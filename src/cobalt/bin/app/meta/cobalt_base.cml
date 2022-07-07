@@ -27,11 +27,14 @@
                 "fuchsia.buildinfo.Provider",
                 "fuchsia.net.http.Loader",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.settings.Privacy",
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.activity.Provider",
             ],
+        },
+        {
+            protocol: "fuchsia.settings.Privacy",
+            availability: "optional",
         },
         {
             storage: "data",

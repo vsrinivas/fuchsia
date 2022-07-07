@@ -736,15 +736,16 @@
             protocol: [
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.kernel.Stats",
-
-                // These capabilities are required for the Power Manager to implement the
-                // fuchsia.power.profile.Watcher service.
-                // (see: https://fuchsia.dev/reference/fidl/fuchsia.power.profile)
-                "fuchsia.settings.Input",
                 "fuchsia.ui.activity.Provider",
             ],
             from: "parent",
             to: "#power_manager",
+        },
+        {
+            protocol: "fuchsia.settings.Input",
+            from: "parent",
+            to: "#power_manager",
+            availability: "optional",
         },
         {
             protocol: [

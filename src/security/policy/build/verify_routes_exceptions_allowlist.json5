@@ -886,6 +886,26 @@
                         message: "`/core` tried to offer `fuchsia.recovery.policy.Device` from its child `#ui`, but `#ui` does not expose `fuchsia.recovery.policy.Device`.",
                     },
                 },
+
+                // TODO(fxbug.dev/103977): once fixed, delete the suppressions below.
+                {
+                    using_node: "/bootstrap/power_manager",
+                    capability: "fuchsia.settings.Input",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: "core",
+                                        moniker: "/",
+                                        capability_id: "fuchsia.settings.Input",
+                                    },
+                                },
+                            },
+                        },
+                        message: "`/` tried to offer `fuchsia.settings.Input` from its child `#core`, but `#core` does not expose `fuchsia.settings.Input`.",
+                    },
+                },
             ],
         },
     },

@@ -892,10 +892,24 @@
                 "fuchsia.sysinfo.SysInfo",
             ],
             from: "parent",
+            to: "#cobalt",
+        },
+        {
+            protocol: "fuchsia.sysinfo.SysInfo",
+            from: "parent",
+            to: "#cobalt_system_metrics",
+        },
+        {
+            protocol: "fuchsia.settings.Privacy",
+            from: "#setui_service",
             to: [
                 "#cobalt",
-                "#cobalt_system_metrics",
+                "#feedback",
             ],
+
+            // TODO: break the cycle
+            dependency: "weak",
+            source_availability: "unknown",
         },
         {
             storage: "data",
@@ -913,7 +927,7 @@
                 "fuchsia.sysinfo.SysInfo",
             ],
             from: "parent",
-            to: [ "#feedback" ],
+            to: "#feedback",
         },
         {
             protocol: [

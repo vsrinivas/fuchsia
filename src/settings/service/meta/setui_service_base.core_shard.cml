@@ -101,4 +101,10 @@
             to: "#setui_service",
         },
     ],
+    expose: [
+        {
+            protocol: "fuchsia.settings.Input",
+            from: "#setui_service",
+        },
+    ],
 }

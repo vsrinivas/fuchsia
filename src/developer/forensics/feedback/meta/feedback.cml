@@ -40,14 +40,16 @@
                 "fuchsia.net.name.Lookup",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.process.Launcher",
-                "fuchsia.settings.Privacy",
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.scenic.Scenic",
             ],
         },
         {
-            protocol: "fuchsia.update.channelcontrol.ChannelControl",
+            protocol: [
+                "fuchsia.settings.Privacy",
+                "fuchsia.update.channelcontrol.ChannelControl",
+            ],
             availability: "optional",
         },
         {
