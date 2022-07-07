@@ -432,7 +432,7 @@ func (*directoryState) SetFlags(fidl.Context, io.OpenFlags) (int32, error) {
 }
 
 func (dirState *directoryState) AdvisoryLock(fidl.Context, io.AdvisoryLockRequest) (io.AdvisoryLockingAdvisoryLockResult, error) {
-	return io.AdvisoryLockingAdvisoryLockResult{}, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", dirState)}
+	return io.AdvisoryLockingAdvisoryLockResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 func (*directoryState) QueryFilesystem(fidl.Context) (int32, *io.FilesystemInfo, error) {
@@ -489,22 +489,21 @@ type FileWrapper struct {
 	File File
 }
 
-func (file *FileWrapper) getFile() io.FileWithCtx {
+func (file *FileWrapper) GetFile() io.FileWithCtx {
 	reader, size := file.File.GetReader()
 	return &fileState{
 		FileWrapper: file,
 		reader:      reader,
 		size:        size,
-		vmo:         file.File.GetVMO(),
 	}
 }
 
 func (file *FileWrapper) getIO() io.NodeWithCtx {
-	return file.getFile()
+	return file.GetFile()
 }
 
 func (file *FileWrapper) addConnection(ctx fidl.Context, flags io.OpenFlags, mode uint32, req io.NodeWithCtxInterfaceRequest) error {
-	ioFile := file.getFile()
+	ioFile := file.GetFile()
 	stub := io.FileWithCtxStub{Impl: ioFile}
 	go Serve(context.Background(), &stub, req.Channel, ServeOptions{
 		OnError: logError,
@@ -524,7 +523,6 @@ type fileState struct {
 	*FileWrapper
 	reader Reader
 	size   uint64
-	vmo    zx.VMO
 }
 
 func (fState *fileState) Clone(ctx fidl.Context, flags io.OpenFlags, req io.NodeWithCtxInterfaceRequest) error {
@@ -543,8 +541,8 @@ func (fState *fileState) Close(fidl.Context) (io.Node2CloseResult, error) {
 
 func (fState *fileState) Describe(fidl.Context) (io.NodeInfo, error) {
 	var nodeInfo io.NodeInfo
-	if fState.vmo.Handle().IsValid() {
-		h, err := fState.vmo.Handle().Duplicate(zx.RightSameRights)
+	if vmo := fState.File.GetVMO(); vmo.Handle().IsValid() {
+		h, err := vmo.Handle().Duplicate(zx.RightSameRights)
 		if err != nil {
 			return nodeInfo, err
 		}
@@ -563,9 +561,9 @@ func (fState *fileState) Describe2(_ fidl.Context, query io.ConnectionInfoQuery)
 	var connectionInfo io.ConnectionInfo
 	if query&io.ConnectionInfoQueryRepresentation != 0 {
 		var representation io.Representation
-		if fState.vmo.Handle().IsValid() {
+		if vmo := fState.File.GetVMO(); vmo.Handle().IsValid() {
 			// TODO(https://fxbug.dev/77623): The rights on this VMO should be capped at the connection's.
-			h, err := fState.vmo.Handle().Duplicate(zx.RightSameRights)
+			h, err := vmo.Handle().Duplicate(zx.RightSameRights)
 			if err != nil {
 				return connectionInfo, err
 			}
@@ -687,6 +685,20 @@ func (fState *fileState) AdvisoryLock(fidl.Context, io.AdvisoryLockRequest) (io.
 	return io.AdvisoryLockingAdvisoryLockResult{}, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", fState)}
 }
 
-func (*fileState) GetBackingMemory(fidl.Context, io.VmoFlags) (io.File2GetBackingMemoryResult, error) {
+func (fState *fileState) GetBackingMemory(fidl.Context, io.VmoFlags) (io.File2GetBackingMemoryResult, error) {
+	if vmo := fState.File.GetVMO(); vmo.Handle().IsValid() {
+		// TODO(https://fxbug.dev/77623): The rights on this VMO should be capped at the connection's.
+		h, err := vmo.Handle().Duplicate(zx.RightSameRights)
+		switch err := err.(type) {
+		case nil:
+			return io.File2GetBackingMemoryResultWithResponse(io.File2GetBackingMemoryResponse{
+				Vmo: zx.VMO(h),
+			}), nil
+		case *zx.Error:
+			return io.File2GetBackingMemoryResultWithErr(int32(err.Status)), nil
+		default:
+			return io.File2GetBackingMemoryResult{}, err
+		}
+	}
 	return io.File2GetBackingMemoryResultWithErr(int32(zx.ErrNotSupported)), nil
 }

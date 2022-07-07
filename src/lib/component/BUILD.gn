@@ -17,6 +17,7 @@ go_library("component") {
   deps = [
     "//sdk/fidl/fuchsia.io($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
+    "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:golang.org/x/sync",
   ]
 
