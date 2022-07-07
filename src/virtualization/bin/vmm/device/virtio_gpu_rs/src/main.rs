@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod gpu_device;
+mod resource;
 mod wire;
 
 use {

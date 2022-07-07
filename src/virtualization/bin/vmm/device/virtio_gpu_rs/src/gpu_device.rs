@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 use {
+    crate::resource::Resource2D,
     crate::wire,
     anyhow::{anyhow, Context, Error},
     futures::StreamExt,
     machina_virtio_device::{GuestMem, WrappedDescChainStream},
+    std::collections::{hash_map::Entry, HashMap},
     std::io::{Read, Write},
     tracing,
     virtio_device::chain::{ReadableChain, WritableChain},
@@ -66,11 +68,13 @@ fn read_from_chain<'a, 'b, N: DriverNotify, M: DriverMem, T: FromBytes>(
     Ok(T::read_from(buffer.as_slice()).unwrap())
 }
 
-pub struct GpuDevice {}
+pub struct GpuDevice {
+    resources: HashMap<u32, Resource2D>,
+}
 
 impl GpuDevice {
     pub fn new() -> Self {
-        Self {}
+        Self { resources: HashMap::new() }
     }
 
     pub async fn process_queues<'a, 'b, N: DriverNotify>(
@@ -120,6 +124,7 @@ impl GpuDevice {
         };
         match header.ty.get() {
             wire::VIRTIO_GPU_CMD_GET_DISPLAY_INFO => self.get_display_info(chain)?,
+            wire::VIRTIO_GPU_CMD_RESOURCE_CREATE_2D => self.resource_create_2d(chain)?,
             cmd => self.unsupported_command(chain, cmd)?,
         }
         Ok(())
@@ -174,6 +179,65 @@ impl GpuDevice {
 
         // Now write the response to the chain.
         write_to_chain(WritableChain::from_readable(chain)?, display_info)
+    }
+
+    fn resource_create_2d<'a, 'b, N: DriverNotify, M: DriverMem>(
+        &mut self,
+        mut chain: ReadableChain<'a, 'b, N, M>,
+    ) -> Result<(), Error> {
+        let cmd: wire::VirtioGpuResourceCreate2d = match read_from_chain(&mut chain) {
+            Ok(cmd) => cmd,
+            Err(e) => {
+                tracing::warn!(
+                    "Failed to read VirtioGpuResourceCreate2d request from queue: {}",
+                    e
+                );
+                return write_error_to_chain(chain, wire::VirtioGpuError::Unspecified);
+            }
+        };
+        // 0 is used to specify 'no resource in other commands (ex: SET_SCANOUT), so let's not
+        // allow creating any resources with ID 0.
+        if cmd.resource_id.get() == 0 {
+            tracing::warn!("Failed to create resource with null resource id");
+            return write_error_to_chain(chain, wire::VirtioGpuError::InvalidResourceId);
+        }
+        // Require that we have a non-zero size.
+        if cmd.width.get() == 0 || cmd.height.get() == 0 {
+            tracing::warn!(
+                "Failed to create resource with zero size: {}x{}",
+                cmd.width.get(),
+                cmd.height.get()
+            );
+            return write_error_to_chain(chain, wire::VirtioGpuError::InvalidParameter);
+        }
+        {
+            let entry = self.resources.entry(cmd.resource_id.get());
+            if let Entry::Occupied(_) = &entry {
+                tracing::warn!(
+                    "Failed to create resource with duplicate ID: {}",
+                    cmd.resource_id.get()
+                );
+                return write_error_to_chain(chain, wire::VirtioGpuError::InvalidResourceId);
+            }
+            match Resource2D::allocate_from_request(&cmd) {
+                Ok((resource, _)) => {
+                    entry.or_insert(resource);
+                }
+                Err(e) => {
+                    tracing::info!("Failed to allocate resource {:?}: {}", cmd, e);
+                    return write_error_to_chain(chain, wire::VirtioGpuError::OutOfMemory);
+                }
+            }
+        }
+
+        // Send success response.
+        write_to_chain(
+            WritableChain::from_readable(chain)?,
+            wire::VirtioGpuCtrlHeader {
+                ty: wire::VIRTIO_GPU_RESP_OK_NODATA.into(),
+                ..Default::default()
+            },
+        )
     }
 }
 
@@ -290,5 +354,140 @@ mod tests {
             assert_eq!(result.pmodes[pmode].enabled.get(), 0);
             assert_eq!(result.pmodes[pmode].flags.get(), 0);
         }
+    }
+
+    const VALID_RESOURCE_ID: u32 = 1;
+    const VALID_RESOURCE_WIDTH: u32 = 1024;
+    const VALID_RESOURCE_HEIGHT: u32 = 768;
+
+    /// A fixture for reusing logic across different tests.
+    struct TestFixture<'a> {
+        mem: &'a IdentityDriverMem,
+        state: TestQueue<'a>,
+        device: GpuDevice,
+    }
+
+    impl<'a> TestFixture<'a> {
+        pub fn new(mem: &'a IdentityDriverMem) -> Self {
+            let state = TestQueue::new(32, mem);
+            let device = GpuDevice::new();
+            Self { mem, state, device }
+        }
+
+        /// Sends a VIRTIO_GPU_CMD_RESOURCE_CREATE_2D and returns the response.
+        ///
+        /// This asserts that the device has written the correct number of bytes to represent the
+        /// expected response struct.
+        fn resource_create_2d(
+            &mut self,
+            cmd: wire::VirtioGpuResourceCreate2d,
+        ) -> wire::VirtioGpuCtrlHeader {
+            self.state
+                .fake_queue
+                .publish(
+                    ChainBuilder::new()
+                        // Header
+                        .readable(
+                            std::slice::from_ref(&wire::VirtioGpuCtrlHeader {
+                                ty: wire::VIRTIO_GPU_CMD_RESOURCE_CREATE_2D.into(),
+                                ..Default::default()
+                            }),
+                            self.mem,
+                        )
+                        // Request
+                        .readable(std::slice::from_ref(&cmd), self.mem)
+                        .writable(std::mem::size_of::<wire::VirtioGpuCtrlHeader>() as u32, self.mem)
+                        .build(),
+                )
+                .unwrap();
+
+            self.device
+                .process_control_chain(ReadableChain::new(
+                    self.state.queue.next_chain().unwrap(),
+                    self.mem,
+                ))
+                .expect("Failed to process control chain");
+
+            let returned = self.state.fake_queue.next_used().unwrap();
+            assert_eq!(
+                std::mem::size_of::<wire::VirtioGpuCtrlHeader>(),
+                returned.written() as usize
+            );
+
+            // Read and return the header.
+            let mut iter = returned.data_iter();
+            read_returned::<wire::VirtioGpuCtrlHeader>(iter.next().unwrap())
+        }
+    }
+
+    #[fuchsia::test]
+    fn test_resource_create_2d() {
+        let mem = IdentityDriverMem::new();
+        let mut test = TestFixture::new(&mem);
+        let response = test.resource_create_2d(wire::VirtioGpuResourceCreate2d {
+            resource_id: VALID_RESOURCE_ID.into(),
+            width: VALID_RESOURCE_WIDTH.into(),
+            height: VALID_RESOURCE_HEIGHT.into(),
+            format: wire::VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM.into(),
+        });
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
+    }
+
+    #[fuchsia::test]
+    fn test_resource_create_2d_null_resource_id() {
+        let mem = IdentityDriverMem::new();
+        let mut test = TestFixture::new(&mem);
+        let response = test.resource_create_2d(wire::VirtioGpuResourceCreate2d {
+            // 0 is not a valid resource id.
+            resource_id: 0.into(),
+            width: VALID_RESOURCE_WIDTH.into(),
+            height: VALID_RESOURCE_HEIGHT.into(),
+            format: wire::VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM.into(),
+        });
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID);
+    }
+
+    #[fuchsia::test]
+    fn test_resource_create_2d_duplicate_resource_id() {
+        let mem = IdentityDriverMem::new();
+        let mut test = TestFixture::new(&mem);
+
+        let request = wire::VirtioGpuResourceCreate2d {
+            resource_id: VALID_RESOURCE_ID.into(),
+            width: VALID_RESOURCE_WIDTH.into(),
+            height: VALID_RESOURCE_HEIGHT.into(),
+            format: wire::VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM.into(),
+        };
+
+        // Create a resource, this should succeed.
+        let response = test.resource_create_2d(request.clone());
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
+
+        // Create another resource with the same request. This will fail because the id is already
+        // in use.
+        let response = test.resource_create_2d(request.clone());
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID);
+    }
+
+    #[fuchsia::test]
+    fn test_resource_create_2d_zero_sized_resource() {
+        let mem = IdentityDriverMem::new();
+        let mut test = TestFixture::new(&mem);
+
+        let response = test.resource_create_2d(wire::VirtioGpuResourceCreate2d {
+            resource_id: VALID_RESOURCE_ID.into(),
+            width: 0.into(),
+            height: VALID_RESOURCE_HEIGHT.into(),
+            format: wire::VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM.into(),
+        });
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER);
+
+        let response = test.resource_create_2d(wire::VirtioGpuResourceCreate2d {
+            resource_id: VALID_RESOURCE_ID.into(),
+            width: VALID_RESOURCE_WIDTH.into(),
+            height: 0.into(),
+            format: wire::VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM.into(),
+        });
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER);
     }
 }
