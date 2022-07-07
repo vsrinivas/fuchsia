@@ -5,7 +5,7 @@
 mod framed_stream;
 
 pub(crate) use self::framed_stream::{
-    FrameType, FramedStreamReader, FramedStreamWriter, MessageStats, ReadNextFrame,
+    FrameType, FramedStreamReader, FramedStreamWriter, MessageStats,
 };
 use crate::{
     coding::{self, decode_fidl_with_context, encode_fidl_with_context},
@@ -32,8 +32,7 @@ use futures::{
     ready,
 };
 use quic::{
-    AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter, ConnState, ReadExact,
-    StreamProperties,
+    AsyncConnection, AsyncQuicStreamReader, AsyncQuicStreamWriter, ConnState, StreamProperties,
 };
 use std::{
     convert::TryInto,

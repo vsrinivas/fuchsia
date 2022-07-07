@@ -610,10 +610,6 @@ impl<'b> Future for ReadExact<'b> {
 }
 
 impl<'b> ReadExact<'b> {
-    pub fn read_buf_mut(&mut self) -> &mut ReadBuf<'b> {
-        self.read.read_buf_mut()
-    }
-
     pub fn rearm(&mut self, bytes: impl Into<ReadBuf<'b>>) {
         assert!(self.done);
         self.read.bytes_offset = 0;
@@ -721,10 +717,6 @@ impl<'b> QuicRead<'b> {
     #[allow(dead_code)]
     pub fn debug_id(&self) -> impl std::fmt::Debug {
         (self.conn.endpoint, self.id)
-    }
-
-    pub fn read_buf_mut(&mut self) -> &mut ReadBuf<'b> {
-        &mut self.bytes
     }
 
     fn poll_inner(&mut self, ctx: &mut Context<'_>) -> Poll<Result<(usize, bool), Error>> {

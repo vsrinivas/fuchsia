@@ -6,13 +6,17 @@ use super::handle::{Message, Proxyable, ProxyableHandle, RouterHolder, Serialize
 use crate::coding::{self, decode_fidl_with_context, encode_fidl_with_context};
 use crate::labels::{NodeId, TransferKey};
 use crate::peer::{
-    FrameType, FramedStreamReader, FramedStreamWriter, MessageStats, PeerConnRef, ReadNextFrame,
+    FrameType, FramedStreamReader, FramedStreamWriter, MessageStats, PeerConn, PeerConnRef,
 };
 use crate::router::Router;
 use anyhow::{format_err, Context as _, Error};
 use fidl_fuchsia_overnet_protocol::{BeginTransfer, Empty, SignalUpdate, StreamControl};
 use fuchsia_zircon_status as zx_status;
-use futures::{future::poll_fn, prelude::*, ready};
+use futures::{
+    future::{poll_fn, BoxFuture},
+    prelude::*,
+    ready,
+};
 use std::pin::Pin;
 use std::sync::{Arc, Weak};
 use std::task::{Context, Poll};
@@ -172,29 +176,37 @@ pub(crate) struct StreamReader<Msg: Message> {
 pub(crate) struct ReadNext<'a, Msg: Message> {
     read_next_frame_or_peer_conn_ref: ReadNextFrameOrPeerConnRef<'a>,
     state: &'a mut ReadNextState<Msg::Parser>,
+    conn: PeerConn,
     incoming_message: Option<&'a mut Msg>,
     stats: &'a Arc<MessageStats>,
     router_holder: RouterHolder<'a>,
 }
 
-#[derive(Debug)]
 enum ReadNextFrameOrPeerConnRef<'a> {
-    ReadNextFrame(ReadNextFrame<'a>),
+    ReadNextFrame(BoxFuture<'a, Result<(FrameType, Vec<u8>, bool), Error>>),
     PeerConnRef(PeerConnRef<'a>),
 }
 
+impl std::fmt::Debug for ReadNextFrameOrPeerConnRef<'_> {
+    fn fmt(&self, writer: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
+        match self {
+            Self::ReadNextFrame(_) => {
+                write!(writer, "ReadNextFrameOrPeerConnRef::ReadNextFrame(...)")
+            }
+            Self::PeerConnRef(x) => {
+                write!(writer, "ReadNextFrameOrPeerConnRef::PeerConnRef({x:?})")
+            }
+        }
+    }
+}
+
 impl<'a> ReadNextFrameOrPeerConnRef<'a> {
-    fn as_read_next_frame_mut(&mut self) -> Option<&mut ReadNextFrame<'a>> {
+    fn as_read_next_frame_mut(
+        &mut self,
+    ) -> Option<&mut BoxFuture<'a, Result<(FrameType, Vec<u8>, bool), Error>>> {
         match self {
             Self::ReadNextFrame(x) => Some(x),
             _ => None,
-        }
-    }
-
-    fn conn(&'a self) -> PeerConnRef<'a> {
-        match self {
-            Self::ReadNextFrame(x) => x.conn(),
-            Self::PeerConnRef(x) => *x,
         }
     }
 }
@@ -281,7 +293,7 @@ impl<'a, Msg: Message> ReadNext<'a, Msg> {
                     ready!(parser.poll_ser(
                         self.incoming_message.as_mut().unwrap(),
                         bytes,
-                        self.read_next_frame_or_peer_conn_ref.conn(),
+                        self.conn.as_ref(),
                         self.stats,
                         &mut self.router_holder,
                         ctx,
@@ -312,16 +324,18 @@ impl<Msg: Message> StreamReader<Msg> {
     }
 
     pub fn next<'a>(&'a mut self) -> ReadNext<'a, Msg> {
+        let conn = self.stream.conn().into_peer_conn();
         ReadNext {
             read_next_frame_or_peer_conn_ref: match self.state {
                 ReadNextState::Reading => {
-                    ReadNextFrameOrPeerConnRef::ReadNextFrame(self.stream.next())
+                    ReadNextFrameOrPeerConnRef::ReadNextFrame(self.stream.next().boxed())
                 }
                 ReadNextState::DeserializingData(_, _, _) => {
                     ReadNextFrameOrPeerConnRef::PeerConnRef(self.stream.conn())
                 }
             },
             state: &mut self.state,
+            conn,
             incoming_message: Some(&mut self.incoming_message),
             stats: &self.stats,
             router_holder: RouterHolder::Unused(&self.router),

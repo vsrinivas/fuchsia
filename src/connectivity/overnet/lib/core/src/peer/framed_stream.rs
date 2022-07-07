@@ -4,18 +4,13 @@
 
 //! Framing and deframing datagrams onto QUIC streams
 
-use super::{PeerConnRef, ReadExact};
+use super::PeerConnRef;
 use crate::coding;
 use crate::labels::NodeId;
 use crate::stat_counter::StatCounter;
 use anyhow::{format_err, Error};
-use futures::{prelude::*, ready};
 use quic::{AsyncQuicStreamReader, AsyncQuicStreamWriter, StreamProperties};
-use std::{
-    convert::TryInto,
-    pin::Pin,
-    task::{Context, Poll},
-};
+use std::convert::TryInto;
 
 /// The type of frame that can be received on a QUIC stream
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -167,19 +162,11 @@ pub(crate) struct FramedStreamReader {
     read_state: ReadState,
     /// Scratch space for reading the frame header
     hdr: [u8; FRAME_HEADER_LENGTH],
-    /// Scratch space for reading the frame payload
-    payload: Vec<u8>,
 }
 
 impl FramedStreamReader {
     pub fn from_quic(quic: AsyncQuicStreamReader, peer_node_id: NodeId) -> Self {
-        Self {
-            quic,
-            peer_node_id,
-            read_state: ReadState::Initial,
-            hdr: [0u8; FRAME_HEADER_LENGTH],
-            payload: Vec::new(),
-        }
+        Self { quic, peer_node_id, read_state: ReadState::Initial, hdr: [0u8; FRAME_HEADER_LENGTH] }
     }
 
     pub(crate) async fn abandon(&mut self) {
@@ -194,22 +181,31 @@ impl FramedStreamReader {
         self.quic.is_initiator()
     }
 
-    pub(crate) fn next<'b>(&'b mut self) -> ReadNextFrame<'b> {
-        let (read, payload) = match self.read_state {
-            ReadState::Initial => {
-                self.payload.clear();
-                (self.quic.read_exact(&mut self.hdr), Some(&mut self.payload))
+    pub(crate) async fn next<'b>(&'b mut self) -> Result<(FrameType, Vec<u8>, bool), Error> {
+        if let ReadState::Initial = self.read_state {
+            let fin = self.quic.read_exact(&mut self.hdr).await?;
+            let hdr = FrameHeader::from_bytes(&self.hdr)?;
+
+            if hdr.length == 0 {
+                return Ok((hdr.frame_type, Vec::new(), fin));
             }
-            ReadState::GotHeader(hdr) => {
-                assert_eq!(self.payload.len(), hdr.length);
-                (self.quic.read_exact(&mut self.payload), None)
+
+            if fin {
+                return Err(format_err!("Unexpected end of stream"));
             }
-        };
-        ReadNextFrame {
-            read,
-            payload,
-            read_state: &mut self.read_state,
-            peer_node_id: self.peer_node_id,
+
+            self.read_state = ReadState::GotHeader(hdr);
+        }
+
+        if let ReadState::GotHeader(hdr) = &self.read_state {
+            let mut payload = Vec::new();
+            payload.resize(hdr.length, 0);
+            let fin = self.quic.read_exact(&mut payload).await?;
+            let frame_type = hdr.frame_type;
+            self.read_state = ReadState::Initial;
+            Ok((frame_type, payload, fin))
+        } else {
+            unreachable!();
         }
     }
 }
@@ -218,62 +214,6 @@ impl FramedStreamReader {
 enum ReadState {
     Initial,
     GotHeader(FrameHeader),
-}
-
-#[derive(Debug)]
-pub(crate) struct ReadNextFrame<'b> {
-    read: ReadExact<'b>,
-    read_state: &'b mut ReadState,
-    payload: Option<&'b mut Vec<u8>>,
-    peer_node_id: NodeId,
-}
-
-impl<'b> ReadNextFrame<'b> {
-    #[allow(dead_code)]
-    pub(crate) fn debug_id(&self) -> impl std::fmt::Debug {
-        self.read.debug_id()
-    }
-
-    pub(crate) fn conn(&self) -> PeerConnRef<'_> {
-        PeerConnRef::from_quic(self.read.conn(), self.peer_node_id)
-    }
-
-    fn poll_inner(
-        &mut self,
-        ctx: &mut Context<'_>,
-    ) -> Poll<Result<(FrameType, Vec<u8>, bool), Error>> {
-        loop {
-            let fin = ready!(self.read.poll_unpin(ctx))?;
-            match self.read_state {
-                ReadState::Initial => {
-                    let hdr = FrameHeader::from_bytes(self.read.read_buf_mut().as_mut_slice())?;
-                    if hdr.length == 0 {
-                        return Poll::Ready(Ok((hdr.frame_type, Vec::new(), fin)));
-                    }
-                    if fin {
-                        return Poll::Ready(Err(format_err!("Unexpected end of stream")));
-                    }
-                    let payload = self.payload.take().unwrap();
-                    *payload = vec![0u8; hdr.length];
-                    self.read.rearm(payload);
-                    *self.read_state = ReadState::GotHeader(hdr);
-                }
-                ReadState::GotHeader(hdr) => {
-                    let out =
-                        Poll::Ready(Ok((hdr.frame_type, self.read.read_buf_mut().take_vec(), fin)));
-                    *self.read_state = ReadState::Initial;
-                    return out;
-                }
-            }
-        }
-    }
-}
-
-impl<'b> Future for ReadNextFrame<'b> {
-    type Output = Result<(FrameType, Vec<u8>, bool), Error>;
-    fn poll(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Self::Output> {
-        Pin::into_inner(self).poll_inner(ctx)
-    }
 }
 
 #[cfg(test)]
