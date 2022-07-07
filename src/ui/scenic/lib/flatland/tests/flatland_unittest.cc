@@ -12,6 +12,7 @@
 #include <lib/ui/scenic/cpp/view_creation_tokens.h>
 #include <lib/ui/scenic/cpp/view_identity.h>
 
+#include <cstdint>
 #include <limits>
 
 #include <gtest/gtest.h>
@@ -3828,6 +3829,39 @@ TEST_F(FlatlandTest, CreateImageValidCase) {
 
   CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
               std::move(properties));
+}
+
+TEST_F(FlatlandTest, CreateImageSetsDefaults) {
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  std::shared_ptr<Flatland> flatland = CreateFlatland();
+
+  // Setup a valid image.
+  const ContentId kImageId = {1};
+  const uint32_t kWidth = 100;
+  const uint32_t kHeight = 200;
+  BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
+  ImageProperties properties;
+  properties.set_size({kWidth, kHeight});
+
+  CreateImage(flatland.get(), allocator.get(), kImageId, std::move(ref_pair),
+              std::move(properties));
+
+  const auto maybe_image_handle = flatland->GetContentHandle(kImageId);
+  ASSERT_TRUE(maybe_image_handle.has_value());
+  const auto image_handle = maybe_image_handle.value();
+  auto uber_struct = GetUberStruct(flatland.get());
+
+  // Default sample region should be same as size.
+  auto sample_region_kv = uber_struct->local_image_sample_regions.find(image_handle);
+  EXPECT_NE(sample_region_kv, uber_struct->local_image_sample_regions.end());
+  fuchsia::math::RectF rect = {0, 0, kWidth, kHeight};
+  ExpectRectFEquals(sample_region_kv->second, rect);
+
+  // Default destination rect should be same as size.
+  auto matrix_kv = uber_struct->local_matrices.find(image_handle);
+  EXPECT_NE(matrix_kv, uber_struct->local_matrices.end());
+  EXPECT_EQ(sample_region_kv->second.width, kWidth);
+  EXPECT_EQ(sample_region_kv->second.height, kHeight);
 }
 
 TEST_F(FlatlandTest, SetImageOpacityTestCases) {

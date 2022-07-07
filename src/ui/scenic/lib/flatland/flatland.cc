@@ -933,6 +933,9 @@ void Flatland::CreateImage(ContentId image_id,
   SetImageSampleRegion(image_id, {0, 0, static_cast<float>(properties.size().width),
                                   static_cast<float>(properties.size().height)});
 
+  // Set the default destination region of the image to be the full image.
+  SetImageDestinationSize(image_id, properties.size());
+
   FLATLAND_VERBOSE_LOG << "Flatland::CreateImage" << handle << " for " << local_root_
                        << " size:" << properties.size().width << "x" << properties.size().height;
 }

@@ -742,6 +742,9 @@ protocol Flatland {
     /// other words, the region specifed by [`rect`] must not exceed the ranges (0, image_width) and
     /// (0, image_height). If (rect.x + rect.width > image_width) or (rect.y + rect.height >
     /// image_height) or if any of the values are negative, this will result in an error.
+    ///
+    /// If this method is not called, the default sample region is the rectangle with origin at
+    /// (0, 0) and width and height set at ImageProperties from [`CreateImage`].
     SetImageSampleRegion(struct {
         image_id ContentId;
         rect fuchsia.math.RectF;
@@ -751,6 +754,10 @@ protocol Flatland {
     /// coordinate space that the image occupies. This combined with the global translation of the
     /// transform it is attached to determines the size and location of where the content is
     /// rendered on the display.
+    ///
+    /// If this method is not called, the default image destination size is the width and height set
+    /// at ImageProperties from [`CreateImage`]. The destination size will be affected by scaling if
+    /// [`SetScale`] is used on the attached Transform or its parents.
     SetImageDestinationSize(struct {
         image_id ContentId;
         size fuchsia.math.SizeU;
