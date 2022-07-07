@@ -35,17 +35,16 @@ zx_rights_t GetVmoRightsForAccessMode(fs::Rights fs_rights) {
 
 }  // namespace
 
-VmoFile::VmoFile(const zx::vmo& unowned_vmo, size_t offset, size_t length, bool writable,
-                 VmoSharing vmo_sharing)
-    : vmo_handle_(unowned_vmo.get()),
+VmoFile::VmoFile(zx::vmo vmo, size_t offset, size_t length, bool writable, VmoSharing vmo_sharing)
+    : vmo_(std::move(vmo)),
       offset_(offset),
       length_(length),
       writable_(writable),
       vmo_sharing_(vmo_sharing) {
-  ZX_DEBUG_ASSERT(vmo_handle_ != ZX_HANDLE_INVALID);
+  ZX_ASSERT(vmo_.is_valid());
 }
 
-VmoFile::~VmoFile() {}
+VmoFile::~VmoFile() = default;
 
 VnodeProtocolSet VmoFile::GetProtocols() const { return VnodeProtocol::kMemory; }
 
@@ -82,7 +81,7 @@ zx_status_t VmoFile::Read(void* data, size_t length, size_t offset, size_t* out_
   if (length > remaining_length) {
     length = remaining_length;
   }
-  zx_status_t status = zx_vmo_read(vmo_handle_, data, offset_ + offset, length);
+  zx_status_t status = vmo_.read(data, offset_ + offset, length);
   if (status != ZX_OK) {
     return status;
   }
@@ -105,7 +104,7 @@ zx_status_t VmoFile::Write(const void* data, size_t length, size_t offset, size_
   if (length > remaining_length) {
     length = remaining_length;
   }
-  zx_status_t status = zx_vmo_write(vmo_handle_, data, offset_ + offset, length);
+  zx_status_t status = vmo_.write(data, offset_ + offset, length);
   if (status == ZX_OK) {
     *out_actual = length;
   }
@@ -147,7 +146,7 @@ zx_status_t VmoFile::DuplicateVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* 
   // duplicating the VMO handle. If this restriction needs to be eased in the future, size
   // changes need to be tracked accordingly, or a fixed-size child slice should be provided.
   rights &= ~(ZX_RIGHT_WRITE | ZX_RIGHT_SET_PROPERTY);
-  zx_status_t status = zx_handle_duplicate(vmo_handle_, rights, out_vmo->reset_and_get_address());
+  zx_status_t status = vmo_.duplicate(rights, out_vmo);
   if (status != ZX_OK)
     return status;
 
@@ -165,9 +164,8 @@ zx_status_t VmoFile::CloneVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_
     // Use a shared clone for read-only content.
     zx_status_t status = ZX_OK;
     std::call_once(shared_clone_.once, [&]() {
-      status =
-          zx_vmo_create_child(vmo_handle_, ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, clone_offset,
-                              clone_length, shared_clone_.vmo.reset_and_get_address());
+      status = vmo_.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, clone_offset,
+                                 clone_length, &shared_clone_.vmo);
     });
     if (status != ZX_OK)
       return status;
@@ -178,9 +176,8 @@ zx_status_t VmoFile::CloneVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_
   } else {
     // Use separate clone for each client with writable COW access.
     zx::vmo private_clone;
-    zx_status_t status =
-        zx_vmo_create_child(vmo_handle_, ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, clone_offset,
-                            clone_length, private_clone.reset_and_get_address());
+    zx_status_t status = vmo_.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, clone_offset,
+                                           clone_length, &private_clone);
     if (status != ZX_OK)
       return status;
 

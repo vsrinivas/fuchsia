@@ -32,8 +32,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       {fs::VmoFile::VmoSharing::NONE, fs::VmoFile::VmoSharing::DUPLICATE,
        fs::VmoFile::VmoSharing::CLONE_COW});
 
-  auto vmo_file =
-      fbl::MakeRefCounted<fs::VmoFile>(vmo, offset, length, true /*writable*/, vmo_sharing);
+  auto vmo_file = fbl::MakeRefCounted<fs::VmoFile>(std::move(vmo), offset, length,
+                                                   true /*writable*/, vmo_sharing);
 
   size_t offset_write = fuzzed_data.ConsumeIntegralInRange<size_t>(0, vmo_size);
   size_t bytes_written = 0;

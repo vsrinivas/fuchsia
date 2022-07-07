@@ -28,9 +28,8 @@ class ExposedInspector {
                                              component::OutgoingDirectory& outgoing_directory);
 
  private:
-  ExposedInspector(std::unique_ptr<fs::SynchronousVfs> vfs, zx::vmo vmo);
+  explicit ExposedInspector(std::unique_ptr<fs::SynchronousVfs> vfs);
 
-  zx::vmo vmo_;
   // |vfs_| has to be wrapped in a pointer because it's neither copy-able
   // nor move-able.
   std::unique_ptr<fs::SynchronousVfs> vfs_ = nullptr;

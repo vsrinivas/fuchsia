@@ -28,7 +28,7 @@
 static constexpr bool kEnableAlwaysInit = false;
 
 Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
-               fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::vmo inspect_vmo,
+               fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::vmo inspect,
                zx::channel client_remote, fidl::ClientEnd<fio::Directory> outgoing_dir)
     : coordinator(coord),
       name_(std::move(name)),
@@ -38,9 +38,9 @@ Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::S
       protocol_id_(protocol_id),
       publish_task_([this] { coordinator->device_manager()->HandleNewDevice(fbl::RefPtr(this)); }),
       client_remote_(std::move(client_remote)),
-      outgoing_dir_(std::move(outgoing_dir)) {
-  inspect_.emplace(coord->inspect_manager().devices(), coord->inspect_manager().device_count(),
-                   name_.c_str(), std::move(inspect_vmo));
+      outgoing_dir_(std::move(outgoing_dir)),
+      inspect_(coord->inspect_manager().devices(), coord->inspect_manager().device_count(),
+               name_.c_str(), std::move(inspect)) {
   set_state(Device::State::kActive);  // set default state
 }
 
@@ -122,9 +122,8 @@ zx_status_t Device::Create(
     dev->flags |= DEV_CTX_SKIP_AUTOBIND;
   }
 
-  // Initialise and publish device inspect
-  if (auto status = coordinator->inspect_manager().devfs()->InitInspectFileAndPublish(dev);
-      status.is_error()) {
+  // Set up device inspect.
+  if (auto status = coordinator->inspect_manager().devfs()->Publish(dev); status.is_error()) {
     return status.error_value();
   }
 
@@ -141,7 +140,7 @@ zx_status_t Device::Create(
   Device::Bind(dev, coordinator->dispatcher(), std::move(coordinator_request));
 
   // If we have bus device args we are, by definition, a bus device.
-  if (dev->args_.size() > 0) {
+  if (!dev->args_.empty()) {
     dev->flags |= DEV_CTX_BUS_DEVICE | DEV_CTX_MUST_ISOLATE;
   }
 
@@ -200,8 +199,7 @@ zx_status_t Device::CreateComposite(
     return ZX_ERR_NO_MEMORY;
   }
 
-  if (auto status = coordinator->inspect_manager().devfs()->InitInspectFileAndPublish(dev);
-      status.is_error()) {
+  if (auto status = coordinator->inspect_manager().devfs()->Publish(dev); status.is_error()) {
     return status.error_value();
   }
 
@@ -781,8 +779,8 @@ void Device::AddCompositeDevice(AddCompositeDeviceRequestView request,
                                 AddCompositeDeviceCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
   std::string_view name(request->name.data(), request->name.size());
-  zx_status_t status = this->coordinator->device_manager()->AddCompositeDevice(
-      dev, name, std::move(request->comp_desc));
+  zx_status_t status =
+      this->coordinator->device_manager()->AddCompositeDevice(dev, name, request->comp_desc);
   if (status != ZX_OK) {
     completer.ReplyError(status);
   } else {
@@ -794,7 +792,7 @@ void Device::AddDeviceGroup(AddDeviceGroupRequestView request,
                             AddDeviceGroupCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
   zx_status_t status =
-      this->coordinator->AddDeviceGroup(dev, request->name.get(), std::move(request->group_desc));
+      this->coordinator->AddDeviceGroup(dev, request->name.get(), request->group_desc);
   if (status != ZX_OK) {
     completer.ReplyError(status);
   } else {

@@ -52,7 +52,7 @@ class VmoFile : public Vnode {
   };
 
   // The underlying VMO handle.
-  zx_handle_t vmo_handle() const { return vmo_handle_; }
+  const zx::vmo& vmo() const { return vmo_; }
 
   // The offset of the start of the file within the VMO in bytes.
   size_t offset() const { return offset_; }
@@ -82,7 +82,7 @@ class VmoFile : public Vnode {
 
   // Creates a file node backed an VMO owned by the creator. The creator retains ownership of
   // |unowned_vmo| which must outlive this object.
-  VmoFile(const zx::vmo& unowned_vmo, size_t offset, size_t length, bool writable = false,
+  VmoFile(zx::vmo vmo, size_t offset, size_t length, bool writable = false,
           VmoSharing vmo_sharing = VmoSharing::DUPLICATE);
 
   ~VmoFile() override;
@@ -92,7 +92,7 @@ class VmoFile : public Vnode {
   zx_status_t DuplicateVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_offset);
   zx_status_t CloneVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_offset);
 
-  zx_handle_t const vmo_handle_;
+  zx::vmo vmo_;
   size_t const offset_;
   size_t const length_;
   bool const writable_;

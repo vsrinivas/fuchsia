@@ -7,6 +7,8 @@
 #include <lib/ddk/driver.h>
 #include <lib/inspect/service/cpp/service.h>
 
+#include <utility>
+
 #include <driver-info/driver-info.h>
 
 #include "src/devices/bin/driver_manager/device.h"
@@ -18,58 +20,31 @@
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
-zx::status<> InspectDevfs::InitInspectFile(const fbl::RefPtr<Device>& dev) {
-  if (dev->inspect_file() != nullptr) {
-    return zx::error(ZX_ERR_INTERNAL);
-  }
-
-  if (!dev->inspect().vmo()) {
-    // Device doesn't have an inspect VMO to publish.
-    return zx::ok();
-  }
-
-  dev->inspect_file() = fbl::MakeRefCounted<fs::VmoFile>(dev->inspect().vmo(), 0, ZX_PAGE_SIZE);
-  return zx::ok();
-}
-
-zx::status<> InspectDevfs::Publish(const fbl::RefPtr<Device>& dev) {
-  if (!dev->inspect().vmo()) {
-    // Device doesn't have an inspect VMO to publish.
-    return zx::ok();
-  }
-
-  if (dev->inspect_file() == nullptr) {
-    return zx::error(ZX_ERR_INTERNAL);
-  }
-
-  return AddClassDirEntry(dev);
-}
-
-zx::status<> InspectDevfs::InitInspectFileAndPublish(const fbl::RefPtr<Device>& dev) {
-  zx::status<> status = InitInspectFile(dev);
-  if (status.is_error()) {
-    return status.take_error();
-  }
-  return Publish(dev);
-}
+zx::status<> InspectDevfs::Publish(const fbl::RefPtr<Device>& dev) { return AddClassDirEntry(dev); }
 
 // TODO(surajmalhotra): Ideally this would take a RefPtr, but currently this is
 // invoked in the dtor for Device.
 void InspectDevfs::Unpublish(Device* dev) {
   // Remove reference in class directory if it exists
   auto [dir, seqcount] = GetProtoDir(dev->protocol_id());
-  if (dir != nullptr) {
-    dir->RemoveEntry(dev->link_name(), dev->inspect_file().get());
-    // Keep only those protocol directories which are not empty to avoid clutter
-    RemoveEmptyProtoDir(dev->protocol_id());
+  if (dir == nullptr) {
+    // No class dir for this type, so ignore it
+    return;
   }
-
-  dev->inspect_file() = nullptr;
+  std::optional file_opt = dev->inspect().file();
+  if (!file_opt.has_value()) {
+    // No inspect file for this device.
+    return;
+  }
+  fbl::RefPtr file = file_opt.value();
+  dir->RemoveEntry(dev->link_name(), file.get());
+  // Keep only those protocol directories which are not empty to avoid clutter
+  RemoveEmptyProtoDir(dev->protocol_id());
 }
 
-InspectDevfs::InspectDevfs(const fbl::RefPtr<fs::PseudoDir>& root_dir,
+InspectDevfs::InspectDevfs(fbl::RefPtr<fs::PseudoDir> root_dir,
                            fbl::RefPtr<fs::PseudoDir> class_dir)
-    : root_dir_(root_dir), class_dir_(class_dir) {
+    : root_dir_(std::move(root_dir)), class_dir_(std::move(class_dir)) {
   std::copy(std::begin(kProtoInfos), std::end(kProtoInfos), proto_infos_.begin());
 }
 
@@ -127,6 +102,12 @@ zx::status<> InspectDevfs::AddClassDirEntry(const fbl::RefPtr<Device>& dev) {
     // No class dir for this type, so ignore it
     return zx::ok();
   }
+  std::optional file_opt = dev->inspect().file();
+  if (!file_opt.has_value()) {
+    // No inspect file for this device.
+    return zx::ok();
+  }
+  fbl::RefPtr file = file_opt.value();
 
   char tmp[32];
   const char* name = nullptr;
@@ -144,11 +125,12 @@ zx::status<> InspectDevfs::AddClassDirEntry(const fbl::RefPtr<Device>& dev) {
       return zx::error(ZX_ERR_ALREADY_EXISTS);
     }
   } else {
-    snprintf(tmp, sizeof(tmp), "%.*s.inspect", (int)dev->name().length(), dev->name().data());
+    snprintf(tmp, sizeof(tmp), "%.*s.inspect", static_cast<int>(dev->name().length()),
+             dev->name().data());
     name = tmp;
   }
 
-  zx::status<> status = zx::make_status(dir->AddEntry(name, dev->inspect_file()));
+  zx::status<> status = zx::make_status(dir->AddEntry(name, file));
   if (status.is_error()) {
     return status;
   }
@@ -184,8 +166,15 @@ InspectManager::InspectManager(async_dispatcher_t* dispatcher) {
 }
 
 DeviceInspect::DeviceInspect(inspect::Node& devices, inspect::UintProperty& device_count,
-                             std::string name, zx::vmo inspect_vmo)
-    : device_count_node_(device_count), vmo_(std::move(inspect_vmo)) {
+                             std::string name, zx::vmo vmo)
+    : device_count_node_(device_count) {
+  // Devices are sometimes passed bogus handles. Fun!
+  if (vmo.is_valid()) {
+    uint64_t size;
+    zx_status_t status = vmo.get_size(&size);
+    ZX_ASSERT_MSG(status == ZX_OK, "%s", zx_status_get_string(status));
+    vmo_file_.emplace(fbl::MakeRefCounted<fs::VmoFile>(std::move(vmo), 0, size));
+  }
   device_node_ = devices.CreateChild(name);
   // Increment device count.
   device_count_node_.Add(1);
@@ -204,7 +193,7 @@ void DeviceInspect::set_properties(const fbl::Array<const zx_device_prop_t>& pro
   inspect::Node properties_array;
 
   // Add a node only if there are any `props`
-  if (props.size()) {
+  if (!props.empty()) {
     properties_array = device_node_.CreateChild("properties");
   }
 
@@ -222,7 +211,7 @@ void DeviceInspect::set_properties(const fbl::Array<const zx_device_prop_t>& pro
   }
 
   // Place the node into value list as props will not change in the lifetime of the device.
-  if (props.size()) {
+  if (!props.empty()) {
     static_values_.emplace(std::move(properties_array));
   }
 }

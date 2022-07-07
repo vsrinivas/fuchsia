@@ -11,10 +11,10 @@
 #include "zx_device.h"
 
 DriverHostInspect::DriverHostInspect() {
-  inspect_vmo_ = inspect_.DuplicateVmo();
-  uint64_t vmo_size;
-  ZX_ASSERT(inspect_vmo_.get_size(&vmo_size) == ZX_OK);
-  auto vmo_file = fbl::MakeRefCounted<fs::VmoFile>(inspect_vmo_, 0, vmo_size);
+  zx::vmo vmo = inspect_.DuplicateVmo();
+  uint64_t size;
+  ZX_ASSERT(vmo.get_size(&size) == ZX_OK);
+  auto vmo_file = fbl::MakeRefCounted<fs::VmoFile>(std::move(vmo), 0, size);
 
   diagnostics_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
   diagnostics_dir_->AddEntry("root.inspect", vmo_file);
@@ -37,7 +37,7 @@ zx_status_t DriverHostInspect::Serve(zx::channel remote, async_dispatcher_t* dis
 
 void DriverHostInspect::SetDeviceDefaultPowerStates(inspect::Node& parent) {
   auto power_states = parent.CreateChild("default_power_states");
-  for (uint8_t i = 0; i < std::size(internal::kDeviceDefaultPowerStates); i++) {
+  for (size_t i = 0; i < std::size(internal::kDeviceDefaultPowerStates); i++) {
     const auto& info = internal::kDeviceDefaultPowerStates[i];
     auto& state = power_states_[i];
     state.emplace(power_states, info.state_id);
@@ -51,7 +51,7 @@ void DriverHostInspect::SetDeviceDefaultPowerStates(inspect::Node& parent) {
 
 void DriverHostInspect::SetDeviceDefaultPerfStates(inspect::Node& parent) {
   auto perf_states = parent.CreateChild("default_performance_states");
-  for (uint8_t i = 0; i < std::size(internal::kDeviceDefaultPerfStates); i++) {
+  for (size_t i = 0; i < std::size(internal::kDeviceDefaultPerfStates); i++) {
     const auto& info = internal::kDeviceDefaultPerfStates[i];
     auto& state = performance_states_[i];
     state.emplace(perf_states, info.state_id);
@@ -63,7 +63,7 @@ void DriverHostInspect::SetDeviceDefaultPerfStates(inspect::Node& parent) {
 
 void DriverHostInspect::SetDeviceDefaultStateMapping(inspect::Node& parent) {
   auto state_mapping = parent.CreateChild("default_system_power_state_mapping");
-  for (uint8_t i = 0; i < internal::kDeviceDefaultStateMapping.size(); i++) {
+  for (size_t i = 0; i < internal::kDeviceDefaultStateMapping.size(); i++) {
     auto info = &internal::kDeviceDefaultStateMapping[i];
     auto& state = state_mappings_[i];
     state.emplace(state_mapping, i);
@@ -490,7 +490,7 @@ void DeviceInspect::set_system_power_state_mapping(
   if (!system_power_states_node_) {
     system_power_states_node_ = device_node_.CreateChild("system_power_states_mapping");
   }
-  for (uint8_t i = 0; i < mapping.size(); i++) {
+  for (size_t i = 0; i < mapping.size(); i++) {
     const auto& info = mapping[i];
     auto& state = system_power_states_mapping_[i];
     if (!state) {

@@ -23,7 +23,7 @@ zx::status<ExposedInspector> ExposedInspector::Create(
     return zx::error(ZX_ERR_NO_MEMORY);
   }
 
-  auto vmo = inspector.DuplicateVmo();
+  zx::vmo vmo = inspector.DuplicateVmo();
   uint64_t vmo_size;
   zx_status_t status = vmo.get_size(&vmo_size);
   if (status != ZX_OK) {
@@ -32,7 +32,7 @@ zx::status<ExposedInspector> ExposedInspector::Create(
 
   auto vfs = std::make_unique<fs::SynchronousVfs>(dispatcher);
   auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-  auto vmo_file = fbl::MakeRefCounted<fs::VmoFile>(vmo, 0, vmo_size);
+  auto vmo_file = fbl::MakeRefCounted<fs::VmoFile>(std::move(vmo), 0, vmo_size);
   status = diagnostics_dir->AddEntry("root.inspect", std::move(vmo_file));
   if (status != ZX_OK) {
     return zx::error(status);
@@ -50,10 +50,10 @@ zx::status<ExposedInspector> ExposedInspector::Create(
     return zx::error(result.status_value());
   }
 
-  return zx::ok(ExposedInspector(std::move(vfs), std::move(vmo)));
+  return zx::ok(ExposedInspector(std::move(vfs)));
 }
 
-ExposedInspector::ExposedInspector(std::unique_ptr<fs::SynchronousVfs> vfs, zx::vmo vmo)
-    : vmo_(std::move(vmo)), vfs_(std::move(vfs)) {}
+ExposedInspector::ExposedInspector(std::unique_ptr<fs::SynchronousVfs> vfs)
+    : vfs_(std::move(vfs)) {}
 
 }  // namespace driver

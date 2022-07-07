@@ -134,7 +134,6 @@ class DriverHostInspect {
 
  private:
   inspect::Inspector inspect_;
-  zx::vmo inspect_vmo_;
   fbl::RefPtr<fs::PseudoDir> diagnostics_dir_;
   std::unique_ptr<fs::SynchronousVfs> diagnostics_vfs_;
 

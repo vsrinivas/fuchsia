@@ -15,6 +15,7 @@
 
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
+#include "src/lib/storage/vfs/cpp/vmo_file.h"
 
 class Device;
 
@@ -34,8 +35,7 @@ static const inline ProtocolInfo kProtoInfos[] = {
 class InspectDevfs {
  public:
   // Use Create instead.
-  explicit InspectDevfs(const fbl::RefPtr<fs::PseudoDir>& root_dir,
-                        fbl::RefPtr<fs::PseudoDir> class_dir);
+  explicit InspectDevfs(fbl::RefPtr<fs::PseudoDir> root_dir, fbl::RefPtr<fs::PseudoDir> class_dir);
 
   static zx::status<InspectDevfs> Create(const fbl::RefPtr<fs::PseudoDir>& root_dir);
 
@@ -47,13 +47,7 @@ class InspectDevfs {
 
   zx::status<> AddClassDirEntry(const fbl::RefPtr<Device>& dev);
 
-  // Initialize |dev|'s devfs state
-  zx::status<> InitInspectFile(const fbl::RefPtr<Device>& dev);
-
   zx::status<> Publish(const fbl::RefPtr<Device>& dev);
-
-  // Convenience method for initializing |dev| and publishing it to devfs immediately.
-  zx::status<> InitInspectFileAndPublish(const fbl::RefPtr<Device>& dev);
 
   void Unpublish(Device* dev);
 
@@ -107,22 +101,22 @@ class DeviceInspect {
  public:
   // |devices| and |device_count| should outlive DeviceInspect class
   DeviceInspect(inspect::Node& devices, inspect::UintProperty& device_count, std::string name,
-                zx::vmo inspect_vmo);
+                zx::vmo vmo);
 
   ~DeviceInspect();
 
   inspect::Node& device_node() { return device_node_; }
 
-  zx::vmo& vmo() { return vmo_; }
+  std::optional<fbl::RefPtr<fs::VmoFile>> file() { return vmo_file_; }
 
-  void set_state(std::string state) { state_.Set(state); }
+  void set_state(const std::string& state) { state_.Set(state); }
 
   void set_local_id(uint64_t local_id) { local_id_.Set(local_id); }
 
   // These methods below are for static values and should be called only once. Calling it more than
   // once will lead to duplicate entries.
 
-  void set_topological_path(std::string path) {
+  void set_topological_path(const std::string& path) {
     device_node_.CreateString("topological_path", path, &static_values_);
   }
 
@@ -130,13 +124,15 @@ class DeviceInspect {
     device_node_.CreateUint("protocol_id", value, &static_values_);
   }
 
-  void set_type(std::string type) { device_node_.CreateString("type", type, &static_values_); }
+  void set_type(const std::string& type) {
+    device_node_.CreateString("type", type, &static_values_);
+  }
 
   void set_flags(uint32_t flags) { device_node_.CreateUint("flags", flags, &static_values_); }
 
   void set_properties(const fbl::Array<const zx_device_prop_t>& props);
 
-  void set_driver(std::string libname) {
+  void set_driver(const std::string& libname) {
     device_node_.CreateString("driver", libname, &static_values_);
   }
 
@@ -152,7 +148,7 @@ class DeviceInspect {
   inspect::UintProperty local_id_;
 
   // Inspect VMO returned via devfs's inspect nodes.
-  zx::vmo vmo_;
+  std::optional<fbl::RefPtr<fs::VmoFile>> vmo_file_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_INSPECT_H_

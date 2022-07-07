@@ -129,11 +129,9 @@ class TestHarness : public fio_test::Io1Harness {
       case fio_test::DirectoryEntry::Tag::kVmoFile: {
         fio_test::VmoFile vmo_file = std::move(entry.vmo_file());
         fuchsia::mem::Range buffer = std::move(*vmo_file.mutable_buffer());
-        dest.AddEntry(vmo_file.name(),
-                      fbl::MakeRefCounted<fs::VmoFile>(buffer.vmo, buffer.offset, buffer.size,
-                                                       /*writable=*/true));
-        // Need to keep ownership of the VMO since |fs::VmoFile| only borrows a reference to it.
-        test_vmos_.emplace_back(std::move(buffer.vmo));
+        dest.AddEntry(vmo_file.name(), fbl::MakeRefCounted<fs::VmoFile>(std::move(buffer.vmo),
+                                                                        buffer.offset, buffer.size,
+                                                                        /*writable=*/true));
         break;
       }
       case fio_test::DirectoryEntry::Tag::kExecutableFile:
@@ -147,7 +145,6 @@ class TestHarness : public fio_test::Io1Harness {
 
  private:
   std::unique_ptr<fs::ManagedVfs> vfs_;
-  std::vector<zx::vmo> test_vmos_;
   async::Loop vfs_loop_;
 };
 

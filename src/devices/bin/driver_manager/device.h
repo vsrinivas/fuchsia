@@ -15,6 +15,7 @@
 #include <lib/zx/event.h>
 
 #include <memory>
+#include <utility>
 #include <variant>
 
 #include <fbl/array.h>
@@ -26,7 +27,6 @@
 #include "src/devices/bin/driver_manager/composite_device.h"
 #include "src/devices/bin/driver_manager/inspect.h"
 #include "src/devices/bin/driver_manager/metadata.h"
-#include "src/lib/storage/vfs/cpp/vmo_file.h"
 
 namespace fio = fuchsia_io;
 
@@ -283,7 +283,7 @@ class Device
   Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::String args,
          fbl::RefPtr<Device> parent, uint32_t protocol_id, zx::vmo inspect,
          zx::channel client_remote, fidl::ClientEnd<fio::Directory> outgoing_dir);
-  ~Device();
+  ~Device() override;
 
   // Create a new device with the given parameters.  This sets up its
   // relationship with its parent and driver_host and adds its RPC channel to the
@@ -386,7 +386,7 @@ class Device
 
   uint32_t protocol_id() const { return protocol_id_; }
 
-  DeviceInspect& inspect() { return *inspect_; }
+  DeviceInspect& inspect() { return inspect_; }
 
   bool is_bindable() const {
     return !(flags & (DEV_CTX_BOUND | DEV_CTX_INVISIBLE)) && (state_ != Device::State::kDead);
@@ -453,10 +453,12 @@ class Device
   fbl::RefPtr<SuspendTask> RequestSuspendTask(uint32_t suspend_flags);
 
   fbl::RefPtr<ResumeTask> GetActiveResume() { return active_resume_; }
-  void SetActiveResume(fbl::RefPtr<ResumeTask> resume_task) { active_resume_ = resume_task; }
+  void SetActiveResume(fbl::RefPtr<ResumeTask> resume_task) {
+    active_resume_ = std::move(resume_task);
+  }
 
   // Request Resume task
-  fbl::RefPtr<ResumeTask> RequestResumeTask(uint32_t system_resume_state);
+  fbl::RefPtr<ResumeTask> RequestResumeTask(uint32_t target_system_state);
 
   // Run the completion for the outstanding suspend, if any.  This method is
   // only exposed currently because RemoveDevice is on Coordinator instead of
@@ -511,8 +513,6 @@ class Device
 
   const fbl::String& link_name() const { return link_name_; }
   void set_link_name(fbl::String link_name) { link_name_ = std::move(link_name); }
-
-  fbl::RefPtr<fs::VmoFile>& inspect_file() { return inspect_file_; }
 
   // TODO(teisenbe): We probably want more states.
 #define STATE_VALUES(macro)                                                                        \
@@ -573,7 +573,7 @@ class Device
     return coordinator_binding_;
   }
 
-  const fidl::ServerEnd<fuchsia_device_manager::DeviceController> ConnectDeviceController(
+  fidl::ServerEnd<fuchsia_device_manager::DeviceController> ConnectDeviceController(
       async_dispatcher_t* dispatcher) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_device_manager::DeviceController>();
     device_controller_.Bind(std::move(endpoints->client), dispatcher);
@@ -671,8 +671,6 @@ class Device
   // Name of the inspect vmo file as it appears in diagnostics class directory
   fbl::String link_name_;
 
-  fbl::RefPtr<fs::VmoFile> inspect_file_;
-
   // For attaching as an open connection to the proxy device,
   // or once the device becomes visible.
   zx::channel client_remote_;
@@ -683,7 +681,7 @@ class Device
   // This lets us check for unexpected removals and is for testing use only.
   size_t num_removal_attempts_ = 0;
 
-  std::optional<DeviceInspect> inspect_;
+  DeviceInspect inspect_;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_DEVICE_H_
