@@ -156,7 +156,7 @@ async fn add_mouse_handler(
 //
 // This value has been tuned for Atlas, and may need further tuning or
 // configuration for other devices.
-const CLICK_TO_DRAG_THRESHOLD: f32 = 16.0;
+const CLICK_TO_DRAG_THRESHOLD_MM: f32 = 16.0 / 12.0;
 
 async fn build_input_pipeline_assembly(
     use_flatland: bool,
@@ -306,7 +306,7 @@ async fn add_ime(mut assembly: InputPipelineAssembly) -> InputPipelineAssembly {
 
 fn add_click_drag_handler(assembly: InputPipelineAssembly) -> InputPipelineAssembly {
     assembly.add_handler(input_pipeline::click_drag_handler::ClickDragHandler::new(
-        CLICK_TO_DRAG_THRESHOLD,
+        CLICK_TO_DRAG_THRESHOLD_MM,
     ))
 }
 

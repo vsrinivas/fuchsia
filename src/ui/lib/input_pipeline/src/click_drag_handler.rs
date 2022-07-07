@@ -20,7 +20,11 @@ use {
 /// not associated with a mouse device.
 #[derive(Debug)]
 struct RelativeMouseEvent {
-    displacement: Position, // Change in position since the previous event
+    // Change in position since the previous event in mm
+    displacement: Position,
+    // Change in position since the previous event in counts
+    // TODO(https://fxbug.dev/103457) Remove displacement_counts.
+    displacement_counts: Position,
     phase: mouse_binding::MousePhase,
     affected_buttons: HashSet<mouse_binding::MouseButton>,
     pressed_buttons: HashSet<mouse_binding::MouseButton>,
@@ -40,8 +44,8 @@ impl TryFrom<input_device::UnhandledInputEvent> for RelativeMouseEvent {
                     input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
                         location:
                             mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
-                                counts: position,
-                                ..
+                                counts: position_counts,
+                                millimeters: position,
                             }),
                         // Click and drag only interested in motion and button events.
                         phase:
@@ -57,6 +61,7 @@ impl TryFrom<input_device::UnhandledInputEvent> for RelativeMouseEvent {
                 trace_id: _,
             } => Ok(RelativeMouseEvent {
                 displacement: position,
+                displacement_counts: position_counts,
                 phase,
                 affected_buttons,
                 pressed_buttons,
@@ -74,9 +79,9 @@ impl From<RelativeMouseEvent> for input_device::InputEvent {
         input_device::InputEvent {
             device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
-                    counts: relative_mouse_event.displacement,
-                    // TODO(https://fxbug.dev/102567): Implement millimeters.
-                    millimeters: Position::zero(),
+                    millimeters: relative_mouse_event.displacement,
+                    // TODO(https://fxbug.dev/103457) Remove counts.
+                    counts: relative_mouse_event.displacement_counts,
                 }),
                 wheel_delta_v: None,
                 wheel_delta_h: None,
@@ -177,7 +182,7 @@ pub struct ClickDragHandler {
     event_count: Cell<u64>,
     // Threshold Euclidean distance at which an ambiguous gesture
     // is resolved to be a drag.
-    click_to_drag_threshold: f32,
+    click_to_drag_threshold_mm: f32,
 }
 
 #[async_trait(?Send)]
@@ -199,12 +204,12 @@ impl UnhandledInputHandler for ClickDragHandler {
 
 impl ClickDragHandler {
     /// Creates a new [`ClickDragHandler`] that disambiguates clicks vs. drags.
-    pub fn new(click_to_drag_threshold: f32) -> Rc<Self> {
+    pub fn new(click_to_drag_threshold_mm: f32) -> Rc<Self> {
         Rc::new(Self {
             state: RefCell::new(HandlerState::NoActiveGesture),
             entry_time: Cell::new(std::time::Instant::now()),
             event_count: Cell::new(0),
-            click_to_drag_threshold,
+            click_to_drag_threshold_mm,
         })
     }
 
@@ -367,7 +372,7 @@ impl ClickDragHandler {
     /// Returns true iff the Euclidean distance for the displacement indicated
     /// by (delta_x, delta_y) is less than the drag threshold.
     fn motion_is_in_click_threshold(&self, delta_x: f32, delta_y: f32) -> bool {
-        (delta_x * delta_x + delta_y * delta_y).sqrt() < self.click_to_drag_threshold
+        (delta_x * delta_x + delta_y * delta_y).sqrt() < self.click_to_drag_threshold_mm
     }
 }
 
@@ -386,13 +391,12 @@ mod tests {
             wheel_v_range: None,
             wheel_h_range: None,
             buttons: None,
-            // TODO(https://fxbug.dev/102567) Use millimeters.
-            counts_per_mm: 1,
+            counts_per_mm: mouse_binding::DEFAULT_COUNTS_PER_MM,
         });
-    const CLICK_TO_DRAG_THRESHOLD: f32 = 16.0;
-    const SMALL_MOTION: f32 = CLICK_TO_DRAG_THRESHOLD * 0.1;
-    const HALF_MOTION: f32 = CLICK_TO_DRAG_THRESHOLD / 2.0;
-    const LARGE_MOTION: f32 = CLICK_TO_DRAG_THRESHOLD * 1.2;
+    const CLICK_TO_DRAG_THRESHOLD_MM: f32 = 16.0 / 12.0;
+    const SMALL_MOTION: f32 = CLICK_TO_DRAG_THRESHOLD_MM * 0.1;
+    const HALF_MOTION: f32 = CLICK_TO_DRAG_THRESHOLD_MM / 2.0;
+    const LARGE_MOTION: f32 = CLICK_TO_DRAG_THRESHOLD_MM * 1.2;
     const DIAGONAL_LARGE_MOTION: f32 = LARGE_MOTION / 2.0 * std::f32::consts::SQRT_2;
 
     std::thread_local! {static NEXT_EVENT_TIME: Cell<i64> = Cell::new(0)}
@@ -415,7 +419,7 @@ mod tests {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn button_down_is_passed_through_when_no_button_was_previously_clicked() {
-        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD_MM);
         let event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: None,
@@ -432,11 +436,11 @@ mod tests {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn move_event_is_passed_through_when_no_button_is_clicked() {
-        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD_MM);
         let event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
-                counts: Position { x: SMALL_MOTION, y: SMALL_MOTION },
-                millimeters: Position::zero(),
+                millimeters: Position { x: SMALL_MOTION, y: SMALL_MOTION },
+                counts: Position::zero(),
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
@@ -452,7 +456,7 @@ mod tests {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn button_down_then_small_motion_yields_no_move_events() {
-        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD_MM);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: None,
@@ -463,8 +467,8 @@ mod tests {
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
-                counts: Position { x: 0.0, y: SMALL_MOTION },
-                millimeters: Position::zero(),
+                millimeters: Position { x: 0.0, y: SMALL_MOTION },
+                counts: Position::zero(),
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
@@ -482,7 +486,7 @@ mod tests {
     #[fuchsia::test(allow_stalls = false)]
     async fn button_down_then_small_motion_then_button_up_yields_handled_move_and_unhandled_button_up(
     ) {
-        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD_MM);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: None,
@@ -493,8 +497,8 @@ mod tests {
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
-                counts: Position { x: 0.0, y: SMALL_MOTION },
-                millimeters: Position::zero(),
+                millimeters: Position { x: 0.0, y: SMALL_MOTION },
+                counts: Position::zero(),
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
@@ -535,7 +539,7 @@ mod tests {
     #[test_case(Position { x: DIAGONAL_LARGE_MOTION, y: DIAGONAL_LARGE_MOTION }; "diagonal")]
     #[fuchsia::test(allow_stalls = false)]
     async fn button_down_then_large_motion_yields_large_motion(position: Position) {
-        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD_MM);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: None,
@@ -546,8 +550,8 @@ mod tests {
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
-                counts: position,
-                millimeters: Position::zero(),
+                millimeters: position,
+                counts: Position::zero(),
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
@@ -567,7 +571,7 @@ mod tests {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn button_up_after_botton_down_and_large_motion_does_not_replay_motion() {
-        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD_MM);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: None,
@@ -578,8 +582,8 @@ mod tests {
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
-                counts: Position { x: 0.0, y: LARGE_MOTION },
-                millimeters: Position::zero(),
+                millimeters: Position { x: 0.0, y: LARGE_MOTION },
+                counts: Position::zero(),
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
@@ -609,7 +613,7 @@ mod tests {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn button_down_then_two_motions_summing_past_drag_threshold_yields_motions() {
-        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD_MM);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: None,
@@ -620,8 +624,8 @@ mod tests {
         });
         let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
-                counts: Position { x: 0.0, y: HALF_MOTION },
-                millimeters: Position::zero(),
+                millimeters: Position { x: 0.0, y: HALF_MOTION },
+                counts: Position::zero(),
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
@@ -631,8 +635,8 @@ mod tests {
         });
         let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
-                counts: Position { x: 0.0, y: HALF_MOTION },
-                millimeters: Position::zero(),
+                millimeters: Position { x: 0.0, y: HALF_MOTION },
+                counts: Position::zero(),
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
@@ -662,7 +666,7 @@ mod tests {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn move_events_continue_after_drag_is_recognized() {
-        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD_MM);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: None,
@@ -673,8 +677,8 @@ mod tests {
         });
         let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
-                counts: Position { x: 0.0, y: HALF_MOTION },
-                millimeters: Position::zero(),
+                millimeters: Position { x: 0.0, y: HALF_MOTION },
+                counts: Position::zero(),
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
@@ -684,8 +688,8 @@ mod tests {
         });
         let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
-                counts: Position { x: 0.0, y: HALF_MOTION },
-                millimeters: Position::zero(),
+                millimeters: Position { x: 0.0, y: HALF_MOTION },
+                counts: Position::zero(),
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
@@ -695,8 +699,8 @@ mod tests {
         });
         let third_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
-                counts: Position { x: 0.0, y: HALF_MOTION },
-                millimeters: Position::zero(),
+                millimeters: Position { x: 0.0, y: HALF_MOTION },
+                counts: Position::zero(),
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
@@ -717,16 +721,16 @@ mod tests {
         );
     }
 
-    #[test_case(Position { x: -2.0, y: 0.0 },
-                    Position { x: CLICK_TO_DRAG_THRESHOLD + 1.0, y: 0.0}; "horizontal")]
-    #[test_case(Position { x: 0.0, y: -2.0 },
-                    Position { x: 0.0, y: CLICK_TO_DRAG_THRESHOLD + 1.0}; "vertical")]
+    #[test_case(Position { x: -2.0 / 12.0, y: 0.0 },
+                    Position { x: CLICK_TO_DRAG_THRESHOLD_MM + (1.0 / 12.0), y: 0.0}; "horizontal")]
+    #[test_case(Position { x: 0.0, y: -2.0 / 12.0 },
+                    Position { x: 0.0, y: CLICK_TO_DRAG_THRESHOLD_MM +  (1.0 / 12.0)}; "vertical")]
     #[fuchsia::test(allow_stalls = false)]
     async fn back_and_forth_motion_does_not_spuriously_yield_move_events(
         first_motion: Position,
         second_motion: Position,
     ) {
-        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD_MM);
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: None,
@@ -737,8 +741,8 @@ mod tests {
         });
         let first_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
-                counts: first_motion,
-                millimeters: Position::zero(),
+                millimeters: first_motion,
+                counts: Position::zero(),
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
@@ -748,8 +752,8 @@ mod tests {
         });
         let second_move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
-                counts: second_motion,
-                millimeters: Position::zero(),
+                millimeters: second_motion,
+                counts: Position::zero(),
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
@@ -771,7 +775,7 @@ mod tests {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn ignore_wheel_events() {
-        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD_MM);
         let wheel_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Default::default()),
             wheel_delta_v: Some(1),
@@ -789,7 +793,7 @@ mod tests {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn ignore_wheel_events_in_click_drag() {
-        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD);
+        let handler = ClickDragHandler::new(CLICK_TO_DRAG_THRESHOLD_MM);
 
         let button_down_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(Default::default()),
@@ -801,8 +805,8 @@ mod tests {
         });
         let move_event = make_unhandled_input_event(mouse_binding::MouseEvent {
             location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
-                counts: Position { x: -2.0, y: 0.0 },
-                millimeters: Position::zero(),
+                millimeters: Position { x: -2.0, y: 0.0 },
+                counts: Position::zero(),
             }),
             wheel_delta_v: None,
             wheel_delta_h: None,
