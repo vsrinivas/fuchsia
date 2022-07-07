@@ -2271,3 +2271,17 @@
   reviewers: ['dworsham@google.com', 'jaeheon@google.com', 'jjosh@google.com', 'lucasradaelli@google.com', 'neelsa@google.com', 'quiche@google.com']
   submitted: '2022-06-02'
   reviewed: '2022-07-01'
+
+- name: 'RFC-0175'
+  title: 'ELF Runner stdio forwarding defaults'
+  short_description: 'Improving the component developer experience by forwarding stdout/stderr to LogSink by default.'
+  authors: ['adamperry@google.com']
+  file: '0175_elf_runner_stdio_forwarding_defaults.md'
+  area: ['Component Framework']
+  issue: ['91082']
+  gerrit_change_id: ['686908']
+  status: 'Accepted'
+  reviewers: ['geb@google.com', 'yaneury@google.com']
+  consulted: ['hjfreyer@google.com', 'abdulla@google.com', 'miguelfrde@google.com', 'surajmalhotra@google.com', 'wez@google.com', 'shayba@google.com']
+  submitted: '2022-06-03'
+  reviewed: '2022-07-06'
