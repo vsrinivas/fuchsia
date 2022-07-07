@@ -6,6 +6,12 @@ library fuchsia.hardware.i2cimpl;
 
 using zx;
 
+const I2C_IMPL_10_BIT_ADDR_MASK uint32 = 0xF000;
+/// The maximum number of I2cImplOp's that may be passed to Transact.
+const I2C_IMPL_MAX_RW_OPS uint32 = 8;
+/// The maximum length of all read or all write transfers in bytes.
+const I2C_IMPL_MAX_TOTAL_TRANSFER uint32 = 4096;
+
 /// See `Transact` below for usage.
 type I2cImplOp = struct {
     address uint16;
