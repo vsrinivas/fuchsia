@@ -1,0 +1,22 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//zircon/kernel/phys/efi/efi_executable.gni")
+
+efi_executable("gigaboot") {
+  sources = [
+    "main.cc",
+    "sysdeps.cc",
+  ]
+
+  deps = [
+    "//src/firmware/lib/zircon_boot:in_tree",
+    "//zircon/kernel/lib/ktl",
+    "//zircon/kernel/lib/libc",
+    "//zircon/system/ulib/zbitl",
+    "//zircon/third_party/ulib/cksum",
+  ]
+
+  cflags = [ "-DAVB_COMPILATION" ]
+}

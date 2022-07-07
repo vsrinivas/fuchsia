@@ -18,16 +18,16 @@ common_vars = {
     "zircon_vboot.c",
     "zircon_vboot.h",
   ]
-  public_deps = [
-    "//src/firmware/lib/abr",
-    "//src/firmware/lib/zbi",
-    "//third_party/android/platform/external/avb",
-  ]
 }
 
 # SDK library.
 zx_library("zircon_boot") {
   forward_variables_from(common_vars, "*")
+  public_deps = [
+    "//src/firmware/lib/abr",
+    "//src/firmware/lib/zbi",
+    "//third_party/android/platform/external/avb",
+  ]
   sdk_publishable = "experimental"
 }
 
@@ -37,5 +37,14 @@ zx_library("zircon_boot") {
 # targets.
 zx_library("in_tree") {
   forward_variables_from(common_vars, "*")
+  public_deps = [
+    "//src/firmware/lib/abr:in_tree",
+    "//src/firmware/lib/zbi:in_tree",
+  ]
+
+  # For in-tree build, use the library target without sysdeps. Final
+  # executable target or toolchain need to provide the implementation
+  # accordingly.
+  public_deps += [ "//third_party/android/platform/external/avb:lib" ]
   deps = [ "//zircon/system/public" ]
 }

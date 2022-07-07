@@ -4,6 +4,7 @@
  */
 
 #include <lib/abr/abr.h>
+#include <lib/abr/util.h>
 #include <stdarg.h>
 
 /* Returns |in| in big-endian byte order. */

@@ -32,4 +32,8 @@ zx_library("abr") {
 zx_library("in_tree") {
   forward_variables_from(common_vars, "*")
   deps = [ "//zircon/system/public" ]
+
+  if (is_kernel) {
+    public_deps = [ "//zircon/kernel/lib/libc" ]
+  }
 }

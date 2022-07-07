@@ -282,8 +282,9 @@ static bool ZirconVBootSlotVerifyInternal(ZirconBootOps* zb_ops, zbi_header_t* i
         continue;
       }
 
-      AvbIOResult result = avb_ops.write_rollback_index(&avb_ops, i, rollback_index_value);
-      if (result != AVB_IO_RESULT_OK) {
+      AvbIOResult write_rb_idx_res =
+          avb_ops.write_rollback_index(&avb_ops, i, rollback_index_value);
+      if (write_rb_idx_res != AVB_IO_RESULT_OK) {
         zircon_boot_dlog("Failed to write rollback index: %zu\n", i);
         return false;
       }
@@ -291,9 +292,9 @@ static bool ZirconVBootSlotVerifyInternal(ZirconBootOps* zb_ops, zbi_header_t* i
 
     // Also increase rollback index values for Fuchsia key version locations.
     for (size_t i = 0; i < AVB_ATX_NUM_KEY_VERSIONS; i++) {
-      AvbIOResult result = avb_ops.write_rollback_index(&avb_ops, context.key_versions[i].location,
-                                                        context.key_versions[i].value);
-      if (result != AVB_IO_RESULT_OK) {
+      AvbIOResult write_key_rb_idx_res = avb_ops.write_rollback_index(
+          &avb_ops, context.key_versions[i].location, context.key_versions[i].value);
+      if (write_key_rb_idx_res != AVB_IO_RESULT_OK) {
         zircon_boot_dlog("Failed to write rollback index: %zu\n", context.key_versions[i].location);
         return false;
       }
