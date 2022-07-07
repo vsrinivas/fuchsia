@@ -29,7 +29,6 @@ if (target_cpu == "arm64") {
 
     deps = [
       ":amlogic_video_bind_test",
-      ":test_amlogic_codec_factory_package",
       "tests/runner:amlogic_decoder_integration_tests",
       "tests/unit_tests:amlogic-decoder-unittest",
     ]
@@ -292,33 +291,5 @@ if (target_cpu == "arm64") {
     testonly = true
     driver_components = [ ":amlogic_decoder_test-component" ]
     deps = [ ":test_files" ]
-  }
-
-  #
-  # Manual tests
-  #
-
-  executable("test_amlogic_codec_factory") {
-    testonly = true
-    sources = [ "tests/manual/test_amlogic_codec_factory.cc" ]
-    deps = [
-      "//sdk/fidl/fuchsia.mediacodec",
-      "//sdk/lib/sys/cpp",
-      "//src/sys/testing/elftest",
-      "//zircon/system/ulib/async-loop:async-loop-cpp",
-      "//zircon/system/ulib/async-loop:async-loop-default",
-    ]
-  }
-
-  fuchsia_unittest_package("test_amlogic_codec_factory_package") {
-    if (target_cpu == "arm64") {
-      deps = [ ":test_amlogic_codec_factory" ]
-      test_specs = {
-        environments = [
-          # Manual only test; uncomment out to use `fx test`
-          #astro_env
-        ]
-      }
-    }
   }
 }
