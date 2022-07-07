@@ -7,7 +7,6 @@
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/ddk/trace/event.h>
-#include <lib/device-protocol/i2c.h>
 #include <lib/fit/defer.h>
 #include <lib/simple-codec/simple-codec-helper.h>
 
@@ -361,7 +360,7 @@ void Tas58xx::SetAutomaticGainControlElement(signal_fidl::ElementState state) {
     const uint8_t agl_value = 0x40 | (enable_agl ? kRegAglEnableBitByte0 : 0);
 
     // clang-format off
-    const uint8_t buffer[] = {
+    uint8_t buffer[] = {
         kRegSelectBook, 0x8c,
         kRegSelectPage, 0x2c,
         kRegAgl, agl_value, 0x00, 0x00, 0x00,
@@ -370,43 +369,53 @@ void Tas58xx::SetAutomaticGainControlElement(signal_fidl::ElementState state) {
     };
     // clang-format on
 
-    i2c_op_t ops[5] = {};
+    fuchsia_hardware_i2c::wire::Transaction ops[5] = {};
 
-    ops[0].data_buffer = &buffer[0];
-    ops[0].data_size = 2;
-    ops[0].is_read = false;
-    ops[0].stop = true;
+    struct {
+      fidl::ObjectView<fidl::WireTableFrame<fuchsia_hardware_i2c::wire::Transaction>>
+      Transaction() {
+        return fidl::ObjectView<fidl::WireTableFrame<fuchsia_hardware_i2c::wire::Transaction>>::
+            FromExternal(&transaction);
+      }
 
-    ops[1].data_buffer = &buffer[2];
-    ops[1].data_size = 2;
-    ops[1].is_read = false;
-    ops[1].stop = true;
+      fidl::ObjectView<fuchsia_hardware_i2c::wire::DataTransfer> DataTransfer(uint8_t* data,
+                                                                              size_t count) {
+        write_data = fidl::VectorView<uint8_t>::FromExternal(data, count);
+        data_transfer = fuchsia_hardware_i2c::wire::DataTransfer::WithWriteData(
+            fidl::ObjectView<fidl::VectorView<uint8_t>>::FromExternal(&write_data));
+        return fidl::ObjectView<fuchsia_hardware_i2c::wire::DataTransfer>::FromExternal(
+            &data_transfer);
+      }
 
-    ops[2].data_buffer = &buffer[4];
-    ops[2].data_size = 5;
-    ops[2].is_read = false;
-    ops[2].stop = true;
+      fidl::WireTableFrame<fuchsia_hardware_i2c::wire::Transaction> transaction;
+      fidl::VectorView<uint8_t> write_data;
+      fuchsia_hardware_i2c::wire::DataTransfer data_transfer;
+    } ops_data[5] = {};
 
-    ops[3].data_buffer = &buffer[9];
-    ops[3].data_size = 2;
-    ops[3].is_read = false;
-    ops[3].stop = true;
+    ops[0] = fuchsia_hardware_i2c::wire::Transaction::ExternalBuilder(ops_data[0].Transaction())
+                 .data_transfer(ops_data[0].DataTransfer(&buffer[0], 2))
+                 .stop(true)
+                 .Build();
+    ops[1] = fuchsia_hardware_i2c::wire::Transaction::ExternalBuilder(ops_data[1].Transaction())
+                 .data_transfer(ops_data[1].DataTransfer(&buffer[2], 2))
+                 .stop(true)
+                 .Build();
+    ops[2] = fuchsia_hardware_i2c::wire::Transaction::ExternalBuilder(ops_data[2].Transaction())
+                 .data_transfer(ops_data[2].DataTransfer(&buffer[4], 5))
+                 .stop(true)
+                 .Build();
+    ops[3] = fuchsia_hardware_i2c::wire::Transaction::ExternalBuilder(ops_data[3].Transaction())
+                 .data_transfer(ops_data[3].DataTransfer(&buffer[9], 2))
+                 .stop(true)
+                 .Build();
+    ops[4] = fuchsia_hardware_i2c::wire::Transaction::ExternalBuilder(ops_data[4].Transaction())
+                 .data_transfer(ops_data[4].DataTransfer(&buffer[11], 2))
+                 .stop(true)
+                 .Build();
 
-    ops[4].data_buffer = &buffer[11];
-    ops[4].data_size = 2;
-    ops[4].is_read = false;
-    ops[4].stop = true;
-
-    sync_completion_t completion;
-    sync_completion_reset(&completion);
-
-    i2c_.Transact(
-        ops, countof(ops),
-        [](void* ctx, zx_status_t status, const i2c_op_t* op_list, size_t op_count) {
-          sync_completion_signal(reinterpret_cast<sync_completion_t*>(ctx));
-        },
-        &completion);
-    sync_completion_wait(&completion, ZX_TIME_INFINITE);
+    auto result =
+        i2c_.Transfer(fidl::VectorView<fuchsia_hardware_i2c::wire::Transaction>::FromExternal(
+            ops, std::size(ops)));
 
     signal_fidl::ElementState state;
     state.set_enabled(enable_agl);
@@ -776,35 +785,14 @@ zx_status_t Tas58xx::SetBand(bool enable, size_t index, uint32_t frequency, floa
     return status;
   }
 
-  struct TransactReturn {
-    sync_completion_t completion;
-    zx_status_t status;
-  } transact_return;
-
-  i2c_op_t ops;
-  ops.is_read = false;
-  ops.stop = true;
-
   // Issue the band coefficients write.
   status = WriteReg(kRegSelectPage, first_reg_page);
   if (status != ZX_OK) {
     return status;
   }
-  sync_completion_reset(&transact_return.completion);
-  ops.data_buffer = &(band_regs[0]);
-  ops.data_size = countof(band_regs);
-  i2c_.Transact(
-      &ops, 1,
-      [](void* ctx, zx_status_t status, const i2c_op_t* op_list, size_t op_count) {
-        reinterpret_cast<TransactReturn*>(ctx)->status = status;
-        sync_completion_signal(&reinterpret_cast<TransactReturn*>(ctx)->completion);
-      },
-      &transact_return);
-  sync_completion_wait(&transact_return.completion, ZX_TIME_INFINITE);
-  if (transact_return.status != ZX_OK) {
-    zxlogf(WARNING, "Equalizer I2C transaction failure: %s",
-           zx_status_get_string(transact_return.status));
-    return transact_return.status;
+  if ((status = i2c_.WriteSync(&band_regs[0], std::size(band_regs))) != ZX_OK) {
+    zxlogf(WARNING, "Equalizer I2C transaction failure: %s", zx_status_get_string(status));
+    return status;
   }
 
   // Issue the gain adjustment write.
@@ -812,21 +800,9 @@ zx_status_t Tas58xx::SetBand(bool enable, size_t index, uint32_t frequency, floa
   if (status != ZX_OK) {
     return status;
   }
-  sync_completion_reset(&transact_return.completion);
-  ops.data_buffer = &(gain_regs[0]);
-  ops.data_size = countof(gain_regs);
-  i2c_.Transact(
-      &ops, 1,
-      [](void* ctx, zx_status_t status, const i2c_op_t* op_list, size_t op_count) {
-        reinterpret_cast<TransactReturn*>(ctx)->status = status;
-        sync_completion_signal(&reinterpret_cast<TransactReturn*>(ctx)->completion);
-      },
-      &transact_return);
-  sync_completion_wait(&transact_return.completion, ZX_TIME_INFINITE);
-  if (transact_return.status != ZX_OK) {
-    zxlogf(WARNING, "Equalizer I2C transaction failure: %s",
-           zx_status_get_string(transact_return.status));
-    return transact_return.status;
+  if ((status = i2c_.WriteSync(&gain_regs[0], std::size(gain_regs))) != ZX_OK) {
+    zxlogf(WARNING, "Equalizer I2C transaction failure: %s", zx_status_get_string(status));
+    return status;
   }
 
   // Back to book 0 and play mode if we are started.
