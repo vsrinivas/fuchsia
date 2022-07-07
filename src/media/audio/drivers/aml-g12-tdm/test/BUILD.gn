@@ -17,7 +17,6 @@ executable("aml-g12-tdm-test-bin") {
   deps = [
     "../:aml-g12-tdm-bind",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp_mock",
-    "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_banjo_cpp",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
     "//sdk/lib/inspect/testing/cpp:zxtest",
     "//src/devices/bus/lib/device-protocol-pdev",

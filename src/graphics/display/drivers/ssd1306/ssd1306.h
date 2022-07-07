@@ -4,9 +4,7 @@
 
 #include <fidl/fuchsia.hardware.dotmatrixdisplay/cpp/wire.h>
 #include <fuchsia/hardware/dotmatrixdisplay/cpp/banjo.h>
-#include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
-#include <lib/device-protocol/i2c.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <threads.h>
 

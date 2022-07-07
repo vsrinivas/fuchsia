@@ -8,7 +8,6 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
-#include <lib/device-protocol/i2c.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/zx/clock.h>

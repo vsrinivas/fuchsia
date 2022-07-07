@@ -6,7 +6,6 @@
 
 #include <lib/ddk/debug.h>
 #include <lib/ddk/trace/event.h>
-#include <lib/device-protocol/i2c.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>

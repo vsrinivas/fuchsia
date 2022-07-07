@@ -7,9 +7,7 @@
 
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
-#include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <lib/device-protocol/i2c-channel.h>
-#include <lib/device-protocol/i2c.h>
 #include <threads.h>
 
 #include <memory>

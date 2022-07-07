@@ -21,7 +21,6 @@ fuchsia_driver("alc5514-driver") {
   sources = [ "alc5514.cc" ]
   deps = [
     ":alc5514_bind",
-    "//sdk/banjo/fuchsia.hardware.i2c:fuchsia.hardware.i2c_banjo_cpp",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",

@@ -4,7 +4,6 @@
 
 #include "src/graphics/display/drivers/ssd1306/ssd1306.h"
 
-#include <fuchsia/hardware/i2c/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>

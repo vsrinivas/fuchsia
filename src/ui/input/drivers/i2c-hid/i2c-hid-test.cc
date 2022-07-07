@@ -11,7 +11,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/trace/event.h>
-#include <lib/device-protocol/i2c.h>
+#include <lib/device-protocol/i2c-channel.h>
 #include <lib/fake-hidbus-ifc/fake-hidbus-ifc.h>
 #include <lib/fake-i2c/fake-i2c.h>
 #include <lib/fake_ddk/fake_ddk.h>

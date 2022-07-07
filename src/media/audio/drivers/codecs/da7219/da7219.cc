@@ -5,7 +5,6 @@
 #include "src/media/audio/drivers/codecs/da7219/da7219.h"
 
 #include <lib/ddk/platform-defs.h>
-#include <lib/device-protocol/i2c.h>
 #include <lib/simple-codec/simple-codec-helper.h>
 
 #include "src/devices/lib/acpi/client.h"

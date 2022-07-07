@@ -21,8 +21,6 @@
 
 // The following equality operators are necessary for mocks.
 
-bool operator==(const i2c_op_t& lhs, const i2c_op_t& rhs) { return true; }
-
 bool operator==(const dimensions_t& lhs, const dimensions_t& rhs) {
   return lhs.x == rhs.x && lhs.y == rhs.y;
 }

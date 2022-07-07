@@ -9,7 +9,6 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/hw/reg.h>
 #include <lib/ddk/metadata.h>
-#include <lib/device-protocol/i2c.h>
 #include <lib/driver-unit-test/utils.h>
 #include <lib/fpromise/result.h>
 #include <lib/trace/event.h>

@@ -7,7 +7,6 @@
 
 #include <endian.h>
 #include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
-#include <lib/device-protocol/i2c.h>
 #include <zircon/types.h>
 
 #include <hwreg/bitfields.h>

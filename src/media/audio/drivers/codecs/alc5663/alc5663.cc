@@ -8,7 +8,6 @@
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c-channel.h>
-#include <lib/device-protocol/i2c.h>
 #include <sys/types.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>

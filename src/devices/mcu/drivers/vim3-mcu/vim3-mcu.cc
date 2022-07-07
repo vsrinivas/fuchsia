@@ -8,7 +8,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
-#include <lib/device-protocol/i2c.h>
+#include <lib/device-protocol/i2c-channel.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>

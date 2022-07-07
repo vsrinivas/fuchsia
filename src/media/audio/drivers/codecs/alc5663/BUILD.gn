@@ -23,7 +23,6 @@ source_set("shared") {
   public_deps = [
     ":alc5663_bind",
     "//sdk/lib/fit",
-    "//src/devices/i2c/lib/device-protocol-i2c",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",

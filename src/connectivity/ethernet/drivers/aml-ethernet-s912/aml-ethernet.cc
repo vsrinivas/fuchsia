@@ -10,7 +10,7 @@
 #include <lib/ddk/hw/reg.h>
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
-#include <lib/device-protocol/i2c.h>
+#include <lib/device-protocol/i2c-channel.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/compiler.h>

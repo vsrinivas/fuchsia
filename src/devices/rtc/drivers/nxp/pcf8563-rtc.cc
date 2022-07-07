@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/hardware/i2c/c/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c-channel.h>
-#include <lib/device-protocol/i2c.h>
 #include <librtc.h>
 #include <stdlib.h>
 #include <zircon/assert.h>
