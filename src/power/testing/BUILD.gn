@@ -5,10 +5,7 @@
 group("testing") {
   testonly = true
 
-  deps = [
-    ":tests",
-    "thermal-test-control",
-  ]
+  deps = [ ":tests" ]
 }
 
 group("tests") {

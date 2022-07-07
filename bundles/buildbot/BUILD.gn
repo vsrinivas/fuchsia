@@ -147,7 +147,6 @@ group("core_base_packages") {
     "//src/performance/ktrace_provider:ktrace_provider",
     "//src/performance/trace:trace",
     "//src/performance/trace_manager",
-    "//src/power/testing/thermal-test-control:thermal-test-control",
     "//src/proc/bin/starnix",
     "//src/security/codelab/smart_door:smart-door",
     "//src/security/codelab/smart_door_memory:smart-door-memory",

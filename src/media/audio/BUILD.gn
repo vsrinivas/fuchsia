@@ -31,7 +31,6 @@ group("tests") {
     "lib/audio_test_devmgr",
     "services:tests",
     "tools:tests",
-    "//src/power/testing/thermal-test-control",
   ]
 }
 
