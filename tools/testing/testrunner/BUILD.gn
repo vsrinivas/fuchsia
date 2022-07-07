@@ -12,6 +12,7 @@ go_library("lib") {
     "nsjail_test.go",
     "outputs.go",
     "outputs_test.go",
+    "resolve.go",
     "result.go",
     "tester.go",
     "tester_test.go",

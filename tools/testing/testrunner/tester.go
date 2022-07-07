@@ -754,6 +754,30 @@ func (t *FFXTester) RunSnapshot(ctx context.Context, snapshotFile string) error 
 	return err
 }
 
+func sshToTarget(ctx context.Context, addr net.IPAddr, sshKeyFile string) (*sshutil.Client, error) {
+	key, err := ioutil.ReadFile(sshKeyFile)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read SSH key file: %w", err)
+	}
+	config, err := sshutil.DefaultSSHConfig(key)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create an SSH client config: %w", err)
+	}
+
+	return sshutil.NewClient(
+		ctx,
+		sshutil.ConstantAddrResolver{
+			Addr: &net.TCPAddr{
+				IP:   addr.IP,
+				Port: sshutil.SSHPort,
+				Zone: addr.Zone,
+			},
+		},
+		config,
+		sshutil.DefaultConnectBackoff(),
+	)
+}
+
 // FuchsiaSSHTester executes fuchsia tests over an SSH connection.
 type FuchsiaSSHTester struct {
 	client                      sshClient
@@ -768,27 +792,7 @@ type FuchsiaSSHTester struct {
 // instance of given nodename, the private key paired with an authorized one
 // and the directive of whether `runtests` should be used to execute the test.
 func NewFuchsiaSSHTester(ctx context.Context, addr net.IPAddr, sshKeyFile, localOutputDir, serialSocketPath string, useRuntests bool) (Tester, error) {
-	key, err := ioutil.ReadFile(sshKeyFile)
-	if err != nil {
-		return nil, fmt.Errorf("failed to read SSH key file: %w", err)
-	}
-	config, err := sshutil.DefaultSSHConfig(key)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create an SSH client config: %w", err)
-	}
-
-	client, err := sshutil.NewClient(
-		ctx,
-		sshutil.ConstantAddrResolver{
-			Addr: &net.TCPAddr{
-				IP:   addr.IP,
-				Port: sshutil.SSHPort,
-				Zone: addr.Zone,
-			},
-		},
-		config,
-		sshutil.DefaultConnectBackoff(),
-	)
+	client, err := sshToTarget(ctx, addr, sshKeyFile)
 	if err != nil {
 		return nil, fmt.Errorf("failed to establish an SSH connection: %w", err)
 	}

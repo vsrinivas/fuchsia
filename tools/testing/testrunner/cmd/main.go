@@ -78,6 +78,10 @@ type testrunnerFlags struct {
 
 	// The level of experimental ffx features to enable.
 	ffxExperimentLevel int
+
+	// Whether to prefetch test packages. This is only useful when fetching
+	// packages ephemerally.
+	prefetchPackages bool
 }
 
 func usage() {
@@ -104,6 +108,7 @@ func main() {
 	flag.Var(&flags.logLevel, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
 	flag.StringVar(&flags.ffxPath, "ffx", "", "Path to the ffx tool.")
 	flag.IntVar(&flags.ffxExperimentLevel, "ffx-experiment-level", 0, "The level of experimental features to enable. If -ffx is not set, this will have no effect.")
+	flag.BoolVar(&flags.prefetchPackages, "prefetch-packages", false, "Prefetch any test packages in the background.")
 
 	flag.Usage = usage
 	flag.Parse()
@@ -303,6 +308,23 @@ func execute(
 	)
 
 	if sshKeyFile != "" {
+		if flags.prefetchPackages {
+			// TODO(rudymathu): Remove this prefetching of packages once package
+			// delivery is fast enough.
+			var wg sync.WaitGroup
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				resolveLog := filepath.Join(outDir, "resolve.log")
+				if err := testrunner.ResolveTestPackages(ctx, tests, addr, sshKeyFile, resolveLog); err != nil {
+					logger.Warningf(ctx, "package pre-fetching routine failed: %s", err)
+				}
+			}()
+			// We wait here to ensure that our log of resolved packages is
+			// correctly saved.
+			defer wg.Wait()
+		}
+
 		ffxPath, ok := os.LookupEnv(botanistconstants.FFXPathEnvKey)
 		if !ok {
 			ffxPath = flags.ffxPath
