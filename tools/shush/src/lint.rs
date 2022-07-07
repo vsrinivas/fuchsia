@@ -101,26 +101,29 @@ pub fn filter_lints<R: BufRead>(input: &mut R, filter: &[String]) -> HashMap<Str
         }
     }
 
-    let mut files: HashMap<String, Vec<Lint>> = HashMap::new();
+    let mut files = HashMap::new();
     serde_json::Deserializer::from_reader(input)
         .into_iter::<Diagnostic>()
         .map(|result| result.expect("parsing diagnostic"))
         .filter_map(|d| d.code.as_ref().map(|c| filter_lints.contains(&c.code).then(|| d.clone())))
         .flatten()
         .for_each(|lint| {
-            let span = lint.spans.iter().find(|s| s.is_primary).expect("no primary span found");
-            let file = &span.file_name;
+            let span =
+                lint.spans.into_iter().find(|s| s.is_primary).expect("no primary span found");
             // ignore stuff in the build directory
-            if file.starts_with("out/") {
-                eprintln!("Ignoring file inside build dir: {}", file);
+            if span.file_name.starts_with("out/") {
+                eprintln!("Ignoring file inside build dir: {}", span.file_name);
             } else {
-                files
-                    .entry(file.to_string())
-                    .or_default()
-                    .push(Lint { name: lint.code.unwrap().code, span: span.into() });
+                let lint = Lint { name: lint.code.unwrap().code, span: Span::from(&span) };
+                files.entry(span.file_name).or_insert(Vec::new()).push(lint);
             }
         });
     files
+}
+
+pub struct LintFile {
+    pub path: String,
+    pub lints: Vec<Lint>,
 }
 
 #[cfg(test)]

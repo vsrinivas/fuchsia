@@ -6,6 +6,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 use std::{
+    fmt,
     fs::File,
     io::{self, BufRead, BufReader},
     path::{Path, PathBuf},
@@ -62,4 +63,38 @@ pub fn get_owners(path: &Path, root: &Path) -> Vec<Owners> {
         prev = current;
     }
     all_owners
+}
+
+#[derive(Debug, Eq, Hash, PartialEq)]
+pub struct FileOwnership {
+    pub component: Option<String>,
+    pub owners: Vec<String>,
+}
+
+impl FileOwnership {
+    pub fn from_path(path: &Path, fuchsia_dir: &Path) -> Self {
+        let owners = get_owners(path, fuchsia_dir);
+
+        let component = owners.iter().find_map(|o| o.component.clone());
+        let owners = owners
+            .into_iter()
+            .find(|o| !o.users.is_empty())
+            .map(|o| o.users)
+            .unwrap_or_else(|| Vec::new());
+
+        Self { component, owners }
+    }
+}
+
+impl fmt::Display for FileOwnership {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let owners =
+            if !self.owners.is_empty() { self.owners.join(",") } else { "Unowned".to_string() };
+
+        if let Some(ref component) = self.component {
+            write!(f, "{} ({})", component, owners)
+        } else {
+            write!(f, "{}", owners)
+        }
+    }
 }

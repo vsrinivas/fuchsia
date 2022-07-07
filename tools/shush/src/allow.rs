@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::Error;
+use anyhow::Result;
 use syn::{
     spanned::Spanned,
     visit::{self, Visit},
@@ -16,64 +16,70 @@ use std::{
     path::Path,
 };
 
-use crate::lint::{filter_lints, Lint};
-use crate::owners::get_owners;
-use crate::span::Span;
+use crate::{
+    issues::IssueTemplate,
+    lint::{filter_lints, Lint, LintFile},
+    monorail::Monorail,
+    owners::FileOwnership,
+    span::Span,
+};
 
-pub fn allow<R: BufRead>(
-    lints: &mut R,
+pub fn allow(
+    lints: &mut impl BufRead,
     filter: &[String],
     fuchsia_dir: &Path,
+    monorail: &mut (impl Monorail + ?Sized),
+    issue_template: &mut IssueTemplate<'_>,
+    rollout_path: &Path,
     dryrun: bool,
-    markdown: bool,
-) -> Result<(), Error> {
+    verbose: bool,
+) -> Result<()> {
     println!("Searching for lints: {}\n", filter.join(", "));
-    let mut components: HashMap<String, String> = Default::default();
-    let mut no_comp: HashMap<String, String> = Default::default();
-    let mut no_owners = String::new();
-    for (file, lints) in filter_lints(lints, filter) {
-        let mut insertions = match annotate(&file, &lints, dryrun, markdown) {
-            Ok(ins) => ins,
-            Err(e) => {
-                eprintln!("Failed to annotate {}: {:?}", file, e);
-                continue;
+    let mut ownership_to_lints = HashMap::<_, Vec<_>>::new();
+
+    for (path, lints) in filter_lints(lints, filter) {
+        let ownership = FileOwnership::from_path(Path::new(&path), fuchsia_dir);
+        ownership_to_lints.entry(ownership).or_default().push(LintFile { path, lints });
+    }
+
+    let mut created_issues = Vec::new();
+    for (ownership, files) in ownership_to_lints.iter() {
+        let issue = issue_template.create(monorail, ownership, files)?;
+        let bug_link = format!("fxbug.dev/{}", issue.id());
+        created_issues.push(issue);
+
+        if !dryrun {
+            for file in files.iter() {
+                match insert_allows(&file.path, &file.lints, &bug_link) {
+                    Ok(ins) => ins,
+                    Err(e) => {
+                        eprintln!("Failed to annotate {}: {:?}", file.path, e);
+                        continue;
+                    }
+                };
             }
-        };
-        insertions.sort();
-        let msg = if markdown {
-            format!("\n[{}]({})\n{}\n", file, codesearch_url(&file, None), insertions.join("\n"))
-        } else {
-            format!(
-                "\t{}\n\t\t{}\n",
-                cli_linkify(&file, &codesearch_url(&file, None)),
-                insertions.join("\n\t\t")
-            )
-        };
-        let owners = get_owners(Path::new(&file), fuchsia_dir);
-        if let Some(comp) = owners.iter().find_map(|o| o.component.clone()) {
-            components.entry(comp).or_default().push_str(&msg)
-        } else if let Some(owner) = owners.iter().find(|o| !o.users.is_empty()) {
-            no_comp.entry(owner.users.join(", ")).or_default().push_str(&msg)
-        } else {
-            no_owners.push_str(&msg)
         }
     }
 
-    if !components.is_empty() {
-        println!("\nComponents:");
-        for (c, msg) in components {
-            println!("{}\n{}\n", c, msg);
+    if verbose {
+        for (ownership, files) in ownership_to_lints.iter() {
+            println!("{}:", ownership);
+            for file in files.iter() {
+                println!("    {}:", file.path);
+                for lint in file.lints.iter() {
+                    let lint_name = lint.name.strip_prefix("clippy::").unwrap_or(&lint.name);
+                    println!(
+                        "        {:4}:{:<3}    {}",
+                        lint.span.start.line, lint.span.start.column, lint_name
+                    );
+                }
+            }
+            println!();
         }
     }
-    if !no_comp.is_empty() {
-        println!("\nFiles missing Components:");
-        for (o, msg) in no_comp {
-            println!("{}\n{}\n", o, msg);
-        }
-    }
-    if !no_owners.is_empty() {
-        println!("\nFiles missing any OWNERS whatsoever:\n{}", no_owners);
-    }
+
+    fs::write(rollout_path, serde_json::to_string(&created_issues)?)?;
+
     Ok(())
 }
 
@@ -150,37 +156,14 @@ impl<'ast> Visit<'ast> for Finder {
     }
 }
 
-/// Returns a message for each lint allowed.
-fn annotate(
-    filename: &str,
-    lints: &[Lint],
-    dryrun: bool,
-    markdown: bool,
-) -> Result<Vec<String>, Error> {
-    if !dryrun {
-        let src = fs::read_to_string(filename)?;
-        let insertions = calculate_insertions(&src, lints)?;
-        fs::write(filename, apply_insertions(&src, insertions))?;
-    }
-    Ok(lints.iter().map(|l| annotation_msg(l, filename, markdown)).collect())
+fn insert_allows(filename: &str, lints: &[Lint], bug_link: &str) -> Result<()> {
+    let src = fs::read_to_string(filename)?;
+    let insertions = calculate_insertions(&src, lints)?;
+    fs::write(filename, apply_insertions(&src, insertions, bug_link))?;
+    Ok(())
 }
 
-fn codesearch_url(filename: &str, line: Option<usize>) -> String {
-    let mut link = format!("https://cs.opensource.google/fuchsia/fuchsia/+/main:{}", filename);
-    if let Some(line) = line {
-        link.push_str(&format!(";l={}", line))
-    }
-    link
-}
-
-fn cli_linkify(text: &str, address: &str) -> String {
-    format!("\x1b]8;;{}\x1b\\{}\x1b]8;;\x1b\\", address, text)
-}
-
-fn calculate_insertions(
-    src: &str,
-    lints: &[Lint],
-) -> Result<BTreeMap<usize, HashSet<String>>, Error> {
+fn calculate_insertions(src: &str, lints: &[Lint]) -> Result<BTreeMap<usize, HashSet<String>>> {
     let mut finder =
         Finder { lints: lints.iter().cloned().map(|l| (l, Span::default())).collect() };
     finder.visit_file(&syn::parse_file(src)?);
@@ -193,7 +176,11 @@ fn calculate_insertions(
     Ok(inserts)
 }
 
-fn apply_insertions(src: &str, insertions: BTreeMap<usize, HashSet<String>>) -> String {
+fn apply_insertions(
+    src: &str,
+    insertions: BTreeMap<usize, HashSet<String>>,
+    bug_link: &str,
+) -> String {
     let ends_with_newline = src.ends_with('\n');
     let mut lines: Vec<Cow<'_, str>> = src.lines().map(Cow::from).collect();
 
@@ -209,35 +196,11 @@ fn apply_insertions(src: &str, insertions: BTreeMap<usize, HashSet<String>>) -> 
         lints_for_line.sort();
         lines.insert(
             line - 1,
-            format!("{}#[allow({})] // TODO(INSERT_LINT_BUG)", indent, lints_for_line.join(", "))
+            format!("{}#[allow({})] // TODO({})", indent, lints_for_line.join(", "), bug_link)
                 .into(),
         );
     }
     (lines.join("\n") + if ends_with_newline { "\n" } else { "" }).to_owned()
-}
-
-fn annotation_msg(l: &Lint, filename: &str, markdown: bool) -> String {
-    let lints_url = "https://rust-lang.github.io/rust-clippy/master#".to_owned();
-    let cs_url = codesearch_url(filename, Some(l.span.start.line));
-    let cli_cs_link =
-        cli_linkify(&format!("{}:{}", l.span.start.line, l.span.start.column), &cs_url);
-
-    // handle both clippy and normal rustc lints, in either markdown or plaintext
-    match (l.name.strip_prefix("clippy::"), markdown) {
-        (Some(name), true) => {
-            format!(
-                "- [{name}]({}) on [line {}]({})",
-                &(lints_url + name),
-                l.span.start.line,
-                cs_url
-            )
-        }
-        (Some(name), false) => format!("{cli_cs_link}\t{}", cli_linkify(name, &(lints_url + name))),
-        (None, true) => {
-            format!("- {} on [line {}]({})", l.name, l.span.start.line, cs_url)
-        }
-        (None, false) => format!("{cli_cs_link}\t{}", l.name),
-    }
 }
 
 #[cfg(test)]
@@ -283,7 +246,7 @@ trait Foo {
         let insertions =
             calculate_insertions(BASIC, &[lint(name.clone(), (3, 5), (3, 6))]).unwrap();
         assert_eq!(
-            apply_insertions(BASIC, insertions),
+            apply_insertions(BASIC, insertions, "INSERT_LINT_BUG"),
             "
 fn main() {
     #[allow(LINTNAME)] // TODO(INSERT_LINT_BUG)
@@ -304,7 +267,7 @@ fn main() {
         )
         .unwrap();
         assert_eq!(
-            apply_insertions(BASIC, insertions),
+            apply_insertions(BASIC, insertions, "INSERT_LINT_BUG"),
             "
 fn main() {
     #[allow(LINTNAME, OTHERNAME)] // TODO(INSERT_LINT_BUG)
@@ -320,7 +283,7 @@ fn main() {
         let insertions =
             calculate_insertions(BASIC, &[lint(name.clone(), (2, 4), (3, 6))]).unwrap();
         assert_eq!(
-            apply_insertions(BASIC, insertions),
+            apply_insertions(BASIC, insertions, "INSERT_LINT_BUG"),
             "
 #[allow(LINTNAME)] // TODO(INSERT_LINT_BUG)
 fn main() {
@@ -336,7 +299,7 @@ fn main() {
         let insertions =
             calculate_insertions(NESTED, &[lint(name.clone(), (10, 21), (10, 30))]).unwrap();
         assert_eq!(
-            apply_insertions(NESTED, insertions).lines().nth(9).unwrap(),
+            apply_insertions(NESTED, insertions, "INSERT_LINT_BUG").lines().nth(9).unwrap(),
             "                    #[allow(LINTNAME)] // TODO(INSERT_LINT_BUG)"
         );
     }
@@ -347,7 +310,7 @@ fn main() {
         let insertions =
             calculate_insertions(NESTED, &[lint(name.clone(), (12, 17), (12, 18))]).unwrap();
         assert_eq!(
-            apply_insertions(NESTED, insertions).lines().nth(8).unwrap(),
+            apply_insertions(NESTED, insertions, "INSERT_LINT_BUG").lines().nth(8).unwrap(),
             "                #[allow(LINTNAME)] // TODO(INSERT_LINT_BUG)"
         );
     }
@@ -358,7 +321,7 @@ fn main() {
         let insertions =
             calculate_insertions(NESTED, &[lint(name.clone(), (6, 13), (7, 30))]).unwrap();
         assert_eq!(
-            apply_insertions(NESTED, insertions).lines().nth(4).unwrap(),
+            apply_insertions(NESTED, insertions, "INSERT_LINT_BUG").lines().nth(4).unwrap(),
             "        #[allow(LINTNAME)] // TODO(INSERT_LINT_BUG)"
         );
     }
@@ -369,7 +332,7 @@ fn main() {
         let insertions =
             calculate_insertions(TRAIT, &[lint(name.clone(), (3, 5), (3, 6))]).unwrap();
         assert_eq!(
-            apply_insertions(TRAIT, insertions).lines().nth(2).unwrap(),
+            apply_insertions(TRAIT, insertions, "INSERT_LINT_BUG").lines().nth(2).unwrap(),
             "    #[allow(LINTNAME)] // TODO(INSERT_LINT_BUG)"
         );
     }
