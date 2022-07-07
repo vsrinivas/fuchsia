@@ -2767,21 +2767,21 @@ built and mounted inside the container at /mnt/chromeos.
 
 **Current value (from the default):** `true`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:13
+From //src/virtualization/bin/linux_runner/BUILD.gn:14
 
 ### linux_runner_stateful_image_path
 Point this to the location of a prebuilt stateful image in QCOW2 format
 
 **Current value (from the default):** `""`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:24
+From //src/virtualization/bin/linux_runner/BUILD.gn:25
 
 ### linux_runner_user_extras
 Point this to the location of external files to be included as extras
 
 **Current value (from the default):** `[]`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:21
+From //src/virtualization/bin/linux_runner/BUILD.gn:22
 
 ### linux_runner_volatile_block
 If `true`, all block devices that would normally load as READ_WRITE will
@@ -2790,7 +2790,7 @@ the linux kernel as crashes and panics can sometimes corrupt the images.
 
 **Current value (from the default):** `false`
 
-From //src/virtualization/bin/linux_runner/BUILD.gn:18
+From //src/virtualization/bin/linux_runner/BUILD.gn:19
 
 ### local_bench
 Used to enable local benchmarking/fine-tuning when running benchmarks
@@ -5033,7 +5033,7 @@ Whether protocol logging should be enabled
 
 **Current value (from the default):** `false`
 
-From //src/ui/wayland/bin/bridge/BUILD.gn:13
+From //src/ui/wayland/bin/bridge/BUILD.gn:12
 
 ### wayland_server_fatal_object_lookup_failures
 Enable this to make object lookup failures fatal for debugging.
