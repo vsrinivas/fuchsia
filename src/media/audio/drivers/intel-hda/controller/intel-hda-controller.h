@@ -11,6 +11,7 @@
 #include <lib/async/cpp/irq.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
+#include <lib/device-protocol/pci.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -53,7 +54,7 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
   const pci_device_info_t& dev_info() const { return pci_dev_info_; }
   unsigned int id() const { return id_; }
   const char* log_prefix() const { return log_prefix_; }
-  const pci_protocol_t* pci() const { return &pci_; }
+  const ddk::Pci& pci() const { return pci_; }
   const fbl::RefPtr<RefCountedBti>& pci_bti() const { return pci_bti_; }
   async_dispatcher_t* dispatcher() const { return loop_->dispatcher(); }
   acpi::Client& acpi() { return acpi_; }
@@ -173,7 +174,7 @@ class IntelHDAController : public fbl::RefCounted<IntelHDAController> {
 
   // Upstream PCI device, protocol interface, and device info.
   zx_device_t* pci_dev_ = nullptr;
-  pci_protocol_t pci_ = {nullptr, nullptr};
+  ddk::Pci pci_;
   pci_interrupt_mode_t irq_mode_ = PCI_INTERRUPT_MODE_DISABLED;
   pci_device_info_t pci_dev_info_;
   static zx_protocol_device_t ROOT_DEVICE_THUNKS;

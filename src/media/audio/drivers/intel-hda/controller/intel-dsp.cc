@@ -466,8 +466,7 @@ Status IntelDsp::SetupDspDevice() {
            hda_dev_info.dev_id, hda_dev_info.func_id);
   // Fetch the BAR which holds the Audio DSP registers (BAR 4).
   std::optional<fdf::MmioBuffer> mmio;
-  ddk::Pci pci(*controller_->pci());
-  zx_status_t res = pci.MapMmio(4u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  zx_status_t res = controller_->pci().MapMmio(4u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to fetch and map DSP register (err %u)", res);
     return Status(res);

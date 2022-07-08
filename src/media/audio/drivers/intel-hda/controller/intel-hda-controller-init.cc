@@ -40,12 +40,11 @@ constexpr unsigned int MAX_CAPS = 10;  // Arbitrary number of capabilities to ch
 }  // namespace
 
 void IntelHDAController::UpdateMiscbdcge(bool enable) {
-  ddk::Pci pci(pci_);
   uint32_t cgctl = 0;
-  pci.ReadConfig32(kPciRegCgctl, &cgctl);
+  pci_.ReadConfig32(kPciRegCgctl, &cgctl);
   cgctl &= ~kPciRegCgctlBitMaskMiscbdcge;
   cgctl |= enable ? kPciRegCgctlBitMaskMiscbdcge : 0;
-  pci.WriteConfig32(kPciRegCgctl, cgctl);
+  pci_.WriteConfig32(kPciRegCgctl, cgctl);
 }
 
 void IntelHDAController::PreResetControllerHardware() {
@@ -221,7 +220,7 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
   }
 
   ZX_DEBUG_ASSERT(!mapped_regs_.has_value());
-  ZX_DEBUG_ASSERT(pci_.ops == nullptr);
+  ZX_DEBUG_ASSERT(!pci_.is_valid());
 
   pci_dev_ = pci_dev;
 
@@ -232,12 +231,10 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
     return res;
   }
 
-  ddk::Pci pci(pci_);
-
   // Fetch our device info and use it to re-generate our debug tag once we
   // know our BDF address.
-  ZX_DEBUG_ASSERT(pci_.ops != nullptr);
-  res = pci.GetDeviceInfo(&pci_dev_info_);
+  ZX_DEBUG_ASSERT(pci_.is_valid());
+  res = pci_.GetDeviceInfo(&pci_dev_info_);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to fetch basic PCI device info! (res %d)", res);
     return res;
@@ -250,7 +247,7 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
   // counted object (so we can manage the lifecycle as we share the handle
   // with various pinned VMOs we need to grant the controller BTI access to).
   zx::bti pci_bti;
-  res = pci.GetBti(0, &pci_bti);
+  res = pci_.GetBti(0, &pci_bti);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to get BTI handle for IHDA Controller (res %d)", res);
     return res;
@@ -264,7 +261,7 @@ zx_status_t IntelHDAController::SetupPCIDevice(zx_device_t* pci_dev) {
 
   // Fetch the BAR which holds our main registers.
   std::optional<fdf::MmioBuffer> mmio;
-  res = pci.MapMmio(0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
+  res = pci_.MapMmio(0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to fetch and map registers from PCI (res %d)", res);
     return res;
@@ -290,15 +287,14 @@ zx_status_t IntelHDAController::SetupPCIInterrupts() {
   REG_WR(&regs()->intctl, 0u);
 
   // Configure our IRQ mode and map our IRQ handle.
-  ddk::Pci pci(pci_);
-  zx_status_t res = pci.ConfigureInterruptMode(1, &irq_mode_);
+  zx_status_t res = pci_.ConfigureInterruptMode(1, &irq_mode_);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to set IRQ mode (%d)!", res);
     return res;
   }
 
   // Retrieve our PCI interrupt, then use it to activate our IRQ dispatcher.
-  res = pci.MapInterrupt(0, &irq_);
+  res = pci_.MapInterrupt(0, &irq_);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to map IRQ! (res %d)", res);
     return res;
@@ -307,7 +303,7 @@ zx_status_t IntelHDAController::SetupPCIInterrupts() {
   irq_handler_.set_object(irq_.get());
 
   // Enable Bus Mastering so we can DMA data and receive MSIs
-  res = pci.SetBusMastering(true);
+  res = pci_.SetBusMastering(true);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to enable PCI bus mastering!");
     return res;

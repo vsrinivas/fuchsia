@@ -86,9 +86,8 @@ IntelHDAController::~IntelHDAController() {
   irq_handler_.Cancel();
 
   // Disable IRQs at the PCI level.
-  if (pci_.ops != nullptr) {
-    ZX_DEBUG_ASSERT(pci_.ctx != nullptr);
-    pci_.ops->set_interrupt_mode(pci_.ctx, PCI_INTERRUPT_MODE_DISABLED, 0);
+  if (pci_.is_valid()) {
+    pci_.SetInterruptMode(PCI_INTERRUPT_MODE_DISABLED, 0);
   }
 
   // Let go of our stream state.
@@ -99,14 +98,6 @@ IntelHDAController::~IntelHDAController() {
   // Unmap, unpin and release the memory we use for the command/response ring buffers.
   cmd_buf_cpu_mem_.Unmap();
   cmd_buf_hda_mem_.Unpin();
-
-  if (pci_.ops != nullptr) {
-    // TODO(johngro) : unclaim the PCI device.  Right now, there is no way
-    // to do this aside from closing the device handle (which would
-    // seriously mess up the DevMgr's brain)
-    pci_.ops = nullptr;
-    pci_.ctx = nullptr;
-  }
 }
 
 fbl::RefPtr<IntelHDAStream> IntelHDAController::AllocateStream(IntelHDAStream::Type type) {
