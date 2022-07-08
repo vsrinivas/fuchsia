@@ -622,7 +622,7 @@ pub fn sys_chmod(
 
 pub fn sys_fchmod(current_task: &CurrentTask, fd: FdNumber, mode: FileMode) -> Result<(), Errno> {
     // Remove the filetype from the mode.
-    let mode = mode & FileMode::from_bits(0o777);
+    let mode = mode & FileMode::PERMISSIONS;
     let file = current_task.files.get_unless_opath(fd)?;
     file.name.entry.node.chmod(mode);
     Ok(())
@@ -635,7 +635,7 @@ pub fn sys_fchmodat(
     mode: FileMode,
 ) -> Result<(), Errno> {
     // Remove the filetype from the mode.
-    let mode = mode & FileMode::from_bits(0o777);
+    let mode = mode & FileMode::PERMISSIONS;
     let name = lookup_at(current_task, dir_fd, user_path, LookupFlags::default())?;
     name.entry.node.chmod(mode);
     Ok(())
