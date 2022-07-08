@@ -15,6 +15,7 @@
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <iterator>
 #include <limits>
 
 DeviceWatcherImpl::DeviceWatcherImpl(std::unique_ptr<sys::ComponentContext> context)
