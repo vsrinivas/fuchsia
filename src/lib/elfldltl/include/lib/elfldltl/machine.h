@@ -12,8 +12,63 @@
 
 namespace elfldltl {
 
+// This is specialized to give some machine-specific details on ABI.
+// This is more about calling conventions than anything directly to do
+// with ELF, but it's a common part of what's entailed in program loading.
+template <ElfMachine Machine = ElfMachine::kNative>
+struct AbiTraits;
+
+// This is the prototypical specialization that serves to document the
+// AbiTraits API.  It does not correspond to an actual machine ABI per se, but
+// does provide a common base class for specializations defined below.
+template <>
+struct AbiTraits<ElfMachine::kNone> {
+  // The minimum alignment to which the machine stack pointer must be kept.
+  // 16-byte alignment is a common ABI requirement across several machines.
+  template <typename SizeType = uintptr_t>
+  static constexpr SizeType kStackAlignment = 16;
+
+  // Given the base address and size of a machine stack block, compute the
+  // initial SP value for using a psABI C function as an entry point address.
+  template <typename SizeType>
+  static constexpr SizeType InitialStackPointer(SizeType base, SizeType size) {
+    // Stacks grow down on most machines.
+    return (base + size) & -kStackAlignment<SizeType>;
+  }
+};
+
+// AArch64 has simple 16-byte stack alignment.
+template <>
+struct AbiTraits<ElfMachine::kAarch64> : public AbiTraits<ElfMachine::kNone> {};
+
+// x86-64 requires exactly 8 below 16-byte alignment for the entry SP,
+// consistent with the CALL instruction pushing the return address on
+// the stack when it was 16-byte-aligned at the call site.
+template <>
+struct AbiTraits<ElfMachine::kX86_64> : public AbiTraits<ElfMachine::kNone> {
+  template <typename SizeType>
+  static constexpr SizeType InitialStackPointer(SizeType base, SizeType size) {
+    return AbiTraits<ElfMachine::kNone>::InitialStackPointer(base, size) - 8;
+  }
+};
+
+// i386 requires exactly 4 below 16-byte alignment for the entry SP,
+// consistent with the CALL instruction pushing the return address on
+// the stack when it was 16-byte-aligned at the call site.
+template <>
+struct AbiTraits<ElfMachine::k386> : public AbiTraits<ElfMachine::kNone> {
+  template <typename SizeType>
+  static constexpr SizeType InitialStackPointer(SizeType base, SizeType size) {
+    return AbiTraits<ElfMachine::kNone>::InitialStackPointer(base, size) - 4;
+  }
+};
+
+// RISCV has simple 16-byte stack alignment.
+template <>
+struct AbiTraits<ElfMachine::kRiscv> : public AbiTraits<ElfMachine::kNone> {};
+
 // This is specialized to give the machine-specific details on relocation.
-template <ElfMachine Machine>
+template <ElfMachine Machine = ElfMachine::kNative>
 struct RelocationTraits;
 
 // This is the prototypical specialization that serves to document the
