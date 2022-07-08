@@ -23,6 +23,11 @@ class TargetServer : public fidl::serversuite::Target {
     reporter_->ReceivedOneWayNoPayload();
   }
 
+  void TwoWayNoPayload(TwoWayNoPayloadCallback callback) override {
+    std::cout << "Target.TwoWayNoPayload()" << std::endl;
+    callback();
+  }
+
  private:
   fidl::InterfacePtr<fidl::serversuite::Reporter> reporter_;
 };

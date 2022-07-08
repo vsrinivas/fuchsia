@@ -22,10 +22,14 @@ async fn run_target_server(
         .try_for_each(|request| async move {
             match request {
                 TargetRequest::OneWayNoPayload { control_handle: _ } => {
-                    println!("OneWayIteractionNoPayload");
+                    println!("OneWayNoPayload");
                     reporter_proxy
                         .received_one_way_no_payload()
                         .expect("calling received_one_way_no_payload failed");
+                }
+                TargetRequest::TwoWayNoPayload { responder } => {
+                    println!("TwoWayNoPayload");
+                    responder.send().expect("failed to send two way payload response");
                 }
             }
             Ok(())
@@ -39,7 +43,11 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
         .try_for_each(|request| async move {
             match request {
                 RunnerRequest::IsTestEnabled { test, responder } => {
-                    responder.send(test != Test::OneWayWithNonZeroTxid)?;
+                    let enabled = match test {
+                        Test::OneWayWithNonZeroTxid | Test::TwoWayNoPayloadWithZeroTxid => false,
+                        _ => true,
+                    };
+                    responder.send(enabled)?;
                 }
                 RunnerRequest::Start { reporter, responder } => {
                     println!("Runner.Start() called");

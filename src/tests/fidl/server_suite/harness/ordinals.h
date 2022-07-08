@@ -15,6 +15,10 @@
 //
 // While using `jq` would be much nicer, large numbers are mishandled and the
 // displayed ordinal ends up being incorrect.
-static const uint64_t kOrdinalOneWayInteractionNoPayload = 5311082811961759320lu;
+//
+// Ordinals are redefined here even though they may be accessible via C++
+// binding definitions to ensure they are unchanged by changes in the bindings.
+static const uint64_t kOrdinalOneWayNoPayload = 5311082811961759320lu;
+static const uint64_t kOrdinalTwoWayNoPayload = 6235614372471446922lu;
 
 #endif  // SRC_TESTS_FIDL_SERVER_SUITE_HARNESS_ORDINALS_H_

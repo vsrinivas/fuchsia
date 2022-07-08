@@ -30,12 +30,27 @@ func (t *targetImpl) OneWayNoPayload(_ fidl.Context) error {
 	return nil
 }
 
+func (t *targetImpl) TwoWayNoPayload(_ fidl.Context) error {
+	log.Println("serversuite.Target TwoWayNoPayload() called")
+	return nil
+}
+
 type runnerImpl struct{}
 
 var _ serversuite.RunnerWithCtx = (*runnerImpl)(nil)
 
 func (*runnerImpl) IsTestEnabled(_ fidl.Context, test serversuite.Test) (bool, error) {
-	return test != serversuite.TestOneWayWithNonZeroTxid, nil
+	isEnabled := func(test serversuite.Test) bool {
+		switch test {
+		case serversuite.TestOneWayWithNonZeroTxid:
+			return false
+		case serversuite.TestTwoWayNoPayloadWithZeroTxid:
+			return false
+		default:
+			return true
+		}
+	}
+	return isEnabled(test), nil
 }
 
 func (*runnerImpl) Start(

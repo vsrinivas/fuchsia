@@ -21,6 +21,12 @@ class TargetServer : public fidl::WireServer<fidl_serversuite::Target> {
     ZX_ASSERT(result.ok());
   }
 
+  void TwoWayNoPayload(TwoWayNoPayloadRequestView request,
+                       TwoWayNoPayloadCompleter::Sync& completer) override {
+    std::cout << "Target.TwoWayNoPayload()" << std::endl;
+    completer.Reply();
+  }
+
  private:
   fidl::WireSyncClient<fidl_serversuite::Reporter> reporter_;
 };
@@ -31,7 +37,16 @@ class RunnerServer : public fidl::WireServer<fidl_serversuite::Runner> {
 
   void IsTestEnabled(IsTestEnabledRequestView request,
                      IsTestEnabledCompleter::Sync& completer) override {
-    completer.Reply(request->test != fidl_serversuite::Test::kOneWayWithNonZeroTxid);
+    bool is_enabled = [&request]() {
+      switch (request->test) {
+        case fidl_serversuite::Test::kOneWayWithNonZeroTxid:
+        case fidl_serversuite::Test::kTwoWayNoPayloadWithZeroTxid:
+          return false;
+        default:
+          return true;
+      }
+    }();
+    completer.Reply(is_enabled);
   }
 
   void Start(StartRequestView request, StartCompleter::Sync& completer) override {
