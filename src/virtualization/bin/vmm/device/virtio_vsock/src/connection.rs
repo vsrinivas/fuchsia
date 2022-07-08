@@ -42,15 +42,27 @@ pub struct ConnectionCredit {
 }
 
 impl ConnectionCredit {
+    // Running count of bytes sent by the device to the guest. This is allowed to overflow.
+    pub fn increment_rx_count(&mut self, count: u32) {
+        self.rx_count = self.rx_count.wrapping_add(count);
+    }
+
     // Running count of bytes received by the device. This is allowed to overflow.
     pub fn increment_tx_count(&mut self, count: u32) {
-        self.tx_count += count;
+        self.tx_count = self.tx_count.wrapping_add(count);
+    }
+
+    // Maximum non-header bytes that can be sent from the device to the guest for this connection.
+    pub fn peer_free_bytes(&self) -> u32 {
+        self.guest_buf_alloc.saturating_sub(self.rx_count.wrapping_sub(self.guest_fwd_count))
     }
 
     // Whether the guest thinks that there is no TX buffer available. If "true" and if there is
     // buffer available, the connection must send an unsolicited credit update to the guest.
     pub fn guest_believes_no_tx_buffer_available(&self) -> bool {
-        (self.tx_count - self.last_reported_fwd_count) >= self.last_reported_total_buf
+        self.last_reported_total_buf
+            .saturating_sub(self.tx_count.wrapping_sub(self.last_reported_fwd_count))
+            == 0
     }
 
     // Read guest credit from the header. This controls the amount of data this connection can
@@ -82,7 +94,7 @@ impl ConnectionCredit {
         self.last_reported_total_buf = socket_tx_max;
         header.buf_alloc = self.last_reported_total_buf.into();
 
-        self.last_reported_fwd_count = self.tx_count - socket_tx_current;
+        self.last_reported_fwd_count = self.tx_count.wrapping_sub(socket_tx_current);
         header.fwd_cnt = self.last_reported_fwd_count.into();
 
         Ok(())
@@ -389,6 +401,56 @@ mod tests {
         // knows there is some TX buffer available.
         credit.write_credit(&async_local, &mut header).expect("failed to query socket info");
         assert!(!credit.guest_believes_no_tx_buffer_available());
+    }
+
+    #[fuchsia::test]
+    async fn connection_credit_handles_rx_overflow() {
+        let mut credit = ConnectionCredit::default();
+
+        credit.increment_rx_count(u32::MAX - 5);
+        credit.read_credit(&VirtioVsockHeader {
+            buf_alloc: LE32::new(256),
+            fwd_cnt: LE32::new(u32::MAX - 5),
+            ..VirtioVsockHeader::default()
+        });
+        credit.increment_rx_count(10);
+
+        // RX count should wrap around, and peer free should be based on the wrapped difference.
+        assert_eq!(credit.peer_free_bytes(), 246);
+    }
+
+    #[fuchsia::test]
+    async fn connection_credit_handles_tx_overflow() {
+        let mut credit = ConnectionCredit::default();
+        let (_remote, local) =
+            zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create socket");
+
+        let max_tx_bytes = local.info().unwrap().tx_buf_max;
+        let async_local =
+            fasync::Socket::from_socket(local).expect("failed to create async socket");
+
+        credit.increment_tx_count(u32::MAX - 5);
+        let mut header = VirtioVsockHeader::default();
+        credit.write_credit(&async_local, &mut header).expect("failed to write credit");
+        assert!(!credit.guest_believes_no_tx_buffer_available());
+
+        // TX count should have wrapped, and guest_believes_no_tx_buffer_available should be
+        // based on this new value.
+        credit.increment_tx_count(max_tx_bytes as u32);
+
+        // As far as the guest knows, the socket buffer is now full.
+        assert!(credit.guest_believes_no_tx_buffer_available());
+
+        // Guest now knows there's credit available.
+        credit.write_credit(&async_local, &mut header).expect("failed to write credit");
+        assert!(!credit.guest_believes_no_tx_buffer_available());
+
+        // Simulate the total buffer decreasing.
+        credit.increment_tx_count(100);
+        credit.last_reported_total_buf = 50;
+
+        // A saturating subtract should allow for buffer size changes.
+        assert!(credit.guest_believes_no_tx_buffer_available());
     }
 
     #[test]

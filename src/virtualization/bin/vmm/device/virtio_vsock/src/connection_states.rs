@@ -68,13 +68,19 @@ use {
     futures::{
         channel::mpsc::UnboundedSender,
         future::{self, poll_fn},
-        AsyncWriteExt, FutureExt,
+        AsyncReadExt, AsyncWriteExt, FutureExt,
     },
     std::{
         cell::{Cell, RefCell},
         convert::TryFrom,
+        io::Write,
     },
-    virtio_device::{chain::ReadableChain, mem::DriverMem, queue::DriverNotify},
+    virtio_device::{
+        chain::{ReadableChain, WritableChain},
+        mem::DriverMem,
+        queue::DriverNotify,
+    },
+    zerocopy::AsBytes,
 };
 
 #[derive(Debug)]
@@ -479,6 +485,11 @@ impl ReadWrite {
             return false;
         }
 
+        // This connection is waiting on a credit update via guest TX.
+        if self.credit.borrow().peer_free_bytes() == 0 {
+            return future::pending::<bool>().await;
+        }
+
         // Optimization when data is available on a fully open socket, preventing the device from
         // needing to reacquire a read signal from the kernel. This is the steady state when a
         // connection is bottlenecked on the guest refilling the RX queue.
@@ -498,6 +509,90 @@ impl ReadWrite {
                 false
             }
         }
+    }
+
+    pub fn handle_rx_chain<'a, 'b, N: DriverNotify, M: DriverMem>(
+        &self,
+        mut chain: WritableChain<'a, 'b, N, M>,
+    ) -> Result<(), Error> {
+        let header_length = std::mem::size_of::<VirtioVsockHeader>();
+        let chain_bytes = chain
+            .remaining()
+            .map_err(|err| anyhow!("Failed to query chain for remaining bytes: {}", err))?;
+
+        if chain_bytes <= header_length {
+            // This chain is too small to transmit data. This is the fault of the guest, not this
+            // connection.
+            return Ok(());
+        }
+
+        // The device fills the chain sequentially, so the header must be constructed first
+        // with the anticipated size of the packet.
+        let usable_chain_bytes = chain_bytes - header_length;
+        let bytes_on_socket = self.socket.borrow().as_ref().outstanding_read_bytes()?;
+        let peer_buffer_available = usize::try_from(self.credit.borrow().peer_free_bytes())?;
+
+        let bytes_to_send = std::cmp::min(
+            peer_buffer_available,
+            std::cmp::min(usable_chain_bytes, bytes_on_socket),
+        );
+
+        self.credit.borrow_mut().increment_rx_count(bytes_to_send.try_into()?);
+
+        let mut header = VirtioVsockHeader {
+            src_cid: LE64::new(self.key.host_cid.into()),
+            dst_cid: LE64::new(self.key.guest_cid.into()),
+            src_port: LE32::new(self.key.host_port),
+            dst_port: LE32::new(self.key.guest_port),
+            len: LE32::new(bytes_to_send.try_into()?),
+            vsock_type: LE16::new(VsockType::Stream.into()),
+            op: LE16::new(OpType::ReadWrite.into()),
+            flags: LE32::new(self.conn_flags.borrow().bits()),
+
+            // Set by write_credit below.
+            buf_alloc: LE32::new(0),
+            fwd_cnt: LE32::new(0),
+        };
+        self.write_credit(&mut header)?;
+
+        chain
+            .write_all(header.as_bytes())
+            .map_err(|err| anyhow!("failed to write to chain: {}", err))?;
+
+        let mut bytes_remaining_to_send = bytes_to_send;
+        while let Some(range) = chain
+            .next_with_limit(bytes_remaining_to_send)
+            .transpose()
+            .map_err(|err| anyhow!("Failed to iterate over chain: {}", err))?
+        {
+            // A note on safety:
+            //   * No references (mutable or unmutable) to this range are held elsewhere. Other
+            //     pointers may exist but will not be dereferenced while this slice is held.
+            //   * This is a u8 pointer which has no alignment constraints.
+            let slice = unsafe {
+                std::slice::from_raw_parts_mut(range.try_mut_ptr().unwrap(), range.len())
+            };
+
+            match self.socket.borrow_mut().read_exact(slice).now_or_never() {
+                None => {
+                    Err(anyhow!("Socket read tried to block when bytes should have been available"))
+                }
+                Some(result) => match result {
+                    Err(err) => Err(anyhow!("Failed to read from socket: {}", err)),
+                    Ok(_) => Ok(()),
+                },
+            }?;
+
+            chain.add_written(slice.len().try_into()?);
+            bytes_remaining_to_send -= slice.len();
+
+            if bytes_remaining_to_send == 0 {
+                break;
+            }
+        }
+        assert_eq!(0, bytes_remaining_to_send);
+
+        Ok(())
     }
 
     fn handle_tx_chain<'a, 'b, N: DriverNotify, M: DriverMem>(
@@ -794,6 +889,45 @@ impl VsockConnectionState {
         }
     }
 
+    pub async fn wants_rx_chain(&self) -> bool {
+        match self {
+            VsockConnectionState::Invalid => panic!("Connection entered an impossible state"),
+            VsockConnectionState::ClientInitiated(_) | VsockConnectionState::GuestInitiated(_) => {
+                // States that may eventually transition to the read write simply return pending
+                // so that they continue being tracked without consuming chains.
+                future::pending::<bool>().await
+            }
+            VsockConnectionState::ReadWrite(state) => {
+                // Will return true when data is available on the socket, and false if there will
+                // be no additional RX to the guest.
+                state.wants_rx_chain().await
+            }
+            VsockConnectionState::GuestInitiatedShutdown(_)
+            | VsockConnectionState::ClientInitiatedShutdown(_)
+            | VsockConnectionState::ShutdownClean(_)
+            | VsockConnectionState::ShutdownForced(_) => {
+                // These states will never transition to a state which requires a writable chain,
+                // so this connection can stop being polled for that purpose by the device.
+                false
+            }
+        }
+    }
+
+    pub fn handle_rx_chain<'a, 'b, N: DriverNotify, M: DriverMem>(
+        &self,
+        chain: WritableChain<'a, 'b, N, M>,
+    ) -> Result<(), Error> {
+        match self {
+            VsockConnectionState::Invalid => panic!("Connection entered an impossible state"),
+            VsockConnectionState::ReadWrite(state) => state.handle_rx_chain(chain),
+            _ => {
+                // This is a fatal logic error. The device should only offer states writable chains
+                // when they request one.
+                panic!("Device gave an invalid state a writable chain")
+            }
+        }
+    }
+
     pub fn handle_tx_chain<'a, 'b, N: DriverNotify, M: DriverMem>(
         &self,
         op: OpType,
@@ -850,8 +984,10 @@ mod tests {
         },
         fuchsia_async::TestExecutor,
         futures::{channel::mpsc, TryStreamExt},
+        rand::{distributions::Standard, Rng},
         std::{io::Read, task::Poll},
         virtio_device::fake_queue::{ChainBuilder, IdentityDriverMem, TestQueue},
+        zerocopy::FromBytes,
     };
 
     fn send_header_to_rw_state(header: VirtioVsockHeader, state: &ReadWrite) {
@@ -1059,6 +1195,199 @@ mod tests {
     }
 
     #[test]
+    fn read_write_basic_tx_data_integrity_validation() {
+        let mut executor = fasync::TestExecutor::new().expect("failed to create executor");
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
+        let (control_tx, mut control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
+
+        let (client_socket, device_socket) =
+            zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create socket");
+        let socket =
+            fasync::Socket::from_socket(device_socket).expect("failed to create async socket");
+
+        let state = ReadWrite::new(socket, key, control_tx);
+
+        // The RW state will immediately send an unsolicited credit update upon creation as it
+        // knows that the guest thinks there's no credit available.
+        let state_action_fut = state.do_state_action();
+        futures::pin_mut!(state_action_fut);
+        assert!(!executor.run_until_stalled(&mut state_action_fut).is_pending());
+
+        let header = control_rx
+            .try_next()
+            .expect("expected control packet")
+            .expect("control stream should not close");
+        assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::CreditUpdate);
+
+        // Create a vector of random bytes that will entirely exhaust the TX credit.
+        let num_bytes_to_send: usize = header.buf_alloc.get().try_into().unwrap();
+        let random_bytes: Vec<u8> =
+            rand::thread_rng().sample_iter(Standard).take(num_bytes_to_send).collect();
+
+        // Each time send_bytes is called with a slice, a chain is created with the slice spread
+        // across three descriptors.
+        let send_bytes = |slice: &[u8]| {
+            let mem = IdentityDriverMem::new();
+            let mut queue_state = TestQueue::new(32, &mem);
+
+            // Chunk the array into three descriptors.
+            queue_state
+                .fake_queue
+                .publish(
+                    ChainBuilder::new()
+                        .readable(&slice[..slice.len() / 4], &mem)
+                        .readable(&slice[slice.len() / 4..slice.len() / 2], &mem)
+                        .readable(&slice[slice.len() / 2..], &mem)
+                        .build(),
+                )
+                .expect("failed to publish readable chain");
+
+            state
+                .handle_tx_chain(
+                    OpType::ReadWrite,
+                    VirtioVsockHeader {
+                        len: LE32::new(slice.len() as u32),
+                        ..VirtioVsockHeader::default()
+                    },
+                    ReadableChain::new(
+                        queue_state.queue.next_chain().expect("failed to get next chain"),
+                        &mem,
+                    ),
+                )
+                .expect("failed to write chain to socket");
+        };
+
+        // Send the bytes in 20 equally sized chains. The data in each chain is split across three
+        // descriptors.
+        let chunks: Vec<&[u8]> = random_bytes.chunks(20).collect();
+        for chunk in chunks {
+            send_bytes(chunk);
+        }
+
+        // Once TX completes, this data should be immediately readable from the client side socket.
+        let mut received_bytes = vec![0u8; num_bytes_to_send];
+        assert_eq!(
+            client_socket.read(&mut received_bytes).expect("failed to read bytes"),
+            received_bytes.len()
+        );
+        assert_eq!(received_bytes, random_bytes);
+    }
+
+    #[test]
+    fn read_write_basic_rx_data_integrity_validation() {
+        let mut executor = fasync::TestExecutor::new().expect("failed to create executor");
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
+        let (control_tx, _control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
+
+        let (client_socket, device_socket) =
+            zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create socket");
+        let socket =
+            fasync::Socket::from_socket(device_socket).expect("failed to create async socket");
+
+        let state = ReadWrite::new(socket, key, control_tx);
+
+        // Tell the device that there's u32::MAX credit available, as this test should not be
+        // credit limited.
+        send_header_to_rw_state(
+            VirtioVsockHeader {
+                op: LE16::new(OpType::CreditUpdate.into()),
+                buf_alloc: LE32::new(u32::MAX),
+                ..VirtioVsockHeader::default()
+            },
+            &state,
+        );
+
+        // Max out the client socket's TX buffer with random bytes.
+        let num_bytes_to_send = client_socket.info().expect("failed to get info").tx_buf_max;
+        let random_bytes: Vec<u8> =
+            rand::thread_rng().sample_iter(Standard).take(num_bytes_to_send).collect();
+        let mut received_bytes: Vec<u8> = Vec::new();
+
+        assert_eq!(
+            client_socket.write(&random_bytes).expect("failed to write bytes"),
+            num_bytes_to_send
+        );
+
+        let min_chain_size = std::mem::size_of::<VirtioVsockHeader>() as u32;
+        loop {
+            // A state will return true for wants_rx_chain as long as there's data pending on the
+            // socket, and will return pending when there's not yet data. This should never return
+            // false, as that would suggest a state change.
+            let want_rx_chain_fut = state.wants_rx_chain();
+            futures::pin_mut!(want_rx_chain_fut);
+            let wants_chain = match executor.run_until_stalled(&mut want_rx_chain_fut) {
+                Poll::Pending => {
+                    // No remaining bytes to read.
+                    break;
+                }
+                Poll::Ready(wants_chain) => wants_chain,
+            };
+            assert!(wants_chain);
+
+            let mem = IdentityDriverMem::new();
+            let mut queue_state = TestQueue::new(32, &mem);
+
+            // Repeatedly send writable chains to the device with 6 descriptors, with each
+            // descriptor between 1 and 100 bytes (except the first which will always have room
+            // for the header).
+            queue_state
+                .fake_queue
+                .publish(
+                    ChainBuilder::new()
+                        .writable(rand::thread_rng().gen_range(min_chain_size..100), &mem)
+                        .writable(rand::thread_rng().gen_range(1..100), &mem)
+                        .writable(rand::thread_rng().gen_range(1..100), &mem)
+                        .writable(rand::thread_rng().gen_range(1..100), &mem)
+                        .writable(rand::thread_rng().gen_range(1..100), &mem)
+                        .writable(rand::thread_rng().gen_range(1..100), &mem)
+                        .build(),
+                )
+                .expect("failed to publish writable chain");
+
+            state
+                .handle_rx_chain(
+                    WritableChain::new(
+                        queue_state.queue.next_chain().expect("failed to get next chain"),
+                        &mem,
+                    )
+                    .expect("failed to get writable chain"),
+                )
+                .expect("failed to handle rx chain");
+
+            let used_chain = queue_state.fake_queue.next_used().expect("no next used chain");
+
+            // Coalesce the returned chain into one contiguous buffer.
+            let mut result = Vec::new();
+            let mut iter = used_chain.data_iter();
+            while let Some((data, len)) = iter.next() {
+                let slice = unsafe { std::slice::from_raw_parts(data as *const u8, len as usize) };
+                result.extend_from_slice(slice);
+            }
+
+            // For each chain, parse and validate the header, and then append the data section to
+            // the received_bytes vector for eventual comparison.
+            assert_eq!(result.len(), usize::try_from(used_chain.written()).unwrap());
+            let header =
+                VirtioVsockHeader::read_from(&result[..std::mem::size_of::<VirtioVsockHeader>()])
+                    .expect("failed to read header");
+
+            assert_eq!(header.src_cid.get(), key.host_cid.into());
+            assert_eq!(header.dst_cid.get(), key.guest_cid.into());
+            assert_eq!(header.src_port.get(), key.host_port);
+            assert_eq!(header.dst_port.get(), key.guest_port);
+            assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::ReadWrite);
+            assert_eq!(
+                usize::try_from(header.len.get()).unwrap(),
+                (result.len() - std::mem::size_of::<VirtioVsockHeader>())
+            );
+
+            received_bytes.extend_from_slice(&result[std::mem::size_of::<VirtioVsockHeader>()..]);
+        }
+
+        assert_eq!(received_bytes, random_bytes);
+    }
+
+    #[test]
     fn require_fresh_read_signal_in_read_write_state() {
         let mut executor = fasync::TestExecutor::new().expect("failed to create executor");
         let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
@@ -1070,6 +1399,14 @@ mod tests {
             fasync::Socket::from_socket(device_socket).expect("failed to create async socket");
 
         let state = ReadWrite::new(socket, key, control_tx);
+        send_header_to_rw_state(
+            VirtioVsockHeader {
+                op: LE16::new(OpType::CreditUpdate.into()),
+                buf_alloc: LE32::new(u32::MAX),
+                ..VirtioVsockHeader::default()
+            },
+            &state,
+        );
 
         // Nothing sent via the client socket, so the state has no need for an RX chain.
         let want_rx_chain_fut = state.wants_rx_chain();
@@ -1179,9 +1516,262 @@ mod tests {
         }
     }
 
-    #[fuchsia::test]
-    async fn read_write_client_close_socket_rx_bytes_outstanding() {
-        // TODO(fxb/97355): Write test once we have RX support.
+    #[test]
+    fn read_write_client_close_socket_rx_bytes_outstanding() {
+        let mut executor = fasync::TestExecutor::new().expect("failed to create executor");
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
+        let (control_tx, mut control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
+
+        let (client_socket, device_socket) =
+            zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create socket");
+        let socket =
+            fasync::Socket::from_socket(device_socket).expect("failed to create async socket");
+
+        let state = ReadWrite::new(socket, key, control_tx);
+
+        // Tell the device that there's u32::MAX credit available, as this test should not be
+        // credit limited.
+        send_header_to_rw_state(
+            VirtioVsockHeader {
+                op: LE16::new(OpType::CreditUpdate.into()),
+                buf_alloc: LE32::new(u32::MAX),
+                ..VirtioVsockHeader::default()
+            },
+            &state,
+        );
+
+        // Write 5 bytes to the client socket, and then drop it. The socket now has a peer closed
+        // signal.
+        let bytes = vec![1u8, 2, 3, 4, 5];
+        assert_eq!(client_socket.write(&bytes).expect("failed to write bytes"), bytes.len());
+        drop(client_socket);
+
+        // State wants a chain even though the socket was closed, as there are bytes outstanding.
+        let want_rx_chain_fut = state.wants_rx_chain();
+        futures::pin_mut!(want_rx_chain_fut);
+        if let Poll::Ready(wants_chain) = executor.run_until_stalled(&mut want_rx_chain_fut) {
+            assert!(wants_chain)
+        } else {
+            panic!("Expected future to be ready")
+        };
+
+        // The guest is instructed to stop sending packets, but receive is left open until the
+        // socket is drained.
+        let header = control_rx
+            .try_next()
+            .expect("expected control packet")
+            .expect("control stream should not close");
+
+        let flags = VirtioVsockFlags::from_bits(header.flags.get()).expect("unrecognized flag");
+        assert_eq!(flags, VirtioVsockFlags::SHUTDOWN_SEND);
+        assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::Shutdown);
+
+        // Device still wants a chain as it has 5 bytes to sent before transitioning to a shutdown
+        // state.
+        let want_rx_chain_fut = state.wants_rx_chain();
+        futures::pin_mut!(want_rx_chain_fut);
+        if let Poll::Ready(wants_chain) = executor.run_until_stalled(&mut want_rx_chain_fut) {
+            assert!(wants_chain)
+        } else {
+            panic!("Expected future to be ready")
+        };
+
+        let header_size = std::mem::size_of::<VirtioVsockHeader>();
+        let mem = IdentityDriverMem::new();
+        let mut queue_state = TestQueue::new(32, &mem);
+
+        queue_state
+            .fake_queue
+            .publish(ChainBuilder::new().writable(header_size as u32 + 50, &mem).build())
+            .expect("failed to publish writable chain");
+
+        state
+            .handle_rx_chain(
+                WritableChain::new(
+                    queue_state.queue.next_chain().expect("failed to get next chain"),
+                    &mem,
+                )
+                .expect("failed to get writable chain"),
+            )
+            .expect("failed to handle rx chain");
+
+        let used_chain = queue_state.fake_queue.next_used().expect("no next used chain");
+
+        assert_eq!(used_chain.written(), (header_size + bytes.len()) as u32);
+        let (data, len) =
+            used_chain.data_iter().next().expect("there should be one filled descriptor");
+        let slice = unsafe { std::slice::from_raw_parts(data as *const u8, len as usize) };
+        assert_eq!(&slice[header_size..], &bytes);
+
+        // Socket has been drained, so the state no longer wants any chains.
+        let want_rx_chain_fut = state.wants_rx_chain();
+        futures::pin_mut!(want_rx_chain_fut);
+        if let Poll::Ready(wants_chain) = executor.run_until_stalled(&mut want_rx_chain_fut) {
+            assert!(!wants_chain)
+        } else {
+            panic!("Expected future to be ready")
+        };
+
+        // The state can transition to a full shutdown now that the socket has been drained,
+        let header = control_rx
+            .try_next()
+            .expect("expected control packet")
+            .expect("control stream should not close");
+
+        let flags = VirtioVsockFlags::from_bits(header.flags.get()).expect("unrecognized flag");
+        assert_eq!(flags, VirtioVsockFlags::SHUTDOWN_BOTH);
+        assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::Shutdown);
+
+        let state_action_fut = state.do_state_action();
+        futures::pin_mut!(state_action_fut);
+        if let Poll::Ready(action) = executor.run_until_stalled(&mut state_action_fut) {
+            if let StateAction::UpdateState(new_state) = action {
+                match new_state {
+                    VsockConnectionState::ClientInitiatedShutdown(_) => (),
+                    _ => panic!("Expected transition to client initiated shutdown"),
+                }
+            } else {
+                panic!("Expected a change of state")
+            }
+        } else {
+            panic!("Expected future to be ready")
+        };
+    }
+
+    #[test]
+    fn read_write_rx_obeys_guest_credit() {
+        let mut executor = fasync::TestExecutor::new().expect("failed to create executor");
+        let key = VsockConnectionKey::new(HOST_CID, 5, DEFAULT_GUEST_CID, 10);
+        let (control_tx, _control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
+
+        let (client_socket, device_socket) =
+            zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create socket");
+        let socket =
+            fasync::Socket::from_socket(device_socket).expect("failed to create async socket");
+
+        let state = ReadWrite::new(socket, key, control_tx);
+
+        // The guest informs the device that it only has 5 bytes of buffer available (the guest
+        // RX credit).
+        let guest_buf_alloc = 5;
+        send_header_to_rw_state(
+            VirtioVsockHeader {
+                op: LE16::new(OpType::CreditUpdate.into()),
+                buf_alloc: LE32::new(guest_buf_alloc),
+                fwd_cnt: LE32::new(0),
+                ..VirtioVsockHeader::default()
+            },
+            &state,
+        );
+
+        // Client writes 9 bytes to the socket. Note that this is above the guest credit, but this
+        // is fine as the device will enforce this when writing to the chain.
+        let mut received_bytes: Vec<u8> = Vec::new();
+        let random_bytes: Vec<u8> = rand::thread_rng().sample_iter(Standard).take(9).collect();
+        assert_eq!(
+            client_socket.write(&random_bytes).expect("failed to write bytes"),
+            random_bytes.len()
+        );
+
+        let header_size = std::mem::size_of::<VirtioVsockHeader>();
+        let mem = IdentityDriverMem::new();
+        let mut queue_state = TestQueue::new(32, &mem);
+
+        // Guest credit allows for 5 bytes, so wants_rx_chain future completes true.
+        let want_rx_chain_fut = state.wants_rx_chain();
+        futures::pin_mut!(want_rx_chain_fut);
+        if let Poll::Ready(wants_chain) = executor.run_until_stalled(&mut want_rx_chain_fut) {
+            assert!(wants_chain)
+        } else {
+            panic!("Expected future to be ready")
+        };
+
+        // This chain has a single descriptor which is big enough for the 9 byte payload, but
+        // only 5 bytes (plus the header) will be written due to the guest credit requirement.
+        queue_state
+            .fake_queue
+            .publish(ChainBuilder::new().writable(header_size as u32 + 50, &mem).build())
+            .expect("failed to publish writable chain");
+
+        state
+            .handle_rx_chain(
+                WritableChain::new(
+                    queue_state.queue.next_chain().expect("failed to get next chain"),
+                    &mem,
+                )
+                .expect("failed to get writable chain"),
+            )
+            .expect("failed to handle rx chain");
+
+        let used_chain = queue_state.fake_queue.next_used().expect("no next used chain");
+
+        assert_eq!(used_chain.written(), header_size as u32 + 5);
+        let (data, len) =
+            used_chain.data_iter().next().expect("there should be one filled descriptor");
+        let slice = unsafe { std::slice::from_raw_parts(data as *const u8, len as usize) };
+
+        // Only part of the chain was filled due to the allowable guest credit.
+        let header =
+            VirtioVsockHeader::read_from(&slice[..header_size]).expect("failed to read header");
+        assert_eq!(header.len.get(), 5);
+        received_bytes.extend_from_slice(&slice[header_size..]);
+
+        // No guest credit, so the connection doesn't request an RX chain.
+        let want_rx_chain_fut = state.wants_rx_chain();
+        futures::pin_mut!(want_rx_chain_fut);
+        assert!(executor.run_until_stalled(&mut want_rx_chain_fut).is_pending());
+
+        // Increasing fwd_cnt to 5 means the guest has processed all bytes in its buffer, so the
+        // device can fill another chain.
+        send_header_to_rw_state(
+            VirtioVsockHeader {
+                op: LE16::new(OpType::CreditUpdate.into()),
+                buf_alloc: LE32::new(guest_buf_alloc),
+                fwd_cnt: LE32::new(5),
+                ..VirtioVsockHeader::default()
+            },
+            &state,
+        );
+
+        // Device wants a chain again now that guest credit is available.
+        let want_rx_chain_fut = state.wants_rx_chain();
+        futures::pin_mut!(want_rx_chain_fut);
+        if let Poll::Ready(wants_chain) = executor.run_until_stalled(&mut want_rx_chain_fut) {
+            assert!(wants_chain)
+        } else {
+            panic!("Expected future to be ready")
+        };
+
+        queue_state
+            .fake_queue
+            .publish(ChainBuilder::new().writable(header_size as u32 + 50, &mem).build())
+            .expect("failed to publish writable chain");
+
+        state
+            .handle_rx_chain(
+                WritableChain::new(
+                    queue_state.queue.next_chain().expect("failed to get next chain"),
+                    &mem,
+                )
+                .expect("failed to get writable chain"),
+            )
+            .expect("failed to handle rx chain");
+
+        let used_chain = queue_state.fake_queue.next_used().expect("no next used chain");
+
+        // Once again the chain is only partially filled, but this time it is because the socket
+        // had no more data.
+        assert_eq!(used_chain.written(), header_size as u32 + 4);
+        let (data, len) =
+            used_chain.data_iter().next().expect("there should be one filled descriptor");
+        let slice = unsafe { std::slice::from_raw_parts(data as *const u8, len as usize) };
+
+        let header =
+            VirtioVsockHeader::read_from(&slice[..header_size]).expect("failed to read header");
+        assert_eq!(header.len.get(), 4);
+        received_bytes.extend_from_slice(&slice[header_size..]);
+
+        assert_eq!(received_bytes, random_bytes);
     }
 
     #[test]
@@ -1199,6 +1789,15 @@ mod tests {
             fasync::Socket::from_socket(device_socket).expect("failed to create async socket");
 
         let state = ReadWrite::new(socket, key, control_tx);
+
+        send_header_to_rw_state(
+            VirtioVsockHeader {
+                op: LE16::new(OpType::CreditUpdate.into()),
+                buf_alloc: LE32::new(u32::MAX),
+                ..VirtioVsockHeader::default()
+            },
+            &state,
+        );
 
         // Write some data to the buffer so that dropping the socket doesn't immediately transition
         // to a shutdown state. The device will try and send this data to the guest first.

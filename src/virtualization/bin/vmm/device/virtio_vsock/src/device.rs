@@ -10,7 +10,7 @@ use {
     crate::connection_states::{StateAction, VsockConnectionState},
     crate::port_manager::PortManager,
     crate::wire::{OpType, VirtioVsockConfig, VirtioVsockHeader, VsockType, LE64},
-    anyhow::{anyhow, Context, Error},
+    anyhow::{anyhow, Error},
     fidl::endpoints::Proxy,
     fidl_fuchsia_virtualization::{
         HostVsockAcceptorProxy, HostVsockEndpointConnect2Responder,
@@ -135,10 +135,7 @@ impl VsockDevice {
         } else {
             match OpType::try_from(header.op.get())? {
                 OpType::Request => match chain.return_complete() {
-                    Ok(()) => self
-                        .guest_initiated_connect(key)
-                        .await
-                        .context("Failed guest initiated connect"),
+                    Ok(()) => self.guest_initiated_connect(key).await,
                     Err(err) => Err(anyhow!("Failed to complete chain: {}", err)),
                 },
                 op => {
@@ -420,10 +417,13 @@ impl VsockDevice {
         chain: &mut ReadableChain<'a, 'b, N, M>,
     ) -> Result<VirtioVsockHeader, Error> {
         let mut header_buf = [0u8; mem::size_of::<VirtioVsockHeader>()];
-        chain.read_exact(&mut header_buf).context(format!(
-            "Failed to read {} bytes for the header",
-            mem::size_of::<VirtioVsockHeader>(),
-        ))?;
+        chain.read_exact(&mut header_buf).map_err(|err| {
+            anyhow!(
+                "Failed to read {} bytes for the header: {}",
+                mem::size_of::<VirtioVsockHeader>(),
+                err
+            )
+        })?;
         match VirtioVsockHeader::read_from(header_buf.as_slice()) {
             Some(header) => Ok(header),
             None => Err(anyhow!("Failed to deserialize VirtioVsockHeader")),

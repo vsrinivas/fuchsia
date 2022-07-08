@@ -44,6 +44,8 @@ rustc_binary("virtio_vsock_bin") {
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:pin-utils",
   ]
+
+  test_deps = [ "//third_party/rust_crates:rand" ]
 }
 
 fuchsia_package("virtio_vsock") {
