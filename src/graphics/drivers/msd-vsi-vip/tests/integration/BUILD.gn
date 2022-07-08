@@ -24,7 +24,7 @@ test("test_magma_vsi_exec_bin") {
 }
 
 fuchsia_unittest_package("test-magma-vsi-exec") {
-  manifest = "meta/test_magma_vsi_exec.cmx"
+  manifest = "meta/test_magma_vsi_exec.cml"
   deps = [ ":test_magma_vsi_exec_bin" ]
   test_specs = {
     environments = [
@@ -61,7 +61,7 @@ test("msd_vsi_vip_integration_tests") {
 }
 
 fuchsia_unittest_package("msd-vsi-vip-integration-tests") {
-  manifest = "meta/msd_vsi_vip_integration_tests.cmx"
+  manifest = "meta/msd_vsi_vip_integration_tests.cml"
   deps = [ ":msd_vsi_vip_integration_tests" ]
   test_specs = {
     environments = [
