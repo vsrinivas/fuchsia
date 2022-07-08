@@ -83,6 +83,41 @@ To run an interactive Android shell, connected to your host machine, run:
 ffx starnix shell
 ```
 
+### Running the ADB Relay
+
+The target daemon 'adbd` is normally started as part of init.
+If adbd is not already started, it can be started with
+
+```sh
+ffx starnix start fuchsia-pkg://fuchsia.com/starnix_android#meta/adbd.cm
+```
+
+The relay between the host and server is started by running the adb
+starnix plugin in a termainal.
+
+```sh
+ffx starnix adb
+```
+
+After the plugin is running, connect to it with `adb connect` on
+the host.
+
+```sh
+$ adb connect 127.0.0.1:5556
+$ adb devices -l
+List of devices attached
+127.0.0.1:5556         device product:starnix_x86_64 model:starnix_x86_64 device:starnix_x86_64 transport_id:2
+emulator-5554          offline transport_id:1
+```
+
+If there is more than one adb device, run commands with the '-s`
+or `-t` selectors. For example:
+
+```sh
+adb -t 2 shell
+adb -s 127.0.0.1:5556 logcat
+```
+
 ### Run a Linux test binary
 
 Linux test binaries can also be run using the Starnix test runner using the
@@ -105,7 +140,7 @@ You should see output like:
 [ RUN      ] ExitTest.CloseFds
 ```
 
-If you set the log level to `TRACE` (e.g.,  `fx log --severity TRACE --select "core/test*/*/starnix*#TRACE"`), you should e the system call handling in the device logs:
+If you set the log level to `TRACE` (e.g.,  `fx log --severity TRACE --select "core/test*/*/starnix*#TRACE"`), you should see the system call handling in the device logs:
 
 ```text
 [629.603][starnix][D] 1[/data/tests/exit_test] wait4(0x3, 0x1c48095b950, 0x0, 0x0, 0x10, 0x10)
