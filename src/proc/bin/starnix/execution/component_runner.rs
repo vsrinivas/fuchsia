@@ -94,7 +94,7 @@ pub async fn start_component(
     let mut current_task = galaxy.create_process(&binary_path)?;
     let user_passwd = get_program_string(&start_info, "user").unwrap_or("fuchsia:x:42:42");
     let credentials = Credentials::from_passwd(user_passwd)?;
-    current_task.write().creds = credentials;
+    current_task.set_creds(credentials);
     let startup_handles =
         parse_numbered_handles(&current_task, start_info.numbered_handles, &current_task.files)?;
     let shell_controller = startup_handles.shell_controller;

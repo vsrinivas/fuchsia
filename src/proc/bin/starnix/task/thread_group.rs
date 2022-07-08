@@ -482,7 +482,7 @@ impl ThreadGroup {
             return error!(EINVAL);
         }
 
-        let has_admin = current_task.read().creds.has_capability(CAP_SYS_ADMIN);
+        let has_admin = current_task.creds().has_capability(CAP_SYS_ADMIN);
 
         // "If this terminal is already the controlling terminal of a different
         // session group, then the ioctl fails with EPERM, unless the caller
@@ -616,7 +616,7 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
             self.zombie_leader = Some(ZombieProcess {
                 pid: self.leader(),
                 pgid: self.process_group.leader,
-                uid: task.read().creds.uid,
+                uid: task.creds().uid,
                 exit_status,
             });
         }
@@ -684,7 +684,7 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
                     };
                     return Ok(WaitableChild::Available(ZombieProcess::new(
                         &child,
-                        &child.get_task()?.read().creds,
+                        &child.get_task()?.creds(),
                         ExitStatus::Continue(siginfo),
                     )));
                 }
@@ -696,7 +696,7 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
                     };
                     return Ok(WaitableChild::Available(ZombieProcess::new(
                         &child,
-                        &child.get_task()?.read().creds,
+                        &child.get_task()?.creds(),
                         ExitStatus::Stop(siginfo),
                     )));
                 }

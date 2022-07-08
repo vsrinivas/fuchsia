@@ -189,7 +189,7 @@ fn create_task(
     credentials: Credentials,
 ) -> Result<CurrentTask, Error> {
     let task = Task::create_process_without_parent(kernel, to_cstr(&name.to_string()), fs.clone())?;
-    task.write().creds = credentials;
+    task.set_creds(credentials);
     Ok(task)
 }
 

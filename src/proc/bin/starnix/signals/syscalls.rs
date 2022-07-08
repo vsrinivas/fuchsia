@@ -1100,11 +1100,12 @@ mod tests {
     fn test_kill_invalid_task() {
         let (_kernel, task1) = create_kernel_and_task();
         // Task must not have the kill capability.
-        task1.write().creds =
-            Credentials::from_passwd("foo:x:1:1").expect("Credentials::from_passwd");
+        task1.set_creds(Credentials::from_passwd("foo:x:1:1").expect("Credentials::from_passwd"));
         let task2 = task1.clone_task_for_test(0);
-        task2.write().creds = Credentials::from_passwd("bin:x:2:2:bin:/bin:/usr/sbin/nologin")
-            .expect("build credentials");
+        task2.set_creds(
+            Credentials::from_passwd("bin:x:2:2:bin:/bin:/usr/sbin/nologin")
+                .expect("build credentials"),
+        );
 
         assert_eq!(task1.can_signal(&task2, &SIGINT.into()), false);
         assert_eq!(sys_kill(&task2, task1.id, SIGINT.into()), error!(EPERM));
@@ -1119,8 +1120,10 @@ mod tests {
         task1.thread_group.setsid().expect("setsid");
         let task2 = task1.clone_task_for_test(0);
         task2.thread_group.setsid().expect("setsid");
-        task2.write().creds = Credentials::from_passwd("bin:x:2:2:bin:/bin:/usr/sbin/nologin")
-            .expect("build credentials");
+        task2.set_creds(
+            Credentials::from_passwd("bin:x:2:2:bin:/bin:/usr/sbin/nologin")
+                .expect("build credentials"),
+        );
 
         assert_eq!(task2.can_signal(&task1, &SIGINT.into()), false);
         assert_eq!(sys_kill(&task2, -task1.id, SIGINT.into()), error!(EPERM));
@@ -1524,7 +1527,7 @@ mod tests {
     #[::fuchsia::test]
     fn test_sigqueue() {
         let (kernel, current_task) = create_kernel_and_task();
-        let current_uid = current_task.read().creds.uid;
+        let current_uid = current_task.creds().uid;
         let current_pid = current_task.get_pid();
 
         const TEST_VALUE: u64 = 101;

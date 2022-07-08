@@ -88,9 +88,6 @@ pub struct TaskMutableState {
     /// The arguments with which this task was started.
     pub argv: Vec<CString>,
 
-    /// The security credentials for this task.
-    pub creds: Credentials,
-
     // See https://man7.org/linux/man-pages/man2/set_tid_address.2.html
     pub clear_child_tid: UserRef<pid_t>,
 
@@ -137,6 +134,12 @@ pub struct Task {
     /// This is guarded by its own lock because it is use to display the task description, and
     /// other locks may be taken at the time. No other lock may be held while this lock is taken.
     command: RwLock<CString>,
+
+    /// The security credentials for this task.
+    ///
+    /// This is necessary because credentials need to be read from operations on Node, and other
+    /// locks may be taken at the time. No other lock may be held while this lock is taken.
+    creds: RwLock<Credentials>,
 }
 
 impl Task {
@@ -171,9 +174,9 @@ impl Task {
             abstract_vsock_namespace,
             exit_signal,
             command: RwLock::new(command),
+            creds: RwLock::new(creds),
             mutable_state: RwLock::new(TaskMutableState {
                 argv: argv,
-                creds: creds,
                 clear_child_tid: UserRef::default(),
                 signals: Default::default(),
                 exit_status: None,
@@ -183,6 +186,7 @@ impl Task {
         {
             let _l1 = result.read();
             let _l2 = result.command.read();
+            let _l3 = result.creds.read();
         }
         result
     }
@@ -195,6 +199,14 @@ impl Task {
     /// Access mutable state with a write lock.
     pub fn write(&self) -> RwLockWriteGuard<'_, TaskMutableState> {
         self.mutable_state.write()
+    }
+
+    pub fn creds(&self) -> Credentials {
+        self.creds.read().clone()
+    }
+
+    pub fn set_creds(&self, creds: Credentials) {
+        *self.creds.write() = creds;
     }
 
     /// Create a task that is the leader of a new thread group.
@@ -317,7 +329,7 @@ impl Task {
         let pid = pids.allocate_pid();
         let command = self.command();
         let argv = state.argv.clone();
-        let creds = state.creds.clone();
+        let creds = self.creds();
         let (thread, thread_group, mm) = if clone_thread {
             // Drop both locks when leaving this block
             let (_state, _thread_group_state) = (state, thread_group_state);
@@ -455,13 +467,13 @@ impl Task {
     }
 
     pub fn as_ucred(&self) -> ucred {
-        let state = self.read();
-        ucred { pid: self.get_pid(), uid: state.creds.uid, gid: state.creds.gid }
+        let creds = self.creds();
+        ucred { pid: self.get_pid(), uid: creds.uid, gid: creds.gid }
     }
 
     pub fn as_fscred(&self) -> FsCred {
-        let state = self.read();
-        FsCred { uid: state.creds.euid, gid: state.creds.egid }
+        let creds = self.creds();
+        FsCred { uid: creds.euid, gid: creds.egid }
     }
 
     pub fn can_signal(&self, target: &Task, unchecked_signal: &UncheckedSignal) -> bool {
@@ -471,13 +483,13 @@ impl Task {
             return true;
         }
 
-        let self_creds = self.read().creds.clone();
+        let self_creds = self.creds();
 
         if self_creds.has_capability(CAP_KILL) {
             return true;
         }
 
-        if self_creds.has_same_uid(&target.read().creds) {
+        if self_creds.has_same_uid(&target.creds()) {
             return true;
         }
 
@@ -845,11 +857,12 @@ impl CurrentTask {
 
         {
             let mut state = self.write();
+            let mut creds = self.creds.write();
             state.signals.alt_stack = None;
 
             // TODO(tbodt): Check whether capability xattrs are set on the file, and grant/limit
             // capabilities accordingly.
-            state.creds.exec();
+            creds.exec();
         }
 
         self.thread_group.signal_actions.reset_for_exec();
@@ -990,11 +1003,9 @@ mod test {
     #[::fuchsia::test]
     fn test_root_capabilities() {
         let (_kernel, current_task) = create_kernel_and_task();
-        current_task.write().creds =
-            Credentials::from_passwd("root:x:0:0").expect("Credentials::from_passwd");
-        assert!(current_task.read().creds.has_capability(CAP_SYS_ADMIN));
-        current_task.write().creds =
-            Credentials::from_passwd("foo:x:1:1").expect("Credentials::from_passwd");
-        assert!(!current_task.read().creds.has_capability(CAP_SYS_ADMIN));
+        assert!(current_task.creds().has_capability(CAP_SYS_ADMIN));
+        current_task
+            .set_creds(Credentials::from_passwd("foo:x:1:1").expect("Credentials::from_passwd"));
+        assert!(!current_task.creds().has_capability(CAP_SYS_ADMIN));
     }
 }

@@ -62,7 +62,7 @@ pub fn sys_reboot(
     {
         return error!(EINVAL);
     }
-    if !current_task.read().creds.has_capability(CAP_SYS_BOOT) {
+    if !current_task.creds().has_capability(CAP_SYS_BOOT) {
         return error!(EPERM);
     }
     // TODO(tbodt): only shut down the current Kernel rather than panicking the entire process

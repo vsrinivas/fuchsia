@@ -600,7 +600,7 @@ impl FsNode {
             let info = self.info();
             (info.uid, info.gid, info.mode.bits())
         };
-        let creds = &current_task.read().creds;
+        let creds = current_task.creds();
         if creds.has_capability(CAP_DAC_OVERRIDE) {
             return Ok(());
         }
@@ -835,7 +835,7 @@ mod tests {
         let (_kernel, current_task) = create_kernel_and_task();
         let mut creds = Credentials::with_ids(1, 2);
         creds.groups = vec![3, 4];
-        current_task.write().creds = creds;
+        current_task.set_creds(creds);
 
         // Create a node.
         let node = &current_task

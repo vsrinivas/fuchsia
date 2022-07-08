@@ -467,13 +467,7 @@ impl SocketOps for UnixSocket {
                 ancillary_data
                     .push(AncillaryData::Unix(UnixControlData::Credentials(creds.clone())));
             } else {
-                let task_state = current_task.read();
-                let credentials = &task_state.creds;
-                let creds = ucred {
-                    pid: current_task.get_pid(),
-                    uid: credentials.uid,
-                    gid: credentials.gid,
-                };
+                let creds = current_task.as_ucred();
                 ancillary_data.push(AncillaryData::Unix(UnixControlData::Credentials(creds)));
             }
         }

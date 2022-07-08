@@ -394,8 +394,7 @@ pub fn load_executable(
     const STARNIX_CLOCK_TICKS_PER_SEC: u64 = 100;
 
     let auxv = {
-        let state = current_task.read();
-        let creds = &state.creds;
+        let creds = current_task.creds();
 
         vec![
             (AT_UID, creds.uid as u64),

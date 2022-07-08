@@ -337,7 +337,7 @@ pub fn sys_getdents64(
 }
 
 pub fn sys_chroot(current_task: &CurrentTask, user_path: UserCString) -> Result<(), Errno> {
-    if !current_task.read().creds.has_capability(CAP_SYS_CHROOT) {
+    if !current_task.creds().has_capability(CAP_SYS_CHROOT) {
         return error!(EPERM);
     }
 
