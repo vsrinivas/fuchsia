@@ -173,7 +173,8 @@ void FileConnection::GetBackingMemory(fuchsia::io::VmoFlags vmo_flags,
     }
   }
   zx::vmo vmo;
-  if (zx_status_t status = vn_->GetBackingMemory(vmo_flags, &vmo); status != ZX_OK) {
+  zx_status_t status = vn_->GetBackingMemory(vmo_flags, &vmo);
+  if (status != ZX_OK) {
     callback(fpromise::error(status));
   } else {
     callback(fpromise::ok(std::move(vmo)));

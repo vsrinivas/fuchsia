@@ -54,8 +54,8 @@ zx_status_t VmoFile::GetBackingMemory(fuchsia::io::VmoFlags flags, zx::vmo* out_
 
 void VmoFile::Describe(fuchsia::io::NodeInfo* out_info) {
   zx::vmo client_vmo;
-  if (zx_status_t status = GetBackingMemory(fuchsia::io::VmoFlags::READ, &client_vmo);
-      status == ZX_OK) {
+  zx_status_t status = GetBackingMemory(fuchsia::io::VmoFlags::READ, &client_vmo);
+  if (status == ZX_OK) {
     out_info->vmofile() =
         fuchsia::io::Vmofile{.vmo = std::move(client_vmo), .offset = offset_, .length = length_};
   } else {
@@ -65,8 +65,8 @@ void VmoFile::Describe(fuchsia::io::NodeInfo* out_info) {
 
 void VmoFile::Describe2(fuchsia::io::ConnectionInfo* out_info) {
   zx::vmo client_vmo;
-  if (zx_status_t status = GetBackingMemory(fuchsia::io::VmoFlags::READ, &client_vmo);
-      status == ZX_OK) {
+  zx_status_t status = GetBackingMemory(fuchsia::io::VmoFlags::READ, &client_vmo);
+  if (status == ZX_OK) {
     fuchsia::io::MemoryInfo mem_info;
     mem_info.set_buffer(
         fuchsia::mem::Range{.vmo = std::move(client_vmo), .offset = offset_, .size = length_});
