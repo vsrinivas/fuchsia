@@ -336,9 +336,7 @@ async fn read_file(dir: &fio::DirectoryProxy, path: &str) -> Result<Vec<u8>, Ver
 
         let mut expect_empty_blob = false;
 
-        // First try getting a fuchsia.mem.Buffer of the file, as blobfs already has a VMO for the
-        // blob and it is faster to get the file data that way. Not all package blobs support the
-        // API, so on expected errors, fall back to reading the file over FIDL.
+        // Attempt to get the backing VMO, which is faster. Fall back to reading over FIDL
         match result {
             Ok(vmo) => {
                 let size = vmo.get_content_size().context("unable to get vmo size")?;
@@ -347,9 +345,7 @@ async fn read_file(dir: &fio::DirectoryProxy, path: &str) -> Result<Vec<u8>, Ver
                 return Ok(buf);
             }
             Err(status) => match status {
-                Status::NOT_SUPPORTED => {
-                    // meta far files do not support get_buffer, fallback to file read path.
-                }
+                Status::NOT_SUPPORTED => {}
                 Status::BAD_STATE => {
                     // may or may not be intended behavior, but the empty blob will not provide a vmo,
                     // failing with BAD_STATE. Verify in the read path below that the blob is indeed

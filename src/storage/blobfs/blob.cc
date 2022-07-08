@@ -996,8 +996,8 @@ zx_status_t Blob::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo, siz
 
   // Let clients map and set the names of their VMOs.
   zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHTS_PROPERTY;
-  // We can ignore fuchsia_io_VMO_FLAG_PRIVATE, since private / shared access to the underlying VMO
-  // can both be satisfied with a clone due to the immutability of blobfs blobs.
+  // We can ignore VmoFlags::PRIVATE_CLONE since private / shared access to the underlying VMO can
+  // both be satisfied with a clone due to the immutability of blobfs blobs.
   rights |= (flags & fuchsia_io::wire::VmoFlags::kRead) ? ZX_RIGHT_READ : 0;
   rights |= (flags & fuchsia_io::wire::VmoFlags::kExecute) ? ZX_RIGHT_EXECUTE : 0;
   return CloneDataVmo(rights, out_vmo, out_size);

@@ -337,16 +337,16 @@ async fn assert_seek_past_end_end_origin(
 }
 
 #[fuchsia::test]
-async fn get_buffer() {
+async fn get_backing_memory() {
     for source in dirs_to_test().await {
-        get_buffer_per_package_source(source).await
+        get_backing_memory_per_package_source(source).await
     }
 }
 
-async fn get_buffer_per_package_source(source: PackageSource) {
+async fn get_backing_memory_per_package_source(source: PackageSource) {
     let root_dir = &source.dir;
 
-    // GetBuffer() calls with supported flags should succeed for files that are not meta-as-file.
+    // calls with supported flags should succeed for files that are not meta-as-file.
     for size in [0, 1, 4095, 4096, 4097] {
         for path in [format!("file_{}", size), format!("meta/file_{}", size)] {
             if path == "file_0" {
@@ -355,15 +355,16 @@ async fn get_buffer_per_package_source(source: PackageSource) {
 
             let file = open_file(root_dir, &path, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
 
-            let _: zx::Vmo = test_get_buffer_success(&file, fio::VmoFlags::READ, size).await;
+            let _: zx::Vmo =
+                test_get_backing_memory_success(&file, fio::VmoFlags::READ, size).await;
 
-            let vmo0 = test_get_buffer_success(
+            let vmo0 = test_get_backing_memory_success(
                 &file,
                 fio::VmoFlags::READ | fio::VmoFlags::PRIVATE_CLONE,
                 size,
             )
             .await;
-            let vmo1 = test_get_buffer_success(
+            let vmo1 = test_get_backing_memory_success(
                 &file,
                 fio::VmoFlags::READ | fio::VmoFlags::PRIVATE_CLONE,
                 size,
@@ -372,25 +373,26 @@ async fn get_buffer_per_package_source(source: PackageSource) {
             assert_ne!(
                 vmo0.as_handle_ref().get_koid().unwrap(),
                 vmo1.as_handle_ref().get_koid().unwrap(),
-                "We should receive our own clone each time we invoke GetBuffer() with the VmoFlagPrivate field set"
+                "We should receive our own clone each time we invoke with {:?}",
+                fio::VmoFlags::PRIVATE_CLONE,
             );
         }
     }
 
-    // The empty blob will not return a vmo, failing calls to GetBuffer() with BAD_STATE.
+    // The empty blob will not return a vmo, failing calls with BAD_STATE.
     let file = open_file(root_dir, "file_0", fio::OpenFlags::RIGHT_READABLE).await.unwrap();
     let result =
         file.get_backing_memory(fio::VmoFlags::READ).await.unwrap().map_err(zx::Status::from_raw);
     assert_eq!(result, Err(zx::Status::BAD_STATE));
 
-    // For "meta as file", GetBuffer() should be unsupported.
+    // For "meta as file", should be unsupported.
     let file = open_file(root_dir, "meta", fio::OpenFlags::RIGHT_READABLE).await.unwrap();
     let result =
         file.get_backing_memory(fio::VmoFlags::READ).await.unwrap().map_err(zx::Status::from_raw);
     assert_eq!(result, Err(zx::Status::NOT_SUPPORTED));
 
-    // For files NOT under meta, GetBuffer() calls with unsupported flags should successfully return
-    // the FIDL call with a failure status.
+    // For files NOT under meta, calls with unsupported flags should successfully return the FIDL
+    // call with a failure status.
     let file = open_file(root_dir, "file", fio::OpenFlags::RIGHT_READABLE).await.unwrap();
     let result = file
         .get_backing_memory(fio::VmoFlags::EXECUTE)
@@ -442,17 +444,12 @@ fn round_up_to_4096_multiple(val: usize) -> usize {
     (val + 4095) & !4095
 }
 
-async fn test_get_buffer_success(
+async fn test_get_backing_memory_success(
     file: &fio::FileProxy,
-    get_buffer_flags: fio::VmoFlags,
+    flags: fio::VmoFlags,
     size: usize,
 ) -> zx::Vmo {
-    let vmo = file
-        .get_backing_memory(get_buffer_flags)
-        .await
-        .unwrap()
-        .map_err(zx::Status::from_raw)
-        .unwrap();
+    let vmo = file.get_backing_memory(flags).await.unwrap().map_err(zx::Status::from_raw).unwrap();
 
     let vmo_size = vmo.get_size().unwrap().try_into().unwrap();
     assert_eq!(vmo.get_content_size().unwrap(), u64::try_from(size).unwrap());

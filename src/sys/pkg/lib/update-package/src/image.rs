@@ -14,11 +14,11 @@ pub enum OpenImageError {
     #[error("while opening the file")]
     OpenFile(#[source] fuchsia_fs::node::OpenError),
 
-    #[error("while calling get_buffer")]
-    FidlGetBuffer(#[source] fidl::Error),
+    #[error("while calling get_backing_memory")]
+    FidlGetBackingMemory(#[source] fidl::Error),
 
     #[error("while obtaining vmo of file: {0}")]
-    GetBuffer(Status),
+    GetBackingMemory(Status),
 
     #[error("while converting vmo to a resizable vmo: {0}")]
     CloneBuffer(Status),
@@ -184,11 +184,11 @@ pub(crate) async fn open(
     let vmo = file
         .get_backing_memory(fio::VmoFlags::READ)
         .await
-        .map_err(OpenImageError::FidlGetBuffer)?
+        .map_err(OpenImageError::FidlGetBackingMemory)?
         .map_err(Status::from_raw)
-        .map_err(OpenImageError::GetBuffer)?;
+        .map_err(OpenImageError::GetBackingMemory)?;
 
-    let size = vmo.get_content_size().map_err(OpenImageError::GetBuffer)?;
+    let size = vmo.get_content_size().map_err(OpenImageError::GetBackingMemory)?;
 
     // The paver service requires VMOs that are resizable, and blobfs does not give out resizable
     // VMOs. Fortunately, a copy-on-write child clone of the vmo can be made resizable.

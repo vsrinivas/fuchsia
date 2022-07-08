@@ -205,8 +205,7 @@ mod tests {
         }
     }
 
-    /// Test that we still get a VMO when the server doesn't describe itself as a VmoFile but still
-    /// supports `File/GetBuffer`.
+    /// Test that we get a VMO when the server supports `File/GetBackingMemory`.
     #[fuchsia::test]
     async fn bytes_from_vmo_from_get_buffer() {
         let channel_only_foo: RoutingFn = Box::new(|scope, _flags, _mode, _path, server_end| {
@@ -250,7 +249,7 @@ mod tests {
     /// doesn't support returning a VMO.
     #[fuchsia::test]
     async fn bytes_from_channel_fallback() {
-        // create a fuchsia.io.Node which returns NOT_SUPPORTED on File/GetBuffer
+        // create a fuchsia.io.Node which returns NOT_SUPPORTED on `File/GetBackingMemory`.
         let channel_only_foo: RoutingFn = Box::new(|scope, _flags, _mode, _path, server_end| {
             let server_end: ServerEnd<fio::FileMarker> = ServerEnd::new(server_end.into_channel());
             let (mut file_requests, control) = server_end.into_stream_and_control_handle().unwrap();

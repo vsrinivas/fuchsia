@@ -61,7 +61,7 @@ class TestHarness : public fio_test::Io1Harness {
     // Unsupported options
     config.set_supports_create(false);
     config.set_supports_executable_file(false);
-    config.set_supports_get_buffer(false);
+    config.set_supports_get_backing_memory(false);
     config.set_supports_rename(false);
     config.set_supports_link(false);
     config.set_supports_set_attr(false);

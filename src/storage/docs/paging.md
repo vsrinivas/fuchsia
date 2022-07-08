@@ -20,7 +20,7 @@ This document describes the low-level implementation details of a writing a page
 
 Paged [Virtual Memory Objects](/docs/concepts/kernel/concepts.md) (VMOs) can be created and
 transferred in any way the implementation desires. Most mappings are created by filesystems which
-map memory in response to `GetBuffer` requests on the
+map memory in response to `GetBackingMemory` requests on the
 [fuchsia.io/File](/docs/reference/fidl/fuchsia.io) interface. (Most client programs will make this
 IPC request indirectly through the Posix `mmap` interface.)
 

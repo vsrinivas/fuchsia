@@ -36,10 +36,10 @@ class SdkCppHarness : public fio_test::Io1Harness {
     fio_test::Io1Config config;
 
     // Supported configuration options:
-    config.set_mutable_file(true);         // Files are mutable.
-    config.set_supports_remote_dir(true);  // vfs::RemoteDir
-    config.set_supports_vmo_file(true);    // vfs::VmoFile
-    config.set_supports_get_buffer(true);  // vfs::VmoFile
+    config.set_mutable_file(true);                 // Files are mutable.
+    config.set_supports_remote_dir(true);          // vfs::RemoteDir
+    config.set_supports_vmo_file(true);            // vfs::VmoFile
+    config.set_supports_get_backing_memory(true);  // vfs::VmoFile
 
     // Unsupported configuration options:
     config.set_supports_create(false);           // OPEN_FLAG_CREATE is not supported.

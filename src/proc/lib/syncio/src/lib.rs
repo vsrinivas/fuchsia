@@ -350,7 +350,7 @@ fn directory_open(
 /// Open a VMO at the given path in the given directory.
 ///
 /// The semantics for the vmo_flags argument are defined by the
-/// fuchsia.io/File.GetBuffer message (i.e., VmoFlags::*).
+/// fuchsia.io/File.GetBackingMemory message (i.e., VmoFlags::*).
 ///
 /// If the node at the given path is not a VMO, then this function returns
 /// a zx::Status::IO error.

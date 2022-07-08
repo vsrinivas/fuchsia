@@ -150,9 +150,9 @@ impl<S: crate::NonMetaStorage> RootDir<S> {
                     .meta_far
                     .get_backing_memory(fio::VmoFlags::READ)
                     .await
-                    .context("meta.far .get_buffer() fidl error")?
+                    .context("meta.far .get_backing_memory() fidl error")?
                     .map_err(zx::Status::from_raw)
-                    .context("meta.far .get_buffer protocol error")?;
+                    .context("meta.far .get_backing_memory protocol error")?;
                 Ok(vmo)
             })
             .await

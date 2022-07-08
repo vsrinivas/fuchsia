@@ -209,7 +209,7 @@ TEST(VmofileTests, test_vmofile_exec) {
 
   {
     // Providing a backing VMO with ZX_RIGHT_EXECUTE in CreateFromVmo above should cause
-    // VMO_FLAG_EXEC to work.
+    // VmoFlags::EXECUTE to work.
     const fidl::WireResult get_result = fidl::WireCall(file)->GetBackingMemory(
         fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kExecute);
     ASSERT_TRUE(get_result.ok(), "%s", get_result.FormatDescription().c_str());

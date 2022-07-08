@@ -7,7 +7,7 @@ use {
         endpoints::{create_proxy, ClientEnd, ProtocolMarker, Proxy},
         AsHandleRef,
     },
-    fidl_fuchsia_io as fio, fidl_fuchsia_io_test as io_test, fidl_fuchsia_mem,
+    fidl_fuchsia_io as fio, fidl_fuchsia_io_test as io_test,
     fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
     fuchsia_zircon as zx,
     futures::StreamExt,
@@ -173,11 +173,11 @@ fn get_directory_entry_name(dir_entry: &io_test::DirectoryEntry) -> String {
     .clone()
 }
 
-/// Asserts that the given `vmo_rights` align with the `vmo_flags` passed to a get_buffer call.
+/// Asserts that the given `vmo_rights` align with the `vmo_flags` passed to a get_backing_memory call.
 /// We check that the returned rights align with and do not exceed those in the given flags, that
 /// we have at least basic VMO rights, and that the flags align with the expected sharing mode.
-fn validate_vmo_rights(buffer: &fidl_fuchsia_mem::Buffer, vmo_flags: fio::VmoFlags) {
-    let vmo_rights: zx::Rights = buffer.vmo.basic_info().expect("failed to get VMO info").rights;
+fn validate_vmo_rights(vmo: &zx::Vmo, vmo_flags: fio::VmoFlags) {
+    let vmo_rights: zx::Rights = vmo.basic_info().expect("failed to get VMO info").rights;
 
     // Ensure that we have at least some basic rights.
     assert!(vmo_rights.contains(zx::Rights::BASIC));
@@ -197,12 +197,12 @@ fn validate_vmo_rights(buffer: &fidl_fuchsia_mem::Buffer, vmo_flags: fio::VmoFla
 
 /// Creates a directory with the given DirectoryEntry, opening the file with the given
 /// file flags, and returning a Buffer object initialized with the given vmo_flags.
-async fn create_file_and_get_buffer(
+async fn create_file_and_get_backing_memory(
     dir_entry: io_test::DirectoryEntry,
     test_harness: &TestHarness,
     file_flags: fio::OpenFlags,
     vmo_flags: fio::VmoFlags,
-) -> Result<(fidl_fuchsia_mem::Buffer, (fio::DirectoryProxy, fio::FileProxy)), zx::Status> {
+) -> Result<(zx::Vmo, (fio::DirectoryProxy, fio::FileProxy)), zx::Status> {
     let file_path = get_directory_entry_name(&dir_entry);
     let root = root_directory(vec![dir_entry]);
     let dir_proxy = test_harness.get_directory(root, file_flags);
@@ -216,10 +216,9 @@ async fn create_file_and_get_buffer(
     let vmo = file_proxy
         .get_backing_memory(vmo_flags)
         .await
-        .expect("Get buffer failed")
+        .expect("get_backing_memory failed")
         .map_err(zx::Status::from_raw)?;
-    let size = vmo.get_content_size()?;
-    Ok((fidl_fuchsia_mem::Buffer { vmo, size }, (dir_proxy, file_proxy)))
+    Ok((vmo, (dir_proxy, file_proxy)))
 }
 
 fn root_directory(entries: Vec<io_test::DirectoryEntry>) -> io_test::Directory {
@@ -1166,9 +1165,9 @@ async fn file_read_in_subdirectory() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn file_get_readable_buffer_with_sufficient_rights() {
+async fn file_get_readable_memory_with_sufficient_rights() {
     let harness = TestHarness::new().await;
-    if !harness.config.supports_get_buffer.unwrap_or_default() {
+    if !harness.config.supports_get_backing_memory.unwrap_or_default() {
         return;
     }
 
@@ -1178,37 +1177,39 @@ async fn file_get_readable_buffer_with_sufficient_rights() {
             [fio::VmoFlags::empty(), fio::VmoFlags::SHARED_BUFFER, fio::VmoFlags::PRIVATE_CLONE]
         {
             let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
-            let (buffer, _) = create_file_and_get_buffer(
+            let (vmo, _) = create_file_and_get_backing_memory(
                 file,
                 &harness,
                 file_flags,
                 fio::VmoFlags::READ | sharing_mode,
             )
             .await
-            .expect("Failed to create file and obtain buffer");
+            .expect("Failed to create file and obtain VMO");
 
             // Ensure that the returned VMO's rights are consistent with the expected flags.
-            validate_vmo_rights(&buffer, fio::VmoFlags::READ);
+            validate_vmo_rights(&vmo, fio::VmoFlags::READ);
+
+            let size = vmo.get_content_size().expect("Failed to get vmo content size");
 
             // Check contents of buffer.
-            let mut data = vec![0; buffer.size as usize];
-            buffer.vmo.read(&mut data, 0).expect("VMO read failed");
+            let mut data = vec![0; size as usize];
+            let () = vmo.read(&mut data, 0).expect("VMO read failed");
             assert_eq!(&data, TEST_FILE_CONTENTS);
         }
     }
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn file_get_readable_buffer_with_insufficient_rights() {
+async fn file_get_readable_memory_with_insufficient_rights() {
     let harness = TestHarness::new().await;
-    if !harness.config.supports_get_buffer.unwrap_or_default() {
+    if !harness.config.supports_get_backing_memory.unwrap_or_default() {
         return;
     }
 
     for file_flags in harness.vmo_file_rights.valid_combos_without(fio::OpenFlags::RIGHT_READABLE) {
         let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
         assert_eq!(
-            create_file_and_get_buffer(file, &harness, file_flags, fio::VmoFlags::READ)
+            create_file_and_get_backing_memory(file, &harness, file_flags, fio::VmoFlags::READ)
                 .await
                 .expect_err("Error was expected"),
             zx::Status::ACCESS_DENIED
@@ -1217,9 +1218,9 @@ async fn file_get_readable_buffer_with_insufficient_rights() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn file_get_writable_buffer_with_sufficient_rights() {
+async fn file_get_writable_memory_with_sufficient_rights() {
     let harness = TestHarness::new().await;
-    if !harness.config.supports_get_buffer.unwrap_or_default() {
+    if !harness.config.supports_get_backing_memory.unwrap_or_default() {
         return;
     }
     // Writable VMOs currently require private sharing mode.
@@ -1228,22 +1229,22 @@ async fn file_get_writable_buffer_with_sufficient_rights() {
 
     for file_flags in harness.vmo_file_rights.valid_combos_with(fio::OpenFlags::RIGHT_WRITABLE) {
         let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
-        let (buffer, _) = create_file_and_get_buffer(file, &harness, file_flags, VMO_FLAGS)
+        let (vmo, _) = create_file_and_get_backing_memory(file, &harness, file_flags, VMO_FLAGS)
             .await
-            .expect("Failed to create file and obtain buffer");
+            .expect("Failed to create file and obtain VMO");
 
         // Ensure that the returned VMO's rights are consistent with the expected flags.
-        validate_vmo_rights(&buffer, VMO_FLAGS);
+        validate_vmo_rights(&vmo, VMO_FLAGS);
 
         // Ensure that we can actually write to the VMO.
-        buffer.vmo.write("bbbbb".as_bytes(), 0).expect("vmo write failed");
+        let () = vmo.write("bbbbb".as_bytes(), 0).expect("vmo write failed");
     }
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn file_get_writable_buffer_with_insufficient_rights() {
+async fn file_get_writable_memory_with_insufficient_rights() {
     let harness = TestHarness::new().await;
-    if !harness.config.supports_get_buffer.unwrap_or_default() {
+    if !harness.config.supports_get_backing_memory.unwrap_or_default() {
         return;
     }
     const VMO_FLAGS: fio::VmoFlags =
@@ -1252,7 +1253,7 @@ async fn file_get_writable_buffer_with_insufficient_rights() {
     for file_flags in harness.vmo_file_rights.valid_combos_without(fio::OpenFlags::RIGHT_WRITABLE) {
         let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
         assert_eq!(
-            create_file_and_get_buffer(file, &harness, file_flags, VMO_FLAGS)
+            create_file_and_get_backing_memory(file, &harness, file_flags, VMO_FLAGS)
                 .await
                 .expect_err("Error was expected"),
             zx::Status::ACCESS_DENIED
@@ -1261,63 +1262,63 @@ async fn file_get_writable_buffer_with_insufficient_rights() {
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn file_get_executable_buffer_with_sufficient_rights() {
+async fn file_get_executable_memory_with_sufficient_rights() {
     let harness = TestHarness::new().await;
-    if !harness.config.supports_get_buffer.unwrap_or_default()
+    if !harness.config.supports_get_backing_memory.unwrap_or_default()
         || !harness.config.supports_executable_file.unwrap_or_default()
     {
         return;
     }
 
-    // We should be able to get an executable VMO in default, exact, and private sharing modes.
-    // Note that the fuchsia.io interface requires the connection to have OPEN_RIGHT_READABLE in
-    // addition to OPEN_RIGHT_EXECUTABLE if passing VmoFlags::EXECUTE to the GetBuffer method.
+    // We should be able to get an executable VMO in default, exact, and private sharing modes. Note
+    // that the fuchsia.io interface requires the connection to have OPEN_RIGHT_READABLE in addition
+    // to OPEN_RIGHT_EXECUTABLE if passing VmoFlags::EXECUTE to the GetBackingMemory method.
     for sharing_mode in
         [fio::VmoFlags::empty(), fio::VmoFlags::SHARED_BUFFER, fio::VmoFlags::PRIVATE_CLONE]
     {
         let file = executable_file(TEST_FILE);
         let vmo_flags = fio::VmoFlags::READ | fio::VmoFlags::EXECUTE | sharing_mode;
-        let (buffer, _) = create_file_and_get_buffer(
+        let (vmo, _) = create_file_and_get_backing_memory(
             file,
             &harness,
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
             vmo_flags,
         )
         .await
-        .expect("Failed to create file and obtain buffer");
+        .expect("Failed to create file and obtain VMO");
         // Ensure that the returned VMO's rights are consistent with the expected flags.
-        validate_vmo_rights(&buffer, vmo_flags);
+        validate_vmo_rights(&vmo, vmo_flags);
     }
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn file_get_executable_buffer_with_insufficient_rights() {
+async fn file_get_executable_memory_with_insufficient_rights() {
     let harness = TestHarness::new().await;
-    if !harness.config.supports_get_buffer.unwrap_or_default()
+    if !harness.config.supports_get_backing_memory.unwrap_or_default()
         || !harness.config.supports_executable_file.unwrap_or_default()
     {
         return;
     }
-    // We should fail to get the buffer if the connection lacks execute rights.
+    // We should fail to get the backing memory if the connection lacks execute rights.
     for file_flags in
         harness.executable_file_rights.valid_combos_without(fio::OpenFlags::RIGHT_EXECUTABLE)
     {
         let file = executable_file(TEST_FILE);
         assert_eq!(
-            create_file_and_get_buffer(file, &harness, file_flags, fio::VmoFlags::EXECUTE)
+            create_file_and_get_backing_memory(file, &harness, file_flags, fio::VmoFlags::EXECUTE)
                 .await
                 .expect_err("Error was expected"),
             zx::Status::ACCESS_DENIED
         );
     }
-    // The fuchsia.io interface additionally specifies that GetBuffer should fail if VmoFlags::EXECUTE
-    // is specified but connection lacks OPEN_RIGHT_READABLE.
+    // The fuchsia.io interface additionally specifies that GetBackingMemory should fail if
+    // VmoFlags::EXECUTE is specified but connection lacks OPEN_RIGHT_READABLE.
     for file_flags in
         harness.executable_file_rights.valid_combos_without(fio::OpenFlags::RIGHT_READABLE)
     {
         let file = executable_file(TEST_FILE);
         assert_eq!(
-            create_file_and_get_buffer(file, &harness, file_flags, fio::VmoFlags::EXECUTE)
+            create_file_and_get_backing_memory(file, &harness, file_flags, fio::VmoFlags::EXECUTE)
                 .await
                 .expect_err("Error was expected"),
             zx::Status::ACCESS_DENIED
@@ -1325,11 +1326,12 @@ async fn file_get_executable_buffer_with_insufficient_rights() {
     }
 }
 
-// Ensure that passing VmoFlags::SHARED_BUFFER to GetBuffer returns the same KOID as the backing VMO.
+// Ensure that passing VmoFlags::SHARED_BUFFER to GetBackingMemory returns the same KOID as the
+// backing VMO.
 #[fasync::run_singlethreaded(test)]
-async fn file_get_buffer_exact_same_koid() {
+async fn file_get_backing_memory_exact_same_koid() {
     let harness = TestHarness::new().await;
-    if !harness.config.supports_get_buffer.unwrap_or_default() {
+    if !harness.config.supports_get_backing_memory.unwrap_or_default() {
         return;
     }
 
@@ -1342,16 +1344,16 @@ async fn file_get_buffer_exact_same_koid() {
         ..io_test::VmoFile::EMPTY
     });
 
-    let (buffer, _) = create_file_and_get_buffer(
+    let (vmo, _) = create_file_and_get_backing_memory(
         vmofile_object,
         &harness,
         fio::OpenFlags::RIGHT_READABLE,
         fio::VmoFlags::READ | fio::VmoFlags::SHARED_BUFFER,
     )
     .await
-    .expect("Failed to create file and obtain buffer");
+    .expect("Failed to create file and obtain VMO");
 
-    assert_eq!(original_koid, buffer.vmo.get_koid());
+    assert_eq!(original_koid, vmo.get_koid());
 }
 
 #[fasync::run_singlethreaded(test)]

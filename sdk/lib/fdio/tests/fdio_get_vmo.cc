@@ -30,7 +30,7 @@ struct Context {
   bool is_vmofile;
   bool supports_read_at;
   bool supports_seek;
-  bool supports_get_buffer;
+  bool supports_get_backing_memory;
   size_t content_size;  // Must be <= zx_system_get_page_size().
   fuchsia_io::wire::VmoFlags last_flags;
 };
@@ -109,7 +109,7 @@ class TestServer final : public fidl::testing::WireTestBase<fuchsia_io::File> {
                         GetBackingMemoryCompleter::Sync& completer) override {
     context->last_flags = request->flags;
 
-    if (!context->supports_get_buffer) {
+    if (!context->supports_get_backing_memory) {
       completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
       return;
     }
@@ -195,7 +195,7 @@ TEST(GetVMOTest, Remote) {
 
   Context context = {
       .is_vmofile = false,
-      .supports_get_buffer = true,
+      .supports_get_backing_memory = true,
       .content_size = 43,
   };
   create_context_vmo(zx_system_get_page_size(), &context.vmo);
@@ -219,8 +219,8 @@ TEST(GetVMOTest, Remote) {
             context.last_flags);
   context.last_flags = {};
 
-  // The rest of these tests exercise methods which use VMO_FLAG_PRIVATE, in which case the returned
-  // rights should also include SET_PROPERTY.
+  // The rest of these tests exercise methods which use VmoFlags::PRIVATE_CLONE, in which case the
+  // returned rights should also include ZX_RIGHT_SET_PROPERTY.
   expected_rights |= ZX_RIGHT_SET_PROPERTY;
 
   EXPECT_OK(fdio_get_vmo_clone(fd.get(), received.reset_and_get_address()));
@@ -248,7 +248,7 @@ TEST(GetVMOTest, Remote) {
   EXPECT_TRUE(vmo_starts_with(received, "abcd"));
   context.last_flags = {};
 
-  context.supports_get_buffer = false;
+  context.supports_get_backing_memory = false;
   context.supports_read_at = true;
   EXPECT_OK(fdio_get_vmo_copy(fd.get(), received.reset_and_get_address()));
   EXPECT_NE(get_koid(context.vmo), get_koid(received));
@@ -291,8 +291,8 @@ TEST(GetVMOTest, VMOFile) {
   EXPECT_EQ(get_koid(context.vmo), get_koid(received));
   EXPECT_EQ(get_rights(received), expected_rights);
 
-  // The rest of these tests exercise methods which use VMO_FLAG_PRIVATE, in which case the returned
-  // rights should also include SET_PROPERTY.
+  // The rest of these tests exercise methods which use VmoFlags::PRIVATE_CLONE, in which case the
+  // returned rights should also include ZX_RIGHT_SET_PROPERTY.
   expected_rights |= ZX_RIGHT_SET_PROPERTY;
 
   EXPECT_OK(fdio_get_vmo_clone(fd.get(), received.reset_and_get_address()));
@@ -323,7 +323,7 @@ TEST(MmapFileTest, ProtExecWorks) {
 
   Context context = {
       .is_vmofile = false,
-      .supports_get_buffer = true,
+      .supports_get_backing_memory = true,
       .content_size = 43,
   };
   create_context_vmo(zx_system_get_page_size(), &context.vmo);

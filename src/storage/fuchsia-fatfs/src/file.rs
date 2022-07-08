@@ -14,9 +14,8 @@ use {
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio,
-    fidl_fuchsia_mem::Buffer,
     fuchsia_syslog::fx_log_err,
-    fuchsia_zircon::Status,
+    fuchsia_zircon::{self as zx, Status},
     libc::{S_IRUSR, S_IWUSR},
     std::{
         cell::UnsafeCell,
@@ -257,7 +256,7 @@ impl VfsFile for FatFile {
         Ok(())
     }
 
-    async fn get_buffer(&self, _flags: fio::VmoFlags) -> Result<Buffer, Status> {
+    async fn get_backing_memory(&self, _flags: fio::VmoFlags) -> Result<zx::Vmo, Status> {
         Err(Status::NOT_SUPPORTED)
     }
 

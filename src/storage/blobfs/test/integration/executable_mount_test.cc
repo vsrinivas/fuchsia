@@ -53,8 +53,8 @@ class ExecutableMountTest : public FdioTest {
 };
 
 // The test fixture for this test provides a valid Resource object to the filesystem when it is
-// created, which means it should support fuchsia.io.File.GetBuffer with VMO_FLAG_EXEC which
-// fdio_get_vmo_exec exercises.
+// created, which means it should support fuchsia.io/File.GetBackingMemory with VmoFlags::EXECUTE
+// which fdio_get_vmo_exec exercises.
 TEST_F(ExecutableMountTest, CanLoadBlobsExecutable) {
   // Create a new blob with random contents on the mounted filesystem.
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob(".", 1 << 16);

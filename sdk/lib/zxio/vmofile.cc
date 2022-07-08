@@ -172,10 +172,7 @@ zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, zxio_vm
     return ZX_ERR_INVALID_ARGS;
   }
 
-  // Ensure that we return a VMO handle with only the rights requested by the
-  // client. For Vmofiles, the server side does not ever see the VMO_FLAG_*
-  // options from the client because the VMO is returned in NodeInfo/Vmofile
-  // rather than from a File.GetBuffer call.
+  // Ensure that we return a VMO handle with only the rights requested by the client.
 
   zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
   rights |= flags & ZXIO_VMO_READ ? ZX_RIGHT_READ : 0;
@@ -183,17 +180,17 @@ zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, zxio_vm
   rights |= flags & ZXIO_VMO_EXECUTE ? ZX_RIGHT_EXECUTE : 0;
 
   if (flags & ZXIO_VMO_PRIVATE_CLONE) {
-    // Allow SET_PROPERTY only if creating a private child VMO so that the user
-    // can set ZX_PROP_NAME (or similar).
+    // Allow ZX_RIGHT_SET_PROPERTY only if creating a private child VMO so that the user can set
+    // ZX_PROP_NAME (or similar).
     rights |= ZX_RIGHT_SET_PROPERTY;
 
     uint32_t options = ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE;
     if (flags & ZXIO_VMO_EXECUTE) {
-      // Creating a SNAPSHOT_AT_LEAST_ON_WRITE child removes ZX_RIGHT_EXECUTE even if the
-      // parent VMO has it, and we can't arbitrarily add EXECUTE here on the
-      // client side. Adding CHILD_NO_WRITE still creates a snapshot and a new
-      // VMO object, which e.g. can have a unique ZX_PROP_NAME value, but the
-      // returned handle lacks WRITE and maintains EXECUTE.
+      // Creating a ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE child removes ZX_RIGHT_EXECUTE even if
+      // the parent VMO has it, and we can't arbitrarily add ZX_RIGHT_EXECUTE here on the client
+      // side. Adding ZX_VMO_CHILD_NO_WRITE still creates a snapshot and a new VMO object, which
+      // e.g. can have a unique ZX_PROP_NAME value, but the returned handle lacks ZX_RIGHT_WRITE and
+      // maintains ZX_RIGHT_EXECUTE.
       if (flags & ZXIO_VMO_WRITE) {
         return ZX_ERR_NOT_SUPPORTED;
       }
@@ -206,10 +203,11 @@ zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, zxio_vm
       return status;
     }
 
-    // SNAPSHOT_AT_LEAST_ON_WRITE adds ZX_RIGHT_WRITE automatically, but we shouldn't return
-    // a handle with that right unless requested using VMO_FLAG_WRITE.
-    // TODO(fxbug.dev/36877): Supporting VMO_FLAG_PRIVATE & VMO_FLAG_WRITE for
-    // Vmofiles is a bit weird and inconsistent. See bug for more info.
+    // ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE adds ZX_RIGHT_WRITE automatically, but we shouldn't
+    // return a handle with that right unless requested using ZXIO_VMO_WRITE.
+    //
+    // TODO(fxbug.dev/36877): Supporting ZXIO_VMO_PRIVATE_CLONE & ZXIO_VMO_WRITE for Vmofiles is a
+    // bit weird and inconsistent. See bug for more info.
     zx::vmo result;
     status = child_vmo.replace(rights, &result);
     if (status != ZX_OK) {
@@ -222,8 +220,8 @@ zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, zxio_vm
     return ZX_OK;
   }
 
-  // For !VMO_FLAG_PRIVATE (including VMO_FLAG_EXACT), we just duplicate another
-  // handle to the Vmofile's VMO with appropriately scoped rights.
+  // For !ZXIO_VMO_PRIVATE_CLONE we just duplicate another handle to the Vmofile's VMO with
+  // appropriately scoped rights.
   zx::vmo result;
   zx_status_t status = vmo.duplicate(rights, &result);
   if (status != ZX_OK) {

@@ -98,10 +98,7 @@ impl<S: crate::NonMetaStorage> vfs::file::File for MetaAsFile<S> {
         Err(zx::Status::NOT_SUPPORTED)
     }
 
-    async fn get_buffer(
-        &self,
-        _flags: fio::VmoFlags,
-    ) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
+    async fn get_backing_memory(&self, _flags: fio::VmoFlags) -> Result<zx::Vmo, zx::Status> {
         Err(zx::Status::NOT_SUPPORTED)
     }
 
@@ -330,7 +327,7 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn file_get_buffer() {
+    async fn file_get_backing_memory() {
         let (_env, meta_as_file) = TestEnv::new().await;
 
         for sharing_mode in
@@ -338,7 +335,10 @@ mod tests {
         {
             for flag in [fio::VmoFlags::empty(), fio::VmoFlags::READ] {
                 assert_eq!(
-                    File::get_buffer(&meta_as_file, sharing_mode | flag).await.err().unwrap(),
+                    File::get_backing_memory(&meta_as_file, sharing_mode | flag)
+                        .await
+                        .err()
+                        .unwrap(),
                     zx::Status::NOT_SUPPORTED
                 );
             }

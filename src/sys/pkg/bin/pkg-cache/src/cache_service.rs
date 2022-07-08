@@ -2581,7 +2581,7 @@ mod serve_write_blob_tests {
         Truncate,
         GetFlags,
         SetFlags,
-        GetBuffer,
+        GetBackingMemory,
         // New API. Not strictly necessary to verify all possible ordinals (which is the space of a
         // u64 anyway).
         // AdvisoryLock
@@ -2606,7 +2606,7 @@ mod serve_write_blob_tests {
                 StubRequestor::Truncate => "resize",
                 StubRequestor::GetFlags => "get_flags",
                 StubRequestor::SetFlags => "set_flags",
-                StubRequestor::GetBuffer => "get_backing_memory",
+                StubRequestor::GetBackingMemory => "get_backing_memory",
             }
         }
 
@@ -2639,7 +2639,7 @@ mod serve_write_blob_tests {
                 StubRequestor::SetFlags => {
                     proxy.set_flags(fio::OpenFlags::empty()).map(|_| ()).boxed()
                 }
-                StubRequestor::GetBuffer => {
+                StubRequestor::GetBackingMemory => {
                     proxy.get_backing_memory(fio::VmoFlags::empty()).map(|_| ()).boxed()
                 }
             }

@@ -129,7 +129,7 @@ pub trait FileOps: Send + Sync + AsAny {
         let vmo = Arc::new(if options.contains(MappingOptions::SHARED) {
             self.get_vmo(file, current_task, Some(length), zx_prot_flags)?
         } else {
-            // TODO(tbodt): Use VMO_FLAG_PRIVATE to have the filesystem server do the clone for us.
+            // TODO(tbodt): Use PRIVATE_CLONE to have the filesystem server do the clone for us.
             let vmo = self.get_vmo(
                 file,
                 current_task,

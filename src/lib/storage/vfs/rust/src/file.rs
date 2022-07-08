@@ -4,8 +4,10 @@
 
 //! Module holding different kinds of files and their building blocks.
 use {
-    crate::directory::entry::DirectoryEntry, async_trait::async_trait, fidl_fuchsia_io as fio,
-    fidl_fuchsia_mem::Buffer, fuchsia_zircon::Status,
+    crate::directory::entry::DirectoryEntry,
+    async_trait::async_trait,
+    fidl_fuchsia_io as fio,
+    fuchsia_zircon::{self as zx, Status},
 };
 
 /// File nodes backed by VMOs.
@@ -55,7 +57,7 @@ pub trait File: Sync + Send + DirectoryEntry {
 
     /// Get a VMO representing this file.
     /// If not supported by the underlying filesystem, should return Error(NOT_SUPPORTED).
-    async fn get_buffer(&self, flags: fio::VmoFlags) -> Result<Buffer, Status>;
+    async fn get_backing_memory(&self, flags: fio::VmoFlags) -> Result<zx::Vmo, Status>;
 
     /// Get the size of this file.
     /// This is used to calculate seek offset relative to the end.

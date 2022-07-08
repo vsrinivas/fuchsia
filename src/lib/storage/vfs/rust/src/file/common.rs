@@ -119,11 +119,11 @@ pub fn vmo_flags_to_rights(vmo_flags: fio::VmoFlags) -> zx::Rights {
     rights
 }
 
-/// Validate flags passed to `get_buffer` against the underlying connection flags.
+/// Validate flags passed to `get_backing_memory` against the underlying connection flags.
 /// Returns Ok() if the flags were validated, and an Error(zx::Status) otherwise.
 ///
 /// Changing this function can be dangerous!  Flags operations may have security implications.
-pub fn get_buffer_validate_flags(
+pub fn get_backing_memory_validate_flags(
     vmo_flags: fio::VmoFlags,
     connection_flags: fio::OpenFlags,
 ) -> Result<(), zx::Status> {
@@ -164,7 +164,9 @@ pub fn get_buffer_validate_flags(
 
 #[cfg(test)]
 mod tests {
-    use super::{get_buffer_validate_flags, new_connection_validate_flags, vmo_flags_to_rights};
+    use super::{
+        get_backing_memory_validate_flags, new_connection_validate_flags, vmo_flags_to_rights,
+    };
     use crate::test_utils::build_flag_combinations;
 
     use {fidl_fuchsia_io as fio, fuchsia_zircon as zx};
@@ -397,10 +399,10 @@ mod tests {
     }
 
     #[test]
-    fn get_buffer_validate_flags_invalid() {
+    fn get_backing_memory_validate_flags_invalid() {
         // Cannot specify both PRIVATE and EXACT at the same time, since they conflict.
         assert_eq!(
-            get_buffer_validate_flags(
+            get_backing_memory_validate_flags(
                 fio::VmoFlags::PRIVATE_CLONE | fio::VmoFlags::SHARED_BUFFER,
                 fio::OpenFlags::empty()
             ),
@@ -410,7 +412,7 @@ mod tests {
 
     /// Ensure that the check passes if we request the same or less rights than the connection has.
     #[test]
-    fn get_buffer_validate_flags_less_rights() {
+    fn get_backing_memory_validate_flags_less_rights() {
         for open_flags in build_flag_combinations(
             0,
             (fio::OpenFlags::RIGHT_READABLE
@@ -426,34 +428,38 @@ mod tests {
             // both readable and executable.
             if executable && !readable {
                 assert_eq!(
-                    get_buffer_validate_flags(vmo_flags, open_flags),
+                    get_backing_memory_validate_flags(vmo_flags, open_flags),
                     Err(zx::Status::ACCESS_DENIED)
                 );
                 continue;
             }
 
             // Ensure that we can open the VMO with the same rights as the connection.
-            get_buffer_validate_flags(vmo_flags, open_flags).expect("Failed to validate flags");
+            get_backing_memory_validate_flags(vmo_flags, open_flags)
+                .expect("Failed to validate flags");
 
             // Ensure that we can also open the VMO with *less* rights than the connection has.
             if readable {
                 let vmo_flags = rights_to_vmo_flags(false, writable, false);
-                get_buffer_validate_flags(vmo_flags, open_flags).expect("Failed to validate flags");
+                get_backing_memory_validate_flags(vmo_flags, open_flags)
+                    .expect("Failed to validate flags");
             }
             if writable {
                 let vmo_flags = rights_to_vmo_flags(readable, false, executable);
-                get_buffer_validate_flags(vmo_flags, open_flags).expect("Failed to validate flags");
+                get_backing_memory_validate_flags(vmo_flags, open_flags)
+                    .expect("Failed to validate flags");
             }
             if executable {
                 let vmo_flags = rights_to_vmo_flags(true, writable, false);
-                get_buffer_validate_flags(vmo_flags, open_flags).expect("Failed to validate flags");
+                get_backing_memory_validate_flags(vmo_flags, open_flags)
+                    .expect("Failed to validate flags");
             }
         }
     }
 
     /// Ensure that vmo_flags cannot exceed rights of connection_flags.
     #[test]
-    fn get_buffer_validate_flags_more_rights() {
+    fn get_backing_memory_validate_flags_more_rights() {
         for open_flags in build_flag_combinations(
             0,
             (fio::OpenFlags::RIGHT_READABLE
@@ -467,21 +473,21 @@ mod tests {
             if !readable {
                 let vmo_flags = rights_to_vmo_flags(true, writable, executable);
                 assert_eq!(
-                    get_buffer_validate_flags(vmo_flags, open_flags),
+                    get_backing_memory_validate_flags(vmo_flags, open_flags),
                     Err(zx::Status::ACCESS_DENIED)
                 );
             }
             if !writable {
                 let vmo_flags = rights_to_vmo_flags(readable, true, false);
                 assert_eq!(
-                    get_buffer_validate_flags(vmo_flags, open_flags),
+                    get_backing_memory_validate_flags(vmo_flags, open_flags),
                     Err(zx::Status::ACCESS_DENIED)
                 );
             }
             if !executable {
                 let vmo_flags = rights_to_vmo_flags(readable, false, true);
                 assert_eq!(
-                    get_buffer_validate_flags(vmo_flags, open_flags),
+                    get_backing_memory_validate_flags(vmo_flags, open_flags),
                     Err(zx::Status::ACCESS_DENIED)
                 );
             }

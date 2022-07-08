@@ -20,9 +20,7 @@ use {
     anyhow::Error,
     async_trait::async_trait,
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io as fio,
-    fidl_fuchsia_mem::Buffer,
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, Status},
     futures::{channel::oneshot, join},
     once_cell::sync::Lazy,
@@ -428,7 +426,7 @@ impl File for FxFile {
     }
 
     // Returns a VMO handle that supports paging.
-    async fn get_buffer(&self, flags: fio::VmoFlags) -> Result<Buffer, Status> {
+    async fn get_backing_memory(&self, flags: fio::VmoFlags) -> Result<zx::Vmo, Status> {
         // We do not support exact/duplicate sharing mode.
         if flags.contains(fio::VmoFlags::SHARED_BUFFER) {
             error!("get_buffer does not support exact sharing mode!");
@@ -463,7 +461,7 @@ impl File for FxFile {
             // Take an open count so that we keep this object alive if it is unlinked.
             self.open_count_add_one();
         }
-        Ok(Buffer { vmo: child_vmo, size })
+        Ok(child_vmo)
     }
 
     async fn get_size(&self) -> Result<u64, Status> {

@@ -489,7 +489,7 @@ mod tests {
         assert_eq!(decl.program, expected_program);
 
         // Try to load an executable file, like a binary, reusing the library_loader helper that
-        // opens with OPEN_RIGHT_EXECUTABLE and gets a VMO with VMO_FLAG_EXEC.
+        // opens with OPEN_RIGHT_EXECUTABLE and gets a VMO with VmoFlags::EXECUTE.
         library_loader::load_vmo(&dir_proxy, "bin/hello_world_rust")
             .await
             .expect("failed to open executable file");

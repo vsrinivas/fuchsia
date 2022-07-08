@@ -52,8 +52,8 @@ type Io1Config = table {
     /// Remote directories are supported.
     5: supports_remote_dir bool;
 
-    /// GetBuffer is supported by VmoFile objects.
-    6: supports_get_buffer bool;
+    /// VmoFile objects support File.GetBackingMemory.
+    6: supports_get_backing_memory bool;
 
     /// Rename is supported.
     7: supports_rename bool;
@@ -119,8 +119,9 @@ type VmoFile = resource table {
 /// Adds an executable file that supports opening as readable + executable. The file has a non-zero
 /// size, but the contents are otherwise unspecified.
 ///
-/// Enabled by setting `supports_executable_file` to false. If enabled, `supports_get_buffer` should
-/// be enabled to validate the permissions of the VMO backing the ExecutableFile.
+/// Enabled by setting `supports_executable_file` to false. If enabled,
+/// `supports_get_backing_memory` should be enabled to validate the permissions of the VMO backing
+/// the ExecutableFile.
 ///
 /// As the conformance tests verify W^X enforcement, opening an ExecutableFile with RIGHT_WRITABLE
 /// should fail with ACCESS_DENIED. If writable files are required, use File/VmoFile instead.

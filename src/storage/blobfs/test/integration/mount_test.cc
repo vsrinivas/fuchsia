@@ -77,7 +77,7 @@ TEST_F(OutgoingMountTest, OutgoingDirectoryDataRootCanHaveBlobsCreated) {
 }
 
 // Verify that if no valid Resource of at least KIND_VMEX is provided to the filesystem during
-// creation then it does not support VMO_FLAG_EXEC to obtain executable VMOs from blobs.
+// creation then it does not support VmoFlags::EXECUTE to obtain executable VMOs from blobs.
 TEST_F(DataMountTest, CannotLoadBlobsExecutable) {
   // Create a new blob with random contents on the mounted filesystem.
   std::unique_ptr<BlobInfo> info = GenerateRandomBlob(".", 1 << 16);

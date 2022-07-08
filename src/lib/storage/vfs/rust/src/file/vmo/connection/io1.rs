@@ -10,7 +10,9 @@ use crate::{
         GET_FLAGS_VISIBLE,
     },
     execution_scope::ExecutionScope,
-    file::common::{get_buffer_validate_flags, new_connection_validate_flags, vmo_flags_to_rights},
+    file::common::{
+        get_backing_memory_validate_flags, new_connection_validate_flags, vmo_flags_to_rights,
+    },
     file::vmo::{
         asynchronous::{NewVmo, VmoFileState},
         connection::VmoFileInterface,
@@ -455,7 +457,8 @@ impl VmoFileConnection {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             fio::FileRequest::GetBackingMemory { flags, responder } => {
-                let result = self.handle_get_buffer(flags).await.map(|Buffer { vmo, size: _ }| vmo);
+                let result =
+                    self.handle_get_backing_memory(flags).await.map(|Buffer { vmo, size: _ }| vmo);
                 responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
             fio::FileRequest::AdvisoryLock { request: _, responder } => {
@@ -663,11 +666,14 @@ impl VmoFileConnection {
         Self::truncate_vmo(&mut *self.file.state().await, length, &mut self.seek)
     }
 
-    async fn handle_get_buffer(&mut self, flags: fio::VmoFlags) -> Result<Buffer, zx::Status> {
-        let () = get_buffer_validate_flags(flags, self.flags)?;
+    async fn handle_get_backing_memory(
+        &mut self,
+        flags: fio::VmoFlags,
+    ) -> Result<Buffer, zx::Status> {
+        let () = get_backing_memory_validate_flags(flags, self.flags)?;
 
         // The only sharing mode we support that disallows the VMO size to change currently
-        // is VMO_FLAG_PRIVATE (`get_as_private`), so we require that to be set explicitly.
+        // is PRIVATE_CLONE (`get_as_private`), so we require that to be set explicitly.
         if flags.contains(fio::VmoFlags::WRITE) && !flags.contains(fio::VmoFlags::PRIVATE_CLONE) {
             return Err(zx::Status::NOT_SUPPORTED);
         }
@@ -681,7 +687,7 @@ impl VmoFileConnection {
 
         update_initialized_state! {
             match &*self.file.state().await;
-            error: "handle_get_buffer" => Err(zx::Status::INTERNAL);
+            error: "handle_get_backing_memory" => Err(zx::Status::INTERNAL);
             { vmo, size, .. } => {
                 let () = vmo.set_content_size(&size)?;
 

@@ -129,9 +129,6 @@ TEST(MemfsTest, LocalClone) {
   ASSERT_OK(vmo.get_info(ZX_INFO_HANDLE_BASIC, &original_vmo_info, sizeof(original_vmo_info),
                          nullptr, nullptr));
 
-  // TODO(fxbug.dev/45287): Test the following properties through GetBuffer when support is added.
-  // We cannot guarantee VMO_FLAG_EXACT if the file has a non-zero offset or different length.
-
   // Create a file from a VMO using a non-zero offset after which we should NOT get an exact copy.
   zx::vmo vmo_dup;
   fbl::RefPtr<fs::Vnode> vmo_vnode;

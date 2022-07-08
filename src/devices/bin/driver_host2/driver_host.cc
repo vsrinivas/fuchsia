@@ -241,9 +241,9 @@ void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
 
   uint32_t default_dispatcher_opts = ExtractDefaultDispatcherOpts(wire_program);
 
-  // Once we receive the VMO from the call to GetBuffer, we can load the driver
-  // into this driver host. We move the storage and encoded for start_args into
-  // this callback to extend its lifetime.
+  // Once we receive the VMO from the call to GetBackingMemory, we can load the driver into this
+  // driver host. We move the storage and encoded for start_args into this callback to extend its
+  // lifetime.
   fidl::SharedClient file(std::move(endpoints->client), loop_.dispatcher(),
                           std::make_unique<FileEventHandler>(url));
   auto callback = [this, request = std::move(request.driver()), completer = completer.ToAsync(),

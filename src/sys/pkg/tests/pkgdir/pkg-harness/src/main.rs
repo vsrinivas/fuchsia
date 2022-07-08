@@ -116,7 +116,7 @@ async fn make_test_package() -> Package {
         .add_resource_at("exceeds_max_buf", exceeds_max_buf_contents.as_bytes())
         .add_resource_at("meta/exceeds_max_buf", exceeds_max_buf_contents.as_bytes());
 
-    // For use in testing File.GetBuffer on different file sizes.
+    // For use in testing File.GetBackingMemory on different file sizes.
     let file_sizes = [0, 1, 4095, 4096, 4097];
     for size in &file_sizes {
         builder = builder

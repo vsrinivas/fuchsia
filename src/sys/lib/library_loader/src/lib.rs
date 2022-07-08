@@ -103,14 +103,13 @@ pub async fn load_vmo<'a>(
     dir_proxy: &'a fio::DirectoryProxy,
     object_name: &'a str,
 ) -> Result<zx::Vmo, Error> {
-    // TODO(fxbug.dev/52468): This does not ask or wait for a Describe event, which means a failure to
-    // open the file will appear as a PEER_CLOSED on the get_buffer call. It also means this could
-    // be a Vmofile node and that we're relying on it still supporting the File protocol.
     let file_proxy = fuchsia_fs::open_file(
         dir_proxy,
         &Path::new(object_name),
         fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
     )?;
+    // TODO(fxbug.dev/52468): This does not ask or wait for a Describe event, which means a failure to
+    // open the file will appear as a PEER_CLOSED error on this call.
     let vmo = file_proxy
         .get_backing_memory(fio::VmoFlags::READ | fio::VmoFlags::EXECUTE)
         .await

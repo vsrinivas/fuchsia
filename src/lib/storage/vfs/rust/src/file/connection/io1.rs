@@ -8,7 +8,7 @@ use {
         directory::entry::DirectoryEntry,
         execution_scope::ExecutionScope,
         file::{
-            common::{get_buffer_validate_flags, new_connection_validate_flags},
+            common::{get_backing_memory_validate_flags, new_connection_validate_flags},
             connection::util::OpenFile,
             File,
         },
@@ -318,10 +318,7 @@ impl<T: 'static + File> FileConnection<T> {
             }
             fio::FileRequest::GetBackingMemory { flags, responder } => {
                 fuchsia_trace::duration!("storage", "File::GetBackingMemory");
-                let result = self
-                    .handle_get_buffer(flags)
-                    .await
-                    .map(|fidl_fuchsia_mem::Buffer { vmo, size: _ }| vmo);
+                let result = self.handle_get_backing_memory(flags).await;
                 responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
             fio::FileRequest::AdvisoryLock { request: _, responder } => {
@@ -474,12 +471,12 @@ impl<T: 'static + File> FileConnection<T> {
         self.file.truncate(length).await
     }
 
-    async fn handle_get_buffer(
+    async fn handle_get_backing_memory(
         &mut self,
         flags: fio::VmoFlags,
-    ) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
-        get_buffer_validate_flags(flags, self.flags)?;
-        self.file.get_buffer(flags).await
+    ) -> Result<zx::Vmo, zx::Status> {
+        get_backing_memory_validate_flags(flags, self.flags)?;
+        self.file.get_backing_memory(flags).await
     }
 }
 
@@ -498,7 +495,7 @@ mod tests {
         WriteAt { offset: u64, content: Vec<u8> },
         Append { content: Vec<u8> },
         Truncate { length: u64 },
-        GetBuffer { flags: fio::VmoFlags },
+        GetBackingMemory { flags: fio::VmoFlags },
         GetSize,
         GetAttrs,
         SetAttrs { flags: fio::NodeAttributeFlags, attrs: fio::NodeAttributes },
@@ -578,11 +575,8 @@ mod tests {
             self.handle_operation(FileOperation::Truncate { length })
         }
 
-        async fn get_buffer(
-            &self,
-            flags: fio::VmoFlags,
-        ) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
-            self.handle_operation(FileOperation::GetBuffer { flags })?;
+        async fn get_backing_memory(&self, flags: fio::VmoFlags) -> Result<zx::Vmo, zx::Status> {
+            self.handle_operation(FileOperation::GetBackingMemory { flags })?;
             Err(zx::Status::NOT_SUPPORTED)
         }
 
@@ -847,7 +841,7 @@ mod tests {
             *events,
             vec![
                 FileOperation::Init { flags: fio::OpenFlags::RIGHT_READABLE },
-                FileOperation::GetBuffer { flags: fio::VmoFlags::READ },
+                FileOperation::GetBackingMemory { flags: fio::VmoFlags::READ },
             ]
         );
     }

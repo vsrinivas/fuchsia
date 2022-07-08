@@ -38,8 +38,8 @@ impl TestHarness {
         // Validate configuration options for consistency, disallow invalid combinations.
         if config.supports_executable_file.unwrap_or_default() {
             assert!(
-                config.supports_get_buffer.unwrap_or_default(),
-                "GetBuffer must be supported for testing ExecutableFile objects!"
+                config.supports_get_backing_memory.unwrap_or_default(),
+                "GetBackingMemory must be supported for testing ExecutableFile objects!"
             );
         }
         if config.supports_rename.unwrap_or_default() || config.supports_link.unwrap_or_default() {

@@ -30,9 +30,9 @@ bool PseudoFile::ValidateRights(Rights rights) const {
   if (rights.write && !write_handler_) {
     return false;
   }
-  // Executable pseudofiles are not supported, thus we prevent it from being opened with
-  // OPEN_RIGHT_EXECUTABLE (since even if GetBuffer was supported, there is no way of creating
-  // an executable VMO without a VMEX, which poses potential security issues).
+  // Executable pseudo-files are not supported, thus we prevent it from being opened with
+  // OPEN_RIGHT_EXECUTABLE (since even if GetBackingMemory was supported, there is no way of
+  // creating an executable VMO without a VMEX, which poses potential security issues).
   if (rights.execute) {
     return false;
   }

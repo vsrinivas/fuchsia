@@ -148,10 +148,7 @@ impl<S: crate::NonMetaStorage> vfs::file::File for MetaFile<S> {
         Err(zx::Status::NOT_SUPPORTED)
     }
 
-    async fn get_buffer(
-        &self,
-        flags: fio::VmoFlags,
-    ) -> Result<fidl_fuchsia_mem::Buffer, zx::Status> {
+    async fn get_backing_memory(&self, flags: fio::VmoFlags) -> Result<zx::Vmo, zx::Status> {
         if flags.intersects(
             fio::VmoFlags::WRITE | fio::VmoFlags::EXECUTE | fio::VmoFlags::SHARED_BUFFER,
         ) {
@@ -159,7 +156,7 @@ impl<S: crate::NonMetaStorage> vfs::file::File for MetaFile<S> {
         }
 
         let vmo = self.vmo().await.map_err(|e: anyhow::Error| {
-            fx_log_err!("Failed to get MetaFile VMO during get_buffer: {:#}", e);
+            fx_log_err!("Failed to get MetaFile VMO during get_backing_memory: {:#}", e);
             zx::Status::INTERNAL
         })?;
 
@@ -171,10 +168,13 @@ impl<S: crate::NonMetaStorage> vfs::file::File for MetaFile<S> {
                     self.location.length,
                 )
                 .map_err(|e: zx::Status| {
-                    fx_log_err!("Failed to create private child VMO during get_buffer: {:#}", e);
+                    fx_log_err!(
+                        "Failed to create private child VMO during get_backing_memory: {:#}",
+                        e
+                    );
                     e
                 })?;
-            Ok(fidl_fuchsia_mem::Buffer { vmo, size: self.location.length })
+            Ok(vmo)
         } else {
             let rights = zx::Rights::BASIC
                 | zx::Rights::MAP
@@ -185,10 +185,10 @@ impl<S: crate::NonMetaStorage> vfs::file::File for MetaFile<S> {
                     zx::Rights::NONE
                 };
             let vmo = vmo.duplicate_handle(rights).map_err(|e: zx::Status| {
-                fx_log_err!("Failed to clone VMO handle during get_buffer: {:#}", e);
+                fx_log_err!("Failed to clone VMO handle during get_backing_memory: {:#}", e);
                 e
             })?;
-            Ok(fidl_fuchsia_mem::Buffer { vmo, size: self.location.length })
+            Ok(vmo)
         }
     }
 
@@ -451,22 +451,25 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn file_get_buffer_rejects_unsupported_flags() {
+    async fn file_get_backing_memory_rejects_unsupported_flags() {
         let (_env, meta_file) = TestEnv::new().await;
 
         for flag in [fio::VmoFlags::WRITE, fio::VmoFlags::EXECUTE, fio::VmoFlags::SHARED_BUFFER] {
-            assert_eq!(File::get_buffer(&meta_file, flag).await, Err(zx::Status::NOT_SUPPORTED));
+            assert_eq!(
+                File::get_backing_memory(&meta_file, flag).await,
+                Err(zx::Status::NOT_SUPPORTED)
+            );
         }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn file_get_buffer_private() {
+    async fn file_get_backing_memory_private() {
         let (_env, meta_file) = TestEnv::new().await;
 
-        let fidl_fuchsia_mem::Buffer { vmo, size } =
-            File::get_buffer(&meta_file, fio::VmoFlags::PRIVATE_CLONE)
-                .await
-                .expect("get_buffer should succeed");
+        let vmo = File::get_backing_memory(&meta_file, fio::VmoFlags::PRIVATE_CLONE)
+            .await
+            .expect("get_backing_memory should succeed");
+        let size = vmo.get_content_size().expect("get_content_size should succeed");
 
         assert_eq!(size, u64::try_from(TEST_FILE_CONTENTS.len()).unwrap());
         // VMO is readable
@@ -486,13 +489,13 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn file_get_buffer_not_private() {
+    async fn file_get_backing_memory_not_private() {
         let (_env, meta_file) = TestEnv::new().await;
 
-        let fidl_fuchsia_mem::Buffer { vmo, size } =
-            File::get_buffer(&meta_file, fio::VmoFlags::READ)
-                .await
-                .expect("get_buffer should succeed");
+        let vmo = File::get_backing_memory(&meta_file, fio::VmoFlags::READ)
+            .await
+            .expect("get_backing_memory should succeed");
+        let size = vmo.get_content_size().expect("get_content_size should succeed");
 
         assert_eq!(size, u64::try_from(TEST_FILE_CONTENTS.len()).unwrap());
         // VMO is readable

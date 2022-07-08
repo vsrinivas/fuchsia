@@ -38,8 +38,8 @@ const HARNESS_EXEC_PATH: &'static str = "/pkg/bin/io_conformance_harness_rustvfs
 
 /// Creates and returns a Rust VFS VmoFile-backed file using the contents of the given buffer.
 ///
-/// The VMO backing the buffer is duplicated so that tests using VMO_FLAG_EXACT can ensure the
-/// same VMO is returned by subsequent GetBuffer calls.
+/// The VMO backing the buffer is duplicated so that tests can ensure the same VMO is returned by
+/// subsequent GetBackingMemory calls.
 fn new_vmo_file(buffer: &fidl_fuchsia_mem::Range) -> Result<Arc<dyn DirectoryEntry>, Error> {
     let size = buffer.size;
     // Duplicate the VMO so we can move it into the init closure.
@@ -123,7 +123,7 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
                     supports_executable_file: Some(true),
                     supports_vmo_file: Some(true),
                     supports_remote_dir: Some(true),
-                    supports_get_buffer: Some(true),
+                    supports_get_backing_memory: Some(true),
                     supports_rename: Some(true),
                     supports_get_token: Some(true),
                     conformant_path_handling: Some(true),

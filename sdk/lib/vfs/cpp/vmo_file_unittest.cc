@@ -296,9 +296,9 @@ TEST(VmoFile, WritableDuplicate) {
 
   // TODO(fxbug.dev/45287): As part of fxbug.dev/85334 it was discovered that Describe leaks
   // writable handles even if the connection lacks OPEN_RIGHT_WRITABLE. In the long term, if handles
-  // to the underlying VMO require specific rights, they should either be obtained via GetBuffer(),
-  // or we need to allow the VmoFile node itself query the connection rights (since these are
-  // currently not available when handling the Describe call).
+  // to the underlying VMO require specific rights, they should either be obtained via
+  // GetBackingMemory(), or we need to allow the VmoFile node itself query the connection rights
+  // (since these are currently not available when handling the Describe call).
 }
 
 TEST(VmoFile, ReadOnlyCopyOnWrite) {
