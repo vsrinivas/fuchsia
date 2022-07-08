@@ -7,6 +7,7 @@
 use anyhow::{Context, Error};
 use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_protocol;
+use fuchsia_fs::OpenFlags;
 use fuchsia_inspect::{self as inspect, component};
 use fuchsia_syslog::{self as syslog, fx_log_info};
 use futures::lock::Mutex;
@@ -90,6 +91,11 @@ fn main() -> Result<(), Error> {
         StashInspectLoggerHandle::new().logger,
     );
 
+    let storage_dir = fuchsia_fs::directory::open_in_namespace(
+        "/data/storage",
+        OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE | OpenFlags::CREATE,
+    )
+    .context("unable to open data dir")?;
     // EnvironmentBuilder::spawn returns a future that can be awaited for the
     // result of the startup. Since main is a synchronous function, we cannot
     // block here and therefore continue without waiting for the result.
@@ -100,6 +106,7 @@ fn main() -> Result<(), Error> {
             SETTING_PROXY_INSPECT_INFO.node(),
             LISTENER_INSPECT_LOGGER.clone(),
         )
+        .storage_dir(storage_dir)
         .spawn(executor)
         .context("Failed to spawn environment for setui")
 }

@@ -14,8 +14,9 @@ use futures::future::BoxFuture;
 use futures::stream::{FuturesUnordered, StreamFuture};
 use futures::StreamExt;
 
-use super::device_storage::DeviceStorageConvertible;
-use super::storage_factory::DeviceStorageFactory;
+use super::device_storage::{DeviceStorage, DeviceStorageConvertible};
+use super::fidl_storage::{FidlStorage, FidlStorageConvertible};
+use super::storage_factory::StorageFactory;
 use crate::accessibility::types::AccessibilityInfo;
 use crate::agent::{self, Context, Lifespan};
 use crate::audio::policy as audio_policy;
@@ -47,53 +48,69 @@ use crate::Role;
 use crate::{trace, trace_guard};
 
 /// `Blueprint` struct for managing the state needed to construct a [`StorageAgent`].
-pub(crate) struct Blueprint<T>
+pub(crate) struct Blueprint<T, F>
 where
-    T: DeviceStorageFactory,
+    T: StorageFactory<Storage = DeviceStorage>,
+    F: StorageFactory<Storage = FidlStorage>,
 {
-    storage_factory: Arc<T>,
+    device_storage_factory: Arc<T>,
+    fidl_storage_factory: Arc<F>,
 }
 
-impl<T> Blueprint<T>
+impl<T, F> Blueprint<T, F>
 where
-    T: DeviceStorageFactory,
+    T: StorageFactory<Storage = DeviceStorage>,
+    F: StorageFactory<Storage = FidlStorage>,
 {
-    pub(crate) fn new(storage_factory: Arc<T>) -> Self {
-        Self { storage_factory }
+    pub(crate) fn new(device_storage_factory: Arc<T>, fidl_storage_factory: Arc<F>) -> Self {
+        Self { device_storage_factory, fidl_storage_factory }
     }
 }
 
-impl<T> agent::Blueprint for Blueprint<T>
+impl<T, F> agent::Blueprint for Blueprint<T, F>
 where
-    T: DeviceStorageFactory + Send + Sync + 'static,
+    T: StorageFactory<Storage = DeviceStorage> + Send + Sync + 'static,
+    F: StorageFactory<Storage = FidlStorage> + Send + Sync + 'static,
 {
     fn debug_id(&self) -> &'static str {
         "StorageAgent"
     }
 
     fn create(&self, context: Context) -> BoxFuture<'static, ()> {
-        let storage_factory = Arc::clone(&self.storage_factory);
+        let device_storage_factory = Arc::clone(&self.device_storage_factory);
+        let fidl_storage_factory = Arc::clone(&self.fidl_storage_factory);
         Box::pin(async move {
-            StorageAgent::create(context, storage_factory).await;
+            StorageAgent::create(context, device_storage_factory, fidl_storage_factory).await;
         })
     }
 }
 
-pub(crate) struct StorageAgent<T>
+pub(crate) struct StorageAgent<T, F>
 where
-    T: DeviceStorageFactory + Send + Sync + 'static,
+    T: StorageFactory<Storage = DeviceStorage> + Send + Sync + 'static,
+    F: StorageFactory<Storage = FidlStorage> + Send + Sync + 'static,
 {
     /// The factory for creating a messenger to receive messages.
     delegate: service::message::Delegate,
-    storage_factory: Arc<T>,
+    device_storage_factory: Arc<T>,
+    fidl_storage_factory: Arc<F>,
 }
 
-impl<T> StorageAgent<T>
+impl<T, F> StorageAgent<T, F>
 where
-    T: DeviceStorageFactory + Send + Sync + 'static,
+    T: StorageFactory<Storage = DeviceStorage> + Send + Sync + 'static,
+    F: StorageFactory<Storage = FidlStorage> + Send + Sync + 'static,
 {
-    async fn create(context: Context, storage_factory: Arc<T>) {
-        let mut storage_agent = StorageAgent { delegate: context.delegate, storage_factory };
+    async fn create(
+        context: Context,
+        device_storage_factory: Arc<T>,
+        fidl_storage_factory: Arc<F>,
+    ) {
+        let mut storage_agent = StorageAgent {
+            delegate: context.delegate,
+            device_storage_factory,
+            fidl_storage_factory,
+        };
 
         let unordered = FuturesUnordered::new();
         unordered.push(context.receptor.into_future());
@@ -112,8 +129,10 @@ where
             StreamFuture<Receptor<service::Payload, service::Address, Role>>,
         >,
     ) {
-        let storage_management =
-            StorageManagement { storage_factory: Arc::clone(&self.storage_factory) };
+        let storage_management = StorageManagement {
+            device_storage_factory: Arc::clone(&self.device_storage_factory),
+            fidl_storage_factory: Arc::clone(&self.fidl_storage_factory),
+        };
         while let Some((event, stream)) = unordered.next().await {
             let event = if let Some(event) = event {
                 event
@@ -190,23 +209,28 @@ into_storage_info!(PrivacyInfo => SettingInfo);
 into_storage_info!(SetupInfo => SettingInfo);
 into_storage_info!(audio_policy::State => PolicyInfo);
 
-struct StorageManagement<T>
+struct StorageManagement<T, F>
 where
-    T: DeviceStorageFactory,
+    T: StorageFactory<Storage = DeviceStorage>,
+    F: StorageFactory<Storage = FidlStorage>,
 {
-    storage_factory: Arc<T>,
+    device_storage_factory: Arc<T>,
+    // TODO(fxbug.dev/91407) Use when implementing fidl storage.
+    #[allow(dead_code)]
+    fidl_storage_factory: Arc<F>,
 }
 
-impl<T> StorageManagement<T>
+impl<T, F> StorageManagement<T, F>
 where
-    T: DeviceStorageFactory,
+    T: StorageFactory<Storage = DeviceStorage>,
+    F: StorageFactory<Storage = FidlStorage>,
 {
     async fn read<S>(&self, id: ftrace::Id, responder: service::message::MessageClient)
     where
         S: DeviceStorageConvertible + Into<StorageInfo>,
     {
         let guard = trace_guard!(id, "get store");
-        let store = self.storage_factory.get_store().await;
+        let store = self.device_storage_factory.get_store().await;
         drop(guard);
 
         let guard = trace_guard!(id, "get data");
@@ -226,7 +250,7 @@ where
         S: DeviceStorageConvertible,
     {
         let update_result = {
-            let store = self.storage_factory.get_store().await;
+            let store = self.device_storage_factory.get_store().await;
             let storable_value = data.get_storable();
             let storable_value: &S::Storable = storable_value.borrow();
             if storable_value == &store.get::<S::Storable>().await {
@@ -237,6 +261,47 @@ where
                     .await
                     .map_err(|e| Error { message: format!("{:?}", e) })
             }
+        };
+
+        // Ignore the receptor result.
+        let _ = responder
+            .reply(service::Payload::Storage(Payload::Response(StorageResponse::Write(
+                update_result,
+            ))))
+            .send();
+    }
+
+    // TODO(fxbug.dev/91407) Use when implementing fidl storage.
+    #[allow(dead_code)]
+    async fn fidl_read<S>(&self, id: ftrace::Id, responder: service::message::MessageClient)
+    where
+        S: FidlStorageConvertible + Into<StorageInfo>,
+    {
+        let guard = trace_guard!(id, "get fidl store");
+        let store = self.fidl_storage_factory.get_store().await;
+        drop(guard);
+
+        let guard = trace_guard!(id, "get data");
+        let storable: S = store.get::<S>().await;
+        drop(guard);
+
+        let guard = trace_guard!(id, "reply");
+        // Ignore the receptor result.
+        let _ = responder
+            .reply(Payload::Response(StorageResponse::Read(storable.into())).into())
+            .send();
+        drop(guard);
+    }
+
+    // TODO(fxbug.dev/91407) Use when implementing fidl storage.
+    #[allow(dead_code)]
+    async fn fidl_write<S>(&self, data: S, responder: service::message::MessageClient)
+    where
+        S: FidlStorageConvertible,
+    {
+        let update_result = {
+            let store = self.fidl_storage_factory.get_store().await;
+            store.write::<S>(data).await.map_err(|e| Error { message: format!("{:?}", e) })
         };
 
         // Ignore the receptor result.
@@ -319,13 +384,15 @@ where
 payload_convert!(Storage, Payload);
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
+    use crate::agent::storage::storage_factory::FidlStorageFactory;
     use crate::async_property_test;
     use crate::display::types::LightData;
     use crate::message::base::Audience;
     use crate::message::MessageHubUtil;
-
-    use super::*;
+    use fidl::endpoints::create_proxy_and_stream;
+    use fidl_fuchsia_io::DirectoryMarker;
 
     enum Setting {
         Info(SettingInfo),
@@ -348,8 +415,12 @@ mod tests {
     ]);
 
     async fn unsupported_types_panic_on_read_and_write(setting: Setting) {
-        let storage_manager =
-            StorageManagement { storage_factory: Arc::new(InMemoryStorageFactory::new()) };
+        let (directory_proxy, _stream) =
+            create_proxy_and_stream::<DirectoryMarker>().expect("success");
+        let storage_manager = StorageManagement {
+            device_storage_factory: Arc::new(InMemoryStorageFactory::new()),
+            fidl_storage_factory: Arc::new(FidlStorageFactory::new(1, directory_proxy)),
+        };
 
         // This section is just to get a responder. We don't need it to actually respond to anything.
         let delegate = service::MessageHub::create_hub();

@@ -180,30 +180,6 @@ where
     }
 }
 
-/// A trait for describing which storages an item needs access to.
-/// See [StashDeviceStorageFactory::initialize] for usage.
-pub trait DeviceStorageAccess {
-    /// This field should be populated by items that implement [`DeviceStorageCompatible`].
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # struct SomeItem;
-    /// # struct StorageItem;
-    ///
-    /// impl DeviceStorageCompatible for StorageItem {
-    ///    # fn default_value() -> Self { StorageItem }
-    ///    // ...
-    ///    const KEY: &'static str = "some_key";
-    /// }
-    ///
-    /// impl DeviceStorageAccess for SomeItem {
-    ///     const STORAGE_KEYS: &'static [&'static str] = &[StorageItem::KEY];
-    /// }
-    /// ```
-    const STORAGE_KEYS: &'static [&'static str];
-}
-
 impl DeviceStorage {
     /// Construct a device storage from the iteratable item, which will produce the keys for
     /// storage, and from a generator that will produce a stash proxy given a particular key.

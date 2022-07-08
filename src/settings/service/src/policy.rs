@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::storage_factory::DeviceStorageFactory;
+use crate::agent::storage::device_storage::DeviceStorage;
+use crate::agent::storage::storage_factory::StorageFactory;
 use crate::audio::policy::{self as audio, State};
 use crate::base::SettingType;
 use crate::generate_inspect_with_info;
@@ -205,7 +206,7 @@ pub type GenerateHandler<T> =
 
 /// Context captures all details necessary for a policy handler to execute in a given
 /// settings service environment.
-pub struct Context<T: DeviceStorageFactory> {
+pub struct Context<T: StorageFactory<Storage = DeviceStorage>> {
     pub policy_type: PolicyType,
     pub service_messenger: service::message::Messenger,
     pub storage_factory: Arc<T>,

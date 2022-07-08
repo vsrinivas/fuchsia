@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::device_storage::{
-    DeviceStorage, DeviceStorageAccess, DeviceStorageCompatible,
-};
+use crate::agent::storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
-use crate::agent::storage::storage_factory::DeviceStorageFactory;
+use crate::agent::storage::storage_factory::{StorageAccess, StorageFactory};
 use crate::base::{SettingInfo, SettingType, UnknownInfo};
 use crate::message::base::{Audience, MessengerType};
 use crate::service::{self, Address};
@@ -18,7 +16,8 @@ use std::sync::Arc;
 const ENV_NAME: &str = "storage_agent_test_environment";
 const ORIGINAL_VALUE: bool = true;
 struct TestAccess;
-impl DeviceStorageAccess for TestAccess {
+impl StorageAccess for TestAccess {
+    type Storage = DeviceStorage;
     const STORAGE_KEYS: &'static [&'static str] = &[UnknownInfo::KEY];
 }
 

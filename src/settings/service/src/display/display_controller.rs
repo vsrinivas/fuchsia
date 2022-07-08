@@ -4,7 +4,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::agent::storage::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
+use crate::agent::storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use crate::agent::storage::storage_factory::StorageAccess;
 use crate::base::{Merge, SettingInfo, SettingType};
 use crate::call;
 use crate::config::default_settings::DefaultSetting;
@@ -211,10 +212,11 @@ where
     brightness_manager: T,
 }
 
-impl<T> DeviceStorageAccess for DisplayController<T>
+impl<T> StorageAccess for DisplayController<T>
 where
     T: BrightnessManager,
 {
+    type Storage = DeviceStorage;
     const STORAGE_KEYS: &'static [&'static str] = &[DisplayInfo::KEY];
 }
 

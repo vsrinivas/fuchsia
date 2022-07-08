@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::agent::storage::device_storage::DeviceStorage;
 use crate::base::SettingType;
 use crate::handler::base::{Payload as HandlerPayload, Request, Response as SettingResponse};
 use crate::handler::setting_handler::{SettingHandlerResult, StorageFactory};
@@ -96,7 +97,7 @@ pub trait Create: Sized {
 ///
 /// [`PolicyHandler`]: trait.PolicyHandler.html
 /// [`Context`]: ../base/struct.Context.html
-pub(crate) fn create_handler<C, T: StorageFactory + 'static>(
+pub(crate) fn create_handler<C, T: StorageFactory<Storage = DeviceStorage> + 'static>(
     context: Context<T>,
 ) -> BoxFuture<'static, GenerateHandlerResult>
 where

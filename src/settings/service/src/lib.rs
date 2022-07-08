@@ -12,12 +12,21 @@ use std::sync::atomic::AtomicU64;
 use std::sync::Arc;
 
 #[cfg(test)]
+use ::fidl::endpoints::{create_proxy, ServerEnd};
+use agent::storage::device_storage::DeviceStorage;
+use agent::storage::fidl_storage::FidlStorage;
+#[cfg(test)]
 use anyhow::format_err;
 use anyhow::{Context, Error};
+#[cfg(test)]
+use fidl_fuchsia_io::DirectoryMarker;
+use fidl_fuchsia_io::DirectoryProxy;
 use fuchsia_async as fasync;
 #[cfg(test)]
 use fuchsia_component::server::NestedEnvironment;
 use fuchsia_component::server::{ServiceFs, ServiceFsDir, ServiceObj};
+#[cfg(test)]
+use fuchsia_fs::OpenFlags;
 use fuchsia_inspect::component;
 use fuchsia_syslog::fx_log_warn;
 use fuchsia_zircon::{Duration, DurationNum};
@@ -33,10 +42,22 @@ pub use input::input_device_configuration::InputConfiguration;
 pub use light::light_hardware_configuration::LightHardwareConfiguration;
 use serde::Deserialize;
 pub use service::{Address, Payload, Role};
+#[cfg(test)]
+use vfs::directory::entry::DirectoryEntry;
+#[cfg(test)]
+use vfs::directory::mutable::simple::tree_constructor;
+#[cfg(test)]
+use vfs::execution_scope::ExecutionScope;
+#[cfg(test)]
+use vfs::file::vmo::{read_write, simple_init_vmo_resizable_with_capacity};
+#[cfg(test)]
+use vfs::mut_pseudo_directory;
+#[cfg(test)]
+use vfs::registry::{inode_registry, token_registry};
 
 use crate::accessibility::accessibility_controller::AccessibilityController;
 use crate::agent::authority::Authority;
-use crate::agent::storage::storage_factory::DeviceStorageFactory;
+use crate::agent::storage::storage_factory::{FidlStorageFactory, StorageFactory};
 use crate::agent::{BlueprintHandle as AgentBlueprintHandle, Lifespan};
 use crate::audio::audio_controller::AudioController;
 use crate::audio::policy::audio_policy_handler::AudioPolicyHandler;
@@ -228,9 +249,34 @@ impl Environment {
     }
 }
 
+#[cfg(test)]
+fn init_storage_dir() -> DirectoryProxy {
+    let fs_scope = ExecutionScope::build()
+        .token_registry(token_registry::Simple::new())
+        .inode_registry(inode_registry::Simple::new())
+        .entry_constructor(tree_constructor(move |_, _| {
+            Ok(read_write(simple_init_vmo_resizable_with_capacity(b"", 100)))
+        }))
+        .new();
+    let (directory, server) = create_proxy::<DirectoryMarker>().unwrap();
+    mut_pseudo_directory! {}.open(
+        fs_scope,
+        OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
+        0,
+        vfs::path::Path::dot(),
+        ServerEnd::new(server.into_channel()),
+    );
+    directory
+}
+
+#[cfg(not(test))]
+fn init_storage_dir() -> DirectoryProxy {
+    panic!("migration dir must be specified");
+}
+
 /// The [EnvironmentBuilder] aggregates the parameters surrounding an [environment](Environment) and
 /// ultimately spawns an environment based on them.
-pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
+pub struct EnvironmentBuilder<T: StorageFactory<Storage = DeviceStorage> + Send + Sync + 'static> {
     configuration: Option<ServiceConfiguration>,
     agent_blueprints: Vec<AgentBlueprintHandle>,
     agent_mapping_func: Option<Box<dyn Fn(AgentType) -> AgentBlueprintHandle>>,
@@ -243,9 +289,11 @@ pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
     resource_monitors: Vec<monitor_base::monitor::Generate>,
     setting_proxy_inspect_info: Option<&'static fuchsia_inspect::Node>,
     active_listener_inspect_logger: Option<Arc<Mutex<ListenerInspectLogger>>>,
+    storage_dir: Option<DirectoryProxy>,
+    fidl_storage_factory: Option<Arc<FidlStorageFactory>>,
 }
 
-impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
+impl<T: StorageFactory<Storage = DeviceStorage> + Send + Sync + 'static> EnvironmentBuilder<T> {
     /// Construct a new [EnvironmentBuilder] using `storage_factory` to construct the storage for
     /// the future [Environment].
     pub fn new(storage_factory: Arc<T>) -> EnvironmentBuilder<T> {
@@ -262,6 +310,8 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             resource_monitors: vec![],
             setting_proxy_inspect_info: None,
             active_listener_inspect_logger: None,
+            storage_dir: None,
+            fidl_storage_factory: None,
         }
     }
 
@@ -375,6 +425,16 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         self
     }
 
+    pub fn storage_dir(mut self, storage_dir: DirectoryProxy) -> Self {
+        self.storage_dir = Some(storage_dir);
+        self
+    }
+
+    pub fn fidl_storage_factory(mut self, fidl_storage_factory: Arc<FidlStorageFactory>) -> Self {
+        self.fidl_storage_factory = Some(fidl_storage_factory);
+        self
+    }
+
     /// Prepares an environment so that it may be spawned. This ensures that all necessary
     /// components are spawned and ready to handle events and FIDL requests.
     async fn prepare_env(
@@ -427,6 +487,12 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             }
         }
 
+        let fidl_storage_factory = if let Some(factory) = self.fidl_storage_factory {
+            factory
+        } else {
+            Arc::new(FidlStorageFactory::new(0, self.storage_dir.unwrap_or_else(init_storage_dir)))
+        };
+
         let service_context =
             Arc::new(ServiceContext::new(self.generate_service, Some(delegate.clone())));
 
@@ -456,6 +522,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         EnvironmentBuilder::register_setting_handlers(
             &settings,
             Arc::clone(&self.storage_factory),
+            Arc::clone(&fidl_storage_factory),
             &flags,
             &mut handler_factory,
         )
@@ -489,6 +556,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             Arc::new(Mutex::new(handler_factory)),
             Arc::new(Mutex::new(policy_handler_factory)),
             self.storage_factory,
+            fidl_storage_factory,
             self.setting_proxy_inspect_info.unwrap_or_else(|| component::inspector().root()),
             self.active_listener_inspect_logger
                 .unwrap_or_else(|| Arc::new(Mutex::new(ListenerInspectLogger::new()))),
@@ -557,15 +625,19 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
     /// Initializes storage and registers handler generation functions for the configured setting
     /// types.
-    async fn register_setting_handlers(
+    async fn register_setting_handlers<F>(
         components: &HashSet<SettingType>,
-        storage_factory: Arc<T>,
+        device_storage_factory: Arc<T>,
+        // TODO(fxbug.dev/91407) Use when implementing fidl storage.
+        #[allow(unused_variables)] fidl_storage_factory: Arc<F>,
         controller_flags: &HashSet<ControllerFlag>,
         factory_handle: &mut SettingHandlerFactoryImpl,
-    ) {
+    ) where
+        F: StorageFactory<Storage = FidlStorage>,
+    {
         // Accessibility
         if components.contains(&SettingType::Accessibility) {
-            storage_factory
+            device_storage_factory
                 .initialize::<AccessibilityController>()
                 .await
                 .expect("storage should still be initializing");
@@ -577,7 +649,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
         // Audio
         if components.contains(&SettingType::Audio) {
-            storage_factory
+            device_storage_factory
                 .initialize::<AudioController>()
                 .await
                 .expect("storage should still be initializing");
@@ -587,7 +659,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
         // Display
         if components.contains(&SettingType::Display) {
-            storage_factory
+            device_storage_factory
                 .initialize::<DisplayController>()
                 .await
                 .expect("storage should still be initializing");
@@ -605,7 +677,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
         // Light
         if components.contains(&SettingType::Light) {
-            storage_factory
+            device_storage_factory
                 .initialize::<LightController>()
                 .await
                 .expect("storage should still be initializing");
@@ -615,7 +687,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
         // Light sensor
         if components.contains(&SettingType::LightSensor) {
-            storage_factory
+            device_storage_factory
                 .initialize::<LightSensorController>()
                 .await
                 .expect("storage should still be initializing");
@@ -627,7 +699,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
         // Input
         if components.contains(&SettingType::Input) {
-            storage_factory
+            device_storage_factory
                 .initialize::<InputController>()
                 .await
                 .expect("storage should still be initializing");
@@ -637,7 +709,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
         // Intl
         if components.contains(&SettingType::Intl) {
-            storage_factory
+            device_storage_factory
                 .initialize::<IntlController>()
                 .await
                 .expect("storage should still be initializing");
@@ -647,7 +719,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
         // Keyboard
         if components.contains(&SettingType::Keyboard) {
-            storage_factory
+            device_storage_factory
                 .initialize::<KeyboardController>()
                 .await
                 .expect("storage should still be initializing");
@@ -659,7 +731,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
         // Do not disturb
         if components.contains(&SettingType::DoNotDisturb) {
-            storage_factory
+            device_storage_factory
                 .initialize::<DoNotDisturbController>()
                 .await
                 .expect("storage should still be initializing");
@@ -671,7 +743,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
         // Factory Reset
         if components.contains(&SettingType::FactoryReset) {
-            storage_factory
+            device_storage_factory
                 .initialize::<FactoryResetController>()
                 .await
                 .expect("storage should still be initializing");
@@ -683,7 +755,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
         // Night mode
         if components.contains(&SettingType::NightMode) {
-            storage_factory
+            device_storage_factory
                 .initialize::<NightModeController>()
                 .await
                 .expect("storage should still be initializing");
@@ -695,7 +767,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
         // Privacy
         if components.contains(&SettingType::Privacy) {
-            storage_factory
+            device_storage_factory
                 .initialize::<PrivacyController>()
                 .await
                 .expect("storage should still be initializing");
@@ -705,7 +777,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
         // Setup
         if components.contains(&SettingType::Setup) {
-            storage_factory
+            device_storage_factory
                 .initialize::<SetupController>()
                 .await
                 .expect("storage should still be initializing");
@@ -721,7 +793,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 /// service (handlers, agents, etc.) and brings up the components necessary to
 /// support the components specified in the components HashSet.
 #[allow(clippy::too_many_arguments)]
-async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>(
+async fn create_environment<'a, T, F>(
     mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
     delegate: service::message::Delegate,
     job_seeder: Seeder,
@@ -734,10 +806,15 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     service_context: Arc<ServiceContext>,
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl>>,
     policy_handler_factory: Arc<Mutex<PolicyHandlerFactoryImpl<T>>>,
-    storage_factory: Arc<T>,
+    device_storage_factory: Arc<T>,
+    fidl_storage_factory: Arc<F>,
     setting_proxies_node: &'static fuchsia_inspect::Node,
     listener_logger: Arc<Mutex<ListenerInspectLogger>>,
-) -> Result<HashSet<Entity>, Error> {
+) -> Result<HashSet<Entity>, Error>
+where
+    T: StorageFactory<Storage = DeviceStorage> + Send + Sync + 'static,
+    F: StorageFactory<Storage = FidlStorage> + Send + Sync + 'static,
+{
     for blueprint in event_subscriber_blueprints {
         blueprint.create(delegate.clone()).await;
     }
@@ -789,7 +866,10 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
 
     // The service does not work without storage, so ensure it is always included first.
     agent_authority
-        .register(Arc::new(crate::agent::storage::storage_agent::Blueprint::new(storage_factory)))
+        .register(Arc::new(crate::agent::storage::storage_agent::Blueprint::new(
+            device_storage_factory,
+            fidl_storage_factory,
+        )))
         .await;
 
     for blueprint in agent_blueprints {

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::storage_factory::DeviceStorageFactory;
+use crate::agent::storage::device_storage::DeviceStorage;
+use crate::agent::storage::storage_factory::StorageFactory;
 use crate::base::SettingType;
 use crate::policy::{
     BoxedHandler, Context, GenerateHandler, PolicyHandlerFactory, PolicyHandlerFactoryError,
@@ -17,7 +18,7 @@ use std::sync::Arc;
 
 /// PolicyHandlerFactoryImpl houses registered closures for generating setting
 /// handlers.
-pub struct PolicyHandlerFactoryImpl<T: DeviceStorageFactory + Send + Sync> {
+pub struct PolicyHandlerFactoryImpl<T: StorageFactory<Storage = DeviceStorage> + Send + Sync> {
     policies: HashSet<PolicyType>,
     settings: HashSet<SettingType>,
     storage_factory: Arc<T>,
@@ -28,7 +29,10 @@ pub struct PolicyHandlerFactoryImpl<T: DeviceStorageFactory + Send + Sync> {
 }
 
 #[async_trait]
-impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactory for PolicyHandlerFactoryImpl<T> {
+impl<T> PolicyHandlerFactory for PolicyHandlerFactoryImpl<T>
+where
+    T: StorageFactory<Storage = DeviceStorage> + Send + Sync,
+{
     async fn generate(
         &mut self,
         policy_type: PolicyType,
@@ -63,7 +67,7 @@ impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactory for PolicyHandl
     }
 }
 
-impl<T: DeviceStorageFactory + Send + Sync> PolicyHandlerFactoryImpl<T> {
+impl<T: StorageFactory<Storage = DeviceStorage> + Send + Sync> PolicyHandlerFactoryImpl<T> {
     pub(crate) fn new(
         policies: HashSet<PolicyType>,
         settings: HashSet<SettingType>,

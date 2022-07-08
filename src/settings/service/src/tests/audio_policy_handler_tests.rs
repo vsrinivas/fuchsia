@@ -5,7 +5,7 @@
 use crate::agent::authority::Authority;
 use crate::agent::storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
-use crate::agent::storage::storage_factory::DeviceStorageFactory;
+use crate::agent::storage::storage_factory::{FidlStorageFactory, StorageFactory};
 use crate::agent::Lifespan;
 use crate::audio::default_audio_info;
 use crate::audio::policy::audio_policy_handler::{AudioPolicyHandler, ARG_POLICY_ID};
@@ -28,6 +28,8 @@ use crate::service::TryFromWithClient;
 use crate::service_context::ServiceContext;
 use crate::tests::message_utils::verify_payload;
 use assert_matches::assert_matches;
+use fidl::endpoints::create_proxy_and_stream;
+use fidl_fuchsia_io::DirectoryMarker;
 use fuchsia_async::Task;
 use futures::StreamExt;
 use std::collections::HashSet;
@@ -98,9 +100,12 @@ impl TestEnvironment {
             .await
             .expect("failed to create agent authority");
 
+        let (directory_proxy, _stream) = create_proxy_and_stream::<DirectoryMarker>().unwrap();
+
         agent_authority
             .register(Arc::new(crate::agent::storage::storage_agent::Blueprint::new(
                 storage_factory,
+                Arc::new(FidlStorageFactory::new(1, directory_proxy)),
             )))
             .await;
         agent_authority

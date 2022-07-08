@@ -1,7 +1,8 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::agent::storage::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
+use crate::agent::storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use crate::agent::storage::storage_factory::StorageAccess;
 use crate::audio::types::{
     AudioInfo, AudioInputInfo, AudioStream, AudioStreamType, SetAudioStream,
 };
@@ -298,7 +299,8 @@ pub(crate) struct AudioController {
     volume: VolumeControllerHandle,
 }
 
-impl DeviceStorageAccess for AudioController {
+impl StorageAccess for AudioController {
+    type Storage = DeviceStorage;
     const STORAGE_KEYS: &'static [&'static str] = &[AudioInfo::KEY];
 }
 

@@ -1,7 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::agent::storage::storage_factory::DeviceStorageFactory;
+use crate::agent::storage::storage_factory::StorageFactory as StorageFactoryTrait;
 use crate::base::{HasSettingType, SettingInfo, SettingType};
 use crate::handler::base::{Context, ControllerGenerateResult, Request};
 use crate::message::base::Audience;
@@ -91,8 +91,8 @@ pub enum Event {
     Exited(ExitResult),
 }
 
-pub(crate) trait StorageFactory: DeviceStorageFactory + Send + Sync {}
-impl<T: DeviceStorageFactory + Send + Sync> StorageFactory for T {}
+pub(crate) trait StorageFactory: StorageFactoryTrait + Send + Sync {}
+impl<T: StorageFactoryTrait + Send + Sync> StorageFactory for T {}
 
 #[derive(Error, Debug, Clone, PartialEq)]
 pub enum ControllerError {

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
+use crate::agent::storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use crate::agent::storage::storage_factory::StorageAccess;
 use crate::base::{SettingInfo, SettingType};
 use crate::call;
 use crate::factory_reset::types::FactoryResetInfo;
@@ -45,7 +46,8 @@ pub struct FactoryResetController {
     handle: FactoryResetHandle,
 }
 
-impl DeviceStorageAccess for FactoryResetController {
+impl StorageAccess for FactoryResetController {
+    type Storage = DeviceStorage;
     const STORAGE_KEYS: &'static [&'static str] = &[FactoryResetInfo::KEY];
 }
 

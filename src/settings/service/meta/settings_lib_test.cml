@@ -48,5 +48,13 @@
             // for our tests by specifying subdirectory as our package.
             subdir: "setui_service_tests",
         },
+        {
+            storage: "data",
+            path: "/data",
+
+            // Test manager makes all config data available, but we need to choose a meaningful one
+            // for our tests by specifying subdirectory as our package.
+            subdir: "setui_service_tests",
+        },
     ],
 }

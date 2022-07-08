@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
-use crate::agent::storage::storage_factory::DeviceStorageFactory;
+use crate::agent::storage::storage_factory::StorageFactory;
 use crate::handler::base::{Request, Response as SettingResponse};
 use crate::message::base::MessengerType;
 use crate::policy::policy_handler::{

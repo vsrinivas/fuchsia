@@ -5,7 +5,8 @@
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_light::{Info, LightMarker, LightProxy};
 
-use crate::agent::storage::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
+use crate::agent::storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use crate::agent::storage::storage_factory::StorageAccess;
 use crate::base::{SettingInfo, SettingType};
 use crate::config::default_settings::DefaultSetting;
 use crate::handler::base::Request;
@@ -56,7 +57,8 @@ pub struct LightController {
     light_hardware_config: Option<LightHardwareConfiguration>,
 }
 
-impl DeviceStorageAccess for LightController {
+impl StorageAccess for LightController {
+    type Storage = DeviceStorage;
     const STORAGE_KEYS: &'static [&'static str] = &[LightInfo::KEY];
 }
 

@@ -63,7 +63,8 @@
 //! [Response]: crate::handler::base::Payload::Response
 //! [Rebroadcast]: crate::handler::base::Request::Rebroadcast
 
-use crate::agent::storage::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
+use crate::agent::storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use crate::agent::storage::storage_factory::StorageAccess;
 use crate::audio::default_audio_info;
 use crate::audio::policy::{
     self as audio_policy, AudioPolicyConfig, PolicyId, PropertyTarget, Request as PolicyRequest,
@@ -105,7 +106,8 @@ pub(crate) struct AudioPolicyHandler {
     client_proxy: ClientProxy,
 }
 
-impl DeviceStorageAccess for AudioPolicyHandler {
+impl StorageAccess for AudioPolicyHandler {
+    type Storage = DeviceStorage;
     const STORAGE_KEYS: &'static [&'static str] = &[State::KEY];
 }
 

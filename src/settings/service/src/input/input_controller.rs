@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
+use crate::agent::storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use crate::agent::storage::storage_factory::StorageAccess;
 use crate::base::{SettingInfo, SettingType};
 use crate::config::default_settings::DefaultSetting;
 use crate::handler::base::Request;
@@ -352,7 +353,8 @@ pub struct InputController {
     inner: InputControllerInnerHandle,
 }
 
-impl DeviceStorageAccess for InputController {
+impl StorageAccess for InputController {
+    type Storage = DeviceStorage;
     const STORAGE_KEYS: &'static [&'static str] = &[InputInfoSources::KEY];
 }
 

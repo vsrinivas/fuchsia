@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
+use crate::agent::storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use crate::agent::storage::storage_factory::StorageAccess;
 use crate::base::{SettingInfo, SettingType};
 use crate::handler::base::Request;
 use crate::handler::setting_handler::persist::{controller as data_controller, ClientProxy};
@@ -33,7 +34,8 @@ pub struct KeyboardController {
     client: ClientProxy,
 }
 
-impl DeviceStorageAccess for KeyboardController {
+impl StorageAccess for KeyboardController {
+    type Storage = DeviceStorage;
     const STORAGE_KEYS: &'static [&'static str] = &[KeyboardInfo::KEY];
 }
 
