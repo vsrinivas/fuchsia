@@ -44,15 +44,14 @@ class VmoFile final : public vfs::internal::File {
     // contents of the VMO, possibly extending beyond the pages spanned by the
     // file.
     //
-    // This mode is significantly more efficient than |CLONE| and |CLONE_COW|
-    // and should be preferred when file spans the whole VMO or when the VMO's
-    // entire content is safe for clients to read.
+    // This mode is significantly more efficient than |CLONE_COW| and should be
+    // preferred when file spans the whole VMO or when the VMO's entire content
+    // is safe for clients to read.
     DUPLICATE,
 
     // The VMO range spanned by the file is cloned on demand, using
-    // copy-on-write
-    // semantics to isolate modifications of clients which open the file in
-    // a writable mode.
+    // copy-on-write semantics to isolate modifications of clients which open
+    // the file in a writable mode.
     //
     // This is appropriate when clients need to be restricted from accessing
     // portions of the VMO outside of the range of the file and when file
@@ -60,20 +59,18 @@ class VmoFile final : public vfs::internal::File {
     CLONE_COW,
   };
 
-  // Creates a file node backed an VMO owned by the creator.
-  // The creator retains ownership of |unowned_vmo| which must outlive this
-  // object.
-  VmoFile(zx::unowned_vmo unowned_vmo, size_t offset, size_t length,
-          WriteOption write_options = WriteOption::READ_ONLY,
-          Sharing vmo_sharing = Sharing::DUPLICATE);
-
-  // Creates a file node backed by a VMO. The VmoFile takes ownership of the
-  // vmo.
+  // Creates a file node backed by a VMO.
+  //
+  // TODO(https://fxbug.dev/104048): Remove this constructor.
   VmoFile(zx::vmo vmo, size_t offset, size_t length,
-          WriteOption write_options = WriteOption::READ_ONLY,
+          WriteOption write_option = WriteOption::READ_ONLY,
           Sharing vmo_sharing = Sharing::DUPLICATE);
 
-  ~VmoFile();
+  // Creates a file node backed by a VMO.
+  VmoFile(zx::vmo vmo, size_t length, WriteOption write_option = WriteOption::READ_ONLY,
+          Sharing vmo_sharing = Sharing::DUPLICATE);
+
+  ~VmoFile() override;
 
   // Create |count| bytes of data from the file at the given |offset|.
   //

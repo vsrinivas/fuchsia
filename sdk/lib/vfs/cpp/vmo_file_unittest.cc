@@ -69,7 +69,9 @@ TEST(VmoFile, ConstructTransferOwnership) {
 TEST(VmoFile, Reading) {
   // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
   zx::vmo test_vmo = MakeTestVmo();
-  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::READ_ONLY,
+  zx::vmo dup;
+  ASSERT_EQ(ZX_OK, test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+  vfs::VmoFile file(std::move(dup), 24, 1000, vfs::VmoFile::WriteOption::READ_ONLY,
                     vfs::VmoFile::Sharing::NONE);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -96,7 +98,9 @@ TEST(VmoFile, Reading) {
 TEST(VmoFile, GetAttrReadOnly) {
   // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
   zx::vmo test_vmo = MakeTestVmo();
-  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::READ_ONLY,
+  zx::vmo dup;
+  ASSERT_EQ(ZX_OK, test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+  vfs::VmoFile file(std::move(dup), 24, 1000, vfs::VmoFile::WriteOption::READ_ONLY,
                     vfs::VmoFile::Sharing::NONE);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -119,7 +123,9 @@ TEST(VmoFile, GetAttrReadOnly) {
 TEST(VmoFile, GetAttrWritable) {
   // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
   zx::vmo test_vmo = MakeTestVmo();
-  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE,
+  zx::vmo dup;
+  ASSERT_EQ(ZX_OK, test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+  vfs::VmoFile file(std::move(dup), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE,
                     vfs::VmoFile::Sharing::NONE);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -143,7 +149,9 @@ TEST(VmoFile, GetAttrWritable) {
 TEST(VmoFile, ReadOnlyNoSharing) {
   // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
   zx::vmo test_vmo = MakeTestVmo();
-  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::READ_ONLY,
+  zx::vmo dup;
+  ASSERT_EQ(ZX_OK, test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+  vfs::VmoFile file(std::move(dup), 24, 1000, vfs::VmoFile::WriteOption::READ_ONLY,
                     vfs::VmoFile::Sharing::NONE);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -180,7 +188,9 @@ TEST(VmoFile, ReadOnlyNoSharing) {
 TEST(VmoFile, WritableNoSharing) {
   // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
   zx::vmo test_vmo = MakeTestVmo();
-  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE,
+  zx::vmo dup;
+  ASSERT_EQ(ZX_OK, test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+  vfs::VmoFile file(std::move(dup), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE,
                     vfs::VmoFile::Sharing::NONE);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -218,7 +228,9 @@ TEST(VmoFile, WritableNoSharing) {
 TEST(VmoFile, ReadOnlyDuplicate) {
   // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
   zx::vmo test_vmo = MakeTestVmo();
-  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000);
+  zx::vmo dup;
+  ASSERT_EQ(ZX_OK, test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+  vfs::VmoFile file(std::move(dup), 24, 1000);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("vfs test thread");
@@ -259,7 +271,9 @@ TEST(VmoFile, ReadOnlyDuplicate) {
 TEST(VmoFile, WritableDuplicate) {
   // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
   zx::vmo test_vmo = MakeTestVmo();
-  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE);
+  zx::vmo dup;
+  ASSERT_EQ(ZX_OK, test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+  vfs::VmoFile file(std::move(dup), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("vfs test thread");
@@ -304,7 +318,9 @@ TEST(VmoFile, WritableDuplicate) {
 TEST(VmoFile, ReadOnlyCopyOnWrite) {
   // Create a VmoFile wrapping the VMO.
   zx::vmo test_vmo = MakeTestVmo();
-  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 0, 4096, vfs::VmoFile::WriteOption::READ_ONLY,
+  zx::vmo dup;
+  ASSERT_EQ(ZX_OK, test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+  vfs::VmoFile file(std::move(dup), 0, 4096, vfs::VmoFile::WriteOption::READ_ONLY,
                     vfs::VmoFile::Sharing::CLONE_COW);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -347,7 +363,9 @@ TEST(VmoFile, ReadOnlyCopyOnWrite) {
 TEST(VmoFile, WritableCopyOnWrite) {
   // Create a VmoFile wrapping the VMO.
   zx::vmo test_vmo = MakeTestVmo();
-  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 0, 4096, vfs::VmoFile::WriteOption::WRITABLE,
+  zx::vmo dup;
+  ASSERT_EQ(ZX_OK, test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+  vfs::VmoFile file(std::move(dup), 0, 4096, vfs::VmoFile::WriteOption::WRITABLE,
                     vfs::VmoFile::Sharing::CLONE_COW);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -425,7 +443,9 @@ TEST(VmoFile, UnalignedCopyOnWrite) {
   // Create a VmoFile wrapping 1000 bytes of the VMO starting at offset 24.
   // This offset is not page-aligned, so cloning will fail.
   zx::vmo test_vmo = MakeTestVmo();
-  vfs::VmoFile file(zx::unowned_vmo(test_vmo), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE,
+  zx::vmo dup;
+  ASSERT_EQ(ZX_OK, test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+  vfs::VmoFile file(std::move(dup), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE,
                     vfs::VmoFile::Sharing::CLONE_COW);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);

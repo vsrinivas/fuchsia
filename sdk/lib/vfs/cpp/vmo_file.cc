@@ -6,12 +6,6 @@
 
 namespace vfs {
 
-VmoFile::VmoFile(zx::unowned_vmo unowned_vmo, size_t offset, size_t length,
-                 WriteOption write_option, Sharing vmo_sharing)
-    : offset_(offset), length_(length), write_option_(write_option), vmo_sharing_(vmo_sharing) {
-  unowned_vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_);
-}
-
 VmoFile::VmoFile(zx::vmo vmo, size_t offset, size_t length, WriteOption write_option,
                  Sharing vmo_sharing)
     : offset_(offset),
@@ -19,6 +13,9 @@ VmoFile::VmoFile(zx::vmo vmo, size_t offset, size_t length, WriteOption write_op
       write_option_(write_option),
       vmo_sharing_(vmo_sharing),
       vmo_(std::move(vmo)) {}
+
+VmoFile::VmoFile(zx::vmo vmo, size_t length, WriteOption write_option, Sharing vmo_sharing)
+    : VmoFile(std::move(vmo), 0, length, write_option, vmo_sharing) {}
 
 VmoFile::~VmoFile() = default;
 
@@ -76,18 +73,18 @@ void VmoFile::Describe2(fuchsia::io::ConnectionInfo* out_info) {
   }
 }
 
-zx_status_t VmoFile::ReadAt(uint64_t length, uint64_t offset, std::vector<uint8_t>* out_data) {
-  if (length == 0u || offset >= length_) {
+zx_status_t VmoFile::ReadAt(uint64_t count, uint64_t offset, std::vector<uint8_t>* out_data) {
+  if (count == 0u || offset >= length_) {
     return ZX_OK;
   }
 
   size_t remaining_length = length_ - offset;
-  if (length > remaining_length) {
-    length = remaining_length;
+  if (count > remaining_length) {
+    count = remaining_length;
   }
 
-  out_data->resize(length);
-  return vmo_.read(out_data->data(), offset_ + offset, length);
+  out_data->resize(count);
+  return vmo_.read(out_data->data(), offset_ + offset, count);
 }
 
 zx_status_t VmoFile::WriteAt(std::vector<uint8_t> data, uint64_t offset, uint64_t* out_actual) {

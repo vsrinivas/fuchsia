@@ -8,6 +8,8 @@
 #include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/vfs/cpp/vmo_file.h>
 
+#include <utility>
+
 #include <gtest/gtest.h>
 #include <src/lib/fsl/vmo/sized_vmo.h>
 #include <src/lib/fsl/vmo/strings.h>
@@ -21,13 +23,13 @@ class FakeDirectory final {
   FakeDirectory() : root_(std::make_unique<vfs::PseudoDir>()) {}
 
   // Add a file with the given name and data to the directory.
-  FakeDirectory& AddFile(std::string filename, std::string data) {
-    InternalAddFile(filename, data);
+  FakeDirectory& AddFile(std::string filename, const std::string& data) {
+    InternalAddFile(std::move(filename), data);
     return *this;
   }
 
   // Removes a file with the given name from the directory.
-  FakeDirectory& RemoveFile(std::string filename) {
+  FakeDirectory& RemoveFile(const std::string& filename) {
     InternalRemoveFile(filename);
     return *this;
   }
@@ -42,19 +44,21 @@ class FakeDirectory final {
 
  private:
   // Internal helper functions to assert when adding and removing files.
-  void InternalAddFile(std::string filename, std::string data) {
-    ASSERT_EQ(root_->AddEntry(filename, CreateVmoFile(data)), ZX_OK);
+  void InternalAddFile(std::string filename, const std::string& data) {
+    ASSERT_EQ(root_->AddEntry(std::move(filename), CreateVmoFile(data)), ZX_OK);
   }
 
-  void InternalRemoveFile(std::string filename) { ASSERT_EQ(root_->RemoveEntry(filename), ZX_OK); }
+  void InternalRemoveFile(const std::string& filename) {
+    ASSERT_EQ(root_->RemoveEntry(filename), ZX_OK);
+  }
 
   // Internal helper function to create a vmo-file from a string.
-  static std::unique_ptr<vfs::VmoFile> CreateVmoFile(std::string data) {
+  static std::unique_ptr<vfs::VmoFile> CreateVmoFile(const std::string& data) {
     fsl::SizedVmo file_vmo;
     if (!fsl::VmoFromString(data, &file_vmo)) {
       return nullptr;
     }
-    return std::make_unique<vfs::VmoFile>(zx::unowned_vmo(file_vmo.vmo()), 0, data.size(),
+    return std::make_unique<vfs::VmoFile>(std::move(file_vmo.vmo()), 0, file_vmo.size(),
                                           vfs::VmoFile::WriteOption::WRITABLE,
                                           vfs::VmoFile::Sharing::CLONE_COW);
   }
