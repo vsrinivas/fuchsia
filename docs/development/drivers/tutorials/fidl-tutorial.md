@@ -133,22 +133,34 @@ class Device : public fidl::WireServer<fidl_examples_echo::Echo> {
 
 The first important thing to discuss is how the child driver will bind. It can
 bind due to any number of device properties, but if you wish to bind based
-solely on the FIDL protocol the parent exports, you will need to create the
-following bind library:
+solely on the FIDL protocol the parent exports, you will need the bind library
+that the build automatically generates for you from the FIDL library.
 
-```
-library fidl.examples.echo;
+If the FIDL library target is:
+`//sdk/fidl/fidl.examples.echo:myecholibrary`
 
-bool Echo;
-```
+Then the auto generated bind_library target is:
+`//sdk/fidl/fidl.examples.echo:myecholibrary_bindlib`.
 
-You will then need to use this library in your driver's bind rules:
+
+Most FIDL libraries have the target name be the same as the folder name they are in.
+
+In this common case the FIDL library is:
+`//sdk/fidl/fidl.examples.echo`
+
+The auto generated bind_library target is:
+`//sdk/fidl/fidl.examples.echo:fidl.examples.echo_bindlib`.
+
+You will need to depend on and use this library in your driver's bind rules:
 
 ```
 using fidl.examples.echo;
 
-fidl.examples.echo.Echo == true;
+fidl.examples.echo.Echo == fidl.examples.echo.Echo.ZirconTransport;
 ```
+
+ZirconTransport is the transport method that the parent driver uses to
+provide the Echo FIDL protocol to the child.
 
 You can addition additional bind constraints if you desire. Note that the
 property which we describe here is only added if the parent driver declares

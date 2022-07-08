@@ -4,4 +4,4 @@
 
 using fidl.examples.echo;
 
-fidl.examples.echo.Echo == true;
+fidl.examples.echo.Echo == fidl.examples.echo.Echo.ZirconTransport;

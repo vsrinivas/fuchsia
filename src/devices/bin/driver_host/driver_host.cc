@@ -406,7 +406,8 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
   for (const auto& offer : child->fidl_offers()) {
     auto str_property = fuchsia_device_manager::wire::DeviceStrProperty{
         .key = fidl::StringView(allocator, offer),
-        .value = fuchsia_device_manager::wire::PropertyValue::WithBoolValue(true),
+        .value = fuchsia_device_manager::wire::PropertyValue::WithEnumValue(
+            allocator, std::string(offer) + ".ZirconTransport"),
     };
     str_props_list.push_back(str_property);
 

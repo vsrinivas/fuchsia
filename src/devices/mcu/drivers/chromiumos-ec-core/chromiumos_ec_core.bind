@@ -5,4 +5,4 @@
 using fuchsia.hardware.google.ec;
 
 
-fuchsia.hardware.google.ec.Device == true;
+fuchsia.hardware.google.ec.Device == fuchsia.hardware.google.ec.Device.ZirconTransport;

@@ -116,7 +116,8 @@ std::vector<fuchsia_driver_framework::wire::NodeProperty> CreateProperties(
     properties.emplace_back(arena)
         .set_key(arena, fdf::wire::NodePropertyKey::WithStringValue(
                             arena, fidl::StringView::FromExternal(value)))
-        .set_value(arena, fdf::wire::NodePropertyValue::WithBoolValue(true));
+        .set_value(arena, fdf::wire::NodePropertyValue::WithEnumValue(
+                              arena, std::string(value) + ".ZirconTransport"));
 
     auto property = fidl_offer_to_device_prop(arena, value);
     if (property) {

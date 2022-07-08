@@ -923,7 +923,8 @@ TEST_F(DeviceTest, CreateNodeProperties) {
   EXPECT_EQ(5u, properties[1].value().int_value());
 
   EXPECT_EQ("fuchsia.hardware.i2c.Device", properties[2].key().string_value().get());
-  EXPECT_EQ(true, properties[2].value().bool_value());
+  EXPECT_EQ("fuchsia.hardware.i2c.Device.ZirconTransport",
+            properties[2].value().enum_value().get());
 
   EXPECT_EQ(static_cast<uint32_t>(BIND_FIDL_PROTOCOL), properties[3].key().int_value());
   EXPECT_EQ(3u, properties[3].value().int_value());

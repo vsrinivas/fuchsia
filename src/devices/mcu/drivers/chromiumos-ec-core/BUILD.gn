@@ -21,7 +21,9 @@ driver_bind_rules("bind") {
   rules = "chromiumos_ec_core.bind"
   header_output = "chromiumos_ec_core_bind.h"
   bind_output = "chromiumos_ec_core.bindbc"
-  deps = [ "//src/devices/bind/fuchsia.hardware.google.ec" ]
+  deps = [
+    "//sdk/fidl/fuchsia.hardware.google.ec:fuchsia.hardware.google.ec_bindlib",
+  ]
 }
 
 source_set("core") {
