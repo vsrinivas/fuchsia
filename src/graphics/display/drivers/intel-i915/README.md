@@ -1,5 +1,19 @@
 # Display Driver for Intel GPUs
 
+## Target Hardware
+
+Changes to the driver should be reviewed against the documentation for the
+following hardware.
+
+* Tiger Lake - on Intel NUC11
+* Kaby Lake - on Google Pixelbook (eve), Google Pixelbook Go (atlas), and Intel
+  NUC7
+* Skylake - on Acer Switch Alpha 12
+
+Some of the hardware listed here is not supported, meaning we don't regularly
+run tests on it. [The hardware development page][fuchsia-development-hardware]
+on fuchsia.dev has the most up to date hardware support status.
+
 ## Documentation References
 
 The driver code here is based on the
@@ -24,11 +38,12 @@ relevant manual sections. Reference comments should include the following parts:
 The most relevant manuals for this driver are:
 
 * [Tiger Lake (TGL)][intel-tgl-prm]
-* [Kaby Lake (KBL)][intel-kbl-prm] - on Google Pixelbook (eve) and Go (atlas)
+* [Kaby Lake (KBL)][intel-kbl-prm]
 * [Skylake (SKL)][intel-skl-prm]
 * [IGD OpRegion / Software SCI][intel-opregion-prm]
 
 
+[fuchsia-development-hardware]: https://fuchsia.dev/fuchsia-src/development/hardware
 [intel-graphics-prms]: https://01.org/linuxgraphics/documentation/hardware-specification-prms
 [intel-tgl-prm]: https://01.org/node/37295
 [intel-kbl-prm]: https://01.org/linuxgraphics/hardware-specification-prms/2016-intelr-processors-based-kaby-lake-platform
