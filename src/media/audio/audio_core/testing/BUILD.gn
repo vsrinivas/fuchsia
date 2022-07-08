@@ -8,6 +8,8 @@ source_set("testing") {
   testonly = true
 
   sources = [
+    "fake_audio_core_clock_factory.cc",
+    "fake_audio_core_clock_factory.h",
     "fake_audio_device.h",
     "fake_audio_driver.cc",
     "fake_audio_driver.h",

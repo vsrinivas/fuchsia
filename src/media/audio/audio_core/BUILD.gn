@@ -79,6 +79,7 @@ source_set("audio_core_lib") {
     "capture_packet_queue.cc",
     "capture_packet_queue.h",
     "channel_attributes.h",
+    "clock.h",
     "context.cc",
     "context.h",
     "device_config.cc",
