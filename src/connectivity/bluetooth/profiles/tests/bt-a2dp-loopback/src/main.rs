@@ -2,99 +2,86 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_bluetooth_bredr::*;
-use fidl_fuchsia_media::{AudioDeviceEnumeratorMarker, SessionAudioConsumerFactoryMarker};
-use fidl_fuchsia_mediacodec::CodecFactoryMarker;
-use fidl_fuchsia_metrics::MetricEventLoggerFactoryMarker;
-use fidl_fuchsia_sysmem::AllocatorMarker;
-use fidl_fuchsia_tracing_provider::RegistryMarker;
-use fuchsia_async as fasync;
-use fuchsia_component_test::{Capability, RealmInstance};
-use fuchsia_zircon as zx;
-use mock_piconet_client_v2::{BtProfileComponent, PiconetHarness};
-use tracing::info;
+use {
+    anyhow::{format_err, Error},
+    argh::FromArgs,
+    assert_matches::assert_matches,
+    fidl_fuchsia_bluetooth_bredr::*,
+    fuchsia_async as fasync,
+    fuchsia_bluetooth::types::PeerId,
+    fuchsia_zircon as zx,
+    futures::future,
+    log::info,
+    mock_piconet_client::ProfileTestHarness,
+    std::convert::TryInto,
+};
 
-const A2DP_SOURCE_URL: &str =
-    "fuchsia-pkg://fuchsia.com/bt-a2dp-loopback-test#meta/bt-a2dp-source.cm";
-const A2DP_SINK_URL: &str = "fuchsia-pkg://fuchsia.com/bt-a2dp-loopback-test#meta/bt-a2dp-sink.cm";
-const A2DP_SOURCE_MONIKER: &str = "a2dp-source";
-const A2DP_SINK_MONIKER: &str = "a2dp-sink";
+/// A2DP component URL.
+const A2DP_URL: &str = fuchsia_component::fuchsia_single_component_package_url!("bt-a2dp");
 
-struct LoopbackIntegrationTest {
-    test_realm: RealmInstance,
-    a2dp_source: BtProfileComponent,
-    a2dp_sink: BtProfileComponent,
+/// Defines the options available from the command line
+#[derive(FromArgs)]
+#[argh(description = "Bluetooth A2DP Loopback Test")]
+struct Opt {
+    #[argh(option, default = "10")]
+    /// length in seconds to run for. Pass 0 to wait indefinitely.
+    duration: usize,
 }
 
-async fn setup_piconet_with_two_a2dp_components() -> LoopbackIntegrationTest {
-    let mut test_harness = PiconetHarness::new().await;
-
-    let use_capabilities = vec![
-        Capability::protocol::<CodecFactoryMarker>().into(),
-        Capability::protocol::<MetricEventLoggerFactoryMarker>().into(),
-        Capability::protocol::<AllocatorMarker>().into(),
-        Capability::protocol::<RegistryMarker>().into(),
-        Capability::protocol::<SessionAudioConsumerFactoryMarker>().into(),
-        Capability::protocol::<AudioDeviceEnumeratorMarker>().into(),
-    ];
-    let a2dp_source = test_harness
-        .add_profile_with_capabilities(
-            A2DP_SOURCE_MONIKER.to_string(),
-            A2DP_SOURCE_URL.to_string(),
-            None,
-            use_capabilities.clone(),
-            vec![],
-        )
-        .await
-        .expect("can add a2dp source profile");
-
-    let a2dp_sink = test_harness
-        .add_profile_with_capabilities(
-            A2DP_SINK_MONIKER.to_string(),
-            A2DP_SINK_URL.to_string(),
-            None,
-            use_capabilities,
-            vec![],
-        )
-        .await
-        .expect("can add a2dp sink profile");
-
-    let test_realm = test_harness.build().await.expect("test topology should build");
-
-    LoopbackIntegrationTest { test_realm, a2dp_source, a2dp_sink }
-}
-
-#[fuchsia::test]
-async fn main() {
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
+    let opts: Opt = argh::from_env();
+    fuchsia_syslog::init_with_tags(&["a2dp-loopback"])?;
     info!("Starting a2dp-loopback");
 
-    let LoopbackIntegrationTest { test_realm: _tr, a2dp_source, mut a2dp_sink } =
-        setup_piconet_with_two_a2dp_components().await;
+    let test_harness = ProfileTestHarness::new().expect("Failed to create profile test harness");
+
+    info!("Create mock peer #1");
+    // Create MockPeer #1 for source.
+    let id1 = PeerId(1);
+    let mock_peer1 = test_harness.register_peer(id1).await?;
+    let launch_info = LaunchInfo { component_url: Some(A2DP_URL.to_string()), ..LaunchInfo::EMPTY };
+    assert_matches!(mock_peer1.launch_profile(launch_info).await, Ok(()));
+
+    info!("Create mock peer #2");
+    // Create MockPeer #2 for sink, but disable the auto connect so they don't collide
+    let id2 = PeerId(8);
+    let mut mock_peer2 = test_harness.register_peer(id2).await?;
+    let launch_info = LaunchInfo {
+        component_url: Some(A2DP_URL.to_string()),
+        arguments: Some(vec!["--initiator-delay".to_string(), "0".to_string()]),
+        ..LaunchInfo::EMPTY
+    };
+    assert_matches!(mock_peer2.launch_profile(launch_info).await, Ok(()));
 
     // Loop till peer connects
     loop {
-        match a2dp_sink.expect_observer_request().await.unwrap() {
+        match mock_peer2.expect_observer_request().await? {
             PeerObserverRequest::PeerConnected { peer_id, responder, .. } => {
-                info!("A2DP Source (Peer #1) connected to A2DP Sink (Peer #2)");
-                assert_eq!(peer_id, a2dp_source.peer_id().into());
-                let _ = responder.send().unwrap();
+                info!("Peer #1 connected to Peer #2");
+                assert_eq!(id1, peer_id.into());
+                responder.send()?;
                 break;
             }
             PeerObserverRequest::ServiceFound { peer_id, responder, .. } => {
-                info!("A2DP Sink (Peer #2) discovered A2DP Source (Peer #1)");
-                assert_eq!(peer_id, a2dp_source.peer_id().into());
-                let _ = responder.send().unwrap();
+                assert_eq!(id1, peer_id.into());
+                responder.send()?;
             }
             x => {
-                panic!("Expected PeerConnected or ServiceFound but got: {:?}", x);
+                return Err(format_err!("Expected PeerConnected or ServiceFound but got: {:?}", x))
             }
         }
     }
 
-    // The test will stream for 10 seconds.
-    // TODO(fxbug.dev/104010): Verify that audio packets are transferred from Source to Sink.
-    const STREAMING_DURATION: i64 = 10;
-    info!("Streaming for duration {}", STREAMING_DURATION);
-    fasync::Timer::new(fasync::Time::after(zx::Duration::from_seconds(STREAMING_DURATION))).await;
-    info!("Finished streaming.")
+    if opts.duration > 0 {
+        info!("Streaming for duration {}", opts.duration);
+        fasync::Timer::new(fasync::Time::after(zx::Duration::from_seconds(
+            opts.duration.try_into()?,
+        )))
+        .await;
+    } else {
+        info!("Streaming forever...");
+        future::pending::<()>().await;
+    }
+    Ok(())
 }
