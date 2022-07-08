@@ -42,7 +42,7 @@ async fn run_virtio_gpu(mut virtio_gpu_fidl: VirtioGpuRequestStream) -> Result<(
     .context("Failed to initialize device.")?;
 
     // Initialize all queues.
-    let mut gpu_device = GpuDevice::new();
+    let mut gpu_device = GpuDevice::new(&guest_mem);
     let control_stream = device.take_stream(wire::CONTROLQ)?;
     let cursor_stream = device.take_stream(wire::CURSORQ)?;
     ready_responder.send()?;
@@ -51,7 +51,7 @@ async fn run_virtio_gpu(mut virtio_gpu_fidl: VirtioGpuRequestStream) -> Result<(
         device
             .run_device_notify(virtio_device_fidl)
             .map_err(|e| anyhow!("run_device_notify: {}", e)),
-        gpu_device.process_queues(&guest_mem, control_stream, cursor_stream),
+        gpu_device.process_queues(control_stream, cursor_stream),
     )?;
     Ok(())
 }

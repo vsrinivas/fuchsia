@@ -7,18 +7,21 @@ use {
     crate::wire,
     anyhow::{anyhow, Context, Error},
     futures::StreamExt,
-    machina_virtio_device::{GuestMem, WrappedDescChainStream},
+    machina_virtio_device::WrappedDescChainStream,
     std::collections::{hash_map::Entry, HashMap},
     std::io::{Read, Write},
     tracing,
     virtio_device::chain::{ReadableChain, WritableChain},
-    virtio_device::mem::DriverMem,
+    virtio_device::mem::{DriverMem, DriverRange},
     virtio_device::queue::DriverNotify,
     zerocopy::{AsBytes, FromBytes},
 };
 
 const VIRTIO_GPU_STARTUP_HEIGHT: u32 = 720;
 const VIRTIO_GPU_STARTUP_WIDTH: u32 = 1280;
+/// This is a (somewhat arbitrary) upper bound to the number of entries in a
+/// VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING command.
+const ATTACH_BACKING_MAX_ENTRIES: u32 = 1024;
 
 /// Consumes bytes equal to the size of `message` and writes `message` to the chain.
 ///
@@ -68,18 +71,18 @@ fn read_from_chain<'a, 'b, N: DriverNotify, M: DriverMem, T: FromBytes>(
     Ok(T::read_from(buffer.as_slice()).unwrap())
 }
 
-pub struct GpuDevice {
-    resources: HashMap<u32, Resource2D>,
+pub struct GpuDevice<'a, M: DriverMem> {
+    resources: HashMap<u32, Resource2D<'a>>,
+    mem: &'a M,
 }
 
-impl GpuDevice {
-    pub fn new() -> Self {
-        Self { resources: HashMap::new() }
+impl<'a, M: DriverMem> GpuDevice<'a, M> {
+    pub fn new(mem: &'a M) -> Self {
+        Self { resources: HashMap::new(), mem }
     }
 
-    pub async fn process_queues<'a, 'b, N: DriverNotify>(
+    pub async fn process_queues<'b, N: DriverNotify>(
         &mut self,
-        guest_mem: &'a GuestMem,
         control_stream: WrappedDescChainStream<'a, 'b, N>,
         cursor_stream: WrappedDescChainStream<'a, 'b, N>,
     ) -> Result<(), Error> {
@@ -98,10 +101,10 @@ impl GpuDevice {
         while let Some((queue, chain)) = stream.next().await {
             let result = match queue {
                 CommandQueue::Control => {
-                    self.process_control_chain(ReadableChain::new(chain, guest_mem))
+                    self.process_control_chain(ReadableChain::new(chain, self.mem))
                 }
                 CommandQueue::Cursor => {
-                    self.process_cursor_chain(ReadableChain::new(chain, guest_mem))
+                    self.process_cursor_chain(ReadableChain::new(chain, self.mem))
                 }
             };
             if let Err(e) = result {
@@ -111,7 +114,7 @@ impl GpuDevice {
         Ok(())
     }
 
-    pub fn process_control_chain<'a, 'b, N: DriverNotify, M: DriverMem>(
+    pub fn process_control_chain<'b, N: DriverNotify>(
         &mut self,
         mut chain: ReadableChain<'a, 'b, N, M>,
     ) -> Result<(), Error> {
@@ -125,12 +128,13 @@ impl GpuDevice {
         match header.ty.get() {
             wire::VIRTIO_GPU_CMD_GET_DISPLAY_INFO => self.get_display_info(chain)?,
             wire::VIRTIO_GPU_CMD_RESOURCE_CREATE_2D => self.resource_create_2d(chain)?,
+            wire::VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING => self.resource_attach_backing(chain)?,
             cmd => self.unsupported_command(chain, cmd)?,
         }
         Ok(())
     }
 
-    pub fn process_cursor_chain<'a, 'b, N: DriverNotify, M: DriverMem>(
+    pub fn process_cursor_chain<'b, N: DriverNotify>(
         &mut self,
         mut chain: ReadableChain<'a, 'b, N, M>,
     ) -> Result<(), Error> {
@@ -147,7 +151,7 @@ impl GpuDevice {
         Ok(())
     }
 
-    fn unsupported_command<'a, 'b, N: DriverNotify, M: DriverMem>(
+    fn unsupported_command<'b, N: DriverNotify>(
         &self,
         chain: ReadableChain<'a, 'b, N, M>,
         cmd: u32,
@@ -156,7 +160,7 @@ impl GpuDevice {
         write_error_to_chain(chain, wire::VirtioGpuError::Unspecified)
     }
 
-    fn get_display_info<'a, 'b, N: DriverNotify, M: DriverMem>(
+    fn get_display_info<'b, N: DriverNotify>(
         &self,
         chain: ReadableChain<'a, 'b, N, M>,
     ) -> Result<(), Error> {
@@ -181,7 +185,7 @@ impl GpuDevice {
         write_to_chain(WritableChain::from_readable(chain)?, display_info)
     }
 
-    fn resource_create_2d<'a, 'b, N: DriverNotify, M: DriverMem>(
+    fn resource_create_2d<'b, N: DriverNotify>(
         &mut self,
         mut chain: ReadableChain<'a, 'b, N, M>,
     ) -> Result<(), Error> {
@@ -239,6 +243,75 @@ impl GpuDevice {
             },
         )
     }
+
+    fn resource_attach_backing<'b, N: DriverNotify>(
+        &mut self,
+        mut chain: ReadableChain<'a, 'b, N, M>,
+    ) -> Result<(), Error> {
+        let cmd: wire::VirtioGpuResourceAttachBacking = match read_from_chain(&mut chain) {
+            Ok(cmd) => cmd,
+            Err(e) => {
+                tracing::warn!("Failed to read VirtioGpuResourceAttachBacking from queue: {}", e);
+                return write_error_to_chain(chain, wire::VirtioGpuError::Unspecified);
+            }
+        };
+
+        // Validate resource_id
+        let resource = match self.resources.get_mut(&cmd.resource_id.get()) {
+            None => {
+                tracing::warn!("AttachBacking to unknown resource_id {}", cmd.resource_id.get());
+                return write_error_to_chain(chain, wire::VirtioGpuError::InvalidResourceId);
+            }
+            Some(resource) => resource,
+        };
+
+        // Enforce an upper bound to the number of entries we attempt to read.
+        if cmd.nr_entries.get() > ATTACH_BACKING_MAX_ENTRIES {
+            tracing::warn!(
+                "Rejecting RESOURCE_ATTACH_BACKING request too many entries {} > {}",
+                cmd.nr_entries.get(),
+                ATTACH_BACKING_MAX_ENTRIES
+            );
+            return write_error_to_chain(chain, wire::VirtioGpuError::OutOfMemory);
+        }
+
+        // For each of `nr_entries`, there exists a VirtioGpuMemEntry struct in the chain that
+        // holds a region of backing memory for this resource. For each entry, we want to read it
+        // from the chain and translate those guest-physical addresses into DeviceRanges which will
+        // allow us to read that memory from our virtual address space.
+        let mut device_ranges = Vec::with_capacity(cmd.nr_entries.get() as usize);
+        for _ in 0..cmd.nr_entries.get() {
+            let entry: wire::VirtioGpuMemEntry = match read_from_chain(&mut chain) {
+                Ok(entry) => entry,
+                Err(e) => {
+                    tracing::warn!("Failed to read VirtioGpuMemEntry from queue: {}", e);
+                    return write_error_to_chain(chain, wire::VirtioGpuError::Unspecified);
+                }
+            };
+            let driver_addr = entry.addr.get() as usize;
+            let length = entry.length.get() as usize;
+            match self.mem.translate(DriverRange(driver_addr..driver_addr + length)) {
+                // If translation failed, then the memory range does not reside within a valid
+                // region in guest RAM.
+                None => {
+                    tracing::warn!("Invalid device range provided: {:?}", entry);
+                    return write_error_to_chain(chain, wire::VirtioGpuError::InvalidParameter);
+                }
+                Some(device_range) => device_ranges.push(device_range),
+            }
+        }
+
+        // Insert the backing pages into the resource.
+        resource.attach_backing(device_ranges);
+
+        write_to_chain(
+            WritableChain::from_readable(chain)?,
+            wire::VirtioGpuCtrlHeader {
+                ty: wire::VIRTIO_GPU_RESP_OK_NODATA.into(),
+                ..Default::default()
+            },
+        )
+    }
 }
 
 #[cfg(test)]
@@ -280,7 +353,7 @@ mod tests {
             .unwrap();
 
         // Process the chain.
-        let mut device = GpuDevice::new();
+        let mut device = GpuDevice::new(&mem);
 
         // Process the request.
         device
@@ -319,7 +392,7 @@ mod tests {
             .unwrap();
 
         // Process the chain.
-        let mut device = GpuDevice::new();
+        let mut device = GpuDevice::new(&mem);
 
         // Process the request.
         device
@@ -359,18 +432,19 @@ mod tests {
     const VALID_RESOURCE_ID: u32 = 1;
     const VALID_RESOURCE_WIDTH: u32 = 1024;
     const VALID_RESOURCE_HEIGHT: u32 = 768;
+    const VALID_RESOURCE_FORMAT: u32 = wire::VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM;
 
     /// A fixture for reusing logic across different tests.
     struct TestFixture<'a> {
         mem: &'a IdentityDriverMem,
         state: TestQueue<'a>,
-        device: GpuDevice,
+        device: GpuDevice<'a, IdentityDriverMem>,
     }
 
     impl<'a> TestFixture<'a> {
         pub fn new(mem: &'a IdentityDriverMem) -> Self {
             let state = TestQueue::new(32, mem);
-            let device = GpuDevice::new();
+            let device = GpuDevice::new(mem);
             Self { mem, state, device }
         }
 
@@ -396,6 +470,57 @@ mod tests {
                         )
                         // Request
                         .readable(std::slice::from_ref(&cmd), self.mem)
+                        .writable(std::mem::size_of::<wire::VirtioGpuCtrlHeader>() as u32, self.mem)
+                        .build(),
+                )
+                .unwrap();
+
+            self.device
+                .process_control_chain(ReadableChain::new(
+                    self.state.queue.next_chain().unwrap(),
+                    self.mem,
+                ))
+                .expect("Failed to process control chain");
+
+            let returned = self.state.fake_queue.next_used().unwrap();
+            assert_eq!(
+                std::mem::size_of::<wire::VirtioGpuCtrlHeader>(),
+                returned.written() as usize
+            );
+
+            // Read and return the header.
+            let mut iter = returned.data_iter();
+            read_returned::<wire::VirtioGpuCtrlHeader>(iter.next().unwrap())
+        }
+
+        /// Sends a VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING and returns the response.
+        fn resource_attach_backing(
+            &mut self,
+            resource_id: u32,
+            entries: Vec<wire::VirtioGpuMemEntry>,
+        ) -> wire::VirtioGpuCtrlHeader {
+            self.state
+                .fake_queue
+                .publish(
+                    ChainBuilder::new()
+                        // Header
+                        .readable(
+                            std::slice::from_ref(&wire::VirtioGpuCtrlHeader {
+                                ty: wire::VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING.into(),
+                                ..Default::default()
+                            }),
+                            self.mem,
+                        )
+                        // Command
+                        .readable(
+                            std::slice::from_ref(&wire::VirtioGpuResourceAttachBacking {
+                                resource_id: resource_id.into(),
+                                nr_entries: (entries.len() as u32).into(),
+                            }),
+                            self.mem,
+                        )
+                        // entries
+                        .readable(entries.as_slice(), self.mem)
                         .writable(std::mem::size_of::<wire::VirtioGpuCtrlHeader>() as u32, self.mem)
                         .build(),
                 )
@@ -489,5 +614,98 @@ mod tests {
             format: wire::VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM.into(),
         });
         assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER);
+    }
+
+    #[fuchsia::test]
+    fn test_resource_attach_backing() {
+        let mem = IdentityDriverMem::new();
+        let mut test = TestFixture::new(&mem);
+
+        let create_request = wire::VirtioGpuResourceCreate2d {
+            resource_id: VALID_RESOURCE_ID.into(),
+            width: VALID_RESOURCE_WIDTH.into(),
+            height: VALID_RESOURCE_HEIGHT.into(),
+            format: VALID_RESOURCE_FORMAT.into(),
+        };
+        let response = test.resource_create_2d(create_request);
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
+
+        // Allocate a backing buffer in guest memory. We need to allocate this through our
+        // IdentityDriverMem because these addresses will need to be translated by the device to
+        // obtain a DeviceRange.
+        let backing_size = create_request.width.get() * create_request.height.get() * 4;
+        let alloc =
+            mem.new_range(backing_size as usize).expect("Failed to allocate backing memory");
+
+        // Try to attach the backing memory.
+        let response = test.resource_attach_backing(
+            create_request.resource_id.get(),
+            vec![wire::VirtioGpuMemEntry {
+                addr: (alloc.get().start as u64).into(),
+                length: (alloc.len() as u32).into(),
+                ..Default::default()
+            }],
+        );
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
+    }
+
+    #[fuchsia::test]
+    fn test_resource_attach_backing_invalid_range() {
+        let mem = IdentityDriverMem::new();
+        let mut test = TestFixture::new(&mem);
+
+        let create_request = wire::VirtioGpuResourceCreate2d {
+            resource_id: VALID_RESOURCE_ID.into(),
+            width: VALID_RESOURCE_WIDTH.into(),
+            height: VALID_RESOURCE_HEIGHT.into(),
+            format: VALID_RESOURCE_FORMAT.into(),
+        };
+        let response = test.resource_create_2d(create_request);
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
+
+        // Allocate some memory on the heap. Since this is not allocated through our DriverMem, the
+        // device will be unable to translate these addresses. This is what would happen if the
+        // driver provided the device with a memory region outside of the valid memory area.
+        //
+        // Note that the primary reason we allocate on the heap here it to guarantee we're using
+        // addresses the IdentityDriverMem could not possibly be using.
+        let backing_size = create_request.width.get() * create_request.height.get() * 4;
+        let alloc = vec![0u8; backing_size as usize];
+
+        // Try to attach the backing memory.
+        let response = test.resource_attach_backing(
+            create_request.resource_id.get(),
+            vec![wire::VirtioGpuMemEntry {
+                addr: (alloc.as_ptr() as u64).into(),
+                length: (alloc.len() as u32).into(),
+                ..Default::default()
+            }],
+        );
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER);
+    }
+
+    #[fuchsia::test]
+    fn test_resource_attach_backing_invalid_resource_id() {
+        let mem = IdentityDriverMem::new();
+        let mut test = TestFixture::new(&mem);
+
+        // Allocate a backing buffer in guest memory. We need to allocate this through our
+        // IdentityDriverMem because these addresses will need to be translated by the device to
+        // obtain a DeviceRange.
+        let backing_size = VALID_RESOURCE_WIDTH * VALID_RESOURCE_HEIGHT * 4;
+        let alloc =
+            mem.new_range(backing_size as usize).expect("Failed to allocate backing memory");
+
+        // Try to attach the backing memory. We didn't create a resource so we expect this to fail.
+        let response = test.resource_attach_backing(
+            VALID_RESOURCE_ID,
+            vec![wire::VirtioGpuMemEntry {
+                addr: (alloc.get().start as u64).into(),
+                length: (alloc.len() as u32).into(),
+                ..Default::default()
+            }],
+        );
+
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID);
     }
 }
