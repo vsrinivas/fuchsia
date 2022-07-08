@@ -537,6 +537,15 @@ uint64_t WavPlayer::RetrieveAudioForPacket(const fuchsia::media::StreamPacket& p
       }
     }
 
+    // If a WAV file's final frame is incomplete, play all that IS included, plus silence for the
+    // rest of the frame. We require that bytes_per_packet_ (which determines packet.payload_size)
+    // is a multiple of frame_size_, so this "round up" will never exceed the bounds of our packet.
+    if (bytes_added % frame_size_ != 0) {
+      auto num_padding_bytes = frame_size_ - (bytes_added % frame_size_);
+      // Clear these extra bytes to avoid re-rendering previous data.
+      std::memset(&audio_buff[bytes_added], 0, num_padding_bytes);
+      bytes_added += num_padding_bytes;
+    }
     // Extra-safe but unnecessary, since we shorten the final packet based on bytes_added retval.
     std::memset(&audio_buff[bytes_added], 0, packet.payload_size - bytes_added);
   }
