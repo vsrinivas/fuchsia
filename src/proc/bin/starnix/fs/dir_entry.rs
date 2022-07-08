@@ -543,6 +543,17 @@ impl DirEntry {
         callback(&state.children)
     }
 
+    /// Remove the child with the given name from the children cache.
+    pub fn remove_child(&self, name: &FsStr) {
+        let mut state = self.state.write();
+        let child = state.children.get(name).and_then(Weak::upgrade);
+        if let Some(child) = child {
+            state.children.remove(name);
+            std::mem::drop(state);
+            self.node.fs().will_destroy_dir_entry(&child);
+        }
+    }
+
     fn get_or_create_child<F>(
         self: &DirEntryHandle,
         name: &FsStr,

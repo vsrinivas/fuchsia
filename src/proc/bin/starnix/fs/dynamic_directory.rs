@@ -43,6 +43,10 @@ pub fn dynamic_directory<D: DirectoryDelegate>(fs: &Arc<FileSystem>, d: D) -> Ar
     fs.create_node_with_ops(Arc::new(DynamicDirectory(d)), mode!(IFDIR, 0o777), FsCred::root())
 }
 
+pub fn root_dynamic_directory<D: DirectoryDelegate>(d: D) -> FsNode {
+    FsNode::new_root(Arc::new(DynamicDirectory(d)))
+}
+
 struct DynamicDirectory<D>(D);
 
 impl<D: DirectoryDelegate> FsNodeOps for Arc<DynamicDirectory<D>> {

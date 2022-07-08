@@ -6,6 +6,7 @@ use derivative::Derivative;
 use std::collections::{BTreeSet, HashMap, VecDeque};
 use std::sync::{Arc, Weak};
 
+use crate::auth::FsCred;
 use crate::fs::devpts::*;
 use crate::fs::*;
 use crate::lock::{Mutex, RwLock};
@@ -35,18 +36,14 @@ pub struct TTYState {
     /// The terminal objects indexed by their identifier.
     pub terminals: RwLock<HashMap<u32, Weak<Terminal>>>,
 
-    /// The devpts filesystem.
-    fs: FileSystemHandle,
-
     /// The set of available terminal identifier.
     pts_ids_set: Mutex<PtsIdsSet>,
 }
 
 impl TTYState {
-    pub fn new(fs: FileSystemHandle) -> Self {
+    pub fn new() -> Self {
         Self {
             terminals: RwLock::new(HashMap::new()),
-            fs,
             pts_ids_set: Mutex::new(PtsIdsSet::new(DEVPTS_COUNT)),
         }
     }
@@ -54,8 +51,7 @@ impl TTYState {
     /// Returns the next available terminal.
     pub fn get_next_terminal(self: &Arc<Self>, task: &CurrentTask) -> Result<Arc<Terminal>, Errno> {
         let id = self.pts_ids_set.lock().get()?;
-        let terminal = Arc::new(Terminal::new(self.clone(), id));
-        create_pts_node(&self.fs, task, id)?;
+        let terminal = Arc::new(Terminal::new(self.clone(), task.as_fscred(), id));
         self.terminals.write().insert(id, Arc::downgrade(&terminal));
         Ok(terminal)
     }
@@ -141,6 +137,9 @@ pub struct Terminal {
     #[derivative(Debug = "ignore")]
     state: Arc<TTYState>,
 
+    /// The owner of the terminal.
+    pub fscred: FsCred,
+
     /// The identifier of the terminal.
     pub id: u32,
 
@@ -149,8 +148,8 @@ pub struct Terminal {
 }
 
 impl Terminal {
-    pub fn new(state: Arc<TTYState>, id: u32) -> Self {
-        Self { state, id, mutable_state: RwLock::new(Default::default()) }
+    pub fn new(state: Arc<TTYState>, fscred: FsCred, id: u32) -> Self {
+        Self { state, fscred, id, mutable_state: RwLock::new(Default::default()) }
     }
 
     /// Sets the terminal configuration.
@@ -403,7 +402,7 @@ state_implementation!(Terminal, TerminalMutableState, {
         self.main_references = Some(self.main_references.unwrap_or(0) + 1);
     }
 
-    fn is_main_closed(&self) -> bool {
+    pub fn is_main_closed(&self) -> bool {
         match self.main_references {
             Some(0) => true,
             _ => false,

@@ -190,6 +190,7 @@ impl Credentials {
 }
 
 /// The owner and group of a file. Used as a parameter for functions that create files.
+#[derive(Debug, Clone)]
 pub struct FsCred {
     pub uid: uid_t,
     pub gid: gid_t,

@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::sync::Arc;
+use std::sync::{Arc, Weak};
 
 use crate::auth::FsCred;
 use crate::device::terminal::*;
 use crate::device::DeviceOps;
-use crate::fs::tmpfs::*;
 use crate::fs::*;
 use crate::syscalls::*;
 use crate::task::*;
@@ -23,57 +22,45 @@ pub const DEVPTS_COUNT: u32 = DEVPTS_MAJOR_COUNT * 256;
 // https://github.com/google/gvisor/blob/master/test/syscalls/linux/pty.cc
 const BLOCK_SIZE: i64 = 1024;
 
+// The inode of the different node in the devpts filesystem.
+const ROOT_INODE: ino_t = 1;
+const PTMX_INODE: ino_t = 2;
+const FIRST_PTS_INODE: ino_t = 3;
+
 pub fn dev_pts_fs(kernel: &Kernel) -> &FileSystemHandle {
     kernel.dev_pts_fs.get_or_init(|| init_devpts(kernel))
 }
 
-pub fn create_pts_node(fs: &FileSystemHandle, task: &CurrentTask, id: u32) -> Result<(), Errno> {
-    let device_type = get_device_type_for_pts(id);
-    let pts = fs.root().create_node(
-        id.to_string().as_bytes(),
-        mode!(IFCHR, 0o620),
-        device_type,
-        task.as_fscred(),
-    )?;
-    let mut info = pts.node.info_write();
-    info.blksize = BLOCK_SIZE;
-    info.uid = task.read().creds.euid;
-    // TODO(qsr): set gid to the tty group
-    info.gid = 0;
-    Ok(())
-}
-
 fn init_devpts(kernel: &Kernel) -> FileSystemHandle {
-    let fs = TmpFs::new();
-
-    // Create ptmx
-    let ptmx = fs
-        .root()
-        .create_node(b"ptmx", mode!(IFCHR, 0o666), DeviceType::PTMX, FsCred::root())
-        .unwrap();
-    ptmx.node.info_write().blksize = BLOCK_SIZE;
-
+    let state = Arc::new(TTYState::new());
+    let device = DevPtsDevice::new(state.clone());
     {
-        let state = Arc::new(TTYState::new(fs.clone()));
         let mut registry = kernel.device_registry.write();
         // Register /dev/pts/X device type
         for n in 0..DEVPTS_MAJOR_COUNT {
             registry
-                .register_default_chrdev(
-                    DevPtsDevice::new(fs.clone(), state.clone()),
-                    DEVPTS_FIRST_MAJOR + n,
-                )
-                .unwrap();
+                .register_default_chrdev(device.clone(), DEVPTS_FIRST_MAJOR + n)
+                .expect("Registering pts device");
         }
         // Register tty device type
-        registry
-            .register_chrdev(DevPtsDevice::new(fs.clone(), state.clone()), DeviceType::TTY)
-            .unwrap();
+        registry.register_chrdev(device.clone(), DeviceType::TTY).expect("Registering tty device");
         // Register ptmx device type
-        registry.register_chrdev(DevPtsDevice::new(fs.clone(), state), DeviceType::PTMX).unwrap();
+        registry
+            .register_chrdev(device.clone(), DeviceType::PTMX)
+            .expect("Resgistering ptmx device");
     }
-
+    let root_directory = root_dynamic_directory(DevPtsDirectoryDelegate::new(state));
+    assert!(root_directory.inode_num == ROOT_INODE);
+    let fs = FileSystem::new(DevPtsFs {});
+    fs.set_root_node(root_directory);
     fs
+}
+
+struct DevPtsFs {}
+impl FileSystemOps for DevPtsFs {
+    fn generate_node_ids(&self) -> bool {
+        true
+    }
 }
 
 // Construct the DeviceType associated with the given pts replicas.
@@ -81,26 +68,90 @@ fn get_device_type_for_pts(id: u32) -> DeviceType {
     DeviceType::new(DEVPTS_FIRST_MAJOR + id / 256, id % 256)
 }
 
-fn unlink_ptr_node_if_exists(fs: &FileSystemHandle, id: u32) -> Result<(), Errno> {
-    let pts_filename = id.to_string();
-    match fs.root().unlink(pts_filename.as_bytes(), UnlinkKind::NonDirectory) {
-        Err(e) if e == ENOENT => Ok(()),
-        other => other,
+struct DevPtsDirectoryDelegate {
+    state: Arc<TTYState>,
+}
+
+impl DevPtsDirectoryDelegate {
+    fn new(state: Arc<TTYState>) -> Self {
+        Self { state }
+    }
+}
+
+impl DirectoryDelegate for DevPtsDirectoryDelegate {
+    fn list(&self, _fs: &Arc<FileSystem>) -> Result<Vec<DynamicDirectoryEntry>, Errno> {
+        let mut result = vec![];
+        result.push(DynamicDirectoryEntry {
+            entry_type: DirectoryEntryType::CHR,
+            name: b"ptmx".to_vec(),
+            inode: Some(PTMX_INODE),
+        });
+        for (id, terminal) in self.state.terminals.read().iter() {
+            if let Some(terminal) = terminal.upgrade() {
+                if !terminal.read().is_main_closed() {
+                    result.push(DynamicDirectoryEntry {
+                        entry_type: DirectoryEntryType::CHR,
+                        name: format!("{}", id).as_bytes().to_vec(),
+                        inode: Some((*id as ino_t) + FIRST_PTS_INODE),
+                    });
+                }
+            }
+        }
+        Ok(result)
+    }
+
+    fn lookup(&self, fs: &Arc<FileSystem>, name: &FsStr) -> Result<Arc<FsNode>, Errno> {
+        let name = std::str::from_utf8(name).map_err(|_| ENOENT)?;
+        if name == "ptmx" {
+            let node = fs.create_node_with_id(
+                Box::new(SpecialNode),
+                PTMX_INODE,
+                mode!(IFCHR, 0o666),
+                FsCred::root(),
+            );
+            {
+                let mut info = node.info_write();
+                info.rdev = DeviceType::PTMX;
+                info.blksize = BLOCK_SIZE;
+            }
+            return Ok(node);
+        }
+        if let Ok(id) = name.parse::<u32>() {
+            let terminal = self.state.terminals.read().get(&id).and_then(Weak::upgrade);
+            if let Some(terminal) = terminal {
+                if !terminal.read().is_main_closed() {
+                    let node = fs.create_node_with_id(
+                        Box::new(SpecialNode),
+                        (id as ino_t) + FIRST_PTS_INODE,
+                        mode!(IFCHR, 0o620),
+                        terminal.fscred.clone(),
+                    );
+                    {
+                        let mut info = node.info_write();
+                        info.rdev = get_device_type_for_pts(id);
+                        info.blksize = BLOCK_SIZE;
+                        // TODO(qsr): set gid to the tty group
+                        info.gid = 0;
+                    }
+                    return Ok(node);
+                }
+            }
+        }
+        error!(ENOENT)
     }
 }
 
 struct DevPtsDevice {
-    fs: FileSystemHandle,
     state: Arc<TTYState>,
 }
 
 impl DevPtsDevice {
-    pub fn new(fs: FileSystemHandle, state: Arc<TTYState>) -> Self {
-        Self { fs, state }
+    pub fn new(state: Arc<TTYState>) -> Arc<Self> {
+        Arc::new(Self { state })
     }
 }
 
-impl DeviceOps for DevPtsDevice {
+impl DeviceOps for Arc<DevPtsDevice> {
     fn open(
         &self,
         current_task: &CurrentTask,
@@ -113,7 +164,7 @@ impl DeviceOps for DevPtsDevice {
             DeviceType::PTMX => {
                 let terminal = self.state.get_next_terminal(current_task)?;
 
-                Ok(Box::new(DevPtmxFile::new(self.fs.clone(), terminal)))
+                Ok(Box::new(DevPtmxFile::new(terminal)))
             }
             // /dev/tty
             DeviceType::TTY => {
@@ -127,10 +178,7 @@ impl DeviceOps for DevPtsDevice {
                     .clone();
                 if let Some(controlling_terminal) = controlling_terminal {
                     if controlling_terminal.is_main {
-                        Ok(Box::new(DevPtmxFile::new(
-                            self.fs.clone(),
-                            controlling_terminal.terminal,
-                        )))
+                        Ok(Box::new(DevPtmxFile::new(controlling_terminal.terminal)))
                     } else {
                         Ok(Box::new(DevPtsFile::new(controlling_terminal.terminal)))
                     }
@@ -164,28 +212,22 @@ impl DeviceOps for DevPtsDevice {
 }
 
 struct DevPtmxFile {
-    fs: FileSystemHandle,
     terminal: Arc<Terminal>,
 }
 
 impl DevPtmxFile {
-    pub fn new(fs: FileSystemHandle, terminal: Arc<Terminal>) -> Self {
+    pub fn new(terminal: Arc<Terminal>) -> Self {
         terminal.main_open();
-        Self { fs, terminal }
-    }
-}
-
-impl Drop for DevPtmxFile {
-    fn drop(&mut self) {
-        unlink_ptr_node_if_exists(&self.fs, self.terminal.id).unwrap();
+        Self { terminal }
     }
 }
 
 impl FileOps for DevPtmxFile {
     fileops_impl_nonseekable!();
 
-    fn close(&self, _file: &FileObject) {
+    fn close(&self, file: &FileObject) {
         self.terminal.main_close();
+        file.fs.root().remove_child(format!("{}", self.terminal.id).as_bytes());
     }
 
     fn read(
@@ -465,6 +507,7 @@ fn shared_ioctl(
 mod tests {
     use super::*;
     use crate::auth::{Credentials, FsCred};
+    use crate::fs::tmpfs::TmpFs;
     use crate::testing::*;
 
     fn ioctl<T: zerocopy::AsBytes + zerocopy::FromBytes + Copy>(
@@ -568,7 +611,9 @@ mod tests {
     #[::fuchsia::test]
     fn opening_inexistant_replica_fails() {
         let (kernel, task) = create_kernel_and_task();
-        let fs = dev_pts_fs(&kernel);
+        // Initialize pts devices
+        dev_pts_fs(&kernel);
+        let fs = TmpFs::new();
         let pts = fs
             .root()
             .create_node(
@@ -579,19 +624,6 @@ mod tests {
             )
             .expect("custom_pts");
         assert!(pts.node.open(&task, OpenFlags::RDONLY).is_err());
-    }
-
-    #[::fuchsia::test]
-    fn deleting_pts_nodes_do_not_crash() {
-        let (kernel, task) = create_kernel_and_task();
-        let fs = dev_pts_fs(&kernel);
-        let root = fs.root();
-        let ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
-        root.component_lookup(&task, b"0").expect("component_lookup");
-        root.unlink(b"0", UnlinkKind::NonDirectory).expect("unlink");
-        root.component_lookup(&task, b"0").unwrap_err();
-
-        std::mem::drop(ptmx);
     }
 
     #[::fuchsia::test]
