@@ -1414,7 +1414,7 @@
   area: ['Netstack']
   issue: ['']
   gerrit_change_id: ['544642']
-  status: 'Socializing'
+  status: 'Accepted'
   reviewers: ['maniscalco@google.com', 'brunodalbo@google.com', 'abarth@google.com', 'iyerm@google.com']
   submitted: '2021-06-17'
   reviewed: '2021-06-25'
