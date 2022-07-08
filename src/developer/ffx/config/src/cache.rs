@@ -6,7 +6,7 @@ use {
     crate::environment::Environment,
     crate::runtime::populate_runtime_config,
     crate::storage::Config,
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     async_lock::RwLock,
     serde_json::Value,
     std::sync::Arc,
@@ -16,6 +16,7 @@ use {
         sync::{Mutex, Once},
         time::{Duration, Instant},
     },
+    tempfile::NamedTempFile,
 };
 
 // Timeout for the config cache.
@@ -40,20 +41,62 @@ pub fn env_file() -> Option<PathBuf> {
     ENV_FILE.lock().unwrap().as_ref().map(|p| p.to_path_buf())
 }
 
-fn test_env_file() -> PathBuf {
-    use tempfile::NamedTempFile;
-    lazy_static::lazy_static! {
-        static ref ENV_FILE: NamedTempFile = NamedTempFile::new().expect("tmp access failed");
-        static ref USER_FILE: NamedTempFile = NamedTempFile::new().expect("tmp access failed");
+/// A structure that holds information about the test config environment for the duration
+/// of a test. This object must continue to exist for the duration of the test, or the test
+/// may fail.
+#[must_use = "This object must be held for the duration of a test (ie. `let _env = ffx_config::test_init()`) for it to operate correctly."]
+pub struct TestEnv {
+    env_file: NamedTempFile,
+    _user_file: NamedTempFile,
+    _guard: async_lock::MutexGuardArc<()>,
+}
+
+impl TestEnv {
+    fn new(_guard: async_lock::MutexGuardArc<()>) -> Result<Self> {
+        let env_file = NamedTempFile::new().context("tmp access failed")?;
+        let user_file = NamedTempFile::new().context("tmp access failed")?;
+        Environment::init_env_file(env_file.path()).context("initializing env file")?;
+
+        // Point the user config at a temporary file.
+        let mut env = Environment::load(env_file.path()).context("opening env file")?;
+        env.user = Some(user_file.path().to_str().context("path to be UTF-8")?.to_string());
+        env.save(env_file.path()).context("saving env file")?;
+
+        Ok(TestEnv { env_file, _user_file: user_file, _guard })
     }
-    Environment::init_env_file(ENV_FILE.path()).expect("initializing env file");
+}
 
-    // Point the user config at a temporary file.
-    let mut env = Environment::load(ENV_FILE.path()).expect("opening env file");
-    env.user = Some(USER_FILE.path().to_str().expect("path to be UTF-8").to_string());
-    env.save(ENV_FILE.path()).expect("saving env file");
+impl Drop for TestEnv {
+    fn drop(&mut self) {
+        // after the test, wipe out all the test configuration we set up. Explode if things aren't as we
+        // expect them.
+        let mut env = ENV_FILE.lock().expect("Poisoned lock");
+        let env_prev = env.clone();
+        *env = None;
+        drop(env);
 
-    ENV_FILE.path().to_path_buf()
+        let mut runtime = RUNTIME.lock().expect("Poisoned lock");
+        let runtime_prev = runtime.clone();
+        *runtime = None;
+        drop(runtime);
+
+        // do these checks outside the mutex lock so we can't poison them.
+        assert_eq!(
+            env_prev.as_deref(),
+            Some(self.env_file.path()),
+            "env path changed from {expected} to {other:?} during test run somehow.",
+            expected = self.env_file.path().display(),
+            other = env_prev
+        );
+        assert_eq!(
+            runtime_prev.as_ref(),
+            None,
+            "runtime args changed from None to {other:?} during test run somehow.",
+            other = runtime_prev.as_ref()
+        );
+
+        // since we're not running in async context during drop, we can't clear the cache unfortunately.
+    }
 }
 
 /// Initialize the configuration. Only the first call in a process runtime takes effect, so users must
@@ -71,9 +114,20 @@ pub fn init(runtime: &[String], runtime_overrides: Option<String>, env: PathBuf)
 }
 
 /// When running tests we usually just want to initialize a blank slate configuration, so
-/// use this for tests
-pub fn test_init() -> Result<()> {
-    init(&[], None, test_env_file())
+/// use this for tests. You must hold the returned object object for the duration of the test, not doing so
+/// will result in strange behaviour.
+pub async fn test_init() -> Result<TestEnv> {
+    lazy_static::lazy_static! {
+        static ref TEST_LOCK: Arc<async_lock::Mutex<()>> = Arc::default();
+    }
+    let env = TestEnv::new(TEST_LOCK.lock_arc().await)?;
+
+    // force an overwrite of the configuration setup
+    init_impl(&[], None, env.env_file.path().to_owned())?;
+    // force clearing the cache as well
+    CACHE.write().await.clear();
+
+    Ok(env)
 }
 
 fn init_impl(runtime: &[String], runtime_overrides: Option<String>, env: PathBuf) -> Result<()> {
@@ -136,19 +190,19 @@ async fn load_config_with_instant(
                     .map_or(true, |item| is_cache_item_expired(item, now));
                 if write {
                     let runtime = RUNTIME.lock().unwrap().as_ref().map(|v| v.clone());
+                    let env_path = env_file().context(
+                        "Tried to load from config cache with no environment configured.",
+                    )?;
 
-                    let env = match ENV_FILE.lock().unwrap().as_ref() {
-                        Some(path) => match Environment::load(path) {
-                            Ok(env) => env,
-                            Err(err) => {
-                                log::error!(
-                                    "failed to load environment, reverting to default: {}",
-                                    err
-                                );
-                                Environment::default()
-                            }
-                        },
-                        None => Environment::default(),
+                    let env = match Environment::load(&env_path) {
+                        Ok(env) => env,
+                        Err(err) => {
+                            log::error!(
+                                "failed to load environment, reverting to default: {}",
+                                err
+                            );
+                            Environment::default()
+                        }
                     };
 
                     (*write_guard).insert(
@@ -223,6 +277,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_config_one_at_a_time() {
+        let _env = test_init().await.unwrap();
         let tests = 10;
         let (now, build_dirs, cache) = setup(tests);
         for x in 0..tests {
@@ -232,6 +287,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_config_many_at_a_time() {
+        let _env = test_init().await.unwrap();
         let tests = 25;
         let (now, build_dirs, cache) = setup(tests);
         let futures = build_dirs.iter().map(|x| load(now, &x, &cache));
@@ -243,6 +299,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_config_timeout() {
+        let _env = test_init().await.unwrap();
         let tests = 1;
         let (now, build_dirs, cache) = setup(tests);
         load_and_test(now, 0, 1, &build_dirs[0], &cache).await;

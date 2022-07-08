@@ -195,6 +195,7 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_list() {
+        let _env = ffx_config::test_init().await.unwrap();
         let repos = fake_repos();
         let mut out = Writer::new_test(None);
         list_impl(ListCommand {}, repos, None, &mut out).await.unwrap();
@@ -218,6 +219,7 @@ mod test {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_machine() {
+        let _env = ffx_config::test_init().await.unwrap();
         let repos = fake_repos();
         let mut out = Writer::new_test(Some(ffx_writer::Format::Json));
         list_impl(ListCommand {}, repos, None, &mut out).await.unwrap();

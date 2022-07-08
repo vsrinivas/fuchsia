@@ -681,6 +681,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_init_daemon_proxy_hash_matches() {
+        let _env = ffx_config::test_init().await.unwrap();
         let sockpath = setup_ascendd_temp();
 
         let sockpath1 = sockpath.to_owned();
@@ -700,6 +701,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_init_daemon_proxy_upgrade() {
+        let _env = ffx_config::test_init().await.unwrap();
         let sockpath = setup_ascendd_temp();
 
         // Spawn two daemons, the first out of date, the second is up to date.
@@ -722,6 +724,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_init_daemon_blocked_for_4s_succeeds() {
+        let _env = ffx_config::test_init().await.unwrap();
         let sockpath = setup_ascendd_temp();
 
         // Spawn two daemons, the first out of date, the second is up to date.
@@ -742,6 +745,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_init_daemon_blocked_for_6s_timesout() {
+        let _env = ffx_config::test_init().await.unwrap();
         let sockpath = setup_ascendd_temp();
 
         // Spawn two daemons, the first out of date, the second is up to date.

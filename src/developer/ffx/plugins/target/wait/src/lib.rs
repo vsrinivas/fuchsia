@@ -158,6 +158,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn able_to_connect_to_device() {
+        let _env = ffx_config::test_init().await.unwrap();
         assert!(wait_for_device(
             setup_fake_target_collection_server(true),
             WaitCommand { timeout: 5 }
@@ -168,6 +169,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn unable_to_connect_to_device() {
+        let _env = ffx_config::test_init().await.unwrap();
         assert!(wait_for_device(
             setup_fake_target_collection_server(false),
             WaitCommand { timeout: 5 }

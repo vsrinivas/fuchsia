@@ -338,7 +338,7 @@ mod tests {
     //   tests.
     fn run_async_test<F: Future>(fut: F) -> F::Output {
         fuchsia_async::TestExecutor::new().unwrap().run_singlethreaded(async move {
-            ffx_config::test_init().unwrap();
+            let _env = ffx_config::test_init().await.unwrap();
             fut.await
         })
     }

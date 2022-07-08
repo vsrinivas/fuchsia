@@ -146,7 +146,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn oot_default_config() {
-        ffx_config::test_init().expect("Unable to initialize ffx_config.");
+        let _env = ffx_config::test_init().await.expect("Unable to initialize ffx_config.");
 
         let oot_test_default_configs =
             [Path::new("default/configs/a.triage"), Path::new("configs/b.triage")];

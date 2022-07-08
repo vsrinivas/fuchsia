@@ -382,6 +382,7 @@ mod test {
             RebootListenerRequest, UploadProgressListenerMarker,
         },
         futures::task::{Context as fContext, Poll},
+        serial_test::serial,
         std::io::{BufWriter, Write},
         std::pin::Pin,
         tempfile::NamedTempFile,
@@ -474,7 +475,9 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    #[serial]
     async fn test_flash() -> Result<()> {
+        let _env = ffx_config::test_init().await?;
         let (prog_client, prog_server) = create_endpoints::<UploadProgressListenerMarker>()?;
         let mut stream = prog_server.into_stream()?;
         let file: NamedTempFile = NamedTempFile::new().expect("tmp access failed");

@@ -283,6 +283,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_apply_command_line_options() -> Result<()> {
+        let _env = ffx_config::test_init().await.unwrap();
         let mut ffx_config = FfxConfigWrapper::new();
         ffx_config.overrides.insert(EMU_UPSCRIPT_FILE, "/path/to/upscript".to_string());
 
@@ -342,6 +343,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_accel_auto() -> Result<()> {
+        let _env = ffx_config::test_init().await.unwrap();
         let temp_path = PathBuf::from(tempdir().unwrap().path());
         let file_path = temp_path.join("kvm");
         create_dir_all(&temp_path).expect("Create all temp directory");

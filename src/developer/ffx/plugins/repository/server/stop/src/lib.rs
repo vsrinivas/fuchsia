@@ -55,7 +55,7 @@ mod tests {
         let _guard = TEST_LOCK.lock().unwrap();
 
         fuchsia_async::TestExecutor::new().unwrap().run_singlethreaded(async move {
-            ffx_config::test_init().unwrap();
+            let _env = ffx_config::test_init().await.unwrap();
             fut.await
         })
     }
@@ -78,41 +78,37 @@ mod tests {
         })
     }
 
-    #[test]
-    fn test_stop_disables_server_on_error() {
-        run_test(async {
-            ffx_config::test_init().unwrap();
-            pkg_config::set_repository_server_enabled(true).await.unwrap();
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_stop_disables_server_on_error() {
+        let _env = ffx_config::test_init().await.unwrap();
+        pkg_config::set_repository_server_enabled(true).await.unwrap();
 
-            let (sender, receiver) = channel();
-            let mut sender = Some(sender);
-            let repos = setup_fake_repos(move |req| match req {
-                RepositoryRegistryRequest::ServerStop { responder } => {
-                    sender.take().unwrap().send(()).unwrap();
-                    responder.send(&mut Err(RepositoryError::InternalError.into())).unwrap()
-                }
-                other => panic!("Unexpected request: {:?}", other),
-            });
+        let (sender, receiver) = channel();
+        let mut sender = Some(sender);
+        let repos = setup_fake_repos(move |req| match req {
+            RepositoryRegistryRequest::ServerStop { responder } => {
+                sender.take().unwrap().send(()).unwrap();
+                responder.send(&mut Err(RepositoryError::InternalError.into())).unwrap()
+            }
+            other => panic!("Unexpected request: {:?}", other),
+        });
 
-            assert!(stop(StopCommand {}, repos).await.is_err());
-            assert!(receiver.await.is_ok());
+        assert!(stop(StopCommand {}, repos).await.is_err());
+        assert!(receiver.await.is_ok());
 
-            assert!(!pkg_config::get_repository_server_enabled().await.unwrap());
-        })
+        assert!(!pkg_config::get_repository_server_enabled().await.unwrap());
     }
 
-    #[test]
-    fn test_stop_disables_server_on_communication_error() {
-        run_test(async {
-            ffx_config::test_init().unwrap();
-            pkg_config::set_repository_server_enabled(true).await.unwrap();
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_stop_disables_server_on_communication_error() {
+        let _env = ffx_config::test_init().await.unwrap();
+        pkg_config::set_repository_server_enabled(true).await.unwrap();
 
-            let (repos, stream) =
-                fidl::endpoints::create_proxy_and_stream::<RepositoryRegistryMarker>().unwrap();
-            drop(stream);
+        let (repos, stream) =
+            fidl::endpoints::create_proxy_and_stream::<RepositoryRegistryMarker>().unwrap();
+        drop(stream);
 
-            assert!(stop(StopCommand {}, repos).await.is_err());
-            assert!(!pkg_config::get_repository_server_enabled().await.unwrap());
-        })
+        assert!(stop(StopCommand {}, repos).await.is_err());
+        assert!(!pkg_config::get_repository_server_enabled().await.unwrap());
     }
 }

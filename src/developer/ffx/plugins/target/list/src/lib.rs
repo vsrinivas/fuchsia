@@ -155,6 +155,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_list_with_no_devices_and_no_nodename() -> Result<()> {
+        let _env = ffx_config::test_init().await.unwrap();
         let output = run_list_test(0, tab_list_cmd(None)).await;
         assert_eq!("".to_string(), output);
         Ok(())
@@ -162,6 +163,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_list_with_one_device_and_no_nodename() -> Result<()> {
+        let _env = ffx_config::test_init().await.unwrap();
         let output = run_list_test(1, tab_list_cmd(None)).await;
         let value = format!("Test {}", 0);
         let node_listing = Regex::new(&value).expect("test regex");
@@ -177,6 +179,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_list_with_multiple_devices_and_no_nodename() -> Result<()> {
+        let _env = ffx_config::test_init().await.unwrap();
         let num_tests = 10;
         let output = run_list_test(num_tests, tab_list_cmd(None)).await;
         for x in 0..num_tests {
@@ -195,6 +198,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_list_with_one_device_and_matching_nodename() -> Result<()> {
+        let _env = ffx_config::test_init().await.unwrap();
         let output = run_list_test(1, tab_list_cmd(Some("Test 0".to_string()))).await;
         let value = format!("Test {}", 0);
         let node_listing = Regex::new(&value).expect("test regex");
@@ -210,6 +214,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_list_with_one_device_and_not_matching_nodename() -> Result<()> {
+        let _env = ffx_config::test_init().await.unwrap();
         let output = try_run_list_test(1, tab_list_cmd(Some("blarg".to_string()))).await;
         assert!(output.is_err());
         Ok(())
@@ -217,6 +222,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_list_with_multiple_devices_and_not_matching_nodename() -> Result<()> {
+        let _env = ffx_config::test_init().await.unwrap();
         let num_tests = 25;
         let output = try_run_list_test(num_tests, tab_list_cmd(Some("blarg".to_string()))).await;
         assert!(output.is_err());
@@ -225,6 +231,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_list_with_multiple_devices_and_matching_nodename() -> Result<()> {
+        let _env = ffx_config::test_init().await.unwrap();
         let output = run_list_test(25, tab_list_cmd(Some("Test 19".to_string()))).await;
         let value = format!("Test {}", 0);
         let node_listing = Regex::new(&value).expect("test regex");

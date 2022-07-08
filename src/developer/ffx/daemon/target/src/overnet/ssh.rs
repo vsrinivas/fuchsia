@@ -117,7 +117,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_apply_auth_sock() {
-        ffx_config::test_init().unwrap();
+        let _env = ffx_config::test_init().await.unwrap();
         // XXX(82683): Setting config options in tests is modifying the user environment, so just
         // grab the current value and assert against it.  This needs to get fixed, until it is, this
         // test is of somewhat limited value.

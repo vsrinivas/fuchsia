@@ -629,6 +629,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_list_categories() {
+        let _env = ffx_config::test_init().await.unwrap();
         let writer = Writer::new_test(None);
         run_trace_test(
             TraceCommand { sub_cmd: TraceSubCommand::ListCategories(ListCategories {}) },
@@ -651,6 +652,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_list_categories_machine() {
+        let _env = ffx_config::test_init().await.unwrap();
         let writer = Writer::new_test(Some(Format::Json));
         run_trace_test(
             TraceCommand { sub_cmd: TraceSubCommand::ListCategories(ListCategories {}) },
@@ -664,6 +666,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_list_categories_peer_closed() {
+        let _env = ffx_config::test_init().await.unwrap();
         let writer = Writer::new_test(None);
         let proxy = setup_fake_service();
         let controller = setup_closed_fake_controller_proxy();
@@ -676,6 +679,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_providers() {
+        let _env = ffx_config::test_init().await.unwrap();
         let writer = Writer::new_test(None);
         run_trace_test(
             TraceCommand { sub_cmd: TraceSubCommand::ListProviders(ListProviders {}) },
@@ -693,6 +697,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_providers_peer_closed() {
+        let _env = ffx_config::test_init().await.unwrap();
         let writer = Writer::new_test(None);
         let proxy = setup_fake_service();
         let controller = setup_closed_fake_controller_proxy();
@@ -705,6 +710,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_providers_machine() {
+        let _env = ffx_config::test_init().await.unwrap();
         let writer = Writer::new_test(Some(Format::Json));
         run_trace_test(
             TraceCommand { sub_cmd: TraceSubCommand::ListProviders(ListProviders {}) },
@@ -718,6 +724,7 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_start() {
+        let _env = ffx_config::test_init().await.unwrap();
         let writer = Writer::new_test(None);
         run_trace_test(
             TraceCommand {
@@ -758,6 +765,7 @@ Current tracing status:
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_status() {
+        let _env = ffx_config::test_init().await.unwrap();
         let writer = Writer::new_test(None);
         run_trace_test(
             TraceCommand { sub_cmd: TraceSubCommand::Status(Status {}) },
@@ -782,6 +790,7 @@ Current tracing status:
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_stop() {
+        let _env = ffx_config::test_init().await.unwrap();
         let writer = Writer::new_test(None);
         run_trace_test(
             TraceCommand {
@@ -798,6 +807,7 @@ Current tracing status:
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_start_with_duration() {
+        let _env = ffx_config::test_init().await.unwrap();
         let writer = Writer::new_test(None);
         run_trace_test(
             TraceCommand {
@@ -823,6 +833,7 @@ Current tracing status:
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_start_with_duration_foreground() {
+        let _env = ffx_config::test_init().await.unwrap();
         let writer = Writer::new_test(None);
         run_trace_test(
             TraceCommand {
@@ -852,6 +863,7 @@ Current tracing status:
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_start_foreground() {
+        let _env = ffx_config::test_init().await.unwrap();
         let writer = Writer::new_test(None);
         run_trace_test(
             TraceCommand {
