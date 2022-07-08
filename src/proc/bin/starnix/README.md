@@ -5,8 +5,6 @@ experimental and can run only trivial programs.
 
 ## How to run starnix
 
-Currently, we require a x86_64 host Linux system to run starnix.
-
 ### Configure your build
 
 In order to run starnix, we need to build `//src/proc`:
