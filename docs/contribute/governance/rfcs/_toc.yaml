@@ -366,3 +366,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0174_scale_in_flatland.md
   - title: "RFC-0175: ELF Runner stdio forwarding defaults"
     path: /docs/contribute/governance/rfcs/0175_elf_runner_stdio_forwarding_defaults.md
+  - title: "RFC-0177: Focus Observer for Parent Views"
+    path: /docs/contribute/governance/rfcs/0177_focus_observer_parent_views.md

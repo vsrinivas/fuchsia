@@ -2285,3 +2285,17 @@
   consulted: ['hjfreyer@google.com', 'abdulla@google.com', 'miguelfrde@google.com', 'surajmalhotra@google.com', 'wez@google.com', 'shayba@google.com']
   submitted: '2022-06-03'
   reviewed: '2022-07-06'
+
+- name: 'RFC-0177'
+  title: 'Focus Observer for Parent Views'
+  short_description: 'API for parent view to learn how focus moves in its view tree'
+  authors: ['jaeheon@google.com']
+  file: '0177_focus_observer_parent_views.md'
+  area: ['View System', 'HCI']
+  issue: ['95669']
+  gerrit_change_id: ['687683']
+  status: 'Accepted'
+  reviewers: ['sanjayc@google.com', 'quiche@google.com', 'neelsa@google.com', 'akbiggs@google.com']
+  consulted: ['shiveshganju@google.com', 'fmil@google.com', 'emircan@google.com', 'jsankey@google.com']
+  submitted: '2022-06-06'
+  reviewed: '2022-07-07'
