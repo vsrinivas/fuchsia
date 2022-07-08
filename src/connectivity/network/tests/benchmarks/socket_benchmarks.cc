@@ -312,18 +312,14 @@ void RegisterTests() {
     }
   };
 
-  // TODO(https://fxbug.dev/101918): remove this caveat once the fake netstack
-  // implements TCP.
-  if (!std::getenv(kFakeNetstackEnvVar)) {
-    constexpr size_t kTransferSizesForTcp[] = {
-        1 << 10, 10 << 10, 100 << 10, 500 << 10, 1000 << 10,
-    };
-    for (size_t transfer : kTransferSizesForTcp) {
-      perftest::RegisterTest(get_tcp_test_name(Network::kIpv4, transfer).c_str(),
-                             TcpWriteRead<Ipv4>, transfer);
-      perftest::RegisterTest(get_tcp_test_name(Network::kIpv6, transfer).c_str(),
-                             TcpWriteRead<Ipv6>, transfer);
-    }
+  constexpr size_t kTransferSizesForTcp[] = {
+      1 << 10, 10 << 10, 100 << 10, 500 << 10, 1000 << 10,
+  };
+  for (size_t transfer : kTransferSizesForTcp) {
+    perftest::RegisterTest(get_tcp_test_name(Network::kIpv4, transfer).c_str(), TcpWriteRead<Ipv4>,
+                           transfer);
+    perftest::RegisterTest(get_tcp_test_name(Network::kIpv6, transfer).c_str(), TcpWriteRead<Ipv6>,
+                           transfer);
   }
 
   // NB: Knowledge encoded at a distance: these datagrams avoid IP fragmentation
