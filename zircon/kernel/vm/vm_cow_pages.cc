@@ -1798,8 +1798,9 @@ void VmCowPages::UpdateDirtyStateLocked(vm_page_t* page, uint64_t offset, DirtyS
   page->object.dirty_state = static_cast<uint8_t>(dirty_state) & VM_PAGE_OBJECT_DIRTY_STATES_MASK;
 }
 
-zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uint64_t offset,
-                                              uint64_t len, uint64_t* dirty_len_out) {
+zx_status_t VmCowPages::PrepareForWriteLocked(uint64_t offset, uint64_t len,
+                                              LazyPageRequest* page_request,
+                                              uint64_t* dirty_len_out) {
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
   DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
   DEBUG_ASSERT(InRange(offset, len, size_));
@@ -1816,7 +1817,7 @@ zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uin
     // property changes.
     DEBUG_ASSERT(!parent->is_slice_locked());
 
-    return parent->PrepareForWriteLocked(page_request, offset + parent_offset, len, dirty_len_out);
+    return parent->PrepareForWriteLocked(offset + parent_offset, len, page_request, dirty_len_out);
   }
 
   DEBUG_ASSERT(page_source_);
@@ -2184,7 +2185,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
       // non-dirty pages in the entire lookup range. This is an optimization to reduce the number of
       // DIRTY page requests generated overall.
       zx_status_t status =
-          PrepareForWriteLocked(page_request, offset, max_out_pages * PAGE_SIZE, &dirty_len);
+          PrepareForWriteLocked(offset, max_out_pages * PAGE_SIZE, page_request, &dirty_len);
       if (status != ZX_OK) {
         // We were not able to dirty any pages.
         DEBUG_ASSERT(dirty_len == 0);
@@ -2379,7 +2380,7 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
       // requests.
       uint64_t dirty_len = 0;
       zx_status_t status =
-          PrepareForWriteLocked(page_request, offset, max_out_pages * PAGE_SIZE, &dirty_len);
+          PrepareForWriteLocked(offset, max_out_pages * PAGE_SIZE, page_request, &dirty_len);
       // The page source will never succeed synchronously.
       DEBUG_ASSERT(status != ZX_OK);
       // No pages will have been dirtied. The range starts with a marker, so we won't be able to

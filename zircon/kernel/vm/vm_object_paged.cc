@@ -882,7 +882,7 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
         while (to_dirty_len > 0) {
           uint64_t dirty_len = 0;
           zx_status_t write_status = cow_pages_locked()->PrepareForWriteLocked(
-              &page_request, offset, to_dirty_len, &dirty_len);
+              offset, to_dirty_len, &page_request, &dirty_len);
           DEBUG_ASSERT(dirty_len <= to_dirty_len);
           if (write_status != ZX_OK && write_status != ZX_ERR_SHOULD_WAIT) {
             return write_status;

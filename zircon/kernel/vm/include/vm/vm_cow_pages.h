@@ -366,7 +366,7 @@ class VmCowPages final
   // require dirty transitions to be trapped, ZX_OK is returned.
   //
   // |offset| and |len| should be page-aligned.
-  zx_status_t PrepareForWriteLocked(LazyPageRequest* page_request, uint64_t offset, uint64_t len,
+  zx_status_t PrepareForWriteLocked(uint64_t offset, uint64_t len, LazyPageRequest* page_request,
                                     uint64_t* dirty_len_out) TA_REQ(lock_);
 
   using LookupInfo = VmObject::LookupInfo;
