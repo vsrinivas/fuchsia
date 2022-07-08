@@ -2534,6 +2534,11 @@ impl TransactionError {
     fn dispatch(self, binder_thread: &Arc<BinderThread>) -> Result<(), Errno> {
         binder_thread.write().enqueue_command(match self {
             TransactionError::Malformed(err) => {
+                tracing::error!(
+                    "binder thread {} sent a malformed transaction: {:?}",
+                    binder_thread.tid,
+                    &err
+                );
                 // Negate the value, as the binder runtime assumes error values are already
                 // negative.
                 Command::Error(-(err.value() as i32))
