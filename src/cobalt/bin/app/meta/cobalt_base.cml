@@ -28,12 +28,14 @@
                 "fuchsia.net.http.Loader",
                 "fuchsia.scheduler.ProfileProvider",
                 "fuchsia.sysinfo.SysInfo",
-                "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.activity.Provider",
             ],
         },
         {
-            protocol: "fuchsia.settings.Privacy",
+            protocol: [
+                "fuchsia.settings.Privacy",
+                "fuchsia.tracing.provider.Registry",
+            ],
             availability: "optional",
         },
         {

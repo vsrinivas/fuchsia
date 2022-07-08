@@ -30,9 +30,17 @@
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.pkg.LocalMirror",
                 "fuchsia.pkg.PackageCache",
-                "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "parent",
+
+            // Trace manager may be excluded from builds where tracing is not
+            // expected to be used for observability, such as in the bringup
+            // product and non-eng builds of any product.
+            availability: "optional",
         },
         {
             directory: "config-data",

@@ -51,19 +51,6 @@
             from: "#trace_manager",
             to: "#appmgr",
         },
-
-        // Weak offers to resolve dependency cycles that would be caused by
-        // using #full-resolver-env.
-        {
-            protocol: "fuchsia.tracing.provider.Registry",
-            from: "#trace_manager",
-            to: [
-                "#cobalt",
-                "#network",
-                "#pkg-resolver",
-            ],
-            dependency: "weak",
-        },
     ],
     expose: [
         {

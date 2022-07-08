@@ -64,8 +64,15 @@
                 "fuchsia.process.Launcher",
                 "fuchsia.process.Resolver",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.tracing.provider.Registry",
             ],
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+
+            // Trace manager may be excluded from builds where tracing is not
+            // expected to be used for observability, such as in the bringup
+            // product and non-eng builds of any product.
+            availability: "optional",
         },
         {
             // The Realm protocol is required to start components.

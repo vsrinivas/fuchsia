@@ -35,12 +35,14 @@
                 "fuchsia.kernel.CpuResource",
                 "fuchsia.kernel.Stats",
                 "fuchsia.sys2.SystemController",
-                "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.activity.Provider",
             ],
         },
         {
-            protocol: "fuchsia.settings.Input",
+            protocol: [
+                "fuchsia.settings.Input",
+                "fuchsia.tracing.provider.Registry",
+            ],
             availability: "optional",
         },
     ],

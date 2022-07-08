@@ -161,10 +161,15 @@
                 "fuchsia.boot.Arguments",
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
             to: "#virtual_console",
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "parent",
+            to: "#virtual_console",
+            source_availability: "unknown",
         },
         {
             protocol: [
@@ -188,6 +193,15 @@
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Launcher",
                 "fuchsia.sys.Loader",
+            ],
+            from: "parent",
+            to: [
+                "#console-launcher",
+                "#netsvc",
+            ],
+        },
+        {
+            protocol: [
                 "fuchsia.tracing.controller.Controller",
                 "fuchsia.tracing.provider.Registry",
             ],
@@ -196,6 +210,7 @@
                 "#console-launcher",
                 "#netsvc",
             ],
+            source_availability: "unknown",
         },
         {
             // Allow networking from programs running in the console.
@@ -277,10 +292,15 @@
                 "fuchsia.pkg.PackageResolver",
                 "fuchsia.process.Launcher",
                 "fuchsia.process.Resolver",
-                "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
             to: "#driver_manager",
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "parent",
+            to: "#driver_manager",
+            source_availability: "unknown",
         },
         {
             protocol: "fuchsia.component.Realm",
@@ -302,21 +322,29 @@
             to: "#driver_manager",
         },
         {
-            protocol: [
-                "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.tracing.provider.Registry",
-            ],
+            protocol: [ "fuchsia.boot.WriteOnlyLog" ],
             from: "parent",
             to: "#driver-hosts",
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "parent",
+            to: "#driver-hosts",
+            source_availability: "unknown",
         },
         {
             protocol: [
                 "fuchsia.boot.Items",
                 "fuchsia.boot.RootResource",
-                "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
             to: "#boot-drivers",
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "parent",
+            to: "#boot-drivers",
+            source_availability: "unknown",
         },
         {
             protocol: [ "fuchsia.tracing.provider.Registry" ],
@@ -325,6 +353,7 @@
                 "#pkg-drivers",
                 "#universe-pkg-drivers",
             ],
+            source_availability: "unknown",
         },
         {
             protocol: [
@@ -397,13 +426,21 @@
             protocol: [
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.metrics.MetricEventLoggerFactory",
-                "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
             to: [
                 "#fshost",
                 "#power_manager",
             ],
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "parent",
+            to: [
+                "#fshost",
+                "#power_manager",
+            ],
+            source_availability: "unknown",
         },
         {
             protocol: [
@@ -964,12 +1001,18 @@
         {
             protocol: [
                 "fuchsia.cobalt.LoggerFactory",
-                "fuchsia.tracing.provider.Registry",
                 "fuchsia.update.CommitStatusProvider",
             ],
             from: "parent",
             to: "#pkg-cache",
             dependency: "weak",
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "parent",
+            to: "#pkg-cache",
+            dependency: "weak",
+            source_availability: "unknown",
         },
         {
             directory: "pkgfs-packages",

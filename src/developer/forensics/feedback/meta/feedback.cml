@@ -40,7 +40,6 @@
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.process.Launcher",
                 "fuchsia.sysinfo.SysInfo",
-                "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.scenic.Scenic",
             ],
         },
@@ -52,7 +51,10 @@
             availability: "optional",
         },
         {
-            protocol: "fuchsia.feedback.DeviceIdProvider",
+            protocol: [
+                "fuchsia.feedback.DeviceIdProvider",
+                "fuchsia.tracing.provider.Registry",
+            ],
             availability: "optional",
         },
         {
