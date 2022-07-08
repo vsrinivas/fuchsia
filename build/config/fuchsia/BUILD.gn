@@ -66,7 +66,6 @@ config("compiler") {
     configs += [ ":ccache" ]
   }
 
-  ldflags = []
   rustflags = [
     "-L",
     rebase_path(rust_sysroot_dir, root_build_dir) + "/lib",
@@ -86,6 +85,7 @@ config("compiler") {
   # TODO(fxbug.dev/53078): Eventually the default in the compler driver.
   rustflags += [ "-Clink-arg=-zrel" ]
 
+  ldflags = []
   if (build_id_format != "") {
     ldflags += [ "-Wl,--build-id=$build_id_format" ]
   }
@@ -148,6 +148,12 @@ config("no_cpp_standard_library") {
 
 config("static_cpp_standard_library") {
   ldflags = [
+    # Use libc++ as the C++ standard library.
+    "-stdlib=libc++",
+
+    # Use libunwind as the unwinder.
+    "-unwindlib=libunwind",
+
     # Request static linking for standard C++ library. Despite the name, this
     # option applies to both libstdc++ and libc++, whichever is used by Clang.
     "-static-libstdc++",

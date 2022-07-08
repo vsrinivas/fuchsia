@@ -88,8 +88,7 @@ config("clang_defaults") {
     "-stdlib=libc++",
 
     # Use libunwind as the unwinder.
-    # TODO(fxbug.dev/75410): Re-enable after fxbug.dev/101610.
-    #"-unwindlib=libunwind",
+    "-unwindlib=libunwind",
 
     # Use compiler-rt as the compiler runtime.
     "-rtlib=compiler-rt",
