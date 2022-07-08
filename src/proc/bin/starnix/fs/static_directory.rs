@@ -108,7 +108,19 @@ impl FsNodeOps for Arc<StaticDirectory> {
     }
 
     fn lookup(&self, _node: &FsNode, name: &FsStr) -> Result<Arc<FsNode>, Errno> {
-        self.entries.get(name).cloned().ok_or_else(|| errno!(ENOENT))
+        self.entries.get(name).cloned().ok_or_else(|| {
+            errno!(
+                ENOENT,
+                format!(
+                    "looking for {:?} in {:?}",
+                    String::from_utf8_lossy(name),
+                    self.entries
+                        .keys()
+                        .map(|e| String::from_utf8_lossy(e).to_string())
+                        .collect::<Vec<String>>()
+                )
+            )
+        })
     }
 
     fn mknod(
