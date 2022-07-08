@@ -41,6 +41,7 @@ class DwarfExprEvalTest : public TestWithLoop {
         eval_(UnitSymbolFactory(symbol_factory_, kUnitOffset), provider_, symbol_context_) {}
 
   DwarfExprEval& eval() { return eval_; }
+  MockSymbolFactory& symbol_factory() { return *symbol_factory_; }
   fxl::RefPtr<MockSymbolDataProvider> provider() { return provider_; }
   const SymbolContext symbol_context() const { return symbol_context_; }
 
@@ -941,7 +942,8 @@ TEST_F(DwarfExprEvalTest, Deref) {
   EXPECT_FALSE(eval().result_is_constant());
 }
 
-TEST_F(DwarfExprEvalTest, DerefSize) {
+// Tests DW_OP_deref_size and DW_OP_deref_type.
+TEST_F(DwarfExprEvalTest, DerefSizeAndType) {
   // This is a real program GCC generated.
   // This is "[BYTE PTR rdx] + 2"
   constexpr uint8_t kAddAmount = 2;
@@ -961,6 +963,31 @@ TEST_F(DwarfExprEvalTest, DerefSize) {
   DoEvalTest(program, true, DwarfExprEval::Completion::kAsync,
              DwarfStackEntry(kMemValue + kAddAmount), DwarfExprEval::ResultType::kValue,
              "DW_OP_breg1(0), DW_OP_deref_size(1), DW_OP_plus_uconst(2), DW_OP_stack_value");
+  EXPECT_FALSE(eval().result_is_constant());
+
+  // Same thing but with DW_OP_deref_type pointing to a 1-byte char and adding a typed constant.
+  constexpr uint8_t kDieOffset = 0x29;  // Offset from unit (<7 bits to avoid LEB encoding).
+  // clang-format off
+  const std::vector<uint8_t> program_type = {
+      llvm::dwarf::DW_OP_breg1, 0,
+      llvm::dwarf::DW_OP_deref_type, 0x01, kDieOffset,  // Deref one byte with the type.
+      llvm::dwarf::DW_OP_const_type, kDieOffset, 1, kAddAmount,  // Push constant of char type.
+      llvm::dwarf::DW_OP_plus,
+      llvm::dwarf::DW_OP_stack_value};
+  // clang-format on
+
+  // Set up the type info for the character type.
+  constexpr uint64_t kDieLoc = kUnitOffset + kDieOffset;
+  auto char_type = MakeSignedChar8Type();
+  symbol_factory().SetMockSymbol(kDieLoc, char_type);
+
+  DoEvalTest(
+      program_type, true, DwarfExprEval::Completion::kAsync,
+      DwarfStackEntry(char_type, static_cast<DwarfStackEntry::SignedType>(kMemValue + kAddAmount)),
+      DwarfExprEval::ResultType::kValue,
+      "DW_OP_breg1(0), DW_OP_deref_type(size=1, die_offset=0x29), "
+      "DW_OP_const_type(die_offset=0x29, data_size=1, data_bytes=0x02), DW_OP_plus, "
+      "DW_OP_stack_value");
   EXPECT_FALSE(eval().result_is_constant());
 }
 
@@ -1243,6 +1270,173 @@ TEST_F(DwarfExprEvalTest, EntryValue) {
              "DW_OP_entry_value(DW_OP_breg6(49), DW_OP_deref), DW_OP_breg6(1), DW_OP_minus");
 
   eval().Clear();
+}
+
+TEST_F(DwarfExprEvalTest, ConstType) {
+  constexpr uint8_t kDieOffset = 0x29;  // Offset from unit (<7 bits to avoid LEB encoding).
+  constexpr uint64_t kDieLoc = kUnitOffset + kDieOffset;
+
+  auto uint32_type = MakeUint32Type();
+  symbol_factory().SetMockSymbol(kDieLoc, uint32_type);
+
+  // Normal typed expression.
+  std::vector<uint8_t> expr1{llvm::dwarf::DW_OP_const_type,
+                             kDieOffset,  // 1st param: ULEB unit-relative DIE offset.
+                             4,           // 2nd param: (1 byte) data size.
+                             0x22,
+                             0x33,
+                             0x44,
+                             0x55,  // 3rd param: data.
+                             llvm::dwarf::DW_OP_stack_value};
+  DoEvalTest(expr1, true, DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(uint32_type, DwarfStackEntry::UnsignedType(0x55443322u)),
+             DwarfExprEval::ResultType::kValue,
+             "DW_OP_const_type(die_offset=0x29, data_size=4, data_bytes=0x22 0x33 0x44 0x55), "
+             "DW_OP_stack_value");
+
+  // Invalid DIE offset.
+  std::vector<uint8_t> expr2{llvm::dwarf::DW_OP_const_type,
+                             2,  // 1st param: ULEB unit-relative DIE offset.
+                             4,  // 2nd param: (1 byte) data size.
+                             0x22,
+                             0x33,
+                             0x44,
+                             0x55};  // 3rd param: data.
+  DoEvalTest(expr2, false, DwarfExprEval::Completion::kSync, DwarfStackEntry(0),
+             DwarfExprEval::ResultType::kPointer,
+             "DW_OP_const_type(die_offset=0x2, data_size=4, data_bytes=0x22 0x33 0x44 0x55)");
+
+  // 0 data bytes.
+  std::vector<uint8_t> expr3{llvm::dwarf::DW_OP_const_type,
+                             kDieOffset,  // 1st param: ULEB unit-relative DIE offset.
+                             0,           // 2nd param: (1 byte) data size.
+                                          // 3rd param: no data.
+                             llvm::dwarf::DW_OP_stack_value};
+  DoEvalTest(expr3, false, DwarfExprEval::Completion::kSync, DwarfStackEntry(0),
+             DwarfExprEval::ResultType::kPointer,
+             "DW_OP_const_type(die_offset=0x29, data_size=0, data_bytes=), DW_OP_stack_value");
+
+  // Too many data bytes.
+  // clang-format off
+  std::vector<uint8_t> expr4{llvm::dwarf::DW_OP_const_type,
+                             kDieOffset,  // 1st param: ULEB unit-relative DIE offset.
+                             20,          // 2nd param: (1 byte) data size.
+                             0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                             0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+                             llvm::dwarf::DW_OP_stack_value};
+  // clang-format on
+  DoEvalTest(
+      expr4, false, DwarfExprEval::Completion::kSync, DwarfStackEntry(0),
+      DwarfExprEval::ResultType::kPointer,
+      "DW_OP_const_type(die_offset=0x29, data_size=20, data_bytes=0x00 0x00 0x00 0x00 0x00 0x00 "
+      "0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x00), DW_OP_stack_value");
+}
+
+TEST_F(DwarfExprEvalTest, RegvalType) {
+  constexpr uint8_t kIntDieOffset = 0x29;  // Offset from unit (<7 bits to avoid LEB encoding).
+  constexpr uint64_t kIntDieLoc = kUnitOffset + kIntDieOffset;
+  constexpr uint8_t kFloatDieOffset = 0x37;
+  constexpr uint64_t kFloatDieLoc = kUnitOffset + kFloatDieOffset;
+
+  auto int64_type = MakeInt64Type();
+  symbol_factory().SetMockSymbol(kIntDieLoc, int64_type);
+  auto float_type = MakeFloatType();
+  symbol_factory().SetMockSymbol(kFloatDieLoc, float_type);
+
+  provider()->AddRegisterValue(kDWARFReg0ID, true, 100);
+
+  float kFloatVal = 3.14159f;
+  uint64_t float_as_register = 0;
+  memcpy(&float_as_register, &kFloatVal, sizeof(float));
+  provider()->AddRegisterValue(kDWARFReg9ID, false, float_as_register);
+
+  // Reg0, synchronous int64 (=100).
+  DoEvalTest({llvm::dwarf::DW_OP_regval_type, 0, kIntDieOffset}, true,
+             DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(int64_type, DwarfStackEntry::SignedType(100)),
+             DwarfExprEval::ResultType::kPointer, "DW_OP_regval_type(reg=0, die_offset=0x29)");
+  EXPECT_EQ(RegisterID::kARMv8_x0, eval().current_register_id());
+  EXPECT_FALSE(eval().result_is_constant());
+
+  // Reg9, asynchronous float. This is stored in the low bits of the register.
+  DoEvalTest({llvm::dwarf::DW_OP_regval_type, 9, kFloatDieOffset, llvm::dwarf::DW_OP_stack_value},
+             true, DwarfExprEval::Completion::kAsync, DwarfStackEntry(float_type, kFloatVal),
+             DwarfExprEval::ResultType::kValue,
+             "DW_OP_regval_type(reg=9, die_offset=0x37), DW_OP_stack_value");
+  EXPECT_EQ(RegisterID::kARMv8_x9, eval().current_register_id());
+  EXPECT_FALSE(eval().result_is_constant());
+}
+
+// Tests DW_OP_convert and DW_OP_reinterpret.
+TEST_F(DwarfExprEvalTest, Casts) {
+  // Die offsets all uses <= 7 bits so we don't have to use multibyte LEB encoding.
+  constexpr uint8_t kInt64DieOffset = 0x29;
+  constexpr uint64_t kInt64DieLoc = kUnitOffset + kInt64DieOffset;
+  auto int64_type = MakeInt64Type();
+  symbol_factory().SetMockSymbol(kInt64DieLoc, int64_type);
+
+  constexpr uint8_t kUint32DieOffset = 0x31;
+  constexpr uint64_t kUint32DieLoc = kUnitOffset + kUint32DieOffset;
+  auto uint32_type = MakeUint32Type();
+  symbol_factory().SetMockSymbol(kUint32DieLoc, uint32_type);
+
+  constexpr uint8_t kFloatDieOffset = 0x33;
+  constexpr uint64_t kFloatDieLoc = kUnitOffset + kFloatDieOffset;
+  auto float_type = MakeFloatType();
+  symbol_factory().SetMockSymbol(kFloatDieLoc, float_type);
+
+  constexpr uint8_t kDoubleDieOffset = 0x35;
+  constexpr uint64_t kDoubleDieLoc = kUnitOffset + kDoubleDieOffset;
+  auto double_type = MakeDoubleType();
+  symbol_factory().SetMockSymbol(kDoubleDieLoc, double_type);
+
+  // Program fragment that adds a typed double to the stack.
+  constexpr double kDoubleSource = 3.1415926535;
+  uint8_t double_arr[sizeof(double)];
+  memcpy(double_arr, &kDoubleSource, sizeof(double));
+  // clang-format off
+  std::vector<uint8_t> double_const_source = {
+      llvm::dwarf::DW_OP_const_type, kDoubleDieOffset, static_cast<uint8_t>(sizeof(double)),
+      double_arr[0], double_arr[1], double_arr[2], double_arr[3],
+      double_arr[4], double_arr[5], double_arr[6], double_arr[7]};
+  // clang-format on
+
+  // Static cast the double to a uint32 = 3;
+  std::vector<uint8_t> static_double_to_uint = double_const_source;
+  static_double_to_uint.push_back(llvm::dwarf::DW_OP_convert);
+  static_double_to_uint.push_back(kUint32DieOffset);
+  DoEvalTest(static_double_to_uint, true, DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(uint32_type, DwarfStackEntry::UnsignedType(3)),
+             DwarfExprEval::ResultType::kPointer,
+             "DW_OP_const_type(die_offset=0x35, data_size=8, data_bytes=0x44 0x17 0x41 0x54 0xfb "
+             "0x21 0x09 0x40), DW_OP_convert(die_offset=0x31)");
+
+  // Static cast the double to a float.
+  std::vector<uint8_t> static_double_to_float = double_const_source;
+  static_double_to_float.push_back(llvm::dwarf::DW_OP_convert);
+  static_double_to_float.push_back(kFloatDieOffset);
+  DoEvalTest(static_double_to_float, true, DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(float_type, static_cast<float>(kDoubleSource)),
+             DwarfExprEval::ResultType::kPointer,
+             "DW_OP_const_type(die_offset=0x35, data_size=8, data_bytes=0x44 0x17 0x41 0x54 0xfb "
+             "0x21 0x09 0x40), DW_OP_convert(die_offset=0x33)");
+
+  // Reinterpret the double to an int64.
+  std::vector<uint8_t> reint_double_to_int64 = double_const_source;
+  reint_double_to_int64.push_back(llvm::dwarf::DW_OP_reinterpret);
+  reint_double_to_int64.push_back(kInt64DieOffset);
+
+  int64_t expected_int64 = 0;
+  memcpy(&expected_int64, &kDoubleSource, sizeof(int64_t));
+  DoEvalTest(reint_double_to_int64, true, DwarfExprEval::Completion::kSync,
+             DwarfStackEntry(int64_type, DwarfStackEntry::UnsignedType(expected_int64)),
+             DwarfExprEval::ResultType::kPointer,
+             "DW_OP_const_type(die_offset=0x35, data_size=8, data_bytes=0x44 0x17 0x41 0x54 0xfb "
+             "0x21 0x09 0x40), DW_OP_reinterpret(die_offset=0x29)");
+
+  // This is a real program from Clang. It expresses a boolean passed in a register
+  // DW_OP_breg5 RDI+0, DW_OP_constu 0xffffffff, DW_OP_and, DW_OP_convert (0x0000002f)
+  // "DW_ATE_unsigned_1", DW_OP_convert (0x00000034) "DW_ATE_unsigned_8", DW_OP_stack_value
 }
 
 }  // namespace zxdb

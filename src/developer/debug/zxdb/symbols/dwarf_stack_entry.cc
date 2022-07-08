@@ -7,32 +7,53 @@
 #include <float.h>
 #include <lib/syslog/cpp/macros.h>
 #include <math.h>
+#include <string.h>
 
 #include <algorithm>
 #include <iostream>
 
 namespace zxdb {
 
-DwarfStackEntry::DwarfStackEntry(uint128_t generic_value) : unsigned_value_(generic_value) {}
+DwarfStackEntry::DwarfStackEntry(uint128_t generic_value) {
+  bzero(&data_, sizeof(data_));
+  data_.unsigned_value = generic_value;
+}
+
+DwarfStackEntry::DwarfStackEntry(fxl::RefPtr<BaseType> type, const void* data, size_t data_size)
+    : type_(std::move(type)) {
+  bzero(&data_, sizeof(data_));
+  memcpy(&data_, data, std::min(data_size, sizeof(data_)));
+}
 
 DwarfStackEntry::DwarfStackEntry(fxl::RefPtr<BaseType> type, int128_t value)
-    : type_(std::move(type)), signed_value_(value) {
+    : type_(std::move(type)) {
   FX_DCHECK(TreatAsSigned());
+
+  bzero(&data_, sizeof(data_));
+  data_.signed_value = value;
 }
 
 DwarfStackEntry::DwarfStackEntry(fxl::RefPtr<BaseType> type, uint128_t value)
-    : type_(std::move(type)), unsigned_value_(value) {
+    : type_(std::move(type)) {
   FX_DCHECK(TreatAsUnsigned());
+
+  bzero(&data_, sizeof(data_));
+  data_.unsigned_value = value;
 }
 
-DwarfStackEntry::DwarfStackEntry(fxl::RefPtr<BaseType> type, float value)
-    : type_(std::move(type)), float_value_(value) {
+DwarfStackEntry::DwarfStackEntry(fxl::RefPtr<BaseType> type, float value) : type_(std::move(type)) {
   FX_DCHECK(TreatAsFloat());
+
+  bzero(&data_, sizeof(data_));
+  data_.float_value = value;
 }
 
 DwarfStackEntry::DwarfStackEntry(fxl::RefPtr<BaseType> type, double value)
-    : type_(std::move(type)), double_value_(value) {
+    : type_(std::move(type)) {
   FX_DCHECK(TreatAsDouble());
+
+  bzero(&data_, sizeof(data_));
+  data_.double_value = value;
 }
 
 bool DwarfStackEntry::operator==(const DwarfStackEntry& other) const {
@@ -47,9 +68,9 @@ bool DwarfStackEntry::operator==(const DwarfStackEntry& other) const {
   }
 
   if (TreatAsUnsigned())
-    return unsigned_value_ == other.unsigned_value_;
+    return data_.unsigned_value == other.data_.unsigned_value;
   if (TreatAsSigned())
-    return signed_value_ == other.signed_value_;
+    return data_.signed_value == other.data_.signed_value;
 
   // This is used for tests that compare the results of expressions. The floating-point error can
   // accumulate much larger than DBL_EPSILON so we have our own more permissive value. If necessary,
@@ -57,14 +78,14 @@ bool DwarfStackEntry::operator==(const DwarfStackEntry& other) const {
   constexpr double kEpsilon = 0.000000001;
 
   if (TreatAsFloat()) {
-    if (isnan(float_value_) || isnan(other.float_value_))
+    if (isnan(other.data_.float_value) || isnan(other.data_.float_value))
       return false;
-    return fabsf(float_value_ - other.float_value_) < kEpsilon;
+    return fabsf(other.data_.float_value - other.data_.float_value) < kEpsilon;
   }
   if (TreatAsDouble()) {
-    if (isnan(double_value_) || isnan(other.double_value_))
+    if (isnan(data_.double_value) || isnan(other.data_.double_value))
       return false;
-    return fabs(double_value_ - other.double_value_) < kEpsilon;
+    return fabs(data_.double_value - other.data_.double_value) < kEpsilon;
   }
 
   FX_NOTREACHED();
@@ -115,13 +136,17 @@ bool DwarfStackEntry::TreatAsDouble(const BaseType* type) {
 
 bool DwarfStackEntry::IsZero() const {
   if (TreatAsSigned())
-    return signed_value_ == 0;
+    return data_.signed_value == 0;
   if (TreatAsUnsigned())
-    return unsigned_value_ == 0;
-  if (TreatAsFloat())
-    return !isnan(float_value_) && float_value_ > -FLT_EPSILON && float_value_ < FLT_EPSILON;
-  if (TreatAsDouble())
-    return !isnan(double_value_) && double_value_ > -DBL_EPSILON && double_value_ < DBL_EPSILON;
+    return data_.unsigned_value == 0;
+  if (TreatAsFloat()) {
+    return !isnan(data_.float_value) && data_.float_value > -FLT_EPSILON &&
+           data_.float_value < FLT_EPSILON;
+  }
+  if (TreatAsDouble()) {
+    return !isnan(data_.double_value) && data_.double_value > -DBL_EPSILON &&
+           data_.double_value < DBL_EPSILON;
+  }
 
   FX_NOTREACHED();
   return false;

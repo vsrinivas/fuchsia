@@ -13,9 +13,9 @@
 
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "src/developer/debug/shared/message_loop.h"
-#include "src/developer/debug/shared/register_info.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
+#include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -372,11 +372,13 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
   FX_DCHECK(!is_complete_);
   FX_DCHECK(!data_extractor_.done());
 
-  // Clear any current register information. See current_register_id_ declaration for more.
-  current_register_id_ = debug::RegisterID::kUnknown;
-
   // Opcode is next byte in the data buffer. Consume it (we already checked there's data).
   uint8_t op = *data_extractor_.Read<uint8_t>();
+
+  // Clear any current register information whenever the stack is being mutated.
+  // See current_register_id_ declaration for more.
+  if (op != llvm::dwarf::DW_OP_stack_value)
+    current_register_id_ = debug::RegisterID::kUnknown;
 
   // Literals 0-31.
   if (op >= llvm::dwarf::DW_OP_lit0 && op <= llvm::dwarf::DW_OP_lit31) {
@@ -408,7 +410,7 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
     case llvm::dwarf::DW_OP_addr:
       return OpAddr();
     case llvm::dwarf::DW_OP_deref:
-      return OpDeref(sizeof(TargetPointer), "DW_OP_deref", false);
+      return OpDeref(sizeof(TargetPointer), nullptr, "DW_OP_deref", false);
     case llvm::dwarf::DW_OP_const1u:
       return OpPushUnsigned(1, "DW_OP_const1u");
     case llvm::dwarf::DW_OP_const1s:
@@ -539,12 +541,18 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
     case llvm::dwarf::DW_OP_entry_value:
       return OpEntryValue("DW_OP_entry_value");
     case llvm::dwarf::DW_OP_const_type:
+      return OpConstType("DW_OP_const_type");
     case llvm::dwarf::DW_OP_regval_type:
+      return OpRegvalType("DW_OP_regval_type");
     case llvm::dwarf::DW_OP_deref_type:
+      return OpDerefType("DW_OP_deref_type");
     case llvm::dwarf::DW_OP_xderef_type:
+      // We don't have multiple address spaces.
+      return ReportError("DW_OP_xderef_type opcode is not applicable to this platform.");
     case llvm::dwarf::DW_OP_convert:
+      return OpConvert("DW_OP_convert");
     case llvm::dwarf::DW_OP_reinterpret:
-      return ReportError("Unimplemented DWARF 5 'type' opcode (http://fxbug.dev/79529).");
+      return OpReinterpret("DW_OP_reinterpret");
 
     // GNU extensions.
     case DW_OP_GNU_push_tls_address:
@@ -559,11 +567,15 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
     case DW_OP_GNU_entry_value:
       return OpEntryValue("DW_OP_GNU_entry_value");
     case DW_OP_GNU_const_type:
+      return OpConstType("DW_OP_GNU_const_type");
     case DW_OP_GNU_regval_type:
+      return OpRegvalType("DW_OP_GNU_regval_type");
     case DW_OP_GNU_deref_type:
+      return OpDerefType("DW_OP_GNU_deref_type");
     case DW_OP_GNU_convert:
+      return OpConvert("DW_OP_GNU_convert");
     case DW_OP_GNU_reinterpret:
-      return ReportError("Unimplemented GNU 'type' opcode (http://fxbug.dev/79529).");
+      return OpReinterpret("DW_OP_GNU_reinterpret");
     case DW_OP_GNU_parameter_ref:
       return ReportError("Unimplemented DW_OP_GNU_parameter_ref opcode.");
     case DW_OP_GNU_addr_index:
@@ -584,24 +596,24 @@ DwarfExprEval::Completion DwarfExprEval::EvalOneOp() {
   }
 }
 
-DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_register_number,
-                                                                SignedType offset) {
-  // Reading register data means the result is not constant.
-  result_is_constant_ = false;
-
+DwarfExprEval::Completion DwarfExprEval::GetRegisterValue(
+    int dwarf_register_number,
+    fit::function<void(DwarfExprEval* eval, Completion completion,
+                       std::optional<UnsignedType> value, const debug::RegisterInfo* info)>
+        cb) {
   const debug::RegisterInfo* reg_info =
       debug::DWARFToRegisterInfo(data_provider_->GetArch(), dwarf_register_number);
   if (!reg_info) {
-    ReportError(fxl::StringPrintf("Register %d not known.", dwarf_register_number));
+    ReportError(fxl::StringPrintf("DWARF register %d not known.", dwarf_register_number));
+    cb(this, Completion::kSync, std::nullopt, nullptr);
     return Completion::kSync;
   }
 
-  // This function doesn't set the result_type_ because it is called from different contexts. The
-  // callers should set the result_type_ as appropriate for their operation.
   if (auto reg_data = data_provider_->GetRegister(reg_info->id)) {
     // State known synchronously (could be available or known unavailable).
     if (reg_data->empty()) {
-      ReportError(fxl::StringPrintf("Register %d not available.", dwarf_register_number));
+      ReportError(fxl::StringPrintf("Register %s not available.", reg_info->name.c_str()));
+      cb(this, Completion::kSync, std::nullopt, nullptr);
     } else {
       // This truncates to 128 bits and converts from little-endian. DWARF doesn't seem to use the
       // stack machine for vector computations (it's not specified that the stack items are large
@@ -609,40 +621,53 @@ DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_regist
       // uses the low bits.
       UnsignedType reg_value = 0;
       memcpy(&reg_value, reg_data->data(), std::min(sizeof(UnsignedType), reg_data->size()));
-      Push(DwarfStackEntry(reg_value + offset));
-
-      // When the current value represents a register, save that fact.
-      if (offset == 0)
-        current_register_id_ = reg_info->id;
+      cb(this, Completion::kSync, reg_value, reg_info);
     }
     return Completion::kSync;
   }
 
-  // Must request async.
+  // Must request async. The reg_info is static data so the pointer can be captured.
   data_provider_->GetRegisterAsync(
-      reg_info->id, [reg_id = reg_info->id, weak_eval = weak_factory_.GetWeakPtr(), offset](
-                        const Err& err, std::vector<uint8_t> reg_data) {
+      reg_info->id, [weak_eval = weak_factory_.GetWeakPtr(), reg_info, cb = std::move(cb)](
+                        const Err& err, std::vector<uint8_t> reg_data) mutable {
         if (!weak_eval)
           return;
         if (err.has_error()) {
           weak_eval->ReportError(err);
+          cb(weak_eval.get(), Completion::kAsync, std::nullopt, nullptr);
           return;
         }
 
         // Truncate/convert from little-endian as above.
         UnsignedType reg_value = 0;
         memcpy(&reg_value, reg_data.data(), std::min(sizeof(UnsignedType), reg_data.size()));
-        weak_eval->Push(DwarfStackEntry(static_cast<UnsignedType>(reg_value + offset)));
-
-        // When the current value represents a register, save that fact.
-        if (offset == 0)
-          weak_eval->current_register_id_ = reg_id;
-
-        // Picks up processing at the next instruction.
-        weak_eval->ContinueEval();
+        cb(weak_eval.get(), Completion::kAsync, reg_value, reg_info);
       });
 
   return Completion::kAsync;
+}
+
+DwarfExprEval::Completion DwarfExprEval::PushRegisterWithOffset(int dwarf_register_number,
+                                                                SignedType offset) {
+  return GetRegisterValue(
+      dwarf_register_number,
+      [offset](DwarfExprEval* eval, Completion completion, std::optional<UnsignedType> value,
+               const debug::RegisterInfo* info) {
+        if (value) {
+          // Success.
+          eval->Push(DwarfStackEntry(*value + offset));
+
+          // Reading register data means the result is not constant.
+          eval->result_is_constant_ = false;
+
+          // When the current value represents a literal register value, save that fact.
+          if (offset == 0)
+            eval->current_register_id_ = info->id;
+
+          if (completion == Completion::kAsync)
+            eval->ContinueEval();  // Pick up processing at the next instruction.
+        }
+      });
 }
 
 bool DwarfExprEval::ReadSigned(int byte_size, SignedType* output) {
@@ -1216,9 +1241,107 @@ DwarfExprEval::Completion DwarfExprEval::OpBregx() {
   return PushRegisterWithOffset(reg, offset);
 }
 
+// Three operands:
+//  1. An unsigned LEB128 integer that represents the offset of a debugging information entry in the
+//     current compilation unit.
+//  2. The second operand is 1-byte unsigned integer that specifies the size of the
+//     constant value.
+//  3. The sequence of bytes of the given size.
+DwarfExprEval::Completion DwarfExprEval::OpConstType(const char* op_name) {
+  UnsignedType die_offset = 0;
+  if (!ReadLEBUnsigned(&die_offset))
+    return Completion::kSync;
+
+  auto size_or = data_extractor_.Read<uint8_t>();
+  if (!size_or)
+    return ReportError("Unexpected end of DWARF expression.");
+
+  std::vector<uint8_t> data;
+  data.resize(*size_or);
+  data_extractor_.ReadBytes(*size_or, data.data());
+
+  if (is_string_output()) {
+    std::string str = op_name;
+    str += "(die_offset=";
+    str += to_hex_string(die_offset);
+    str += ", data_size=";
+    str += std::to_string(*size_or);
+    str += ", data_bytes=";
+    for (size_t i = 0; i < data.size(); i++) {
+      if (i > 0)
+        str += " ";
+      str += to_hex_string(data[i], 2);
+    }
+    str += ")";
+
+    return AppendString(str);
+  }
+
+  if (data.size() == 0 || data.size() > sizeof(DwarfStackEntry::UnsignedType))
+    return ReportError("Data size for DW_OP_const_type is not supported.");
+
+  auto base_type = unit_symbol_factory_.MakeLazyUnitRelative(static_cast<uint64_t>(die_offset))
+                       .Get()
+                       ->As<BaseType>();
+  if (!base_type)
+    return ReportError("Invalid type for DW_OP_const_type in expression.");
+
+  Push(DwarfStackEntry(RefPtrTo(base_type), data.data(), data.size()));
+  return Completion::kSync;
+}
+
+DwarfExprEval::Completion DwarfExprEval::OpConvert(const char* op_name) {
+  UnsignedType die_offset = 0;
+  if (!ReadLEBUnsigned(&die_offset))
+    return Completion::kSync;
+
+  if (is_string_output())
+    return AppendString(std::string(op_name) + "(die_offset=" + to_hex_string(die_offset) + ")");
+
+  // Stack value being converted.
+  if (stack_.empty())
+    return ReportError("Stack underflow in DW_OP_convert.");
+  DwarfStackEntry old_value = stack_.back();
+  stack_.pop_back();
+
+  // Get the type to convert to.
+  auto base_type =
+      RefPtrTo(unit_symbol_factory_.MakeLazyUnitRelative(static_cast<uint64_t>(die_offset))
+                   .Get()
+                   ->As<BaseType>());
+  if (!base_type)
+    return ReportError("Invalid type for DW_OP_convert in expression.");
+
+// Implements a static cast from the old_value.<from_getter>() to the requested base_type.
+#define IMPLEMENT_CAST(from_getter)                                                       \
+  if (DwarfStackEntry::TreatAsSigned(base_type.get())) {                                  \
+    Push(DwarfStackEntry(base_type, static_cast<SignedType>(old_value.from_getter())));   \
+  } else if (DwarfStackEntry::TreatAsUnsigned(base_type.get())) {                         \
+    Push(DwarfStackEntry(base_type, static_cast<UnsignedType>(old_value.from_getter()))); \
+  } else if (DwarfStackEntry::TreatAsFloat(base_type.get())) {                            \
+    Push(DwarfStackEntry(base_type, static_cast<float>(old_value.from_getter())));        \
+  } else if (DwarfStackEntry::TreatAsDouble(base_type.get())) {                           \
+    Push(DwarfStackEntry(base_type, static_cast<double>(old_value.from_getter())));       \
+  }
+
+  if (old_value.TreatAsSigned()) {
+    IMPLEMENT_CAST(signed_value);
+  } else if (old_value.TreatAsUnsigned()) {
+    IMPLEMENT_CAST(unsigned_value);
+  } else if (old_value.TreatAsFloat()) {
+    IMPLEMENT_CAST(float_value);
+  } else if (old_value.TreatAsDouble()) {
+    IMPLEMENT_CAST(double_value);
+  }
+
+#undef IMPLEMENT_CAST
+
+  return Completion::kSync;
+}
+
 // Pops the stack and pushes an given-sized value from memory at that location.
-DwarfExprEval::Completion DwarfExprEval::OpDeref(uint32_t byte_size, const char* op_name,
-                                                 bool string_include_size) {
+DwarfExprEval::Completion DwarfExprEval::OpDeref(uint32_t byte_size, fxl::RefPtr<BaseType> type,
+                                                 const char* op_name, bool string_include_size) {
   if (is_string_output()) {
     if (string_include_size)
       return AppendString(std::string(op_name) + "(" + std::to_string(byte_size) + ")");
@@ -1238,14 +1361,11 @@ DwarfExprEval::Completion DwarfExprEval::OpDeref(uint32_t byte_size, const char*
   if (!addr.TreatAsUnsigned())
     return ReportError("DW_OP_deref trying to dereference a non-unsigned value.");
 
-  ReadMemory(addr.unsigned_value(), byte_size, [](DwarfExprEval* eval, std::vector<uint8_t> data) {
-    // Success. This assumes little-endian and copies starting from the low bytes. The data will
-    // have already been validated to be the correct size so we know it will fit in a UnsignedType.
-    FX_DCHECK(data.size() <= sizeof(UnsignedType));
-    UnsignedType to_push = 0;
-    memcpy(&to_push, data.data(), data.size());
-    eval->Push(DwarfStackEntry(to_push));
-  });
+  ReadMemory(addr.unsigned_value(), byte_size,
+             [type](DwarfExprEval* eval, std::vector<uint8_t> data) {
+               FX_DCHECK(data.size() <= sizeof(UnsignedType));
+               eval->Push(DwarfStackEntry(type, data.data(), data.size()));
+             });
   return Completion::kAsync;
 }
 
@@ -1256,7 +1376,34 @@ DwarfExprEval::Completion DwarfExprEval::OpDerefSize() {
     return Completion::kSync;
 
   // The generic deref path can handle the rest.
-  return OpDeref(static_cast<uint32_t>(byte_size), "DW_OP_deref_size", true);
+  return OpDeref(static_cast<uint32_t>(byte_size), nullptr, "DW_OP_deref_size", true);
+}
+
+DwarfExprEval::Completion DwarfExprEval::OpDerefType(const char* op_name) {
+  // Like OP_deref_size except a ULEB DIE offset of the type is the 2nd parameter.
+  UnsignedType byte_size = 0;
+  if (!ReadUnsigned(1, &byte_size))
+    return Completion::kSync;
+
+  UnsignedType die_offset;
+  if (!ReadLEBUnsigned(&die_offset))
+    return Completion::kSync;
+
+  if (is_string_output()) {
+    return AppendString(std::string(op_name) +
+                        "(size=" + std::to_string(static_cast<int>(byte_size)) +
+                        ", die_offset=" + to_hex_string(die_offset) + ")");
+  }
+
+  // Extract the symbol for the type.
+  auto base_type = unit_symbol_factory_.MakeLazyUnitRelative(static_cast<uint64_t>(die_offset))
+                       .Get()
+                       ->As<BaseType>();
+  if (!base_type)
+    return ReportError("Invalid type for DW_OP_deref_type in expression.");
+
+  // The generic deref path can handle the rest.
+  return OpDeref(static_cast<uint32_t>(byte_size), RefPtrTo(base_type), "DW_OP_deref_type", true);
 }
 
 DwarfExprEval::Completion DwarfExprEval::OpOver() {
@@ -1441,6 +1588,83 @@ DwarfExprEval::Completion DwarfExprEval::OpPushLEBUnsigned() {
   }
 
   Push(DwarfStackEntry(value));
+  return Completion::kSync;
+}
+
+// ULEB register #, ULEB DIE offset of its type.
+DwarfExprEval::Completion DwarfExprEval::OpRegvalType(const char* op_name) {
+  UnsignedType reg_num = 0;
+  if (!ReadLEBUnsigned(&reg_num))
+    return Completion::kSync;
+  int dwarf_reg_int = static_cast<int>(reg_num);
+
+  UnsignedType die_offset;
+  if (!ReadLEBUnsigned(&die_offset))
+    return Completion::kSync;
+
+  if (is_string_output()) {
+    return AppendString(std::string(op_name) + "(reg=" + std::to_string(dwarf_reg_int) +
+                            ", die_offset=" + to_hex_string(die_offset) + ")",
+                        std::string(op_name) + "(" + GetRegisterName(dwarf_reg_int) +
+                            ", die_offset=" + to_hex_string(die_offset) + ")");
+  }
+
+  // Extract the symbol for the type.
+  auto base_type = unit_symbol_factory_.MakeLazyUnitRelative(static_cast<uint64_t>(die_offset))
+                       .Get()
+                       ->As<BaseType>();
+  if (!base_type)
+    return ReportError("Invalid type for DW_OP_regval_type in expression.");
+  fxl::RefPtr<BaseType> base_type_ref = RefPtrTo(base_type);
+
+  return GetRegisterValue(dwarf_reg_int, [base_type_ref](DwarfExprEval* eval, Completion completion,
+                                                         std::optional<UnsignedType> value,
+                                                         const debug::RegisterInfo* info) {
+    if (value) {
+      // Success.
+      UnsignedType value_data = *value;
+      eval->Push(DwarfStackEntry(std::move(base_type_ref), &value_data, sizeof(value_data)));
+
+      // Reading register data means the result is not constant.
+      eval->result_is_constant_ = false;
+      eval->current_register_id_ = info->id;
+
+      if (completion == Completion::kAsync)
+        eval->ContinueEval();  // Pick up processing at the next instruction.
+    }
+  });
+}
+
+DwarfExprEval::Completion DwarfExprEval::OpReinterpret(const char* op_name) {
+  UnsignedType die_offset = 0;
+  if (!ReadLEBUnsigned(&die_offset))
+    return Completion::kSync;
+
+  if (is_string_output())
+    return AppendString(std::string(op_name) + "(die_offset=" + to_hex_string(die_offset) + ")");
+
+  // Stack value being converted.
+  if (stack_.empty())
+    return ReportError("Stack underflow in DW_OP_convert.");
+  DwarfStackEntry old_value = stack_.back();
+  stack_.pop_back();
+
+  // Get the type to convert to.
+  auto base_type =
+      RefPtrTo(unit_symbol_factory_.MakeLazyUnitRelative(static_cast<uint64_t>(die_offset))
+                   .Get()
+                   ->As<BaseType>());
+  if (!base_type)
+    return ReportError("Invalid type for DW_OP_convert in expression.");
+
+  // Implements a bit cast from the old_value.<from_getter>() to the requested base_type.
+  // This isn't the same as a C++ reinterpret cast because it can convert from e.g. int64 to float.
+  //
+  // This copies all of the data bytes out of the source and just changes the types because our
+  // signed values are stored sign-extended regardless of the requested data type and we want all
+  // of the bits.
+  Push(DwarfStackEntry(base_type, old_value.data(), old_value.MaxByteSize()));
+
   return Completion::kSync;
 }
 

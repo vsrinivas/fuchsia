@@ -12,6 +12,7 @@
 
 #include "lib/fit/function.h"
 #include "src/developer/debug/shared/register_id.h"
+#include "src/developer/debug/shared/register_info.h"
 #include "src/developer/debug/zxdb/common/data_extractor.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/common/err_or.h"
@@ -154,6 +155,25 @@ class DwarfExprEval {
   // Evaluates a single operation.
   Completion EvalOneOp();
 
+  // Retrieves a register's contents and reports it to the callback (the stack and other object
+  // state is not changed). If the value is available synchronously, the callback will be called
+  // reentrantly and this function will return "kSync".
+  //
+  // On failure, an error will be reported via ReportError, and the callback will be issued with
+  // (X, Y, nullopt, null).
+  //
+  // The callback is called with a sync/async completion parameter depending on the context in which
+  // it was called. If evaluation should be continued and completion is kAsync, the callback should
+  // call ContinueEval().
+  //
+  // The DwarfExprEval parameter to the callback will always be non-null. If the object is destroyed
+  // during an async request, the callback will be dropped.
+  Completion GetRegisterValue(
+      int dwarf_register_number,
+      fit::function<void(DwarfExprEval* eval, Completion completion,
+                         std::optional<UnsignedType> value, const debug::RegisterInfo* info)>
+          cb);
+
   // Adds a register's contents + an offset to the stack. Use 0 for the offset to get the raw
   // register value.
   Completion PushRegisterWithOffset(int dwarf_register_number, int128_t offset);
@@ -211,8 +231,12 @@ class DwarfExprEval {
   Completion OpBra();
   Completion OpBreg(uint8_t op);
   Completion OpCFA();
-  Completion OpDeref(uint32_t byte_size, const char* op_name, bool string_include_size);
+  Completion OpConstType(const char* op_name);
+  Completion OpConvert(const char* op_name);
+  Completion OpDeref(uint32_t byte_size, fxl::RefPtr<BaseType> type, const char* op_name,
+                     bool string_include_size);
   Completion OpDerefSize();
+  Completion OpDerefType(const char* op_name);
   Completion OpDrop();
   Completion OpDup();
   Completion OpEntryValue(const char* op_name);
@@ -229,6 +253,8 @@ class DwarfExprEval {
   Completion OpPushUnsigned(int byte_count, const char* op_name);
   Completion OpPushLEBSigned();
   Completion OpPushLEBUnsigned();
+  Completion OpRegvalType(const char* op_name);
+  Completion OpReinterpret(const char* op_name);
   Completion OpRot();
   Completion OpSkip();
   Completion OpStackValue();

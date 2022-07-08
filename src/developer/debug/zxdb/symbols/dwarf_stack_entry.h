@@ -39,6 +39,11 @@ class DwarfStackEntry {
 
   explicit DwarfStackEntry(UnsignedType generic_value);
 
+  // This doesn't do any validation of the data, it just copies data_bytes (up to the maximum size
+  // this class supports) and hopes it's the correct type. This is used for deserializing from
+  // DWARF where the data is coming in as raw bytes.
+  DwarfStackEntry(fxl::RefPtr<BaseType> type, const void* data, size_t data_size);
+
   // The sign of the BaseType in the first argument must match the sign of the second argument.
   DwarfStackEntry(fxl::RefPtr<BaseType> type, SignedType value);
   DwarfStackEntry(fxl::RefPtr<BaseType> type, UnsignedType value);  // type can be null for generic.
@@ -57,10 +62,15 @@ class DwarfStackEntry {
   // Returns the size in bytes of this value.
   size_t GetByteSize() const;
 
-  UnsignedType unsigned_value() const { return unsigned_value_; }
-  SignedType signed_value() const { return signed_value_; }
-  float float_value() const { return float_value_; }
-  double double_value() const { return double_value_; }
+  UnsignedType unsigned_value() const { return data_.unsigned_value; }
+  SignedType signed_value() const { return data_.signed_value; }
+  float float_value() const { return data_.float_value; }
+  double double_value() const { return data_.double_value; }
+
+  // Some operations need to work on the contained data as an abstract bag of bits. These accessors
+  // provide access to it.
+  const void* data() const { return &data_; }
+  constexpr size_t MaxByteSize() { return sizeof(data_); }
 
   // These functions also accept null BaseType pointers which are counted as generic.
   static bool TreatAsSigned(const BaseType* type);
@@ -100,11 +110,11 @@ class DwarfStackEntry {
   // NOTE: Some users expect this to be a union! If you know the byte size of the result, some
   // users extract the output as an unsigned and memcpy it to the result to avoid type-checking.
   union {
-    UnsignedType unsigned_value_;  // Address, boolean, unsigned, unsigned char, UTF.
-    SignedType signed_value_;      // Signed, signed char.
-    float float_value_;            // Float, 32-bit.
-    double double_value_;          // Float, 64-bit.
-  };
+    UnsignedType unsigned_value;  // Address, boolean, unsigned, unsigned char, UTF.
+    SignedType signed_value;      // Signed, signed char.
+    float float_value;            // Float, 32-bit.
+    double double_value;          // Float, 64-bit.
+  } data_;
 };
 
 // For test output.
