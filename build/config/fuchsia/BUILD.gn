@@ -147,12 +147,20 @@ config("no_cpp_standard_library") {
 }
 
 config("static_cpp_standard_library") {
-  ldflags = [ "-static-libstdc++" ]
+  ldflags = [
+    # Request static linking for standard C++ library. Despite the name, this
+    # option applies to both libstdc++ and libc++, whichever is used by Clang.
+    "-static-libstdc++",
 
-  # -static-libstdc++ is only supported by the compiler drivers (clang/clang++), whereas these
-  # link-args get passed straight to lld by rustc
-  rustflags =
-      [ "-Clink-args=--push-state -Bstatic -lc++ -Bdynamic -lm --pop-state" ]
+    # Request static linking for unwinder. Despite the name, this option
+    # applies to both libgcc and libunwind, whichever is used by Clang.
+    "-static-libgcc",
+  ]
+
+  # -static-libstdc++ and -static-libgcc options are handled by the C++
+  # compiler driver (that is clang), whereas these link-args get passed
+  # straight to lld by rustc and need to be expanded manually.
+  rustflags = [ "-Clink-args=--push-state -Bstatic -lc++ -Bdynamic -lm --pop-state -l:libunwind.a" ]
 }
 
 config("dynamic_rust_standard_library") {
