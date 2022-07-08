@@ -250,6 +250,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
             package_resolver.clone(),
             pkg_cache,
             data_proxy,
+            &*system_cache_list,
         )
         .await
         .map_err(|e| {

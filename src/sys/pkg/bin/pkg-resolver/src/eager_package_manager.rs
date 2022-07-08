@@ -22,6 +22,7 @@ use {
     },
     p256::ecdsa::{signature::Signature, DerSignature},
     std::{collections::BTreeMap, convert::TryInto, sync::Arc},
+    system_image::CachePackages,
 };
 
 const EAGER_PACKAGE_PERSISTENT_FIDL_NAME: &str = "eager_packages.pf";
@@ -42,7 +43,7 @@ pub struct EagerPackageManager<T: Resolver> {
     data_proxy: Option<fio::DirectoryProxy>,
 }
 
-async fn verify_cup_signature(
+fn verify_cup_signature(
     cup_handler: &StandardCupv2Handler,
     cup: &CupData,
 ) -> Result<(), ParseCupResponseError> {
@@ -63,10 +64,11 @@ impl<T: Resolver> EagerPackageManager<T> {
         package_resolver: T,
         pkg_cache: cache::Client,
         data_proxy: Option<fio::DirectoryProxy>,
+        cache_packages: &CachePackages,
     ) -> Result<Self, Error> {
         let config =
             EagerPackageConfigs::from_namespace().await.context("loading eager package config")?;
-        Ok(Self::from_config(config, package_resolver, pkg_cache, data_proxy).await)
+        Ok(Self::from_config(config, package_resolver, pkg_cache, data_proxy, cache_packages).await)
     }
 
     async fn from_config(
@@ -74,6 +76,7 @@ impl<T: Resolver> EagerPackageManager<T> {
         package_resolver: T,
         pkg_cache: cache::Client,
         data_proxy: Option<fio::DirectoryProxy>,
+        cache_packages: &CachePackages,
     ) -> Self {
         let mut packages = config
             .packages
@@ -84,11 +87,17 @@ impl<T: Resolver> EagerPackageManager<T> {
             .collect();
 
         if let Some(ref data_proxy) = data_proxy {
-            if let Err(e) =
-                Self::load_persistent_eager_packages(&mut packages, pkg_cache, &data_proxy).await
-            {
+            if let Err(e) = Self::load_persistent_eager_packages(&mut packages, &data_proxy).await {
                 fx_log_err!("failed to load persistent eager packages: {:#}", anyhow!(e));
             }
+        }
+
+        for (url, package) in packages.iter_mut() {
+            Self::get_package_directory_from_cache(url, package, &pkg_cache, cache_packages)
+                .await
+                .unwrap_or_else(|e| {
+                    fx_log_err!("failed to resolve package directory: {:#}", anyhow!(e))
+                });
         }
 
         Self { packages, package_resolver, data_proxy }
@@ -96,7 +105,6 @@ impl<T: Resolver> EagerPackageManager<T> {
 
     async fn load_persistent_eager_packages(
         packages: &mut BTreeMap<UnpinnedAbsolutePackageUrl, EagerPackage>,
-        pkg_cache: cache::Client,
         data_proxy: &fio::DirectoryProxy,
     ) -> Result<(), Error> {
         let file_proxy = match fuchsia_fs::directory::open_file(
@@ -121,52 +129,65 @@ impl<T: Resolver> EagerPackageManager<T> {
             .packages
             .ok_or_else(|| anyhow!("PersistentEagerPackages does not contain `packages` field"))?
         {
-            async {
+            (|| {
                 let url = url.ok_or_else(|| {
                     anyhow!("PersistentEagerPackage does not contain `url` field")
                 })?;
                 let cup: CupData = cup
                     .ok_or_else(|| anyhow!("PersistentEagerPackage does not contain `cup` field"))?
                     .try_into()?;
-                let response = parse_omaha_response_from_cup(&cup)
-                    .with_context(|| format!("while parsing omaha response {:?}", cup.response))?;
-                let pinned_url = response
-                    .apps
-                    .iter()
-                    .find_map(|app| {
-                        app.update_check
-                            .as_ref()
-                            .and_then(|uc| uc.get_all_full_urls().find(|u| u.starts_with(&url.url)))
-                    })
-                    .ok_or_else(|| {
-                        anyhow!("could not find pinned url in CUP omaha response for {}", url.url)
-                    })?;
-                let pinned_url: PinnedAbsolutePackageUrl =
-                    pinned_url.parse().with_context(|| format!("while parsing {}", url.url))?;
-                let unpinned_url = pinned_url.as_unpinned();
                 let package = packages
-                    .get_mut(&unpinned_url)
+                    .get_mut(&url.url.parse().with_context(|| format!("parsing '{}'", url.url))?)
                     .ok_or_else(|| anyhow!("unknown pkg url: {}", url.url))?;
 
                 let cup_handler = StandardCupv2Handler::new(&package.public_keys);
 
                 verify_cup_signature(&cup_handler, &cup)
-                    .await
                     .map_err(|e| anyhow!("could not verify cup signature {:?}", e))?;
 
                 package.cup = Some(cup);
-
-                let pkg_dir =
-                    Self::resolve_pinned_from_cache(&pkg_cache, pinned_url).await.with_context(
-                        || format!("while resolving eager package {} from cache", url.url),
-                    )?;
-                package.package_directory = Some(pkg_dir);
                 Ok(())
-            }
-            .await
+            })()
             .unwrap_or_else(|e: Error| {
                 fx_log_err!("failed to load persistent eager package: {:#}", anyhow!(e))
             })
+        }
+        Ok(())
+    }
+
+    async fn get_package_directory_from_cache(
+        url: &UnpinnedAbsolutePackageUrl,
+        package: &mut EagerPackage,
+        pkg_cache: &cache::Client,
+        cache_packages: &CachePackages,
+    ) -> Result<(), Error> {
+        let pinned_url = if let Some(cup) = &package.cup {
+            let response = parse_omaha_response_from_cup(&cup)
+                .with_context(|| format!("while parsing omaha response {:?}", cup.response))?;
+            let pinned_url = response
+                .apps
+                .iter()
+                .find_map(|app| {
+                    app.update_check.as_ref().and_then(|uc| {
+                        uc.get_all_full_urls().find(|u| u.starts_with(&url.to_string()))
+                    })
+                })
+                .ok_or_else(|| {
+                    anyhow!("could not find pinned url in CUP omaha response for {}", url)
+                })?;
+
+            Some(pinned_url.parse().with_context(|| format!("while parsing {}", url))?)
+        } else {
+            // The config includes an eager package, but no CUP is persisted, try to load it
+            // from cache packages.
+            cache_packages.contents().find(|pinned_url| pinned_url.as_unpinned() == url).cloned()
+        };
+
+        if let Some(pinned_url) = pinned_url {
+            let pkg_dir = Self::resolve_pinned_from_cache(&pkg_cache, pinned_url)
+                .await
+                .with_context(|| format!("while resolving eager package {} from cache", url))?;
+            package.package_directory = Some(pkg_dir);
         }
         Ok(())
     }
@@ -284,7 +305,7 @@ impl<T: Resolver> EagerPackageManager<T> {
         package.package_directory = Some(pkg_dir);
 
         let cup_handler = StandardCupv2Handler::new(&package.public_keys);
-        verify_cup_signature(&cup_handler, &cup_data).await?;
+        verify_cup_signature(&cup_handler, &cup_data)?;
 
         package.cup = Some(cup_data);
 
@@ -707,8 +728,14 @@ mod tests {
         let config = EagerPackageConfigs { packages: Vec::new() };
         let package_resolver = get_test_package_resolver();
         let (pkg_cache, _) = get_mock_pkg_cache();
-        let manager =
-            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
+        let manager = EagerPackageManager::from_config(
+            config,
+            package_resolver,
+            pkg_cache,
+            None,
+            &CachePackages::from_entries(vec![]),
+        )
+        .await;
 
         assert!(manager.packages.is_empty());
 
@@ -784,7 +811,13 @@ mod tests {
         )
         .await;
         let (manager, ()) = future::join(
-            EagerPackageManager::from_config(config, package_resolver, pkg_cache, Some(data_proxy)),
+            EagerPackageManager::from_config(
+                config,
+                package_resolver,
+                pkg_cache,
+                Some(data_proxy),
+                &CachePackages::from_entries(vec![]),
+            ),
             handle_pkg_cache(pkg_cache_stream),
         )
         .await;
@@ -831,7 +864,13 @@ mod tests {
         let cup: CupData = make_cup_data(&get_default_cup_response());
         write_persistent_fidl(&data_proxy, [(url.clone(), cup.clone())]).await;
         let (manager, ()) = future::join(
-            EagerPackageManager::from_config(config, package_resolver, pkg_cache, Some(data_proxy)),
+            EagerPackageManager::from_config(
+                config,
+                package_resolver,
+                pkg_cache,
+                Some(data_proxy),
+                &CachePackages::from_entries(vec![]),
+            ),
             handle_pkg_cache(pkg_cache_stream),
         )
         .await;
@@ -840,6 +879,72 @@ mod tests {
         // VerificationError(SpecifiedPublicKeyIdMissing)".
         assert!(manager.get_package_dir(&url.clone().into()).is_err());
         assert!(manager.packages[&url].package_directory.is_none());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_no_data_fallback_to_cache() {
+        let url = UnpinnedAbsolutePackageUrl::parse(TEST_URL).unwrap();
+        let config = EagerPackageConfigs {
+            packages: vec![EagerPackageConfig {
+                url: url.clone(),
+                executable: true,
+                public_keys: make_default_public_keys_for_test(),
+            }],
+        };
+        let package_resolver = get_test_package_resolver();
+        let (pkg_cache, pkg_cache_stream) = get_mock_pkg_cache();
+
+        let (manager, ()) = future::join(
+            EagerPackageManager::from_config(
+                config,
+                package_resolver,
+                pkg_cache,
+                None,
+                &CachePackages::from_entries(vec![TEST_PINNED_URL.parse().unwrap()]),
+            ),
+            handle_pkg_cache(pkg_cache_stream),
+        )
+        .await;
+        assert!(manager.packages[&url].package_directory.is_some());
+        assert!(manager.get_package_dir(&url.clone().into()).unwrap().is_some());
+        assert_eq!(manager.packages[&url].cup, None);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_empty_persistent_fidl_fallback_to_cache() {
+        let url = UnpinnedAbsolutePackageUrl::parse(TEST_URL).unwrap();
+        let config = EagerPackageConfigs {
+            packages: vec![EagerPackageConfig {
+                url: url.clone(),
+                executable: true,
+                public_keys: make_default_public_keys_for_test(),
+            }],
+        };
+        let package_resolver = get_test_package_resolver();
+        let (pkg_cache, pkg_cache_stream) = get_mock_pkg_cache();
+
+        let data_dir = tempfile::tempdir().unwrap();
+        let data_proxy = fuchsia_fs::open_directory_in_namespace(
+            data_dir.path().to_str().unwrap(),
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        )
+        .unwrap();
+        write_persistent_fidl(&data_proxy, [] as [(String, CupData); 0]).await;
+
+        let (manager, ()) = future::join(
+            EagerPackageManager::from_config(
+                config,
+                package_resolver,
+                pkg_cache,
+                Some(data_proxy),
+                &CachePackages::from_entries(vec![TEST_PINNED_URL.parse().unwrap()]),
+            ),
+            handle_pkg_cache(pkg_cache_stream),
+        )
+        .await;
+        assert!(manager.packages[&url].package_directory.is_some());
+        assert!(manager.get_package_dir(&url.clone().into()).unwrap().is_some());
+        assert_eq!(manager.packages[&url].cup, None);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -866,6 +971,7 @@ mod tests {
             package_resolver.clone(),
             pkg_cache.clone(),
             Some(Clone::clone(&data_proxy)),
+            &CachePackages::from_entries(vec![]),
         )
         .await;
         let cup: CupData = make_cup_data(&get_default_cup_response());
@@ -878,7 +984,13 @@ mod tests {
 
         // create a new manager which should load the persisted cup data.
         let (manager2, ()) = future::join(
-            EagerPackageManager::from_config(config, package_resolver, pkg_cache, Some(data_proxy)),
+            EagerPackageManager::from_config(
+                config,
+                package_resolver,
+                pkg_cache,
+                Some(data_proxy),
+                &CachePackages::from_entries(vec![]),
+            ),
             handle_pkg_cache(pkg_cache_stream),
         )
         .await;
@@ -899,8 +1011,14 @@ mod tests {
         let (package_resolver, _test_dir) = get_test_package_resolver_with_hash(TEST_HASH);
         let (pkg_cache, _) = get_mock_pkg_cache();
 
-        let mut manager =
-            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
+        let mut manager = EagerPackageManager::from_config(
+            config,
+            package_resolver,
+            pkg_cache,
+            None,
+            &CachePackages::from_entries(vec![]),
+        )
+        .await;
         let cup: CupData = make_cup_data(&get_default_cup_response());
         assert_matches!(
             manager.cup_write(&fpkg::PackageUrl { url: TEST_PINNED_URL.into() }, cup.into()).await,
@@ -923,8 +1041,14 @@ mod tests {
         let (package_resolver, _test_dir) = get_test_package_resolver_with_hash(TEST_HASH);
         let (pkg_cache, _) = get_mock_pkg_cache();
 
-        let mut manager =
-            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
+        let mut manager = EagerPackageManager::from_config(
+            config,
+            package_resolver,
+            pkg_cache,
+            None,
+            &CachePackages::from_entries(vec![]),
+        )
+        .await;
         let cup: CupData = make_cup_data(&get_default_cup_response());
         assert_matches!(
             manager
@@ -949,8 +1073,14 @@ mod tests {
         let package_resolver = get_test_package_resolver();
         let (pkg_cache, _) = get_mock_pkg_cache();
 
-        let mut manager =
-            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
+        let mut manager = EagerPackageManager::from_config(
+            config,
+            package_resolver,
+            pkg_cache,
+            None,
+            &CachePackages::from_entries(vec![]),
+        )
+        .await;
         let cup: CupData = make_cup_data(&get_default_cup_response());
         assert_matches!(
             manager.cup_write(&fpkg::PackageUrl { url: TEST_PINNED_URL.into() }, cup.into()).await,
@@ -973,8 +1103,14 @@ mod tests {
         let package_resolver = get_test_package_resolver();
         let (pkg_cache, _) = get_mock_pkg_cache();
 
-        let mut manager =
-            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
+        let mut manager = EagerPackageManager::from_config(
+            config,
+            package_resolver,
+            pkg_cache,
+            None,
+            &CachePackages::from_entries(vec![]),
+        )
+        .await;
         let cup: CupData = make_cup_data(&get_default_cup_response());
         manager.packages.get_mut(&url).unwrap().cup = Some(cup);
         let (version, channel) =
@@ -996,8 +1132,14 @@ mod tests {
         let package_resolver = get_test_package_resolver();
         let (pkg_cache, _) = get_mock_pkg_cache();
 
-        let manager =
-            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
+        let manager = EagerPackageManager::from_config(
+            config,
+            package_resolver,
+            pkg_cache,
+            None,
+            &CachePackages::from_entries(vec![]),
+        )
+        .await;
         assert_matches!(
             manager.cup_get_info(&fpkg::PackageUrl { url: TEST_URL.into() }).await,
             Err(CupGetInfoError::CupDataNotAvailable)
@@ -1017,8 +1159,14 @@ mod tests {
         let package_resolver = get_test_package_resolver();
         let (pkg_cache, _) = get_mock_pkg_cache();
 
-        let mut manager =
-            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
+        let mut manager = EagerPackageManager::from_config(
+            config,
+            package_resolver,
+            pkg_cache,
+            None,
+            &CachePackages::from_entries(vec![]),
+        )
+        .await;
         let cup: CupData = make_cup_data(&get_default_cup_response());
         manager.packages.get_mut(&url).unwrap().cup = Some(cup);
         assert_matches!(
@@ -1044,8 +1192,14 @@ mod tests {
         let package_resolver = get_test_package_resolver();
         let (pkg_cache, _) = get_mock_pkg_cache();
 
-        let mut manager =
-            EagerPackageManager::from_config(config, package_resolver, pkg_cache, None).await;
+        let mut manager = EagerPackageManager::from_config(
+            config,
+            package_resolver,
+            pkg_cache,
+            None,
+            &CachePackages::from_entries(vec![]),
+        )
+        .await;
         let cup: CupData = make_cup_data(&get_default_cup_response());
         manager.packages.get_mut(&url).unwrap().cup = Some(cup);
         assert_matches!(
