@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "inspect.h"
+#include "src/devices/bin/driver_manager/inspect.h"
 
 #include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
 
-#include "multiple_device_test.h"
+#include "src/devices/bin/driver_manager/tests/multiple_device_test.h"
 #include "src/lib/storage/vfs/cpp/dir_test_util.h"
 
 class InspectManagerTestCase : public zxtest::Test {

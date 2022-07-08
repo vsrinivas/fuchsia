@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_MULTIPLE_DEVICE_TEST_H_
-#define SRC_DEVICES_BIN_DRIVER_MANAGER_MULTIPLE_DEVICE_TEST_H_
+#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_TESTS_MULTIPLE_DEVICE_TEST_H_
+#define SRC_DEVICES_BIN_DRIVER_MANAGER_TESTS_MULTIPLE_DEVICE_TEST_H_
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <fidl/fuchsia.fshost/cpp/wire.h>
@@ -14,7 +14,7 @@
 #include <mock-boot-arguments/server.h>
 #include <zxtest/zxtest.h>
 
-#include "coordinator_test_utils.h"
+#include "src/devices/bin/driver_manager/tests/coordinator_test_utils.h"
 #include "src/devices/lib/log/log.h"
 
 namespace fdm = fuchsia_device_manager;
@@ -267,4 +267,4 @@ class MultipleDeviceTestCase : public zxtest::Test {
   fbl::Vector<DeviceState> devices_;
 };
 
-#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_MULTIPLE_DEVICE_TEST_H_
+#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_TESTS_MULTIPLE_DEVICE_TEST_H_

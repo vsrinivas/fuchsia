@@ -9,7 +9,7 @@
 
 #include <zxtest/zxtest.h>
 
-#include "multiple_device_test.h"
+#include "src/devices/bin/driver_manager/tests/multiple_device_test.h"
 
 class DriverDevelopmentTest : public MultipleDeviceTestCase {};
 

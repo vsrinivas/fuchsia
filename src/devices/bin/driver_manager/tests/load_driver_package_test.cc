@@ -11,8 +11,8 @@
 
 #include <zxtest/zxtest.h>
 
-#include "multiple_device_test.h"
-#include "package_resolver.h"
+#include "src/devices/bin/driver_manager/package_resolver.h"
+#include "src/devices/bin/driver_manager/tests/multiple_device_test.h"
 
 class FakePackageResolver : public internal::PackageResolverInterface {
  public:

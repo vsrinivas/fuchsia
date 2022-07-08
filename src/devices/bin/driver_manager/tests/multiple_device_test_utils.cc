@@ -9,7 +9,7 @@
 #include <zircon/fidl.h>
 #include <zircon/types.h>
 
-#include "multiple_device_test.h"
+#include "src/devices/bin/driver_manager/tests/multiple_device_test.h"
 
 namespace {
 

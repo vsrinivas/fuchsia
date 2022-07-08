@@ -7,10 +7,10 @@
 
 #include <zxtest/zxtest.h>
 
-#include "coordinator.h"
-#include "coordinator_test_utils.h"
-#include "driver.h"
-#include "multiple_device_test.h"
+#include "src/devices/bin/driver_manager/coordinator.h"
+#include "src/devices/bin/driver_manager/driver.h"
+#include "src/devices/bin/driver_manager/tests/coordinator_test_utils.h"
+#include "src/devices/bin/driver_manager/tests/multiple_device_test.h"
 
 class AutobindTest : public MultipleDeviceTestCase {
   void SetUp() {

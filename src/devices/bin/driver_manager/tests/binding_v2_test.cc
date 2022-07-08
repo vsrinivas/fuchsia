@@ -6,8 +6,8 @@
 
 #include <zxtest/zxtest.h>
 
-#include "binding_internal.h"
-#include "coordinator.h"
+#include "src/devices/bin/driver_manager/binding_internal.h"
+#include "src/devices/bin/driver_manager/coordinator.h"
 #include "src/devices/lib/bind/ffi_bindings.h"
 
 // Tests for matching device properties to the new bytecode.

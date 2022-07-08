@@ -10,8 +10,8 @@
 
 #include <string>
 
-#include "component_lifecycle.h"
-#include "coordinator_test_mock_power_manager.h"
+#include "src/devices/bin/driver_manager/component_lifecycle.h"
+#include "src/devices/bin/driver_manager/tests/coordinator_test_mock_power_manager.h"
 #include "src/devices/lib/log/log.h"
 
 TEST_F(MultipleDeviceTestCase, UnbindThenSuspend) {

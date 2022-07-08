@@ -18,7 +18,7 @@
 
 #include <list>
 
-#include "src/devices/bin/driver_manager/fake_driver_index.h"
+#include "src/devices/bin/driver_manager/tests/fake_driver_index.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace fdata = fuchsia_data;

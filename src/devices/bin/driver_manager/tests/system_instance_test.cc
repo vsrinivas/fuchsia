@@ -17,8 +17,8 @@
 
 #include "lib/fidl/llcpp/connect_service.h"
 #include "src/devices/bin/driver_manager/coordinator.h"
-#include "src/devices/bin/driver_manager/coordinator_test_utils.h"
 #include "src/devices/bin/driver_manager/driver_host.h"
+#include "src/devices/bin/driver_manager/tests/coordinator_test_utils.h"
 
 namespace fkernel = fuchsia_kernel;
 

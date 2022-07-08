@@ -20,11 +20,11 @@
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 
-#include "coordinator_test_utils.h"
-#include "devfs.h"
-#include "driver_host.h"
-#include "fdio.h"
-#include "src/devices/bin/driver_manager/fake_driver_index.h"
+#include "src/devices/bin/driver_manager/devfs.h"
+#include "src/devices/bin/driver_manager/driver_host.h"
+#include "src/devices/bin/driver_manager/fdio.h"
+#include "src/devices/bin/driver_manager/tests/coordinator_test_utils.h"
+#include "src/devices/bin/driver_manager/tests/fake_driver_index.h"
 
 constexpr char kDriverPath[] = "/pkg/driver/mock-device.so";
 

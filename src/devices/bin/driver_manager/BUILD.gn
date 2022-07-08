@@ -208,25 +208,25 @@ executable("driver_manager") {
 
 test("driver_manager_test") {
   sources = [
-    "autobind_tests.cc",
-    "binding_v2_test.cc",
-    "builtin_devices_test.cc",
-    "composite_device_tests.cc",
-    "coordinator_test_utils.cc",
-    "devfs_test.cc",
-    "device_tests.cc",
-    "driver_development_test.cc",
-    "driver_loader_test.cc",
-    "init_tests.cc",
-    "inspect_test.cc",
-    "load_driver_package_test.cc",
-    "misc_tests.cc",
-    "multiple_device_test.cc",
-    "multiple_device_test_utils.cc",
-    "resume_tests.cc",
-    "suspend_tests.cc",
-    "system_instance_test.cc",
-    "unbind_tests.cc",
+    "tests/autobind_tests.cc",
+    "tests/binding_v2_test.cc",
+    "tests/builtin_devices_test.cc",
+    "tests/composite_device_tests.cc",
+    "tests/coordinator_test_utils.cc",
+    "tests/devfs_test.cc",
+    "tests/device_tests.cc",
+    "tests/driver_development_test.cc",
+    "tests/driver_loader_test.cc",
+    "tests/init_tests.cc",
+    "tests/inspect_test.cc",
+    "tests/load_driver_package_test.cc",
+    "tests/misc_tests.cc",
+    "tests/multiple_device_test.cc",
+    "tests/multiple_device_test_utils.cc",
+    "tests/resume_tests.cc",
+    "tests/suspend_tests.cc",
+    "tests/system_instance_test.cc",
+    "tests/unbind_tests.cc",
     "v1/task_test.cc",
   ]
 
@@ -265,7 +265,7 @@ fuchsia_unittest_component("driver-manager-test") {
 
 # This is a separate test binary because this test fixture uses gtest, not zxtest
 test("driver_host_loader_service_test") {
-  sources = [ "driver_host_loader_service_test.cc" ]
+  sources = [ "tests/driver_host_loader_service_test.cc" ]
   deps = [
     ":lib",
     "//src/lib/loader_service:loader_service_test_fixture",
@@ -279,7 +279,7 @@ fuchsia_unittest_component("driver-host-loader-service-test") {
 
 executable("manifest_parser_test") {
   testonly = true
-  sources = [ "manifest_parser_test.cc" ]
+  sources = [ "tests/manifest_parser_test.cc" ]
 
   deps = [
     ":manifest_parser",

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_COORDINATOR_TEST_UTILS_H_
-#define SRC_DEVICES_BIN_DRIVER_MANAGER_COORDINATOR_TEST_UTILS_H_
+#ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_TESTS_COORDINATOR_TEST_UTILS_H_
+#define SRC_DEVICES_BIN_DRIVER_MANAGER_TESTS_COORDINATOR_TEST_UTILS_H_
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
 #include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
@@ -26,10 +26,10 @@
 #include <fbl/algorithm.h>
 #include <mock-boot-arguments/server.h>
 
-#include "coordinator.h"
-#include "devfs.h"
-#include "driver_host.h"
-#include "fdio.h"
+#include "src/devices/bin/driver_manager/coordinator.h"
+#include "src/devices/bin/driver_manager/devfs.h"
+#include "src/devices/bin/driver_manager/driver_host.h"
+#include "src/devices/bin/driver_manager/fdio.h"
 
 constexpr char kSystemDriverPath[] = "/pkg/driver/platform-bus.so";
 
@@ -46,4 +46,4 @@ CoordinatorConfig DefaultConfig(async_dispatcher_t* bootargs_dispatcher,
                                 fidl::WireSyncClient<fuchsia_boot::Arguments>* client);
 void InitializeCoordinator(Coordinator* coordinator);
 
-#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_COORDINATOR_TEST_UTILS_H_
+#endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_TESTS_COORDINATOR_TEST_UTILS_H_
