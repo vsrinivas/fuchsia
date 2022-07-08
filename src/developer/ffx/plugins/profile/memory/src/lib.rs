@@ -19,16 +19,22 @@ use {
 
 #[ffx_plugin("ffx_memory", MonitorProxy = "core/appmgr:out:fuchsia.memory.Monitor")]
 /// Prints a memory digest to stdout.
-pub async fn print_memory_digest(monitor_proxy: MonitorProxy, _cmd: MemoryCommand) -> Result<()> {
-    let digest = get_digest(monitor_proxy).await?;
-    // TODO(b/231425139): Print a JSON when "--machine json" is passed.
-    pretty_print_full_digest(processed::Digest::from(digest))
+pub async fn print_memory_digest(monitor_proxy: MonitorProxy, cmd: MemoryCommand) -> Result<()> {
+    if cmd.print_json_from_memory_monitor {
+        let raw_data = get_raw_data(monitor_proxy).await?;
+        println!("{}", String::from_utf8(raw_data)?);
+        Ok(())
+    } else {
+        let digest = get_digest(monitor_proxy).await?;
+        // TODO(b/231425139): Print a JSON when "--machine json" is passed.
+        pretty_print_full_digest(processed::Digest::from(digest))
+    }
 }
 
-/// Returns a `Digest` obtained via the `MonitorProxyInterface`. Performs basic schema validation.
-async fn get_digest(
+/// Returns a buffer containing the data that MemoryMonitor wrote.
+async fn get_raw_data(
     monitor_proxy: impl fidl_fuchsia_memory::MonitorProxyInterface,
-) -> anyhow::Result<raw::Digest> {
+) -> Result<Vec<u8>> {
     // Create a socket.
     let (rx, tx) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
 
@@ -39,6 +45,15 @@ async fn get_digest(
     let mut rx_async = fidl::AsyncSocket::from_socket(rx)?;
     let mut buffer = Vec::new();
     rx_async.read_to_end(&mut buffer).await?;
+
+    Ok(buffer)
+}
+
+/// Returns a `Digest` obtained via the `MonitorProxyInterface`. Performs basic schema validation.
+async fn get_digest(
+    monitor_proxy: impl fidl_fuchsia_memory::MonitorProxyInterface,
+) -> anyhow::Result<raw::Digest> {
+    let buffer = get_raw_data(monitor_proxy).await?;
     Ok(serde_json::from_slice(&buffer)?)
 }
 
@@ -140,11 +155,14 @@ mod tests {
         vmo_names: vec!["name1".to_string(), "name2".to_string()],
         vmos: vec![],
     };
+
+    static ref DATA_WRITTEN_BY_MEMORY_MONITOR: Vec<u8> = serde_json::to_vec(&*EXPECTED_DIGEST).unwrap();
+
     }
 
     use fidl_fuchsia_memory::MonitorRequest;
 
-    /// Returns a fake monitor service that writes `EXPECTED_DIGEST` to the socket
+    /// Returns a fake monitor service that writes `EXPECTED_DIGEST` serialized to JSON to the socket
     /// when `WriteJsonCapture` is called.
     fn setup_fake_monitor_svc() -> MonitorProxy {
         setup_fake_monitor_proxy(|request| match request {
@@ -152,14 +170,22 @@ mod tests {
             MonitorRequest::WriteJsonCapture { socket, .. } => {
                 let mut s = fidl::AsyncSocket::from_socket(socket).unwrap();
                 fuchsia_async::Task::local(async move {
-                    s.write_all(&serde_json::to_vec(&*EXPECTED_DIGEST).unwrap()).await.unwrap();
+                    s.write_all(&DATA_WRITTEN_BY_MEMORY_MONITOR).await.unwrap();
                 })
                 .detach();
             }
         })
     }
 
-    /// Tests that `get_digest` properly reads data from the memory monitor service.
+    /// Tests that `get_raw_data` properly reads data from the memory monitor service.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn get_raw_data_test() {
+        let monitor_proxy = setup_fake_monitor_svc();
+        let raw_data = get_raw_data(monitor_proxy).await.expect("failed to get raw data");
+        assert_eq!(raw_data, *DATA_WRITTEN_BY_MEMORY_MONITOR);
+    }
+
+    /// Tests that `get_digest` properly reads and parses data from the memory monitor service.
     #[fuchsia_async::run_singlethreaded(test)]
     async fn get_digest_test() {
         let monitor_proxy = setup_fake_monitor_svc();

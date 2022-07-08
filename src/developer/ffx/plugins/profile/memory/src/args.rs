@@ -10,4 +10,11 @@ use {argh::FromArgs, ffx_core::ffx_command, ffx_profile_memory_sub_command::SubC
 pub struct MemoryCommand {
     #[argh(subcommand)]
     pub subcommand: Option<SubCommand>,
+
+    #[argh(
+        option,
+        default = "false",
+        description = "outputs the json returned by memory_monitor. For debug purposes only, no garantee is made on the stability of the output of this command."
+    )]
+    pub print_json_from_memory_monitor: bool,
 }
