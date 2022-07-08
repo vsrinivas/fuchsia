@@ -261,12 +261,9 @@ TEST_F(FlutterEmbedderTestIp, HittestEmbeddingWithOverlay) {
   RegisterInjectionDevice();
 
   // The bottom-left corner of the overlay is at the center of the screen,
-  // which is at (0, 0) in the injection coordinate space. The local coordinates
-  // of an injected tap event are subject to rounding error, so injecting at
-  // exactly (0, 0) may cause unexpected behavior. Instead, we inject slightly
-  // below and left of the center.
-  //
-  // TODO(fxbug.dev/103612): Inject at (0, 0).
+  // which is at (0, 0) in the injection coordinate space. Inject a pointer
+  // event just outside the overlay's bounds, and ensure that it goes to the
+  // embedded view.
   TryInject(/* x = */ -1, /* y = */ 1);
 
   // Take screenshot until we see the child-view's tapped color.
