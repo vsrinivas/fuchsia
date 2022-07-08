@@ -114,11 +114,12 @@ fbl::RefPtr<RefCountedVmoMapper> MapVmo(const Format& format, zx::vmo vmo, int64
 BaseRingBuffer::BaseRingBuffer(
     const Format& format,
     fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-    AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, int64_t frame_count)
+    std::shared_ptr<Clock> audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper,
+    int64_t frame_count)
     : vmo_mapper_(std::move(vmo_mapper)),
       frame_count_(frame_count),
       ref_time_to_frac_presentation_frame_(std::move(ref_time_to_frac_presentation_frame)),
-      audio_clock_(audio_clock) {
+      audio_clock_(std::move(audio_clock)) {
   FX_CHECK(vmo_mapper_->start() != nullptr);
   FX_CHECK(vmo_mapper_->size() >= static_cast<uint64_t>(format.bytes_per_frame() * frame_count));
 }
@@ -126,28 +127,29 @@ BaseRingBuffer::BaseRingBuffer(
 ReadableRingBuffer::ReadableRingBuffer(
     const Format& format,
     fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-    AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, int64_t frame_count,
-    SafeReadWriteFrameFn safe_read_frame)
+    std::shared_ptr<Clock> audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper,
+    int64_t frame_count, SafeReadWriteFrameFn safe_read_frame)
     : ReadableStream("ReadableRingBuffer", format),
-      BaseRingBuffer(format, ref_time_to_frac_presentation_frame, audio_clock, vmo_mapper,
-                     frame_count),
+      BaseRingBuffer(format, ref_time_to_frac_presentation_frame, std::move(audio_clock),
+                     vmo_mapper, frame_count),
       safe_read_frame_(std::move(safe_read_frame)) {}
 
 WritableRingBuffer::WritableRingBuffer(
     const Format& format,
     fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-    AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, int64_t frame_count,
-    SafeReadWriteFrameFn safe_write_frame)
+    std::shared_ptr<Clock> audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper,
+    int64_t frame_count, SafeReadWriteFrameFn safe_write_frame)
     : WritableStream("WritableRingBuffer", format),
-      BaseRingBuffer(format, ref_time_to_frac_presentation_frame, audio_clock, vmo_mapper,
-                     frame_count),
+      BaseRingBuffer(format, ref_time_to_frac_presentation_frame, std::move(audio_clock),
+                     vmo_mapper, frame_count),
       safe_write_frame_(std::move(safe_write_frame)) {}
 
 // static
 BaseRingBuffer::Endpoints BaseRingBuffer::AllocateSoftwareBuffer(
     const Format& format,
     fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-    AudioClock& audio_clock, int64_t frame_count, SafeReadWriteFrameFn safe_write_frame) {
+    std::shared_ptr<Clock> audio_clock, int64_t frame_count,
+    SafeReadWriteFrameFn safe_write_frame) {
   TRACE_DURATION("audio", "RingBuffer::AllocateSoftwareBuffer");
 
   size_t vmo_size = frame_count * format.bytes_per_frame();
@@ -220,7 +222,7 @@ BaseRingBuffer::Endpoints BaseRingBuffer::AllocateSoftwareBuffer(
 std::shared_ptr<ReadableRingBuffer> BaseRingBuffer::CreateReadableHardwareBuffer(
     const Format& format,
     fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-    AudioClock& audio_clock, zx::vmo vmo, int64_t frame_count,
+    std::shared_ptr<Clock> audio_clock, zx::vmo vmo, int64_t frame_count,
     SafeReadWriteFrameFn safe_read_frame) {
   TRACE_DURATION("audio", "RingBuffer::CreateReadableHardwareBuffer");
 
@@ -228,15 +230,15 @@ std::shared_ptr<ReadableRingBuffer> BaseRingBuffer::CreateReadableHardwareBuffer
   FX_DCHECK(vmo_mapper);
 
   return std::make_shared<ReadableRingBuffer>(
-      format, std::move(ref_time_to_frac_presentation_frame), audio_clock, std::move(vmo_mapper),
-      frame_count, std::move(safe_read_frame));
+      format, std::move(ref_time_to_frac_presentation_frame), std::move(audio_clock),
+      std::move(vmo_mapper), frame_count, std::move(safe_read_frame));
 }
 
 // static
 std::shared_ptr<WritableRingBuffer> BaseRingBuffer::CreateWritableHardwareBuffer(
     const Format& format,
     fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-    AudioClock& audio_clock, zx::vmo vmo, int64_t frame_count,
+    std::shared_ptr<Clock> audio_clock, zx::vmo vmo, int64_t frame_count,
     SafeReadWriteFrameFn safe_write_frame) {
   TRACE_DURATION("audio", "RingBuffer::CreateWritableHardwareBuffer");
 
@@ -244,8 +246,8 @@ std::shared_ptr<WritableRingBuffer> BaseRingBuffer::CreateWritableHardwareBuffer
   FX_DCHECK(vmo_mapper);
 
   return std::make_shared<WritableRingBuffer>(
-      format, std::move(ref_time_to_frac_presentation_frame), audio_clock, std::move(vmo_mapper),
-      frame_count, std::move(safe_write_frame));
+      format, std::move(ref_time_to_frac_presentation_frame), std::move(audio_clock),
+      std::move(vmo_mapper), frame_count, std::move(safe_write_frame));
 }
 
 std::optional<ReadableStream::Buffer> ReadableRingBuffer::ReadLockImpl(ReadLockContext& ctx,

@@ -24,7 +24,7 @@ class FakeAudioDevice : public AudioDevice {
  public:
   FakeAudioDevice(AudioDevice::Type type, const DeviceConfig& config,
                   ThreadingModel* threading_model, DeviceRegistry* registry,
-                  LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory)
+                  LinkMatrix* link_matrix, std::shared_ptr<AudioCoreClockFactory> clock_factory)
       : AudioDevice(type, "", config, threading_model, registry, link_matrix, clock_factory,
                     std::make_unique<AudioDriver>(this)) {}
 
@@ -97,7 +97,8 @@ TEST_F(AudioDeviceTest, ReferenceClockIsAdvancing) {
 
   RunLoopUntilIdle();
   EXPECT_TRUE(device_->driver_info_fetched_);
-  clock::testing::VerifyAdvances(device_->reference_clock(), context().clock_factory());
+  clock::testing::VerifyAdvances(*device_->reference_clock(),
+                                 context().clock_factory()->synthetic());
 }
 
 TEST_F(AudioDeviceTest, DefaultClockIsClockMono) {
@@ -105,7 +106,7 @@ TEST_F(AudioDeviceTest, DefaultClockIsClockMono) {
   RunLoopUntilIdle();
   EXPECT_TRUE(device_->driver_info_fetched_);
 
-  clock::testing::VerifyIsSystemMonotonic(device_->reference_clock());
+  clock::testing::VerifyIsSystemMonotonic(*device_->reference_clock());
 }
 
 }  // namespace

@@ -10,6 +10,7 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/media/audio/audio_core/audio_core_impl.h"
 #include "src/media/audio/audio_core/base_capturer.h"
+#include "src/media/audio/audio_core/clock.h"
 #include "src/media/audio/audio_core/pin_executable_memory.h"
 #include "src/media/audio/audio_core/plug_detector.h"
 #include "src/media/audio/audio_core/process_config_loader.h"
@@ -18,7 +19,6 @@
 #include "src/media/audio/audio_core/thermal_watcher.h"
 #include "src/media/audio/audio_core/threading_model.h"
 #include "src/media/audio/audio_core/ultrasound_factory.h"
-#include "src/media/audio/lib/clock/audio_clock_factory.h"
 
 namespace media::audio {
 
@@ -52,7 +52,7 @@ static int StartAudioCore(const fxl::CommandLine& cl) {
 
   auto context = Context::Create(std::move(threading_model), std::move(component_context),
                                  PlugDetector::Create(), process_config.take_value(),
-                                 std::make_shared<AudioClockFactory>());
+                                 std::make_shared<AudioCoreClockFactory>());
   context->PublishOutgoingServices();
 
   auto thermal_watcher = ThermalWatcher::CreateAndWatch(*context);

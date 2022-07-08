@@ -91,7 +91,7 @@ class SilencePaddingStream : public ReadableStream {
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override {
     return source_->ref_time_to_frac_presentation_frame();
   }
-  AudioClock& reference_clock() override { return source_->reference_clock(); }
+  std::shared_ptr<Clock> reference_clock() override { return source_->reference_clock(); }
 
   void SetPresentationDelay(zx::duration external_delay) override {
     source_->SetPresentationDelay(external_delay);

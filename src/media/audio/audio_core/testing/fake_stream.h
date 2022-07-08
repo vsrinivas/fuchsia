@@ -7,9 +7,9 @@
 
 #include <lib/zx/clock.h>
 
+#include "src/media/audio/audio_core/clock.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/versioned_timeline_function.h"
-#include "src/media/audio/lib/clock/audio_clock_factory.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/processing/gain.h"
 
@@ -17,7 +17,7 @@ namespace media::audio::testing {
 
 class FakeStream : public ReadableStream {
  public:
-  FakeStream(const Format& format, std::shared_ptr<AudioClockFactory> clock_factory,
+  FakeStream(const Format& format, std::shared_ptr<AudioCoreClockFactory> clock_factory,
              size_t max_buffer_size = 0, zx::clock clock = audio::clock::CloneOfMonotonic());
 
   void set_usage_mask(StreamUsageMask mask) { usage_mask_ = mask; }
@@ -30,7 +30,7 @@ class FakeStream : public ReadableStream {
 
   // |media::audio::ReadableStream|
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
-  AudioClock& reference_clock() override { return *audio_clock_; }
+  std::shared_ptr<Clock> reference_clock() override { return audio_clock_; }
 
  private:
   std::optional<Buffer> ReadLockImpl(ReadLockContext& ctx, Fixed frame,
@@ -45,7 +45,7 @@ class FakeStream : public ReadableStream {
   int64_t max_frame_ = std::numeric_limits<int64_t>::max();
   std::unique_ptr<uint8_t[]> buffer_;
 
-  std::unique_ptr<AudioClock> audio_clock_;
+  std::shared_ptr<Clock> audio_clock_;
 };
 
 }  // namespace media::audio::testing

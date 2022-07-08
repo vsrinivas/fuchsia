@@ -4,12 +4,9 @@
 
 #include "src/media/audio/audio_core/ring_buffer.h"
 
-#include <lib/zx/clock.h>
-
 #include <gtest/gtest.h>
 
-#include "src/media/audio/lib/clock/clone_mono.h"
-#include "src/media/audio/lib/clock/testing/clock_test.h"
+#include "src/media/audio/audio_core/testing/fake_audio_core_clock_factory.h"
 
 namespace media::audio {
 namespace {
@@ -45,7 +42,7 @@ class InputRingBufferTest : public ::testing::Test {
   }
 
   ReadableRingBuffer* ring_buffer() const { return ring_buffer_.get(); }
-  AudioClock& reference_clock() { return *audio_clock_; }
+  std::shared_ptr<Clock> reference_clock() { return audio_clock_; }
 
   // Advance to the given time.
   void Advance(zx::time ref_time) {
@@ -56,8 +53,8 @@ class InputRingBufferTest : public ::testing::Test {
  private:
   std::shared_ptr<ReadableRingBuffer> ring_buffer_;
 
-  std::unique_ptr<AudioClock> audio_clock_ = std::make_unique<AudioClock>(
-      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain));
+  std::shared_ptr<Clock> audio_clock_ =
+      ::media::audio::testing::FakeAudioCoreClockFactory::DefaultClock();
 
   int64_t safe_write_frame_ = std::numeric_limits<int64_t>::min();
 };
@@ -78,7 +75,7 @@ class OutputRingBufferTest : public ::testing::Test {
   }
 
   WritableRingBuffer* ring_buffer() const { return ring_buffer_.get(); }
-  AudioClock& reference_clock() { return *audio_clock_; }
+  std::shared_ptr<Clock> reference_clock() { return audio_clock_; }
 
   // Advance to the given time.
   void Advance(zx::time ref_time) {
@@ -89,8 +86,8 @@ class OutputRingBufferTest : public ::testing::Test {
  private:
   std::shared_ptr<WritableRingBuffer> ring_buffer_;
 
-  std::unique_ptr<AudioClock> audio_clock_ = std::make_unique<AudioClock>(
-      AudioClock::DeviceFixed(clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain));
+  std::shared_ptr<Clock> audio_clock_ =
+      ::media::audio::testing::FakeAudioCoreClockFactory::DefaultClock();
   int64_t safe_write_frame_ = 0;
 };
 

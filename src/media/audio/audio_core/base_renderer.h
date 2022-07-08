@@ -16,6 +16,7 @@
 #include <unordered_map>
 
 #include "src/media/audio/audio_core/audio_object.h"
+#include "src/media/audio/audio_core/clock.h"
 #include "src/media/audio/audio_core/context.h"
 #include "src/media/audio/audio_core/link_matrix.h"
 #include "src/media/audio/audio_core/packet_queue.h"
@@ -23,7 +24,6 @@
 #include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/usage_settings.h"
 #include "src/media/audio/audio_core/utils.h"
-#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 #include "src/media/audio/lib/wav/wav_writer.h"
@@ -62,7 +62,7 @@ class BaseRenderer : public AudioObject,
   void Pause(PauseCallback callback) final;
   void PauseNoReply() final { Pause(nullptr); }
 
-  AudioClock& reference_clock() { return *clock_; }
+  std::shared_ptr<Clock> reference_clock() { return clock_; }
 
  protected:
   BaseRenderer(fidl::InterfaceRequest<fuchsia::media::AudioRenderer> audio_renderer_request,
@@ -166,9 +166,7 @@ class BaseRenderer : public AudioObject,
   WavWriter<kEnableRendererWavWriters> wav_writer_;
   Reporter::Container<Reporter::Renderer, Reporter::kObjectsToCache>::Ptr reporter_;
 
-  std::unique_ptr<AudioClock> clock_;
-  bool client_allows_clock_adjustment_ = true;
-  bool adjustable_clock_is_allocated_ = false;
+  std::shared_ptr<Clock> clock_;
 };
 
 }  // namespace media::audio

@@ -18,7 +18,7 @@ class FakeAudioDevice : public AudioDevice {
  public:
   FakeAudioDevice(AudioDevice::Type type, const DeviceConfig& config,
                   ThreadingModel* threading_model, DeviceRegistry* registry,
-                  LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory)
+                  LinkMatrix* link_matrix, std::shared_ptr<AudioCoreClockFactory> clock_factory)
       : AudioDevice(type, "", config, threading_model, registry, link_matrix,
                     std::move(clock_factory), std::make_unique<AudioDriver>(this)),
         mix_domain_(threading_model->AcquireMixDomain("fake-audio-device")) {}
@@ -58,34 +58,32 @@ class FakeAudioDevice : public AudioDevice {
 
 class FakeAudioInput : public FakeAudioDevice {
  public:
-  static std::shared_ptr<FakeAudioInput> Create(const DeviceConfig& config,
-                                                ThreadingModel* threading_model,
-                                                DeviceRegistry* registry, LinkMatrix* link_matrix,
-                                                std::shared_ptr<AudioClockFactory> clock_factory) {
+  static std::shared_ptr<FakeAudioInput> Create(
+      const DeviceConfig& config, ThreadingModel* threading_model, DeviceRegistry* registry,
+      LinkMatrix* link_matrix, std::shared_ptr<AudioCoreClockFactory> clock_factory) {
     return std::make_shared<FakeAudioInput>(config, threading_model, registry, link_matrix,
                                             std::move(clock_factory));
   }
 
   FakeAudioInput(const DeviceConfig& config, ThreadingModel* threading_model,
                  DeviceRegistry* registry, LinkMatrix* link_matrix,
-                 std::shared_ptr<AudioClockFactory> clock_factory)
+                 std::shared_ptr<AudioCoreClockFactory> clock_factory)
       : FakeAudioDevice(Type::Input, config, threading_model, registry, link_matrix,
                         std::move(clock_factory)) {}
 };
 
 class FakeAudioOutput : public FakeAudioDevice {
  public:
-  static std::shared_ptr<FakeAudioOutput> Create(const DeviceConfig& config,
-                                                 ThreadingModel* threading_model,
-                                                 DeviceRegistry* registry, LinkMatrix* link_matrix,
-                                                 std::shared_ptr<AudioClockFactory> clock_factory) {
+  static std::shared_ptr<FakeAudioOutput> Create(
+      const DeviceConfig& config, ThreadingModel* threading_model, DeviceRegistry* registry,
+      LinkMatrix* link_matrix, std::shared_ptr<AudioCoreClockFactory> clock_factory) {
     return std::make_shared<FakeAudioOutput>(config, threading_model, registry, link_matrix,
                                              std::move(clock_factory));
   }
 
   FakeAudioOutput(const DeviceConfig& config, ThreadingModel* threading_model,
                   DeviceRegistry* registry, LinkMatrix* link_matrix,
-                  std::shared_ptr<AudioClockFactory> clock_factory)
+                  std::shared_ptr<AudioCoreClockFactory> clock_factory)
       : FakeAudioDevice(Type::Output, config, threading_model, registry, link_matrix,
                         std::move(clock_factory)) {}
 

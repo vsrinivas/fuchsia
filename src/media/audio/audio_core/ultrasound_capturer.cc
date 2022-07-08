@@ -28,9 +28,9 @@ UltrasoundCapturer::InitializeSourceLink(const AudioObject& source,
     return fpromise::error(ZX_ERR_BAD_STATE);
   }
 
-  auto reference_clock_result = reference_clock().DuplicateClockReadOnly();
-  if (reference_clock_result.is_error()) {
-    return fpromise::error(reference_clock_result.error());
+  auto reference_clock_result = reference_clock()->DuplicateZxClockReadOnly();
+  if (!reference_clock_result) {
+    return fpromise::error(ZX_ERR_INTERNAL);
   }
 
   // Ultrasound renderers require FLOAT samples.
@@ -41,7 +41,7 @@ UltrasoundCapturer::InitializeSourceLink(const AudioObject& source,
 
   UpdateFormat(create_result.value());
   format_ = {create_result.take_value()};
-  create_callback_(reference_clock_result.take_value(), format_->stream_type());
+  create_callback_(std::move(*reference_clock_result), format_->stream_type());
   create_callback_ = nullptr;
   return BaseCapturer::InitializeSourceLink(source, std::move(stream));
 }

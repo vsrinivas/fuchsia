@@ -35,8 +35,8 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
  public:
   AudioDeviceManager(ThreadingModel& threading_model, std::unique_ptr<PlugDetector> plug_detector,
                      LinkMatrix& link_matrix, ProcessConfig& process_config,
-                     std::shared_ptr<AudioClockFactory> clock_factory, DeviceRouter& device_router,
-                     EffectsLoaderV2* effects_loader_v2);
+                     std::shared_ptr<AudioCoreClockFactory> clock_factory,
+                     DeviceRouter& device_router, EffectsLoaderV2* effects_loader_v2);
   ~AudioDeviceManager();
 
   fidl::InterfaceRequestHandler<fuchsia::media::AudioDeviceEnumerator> GetFidlRequestHandler() {
@@ -134,7 +134,7 @@ class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public 
   std::unique_ptr<PlugDetector> plug_detector_;
   LinkMatrix& link_matrix_;
   ProcessConfig& process_config_;
-  std::shared_ptr<AudioClockFactory> clock_factory_;
+  std::shared_ptr<AudioCoreClockFactory> clock_factory_;
   DeviceRouter& device_router_;
   EffectsLoaderV2* effects_loader_v2_;
 

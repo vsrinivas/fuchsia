@@ -23,12 +23,12 @@ class AudioInput : public AudioDevice {
       const std::string& name, const DeviceConfig& config,
       fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config,
       ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix,
-      std::shared_ptr<AudioClockFactory> clock_factory);
+      std::shared_ptr<AudioCoreClockFactory> clock_factory);
 
   AudioInput(const std::string& name, const DeviceConfig& config,
              fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> stream_config,
              ThreadingModel* threading_model, DeviceRegistry* registry, LinkMatrix* link_matrix,
-             std::shared_ptr<AudioClockFactory> clock_factory);
+             std::shared_ptr<AudioCoreClockFactory> clock_factory);
 
   ~AudioInput() override = default;
 

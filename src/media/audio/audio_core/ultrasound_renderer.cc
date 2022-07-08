@@ -83,13 +83,13 @@ UltrasoundRenderer::InitializeDestLink(const AudioObject& dest) {
                            })
                 .take_value();
 
-  auto reference_clock_result = reference_clock().DuplicateClockReadOnly();
-  if (reference_clock_result.is_error()) {
-    return fpromise::error(reference_clock_result.error());
+  auto reference_clock_result = reference_clock()->DuplicateZxClockReadOnly();
+  if (!reference_clock_result) {
+    return fpromise::error(ZX_ERR_INTERNAL);
   }
 
   reporter().SetFormat(*format_);
-  create_callback_(reference_clock_result.take_value(), format_->stream_type());
+  create_callback_(std::move(*reference_clock_result), format_->stream_type());
   create_callback_ = nullptr;
   return BaseRenderer::InitializeDestLink(dest);
 }

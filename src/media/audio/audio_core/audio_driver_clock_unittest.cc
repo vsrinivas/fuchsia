@@ -80,8 +80,9 @@ class AudioDriverClockTest : public testing::ThreadingModelFixture {
   void ValidateClockAdvancesAtClockMonotonicRate(uint32_t clock_domain) {
     CreateDrivers(clock_domain);
 
-    clock::testing::VerifyAdvances(driver_->reference_clock(), context().clock_factory());
-    clock::testing::VerifyIsSystemMonotonic(driver_->reference_clock());
+    clock::testing::VerifyAdvances(*driver_->reference_clock(),
+                                   context().clock_factory()->synthetic());
+    clock::testing::VerifyIsSystemMonotonic(*driver_->reference_clock());
   }
 
   // Verify that AudioDriver correctly uses driver position notifications to rate-adjust
@@ -94,7 +95,7 @@ class AudioDriverClockTest : public testing::ThreadingModelFixture {
     remote_driver_->SendPositionNotification(remote_driver_->mono_start_time(), 0);
 
     // If MONOTONIC, no position notifications should be delivered.
-    auto mono_to_ref = driver_->reference_clock().ref_clock_to_clock_mono().Inverse();
+    auto mono_to_ref = driver_->reference_clock()->to_clock_mono().Inverse();
 
     // First notification won't lead to adustment: clock still tracks MONOTONIC (numer == denom).
     EXPECT_EQ(mono_to_ref.subject_delta(), mono_to_ref.reference_delta());
@@ -126,7 +127,7 @@ class AudioDriverClockTest : public testing::ThreadingModelFixture {
 
 // AudioDriver correctly retrieves and caches the clock domain provided by the driver
 TEST_F(AudioDriverClockTest, MonotonicClockDomain) {
-  this->ValidateClockDomainSet(AudioClock::kMonotonicDomain);
+  this->ValidateClockDomainSet(Clock::kMonotonicDomain);
 }
 
 // AudioDriver correctly retrieves and caches the clock domain provided by the driver
@@ -136,7 +137,7 @@ TEST_F(AudioDriverClockTest, NonMonotonicClockDomain) {
 
 // For devices in the MONOTONIC domain, the clock is available after GetDriverInfo.
 TEST_F(AudioDriverClockTest, DefaultRefClockAdvancesAtMonoRate) {
-  this->ValidateClockAdvancesAtClockMonotonicRate(AudioClock::kMonotonicDomain);
+  this->ValidateClockAdvancesAtClockMonotonicRate(Clock::kMonotonicDomain);
 }
 
 // We model clocks in a non-MONOTONIC domain as running at the MONOTONIC rate, until we start
@@ -149,7 +150,7 @@ TEST_F(AudioDriverClockTest, NonMonoClockAdvancesAtMonoRate) {
 TEST_F(AudioDriverClockTest, NotificationsAdjustClockRateSame) {
   this->ValidateNotificationsTuneDriverClock(kNonMonotonicDomain, kHalfRingBufferBytes);
 
-  auto mono_to_ref = this->driver_->reference_clock().ref_clock_to_clock_mono().Inverse();
+  auto mono_to_ref = this->driver_->reference_clock()->to_clock_mono().Inverse();
   EXPECT_EQ(mono_to_ref.subject_delta(), mono_to_ref.reference_delta());
 }
 
@@ -158,7 +159,7 @@ TEST_F(AudioDriverClockTest, NotificationsAdjustClockRateDown) {
   // We should be at the ring buffer's halfway point, but we are not quite there yet
   this->ValidateNotificationsTuneDriverClock(kNonMonotonicDomain, kHalfRingBufferBytes * 0.95);
 
-  auto mono_to_ref = this->driver_->reference_clock().ref_clock_to_clock_mono().Inverse();
+  auto mono_to_ref = this->driver_->reference_clock()->to_clock_mono().Inverse();
   EXPECT_LT(mono_to_ref.subject_delta(), mono_to_ref.reference_delta());
 }
 
@@ -167,17 +168,16 @@ TEST_F(AudioDriverClockTest, NotificationsAdjustClockRateUp) {
   // We should be at the ring buffer's halfway point, but we are a little farther along
   this->ValidateNotificationsTuneDriverClock(kNonMonotonicDomain, kHalfRingBufferBytes * 1.05);
 
-  auto mono_to_ref = this->driver_->reference_clock().ref_clock_to_clock_mono().Inverse();
+  auto mono_to_ref = this->driver_->reference_clock()->to_clock_mono().Inverse();
   EXPECT_GT(mono_to_ref.subject_delta(), mono_to_ref.reference_delta());
 }
 
 // In the MONOTONIC domain, no position notifications are sent; thus no rate-adjustment can occur.
 // These values suggest the device runs fast, so if a notification is sent, the rate will change.
 TEST_F(AudioDriverClockTest, NotificationsDontAdjustMonotonicDomain) {
-  this->ValidateNotificationsTuneDriverClock(AudioClock::kMonotonicDomain,
-                                             kHalfRingBufferBytes * 1.05);
+  this->ValidateNotificationsTuneDriverClock(Clock::kMonotonicDomain, kHalfRingBufferBytes * 1.05);
 
-  auto mono_to_ref = this->driver_->reference_clock().ref_clock_to_clock_mono().Inverse();
+  auto mono_to_ref = this->driver_->reference_clock()->to_clock_mono().Inverse();
   EXPECT_EQ(mono_to_ref.subject_delta(), mono_to_ref.reference_delta());
 }
 

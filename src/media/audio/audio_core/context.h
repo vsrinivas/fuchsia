@@ -11,10 +11,10 @@
 #include <lib/trace/event.h>
 
 #include "src/media/audio/audio_core/active_stream_count_reporter.h"
+#include "src/media/audio/audio_core/clock.h"
 #include "src/media/audio/audio_core/device_registry.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/threading_model.h"
-#include "src/media/audio/lib/clock/audio_clock_factory.h"
 
 namespace media::audio {
 
@@ -36,7 +36,7 @@ class Context {
                                          std::unique_ptr<sys::ComponentContext> component_context,
                                          std::unique_ptr<PlugDetector> plug_detector,
                                          ProcessConfig process_config,
-                                         std::shared_ptr<AudioClockFactory> clock_factory);
+                                         std::shared_ptr<AudioCoreClockFactory> clock_factory);
 
   // Disallow copy & move.
   Context(Context&& o) = delete;
@@ -49,7 +49,7 @@ class Context {
   virtual void PublishOutgoingServices() = 0;
 
   virtual ThreadingModel& threading_model() = 0;
-  virtual std::shared_ptr<AudioClockFactory> clock_factory() = 0;
+  virtual std::shared_ptr<AudioCoreClockFactory> clock_factory() = 0;
   virtual AudioDeviceManager& device_manager() = 0;
   virtual AudioAdmin& audio_admin() = 0;
   virtual fbl::RefPtr<fzl::VmarManager> vmar() const = 0;

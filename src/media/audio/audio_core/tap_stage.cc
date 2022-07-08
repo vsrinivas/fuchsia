@@ -15,7 +15,7 @@ TapStage::TapStage(std::shared_ptr<ReadableStream> source, std::shared_ptr<Writa
       tap_(std::move(tap)),
       output_producer_(OutputProducer::Select(tap_->format().stream_type())) {
   FX_CHECK(source_->format() == tap_->format());
-  FX_CHECK(source_->reference_clock() == tap_->reference_clock());
+  FX_CHECK(source_->reference_clock()->koid() == tap_->reference_clock()->koid());
 }
 
 std::optional<ReadableStream::Buffer> TapStage::ReadLockImpl(ReadLockContext& ctx, Fixed dest_frame,
@@ -124,7 +124,7 @@ void TapStage::SetPresentationDelay(zx::duration external_delay) {
 }
 
 const TimelineFunction& TapStage::SourceFracFrameToTapFracFrame() {
-  FX_DCHECK(source_->reference_clock() == tap_->reference_clock());
+  FX_DCHECK(source_->reference_clock()->koid() == tap_->reference_clock()->koid());
 
   auto source_snapshot = source_->ref_time_to_frac_presentation_frame();
   auto tap_snapshot = tap_->ref_time_to_frac_presentation_frame();

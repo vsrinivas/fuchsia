@@ -8,9 +8,9 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
+#include "src/media/audio/audio_core/clock.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
-#include "src/media/audio/lib/clock/audio_clock_factory.h"
 #include "src/media/audio/lib/effects_loader/testing/test_effects_v1.h"
 
 using ::testing::AllOf;
@@ -158,7 +158,7 @@ class AudioTunerTest : public gtest::TestLoopFixture {
     auto plug_detector = std::make_unique<testing::FakePlugDetector>();
     return Context::Create(std::move(threading_model), component_context_provider_.TakeContext(),
                            std::move(plug_detector), std::move(process_config),
-                           std::make_shared<AudioClockFactory>());
+                           std::make_shared<AudioCoreClockFactory>());
   }
 
   std::unique_ptr<Context> CreateContext() { return CreateContext(kDefaultProcessConfig); }

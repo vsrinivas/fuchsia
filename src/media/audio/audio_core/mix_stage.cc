@@ -8,7 +8,6 @@
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
-#include <lib/zx/clock.h>
 #include <zircon/status.h>
 
 #include <algorithm>
@@ -25,9 +24,10 @@
 #include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/silence_padding_stream.h"
-#include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/processing/gain.h"
 #include "src/media/audio/lib/timeline/timeline_rate.h"
+
+using ::media_audio::ClockSynchronizer;
 
 namespace media::audio {
 namespace {
@@ -58,20 +58,21 @@ constexpr zx::duration kMaxErrorThresholdDuration = zx::msec(2);
 }  // namespace
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
-                   TimelineFunction ref_time_to_frac_presentation_frame, AudioClock& audio_clock,
-                   std::optional<float> min_gain_db, std::optional<float> max_gain_db)
+                   TimelineFunction ref_time_to_frac_presentation_frame,
+                   std::shared_ptr<Clock> audio_clock, std::optional<float> min_gain_db,
+                   std::optional<float> max_gain_db)
     : MixStage(output_format, block_size,
                fbl::MakeRefCounted<VersionedTimelineFunction>(ref_time_to_frac_presentation_frame),
                audio_clock, min_gain_db, max_gain_db) {}
 
 MixStage::MixStage(const Format& output_format, uint32_t block_size,
                    fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-                   AudioClock& audio_clock, std::optional<float> min_gain_db,
+                   std::shared_ptr<Clock> audio_clock, std::optional<float> min_gain_db,
                    std::optional<float> max_gain_db)
     : ReadableStream("MixStage", output_format),
       output_buffer_frames_(block_size),
       output_buffer_(block_size * output_format.channels()),
-      output_ref_clock_(audio_clock),
+      output_ref_clock_(std::move(audio_clock)),
       output_ref_clock_to_fractional_frame_(ref_time_to_frac_presentation_frame),
       gain_limits_{
           .min_gain_db = min_gain_db,
@@ -90,9 +91,10 @@ std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream
     return nullptr;
   }
 
+  auto clock_sync =
+      ClockSynchronizer::SelectModeAndCreate(stream->reference_clock(), reference_clock());
   if (resampler_hint == Mixer::Resampler::Default &&
-      AudioClock::SynchronizationNeedsHighQualityResampler(stream->reference_clock(),
-                                                           reference_clock())) {
+      clock_sync->mode() == ClockSynchronizer::Mode::WithMicroSRC) {
     resampler_hint = Mixer::Resampler::WindowedSinc;
   }
 
@@ -116,17 +118,16 @@ std::shared_ptr<Mixer> MixStage::AddInput(std::shared_ptr<ReadableStream> stream
       /*fractional_gaps_round_down=*/true);
   stream->SetPresentationDelay(GetPresentationDelay() + LeadTimeForMixer(stream->format(), *mixer));
 
-  FX_LOGS(DEBUG) << "AddInput "
-                 << (stream->reference_clock().is_adjustable() ? "adjustable " : "static ")
-                 << (stream->reference_clock().is_device_clock() ? "device" : "client") << " (self "
-                 << (reference_clock().is_adjustable() ? "adjustable " : "static ")
-                 << (reference_clock().is_device_clock() ? "device)" : "client)");
+  FX_LOGS(DEBUG) << "AddInput (source clock: " << stream->reference_clock()->name()
+                 << ") (self clock: " << reference_clock()->name() << ")";
+
   {
     std::lock_guard<std::mutex> lock(stream_lock_);
     streams_.emplace_back(StreamHolder{
         .stream = std::move(stream),
         .original_stream = std::move(original_stream),
         .mixer = mixer,
+        .clock_sync = std::move(clock_sync),
     });
   }
   return mixer;
@@ -144,11 +145,8 @@ void MixStage::RemoveInput(const ReadableStream& stream) {
     return;
   }
 
-  FX_LOGS(DEBUG) << "RemoveInput "
-                 << (it->stream->reference_clock().is_adjustable() ? "adjustable " : "static ")
-                 << (it->stream->reference_clock().is_device_clock() ? "device" : "client")
-                 << " (self " << (reference_clock().is_adjustable() ? "adjustable " : "static ")
-                 << (reference_clock().is_device_clock() ? "device)" : "client)");
+  FX_LOGS(DEBUG) << "RemoveInput (source clock: " << it->stream->reference_clock()->name()
+                 << ") (self clock: " << reference_clock()->name() << ")";
 
   streams_.erase(it);
 }
@@ -247,7 +245,7 @@ void MixStage::ForEachSource(TaskType task_type, Fixed dest_frame) {
     if (task_type == TaskType::Mix) {
       auto& source_info = source.mixer->source_info();
       auto& bookkeeping = source.mixer->bookkeeping();
-      ReconcileClocksAndSetStepSize(source_info, bookkeeping, *source.stream);
+      ReconcileClocksAndSetStepSize(*source.clock_sync, source_info, bookkeeping, *source.stream);
       MixStream(*source.mixer, *source.stream);
     } else {
       // Call this just once: it may be relatively expensive as it requires a lock and
@@ -262,9 +260,9 @@ void MixStage::ForEachSource(TaskType task_type, Fixed dest_frame) {
       }
 
       auto dest_ref_time = RefTimeAtFracPresentationFrame(dest_frame);
-      auto mono_time = reference_clock().MonotonicTimeFromReferenceTime(dest_ref_time);
+      auto mono_time = reference_clock()->MonotonicTimeFromReferenceTime(dest_ref_time);
       auto source_ref_time =
-          source.stream->reference_clock().ReferenceTimeFromMonotonicTime(mono_time);
+          source.stream->reference_clock()->ReferenceTimeFromMonotonicTime(mono_time);
       auto source_frame =  // source.stream->FracPresentationFrameAtRefTime(source_ref_time);
           Fixed::FromRaw(source_ref_time_to_frac_presentation_frame.Apply(source_ref_time.get()));
       source.stream->Trim(source_frame);
@@ -551,17 +549,18 @@ std::optional<ReadableStream::Buffer> MixStage::NextSourceBuffer(Mixer& mixer,
 //
 // Calculate the composed dest-to-source transformation and update the mixer's bookkeeping for
 // step_size etc. These are the only deliverables for this method.
-void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
+void MixStage::ReconcileClocksAndSetStepSize(::media_audio::ClockSynchronizer& clock_sync,
+                                             Mixer::SourceInfo& info,
                                              Mixer::Bookkeeping& bookkeeping,
                                              ReadableStream& stream) {
   TRACE_DURATION("audio", "MixStage::ReconcileClocksAndSetStepSize");
 
-  auto& source_clock = stream.reference_clock();
-  auto& dest_clock = reference_clock();
+  const Clock& source_clock = *stream.reference_clock();
+  const Clock& dest_clock = *reference_clock();
 
   // Right upfront, capture current states for the source and destination clocks.
-  auto source_ref_to_clock_mono = source_clock.ref_clock_to_clock_mono();
-  auto dest_ref_to_mono = dest_clock.ref_clock_to_clock_mono();
+  auto source_ref_to_clock_mono = source_clock.to_clock_mono();
+  auto dest_ref_to_mono = dest_clock.to_clock_mono();
 
   // UpdateSourceTrans
   //
@@ -644,16 +643,12 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   if (info.source_ref_clock_to_frac_source_frames_generation != clock_generation_for_previous_mix) {
     if constexpr (kLogInitialPositionSync) {
       FX_LOGS(INFO) << "MixStage(" << this << "), stream(" << &stream
-                    << "): " << (source_clock.is_device_clock() ? "Device" : "Client")
-                    << (source_clock.is_adjustable() ? "Adjustable" : "Fixed") << "("
-                    << &source_clock << ") ==> "
-                    << (dest_clock.is_device_clock() ? "Device" : "Client")
-                    << (dest_clock.is_adjustable() ? "Adjustable" : "Fixed") << "(" << &dest_clock
-                    << ")" << AudioClock::SyncInfo(source_clock, dest_clock)
+                    << "): " << source_clock.name() << "(" << &source_clock << ") ==> "
+                    << dest_clock.name() << "(" << &dest_clock << ")" << clock_sync.ToDebugString()
                     << ": timeline changed ************";
     }
-    SyncSourcePositionFromClocks(source_clock, dest_clock, info, bookkeeping, dest_frame,
-                                 mono_now_from_dest, true);
+    SyncSourcePositionFromClocks(clock_sync, source_clock, dest_clock, info, bookkeeping,
+                                 dest_frame, mono_now_from_dest, true);
     SetStepSize(info, bookkeeping, frac_source_frames_per_dest_frame);
     return;
   }
@@ -670,12 +665,9 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
       static int dest_discontinuity_count = 0;
       if (dest_discontinuity_count % kLogDestDiscontinuitiesStride == 0) {
         FX_LOGS(WARNING) << "MixStage(" << this << "), stream(" << &stream
-                         << "): " << (source_clock.is_device_clock() ? "Device" : "Client")
-                         << (source_clock.is_adjustable() ? "Adjustable" : "Fixed") << "("
-                         << &source_clock << ") ==> "
-                         << (dest_clock.is_device_clock() ? "Device" : "Client")
-                         << (dest_clock.is_adjustable() ? "Adjustable" : "Fixed") << "("
-                         << &dest_clock << "); " << AudioClock::SyncInfo(source_clock, dest_clock);
+                         << "): " << source_clock.name() << "(" << &source_clock << ") ==> "
+                         << dest_clock.name() << "(" << &dest_clock << "); "
+                         << clock_sync.ToDebugString();
         FX_LOGS(WARNING) << "Dest discontinuity: " << info.next_dest_frame - dest_frame
                          << " frames (" << dest_gap_duration.to_nsecs() << " nsec), will "
                          << (dest_gap_duration < kMaxErrorThresholdDuration ? "NOT" : "")
@@ -687,8 +679,8 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
     // If dest position discontinuity exceeds threshold, reset positions and rate adjustments.
     if (dest_gap_duration > kMaxErrorThresholdDuration) {
       // Set new running positions, based on E2E clock (not just step_size).
-      SyncSourcePositionFromClocks(source_clock, dest_clock, info, bookkeeping, dest_frame,
-                                   mono_now_from_dest, false);
+      SyncSourcePositionFromClocks(clock_sync, source_clock, dest_clock, info, bookkeeping,
+                                   dest_frame, mono_now_from_dest, false);
       SetStepSize(info, bookkeeping, frac_source_frames_per_dest_frame);
       return;
     }
@@ -703,7 +695,7 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   // If no synchronization is needed between these clocks (same clock, device clocks in same domain,
   // or clones of CLOCK_MONOTONIC that have not yet been adjusted), then source-to-dest is precisely
   // the relationship between each side's frame rate.
-  if (AudioClock::NoSynchronizationRequired(source_clock, dest_clock)) {
+  if (!clock_sync.NeedsSynchronization()) {
     SetStepSize(info, bookkeeping, frac_source_frames_per_dest_frame);
     return;
   }
@@ -735,26 +727,34 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   if (std::abs(info.source_pos_error.get()) > kMaxErrorThresholdDuration.get()) {
     Reporter::Singleton().MixerClockSkewDiscontinuity(info.source_pos_error);
 
-    SyncSourcePositionFromClocks(source_clock, dest_clock, info, bookkeeping, dest_frame,
-                                 mono_now_from_dest, false);
+    SyncSourcePositionFromClocks(clock_sync, source_clock, dest_clock, info, bookkeeping,
+                                 dest_frame, mono_now_from_dest, false);
     SetStepSize(info, bookkeeping, frac_source_frames_per_dest_frame);
     return;
   }
 
-  // Allow the clocks to self-synchronize to eliminate the position error. A non-zero return value
-  // indicates that they cannot, and we should apply a rate-conversion factor in software.
-  auto micro_src_ppm = AudioClock::SynchronizeClocks(source_clock, dest_clock, mono_now_from_dest,
-                                                     info.source_pos_error);
+  // Allow the clocks to self-synchronize to eliminate the position error.
+  if (clock_sync.follower().get() == &source_clock) {
+    clock_sync.Update(mono_now_from_dest, info.source_pos_error);
+  } else {
+    clock_sync.Update(mono_now_from_dest, zx::nsec(0) - info.source_pos_error);
+  }
 
-  // Incorporate the adjustment into frac_source_frames_per_dest_frame (which determines step size).
-  if (micro_src_ppm) {
-    TimelineRate micro_src_factor{static_cast<uint64_t>(1'000'000 + micro_src_ppm), 1'000'000};
+  // In MicroSRC mode, we should apply a rate-conversion factor during SRC.
+  if (clock_sync.mode() == ClockSynchronizer::Mode::WithMicroSRC) {
+    auto micro_src_ppm = clock_sync.follower_adjustment_ppm();
 
-    // Product may exceed uint64/uint64: allow reduction. step_size can be approximate, as clocks
-    // (not SRC/step_size) determine a stream absolute position -- SRC just chases the position.
-    frac_source_frames_per_dest_frame =
-        TimelineRate::Product(frac_source_frames_per_dest_frame, micro_src_factor,
-                              false /* don't require exact precision */);
+    // Incorporate the adjustment into frac_source_frames_per_dest_frame (which determines step
+    // size).
+    if (micro_src_ppm) {
+      TimelineRate micro_src_factor{static_cast<uint64_t>(1'000'000 + micro_src_ppm), 1'000'000};
+
+      // Product may exceed uint64/uint64: allow reduction. step_size can be approximate, as clocks
+      // (not SRC/step_size) determine a stream absolute position -- SRC just chases the position.
+      frac_source_frames_per_dest_frame =
+          TimelineRate::Product(frac_source_frames_per_dest_frame, micro_src_factor,
+                                false /* don't require exact precision */);
+    }
   }
 
   SetStepSize(info, bookkeeping, frac_source_frames_per_dest_frame);
@@ -763,7 +763,8 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
 // Establish specific running position values rather than adjusting clock rates, to bring source and
 // dest positions together. We do this when setting the initial position relationship, when dest
 // running position jumps unexpectedly, and when the error in source position exceeds our threshold.
-void MixStage::SyncSourcePositionFromClocks(AudioClock& source_clock, AudioClock& dest_clock,
+void MixStage::SyncSourcePositionFromClocks(ClockSynchronizer& clock_sync,
+                                            const Clock& source_clock, const Clock& dest_clock,
                                             Mixer::SourceInfo& info,
                                             Mixer::Bookkeeping& bookkeeping, int64_t dest_frame,
                                             zx::time mono_now_from_dest, bool timeline_changed) {
@@ -774,7 +775,7 @@ void MixStage::SyncSourcePositionFromClocks(AudioClock& source_clock, AudioClock
   info.ResetPositions(dest_frame, bookkeeping);
 
   // Reset accumulated rate adjustment feedback, in the relevant clocks.
-  AudioClock::ResetRateAdjustments(source_clock, dest_clock, mono_now_from_dest);
+  clock_sync.Reset(mono_now_from_dest);
 
   if constexpr (kLogJamSyncs) {
     if (!kLogInitialPositionSync && timeline_changed) {
@@ -783,15 +784,11 @@ void MixStage::SyncSourcePositionFromClocks(AudioClock& source_clock, AudioClock
 
     std::stringstream common_stream, dest_stream, source_stream;
     common_stream << "; MixStage " << static_cast<void*>(this) << ", SourceInfo "
-                  << static_cast<void*>(&info) << "; "
-                  << AudioClock::SyncInfo(source_clock, dest_clock);
-    dest_stream << "dest " << (dest_clock.is_client_clock() ? "Client" : "Device")
-                << (dest_clock.is_adjustable() ? "Adjustable" : "Fixed") << "["
-                << static_cast<void*>(&dest_clock) << "]: " << ffl::String::DecRational
-                << info.next_dest_frame;
-    source_stream << "; src " << (source_clock.is_client_clock() ? "Client" : "Device")
-                  << (source_clock.is_adjustable() ? "Adjustable" : "Fixed") << "["
-                  << static_cast<void*>(&source_clock) << "]: " << ffl::String::DecRational
+                  << static_cast<void*>(&info) << "; " << clock_sync.ToDebugString();
+    dest_stream << "dest " << dest_clock.name() << "[" << static_cast<const void*>(&dest_clock)
+                << "]: " << ffl::String::DecRational << info.next_dest_frame;
+    source_stream << "; src " << source_clock.name() << "["
+                  << static_cast<const void*>(&source_clock) << "]: " << ffl::String::DecRational
                   << info.next_source_frame;
 
     std::stringstream complete_log_msg;

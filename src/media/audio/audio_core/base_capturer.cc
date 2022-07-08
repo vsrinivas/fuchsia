@@ -167,7 +167,8 @@ BaseCapturer::InitializeSourceLink(const AudioObject& source,
     case State::WaitingForVmo:
       // In capture, source clocks originate from devices (inputs if live, outputs if loopback).
       // For now, "loop in" (direct client-to-client) routing is unsupported.
-      FX_CHECK(source_stream->reference_clock().is_device_clock());
+      // For now, device clocks should not be adjustable.
+      FX_CHECK(!source_stream->reference_clock()->adjustable());
       return fpromise::ok(
           std::make_pair(mix_stage_->AddInput(std::move(source_stream)), &mix_domain()));
 
@@ -580,7 +581,7 @@ zx_status_t BaseCapturer::Process() {
     // Establish the frame pointer.
     // We continue at the current frame pointer, unless there was a discontinuity,
     // at which point we need to recompute the frame pointer.
-    auto dest_ref_now = reference_clock().Read();
+    auto dest_ref_now = reference_clock()->now();
     auto [dest_ref_pts_to_frac_frame, _] = ref_pts_to_fractional_frame_->get();
     FX_CHECK(dest_ref_pts_to_frac_frame.invertible());
 
@@ -606,7 +607,7 @@ zx_status_t BaseCapturer::Process() {
 
       auto dest_ref_wakeup_time = dest_ref_last_frame_time + presentation_delay_;
       auto mono_wakeup_time =
-          reference_clock().MonotonicTimeFromReferenceTime(dest_ref_wakeup_time);
+          reference_clock()->MonotonicTimeFromReferenceTime(dest_ref_wakeup_time);
 
       zx_status_t status = mix_timer_.PostForTime(mix_domain_->dispatcher(), mono_wakeup_time);
       if (status != ZX_OK) {
@@ -807,7 +808,7 @@ void BaseCapturer::UpdateFormat(Format format) {
 
   reporter().SetFormat(format);
 
-  auto dest_ref_now = reference_clock().Read();
+  auto dest_ref_now = reference_clock()->now();
   ref_pts_to_fractional_frame_->Update(TimelineFunction(
       0, dest_ref_now.get(), Fixed(format_->frames_per_second()).raw_value(), zx::sec(1).get()));
 
@@ -851,13 +852,13 @@ void BaseCapturer::GetReferenceClock(GetReferenceClockCallback callback) {
   auto cleanup = fit::defer([this]() { BeginShutdown(); });
 
   // Regardless of whether clock_ is writable, this strips off the WRITE right.
-  auto clock_result = reference_clock().DuplicateClockReadOnly();
-  if (clock_result.is_error()) {
-    FX_LOGS(ERROR) << "DuplicateClockReadOnly failed, will not return a reference clock!";
+  auto clock_result = audio_clock_->DuplicateZxClockReadOnly();
+  if (!clock_result) {
+    FX_LOGS(ERROR) << "DuplicateZxClockReadOnly failed, will not return reference clock!";
     return;
   }
 
-  callback(clock_result.take_value());
+  callback(std::move(*clock_result));
   cleanup.cancel();
 }
 

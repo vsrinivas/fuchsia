@@ -18,6 +18,7 @@
 
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/capture_packet_queue.h"
+#include "src/media/audio/audio_core/clock.h"
 #include "src/media/audio/audio_core/context.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/mixer/output_producer.h"
@@ -26,7 +27,6 @@
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/usage_settings.h"
 #include "src/media/audio/audio_core/utils.h"
-#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 #include "src/media/audio/lib/timeline/timeline_rate.h"
 
@@ -36,7 +36,7 @@ class BaseCapturer : public AudioObject,
                      public fuchsia::media::AudioCapturer,
                      public std::enable_shared_from_this<BaseCapturer> {
  public:
-  AudioClock& reference_clock() { return *audio_clock_; }
+  std::shared_ptr<Clock> reference_clock() { return audio_clock_; }
 
  protected:
   using RouteGraphRemover = void (RouteGraph::*)(const AudioObject&);
@@ -157,7 +157,7 @@ class BaseCapturer : public AudioObject,
   fidl::Binding<fuchsia::media::AudioCapturer>& binding() { return binding_; }
 
   // AudioCore treats client-provided clocks as not-rate-adjustable.
-  void SetClock(std::unique_ptr<AudioClock> audio_clock) { audio_clock_ = std::move(audio_clock); }
+  void SetClock(std::shared_ptr<Clock> audio_clock) { audio_clock_ = std::move(audio_clock); }
 
   Reporter::Capturer& reporter() { return *reporter_; }
 
@@ -278,7 +278,7 @@ class BaseCapturer : public AudioObject,
   std::shared_ptr<MixStage> mix_stage_;
   Reporter::Container<Reporter::Capturer, Reporter::kObjectsToCache>::Ptr reporter_;
 
-  std::unique_ptr<AudioClock> audio_clock_;
+  std::shared_ptr<Clock> audio_clock_;
 };
 
 }  // namespace media::audio

@@ -10,30 +10,31 @@
 
 #include <optional>
 
-#include "src/media/audio/lib/clock/audio_clock.h"
-#include "src/media/audio/lib/clock/audio_clock_factory.h"
+#include "src/media/audio/lib/clock/clock.h"
+#include "src/media/audio/lib/clock/synthetic_clock_realm.h"
 
 namespace media::audio::clock::testing {
 
 // Clock should have rights DUPLICATE, TRANSFER, READ; clock should not have WRITE
 void VerifyReadOnlyRights(const zx::clock& ref_clock);
-void VerifyReadOnlyRights(const AudioClock& audio_clock);
+void VerifyReadOnlyRights(const ::media_audio::Clock& audio_clock);
 
 void VerifyAdvances(const zx::clock& ref_clock);
-void VerifyAdvances(const AudioClock& audio_clock,
-                    std::shared_ptr<AudioClockFactory> clock_factory);
+void VerifyAdvances(const ::media_audio::Clock& audio_clock);
+void VerifyAdvances(const ::media_audio::Clock& audio_clock,
+                    ::media_audio::SyntheticClockRealm& clock_realm);
 
 void VerifyCannotBeRateAdjusted(const zx::clock& ref_clock);
-void VerifyCannotBeRateAdjusted(const AudioClock& audio_clock);
+void VerifyCannotBeRateAdjusted(const ::media_audio::Clock& audio_clock);
 
 void VerifyCanBeRateAdjusted(const zx::clock& ref_clock);
-void VerifyCanBeRateAdjusted(const AudioClock& audio_clock);
+void VerifyCanBeRateAdjusted(const ::media_audio::Clock& audio_clock);
 
 void VerifyIsSystemMonotonic(const zx::clock& clock);
-void VerifyIsSystemMonotonic(const AudioClock& audio_clock);
+void VerifyIsSystemMonotonic(const ::media_audio::Clock& audio_clock);
 
 void VerifyIsNotSystemMonotonic(const zx::clock& clock);
-void VerifyIsNotSystemMonotonic(const AudioClock& audio_clock);
+void VerifyIsNotSystemMonotonic(const ::media_audio::Clock& audio_clock);
 
 struct ClockProperties {
   std::optional<zx::time> start_val = std::nullopt;

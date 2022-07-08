@@ -70,7 +70,7 @@ DriverOutput::DriverOutput(const std::string& name, const DeviceConfig& config,
                            ThreadingModel* threading_model, DeviceRegistry* registry,
                            fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
                            LinkMatrix* link_matrix,
-                           std::shared_ptr<AudioClockFactory> clock_factory,
+                           std::shared_ptr<AudioCoreClockFactory> clock_factory,
                            EffectsLoaderV2* effects_loader_v2)
     : AudioOutput(name, config, threading_model, registry, link_matrix, clock_factory,
                   effects_loader_v2, std::make_unique<AudioDriver>(this)),
@@ -183,7 +183,7 @@ std::optional<AudioOutput::FrameSpan> DriverOutput::StartMixJob(zx::time ref_tim
   int64_t output_frames_consumed = RefTimeToSafeWriteFrame(ref_time);
   int64_t output_frames_transmitted = output_frames_consumed - fifo_frames;
 
-  auto mono_time = reference_clock().MonotonicTimeFromReferenceTime(ref_time);
+  auto mono_time = reference_clock()->MonotonicTimeFromReferenceTime(ref_time);
 
   if (output_frames_consumed >= frames_sent_) {
     if (!underflow_start_time_mono_.get()) {
@@ -367,7 +367,7 @@ void DriverOutput::ScheduleNextLowWaterWakeup() {
   // will be time to wake up.
   int64_t low_water_frame_number = frames_sent_ - low_water_frames_;
   auto low_water_ref_time = SafeWriteFrameToRefTime(low_water_frame_number);
-  auto low_water_mono_time = reference_clock().MonotonicTimeFromReferenceTime(low_water_ref_time);
+  auto low_water_mono_time = reference_clock()->MonotonicTimeFromReferenceTime(low_water_ref_time);
 
   SetNextSchedTimeMono(low_water_mono_time);
 }
@@ -607,7 +607,7 @@ void DriverOutput::OnDriverStartComplete() {
   //
   // TODO(57377): Keep reference clocks in sync with mono time under test.
   auto mono_time = async::Now(mix_domain().dispatcher());
-  auto ref_time = reference_clock().ReferenceTimeFromMonotonicTime(mono_time);
+  auto ref_time = reference_clock()->ReferenceTimeFromMonotonicTime(mono_time);
   int64_t output_frames_consumed = RefTimeToSafeWriteFrame(ref_time);
   frames_sent_ = output_frames_consumed + low_water_frames_;
 

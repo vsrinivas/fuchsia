@@ -7,10 +7,7 @@ import("//build/components.gni")
 
 source_set("clock") {
   sources = [
-    "audio_clock.cc",
-    "audio_clock.h",
     "audio_clock_coefficients.h",
-    "audio_clock_factory.h",
     "clock.h",
     "clock_snapshot.cc",
     "clock_snapshot.h",
@@ -61,7 +58,6 @@ executable("unittest_bin") {
   output_name = "audio-libclock-unittests"
 
   sources = [
-    "audio_clock_unittest.cc",
     "clock_snapshot_unittest.cc",
     "clock_synchronizer_unittest.cc",
     "clone_mono_unittest.cc",
@@ -86,39 +82,11 @@ executable("unittest_bin") {
   ]
 }
 
-executable("death_unittest_bin") {
-  visibility = [ ":*" ]
-  testonly = true
-  output_name = "audio-libclock-death-unittests"
-
-  sources = [ "audio_clock_death_unittest.cc" ]
-
-  deps = [
-    ":clock",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/zircon/lib/zircon",
-  ]
-}
-
 fuchsia_unittest_package("audio-libclock-unittests") {
   deps = [ ":unittest_bin" ]
 }
 
-fuchsia_unittest_package("audio-libclock-death-unittests") {
-  manifest = "meta/audio-libclock-death-unittests.cml"
-  deps = [ ":death_unittest_bin" ]
-  test_specs = {
-    log_settings = {
-      max_severity = "FATAL"
-    }
-  }
-}
-
 group("tests") {
   testonly = true
-  deps = [
-    ":audio-libclock-death-unittests",
-    ":audio-libclock-unittests",
-    "testing:tests",
-  ]
+  deps = [ ":audio-libclock-unittests" ]
 }

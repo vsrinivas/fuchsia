@@ -213,7 +213,7 @@ OutputPipelineBenchmark::Scenario OutputPipelineBenchmark::Scenario::FromString(
 }
 
 std::shared_ptr<OutputPipeline> OutputPipelineBenchmark::CreateOutputPipeline(
-    const ProcessConfig& process_config, AudioClock& device_clock,
+    const ProcessConfig& process_config, std::shared_ptr<Clock> device_clock,
     EffectsLoaderV2* effects_loader_v2) {
   auto device_profile =
       process_config.device_config().output_device_profile(AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS);
@@ -388,7 +388,7 @@ void OutputPipelineBenchmark::Run(Scenario scenario, int64_t runs_per_scenario,
       }
     }
 
-    Fixed frame_start = output_pipeline_->FracPresentationFrameAtRefTime(device_clock_->Read());
+    Fixed frame_start = output_pipeline_->FracPresentationFrameAtRefTime(device_clock_->now());
 
     ReadableStream::ReadLockContext ctx;
     StageMetricsTimer timer("main");

@@ -10,6 +10,7 @@
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/media/audio/audio_core/mixer/no_op.h"
 #include "src/media/audio/audio_core/packet_queue.h"
+#include "src/media/audio/audio_core/testing/fake_audio_core_clock_factory.h"
 #include "src/media/audio/audio_core/volume_curve.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 
@@ -298,7 +299,7 @@ TEST_F(LinkMatrixTest, InitializationHooks) {
                          .frames_per_second = 48000,
                      })
           .take_value(),
-      std::make_unique<AudioClock>(AudioClock::ClientFixed(clock::CloneOfMonotonic())));
+      ::media::audio::testing::FakeAudioCoreClockFactory::DefaultClock());
   source->set_stream(stream);
 
   under_test.LinkObjects(source, dest, std::make_shared<FakeLoudnessTransform>());
@@ -324,7 +325,7 @@ TEST_F(LinkMatrixTest, LinkHandleHasStream) {
                          .frames_per_second = 48000,
                      })
           .take_value(),
-      std::make_unique<AudioClock>(AudioClock::ClientFixed(clock::CloneOfMonotonic())));
+      ::media::audio::testing::FakeAudioCoreClockFactory::DefaultClock());
   source->set_stream(stream);
 
   under_test.LinkObjects(source, dest, std::make_shared<FakeLoudnessTransform>());

@@ -10,7 +10,7 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/audio_core/mixer/intersect.h"
-#include "src/media/audio/lib/clock/clone_mono.h"
+#include "src/media/audio/audio_core/testing/fake_audio_core_clock_factory.h"
 
 using ASF = fuchsia::media::AudioSampleFormat;
 
@@ -45,7 +45,7 @@ class FakeStream : public ReadableStream {
       : ReadableStream("FakeStream", kFormat),
         use_cache_(use_cache),
         buffers_(std::move(buffers)),
-        audio_clock_(AudioClock::ClientFixed(audio::clock::CloneOfMonotonic())),
+        audio_clock_(::media::audio::testing::FakeAudioCoreClockFactory::DefaultClock()),
         timeline_({
             .timeline_function = TimelineFunction(
                 0, 0, Fixed(kFormat.frames_per_second()).raw_value(), zx::sec(1).get()),
@@ -55,7 +55,7 @@ class FakeStream : public ReadableStream {
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override {
     return timeline_;
   }
-  AudioClock& reference_clock() override { return audio_clock_; }
+  std::shared_ptr<Clock> reference_clock() override { return audio_clock_; }
 
   std::optional<Buffer> ReadLockImpl(ReadLockContext& ctx, Fixed frame,
                                      int64_t frame_count) override {
@@ -121,7 +121,7 @@ class FakeStream : public ReadableStream {
   std::vector<QueuedBuffer> buffers_;
   std::vector<Fixed> trim_calls_;
   std::optional<Fixed> cached_end_;
-  AudioClock audio_clock_;
+  std::shared_ptr<Clock> audio_clock_;
   TimelineFunctionSnapshot timeline_;
 };
 
@@ -135,7 +135,7 @@ class PassThroughStream : public ReadableStream {
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override {
     return src_->ref_time_to_frac_presentation_frame();
   }
-  AudioClock& reference_clock() override { return src_->reference_clock(); }
+  std::shared_ptr<Clock> reference_clock() override { return src_->reference_clock(); }
 
   std::optional<Buffer> ReadLockImpl(ReadLockContext& ctx, Fixed frame,
                                      int64_t frame_count) override {
@@ -614,9 +614,9 @@ TEST_P(ReadableStreamTest, Reset) {
 }
 
 INSTANTIATE_TEST_SUITE_P(ReadableStreamTestPipelines, ReadableStreamTest,
-                         testing::Values(FakeStreamWithCaching, FakeStreamWithoutCaching,
-                                         FakeStreamWithCachingThenPassthrough,
-                                         FakeStreamWithoutCachingThenPassthrough),
+                         ::testing::Values(FakeStreamWithCaching, FakeStreamWithoutCaching,
+                                           FakeStreamWithCachingThenPassthrough,
+                                           FakeStreamWithoutCachingThenPassthrough),
                          PipelineParamToString);
 
 }  // namespace media::audio

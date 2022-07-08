@@ -9,7 +9,6 @@
 #include "src/media/audio/audio_core/ring_buffer.h"
 #include "src/media/audio/audio_core/tap_stage.h"
 #include "src/media/audio/audio_core/usage_settings.h"
-#include "src/media/audio/lib/clock/audio_clock.h"
 
 namespace media::audio {
 
@@ -39,23 +38,23 @@ OutputPipelineImpl::OutputPipelineImpl(const PipelineConfig& config,
                                        EffectsLoaderV2* effects_loader_v2,
                                        uint32_t max_block_size_frames,
                                        TimelineFunction ref_pts_to_fractional_frame,
-                                       AudioClock& clock, Mixer::Resampler sampler)
+                                       std::shared_ptr<Clock> clock, Mixer::Resampler sampler)
     : OutputPipelineImpl(State(config, volume_curve, effects_loader_v2, max_block_size_frames,
-                               ref_pts_to_fractional_frame, clock, sampler)) {}
+                               ref_pts_to_fractional_frame, std::move(clock), sampler)) {}
 
 OutputPipelineImpl::OutputPipelineImpl(State state)
     : OutputPipeline(state.stream->format()), state_(std::move(state)) {}
 
 OutputPipelineImpl::State::State(const PipelineConfig& config, const VolumeCurve& volume_curve,
                                  EffectsLoaderV2* effects_loader_v2, uint32_t max_block_size_frames,
-                                 TimelineFunction ref_pts_to_fractional_frame, AudioClock& clock,
-                                 Mixer::Resampler sampler)
-    : audio_clock(clock) {
+                                 TimelineFunction ref_pts_to_fractional_frame,
+                                 std::shared_ptr<Clock> clock, Mixer::Resampler sampler)
+    : audio_clock(std::move(clock)) {
   uint32_t usage_mask = 0;
   stream =
       CreateMixStage(config.root(), volume_curve, effects_loader_v2, max_block_size_frames,
                      fbl::MakeRefCounted<VersionedTimelineFunction>(ref_pts_to_fractional_frame),
-                     clock, &usage_mask, sampler);
+                     audio_clock, &usage_mask, sampler);
 }
 
 std::shared_ptr<Mixer> OutputPipelineImpl::AddInput(std::shared_ptr<ReadableStream> stream,
@@ -92,8 +91,8 @@ fpromise::result<void, fuchsia::media::audio::UpdateEffectError> OutputPipelineI
 std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
     const PipelineConfig::MixGroup& spec, const VolumeCurve& volume_curve,
     EffectsLoaderV2* effects_loader_v2, uint32_t max_block_size_frames,
-    fbl::RefPtr<VersionedTimelineFunction> ref_pts_to_fractional_frame, AudioClock& audio_clock,
-    uint32_t* usage_mask, Mixer::Resampler sampler) {
+    fbl::RefPtr<VersionedTimelineFunction> ref_pts_to_fractional_frame,
+    std::shared_ptr<Clock> audio_clock, uint32_t* usage_mask, Mixer::Resampler sampler) {
   auto output_format = FormatForMixGroup(spec);
 
   auto stage =
@@ -136,10 +135,10 @@ std::shared_ptr<ReadableStream> OutputPipelineImpl::State::CreateMixStage(
     const uint32_t ring_size = output_format.frames_per_second();
     auto endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
         root->format(), ref_pts_to_fractional_frame, audio_clock, ring_size,
-        [ref_pts_to_fractional_frame, &audio_clock]() {
+        [ref_pts_to_fractional_frame, audio_clock]() {
           // The loopback capture has no presentation delay. Whatever frame is being presented "now"
           // is the latest safe_write_frame;
-          auto pts = audio_clock.Read();
+          auto pts = audio_clock->now();
           return Fixed::FromRaw(ref_pts_to_fractional_frame.get()->Apply(pts.get())).Floor();
         });
     loopback = std::move(endpoints.reader);

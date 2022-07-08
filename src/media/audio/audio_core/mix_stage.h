@@ -14,10 +14,11 @@
 #include <gtest/gtest_prod.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/audio/audio_core/clock.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/versioned_timeline_function.h"
-#include "src/media/audio/lib/clock/audio_clock.h"
+#include "src/media/audio/lib/clock/clock_synchronizer.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 
@@ -26,17 +27,17 @@ namespace media::audio {
 class MixStage : public ReadableStream {
  public:
   MixStage(const Format& output_format, uint32_t block_size,
-           TimelineFunction ref_time_to_frac_presentation_frame, AudioClock& ref_clock,
+           TimelineFunction ref_time_to_frac_presentation_frame, std::shared_ptr<Clock> ref_clock,
            std::optional<float> min_gain_db = std::nullopt,
            std::optional<float> max_gain_db = std::nullopt);
   MixStage(const Format& output_format, uint32_t block_size,
            fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-           AudioClock& ref_clock, std::optional<float> min_gain_db = std::nullopt,
+           std::shared_ptr<Clock> ref_clock, std::optional<float> min_gain_db = std::nullopt,
            std::optional<float> max_gain_db = std::nullopt);
 
   // |media::audio::ReadableStream|
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
-  AudioClock& reference_clock() override { return output_ref_clock_; }
+  std::shared_ptr<Clock> reference_clock() override { return output_ref_clock_; }
   void SetPresentationDelay(zx::duration external_delay) override;
 
   std::shared_ptr<Mixer> AddInput(std::shared_ptr<ReadableStream> stream,
@@ -69,13 +70,16 @@ class MixStage : public ReadableStream {
     std::shared_ptr<ReadableStream> stream;
     std::shared_ptr<ReadableStream> original_stream;
     std::shared_ptr<Mixer> mixer;
+    std::shared_ptr<::media_audio::ClockSynchronizer> clock_sync;
   };
 
   enum class TaskType { Mix, Trim };
   void ForEachSource(TaskType task_type, Fixed dest_frame);
-  void ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
+  void ReconcileClocksAndSetStepSize(::media_audio::ClockSynchronizer& clock_sync,
+                                     Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
                                      ReadableStream& stream);
-  void SyncSourcePositionFromClocks(AudioClock& source_clock, AudioClock& dest_clock,
+  void SyncSourcePositionFromClocks(::media_audio::ClockSynchronizer& clock_sync,
+                                    const Clock& source_clock, const Clock& dest_clock,
                                     Mixer::SourceInfo& info, Mixer::Bookkeeping& bookkeeping,
                                     int64_t dest_frame, zx::time mono_now_from_dest,
                                     bool timeline_changed);
@@ -93,7 +97,7 @@ class MixStage : public ReadableStream {
 
   const int64_t output_buffer_frames_;
   std::vector<float> output_buffer_;
-  AudioClock& output_ref_clock_;
+  std::shared_ptr<Clock> output_ref_clock_;
   fbl::RefPtr<VersionedTimelineFunction> output_ref_clock_to_fractional_frame_;
 
   const Gain::Limits gain_limits_;

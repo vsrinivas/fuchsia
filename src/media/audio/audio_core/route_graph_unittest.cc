@@ -66,18 +66,16 @@ class FakeAudioObject : public AudioObject {
 // TODO(fxbug.dev/39532): Remove; use a real output class with fake hardware.
 class FakeAudioOutput : public AudioOutput {
  public:
-  static std::shared_ptr<FakeAudioOutput> Create(const DeviceConfig& config,
-                                                 ThreadingModel* threading_model,
-                                                 DeviceRegistry* device_registry,
-                                                 LinkMatrix* link_matrix,
-                                                 std::shared_ptr<AudioClockFactory> clock_factory) {
+  static std::shared_ptr<FakeAudioOutput> Create(
+      const DeviceConfig& config, ThreadingModel* threading_model, DeviceRegistry* device_registry,
+      LinkMatrix* link_matrix, std::shared_ptr<AudioCoreClockFactory> clock_factory) {
     return std::make_shared<FakeAudioOutput>(config, threading_model, device_registry, link_matrix,
                                              clock_factory);
   }
 
   FakeAudioOutput(const DeviceConfig& config, ThreadingModel* threading_model,
                   DeviceRegistry* device_registry, LinkMatrix* link_matrix,
-                  std::shared_ptr<AudioClockFactory> clock_factory)
+                  std::shared_ptr<AudioCoreClockFactory> clock_factory)
       : AudioOutput("", config, threading_model, device_registry, link_matrix, clock_factory,
                     nullptr /* EffectsLoaderV2 */, std::make_unique<AudioDriver>(this)) {}
 

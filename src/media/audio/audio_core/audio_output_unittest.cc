@@ -7,13 +7,13 @@
 #include <lib/fit/defer.h>
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
+#include "src/media/audio/audio_core/clock.h"
 #include "src/media/audio/audio_core/device_config.h"
 #include "src/media/audio/audio_core/loudness_transform.h"
 #include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
 #include "src/media/audio/audio_core/testing/fake_stream.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
-#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/effects_loader/testing/test_effects_v1.h"
 #include "src/media/audio/lib/processing/gain.h"
@@ -31,7 +31,7 @@ static const TimelineFunction kDriverRefPtsToFractionalFrames =
 // An OutputPipeline that always returns std::nullopt from |ReadLock|.
 class TestOutputPipeline : public OutputPipeline {
  public:
-  TestOutputPipeline(const Format& format, std::shared_ptr<AudioClockFactory> clock_factory)
+  TestOutputPipeline(const Format& format, std::shared_ptr<AudioCoreClockFactory> clock_factory)
       : OutputPipeline(format),
         audio_clock_(clock_factory->CreateClientFixed(clock::AdjustableCloneOfMonotonic())) {}
 
@@ -58,7 +58,7 @@ class TestOutputPipeline : public OutputPipeline {
         .generation = 1,
     };
   }
-  AudioClock& reference_clock() override { return *audio_clock_; }
+  std::shared_ptr<Clock> reference_clock() override { return audio_clock_; }
 
   // |media::audio::OutputPipeline|
   std::shared_ptr<ReadableRingBuffer> dup_loopback() const override { return nullptr; }
@@ -77,7 +77,7 @@ class TestOutputPipeline : public OutputPipeline {
  private:
   std::deque<ReadableStream::Buffer> buffers_;
 
-  std::unique_ptr<AudioClock> audio_clock_;
+  std::shared_ptr<Clock> audio_clock_;
 };
 
 class StubDriver : public AudioDriver {
@@ -105,7 +105,7 @@ class TestAudioOutput : public AudioOutput {
  public:
   TestAudioOutput(const DeviceConfig& config, ThreadingModel* threading_model,
                   DeviceRegistry* registry, LinkMatrix* link_matrix,
-                  std::shared_ptr<AudioClockFactory> clock_factory)
+                  std::shared_ptr<AudioCoreClockFactory> clock_factory)
       : AudioOutput("", config, threading_model, registry, link_matrix, clock_factory,
                     nullptr /* EffectsLoaderV2 */, std::make_unique<StubDriver>(this)) {
     SetPresentationDelay(StubDriver::kSafeWriteDelayDuration);
@@ -124,7 +124,8 @@ class TestAudioOutput : public AudioOutput {
   }
   std::shared_ptr<OutputPipeline> CreateOutputPipeline(
       const PipelineConfig& config, const VolumeCurve& volume_curve, size_t max_block_size_frames,
-      TimelineFunction device_reference_clock_to_fractional_frame, AudioClock& ref_clock) override {
+      TimelineFunction device_reference_clock_to_fractional_frame,
+      std::shared_ptr<Clock> ref_clock) override {
     if (output_pipeline_) {
       return output_pipeline_;
     }

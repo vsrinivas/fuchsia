@@ -9,10 +9,10 @@
 
 #include <memory>
 
+#include "src/media/audio/audio_core/clock.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/utils.h"
 #include "src/media/audio/audio_core/versioned_timeline_function.h"
-#include "src/media/audio/lib/clock/audio_clock.h"
 
 namespace media::audio {
 
@@ -42,13 +42,13 @@ class BaseRingBuffer {
   static std::shared_ptr<ReadableRingBuffer> CreateReadableHardwareBuffer(
       const Format& format,
       fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-      AudioClock& audio_clock, zx::vmo vmo, int64_t frame_count,
+      std::shared_ptr<Clock> audio_clock, zx::vmo vmo, int64_t frame_count,
       SafeReadWriteFrameFn safe_read_frame);
 
   static std::shared_ptr<WritableRingBuffer> CreateWritableHardwareBuffer(
       const Format& format,
       fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-      AudioClock& audio_clock, zx::vmo vmo, int64_t frame_count,
+      std::shared_ptr<Clock> audio_clock, zx::vmo vmo, int64_t frame_count,
       SafeReadWriteFrameFn safe_write_frame);
 
   struct Endpoints {
@@ -60,7 +60,8 @@ class BaseRingBuffer {
   static Endpoints AllocateSoftwareBuffer(
       const Format& format,
       fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-      AudioClock& audio_clock, int64_t frame_count, SafeReadWriteFrameFn safe_write_frame);
+      std::shared_ptr<Clock> audio_clock, int64_t frame_count,
+      SafeReadWriteFrameFn safe_write_frame);
 
   int64_t size() const { return static_cast<int64_t>(vmo_mapper_->size()); }
   int64_t frames() const { return frame_count_; }
@@ -69,7 +70,7 @@ class BaseRingBuffer {
  protected:
   BaseRingBuffer(const Format& format,
                  fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-                 AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper,
+                 std::shared_ptr<Clock> audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper,
                  int64_t frame_count);
   virtual ~BaseRingBuffer() = default;
 
@@ -78,7 +79,7 @@ class BaseRingBuffer {
   const fbl::RefPtr<RefCountedVmoMapper> vmo_mapper_;
   const int64_t frame_count_ = 0;
   const fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame_;
-  AudioClock& audio_clock_;
+  std::shared_ptr<Clock> audio_clock_;
 };
 
 class ReadableRingBuffer : public ReadableStream, public BaseRingBuffer {
@@ -87,8 +88,9 @@ class ReadableRingBuffer : public ReadableStream, public BaseRingBuffer {
   // be called directly. Use static methods in BaseRingBuffer.
   ReadableRingBuffer(const Format& format,
                      fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-                     AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper,
-                     int64_t frame_count, SafeReadWriteFrameFn safe_read_frame);
+                     std::shared_ptr<Clock> audio_clock,
+                     fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, int64_t frame_count,
+                     SafeReadWriteFrameFn safe_read_frame);
 
   // Return a duplicate handle that reads from the same underlying ring buffer but resets
   // all stream-specific state, such as the current Trim position.
@@ -96,7 +98,7 @@ class ReadableRingBuffer : public ReadableStream, public BaseRingBuffer {
 
   // |media::audio::ReadableStream|
   BaseStream::TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
-  AudioClock& reference_clock() override { return audio_clock_; }
+  std::shared_ptr<Clock> reference_clock() override { return audio_clock_; }
 
  private:
   ReadableRingBuffer(const ReadableRingBuffer& rb);
@@ -117,12 +119,13 @@ class WritableRingBuffer : public WritableStream, public BaseRingBuffer {
   // be called directly. Use static methods in BaseRingBuffer.
   WritableRingBuffer(const Format& format,
                      fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-                     AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper,
-                     int64_t frame_count, SafeReadWriteFrameFn safe_write_frame);
+                     std::shared_ptr<Clock> audio_clock,
+                     fbl::RefPtr<RefCountedVmoMapper> vmo_mapper, int64_t frame_count,
+                     SafeReadWriteFrameFn safe_write_frame);
 
   // |media::audio::WritableStream|
   BaseStream::TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
-  AudioClock& reference_clock() override { return audio_clock_; }
+  std::shared_ptr<Clock> reference_clock() override { return audio_clock_; }
   std::optional<WritableStream::Buffer> WriteLock(int64_t frame, int64_t frame_count) override;
 
  private:

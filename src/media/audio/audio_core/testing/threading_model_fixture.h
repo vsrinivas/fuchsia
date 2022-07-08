@@ -15,9 +15,9 @@
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "src/media/audio/audio_core/context.h"
 #include "src/media/audio/audio_core/process_config.h"
+#include "src/media/audio/audio_core/testing/fake_audio_core_clock_factory.h"
 #include "src/media/audio/audio_core/testing/fake_plug_detector.h"
 #include "src/media/audio/audio_core/threading_model.h"
-#include "src/media/audio/lib/clock/testing/fake_audio_clock_factory.h"
 
 namespace media::audio::testing {
 
@@ -72,10 +72,25 @@ class TestThreadingModel : public ThreadingModel {
 //   }
 class ThreadingModelFixture : public gtest::TestLoopFixture {
  public:
-  explicit ThreadingModelFixture(ProcessConfig config) { Init(std::move(config)); }
+  enum ClockFactoryMode {
+    WithSyntheticClocks,
+    WithRealClocks,
+  };
+
+  explicit ThreadingModelFixture(ProcessConfig config,
+                                 ClockFactoryMode mode = WithSyntheticClocks) {
+    auto threading_model = std::make_unique<TestThreadingModel>(&test_loop());
+    auto plug_detector = std::make_unique<testing::FakePlugDetector>();
+    fake_plug_detector_ = plug_detector.get();
+    context_ =
+        Context::Create(std::move(threading_model), component_context_provider_.TakeContext(),
+                        std::move(plug_detector), std::move(config),
+                        mode == WithRealClocks ? std::make_shared<AudioCoreClockFactory>()
+                                               : std::make_shared<FakeAudioCoreClockFactory>());
+  }
 
   // The default constructor provides a reasonable valid default configuration.
-  ThreadingModelFixture()
+  explicit ThreadingModelFixture(ClockFactoryMode mode = WithSyntheticClocks)
       : ThreadingModelFixture(
             ProcessConfig::Builder()
                 .AddDeviceProfile(
@@ -84,7 +99,8 @@ class ThreadingModelFixture : public gtest::TestLoopFixture {
                                        StreamUsageSetFromRenderUsages(kFidlRenderUsages))})
                 .SetDefaultVolumeCurve(
                     VolumeCurve::DefaultForMinGain(VolumeCurve::kDefaultGainForMinVolume))
-                .Build()) {}
+                .Build(),
+            mode) {}
 
  protected:
   // This threading model will be backed by an |async::TestLoop|. Control the loop using the methods
@@ -96,14 +112,7 @@ class ThreadingModelFixture : public gtest::TestLoopFixture {
   FakePlugDetector* fake_plug_detector() const { return fake_plug_detector_; }
 
  private:
-  void Init(ProcessConfig config) {
-    auto threading_model = std::make_unique<TestThreadingModel>(&test_loop());
-    auto plug_detector = std::make_unique<testing::FakePlugDetector>();
-    fake_plug_detector_ = plug_detector.get();
-    context_ = Context::Create(std::move(threading_model),
-                               component_context_provider_.TakeContext(), std::move(plug_detector),
-                               std::move(config), std::make_shared<FakeAudioClockFactory>());
-  }
+  void Init(ProcessConfig config) {}
   TestThreadingModel threading_model_{&test_loop()};
   sys::testing::ComponentContextProvider component_context_provider_;
   testing::FakePlugDetector* fake_plug_detector_;

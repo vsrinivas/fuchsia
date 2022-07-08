@@ -7,9 +7,9 @@
 #include <lib/async/cpp/time.h>
 
 #include "src/media/audio/audio_core/audio_output.h"
+#include "src/media/audio/audio_core/clock.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/packet.h"
-#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 
 namespace media::audio::testing {
@@ -26,25 +26,25 @@ const fuchsia::media::AudioStreamType kDefaultStreamType{
 // static
 std::shared_ptr<FakeAudioRenderer> FakeAudioRenderer::CreateWithDefaultFormatInfo(
     async_dispatcher_t* dispatcher, LinkMatrix* link_matrix,
-    std::shared_ptr<AudioClockFactory> clock_factory) {
+    std::shared_ptr<AudioCoreClockFactory> clock_factory) {
   auto format_result = Format::Create(kDefaultStreamType);
   FX_CHECK(format_result.is_ok());
   return FakeAudioRenderer::Create(dispatcher, {format_result.value()},
                                    fuchsia::media::AudioRenderUsage::MEDIA, link_matrix,
-                                   clock_factory);
+                                   std::move(clock_factory));
 }
 
 FakeAudioRenderer::FakeAudioRenderer(async_dispatcher_t* dispatcher, std::optional<Format> format,
                                      fuchsia::media::AudioRenderUsage usage,
                                      LinkMatrix* link_matrix,
-                                     std::shared_ptr<AudioClockFactory> clock_factory)
+                                     std::shared_ptr<AudioCoreClockFactory> clock_factory)
     : AudioObject(AudioObject::Type::AudioRenderer),
       dispatcher_(dispatcher),
       format_(format),
       usage_(usage),
       packet_factory_(dispatcher, *format, 2 * zx_system_get_page_size()),
       link_matrix_(*link_matrix),
-      clock_factory_(clock_factory) {}
+      clock_factory_(std::move(clock_factory)) {}
 
 void FakeAudioRenderer::EnqueueAudioPacket(float sample, zx::duration duration,
                                            fit::closure callback) {

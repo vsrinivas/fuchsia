@@ -48,7 +48,7 @@ class ContextImpl : public Context {
   ContextImpl(std::unique_ptr<ThreadingModel> threading_model,
               std::unique_ptr<sys::ComponentContext> component_context,
               std::unique_ptr<PlugDetector> plug_detector, ProcessConfig process_config,
-              std::shared_ptr<AudioClockFactory> clock_factory)
+              std::shared_ptr<AudioCoreClockFactory> clock_factory)
       : threading_model_(std::move(threading_model)),
         component_context_(std::move(component_context)),
         process_config_(std::move(process_config)),
@@ -102,7 +102,7 @@ class ContextImpl : public Context {
     component_context_->outgoing()->AddPublicService(effects_controller_.GetFidlRequestHandler());
   }
   ThreadingModel& threading_model() override { return *threading_model_; }
-  std::shared_ptr<AudioClockFactory> clock_factory() override { return clock_factory_; }
+  std::shared_ptr<AudioCoreClockFactory> clock_factory() override { return clock_factory_; }
   AudioDeviceManager& device_manager() override { return device_manager_; }
   AudioAdmin& audio_admin() override { return audio_admin_; }
   fbl::RefPtr<fzl::VmarManager> vmar() const override { return vmar_manager_; }
@@ -131,7 +131,7 @@ class ContextImpl : public Context {
   std::unique_ptr<EffectsLoaderV2> effects_loader_v2_;
 
   // Manages clock creation.
-  std::shared_ptr<AudioClockFactory> clock_factory_;
+  std::shared_ptr<AudioCoreClockFactory> clock_factory_;
 
   IdlePolicy idle_policy_;
 
@@ -170,7 +170,7 @@ std::unique_ptr<Context> Context::Create(std::unique_ptr<ThreadingModel> threadi
                                          std::unique_ptr<sys::ComponentContext> component_context,
                                          std::unique_ptr<PlugDetector> plug_detector,
                                          ProcessConfig process_config,
-                                         std::shared_ptr<AudioClockFactory> clock_factory) {
+                                         std::shared_ptr<AudioCoreClockFactory> clock_factory) {
   return std::make_unique<ContextImpl>(std::move(threading_model), std::move(component_context),
                                        std::move(plug_detector), std::move(process_config),
                                        std::move(clock_factory));

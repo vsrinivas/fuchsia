@@ -38,7 +38,8 @@ static constexpr zx::duration kMaxTrimPeriod = zx::msec(10);
 // TODO(fxbug.dev/49345): We should not need driver to be set for all Audio Devices.
 AudioOutput::AudioOutput(const std::string& name, const DeviceConfig& config,
                          ThreadingModel* threading_model, DeviceRegistry* registry,
-                         LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory,
+                         LinkMatrix* link_matrix,
+                         std::shared_ptr<AudioCoreClockFactory> clock_factory,
                          EffectsLoaderV2* effects_loader_v2, std::unique_ptr<AudioDriver> driver)
     : AudioDevice(Type::Output, name, config, threading_model, registry, link_matrix, clock_factory,
                   std::move(driver)),
@@ -65,7 +66,7 @@ void AudioOutput::Process() {
     // Clear the flag. If the implementation does not set it during the cycle by calling
     // SetNextSchedTimeMono, we consider it an error and shut down.
     ClearNextSchedTime();
-    auto ref_now = reference_clock().ReferenceTimeFromMonotonicTime(mono_now);
+    auto ref_now = reference_clock()->ReferenceTimeFromMonotonicTime(mono_now);
 
     ReadableStream::ReadLockContext ctx;
     StageMetricsTimer timer("AudioOutput::Process");
@@ -174,10 +175,8 @@ AudioOutput::InitializeSourceLink(const AudioObject& source,
     usage = {StreamUsage::WithRenderUsage(RenderUsage::MEDIA)};
   }
 
-  // In rendering, we expect the source clock to originate from a client.
-  // For now, "loop out" (direct device-to-device) routing is unsupported.
-  FX_CHECK(source_stream->reference_clock().is_client_clock() ||
-           source_stream->reference_clock() == reference_clock());
+  // For now, at least one clock should be unadjustable.
+  FX_CHECK(!source_stream->reference_clock()->adjustable() || !reference_clock()->adjustable());
 
   auto mixer = pipeline_->AddInput(std::move(source_stream), *usage);
   return fpromise::ok(std::make_pair(std::move(mixer), &mix_domain()));
@@ -205,7 +204,7 @@ fpromise::result<std::shared_ptr<ReadableStream>, zx_status_t> AudioOutput::Init
 
 std::shared_ptr<OutputPipeline> AudioOutput::CreateOutputPipeline(
     const PipelineConfig& config, const VolumeCurve& volume_curve, size_t max_block_size_frames,
-    TimelineFunction device_reference_clock_to_fractional_frame, AudioClock& ref_clock) {
+    TimelineFunction device_reference_clock_to_fractional_frame, std::shared_ptr<Clock> ref_clock) {
   auto pipeline = std::make_unique<OutputPipelineImpl>(
       config, volume_curve, effects_loader_v2_, max_block_size_frames,
       device_reference_clock_to_fractional_frame, ref_clock);

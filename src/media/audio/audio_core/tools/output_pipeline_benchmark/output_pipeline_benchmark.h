@@ -11,13 +11,13 @@
 
 #include "gperftools/profiler.h"
 #include "lib/syslog/cpp/macros.h"
+#include "src/media/audio/audio_core/clock.h"
 #include "src/media/audio/audio_core/output_pipeline.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/stream_usage.h"
+#include "src/media/audio/audio_core/testing/fake_audio_core_clock_factory.h"
 #include "src/media/audio/lib/analysis/generators.h"
-#include "src/media/audio/lib/clock/audio_clock.h"
-#include "src/media/audio/lib/clock/testing/fake_audio_clock_factory.h"
 #include "src/media/audio/lib/effects_loader/effects_loader_v2.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
 
@@ -54,7 +54,7 @@ class OutputPipelineBenchmark {
         process_config_(LoadProcessConfigOrDie()),
         effects_loader_v2_(CreateEffectsLoaderV2(context_)),
         output_pipeline_(
-            CreateOutputPipeline(process_config_, *device_clock_, effects_loader_v2_.get())) {}
+            CreateOutputPipeline(process_config_, device_clock_, effects_loader_v2_.get())) {}
 
   void PrintLegend(zx::duration mix_period);
   void PrintHeader();
@@ -70,14 +70,14 @@ class OutputPipelineBenchmark {
   static ProcessConfig LoadProcessConfigOrDie();
   static std::unique_ptr<EffectsLoaderV2> CreateEffectsLoaderV2(sys::ComponentContext& context);
   static std::shared_ptr<OutputPipeline> CreateOutputPipeline(const ProcessConfig& process_config,
-                                                              AudioClock& device_clock,
+                                                              std::shared_ptr<Clock> device_clock,
                                                               EffectsLoaderV2* effects_loader_v2);
   std::shared_ptr<ReadableStream> CreateInput(const Input& input);
 
-  std::shared_ptr<testing::FakeAudioClockFactory> clock_factory_ =
-      std::make_shared<testing::FakeAudioClockFactory>();
-  std::unique_ptr<AudioClock> device_clock_ =
-      clock_factory_->CreateDeviceFixed(zx::time(0), 0, AudioClock::kMonotonicDomain);
+  std::shared_ptr<testing::FakeAudioCoreClockFactory> clock_factory_ =
+      std::make_shared<testing::FakeAudioCoreClockFactory>();
+  std::shared_ptr<Clock> device_clock_ =
+      clock_factory_->CreateDeviceFixed(zx::time(0), 0, Clock::kMonotonicDomain);
 
   sys::ComponentContext& context_;
   ProcessConfig process_config_;

@@ -30,7 +30,7 @@ class DriverOutput : public AudioOutput {
                const MixProfileConfig& mix_profile_config, ThreadingModel* threading_model,
                DeviceRegistry* registry,
                fidl::InterfaceHandle<fuchsia::hardware::audio::StreamConfig> channel,
-               LinkMatrix* link_matrix, std::shared_ptr<AudioClockFactory> clock_factory,
+               LinkMatrix* link_matrix, std::shared_ptr<AudioCoreClockFactory> clock_factory,
                EffectsLoaderV2* effects_loader_v2);
 
   ~DriverOutput();

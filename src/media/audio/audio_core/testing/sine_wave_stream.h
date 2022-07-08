@@ -5,10 +5,10 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_TESTING_SINE_WAVE_STREAM_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_TESTING_SINE_WAVE_STREAM_H_
 
+#include "src/media/audio/audio_core/clock.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/lib/analysis/generators.h"
-#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
 
 namespace media::audio::testing {
@@ -18,7 +18,7 @@ template <fuchsia::media::AudioSampleFormat SampleFormat>
 class SineWaveStream : public ReadableStream {
  public:
   SineWaveStream(TypedFormat<SampleFormat> format, int64_t period_frames, StreamUsage usage,
-                 std::unique_ptr<AudioClock> clock)
+                 std::shared_ptr<Clock> clock)
       : ReadableStream("SineWaveStream", format),
         usage_mask_({usage}),
         clock_(std::move(clock)),
@@ -39,7 +39,7 @@ class SineWaveStream : public ReadableStream {
     };
   }
 
-  AudioClock& reference_clock() override { return *clock_; }
+  std::shared_ptr<Clock> reference_clock() override { return clock_; }
 
  private:
   std::optional<Buffer> ReadLockImpl(ReadLockContext& ctx, Fixed frame,
@@ -55,7 +55,7 @@ class SineWaveStream : public ReadableStream {
   void TrimImpl(Fixed frame) override {}
 
   StreamUsageMask usage_mask_;
-  std::unique_ptr<AudioClock> clock_;
+  std::shared_ptr<Clock> clock_;
   AudioBuffer<SampleFormat> buffer_;
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_;
 };

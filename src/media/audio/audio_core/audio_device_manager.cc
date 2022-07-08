@@ -23,7 +23,7 @@ namespace media::audio {
 AudioDeviceManager::AudioDeviceManager(ThreadingModel& threading_model,
                                        std::unique_ptr<PlugDetector> plug_detector,
                                        LinkMatrix& link_matrix, ProcessConfig& process_config,
-                                       std::shared_ptr<AudioClockFactory> clock_factory,
+                                       std::shared_ptr<AudioCoreClockFactory> clock_factory,
                                        DeviceRouter& device_router,
                                        EffectsLoaderV2* effects_loader_v2)
     : threading_model_(threading_model),

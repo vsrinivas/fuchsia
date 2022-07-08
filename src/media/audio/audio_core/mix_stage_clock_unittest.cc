@@ -141,8 +141,8 @@ class MixStageClockTest : public testing::ThreadingModelFixture {
   std::shared_ptr<MixStage> mix_stage_;
   std::shared_ptr<Mixer> mixer_;
 
-  std::unique_ptr<AudioClock> client_clock_;
-  std::unique_ptr<AudioClock> device_clock_;
+  std::shared_ptr<Clock> client_clock_;
+  std::shared_ptr<Clock> device_clock_;
 
   int32_t total_mix_count_;
   int32_t limit_mix_count_settled_;
@@ -195,8 +195,11 @@ class MicroSrcTest : public MixStageClockTest, public ::testing::WithParamInterf
         Fixed(kDefaultFormat.frames_per_second()).raw_value(), zx::sec(1).to_nsecs()));
 
     device_clock_ = context().clock_factory()->CreateDeviceFixed(clock::CloneOfMonotonic(),
-                                                                 AudioClock::kMonotonicDomain);
-    clock::testing::VerifyAdvances(*device_clock_, context().clock_factory());
+                                                                 Clock::kMonotonicDomain);
+    {
+      SCOPED_TRACE("device clock must advance");
+      clock::testing::VerifyAdvances(*device_clock_, context().clock_factory()->synthetic());
+    }
 
     zx::time source_start = context().clock_factory()->mono_time();
     if (clock_mode == ClockMode::WITH_OFFSET) {
@@ -209,7 +212,10 @@ class MicroSrcTest : public MixStageClockTest, public ::testing::WithParamInterf
 
     client_clock_ = context().clock_factory()->CreateClientFixed(
         source_start, clock_mode == ClockMode::RATE_ADJUST ? rate_adjust_ppm : 0);
-    clock::testing::VerifyAdvances(*client_clock_, context().clock_factory());
+    {
+      SCOPED_TRACE("client clock must advance");
+      clock::testing::VerifyAdvances(*client_clock_, context().clock_factory()->synthetic());
+    }
   }
 };
 
@@ -250,7 +256,10 @@ class AdjustableClockTest : public MixStageClockTest,
 
     client_clock_ =
         context().clock_factory()->CreateClientAdjustable(clock::AdjustableCloneOfMonotonic());
-    clock::testing::VerifyAdvances(*client_clock_, context().clock_factory());
+    {
+      SCOPED_TRACE("client clock must advance");
+      clock::testing::VerifyAdvances(*client_clock_, context().clock_factory()->synthetic());
+    }
 
     auto device_start = context().clock_factory()->mono_time();
     if (clock_mode == ClockMode::WITH_OFFSET) {
@@ -264,8 +273,10 @@ class AdjustableClockTest : public MixStageClockTest,
     device_clock_ = context().clock_factory()->CreateDeviceFixed(
         device_start, clock_mode == ClockMode::RATE_ADJUST ? rate_adjust_ppm : 0,
         kNonMonotonicDomain);
-
-    clock::testing::VerifyAdvances(*device_clock_, context().clock_factory());
+    {
+      SCOPED_TRACE("device clock must advance");
+      clock::testing::VerifyAdvances(*device_clock_, context().clock_factory()->synthetic());
+    }
   }
 };
 
@@ -310,7 +321,10 @@ class RevertToMonoTest : public MixStageClockTest, public ::testing::WithParamIn
     EXPECT_EQ(adjusted_clock.update(args), ZX_OK);
 
     client_clock_ = context().clock_factory()->CreateClientAdjustable(std::move(adjusted_clock));
-    clock::testing::VerifyAdvances(*client_clock_, context().clock_factory());
+    {
+      SCOPED_TRACE("client clock must advance");
+      clock::testing::VerifyAdvances(*client_clock_, context().clock_factory()->synthetic());
+    }
 
     auto device_start = context().clock_factory()->mono_time();
     if (clock_mode == ClockMode::WITH_OFFSET) {
@@ -322,9 +336,11 @@ class RevertToMonoTest : public MixStageClockTest, public ::testing::WithParamIn
         zx::sec(1).to_nsecs()));
 
     device_clock_ =
-        context().clock_factory()->CreateDeviceFixed(device_start, 0, AudioClock::kMonotonicDomain);
-
-    clock::testing::VerifyAdvances(*device_clock_, context().clock_factory());
+        context().clock_factory()->CreateDeviceFixed(device_start, 0, Clock::kMonotonicDomain);
+    {
+      SCOPED_TRACE("device clock must advance");
+      clock::testing::VerifyAdvances(*device_clock_, context().clock_factory()->synthetic());
+    }
   }
 };
 
@@ -367,14 +383,14 @@ void MixStageClockTest::ConnectStages() {
     packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, client_ref_to_frac_frames_,
                                                  std::move(client_clock_));
     mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, kFramesToMix,
-                                            device_ref_to_frac_frames_, *device_clock_);
+                                            device_ref_to_frac_frames_, device_clock_);
   } else {
     // Create a PacketQueue with the device timeline and clock, as the source.
     // Pass the client timeline and clock to a mix stage, as the destination.
     packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, device_ref_to_frac_frames_,
                                                  std::move(device_clock_));
     mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, kFramesToMix,
-                                            client_ref_to_frac_frames_, *client_clock_);
+                                            client_ref_to_frac_frames_, client_clock_);
   }
 
   // Connect packet queue to mix stage.
@@ -520,7 +536,7 @@ void MixStageClockTest::SyncTest(int32_t rate_adjust_ppm) {
 // MicroSrcTest tests "Up1000" and "Down1000", while AdjustableClockTest and RevertToMonoTest use
 // a reasonable validation outer limit of 750 PPM.
 
-// Test cases that validate the MixStage+AudioClock "micro-SRC" synchronization path.
+// Test cases that validate the MixStage+Clock "micro-SRC" synchronization path.
 TEST_P(MicroSrcTest, Basic) { VerifySync(ClockMode::SAME); }
 TEST_P(MicroSrcTest, Offset) { VerifySync(ClockMode::WITH_OFFSET); }
 
@@ -548,7 +564,7 @@ TEST_P(MicroSrcTest, AdjustDown300) { VerifySync(ClockMode::RATE_ADJUST, -300); 
 TEST_P(MicroSrcTest, AdjustUp1000) { VerifySync(ClockMode::RATE_ADJUST, 1000); }
 TEST_P(MicroSrcTest, AdjustDown1000) { VerifySync(ClockMode::RATE_ADJUST, -1000); }
 
-// Test cases that validate the MixStage+AudioClock "flexible clock" synchronization path.
+// Test cases that validate the MixStage+Clock "flexible clock" synchronization path.
 TEST_P(AdjustableClockTest, Basic) { VerifySync(ClockMode::SAME); }
 TEST_P(AdjustableClockTest, Offset) { VerifySync(ClockMode::WITH_OFFSET); }
 
@@ -576,7 +592,7 @@ TEST_P(AdjustableClockTest, AdjustDown300) { VerifySync(ClockMode::RATE_ADJUST, 
 TEST_P(AdjustableClockTest, AdjustUp750) { VerifySync(ClockMode::RATE_ADJUST, 750); }
 TEST_P(AdjustableClockTest, AdjustDown750) { VerifySync(ClockMode::RATE_ADJUST, -750); }
 
-// Test cases to validate the MixStage+AudioClock "flex clock reverts to monotonic target" path.
+// Test cases to validate the MixStage+Clock "flex clock reverts to monotonic target" path.
 TEST_P(RevertToMonoTest, Basic) { VerifySync(ClockMode::SAME); }
 TEST_P(RevertToMonoTest, Offset) { VerifySync(ClockMode::WITH_OFFSET); }
 

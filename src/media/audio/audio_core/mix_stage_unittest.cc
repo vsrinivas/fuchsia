@@ -4,6 +4,7 @@
 
 #include "src/media/audio/audio_core/mix_stage.h"
 
+#include <lib/fit/defer.h>
 #include <zircon/syscalls.h>
 
 #include <fbl/string_printf.h>
@@ -57,12 +58,12 @@ class MixStageTest : public testing::ThreadingModelFixture {
     zx::clock zx_clone_device_clock = clock_result.take_value();
 
     device_clock_ = context().clock_factory()->CreateDeviceFixed(std::move(zx_device_clock),
-                                                                 AudioClock::kMonotonicDomain);
+                                                                 Clock::kMonotonicDomain);
     clone_of_device_clock_ = context().clock_factory()->CreateDeviceFixed(
-        std::move(zx_clone_device_clock), AudioClock::kMonotonicDomain);
+        std::move(zx_clone_device_clock), Clock::kMonotonicDomain);
 
     mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames, timeline_function_,
-                                            *device_clock_);
+                                            device_clock_);
   }
 
   int64_t duration_to_frames(zx::duration delta) {
@@ -83,8 +84,8 @@ class MixStageTest : public testing::ThreadingModelFixture {
     return reinterpret_cast<std::array<T, N>&>(static_cast<T*>(ptr)[offset]);
   }
 
-  std::unique_ptr<AudioClock> SetPacketFactoryWithOffsetAudioClock(zx::duration clock_offset,
-                                                                   testing::PacketFactory& factory);
+  std::shared_ptr<Clock> SetPacketFactoryWithOffsetAudioClock(zx::duration clock_offset,
+                                                              testing::PacketFactory& factory);
   void TestMixStageTrim(ClockMode clock_mode);
   void TestMixStageUniformFormats(ClockMode clock_mode);
   void TestMixStageSingleInput(ClockMode clock_mode);
@@ -103,8 +104,8 @@ class MixStageTest : public testing::ThreadingModelFixture {
 
   std::shared_ptr<MixStage> mix_stage_;
 
-  std::unique_ptr<AudioClock> device_clock_;
-  std::unique_ptr<AudioClock> clone_of_device_clock_;
+  std::shared_ptr<Clock> device_clock_;
+  std::shared_ptr<Clock> clone_of_device_clock_;
 };
 
 TEST_F(MixStageTest, AddInput_MixerSelection) {
@@ -132,13 +133,13 @@ TEST_F(MixStageTest, AddInput_MixerSelection) {
       TimelineRate(Fixed(kDiffFrameRate.frames_per_second()).raw_value(), zx::sec(1).to_nsecs())));
 
   auto adjustable_device_clock = context().clock_factory()->CreateDeviceAdjustable(
-      clock::AdjustableCloneOfMonotonic(), AudioClock::kMonotonicDomain + 1);
+      clock::AdjustableCloneOfMonotonic(), Clock::kMonotonicDomain + 1);
   auto adjustable_device_mix_stage = std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames,
-                                                                timeline, *adjustable_device_clock);
-  auto fixed_device_clock = context().clock_factory()->CreateDeviceFixed(
-      clock::CloneOfMonotonic(), AudioClock::kMonotonicDomain);
+                                                                timeline, adjustable_device_clock);
+  auto fixed_device_clock = context().clock_factory()->CreateDeviceFixed(clock::CloneOfMonotonic(),
+                                                                         Clock::kMonotonicDomain);
   auto fixed_device_mix_stage =
-      std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames, timeline, *fixed_device_clock);
+      std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames, timeline, fixed_device_clock);
 
   auto adjustable_client_same_rate = std::make_shared<PacketQueue>(
       kSameFrameRate, tl_same,
@@ -200,7 +201,7 @@ TEST_F(MixStageTest, AddInput_MixerSelection) {
 
 // TODO(fxbug.dev/50004): Add tests to verify we can read from mix stages with unaligned frames.
 
-std::unique_ptr<AudioClock> MixStageTest::SetPacketFactoryWithOffsetAudioClock(
+std::shared_ptr<Clock> MixStageTest::SetPacketFactoryWithOffsetAudioClock(
     zx::duration clock_offset, testing::PacketFactory& factory) {
   auto custom_clock =
       clock::testing::CreateCustomClock({.start_val = zx::clock::get_monotonic() + clock_offset})
@@ -411,7 +412,7 @@ TEST_F(MixStageTest, MixFromRingBuffersSinc) {
   // Create a new RingBuffer and add it to our mix stage.
   int64_t safe_write_frame = 0;
   auto ring_buffer_endpoints = BaseRingBuffer::AllocateSoftwareBuffer(
-      kDefaultFormat, timeline_function_, *device_clock_, kRingSizeFrames,
+      kDefaultFormat, timeline_function_, device_clock_, kRingSizeFrames,
       [&safe_write_frame] { return safe_write_frame; });
 
   // We explictly request a SincSampler here to get a non-trivial filter width.
@@ -714,7 +715,7 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
   stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10),
                                                  [&packet_released] { packet_released = true; }));
   auto mix_stage =
-      std::make_shared<MixStage>(kDefaultFormat, 480, timeline_function_, *device_clock_);
+      std::make_shared<MixStage>(kDefaultFormat, 480, timeline_function_, device_clock_);
   auto mixer = mix_stage->AddInput(stream);
 
   // After mixing half the packet, the packet should not be released.
@@ -779,7 +780,7 @@ TEST_F(MixStageTest, FirstPacketOffsetLargerThanBlockSize) {
 
   // packet_factory must outlive mix_stage_.
   mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, kBlockSizeFrames, timeline_function_,
-                                          *device_clock_);
+                                          device_clock_);
   auto mixer = mix_stage_->AddInput(stream, std::nullopt, Mixer::Resampler::SampleAndHold);
 
   // Request the first four blocks. What should happen:
@@ -924,7 +925,7 @@ TEST_F(MixStageTest, DontCrashOnDestOffsetRoundingError) {
   //
   // We use 480, which is 10ms at 48kHz.
   mix_stage_ = std::make_shared<MixStage>(kDefaultFormat, 480 /* block size in frames */,
-                                          timeline_function_, *device_clock_);
+                                          timeline_function_, device_clock_);
 
   // First step of ReadLock.
   memset(&mix_stage_->cur_mix_job_, 0, sizeof(mix_stage_->cur_mix_job_));
@@ -1011,7 +1012,7 @@ class MixStagePositionTest : public MixStageTest {
  protected:
   static constexpr int32_t kDestFramesPerMix = 96;
 
-  void SetUpWithClock(std::unique_ptr<AudioClock> clock) {
+  void SetUpWithClock(std::shared_ptr<Clock> clock) {
     packet_queue_ =
         std::make_shared<PacketQueue>(kDefaultFormat, timeline_function_, std::move(clock));
     info_ =
@@ -1026,13 +1027,14 @@ class MixStagePositionTest : public MixStageTest {
   zx::duration GetDurationErrorForFracFrameError(Fixed frac_source_error,
                                                  uint64_t source_pos_modulo = 0,
                                                  uint64_t denominator = 1) {
-    auto clock = clock::testing::CreateCustomClock({.synthetic_offset_from_mono = zx::duration(0)})
-                     .take_value();
-    auto packet_queue = std::make_shared<PacketQueue>(
-        kDefaultFormat, timeline_function_,
-        context().clock_factory()->CreateClientFixed(std::move(clock)));
+    auto clock = context().clock_factory()->CreateClientAdjustable(
+        clock::testing::CreateCustomClock({.synthetic_offset_from_mono = zx::duration(0)})
+            .take_value());
+
+    auto packet_queue = std::make_shared<PacketQueue>(kDefaultFormat, timeline_function_, clock);
     auto mixer = mix_stage_->AddInput(packet_queue, 0.0f, Mixer::Resampler::WindowedSinc);
     auto& info = mixer->source_info();
+    auto cleanup = fit::defer([this, packet_queue]() { mix_stage_->RemoveInput(*packet_queue); });
 
     // This method is called multiple times from the same test.
     // To avoid source-goes-backwards errors, reset the timeline function before calling ReadLock.
@@ -1047,6 +1049,15 @@ class MixStagePositionTest : public MixStageTest {
     EXPECT_NE(info.source_ref_clock_to_frac_source_frames_generation, kInvalidGenerationId);
     EXPECT_EQ(info.next_dest_frame, kDestFramesPerMix);
     EXPECT_EQ(info.source_pos_error, zx::duration(0));
+
+    // Advance time.
+    context().clock_factory()->AdvanceMonoTimeBy(zx::msec(10));
+
+    // Apply some no-op rate changes so MixStage believes the client and device clocks may have
+    // diverged since the last ReadLock. If we don't do this, ReadLock won't bother computing an
+    // updated position error.
+    clock->SetRate(-1);
+    clock->SetRate(0);
 
     // Inject error, mix
     info.next_source_frame += frac_source_error;
@@ -1220,10 +1231,17 @@ TEST_F(MixStagePositionTest, SourceDiscontinuityNoSync) {
 
 // On source discontinuity beyond the recoverability threshold, long-running source pos is reset.
 TEST_F(MixStagePositionTest, SourceDiscontinuityBeyondThreshold) {
-  auto non_clone = context().clock_factory()->CreateClientFixed(
+  auto clock = context().clock_factory()->CreateClientAdjustable(
       clock::testing::CreateCustomClock({.synthetic_offset_from_mono = zx::duration(0)})
           .take_value());
-  SetUpWithClock(std::move(non_clone));
+  SetUpWithClock(clock);
+
+  // Apply some no-op rate changes so MixStage believes the client and device clocks may have
+  // diverged since the last ReadLock. If we don't do this, the next ReadLock won't bother
+  // computing an updated position error.
+  clock->SetRate(-1);
+  clock->SetRate(0);
+
   // MixStage should reset source, then advance normally
   ExpectPositionOffsetsAfterMix(0, Fixed(300), 0, Fixed(0));
 }

@@ -26,7 +26,7 @@ constexpr size_t kAudioCapturerUnittestVmarSize = 16ull * 1024;
 
 class AudioCapturerTest : public testing::ThreadingModelFixture {
  public:
-  AudioCapturerTest() {
+  AudioCapturerTest() : testing::ThreadingModelFixture(WithRealClocks) {
     FX_CHECK(vmo_mapper_.CreateAndMap(kAudioCapturerUnittestVmarSize,
                                       /*flags=*/0, nullptr, &vmo_) == ZX_OK);
   }
@@ -143,7 +143,7 @@ TEST_F(AudioCapturerTest, ReferenceClockIsAdvancing) {
   auto fidl_clock = GetReferenceClock();
 
   clock::testing::VerifyAdvances(fidl_clock);
-  clock::testing::VerifyAdvances(capturer_->reference_clock(), context().clock_factory());
+  clock::testing::VerifyAdvances(*capturer_->reference_clock());
 }
 
 TEST_F(AudioCapturerTest, DefaultReferenceClockIsReadOnly) {
@@ -152,14 +152,14 @@ TEST_F(AudioCapturerTest, DefaultReferenceClockIsReadOnly) {
   clock::testing::VerifyCannotBeRateAdjusted(fidl_clock);
 
   // Within audio_core, the default clock is rate-adjustable.
-  clock::testing::VerifyCanBeRateAdjusted(capturer_->reference_clock());
+  clock::testing::VerifyCanBeRateAdjusted(*capturer_->reference_clock());
 }
 
 TEST_F(AudioCapturerTest, DefaultClockIsClockMonotonic) {
   auto fidl_clock = GetReferenceClock();
 
   clock::testing::VerifyIsSystemMonotonic(fidl_clock);
-  clock::testing::VerifyIsSystemMonotonic(capturer_->reference_clock());
+  clock::testing::VerifyIsSystemMonotonic(*capturer_->reference_clock());
 }
 
 }  // namespace

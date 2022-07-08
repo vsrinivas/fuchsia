@@ -8,6 +8,15 @@
 
 namespace media::audio::testing {
 
+namespace {
+FakeAudioCoreClockFactory kDefaultClockFactory;
+}
+
+// static
+std::shared_ptr<Clock> FakeAudioCoreClockFactory::DefaultClock() {
+  return kDefaultClockFactory.CreateClientFixed(zx::time(0), 0);
+}
+
 std::shared_ptr<Clock> FakeAudioCoreClockFactory::CreateClientAdjustable(zx::clock clock) {
   return realm_->CreateClock("synthetic_client_adjustable", Clock::kExternalDomain, true,
                              RefToMonoTransform(clock));

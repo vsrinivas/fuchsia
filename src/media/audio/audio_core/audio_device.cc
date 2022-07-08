@@ -53,7 +53,7 @@ fpromise::result<audio_stream_unique_id_t> AudioDevice::UniqueIdFromString(const
 }
 
 // Simple accessor here (not in .h) because of forward-declaration issues with AudioDriver
-AudioClock& AudioDevice::reference_clock() {
+std::shared_ptr<Clock> AudioDevice::reference_clock() {
   FX_DCHECK(driver_);
   return driver_->reference_clock();
 }
@@ -77,7 +77,7 @@ const DeviceConfig::DeviceProfile& AudioDevice::profile() const {
 AudioDevice::AudioDevice(AudioObject::Type type, const std::string& name,
                          const DeviceConfig& config, ThreadingModel* threading_model,
                          DeviceRegistry* registry, LinkMatrix* link_matrix,
-                         std::shared_ptr<AudioClockFactory> clock_factory,
+                         std::shared_ptr<AudioCoreClockFactory> clock_factory,
                          std::unique_ptr<AudioDriver> driver)
     : AudioObject(type),
       name_(name),

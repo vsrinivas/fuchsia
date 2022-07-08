@@ -13,8 +13,8 @@
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_output.h"
+#include "src/media/audio/audio_core/clock.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
-#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
 
@@ -30,7 +30,7 @@ class ThrottleOutput : public AudioOutput {
   static std::shared_ptr<AudioOutput> Create(const DeviceConfig& config,
                                              ThreadingModel* threading_model,
                                              DeviceRegistry* registry, LinkMatrix* link_matrix,
-                                             std::shared_ptr<AudioClockFactory> clock_factory) {
+                                             std::shared_ptr<AudioCoreClockFactory> clock_factory) {
     return std::make_shared<ThrottleOutput>(config, threading_model, registry, link_matrix,
                                             clock_factory);
   }
@@ -39,12 +39,12 @@ class ThrottleOutput : public AudioOutput {
   // implementation that calls into the AudioDriver, because we don't have an associated driver.
   ThrottleOutput(const DeviceConfig& config, ThreadingModel* threading_model,
                  DeviceRegistry* registry, LinkMatrix* link_matrix,
-                 std::shared_ptr<AudioClockFactory> clock_factory)
+                 std::shared_ptr<AudioCoreClockFactory> clock_factory)
       : AudioOutput("throttle", config, threading_model, registry, link_matrix, clock_factory,
                     nullptr /* EffectsLoaderV2 */, std::make_unique<AudioDriver>(this)),
         audio_clock_(clock_factory->CreateDeviceFixed(audio::clock::CloneOfMonotonic(),
-                                                      AudioClock::kMonotonicDomain)) {
-    const auto ref_now = reference_clock().Read();
+                                                      Clock::kMonotonicDomain)) {
+    const auto ref_now = reference_clock()->now();
     const auto fps = PipelineConfig::kDefaultMixGroupRate;
     ref_time_to_frac_presentation_frame_ =
         TimelineFunction(0, ref_now.get(), Fixed(fps).raw_value(), zx::sec(1).get());
@@ -68,7 +68,7 @@ class ThrottleOutput : public AudioOutput {
 
   ~ThrottleOutput() override = default;
 
-  AudioClock& reference_clock() override { return *audio_clock_; }
+  std::shared_ptr<Clock> reference_clock() override { return audio_clock_; }
 
  protected:
   // AudioOutput Implementation
@@ -85,7 +85,7 @@ class ThrottleOutput : public AudioOutput {
   std::optional<AudioOutput::FrameSpan> StartMixJob(zx::time ref_time) override {
     // Compute the next callback time; check whether trimming is falling behind.
     last_sched_time_mono_ = last_sched_time_mono_ + TRIM_PERIOD;
-    auto mono_time = reference_clock().MonotonicTimeFromReferenceTime(ref_time);
+    auto mono_time = reference_clock()->MonotonicTimeFromReferenceTime(ref_time);
 
     if (mono_time > last_sched_time_mono_) {
       // TODO(mpuryear): Trimming is falling behind. We should tell someone.
@@ -144,7 +144,7 @@ class ThrottleOutput : public AudioOutput {
   bool uninitialized_ = true;
   TimelineFunction ref_time_to_frac_presentation_frame_;
   TimelineFunction ref_time_to_frac_safe_read_or_write_frame_;
-  std::unique_ptr<AudioClock> audio_clock_;
+  std::shared_ptr<Clock> audio_clock_;
 };
 
 }  // namespace media::audio

@@ -78,40 +78,9 @@ fpromise::result<std::shared_ptr<ReadableStream>, zx_status_t> BaseRenderer::Ini
     const AudioObject& dest) {
   TRACE_DURATION("audio", "BaseRenderer::InitializeDestLink");
 
-  std::unique_ptr<AudioClock> clock_for_packet_queue;
-  if (client_allows_clock_adjustment_ && !adjustable_clock_is_allocated_) {
-    // Duplicate clock_ with ZX_RIGHT_SAME_RIGHTS to retain WRITE, create adjustable AudioClock, and
-    // note that an adjustable clock has been provided.
-    auto adjustable_duplicate_result = clock_->DuplicateClock();
-    if (adjustable_duplicate_result.is_error()) {
-      return fpromise::error(adjustable_duplicate_result.error());
-    }
-    FX_DCHECK(adjustable_duplicate_result.value().is_valid());
-
-    clock_for_packet_queue =
-        context_.clock_factory()->CreateClientAdjustable(adjustable_duplicate_result.take_value());
-    adjustable_clock_is_allocated_ = true;
-    if constexpr (kLogRendererClockConstruction) {
-      FX_LOGS(INFO) << "Renderer " << this << " created ClientAdjustable AudioClock 0x" << std::hex
-                    << clock_for_packet_queue.get();
-    }
-  } else {
-    // This strips off WRITE rights, which is appropriate for a non-adjustable clock.
-    auto readable_clock_result = clock_->DuplicateClockReadOnly();
-    if (readable_clock_result.is_error()) {
-      return fpromise::error(readable_clock_result.error());
-    }
-
-    clock_for_packet_queue =
-        context_.clock_factory()->CreateClientFixed(readable_clock_result.take_value());
-    if constexpr (kLogRendererClockConstruction) {
-      FX_LOGS(INFO) << "Renderer " << this << " created ClientFixed AudioClock 0x" << std::hex
-                    << clock_for_packet_queue.get();
-    }
-  }
-
-  auto queue = std::make_shared<PacketQueue>(*format(), reference_clock_to_fractional_frames_,
-                                             std::move(clock_for_packet_queue));
+  // The PacketQueue uses our same clock.
+  auto queue =
+      std::make_shared<PacketQueue>(*format(), reference_clock_to_fractional_frames_, clock_);
 
   queue->SetUnderflowReporter([this](zx::duration duration) {
     auto now = zx::clock::get_monotonic();
@@ -143,11 +112,6 @@ void BaseRenderer::CleanupDestLink(const AudioObject& dest) {
   // the flush at the end of the mix job when the packet queue buffers are unlocked.
   queue->Flush(PendingFlushToken::Create(context_.threading_model().FidlDomain().dispatcher(),
                                          [self = shared_from_this()] {}));
-  // If this was our one adjustable clock, mark that a new dest link can use it.
-  if (queue->reference_clock().is_adjustable()) {
-    FX_DCHECK(client_allows_clock_adjustment_);
-    adjustable_clock_is_allocated_ = false;
-  }
 }
 
 void BaseRenderer::RecomputeMinLeadTime() {
@@ -458,7 +422,7 @@ void BaseRenderer::SendPacketInternal(fuchsia::media::StreamPacket packet,
     // If the packet has both pts == NO_TIMESTAMP and STREAM_PACKET_FLAG_DISCONTINUITY, then we will
     // ensure the calculated PTS is playable (that is, greater than now + min_lead_time).
     if (packet.flags & fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY) {
-      auto ref_now = clock_->Read();
+      auto ref_now = clock_->now();
       zx::time deadline = ref_now + min_lead_time_;
 
       auto first_valid_frame =
@@ -629,7 +593,7 @@ void BaseRenderer::PlayInternal(zx::time reference_time, zx::time media_time,
     // in internal interconnect requirements, but impact should be small since internal lead time
     // factors tend to be small, while external factors can be huge.
 
-    auto ref_now = clock_->Read();
+    auto ref_now = clock_->now();
     reference_time = ref_now + min_lead_time_ + kPaddingForUnspecifiedRefTime;
   }
 
@@ -741,7 +705,7 @@ void BaseRenderer::Pause(PauseCallback callback) {
 
 void BaseRenderer::PauseInternal(PauseCallback callback) {
   TRACE_DURATION("audio", "BaseRenderer::PauseInternal");
-  pause_reference_time_ = clock_->Read();
+  pause_reference_time_ = clock_->now();
 
   // Update our reference clock to fractional frame transformation, keeping it 1st order continuous.
   pause_time_frac_frames_ =
@@ -837,7 +801,6 @@ zx_status_t BaseRenderer::SetAdjustableReferenceClock() {
   TRACE_DURATION("audio", "BaseRenderer::SetAdjustableReferenceClock");
   clock_ =
       context_.clock_factory()->CreateClientAdjustable(audio::clock::AdjustableCloneOfMonotonic());
-  client_allows_clock_adjustment_ = true;
   return ZX_OK;
 }
 
@@ -850,8 +813,6 @@ zx_status_t BaseRenderer::SetCustomReferenceClock(zx::clock ref_clock) {
     return ZX_ERR_INVALID_ARGS;
   }
   clock_ = context_.clock_factory()->CreateClientFixed(std::move(ref_clock));
-
-  client_allows_clock_adjustment_ = false;
   return ZX_OK;
 }
 
@@ -863,13 +824,13 @@ void BaseRenderer::GetReferenceClock(GetReferenceClockCallback callback) {
   auto cleanup = fit::defer([this]() { context_.route_graph().RemoveRenderer(*this); });
 
   // Regardless of whether clock_ is writable, this strips off the WRITE right.
-  auto clock_result = clock_->DuplicateClockReadOnly();
-  if (clock_result.is_error()) {
-    FX_LOGS(ERROR) << "DuplicateClockReadOnly failed, will not return reference clock!";
+  auto clock_result = clock_->DuplicateZxClockReadOnly();
+  if (!clock_result) {
+    FX_LOGS(ERROR) << "DuplicateZxClockReadOnly failed, will not return reference clock!";
     return;
   }
 
-  callback(clock_result.take_value());
+  callback(std::move(*clock_result));
   cleanup.cancel();
 }
 

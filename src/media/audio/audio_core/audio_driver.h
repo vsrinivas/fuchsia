@@ -140,7 +140,7 @@ class AudioDriver {
     return writable_ring_buffer_;
   }
 
-  AudioClock& reference_clock() { return *audio_clock_; }
+  std::shared_ptr<Clock> reference_clock() { return audio_clock_; }
   zx::duration turn_on_delay() { return turn_on_delay_; }
   std::vector<ChannelAttributes> channel_config() { return configured_channel_config_; }
 
@@ -262,9 +262,9 @@ class AudioDriver {
   fidl::InterfacePtr<fuchsia::hardware::audio::StreamConfig> stream_config_fidl_;
   fidl::InterfacePtr<fuchsia::hardware::audio::RingBuffer> ring_buffer_fidl_;
 
-  uint32_t clock_domain_ = AudioClock::kMonotonicDomain;
-  std::unique_ptr<AudioClock> audio_clock_;
-  std::unique_ptr<AudioClock> recovered_clock_;
+  uint32_t clock_domain_ = Clock::kMonotonicDomain;
+  std::shared_ptr<Clock> audio_clock_;
+  std::shared_ptr<RecoveredClock> recovered_clock_;
 
   // Counter of received position notifications since START.
   uint64_t position_notification_count_ FXL_GUARDED_BY(owner_->mix_domain().token()) = 0;

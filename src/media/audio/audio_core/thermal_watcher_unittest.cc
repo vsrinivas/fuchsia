@@ -36,7 +36,7 @@ class ThermalWatcherTest : public gtest::TestLoopFixture {
     auto plug_detector = std::make_unique<testing::FakePlugDetector>();
     return Context::Create(std::move(threading_model), component_context_provider_.TakeContext(),
                            std::move(plug_detector), std::move(process_config),
-                           std::make_shared<AudioClockFactory>());
+                           std::make_shared<AudioCoreClockFactory>());
   }
 
  private:

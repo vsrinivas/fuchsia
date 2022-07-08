@@ -13,7 +13,7 @@ namespace media::audio::testing {
 FakePacketQueue::FakePacketQueue(
     std::vector<fbl::RefPtr<Packet>> packets, const Format& format,
     fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-    std::unique_ptr<AudioClock> audio_clock)
+    std::shared_ptr<Clock> audio_clock)
     : ReadableStream("FakePacketQueue", format),
       packets_(std::move(packets)),
       timeline_function_(std::move(ref_time_to_frac_presentation_frame)),

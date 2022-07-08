@@ -30,7 +30,7 @@ constexpr size_t kAudioRendererUnittestVmoSize = 16ull * 1024;
 
 class AudioRendererTest : public testing::ThreadingModelFixture {
  public:
-  AudioRendererTest() {
+  explicit AudioRendererTest(ClockFactoryMode mode) : testing::ThreadingModelFixture(mode) {
     FX_CHECK(vmo_mapper_.CreateAndMap(kAudioRendererUnittestVmoSize,
                                       /*flags=*/0, nullptr, &vmo_) == ZX_OK);
   }
@@ -110,11 +110,23 @@ class AudioRendererTest : public testing::ThreadingModelFixture {
   };
 };
 
+// Real clocks are needed for tests that call GetReferenceClock.
+class AudioRendererTestRealClocks : public AudioRendererTest {
+ public:
+  AudioRendererTestRealClocks() : AudioRendererTest(WithRealClocks) {}
+};
+
+// Synthetic clocks may be used in other tests.
+class AudioRendererTestSyntheticClocks : public AudioRendererTest {
+ public:
+  AudioRendererTestSyntheticClocks() : AudioRendererTest(WithSyntheticClocks) {}
+};
+
 constexpr zx::duration kMinLeadTime = zx::nsec(123456789);
 constexpr int64_t kInvalidLeadTimeNs = -1;
 
 // Validate that MinLeadTime is provided to AudioRenderer clients accurately
-TEST_F(AudioRendererTest, MinLeadTimePadding) {
+TEST_F(AudioRendererTestSyntheticClocks, MinLeadTimePadding) {
   // We must set our output's delay, before linking it, before calling SetPcmStreamType().
   fake_output_->SetPresentationDelay(kMinLeadTime);
 
@@ -138,7 +150,7 @@ TEST_F(AudioRendererTest, MinLeadTimePadding) {
   EXPECT_EQ(lead_time_ns, kMinLeadTime.to_nsecs()) << "Incorrect GetMinLeadTime received";
 }
 
-TEST_F(AudioRendererTest, AllocatePacketQueueForLinks) {
+TEST_F(AudioRendererTestSyntheticClocks, AllocatePacketQueueForLinks) {
   context().route_graph().AddRenderer(std::move(renderer_));
   context().route_graph().AddDeviceToRoutes(fake_output_.get());
 
@@ -171,7 +183,7 @@ TEST_F(AudioRendererTest, AllocatePacketQueueForLinks) {
   }
 }
 
-TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
+TEST_F(AudioRendererTestSyntheticClocks, SendPacket_NO_TIMESTAMP) {
   context().route_graph().AddRenderer(std::move(renderer_));
   context().route_graph().AddDeviceToRoutes(fake_output_.get());
 
@@ -240,7 +252,7 @@ TEST_F(AudioRendererTest, SendPacket_NO_TIMESTAMP) {
 }
 
 // The renderer should be routed once the format is set.
-TEST_F(AudioRendererTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers) {
+TEST_F(AudioRendererTestSyntheticClocks, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers) {
   EXPECT_EQ(context().link_matrix().DestLinkCount(*renderer_), 0u);
 
   zx::vmo duplicate;
@@ -268,7 +280,7 @@ TEST_F(AudioRendererTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers)
 }
 
 // AudioRenderer should survive, if it calls Play while already playing.
-TEST_F(AudioRendererTest, DoublePlay) {
+TEST_F(AudioRendererTestSyntheticClocks, DoublePlay) {
   context().route_graph().AddDeviceToRoutes(fake_output_.get());
   RunLoopUntilIdle();
 
@@ -294,7 +306,7 @@ TEST_F(AudioRendererTest, DoublePlay) {
 
 // AudioRenderer should survive, if it calls Pause for a second time before calling Play.
 // Timestamps returned from this second Pause should be the same as those from the first.
-TEST_F(AudioRendererTest, DoublePause) {
+TEST_F(AudioRendererTestSyntheticClocks, DoublePause) {
   context().route_graph().AddDeviceToRoutes(fake_output_.get());
   RunLoopUntilIdle();
 
@@ -334,7 +346,7 @@ TEST_F(AudioRendererTest, DoublePause) {
 
 // AudioRenderer should survive if calling Pause before ever calling Play.
 // We return timestamps that try to indicate that no previous timeline transform was established.
-TEST_F(AudioRendererTest, PauseBeforePlay) {
+TEST_F(AudioRendererTestSyntheticClocks, PauseBeforePlay) {
   context().route_graph().AddDeviceToRoutes(fake_output_.get());
   RunLoopUntilIdle();
 
@@ -352,7 +364,7 @@ TEST_F(AudioRendererTest, PauseBeforePlay) {
   EXPECT_TRUE(fidl_renderer_.is_bound());
 }
 
-TEST_F(AudioRendererTest, ReportsPlayAndPauseToPolicy) {
+TEST_F(AudioRendererTestSyntheticClocks, ReportsPlayAndPauseToPolicy) {
   context().route_graph().AddDeviceToRoutes(fake_output_.get());
   RunLoopUntilIdle();
 
@@ -388,7 +400,7 @@ TEST_F(AudioRendererTest, ReportsPlayAndPauseToPolicy) {
 }
 
 // AudioCore should survive, if a renderer is unbound between a Play call and its callback.
-TEST_F(AudioRendererTest, RemoveRendererDuringPlay) {
+TEST_F(AudioRendererTestSyntheticClocks, RemoveRendererDuringPlay) {
   context().route_graph().AddDeviceToRoutes(fake_output_.get());
   RunLoopUntilIdle();
 
@@ -409,7 +421,7 @@ TEST_F(AudioRendererTest, RemoveRendererDuringPlay) {
 
 // AudioCore should survive, if a renderer is unbound immediately after PlayNoReply, as AudioCore
 // may kick off deferred actions that need to be safely retired.
-TEST_F(AudioRendererTest, RemoveRendererDuringPlayNoReply) {
+TEST_F(AudioRendererTestSyntheticClocks, RemoveRendererDuringPlayNoReply) {
   context().route_graph().AddDeviceToRoutes(fake_output_.get());
   RunLoopUntilIdle();
 
@@ -425,7 +437,7 @@ TEST_F(AudioRendererTest, RemoveRendererDuringPlayNoReply) {
 }
 
 // AudioCore should survive, if a renderer is unbound between a Pause call and its callback.
-TEST_F(AudioRendererTest, RemoveRendererDuringPause) {
+TEST_F(AudioRendererTestSyntheticClocks, RemoveRendererDuringPause) {
   context().route_graph().AddDeviceToRoutes(fake_output_.get());
   RunLoopUntilIdle();
 
@@ -446,7 +458,7 @@ TEST_F(AudioRendererTest, RemoveRendererDuringPause) {
 
 // AudioCore should survive, if a renderer is unbound immediately after PauseNoReply, as AudioCore
 // may kick off deferred actions that need to be safely retired.
-TEST_F(AudioRendererTest, RemoveRendererDuringPauseNoReply) {
+TEST_F(AudioRendererTestSyntheticClocks, RemoveRendererDuringPauseNoReply) {
   context().route_graph().AddDeviceToRoutes(fake_output_.get());
   RunLoopUntilIdle();
 
@@ -463,7 +475,7 @@ TEST_F(AudioRendererTest, RemoveRendererDuringPauseNoReply) {
   RunLoopFor(zx::msec(20));  // wait for any Pause-related pended actions to try to complete
 }
 
-TEST_F(AudioRendererTest, RemoveRendererWhileBufferLocked) {
+TEST_F(AudioRendererTestSyntheticClocks, RemoveRendererWhileBufferLocked) {
   context().route_graph().AddDeviceToRoutes(fake_output_.get());
   RunLoopUntilIdle();
 
@@ -501,31 +513,32 @@ TEST_F(AudioRendererTest, RemoveRendererWhileBufferLocked) {
   RunLoopUntilIdle();
 }
 
-TEST_F(AudioRendererTest, ReferenceClockIsAdvancing) {
+TEST_F(AudioRendererTestRealClocks, ReferenceClockIsAdvancing) {
   auto fidl_clock = GetReferenceClock();
   clock::testing::VerifyAdvances(fidl_clock);
-  clock::testing::VerifyAdvances(renderer_->reference_clock(), context().clock_factory());
+  clock::testing::VerifyAdvances(*renderer_->reference_clock());
 }
 
-TEST_F(AudioRendererTest, GetReferenceClockReturnsReadOnlyClock) {
+TEST_F(AudioRendererTestRealClocks, GetReferenceClockReturnsReadOnlyClock) {
   auto fidl_clock = GetReferenceClock();
   clock::testing::VerifyCannotBeRateAdjusted(fidl_clock);
 }
 
-TEST_F(AudioRendererTest, DefaultClockIsInitiallyMonotonic) {
+TEST_F(AudioRendererTestRealClocks, DefaultClockIsInitiallyMonotonic) {
   auto fidl_clock = GetReferenceClock();
   clock::testing::VerifyIsSystemMonotonic(fidl_clock);
-  clock::testing::VerifyIsSystemMonotonic(renderer_->reference_clock());
+  clock::testing::VerifyIsSystemMonotonic(*renderer_->reference_clock());
 }
 
-TEST_F(AudioRendererTest, DefaultClockIsFlexible) {
-  clock::testing::VerifyCanBeRateAdjusted(renderer_->reference_clock());
-  EXPECT_TRUE(renderer_->reference_clock().is_adjustable());
-  EXPECT_TRUE(renderer_->reference_clock().is_client_clock());
+TEST_F(AudioRendererTestRealClocks, DefaultClockIsFlexible) {
+  clock::testing::VerifyCanBeRateAdjusted(*renderer_->reference_clock());
+  EXPECT_TRUE(renderer_->reference_clock()->adjustable());
+  // Must be a client clock, which should always be in the "external" domain.
+  EXPECT_EQ(renderer_->reference_clock()->domain(), Clock::kExternalDomain);
 }
 
 // The renderer clock is valid, before and after devices are routed.
-TEST_F(AudioRendererTest, ReferenceClockIsCorrectAfterDeviceChange) {
+TEST_F(AudioRendererTestRealClocks, ReferenceClockIsCorrectAfterDeviceChange) {
   auto* renderer_raw = renderer_.get();
   context().route_graph().AddRenderer(std::move(renderer_));
   RunLoopUntilIdle();

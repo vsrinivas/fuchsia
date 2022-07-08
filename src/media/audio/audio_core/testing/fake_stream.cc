@@ -8,7 +8,7 @@
 
 namespace media::audio::testing {
 
-FakeStream::FakeStream(const Format& format, std::shared_ptr<AudioClockFactory> clock_factory,
+FakeStream::FakeStream(const Format& format, std::shared_ptr<AudioCoreClockFactory> clock_factory,
                        size_t max_buffer_size, zx::clock clock)
     : ReadableStream("FakeStream", format),
       audio_clock_(clock_factory->CreateClientFixed(std::move(clock))) {

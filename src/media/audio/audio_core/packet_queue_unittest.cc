@@ -11,8 +11,7 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
-#include "src/media/audio/lib/clock/audio_clock.h"
-#include "src/media/audio/lib/clock/clone_mono.h"
+#include "src/media/audio/audio_core/testing/fake_audio_core_clock_factory.h"
 
 namespace media::audio {
 namespace {
@@ -36,7 +35,7 @@ class PacketQueueTest : public gtest::TestLoopFixture {
                        })
             .take_value(),
         std::move(one_frame_per_ms),
-        std::make_unique<AudioClock>(AudioClock::ClientFixed(clock::AdjustableCloneOfMonotonic())));
+        ::media::audio::testing::FakeAudioCoreClockFactory::DefaultClock());
   }
 
   fbl::RefPtr<Packet> CreatePacket(uint32_t payload_buffer_id, int64_t start = 0,

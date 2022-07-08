@@ -13,12 +13,12 @@
 
 #include <fbl/static_vector.h>
 
+#include "src/media/audio/audio_core/clock.h"
 #include "src/media/audio/audio_core/logging_flags.h"
 #include "src/media/audio/audio_core/packet.h"
 #include "src/media/audio/audio_core/stage_metrics.h"
 #include "src/media/audio/audio_core/stream_usage.h"
 #include "src/media/audio/audio_core/verbose_log.h"
-#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 
@@ -47,7 +47,7 @@ class BaseStream {
   // This function translates from a timestamp to the corresponding fixed-point frame number that
   // will be presented at that time. The timestamp is relative to the stream's reference clock.
   virtual TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const = 0;
-  virtual AudioClock& reference_clock() = 0;
+  virtual std::shared_ptr<Clock> reference_clock() = 0;
 
   // Common shorthands to convert between PTS and frame numbers.
   Fixed FracPresentationFrameAtRefTime(zx::time ref_time) const {

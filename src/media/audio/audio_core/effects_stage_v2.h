@@ -11,10 +11,10 @@
 
 #include <memory>
 
+#include "src/media/audio/audio_core/clock.h"
 #include "src/media/audio/audio_core/reusable_buffer.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/utils.h"
-#include "src/media/audio/lib/clock/audio_clock.h"
 
 namespace media::audio {
 
@@ -27,7 +27,7 @@ class EffectsStageV2 : public ReadableStream {
 
   // |media::audio::ReadableStream|
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
-  AudioClock& reference_clock() override { return source_->reference_clock(); }
+  std::shared_ptr<Clock> reference_clock() override { return source_->reference_clock(); }
   void SetPresentationDelay(zx::duration external_delay) override;
 
   // Manages buffers for the FIDL connection.

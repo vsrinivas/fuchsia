@@ -17,6 +17,9 @@ namespace media::audio::testing {
 
 class FakeAudioCoreClockFactory : public AudioCoreClockFactory {
  public:
+  // Create a default clock which can by used when any clock is needed.
+  static std::shared_ptr<Clock> DefaultClock();
+
   std::shared_ptr<Clock> CreateClientAdjustable(zx::clock clock) override;
   std::shared_ptr<Clock> CreateClientFixed(zx::clock clock) override;
   std::shared_ptr<Clock> CreateDeviceAdjustable(zx::clock clock, uint32_t domain) override;

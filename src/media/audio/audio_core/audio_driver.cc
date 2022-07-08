@@ -21,7 +21,9 @@
 #include <audio-proto-utils/format-utils.h>
 #include <fbl/algorithm.h>
 
+#include "src/lib/fxl/strings/string_printf.h"
 #include "src/media/audio/audio_core/logging_flags.h"
+#include "src/media/audio/lib/clock/audio_clock_coefficients.h"
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/clock/utils.h"
 #include "src/media/audio/lib/format/driver_format.h"
@@ -527,7 +529,7 @@ zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_b
                   *format, versioned_ref_time_to_frac_presentation_frame_, reference_clock(),
                   std::move(result.response().ring_buffer), result.response().num_frames, [this]() {
                     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
-                    auto t = reference_clock().Read();
+                    auto t = reference_clock()->now();
                     // Safe-read position: ring-buffer readers should never BEYOND this frame.
                     // We Floor any fractional-frame position to be conservative ("safe").
                     return Fixed::FromRaw(ref_time_to_frac_safe_read_or_write_frame_.Apply(t.get()))
@@ -538,7 +540,7 @@ zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_b
                   *format, versioned_ref_time_to_frac_presentation_frame_, reference_clock(),
                   std::move(result.response().ring_buffer), result.response().num_frames, [this]() {
                     OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
-                    auto t = reference_clock().Read();
+                    auto t = reference_clock()->now();
                     // Safe-write position: ring-buffer writers should always write AT/BEYOND this
                     // frame. We Ceiling any fractional-frame position to be conservative ("safe").
                     return Fixed::FromRaw(ref_time_to_frac_safe_read_or_write_frame_.Apply(t.get()))
@@ -564,7 +566,7 @@ zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_b
 
           RequestNextPlugStateChange();
 
-          if (clock_domain_ != AudioClock::kMonotonicDomain) {
+          if (clock_domain_ != Clock::kMonotonicDomain) {
             RequestNextClockRecoveryUpdate();
           }
         });
@@ -594,7 +596,7 @@ void AudioDriver::RequestNextPlugStateChange() {
 // This position notification will be used to synthesize a clock for this audio device.
 void AudioDriver::ClockRecoveryUpdate(fuchsia::hardware::audio::RingBufferPositionInfo info) {
   TRACE_DURATION("audio", "AudioDriver::ClockRecoveryUpdate");
-  if (clock_domain_ == AudioClock::kMonotonicDomain) {
+  if (clock_domain_ == Clock::kMonotonicDomain) {
     return;
   }
 
@@ -617,15 +619,13 @@ void AudioDriver::ClockRecoveryUpdate(fuchsia::hardware::audio::RingBufferPositi
     running_pos_bytes_ += ring_buffer_size_bytes_;
   }
 
-  auto curr_pos_frac_frames = frac_frames_per_byte_.Scale(running_pos_bytes_);
-  auto curr_ref_time = ref_time_to_frac_presentation_frame_.ApplyInverse(curr_pos_frac_frames);
-  auto predicted_mono_time = audio_clock_->MonotonicTimeFromReferenceTime(zx::time(curr_ref_time));
-
-  auto curr_error = predicted_mono_time - actual_mono_time;
+  FX_CHECK(recovered_clock_);
+  auto predicted_mono_time = recovered_clock_->Update(actual_mono_time, running_pos_bytes_);
 
   if constexpr (kDriverPositionNotificationDisplayInterval > 0) {
     if (position_notification_count_ % kDriverPositionNotificationDisplayInterval == 0) {
-      FX_LOGS(INFO) << static_cast<void*>(this) << (owner_->is_output() ? " Output" : " Input ")
+      auto curr_error = predicted_mono_time - actual_mono_time;
+      FX_LOGS(INFO) << static_cast<void*>(this) << " " << recovered_clock_->name()
                     << " notification #" << position_notification_count_ << " [" << info.timestamp
                     << ", " << std::setw(6) << info.position << "] run_pos_bytes "
                     << running_pos_bytes_ << ", run_time "
@@ -634,8 +634,6 @@ void AudioDriver::ClockRecoveryUpdate(fuchsia::hardware::audio::RingBufferPositi
     }
   }
 
-  recovered_clock_->TuneForError(actual_mono_time, curr_error);
-
   // Maintain a running count of position notifications since START.
   ++position_notification_count_;
 
@@ -643,7 +641,7 @@ void AudioDriver::ClockRecoveryUpdate(fuchsia::hardware::audio::RingBufferPositi
 }
 
 void AudioDriver::RequestNextClockRecoveryUpdate() {
-  FX_CHECK(clock_domain_ != AudioClock::kMonotonicDomain);
+  FX_CHECK(clock_domain_ != Clock::kMonotonicDomain);
 
   ring_buffer_fidl_->WatchClockRecoveryPositionInfo(
       [this](fuchsia::hardware::audio::RingBufferPositionInfo info) { ClockRecoveryUpdate(info); });
@@ -683,7 +681,7 @@ zx_status_t AudioDriver::Start() {
     }
 
     mono_start_time_ = zx::time(start_time);
-    ref_start_time_ = reference_clock().ReferenceTimeFromMonotonicTime(mono_start_time_);
+    ref_start_time_ = reference_clock()->ReferenceTimeFromMonotonicTime(mono_start_time_);
 
     auto format = GetFormat();
     auto frac_fps = TimelineRate(Fixed(format->frames_per_second()).raw_value(), zx::sec(1).get());
@@ -778,8 +776,13 @@ zx_status_t AudioDriver::Start() {
     }
 
     versioned_ref_time_to_frac_presentation_frame_->Update(ref_time_to_frac_presentation_frame_);
-    if (clock_domain_ != AudioClock::kMonotonicDomain) {
-      recovered_clock_->ResetRateAdjustment(mono_start_time_);
+    if (clock_domain_ != Clock::kMonotonicDomain) {
+      auto frac_frame_to_ref_time = ref_time_to_frac_presentation_frame_.Inverse();
+      auto bytes_to_frac_frames = TimelineFunction(0, 0, frac_frames_per_byte_);
+      auto bytes_to_ref_time = frac_frame_to_ref_time * bytes_to_frac_frames;
+
+      FX_CHECK(recovered_clock_);
+      recovered_clock_->Reset(mono_start_time_, bytes_to_ref_time);
     }
 
     // We are now Started. Let our owner know about this important milestone.
@@ -921,10 +924,11 @@ zx_status_t AudioDriver::OnDriverInfoFetched(uint32_t info) {
 }
 
 void AudioDriver::SetUpClocks() {
-  if (clock_domain_ == AudioClock::kMonotonicDomain) {
+  if (clock_domain_ == Clock::kMonotonicDomain) {
     // If in the monotonic domain, we'll fall back to a non-adjustable clone of CLOCK_MONOTONIC.
     audio_clock_ = owner_->clock_factory()->CreateDeviceFixed(audio::clock::CloneOfMonotonic(),
-                                                              AudioClock::kMonotonicDomain);
+                                                              Clock::kMonotonicDomain);
+    recovered_clock_ = nullptr;
     return;
   }
 
@@ -932,22 +936,19 @@ void AudioDriver::SetUpClocks() {
   // clock domain, this clock must eventually diverge. We tune this clock based on notifications
   // provided by the audio driver, which correlate DMA position with CLOCK_MONOTONIC time.
   // TODO(fxbug.dev/60027): Recovered clocks should be per-domain not per-driver.
-  auto adjustable_clock = audio::clock::AdjustableCloneOfMonotonic();
-  recovered_clock_ =
-      owner_->clock_factory()->CreateDeviceAdjustable(std::move(adjustable_clock), clock_domain_);
+  auto backing_clock = owner_->clock_factory()->CreateDeviceAdjustable(
+      audio::clock::AdjustableCloneOfMonotonic(), clock_domain_);
 
-  auto read_only_clock_result = recovered_clock_->DuplicateClockReadOnly();
-  if (read_only_clock_result.is_error()) {
-    FX_LOGS(ERROR) << "DuplicateClockReadOnly failed, will not recover a device clock!";
-    return;
-  }
+  // TODO(fxbug.dev/46648): If this clock domain is discovered to be hardware-tunable, we should
+  // support a mode where the RecoveredClock is optionally recovered OR tuned depending on how it
+  // is used in the mix graph.
+  recovered_clock_ = RecoveredClock::Create(
+      fxl::StringPrintf("recovered_clock_for_%s",
+                        (owner_->is_output() ? "output_device" : "input_device")),
+      std::move(backing_clock), kPidFactorsClockChasesDevice);
 
-  // TODO(fxbug.dev/46648): If this clock domain is discovered to be hardware-tunable, this should
-  // be DeviceAdjustable, not DeviceFixed, to articulate that it has hardware controls.
-  auto clone = owner_->clock_factory()->CreateDeviceFixed(read_only_clock_result.take_value(),
-                                                          clock_domain_);
-
-  audio_clock_ = std::move(clone);
+  // Expose the recovered clock as our reference clock.
+  audio_clock_ = recovered_clock_;
 }
 
 zx_status_t AudioDriver::SetGain(const AudioDeviceSettings::GainState& gain_state,

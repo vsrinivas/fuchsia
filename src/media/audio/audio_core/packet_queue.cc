@@ -13,17 +13,16 @@
 #include "src/media/audio/audio_core/logging_flags.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/audio_core/mixer/intersect.h"
-#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/format/format.h"
 #include "src/media/audio/lib/processing/gain.h"
 
 namespace media::audio {
 
-PacketQueue::PacketQueue(Format format, std::unique_ptr<AudioClock> audio_clock)
+PacketQueue::PacketQueue(Format format, std::shared_ptr<Clock> audio_clock)
     : PacketQueue(format, nullptr, std::move(audio_clock)) {}
 
 PacketQueue::PacketQueue(Format format, fbl::RefPtr<VersionedTimelineFunction> timeline_function,
-                         std::unique_ptr<AudioClock> audio_clock)
+                         std::shared_ptr<Clock> audio_clock)
     : ReadableStream("PacketQueue", std::move(format)),
       timeline_function_(std::move(timeline_function)),
       audio_clock_(std::move(audio_clock)) {}

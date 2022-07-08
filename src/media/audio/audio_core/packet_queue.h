@@ -13,23 +13,21 @@
 #include <fbl/ref_ptr.h>
 
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/media/audio/audio_core/clock.h"
 #include "src/media/audio/audio_core/packet.h"
 #include "src/media/audio/audio_core/pending_flush_token.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/versioned_timeline_function.h"
-#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/format/format.h"
 
 namespace media::audio {
 
 class PacketQueue : public ReadableStream {
  public:
-  // Because PacketQueue is the one Stream object that might outlive its creator, it owns its
-  // AudioClock rather than storing a reference to the caller's AudioClock.
-  PacketQueue(Format format, std::unique_ptr<AudioClock> audio_clock);
+  PacketQueue(Format format, std::shared_ptr<Clock> audio_clock);
   PacketQueue(Format format,
               fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-              std::unique_ptr<AudioClock> audio_clock);
+              std::shared_ptr<Clock> audio_clock);
 
   bool empty() const {
     std::lock_guard<std::mutex> locker(pending_mutex_);
@@ -52,7 +50,7 @@ class PacketQueue : public ReadableStream {
 
   // |media::audio::ReadableStream|
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
-  AudioClock& reference_clock() override { return *audio_clock_; }
+  std::shared_ptr<Clock> reference_clock() override { return audio_clock_; }
 
  private:
   // |media::audio::ReadableStream|
@@ -98,7 +96,7 @@ class PacketQueue : public ReadableStream {
   fit::function<void(zx::duration)> underflow_reporter_;
 
   fbl::RefPtr<VersionedTimelineFunction> timeline_function_;
-  std::unique_ptr<AudioClock> audio_clock_;
+  std::shared_ptr<Clock> audio_clock_;
 };
 
 }  // namespace media::audio

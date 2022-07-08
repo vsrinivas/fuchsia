@@ -9,11 +9,11 @@
 
 #include <gtest/gtest_prod.h>
 
+#include "src/media/audio/audio_core/clock.h"
 #include "src/media/audio/audio_core/pipeline_config.h"
 #include "src/media/audio/audio_core/reusable_buffer.h"
 #include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/volume_curve.h"
-#include "src/media/audio/lib/clock/audio_clock.h"
 #include "src/media/audio/lib/effects_loader/effects_processor_v1.h"
 
 namespace media::audio {
@@ -38,7 +38,7 @@ class EffectsStageV1 : public ReadableStream {
 
   // |media::audio::ReadableStream|
   TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
-  AudioClock& reference_clock() override { return source_->reference_clock(); }
+  std::shared_ptr<Clock> reference_clock() override { return source_->reference_clock(); }
 
   void SetPresentationDelay(zx::duration external_delay) override;
 

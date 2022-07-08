@@ -6,7 +6,6 @@
 
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
-#include "src/media/audio/lib/clock/audio_clock.h"
 
 namespace media::audio {
 namespace {
@@ -15,7 +14,7 @@ class TestThrottleOutput : public ThrottleOutput {
  public:
   TestThrottleOutput(const DeviceConfig& config, ThreadingModel* threading_model,
                      DeviceRegistry* registry, LinkMatrix* link_matrix,
-                     std::shared_ptr<AudioClockFactory> clock_factory)
+                     std::shared_ptr<AudioCoreClockFactory> clock_factory)
       : ThrottleOutput(config, threading_model, registry, link_matrix, clock_factory) {}
 
   using ThrottleOutput::driver_ref_time_to_frac_presentation_frame;
@@ -37,7 +36,7 @@ class ThrottleOutputTest : public testing::ThreadingModelFixture {
 TEST_F(ThrottleOutputTest, NextTrimTime) {
   // After a mix job in the past, the next Trim will be TRIM_PERIOD beyond the most recent one.
   auto last_trim_mono_time = throttle_output_->last_sched_time_mono();
-  auto past_ref_time = throttle_output_->reference_clock().ReferenceTimeFromMonotonicTime(
+  auto past_ref_time = throttle_output_->reference_clock()->ReferenceTimeFromMonotonicTime(
       last_trim_mono_time - zx::min(1));
 
   throttle_output_->StartMixJob(past_ref_time);
@@ -45,9 +44,9 @@ TEST_F(ThrottleOutputTest, NextTrimTime) {
   EXPECT_EQ(next_trim_mono_time, last_trim_mono_time + TRIM_PERIOD);
 
   // If we start a mix job in the future, our next Trim time will be TRIM_PERIOD beyond that.
-  auto future_ref_time = throttle_output_->reference_clock().Read() + zx::min(5);
+  auto future_ref_time = throttle_output_->reference_clock()->now() + zx::min(5);
   auto future_mono_time =
-      throttle_output_->reference_clock().MonotonicTimeFromReferenceTime(future_ref_time);
+      throttle_output_->reference_clock()->MonotonicTimeFromReferenceTime(future_ref_time);
 
   throttle_output_->StartMixJob(future_ref_time);
   next_trim_mono_time = throttle_output_->last_sched_time_mono();

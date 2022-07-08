@@ -13,11 +13,11 @@
 
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_driver.h"
+#include "src/media/audio/audio_core/clock.h"
 #include "src/media/audio/audio_core/device_config.h"
 #include "src/media/audio/audio_core/output_pipeline.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/reporter.h"
-#include "src/media/audio/lib/clock/audio_clock_factory.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 
 namespace media::audio {
@@ -45,8 +45,8 @@ class AudioOutput : public AudioDevice {
  protected:
   AudioOutput(const std::string& name, const DeviceConfig& config, ThreadingModel* threading_model,
               DeviceRegistry* registry, LinkMatrix* link_matrix,
-              std::shared_ptr<AudioClockFactory> clock_factory, EffectsLoaderV2* effects_loader_v2,
-              std::unique_ptr<AudioDriver>);
+              std::shared_ptr<AudioCoreClockFactory> clock_factory,
+              EffectsLoaderV2* effects_loader_v2, std::unique_ptr<AudioDriver>);
 
   Reporter::OutputDevice& reporter() { return *reporter_; }
   EffectsLoaderV2* effects_loader_v2() const { return effects_loader_v2_; }
@@ -75,7 +75,8 @@ class AudioOutput : public AudioDevice {
       FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
   virtual std::shared_ptr<OutputPipeline> CreateOutputPipeline(
       const PipelineConfig& config, const VolumeCurve& volume_curve, size_t max_block_size_frames,
-      TimelineFunction device_reference_clock_to_fractional_frame, AudioClock& ref_clock);
+      TimelineFunction device_reference_clock_to_fractional_frame,
+      std::shared_ptr<Clock> ref_clock);
 
   void Cleanup() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
