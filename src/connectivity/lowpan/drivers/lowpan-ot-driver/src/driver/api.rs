@@ -593,7 +593,16 @@ where
     }
 
     async fn get_counters(&self) -> ZxResult<AllCounters> {
-        return Err(ZxStatus::NOT_SUPPORTED);
+        let mut ret = AllCounters::EMPTY;
+        let driver_state = self.driver_state.lock();
+
+        ret.update_from(driver_state.ot_instance.link_get_counters());
+        ret.update_from(driver_state.ot_instance.get_ip6_counters());
+
+        if let Ok(coex_metrics) = driver_state.ot_instance.get_coex_metrics() {
+            ret.update_from(&coex_metrics);
+        }
+        Ok(ret)
     }
 
     async fn reset_counters(&self) -> ZxResult<AllCounters> {

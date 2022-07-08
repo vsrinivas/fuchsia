@@ -204,3 +204,102 @@ impl UpdateOperationalDataset<Credential> for ot::OperationalDataset {
         Ok(())
     }
 }
+
+pub trait AllCountersUpdate<T> {
+    fn update_from(&mut self, data: &T);
+}
+
+impl AllCountersUpdate<ot::MacCounters> for AllCounters {
+    fn update_from(&mut self, data: &ot::MacCounters) {
+        self.mac_tx = Some(MacCounters {
+            total: Some(data.tx_total()),
+            unicast: Some(data.tx_unicast()),
+            broadcast: Some(data.tx_broadcast()),
+            ack_requested: Some(data.tx_ack_requested()),
+            acked: Some(data.tx_acked()),
+            no_ack_requested: Some(data.tx_no_ack_requested()),
+            data: Some(data.tx_data()),
+            data_poll: Some(data.tx_data_poll()),
+            beacon: Some(data.tx_beacon()),
+            beacon_request: Some(data.tx_beacon_request()),
+            other: Some(data.tx_other()),
+            retries: Some(data.tx_retry()),
+            direct_max_retry_expiry: Some(data.tx_direct_max_retry_expiry()),
+            indirect_max_retry_expiry: Some(data.tx_indirect_max_retry_expiry()),
+            err_cca: Some(data.tx_err_cca()),
+            err_abort: Some(data.tx_err_abort()),
+            err_busy_channel: Some(data.tx_err_busy_channel()),
+            ..MacCounters::EMPTY
+        });
+        self.mac_rx = Some(MacCounters {
+            total: Some(data.rx_total()),
+            unicast: Some(data.rx_unicast()),
+            broadcast: Some(data.rx_broadcast()),
+            data: Some(data.rx_data()),
+            data_poll: Some(data.rx_data_poll()),
+            beacon: Some(data.rx_beacon()),
+            beacon_request: Some(data.rx_beacon_request()),
+            other: Some(data.rx_other()),
+            address_filtered: Some(data.rx_address_filtered()),
+            dest_addr_filtered: Some(data.rx_dest_addr_filtered()),
+            duplicated: Some(data.rx_duplicated()),
+            err_no_frame: Some(data.rx_err_no_frame()),
+            err_unknown_neighbor: Some(data.rx_err_unknown_neighbor()),
+            err_invalid_src_addr: Some(data.rx_err_invalid_src_addr()),
+            err_sec: Some(data.rx_err_sec()),
+            err_fcs: Some(data.rx_err_fcs()),
+            err_other: Some(data.rx_err_other()),
+            ..MacCounters::EMPTY
+        });
+    }
+}
+
+impl AllCountersUpdate<ot::RadioCoexMetrics> for AllCounters {
+    fn update_from(&mut self, data: &ot::RadioCoexMetrics) {
+        self.coex_tx = Some(CoexCounters {
+            requests: Some(data.num_tx_request().into()),
+            grant_immediate: Some(data.num_tx_grant_immediate().into()),
+            grant_wait: Some(data.num_tx_grant_wait().into()),
+            grant_wait_activated: Some(data.num_tx_grant_wait_activated().into()),
+            grant_wait_timeout: Some(data.num_tx_grant_wait_timeout().into()),
+            grant_deactivated_during_request: Some(
+                data.num_tx_grant_deactivated_during_request().into(),
+            ),
+            delayed_grant: Some(data.num_tx_delayed_grant().into()),
+            avg_delay_request_to_grant_usec: Some(data.avg_tx_request_to_grant_time()),
+            ..CoexCounters::EMPTY
+        });
+        self.coex_rx = Some(CoexCounters {
+            requests: Some(data.num_tx_request().into()),
+            grant_immediate: Some(data.num_rx_grant_immediate().into()),
+            grant_wait: Some(data.num_rx_grant_wait().into()),
+            grant_wait_activated: Some(data.num_rx_grant_wait_activated().into()),
+            grant_wait_timeout: Some(data.num_rx_grant_wait_timeout().into()),
+            grant_deactivated_during_request: Some(
+                data.num_rx_grant_deactivated_during_request().into(),
+            ),
+            delayed_grant: Some(data.num_rx_delayed_grant().into()),
+            avg_delay_request_to_grant_usec: Some(data.avg_rx_request_to_grant_time()),
+            grant_none: Some(data.num_rx_grant_none().into()),
+            ..CoexCounters::EMPTY
+        });
+        if self.coex_saturated != Some(true) {
+            self.coex_saturated = Some(data.stopped());
+        }
+    }
+}
+
+impl AllCountersUpdate<ot::IpCounters> for AllCounters {
+    fn update_from(&mut self, data: &ot::IpCounters) {
+        self.ip_tx = Some(IpCounters {
+            success: Some(data.tx_success()),
+            failure: Some(data.tx_failure()),
+            ..IpCounters::EMPTY
+        });
+        self.ip_rx = Some(IpCounters {
+            success: Some(data.rx_success()),
+            failure: Some(data.rx_failure()),
+            ..IpCounters::EMPTY
+        });
+    }
+}

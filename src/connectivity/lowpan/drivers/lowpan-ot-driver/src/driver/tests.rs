@@ -300,6 +300,15 @@ async fn test_get_neighbor_table_offline() {
 }
 
 #[fasync::run(10, test)]
+async fn test_get_counters() {
+    test_harness(|driver| async move {
+        let thread_counters = driver.get_counters().await;
+        assert!(thread_counters.is_ok());
+    })
+    .await;
+}
+
+#[fasync::run(10, test)]
 async fn test_provision_network_offline() {
     test_harness(|driver| async move {
         let mut identity_stream = driver.watch_identity();
