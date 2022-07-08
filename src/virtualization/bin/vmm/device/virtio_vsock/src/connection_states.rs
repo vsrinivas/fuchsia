@@ -68,7 +68,6 @@ use {
     futures::{
         channel::mpsc::UnboundedSender,
         future::{self, poll_fn},
-        AsyncReadExt, AsyncWriteExt, FutureExt,
     },
     std::{
         cell::{Cell, RefCell},
@@ -269,7 +268,7 @@ impl Drop for ClientInitiated {
 #[derive(Debug)]
 pub struct ReadWrite {
     // Device local socket end. The remote socket end is held by the client.
-    socket: RefCell<fasync::Socket>,
+    socket: fasync::Socket,
 
     // Tracks the credit for this connection to prevent the guest from saturating the socket,
     // and the device from saturating to the RX queue.
@@ -309,7 +308,7 @@ impl ReadWrite {
         control_packets: UnboundedSender<VirtioVsockHeader>,
     ) -> Self {
         ReadWrite {
-            socket: RefCell::new(socket),
+            socket,
             credit: RefCell::new(ConnectionCredit::default()),
             conn_flags: RefCell::new(VirtioVsockFlags::default()),
             tx_shutdown_leeway: RefCell::new(fasync::Time::now()),
@@ -325,7 +324,7 @@ impl ReadWrite {
     fn write_credit(&self, header: &mut VirtioVsockHeader) -> Result<(), Error> {
         self.credit
             .borrow_mut()
-            .write_credit(&self.socket.borrow(), header)
+            .write_credit(&self.socket, header)
             .map_err(|err| anyhow!("Failed to write current credit to header: {}", err))
     }
 
@@ -359,7 +358,7 @@ impl ReadWrite {
         if flags.contains(VirtioVsockFlags::SHUTDOWN_RECIEVE)
             && !self.conn_flags.borrow().contains(VirtioVsockFlags::SHUTDOWN_RECIEVE)
         {
-            if let Err(err) = self.socket.borrow().as_ref().half_close() {
+            if let Err(err) = self.socket.as_ref().half_close() {
                 syslog::fx_log_err!(
                     "Failed to half close remote socket upon receiving \
                     VirtioVsockFlags::SHUTDOWN_RECIEVE: {}",
@@ -405,8 +404,8 @@ impl ReadWrite {
     async fn send_credit_update_when_credit_available(&self) -> Result<SocketState, Error> {
         // By default async sockets cache signals until a read or write failure, but the
         // device requires an accurate signal before sending the guest a credit update.
-        self.socket.borrow().reacquire_write_signal()?;
-        match poll_fn(move |cx| self.socket.borrow().poll_write_task(cx)).await {
+        self.socket.reacquire_write_signal()?;
+        match poll_fn(move |cx| self.socket.poll_write_task(cx)).await {
             Ok(closed) => {
                 if closed {
                     self.conn_flags.borrow_mut().set(VirtioVsockFlags::SHUTDOWN_SEND, true);
@@ -451,14 +450,14 @@ impl ReadWrite {
     }
 
     async fn get_rx_socket_state(&self) -> SocketState {
-        if let Err(_) = self.socket.borrow().reacquire_read_signal() {
+        if let Err(_) = self.socket.reacquire_read_signal() {
             return SocketState::Closed;
         }
 
-        match poll_fn(move |cx| self.socket.borrow().poll_read_task(cx)).await {
+        match poll_fn(move |cx| self.socket.poll_read_task(cx)).await {
             Ok(closed) if !closed => SocketState::Ready,
             _ => {
-                match self.socket.borrow().as_ref().outstanding_read_bytes() {
+                match self.socket.as_ref().outstanding_read_bytes() {
                     Ok(size) if size > 0 => {
                         // The socket peer is closed, but bytes remain on the local socket that
                         // have yet to be transmitted to the guest. Signal to the guest not to
@@ -493,8 +492,8 @@ impl ReadWrite {
         // Optimization when data is available on a fully open socket, preventing the device from
         // needing to reacquire a read signal from the kernel. This is the steady state when a
         // connection is bottlenecked on the guest refilling the RX queue.
-        if self.socket.borrow().as_ref().outstanding_read_bytes().unwrap_or(0) > 0
-            && !self.socket.borrow().is_closed()
+        if self.socket.as_ref().outstanding_read_bytes().unwrap_or(0) > 0
+            && !self.socket.is_closed()
         {
             return true;
         }
@@ -529,7 +528,7 @@ impl ReadWrite {
         // The device fills the chain sequentially, so the header must be constructed first
         // with the anticipated size of the packet.
         let usable_chain_bytes = chain_bytes - header_length;
-        let bytes_on_socket = self.socket.borrow().as_ref().outstanding_read_bytes()?;
+        let bytes_on_socket = self.socket.as_ref().outstanding_read_bytes()?;
         let peer_buffer_available = usize::try_from(self.credit.borrow().peer_free_bytes())?;
 
         let bytes_to_send = std::cmp::min(
@@ -573,14 +572,19 @@ impl ReadWrite {
                 std::slice::from_raw_parts_mut(range.try_mut_ptr().unwrap(), range.len())
             };
 
-            match self.socket.borrow_mut().read_exact(slice).now_or_never() {
-                None => {
-                    Err(anyhow!("Socket read tried to block when bytes should have been available"))
+            // The slice lengths have been chosen to always sum up to less than the available
+            // bytes on this socket, so this read should never pend. This allows us to drop down
+            // to the underlying synchronous socket to allow for using a non-mutable reference
+            // during the read.
+            match self.socket.as_ref().read(slice) {
+                Ok(read) => {
+                    if read != slice.len() {
+                        Err(anyhow!("Read returned fewer bytes than should have been available"))
+                    } else {
+                        Ok(())
+                    }
                 }
-                Some(result) => match result {
-                    Err(err) => Err(anyhow!("Failed to read from socket: {}", err)),
-                    Ok(_) => Ok(()),
-                },
+                Err(err) => Err(anyhow!("Failed to read from socket: {}", err)),
             }?;
 
             chain.add_written(slice.len().try_into()?);
@@ -640,29 +644,28 @@ impl ReadWrite {
             //   * This is a u8 pointer which has no alignment constraints.
             let slice =
                 unsafe { std::slice::from_raw_parts(range.try_ptr().unwrap(), range.len()) };
-            match self.socket.borrow_mut().write_all(slice).now_or_never() {
-                Some(result) => match result {
-                    Err(_)
-                        if !self.conn_flags.borrow().contains(VirtioVsockFlags::SHUTDOWN_SEND) =>
-                    {
-                        *self.tx_shutdown_leeway.borrow_mut() =
-                            fasync::Time::after(zx::Duration::from_seconds(1));
-                        self.conn_flags.borrow_mut().set(VirtioVsockFlags::SHUTDOWN_SEND, true);
-                        self.send_shutdown_packet();
-                        return Ok(());
+
+            // The credit system means that this write should never pend, so drop down to the
+            // underlying synchronous socket to allow for using a non-mutable reference during
+            // the write.
+            match self.socket.as_ref().write(slice) {
+                Ok(written) => {
+                    if written != slice.len() {
+                        // 5.10.6.3.1 Driver Requirements: Device Operation: Buffer Space Management
+                        //
+                        // VIRTIO_VSOCK_OP_RW data packets MUST only be transmitted when the peer
+                        // has sufficient free buffer space for the payload.
+                        Err(anyhow!("Guest is not honoring the reported socket credit"))
+                    } else {
+                        Ok(())
                     }
-                    result => result
-                        .map_err(|err| anyhow!("Failed to write to socket with error: {}", err)),
-                },
-                None => {
-                    // 5.10.6.3.1 Driver Requirements: Device Operation: Buffer Space Management
-                    //
-                    // VIRTIO_VSOCK_OP_RW data packets MUST only be transmitted when the peer has
-                    // sufficient free buffer space for the payload.
-                    Err(anyhow!(
-                        "Socket write tried to block. Guest is not honoring the reported \
-                        socket credit"
-                    ))
+                }
+                Err(_) => {
+                    *self.tx_shutdown_leeway.borrow_mut() =
+                        fasync::Time::after(zx::Duration::from_seconds(1));
+                    self.conn_flags.borrow_mut().set(VirtioVsockFlags::SHUTDOWN_SEND, true);
+                    self.send_shutdown_packet();
+                    return Ok(());
                 }
             }?;
 
@@ -983,7 +986,7 @@ mod tests {
             HostVsockAcceptorMarker, HostVsockEndpointMarker, DEFAULT_GUEST_CID, HOST_CID,
         },
         fuchsia_async::TestExecutor,
-        futures::{channel::mpsc, TryStreamExt},
+        futures::{channel::mpsc, FutureExt, TryStreamExt},
         rand::{distributions::Standard, Rng},
         std::{io::Read, task::Poll},
         virtio_device::fake_queue::{ChainBuilder, IdentityDriverMem, TestQueue},
