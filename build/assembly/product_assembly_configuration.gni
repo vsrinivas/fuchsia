@@ -74,8 +74,8 @@ template("product_assembly_configuration") {
     if (defined(invoker.base_packages)) {
       base_package_labels += invoker.base_packages
     }
-    if (defined(invoker.base_package_deprecated)) {
-      base_package_labels += invoker.base_package_deprecated
+    if (defined(invoker.base_packages_deprecated)) {
+      base_package_labels += invoker.base_packages_deprecated
     }
 
     # Cache packages specified by the invoker, used to create the list of
