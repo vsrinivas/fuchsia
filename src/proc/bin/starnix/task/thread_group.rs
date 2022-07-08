@@ -610,7 +610,7 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
 
         if task.id == self.leader() {
             let exit_status = task.read().exit_status.clone().unwrap_or_else(|| {
-                log::error!("Process {:?} exiting without an exit code.", task.id);
+                tracing::error!("Process {:?} exiting without an exit code.", task.id);
                 ExitStatus::Exit(u8::MAX)
             });
             self.zombie_leader = Some(ZombieProcess {

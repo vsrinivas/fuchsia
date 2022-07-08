@@ -59,7 +59,7 @@ where
             // without having previous called sys_exit(), and that will swallow the actual error.
             match run_exception_loop(&mut current_task, exceptions) {
                 Err(error) => {
-                    log::error!("{:?}'s runloop failed {:?},", current_task, error);
+                    tracing::error!("{:?}'s runloop failed {:?},", current_task, error);
                     Err(error)
                 }
                 ok => ok,
@@ -243,7 +243,7 @@ fn run_exception_loop(
                     match exit_status {
                         Exit(value) if value == 0 => {}
                         _ => {
-                            log::warn!(
+                            tracing::warn!(
                                 "{:?} last failing syscall before exit: {:?}, failed with {:?}",
                                 current_task,
                                 error_context.syscall,
