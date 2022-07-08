@@ -182,8 +182,6 @@ group("cmx_allowlist") {
     "//src/developer/forensics/crasher/rust:crasher_v1_manifest_compile",
     "//src/developer/memory/mem:mem_component_manifest_compile",
     "//src/developer/memory/monitor:legacy_component_manifest_compile",
-    "//src/developer/memory/monitor/tests:memory_monitor_inspect_integration_tests_component_manifest_compile",
-    "//src/developer/memory/monitor/tests:memory_monitor_test_app_component_manifest_compile",
     "//src/developer/sched:sched_tests_component_manifest_compile",
     "//src/devices/bin/driver_manager:manifest-parser-fuzzer_component_manifest_compile",
     "//src/devices/lib/bind:bind_rules_bytecode_fuzzer_component_manifest_compile",

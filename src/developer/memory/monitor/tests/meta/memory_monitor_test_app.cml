@@ -1,0 +1,41 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/elf_stdio.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/memory_monitor_test_app",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.component.Binder" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.kernel.RootJobForInspect",
+                "fuchsia.kernel.Stats",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+
+        // use a directory capability instead of storage so we can rendezvous with side effects from
+        // previous executions of ourselves in the collection
+        {
+            directory: "memfs",
+            rights: [ "rw*" ],
+            path: "/cache",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.component.Binder" ],
+            from: "framework",
+        },
+    ],
+}

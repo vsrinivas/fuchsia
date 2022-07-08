@@ -1,0 +1,59 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "inspect/client.shard.cml",
+        "sys/testing/system-test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/memory_monitor_inspect_integration_tests",
+    },
+    children: [
+        {
+            name: "memfs",
+            url: "#meta/memfs.cm",
+        },
+    ],
+    collections: [
+        {
+            name: "test_apps",
+            durability: "transient",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
+        },
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        // each instance launched in our collection needs to access the same /cache for these tests
+        // so we can't use storage
+        {
+            directory: "memfs",
+            from: "#memfs",
+            to: "#test_apps",
+        },
+        {
+            protocol: [
+                "fuchsia.kernel.RootJobForInspect",
+                "fuchsia.kernel.Stats",
+                "fuchsia.logger.LogSink",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: "#test_apps",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#memfs",
+        },
+    ],
+}

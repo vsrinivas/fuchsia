@@ -68,12 +68,11 @@ executable("test-inspect") {
   sources = [ "monitor_inspect_test.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.component",
     "//sdk/lib/inspect/contrib/cpp:archive_reader",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/storage/vfs/cpp",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/inspect",
   ]
@@ -82,17 +81,20 @@ executable("test-inspect") {
 fuchsia_component("memory_monitor_test_app_component") {
   testonly = true
   component_name = "memory_monitor_test_app"
-  manifest = "meta/memory_monitor_test_app.cmx"
+  manifest = "meta/memory_monitor_test_app.cml"
   deps = [ ":bin-monitor" ]
 }
 
 fuchsia_test_component("memory_monitor_inspect_integration_tests_component") {
   component_name = "memory_monitor_inspect_integration_tests"
-  manifest = "meta/memory_monitor_inspect_integration_tests.cmx"
+  manifest = "meta/memory_monitor_inspect_integration_tests.cml"
   deps = [ ":test-inspect" ]
 }
 
 fuchsia_test_package("memory_monitor_inspect_integration_tests") {
   test_components = [ ":memory_monitor_inspect_integration_tests_component" ]
-  deps = [ ":memory_monitor_test_app_component" ]
+  deps = [
+    ":memory_monitor_test_app_component",
+    "//src/sys/test_manager:memfs",
+  ]
 }
