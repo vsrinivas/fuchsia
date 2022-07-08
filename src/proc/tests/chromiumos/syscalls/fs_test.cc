@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <dirent.h>
+#include <fcntl.h>
 #include <sys/types.h>
 
 #include <algorithm>
@@ -54,6 +55,15 @@ TEST(FsTest, ReadDirRespectsSeek) {
   // Remove the first elements from entries
   entries.erase(entries.begin(), entries.begin() + (entries.size() - next_entries.size()));
   EXPECT_EQ(entries, next_entries);
+}
+
+TEST(FsTest, FchmodTest) {
+  char *tmp = getenv("TEST_TMPDIR");
+  std::string path = tmp == nullptr ? "/tmp/fchmodtest" : std::string(tmp) + "/fchmodtest";
+  int fd = open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC, 0777);
+  ASSERT_GE(fd, 0);
+  ASSERT_EQ(fchmod(fd, S_IRWXU | S_IRWXG), 0);
+  ASSERT_EQ(fchmod(fd, S_IRWXU | S_IRWXG | S_IFCHR), 0);
 }
 
 }  // namespace

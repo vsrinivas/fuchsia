@@ -6,5 +6,6 @@
     program: {
         binary: "data/tests/syscalls_test_bin",
         user: "fuchsia:x:0:0",
+        environ: [ "TEST_TMPDIR=/data/tmp" ],
     },
 }
