@@ -3,7 +3,7 @@
         {
             "files": [
                 {
-                    "filename": "./../../src/tests/coverage/rust_coverage_test.rs",
+                    "filename": "../../src/tests/coverage/rust_coverage_test.rs",
                     "summary": {
                         "branches": {
                             "count": 0,
