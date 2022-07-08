@@ -16,6 +16,7 @@ source_set("common") {
 
   public_deps = [
     "//sdk/lib/fidl/cpp/wire",
+    "//sdk/lib/syslog/cpp:cpp",
     "//zircon/system/ulib/sync:sync-cpp",
     "//zircon/system/ulib/trace",
   ]

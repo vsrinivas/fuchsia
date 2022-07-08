@@ -12,6 +12,7 @@ source_set("testing") {
 
   public_deps = [
     "//sdk/lib/fidl/cpp/wire",
+    "//sdk/lib/syslog/cpp:cpp",
     "//src/media/audio/services/common",
   ]
 }
