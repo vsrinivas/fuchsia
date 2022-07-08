@@ -321,8 +321,9 @@ TEST_F(DwarfExprEvalTest, AddrxAndConstx) {
   // This unit has an DW_AT_addr_base which is added to the offsets for the "addrx" and "constx"
   // operators for expressions inside of it.
   constexpr uint64_t kAddrBase = 12;
-  auto compile_unit = fxl::MakeRefCounted<CompileUnit>(module_symbols->GetWeakPtr(), 0,
-                                                       DwarfLang::kCpp14, "source.cc", kAddrBase);
+  auto compile_unit =
+      fxl::MakeRefCounted<CompileUnit>(module_symbols->GetWeakPtr(), fxl::RefPtr<DwarfUnit>(),
+                                       DwarfLang::kCpp14, "source.cc", kAddrBase);
 
   // Offset from kAddrBase of our value.
   constexpr uint8_t kOffset = 8;

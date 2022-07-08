@@ -22,9 +22,10 @@
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_abstract_child_iterator.h"
-#include "src/developer/debug/zxdb/symbols/dwarf_binary.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_binary_impl.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_die_decoder.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_location.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_unit_impl.h"
 #include "src/developer/debug/zxdb/symbols/enumeration.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/function_type.h"
@@ -631,9 +632,12 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCompileUnit(const llvm::DWARFDie& 
   if (addr_base)
     addr_base_opt = *addr_base;
 
+  fxl::RefPtr<DwarfUnit> dwarf_unit =
+      fxl::MakeRefCounted<DwarfUnitImpl>(symbols_->binary(), die.getDwarfUnit());
+
   // We know the symbols_ is valid, that was checked on entry to CreateSymbol().
   return fxl::MakeRefCounted<CompileUnit>(static_cast<ModuleSymbols*>(symbols_.get())->GetWeakPtr(),
-                                          die.getOffset(), lang_enum, std::move(name_str),
+                                          std::move(dwarf_unit), lang_enum, std::move(name_str),
                                           addr_base_opt);
 }
 

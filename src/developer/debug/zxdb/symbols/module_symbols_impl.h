@@ -32,7 +32,7 @@ class Binary;
 
 namespace zxdb {
 
-class DwarfBinary;
+class DwarfBinaryImpl;
 class DwarfSymbolFactory;
 class Variable;
 
@@ -42,7 +42,7 @@ class Variable;
 // and the SymbolFactory.
 class ModuleSymbolsImpl final : public ModuleSymbols {
  public:
-  DwarfBinary* binary() { return binary_.get(); }
+  DwarfBinaryImpl* binary() { return binary_.get(); }
   DwarfSymbolFactory* symbol_factory() { return symbol_factory_.get(); }
 
   fxl::WeakPtr<ModuleSymbolsImpl> GetWeakPtr();
@@ -80,7 +80,7 @@ class ModuleSymbolsImpl final : public ModuleSymbols {
   // If create_index is true, an index will be created for fast symbol lookup.
   // Normal callers will always want to create the index, unless you don't need to query a symbol
   // from its name, e.g., in some test scenarios or in symbolizer.
-  explicit ModuleSymbolsImpl(std::unique_ptr<DwarfBinary> binary, const std::string& build_dir,
+  explicit ModuleSymbolsImpl(std::unique_ptr<DwarfBinaryImpl> binary, const std::string& build_dir,
                              bool create_index = true);
   ~ModuleSymbolsImpl() override;
 
@@ -151,7 +151,7 @@ class ModuleSymbolsImpl final : public ModuleSymbols {
   // Fills the forward and backward indices for ELF symbols.
   void FillElfSymbols();
 
-  std::unique_ptr<DwarfBinary> binary_;  // Guaranteed non-null.
+  std::unique_ptr<DwarfBinaryImpl> binary_;  // Guaranteed non-null.
 
   std::string build_dir_;
 

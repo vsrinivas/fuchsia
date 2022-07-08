@@ -6,11 +6,11 @@
 
 namespace zxdb {
 
-CompileUnit::CompileUnit(fxl::WeakPtr<ModuleSymbols> module, uint64_t die_addr, DwarfLang lang,
-                         std::string name, const std::optional<uint64_t>& addr_base)
+CompileUnit::CompileUnit(fxl::WeakPtr<ModuleSymbols> module, fxl::RefPtr<DwarfUnit> dwarf_unit,
+                         DwarfLang lang, std::string name, const std::optional<uint64_t>& addr_base)
     : Symbol(DwarfTag::kCompileUnit),
       module_(std::move(module)),
-      die_addr_(die_addr),
+      dwarf_unit_(std::move(dwarf_unit)),
       language_(lang),
       name_(std::move(name)),
       addr_base_(addr_base) {}

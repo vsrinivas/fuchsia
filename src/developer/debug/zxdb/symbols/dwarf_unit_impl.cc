@@ -21,6 +21,12 @@ llvm::DWARFDie DwarfUnitImpl::FunctionForRelativeAddress(uint64_t relative_addre
   return unit_->getSubroutineForAddress(relative_address);
 }
 
+uint64_t DwarfUnitImpl::GetOffset() const {
+  if (!binary_)
+    return 0;
+  return unit_->getOffset();
+}
+
 std::string DwarfUnitImpl::GetCompilationDir() const {
   if (!binary_)
     return std::string();

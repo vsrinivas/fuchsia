@@ -22,9 +22,11 @@ class DwarfUnitImpl : public DwarfUnit {
  public:
   // Construct with fxl::MakeRefCounted<DwarfUnitImpl>().
 
-  llvm::DWARFUnit* unit() const { return unit_; }
+  // Possibly null (this class may outlive the DwarfBinary).
+  llvm::DWARFUnit* unit() const { return binary_ ? unit_ : nullptr; }
 
   // DwarfUnit implementation.
+  uint64_t GetOffset() const override;
   llvm::DWARFDie FunctionForRelativeAddress(uint64_t relative_address) const override;
   std::string GetCompilationDir() const override;
   const LineTable& GetLineTable() const override;

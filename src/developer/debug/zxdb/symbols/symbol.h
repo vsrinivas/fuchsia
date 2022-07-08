@@ -12,6 +12,7 @@
 #include "src/developer/debug/zxdb/common/ref_ptr_to.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_lang.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_tag.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_unit.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/lazy_symbol.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
@@ -71,14 +72,21 @@ class VariantPart;
 // symbols will be freed when the module is removed, which will require weak pointers from the
 // expression system.
 //
-// DIE ADDRESSES
-// -------------
-// Some things refer to symbols by the address of the DIE. Normally DIE addresses are stored in
-// the LazySymbol for constructing the Symbol object, and are discarded. So Symbols don't know their
-// own DIE address.
+// DIE ADDRESSES AND COMPILATION UNITS
+// -----------------------------------
+// In LLVM a DIE is indexed by its llvm::DWARFUnit and an offset within that. In contrast, our
+// LazySymbols use a single global index which is converted to a unit/offset as needed. Once we
+// decode a DIE, we don't need the offset at all, and we never needed the unit, so there are not
+// available.
 //
-// Currently the only Symbol that knows its own DIE is the CompilationUnit because some offsets are
-// unit relative. This address could be changed in the future if needed so it lives on all symbols.
+// If we find we need this information on each symbol in the future, it could be added. We would
+// want to add some caching system since currently make duplicate DwarfUnit objects for the same
+// LLVM One.
+//
+// Currently the DwarfUnit is accessible by waking up the tree to the CompileUnit. The CompileUnit
+// stores a DwarfUnit pointer. Note that the CompileUnit is a DIE symbol while the DwarfUnit is the
+// container for the CompileUnit and everything else associated with an object file. Normally
+// offsets are relative to the DwarfUnit.
 class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
  public:
   DwarfTag tag() const { return tag_; }
@@ -134,8 +142,10 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   // returns a string, but it's not parseable.
   const Identifier& GetIdentifier() const;
 
-  // Returns the CompileUnit that this symbol is associated with. Returns null on failure.
+  // Returns the DwarfUnit or CompileUnit that this symbol is associated with. Returns null on
+  // failure. See the comment at the top of this class and above the DwarfUnit declaration for more.
   fxl::RefPtr<CompileUnit> GetCompileUnit() const;
+  fxl::RefPtr<DwarfUnit> GetDwarfUnit() const;
 
   // Returns the module symbols associated with this symbol object. It can be null if the module
   // has been unloaded and there are still dangling references to symbols, and it can also be null

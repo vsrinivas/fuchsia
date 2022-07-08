@@ -5,7 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_UNIT_SYMBOL_FACTORY_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_UNIT_SYMBOL_FACTORY_H_
 
-#include "src/developer/debug/zxdb/symbols/compile_unit.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_unit.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
 
@@ -36,12 +36,12 @@ class UnitSymbolFactory {
     if (!weak_mod)
       return;
 
-    fxl::RefPtr<CompileUnit> unit = symbol->GetCompileUnit();
+    fxl::RefPtr<DwarfUnit> unit = symbol->GetDwarfUnit();
     if (!unit)
       return;
 
     symbol_factory_ = fxl::RefPtr<const SymbolFactory>(weak_mod->GetSymbolFactory());
-    unit_loc_ = unit->die_addr();
+    unit_loc_ = unit->GetOffset();
   }
 
   // Constructs a lazy symbol given a unit-relative DIE offset.

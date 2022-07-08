@@ -21,8 +21,14 @@ class LineTable;
 // mocking the LLVM libraries. It corresponds to what we need from llvm::DWARFUnit and is consumed
 // primarily by ModuleSymbolsImpl which provides the high-level symbol interface.
 //
-// This is the higher-level thing that contains the line tables and such for the unit. The specific
-// DIE for the compilation unit is represented by the CompileUnit class.
+// This is a toplevel DWARF concept that contains all the different data types associated with the
+// compilation unit like line tables and abbreviation tables. The main thing it contains is the
+// Debug Information Entry (DIE) tree for the unit. This tree uses a root of DW_TAG_compilation_unit
+// and is represented in our system by the CompileUnit class.
+//
+// These are similarly named so can be confusing, but this class is the higher-level construct.
+// Usually when something ion DWARF is "relative to the compilation unit" it means this class and
+// not the CompileUnit DIE.
 class DwarfUnit : public fxl::RefCountedThreadSafe<DwarfUnit> {
  public:
   // Returns the DIE information, if possible, for the function covering the given absolute address.
@@ -31,6 +37,10 @@ class DwarfUnit : public fxl::RefCountedThreadSafe<DwarfUnit> {
                                     TargetPointer absolute_address) const {
     return FunctionForRelativeAddress(symbol_context.AbsoluteToRelative(absolute_address));
   }
+
+  // Returns the offset of the beginning of this unit within the symbol file. Returns 0 on failure.
+  // The only failure case is that the symbols were unloaded.
+  virtual uint64_t GetOffset() const = 0;
 
   // Returns the DIE information, if possible, for the function covering the given relative address.
   // TODO(brettw) return something higher-level than a DWARFDie.

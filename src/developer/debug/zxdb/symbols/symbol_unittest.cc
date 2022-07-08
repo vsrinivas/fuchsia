@@ -25,7 +25,7 @@ TEST(Symbol, GetSymbolContext) {
   //  - compile_unit
   //    - namespace
   //      - function
-  auto compile_unit = fxl::MakeRefCounted<CompileUnit>(mock_module_symbols->GetWeakPtr(), 0,
+  auto compile_unit = fxl::MakeRefCounted<CompileUnit>(mock_module_symbols->GetWeakPtr(), nullptr,
                                                        DwarfLang::kC, "file.cc", std::nullopt);
 
   auto ns = fxl::MakeRefCounted<Namespace>("ns");

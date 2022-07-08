@@ -15,14 +15,20 @@ namespace zxdb {
 
 class ModuleSymbols;
 
-// Represents a DWARF "unit" DIE. See also DwarfUnit.
+// Represents a DWARF "unit" DIE. This is the root of all other Debug Information Entries (DIEs) in
+// the unit, and is contained inside the DwarfUnit object.
+//
+// See the DwarfUnit object which contains the other unit-related stuff like line tables (see that
+// class for a longer discussion). Usually "unit" offsets are relative to the DwarfUnit and NOT this
+// class.
 class CompileUnit final : public Symbol {
  public:
   // Module. This can be null if the module was unloaded while somebody held onto this symbol. It
   // is also null in many unit testing situations where mock symbols are created.
   const fxl::WeakPtr<ModuleSymbols>& module() const { return module_; }
 
-  uint64_t die_addr() const { return die_addr_; }
+  // See class comment above. Can be null for synthetic symbols and for testing.
+  DwarfUnit* dwarf_unit() const { return dwarf_unit_.get(); }
 
   DwarfLang language() const { return language_; }
 
@@ -45,15 +51,13 @@ class CompileUnit final : public Symbol {
   FRIEND_REF_COUNTED_THREAD_SAFE(CompileUnit);
   FRIEND_MAKE_REF_COUNTED(CompileUnit);
 
-  explicit CompileUnit(fxl::WeakPtr<ModuleSymbols> module, uint64_t die_addr, DwarfLang lang,
-                       std::string name, const std::optional<uint64_t>& addr_base);
+  explicit CompileUnit(fxl::WeakPtr<ModuleSymbols> module, fxl::RefPtr<DwarfUnit> dwarf_unit,
+                       DwarfLang lang, std::string name, const std::optional<uint64_t>& addr_base);
   ~CompileUnit() override;
 
   fxl::WeakPtr<ModuleSymbols> module_;
 
-  // Address of this unit's DIE in the symbol file. Some references are relative to a unit
-  // so this information is required. See symbol.h for more discussion on DIE addresses.
-  uint64_t die_addr_;
+  fxl::RefPtr<DwarfUnit> dwarf_unit_;
 
   DwarfLang language_ = DwarfLang::kNone;
   std::string name_;

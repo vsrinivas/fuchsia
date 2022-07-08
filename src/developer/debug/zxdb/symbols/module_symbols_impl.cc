@@ -21,7 +21,7 @@
 #include "src/developer/debug/zxdb/common/file_util.h"
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
-#include "src/developer/debug/zxdb/symbols/dwarf_binary.h"
+#include "src/developer/debug/zxdb/symbols/dwarf_binary_impl.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_expr_eval.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_symbol_factory.h"
 #include "src/developer/debug/zxdb/symbols/elf_symbol.h"
@@ -145,7 +145,7 @@ bool HasOnlySupportedSpecialIdentifierTypes(const Identifier& ident) {
 
 }  // namespace
 
-ModuleSymbolsImpl::ModuleSymbolsImpl(std::unique_ptr<DwarfBinary> binary,
+ModuleSymbolsImpl::ModuleSymbolsImpl(std::unique_ptr<DwarfBinaryImpl> binary,
                                      const std::string& build_dir, bool create_index)
     : binary_(std::move(binary)), build_dir_(build_dir), weak_factory_(this) {
   symbol_factory_ = fxl::MakeRefCounted<DwarfSymbolFactory>(GetWeakPtr());
