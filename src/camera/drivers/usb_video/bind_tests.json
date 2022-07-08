@@ -1,0 +1,19 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "Protocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.usb.BIND_PROTOCOL.INTERFACE",
+            "fuchsia.BIND_USB_CLASS": "fuchsia.usb.BIND_USB_CLASS.VIDEO",
+            "fuchsia.BIND_USB_PROTOCOL": "fuchsia.usb.video.BIND_USB_PROTOCOL.UNDEFINED",
+            "fuchsia.BIND_USB_SUBCLASS": "fuchsia.usb.video.BIND_USB_SUBCLASS.VIDEO_INTERFACE_COLLECTION"
+        },
+        "expected": "match",
+        "name": "USB video"
+    }
+]
