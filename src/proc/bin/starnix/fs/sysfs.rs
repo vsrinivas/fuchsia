@@ -25,6 +25,14 @@ impl SysFs {
                         b"selinux",
                         StaticDirectoryBuilder::new(&fs).set_mode(mode!(IFDIR, 0o755)).build(),
                     )
+                    .add_node_entry(
+                        b"cgroup",
+                        StaticDirectoryBuilder::new(&fs).set_mode(mode!(IFDIR, 0o755)).build(),
+                    )
+                    .add_node_entry(
+                        b"fuse",
+                        StaticDirectoryBuilder::new(&fs).set_mode(mode!(IFDIR, 0o755)).build(),
+                    )
                     .build(),
             )
             .build_root();
