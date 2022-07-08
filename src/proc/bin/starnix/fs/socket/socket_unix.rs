@@ -533,7 +533,6 @@ impl SocketOps for UnixSocket {
     /// Shuts down this socket according to how, preventing any future reads and/or writes.
     ///
     /// Used by the shutdown syscalls.
-
     fn shutdown(&self, _socket: &Socket, how: SocketShutdownFlags) -> Result<(), Errno> {
         let peer = {
             let mut inner = self.lock();
@@ -767,7 +766,6 @@ impl UnixSocketInner {
         if info.message_length == 0 && !self.is_shutdown {
             return error!(EAGAIN);
         }
-
         Ok(info)
     }
 

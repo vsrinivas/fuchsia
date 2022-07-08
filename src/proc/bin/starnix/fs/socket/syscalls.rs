@@ -513,7 +513,7 @@ pub fn sys_recvfrom(
 
     let flags = SocketMessageFlags::from_bits_truncate(flags);
     let socket_ops = file.downcast_file::<SocketFile>().unwrap();
-    let into = socket_ops.recvmsg(
+    let info = socket_ops.recvmsg(
         current_task,
         &file,
         &[UserBuffer { address: user_buffer, length: buffer_length }],
@@ -522,7 +522,7 @@ pub fn sys_recvfrom(
     )?;
 
     if !user_src_address.is_null() {
-        if let Some(address) = into.address {
+        if let Some(address) = info.address {
             write_socket_address(
                 &current_task,
                 user_src_address,
@@ -535,9 +535,9 @@ pub fn sys_recvfrom(
     }
 
     if flags.contains(SocketMessageFlags::TRUNC) {
-        Ok(into.message_length)
+        Ok(info.message_length)
     } else {
-        Ok(into.bytes_read)
+        Ok(info.bytes_read)
     }
 }
 
