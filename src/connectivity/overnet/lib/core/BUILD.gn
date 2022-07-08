@@ -34,7 +34,7 @@ CORE_DEPS = [
   "//third_party/rust_crates:pin-project",
   "//third_party/rust_crates:rand",
   "//third_party/rust_crates:thiserror",
-  "//third_party/rust_crates/mirrors/quiche_legacy:quiche",
+  "//third_party/rust_crates/mirrors/quiche",
   "//third_party/boringssl",
 ]
 

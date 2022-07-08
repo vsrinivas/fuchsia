@@ -11,7 +11,6 @@ use futures::{future::poll_fn, lock::Mutex, prelude::*, ready};
 use quiche::{Connection, Shutdown};
 use std::collections::BTreeMap;
 use std::net::SocketAddr;
-use std::pin::Pin;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Arc;
 use std::task::{Context, Poll, Waker};
@@ -80,7 +79,7 @@ impl WakeupMap {
 /// Current state of a connection - mutex guarded by AsyncConnection.
 pub struct ConnState {
     local_addr: SocketAddr,
-    conn: Pin<Box<Connection>>,
+    conn: Connection,
     seen_established: bool,
     closed: bool,
     conn_send: Wakeup,
@@ -247,7 +246,7 @@ impl std::fmt::Debug for AsyncConnection {
 impl AsyncConnection {
     fn from_connection(
         local_addr: SocketAddr,
-        conn: Pin<Box<Connection>>,
+        conn: Connection,
         endpoint: Endpoint,
     ) -> Arc<Self> {
         Arc::new(Self {
