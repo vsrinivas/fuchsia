@@ -1195,27 +1195,6 @@ extern "C" {
 }
 extern "C" {
     #[doc = ""]
-    #[doc = " \\brief DEPRECATED - TODO(fxb/86670) remove prior to SDK release. Submits a command buffer for"]
-    #[doc = "        execution on the GPU, with associated resources."]
-    #[doc = " \\param connection An open connection."]
-    #[doc = " \\param context_id A valid context ID."]
-    #[doc = " \\param command_buffer A pointer to the command buffer to execute."]
-    #[doc = " \\param resources An array of |command_buffer->resource_count| resources associated with the"]
-    #[doc = "        command buffer."]
-    #[doc = " \\param semaphore_ids An array of semaphore ids; first should be"]
-    #[doc = "        |command_buffer->wait_semaphore_count| wait semaphores followed by"]
-    #[doc = "        |command_buffer->signal_signal_semaphores| signal semaphores."]
-    #[doc = ""]
-    pub fn magma_execute_command_buffer_with_resources2(
-        connection: magma_connection_t,
-        context_id: u32,
-        command_buffer: *mut magma_command_buffer,
-        resources: *mut magma_exec_resource,
-        semaphore_ids: *mut u64,
-    ) -> magma_status_t;
-}
-extern "C" {
-    #[doc = ""]
     #[doc = " \\brief Gets a platform handle for the given buffer. This can be used to perform a CPU mapping of"]
     #[doc = "        the buffer using the standard syscall.  The handle may be released without invalidating"]
     #[doc = "        such CPU mappings."]
@@ -1310,8 +1289,6 @@ pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_READ_NOTIFICATION_CHANNEL2:
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_VIRT_CREATE_IMAGE: virtio_magma_ctrl_type = 4167;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_VIRT_GET_IMAGE_INFO: virtio_magma_ctrl_type =
     4168;
-pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_EXECUTE_COMMAND_BUFFER_WITH_RESOURCES2:
-    virtio_magma_ctrl_type = 4170;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_GET_BUFFER_HANDLE2: virtio_magma_ctrl_type = 4171;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_FLUSH: virtio_magma_ctrl_type = 4175;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_CMD_EXECUTE_COMMAND: virtio_magma_ctrl_type = 4176;
@@ -1378,8 +1355,6 @@ pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_READ_NOTIFICATION_CHANNEL2:
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_VIRT_CREATE_IMAGE: virtio_magma_ctrl_type = 8263;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_VIRT_GET_IMAGE_INFO: virtio_magma_ctrl_type =
     8264;
-pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_EXECUTE_COMMAND_BUFFER_WITH_RESOURCES2:
-    virtio_magma_ctrl_type = 8266;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_GET_BUFFER_HANDLE2: virtio_magma_ctrl_type =
     8267;
 pub const virtio_magma_ctrl_type_VIRTIO_MAGMA_RESP_FLUSH: virtio_magma_ctrl_type = 8271;
@@ -2142,26 +2117,6 @@ pub struct virtio_magma_virt_get_image_info_resp {
     pub result_return: u64,
 }
 pub type virtio_magma_virt_get_image_info_resp_t = virtio_magma_virt_get_image_info_resp;
-#[repr(C, packed)]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct virtio_magma_execute_command_buffer_with_resources2_ctrl {
-    pub hdr: virtio_magma_ctrl_hdr_t,
-    pub connection: u64,
-    pub context_id: u32,
-    pub command_buffer: u64,
-    pub resources: u64,
-    pub semaphore_ids: u64,
-}
-pub type virtio_magma_execute_command_buffer_with_resources2_ctrl_t =
-    virtio_magma_execute_command_buffer_with_resources2_ctrl;
-#[repr(C, packed)]
-#[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
-pub struct virtio_magma_execute_command_buffer_with_resources2_resp {
-    pub hdr: virtio_magma_ctrl_hdr_t,
-    pub result_return: u64,
-}
-pub type virtio_magma_execute_command_buffer_with_resources2_resp_t =
-    virtio_magma_execute_command_buffer_with_resources2_resp;
 #[repr(C, packed)]
 #[derive(Debug, Default, Copy, Clone, AsBytes, FromBytes)]
 pub struct virtio_magma_get_buffer_handle2_ctrl {

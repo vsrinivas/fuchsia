@@ -542,57 +542,6 @@ zx_status_t VirtioMagma::Handle_import(const virtio_magma_import_ctrl_t* request
   return ZX_OK;
 }
 
-// DEPRECATED - TODO(fxb/86670) remove
-// Command buffer comes after the request struct.
-zx_status_t VirtioMagma::Handle_execute_command_buffer_with_resources2(
-    VirtioDescriptor* request_desc, VirtioDescriptor* response_desc, uint32_t* used_out) {
-  auto request_ptr = reinterpret_cast<uint8_t*>(request_desc->addr);
-
-  auto request =
-      *reinterpret_cast<virtio_magma_execute_command_buffer_with_resources2_ctrl_t*>(request_ptr);
-
-  // Command buffer payload comes immediately after the request
-  auto command_buffer = *reinterpret_cast<magma_command_buffer*>(request_ptr + sizeof(request));
-
-  size_t resources_size = sizeof(magma_exec_resource) * command_buffer.resource_count;
-  size_t semaphore_ids_size = sizeof(uint64_t) * (command_buffer.wait_semaphore_count +
-                                                  command_buffer.signal_semaphore_count);
-
-  size_t required_bytes =
-      sizeof(request) + sizeof(command_buffer) + resources_size + semaphore_ids_size;
-  if (request_desc->len < required_bytes) {
-    FX_LOGS(ERROR) << "VIRTIO_MAGMA_CMD_EXECUTE_COMMAND_BUFFER_WITH_RESOURCES2: request "
-                      "descriptor too small";
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  std::vector<magma_exec_resource> exec_resources(command_buffer.resource_count);
-  memcpy(exec_resources.data(), request_ptr + sizeof(request) + sizeof(command_buffer),
-         resources_size);
-
-  std::vector<uint64_t> semaphore_ids(command_buffer.wait_semaphore_count +
-                                      command_buffer.signal_semaphore_count);
-  memcpy(semaphore_ids.data(),
-         request_ptr + sizeof(request) + sizeof(command_buffer) + resources_size,
-         semaphore_ids_size);
-
-  request.command_buffer = reinterpret_cast<uintptr_t>(&command_buffer);
-  request.resources = reinterpret_cast<uintptr_t>(exec_resources.data());
-  request.semaphore_ids = reinterpret_cast<uintptr_t>(semaphore_ids.data());
-
-  virtio_magma_execute_command_buffer_with_resources2_resp_t response{};
-
-  zx_status_t status =
-      VirtioMagmaGeneric::Handle_execute_command_buffer_with_resources2(&request, &response);
-
-  if (status == ZX_OK) {
-    memcpy(response_desc->addr, &response, sizeof(response));
-    *used_out = sizeof(response);
-  }
-
-  return status;
-}
-
 // Command structures come after the request struct.
 zx_status_t VirtioMagma::Handle_execute_command(VirtioDescriptor* request_desc,
                                                 VirtioDescriptor* response_desc,

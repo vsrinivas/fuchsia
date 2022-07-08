@@ -1123,36 +1123,6 @@ class TestConnectionWithContext : public TestConnection {
 
   uint32_t context_id() { return context_id_; }
 
-  void ExecuteCommandBufferWithResources2(uint32_t resource_count) {
-    ASSERT_TRUE(connection());
-
-    magma_command_buffer command_buffer = {.resource_count = resource_count};
-    magma_exec_resource resources[resource_count];
-
-    memset(resources, 0, sizeof(magma_exec_resource) * resource_count);
-    EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_execute_command_buffer_with_resources2(connection(), context_id(),
-                                                           &command_buffer, resources, nullptr));
-
-    // Command buffer is mostly zeros, so we expect an error here
-    EXPECT_EQ(MAGMA_STATUS_INVALID_ARGS, magma_get_error(connection()));
-  }
-
-  void ExecuteCommandBufferNoResources2() {
-    ASSERT_TRUE(connection());
-
-    magma_command_buffer command_buffer = {.resource_count = 0};
-    EXPECT_EQ(MAGMA_STATUS_OK,
-              magma_execute_command_buffer_with_resources2(
-                  connection(), context_id(), &command_buffer, nullptr /* resources */, nullptr));
-
-    // Empty command buffers may or may not be valid.
-    magma_status_t status = magma_get_error(connection());
-    EXPECT_TRUE(status == MAGMA_STATUS_OK || status == MAGMA_STATUS_INVALID_ARGS ||
-                status == MAGMA_STATUS_UNIMPLEMENTED)
-        << "status: " << status;
-  }
-
   void ExecuteCommand(uint32_t resource_count) {
     ASSERT_TRUE(connection());
 
@@ -1357,14 +1327,6 @@ TEST_F(Magma, SysmemLinearFormatModifier) {
 }
 
 TEST_F(Magma, FromC) { EXPECT_TRUE(test_magma_from_c(TestConnection::device_name().c_str())); }
-
-TEST_F(Magma, ExecuteCommandBufferWithResources2) {
-  TestConnectionWithContext().ExecuteCommandBufferWithResources2(5);
-}
-
-TEST_F(Magma, ExecuteCommandBufferNoResources2) {
-  TestConnectionWithContext().ExecuteCommandBufferNoResources2();
-}
 
 TEST_F(Magma, ExecuteCommand) { TestConnectionWithContext().ExecuteCommand(5); }
 

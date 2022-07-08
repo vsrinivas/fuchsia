@@ -539,25 +539,6 @@ MAGMA_EXPORT magma_status_t magma_virt_get_image_info(
     magma_image_info_t* image_info_out);
 
 ///
-/// \brief DEPRECATED - TODO(fxb/86670) remove prior to SDK release. Submits a command buffer for
-///        execution on the GPU, with associated resources.
-/// \param connection An open connection.
-/// \param context_id A valid context ID.
-/// \param command_buffer A pointer to the command buffer to execute.
-/// \param resources An array of |command_buffer->resource_count| resources associated with the
-///        command buffer.
-/// \param semaphore_ids An array of semaphore ids; first should be
-///        |command_buffer->wait_semaphore_count| wait semaphores followed by
-///        |command_buffer->signal_signal_semaphores| signal semaphores.
-///
-MAGMA_EXPORT magma_status_t magma_execute_command_buffer_with_resources2(
-    magma_connection_t connection,
-    uint32_t context_id,
-    struct magma_command_buffer* command_buffer,
-    struct magma_exec_resource* resources,
-    uint64_t* semaphore_ids);
-
-///
 /// \brief Gets a platform handle for the given buffer. This can be used to perform a CPU mapping of
 ///        the buffer using the standard syscall.  The handle may be released without invalidating
 ///        such CPU mappings.

@@ -305,7 +305,7 @@ TEST_F(TestMagmaFidl, MapUnmap) {
 }
 
 // Sends a bunch of zero command bytes
-TEST_F(TestMagmaFidl, ExecuteCommandBufferWithResources2) {
+TEST_F(TestMagmaFidl, ExecuteCommand) {
   uint32_t context_id = 10;
 
   {
@@ -330,17 +330,18 @@ TEST_F(TestMagmaFidl, ExecuteCommandBufferWithResources2) {
     fuchsia_gpu_magma::wire::BufferRange resource = {
         .buffer_id = buffer_id, .offset = 0, .size = 0};
     std::vector<fuchsia_gpu_magma::wire::BufferRange> resources{std::move(resource)};
-    fuchsia_gpu_magma::wire::CommandBuffer2 command_buffer = {
+    std::vector<fuchsia_gpu_magma::wire::CommandBuffer> command_buffers{{
         .resource_index = 0,
         .start_offset = 0,
-        .flags = static_cast<fuchsia_gpu_magma::wire::CommandBufferFlags>(0)};
+    }};
     std::vector<uint64_t> wait_semaphores;
     std::vector<uint64_t> signal_semaphores;
-    auto wire_result = primary_->ExecuteCommandBufferWithResources2(
-        context_id, std::move(command_buffer),
-        fidl::VectorView<fuchsia_gpu_magma::wire::BufferRange>::FromExternal(resources),
+    auto wire_result = primary_->ExecuteCommand(
+        context_id, fidl::VectorView<fuchsia_gpu_magma::wire::BufferRange>::FromExternal(resources),
+        fidl::VectorView<fuchsia_gpu_magma::wire::CommandBuffer>::FromExternal(command_buffers),
         fidl::VectorView<uint64_t>::FromExternal(wait_semaphores),
-        fidl::VectorView<uint64_t>::FromExternal(signal_semaphores));
+        fidl::VectorView<uint64_t>::FromExternal(signal_semaphores),
+        fuchsia_gpu_magma::wire::CommandBufferFlags(0));
     EXPECT_TRUE(wire_result.ok());
 
     // Fails checking (resource not mapped), does not execute on GPU

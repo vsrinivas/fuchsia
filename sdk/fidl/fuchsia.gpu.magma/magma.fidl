@@ -166,19 +166,6 @@ type CommandBufferFlags = flexible bits : uint64 {
 };
 
 /// A command buffer may be used to pass GPU instructions in a shared buffer (VMO).
-/// DEPRECATED - TODO(fxb/86670) remove prior to SDK release
-type CommandBuffer2 = struct {
-    /// Index of the resource containing instructions to start the command buffer.
-    resource_index uint32;
-
-    /// Starting offset within the resource.
-    start_offset uint64;
-
-    /// Flags.
-    flags CommandBufferFlags;
-};
-
-/// A command buffer may be used to pass GPU instructions in a shared buffer (VMO).
 type CommandBuffer = struct {
     /// Index of the resource containing instructions to start the command buffer.
     resource_index uint32;
@@ -246,20 +233,6 @@ protocol Primary {
     /// Destroys context `context_id`.
     DestroyContext(struct {
         context_id ContextId;
-    });
-
-    /// DEPRECATED - TODO(fxb/86670) remove prior to SDK release
-    /// Submits a command buffer for execution on the GPU, with associated `resources`.
-    /// `resources` must refer to buffers that have been imported.
-    /// `wait_semaphores` and `signal_semaphores` must refer to events that have been imported.
-    /// `wait_semaphores` must all be signaled before execution begins, then are reset.
-    /// `signal_semaphores` will be signaled after the command buffer is completed.  
-    ExecuteCommandBufferWithResources2(struct {
-        context_id uint32;
-        command_buffer CommandBuffer2;
-        resources vector<BufferRange>:MAX;
-        wait_semaphores vector<ObjectId>:MAX;
-        signal_semaphores vector<ObjectId>:MAX;
     });
 
     /// Submits command buffers for execution on the GPU, with associated `resources`.

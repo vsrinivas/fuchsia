@@ -262,21 +262,6 @@ class TestPlatformConnection {
     FlowControlCheckOneMessage();
   }
 
-  void TestExecuteCommandBufferWithResources() {
-    ASSERT_EQ(shared_data_->test_command_buffer.resource_count,
-              shared_data_->test_resources.size());
-    ASSERT_EQ(shared_data_->test_command_buffer.wait_semaphore_count +
-                  shared_data_->test_command_buffer.signal_semaphore_count,
-              shared_data_->test_semaphores.size());
-    FlowControlInit();
-
-    client_connection_->ExecuteCommandBufferWithResources(
-        shared_data_->test_context_id, &shared_data_->test_command_buffer,
-        shared_data_->test_resources.data(), shared_data_->test_semaphores.data());
-    EXPECT_EQ(client_connection_->GetError(), 0);
-    FlowControlCheckOneMessage();
-  }
-
   void TestGetError() {
     FlowControlSkip();
     EXPECT_EQ(client_connection_->GetError(), 0);
@@ -812,12 +797,6 @@ TEST(PlatformConnection, DestroyContext) {
   auto Test = TestPlatformConnection::Create();
   ASSERT_NE(Test, nullptr);
   Test->TestDestroyContext();
-}
-
-TEST(PlatformConnection, ExecuteCommandBufferWithResources) {
-  auto Test = TestPlatformConnection::Create();
-  ASSERT_NE(Test, nullptr);
-  Test->TestExecuteCommandBufferWithResources();
 }
 
 TEST(PlatformConnection, MapUnmapBuffer) {

@@ -89,45 +89,6 @@ magma_status_t magma_poll(magma_poll_item_t* items, uint32_t count, uint64_t tim
   return MAGMA_STATUS_OK;
 }
 
-// DEPRECATED - TODO(fxb/86670) remove
-magma_status_t magma_execute_command_buffer_with_resources2(
-    magma_connection_t connection, uint32_t context_id, struct magma_command_buffer* command_buffer,
-    struct magma_exec_resource* resources, uint64_t* semaphore_ids) {
-#if VIRTMAGMA_DEBUG
-  printf("%s\n", __PRETTY_FUNCTION__);
-#endif
-
-  // Ensure host compatibility with 32bit guest
-  static_assert(sizeof(magma_command_buffer) % 8 == 0);
-  static_assert(sizeof(magma_exec_resource) % 8 == 0);
-
-  virtmagma_command_buffer virt_command_buffer;
-  virt_command_buffer.command_buffer_size = sizeof(magma_command_buffer);
-  virt_command_buffer.command_buffer = reinterpret_cast<uintptr_t>(command_buffer);
-  virt_command_buffer.resource_size = sizeof(magma_exec_resource) * command_buffer->resource_count;
-  virt_command_buffer.resources = reinterpret_cast<uintptr_t>(resources);
-  virt_command_buffer.semaphore_size = sizeof(uint64_t) * (command_buffer->wait_semaphore_count +
-                                                           command_buffer->signal_semaphore_count);
-  virt_command_buffer.semaphores = reinterpret_cast<uintptr_t>(semaphore_ids);
-
-  virtio_magma_execute_command_buffer_with_resources2_ctrl request{};
-  virtio_magma_execute_command_buffer_with_resources2_resp response{};
-  request.hdr.type = VIRTIO_MAGMA_CMD_EXECUTE_COMMAND_BUFFER_WITH_RESOURCES2;
-
-  auto connection_wrapped = virtmagma_connection_t::Get(connection);
-  request.connection = reinterpret_cast<uint64_t>(connection_wrapped->Object());
-  request.context_id = context_id;
-  request.command_buffer = reinterpret_cast<uintptr_t>(&virt_command_buffer);
-
-  int32_t file_descriptor = connection_wrapped->Parent().fd();
-
-  if (!virtmagma_send_command(file_descriptor, &request, sizeof(request), &response,
-                              sizeof(response))) {
-    assert(false);
-  }
-  return static_cast<magma_status_t>(response.result_return);
-}
-
 magma_status_t magma_execute_command(magma_connection_t connection, uint32_t context_id,
                                      struct magma_command_descriptor* descriptor) {
 #if VIRTMAGMA_DEBUG

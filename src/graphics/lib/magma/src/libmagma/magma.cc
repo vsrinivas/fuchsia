@@ -262,21 +262,6 @@ magma_status_t magma_buffer_get_info(magma_connection_t connection, magma_buffer
   return MAGMA_STATUS_OK;
 }
 
-// DEPRECATED - TODO(fxb/86670) remove
-magma_status_t magma_execute_command_buffer_with_resources2(
-    magma_connection_t connection, uint32_t context_id, struct magma_command_buffer* command_buffer,
-    struct magma_exec_resource* resources, uint64_t* semaphore_ids) {
-  TRACE_DURATION("magma", "execute command buffer");
-  if (command_buffer->resource_count > 0) {
-    DASSERT(command_buffer->batch_buffer_resource_index < command_buffer->resource_count);
-
-    uint64_t ATTRIBUTE_UNUSED id = resources[command_buffer->batch_buffer_resource_index].buffer_id;
-    TRACE_FLOW_BEGIN("magma", "command_buffer", id);
-  }
-  return magma::PlatformConnectionClient::cast(connection)
-      ->ExecuteCommandBufferWithResources(context_id, command_buffer, resources, semaphore_ids);
-}
-
 magma_status_t magma_execute_command(magma_connection_t connection, uint32_t context_id,
                                      struct magma_command_descriptor* descriptor) {
   TRACE_DURATION("magma", "execute command");
