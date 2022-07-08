@@ -452,6 +452,7 @@ pub fn create_mouse_pointer_sample_event(
 /// - `event_time`: The time of event.
 pub fn create_touch_input_report(
     contacts: Vec<fidl_input_report::ContactInputReport>,
+    pressed_buttons: Option<Vec<u8>>,
     event_time: i64,
 ) -> fidl_input_report::InputReport {
     fidl_input_report::InputReport {
@@ -460,7 +461,7 @@ pub fn create_touch_input_report(
         mouse: None,
         touch: Some(fidl_input_report::TouchInputReport {
             contacts: Some(contacts),
-            pressed_buttons: None,
+            pressed_buttons,
             ..fidl_input_report::TouchInputReport::EMPTY
         }),
         sensor: None,
@@ -474,14 +475,14 @@ pub fn create_touch_contact(id: u32, position: Position) -> touch_binding::Touch
     touch_binding::TouchContact { id, position, pressure: None, contact_size: None }
 }
 
-/// Creates a [`touch_binding::TouchEvent`] with the provided parameters.
+/// Creates a [`touch_binding::TouchScreenEvent`] with the provided parameters.
 ///
 /// # Parameters
 /// - `contacts`: The contacts in the touch report.
 /// - `event_time`: The time of event.
 /// - `device_descriptor`: The device descriptor to add to the event.
 /// - `handled`: Whether the event has been consumed.
-pub fn create_touch_event_with_handled(
+pub fn create_touch_screen_event_with_handled(
     mut contacts: HashMap<fidl_ui_input::PointerEventPhase, Vec<touch_binding::TouchContact>>,
     event_time: zx::Time,
     device_descriptor: &input_device::InputDeviceDescriptor,
@@ -512,19 +513,68 @@ pub fn create_touch_event_with_handled(
     }
 }
 
-/// Creates a [`touch_binding::TouchEvent`] with the provided parameters.
+/// Creates a [`touch_binding::TouchScreenEvent`] with the provided parameters.
 ///
 /// # Parameters
 /// - `contacts`: The contacts in the touch report.
 /// - `event_time`: The time of event.
 /// - `device_descriptor`: The device descriptor to add to the event.
-pub fn create_touch_event(
+pub fn create_touch_screen_event(
     contacts: HashMap<fidl_ui_input::PointerEventPhase, Vec<touch_binding::TouchContact>>,
     event_time: zx::Time,
     device_descriptor: &input_device::InputDeviceDescriptor,
 ) -> input_device::InputEvent {
-    create_touch_event_with_handled(
+    create_touch_screen_event_with_handled(
         contacts,
+        event_time,
+        device_descriptor,
+        input_device::Handled::No,
+    )
+}
+
+/// Creates a [`touch_binding::TouchpadEvent`] with the provided parameters.
+///
+/// # Parameters
+/// - `injector_contacts`: The contacts in the touch report.
+/// - `pressed_buttons`: The buttons to report in the event.
+/// - `event_time`: The time of event.
+/// - `device_descriptor`: The device descriptor to add to the event.
+/// - `handled`: Whether the event has been consumed.
+pub fn create_touchpad_event_with_handled(
+    injector_contacts: Vec<touch_binding::TouchContact>,
+    pressed_buttons: HashSet<mouse_binding::MouseButton>,
+    event_time: zx::Time,
+    device_descriptor: &input_device::InputDeviceDescriptor,
+    handled: input_device::Handled,
+) -> input_device::InputEvent {
+    input_device::InputEvent {
+        device_event: input_device::InputDeviceEvent::Touchpad(touch_binding::TouchpadEvent {
+            injector_contacts,
+            pressed_buttons,
+        }),
+        device_descriptor: device_descriptor.clone(),
+        event_time,
+        handled: handled,
+        trace_id: None,
+    }
+}
+
+/// Creates a [`touch_binding::TouchpadEvent`] with the provided parameters.
+///
+/// # Parameters
+/// - `contacts`: The contacts in the touch report.
+/// - `pressed_buttons`: The buttons to report in the event.
+/// - `event_time`: The time of event.
+/// - `device_descriptor`: The device descriptor to add to the event.
+pub fn create_touchpad_event(
+    contacts: Vec<touch_binding::TouchContact>,
+    pressed_buttons: HashSet<mouse_binding::MouseButton>,
+    event_time: zx::Time,
+    device_descriptor: &input_device::InputDeviceDescriptor,
+) -> input_device::InputEvent {
+    create_touchpad_event_with_handled(
+        contacts,
+        pressed_buttons,
         event_time,
         device_descriptor,
         input_device::Handled::No,

@@ -117,7 +117,7 @@ impl InputHandler for MouseInjectorHandler {
             input_device::InputEvent {
                 device_event: input_device::InputDeviceEvent::TouchScreen(ref _touch_event),
                 device_descriptor:
-                    input_device::InputDeviceDescriptor::Touch(ref _touch_device_descriptor),
+                    input_device::InputDeviceDescriptor::TouchScreen(ref _touch_device_descriptor),
                 event_time: _,
                 handled: _,
                 trace_id: _,
@@ -576,7 +576,7 @@ mod tests {
         crate::testing_utilities::{
             assert_handler_ignores_input_event_sequence, create_mouse_event,
             create_mouse_event_with_handled, create_mouse_pointer_sample_event,
-            create_touch_contact, create_touch_event_with_handled,
+            create_touch_contact, create_touch_screen_event_with_handled,
         },
         crate::touch_binding,
         assert_matches::assert_matches,
@@ -620,16 +620,18 @@ mod tests {
 
     /// Returns an TouchDescriptor.
     fn get_touch_device_descriptor() -> input_device::InputDeviceDescriptor {
-        input_device::InputDeviceDescriptor::Touch(touch_binding::TouchScreenDeviceDescriptor {
-            device_id: 1,
-            contacts: vec![touch_binding::ContactDeviceDescriptor {
-                x_range: fidl_input_report::Range { min: 0, max: 100 },
-                y_range: fidl_input_report::Range { min: 0, max: 100 },
-                pressure_range: None,
-                width_range: None,
-                height_range: None,
-            }],
-        })
+        input_device::InputDeviceDescriptor::TouchScreen(
+            touch_binding::TouchScreenDeviceDescriptor {
+                device_id: 1,
+                contacts: vec![touch_binding::ContactDeviceDescriptor {
+                    x_range: fidl_input_report::Range { min: 0, max: 100 },
+                    y_range: fidl_input_report::Range { min: 0, max: 100 },
+                    pressure_range: None,
+                    width_range: None,
+                    height_range: None,
+                }],
+            },
+        )
     }
 
     /// Handles |fidl_fuchsia_pointerinjector_configuration::SetupRequest::GetViewRefs|.
@@ -2090,7 +2092,7 @@ mod tests {
         const TOUCH_ID: u32 = 1;
         let touch_descriptor = get_touch_device_descriptor();
         let event_time = zx::Time::get_monotonic();
-        let input_events = vec![create_touch_event_with_handled(
+        let input_events = vec![create_touch_screen_event_with_handled(
             hashmap! {
                 fidl_fuchsia_ui_input::PointerEventPhase::Add
                     => vec![create_touch_contact(TOUCH_ID, Position{ x: 20.0, y: 40.0 })],

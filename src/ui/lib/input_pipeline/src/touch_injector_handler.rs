@@ -70,7 +70,7 @@ impl UnhandledInputHandler for TouchInjectorHandler {
             input_device::UnhandledInputEvent {
                 device_event: input_device::InputDeviceEvent::TouchScreen(ref touch_event),
                 device_descriptor:
-                    input_device::InputDeviceDescriptor::Touch(ref touch_device_descriptor),
+                    input_device::InputDeviceDescriptor::TouchScreen(ref touch_device_descriptor),
                 event_time,
                 trace_id,
             } => {
@@ -410,7 +410,8 @@ mod tests {
     use {
         super::*,
         crate::testing_utilities::{
-            create_touch_contact, create_touch_event, create_touch_pointer_sample_event,
+            create_touch_contact, create_touch_pointer_sample_event, create_touch_screen_event,
+            create_touchpad_event,
         },
         assert_matches::assert_matches,
         fidl_fuchsia_input_report as fidl_input_report, fidl_fuchsia_ui_input as fidl_ui_input,
@@ -418,6 +419,7 @@ mod tests {
         futures::StreamExt,
         maplit::hashmap,
         pretty_assertions::assert_eq,
+        std::collections::HashSet,
         std::convert::TryFrom as _,
     };
 
@@ -425,9 +427,25 @@ mod tests {
     const DISPLAY_WIDTH: f32 = 100.0;
     const DISPLAY_HEIGHT: f32 = 100.0;
 
-    /// Returns an |input_device::InputDeviceDescriptor::TouchDescriptor|.
-    fn get_touch_device_descriptor() -> input_device::InputDeviceDescriptor {
-        input_device::InputDeviceDescriptor::Touch(touch_binding::TouchScreenDeviceDescriptor {
+    /// Returns an |input_device::InputDeviceDescriptor::TouchScreen|.
+    fn get_touch_screen_device_descriptor() -> input_device::InputDeviceDescriptor {
+        input_device::InputDeviceDescriptor::TouchScreen(
+            touch_binding::TouchScreenDeviceDescriptor {
+                device_id: 1,
+                contacts: vec![touch_binding::ContactDeviceDescriptor {
+                    x_range: fidl_input_report::Range { min: 0, max: 100 },
+                    y_range: fidl_input_report::Range { min: 0, max: 100 },
+                    pressure_range: None,
+                    width_range: None,
+                    height_range: None,
+                }],
+            },
+        )
+    }
+
+    /// Returns an |input_device::InputDeviceDescriptor::Touchpad|.
+    fn get_touchpad_device_descriptor() -> input_device::InputDeviceDescriptor {
+        input_device::InputDeviceDescriptor::Touchpad(touch_binding::TouchpadDeviceDescriptor {
             device_id: 1,
             contacts: vec![touch_binding::ContactDeviceDescriptor {
                 x_range: fidl_input_report::Range { min: 0, max: 100 },
@@ -622,8 +640,8 @@ mod tests {
         // Create touch event.
         let event_time = zx::Time::get_monotonic();
         let contact = create_touch_contact(TOUCH_ID, Position { x: 20.0, y: 40.0 });
-        let descriptor = get_touch_device_descriptor();
-        let input_event = input_device::UnhandledInputEvent::try_from(create_touch_event(
+        let descriptor = get_touch_screen_device_descriptor();
+        let input_event = input_device::UnhandledInputEvent::try_from(create_touch_screen_event(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Add
                     => vec![contact.clone()],
@@ -709,8 +727,8 @@ mod tests {
         // Create touch event.
         let event_time = zx::Time::get_monotonic();
         let contact = create_touch_contact(TOUCH_ID, Position { x: 20.0, y: 40.0 });
-        let descriptor = get_touch_device_descriptor();
-        let input_event = input_device::UnhandledInputEvent::try_from(create_touch_event(
+        let descriptor = get_touch_screen_device_descriptor();
+        let input_event = input_device::UnhandledInputEvent::try_from(create_touch_screen_event(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Add
                     => vec![contact.clone()],
@@ -743,5 +761,94 @@ mod tests {
             handle_result.as_slice(),
             [input_device::InputEvent { handled: input_device::Handled::Yes, .. }]
         );
+    }
+
+    // Tests that an add touchpad contact event with viewport is unhandled and not send to scenic.
+    #[fuchsia::test]
+    fn add_touchpad_contact_with_viewport() {
+        let mut exec = fasync::TestExecutor::new().expect("executor needed");
+
+        // Create touch handler.
+        let (configuration_proxy, mut configuration_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<pointerinjector_config::SetupMarker>()
+                .expect("Failed to create pointerinjector Setup proxy and stream.");
+        let (injector_registry_proxy, mut injector_registry_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<pointerinjector::RegistryMarker>()
+                .expect("Failed to create pointerinjector Registry proxy and stream.");
+        let touch_handler_fut = TouchInjectorHandler::new_handler(
+            configuration_proxy,
+            injector_registry_proxy,
+            Size { width: DISPLAY_WIDTH, height: DISPLAY_HEIGHT },
+        );
+        let config_request_stream_fut =
+            handle_configuration_request_stream(&mut configuration_request_stream);
+        let (touch_handler_res, _) = exec.run_singlethreaded(futures::future::join(
+            touch_handler_fut,
+            config_request_stream_fut,
+        ));
+        let touch_handler = touch_handler_res.expect("Failed to create touch handler.");
+
+        // Add an injector.
+        let (injector_device_proxy, mut injector_device_request_stream) =
+            fidl::endpoints::create_proxy_and_stream::<pointerinjector::DeviceMarker>()
+                .expect("Failed to create pointerinjector Registry proxy and stream.");
+        touch_handler.mutable_state.borrow_mut().injectors.insert(1, injector_device_proxy);
+
+        // Request a viewport update.
+        let watch_viewport_fut = fasync::Task::local(touch_handler.clone().watch_viewport());
+        futures::pin_mut!(watch_viewport_fut);
+        assert!(exec.run_until_stalled(&mut watch_viewport_fut).is_pending());
+
+        // Send a viewport update.
+        match exec.run_singlethreaded(&mut configuration_request_stream.next()) {
+            Some(Ok(pointerinjector_config::SetupRequest::WatchViewport { responder, .. })) => {
+                responder.send(create_viewport(0.0, 100.0)).expect("Failed to send viewport.");
+            }
+            other => panic!("Received unexpected value: {:?}", other),
+        };
+        assert!(exec.run_until_stalled(&mut watch_viewport_fut).is_pending());
+
+        // Check that the injector received an updated viewport
+        exec.run_singlethreaded(async {
+            match injector_device_request_stream.next().await {
+                Some(Ok(pointerinjector::DeviceRequest::Inject { events, responder })) => {
+                    assert_eq!(events.len(), 1);
+                    assert!(events[0].data.is_some());
+                    assert_eq!(
+                        events[0].data,
+                        Some(pointerinjector::Data::Viewport(create_viewport(0.0, 100.0)))
+                    );
+                    responder.send().expect("injector stream failed to respond.");
+                }
+                other => panic!("Received unexpected value: {:?}", other),
+            }
+        });
+
+        // Create touch event.
+        let event_time = zx::Time::get_monotonic();
+        let contact = create_touch_contact(TOUCH_ID, Position { x: 20.0, y: 40.0 });
+        let descriptor = get_touchpad_device_descriptor();
+        let input_event = input_device::UnhandledInputEvent::try_from(create_touchpad_event(
+            vec![contact.clone()],
+            HashSet::new(),
+            event_time,
+            &descriptor,
+        ))
+        .unwrap();
+
+        // Handle event.
+        let handle_event_fut = touch_handler.clone().handle_unhandled_input_event(input_event);
+
+        let handle_result = exec.run_singlethreaded(handle_event_fut);
+
+        // Event is not handled.
+        assert_matches!(
+            handle_result.as_slice(),
+            [input_device::InputEvent { handled: input_device::Handled::No, .. }]
+        );
+
+        // Injector should not receive anything because the handler does not support touchpad yet.
+        let mut ir_fut = injector_registry_request_stream.next();
+        assert_matches!(exec.run_until_stalled(&mut ir_fut), futures::task::Poll::Pending);
     }
 }

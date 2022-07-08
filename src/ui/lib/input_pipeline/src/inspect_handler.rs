@@ -16,6 +16,7 @@ enum EventType {
     ConsumerControls,
     Mouse,
     TouchScreen,
+    Touchpad,
     MouseConfig,
     #[cfg(test)]
     Fake,
@@ -28,6 +29,7 @@ impl std::fmt::Display for EventType {
             EventType::ConsumerControls => write!(f, "consumer_controls"),
             EventType::Mouse => write!(f, "mouse"),
             EventType::TouchScreen => write!(f, "touch_screen"),
+            EventType::Touchpad => write!(f, "touchpad"),
             EventType::MouseConfig => write!(f, "mouse_config"),
             #[cfg(test)]
             EventType::Fake => write!(f, "fake"),
@@ -43,6 +45,7 @@ impl EventType {
             InputDeviceEvent::ConsumerControls(_) => EventType::ConsumerControls,
             InputDeviceEvent::Mouse(_) => EventType::Mouse,
             InputDeviceEvent::TouchScreen(_) => EventType::TouchScreen,
+            InputDeviceEvent::Touchpad(_) => EventType::Touchpad,
             InputDeviceEvent::MouseConfig(_) => EventType::MouseConfig,
             #[cfg(test)]
             InputDeviceEvent::Fake => EventType::Fake,

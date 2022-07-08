@@ -4,6 +4,7 @@
 
 use {
     crate::input_device::{self, Handled, InputDeviceBinding, InputEvent},
+    crate::mouse_binding,
     crate::utils::{Position, Size},
     anyhow::{format_err, Error},
     async_trait::async_trait,
@@ -17,6 +18,7 @@ use {
     futures::channel::mpsc::Sender,
     maplit::hashmap,
     std::collections::HashMap,
+    std::collections::HashSet,
     std::iter::FromIterator,
 };
 
@@ -49,6 +51,20 @@ pub struct TouchScreenEvent {
     ///
     /// Contacts are grouped based on their current phase (e.g., add, change).
     pub injector_contacts: HashMap<pointerinjector::EventPhase, Vec<TouchContact>>,
+}
+
+/// A [`TouchpadEvent`] represents a set of contacts.
+///
+/// For example, when a user touches a touch screen with two fingers, there will be two
+/// [`TouchContact`]s in the vector.
+#[derive(Clone, Debug, PartialEq)]
+pub struct TouchpadEvent {
+    /// The contacts associated with the touch event. For example, a two-finger touch would result
+    /// in one touch event with two [`TouchContact`]s.
+    pub injector_contacts: Vec<TouchContact>,
+
+    /// The complete button state including this event.
+    pub pressed_buttons: HashSet<mouse_binding::MouseButton>,
 }
 
 /// [`TouchDeviceType`] indicates the type of touch device. Both Touch Screen and Windows Precision
@@ -107,11 +123,26 @@ impl From<&fidl_fuchsia_input_report::ContactInputReport> for TouchContact {
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct TouchScreenDeviceDescriptor {
-    /// The id of the connected touch input device.
+    /// The id of the connected touch screen input device.
     pub device_id: u32,
 
     /// The descriptors for the possible contacts associated with the device.
     pub contacts: Vec<ContactDeviceDescriptor>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct TouchpadDeviceDescriptor {
+    /// The id of the connected touchpad input device.
+    pub device_id: u32,
+
+    /// The descriptors for the possible contacts associated with the device.
+    pub contacts: Vec<ContactDeviceDescriptor>,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+enum TouchDeviceDescriptor {
+    TouchScreen(TouchScreenDeviceDescriptor),
+    Touchpad(TouchpadDeviceDescriptor),
 }
 
 /// A [`ContactDeviceDescriptor`] describes the possible values touch contact properties can take on.
@@ -156,7 +187,7 @@ pub struct TouchBinding {
     event_sender: Sender<InputEvent>,
 
     /// Holds information about this device.
-    device_descriptor: TouchScreenDeviceDescriptor,
+    device_descriptor: TouchDeviceDescriptor,
 
     /// Touch device type of the touch device.
     touch_device_type: TouchDeviceType,
@@ -172,7 +203,14 @@ impl input_device::InputDeviceBinding for TouchBinding {
     }
 
     fn get_device_descriptor(&self) -> input_device::InputDeviceDescriptor {
-        input_device::InputDeviceDescriptor::Touch(self.device_descriptor.clone())
+        match self.device_descriptor.clone() {
+            TouchDeviceDescriptor::TouchScreen(desc) => {
+                input_device::InputDeviceDescriptor::TouchScreen(desc)
+            }
+            TouchDeviceDescriptor::Touchpad(desc) => {
+                input_device::InputDeviceDescriptor::Touchpad(desc)
+            }
+        }
     }
 
     async fn handle_input_config_request(
@@ -256,6 +294,8 @@ impl TouchBinding {
         let device_descriptor: fidl_fuchsia_input_report::DeviceDescriptor =
             device_proxy.get_descriptor().await?;
 
+        let touch_device_type = get_device_type(&device_proxy).await;
+
         match device_descriptor.touch {
             Some(fidl_fuchsia_input_report::TouchDescriptor {
                 input:
@@ -269,15 +309,29 @@ impl TouchBinding {
                 ..
             }) => Ok(TouchBinding {
                 event_sender: input_event_sender,
-                device_descriptor: TouchScreenDeviceDescriptor {
-                    device_id,
-                    contacts: contact_descriptors
-                        .iter()
-                        .map(TouchBinding::parse_contact_descriptor)
-                        .filter_map(Result::ok)
-                        .collect(),
+                device_descriptor: match touch_device_type {
+                    TouchDeviceType::TouchScreen => {
+                        TouchDeviceDescriptor::TouchScreen(TouchScreenDeviceDescriptor {
+                            device_id,
+                            contacts: contact_descriptors
+                                .iter()
+                                .map(TouchBinding::parse_contact_descriptor)
+                                .filter_map(Result::ok)
+                                .collect(),
+                        })
+                    }
+                    TouchDeviceType::WindowsPrecisionTouchpad => {
+                        TouchDeviceDescriptor::Touchpad(TouchpadDeviceDescriptor {
+                            device_id,
+                            contacts: contact_descriptors
+                                .iter()
+                                .map(TouchBinding::parse_contact_descriptor)
+                                .filter_map(Result::ok)
+                                .collect(),
+                        })
+                    }
                 },
-                touch_device_type: get_device_type(&device_proxy).await,
+                touch_device_type,
                 device_proxy,
             }),
             descriptor => Err(format_err!("Touch Descriptor failed to parse: \n {:?}", descriptor)),
@@ -306,76 +360,18 @@ impl TouchBinding {
         device_descriptor: &input_device::InputDeviceDescriptor,
         input_event_sender: &mut Sender<InputEvent>,
     ) -> Option<InputReport> {
-        fuchsia_trace::duration!("input", "touch-binding-process-report");
-        fuchsia_trace::flow_end!("input", "input_report", report.trace_id.unwrap_or(0).into());
-
-        // Input devices can have multiple types so ensure `report` is a TouchInputReport.
-        let touch_report: &fidl_fuchsia_input_report::TouchInputReport = match &report.touch {
-            Some(touch) => touch,
-            None => {
-                return previous_report;
+        match device_descriptor {
+            input_device::InputDeviceDescriptor::TouchScreen(_) => process_touch_screen_reports(
+                report,
+                previous_report,
+                device_descriptor,
+                input_event_sender,
+            ),
+            input_device::InputDeviceDescriptor::Touchpad(_) => {
+                process_touchpad_reports(report, device_descriptor, input_event_sender)
             }
-        };
-
-        let previous_contacts: HashMap<u32, TouchContact> = previous_report
-            .as_ref()
-            .and_then(|unwrapped_report| unwrapped_report.touch.as_ref())
-            .map(touch_contacts_from_touch_report)
-            .unwrap_or_default();
-        let current_contacts: HashMap<u32, TouchContact> =
-            touch_contacts_from_touch_report(touch_report);
-
-        // Don't send an event if there are no new contacts.
-        if previous_contacts.is_empty() && current_contacts.is_empty() {
-            return Some(report);
+            _ => None,
         }
-
-        // Contacts which exist only in current.
-        let added_contacts: Vec<TouchContact> = Vec::from_iter(
-            current_contacts
-                .values()
-                .cloned()
-                .filter(|contact| !previous_contacts.contains_key(&contact.id)),
-        );
-        // Contacts which exist in both previous and current.
-        let moved_contacts: Vec<TouchContact> = Vec::from_iter(
-            current_contacts
-                .values()
-                .cloned()
-                .filter(|contact| previous_contacts.contains_key(&contact.id)),
-        );
-        // Contacts which exist only in previous.
-        let removed_contacts: Vec<TouchContact> = Vec::from_iter(
-            previous_contacts
-                .values()
-                .cloned()
-                .filter(|contact| !current_contacts.contains_key(&contact.id)),
-        );
-
-        let event_time: zx::Time = input_device::event_time_or_now(report.event_time);
-
-        let trace_id = fuchsia_trace::Id::new();
-        fuchsia_trace::flow_begin!("input", "report-to-event", trace_id);
-        send_event(
-            hashmap! {
-                fidl_ui_input::PointerEventPhase::Add => added_contacts.clone(),
-                fidl_ui_input::PointerEventPhase::Down => added_contacts.clone(),
-                fidl_ui_input::PointerEventPhase::Move => moved_contacts.clone(),
-                fidl_ui_input::PointerEventPhase::Up => removed_contacts.clone(),
-                fidl_ui_input::PointerEventPhase::Remove => removed_contacts.clone(),
-            },
-            hashmap! {
-                pointerinjector::EventPhase::Add => added_contacts,
-                pointerinjector::EventPhase::Change => moved_contacts,
-                pointerinjector::EventPhase::Remove => removed_contacts,
-            },
-            device_descriptor,
-            event_time,
-            input_event_sender,
-            trace_id,
-        );
-
-        Some(report)
     }
 
     /// Parses a fidl_input_report contact descriptor into a [`ContactDeviceDescriptor`]
@@ -410,6 +406,130 @@ impl TouchBinding {
     }
 }
 
+fn process_touch_screen_reports(
+    report: InputReport,
+    previous_report: Option<InputReport>,
+    device_descriptor: &input_device::InputDeviceDescriptor,
+    input_event_sender: &mut Sender<InputEvent>,
+) -> Option<InputReport> {
+    fuchsia_trace::duration!("input", "touch-binding-process-report");
+    fuchsia_trace::flow_end!("input", "input_report", report.trace_id.unwrap_or(0).into());
+
+    // Input devices can have multiple types so ensure `report` is a TouchInputReport.
+    let touch_report: &fidl_fuchsia_input_report::TouchInputReport = match &report.touch {
+        Some(touch) => touch,
+        None => {
+            return previous_report;
+        }
+    };
+
+    let previous_contacts: HashMap<u32, TouchContact> = previous_report
+        .as_ref()
+        .and_then(|unwrapped_report| unwrapped_report.touch.as_ref())
+        .map(touch_contacts_from_touch_report)
+        .unwrap_or_default();
+    let current_contacts: HashMap<u32, TouchContact> =
+        touch_contacts_from_touch_report(touch_report);
+
+    // Don't send an event if there are no new contacts.
+    if previous_contacts.is_empty() && current_contacts.is_empty() {
+        return Some(report);
+    }
+
+    // Contacts which exist only in current.
+    let added_contacts: Vec<TouchContact> = Vec::from_iter(
+        current_contacts
+            .values()
+            .cloned()
+            .filter(|contact| !previous_contacts.contains_key(&contact.id)),
+    );
+    // Contacts which exist in both previous and current.
+    let moved_contacts: Vec<TouchContact> = Vec::from_iter(
+        current_contacts
+            .values()
+            .cloned()
+            .filter(|contact| previous_contacts.contains_key(&contact.id)),
+    );
+    // Contacts which exist only in previous.
+    let removed_contacts: Vec<TouchContact> = Vec::from_iter(
+        previous_contacts
+            .values()
+            .cloned()
+            .filter(|contact| !current_contacts.contains_key(&contact.id)),
+    );
+
+    let event_time: zx::Time = input_device::event_time_or_now(report.event_time);
+
+    let trace_id = fuchsia_trace::Id::new();
+    fuchsia_trace::flow_begin!("input", "report-to-event", trace_id);
+    send_touch_screen_event(
+        hashmap! {
+            fidl_ui_input::PointerEventPhase::Add => added_contacts.clone(),
+            fidl_ui_input::PointerEventPhase::Down => added_contacts.clone(),
+            fidl_ui_input::PointerEventPhase::Move => moved_contacts.clone(),
+            fidl_ui_input::PointerEventPhase::Up => removed_contacts.clone(),
+            fidl_ui_input::PointerEventPhase::Remove => removed_contacts.clone(),
+        },
+        hashmap! {
+            pointerinjector::EventPhase::Add => added_contacts,
+            pointerinjector::EventPhase::Change => moved_contacts,
+            pointerinjector::EventPhase::Remove => removed_contacts,
+        },
+        device_descriptor,
+        event_time,
+        input_event_sender,
+        trace_id,
+    );
+
+    Some(report)
+}
+
+fn process_touchpad_reports(
+    report: InputReport,
+    device_descriptor: &input_device::InputDeviceDescriptor,
+    input_event_sender: &mut Sender<InputEvent>,
+) -> Option<InputReport> {
+    fuchsia_trace::duration!("input", "touch-binding-process-report");
+    fuchsia_trace::flow_end!("input", "input_report", report.trace_id.unwrap_or(0).into());
+
+    // Input devices can have multiple types so ensure `report` is a TouchInputReport.
+    let touch_report: &fidl_fuchsia_input_report::TouchInputReport = match &report.touch {
+        Some(touch) => touch,
+        None => {
+            return None;
+        }
+    };
+
+    let current_contacts: Vec<TouchContact> = touch_report
+        .contacts
+        .as_ref()
+        .and_then(|unwrapped_contacts| {
+            // Once the contacts are found, convert them into `TouchContact`s.
+            Some(unwrapped_contacts.iter().map(TouchContact::from).collect())
+        })
+        .unwrap_or_default();
+
+    let buttons: HashSet<mouse_binding::MouseButton> = match &touch_report.pressed_buttons {
+        Some(buttons) => HashSet::from_iter(buttons.iter().cloned()),
+        None => HashSet::new(),
+    };
+
+    let event_time: zx::Time = input_device::event_time_or_now(report.event_time);
+
+    let trace_id = fuchsia_trace::Id::new();
+    fuchsia_trace::flow_begin!("input", "report-to-event", trace_id);
+    send_touchpad_event(
+        current_contacts,
+        buttons,
+        device_descriptor,
+        event_time,
+        input_event_sender,
+        trace_id,
+    );
+
+    Some(report)
+}
+
 fn touch_contacts_from_touch_report(
     touch_report: &fidl_fuchsia_input_report::TouchInputReport,
 ) -> HashMap<u32, TouchContact> {
@@ -426,16 +546,16 @@ fn touch_contacts_from_touch_report(
     contacts.into_iter().map(|contact| (contact.id, contact)).collect()
 }
 
-/// Sends a TouchEvent over `input_event_sender`.
+/// Sends a TouchScreenEvent over `input_event_sender`.
 ///
 /// # Parameters
-/// - `contacts`: The contact points relevant to the new TouchEvent.
-/// - `injector_contacts`: The contact points relevant to the new TouchEvent, used to send
+/// - `contacts`: The contact points relevant to the new TouchScreenEvent.
+/// - `injector_contacts`: The contact points relevant to the new TouchScreenEvent, used to send
 ///                        pointer events into Scenic.
 /// - `device_descriptor`: The descriptor for the input device generating the input reports.
 /// - `event_time`: The time in nanoseconds when the event was first recorded.
 /// - `input_event_sender`: The sender for the device binding's input event stream.
-fn send_event(
+fn send_touch_screen_event(
     contacts: HashMap<fidl_ui_input::PointerEventPhase, Vec<TouchContact>>,
     injector_contacts: HashMap<pointerinjector::EventPhase, Vec<TouchContact>>,
     device_descriptor: &input_device::InputDeviceDescriptor,
@@ -453,7 +573,38 @@ fn send_event(
         handled: Handled::No,
         trace_id: Some(trace_id),
     }) {
-        Err(e) => fx_log_err!("Failed to send TouchEvent with error: {:?}", e),
+        Err(e) => fx_log_err!("Failed to send TouchScreenEvent with error: {:?}", e),
+        _ => {}
+    }
+}
+
+/// Sends a TouchpadEvent over `input_event_sender`.
+///
+/// # Parameters
+/// - `injector_contacts`: The contact points relevant to the new TouchpadEvent.
+/// - `pressed_buttons`: The pressing button of the new TouchpadEvent.
+/// - `device_descriptor`: The descriptor for the input device generating the input reports.
+/// - `event_time`: The time in nanoseconds when the event was first recorded.
+/// - `input_event_sender`: The sender for the device binding's input event stream.
+fn send_touchpad_event(
+    injector_contacts: Vec<TouchContact>,
+    pressed_buttons: HashSet<mouse_binding::MouseButton>,
+    device_descriptor: &input_device::InputDeviceDescriptor,
+    event_time: zx::Time,
+    input_event_sender: &mut Sender<input_device::InputEvent>,
+    trace_id: fuchsia_trace::Id,
+) {
+    match input_event_sender.try_send(input_device::InputEvent {
+        device_event: input_device::InputDeviceEvent::Touchpad(TouchpadEvent {
+            injector_contacts,
+            pressed_buttons,
+        }),
+        device_descriptor: device_descriptor.clone(),
+        event_time,
+        handled: Handled::No,
+        trace_id: Some(trace_id),
+    }) {
+        Err(e) => fx_log_err!("Failed to send TouchpadEvent with error: {:?}", e),
         _ => {}
     }
 }
@@ -488,7 +639,8 @@ mod tests {
         crate::input_pipeline::InputDeviceBindingHashMap,
         crate::input_pipeline::InputPipeline,
         crate::testing_utilities::{
-            self, create_touch_contact, create_touch_event, create_touch_input_report,
+            self, create_touch_contact, create_touch_input_report, create_touch_screen_event,
+            create_touchpad_event,
         },
         crate::utils::Position,
         assert_matches::assert_matches,
@@ -506,14 +658,20 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn process_empty_reports() {
         let previous_report_time = fuchsia_zircon::Time::get_monotonic().into_nanos();
-        let previous_report = create_touch_input_report(vec![], previous_report_time);
+        let previous_report = create_touch_input_report(
+            vec![],
+            /* pressed_buttons= */ None,
+            previous_report_time,
+        );
         let report_time = fuchsia_zircon::Time::get_monotonic().into_nanos();
-        let report = create_touch_input_report(vec![], report_time);
+        let report =
+            create_touch_input_report(vec![], /* pressed_buttons= */ None, report_time);
 
-        let descriptor = input_device::InputDeviceDescriptor::Touch(TouchScreenDeviceDescriptor {
-            device_id: 1,
-            contacts: vec![],
-        });
+        let descriptor =
+            input_device::InputDeviceDescriptor::TouchScreen(TouchScreenDeviceDescriptor {
+                device_id: 1,
+                contacts: vec![],
+            });
         let (mut event_sender, mut event_receiver) = futures::channel::mpsc::channel(1);
         let returned_report = TouchBinding::process_reports(
             report,
@@ -534,10 +692,11 @@ mod tests {
     async fn add_and_down() {
         const TOUCH_ID: u32 = 2;
 
-        let descriptor = input_device::InputDeviceDescriptor::Touch(TouchScreenDeviceDescriptor {
-            device_id: 1,
-            contacts: vec![],
-        });
+        let descriptor =
+            input_device::InputDeviceDescriptor::TouchScreen(TouchScreenDeviceDescriptor {
+                device_id: 1,
+                contacts: vec![],
+            });
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
 
         let contact = fidl_fuchsia_input_report::ContactInputReport {
@@ -549,9 +708,13 @@ mod tests {
             contact_height: None,
             ..fidl_fuchsia_input_report::ContactInputReport::EMPTY
         };
-        let reports = vec![create_touch_input_report(vec![contact], event_time_i64)];
+        let reports = vec![create_touch_input_report(
+            vec![contact],
+            /* pressed_buttons= */ None,
+            event_time_i64,
+        )];
 
-        let expected_events = vec![create_touch_event(
+        let expected_events = vec![create_touch_screen_event(
             hashmap! {
                 fidl_ui_input::PointerEventPhase::Add
                     => vec![create_touch_contact(TOUCH_ID, Position { x: 0.0, y: 0.0 })],
@@ -575,10 +738,11 @@ mod tests {
     async fn up_and_remove() {
         const TOUCH_ID: u32 = 2;
 
-        let descriptor = input_device::InputDeviceDescriptor::Touch(TouchScreenDeviceDescriptor {
-            device_id: 1,
-            contacts: vec![],
-        });
+        let descriptor =
+            input_device::InputDeviceDescriptor::TouchScreen(TouchScreenDeviceDescriptor {
+                device_id: 1,
+                contacts: vec![],
+            });
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
 
         let contact = fidl_fuchsia_input_report::ContactInputReport {
@@ -591,12 +755,16 @@ mod tests {
             ..fidl_fuchsia_input_report::ContactInputReport::EMPTY
         };
         let reports = vec![
-            create_touch_input_report(vec![contact], event_time_i64),
-            create_touch_input_report(vec![], event_time_i64),
+            create_touch_input_report(
+                vec![contact],
+                /* pressed_buttons= */ None,
+                event_time_i64,
+            ),
+            create_touch_input_report(vec![], /* pressed_buttons= */ None, event_time_i64),
         ];
 
         let expected_events = vec![
-            create_touch_event(
+            create_touch_screen_event(
                 hashmap! {
                     fidl_ui_input::PointerEventPhase::Add
                         => vec![create_touch_contact(TOUCH_ID, Position { x: 0.0, y: 0.0 })],
@@ -606,7 +774,7 @@ mod tests {
                 event_time_u64,
                 &descriptor,
             ),
-            create_touch_event(
+            create_touch_screen_event(
                 hashmap! {
                     fidl_ui_input::PointerEventPhase::Up
                         => vec![create_touch_contact(TOUCH_ID, Position { x: 0.0, y: 0.0 })],
@@ -633,10 +801,11 @@ mod tests {
         let first = Position { x: 10.0, y: 30.0 };
         let second = Position { x: first.x * 2.0, y: first.y * 2.0 };
 
-        let descriptor = input_device::InputDeviceDescriptor::Touch(TouchScreenDeviceDescriptor {
-            device_id: 1,
-            contacts: vec![],
-        });
+        let descriptor =
+            input_device::InputDeviceDescriptor::TouchScreen(TouchScreenDeviceDescriptor {
+                device_id: 1,
+                contacts: vec![],
+            });
         let (event_time_i64, event_time_u64) = testing_utilities::event_times();
 
         let first_contact = fidl_fuchsia_input_report::ContactInputReport {
@@ -659,12 +828,20 @@ mod tests {
         };
 
         let reports = vec![
-            create_touch_input_report(vec![first_contact], event_time_i64),
-            create_touch_input_report(vec![second_contact], event_time_i64),
+            create_touch_input_report(
+                vec![first_contact],
+                /* pressed_buttons= */ None,
+                event_time_i64,
+            ),
+            create_touch_input_report(
+                vec![second_contact],
+                /* pressed_buttons= */ None,
+                event_time_i64,
+            ),
         ];
 
         let expected_events = vec![
-            create_touch_event(
+            create_touch_screen_event(
                 hashmap! {
                     fidl_ui_input::PointerEventPhase::Add
                         => vec![create_touch_contact(TOUCH_ID, first)],
@@ -674,7 +851,7 @@ mod tests {
                 event_time_u64,
                 &descriptor,
             ),
-            create_touch_event(
+            create_touch_screen_event(
                 hashmap! {
                     fidl_ui_input::PointerEventPhase::Move
                         => vec![create_touch_contact(TOUCH_ID, second)],
@@ -695,7 +872,11 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn sent_event_has_trace_id() {
         let previous_report_time = fuchsia_zircon::Time::get_monotonic().into_nanos();
-        let previous_report = create_touch_input_report(vec![], previous_report_time);
+        let previous_report = create_touch_input_report(
+            vec![],
+            /* pressed_buttons= */ None,
+            previous_report_time,
+        );
 
         let report_time = fuchsia_zircon::Time::get_monotonic().into_nanos();
         let contact = fidl_fuchsia_input_report::ContactInputReport {
@@ -704,12 +885,14 @@ mod tests {
             position_y: Some(444),
             ..fidl_fuchsia_input_report::ContactInputReport::EMPTY
         };
-        let report = create_touch_input_report(vec![contact], report_time);
+        let report =
+            create_touch_input_report(vec![contact], /* pressed_buttons= */ None, report_time);
 
-        let descriptor = input_device::InputDeviceDescriptor::Touch(TouchScreenDeviceDescriptor {
-            device_id: 1,
-            contacts: vec![],
-        });
+        let descriptor =
+            input_device::InputDeviceDescriptor::TouchScreen(TouchScreenDeviceDescriptor {
+                device_id: 1,
+                contacts: vec![],
+            });
         let (mut event_sender, mut event_receiver) = futures::channel::mpsc::channel(1);
         let _: Option<InputReport> = TouchBinding::process_reports(
             report,
@@ -900,5 +1083,171 @@ mod tests {
             }),
             ..fidl_input_report::DeviceDescriptor::EMPTY
         }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn send_touchpad_event_button() {
+        const TOUCH_ID: u32 = 1;
+        const PRIMARY_BUTTON: u8 = 1;
+
+        let descriptor = input_device::InputDeviceDescriptor::Touchpad(TouchpadDeviceDescriptor {
+            device_id: 1,
+            contacts: vec![],
+        });
+        let (event_time_i64, event_time_u64) = testing_utilities::event_times();
+
+        let contact = fidl_fuchsia_input_report::ContactInputReport {
+            contact_id: Some(TOUCH_ID),
+            position_x: Some(0),
+            position_y: Some(0),
+            pressure: None,
+            contact_width: None,
+            contact_height: None,
+            ..fidl_fuchsia_input_report::ContactInputReport::EMPTY
+        };
+        let reports = vec![create_touch_input_report(
+            vec![contact],
+            Some(vec![PRIMARY_BUTTON]),
+            event_time_i64,
+        )];
+
+        let expected_events = vec![create_touchpad_event(
+            vec![create_touch_contact(TOUCH_ID, Position { x: 0.0, y: 0.0 })],
+            vec![PRIMARY_BUTTON].into_iter().collect(),
+            event_time_u64,
+            &descriptor,
+        )];
+
+        assert_input_report_sequence_generates_events!(
+            input_reports: reports,
+            expected_events: expected_events,
+            device_descriptor: descriptor,
+            device_type: TouchBinding,
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn send_touchpad_event_2_fingers_down_up() {
+        const TOUCH_ID_1: u32 = 1;
+        const TOUCH_ID_2: u32 = 2;
+
+        let descriptor = input_device::InputDeviceDescriptor::Touchpad(TouchpadDeviceDescriptor {
+            device_id: 1,
+            contacts: vec![],
+        });
+        let (event_time_i64, event_time_u64) = testing_utilities::event_times();
+
+        let contact1 = fidl_fuchsia_input_report::ContactInputReport {
+            contact_id: Some(TOUCH_ID_1),
+            position_x: Some(0),
+            position_y: Some(0),
+            pressure: None,
+            contact_width: None,
+            contact_height: None,
+            ..fidl_fuchsia_input_report::ContactInputReport::EMPTY
+        };
+        let contact2 = fidl_fuchsia_input_report::ContactInputReport {
+            contact_id: Some(TOUCH_ID_2),
+            position_x: Some(10),
+            position_y: Some(10),
+            pressure: None,
+            contact_width: None,
+            contact_height: None,
+            ..fidl_fuchsia_input_report::ContactInputReport::EMPTY
+        };
+        let reports = vec![
+            create_touch_input_report(
+                vec![contact1, contact2],
+                /* pressed_buttons= */ None,
+                event_time_i64,
+            ),
+            create_touch_input_report(vec![], /* pressed_buttons= */ None, event_time_i64),
+        ];
+
+        let expected_events = vec![
+            create_touchpad_event(
+                vec![
+                    create_touch_contact(TOUCH_ID_1, Position { x: 0.0, y: 0.0 }),
+                    create_touch_contact(TOUCH_ID_2, Position { x: 10.0, y: 10.0 }),
+                ],
+                HashSet::new(),
+                event_time_u64,
+                &descriptor,
+            ),
+            create_touchpad_event(vec![], HashSet::new(), event_time_u64, &descriptor),
+        ];
+
+        assert_input_report_sequence_generates_events!(
+            input_reports: reports,
+            expected_events: expected_events,
+            device_descriptor: descriptor,
+            device_type: TouchBinding,
+        );
+    }
+
+    #[test_case(Position{x: 0.0, y: 0.0}, Position{x: 5.0, y: 5.0}; "down move")]
+    #[test_case(Position{x: 0.0, y: 0.0}, Position{x: 0.0, y: 0.0}; "down hold")]
+    #[fasync::run_singlethreaded(test)]
+    async fn send_touchpad_event_1_finger(p0: Position, p1: Position) {
+        const TOUCH_ID: u32 = 1;
+
+        let descriptor = input_device::InputDeviceDescriptor::Touchpad(TouchpadDeviceDescriptor {
+            device_id: 1,
+            contacts: vec![],
+        });
+        let (event_time_i64, event_time_u64) = testing_utilities::event_times();
+
+        let contact1 = fidl_fuchsia_input_report::ContactInputReport {
+            contact_id: Some(TOUCH_ID),
+            position_x: Some(p0.x as i64),
+            position_y: Some(p0.y as i64),
+            pressure: None,
+            contact_width: None,
+            contact_height: None,
+            ..fidl_fuchsia_input_report::ContactInputReport::EMPTY
+        };
+        let contact2 = fidl_fuchsia_input_report::ContactInputReport {
+            contact_id: Some(TOUCH_ID),
+            position_x: Some(p1.x as i64),
+            position_y: Some(p1.y as i64),
+            pressure: None,
+            contact_width: None,
+            contact_height: None,
+            ..fidl_fuchsia_input_report::ContactInputReport::EMPTY
+        };
+        let reports = vec![
+            create_touch_input_report(
+                vec![contact1],
+                /* pressed_buttons= */ None,
+                event_time_i64,
+            ),
+            create_touch_input_report(
+                vec![contact2],
+                /* pressed_buttons= */ None,
+                event_time_i64,
+            ),
+        ];
+
+        let expected_events = vec![
+            create_touchpad_event(
+                vec![create_touch_contact(TOUCH_ID, p0)],
+                HashSet::new(),
+                event_time_u64,
+                &descriptor,
+            ),
+            create_touchpad_event(
+                vec![create_touch_contact(TOUCH_ID, p1)],
+                HashSet::new(),
+                event_time_u64,
+                &descriptor,
+            ),
+        ];
+
+        assert_input_report_sequence_generates_events!(
+            input_reports: reports,
+            expected_events: expected_events,
+            device_descriptor: descriptor,
+            device_type: TouchBinding,
+        );
     }
 }
