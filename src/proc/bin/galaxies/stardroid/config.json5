@@ -4,7 +4,6 @@
     ],
     features: [
         "binder",
-        "logd",
         "selinux_enabled",
     ],
     init: [
