@@ -149,7 +149,6 @@ group("cmx_allowlist") {
     "//src/connectivity/network/netstack/inspect/validator:validator-component_manifest_compile",
     "//src/connectivity/network/netstack3:component-legacy_manifest_compile",
     "//src/connectivity/network/netstack3/core:fuzz-single-device_component_manifest_compile",
-    "//src/connectivity/network/tun/network-tun:component_manifest_compile",
     "//src/connectivity/openthread/ot-stack:ot-stack-v1_manifest_compile",
     "//src/connectivity/openthread/tests/ot-devmgr:ot-devmgr-component-integration_manifest_compile",
     "//src/connectivity/openthread/tests/test-components:ot-radio-ncp-ver-query-mock-component_manifest_compile",

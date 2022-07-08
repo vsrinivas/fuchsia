@@ -56,12 +56,6 @@ executable("bin") {
   deps = [ ":src" ]
 }
 
-fuchsia_component("component") {
-  component_name = "network-tun"
-  manifest = "meta/network-tun.cmx"
-  deps = [ ":bin" ]
-}
-
 fuchsia_component("component-v2") {
   component_name = "network-tun"
   manifest = "meta/network-tun.cml"
