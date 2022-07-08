@@ -27,8 +27,9 @@ import("//build/group_with_inputs.gni")
 #    targets.
 #
 #   base_packages [optional]
-#     [list, GN targets] A list of GN targets that are the specific targets for
-#     the product-provided packages to place into the base set.
+#     [list, GN scopes] A list of GN scopes that hold the information for a
+#     product-provided package to place into the base set. The scope can have a
+#     'package_target' field pointing to the GN target of the fuchsia_package.
 #
 #   # Transitory
 #   base_package_deprecated [optional]
@@ -36,8 +37,9 @@ import("//build/group_with_inputs.gni")
 #     the product-provided packages to place into the base set.
 #
 #   cache_packages [optional]
-#     [list, GN targets] A list of GN targets that are the specific targets for
-#     the product-provided packages to place into the cache set.
+#     [list, GN scopes] A list of GN scopes that hold the information for a
+#     product-provided package to place into the cache set. The scope can have a
+#     'package_target' field pointing to the GN target of the fuchsia_package.
 #
 #   # Transitory
 #   cache_packages_deprecated [optional]
@@ -72,7 +74,11 @@ template("product_assembly_configuration") {
     # manifests and as the deps for the package set targets.
     base_package_labels = []
     if (defined(invoker.base_packages)) {
-      base_package_labels += invoker.base_packages
+      foreach(package, invoker.base_packages) {
+        assert(defined(package.package_target),
+               "package_target must be supplied")
+        base_package_labels += [ package.package_target ]
+      }
     }
     if (defined(invoker.base_packages_deprecated)) {
       base_package_labels += invoker.base_packages_deprecated
@@ -82,7 +88,11 @@ template("product_assembly_configuration") {
     # manifests and as the deps for the package set targets.
     cache_package_labels = []
     if (defined(invoker.cache_packages)) {
-      cache_package_labels += invoker.cache_packages
+      foreach(package, invoker.cache_packages) {
+        assert(defined(package.package_target),
+               "package_target must be supplied")
+        cache_package_labels += [ package.package_target ]
+      }
     }
     if (defined(invoker.cache_packages_deprecated)) {
       cache_package_labels += invoker.cache_packages_deprecated
