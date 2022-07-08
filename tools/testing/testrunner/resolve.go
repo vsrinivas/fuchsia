@@ -8,11 +8,11 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 	"strings"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/integration/testsharder"
+	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 )
@@ -25,7 +25,7 @@ func ResolveTestPackages(ctx context.Context, tests []testsharder.Test, addr net
 	}
 	defer client.Close()
 
-	l, err := os.Create(resolveLog)
+	l, err := osmisc.CreateFile(resolveLog)
 	if err != nil {
 		return fmt.Errorf("failed to create log for package resolutions: %w", err)
 	}
