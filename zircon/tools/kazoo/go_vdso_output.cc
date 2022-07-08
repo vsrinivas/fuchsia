@@ -27,7 +27,7 @@ void PrintStub(Writer* writer, Syscall* syscall) {
   writer->Puts("\n");
 }
 
-/*size_t GoTypeSize(const Type& type) {
+size_t GoTypeSize(const Type& type) {
   std::string native_name = GetNativeGoName(type);
   if (native_name == "void") {
     return 0;
@@ -47,7 +47,7 @@ void PrintStub(Writer* writer, Syscall* syscall) {
     return 8;
   }
   ZX_ASSERT(false && "unhandled GoTypeSize");
-} */
+}
 
 enum class Arch {
   kArm64,
@@ -55,14 +55,14 @@ enum class Arch {
   kRiscv64,
 };
 
-/*bool IsSpecialGoRuntimeFunction(const Syscall& syscall) {
+bool IsSpecialGoRuntimeFunction(const Syscall& syscall) {
   // These functions can't call runtime·entersyscall and exitsyscall, otherwise
   // the system will hang.
   return syscall.name() == "nanosleep" || syscall.name() == "futex_wait";
-} */
+}
 
 void PrintAsm(Writer* writer, Syscall* syscall, Arch arch) {
-/*  static const char* kX86RegArgs[] = {"DI", "SI", "DX", "CX", "R8", "R9", "R12", "R13"};
+  static const char* kX86RegArgs[] = {"DI", "SI", "DX", "CX", "R8", "R9", "R12", "R13"};
   static const char* kArm64RegArgs[] = {"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7"};
   static const char* kRiscv64RegArgs[] = {"A0", "A1", "A2", "A3", "A4", "A5", "A6", "A7"};
 
@@ -115,7 +115,7 @@ void PrintAsm(Writer* writer, Syscall* syscall, Arch arch) {
       reg_args = kRiscv64RegArgs;
       call_ins = "CALL";
       ret_reg = "A0";
-      suffix8 = "D";
+      suffix8 = "";
       suffix4 = "W";
       break;
   }
@@ -149,7 +149,9 @@ void PrintAsm(Writer* writer, Syscall* syscall, Arch arch) {
       writer->Puts("\tMOVD R20, m_vdsoSP(R21)\n");
       break;
     case Arch::kRiscv64:
-      // TODO
+      writer->Puts("\tMOV g_m(g), T2\n");
+      writer->Puts("\tMOV RA, m_vdsoPC(T2)\n");
+      writer->Puts("\tMOV X2, m_vdsoSP(T2) // X2 is riscv64 stack pointer\n");
       break;
   }
 
@@ -201,7 +203,8 @@ void PrintAsm(Writer* writer, Syscall* syscall, Arch arch) {
       writer->Printf("\tBL vdso_zx_%s(SB)\n", syscall->name().c_str());
       break;
     case Arch::kRiscv64:
-      writer->Printf("\tCALL vdso_zx_%s(SB)\n", syscall->name().c_str());
+      writer->Printf("\tMOV vdso_zx_%s(SB), T1\n", syscall->name().c_str());
+      writer->Printf("\tJALR RA, T1\n");
   }
 
   if (ret_size > 0) {
@@ -228,9 +231,10 @@ void PrintAsm(Writer* writer, Syscall* syscall, Arch arch) {
       writer->Puts("\tMOVD $0, m_vdsoSP(R21)\n");
       break;
     case Arch::kRiscv64:
-      // TODO
+      writer->Puts("\tMOV g_m(g), T2\n");
+      writer->Puts("\tMOV ZERO, m_vdsoSP(T2)\n");
       break;
-  } */
+  }
   writer->Puts("\tRET\n");
 }
 
@@ -238,8 +242,7 @@ bool VdsoCalls(const SyscallLibrary& library, Writer* writer, Arch arch) {
   CopyrightHeaderWithCppComments(writer);
 
   writer->Puts("#include \"go_asm.h\"\n");
-// This is not actually used in //third_party/go ?
-//  writer->Puts("#include \"go_tls.h\"\n");
+  writer->Puts("#include \"go_tls.h\"\n");
   writer->Puts("#include \"textflag.h\"\n");
   writer->Puts("#include \"funcdata.h\"\n\n");
 

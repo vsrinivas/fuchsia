@@ -150,8 +150,8 @@ static void print_exception_report(FILE* out, const zx_exception_report_t& repor
   inspector::decoded_registers decoded = inspector::decode_registers(regs);
 
   if (report.header.type == ZX_EXCP_FATAL_PAGE_FAULT) {
-    const char* access_type;
-    const char* violation;
+    const char* access_type = "<unknown>";
+    const char* violation = "<unknown>";
 #if defined(__x86_64__)
     static constexpr uint32_t kErrCodeInstrFetch = (1 << 4);
     static constexpr uint32_t kErrCodeWrite = (1 << 1);
