@@ -30,7 +30,8 @@ if (is_linux) {
 
     deps = [ "//build/images/fuchsia:fuchsia_zbi_for_host_tests" ]
 
-    sources = [ "$root_build_dir/fvm.blk" ]
+    sources = [ get_label_info("//build/images/fuchsia($target_toolchain)",
+                               "target_out_dir") + "/fuchsia/fvm.blk" ]
   }
 
   host_test_data("vm_config") {
