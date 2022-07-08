@@ -5,6 +5,7 @@
 mod attribution;
 mod basic;
 mod budget;
+mod connector;
 mod controller_stop;
 mod crash;
 mod interest;
