@@ -22,7 +22,7 @@ DECLARE_SINGLETON_MUTEX(GuestMutex);
 size_t num_guests TA_GUARDED(GuestMutex::Get()) = 0;
 fbl::Array<VmxPage> vmxon_pages TA_GUARDED(GuestMutex::Get());
 
-zx_status_t vmxon(paddr_t pa) {
+void vmxon(paddr_t pa) {
   uint8_t err;
 
   __asm__ __volatile__("vmxon %[pa]"
@@ -30,10 +30,10 @@ zx_status_t vmxon(paddr_t pa) {
                        : [pa] "m"(pa)
                        : "cc", "memory");
 
-  return err ? ZX_ERR_INTERNAL : ZX_OK;
+  ASSERT(!err);
 }
 
-zx_status_t vmxoff() {
+void vmxoff() {
   uint8_t err;
 
   __asm__ __volatile__("vmxoff"
@@ -41,7 +41,7 @@ zx_status_t vmxoff() {
                        :                // no inputs
                        : "cc");
 
-  return err ? ZX_ERR_INTERNAL : ZX_OK;
+  ASSERT(!err);
 }
 
 zx::status<> vmxon_task(void* context, cpu_num_t cpu_num) {
@@ -106,33 +106,21 @@ zx::status<> vmxon_task(void* context, cpu_num_t cpu_num) {
   region->revision_id = vmx_info.revision_id;
 
   // Execute VMXON.
-  zx_status_t status = vmxon(page.PhysicalAddress());
-  if (status != ZX_OK) {
-    dprintf(CRITICAL, "Failed to turn on VMX on CPU %u\n", cpu_num);
-    return zx::error(status);
-  }
+  vmxon(page.PhysicalAddress());
 
   // From Volume 3, Section 28.3.3.4: Software can use the INVEPT instruction
   // with the “all-context” INVEPT type immediately after execution of the VMXON
   // instruction or immediately prior to execution of the VMXOFF instruction.
   // Either prevents potentially undesired retention of information cached from
   // EPT paging structures between separate uses of VMX operation.
-  status = invept(InvEpt::GLOBAL, 0);
-  if (status != ZX_OK) {
-    dprintf(CRITICAL, "Failed to invalidate all EPTs on CPU %u\n", cpu_num);
-    return zx::error(status);
-  }
+  invept(InvEpt::GLOBAL, 0);
 
   return zx::ok();
 }
 
 void vmxoff_task(void* arg) {
   // Execute VMXOFF.
-  zx_status_t status = vmxoff();
-  if (status != ZX_OK) {
-    dprintf(CRITICAL, "Failed to turn off VMX on CPU %u\n", arch_curr_cpu_num());
-    return;
-  }
+  vmxoff();
 
   // Disable VMX.
   x86_set_cr4(x86_get_cr4() & ~X86_CR4_VMXE);
@@ -140,7 +128,7 @@ void vmxoff_task(void* arg) {
 
 }  // namespace
 
-zx_status_t invept(InvEpt invalidation, uint64_t eptp) {
+void invept(InvEpt invalidation, uint64_t eptp) {
   uint8_t err;
   uint64_t descriptor[] = {eptp, 0};
 
@@ -149,10 +137,10 @@ zx_status_t invept(InvEpt invalidation, uint64_t eptp) {
                        : [descriptor] "m"(descriptor), [invalidation] "r"(invalidation)
                        : "cc");
 
-  return err ? ZX_ERR_INTERNAL : ZX_OK;
+  ASSERT(!err);
 }
 
-zx_status_t invept_from_pml4(paddr_t ept_pml4) {
+void invept_from_pml4(paddr_t ept_pml4) {
   // If there are no guests then do not perform the invept, since vmx will not be on and we will
   // fault. When vmx is turned back on we will perform a global context invalidation anyway, so this
   // is safe. The reason ept invalidations might occur after vmx has been turned off is that the
@@ -164,7 +152,6 @@ zx_status_t invept_from_pml4(paddr_t ept_pml4) {
         [](void* eptp) { invept(InvEpt::SINGLE_CONTEXT, reinterpret_cast<uint64_t>(eptp)); },
         reinterpret_cast<void*>(ept_pointer_from_pml4(ept_pml4)));
   }
-  return ZX_OK;
 }
 
 VmxInfo::VmxInfo() {

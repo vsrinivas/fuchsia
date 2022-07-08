@@ -41,7 +41,7 @@ constexpr uint32_t kInterruptTypeHardwareException = 3u << 8;
 constexpr uint32_t kInterruptTypeSoftwareException = 6u << 8;
 constexpr uint16_t kBaseProcessorVpid = 1;
 
-zx_status_t vmptrld(paddr_t pa) {
+void vmptrld(paddr_t pa) {
   uint8_t err;
 
   __asm__ __volatile__("vmptrld %[pa]"
@@ -49,10 +49,10 @@ zx_status_t vmptrld(paddr_t pa) {
                        : [pa] "m"(pa)
                        : "cc", "memory");
 
-  return err ? ZX_ERR_INTERNAL : ZX_OK;
+  ASSERT(!err);
 }
 
-zx_status_t vmclear(paddr_t pa) {
+void vmclear(paddr_t pa) {
   uint8_t err;
 
   __asm__ __volatile__("vmclear %[pa]"
@@ -60,7 +60,7 @@ zx_status_t vmclear(paddr_t pa) {
                        : [pa] "m"(pa)
                        : "cc", "memory");
 
-  return err ? ZX_ERR_INTERNAL : ZX_OK;
+  ASSERT(!err);
 }
 
 uint64_t vmread(uint64_t field) {
@@ -72,7 +72,7 @@ uint64_t vmread(uint64_t field) {
                          "=@ccna"(err)  // Set `err` on error (C or Z flag set)
                        : [field] "r"(field)
                        : "cc");
-  DEBUG_ASSERT(!err);
+  ASSERT(!err);
   return val;
 }
 
@@ -83,7 +83,7 @@ void vmwrite(uint64_t field, uint64_t val) {
                        : "=@ccna"(err)  // Set `err` on error (C or Z flag set)
                        : [val] "r"(val), [field] "r"(field)
                        : "cc");
-  DEBUG_ASSERT(!err);
+  ASSERT(!err);
 }
 
 // INVVPID invalidation types.
@@ -112,7 +112,7 @@ enum class InvVpid : uint64_t {
   SINGLE_CONTEXT_RETAIN_GLOBALS = 3,
 };
 
-zx_status_t invvpid(InvVpid invalidation, uint16_t vpid, zx_gpaddr_t address) {
+void invvpid(InvVpid invalidation, uint16_t vpid, zx_gpaddr_t address) {
   uint8_t err;
   uint64_t descriptor[] = {vpid, address};
 
@@ -121,7 +121,7 @@ zx_status_t invvpid(InvVpid invalidation, uint16_t vpid, zx_gpaddr_t address) {
                        : [descriptor] "m"(descriptor), [invalidation] "r"(invalidation)
                        : "cc");
 
-  return err ? ZX_ERR_INTERNAL : ZX_OK;
+  ASSERT(!err);
 }
 
 bool has_error_code(uint32_t vector) {
@@ -187,14 +187,10 @@ void register_copy(Out* out, const In& in) {
 zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, uintptr_t entry,
                       paddr_t msr_bitmaps_address, paddr_t pml4_address, VmxState* vmx_state,
                       VmxPage* host_msr_page, VmxPage* guest_msr_page) {
-  zx_status_t status = vmclear(vmcs_address);
-  if (status != ZX_OK) {
-    return status;
-  }
-
+  vmclear(vmcs_address);
   AutoVmcs vmcs(vmcs_address);
   // Setup secondary processor-based VMCS controls.
-  status =
+  zx_status_t status =
       vmcs.SetControl(VmcsField32::PROCBASED_CTLS2, read_msr(X86_MSR_IA32_VMX_PROCBASED_CTLS2), 0,
                       // Enable use of extended page tables.
                       kProcbasedCtls2Ept |
@@ -641,9 +637,8 @@ uint64_t ept_pointer_from_pml4(paddr_t pml4_address) {
 AutoVmcs::AutoVmcs(paddr_t vmcs_address) : vmcs_address_(vmcs_address) {
   DEBUG_ASSERT(!arch_ints_disabled());
   int_state_ = arch_interrupt_save();
-  __UNUSED zx_status_t status = vmptrld(vmcs_address_);
+  vmptrld(vmcs_address_);
   arch_set_blocking_disallowed(true);
-  DEBUG_ASSERT(status == ZX_OK);
 }
 
 AutoVmcs::~AutoVmcs() {
@@ -890,10 +885,7 @@ Vcpu::~Vcpu() {
     paddr_t paddr = vmcs_page_.PhysicalAddress();
     mp_sync_exec(
         MP_IPI_TARGET_MASK, cpu_num_to_mask(cpu),
-        [](void* paddr) {
-          zx_status_t status = vmclear(reinterpret_cast<paddr_t>(paddr));
-          DEBUG_ASSERT(status == ZX_OK);
-        },
+        [](void* paddr) { vmclear(reinterpret_cast<paddr_t>(paddr)); },
         reinterpret_cast<void*>(paddr));
   }
 
@@ -916,8 +908,7 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
     //   ensures that all VMCS data that may be cached by the processor are
     //   flushed to memory.
     case Thread::MigrateStage::Before: {
-      __UNUSED zx_status_t status = vmclear(vmcs_page_.PhysicalAddress());
-      DEBUG_ASSERT(status == ZX_OK);
+      vmclear(vmcs_page_.PhysicalAddress());
       // Now that vmclear has been done last_cpu_ can be cleared to indicate this vcpu is both not
       // presently running, and it's state is not loaded anywhere.
       last_cpu_ = INVALID_CPU;
@@ -945,8 +936,7 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
       last_cpu_ = thread->LastCpuLocked();
 
       // Load the VMCS on the destination processor.
-      __UNUSED zx_status_t status = vmptrld(vmcs_page_.PhysicalAddress());
-      DEBUG_ASSERT(status == ZX_OK);
+      vmptrld(vmcs_page_.PhysicalAddress());
 
       // Update the host MSR list entries with the per-CPU variables of the
       // destination processor.
@@ -1055,10 +1045,7 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
       return status;
     }
     AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
-    guest_->MigrateVpid(vpid_, [](uint16_t vpid) {
-      zx_status_t status = invvpid(InvVpid::SINGLE_CONTEXT, vpid, 0);
-      ASSERT_MSG(status == ZX_OK, "Failed to invalidate VPID %u\n", vpid);
-    });
+    guest_->MigrateVpid(vpid_, [](uint16_t vpid) { invvpid(InvVpid::SINGLE_CONTEXT, vpid, 0); });
 
     // We check whether a kick was requested before entering the guest so that:
     // 1. When we enter the syscall, we can return immediately without entering

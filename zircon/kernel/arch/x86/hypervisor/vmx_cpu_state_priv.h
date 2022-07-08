@@ -68,7 +68,7 @@ enum class InvEpt : uint64_t {
   GLOBAL = 2,
 };
 
-zx_status_t invept(InvEpt invalidation, uint64_t eptp);
+void invept(InvEpt invalidation, uint64_t eptp);
 zx::status<> alloc_vmx_state();
 void free_vmx_state();
 bool cr_is_invalid(uint64_t cr_value, uint32_t fixed0_msr, uint32_t fixed1_msr);
