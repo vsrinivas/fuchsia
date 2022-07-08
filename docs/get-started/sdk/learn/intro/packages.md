@@ -31,14 +31,14 @@ This command prints output similar to the following:
 +==========================+======+===============================================+
 | fuchsiasamples.com       | pm   | /home/alice/.package_repos/sdk-samples        |
 +--------------------------+------+-----------------------------------------------+
-| workstation_eng.qemu-x64 | pm   | /home/alice/.local/share/Fuchsia/.../packages |
+| workstation.qemu-x64     | pm   | /home/alice/.local/share/Fuchsia/.../packages |
 +--------------------------+------+-----------------------------------------------+
 ```
 
-The workstation_eng.qemu-x64 repository is created when you run the
+The `workstation.qemu-x64` repository is created when you run the
 `ffx product-bundle get` command (previously in "Get started with the Fuchsia SDK"
-quickstart guide).
-This repository contains additional system packages for the workstation_eng.qemu-x64 prebuilt image.
+quickstart guide). This repository contains additional system packages for the
+`workstation.qemu-x64` prebuilt image.
 
 Start a local package server instance to begin serving these packages:
 
@@ -54,7 +54,7 @@ Configure the emulator to resolve package URLs for `fuchsia.com` from the local
 package server:
 
 ```posix-terminal
-ffx target repository register -r workstation_eng.qemu-x64 --alias fuchsia.com
+ffx target repository register -r workstation.qemu-x64 --alias fuchsia.com
 ```
 
 ### Examine the package server
@@ -63,7 +63,7 @@ With the local package server running, you can explore the list of packages that
 are available in the repository:
 
 ```posix-terminal
-ffx repository package list -r workstation_eng.qemu-x64
+ffx repository package list -r workstation.qemu-x64
 ```
 
 This command prints additional details about each package in the repository,
