@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/elf-psabi/sp.h>
+#include <lib/stdcompat/atomic.h>
 #include <lib/zircon-internal/unique-backtrace.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -27,18 +28,23 @@ enum {
   DONE,
 };
 
-typedef struct {
-  zxr_thread_entry_t entry;
-  zx_handle_t handle;
-  atomic_int state;
-} zxr_internal_thread_t;
+union zxr_internal_thread_t {
+  cpp20::atomic_ref<int> atomic_state() { return cpp20::atomic_ref(state); }
+
+  zxr_thread_t external;
+  struct {
+    zxr_thread_entry_t entry;
+    zx_handle_t handle;
+    int state;  // Only accessed via atomic_ref.
+  };
+};
 
 // zxr_thread_t should reserve enough size for our internal data.
-_Static_assert(sizeof(zxr_thread_t) == sizeof(zxr_internal_thread_t),
-               "Update zxr_thread_t size for this platform.");
+static_assert(sizeof(zxr_thread_t) == sizeof(zxr_internal_thread_t),
+              "Update zxr_thread_t size for this platform.");
 
 static inline zxr_internal_thread_t* to_internal(zxr_thread_t* external) {
-  return (zxr_internal_thread_t*)(external);
+  return reinterpret_cast<zxr_internal_thread_t*>(external);
 }
 
 zx_status_t zxr_thread_destroy(zxr_thread_t* thread) {
@@ -49,15 +55,15 @@ zx_status_t zxr_thread_destroy(zxr_thread_t* thread) {
 
 // Put the thread into EXITING state.  Returns the previous state.
 static int begin_exit(zxr_internal_thread_t* thread) {
-  return atomic_exchange_explicit(&thread->state, EXITING, memory_order_release);
+  return thread->atomic_state().exchange(EXITING, std::memory_order_release);
 }
 
 // Claim the thread as JOINED or DETACHED.  Returns true on success, which only
 // happens if the previous state was JOINABLE.  Always returns the previous state.
 static bool claim_thread(zxr_internal_thread_t* thread, int new_state, int* old_state) {
   *old_state = JOINABLE;
-  return atomic_compare_exchange_strong_explicit(&thread->state, old_state, new_state,
-                                                 memory_order_acq_rel, memory_order_acquire);
+  return thread->atomic_state().compare_exchange_strong(
+      *old_state, new_state, std::memory_order_acq_rel, std::memory_order_acquire);
 }
 
 // Extract the handle from the thread structure.  This must only be called by the thread
@@ -145,7 +151,7 @@ static void initialize_thread(zxr_internal_thread_t* thread, zx_handle_t handle,
   *thread = (zxr_internal_thread_t){
       .handle = handle,
   };
-  atomic_init(&thread->state, detached ? DETACHED : JOINABLE);
+  thread->atomic_state().store(detached ? DETACHED : JOINABLE, std::memory_order_release);
 }
 
 zx_status_t zxr_thread_create(zx_handle_t process, const char* name, bool detached,
@@ -178,7 +184,7 @@ static void wait_for_done(zxr_internal_thread_t* thread, int32_t old_state) {
     switch (_zx_futex_wait(&thread->state, old_state, ZX_HANDLE_INVALID, ZX_TIME_INFINITE)) {
       case ZX_ERR_BAD_STATE:  // Never blocked because it had changed.
       case ZX_OK:             // Woke up because it might have changed.
-        old_state = atomic_load_explicit(&thread->state, memory_order_acquire);
+        old_state = thread->atomic_state().load(std::memory_order_acquire);
         break;
       default:
         CRASH_WITH_UNIQUE_BACKTRACE();
@@ -261,7 +267,7 @@ zx_status_t zxr_thread_detach(zxr_thread_t* thread) {
 }
 
 bool zxr_thread_detached(zxr_thread_t* thread) {
-  int state = atomic_load_explicit(&to_internal(thread)->state, memory_order_acquire);
+  int state = to_internal(thread)->atomic_state().load(std::memory_order_acquire);
   return state == DETACHED;
 }
 

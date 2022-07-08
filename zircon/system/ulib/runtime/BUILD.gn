@@ -5,14 +5,15 @@
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("runtime") {
-  sources = [ "thread.c" ]
   sdk = "source"
   sdk_headers = [
     "runtime/thread.h",
     "runtime/tls.h",
   ]
 
+  sources = [ "thread.cc" ]
   deps = [
+    "//sdk/lib/stdcompat",
     "//src/zircon/lib/zircon",
     "//zircon/system/ulib/elf-psabi",
     "//zircon/system/ulib/zircon-internal",
