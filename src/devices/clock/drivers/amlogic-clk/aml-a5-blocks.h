@@ -226,109 +226,204 @@ static_assert(a5_clk::CLK_A5_MUX_COUNT == std::size(a5_muxes),
               "a5_muxes and CLK_A5_MUX_COUNT count mismatch");
 
 static constexpr meson_clk_msr_t a5_clk_msr = {
-    .reg0_offset = (0x1 << 2),
-    .reg2_offset = (0x3 << 2),
+    .reg0_offset = (0x0 << 2),
+    .reg2_offset = (0x2 << 2),
 };
 
+// Here the index id is the clock measurement id,
+// so we need to add the "__reserved__" field to skip
+// some useless ids.
 static const char* const a5_clk_table[] = {
-    "cts_sys_clk",
-    "cts_axi_clk",
-    "cts_rtc_clk",
-    "cts_dspa_clk",
-    "sys_cpu_clk_div16",
-    "fclk_div5",
-    "mp0_clk_out",
-    "mp1_clk_out",
-    "mp2_clk_out",
-    "mp3_clk_out",
-    "mpll_clk_50m",
-    "sys_oscin32k_i",
-    "rtc_pll_clk",
-    "mpll_clk_test_out",
-    "hifi_pll_clk",
-    "gp0_pll_clk",
-    "gp1_pll_clk",
-    "sys_pll_div16",
-    "ddr_dpll_pt_clk",
-    "cts_nna_axi_clk",
-    "cts_nna_core_clk",
-    "rtc_sec_pulse_out",
-    "rtc_osc_clk_out",
-    "mod_eth_phy_ref_clk",
-    "mod_eth_tx_clk",
-    "mod_eth_rx_clk_rmii",
-    "cts_rama_clk",
-    "deskew_pll_clk_div32_out",
-    "cts_sar_adc_clk",
-    "cts_ts_clk",
-    "cts_sd_emmc_C_clk",
-    "cts_sd_emmc_A_clk",
-    "gpio_msr_clk",
-    "cts_spicc_1_clk",
-    "cts_spicc_0_clk",
-    "o_mst_sclk_vad",
-    "o_mst_mclk_vad",
-    "o_pdm_sysclk",
-    "mod_audio_pdm_dclk_o",
-    "o_vad_clk",
-    "audio_mst_clk[0]",
-    "audio_mst_clk[1]",
-    "audio_mst_clk[2]",
-    "audio_mst_clk[3]",
-    "audio_mst_clk[4]",
-    "audio_mst_clk[5]",
-    "audio_mst_clk[6]",
-    "audio_mst_clk[7]",
-    "audio_mst_clk[8]",
-    "audio_mst_clk[9]",
-    "audio_mst_clk[10]",
-    "audio_mst_clk[11]",
-    "audio_mst_clk[12]",
-    "audio_mst_clk[13]",
-    "audio_mst_clk[14]",
-    "audio_mst_clk[15]",
-    "audio_mst_clk[16]",
-    "audio_mst_clk[17]",
-    "audio_mst_clk[18]",
-    "audio_mst_clk[19]",
-    "audio_mst_clk[20]",
-    "audio_mst_clk[21]",
-    "audio_mst_clk[22]",
-    "audio_mst_clk[23]",
-    "audio_mst_clk[24]",
-    "audio_mst_clk[25]",
-    "audio_mst_clk[26]",
-    "audio_mst_clk[27]",
-    "audio_mst_clk[28]",
-    "audio_mst_clk[29]",
-    "audio_mst_clk[30]",
-    "audio_mst_clk[31]",
-    "audio_mst_clk[32]",
-    "audio_mst_clk[33]",
-    "audio_mst_clk[34]",
-    "audio_mst_clk[35]",
-    "pwm_h_clk",
-    "pwm_g_clk",
-    "pwm_f_clk",
-    "pwm_e_clk",
-    "pwm_d_clk",
-    "pwm_c_clk",
-    "pwm_b_clk",
-    "pwm_a_clk",
-    "rng_ring_osc_clk[0]",
-    "rng_ring_osc_clk[1]",
-    "rng_ring_osc_clk[2]",
-    "rng_ring_osc_clk[3]",
-    "dmc_osc_ring",
-    "dsp_osc_ring",
-    "axi_srama_osc_ring",
-    "nna_osc_ring[0]",
-    "nna_osc_ring[1]",
-    "sys_cpu_osc_ring[0]",
-    "sys_cpu_osc_ring[1]",
-    "sys_cpu_osc_ring[2]",
-    "sys_cpu_osc_ring[3]",
-    "axi_sramb_osc_ring",
+    "cts_sys_clk",               // 0
+    "cts_axi_clk",               // 1
+    "cts_rtc_clk",               // 2
+    "cts_dspa_clk",              // 3
+    "__reserved__",              // 4
+    "__reserved__",              // 5
+    "sys_cpu_clk_div16",         // 6
+    "__reserved__",              // 7
+    "__reserved__",              // 8
+    "__reserved__",              // 9
+    "fclk_div5",                 // 10
+    "mp0_clk_out",               // 11
+    "mp1_clk_out",               // 12
+    "mp2_clk_out",               // 13
+    "mp3_clk_out",               // 14
+    "mpll_clk_50m",              // 15
+    "sys_oscin32k_i",            // 16
+    "rtc_pll_clk",               // 17
+    "mpll_clk_test_out",         // 18
+    "hifi_pll_clk",              // 19
+    "gp0_pll_clk",               // 20
+    "gp1_pll_clk",               // 21
+    "__reserved__",              // 22
+    "sys_pll_div16",             // 23
+    "ddr_dpll_pt_clk",           // 24
+    "cts_nna_axi_clk",           // 25
+    "cts_nna_core_clk",          // 26
+    "rtc_sec_pulse_out",         // 27
+    "rtc_osc_clk_out",           // 28
+    "__reserved__",              // 29
+    "mod_eth_phy_ref_clk",       // 30
+    "mod_eth_tx_clk",            // 31
+    "__reserved__",              // 32
+    "__reserved__",              // 33
+    "__reserved__",              // 34
+    "mod_eth_rx_clk_rmii",       // 35
+    "__reserved__",              // 36
+    "__reserved__",              // 37
+    "__reserved__",              // 38
+    "__reserved__",              // 39
+    "__reserved__",              // 40
+    "__reserved__",              // 41
+    "__reserved__",              // 42
+    "__reserved__",              // 43
+    "__reserved__",              // 44
+    "__reserved__",              // 45
+    "__reserved__",              // 46
+    "__reserved__",              // 47
+    "__reserved__",              // 48
+    "__reserved__",              // 49
+    "__reserved__",              // 50
+    "__reserved__",              // 51
+    "__reserved__",              // 52
+    "__reserved__",              // 53
+    "__reserved__",              // 54
+    "__reserved__",              // 55
+    "__reserved__",              // 56
+    "__reserved__",              // 57
+    "__reserved__",              // 58
+    "__reserved__",              // 59
+    "__reserved__",              // 60
+    "__reserved__",              // 61
+    "__reserved__",              // 62
+    "__reserved__",              // 63
+    "__reserved__",              // 64
+    "__reserved__",              // 65
+    "__reserved__",              // 66
+    "__reserved__",              // 67
+    "__reserved__",              // 68
+    "__reserved__",              // 69
+    "__reserved__",              // 70
+    "__reserved__",              // 71
+    "__reserved__",              // 72
+    "__reserved__",              // 73
+    "__reserved__",              // 74
+    "__reserved__",              // 75
+    "__reserved__",              // 76
+    "__reserved__",              // 77
+    "__reserved__",              // 78
+    "cts_rama_clk",              // 79
+    "__reserved__",              // 80
+    "__reserved__",              // 81
+    "__reserved__",              // 82
+    "__reserved__",              // 83
+    "__reserved__",              // 84
+    "__reserved__",              // 85
+    "__reserved__",              // 86
+    "__reserved__",              // 87
+    "__reserved__",              // 88
+    "__reserved__",              // 89
+    "__reserved__",              // 90
+    "__reserved__",              // 91
+    "__reserved__",              // 92
+    "__reserved__",              // 93
+    "__reserved__",              // 94
+    "__reserved__",              // 95
+    "__reserved__",              // 96
+    "__reserved__",              // 97
+    "__reserved__",              // 98
+    "__reserved__",              // 99
+    "__reserved__",              // 100
+    "__reserved__",              // 101
+    "__reserved__",              // 102
+    "__reserved__",              // 103
+    "__reserved__",              // 104
+    "__reserved__",              // 105
+    "deskew_pll_clk_div32_out",  // 106
+    "__reserved__",              // 107
+    "__reserved__",              // 108
+    "__reserved__",              // 109
+    "__reserved__",              // 110
+    "cts_sar_adc_clk",           // 111
+    "cts_ts_clk",                // 112
+    "cts_sd_emmc_C_clk",         // 113
+    "__reserved__",              // 114
+    "cts_sd_emmc_A_clk",         // 115
+    "gpio_msr_clk",              // 116
+    "cts_spicc_1_clk",           // 117
+    "cts_spicc_0_clk",           // 118
+    "o_mst_sclk_vad",            // 119
+    "o_mst_mclk_vad",            // 120
+    "o_pdm_sysclk",              // 121
+    "mod_audio_pdm_dclk_o",      // 122
+    "o_vad_clk",                 // 123
+    "audio_mst_clk[0]",          // 124
+    "audio_mst_clk[1]",          // 125
+    "audio_mst_clk[2]",          // 126
+    "audio_mst_clk[3]",          // 127
+    "audio_mst_clk[4]",          // 128
+    "audio_mst_clk[5]",          // 129
+    "audio_mst_clk[6]",          // 130
+    "audio_mst_clk[7]",          // 131
+    "audio_mst_clk[8]",          // 132
+    "audio_mst_clk[9]",          // 133
+    "audio_mst_clk[10]",         // 134
+    "audio_mst_clk[11]",         // 135
+    "audio_mst_clk[12]",         // 136
+    "audio_mst_clk[13]",         // 137
+    "audio_mst_clk[14]",         // 138
+    "audio_mst_clk[15]",         // 139
+    "audio_mst_clk[16]",         // 140
+    "audio_mst_clk[17]",         // 141
+    "audio_mst_clk[18]",         // 142
+    "audio_mst_clk[19]",         // 143
+    "audio_mst_clk[20]",         // 144
+    "audio_mst_clk[21]",         // 145
+    "audio_mst_clk[22]",         // 146
+    "audio_mst_clk[23]",         // 147
+    "audio_mst_clk[24]",         // 148
+    "audio_mst_clk[25]",         // 149
+    "audio_mst_clk[26]",         // 150
+    "audio_mst_clk[27]",         // 151
+    "audio_mst_clk[28]",         // 152
+    "audio_mst_clk[29]",         // 153
+    "audio_mst_clk[30]",         // 154
+    "audio_mst_clk[31]",         // 155
+    "audio_mst_clk[32]",         // 156
+    "audio_mst_clk[33]",         // 157
+    "audio_mst_clk[34]",         // 158
+    "audio_mst_clk[35]",         // 159
+    "__reserved__",              // 160
+    "__reserved__",              // 161
+    "pwm_h_clk",                 // 162
+    "pwm_g_clk",                 // 163
+    "pwm_f_clk",                 // 164
+    "pwm_e_clk",                 // 165
+    "pwm_d_clk",                 // 166
+    "pwm_c_clk",                 // 167
+    "pwm_b_clk",                 // 168
+    "pwm_a_clk",                 // 169
+    "__reserved__",              // 170
+    "__reserved__",              // 171
+    "__reserved__",              // 172
+    "__reserved__",              // 173
+    "__reserved__",              // 174
+    "__reserved__",              // 175
+    "rng_ring_osc_clk[0]",       // 176
+    "rng_ring_osc_clk[1]",       // 177
+    "rng_ring_osc_clk[2]",       // 178
+    "rng_ring_osc_clk[3]",       // 179
+    "dmc_osc_ring",              // 180
+    "dsp_osc_ring",              // 181
+    "axi_srama_osc_ring",        // 182
+    "nna_osc_ring[0]",           // 183
+    "nna_osc_ring[1]",           // 184
+    "sys_cpu_osc_ring[0]",       // 185
+    "sys_cpu_osc_ring[1]",       // 186
+    "sys_cpu_osc_ring[2]",       // 187
+    "sys_cpu_osc_ring[3]",       // 188
+    "axi_sramb_osc_ring",        // 189
 };
 
 #endif  // SRC_DEVICES_CLOCK_DRIVERS_AMLOGIC_CLK_AML_A5_BLOCKS_H_
