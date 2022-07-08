@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This manifest corresponds to the fuzzer used by the integration tests.
-// It is meant to be used when the overall build is using the 'coverage' toolchain variant. In this
-// configuration, //tools/cmc/build/cml.gni will add a `use` declaration for
-// `fuchsia.debugdata.Publisher`, so that declaration is omitted from this file.
+// This manifest corresponds to the fuzzer used by the fuzzer test integration tests.
+// It is similar to "fuzzer.cml", except that it omits the explicit route to the fake fuzz_coverage
+// component, which isn't used by fuzzer tests. This allows it to be used in both coverage and
+// non-coverage builds.
 {
     include: [ "//src/sys/fuzzing/realmfuzzer/adapters/llvm.shard.cml" ],
     program: {

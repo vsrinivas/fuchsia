@@ -67,18 +67,25 @@ fuchsia_test_component("engine") {
 # The test coverage component is a simpler version of test_manager's fuzz_coverage component. It
 # can handle a single watcher, and doesn't need |fuchsia.sys2.EventStream|, making it suitable for
 # use in integration tests.
-executable("coverage-bin") {
-  output_name = "realmfuzzer_test_coverage"
-  testonly = true
-  sources = [ "coverage-main.cc" ]
-  deps = [
-    ":testing",
-    "//sdk/fidl/fuchsia.debugdata",
-    "//src/sys/fuzzing/common",
-  ]
-}
+#
+# NOTE:This component is excluded from coverage builds. In those builds,  test_manager's debug_data
+# component *also* exposes `fuchsia.debugdata.Publisher`, which is offered via the "test-env"
+# environment's debug field. The component framework does not reliably route to this component,
+# which can cause tests to flake.
+if (!is_coverage) {
+  executable("coverage-bin") {
+    output_name = "realmfuzzer_test_coverage"
+    testonly = true
+    sources = [ "coverage-main.cc" ]
+    deps = [
+      ":testing",
+      "//sdk/fidl/fuchsia.debugdata",
+      "//src/sys/fuzzing/common",
+    ]
+  }
 
-fuchsia_test_component("coverage") {
-  manifest = "meta/coverage.cml"
-  deps = [ ":coverage-bin" ]
+  fuchsia_test_component("coverage") {
+    manifest = "meta/coverage.cml"
+    deps = [ ":coverage-bin" ]
+  }
 }

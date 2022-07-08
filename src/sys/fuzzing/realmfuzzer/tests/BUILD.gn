@@ -8,10 +8,17 @@ import("//build/test.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    ":fuzzer-integration-tests-pkg",
-    ":fuzzer-test-integration-tests-pkg",
-  ]
+  deps = [ ":fuzzer-test-integration-tests-pkg" ]
+
+  # Realm fuzzers are designed to be built with a dedicated toolchain variant and use
+  # `fuchsia.debugdata.Publisher` to transport code coverage via test_manager's fuzz_coverage
+  # component. The integration tests provide a fake fuzz_coverage component that is explicitly
+  # routed to fuzzers. Unfortunately, in 'coverage' builds the test realm prefers the route
+  # provided by the 'debug' field of test_manager's "test_env" environment over the explicit one. As
+  # a result, these integration tests are disabled under 'coverage' builds.
+  if (!is_coverage) {
+    deps += [ ":fuzzer-integration-tests-pkg" ]
+  }
 }
 
 # This package contains integration tests that use the "real" fuzzing engine, which generates inputs
@@ -30,11 +37,7 @@ executable("fuzzer-bin") {
 }
 
 fuchsia_test_component("fuzzer") {
-  if (is_coverage) {
-    manifest = "meta/fuzzer-coverage.cml"
-  } else {
-    manifest = "meta/fuzzer.cml"
-  }
+  manifest = "meta/fuzzer.cml"
   deps = [
     ":fuzzer-bin",
     "//src/sys/fuzzing/realmfuzzer/testing/data:corpus",
@@ -67,16 +70,20 @@ fuchsia_test_component("engine") {
 
 fuchsia_test_component("fuzzer-integration-tests") {
   manifest = "meta/integration-tests.cml"
-  deps = [
-    ":engine",
-    ":fuzzer",
-    "//src/sys/fuzzing/realmfuzzer/testing:coverage",
-  ]
+  deps = [ ":engine" ]
 }
 
-fuchsia_test_package("fuzzer-integration-tests-pkg") {
-  package_name = "realmfuzzer-integration-tests"
-  test_components = [ ":fuzzer-integration-tests" ]
+# See the notes on ":tests" above. The fake fuzz_coverage component is not compatible with coverage
+# builds.
+if (!is_coverage) {
+  fuchsia_test_package("fuzzer-integration-tests-pkg") {
+    package_name = "realmfuzzer-integration-tests"
+    test_components = [ ":fuzzer-integration-tests" ]
+    deps = [
+      ":fuzzer",
+      "//src/sys/fuzzing/realmfuzzer/testing:coverage",
+    ]
+  }
 }
 
 # This package contains integration tests that use a test "engine", which uses fixed inputs to drive
@@ -99,11 +106,7 @@ renamed_binary("fuzzer-uninstrumented-renamed") {
 
 fuchsia_test_component("fuzzer-uninstrumented") {
   component_name = "fuzzer"
-  if (is_coverage) {
-    manifest = "meta/fuzzer-coverage.cml"
-  } else {
-    manifest = "meta/fuzzer.cml"
-  }
+  manifest = "meta/fuzzer-uninstrumented.cml"
   deps = [
     ":fuzzer-uninstrumented-renamed",
     "//src/sys/fuzzing/realmfuzzer/testing/data:corpus",

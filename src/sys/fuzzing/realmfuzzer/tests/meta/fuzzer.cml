@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// This manifest corresponds to the fuzzer used by the integration tests.
+// This manifest corresponds to the fuzzer used by the integration tests. The explicit `use`
+// declaration for `fuchsia.debugdata.Publisher` is meant to be satisfied by the fake fuzz_coverage
+// component. This will conflict with the implicit `use` declaration that is added by the "test-env"
+// environment's debug field and that is routed to test_manager's debug_data component in coverage
+// builds. As a result, this manifest should only be used in non-coverage builds.
 {
     include: [ "//src/sys/fuzzing/realmfuzzer/adapters/llvm.shard.cml" ],
     program: {

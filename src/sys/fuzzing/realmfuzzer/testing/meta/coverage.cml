@@ -1,6 +1,13 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+// Provides a fake fuzz_coverage component, analogous to the one provided by test_manager.
+//
+// NOTE: Do not enable tests that include this component in coverage builds. In those builds,
+// test_manager's debug_data component *also* exposes `fuchsia.debugdata.Publisher`, which is
+// offered via the "test-env" environment's debug field. The component framework does not reliably
+// route to this component, which can cause tests to flake.
 {
     include: [ "syslog/client.shard.cml" ],
     program: {
