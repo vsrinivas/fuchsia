@@ -31,19 +31,20 @@ class I2cTestChild : public I2cChild {
 
 class I2cBusTest : public I2cBus {
  public:
-  using TransactCallback =
-      std::function<void(uint16_t, const i2c_op_t*, size_t, i2c_transact_callback, void*)>;
-  explicit I2cBusTest(zx_device_t* fake_root, ddk::I2cImplProtocolClient i2c, uint32_t bus_id,
-                      TransactCallback transact)
+  explicit I2cBusTest(
+      zx_device_t* fake_root, ddk::I2cImplProtocolClient i2c, uint32_t bus_id,
+      std::function<void(uint16_t, const I2cBus::TransactOp*, size_t, TransactCallback, void*)>
+          transact)
       : I2cBus(fake_root, i2c, bus_id), transact_(std::move(transact)) {}
 
-  void Transact(uint16_t address, const i2c_op_t* op_list, size_t op_count,
-                i2c_transact_callback callback, void* cookie) override {
+  void Transact(uint16_t address, const I2cBus::TransactOp* op_list, size_t op_count,
+                TransactCallback callback, void* cookie) override {
     transact_(address, op_list, op_count, callback, cookie);
   }
 
  private:
-  TransactCallback transact_;
+  std::function<void(uint16_t, const I2cBus::TransactOp*, size_t, TransactCallback, void*)>
+      transact_;
 };
 
 class I2cChildTest : public zxtest::Test {
@@ -79,8 +80,8 @@ TEST_F(I2cChildTest, Write3BytesOnce) {
   ddk::I2cImplProtocolClient i2c = {};
   auto bus = fbl::AdoptRef(new I2cBusTest(
       fake_root_.get(), i2c, 0,
-      [](uint16_t address, const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
-         void* cookie) {
+      [](uint16_t address, const I2cBus::TransactOp* op_list, size_t op_count,
+         I2cBus::TransactCallback callback, void* cookie) {
         if (op_count != 1) {
           callback(cookie, ZX_ERR_INTERNAL, nullptr, 0);
           return;
@@ -123,8 +124,8 @@ TEST_F(I2cChildTest, Read3BytesOnce) {
   ddk::I2cImplProtocolClient i2c = {};
   auto bus = fbl::AdoptRef(new I2cBusTest(
       fake_root_.get(), i2c, 0,
-      [](uint16_t address, const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
-         void* cookie) {
+      [](uint16_t address, const I2cBus::TransactOp* op_list, size_t op_count,
+         I2cBus::TransactCallback callback, void* cookie) {
         if (op_count != 1) {
           callback(cookie, ZX_ERR_INTERNAL, nullptr, 0);
           return;
@@ -136,7 +137,7 @@ TEST_F(I2cChildTest, Read3BytesOnce) {
         uint8_t reply0 = kTestRead0;
         uint8_t reply1 = kTestRead1;
         uint8_t reply2 = kTestRead2;
-        i2c_op_t replies[3] = {
+        I2cBus::TransactOp replies[3] = {
             {&reply0, 1, true, false},
             {&reply1, 1, true, false},
             {&reply2, 1, true, false},
@@ -172,8 +173,8 @@ TEST_F(I2cChildTest, Write1ByteOnceRead1Byte3Times) {
   ddk::I2cImplProtocolClient i2c = {};
   auto bus = fbl::AdoptRef(new I2cBusTest(
       fake_root_.get(), i2c, 0,
-      [](uint16_t address, const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
-         void* cookie) {
+      [](uint16_t address, const I2cBus::TransactOp* op_list, size_t op_count,
+         I2cBus::TransactCallback callback, void* cookie) {
         if (op_count != 4) {
           callback(cookie, ZX_ERR_INTERNAL, nullptr, 0);
           return;
@@ -190,7 +191,7 @@ TEST_F(I2cChildTest, Write1ByteOnceRead1Byte3Times) {
         uint8_t reply0 = kTestRead0;
         uint8_t reply1 = kTestRead1;
         uint8_t reply2 = kTestRead2;
-        i2c_op_t replies[3] = {
+        I2cBus::TransactOp replies[3] = {
             {&reply0, 1, true, false},
             {&reply1, 1, true, false},
             {&reply2, 1, true, false},
@@ -240,8 +241,8 @@ TEST_F(I2cChildTest, StopFlagPropagates) {
   ddk::I2cImplProtocolClient i2c = {};
   auto bus = fbl::AdoptRef(new I2cBusTest(
       fake_root_.get(), i2c, 0,
-      [](uint16_t address, const i2c_op_t* op_list, size_t op_count, i2c_transact_callback callback,
-         void* cookie) {
+      [](uint16_t address, const I2cBus::TransactOp* op_list, size_t op_count,
+         I2cBus::TransactCallback callback, void* cookie) {
         if (op_count != 4) {
           callback(cookie, ZX_ERR_INTERNAL, nullptr, 0);
           return;
@@ -255,7 +256,7 @@ TEST_F(I2cChildTest, StopFlagPropagates) {
         uint8_t reply0 = kTestRead0;
         uint8_t reply1 = kTestRead1;
         uint8_t reply2 = kTestRead2;
-        i2c_op_t replies[4] = {
+        I2cBus::TransactOp replies[4] = {
             {&reply0, 1, true, false},
             {&reply1, 1, true, false},
             {&reply2, 1, true, false},

@@ -103,9 +103,9 @@ int I2cBus::I2cThread() {
       TRACE_DURATION("i2c", "I2cBus Process Queued Transacts");
       TRACE_FLOW_END("i2c", "I2cBus Transact Flow", txn->trace_id, "Flow", txn->trace_id);
 
-      auto op_list = reinterpret_cast<i2c_op_t*>(txn + 1);
+      auto op_list = reinterpret_cast<I2cBus::TransactOp*>(txn + 1);
       auto op_count = txn->op_count;
-      auto p_writes = reinterpret_cast<uint8_t*>(op_list) + op_count * sizeof(i2c_op_t);
+      auto p_writes = reinterpret_cast<uint8_t*>(op_list) + op_count * sizeof(I2cBus::TransactOp);
       uint8_t* p_reads = read_buffer.data();
 
       ZX_ASSERT(op_count < I2C_IMPL_MAX_RW_OPS);
@@ -127,7 +127,7 @@ int I2cBus::I2cThread() {
       auto status = i2c_.Transact(bus_id_, impl_ops, op_count);
 
       if (status == ZX_OK) {
-        i2c_op_t read_ops[I2C_IMPL_MAX_RW_OPS];
+        I2cBus::TransactOp read_ops[I2C_IMPL_MAX_RW_OPS];
         size_t read_ops_cnt = 0;
         for (size_t i = 0; i < op_count; ++i) {
           if (op_list[i].is_read) {
@@ -150,8 +150,8 @@ int I2cBus::I2cThread() {
   return 0;
 }
 
-void I2cBus::Transact(uint16_t address, const i2c_op_t* op_list, size_t op_count,
-                      i2c_transact_callback callback, void* cookie) {
+void I2cBus::Transact(uint16_t address, const I2cBus::TransactOp* op_list, size_t op_count,
+                      TransactCallback callback, void* cookie) {
   TRACE_DURATION("i2c", "I2cBus Queue Transact");
 
   // TODO(fxbug.dev/52177): This is a hack to apply a deadline profile to the dispatch
@@ -192,7 +192,7 @@ void I2cBus::Transact(uint16_t address, const i2c_op_t* op_list, size_t op_count
     }
   }
   // Add space for requests and writes data.
-  size_t req_length = sizeof(I2cTxn) + op_count * sizeof(i2c_op_t) + writes_length;
+  size_t req_length = sizeof(I2cTxn) + op_count * sizeof(I2cBus::TransactOp) + writes_length;
   if (req_length >= I2C_IMPL_MAX_TOTAL_TRANSFER) {
     callback(cookie, ZX_ERR_BUFFER_TOO_SMALL, nullptr, 0);
     return;

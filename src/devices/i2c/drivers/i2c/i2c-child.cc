@@ -117,7 +117,7 @@ void I2cChild::Transfer(fidl::WireServer<fidl_i2c::Device>::TransferRequestView 
     return;
   }
 
-  auto op_list = std::make_unique<i2c_op_t[]>(request->transactions.count());
+  auto op_list = std::make_unique<I2cBus::TransactOp[]>(request->transactions.count());
   for (size_t i = 0; i < request->transactions.count(); ++i) {
     if (!request->transactions[i].has_data_transfer()) {
       completer.ReplyError(ZX_ERR_INVALID_ARGS);
@@ -154,7 +154,8 @@ void I2cChild::Transfer(fidl::WireServer<fidl_i2c::Device>::TransferRequestView 
     fidl::WireServer<fidl_i2c::Device>::TransferCompleter::Sync* completer;
   } ctx;
   ctx.completer = &completer;
-  auto callback = [](void* ctx, zx_status_t status, const i2c_op_t* op_list, size_t op_count) {
+  auto callback = [](void* ctx, zx_status_t status, const I2cBus::TransactOp* op_list,
+                     size_t op_count) {
     auto ctx2 = static_cast<Ctx*>(ctx);
     if (status == ZX_OK) {
       auto reads = std::make_unique<fidl::VectorView<uint8_t>[]>(op_count);

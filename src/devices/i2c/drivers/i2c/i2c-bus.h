@@ -5,7 +5,6 @@
 #ifndef SRC_DEVICES_I2C_DRIVERS_I2C_I2C_BUS_H_
 #define SRC_DEVICES_I2C_DRIVERS_I2C_I2C_BUS_H_
 
-#include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 #include <lib/ddk/driver.h>
 #include <lib/sync/completion.h>
@@ -20,13 +19,23 @@ namespace i2c {
 
 class I2cBus : public fbl::RefCounted<I2cBus> {
  public:
+  struct TransactOp {
+    const uint8_t* data_buffer;
+    size_t data_size;
+    bool is_read;
+    bool stop;
+  };
+
+  using TransactCallback = void (*)(void* ctx, zx_status_t status, const TransactOp* op_list,
+                                    size_t op_count);
+
   explicit I2cBus(zx_device_t* parent, ddk::I2cImplProtocolClient i2c, uint32_t bus_id);
   virtual ~I2cBus() = default;
   zx_status_t Start();
   void AsyncStop();
   void WaitForStop();
-  virtual void Transact(uint16_t address, const i2c_op_t* op_list, size_t op_count,
-                        i2c_transact_callback callback, void* cookie);
+  virtual void Transact(uint16_t address, const TransactOp* op_list, size_t op_count,
+                        TransactCallback callback, void* cookie);
 
   size_t max_transfer() const { return max_transfer_; }
 
@@ -35,7 +44,7 @@ class I2cBus : public fbl::RefCounted<I2cBus> {
   struct I2cTxn {
     list_node_t node;
     uint16_t address;
-    i2c_transact_callback transact_cb;
+    TransactCallback transact_cb;
     void* cookie;
     size_t length;
     size_t op_count;
