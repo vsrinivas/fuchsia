@@ -32,9 +32,9 @@ zx_status_t VmoFile::GetBackingMemory(fuchsia::io::VmoFlags flags, zx::vmo* out_
   }
   if ((flags & fuchsia::io::VmoFlags::PRIVATE_CLONE) != fuchsia::io::VmoFlags{}) {
     zx::vmo vmo;
-    if (zx_status_t status =
-            vmo_.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, offset_, length_, &vmo);
-        status != ZX_OK) {
+    zx_status_t status =
+        vmo_.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, offset_, length_, &vmo);
+    if (status != ZX_OK) {
       return status;
     }
     return vmo.replace(rights, out_vmo);
