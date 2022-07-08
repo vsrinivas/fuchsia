@@ -125,6 +125,8 @@ var (
 	// /src/lib/fidl/cpp/include/lib/fidl/cpp/unknown_interaction_handler.h
 	UnknownMethodHandler  = fidlNs.member("UnknownMethodHandler")
 	UnknownMethodMetadata = fidlNs.member("UnknownMethodMetadata")
+	UnknownEventHandler   = fidlNs.member("UnknownEventHandler")
+	UnknownEventMetadata  = fidlNs.member("UnknownEventMetadata")
 )
 
 type unifiedMessagingDetails struct {
@@ -140,6 +142,8 @@ type unifiedMessagingDetails struct {
 	NaturalServer                name
 	UnknownMethodHandler         name
 	UnknownMethodMetadata        name
+	UnknownEventHandler          name
+	UnknownEventMetadata         name
 }
 
 func compileUnifiedMessagingDetails(protocol nameVariants, fidl fidlgen.Protocol) unifiedMessagingDetails {
@@ -157,6 +161,8 @@ func compileUnifiedMessagingDetails(protocol nameVariants, fidl fidlgen.Protocol
 		NaturalServer:                NaturalServer.template(p),
 		UnknownMethodHandler:         UnknownMethodHandler.template(p),
 		UnknownMethodMetadata:        UnknownMethodMetadata.template(p),
+		UnknownEventHandler:          UnknownEventHandler.template(p),
+		UnknownEventMetadata:         UnknownEventMetadata.template(p),
 	}
 }
 

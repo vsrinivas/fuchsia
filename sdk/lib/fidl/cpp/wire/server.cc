@@ -52,8 +52,8 @@ void Dispatch(void* impl, ::fidl::IncomingMessage& msg,
       ::fidl::UnknownInteractionType unknown_interaction_type =
           ::fidl::internal::UnknownInteractionTypeFromHeader(hdr);
       if (::fidl::IsFlexibleInteraction(hdr) &&
-          ::fidl::internal::CanHandleInteraction(unknown_interaction_handler->openness,
-                                                 unknown_interaction_type)) {
+          ::fidl::internal::CanHandleMethod(unknown_interaction_handler->openness,
+                                            unknown_interaction_type)) {
         if (unknown_interaction_type == ::fidl::UnknownInteractionType::kTwoWay) {
           auto reply = ::fidl::internal::UnknownInteractionReply::MakeReplyFor(
               hdr->ordinal, ::fidl::MessageDynamicFlags::kFlexibleMethod);

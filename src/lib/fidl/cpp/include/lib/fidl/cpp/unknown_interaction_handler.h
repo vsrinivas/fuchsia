@@ -41,7 +41,8 @@ struct UnknownMethodMetadata<
   uint64_t method_ordinal;
 };
 
-// Interface implemented by FIDL open and ajar protocols to handle unknown interactions.
+// Interface implemented by FIDL open and ajar protocols to handle unknown
+// methods on the server.
 template <typename Protocol>
 class UnknownMethodHandler {
  public:
@@ -49,6 +50,33 @@ class UnknownMethodHandler {
 
   virtual void handle_unknown_method(UnknownMethodMetadata<Protocol> metadata,
                                      UnknownMethodCompleter::Sync& completer) = 0;
+};
+
+// Base template for unknown interaction metadata.
+template <typename Protocol, typename Enable = void>
+struct UnknownEventMetadata;
+
+// Unknown interaction metadata for open or ajar protocols.
+//
+// Allows UnknownEventHandler on the client to inspect the ordinal of a method
+// that was called.
+template <typename Protocol>
+struct UnknownEventMetadata<
+    Protocol, std::enable_if_t<Protocol::kOpenness == ::fidl::internal::Openness::kOpen ||
+                                   Protocol::kOpenness == ::fidl::internal::Openness::kAjar,
+                               void>> {
+  // Ordinal of the method that was called.
+  uint64_t method_ordinal;
+};
+
+// Interface implemented by FIDL open and ajar protocols to handle unknown
+// events on the client.
+template <typename Protocol>
+class UnknownEventHandler {
+ public:
+  virtual ~UnknownEventHandler() = default;
+
+  virtual void handle_unknown_event(UnknownEventMetadata<Protocol> metadata) = 0;
 };
 
 }  // namespace fidl

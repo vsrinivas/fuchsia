@@ -38,9 +38,22 @@ enum class Openness {
   kOpen,
 };
 
-inline bool CanHandleInteraction(Openness openness, UnknownInteractionType interaction_type) {
+// Returns true if a protocol with the given |Openness| can handle a client-sent
+// unknown method with the given |UnknownInteractionType|.
+inline bool CanHandleMethod(Openness openness, UnknownInteractionType interaction_type) {
   return openness == Openness::kOpen ||
          (openness == Openness::kAjar && interaction_type == UnknownInteractionType::kOneWay);
+}
+
+// Returns true if a protocol with the given |Openness| can handle a server-sent
+// unknown event with the given |UnknownInteractionType|.
+//
+// Note: currently only one-way server-sent messages are defined, so this always
+// returns false if |UnknownInteractionType| is |kTwoWay|. The argument is
+// included to simplify the generated event handler.
+inline bool CanHandleEvent(Openness openness, UnknownInteractionType interaction_type) {
+  return interaction_type == UnknownInteractionType::kOneWay &&
+         (openness == Openness::kOpen || openness == Openness::kAjar);
 }
 
 // Represents the reply to a two-way unknown interaction. Used to build the

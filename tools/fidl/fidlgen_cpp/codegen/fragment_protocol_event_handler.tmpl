@@ -121,7 +121,10 @@ class {{ .WireEventDispatcher }} final :
 {{- EnsureNamespace "" }}
 {{- IfdefFuchsia }}
 template<>
-class {{ .NaturalEventHandlerInterface }} : public ::fidl::internal::BaseEventHandlerInterface {
+class {{ .NaturalEventHandlerInterface }} : public ::fidl::internal::BaseEventHandlerInterface
+{{- if .HandlesOneWayUnknownInteractions -}}
+, public {{ .UnknownEventHandler }}
+{{- end }} {
  public:
   {{ .NaturalEventHandlerInterface.Self }}() = default;
   virtual ~{{ .NaturalEventHandlerInterface.Self }}() = default;
@@ -171,7 +174,7 @@ class {{ .NaturalEventDispatcher }} final :
   explicit {{ .NaturalEventDispatcher.Self }}({{ .NaturalEventHandlerInterface }}* event_handler)
       : IncomingEventDispatcher(event_handler) {}
 
-  {{- if .Events }}
+  {{- if or .Events .HandlesOneWayUnknownInteractions }}
     ::fidl::Status DispatchEvent(
         ::fidl::IncomingMessage& msg,
         internal::MessageStorageViewBase* storage_view) override;
@@ -195,7 +198,7 @@ class {{ .NaturalEventDispatcher }} final :
   }
 {{- end }}
 
-{{- if .Events }}
+{{- if or .Events .HandlesOneWayUnknownInteractions }}
   ::fidl::Status
   {{ .NaturalEventDispatcher.NoLeading }}::DispatchEvent(
       ::fidl::IncomingMessage& msg,
@@ -220,6 +223,21 @@ class {{ .NaturalEventDispatcher }} final :
       }
     {{- end }}
       default:
+        {{ if .HandlesOneWayUnknownInteractions -}}
+        auto* hdr = msg.header();
+        ::fidl::UnknownInteractionType unknown_interaction_type =
+            ::fidl::internal::UnknownInteractionTypeFromHeader(hdr);
+        if (::fidl::IsFlexibleInteraction(hdr) &&
+            ::fidl::internal::CanHandleEvent({{ . }}::kOpenness, unknown_interaction_type)) {
+          if (event_handler()) {
+            {{ .UnknownEventMetadata }} metadata {
+              .method_ordinal = hdr->ordinal,
+            };
+            event_handler()->handle_unknown_event(metadata);
+          }
+          return ::fidl::Status::Ok();
+        }
+        {{- end }}
         return ::fidl::Status::UnknownOrdinal();
     }
   }

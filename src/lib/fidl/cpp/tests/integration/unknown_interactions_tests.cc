@@ -27,6 +27,36 @@ struct ::fidl::internal::WireOrdinal<FakeUnknownMethod> {
 namespace {
 namespace test = ::test_unknown_interactions;
 
+class UnknownInteractionsEventHandlerBase
+    : public ::fidl::AsyncEventHandler<::test::UnknownInteractionsProtocol>,
+      public ::fidl::SyncEventHandler<::test::UnknownInteractionsProtocol> {
+  void StrictEvent(
+      ::fidl::Event<::test_unknown_interactions::UnknownInteractionsProtocol::StrictEvent>&)
+      override {
+    ADD_FAILURE() << "StrictEvent called unexpectedly";
+  }
+  void StrictEventErr(
+      ::fidl::Event<::test_unknown_interactions::UnknownInteractionsProtocol::StrictEventErr>&)
+      override {
+    ADD_FAILURE() << "StrictEventErr called unexpectedly";
+  }
+  void FlexibleEvent(
+      ::fidl::Event<::test_unknown_interactions::UnknownInteractionsProtocol::FlexibleEvent>&)
+      override {
+    ADD_FAILURE() << "FlexibleEvent called unexpectedly";
+  }
+  void FlexibleEventErr(
+      ::fidl::Event<::test_unknown_interactions::UnknownInteractionsProtocol::FlexibleEventErr>&)
+      override {
+    ADD_FAILURE() << "FlexibleEventErr called unexpectedly";
+  }
+
+  void handle_unknown_event(
+      ::fidl::UnknownEventMetadata<::test::UnknownInteractionsProtocol> metadata) override {
+    ADD_FAILURE() << "Unexpected flexible unknown event";
+  }
+};
+
 class UnknownInteractionsServerBase : public ::fidl::Server<::test::UnknownInteractionsProtocol> {
   void StrictOneWay(StrictOneWayRequest& request, StrictOneWayCompleter::Sync& completer) override {
     ADD_FAILURE() << "StrictOneWay called unexpectedly";
@@ -59,7 +89,7 @@ class UnknownInteractionsServerBase : public ::fidl::Server<::test::UnknownInter
   void handle_unknown_method(
       ::fidl::UnknownMethodMetadata<::test::UnknownInteractionsProtocol> metadata,
       ::fidl::UnknownMethodCompleter::Sync& completer) override {
-    ADD_FAILURE() << "Unexpected flexible unknown interaction";
+    ADD_FAILURE() << "Unexpected flexible unknown method";
   }
 };
 
@@ -103,10 +133,11 @@ class UnknownInteractions : public ::testing::Test {
     return fidl::SyncClient<test::UnknownInteractionsProtocol>(std::move(client_end_));
   }
 
-  fidl::Client<test::UnknownInteractionsProtocol> AsyncClient() {
+  fidl::Client<test::UnknownInteractionsProtocol> AsyncClient(
+      fidl::AsyncEventHandler<test::UnknownInteractionsProtocol>* event_handler = nullptr) {
     EXPECT_TRUE(client_end_.is_valid());
     return fidl::Client<test::UnknownInteractionsProtocol>(std::move(client_end_),
-                                                           loop_->dispatcher());
+                                                           loop_->dispatcher(), event_handler);
   }
 
  private:
@@ -263,6 +294,16 @@ std::array<uint8_t, sizeof(fidl_message_header_t)> MakeMessage(
   return MakeMessage<FidlMethod>(0, dynamic_flags);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+//// Client Side Tests
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////
+//// One-Way Methods - Async Client
+///////////////////////////////////////////////////////////////////////////////
+
 TEST_F(UnknownInteractions, OneWayStrictAsyncSend) {
   auto client = AsyncClient();
   auto server = TakeServerChannel();
@@ -290,6 +331,10 @@ TEST_F(UnknownInteractions, OneWayFlexibleAsyncSend) {
       fidl::MessageDynamicFlags::kFlexibleMethod);
   EXPECT_THAT(received.buf, ::testing::ContainerEq(expected));
 }
+
+///////////////////////////////////////////////////////////////////////////////
+//// Two-Way Methods - Async Client
+///////////////////////////////////////////////////////////////////////////////
 
 TEST_F(UnknownInteractions, TwoWayStrictAsyncSend) {
   auto client = AsyncClient();
@@ -544,6 +589,261 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSendErrorVariant) {
   loop().RunUntilIdle();
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//// Events - Async Client
+///////////////////////////////////////////////////////////////////////////////
+
+TEST_F(UnknownInteractions, ReceiveStrictEventAsync) {
+  class EventHandler : public UnknownInteractionsEventHandlerBase {
+    void StrictEvent(
+        ::fidl::Event<::test_unknown_interactions::UnknownInteractionsProtocol::StrictEvent>&)
+        override {
+      received_event = true;
+    }
+
+   public:
+    bool received_event = false;
+  };
+  EventHandler handler;
+  auto client = AsyncClient(&handler);
+  auto server = TakeServerChannel();
+
+  auto server_message = MakeMessage<::test::UnknownInteractionsProtocol::StrictEvent>(
+      ::fidl::MessageDynamicFlags::kStrictMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  loop().RunUntilIdle();
+
+  EXPECT_TRUE(handler.received_event);
+}
+
+TEST_F(UnknownInteractions, ReceiveStrictEventAsyncMismatchedStrictness) {
+  class EventHandler : public UnknownInteractionsEventHandlerBase {
+    void StrictEvent(
+        ::fidl::Event<::test_unknown_interactions::UnknownInteractionsProtocol::StrictEvent>&)
+        override {
+      received_event = true;
+    }
+
+   public:
+    bool received_event = false;
+  };
+  EventHandler handler;
+  auto client = AsyncClient(&handler);
+  auto server = TakeServerChannel();
+
+  auto server_message = MakeMessage<::test::UnknownInteractionsProtocol::StrictEvent>(
+      ::fidl::MessageDynamicFlags::kFlexibleMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  loop().RunUntilIdle();
+
+  EXPECT_TRUE(handler.received_event);
+}
+
+TEST_F(UnknownInteractions, ReceiveFlexibleEventAsync) {
+  class EventHandler : public UnknownInteractionsEventHandlerBase {
+    void FlexibleEvent(
+        ::fidl::Event<::test_unknown_interactions::UnknownInteractionsProtocol::FlexibleEvent>&)
+        override {
+      received_event = true;
+    }
+
+   public:
+    bool received_event = false;
+  };
+  EventHandler handler;
+  auto client = AsyncClient(&handler);
+  auto server = TakeServerChannel();
+
+  auto server_message = MakeMessage<::test::UnknownInteractionsProtocol::FlexibleEvent>(
+      ::fidl::MessageDynamicFlags::kFlexibleMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  loop().RunUntilIdle();
+
+  EXPECT_TRUE(handler.received_event);
+}
+
+TEST_F(UnknownInteractions, ReceiveFlexibleEventAsyncMismatchedStrictness) {
+  class EventHandler : public UnknownInteractionsEventHandlerBase {
+    void FlexibleEvent(
+        ::fidl::Event<::test_unknown_interactions::UnknownInteractionsProtocol::FlexibleEvent>&)
+        override {
+      received_event = true;
+    }
+
+   public:
+    bool received_event = false;
+  };
+  EventHandler handler;
+  auto client = AsyncClient(&handler);
+  auto server = TakeServerChannel();
+
+  auto server_message = MakeMessage<::test::UnknownInteractionsProtocol::FlexibleEvent>(
+      ::fidl::MessageDynamicFlags::kStrictMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  loop().RunUntilIdle();
+
+  EXPECT_TRUE(handler.received_event);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//// Unknown messages - Async Client
+///////////////////////////////////////////////////////////////////////////////
+
+TEST_F(UnknownInteractions, UnknownServerSentTwoWayAsyncClient) {
+  class EventHandler : public UnknownInteractionsEventHandlerBase {};
+  EventHandler handler;
+  auto client = AsyncClient(&handler);
+  auto server = TakeServerChannel();
+
+  auto server_message =
+      MakeMessage<FakeUnknownMethod>(0xABCD, ::fidl::MessageDynamicFlags::kFlexibleMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  loop().RunUntilIdle();
+
+  auto received = ReadResult<16>::ReadFromChannel(server);
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, received.status);
+}
+
+TEST_F(UnknownInteractions, UnknownStrictEventAsync) {
+  class EventHandler : public UnknownInteractionsEventHandlerBase {};
+  EventHandler handler;
+  auto client = AsyncClient(&handler);
+  auto server = TakeServerChannel();
+
+  auto server_message = MakeMessage<FakeUnknownMethod>(::fidl::MessageDynamicFlags::kStrictMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  loop().RunUntilIdle();
+
+  auto received = ReadResult<16>::ReadFromChannel(server);
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, received.status);
+}
+
+TEST_F(UnknownInteractions, UnknownFlexibleEventAsync) {
+  class EventHandler : public UnknownInteractionsEventHandlerBase {
+    void handle_unknown_event(
+        ::fidl::UnknownEventMetadata<::test::UnknownInteractionsProtocol> metadata) override {
+      received_event = true;
+      ASSERT_EQ(FakeUnknownMethod::kOrdinal, metadata.method_ordinal);
+    }
+
+   public:
+    bool received_event = false;
+  };
+  EventHandler handler;
+  auto client = AsyncClient(&handler);
+  auto server = TakeServerChannel();
+
+  auto server_message =
+      MakeMessage<FakeUnknownMethod>(::fidl::MessageDynamicFlags::kFlexibleMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  loop().RunUntilIdle();
+
+  ASSERT_TRUE(handler.received_event);
+
+  // Write again to check that the channel is still open.
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+}
+
+TEST_F(UnknownInteractions, UnknownStrictEventAsyncAjarProtocol) {
+  class EventHandler : public ::fidl::AsyncEventHandler<::test::UnknownInteractionsAjarProtocol> {
+    void handle_unknown_event(
+        ::fidl::UnknownEventMetadata<::test::UnknownInteractionsAjarProtocol> metadata) override {
+      ADD_FAILURE() << "Unexpected flexible unknown event";
+    }
+  };
+
+  EventHandler handler;
+  auto client = fidl::Client<::test::UnknownInteractionsAjarProtocol>(
+      ::fidl::ClientEnd<::test::UnknownInteractionsAjarProtocol>(TakeClientChannel()),
+      loop().dispatcher(), &handler);
+  auto server = TakeServerChannel();
+
+  auto server_message = MakeMessage<FakeUnknownMethod>(::fidl::MessageDynamicFlags::kStrictMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  loop().RunUntilIdle();
+
+  auto received = ReadResult<16>::ReadFromChannel(server);
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, received.status);
+}
+
+TEST_F(UnknownInteractions, UnknownFlexibleEventAsyncAjarProtocol) {
+  class EventHandler : public ::fidl::AsyncEventHandler<::test::UnknownInteractionsAjarProtocol> {
+    void handle_unknown_event(
+        ::fidl::UnknownEventMetadata<::test::UnknownInteractionsAjarProtocol> metadata) override {
+      received_event = true;
+      ASSERT_EQ(FakeUnknownMethod::kOrdinal, metadata.method_ordinal);
+    }
+
+   public:
+    bool received_event = false;
+  };
+  EventHandler handler;
+  auto client = fidl::Client<::test::UnknownInteractionsAjarProtocol>(
+      ::fidl::ClientEnd<::test::UnknownInteractionsAjarProtocol>(TakeClientChannel()),
+      loop().dispatcher(), &handler);
+  auto server = TakeServerChannel();
+
+  auto server_message =
+      MakeMessage<FakeUnknownMethod>(::fidl::MessageDynamicFlags::kFlexibleMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  loop().RunUntilIdle();
+
+  ASSERT_TRUE(handler.received_event);
+
+  // Write again to check that the channel is still open.
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+}
+
+TEST_F(UnknownInteractions, UnknownStrictEventAsyncClosedProtocol) {
+  class EventHandler : public ::fidl::AsyncEventHandler<::test::UnknownInteractionsClosedProtocol> {
+  };
+  EventHandler handler;
+  auto client = fidl::Client<::test::UnknownInteractionsClosedProtocol>(
+      ::fidl::ClientEnd<::test::UnknownInteractionsClosedProtocol>(TakeClientChannel()),
+      loop().dispatcher(), &handler);
+  auto server = TakeServerChannel();
+
+  auto server_message = MakeMessage<FakeUnknownMethod>(::fidl::MessageDynamicFlags::kStrictMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  loop().RunUntilIdle();
+
+  auto received = ReadResult<16>::ReadFromChannel(server);
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, received.status);
+}
+
+TEST_F(UnknownInteractions, UnknownFlexibleEventAsyncClosedProtocol) {
+  class EventHandler : public ::fidl::AsyncEventHandler<::test::UnknownInteractionsClosedProtocol> {
+  };
+  EventHandler handler;
+  auto client = fidl::Client<::test::UnknownInteractionsClosedProtocol>(
+      ::fidl::ClientEnd<::test::UnknownInteractionsClosedProtocol>(TakeClientChannel()),
+      loop().dispatcher(), &handler);
+  auto server = TakeServerChannel();
+
+  auto server_message =
+      MakeMessage<FakeUnknownMethod>(::fidl::MessageDynamicFlags::kFlexibleMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  loop().RunUntilIdle();
+
+  auto received = ReadResult<16>::ReadFromChannel(server);
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, received.status);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//// One-Way Methods - Sync Client
+///////////////////////////////////////////////////////////////////////////////
+
 TEST_F(UnknownInteractions, OneWayStrictSyncSend) {
   auto client = SyncClient();
   auto server = TakeServerChannel();
@@ -571,6 +871,10 @@ TEST_F(UnknownInteractions, OneWayFlexibleSyncSend) {
       fidl::MessageDynamicFlags::kFlexibleMethod);
   EXPECT_THAT(received.buf, ::testing::ContainerEq(expected));
 }
+
+///////////////////////////////////////////////////////////////////////////////
+//// Two-Way Methods - Sync Client
+///////////////////////////////////////////////////////////////////////////////
 
 TEST_F(UnknownInteractions, TwoWayStrictSyncSend) {
   auto client = SyncClient();
@@ -822,6 +1126,258 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSendErrorVariant) {
   EXPECT_EQ(0x100, response.error_value().application_error());
 }
 
+///////////////////////////////////////////////////////////////////////////////
+//// Events - Sync Client
+///////////////////////////////////////////////////////////////////////////////
+
+TEST_F(UnknownInteractions, ReceiveStrictEventSync) {
+  class EventHandler : public UnknownInteractionsEventHandlerBase {
+    void StrictEvent(
+        ::fidl::Event<::test_unknown_interactions::UnknownInteractionsProtocol::StrictEvent>&)
+        override {
+      received_event = true;
+    }
+
+   public:
+    bool received_event = false;
+  };
+  EventHandler handler;
+  auto client = SyncClient();
+  auto server = TakeServerChannel();
+
+  auto server_message = MakeMessage<::test::UnknownInteractionsProtocol::StrictEvent>(
+      ::fidl::MessageDynamicFlags::kStrictMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  EXPECT_TRUE(client.HandleOneEvent(handler).ok());
+
+  EXPECT_TRUE(handler.received_event);
+}
+
+TEST_F(UnknownInteractions, ReceiveStrictEventSyncMismatchedStrictness) {
+  class EventHandler : public UnknownInteractionsEventHandlerBase {
+    void StrictEvent(
+        ::fidl::Event<::test_unknown_interactions::UnknownInteractionsProtocol::StrictEvent>&)
+        override {
+      received_event = true;
+    }
+
+   public:
+    bool received_event = false;
+  };
+  EventHandler handler;
+  auto client = SyncClient();
+  auto server = TakeServerChannel();
+
+  auto server_message = MakeMessage<::test::UnknownInteractionsProtocol::StrictEvent>(
+      ::fidl::MessageDynamicFlags::kFlexibleMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  EXPECT_TRUE(client.HandleOneEvent(handler).ok());
+
+  EXPECT_TRUE(handler.received_event);
+}
+
+TEST_F(UnknownInteractions, ReceiveFlexibleEventSync) {
+  class EventHandler : public UnknownInteractionsEventHandlerBase {
+    void FlexibleEvent(
+        ::fidl::Event<::test_unknown_interactions::UnknownInteractionsProtocol::FlexibleEvent>&)
+        override {
+      received_event = true;
+    }
+
+   public:
+    bool received_event = false;
+  };
+  EventHandler handler;
+  auto client = SyncClient();
+  auto server = TakeServerChannel();
+
+  auto server_message = MakeMessage<::test::UnknownInteractionsProtocol::FlexibleEvent>(
+      ::fidl::MessageDynamicFlags::kFlexibleMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  EXPECT_TRUE(client.HandleOneEvent(handler).ok());
+
+  EXPECT_TRUE(handler.received_event);
+}
+
+TEST_F(UnknownInteractions, ReceiveFlexibleEventSyncMismatchedStrictness) {
+  class EventHandler : public UnknownInteractionsEventHandlerBase {
+    void FlexibleEvent(
+        ::fidl::Event<::test_unknown_interactions::UnknownInteractionsProtocol::FlexibleEvent>&)
+        override {
+      received_event = true;
+    }
+
+   public:
+    bool received_event = false;
+  };
+  EventHandler handler;
+  auto client = SyncClient();
+  auto server = TakeServerChannel();
+
+  auto server_message = MakeMessage<::test::UnknownInteractionsProtocol::FlexibleEvent>(
+      ::fidl::MessageDynamicFlags::kStrictMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  EXPECT_TRUE(client.HandleOneEvent(handler).ok());
+
+  EXPECT_TRUE(handler.received_event);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+//// Unknown messages - Sync Client
+///////////////////////////////////////////////////////////////////////////////
+
+TEST_F(UnknownInteractions, UnknownServerSentTwoWaySyncClient) {
+  class EventHandler : public UnknownInteractionsEventHandlerBase {};
+  EventHandler handler;
+  auto client = SyncClient();
+  auto server = TakeServerChannel();
+
+  auto server_message =
+      MakeMessage<FakeUnknownMethod>(0xABCD, ::fidl::MessageDynamicFlags::kFlexibleMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  auto status = client.HandleOneEvent(handler);
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, status.status());
+  EXPECT_EQ(fidl::Reason::kUnexpectedMessage, status.reason());
+}
+
+TEST_F(UnknownInteractions, UnknownStrictEventSync) {
+  class EventHandler : public UnknownInteractionsEventHandlerBase {};
+  EventHandler handler;
+  auto client = SyncClient();
+  auto server = TakeServerChannel();
+
+  auto server_message = MakeMessage<FakeUnknownMethod>(::fidl::MessageDynamicFlags::kStrictMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  auto status = client.HandleOneEvent(handler);
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, status.status());
+  EXPECT_EQ(fidl::Reason::kUnexpectedMessage, status.reason());
+}
+
+TEST_F(UnknownInteractions, UnknownFlexibleEventSync) {
+  class EventHandler : public UnknownInteractionsEventHandlerBase {
+    void handle_unknown_event(
+        ::fidl::UnknownEventMetadata<::test::UnknownInteractionsProtocol> metadata) override {
+      received_event = true;
+      ASSERT_EQ(FakeUnknownMethod::kOrdinal, metadata.method_ordinal);
+    }
+
+   public:
+    bool received_event = false;
+  };
+  EventHandler handler;
+  auto client = SyncClient();
+  auto server = TakeServerChannel();
+
+  auto server_message =
+      MakeMessage<FakeUnknownMethod>(::fidl::MessageDynamicFlags::kFlexibleMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  EXPECT_TRUE(client.HandleOneEvent(handler).ok());
+
+  ASSERT_TRUE(handler.received_event);
+
+  // Write again to check that the channel is still open.
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+}
+
+TEST_F(UnknownInteractions, UnknownStrictEventSyncAjarProtocol) {
+  class EventHandler : public ::fidl::SyncEventHandler<::test::UnknownInteractionsAjarProtocol> {
+    void handle_unknown_event(
+        ::fidl::UnknownEventMetadata<::test::UnknownInteractionsAjarProtocol> metadata) override {
+      ADD_FAILURE() << "Unexpected flexible unknown event";
+    }
+  };
+
+  EventHandler handler;
+  auto client = fidl::SyncClient<::test::UnknownInteractionsAjarProtocol>(
+      ::fidl::ClientEnd<::test::UnknownInteractionsAjarProtocol>(TakeClientChannel()));
+  auto server = TakeServerChannel();
+
+  auto server_message = MakeMessage<FakeUnknownMethod>(::fidl::MessageDynamicFlags::kStrictMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  auto status = client.HandleOneEvent(handler);
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, status.status());
+  EXPECT_EQ(fidl::Reason::kUnexpectedMessage, status.reason());
+}
+
+TEST_F(UnknownInteractions, UnknownFlexibleEventSyncAjarProtocol) {
+  class EventHandler : public ::fidl::SyncEventHandler<::test::UnknownInteractionsAjarProtocol> {
+    void handle_unknown_event(
+        ::fidl::UnknownEventMetadata<::test::UnknownInteractionsAjarProtocol> metadata) override {
+      received_event = true;
+      ASSERT_EQ(FakeUnknownMethod::kOrdinal, metadata.method_ordinal);
+    }
+
+   public:
+    bool received_event = false;
+  };
+  EventHandler handler;
+  auto client = fidl::SyncClient<::test::UnknownInteractionsAjarProtocol>(
+      ::fidl::ClientEnd<::test::UnknownInteractionsAjarProtocol>(TakeClientChannel()));
+  auto server = TakeServerChannel();
+
+  auto server_message =
+      MakeMessage<FakeUnknownMethod>(::fidl::MessageDynamicFlags::kFlexibleMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  EXPECT_TRUE(client.HandleOneEvent(handler).ok());
+
+  ASSERT_TRUE(handler.received_event);
+
+  // Write again to check that the channel is still open.
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+}
+
+TEST_F(UnknownInteractions, UnknownStrictEventSyncClosedProtocol) {
+  class EventHandler : public ::fidl::SyncEventHandler<::test::UnknownInteractionsClosedProtocol> {
+  };
+  EventHandler handler;
+  auto client = fidl::SyncClient<::test::UnknownInteractionsClosedProtocol>(
+      ::fidl::ClientEnd<::test::UnknownInteractionsClosedProtocol>(TakeClientChannel()));
+  auto server = TakeServerChannel();
+
+  auto server_message = MakeMessage<FakeUnknownMethod>(::fidl::MessageDynamicFlags::kStrictMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  auto status = client.HandleOneEvent(handler);
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, status.status());
+  EXPECT_EQ(fidl::Reason::kUnexpectedMessage, status.reason());
+}
+
+TEST_F(UnknownInteractions, UnknownFlexibleEventSyncClosedProtocol) {
+  class EventHandler : public ::fidl::SyncEventHandler<::test::UnknownInteractionsClosedProtocol> {
+  };
+  EventHandler handler;
+  auto client = fidl::SyncClient<::test::UnknownInteractionsClosedProtocol>(
+      ::fidl::ClientEnd<::test::UnknownInteractionsClosedProtocol>(TakeClientChannel()));
+  auto server = TakeServerChannel();
+
+  auto server_message =
+      MakeMessage<FakeUnknownMethod>(::fidl::MessageDynamicFlags::kFlexibleMethod);
+  ASSERT_EQ(ZX_OK, server.write(0, &server_message, server_message.size(), nullptr, 0));
+
+  auto status = client.HandleOneEvent(handler);
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, status.status());
+  EXPECT_EQ(fidl::Reason::kUnexpectedMessage, status.reason());
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+//// Server Side Tests
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+///////////////////////////////////////////////////////////////////////////////
+//// Events - Server
+///////////////////////////////////////////////////////////////////////////////
+
 TEST_F(UnknownInteractions, SendStrictEvent) {
   auto client = TakeClientChannel();
   auto server = TakeServerEnd();
@@ -849,6 +1405,10 @@ TEST_F(UnknownInteractions, SendFlexibleEvent) {
       fidl::MessageDynamicFlags::kFlexibleMethod);
   EXPECT_THAT(received.buf, ::testing::ContainerEq(expected));
 }
+
+///////////////////////////////////////////////////////////////////////////////
+//// Two-Way Methods - Server
+///////////////////////////////////////////////////////////////////////////////
 
 TEST_F(UnknownInteractions, StrictTwoWayResponse) {
   auto client = TakeClientChannel();
@@ -1020,6 +1580,10 @@ TEST_F(UnknownInteractions, FlexibleTwoWayErrResponseError) {
       3203);
   EXPECT_THAT(received.buf, ::testing::ContainerEq(expected));
 }
+
+///////////////////////////////////////////////////////////////////////////////
+//// Unknown messages - Server
+///////////////////////////////////////////////////////////////////////////////
 
 TEST_F(UnknownInteractions, UnknownStrictOneWay) {
   auto client = TakeClientChannel();
