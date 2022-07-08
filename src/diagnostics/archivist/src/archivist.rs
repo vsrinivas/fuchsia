@@ -291,7 +291,7 @@ impl Archivist {
         });
         self.incoming_external_event_producers.push(fasync::Task::spawn(async move {
             connector.spawn().await.unwrap_or_else(|err| {
-                error!(?err, "Failed to run event source producer loop");
+                warn!(?err, "Failed to run event source producer loop");
             });
         }));
     }

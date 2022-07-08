@@ -133,7 +133,7 @@ async fn embedding_stop_api_works_for_batch_iterator() {
 
 async fn initialize_topology() -> RealmInstance {
     let (builder, test_realm) = test_topology::create(test_topology::Options {
-        archivist_url: constants::ARCHIVIST_WITH_CONTROLLER_URL,
+        archivist_url: constants::ARCHIVIST_FOR_V1_URL,
     })
     .await
     .unwrap();

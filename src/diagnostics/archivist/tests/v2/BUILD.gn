@@ -83,24 +83,13 @@ rustc_test("integration_tests_bin") {
   ]
 }
 
-fuchsia_component_manifest("with-log-connector-manifest") {
-  manifest = "meta/archivist_for_integration_with_log_connector.cml"
-  component_name = "archivist_with_log_connector"
+fuchsia_component_manifest("for-v1-manifest") {
+  manifest = "meta/archivist_for_integration_for_v1.cml"
+  component_name = "archivist_for_v1"
 }
 
-fuchsia_component("archivist-for-integration-with-log-connector") {
-  cm_label = ":with-log-connector-manifest"
-  testonly = true
-  deps = [ "//src/diagnostics/archivist:bin" ]
-}
-
-fuchsia_component_manifest("with-controller-manifest") {
-  manifest = "meta/archivist_for_integration_with_controller.cml"
-  component_name = "archivist_with_controller"
-}
-
-fuchsia_component("archivist-for-integration-with-controller") {
-  cm_label = ":with-controller-manifest"
+fuchsia_component("archivist-for-integration-for-v1") {
+  cm_label = ":for-v1-manifest"
   testonly = true
   deps = [ "//src/diagnostics/archivist:bin" ]
 }
@@ -203,9 +192,9 @@ fuchsia_structured_config_values("archivist-with-klog-config") {
   values = with_klog_config
 }
 
-fuchsia_structured_config_values("archivist-with-log-connector-config") {
-  cm_label = ":with-log-connector-manifest"
-  values = with_log_connector_config
+fuchsia_structured_config_values("archivist-for-v1-config") {
+  cm_label = ":for-v1-manifest"
+  values = for_v1_config
 }
 
 fuchsia_structured_config_values("archivist-with-feedback-filtering-config") {
@@ -228,11 +217,6 @@ fuchsia_structured_config_values(
     "archivist-with-feedback-filtering-disabled-config") {
   cm_label = ":with-feedback-filtering-disabled-manifest"
   values = with_feedback_filtering_disabled
-}
-
-fuchsia_structured_config_values("with-controller-config") {
-  cm_label = ":with-controller-manifest"
-  values = with_controller_config
 }
 
 resource("filter_feedback") {
@@ -263,8 +247,8 @@ fuchsia_test_package("archivist-integration-tests-v2") {
   deps = [
     ":archivist-for-integration",
     ":archivist-for-integration-config",
-    ":archivist-for-integration-with-controller",
-    ":archivist-for-integration-with-log-connector",
+    ":archivist-for-integration-for-v1",
+    ":archivist-for-v1-config",
     ":archivist-with-feedback-filtering",
     ":archivist-with-feedback-filtering-config",
     ":archivist-with-feedback-filtering-disabled",
@@ -273,7 +257,6 @@ fuchsia_test_package("archivist-integration-tests-v2") {
     ":archivist-with-klog-config",
     ":archivist-with-legacy-metrics-filtering",
     ":archivist-with-legacy-metrics-filtering-config",
-    ":archivist-with-log-connector-config",
     ":archivist-with-lowpan-filtering",
     ":archivist-with-lowpan-filtering-config",
     ":archivist-with-small-caches",
@@ -282,7 +265,6 @@ fuchsia_test_package("archivist-integration-tests-v2") {
     ":do_not_filter_feedback",
     ":filter_feedback",
     ":filter_lowpan",
-    ":with-controller-config",
     "components",
     "//src/diagnostics/iquery/test/test_component",
   ]

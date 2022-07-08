@@ -60,12 +60,10 @@ async fn test_logs_with_hanging_log_connector() {
     let (mut before_response_snd, before_response_recv) = mpsc::unbounded();
     let (after_response_snd, mut after_response_recv) = mpsc::unbounded();
     let recv = Arc::new(Mutex::new(before_response_recv));
-    let (builder, test_realm) = test_topology::create(test_topology::Options {
-        archivist_url:
-            "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/archivist_with_log_connector.cm",
-    })
-    .await
-    .expect("create base topology");
+    let (builder, test_realm) =
+        test_topology::create(test_topology::Options { archivist_url: ARCHIVIST_FOR_V1_URL })
+            .await
+            .expect("create base topology");
     let mocks_server = builder
         .add_local_child(
             "mocks-server",

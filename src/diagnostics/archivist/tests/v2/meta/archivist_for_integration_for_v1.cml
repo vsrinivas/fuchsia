@@ -15,6 +15,11 @@
             protocol: [ "fuchsia.diagnostics.test.Controller" ],
         },
     ],
+    use: [
+        {
+            protocol: [ "fuchsia.sys.internal.LogConnector" ],
+        },
+    ],
     expose: [
         {
             protocol: "fuchsia.diagnostics.test.Controller",
