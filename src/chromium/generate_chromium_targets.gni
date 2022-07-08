@@ -103,7 +103,7 @@ template("generate_chromium_targets") {
   generate_package_flavors_and_config("web_engine") {
     prebuilt_archive_base_path = "${prebuilt_archive_root_path}/${target_name}${invoker.archive_path_suffix}"
 
-    custom_package_path = "${build_output_gen_base_path}/fuchsia/engine/${target_name}/${target_name}.far"
+    custom_package_path = "${build_output_gen_base_path}/fuchsia_web/webengine/${target_name}/${target_name}.far"
     selections = package_flavor_selections
 
     # Config data arguments.
@@ -122,7 +122,7 @@ template("generate_chromium_targets") {
 
   generate_package_flavors("web_engine_shell") {
     prebuilt_archive_base_path = "${prebuilt_archive_root_path}/${target_name}${invoker.archive_path_suffix}"
-    custom_package_path = "${build_output_gen_base_path}/fuchsia/engine/${target_name}/${target_name}.far"
+    custom_package_path = "${build_output_gen_base_path}/fuchsia_web/shell/${target_name}/${target_name}.far"
     selections = package_flavor_selections
 
     testonly = true
@@ -138,7 +138,7 @@ template("generate_chromium_targets") {
   generate_package_flavors_and_config("web_runner") {
     prebuilt_archive_base_path = "${prebuilt_archive_root_path}/${target_name}${invoker.archive_path_suffix}"
 
-    custom_package_path = "${build_output_gen_base_path}/fuchsia/runners/${target_name}/${target_name}.far"
+    custom_package_path = "${build_output_gen_base_path}/fuchsia_web/runners/${target_name}/${target_name}.far"
     selections = package_flavor_selections
 
     # Config data arguments.
