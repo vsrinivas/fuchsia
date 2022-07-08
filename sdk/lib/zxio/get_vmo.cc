@@ -40,7 +40,7 @@ static zx_status_t read_at(zxio_t* io, void* buf, size_t len, off_t offset, size
   return ZX_OK;
 }
 
-static zx_status_t read_file_into_vmo(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size) {
+static zx_status_t read_file_into_vmo(zxio_t* io, zx_handle_t* out_vmo) {
   const size_t kPageSize = zx_system_get_page_size();
   const size_t kMinWindow = kPageSize * 4;
   constexpr size_t kMaxWindow = 64 << 20;
@@ -109,19 +109,16 @@ static zx_status_t read_file_into_vmo(zxio_t* io, zx_handle_t* out_vmo, size_t* 
   }
 
   *out_vmo = vmo.release();
-  if (out_size) {
-    *out_size = attr.content_size;
-  }
   return ZX_OK;
 }
 
-zx_status_t zxio_vmo_get_copy(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size) {
-  zx_status_t status = zxio_vmo_get_clone(io, out_vmo, out_size);
+zx_status_t zxio_vmo_get_copy(zxio_t* io, zx_handle_t* out_vmo) {
+  zx_status_t status = zxio_vmo_get_clone(io, out_vmo);
   if (status == ZX_OK) {
     return ZX_OK;
   }
   zx::vmo vmo;
-  status = read_file_into_vmo(io, vmo.reset_and_get_address(), out_size);
+  status = read_file_into_vmo(io, vmo.reset_and_get_address());
   if (status != ZX_OK) {
     return status;
   }
@@ -133,15 +130,14 @@ zx_status_t zxio_vmo_get_copy(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size
   return ZX_OK;
 }
 
-zx_status_t zxio_vmo_get_clone(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size) {
-  return zxio_vmo_get(io, ZXIO_VMO_READ | ZXIO_VMO_PRIVATE_CLONE, out_vmo, out_size);
+zx_status_t zxio_vmo_get_clone(zxio_t* io, zx_handle_t* out_vmo) {
+  return zxio_vmo_get(io, ZXIO_VMO_READ | ZXIO_VMO_PRIVATE_CLONE, out_vmo);
 }
 
-zx_status_t zxio_vmo_get_exact(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size) {
-  return zxio_vmo_get(io, ZXIO_VMO_READ | ZXIO_VMO_SHARED_BUFFER, out_vmo, out_size);
+zx_status_t zxio_vmo_get_exact(zxio_t* io, zx_handle_t* out_vmo) {
+  return zxio_vmo_get(io, ZXIO_VMO_READ | ZXIO_VMO_SHARED_BUFFER, out_vmo);
 }
 
-zx_status_t zxio_vmo_get_exec(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size) {
-  return zxio_vmo_get(io, ZXIO_VMO_READ | ZXIO_VMO_EXECUTE | ZXIO_VMO_PRIVATE_CLONE, out_vmo,
-                      out_size);
+zx_status_t zxio_vmo_get_exec(zxio_t* io, zx_handle_t* out_vmo) {
+  return zxio_vmo_get(io, ZXIO_VMO_READ | ZXIO_VMO_EXECUTE | ZXIO_VMO_PRIVATE_CLONE, out_vmo);
 }

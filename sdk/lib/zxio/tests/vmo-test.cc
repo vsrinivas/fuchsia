@@ -109,25 +109,28 @@ TEST_F(VmoTest, Basic) {
 
 TEST_F(VmoTest, GetCopy) {
   zx::vmo vmo;
-  size_t size = 0u;
-  ASSERT_OK(zxio_vmo_get_copy(io, vmo.reset_and_get_address(), &size));
+  ASSERT_OK(zxio_vmo_get_copy(io, vmo.reset_and_get_address()));
   EXPECT_NE(vmo.get(), ZX_HANDLE_INVALID);
+  uint64_t size;
+  ASSERT_OK(vmo.get_prop_content_size(&size));
   EXPECT_EQ(size, kSize);
 }
 
 TEST_F(VmoTest, GetClone) {
   zx::vmo vmo;
-  size_t size = 0u;
-  ASSERT_STATUS(ZX_OK, zxio_vmo_get_clone(io, vmo.reset_and_get_address(), &size));
+  ASSERT_STATUS(ZX_OK, zxio_vmo_get_clone(io, vmo.reset_and_get_address()));
   EXPECT_NE(vmo.get(), ZX_HANDLE_INVALID);
+  uint64_t size;
+  ASSERT_OK(vmo.get_prop_content_size(&size));
   EXPECT_EQ(size, kSize);
 }
 
 TEST_F(VmoTest, GetExact) {
   zx::vmo vmo;
-  size_t size = 0u;
-  ASSERT_STATUS(ZX_OK, zxio_vmo_get_exact(io, vmo.reset_and_get_address(), &size));
+  ASSERT_STATUS(ZX_OK, zxio_vmo_get_exact(io, vmo.reset_and_get_address()));
   EXPECT_NE(vmo.get(), ZX_HANDLE_INVALID);
+  uint64_t size;
+  ASSERT_OK(vmo.get_prop_content_size(&size));
   EXPECT_EQ(size, kSize);
 }
 

@@ -314,13 +314,12 @@ zx_status_t zxio_token_get(zxio_t* io, zx_handle_t* out_token) {
   return zio->ops->token_get(io, out_token);
 }
 
-zx_status_t zxio_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_handle_t* out_vmo,
-                         size_t* out_size) {
+zx_status_t zxio_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_handle_t* out_vmo) {
   if (!zxio_is_valid(io)) {
     return ZX_ERR_BAD_HANDLE;
   }
   zxio_internal_t* zio = to_internal(io);
-  return zio->ops->vmo_get(io, flags, out_vmo, out_size);
+  return zio->ops->vmo_get(io, flags, out_vmo);
 }
 
 zx_status_t zxio_get_read_buffer_available(zxio_t* io, size_t* out_available) {

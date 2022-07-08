@@ -166,8 +166,8 @@ static zx_status_t zxio_vmofile_seek(zxio_t* io, zxio_seek_origin_t start, int64
   return ZX_OK;
 }
 
-zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, zxio_vmo_flags_t flags,
-                                zx_handle_t* out_vmo, size_t* out_size) {
+zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t size, zxio_vmo_flags_t flags,
+                                zx_handle_t* out_vmo) {
   if (out_vmo == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -198,7 +198,7 @@ zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, zxio_vm
     }
 
     zx::vmo child_vmo;
-    zx_status_t status = vmo.create_child(options, 0u, content_size, &child_vmo);
+    zx_status_t status = vmo.create_child(options, 0u, size, &child_vmo);
     if (status != ZX_OK) {
       return status;
     }
@@ -214,9 +214,6 @@ zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, zxio_vm
       return status;
     }
     *out_vmo = result.release();
-    if (out_size) {
-      *out_size = content_size;
-    }
     return ZX_OK;
   }
 
@@ -228,14 +225,10 @@ zx_status_t zxio_vmo_get_common(const zx::vmo& vmo, size_t content_size, zxio_vm
     return status;
   }
   *out_vmo = result.release();
-  if (out_size) {
-    *out_size = content_size;
-  }
   return ZX_OK;
 }
 
-static zx_status_t zxio_vmofile_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_handle_t* out_vmo,
-                                        size_t* out_size) {
+static zx_status_t zxio_vmofile_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_handle_t* out_vmo) {
   // Can't support Vmofiles with a non-zero start/offset, because we return just
   // a VMO with no other data - like a starting offset - to the user.
   // (Technically we could support any page aligned offset, but that's currently
@@ -245,7 +238,7 @@ static zx_status_t zxio_vmofile_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_h
     return ZX_ERR_NOT_FOUND;
   }
 
-  return zxio_vmo_get_common(file.vmo, file.size, flags, out_vmo, out_size);
+  return zxio_vmo_get_common(file.vmo, file.size, flags, out_vmo);
 }
 
 static constexpr zxio_ops_t zxio_vmofile_ops = []() {

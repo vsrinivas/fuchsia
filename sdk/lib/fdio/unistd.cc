@@ -595,7 +595,7 @@ extern "C" __EXPORT zx_status_t _mmap_get_vmo_from_fd(int mmap_prot, int mmap_fl
   // Filesystems which support PROT_WRITE + MAP_SHARED can enable the `supports_mmap_shared_write`
   // option in the fs_test suite to validate this case.
 
-  return zxio_vmo_get(&io->zxio_storage().io, zxio_flags, out_vmo, nullptr);
+  return zxio_vmo_get(&io->zxio_storage().io, zxio_flags, out_vmo);
 }
 
 __EXPORT

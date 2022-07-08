@@ -366,7 +366,7 @@ TEST_F(PagingTest, VmoRead) {
   // Test that zx_vmo_read works on the file's VMO.
   std::vector<uint8_t> read;
   read.resize(kFile1Size);
-  ASSERT_EQ(ZX_OK, vmo.read(&read[0], 0, kFile1Size));
+  ASSERT_EQ(ZX_OK, vmo.read(read.data(), 0, kFile1Size));
   for (size_t i = 0; i < kFile1Size; i++) {
     ASSERT_EQ(read[i], file1_contents_[i]);
   }
@@ -407,7 +407,7 @@ TEST_F(PagingTest, Write) {
   // TODO: Add fdio_get_vmo_write() to fdio
   fdio_t* io = fdio_unsafe_fd_to_io(static_cast<int>(file1_fd.get()));
   ASSERT_EQ(ZX_OK, zxio_vmo_get(&io->zxio_storage().io, ZXIO_VMO_READ | ZXIO_VMO_WRITE,
-                                vmo.reset_and_get_address(), nullptr));
+                                vmo.reset_and_get_address()));
   fdio_unsafe_release(io);
   ASSERT_TRUE(file1_shared_->WaitForChangedVmoPresence());
   EXPECT_TRUE(file1_->HasClones());
@@ -448,8 +448,8 @@ TEST_F(PagingTest, Write) {
 
   // Mmap to another adderss space and verify data in mmaped memory.
   io = fdio_unsafe_fd_to_io(static_cast<int>(file1_fd.get()));
-  ASSERT_EQ(ZX_OK, zxio_vmo_get(&io->zxio_storage().io, ZXIO_VMO_READ, vmo.reset_and_get_address(),
-                                nullptr));
+  ASSERT_EQ(ZX_OK,
+            zxio_vmo_get(&io->zxio_storage().io, ZXIO_VMO_READ, vmo.reset_and_get_address()));
   fdio_unsafe_release(io);
 
   // Map the data and validate the result can be read.
@@ -484,7 +484,7 @@ TEST_F(PagingTest, VmoDirty) {
   // TODO: Add fdio_get_vmo_write() to fdio
   fdio_t* io = fdio_unsafe_fd_to_io(static_cast<int>(file1_fd.get()));
   ASSERT_EQ(ZX_OK, zxio_vmo_get(&io->zxio_storage().io, ZXIO_VMO_READ | ZXIO_VMO_WRITE,
-                                vmo.reset_and_get_address(), nullptr));
+                                vmo.reset_and_get_address()));
   fdio_unsafe_release(io);
 
   // Test that zx_vmo_write works on the file's VMO.
@@ -499,12 +499,12 @@ TEST_F(PagingTest, VmoDirty) {
     write_contents[i] = cur;
     cur++;
   }
-  ASSERT_EQ(ZX_OK, vmo.write(&write_contents[0], 0, kFile1Size));
+  ASSERT_EQ(ZX_OK, vmo.write(write_contents.data(), 0, kFile1Size));
 
   // Verify file contents
   std::vector<uint8_t> read;
   read.resize(kFile1Size);
-  ASSERT_EQ(ZX_OK, vmo.read(&read[0], 0, kFile1Size));
+  ASSERT_EQ(ZX_OK, vmo.read(read.data(), 0, kFile1Size));
   for (size_t i = 0; i < kFile1Size; i++) {
     ASSERT_EQ(read[i], write_contents[i]);
   }
@@ -521,7 +521,7 @@ TEST_F(PagingTest, WriteError) {
   // TODO: Add fdio_get_vmo_write() to fdio
   fdio_t* io = fdio_unsafe_fd_to_io(static_cast<int>(file_err_fd.get()));
   ASSERT_EQ(ZX_OK, zxio_vmo_get(&io->zxio_storage().io, ZXIO_VMO_READ | ZXIO_VMO_WRITE,
-                                vmo.reset_and_get_address(), nullptr));
+                                vmo.reset_and_get_address()));
   fdio_unsafe_release(io);
   // All writes should be errors.
   uint8_t buf[8];

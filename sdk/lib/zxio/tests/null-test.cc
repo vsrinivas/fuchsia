@@ -41,12 +41,11 @@ TEST(NullTest, Default) {
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_flags_get(&io, &flags));
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_flags_set(&io, flags));
   zx_handle_t vmo = ZX_HANDLE_INVALID;
-  size_t size = 0u;
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_vmo_get_copy(&io, &vmo, &size));
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_vmo_get_clone(&io, &vmo, &size));
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_vmo_get_exact(&io, &vmo, &size));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_vmo_get_copy(&io, &vmo));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_vmo_get_clone(&io, &vmo));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_vmo_get_exact(&io, &vmo));
 
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_default_get_read_buffer_available(&io, &size));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_default_get_read_buffer_available(&io, nullptr));
 
   constexpr std::string_view name("hello");
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,
@@ -109,12 +108,11 @@ TEST(NullTest, Null) {
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_flags_get(&io, &flags));
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_flags_set(&io, flags));
   zx_handle_t vmo = ZX_HANDLE_INVALID;
-  size_t size = 0u;
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_vmo_get_copy(&io, &vmo, &size));
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_vmo_get_clone(&io, &vmo, &size));
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_vmo_get_exact(&io, &vmo, &size));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_vmo_get_copy(&io, &vmo));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_vmo_get_clone(&io, &vmo));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_vmo_get_exact(&io, &vmo));
 
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_default_get_read_buffer_available(&io, &size));
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_default_get_read_buffer_available(&io, nullptr));
 
   constexpr std::string_view name("hello");
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED,

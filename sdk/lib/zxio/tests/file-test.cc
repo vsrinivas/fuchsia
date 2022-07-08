@@ -176,11 +176,9 @@ TEST_F(File, GetVmoPropagatesError) {
   ASSERT_NO_FAILURES(OpenFile());
 
   zx::vmo vmo;
-  ASSERT_STATUS(kGetBufferError,
-                zxio_vmo_get_clone(&file_.io, vmo.reset_and_get_address(), nullptr));
-  ASSERT_STATUS(kGetBufferError,
-                zxio_vmo_get_exact(&file_.io, vmo.reset_and_get_address(), nullptr));
-  ASSERT_STATUS(kGetAttrError, zxio_vmo_get_copy(&file_.io, vmo.reset_and_get_address(), nullptr));
+  ASSERT_STATUS(kGetBufferError, zxio_vmo_get_clone(&file_.io, vmo.reset_and_get_address()));
+  ASSERT_STATUS(kGetBufferError, zxio_vmo_get_exact(&file_.io, vmo.reset_and_get_address()));
+  ASSERT_STATUS(kGetAttrError, zxio_vmo_get_copy(&file_.io, vmo.reset_and_get_address()));
 }
 
 class TestServerChannel final : public CloseCountingFileServer {

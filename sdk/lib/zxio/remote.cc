@@ -793,8 +793,7 @@ zx_status_t zxio_remote_flags_set(zxio_t* io, uint32_t flags) {
   return response.s;
 }
 
-zx_status_t zxio_remote_vmo_get(zxio_t* io, zxio_vmo_flags_t zxio_flags, zx_handle_t* out_vmo,
-                                size_t* out_size) {
+zx_status_t zxio_remote_vmo_get(zxio_t* io, zxio_vmo_flags_t zxio_flags, zx_handle_t* out_vmo) {
   Remote rio(io);
   fio::wire::VmoFlags flags;
   if (zxio_flags & ZXIO_VMO_READ) {
@@ -822,11 +821,6 @@ zx_status_t zxio_remote_vmo_get(zxio_t* io, zxio_vmo_flags_t zxio_flags, zx_hand
     return response.error_value();
   }
   zx::vmo& vmo = response.value()->vmo;
-  if (out_size) {
-    if (zx_status_t status = vmo.get_prop_content_size(out_size); status != ZX_OK) {
-      return status;
-    }
-  }
   *out_vmo = vmo.release();
   return ZX_OK;
 }

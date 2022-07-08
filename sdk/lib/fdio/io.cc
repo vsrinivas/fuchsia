@@ -64,7 +64,7 @@ zx_status_t with_zxio(int fd, F fn, zx_handle_t* out_vmo) {
   if (io == nullptr) {
     return ZX_ERR_BAD_HANDLE;
   }
-  return fn(&io->zxio_storage().io, out_vmo, nullptr);
+  return fn(&io->zxio_storage().io, out_vmo);
 }
 
 }  // namespace

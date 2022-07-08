@@ -90,25 +90,24 @@ TEST_F(VmoFileNonZeroOffsetTest, Basic) {
 
 TEST_F(VmoFileNonZeroOffsetTest, GetCopy) {
   zx::vmo vmo;
-  size_t size = 0u;
-  ASSERT_OK(zxio_vmo_get_copy(io, vmo.reset_and_get_address(), &size));
+  ASSERT_OK(zxio_vmo_get_copy(io, vmo.reset_and_get_address()));
   EXPECT_NE(vmo, ZX_HANDLE_INVALID);
+  uint64_t size;
+  ASSERT_OK(vmo.get_prop_content_size(&size));
   EXPECT_EQ(size, len);
 }
 
 TEST_F(VmoFileNonZeroOffsetTest, GetClone) {
   zx::vmo vmo;
-  size_t size = 0u;
   // Not found because this vmo-file has a non-zero starting offset.
-  ASSERT_STATUS(ZX_ERR_NOT_FOUND, zxio_vmo_get_clone(io, vmo.reset_and_get_address(), &size));
+  ASSERT_STATUS(ZX_ERR_NOT_FOUND, zxio_vmo_get_clone(io, vmo.reset_and_get_address()));
   EXPECT_EQ(vmo, ZX_HANDLE_INVALID);
 }
 
 TEST_F(VmoFileNonZeroOffsetTest, GetExact) {
   zx::vmo vmo;
-  size_t size = 0u;
   // Not found because this vmo-file has a non-zero starting offset.
-  ASSERT_STATUS(ZX_ERR_NOT_FOUND, zxio_vmo_get_exact(io, vmo.reset_and_get_address(), &size));
+  ASSERT_STATUS(ZX_ERR_NOT_FOUND, zxio_vmo_get_exact(io, vmo.reset_and_get_address()));
 }
 
 TEST(VmoFileTest, GetExact) {
@@ -127,8 +126,7 @@ TEST(VmoFileTest, GetExact) {
   zxio_t* io = &storage.io;
 
   zx::vmo vmo;
-  size_t size = 0u;
-  ASSERT_OK(zxio_vmo_get_exact(io, vmo.reset_and_get_address(), &size));
+  ASSERT_OK(zxio_vmo_get_exact(io, vmo.reset_and_get_address()));
   EXPECT_NE(vmo, ZX_HANDLE_INVALID);
   uint8_t dest[4];
   ASSERT_OK(vmo.read(dest, 0, 4));

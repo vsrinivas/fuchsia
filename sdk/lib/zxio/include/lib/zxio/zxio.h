@@ -302,46 +302,33 @@ ZXIO_EXPORT zx_status_t zxio_token_get(zxio_t* io, zx_handle_t* out_token);
 
 // Acquires a VMO representing this file, if there is one, with the requested
 // access rights.
-ZXIO_EXPORT zx_status_t zxio_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_handle_t* out_vmo,
-                                     size_t* out_size);
+ZXIO_EXPORT zx_status_t zxio_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_handle_t* out_vmo);
 
 // Get a read-only VMO containing the whole contents of the file.
 //
 // This function creates a clone of the underlying VMO when possible. If the
 // function cannot create a clone, the function will eagerly read the contents
 // of the file into a freshly-created VMO.
-//
-// If non-null, |out_size| will hold the size of the file. Note that the size of
-// the vmo as queried from the kernel would be rounded up to the page boundary.
-ZXIO_EXPORT zx_status_t zxio_vmo_get_copy(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size);
+ZXIO_EXPORT zx_status_t zxio_vmo_get_copy(zxio_t* io, zx_handle_t* out_vmo);
 
 // Get a read-only VMO containing the whole contents of the file.
 //
 // This function creates a clone of the underlying VMO when possible. If the
 // function cannot create a clone, the function will return an error.
-//
-// If non-null, |out_size| will hold the size of the file. Note that the size of
-// the vmo as queried from the kernel would be rounded up to the page boundary.
-ZXIO_EXPORT zx_status_t zxio_vmo_get_clone(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size);
+ZXIO_EXPORT zx_status_t zxio_vmo_get_clone(zxio_t* io, zx_handle_t* out_vmo);
 
 // Get a read-only handle to the exact VMO used by the file system server to
 // represent the file.
 //
 // This function fails if the server does not have an exact VMO representation
 // of the file.
-//
-// If non-null, |out_size| will hold the size of the file. Note that the size of
-// the vmo as queried from the kernel would be rounded up to the page boundary.
-ZXIO_EXPORT zx_status_t zxio_vmo_get_exact(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size);
+ZXIO_EXPORT zx_status_t zxio_vmo_get_exact(zxio_t* io, zx_handle_t* out_vmo);
 
 // Get a read + execute VMO as a clone of the underlying VMO in this file.
 // This function will fail rather than copying the contents if it cannot clone,
 // or if the particular |io| does not support / allow a read + execute VMO
 // representation.
-//
-// If non-null, |out_size| will hold the size of the file. Note that the size of
-// the vmo as queried from the kernel would be rounded up to the page boundary.
-ZXIO_EXPORT zx_status_t zxio_vmo_get_exec(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size);
+ZXIO_EXPORT zx_status_t zxio_vmo_get_exec(zxio_t* io, zx_handle_t* out_vmo);
 
 // Queries the number of bytes available to read from this object without
 // blocking.
