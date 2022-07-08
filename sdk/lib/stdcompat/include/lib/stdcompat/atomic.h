@@ -8,9 +8,9 @@
 #include <assert.h>
 
 #include <atomic>
-#include <type_traits>
 
-#include "./internal/atomic.h"
+#include "internal/atomic.h"
+#include "internal/linkage.h"
 #include "memory.h"
 #include "type_traits.h"
 #include "version.h"
@@ -40,15 +40,19 @@ class atomic_ref : public atomic_internal::atomic_ops<atomic_ref<T>, T>,
   static constexpr size_t required_alignment = atomic_internal::alignment<T>::required_alignment;
 
   atomic_ref() = delete;
-  explicit atomic_ref(T& obj) : ptr_(cpp17::addressof(obj)) { check_ptr_alignment(); }
-  atomic_ref(const atomic_ref& ref) noexcept = default;
+  STDCOMPAT_INLINE_LINKAGE explicit atomic_ref(T& obj) : ptr_(cpp17::addressof(obj)) {
+    check_ptr_alignment();
+  }
+  STDCOMPAT_INLINE_LINKAGE atomic_ref(const atomic_ref& ref) noexcept = default;
   atomic_ref& operator=(const atomic_ref&) = delete;
-  atomic_ref& operator=(T& desired) {
+  STDCOMPAT_INLINE_LINKAGE atomic_ref& operator=(T& desired) {
     this->store(desired);
     return *this;
   }
 
-  bool is_lock_free() const noexcept { return __atomic_is_lock_free(sizeof(T), ptr_); }
+  STDCOMPAT_INLINE_LINKAGE bool is_lock_free() const noexcept {
+    return __atomic_is_lock_free(sizeof(T), ptr_);
+  }
 
   // TODO(fxb/ )wait, notify and notify_all to be implemented later.
 
@@ -58,7 +62,7 @@ class atomic_ref : public atomic_internal::atomic_ops<atomic_ref<T>, T>,
   friend atomic_internal::bitwise_ops<atomic_ref, T>;
 
   // Checks that pointer is correctly aligned.
-  void check_ptr_alignment() const {
+  STDCOMPAT_INLINE_LINKAGE void check_ptr_alignment() const {
     // Pointers not aligned to |required_alignment| are considered UB.
     assert(reinterpret_cast<uintptr_t>(ptr_) % required_alignment == 0);
   }

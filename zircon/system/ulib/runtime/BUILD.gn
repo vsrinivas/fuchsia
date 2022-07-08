@@ -21,6 +21,11 @@ zx_library("runtime") {
   # This code is used in early startup, where safe-stack is not ready yet.
   configs += [ "//build/config/sanitizers:no_sanitizers" ]
 
+  # This might be necessary if something from stdcompat didn't get inlined.  A
+  # libc++ ABI symbol that's supposedly the same might be COMDAT'd with another
+  # TU's version that didn't disable the sanitizers.
+  defines = [ "_LIBCPP_HIDE_FROM_ABI_PER_TU=1" ]
+
   if (zircon_toolchain != false) {
     # Make sure the thread_trampoline function has a frame pointer so that
     # user-visible thread backtraces are consistent across collection methods.
