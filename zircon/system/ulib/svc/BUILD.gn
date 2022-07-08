@@ -19,6 +19,62 @@ zx_library("svc") {
     "//zircon/system/ulib/zx",
   ]
 
+  #  ________  _________  ________  ________
+  # |\   ____\|\___   ___\\   __  \|\   __  \
+  # \ \  \___|\|___ \  \_\ \  \|\  \ \  \|\  \
+  #  \ \_____  \   \ \  \ \ \  \\\  \ \   ____\
+  #   \|____|\  \   \ \  \ \ \  \\\  \ \  \___|
+  #     ____\_\  \   \ \__\ \ \_______\ \__\
+  #    |\_________\   \|__|  \|_______|\|__|
+  #    \|_________|
+  #
+  # This is an allowlist of targets that use the svc library. New code should use the
+  # component::OutgoingDirectory class in //sdk/lib/sys/component/cpp instead.
+  #
+  # To remove items from the allowlist, please send a change to one of the OWNERS of
+  # this file to remove an element from the visibility list below.
+  #
+  # Please allowlist entire directories rather than individual targets as it
+  # requires less allowlist churn over time.
+  #
+  # To regenerate:
+  #   scripts/gn/trim_visibility.py --target="//zircon/system/ulib/svc"
+  visibility = [
+    "//examples/fidl/llcpp/services/server/*",
+    "//sdk/lib/driver_test_realm/*",
+    "//src/bringup/bin/console/*",
+    "//src/bringup/bin/device-name-provider/*",
+    "//src/bringup/bin/miscsvc/*",
+    "//src/bringup/bin/pwrbtn-monitor/*",
+    "//src/bringup/bin/svchost/*",
+    "//src/bringup/bin/sysinfo/*",
+    "//src/connectivity/network/tun/network-tun/*",
+    "//src/connectivity/openthread/ot-stack/*",
+    "//src/connectivity/openthread/third_party/openthread/platform/*",
+    "//src/connectivity/openthread/third_party/openthread/platform/tests/*",
+    "//src/devices/bin/driver_manager/*",
+    "//src/devices/block/drivers/sdmmc/*",
+    "//src/devices/board/lib/acpi/*",
+    "//src/devices/bus/drivers/pci/*",
+    "//src/devices/i2c/drivers/i2c/*",
+    "//src/devices/mcu/drivers/chromiumos-ec-core/*",
+    "//src/devices/mcu/drivers/chromiumos-ec-lpc/*",
+    "//src/devices/testing/mock-ddk/*",
+    "//src/devices/tests/fidl-protocol/*",
+    "//src/graphics/drivers/misc/goldfish/*",
+    "//src/graphics/drivers/misc/goldfish_address_space/*",
+    "//src/graphics/drivers/misc/goldfish_sync/*",
+    "//src/storage/lib/paver/*",
+    "//src/storage/lib/paver/test/*",
+    "//src/sys/component_manager/tests/rights/*",
+    "//src/sys/component_manager/tests/security_policy/capability_allowlist/*",
+    "//src/virtualization/packages/*",
+    "//zircon/system/ulib/kcounter/*",
+    "//zircon/system/ulib/kernel-debug/*",
+    "//zircon/system/ulib/ktrace/*",
+    "//zircon/system/ulib/profile/*",
+  ]
+
   # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
