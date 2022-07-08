@@ -39,12 +39,6 @@ struct ErrorContext {
     error: Errno,
 }
 
-impl std::fmt::Debug for ErrorContext {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:?} caused {:?}", self.syscall, self.error)
-    }
-}
-
 /// Spawns a thread that executes `current_task`.
 ///
 /// The `current_task` is expected to be initialized before calling `execute_task`. This means
@@ -243,7 +237,12 @@ fn run_exception_loop(
                     match exit_status {
                         Exit(value) if value == 0 => {}
                         _ => {
-                            log::warn!("[{:?}] {:?}", current_task, error_context);
+                            log::warn!(
+                                "{:?} last failing syscall before exit: {:?}, failed with {:?}",
+                                current_task,
+                                error_context.syscall,
+                                error_context.error
+                            );
                         }
                     };
                 }
