@@ -52,8 +52,8 @@ source_set("observer_registry") {
 
 source_set("geometry_provider") {
   sources = [
-    "geometry_provider_manager.cc",
-    "geometry_provider_manager.h",
+    "geometry_provider.cc",
+    "geometry_provider.h",
   ]
   deps = [ ":view_tree_snapshot" ]
   public_deps = [

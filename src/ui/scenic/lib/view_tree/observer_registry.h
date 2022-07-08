@@ -9,7 +9,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include "src/ui/scenic/lib/view_tree/geometry_provider_manager.h"
+#include "src/ui/scenic/lib/view_tree/geometry_provider.h"
 
 namespace view_tree {
 
@@ -20,7 +20,7 @@ namespace view_tree {
 class Registry : public fuchsia::ui::observation::test::Registry {
  public:
   // Sets up forwarding of geometry requests to the geometry provider manager.
-  Registry(std::shared_ptr<view_tree::GeometryProviderManager> geometry_provider_manager);
+  Registry(std::shared_ptr<view_tree::GeometryProvider> geometry_provider);
 
   // |fuchsia.ui.observation.test.Registry.RegisterGlobalGeometryProvider|.
   void RegisterGlobalGeometryProvider(
@@ -32,7 +32,7 @@ class Registry : public fuchsia::ui::observation::test::Registry {
  private:
   fidl::BindingSet<fuchsia::ui::observation::test::Registry> bindings_;
 
-  std::shared_ptr<view_tree::GeometryProviderManager> geometry_provider_manager_;
+  std::shared_ptr<view_tree::GeometryProvider> geometry_provider_;
 };
 
 }  // namespace view_tree

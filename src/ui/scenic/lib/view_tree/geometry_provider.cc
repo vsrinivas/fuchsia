@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "geometry_provider_manager.h"
+#include "geometry_provider.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
@@ -29,8 +29,8 @@ const auto fuog_BUFFER_SIZE = fuchsia::ui::observation::geometry::BUFFER_SIZE;
 const auto fuog_MAX_VIEW_COUNT = fuchsia::ui::observation::geometry::MAX_VIEW_COUNT;
 const fuog_Error kNoError;
 
-void GeometryProviderManager::Register(fidl::InterfaceRequest<fuog_Provider> endpoint,
-                                       zx_koid_t context_view) {
+void GeometryProvider::Register(fidl::InterfaceRequest<fuog_Provider> endpoint,
+                                zx_koid_t context_view) {
   FX_DCHECK(endpoint.is_valid()) << "precondition";
   FX_DCHECK(context_view != ZX_KOID_INVALID) << "precondition";
 
@@ -42,7 +42,7 @@ void GeometryProviderManager::Register(fidl::InterfaceRequest<fuog_Provider> end
                                                    })});
 }
 
-void GeometryProviderManager::RegisterGlobalGeometryProvider(
+void GeometryProvider::RegisterGlobalGeometryProvider(
     fidl::InterfaceRequest<fuchsia::ui::observation::geometry::Provider> endpoint) {
   FX_DCHECK(endpoint.is_valid()) << "precondition";
   auto endpoint_id = endpoint_counter_++;
@@ -54,8 +54,7 @@ void GeometryProviderManager::RegisterGlobalGeometryProvider(
                                      })});
 }
 
-void GeometryProviderManager::OnNewViewTreeSnapshot(
-    std::shared_ptr<const view_tree::Snapshot> snapshot) {
+void GeometryProvider::OnNewViewTreeSnapshot(std::shared_ptr<const view_tree::Snapshot> snapshot) {
   // Remove any dead endpoints.
   for (auto it = endpoints_.begin(); it != endpoints_.end();) {
     if (!it->second.IsAlive()) {
@@ -71,7 +70,7 @@ void GeometryProviderManager::OnNewViewTreeSnapshot(
   }
 }
 
-fuog_ViewTreeSnapshotPtr GeometryProviderManager::ExtractObservationSnapshot(
+fuog_ViewTreeSnapshotPtr GeometryProvider::ExtractObservationSnapshot(
     std::optional<zx_koid_t> endpoint_context_view,
     std::shared_ptr<const view_tree::Snapshot> snapshot) {
   auto view_tree_snapshot = fuog_ViewTreeSnapshot::New();
@@ -142,7 +141,7 @@ fuog_ViewTreeSnapshotPtr GeometryProviderManager::ExtractObservationSnapshot(
   return view_tree_snapshot;
 }
 
-fuog_ViewDescriptor GeometryProviderManager::ExtractViewDescriptor(
+fuog_ViewDescriptor GeometryProvider::ExtractViewDescriptor(
     zx_koid_t view_ref_koid, zx_koid_t context_view,
     std::shared_ptr<const view_tree::Snapshot> snapshot) {
   auto& view_node = snapshot->view_tree.at(view_ref_koid);
@@ -241,18 +240,18 @@ fuog_ViewDescriptor GeometryProviderManager::ExtractViewDescriptor(
   return view_descriptor;
 }
 
-GeometryProviderManager::ProviderEndpoint::ProviderEndpoint(
+GeometryProvider::ProviderEndpoint::ProviderEndpoint(
     fidl::InterfaceRequest<fuog_Provider> endpoint, std::optional<zx_koid_t> context_view,
     ProviderEndpointId id, fit::function<void()> destroy_instance_function)
     : endpoint_(this, std::move(endpoint)),
       context_view_(std::move(context_view)),
       id_(id),
-      // The |destroy_instance_function_| captures the 'this' pointer to the GeometryProviderManager
+      // The |destroy_instance_function_| captures the 'this' pointer to the GeometryProvider
       // instance. However, the below operation is safe because it is expected that the
-      // GeometryProviderManager outlives the ProviderEndpoint.
+      // GeometryProvider outlives the ProviderEndpoint.
       destroy_instance_function_(std::move(destroy_instance_function)) {}
 
-GeometryProviderManager::ProviderEndpoint::ProviderEndpoint(ProviderEndpoint&& original) noexcept
+GeometryProvider::ProviderEndpoint::ProviderEndpoint(ProviderEndpoint&& original) noexcept
     : endpoint_(this, original.endpoint_.Unbind()),
       view_tree_snapshots_(std::move(original.view_tree_snapshots_)),
       pending_callback_(std::move(original.pending_callback_)),
@@ -260,7 +259,7 @@ GeometryProviderManager::ProviderEndpoint::ProviderEndpoint(ProviderEndpoint&& o
       id_(original.id_),
       destroy_instance_function_(std::move(original.destroy_instance_function_)) {}
 
-void GeometryProviderManager::ProviderEndpoint::AddViewTreeSnapshot(
+void GeometryProvider::ProviderEndpoint::AddViewTreeSnapshot(
     fuog_ViewTreeSnapshotPtr view_tree_snapshot) {
   view_tree_snapshots_.push_back(std::move(view_tree_snapshot));
 
@@ -273,7 +272,7 @@ void GeometryProviderManager::ProviderEndpoint::AddViewTreeSnapshot(
   SendResponseMaybe();
 }
 
-void GeometryProviderManager::ProviderEndpoint::Watch(fuog_Provider::WatchCallback callback) {
+void GeometryProvider::ProviderEndpoint::Watch(fuog_Provider::WatchCallback callback) {
   // Check if there is an ongoing Watch call. If there is an in-flight Watch call, close the channel
   // and remove itself from |endpoints_|.
   if (pending_callback_ != nullptr) {
@@ -287,7 +286,7 @@ void GeometryProviderManager::ProviderEndpoint::Watch(fuog_Provider::WatchCallba
   SendResponseMaybe();
 }
 
-void GeometryProviderManager::ProviderEndpoint::SendResponseMaybe() {
+void GeometryProvider::ProviderEndpoint::SendResponseMaybe() {
   // Check if we have a client waiting for a response and if we have snapshots queued up to be sent
   // to the client before sending the response.
   if (pending_callback_ != nullptr && !view_tree_snapshots_.empty()) {
@@ -295,7 +294,7 @@ void GeometryProviderManager::ProviderEndpoint::SendResponseMaybe() {
   }
 }
 
-void GeometryProviderManager::ProviderEndpoint::SendResponse() {
+void GeometryProvider::ProviderEndpoint::SendResponse() {
   FX_DCHECK(!view_tree_snapshots_.empty());
   FX_DCHECK(pending_callback_ != nullptr);
 
@@ -339,13 +338,13 @@ void GeometryProviderManager::ProviderEndpoint::SendResponse() {
   Reset();
 }
 
-void GeometryProviderManager::ProviderEndpoint::CloseChannel() {
+void GeometryProvider::ProviderEndpoint::CloseChannel() {
   endpoint_.Close(ZX_ERR_BAD_STATE);
   // NOTE: Triggers destruction of this object.
   destroy_instance_function_();
 }
 
-void GeometryProviderManager::ProviderEndpoint::Reset() {
+void GeometryProvider::ProviderEndpoint::Reset() {
   pending_callback_ = nullptr;
   view_tree_snapshots_.clear();
   fidl::Clone(kNoError, &error_);

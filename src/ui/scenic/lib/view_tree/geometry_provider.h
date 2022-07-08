@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_VIEW_TREE_GEOMETRY_PROVIDER_MANAGER_H_
-#define SRC_UI_SCENIC_LIB_VIEW_TREE_GEOMETRY_PROVIDER_MANAGER_H_
+#ifndef SRC_UI_SCENIC_LIB_VIEW_TREE_GEOMETRY_PROVIDER_H_
+#define SRC_UI_SCENIC_LIB_VIEW_TREE_GEOMETRY_PROVIDER_H_
 
 #include <fuchsia/ui/observation/geometry/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -20,9 +20,9 @@ namespace view_tree {
 // fuchsia.ui.observation.geometry.Provider protocol clients. This class also listens for new
 // snapshots generated every frame, and sends a processed version of them to these registered
 // clients.
-class GeometryProviderManager {
+class GeometryProvider {
  public:
-  GeometryProviderManager() = default;
+  GeometryProvider() = default;
   // Adds a server side endpoint to |endpoints_| for lifecycle management.
   void Register(fidl::InterfaceRequest<fuchsia::ui::observation::geometry::Provider> endpoint,
                 zx_koid_t context_view);
@@ -130,9 +130,9 @@ class GeometryProviderManager {
   // Incremented when Register() is called.
   ProviderEndpointId endpoint_counter_ = 0;
 
-  FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(GeometryProviderManager);
+  FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(GeometryProvider);
 };
 
 }  // namespace view_tree
 
-#endif  // SRC_UI_SCENIC_LIB_VIEW_TREE_GEOMETRY_PROVIDER_MANAGER_H_
+#endif  // SRC_UI_SCENIC_LIB_VIEW_TREE_GEOMETRY_PROVIDER_H_

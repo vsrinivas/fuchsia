@@ -37,7 +37,7 @@
 #include "src/ui/scenic/lib/shutdown/lifecycle_controller_impl.h"
 #include "src/ui/scenic/lib/shutdown/shutdown_manager.h"
 #include "src/ui/scenic/lib/utils/metrics_impl.h"
-#include "src/ui/scenic/lib/view_tree/geometry_provider_manager.h"
+#include "src/ui/scenic/lib/view_tree/geometry_provider.h"
 #include "src/ui/scenic/lib/view_tree/observer_registry.h"
 #include "src/ui/scenic/lib/view_tree/view_ref_installed_impl.h"
 #include "src/ui/scenic/lib/view_tree/view_tree_snapshotter.h"
@@ -141,7 +141,7 @@ class App {
 
   std::unique_ptr<view_tree::Registry> observer_registry_;
 
-  std::shared_ptr<view_tree::GeometryProviderManager> geometry_provider_manager_;
+  std::shared_ptr<view_tree::GeometryProvider> geometry_provider_;
 
   AnnotationRegistry annotation_registry_;
 

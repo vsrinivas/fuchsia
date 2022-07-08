@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/view_tree/geometry_provider_manager.h"
+#include "src/ui/scenic/lib/view_tree/geometry_provider.h"
 
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
@@ -16,7 +16,7 @@
 #include "src/ui/scenic/lib/view_tree/tests/utils.h"
 
 namespace view_tree {
-namespace geometry_provider_manager::test {
+namespace geometry_provider::test {
 using fuog_ProviderPtr = fuchsia::ui::observation::geometry::ProviderPtr;
 using fuog_ProviderWatchResponse = fuchsia::ui::observation::geometry::ProviderWatchResponse;
 using fuc_ViewportProperties = fuchsia::ui::composition::ViewportProperties;
@@ -25,11 +25,11 @@ const auto fuog_MAX_VIEW_COUNT = fuchsia::ui::observation::geometry::MAX_VIEW_CO
 
 // Generates |num_snapshots| snapshots with |total_nodes| view nodes and triggers the geometry
 // provider manager to add the newly generated snapshots to all the registered endpoints.
-void PopulateEndpointsWithSnapshots(GeometryProviderManager& geometry_provider_manager,
-                                    uint32_t num_snapshots, uint64_t total_nodes,
+void PopulateEndpointsWithSnapshots(GeometryProvider& geometry_provider, uint32_t num_snapshots,
+                                    uint64_t total_nodes,
                                     std::optional<bool> gfx_is_rendering = std::nullopt) {
   for (uint32_t i = 0; i < num_snapshots; i++) {
-    geometry_provider_manager.OnNewViewTreeSnapshot(
+    geometry_provider.OnNewViewTreeSnapshot(
         SingleDepthViewTreeSnapshot(total_nodes, gfx_is_rendering));
   }
 }
@@ -37,20 +37,20 @@ void PopulateEndpointsWithSnapshots(GeometryProviderManager& geometry_provider_m
 // Unit tests for testing the fuchsia.ui.observation.geometry.Provider
 // protocol.
 // Class fixture for TEST_F.
-class GeometryProviderManagerTest : public gtest::TestLoopFixture {
+class GeometryProviderTest : public gtest::TestLoopFixture {
  protected:
-  GeometryProviderManagerTest() {
-    geometry_provider_manager_.Register(client_.NewRequest(), kNodeA);
+  GeometryProviderTest() {
+    geometry_provider_.Register(client_.NewRequest(), kNodeA);
 
     FX_CHECK(client_.is_bound());
   }
 
-  GeometryProviderManager geometry_provider_manager_;
+  GeometryProvider geometry_provider_;
   fuog_ProviderPtr client_;
 };
 
 // Clients waiting for a snapshot get a response as soon as a new snapshot is generated.
-TEST_F(GeometryProviderManagerTest, SingleWatchBeforeUpdate) {
+TEST_F(GeometryProviderTest, SingleWatchBeforeUpdate) {
   std::optional<fuog_ProviderWatchResponse> client_result;
   const uint32_t num_snapshots = 1;
   const uint64_t num_nodes = 1;
@@ -64,7 +64,7 @@ TEST_F(GeometryProviderManagerTest, SingleWatchBeforeUpdate) {
   // Clients should not receive any snapshots when no snapshots have been generated.
   EXPECT_FALSE(client_result.has_value());
 
-  PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes);
+  PopulateEndpointsWithSnapshots(geometry_provider_, num_snapshots, num_nodes);
   RunLoopUntilIdle();
 
   // Clients are sent the new snapshot as soon as a new snapshot is generated.
@@ -73,7 +73,7 @@ TEST_F(GeometryProviderManagerTest, SingleWatchBeforeUpdate) {
 }
 
 // A Watch call should fail when there is another hanging Watch call by the same client.
-TEST_F(GeometryProviderManagerTest, WatchDuringHangingWatch_ShouldFail) {
+TEST_F(GeometryProviderTest, WatchDuringHangingWatch_ShouldFail) {
   fuog_ProviderWatchResponse client_result;
   fuog_ProviderWatchResponse client_result_1;
 
@@ -89,12 +89,12 @@ TEST_F(GeometryProviderManagerTest, WatchDuringHangingWatch_ShouldFail) {
 
 // Clients receive snapshots when there are snapshots queued up from the time the client had
 // registered.
-TEST_F(GeometryProviderManagerTest, ClientReceivesPendingSnapshots) {
+TEST_F(GeometryProviderTest, ClientReceivesPendingSnapshots) {
   std::optional<fuog_ProviderWatchResponse> client_result;
   const uint32_t num_snapshots = fuog_BUFFER_SIZE;
   const uint64_t num_nodes = 1;
 
-  PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes);
+  PopulateEndpointsWithSnapshots(geometry_provider_, num_snapshots, num_nodes);
 
   client_->Watch([&client_result](auto response) { client_result = std::move(response); });
 
@@ -109,13 +109,13 @@ TEST_F(GeometryProviderManagerTest, ClientReceivesPendingSnapshots) {
 
 // Client is able to make a successful Watch() call after the previous Watch() call finished
 // processing.
-TEST_F(GeometryProviderManagerTest, WatchAfterProcessedWatch) {
+TEST_F(GeometryProviderTest, WatchAfterProcessedWatch) {
   {
     std::optional<fuog_ProviderWatchResponse> client_result;
     const uint32_t num_snapshots = fuog_BUFFER_SIZE;
     const uint64_t num_nodes = 1;
 
-    PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes);
+    PopulateEndpointsWithSnapshots(geometry_provider_, num_snapshots, num_nodes);
 
     client_->Watch([&client_result](auto response) { client_result = std::move(response); });
     RunLoopUntilIdle();
@@ -137,7 +137,7 @@ TEST_F(GeometryProviderManagerTest, WatchAfterProcessedWatch) {
     // the previous Watch() call.
     ASSERT_FALSE(client_result.has_value());
 
-    PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes);
+    PopulateEndpointsWithSnapshots(geometry_provider_, num_snapshots, num_nodes);
     RunLoopUntilIdle();
 
     // Client receives the latest generated snapshot.
@@ -149,13 +149,13 @@ TEST_F(GeometryProviderManagerTest, WatchAfterProcessedWatch) {
 // In case the number of snapshots queued up before the next Watch() call is greater than
 // fuchsia::ui::observation::geometry:BUFFER_SIZE, only the latest f.u.o.g.BUFFER_SIZE snapshots are
 // returned and the old snapshots are discarded.
-TEST_F(GeometryProviderManagerTest, BufferOverflowTest) {
+TEST_F(GeometryProviderTest, BufferOverflowTest) {
   std::optional<fuog_ProviderWatchResponse> client_result;
   const uint32_t num_snapshots = fuog_BUFFER_SIZE;
   const uint64_t num_nodes = 1;
 
-  PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes);
-  PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes + 1);
+  PopulateEndpointsWithSnapshots(geometry_provider_, num_snapshots, num_nodes);
+  PopulateEndpointsWithSnapshots(geometry_provider_, num_snapshots, num_nodes + 1);
 
   client_->Watch([&client_result](auto response) { client_result = std::move(response); });
 
@@ -175,7 +175,7 @@ TEST_F(GeometryProviderManagerTest, BufferOverflowTest) {
 
 // Clients registered with the protocol should be receiving updates even if one of the clients is
 // killed for making an illegal Watch() call.
-TEST_F(GeometryProviderManagerTest, MisbehavingClientsShouldNotAffectOtherClients) {
+TEST_F(GeometryProviderTest, MisbehavingClientsShouldNotAffectOtherClients) {
   fuog_ProviderPtr client1;
   fuog_ProviderPtr client2;
   std::optional<fuog_ProviderWatchResponse> client_result;
@@ -184,8 +184,8 @@ TEST_F(GeometryProviderManagerTest, MisbehavingClientsShouldNotAffectOtherClient
   const uint32_t num_snapshots = fuog_BUFFER_SIZE;
   const uint64_t num_nodes = 1;
 
-  geometry_provider_manager_.Register(client1.NewRequest(), kNodeA);
-  geometry_provider_manager_.Register(client2.NewRequest(), kNodeA);
+  geometry_provider_.Register(client1.NewRequest(), kNodeA);
+  geometry_provider_.Register(client2.NewRequest(), kNodeA);
 
   // Client makes an illegal Watch() call resulting in it being killed.
   client1->Watch([&client1_result](auto response) { client1_result = std::move(response); });
@@ -194,7 +194,7 @@ TEST_F(GeometryProviderManagerTest, MisbehavingClientsShouldNotAffectOtherClient
 
   EXPECT_FALSE(client1.is_bound());
 
-  PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes);
+  PopulateEndpointsWithSnapshots(geometry_provider_, num_snapshots, num_nodes);
 
   client_->Watch([&client_result](auto response) { client_result = std::move(response); });
   client2->Watch([&client2_result](auto response) { client2_result = std::move(response); });
@@ -211,7 +211,7 @@ TEST_F(GeometryProviderManagerTest, MisbehavingClientsShouldNotAffectOtherClient
 }
 
 // Other clients should still receive pending snapshot updates even if any other client dies.
-TEST_F(GeometryProviderManagerTest, ClientFailuresShouldNotAffectOtherClients) {
+TEST_F(GeometryProviderTest, ClientFailuresShouldNotAffectOtherClients) {
   fuog_ProviderPtr client1;
   fuog_ProviderPtr client2;
   std::optional<fuog_ProviderWatchResponse> client_result;
@@ -219,13 +219,13 @@ TEST_F(GeometryProviderManagerTest, ClientFailuresShouldNotAffectOtherClients) {
   const uint32_t num_snapshots = fuog_BUFFER_SIZE;
   const uint64_t num_nodes = 1;
 
-  geometry_provider_manager_.Register(client1.NewRequest(), kNodeA);
-  geometry_provider_manager_.Register(client2.NewRequest(), kNodeA);
+  geometry_provider_.Register(client1.NewRequest(), kNodeA);
+  geometry_provider_.Register(client2.NewRequest(), kNodeA);
 
   // client2 closes the channel to mock client death.
   client2.Unbind();
 
-  PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes);
+  PopulateEndpointsWithSnapshots(geometry_provider_, num_snapshots, num_nodes);
 
   client_->Watch([&client_result](auto response) { client_result = std::move(response); });
   client1->Watch([&client1_result](auto response) { client1_result = std::move(response); });
@@ -242,12 +242,12 @@ TEST_F(GeometryProviderManagerTest, ClientFailuresShouldNotAffectOtherClients) {
   EXPECT_EQ(client1_result->updates().size(), fuog_BUFFER_SIZE);
 }
 
-TEST_F(GeometryProviderManagerTest, ClientDoesNotReceiveViews_WhenViewsCountExceedMaxViewAllowed) {
+TEST_F(GeometryProviderTest, ClientDoesNotReceiveViews_WhenViewsCountExceedMaxViewAllowed) {
   std::optional<fuog_ProviderWatchResponse> client_result;
   const uint32_t num_snapshots = 1;
   const uint64_t num_nodes = fuog_MAX_VIEW_COUNT * 2;
 
-  PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes);
+  PopulateEndpointsWithSnapshots(geometry_provider_, num_snapshots, num_nodes);
 
   client_->Watch([&client_result](auto response) { client_result = std::move(response); });
   RunLoopUntilIdle();
@@ -264,7 +264,7 @@ TEST_F(GeometryProviderManagerTest, ClientDoesNotReceiveViews_WhenViewsCountExce
 
 // A Watch() call should succeed when size of the response exceeds the maximum size of a message
 // that can be sent over the FIDL channel.
-TEST_F(GeometryProviderManagerTest, WatchShouldSucceed_WhenResponseSizeExceedsFIDLChannelMaxSize) {
+TEST_F(GeometryProviderTest, WatchShouldSucceed_WhenResponseSizeExceedsFIDLChannelMaxSize) {
   // The total number of f.u.o.g.ViewTreeSnapshots will always be less than fuog_BUFFER_SIZE when
   // the response size exceeds FIDL channel's limit.
   {
@@ -272,7 +272,7 @@ TEST_F(GeometryProviderManagerTest, WatchShouldSucceed_WhenResponseSizeExceedsFI
     const uint32_t num_snapshots = fuog_BUFFER_SIZE;
     const uint64_t num_nodes = 10;
 
-    PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes);
+    PopulateEndpointsWithSnapshots(geometry_provider_, num_snapshots, num_nodes);
 
     client_->Watch([&client_result](auto response) { client_result = std::move(response); });
     RunLoopUntilIdle();
@@ -293,17 +293,17 @@ TEST_F(GeometryProviderManagerTest, WatchShouldSucceed_WhenResponseSizeExceedsFI
     {
       const uint32_t num_snapshots = 1;
       const uint64_t num_nodes = fuog_MAX_VIEW_COUNT;
-      PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes);
+      PopulateEndpointsWithSnapshots(geometry_provider_, num_snapshots, num_nodes);
     }
     {
       const uint32_t num_snapshots = 1;
       const uint64_t num_nodes = fuog_MAX_VIEW_COUNT - 10;
-      PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes);
+      PopulateEndpointsWithSnapshots(geometry_provider_, num_snapshots, num_nodes);
     }
     {
       const uint32_t num_snapshots = 1;
       const uint64_t num_nodes = fuog_MAX_VIEW_COUNT - 100;
-      PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes);
+      PopulateEndpointsWithSnapshots(geometry_provider_, num_snapshots, num_nodes);
     }
 
     client_->Watch([&client_result](auto response) { client_result = std::move(response); });
@@ -331,7 +331,7 @@ TEST_F(GeometryProviderManagerTest, WatchShouldSucceed_WhenResponseSizeExceedsFI
 // node_b
 //  |
 // node_c
-TEST_F(GeometryProviderManagerTest, ExtractObservationSnapshotTest) {
+TEST_F(GeometryProviderTest, ExtractObservationSnapshotTest) {
   auto snapshot = std::make_shared<view_tree::Snapshot>();
   zx_koid_t node_a_koid = 1, node_b_koid = 2, node_c_koid = 3;
   auto node_a = ViewNode{.children = {node_b_koid}};
@@ -374,7 +374,7 @@ TEST_F(GeometryProviderManagerTest, ExtractObservationSnapshotTest) {
   // Client should receive an empty views vector in the response when a view_tree::Snapshot has no
   // views.
   {
-    auto view_tree_snapshot = view_tree::GeometryProviderManager::ExtractObservationSnapshot(
+    auto view_tree_snapshot = view_tree::GeometryProvider::ExtractObservationSnapshot(
         /*context_view*/ std::nullopt, snapshot);
     ASSERT_TRUE(view_tree_snapshot);
     ASSERT_TRUE(view_tree_snapshot->has_views());
@@ -389,7 +389,7 @@ TEST_F(GeometryProviderManagerTest, ExtractObservationSnapshotTest) {
   // Client should receive fuog_ViewDescriptor for every node in the view tree since the root node
   // is the context view.
   {
-    auto view_tree_snapshot = view_tree::GeometryProviderManager::ExtractObservationSnapshot(
+    auto view_tree_snapshot = view_tree::GeometryProvider::ExtractObservationSnapshot(
         /*context_view*/ node_a_koid, snapshot);
 
     ASSERT_TRUE(view_tree_snapshot);
@@ -550,7 +550,7 @@ TEST_F(GeometryProviderManagerTest, ExtractObservationSnapshotTest) {
   // Client should receive fuog_ViewDescriptor for the context_view only as the context_view is a
   // leaf node.
   {
-    auto view_tree_snapshot = view_tree::GeometryProviderManager::ExtractObservationSnapshot(
+    auto view_tree_snapshot = view_tree::GeometryProvider::ExtractObservationSnapshot(
         /*context_view*/ node_c_koid, snapshot);
 
     ASSERT_TRUE(view_tree_snapshot);
@@ -565,15 +565,15 @@ TEST_F(GeometryProviderManagerTest, ExtractObservationSnapshotTest) {
 
 // Clients registered through |RegisterGlobalGeometryProvider| should receive information about all
 // the nodes in a view tree.
-TEST_F(GeometryProviderManagerTest, RegisterGlobalGeometryProviderTest) {
+TEST_F(GeometryProviderTest, RegisterGlobalGeometryProviderTest) {
   fuog_ProviderPtr client;
   std::optional<fuog_ProviderWatchResponse> client_result;
   const uint32_t num_snapshots = 1;
   const uint64_t num_nodes = 5;
 
-  geometry_provider_manager_.RegisterGlobalGeometryProvider(client.NewRequest());
+  geometry_provider_.RegisterGlobalGeometryProvider(client.NewRequest());
 
-  PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes);
+  PopulateEndpointsWithSnapshots(geometry_provider_, num_snapshots, num_nodes);
 
   client->Watch([&client_result](auto response) { client_result = std::move(response); });
 
@@ -594,7 +594,7 @@ TEST_F(GeometryProviderManagerTest, RegisterGlobalGeometryProviderTest) {
 // view nodes that have rendered. However, in the case of flatland as views do not generate a
 // |is_rendering| signal, the view nodes present in a ViewTreeSnapshot will be present in a Watch()
 // call's response.
-TEST_F(GeometryProviderManagerTest, GfxIsRenderingTest) {
+TEST_F(GeometryProviderTest, GfxIsRenderingTest) {
   // |gfx_is_rendering| is not set which means that the view nodes belong to flatland instances.
   // Hence |num_nodes| fuog_ViewDescriptors are present in the response.
   {
@@ -602,7 +602,7 @@ TEST_F(GeometryProviderManagerTest, GfxIsRenderingTest) {
     const uint32_t num_snapshots = 1;
     const uint64_t num_nodes = 1;
 
-    PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes);
+    PopulateEndpointsWithSnapshots(geometry_provider_, num_snapshots, num_nodes);
 
     client_->Watch([&client_result](auto response) { client_result = std::move(response); });
     RunLoopUntilIdle();
@@ -622,7 +622,7 @@ TEST_F(GeometryProviderManagerTest, GfxIsRenderingTest) {
     const uint32_t num_snapshots = 1;
     const uint64_t num_nodes = 1;
 
-    PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes,
+    PopulateEndpointsWithSnapshots(geometry_provider_, num_snapshots, num_nodes,
                                    /*gfx_is_rendering*/ false);
 
     client_->Watch([&client_result](auto response) { client_result = std::move(response); });
@@ -643,7 +643,7 @@ TEST_F(GeometryProviderManagerTest, GfxIsRenderingTest) {
     const uint32_t num_snapshots = 1;
     const uint64_t num_nodes = 1;
 
-    PopulateEndpointsWithSnapshots(geometry_provider_manager_, num_snapshots, num_nodes,
+    PopulateEndpointsWithSnapshots(geometry_provider_, num_snapshots, num_nodes,
                                    /*gfx_is_rendering*/ true);
 
     client_->Watch([&client_result](auto response) { client_result = std::move(response); });
@@ -658,5 +658,5 @@ TEST_F(GeometryProviderManagerTest, GfxIsRenderingTest) {
   }
 }
 
-}  // namespace geometry_provider_manager::test
+}  // namespace geometry_provider::test
 }  // namespace view_tree

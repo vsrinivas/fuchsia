@@ -187,7 +187,7 @@ class View final : public Resource {
 
   // Set to true in |EngineRendererVisitor::Visit| if a view has rendered some content. Set to false
   // when a view is no longer part of the scene or has been destroyed. Used by
-  // GeometryProviderManager to filter rendered views.
+  // GeometryProvider to filter rendered views.
   bool is_rendering_ = false;
 
   // The offset data for the view's bounding box.

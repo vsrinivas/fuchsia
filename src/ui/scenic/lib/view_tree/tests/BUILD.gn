@@ -36,7 +36,7 @@ executable("view_tree_test_bin") {
 
 executable("geometry_provider_test_bin") {
   testonly = true
-  sources = [ "geometry_provider_manager_unittest.cc" ]
+  sources = [ "geometry_provider_unittest.cc" ]
   deps = [
     ":common_deps",
     "//sdk/lib/ui/scenic/cpp",
