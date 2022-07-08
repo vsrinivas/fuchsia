@@ -199,7 +199,6 @@ core/appmgr
    --fuchsia.boot.FactoryItems
    --fuchsia.boot.Items
    --fuchsia.boot.ReadOnlyLog
-   --fuchsia.boot.RootJobForInspect
    --fuchsia.boot.RootResource
    [truncated]
 ```
