@@ -1,0 +1,46 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components/fuchsia_unittest_package.gni")
+
+group("formatting") {
+  public_deps = [ ":lib" ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":formatting-unittest" ]
+}
+
+source_set("lib") {
+  visibility = [ ":*" ]
+  sources = [
+    "formatting.cc",
+    "macros.h",
+  ]
+  public = [ "formatting.h" ]
+  deps = [
+    "//sdk/fidl/fuchsia.camera2",
+    "//sdk/fidl/fuchsia.camera2.hal",
+    "//sdk/fidl/fuchsia.camera3",
+    "//sdk/fidl/fuchsia.sysmem",
+    "//src/lib/fsl",
+  ]
+}
+
+executable("formatting-unittest-bin") {
+  visibility = [ ":*" ]
+  testonly = true
+  sources = [ "formatting-unittest.cc" ]
+  deps = [
+    "//sdk/fidl/fuchsia.camera2",
+    "//src/camera/lib/formatting",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+fuchsia_unittest_package("formatting-unittest") {
+  visibility = [ ":*" ]
+  deps = [ ":formatting-unittest-bin" ]
+}
