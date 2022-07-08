@@ -82,6 +82,9 @@ type testrunnerFlags struct {
 	// Whether to prefetch test packages. This is only useful when fetching
 	// packages ephemerally.
 	prefetchPackages bool
+
+	// Whether to use serial to run tests on the target.
+	useSerial bool
 }
 
 func usage() {
@@ -109,6 +112,7 @@ func main() {
 	flag.StringVar(&flags.ffxPath, "ffx", "", "Path to the ffx tool.")
 	flag.IntVar(&flags.ffxExperimentLevel, "ffx-experiment-level", 0, "The level of experimental features to enable. If -ffx is not set, this will have no effect.")
 	flag.BoolVar(&flags.prefetchPackages, "prefetch-packages", false, "Prefetch any test packages in the background.")
+	flag.BoolVar(&flags.useSerial, "use-serial", false, "Use serial to run tests on the target.")
 
 	flag.Usage = usage
 	flag.Parse()
@@ -307,7 +311,7 @@ func execute(
 		"RUST_BACKTRACE=1",
 	)
 
-	if sshKeyFile != "" {
+	if !flags.useSerial && sshKeyFile != "" {
 		if flags.prefetchPackages {
 			// TODO(rudymathu): Remove this prefetching of packages once package
 			// delivery is fast enough.
@@ -374,7 +378,7 @@ func execute(
 		case "fuchsia":
 			if fuchsiaTester == nil {
 				var err error
-				if sshKeyFile != "" {
+				if !flags.useSerial && sshKeyFile != "" {
 					fuchsiaTester, err = sshTester(
 						ctx, addr, sshKeyFile, outputs.OutDir, serialSocketPath, flags.useRuntests)
 				} else {
@@ -397,7 +401,7 @@ func execute(
 			}
 			// Initialize the fuchsia SSH tester to run the snapshot at the end in case
 			// we ran any host-target interaction tests.
-			if fuchsiaTester == nil && sshKeyFile != "" {
+			if !flags.useSerial && fuchsiaTester == nil && sshKeyFile != "" {
 				var err error
 				fuchsiaTester, err = sshTester(
 					ctx, addr, sshKeyFile, outputs.OutDir, serialSocketPath, flags.useRuntests)
