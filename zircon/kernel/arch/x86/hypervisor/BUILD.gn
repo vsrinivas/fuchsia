@@ -7,6 +7,7 @@
 source_set("hypervisor") {
   sources = [
     "guest.cc",
+    "guest_copy.cc",
     "pv.cc",
     "vcpu.cc",
     "vmexit.cc",
@@ -19,13 +20,15 @@ source_set("hypervisor") {
     "//zircon/kernel/hypervisor:headers",
     "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/platform/pc",
-    "//zircon/system/ulib/explicit-memory",
   ]
 }
 
 source_set("tests") {
   # TODO: testonly = true
-  sources = [ "vmx_test.cc" ]
+  sources = [
+    "guest_copy_test.cc",
+    "vmx_test.cc",
+  ]
   deps = [
     "//zircon/kernel/hypervisor:headers",
     "//zircon/kernel/lib/unittest",

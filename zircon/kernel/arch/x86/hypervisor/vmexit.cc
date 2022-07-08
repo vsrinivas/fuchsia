@@ -20,7 +20,6 @@
 #include <arch/x86/interrupts.h>
 #include <arch/x86/mmu.h>
 #include <arch/x86/pv.h>
-#include <explicit-memory/bytes.h>
 #include <fbl/canary.h>
 #include <hypervisor/interrupt_tracker.h>
 #include <hypervisor/ktrace.h>
