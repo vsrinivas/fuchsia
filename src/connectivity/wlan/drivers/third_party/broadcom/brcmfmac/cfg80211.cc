@@ -5227,12 +5227,14 @@ static zx_status_t brcmf_handle_assoc_event(struct brcmf_if* ifp, const struct b
   // For this event, e->reason is in the StatusCode enum space.
   status_code_t reason_code = e->reason;
 
-  // TODO(fxbug.dev/85446) - This is a work around until we have a resolution for this bug.
+  // Vendor confirmed the firmware can return reason_code 0 while status_code > 0. See
+  // http://b/201803254#comment12. This is a design that they would like to not change in the
+  // firmware.
   if ((BRCMF_E_STATUS_SUCCESS != e->status) && (STATUS_CODE_SUCCESS == reason_code)) {
-    BRCMF_WARN(
-        "Reason is SUCCESS while status indicates an error:%u. Overriding reason to "
-        "REASON_UNSPECIFIED.",
-        e->status);
+    BRCMF_INFO(
+        "Reason is SUCCESS(%u) while status indicates error: %u. Overriding reason to "
+        "REFUSED_REASON_UNSPECIFIED(%u).",
+        STATUS_CODE_SUCCESS, e->status, STATUS_CODE_REFUSED_REASON_UNSPECIFIED);
     reason_code = STATUS_CODE_REFUSED_REASON_UNSPECIFIED;
   }
 
