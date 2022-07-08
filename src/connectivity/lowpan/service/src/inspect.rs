@@ -486,6 +486,26 @@ async fn monitor_device(name: String, iface_tree: Arc<IfaceTreeHolder>) -> Resul
                         if let Some(val) = all_counters.coex_saturated {
                             inspector.root().record_bool("coex_saturated", val.into());
                         }
+                        // Log ip counters
+                        let ip_counters = [("tx", all_counters.ip_tx), ("rx", all_counters.ip_rx)];
+                        inspector.root().record_child("ip_counters", |ip_counters_child| {
+                            for (ip_counter_for_str, ip_counter_option) in ip_counters {
+                                if let Some(ip_counter) = ip_counter_option {
+                                    if let Some(val) = ip_counter.success {
+                                        ip_counters_child.record_uint(
+                                            format!("{}_success", ip_counter_for_str),
+                                            val.into(),
+                                        );
+                                    }
+                                    if let Some(val) = ip_counter.failure {
+                                        ip_counters_child.record_uint(
+                                            format!("{}_failure", ip_counter_for_str),
+                                            val.into(),
+                                        );
+                                    }
+                                }
+                            }
+                        });
                     }
                     Err(e) => {
                         fx_log_warn!("Error in logging counters. Error: {}", e);
