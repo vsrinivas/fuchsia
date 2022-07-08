@@ -51,6 +51,7 @@ source_set("crash_register") {
   ]
 
   public_deps = [
+    ":annotation_map",
     ":product",
     "//sdk/fidl/fuchsia.feedback",
     "//src/developer/forensics/crash_reports/info",
@@ -100,7 +101,6 @@ source_set("crash_reporter") {
 
   deps = [
     ":constants",
-    ":default_annotations",
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils/cobalt",
@@ -130,25 +130,6 @@ source_set("crash_server") {
     "//src/developer/forensics/utils:sized_data",
     "//src/lib/fostr/fidl/fuchsia.net.http",
     "//src/lib/fsl",
-  ]
-}
-
-source_set("default_annotations") {
-  sources = [
-    "default_annotations.cc",
-    "default_annotations.h",
-  ]
-  public_deps = [
-    ":annotation_map",
-    "//src/developer/forensics/feedback:constants",
-    "//src/developer/forensics/utils:errors",
-  ]
-
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/feedback/annotations",
-    "//src/lib/files",
-    "//src/lib/fxl",
   ]
 }
 
@@ -275,6 +256,7 @@ source_set("report_util") {
   ]
 
   public_deps = [
+    ":crash_register",
     ":product",
     ":report",
     "//sdk/fidl/fuchsia.feedback",

@@ -12,10 +12,11 @@
 #include <string>
 #include <variant>
 
-#include "src/developer/forensics/crash_reports/constants.h"
+#include "src/developer/forensics/crash_reports/annotation_map.h"
+#include "src/developer/forensics/crash_reports/crash_register.h"
 #include "src/developer/forensics/crash_reports/dart_module_parser.h"
-#include "src/developer/forensics/crash_reports/errors.h"
 #include "src/developer/forensics/crash_reports/report.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/lib/fsl/vmo/strings.h"
 
 namespace forensics {
@@ -216,43 +217,9 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
   }
 }
 
-void AddSnapshotAnnotations(const SnapshotUuid& snapshot_uuid, const Snapshot& snapshot,
-                            AnnotationMap* annotations) {
-  // The underlying snapshot may have been garbage collected or its collection timed out
-  // (possibly due to shutdown). Add the annotations from the snapshot manager could collect itself
-  // and annotations indicating why the annotations and archive collected from
-  // fuchsia.feedback.DataProvider aren't present.
-  //
-  // Snapshots will not be missing due to reasons like not being persisted or not having a valid
-  // snapshot uuid because neither can occur without a report entering the store and this flow is
-  // triggered before the store is used.
-  if (std::holds_alternative<MissingSnapshot>(snapshot)) {
-    const auto& s = std::get<MissingSnapshot>(snapshot);
-
-    annotations->Set(s.Annotations());
-    annotations->Set(s.PresenceAnnotations());
-
-    return;
-  }
-
-  // The underlying snapshot was successfully collected and not all of its data was dropped by the
-  // snapshot manager (due to garbage collection). Add the annotations collected from
-  // fuchsia.feedback.DataProvider and any annotations about why the collected archive may be
-  // missing.
-  const auto& s = std::get<ManagedSnapshot>(snapshot);
-  annotations->Set(s.Annotations());
-  annotations->Set(s.PresenceAnnotations());
-}
-
 void AddCrashServerAnnotations(const std::string& program_name,
                                const std::optional<timekeeper::time_utc>& current_time,
-                               const ErrorOr<std::string>& device_id, const Product& product,
                                AnnotationMap* annotations) {
-  // Product.
-  annotations->Set("product", product.name)
-      .Set("version", product.version)
-      .Set("channel", product.channel);
-
   // Program.
   // TODO(fxbug.dev/57502): for historical reasons, we used ptype to benefit from Chrome's
   // "Process type" handling in the crash server UI. Remove once the UI can fallback on "Program".
@@ -267,25 +234,78 @@ void AddCrashServerAnnotations(const std::string& program_name,
   }
 
   // We set the device's global unique identifier only if the device has one.
-  if (device_id.HasValue()) {
-    annotations->Set("guid", device_id.Value());
+  if (annotations->Contains(feedback::kDeviceFeedbackIdKey)) {
+    annotations->Set("guid", annotations->Get(feedback::kDeviceFeedbackIdKey));
   } else {
-    annotations->Set("debug.guid.set", false).Set("debug.device-id.error", device_id.Error());
+    annotations->Set("debug.guid.set", false).Set("debug.device-id.error", Error::kMissingValue);
   }
 }
-
 }  // namespace
+
+AnnotationMap GetReportAnnotations(Product product, const AnnotationMap& annotations) {
+  AnnotationMap added_annotations;
+
+  // Update the default product with the immediately available annotations (which should
+  // contain the version and channel).
+  if (product.IsDefaultPlatformProduct()) {
+    CrashRegister::AddVersionAndChannel(product, annotations);
+  }
+
+  added_annotations.Set("product", product.name)
+      .Set("version", product.version)
+      .Set("channel", product.channel);
+
+  return added_annotations;
+}
+
+AnnotationMap GetReportAnnotations(const Snapshot& snapshot) {
+  // The underlying snapshot may have been garbage collected or its collection timed out
+  // (possibly due to shutdown). If so, add the annotations that the snapshot manager could collect
+  // itself and annotations indicating why the annotations and archive collected from
+  // fuchsia.feedback.DataProvider aren't present.
+  //
+  // If the underlying snapshot was successfully collected and not all of its data was dropped by
+  // the snapshot manager (due to garbage collection), add the annotations collected from
+  // fuchsia.feedback.DataProvider and any annotations about why the collected archive may be
+  // missing.
+  //
+  // Snapshots will not be missing due to reasons like not being persisted or not having a valid
+  // snapshot uuid because neither can occur without a report entering the store and this flow is
+  // triggered before the store is used.
+  AnnotationMap added_annotations;
+
+  const auto& annotations = std::holds_alternative<ManagedSnapshot>(snapshot)
+                                ? std::get<ManagedSnapshot>(snapshot).Annotations()
+                                : std::get<MissingSnapshot>(snapshot).Annotations();
+  const auto& presence_annotations =
+      std::holds_alternative<ManagedSnapshot>(snapshot)
+          ? std::get<ManagedSnapshot>(snapshot).PresenceAnnotations()
+          : std::get<MissingSnapshot>(snapshot).PresenceAnnotations();
+
+  auto Get = [&annotations](const std::string& key) -> ErrorOr<std::string> {
+    if (annotations.count(key) != 0) {
+      return annotations.at(key);
+    }
+
+    return Error::kMissingValue;
+  };
+
+  added_annotations.Set(annotations)
+      .Set(presence_annotations)
+      .Set(feedback::kOSVersionKey, Get(feedback::kBuildVersionKey))
+      .Set(feedback::kOSChannelKey, Get(feedback::kSystemUpdateChannelCurrentKey));
+
+  return added_annotations;
+}
 
 std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report, const ReportId report_id,
                                  const SnapshotUuid& snapshot_uuid, const Snapshot& snapshot,
                                  const std::optional<timekeeper::time_utc>& current_time,
-                                 const ErrorOr<std::string>& device_id,
-                                 const AnnotationMap& default_annotations, const Product& product,
-                                 const bool is_hourly_report) {
+                                 Product product, const bool is_hourly_report) {
   const std::string program_name = report.program_name();
   const std::string shortname = Shorten(program_name);
 
-  AnnotationMap annotations = default_annotations;
+  AnnotationMap annotations = {{feedback::kOSNameKey, "Fuchsia"}};
   std::map<std::string, fuchsia::mem::Buffer> attachments;
   std::optional<fuchsia::mem::Buffer> minidump;
 
@@ -293,10 +313,11 @@ std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report, const Re
   ExtractAnnotationsAndAttachments(std::move(report), &annotations, &attachments, &minidump);
 
   // Snapshot annotations specific to this crash report.
-  AddSnapshotAnnotations(snapshot_uuid, snapshot, &annotations);
+  annotations.Set(GetReportAnnotations(snapshot));
+  annotations.Set(GetReportAnnotations(std::move(product), annotations));
 
   // Crash server annotations common to all crash reports.
-  AddCrashServerAnnotations(program_name, current_time, device_id, product, &annotations);
+  AddCrashServerAnnotations(program_name, current_time, &annotations);
 
   return Report::MakeReport(report_id, shortname, annotations, std::move(attachments),
                             snapshot_uuid, std::move(minidump), is_hourly_report);

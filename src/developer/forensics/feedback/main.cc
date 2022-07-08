@@ -14,7 +14,6 @@
 
 #include <fbl/unique_fd.h>
 
-#include "src/developer/forensics/crash_reports/default_annotations.h"
 #include "src/developer/forensics/feedback/annotations/startup_annotations.h"
 #include "src/developer/forensics/feedback/config.h"
 #include "src/developer/forensics/feedback/constants.h"

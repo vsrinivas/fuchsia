@@ -66,14 +66,13 @@ Product CrashRegister::GetProduct(const std::string& program_name) const {
   return component_to_products_.at(program_name);
 }
 
-void CrashRegister::AddVersionAndChannel(Product& product,
-                                         const feedback::Annotations& annotations) {
-  if (annotations.count(feedback::kBuildVersionKey) != 0) {
-    product.version = annotations.at(feedback::kBuildVersionKey);
+void CrashRegister::AddVersionAndChannel(Product& product, const AnnotationMap& annotations) {
+  if (annotations.Contains(feedback::kBuildVersionKey)) {
+    product.version = annotations.Get(feedback::kBuildVersionKey);
   }
 
-  if (annotations.count(feedback::kSystemUpdateChannelCurrentKey) != 0) {
-    product.channel = annotations.at(feedback::kSystemUpdateChannelCurrentKey);
+  if (annotations.Contains(feedback::kSystemUpdateChannelCurrentKey)) {
+    product.channel = annotations.Get(feedback::kSystemUpdateChannelCurrentKey);
   }
 }
 

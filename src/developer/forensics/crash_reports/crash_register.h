@@ -11,9 +11,9 @@
 #include <memory>
 #include <string>
 
+#include "src/developer/forensics/crash_reports/annotation_map.h"
 #include "src/developer/forensics/crash_reports/info/crash_register_info.h"
 #include "src/developer/forensics/crash_reports/product.h"
-#include "src/developer/forensics/feedback/annotations/types.h"
 #include "third_party/rapidjson/include/rapidjson/document.h"
 
 namespace forensics {
@@ -34,7 +34,7 @@ class CrashRegister : public fuchsia::feedback::CrashReportingProductRegister {
   Product GetProduct(const std::string& program_name) const;
 
   // Adds the version and channel in |annotations| to |product|, if they exist.
-  static void AddVersionAndChannel(Product& product, const feedback::Annotations& annotations);
+  static void AddVersionAndChannel(Product& product, const AnnotationMap& annotations);
 
  private:
   void RestoreFromJson();

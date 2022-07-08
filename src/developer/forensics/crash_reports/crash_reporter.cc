@@ -27,15 +27,10 @@
 #include "src/developer/forensics/crash_reports/config.h"
 #include "src/developer/forensics/crash_reports/constants.h"
 #include "src/developer/forensics/crash_reports/crash_server.h"
-#include "src/developer/forensics/crash_reports/default_annotations.h"
 #include "src/developer/forensics/crash_reports/product.h"
 #include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/report_util.h"
-#include "src/developer/forensics/feedback/annotations/annotation_manager.h"
-#include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/developer/forensics/utils/cobalt/metrics.h"
-#include "src/developer/forensics/utils/errors.h"
-#include "src/lib/timekeeper/system_clock.h"
 
 namespace forensics {
 namespace crash_reports {
@@ -180,23 +175,8 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
                      is_hourly_snapshot, record_failure](const std::string& snapshot_uuid) mutable {
             const auto snapshot = snapshot_manager_->GetSnapshot(snapshot_uuid);
             const auto current_time = utc_provider_.CurrentTime();
-            const auto& annotations = std::holds_alternative<ManagedSnapshot>(snapshot)
-                                          ? std::get<ManagedSnapshot>(snapshot).Annotations()
-                                          : std::get<MissingSnapshot>(snapshot).Annotations();
-
-            // Update the default product with the immediately available annotations (which should
-            // contain the version and channel).
-            if (product.IsDefaultPlatformProduct()) {
-              CrashRegister::AddVersionAndChannel(product, annotations);
-            }
-
-            const auto device_id = (annotations.count(feedback::kDeviceFeedbackIdKey) != 0)
-                                       ? annotations.at(feedback::kDeviceFeedbackIdKey)
-                                       : ErrorOr<std::string>(Error::kMissingValue);
-
             auto report = MakeReport(std::move(fidl_report), report_id, snapshot_uuid, snapshot,
-                                     current_time, device_id, BuildDefaultAnnotations(annotations),
-                                     product, is_hourly_snapshot);
+                                     current_time, std::move(product), is_hourly_snapshot);
 
             if (is_hourly_snapshot) {
               FX_LOGST(INFO, tags_->Get(report_id)) << "Generated hourly snapshot";

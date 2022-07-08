@@ -15,7 +15,6 @@
 #include "src/developer/forensics/crash_reports/product.h"
 #include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
-#include "src/developer/forensics/utils/errors.h"
 
 namespace forensics {
 namespace crash_reports {
@@ -33,6 +32,10 @@ std::string Shorten(std::string program_name);
 // `foo_bar`.
 std::string Logname(std::string name);
 
+// Methods to build annotations from various data collected during report creation.
+AnnotationMap GetReportAnnotations(const Snapshot& snapshot);
+AnnotationMap GetReportAnnotations(Product product, const AnnotationMap& annotations);
+
 // Builds the final report to add to the queue.
 //
 // * Most annotations are shared across all crash reports, e.g. the device uptime.
@@ -44,9 +47,7 @@ std::string Logname(std::string name);
 std::optional<Report> MakeReport(fuchsia::feedback::CrashReport input_report, ReportId report_id,
                                  const SnapshotUuid& snapshot_uuid, const Snapshot& snapshot,
                                  const std::optional<timekeeper::time_utc>& current_time,
-                                 const ErrorOr<std::string>& device_id,
-                                 const AnnotationMap& default_annotations, const Product& product,
-                                 bool is_hourly_report);
+                                 Product product, bool is_hourly_report);
 
 }  // namespace crash_reports
 }  // namespace forensics

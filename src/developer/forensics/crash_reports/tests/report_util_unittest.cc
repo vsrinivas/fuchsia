@@ -7,13 +7,20 @@
 #include <map>
 #include <string>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "src/developer/forensics/crash_reports/annotation_map.h"
+#include "src/developer/forensics/crash_reports/snapshot.h"
+#include "src/developer/forensics/feedback/annotations/constants.h"
 #include "src/developer/forensics/feedback/annotations/types.h"
 
 namespace forensics {
 namespace crash_reports {
 namespace {
+
+using ::testing::Pair;
+using ::testing::UnorderedElementsAreArray;
 
 TEST(Shorten, ShortensCorrectly) {
   const std::map<std::string, std::string> name_to_shortened_name = {
@@ -81,11 +88,10 @@ TEST(MakeReport, AddsManagedSnapshotAnnotations) {
       .channel = "product_channel",
   };
 
-  const auto report =
-      MakeReport(std::move(crash_report), /*report_id=*/0, "snapshot_uuid",
-                 ManagedSnapshot(annotations, presence_annotations),
-                 /*current_time=*/std::nullopt, "device_id", AnnotationMap({{"key", "value"}}),
-                 product, /*is_hourly_report=*/false);
+  const auto report = MakeReport(std::move(crash_report), /*report_id=*/0, "snapshot_uuid",
+                                 ManagedSnapshot(annotations, presence_annotations),
+                                 /*current_time=*/std::nullopt, product,
+                                 /*is_hourly_report=*/false);
   ASSERT_TRUE(report.has_value());
   EXPECT_EQ(report.value().Annotations().Get("snapshot_annotation_key"),
             "snapshot_annotation_value");
@@ -111,16 +117,89 @@ TEST(MakeReport, AddsMissingSnapshotAnnotations) {
       .channel = "product_channel",
   };
 
-  const auto report =
-      MakeReport(std::move(crash_report), /*report_id=*/0, "snapshot_uuid",
-                 MissingSnapshot(annotations, presence_annotations),
-                 /*current_time=*/std::nullopt, "device_id", AnnotationMap({{"key", "value"}}),
-                 product, /*is_hourly_report=*/false);
+  const auto report = MakeReport(std::move(crash_report), /*report_id=*/0, "snapshot_uuid",
+                                 MissingSnapshot(annotations, presence_annotations),
+                                 /*current_time=*/std::nullopt, product,
+                                 /*is_hourly_report=*/false);
   ASSERT_TRUE(report.has_value());
   EXPECT_EQ(report.value().Annotations().Get("snapshot_annotation_key"),
             "snapshot_annotation_value");
   EXPECT_EQ(report.value().Annotations().Get("presence_annotation_key"),
             "presence_annotation_value");
+}
+
+TEST(MakeReport, AddsRequiredAnnotations) {
+  fuchsia::feedback::CrashReport crash_report;
+  crash_report.set_program_name("program_name");
+
+  Product product{
+      .name = "product_name",
+      .version = "product_version",
+      .channel = "product_channel",
+  };
+
+  const auto report =
+      MakeReport(std::move(crash_report), /*report_id=*/0, "snapshot_uuid", MissingSnapshot({}, {}),
+                 /*current_time=*/std::nullopt, product,
+                 /*is_hourly_report=*/false);
+
+  ASSERT_TRUE(report.has_value());
+  EXPECT_EQ(report.value().Annotations().Get(feedback::kOSNameKey), "Fuchsia");
+}
+
+TEST(SnapshotAnnotationsTest, GetReportAnnotations_EmptySnapshotAnnotations) {
+  Product product = Product::DefaultPlatformProduct();
+
+  AnnotationMap annotations = GetReportAnnotations(MissingSnapshot({}, {}));
+
+  EXPECT_THAT(annotations.Raw(), UnorderedElementsAreArray({
+                                     Pair(feedback::kOSVersionKey, "unknown"),
+                                     Pair("debug.osVersion.error", "missing"),
+                                     Pair(feedback::kOSChannelKey, "unknown"),
+                                     Pair("debug.osChannel.error", "missing"),
+                                 }));
+}
+
+TEST(SnapshotAnnotationsTest, GetReportAnnotations_Snapshot) {
+  Product product = Product::DefaultPlatformProduct();
+  feedback::Annotations startup_annotations = {
+      {feedback::kBuildVersionKey, "version"},
+      {feedback::kSystemUpdateChannelCurrentKey, "channel"},
+      {feedback::kBuildBoardKey, "board"},
+      {feedback::kBuildProductKey, Error::kTimeout},
+      {feedback::kBuildLatestCommitDateKey, Error::kFileReadFailure},
+  };
+
+  AnnotationMap annotations = GetReportAnnotations(MissingSnapshot(startup_annotations, {}));
+
+  EXPECT_THAT(annotations.Raw(),
+              UnorderedElementsAreArray({
+                  Pair(feedback::kOSVersionKey, "version"),
+                  Pair(feedback::kOSChannelKey, "channel"),
+                  Pair(feedback::kBuildVersionKey, "version"),
+                  Pair(feedback::kSystemUpdateChannelCurrentKey, "channel"),
+                  Pair(feedback::kBuildBoardKey, "board"),
+                  Pair(feedback::kBuildProductKey, "unknown"),
+                  Pair("debug.build.product.error", "timeout"),
+                  Pair(feedback::kBuildLatestCommitDateKey, "unknown"),
+                  Pair("debug.build.latest-commit-date.error", "file read failure"),
+              }));
+}
+
+TEST(SnapshotAnnotationsTest, GetReportAnnotations_Product) {
+  AnnotationMap annotations = {
+      {feedback::kBuildVersionKey, "version"},
+      {feedback::kSystemUpdateChannelCurrentKey, "channel"},
+  };
+  Product product = Product::DefaultPlatformProduct();
+
+  AnnotationMap added_annotations = GetReportAnnotations(product, annotations);
+
+  EXPECT_THAT(added_annotations.Raw(), UnorderedElementsAreArray({
+                                           Pair("product", "Fuchsia"),
+                                           Pair("version", "version"),
+                                           Pair("channel", "channel"),
+                                       }));
 }
 
 }  // namespace

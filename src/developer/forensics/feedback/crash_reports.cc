@@ -5,7 +5,6 @@
 #include "src/developer/forensics/feedback/crash_reports.h"
 
 #include "fuchsia/feedback/cpp/fidl.h"
-#include "src/developer/forensics/crash_reports/default_annotations.h"
 #include "src/developer/forensics/feedback/constants.h"
 
 namespace forensics::feedback {
