@@ -5,11 +5,14 @@
 package emulator
 
 import (
+	"bytes"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
+	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"io/fs"
 	"io/ioutil"
 	"os"
@@ -28,6 +31,16 @@ import (
 const RSA_KEY_NUM_BITS int = 2048
 const PRIVATE_KEY_PERMISSIONS fs.FileMode = 0600
 const PUBLIC_KEY_PERMISSIONS fs.FileMode = 0666
+
+const NETWORK_TEST_REALM_COMPONENT_NAME = "net-test-realm-controller"
+
+const NETWORK_TEST_REALM_TEST_COLLECTION_MONIKER = "core/network/test-components"
+
+const NETWORK_TEST_REALM_MONIKER = "/" + NETWORK_TEST_REALM_TEST_COLLECTION_MONIKER + ":" + NETWORK_TEST_REALM_COMPONENT_NAME
+const NETWORK_TEST_REALM_URL = "fuchsia-pkg://fuchsia.com/network-test-realm#meta/controller.cm"
+
+const NETWORK_TEST_REALM_COMPONENT_SELECTOR = NETWORK_TEST_REALM_TEST_COLLECTION_MONIKER + "\\:" + NETWORK_TEST_REALM_COMPONENT_NAME
+const NETSTACK_VERSION = "v2"
 
 func TestEmulatorWorksWithFfx(t *testing.T) {
 	var wg sync.WaitGroup
@@ -175,12 +188,74 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 		)))
 	}
 
-	if err := ffx.RunWithTarget(
-		ctx,
-		"--env", ffxEnvPath,
-		"target",
-		"wait",
-	); err != nil {
+	netTestRealmExperimentalFlagPointer := "/net/test/realm"
+	if err := ffx.SetConfigJsonPointer(netTestRealmExperimentalFlagPointer, true); err != nil {
+		t.Fatalf(
+			"ffx.SetConfigJsonPointer(%q, true) = %s",
+			netTestRealmExperimentalFlagPointer,
+			err,
+		)
+	}
+
+	runFfx := func(args ...string) error {
+		return ffx.RunWithTarget(ctx, append([]string{"--env", ffxEnvPath}, args...)...)
+	}
+
+	if err := runFfx("target", "wait"); err != nil {
 		t.Fatal(err)
 	}
+
+	t.Run("starts network test realm", func(t *testing.T) {
+		var buf bytes.Buffer
+		ffx.SetStdoutStderr(io.MultiWriter(os.Stdout, &buf), os.Stderr)
+
+		if err := runFfx("--machine", "json", "component", "show", NETWORK_TEST_REALM_MONIKER); err != nil {
+			t.Logf(
+				"ffx --machine json component show %s had error %s",
+				NETWORK_TEST_REALM_MONIKER,
+				err,
+			)
+		}
+
+		var components []map[string]interface{}
+		if err := json.Unmarshal(buf.Bytes(), &components); err != nil {
+			t.Fatalf("json.Unmarshal(%q, _) = %s", buf.String(), err)
+		}
+
+		if len(components) > 0 {
+			t.Fatalf(
+				"ffx component show %s should return zero components, got %#v instead",
+				NETWORK_TEST_REALM_MONIKER,
+				components,
+			)
+		}
+
+		if err := runFfx(
+			"component",
+			"create",
+			NETWORK_TEST_REALM_MONIKER,
+			NETWORK_TEST_REALM_URL,
+		); err != nil {
+			t.Fatalf(
+				"ffx component create %s %s = %s",
+				NETWORK_TEST_REALM_MONIKER,
+				NETWORK_TEST_REALM_URL,
+				err,
+			)
+		}
+
+		if err := runFfx(
+			"net-test-realm",
+			NETWORK_TEST_REALM_COMPONENT_SELECTOR,
+			"start-hermetic-network-realm",
+			NETSTACK_VERSION,
+		); err != nil {
+			t.Fatalf(
+				"ffx net-test-realm %s start-hermetic-network-realm %s = %s",
+				NETWORK_TEST_REALM_COMPONENT_SELECTOR,
+				NETSTACK_VERSION,
+				err,
+			)
+		}
+	})
 }
