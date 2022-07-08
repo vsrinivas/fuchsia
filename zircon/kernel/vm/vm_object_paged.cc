@@ -872,8 +872,7 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
       // We pin the pages first before marking them dirty in order to guarantee forward progress.
       // Pinning the pages will prevent them from getting decommitted while we are waiting on the
       // dirty page request without the lock held.
-      if (write && pinned_len > 0 &&
-          cow_pages_locked()->is_source_preserving_page_content_locked()) {
+      if (write && pinned_len > 0 && is_dirty_tracked_locked()) {
         // Prepare the committed range for writing. We need a page request for this too, so cancel
         // any existing one and reuse it.
         page_request->CancelRequest();

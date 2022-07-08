@@ -179,21 +179,26 @@ class VmCowPages final
     // OR
     // 2. They are slice children of root pager-backed VMOs, since slices directly reference the
     // parent's pages.
-    auto* which_cow = is_slice_locked() ? parent_.get() : this;
-    bool result =
-        which_cow->page_source_ && which_cow->page_source_->properties().is_preserving_page_content;
-    AssertHeld(which_cow->lock_);
-    DEBUG_ASSERT(result == which_cow->debug_is_user_pager_backed_locked());
+    auto* cow = is_slice_locked() ? parent_.get() : this;
+    bool result = cow->page_source_ && cow->page_source_->properties().is_preserving_page_content;
+    AssertHeld(cow->lock_);
+    DEBUG_ASSERT(result == cow->debug_is_user_pager_backed_locked());
     return result;
   }
 
   // The modified state is only supported for root pager-backed VMOs, and will get queried (and
-  // possibly reset) on the next QueryPagerVmoStatsLocked() call.
+  // possibly reset) on the next QueryPagerVmoStatsLocked() call. Although the modified state is
+  // only tracked for the root VMO, it can get set by a modification through a slice, since a slice
+  // directly modifies the parent.
   void mark_modified_locked() TA_REQ(lock_) {
-    if (!is_source_preserving_page_content_locked()) {
+    if (!is_dirty_tracked_locked()) {
       return;
     }
-    pager_stats_modified_ = true;
+    auto* cow = is_slice_locked() ? parent_.get() : this;
+    AssertHeld(cow->lock_);
+    DEBUG_ASSERT(!cow->is_slice_locked());
+    DEBUG_ASSERT(cow->is_source_preserving_page_content_locked());
+    cow->pager_stats_modified_ = true;
   }
 
   bool is_source_preserving_page_content_locked() const TA_REQ(lock_) {

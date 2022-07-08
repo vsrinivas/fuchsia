@@ -1800,10 +1800,26 @@ void VmCowPages::UpdateDirtyStateLocked(vm_page_t* page, uint64_t offset, DirtyS
 
 zx_status_t VmCowPages::PrepareForWriteLocked(LazyPageRequest* page_request, uint64_t offset,
                                               uint64_t len, uint64_t* dirty_len_out) {
-  DEBUG_ASSERT(page_source_);
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset));
   DEBUG_ASSERT(IS_PAGE_ALIGNED(len));
   DEBUG_ASSERT(InRange(offset, len, size_));
+
+  if (is_slice_locked()) {
+    uint64_t parent_offset;
+    VmCowPages* parent = PagedParentOfSliceLocked(&parent_offset);
+    AssertHeld(parent->lock_);
+
+    // PagedParentOfSliceLocked will walk all of the way up the VMO hierarchy
+    // until it hits a non-slice VMO.  This guarantees that we should only ever
+    // recurse once instead of an unbound number of times.  DEBUG_ASSERT this so
+    // that we don't actually end up with unbound recursion just in case the
+    // property changes.
+    DEBUG_ASSERT(!parent->is_slice_locked());
+
+    return parent->PrepareForWriteLocked(page_request, offset + parent_offset, len, dirty_len_out);
+  }
+
+  DEBUG_ASSERT(page_source_);
   DEBUG_ASSERT(is_source_preserving_page_content_locked());
 
   uint64_t dirty_len = 0;

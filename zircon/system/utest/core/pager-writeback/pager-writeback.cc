@@ -5252,4 +5252,250 @@ TEST(PagerWriteback, NotModifiedPartialFailedPinWrite) {
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
 }
 
+// Tests pinning for write through a slice.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(SlicePinWrite, 0) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(2, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 2));
+
+  std::vector<uint8_t> expected(2 * zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 2, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The VMO hasn't been modified yet.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Create a slice.
+  zx::vmo slice;
+  ASSERT_OK(vmo->vmo().create_child(ZX_VMO_CHILD_SLICE, 0, 2 * zx_system_get_page_size(), &slice));
+
+  // Pin both pages for write through a slice.
+  zx::pmt pmt;
+  TestThread t([&pmt, &root_resource, &slice]() -> bool {
+    zx::iommu iommu;
+    zx::bti bti;
+    zx_iommu_desc_dummy_t desc;
+    if (zx_iommu_create(root_resource->get(), ZX_IOMMU_TYPE_DUMMY, &desc, sizeof(desc),
+                        iommu.reset_and_get_address()) != ZX_OK) {
+      return false;
+    }
+    if (zx::bti::create(iommu, 0, 0xdeadbeef, &bti) != ZX_OK) {
+      return false;
+    }
+    zx_paddr_t addr[2];
+    return bti.pin(ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, slice, 0, 2 * zx_system_get_page_size(),
+                   addr, 2, &pmt) == ZX_OK;
+  });
+
+  auto unpin = fit::defer([&pmt]() {
+    if (pmt) {
+      pmt.unpin();
+    }
+  });
+
+  ASSERT_TRUE(t.Start());
+
+  // If we're trapping dirty transitions, we should see a DIRTY request for both pages.
+  if (create_option & ZX_VMO_TRAP_DIRTY) {
+    ASSERT_TRUE(t.WaitForBlocked());
+    ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 2, ZX_TIME_INFINITE));
+    // Dirty the pages and wait for the pin to succeed.
+    ASSERT_TRUE(pager.DirtyPages(vmo, 0, 2));
+  }
+
+  ASSERT_TRUE(t.Wait());
+
+  // The VMO should be modified.
+  ASSERT_TRUE(pager.VerifyModified(vmo));
+  // Querying the modified state should have reset the modified flag.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 2, expected.data(), true));
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 2, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // The slice itself cannot be modified.
+  zx_pager_vmo_stats_t stats;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            zx_pager_query_vmo_stats(pager.pager().get(), slice.get(), 0, &stats, sizeof(stats)));
+  uint64_t num_ranges = 0;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx_pager_query_dirty_ranges(pager.pager().get(), slice.get(), 0,
+                                                             zx_system_get_page_size(), &range,
+                                                             sizeof(range), &num_ranges, nullptr));
+}
+
+// Tests writing to a VMO through a slice.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(SliceWrite, 0) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The VMO hasn't been modified yet.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Create a slice.
+  zx::vmo slice;
+  ASSERT_OK(vmo->vmo().create_child(ZX_VMO_CHILD_SLICE, 0, zx_system_get_page_size(), &slice));
+
+  // Write the slice directly.
+  uint8_t data = 0xaa;
+  TestThread t1([&slice, data]() -> bool { return slice.write(&data, 0, sizeof(data)) == ZX_OK; });
+  ASSERT_TRUE(t1.Start());
+
+  // If we're trapping dirty transitions, we should see a DIRTY request.
+  if (create_option & ZX_VMO_TRAP_DIRTY) {
+    ASSERT_TRUE(t1.WaitForBlocked());
+    ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+  }
+  ASSERT_TRUE(t1.Wait());
+
+  // The VMO should be modified.
+  ASSERT_TRUE(pager.VerifyModified(vmo));
+  // Querying the modified state should have reset the modified flag.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  memset(expected.data(), data, sizeof(data));
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // The slice itself cannot be modified.
+  zx_pager_vmo_stats_t stats;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            zx_pager_query_vmo_stats(pager.pager().get(), slice.get(), 0, &stats, sizeof(stats)));
+  uint64_t num_ranges = 0;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx_pager_query_dirty_ranges(pager.pager().get(), slice.get(), 0,
+                                                             zx_system_get_page_size(), &range,
+                                                             sizeof(range), &num_ranges, nullptr));
+  // Clean the page.
+  ASSERT_TRUE(pager.WritebackBeginPages(vmo, 0, 1));
+  ASSERT_TRUE(pager.WritebackEndPages(vmo, 0, 1));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Map the slice and then write via the mapping.
+  zx_vaddr_t ptr;
+  data = 0xbb;
+  TestThread t2([&slice, &ptr, data]() -> bool {
+    if (zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, slice, 0,
+                                   zx_system_get_page_size(), &ptr) != ZX_OK) {
+      fprintf(stderr, "could not map vmo\n");
+      return false;
+    }
+
+    auto buf = reinterpret_cast<uint8_t*>(ptr);
+    *buf = data;
+    return true;
+  });
+
+  auto unmap = fit::defer([&ptr]() {
+    // Cleanup the mapping we created.
+    zx::vmar::root_self()->unmap(ptr, zx_system_get_page_size());
+  });
+
+  ASSERT_TRUE(t2.Start());
+
+  // If we're trapping dirty transitions, we should see a DIRTY request.
+  if (create_option & ZX_VMO_TRAP_DIRTY) {
+    ASSERT_TRUE(t2.WaitForBlocked());
+    ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+  }
+  ASSERT_TRUE(t2.Wait());
+
+  // The VMO should be modified.
+  ASSERT_TRUE(pager.VerifyModified(vmo));
+  // Querying the modified state should have reset the modified flag.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  memset(expected.data(), data, sizeof(data));
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // The slice itself cannot be modified.
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            zx_pager_query_vmo_stats(pager.pager().get(), slice.get(), 0, &stats, sizeof(stats)));
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx_pager_query_dirty_ranges(pager.pager().get(), slice.get(), 0,
+                                                             zx_system_get_page_size(), &range,
+                                                             sizeof(range), &num_ranges, nullptr));
+}
+
+// Tests OP_ZERO on a slice.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(SliceOpZero, 0) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // The VMO hasn't been modified yet.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Create a slice.
+  zx::vmo slice;
+  ASSERT_OK(vmo->vmo().create_child(ZX_VMO_CHILD_SLICE, 0, zx_system_get_page_size(), &slice));
+
+  // Zero the slice.
+  TestThread t([&slice]() -> bool {
+    return slice.op_range(ZX_VMO_OP_ZERO, 0, zx_system_get_page_size(), nullptr, 0) == ZX_OK;
+  });
+  ASSERT_TRUE(t.Start());
+
+  // If we're trapping dirty transitions, we should see a DIRTY request.
+  if (create_option & ZX_VMO_TRAP_DIRTY) {
+    ASSERT_TRUE(t.WaitForBlocked());
+    ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+  }
+  ASSERT_TRUE(t.Wait());
+
+  // The VMO should be modified.
+  ASSERT_TRUE(pager.VerifyModified(vmo));
+  // Querying the modified state should have reset the modified flag.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify contents and dirty ranges.
+  memset(expected.data(), 0, zx_system_get_page_size());
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+
+  // The slice itself cannot be modified.
+  zx_pager_vmo_stats_t stats;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            zx_pager_query_vmo_stats(pager.pager().get(), slice.get(), 0, &stats, sizeof(stats)));
+  uint64_t num_ranges = 0;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, zx_pager_query_dirty_ranges(pager.pager().get(), slice.get(), 0,
+                                                             zx_system_get_page_size(), &range,
+                                                             sizeof(range), &num_ranges, nullptr));
+}
+
 }  // namespace pager_tests
