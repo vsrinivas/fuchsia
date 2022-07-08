@@ -42,6 +42,7 @@ static bool g_netbootloader = false;
 // Currently, NB_QUERY (to support netls and netaddr), as well as responding to
 // ICMP as usual.
 static bool g_all_features = false;
+static bool g_log_packets = false;
 
 static char g_nodename[HOST_NAME_MAX];
 
@@ -75,6 +76,22 @@ void udp6_recv(async_dispatcher_t* dispatcher, void* data, size_t len, const ip6
 }
 
 void netifc_recv(async_dispatcher_t* dispatcher, void* data, size_t len) {
+  if (g_log_packets) {
+    printf("netsvc: received %ld bytes: ", len);
+    // Only print enough of a packet to help diagnose issues, we don't need the
+    // full packet. The number was picked because it's the exact full length of
+    // a neighbor solicitation accounting for Ethernet, IPv6, and ICMPv6 headers
+    // plus the NS payload. It is also enough to fully observe a UDP packet's
+    // headers, which is most of the transport-layer traffic.
+    size_t print_len = std::min(len, static_cast<size_t>(86));
+    for (const uint8_t& b : cpp20::span(reinterpret_cast<const uint8_t*>(data), print_len)) {
+      printf("%02x", b);
+    }
+    if (print_len != len) {
+      printf("...");
+    }
+    printf("\n");
+  }
   eth_recv(dispatcher, data, len);
 }
 
@@ -114,6 +131,7 @@ int main(int argc, char** argv) {
   bool should_advertise = args.advertise;
   g_netbootloader = args.netboot;
   g_all_features = args.all_features;
+  g_log_packets = args.log_packets;
   const std::string& interface = args.interface;
 
   if (g_netbootloader && !g_all_features) {

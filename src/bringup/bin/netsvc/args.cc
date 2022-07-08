@@ -68,14 +68,36 @@ int ParseArgs(int argc, char** argv, fidl::UnownedClientEnd<fuchsia_io::Director
     return err;
   }
   while (argc > 1) {
-    if (!strncmp(argv[1], "--netboot", 9)) {
-      out->netboot = true;
-    } else if (!strncmp(argv[1], "--nodename", 10)) {
-      out->print_nodename_and_exit = true;
-    } else if (!strncmp(argv[1], "--advertise", 11)) {
-      out->advertise = true;
-    } else if (!strncmp(argv[1], "--all-features", 14)) {
-      out->all_features = true;
+    const struct {
+      std::string_view name;
+      bool* flag;
+    } flags[] = {
+        {
+            "--netboot",
+            &out->netboot,
+        },
+        {
+            "--nodename",
+            &out->print_nodename_and_exit,
+        },
+        {
+            "--advertise",
+            &out->advertise,
+        },
+        {
+            "--all-features",
+            &out->all_features,
+        },
+        {
+            "--log-packets",
+            &out->log_packets,
+        },
+    };
+    for (const auto& f : flags) {
+      if (f.name == argv[1]) {
+        *(f.flag) = true;
+        break;
+      }
     }
     argv++;
     argc--;

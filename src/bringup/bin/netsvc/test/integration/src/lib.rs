@@ -508,7 +508,7 @@ async fn with_netsvc_and_netstack_bind_port<E, F, Fut, A, V, P>(
     }
 }
 
-const DEFAULT_NETSVC_ARGS: [&str; 2] = ["--netboot", "--all-features"];
+const DEFAULT_NETSVC_ARGS: [&str; 3] = ["--netboot", "--all-features", "--log-packets"];
 
 async fn with_netsvc_and_netstack<E, F, Fut>(name: &str, test: F)
 where

@@ -125,4 +125,17 @@ TEST_F(ArgsTest, NetsvcValidation) {
   ASSERT_TRUE(strstr(error, "interface"));
 }
 
+TEST_F(ArgsTest, LogPackets) {
+  int argc = 2;
+  const char* argv[] = {
+      "netsvc",
+      "--log-packets",
+  };
+  NetsvcArgs args;
+  EXPECT_FALSE(args.log_packets);
+  const char* error = nullptr;
+  ASSERT_EQ(ParseArgs(argc, const_cast<char**>(argv), svc_root(), &error, &args), 0, "%s", error);
+  EXPECT_TRUE(args.log_packets);
+}
+
 }  // namespace

@@ -23,6 +23,8 @@ struct NetsvcArgs {
   // This is true if `netsvc.all-features` is on the kernel commandlinne
   // OR if `--all-features` is on the binary commandline.
   bool all_features = false;
+  // Log all received packets.
+  bool log_packets = false;
   // This is the string value of `netsvc.interface`.
   // It is overriden by the string value of `--interface` on the binary commandline.
   std::string interface;
