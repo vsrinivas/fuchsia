@@ -4,6 +4,7 @@
 
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
+#include <lib/device-protocol/pci.h>
 #include <lib/fake-bti/bti.h>
 #include <zircon/hw/pci.h>
 
@@ -68,8 +69,11 @@ class FakePciProtocolInternal
   zx_status_t PciGetBti(uint32_t index, zx::bti* out_bti);
 
   // Returns a |pci_protocol_t| suitable for use with the C api, or passing to a
-  // ddk::PciProtocolClient.
+  // ddk::PciProtocolClient. New code should use get_pci() instead.
   const pci_protocol_t& get_protocol() { return protocol_; }
+
+  // Returns a |ddk::Pci| client. Prefer this to get_protocol().
+  ddk::Pci get_pci() { return ddk::Pci(ddk::PciProtocolClient(&protocol_)); }
 
  protected:
   struct FakeBar {

@@ -21,14 +21,14 @@ class FakePciProtocolTests : public zxtest::Test {
  protected:
   void SetUp() final {
     fake_pci_.Reset();
-    pci_ = ddk::PciProtocolClient(&fake_pci_.get_protocol());
+    pci_ = fake_pci_.get_pci();
   }
   pci::FakePciProtocol& fake_pci() { return fake_pci_; }
-  ddk::PciProtocolClient& pci() { return pci_; }
+  ddk::Pci& pci() { return pci_; }
 
  private:
   pci::FakePciProtocol fake_pci_;
-  ddk::PciProtocolClient pci_;
+  ddk::Pci pci_;
 };
 
 TEST_F(FakePciProtocolTests, CreateBar) {
@@ -395,7 +395,7 @@ TEST_F(FakePciProtocolTests, MapMmio) {
 
   // Ensure that our fake implementation / backend for the BAR methods still works with
   // the MapMmio helper method added to device-protocol.
-  ddk::Pci dp_pci(fake_pci().get_protocol());
+  ddk::Pci dp_pci = fake_pci().get_pci();
   std::optional<fdf::MmioBuffer> mmio = std::nullopt;
   ASSERT_OK(dp_pci.MapMmio(bar_id, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio));
   ASSERT_TRUE(MatchKoids(borrowed, *mmio->get_vmo()));

@@ -40,7 +40,9 @@ class Pci {
   static constexpr char kFragmentName[] = "pci";
   Pci() = default;
 
+  // These constructors are deprecated and will be removed soon.
   explicit Pci(const pci_protocol_t& proto) : client_(ddk::PciProtocolClient(&proto)) {}
+  explicit Pci(ddk::PciProtocolClient client) : client_(client) {}
 
   explicit Pci(zx_device_t* parent) : client_(ddk::PciProtocolClient(parent)) {}
 
