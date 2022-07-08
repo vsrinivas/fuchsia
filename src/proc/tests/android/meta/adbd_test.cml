@@ -1,0 +1,11 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/proc/tests/starnix_test.shard.cml" ],
+    program: {
+        binary: "/vendor/data/nativetest64/adbd_test/adbd_test",
+        args: [ "--gtest_filter=-*FdeventTest.*:*LocalSocketTest.*:*sysdeps_fd.*:*PropertyMonitor*:*io.ReadFd*:*io.WriteFd*:*adb_utils.mkdirs*:*ShellServiceTest.*:*sysdeps_poll.*:*socket_spec.socket_spec_listen_connect_tcp*:*sysdeps.stat*" ],
+        user: "root:x:0:0",
+    },
+}

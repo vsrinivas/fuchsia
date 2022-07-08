@@ -47,6 +47,11 @@ fuchsia_test_component("binder_test") {
   ]
 }
 
+fuchsia_test_component("adbd_test") {
+  manifest = "meta/adbd_test.cml"
+  deps = [ "//src/proc/tests:starnix_test" ]
+}
+
 fuchsia_test_component("libutils_test") {
   manifest = "meta/libutils_test.cml"
   deps = [ "//src/proc/tests:starnix_test" ]
@@ -77,6 +82,7 @@ fuchsia_component("boringssl_self_test64") {
 
 stardroid_test_package("android") {
   test_components = [
+    ":adbd_test",
     ":boringssl_self_test64",
     ":java_hello_world",
     ":sh_test",
