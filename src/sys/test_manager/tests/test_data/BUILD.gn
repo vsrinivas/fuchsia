@@ -193,6 +193,27 @@ fuchsia_component("debug_data_spam_test") {
   deps = [ ":debug_data_spam_test_bin" ]
 }
 
+rustc_binary("logging-component-bin") {
+  name = "logging_component_bin"
+  source_root = "logging_component.rs"
+  edition = "2021"
+
+  deps = [
+    "//src/lib/diagnostics/log/rust",
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [ "logging_component.rs" ]
+}
+
+fuchsia_component("logging-component") {
+  component_name = "logging_component"
+  testonly = true
+  manifest = "meta/logging_component.cmx"
+  deps = [ ":logging-component-bin" ]
+}
+
 group("test_data") {
   testonly = true
   public_deps = [
@@ -202,12 +223,12 @@ group("test_data") {
     ":debug_data_test_v1",
     ":debug_data_write_test",
     ":hanging_test",
+    ":logging-component",
     ":no_suite_service",
     ":simple_chromium_realm_test",
     ":simple_system_realm_test",
     ":v2_test_runs_v1_component",
     "//examples/tests/rust:custom_artifact_user_cmp",
-    "//src/diagnostics/archivist/tests/logging-component:logging-component",
     "//src/sys/test_manager/cmx_runner/tests:echo_legacy_server",
   ]
 }

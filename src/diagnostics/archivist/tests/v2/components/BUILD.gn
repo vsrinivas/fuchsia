@@ -90,6 +90,27 @@ rustc_binary("log_on_interest_bin") {
   sources = [ "src/log_on_interest.rs" ]
 }
 
+rustc_binary("logging_component_bin") {
+  name = "logging_component"
+  source_root = "src/logging_component.rs"
+  edition = "2021"
+
+  deps = [
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [ "src/logging_component.rs" ]
+}
+
+fuchsia_component("logging_component") {
+  testonly = true
+  manifest = "meta/logging_component.cml"
+  deps = [ ":logging_component_bin" ]
+}
+
 fuchsia_component("stub_inspect_component") {
   testonly = true
   deps = [ ":stub_inspect_component_bin" ]
@@ -186,6 +207,7 @@ group("components") {
     ":log_and_crash_component",
     ":log_and_exit_component",
     ":log_on_interest_component",
+    ":logging_component",
     ":socket-puppet",
     ":stdio-puppet",
     ":stub_inspect_component",

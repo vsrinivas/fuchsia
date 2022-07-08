@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 use crate::constants;
+use fidl::endpoints::DiscoverableProtocolMarker;
+use fidl_fuchsia_diagnostics_test::ControllerMarker;
 use fuchsia_component_test::{
     error::Error, Capability, ChildOptions, ChildRef, Event, RealmBuilder, Ref, Route,
     SubRealmBuilder,
@@ -49,6 +51,7 @@ pub async fn create(opts: Options) -> Result<(RealmBuilder, SubRealmBuilder), Er
         .capability(Capability::protocol_by_name("fuchsia.diagnostics.LoWPANArchiveAccessor"))
         .capability(Capability::protocol_by_name("fuchsia.diagnostics.LogSettings"))
         .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+        .capability(Capability::protocol_by_name(ControllerMarker::PROTOCOL_NAME))
         .capability(Capability::protocol_by_name("fuchsia.logger.Log"));
     test_realm.add_route(archivist_to_parent.clone().from(&archivist).to(Ref::parent())).await?;
     builder.add_route(archivist_to_parent.from(&test_realm).to(Ref::parent())).await?;

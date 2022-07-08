@@ -20,6 +20,7 @@ rustc_test("integration_tests_bin") {
     "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/diagnostics/archivist:lib",
+    "//src/diagnostics/archivist/fidl:controller-rustc",
     "//src/diagnostics/archivist/tests/v2/components/fidl:fidl-rustc",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/diagnostics/hierarchy/rust",
@@ -58,6 +59,7 @@ rustc_test("integration_tests_bin") {
     "src/logs/attribution.rs",
     "src/logs/basic.rs",
     "src/logs/budget.rs",
+    "src/logs/controller_stop.rs",
     "src/logs/crash.rs",
     "src/logs/interest.rs",
     "src/logs/lifecycle.rs",
@@ -88,6 +90,17 @@ fuchsia_component_manifest("with-log-connector-manifest") {
 
 fuchsia_component("archivist-for-integration-with-log-connector") {
   cm_label = ":with-log-connector-manifest"
+  testonly = true
+  deps = [ "//src/diagnostics/archivist:bin" ]
+}
+
+fuchsia_component_manifest("with-controller-manifest") {
+  manifest = "meta/archivist_for_integration_with_controller.cml"
+  component_name = "archivist_with_controller"
+}
+
+fuchsia_component("archivist-for-integration-with-controller") {
+  cm_label = ":with-controller-manifest"
   testonly = true
   deps = [ "//src/diagnostics/archivist:bin" ]
 }
@@ -217,6 +230,11 @@ fuchsia_structured_config_values(
   values = with_feedback_filtering_disabled
 }
 
+fuchsia_structured_config_values("with-controller-config") {
+  cm_label = ":with-controller-manifest"
+  values = with_controller_config
+}
+
 resource("filter_feedback") {
   sources = [ "configs/pipelines/static_selectors.cfg" ]
   outputs = [
@@ -245,6 +263,7 @@ fuchsia_test_package("archivist-integration-tests-v2") {
   deps = [
     ":archivist-for-integration",
     ":archivist-for-integration-config",
+    ":archivist-for-integration-with-controller",
     ":archivist-for-integration-with-log-connector",
     ":archivist-with-feedback-filtering",
     ":archivist-with-feedback-filtering-config",
@@ -263,6 +282,7 @@ fuchsia_test_package("archivist-integration-tests-v2") {
     ":do_not_filter_feedback",
     ":filter_feedback",
     ":filter_lowpan",
+    ":with-controller-config",
     "components",
     "//src/diagnostics/iquery/test/test_component",
   ]

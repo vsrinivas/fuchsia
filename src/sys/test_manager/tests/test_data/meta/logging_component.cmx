@@ -3,6 +3,6 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/logging_component"
+        "binary": "bin/logging_component_bin"
     }
 }

@@ -10,6 +10,7 @@ pub const ARCHIVIST_WITH_SMALL_CACHES: &str = "#meta/archivist-with-small-caches
 pub const ARCHIVIST_WITH_LEGACY_METRICS: &str = "#meta/archivist-with-legacy-metrics-filtering.cm";
 pub const INTEGRATION_ARCHIVIST_URL: &str = "#meta/archivist.cm";
 pub const ARCHIVIST_WITH_KLOG_URL: &str = "#meta/archivist_with_klog.cm";
+pub const ARCHIVIST_WITH_CONTROLLER_URL: &str = "#meta/archivist_with_controller.cm";
 pub const COMPONENT_WITH_CHILDREN_URL: &str =
     "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/component_with_children.cm";
 pub const IQUERY_TEST_COMPONENT_URL: &str =
@@ -20,6 +21,7 @@ pub const SOCKET_PUPPET_COMPONENT_URL: &str =
     "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/socket-puppet.cm";
 pub const LOG_AND_EXIT_COMPONENT_URL: &str =
     "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/log-and-exit.cm";
+pub const LOGGING_COMPONENT_URL: &str = "#meta/logging_component.cm";
 pub const STUB_INSPECT_COMPONENT_URL: &str =
     "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/stub_inspect_component.cm";
 pub const HANGING_INSPECT_COMPONENT_URL: &str = "#meta/hanging_inspect_component.cm";

@@ -44,3 +44,8 @@ with_feedback_filtering_disabled = {
   forward_variables_from(archivist_for_integration_config, "*")
   pipelines_path = "/pkg/data/config/pipelines/feedback_filtering_disabled"
 }
+
+with_controller_config = {
+  forward_variables_from(archivist_for_integration_config, "*")
+  install_controller = true
+}
