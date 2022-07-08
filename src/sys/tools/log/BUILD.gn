@@ -2,20 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/test.gni")
 import("//build/testing/environments.gni")
-
-source_set("lib") {
-  sources = [ "log.cc" ]
-
-  public = [ "log.h" ]
-
-  deps = [
-    "//zircon/system/ulib/syslog",
-    "//zircon/system/ulib/zx",
-  ]
-
-  public_deps = [ "//sdk/fidl/fuchsia.logger" ]
-}
 
 executable("bin") {
   output_name = "log"
@@ -23,11 +11,9 @@ executable("bin") {
   sources = [ "main.cc" ]
 
   deps = [
-    ":lib",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/sys/cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//sdk/lib/syslog/cpp",
   ]
 }
 
@@ -35,23 +21,32 @@ fuchsia_shell_package("log") {
   deps = [ ":bin" ]
 }
 
-executable("tools_log_test_bin") {
-  testonly = true
-
+test("log_binary_test") {
   sources = [ "test.cc" ]
 
   deps = [
-    ":lib",
-    "//sdk/fidl/fuchsia.logger",
+    "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
+    "//third_party/rapidjson",
     "//zircon/system/ulib/syslog",
   ]
 }
 
-fuchsia_unittest_package("tools_log_test") {
-  deps = [ ":tools_log_test_bin" ]
+fuchsia_test_component("log_binary_test_component") {
+  testonly = true
+
+  manifest = "meta/log_binary_test.cml"
+
+  deps = [ ":log_binary_test" ]
+}
+
+fuchsia_test_package("tools_log_test") {
+  test_components = [ ":log_binary_test_component" ]
+  deps = [ ":bin" ]
 }
 
 group("tests") {

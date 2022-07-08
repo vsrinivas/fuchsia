@@ -1,103 +1,120 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include <fuchsia/logger/cpp/fidl_test_base.h>
-#include <lib/sys/cpp/component_context.h>
-#include <lib/syslog/wire_format.h>
-#include <zircon/errors.h>
-#include <zircon/status.h>
+#include <fuchsia/diagnostics/cpp/fidl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/spawn.h>
 
-#include <map>
-#include <string>
-#include <vector>
+#include <algorithm>
+
+#include <rapidjson/document.h>
+#include <rapidjson/pointer.h>
+#include <src/lib/fsl/vmo/strings.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
-#include "src/sys/tools/log/log.h"
-
 namespace {
 
-class FakeLogSink : public fuchsia::logger::testing::LogSink_TestBase {
- public:
-  explicit FakeLogSink(fidl::InterfaceRequest<fuchsia::logger::LogSink> request)
-      : binding_(this, std::move(request)) {}
-  void NotImplemented_(const std::string& name) override {
-    ADD_FAILURE() << "unexpected call to " << name;
-  }
-  void Connect(zx::socket socket) override { socket_ = std::move(socket); }
-  fpromise::result<std::tuple<zx_time_t, std::string, std::string>, zx_status_t> ReadPacket() {
-    static_assert(FX_LOG_MAX_DATAGRAM_LEN == sizeof(fx_log_packet_t));
-    std::vector<char> packet(FX_LOG_MAX_DATAGRAM_LEN);
-    size_t actual = 0;
-    zx_status_t status = socket_.read(0, packet.data(), packet.size(), &actual);
-    if (status != ZX_OK) {
-      return fpromise::error(status);
-    }
-    if (actual != packet.size()) {
-      // Packet should be exactly one log packet.
-      return fpromise::error(ZX_ERR_BAD_STATE);
-    }
-    if (*packet.rbegin() != 0) {
-      // Non-zero final byte indicates an improperly terminated message string.
-      return fpromise::error(ZX_ERR_BAD_STATE);
-    }
-    auto log_packet = reinterpret_cast<const fx_log_packet_t*>(packet.data());
-    if (log_packet->data[0] == 0 || log_packet->data[1 + log_packet->data[0]] != 0) {
-      // This fake assumes messages have exactly one tag.
-      return fpromise::error(ZX_ERR_NOT_SUPPORTED);
-    }
-    std::string tag(&log_packet->data[1]);
-    std::string msg(&log_packet->data[1 + tag.length() + 1]);
-    return fpromise::ok(std::make_tuple(log_packet->metadata.time, tag, msg));
-  }
-
-  void WaitForInterestChange(WaitForInterestChangeCallback callback) override {}
-
- private:
-  fidl::Binding<fuchsia::logger::LogSink> binding_;
-  zx::socket socket_;
-};
-
-class LogTest : public gtest::TestLoopFixture {
+class LogBinaryTest : public gtest::TestLoopFixture {
  protected:
-  LogTest() = default;
+  LogBinaryTest() = default;
+
+  static void RunBinary(const char** args) {
+    ASSERT_EQ(ZX_OK,
+              fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, "/pkg/bin/log", args, nullptr));
+  }
 };
 
-TEST_F(LogTest, InvalidArgc) {
-  EXPECT_EQ(log::ParseAndWriteLog(nullptr, zx::time::infinite(), 0, nullptr), ZX_ERR_INVALID_ARGS);
-  EXPECT_EQ(log::ParseAndWriteLog(nullptr, zx::time::infinite(), 1, nullptr), ZX_ERR_INVALID_ARGS);
-  EXPECT_EQ(log::ParseAndWriteLog(nullptr, zx::time::infinite(), 2, nullptr), ZX_ERR_INVALID_ARGS);
-  EXPECT_EQ(log::ParseAndWriteLog(nullptr, zx::time::infinite(), 4, nullptr), ZX_ERR_INVALID_ARGS);
-  EXPECT_EQ(log::ParseAndWriteLog(nullptr, zx::time::infinite(), 5, nullptr), ZX_ERR_INVALID_ARGS);
+struct TagMessagePair {
+  std::string tag;
+  std::string message;
+
+  bool operator==(const TagMessagePair& other) const {
+    return tag == other.tag && message == other.message;
+  }
+};
+
+std::vector<TagMessagePair> GetNextMessagePairs(
+    fuchsia::diagnostics::BatchIteratorSyncPtr* iterator) {
+  fuchsia::diagnostics::BatchIterator_GetNext_Result result;
+  if ((*iterator)->GetNext(&result) != ZX_OK || !result.is_response()) {
+    std::cout << "Failed to get next batch" << std::endl;
+    return {};
+  }
+
+  std::vector<TagMessagePair> ret;
+  for (const auto& entry : result.response().batch) {
+    std::string content;
+    if (!fsl::StringFromVmo(entry.json(), &content)) {
+      std::cout << "Failed to load JSON from a VMO" << std::endl;
+      return {};
+    }
+    std::cerr << "Received a log entry:\n" << content << std::endl;
+
+    rapidjson::Document document;
+    document.Parse(content);
+    for (const auto& value : document.GetArray()) {
+      auto* tag = rapidjson::Pointer("/metadata/tags/0").Get(value)->GetString();
+      auto* message = rapidjson::Pointer("/payload/root/message/value").Get(value)->GetString();
+      if (tag == nullptr) {
+        std::cout << "Missing tag" << std::endl;
+        return {};
+      }
+      if (message == nullptr) {
+        std::cout << "Missing message" << std::endl;
+        return {};
+      }
+
+      ret.emplace_back(TagMessagePair{.tag = tag, .message = message});
+    }
+  }
+
+  return ret;
 }
 
-TEST_F(LogTest, TagTooLong) {
-  std::string tag(64, 'x');
-  const char* argv[]{"log", tag.c_str(), ""};
-  EXPECT_EQ(log::ParseAndWriteLog(nullptr, zx::time::infinite(), 3, const_cast<char**>(argv)),
-            ZX_ERR_OUT_OF_RANGE);
-}
+// Log some values using the log binary, then check that those values can be read from the
+// Archivist.
+TEST_F(LogBinaryTest, LogValues) {
+  const char* args[] = {"log", "test", "hello", nullptr};
+  RunBinary(args);
+  const char* args2[] = {"log", "another_test", "hello again", nullptr};
+  RunBinary(args2);
 
-TEST_F(LogTest, CombinedTooLong) {
-  std::string tag(32, 'x');
-  std::string msg(32716, 'x');
-  const char* argv[]{"log", tag.c_str(), msg.c_str()};
-  EXPECT_EQ(log::ParseAndWriteLog(nullptr, zx::time::infinite(), 3, const_cast<char**>(argv)),
-            ZX_ERR_OUT_OF_RANGE);
-}
+  std::string path = std::string("/svc/") + fuchsia::diagnostics::ArchiveAccessor::Name_;
 
-TEST_F(LogTest, SimpleLog) {
-  fuchsia::logger::LogSinkHandle log_sink;
-  FakeLogSink fake(log_sink.NewRequest());
-  const char* argv[]{"log", "hello", "world"};
-  auto time = zx::clock::get_monotonic();
-  EXPECT_EQ(log::ParseAndWriteLog(std::move(log_sink), time, 3, const_cast<char**>(argv)), ZX_OK);
-  RunLoopUntilIdle();
-  auto result = fake.ReadPacket();
-  ASSERT_TRUE(result.is_ok()) << zx_status_get_string(result.error());
-  auto [time_out, tag, msg] = result.take_value();
-  EXPECT_EQ(tag, "hello");
-  EXPECT_EQ(msg, "world");
-  EXPECT_EQ(time_out, time.get());
+  fuchsia::diagnostics::ArchiveAccessorSyncPtr accessor;
+  ASSERT_EQ(ZX_OK,
+            fdio_service_connect(path.c_str(), accessor.NewRequest().TakeChannel().release()));
+
+  fuchsia::diagnostics::ClientSelectorConfiguration client_selector_config;
+  client_selector_config.set_select_all(true);
+  fuchsia::diagnostics::StreamParameters params;
+  params.set_data_type(fuchsia::diagnostics::DataType::LOGS);
+  params.set_stream_mode(fuchsia::diagnostics::StreamMode::SNAPSHOT_THEN_SUBSCRIBE);
+  params.set_format(fuchsia::diagnostics::Format::JSON);
+  params.set_client_selector_configuration(std::move(client_selector_config));
+
+  fuchsia::diagnostics::BatchIteratorSyncPtr iterator;
+  ASSERT_EQ(ZX_OK, accessor->StreamDiagnostics(std::move(params), iterator.NewRequest()));
+
+  std::vector<TagMessagePair> expected = {
+      TagMessagePair{.tag = "test", .message = "hello"},
+      TagMessagePair{.tag = "another_test", .message = "hello again"},
+  };
+
+  while (!expected.empty()) {
+    auto next = GetNextMessagePairs(&iterator);
+
+    ASSERT_FALSE(next.empty())
+        << "Ran out of results from the iterator before all expected entries were found.";
+
+    while (!next.empty() && !expected.empty()) {
+      auto it = std::find(expected.begin(), expected.end(), next[0]);
+      if (it != expected.end()) {
+        expected.erase(it);
+      }
+      next.erase(next.begin());
+    }
+  }
 }
 
 }  // namespace
