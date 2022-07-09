@@ -9,7 +9,6 @@
 #include <unistd.h>
 #include <zircon/syscalls.h>
 
-#include <runtime/tls.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -46,7 +45,11 @@ void* DoStackTest(void* arg) {
   static thread_local char tls_buf[64];
   zx_system_get_version(tls_buf, sizeof(tls_buf));
 
-  info->tp = zxr_tp_get();
+#ifdef __x86_64__
+  __asm__("movq %%fs:0, %0" : "=r"(info->tp));
+#else
+  info->tp = __builtin_thread_pointer();
+#endif
 
   info->environ = environ;
   info->unsafe_stack = unsafe_stack;

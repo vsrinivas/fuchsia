@@ -27,7 +27,6 @@
 #include <string>
 
 #include <fbl/unique_fd.h>
-#include <runtime/thread.h>
 #include <test-utils/test-utils.h>
 
 #define TU_FAIL_ERRCODE 10
