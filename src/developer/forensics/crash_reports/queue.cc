@@ -275,7 +275,8 @@ void Queue::Retire(const PendingReport pending_report, const Queue::RetireReason
   auto tags = tags_->Get(pending_report.report_id);
   switch (reason) {
     case RetireReason::kArchive:
-      FX_LOGST(INFO, tags) << "Archiving local report under /tmp/reports";
+      FX_LOGST(INFO, tags)
+          << "Archiving local report. Located under /tmp/reports or /cache/reports";
       metrics_.Retire(pending_report, reason, server_report_id);
       // Don't clean up resources if the report is being archived.
       return;
