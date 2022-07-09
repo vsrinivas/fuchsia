@@ -22,6 +22,7 @@ if (is_host) {
       "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common",
       "//src/developer/ffx/plugins/emulator/configuration:ffx_emulator_config",
       "//src/developer/ffx/plugins/emulator/engines:ffx_emulator_engines",
+      "//third_party/rust_crates:log",
       "//third_party/rust_crates:regex",
     ]
     args_sources = [ "src/args.rs" ]

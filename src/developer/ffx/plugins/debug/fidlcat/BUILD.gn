@@ -13,6 +13,7 @@ ffx_plugin("ffx_debug_fidlcat") {
     "//sdk/fidl/fuchsia.debugger:fuchsia.debugger-rustc",
     "//src/developer/ffx/lib/symbol-index",
     "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:log",
   ]
 
   args_sources = [ "src/args.rs" ]

@@ -16,6 +16,7 @@ ffx_plugin("ffx_wait") {
     "//src/developer/ffx/lib/timeout:lib",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:futures-lite",
+    "//third_party/rust_crates:log",
   ]
 
   args_sources = [ "src/args.rs" ]
