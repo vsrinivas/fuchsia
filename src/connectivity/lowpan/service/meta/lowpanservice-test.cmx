@@ -15,6 +15,7 @@
                 "fuchsia.lowpan.experimental.DeviceRouterConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
                 "fuchsia.lowpan.experimental.DeviceRouterExtraConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
                 "fuchsia.lowpan.experimental.LegacyJoiningConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
+                "fuchsia.lowpan.experimental.TelemetryProviderConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
                 "fuchsia.lowpan.test.DeviceTestConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
                 "fuchsia.lowpan.thread.DatasetConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx",
                 "fuchsia.lowpan.thread.MeshcopConnector": "fuchsia-pkg://fuchsia.com/lowpanservice#meta/lowpanservice.cmx"
@@ -42,6 +43,7 @@
             "fuchsia.lowpan.experimental.DeviceRouterConnector",
             "fuchsia.lowpan.experimental.DeviceRouterExtraConnector",
             "fuchsia.lowpan.experimental.LegacyJoiningConnector",
+            "fuchsia.lowpan.experimental.TelemetryProviderConnector",
             "fuchsia.lowpan.test.DeviceTestConnector",
             "fuchsia.lowpan.thread.DatasetConnector",
             "fuchsia.lowpan.thread.MeshcopConnector",

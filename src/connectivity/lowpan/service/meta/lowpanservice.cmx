@@ -20,6 +20,7 @@
             "fuchsia.lowpan.experimental.DeviceRouterConnector",
             "fuchsia.lowpan.experimental.DeviceRouterExtraConnector",
             "fuchsia.lowpan.experimental.LegacyJoiningConnector",
+            "fuchsia.lowpan.experimental.TelemetryProviderConnector",
             "fuchsia.lowpan.test.DeviceTestConnector",
             "fuchsia.lowpan.thread.DatasetConnector",
             "fuchsia.lowpan.thread.MeshcopConnector"

@@ -15,7 +15,8 @@ use fuchsia_inspect_contrib::nodes::{BoundedListNode, NodeExt, TimeProperty};
 use lowpan_driver_common::lowpan_fidl::{
     CountersConnectorMarker, CountersMarker, DeviceConnectorMarker, DeviceExtraConnectorMarker,
     DeviceExtraMarker, DeviceMarker, DeviceState, DeviceTestConnectorMarker, DeviceTestMarker,
-    DeviceWatcherMarker, DeviceWatcherProxyInterface, Identity,
+    DeviceWatcherMarker, DeviceWatcherProxyInterface, Identity, TelemetryProviderConnectorMarker,
+    TelemetryProviderMarker,
 };
 use parking_lot::Mutex;
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -83,6 +84,8 @@ pub struct IfaceTreeHolder {
     counters: Mutex<LazyNode>,
     // "iface-*/neighbors" subtree
     neighbors: Mutex<LazyNode>,
+    // "iface-*/telemetry" subtree
+    telemetry: Mutex<LazyNode>,
 }
 
 impl IfaceTreeHolder {
@@ -95,6 +98,7 @@ impl IfaceTreeHolder {
             status: Mutex::new(IfaceStatusNode::new(status)),
             counters: Mutex::new(LazyNode::default()),
             neighbors: Mutex::new(LazyNode::default()),
+            telemetry: Mutex::new(LazyNode::default()),
         }
     }
 
@@ -269,16 +273,19 @@ async fn monitor_device(name: String, iface_tree: Arc<IfaceTreeHolder>) -> Resul
     let (device_extra_client, device_extra_server) = create_endpoints::<DeviceExtraMarker>()?;
     let (device_test_client, device_test_server) = create_endpoints::<DeviceTestMarker>()?;
     let (counters_client, counters_server) = create_endpoints::<CountersMarker>()?;
+    let (telemetry_client, telemetry_server) = create_endpoints::<TelemetryProviderMarker>()?;
 
     connect_to_protocol::<DeviceConnectorMarker>()?.connect(&name, device_server)?;
     connect_to_protocol::<DeviceExtraConnectorMarker>()?.connect(&name, device_extra_server)?;
     connect_to_protocol::<DeviceTestConnectorMarker>()?.connect(&name, device_test_server)?;
     connect_to_protocol::<CountersConnectorMarker>()?.connect(&name, counters_server)?;
+    connect_to_protocol::<TelemetryProviderConnectorMarker>()?.connect(&name, telemetry_server)?;
 
     let device = device_client.into_proxy().context("into_proxy() failed")?;
     let device_extra = device_extra_client.into_proxy().context("into_proxy() failed")?;
     let device_test = device_test_client.into_proxy().context("into_proxy() failed")?;
     let counters = counters_client.into_proxy().context("into_proxy() failed")?;
+    let telemetry = telemetry_client.into_proxy().context("into_proxy() failed")?;
 
     {
         // "iface-*/counters" node
@@ -557,8 +564,46 @@ async fn monitor_device(name: String, iface_tree: Arc<IfaceTreeHolder>) -> Resul
                                         neighbor_info_clone.last_rssi_in.unwrap_or(0).into(),
                                     );
                                     inspector.root().record_int(
+                                        "avg_rssi_in",
+                                        neighbor_info_clone.avg_rssi_in.unwrap_or(0).into(),
+                                    );
+                                    inspector.root().record_uint(
+                                        "lqi_in",
+                                        neighbor_info_clone.lqi_in.unwrap_or(0).into(),
+                                    );
+                                    inspector.root().record_int(
                                         "thread_mode",
                                         neighbor_info_clone.thread_mode.unwrap_or(0).into(),
+                                    );
+                                    inspector.root().record_uint(
+                                        "frame_error_rate",
+                                        neighbor_info_clone.frame_error_rate.unwrap_or(0).into(),
+                                    );
+                                    inspector.root().record_uint(
+                                        "ipv6_error_rate",
+                                        neighbor_info_clone.ipv6_error_rate.unwrap_or(0).into(),
+                                    );
+                                    inspector.root().record_bool(
+                                        "child_is_csl_synced",
+                                        neighbor_info_clone
+                                            .child_is_csl_synced
+                                            .unwrap_or(false)
+                                            .into(),
+                                    );
+                                    inspector.root().record_bool(
+                                        "child_is_state_restoring",
+                                        neighbor_info_clone
+                                            .child_is_state_restoring
+                                            .unwrap_or(false)
+                                            .into(),
+                                    );
+                                    inspector.root().record_uint(
+                                        "net_data_version",
+                                        neighbor_info_clone.net_data_version.unwrap_or(0).into(),
+                                    );
+                                    inspector.root().record_uint(
+                                        "queued_messages",
+                                        neighbor_info_clone.queued_messages.unwrap_or(0).into(),
                                     );
                                     Ok(inspector)
                                 }
@@ -568,6 +613,56 @@ async fn monitor_device(name: String, iface_tree: Arc<IfaceTreeHolder>) -> Resul
                     }
                     Err(e) => {
                         fx_log_warn!("Error in logging neighbors. Error: {}", e);
+                    }
+                };
+                Ok(inspector)
+            }
+            .boxed()
+        });
+
+        // "iface-*/telemetry" node
+        let mut lazy_telemetry = iface_tree.telemetry.lock();
+        *lazy_telemetry = iface_tree.node.create_lazy_child("telemetry", move || {
+            let telemetry_clone = telemetry.clone();
+            async move {
+                let inspector = Inspector::new();
+                match telemetry_clone.get_telemetry().await {
+                    Ok(telemetry_data) => {
+                        if let Some(x) = telemetry_data.thread_router_id {
+                            inspector.root().record_uint("thread_router_id", x.into());
+                        }
+                        if let Some(x) = telemetry_data.partition_id {
+                            inspector.root().record_uint("partition_id", x.into());
+                        }
+                        if let Some(x) = telemetry_data.tx_power {
+                            inspector.root().record_int("tx_power", x.into());
+                        }
+                        if let Some(x) = telemetry_data.thread_link_mode {
+                            inspector.root().record_uint("thread_link_mode", x.into());
+                        }
+                        if let Some(x) = telemetry_data.thread_leader_weight {
+                            inspector.root().record_uint("thread_leader_weight", x.into());
+                        }
+                        if let Some(x) = telemetry_data.thread_network_data_version {
+                            inspector.root().record_uint("thread_network_data_version", x.into());
+                        }
+                        if let Some(x) = telemetry_data.thread_stable_network_data_version {
+                            inspector
+                                .root()
+                                .record_uint("thread_stable_network_data_version", x.into());
+                        }
+                        if let Some(x) = telemetry_data.thread_leader_router_id {
+                            inspector.root().record_uint("thread_leader_router_id", x.into());
+                        }
+                        if let Some(x) = telemetry_data.thread_network_data {
+                            inspector.root().record_bytes("thread_network_data", x);
+                        }
+                        if let Some(x) = telemetry_data.thread_stable_network_data {
+                            inspector.root().record_bytes("thread_stable_network_data", x);
+                        }
+                    }
+                    Err(e) => {
+                        fx_log_warn!("Error in logging telemetry. Error: {}", e);
                     }
                 };
                 Ok(inspector)
@@ -694,14 +789,23 @@ mod tests {
                 "neighbors": {
                     "0": {
                         "age": AnyProperty,
+                        "avg_rssi_in": AnyProperty,
+                        "child_is_csl_synced": AnyProperty,
+                        "child_is_state_restoring": AnyProperty,
+                        "frame_error_rate": AnyProperty,
+                        "ipv6_error_rate": AnyProperty,
                         "is_child": AnyProperty,
                         "link_frame_count": AnyProperty,
+                        "lqi_in": AnyProperty,
                         "mgmt_frame_count": AnyProperty,
+                        "net_data_version": AnyProperty,
+                        "queued_messages": AnyProperty,
                         "rssi": AnyProperty,
                         "short_address": AnyProperty,
                         "thread_mode": AnyProperty,
                     }
-                }
+                },
+                "telemetry": contains {},
             }
         });
         assert_data_tree!(inspector, root: contains {
