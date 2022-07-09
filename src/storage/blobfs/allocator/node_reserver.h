@@ -42,8 +42,8 @@ class ReservedNode {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ReservedNode);
 
   ReservedNode(NodeReserverInterface* reserver, uint32_t node);
-  ReservedNode(ReservedNode&& o);
-  ReservedNode& operator=(ReservedNode&& o);
+  ReservedNode(ReservedNode&& o) noexcept;
+  ReservedNode& operator=(ReservedNode&& o) noexcept;
 
   ~ReservedNode();
 

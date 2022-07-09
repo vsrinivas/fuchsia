@@ -18,11 +18,11 @@ namespace blobfs {
 ReservedNode::ReservedNode(NodeReserverInterface* reserver, uint32_t node)
     : reserver_(reserver), node_(node) {}
 
-ReservedNode::ReservedNode(ReservedNode&& o) : reserver_(o.reserver_), node_(o.node_) {
+ReservedNode::ReservedNode(ReservedNode&& o) noexcept : reserver_(o.reserver_), node_(o.node_) {
   o.Release();
 }
 
-ReservedNode& ReservedNode::operator=(ReservedNode&& o) {
+ReservedNode& ReservedNode::operator=(ReservedNode&& o) noexcept {
   Reset();
   reserver_ = o.reserver_;
   node_ = o.node_;

@@ -64,8 +64,8 @@ class ReservedExtent {
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ReservedExtent);
 
-  ReservedExtent(ReservedExtent&& o);
-  ReservedExtent& operator=(ReservedExtent&& o);
+  ReservedExtent(ReservedExtent&& o) noexcept;
+  ReservedExtent& operator=(ReservedExtent&& o) noexcept;
   ~ReservedExtent();
 
   // Access the underlying extent which has been reserved.

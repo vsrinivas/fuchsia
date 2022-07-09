@@ -71,8 +71,8 @@ class BaseBufferView {
       : buffer_(buffer), offset_(offset), length_(length), flusher_(std::move(flusher)) {}
 
   // Movable, but not copyable.
-  BaseBufferView(BaseBufferView&& other) { *this = std::move(other); }
-  BaseBufferView& operator=(BaseBufferView&& other);
+  BaseBufferView(BaseBufferView&& other) noexcept { *this = std::move(other); }
+  BaseBufferView& operator=(BaseBufferView&& other) noexcept;
 
   ~BaseBufferView();
 

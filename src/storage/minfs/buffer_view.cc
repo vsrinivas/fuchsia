@@ -8,7 +8,7 @@ namespace minfs {
 
 BaseBufferView::~BaseBufferView() { ZX_ASSERT_MSG(!dirty_, "Flush not called on dirty buffer."); }
 
-BaseBufferView& BaseBufferView::operator=(BaseBufferView&& other) {
+BaseBufferView& BaseBufferView::operator=(BaseBufferView&& other) noexcept {
   ZX_ASSERT_MSG(!dirty_, "Flush not called on dirty buffer.");
   buffer_ = other.buffer_;
   length_ = other.length_;

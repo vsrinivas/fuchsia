@@ -43,15 +43,15 @@ struct BufferInfo {
 };
 
 // Internal class for representing read and write buffers for the sparse image.
-class Buffer {
+class Buffer final {
  public:
-  Buffer();
+  Buffer() noexcept = default;
   Buffer(uint64_t offset, size_t size, uint64_t capacity);
   Buffer(const Buffer&) = delete;
-  Buffer(Buffer&&);
+  Buffer(Buffer&&) noexcept = default;
   Buffer& operator=(const Buffer&) = delete;
-  Buffer& operator=(Buffer&&);
-  ~Buffer();
+  Buffer& operator=(Buffer&&) noexcept = default;
+  ~Buffer() = default;
 
   // Write |length| bytes from |indata| into buffer.
   bool IsEmpty() const;

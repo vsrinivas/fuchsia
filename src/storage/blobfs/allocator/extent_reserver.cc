@@ -42,11 +42,12 @@ uint64_t ExtentReserver::ReservedBlockCount() const {
 
 ReservedExtent::~ReservedExtent() { Reset(); }
 
-ReservedExtent::ReservedExtent(ReservedExtent&& o) : reserver_(o.reserver_), extent_(o.extent_) {
+ReservedExtent::ReservedExtent(ReservedExtent&& o) noexcept
+    : reserver_(o.reserver_), extent_(o.extent_) {
   o.Release();
 }
 
-ReservedExtent& ReservedExtent::operator=(ReservedExtent&& o) {
+ReservedExtent& ReservedExtent::operator=(ReservedExtent&& o) noexcept {
   Reset();
   reserver_ = o.reserver_;
   extent_ = o.extent_;

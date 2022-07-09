@@ -39,15 +39,11 @@ class FileReader : public ReaderInterface {
 
 using Buffer = internal::Buffer;
 
-Buffer::Buffer() = default;
 Buffer::Buffer(uint64_t offset, size_t size, uint64_t capacity) : capacity_(capacity) {
   info_.size = size;
   info_.offset = offset;
   data_.reset(new uint8_t[capacity]);
 }
-Buffer::Buffer(Buffer&&) = default;
-Buffer& Buffer::operator=(Buffer&&) = default;
-Buffer::~Buffer() = default;
 
 bool Buffer::IsEmpty() const { return info_.offset == 0 && info_.size == 0; }
 
