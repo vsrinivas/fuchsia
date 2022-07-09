@@ -91,21 +91,25 @@ void GuestInteractionTest::SetUp() {
   fuchsia::virtualization::GuestManager_LaunchGuest_Result res;
   guest_manager_ = realm_root_->ConnectSync<fuchsia::virtualization::DebianGuestManager>();
 
+  FX_LOGS(INFO) << "Starting Debian Guest";
   fuchsia::virtualization::GuestPtr guest;
   ASSERT_OK(guest_manager_->LaunchGuest(std::move(cfg), guest.NewRequest(), &res));
 
   // Start a GuestConsole.  When the console starts, it waits until it
   // receives some sensible output from the guest to ensure that the guest is
   // usable.
+  FX_LOGS(INFO) << "Getting Serial Console";
   std::optional<zx_status_t> guest_error;
   guest.set_error_handler([&guest_error](zx_status_t status) { guest_error = status; });
   std::optional<fuchsia::virtualization::Guest_GetConsole_Result> get_console_result;
   guest->GetConsole([&get_console_result](fuchsia::virtualization::Guest_GetConsole_Result result) {
     get_console_result = std::move(result);
   });
+  FX_LOGS(INFO) << "Waiting for Serial Console";
   RunLoopUntil([&guest_error, &get_console_result]() {
     return guest_error.has_value() || get_console_result.has_value();
   });
+  FX_LOGS(INFO) << "Serial Console Received";
   ASSERT_FALSE(guest_error.has_value()) << zx_status_get_string(guest_error.value());
   fuchsia::virtualization::Guest_GetConsole_Result& result = get_console_result.value();
   switch (result.Which()) {
