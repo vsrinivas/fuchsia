@@ -106,6 +106,17 @@ impl Format for LosslessBinary {
 #[cfg(test)]
 mod test {
     use super::*;
+    use anyhow::anyhow;
+    use fuchsia_async::{Task, TimeoutExt};
+    use onet_test_util::{test_security_context, LosslessPipe};
+    use overnet_core::{NodeId, RouterOptions};
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    async fn await_peer(router: Arc<Router>, peer: NodeId) {
+        let lp = router.new_list_peers_context();
+        while lp.list_peers().await.unwrap().into_iter().find(|p| peer == p.id.into()).is_none() {}
+    }
 
     #[fuchsia_async::run(1, test)]
     async fn simple_frame() -> Result<(), Error> {
@@ -126,5 +137,58 @@ mod test {
         let (mut framer_writer, _framer_reader) = new_framer(LosslessBinary, 1024);
         assert!(framer_writer.write(&big_slice).await.is_err());
         Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_run_streamlink() {
+        let rtr_client =
+            Router::new(RouterOptions::new().set_node_id(1.into()), test_security_context())
+                .unwrap();
+        let rtr_server =
+            Router::new(RouterOptions::new().set_node_id(2.into()), test_security_context())
+                .unwrap();
+
+        let (mut c2s_rx, mut c2s_tx) = LosslessPipe::new().split();
+        let (mut s2c_rx, mut s2c_tx) = LosslessPipe::new().split();
+
+        let rtr_client_fut = rtr_client.clone();
+        let rtr_server_fut = rtr_server.clone();
+
+        let _fwd = Task::spawn(
+            futures::future::join(
+                async move {
+                    let run_client = run_stream_link(
+                        rtr_client_fut,
+                        &mut c2s_rx,
+                        &mut s2c_tx,
+                        LinkIntroductionFacts { you_are: None },
+                        Box::new(|| None),
+                    );
+
+                    panic!("should never terminate: {:?}", run_client.await);
+                },
+                async move {
+                    let run_server = run_stream_link(
+                        rtr_server_fut,
+                        &mut s2c_rx,
+                        &mut c2s_tx,
+                        LinkIntroductionFacts { you_are: None },
+                        Box::new(|| None),
+                    );
+
+                    panic!("should never terminate: {:?}", run_server.await);
+                },
+            )
+            .map(drop),
+        );
+
+        futures::future::join(
+            await_peer(rtr_client.clone(), rtr_server.node_id()),
+            await_peer(rtr_server.clone(), rtr_client.node_id()),
+        )
+        .map(Ok)
+        .on_timeout(Duration::from_secs(120), || Err(anyhow!("timeout")))
+        .await
+        .unwrap();
     }
 }

@@ -7,6 +7,7 @@ group("lib") {
   deps = [
     "core",
     "hoist",
+    "onet_test_util",
     "onet_tool",
     "quic",
     "serial_link",
@@ -24,6 +25,7 @@ group("tests") {
   deps = [
     "core:tests",
     "hoist:tests",
+    "onet_test_util:tests",
     "quic:tests",
     "serial_link:tests",
     "stream_framer:tests",

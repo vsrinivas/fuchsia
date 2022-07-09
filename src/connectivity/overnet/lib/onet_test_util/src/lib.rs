@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg(test)]
-
 use futures::prelude::*;
 use overnet_core::SecurityContext;
 use rand::Rng;
@@ -37,6 +35,65 @@ pub fn test_security_context() -> Box<dyn SecurityContext> {
         node_private_key: "/pkg/data/cert.key",
         root_cert: "/pkg/data/rootca.crt",
     })
+}
+
+pub struct LosslessPipe {
+    queue: VecDeque<u8>,
+    read_waker: Option<Waker>,
+}
+
+impl LosslessPipe {
+    pub fn new() -> Self {
+        LosslessPipe { queue: VecDeque::new(), read_waker: None }
+    }
+}
+
+impl AsyncRead for LosslessPipe {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        ctx: &mut Context<'_>,
+        bytes: &mut [u8],
+    ) -> Poll<Result<usize, std::io::Error>> {
+        if self.queue.is_empty() {
+            self.read_waker = Some(ctx.waker().clone());
+            return Poll::Pending;
+        }
+        for (i, b) in bytes.iter_mut().enumerate() {
+            if let Some(x) = self.queue.pop_front() {
+                *b = x;
+            } else {
+                assert_ne!(i, 0);
+                return Poll::Ready(Ok(i));
+            }
+        }
+        Poll::Ready(Ok(bytes.len()))
+    }
+}
+
+impl AsyncWrite for LosslessPipe {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        _ctx: &mut Context<'_>,
+        bytes: &[u8],
+    ) -> Poll<Result<usize, std::io::Error>> {
+        self.queue.extend(bytes.iter());
+        self.read_waker.take().map(|w| w.wake());
+        Poll::Ready(Ok(bytes.len()))
+    }
+
+    fn poll_flush(
+        self: Pin<&mut Self>,
+        _ctx: &mut Context<'_>,
+    ) -> Poll<Result<(), std::io::Error>> {
+        Poll::Ready(Ok(()))
+    }
+
+    fn poll_close(
+        self: Pin<&mut Self>,
+        _ctx: &mut Context<'_>,
+    ) -> Poll<Result<(), std::io::Error>> {
+        Poll::Ready(Ok(()))
+    }
 }
 
 pub struct DodgyPipe {
@@ -83,7 +140,7 @@ impl AsyncWrite for DodgyPipe {
         _ctx: &mut Context<'_>,
         bytes: &[u8],
     ) -> Poll<Result<usize, std::io::Error>> {
-        tracing::trace!("DODGY_WRITE:{:?}", std::str::from_utf8(bytes).unwrap());
+        tracing::trace!("LOSSY_WRITE: {:?}", std::str::from_utf8(bytes).unwrap());
         self.queue.extend(bytes.iter());
         self.read_waker.take().map(|w| w.wake());
         Poll::Ready(Ok(bytes.len()))

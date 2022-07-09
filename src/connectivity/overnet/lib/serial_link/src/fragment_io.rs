@@ -202,11 +202,11 @@ mod test {
 
     use super::{new_fragment_io, FragmentReader, FragmentWriter};
     use crate::lossy_text::LossyText;
-    use crate::test_util::DodgyPipe;
     use anyhow::{format_err, Error};
     use fuchsia_async::TimeoutExt;
     use futures::future::{try_join, try_join4};
     use futures::prelude::*;
+    use onet_test_util::DodgyPipe;
     use std::collections::HashSet;
     use std::time::Duration;
     use stream_framer::{new_deframer, new_framer, DeframerWriter, FramerReader, ReadBytes};

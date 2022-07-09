@@ -1,27 +1,28 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
 
-rustc_library("stream_link") {
+rustc_library("onet_test_util") {
+  testonly = true
   with_unit_tests = true
   edition = "2021"
   deps = [
     "//src/connectivity/overnet/lib/core",
-    "//src/connectivity/overnet/lib/stream_framer",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:tracing",
   ]
-  test_deps = [
-    "//src/connectivity/overnet/lib/onet_test_util",
-    "//src/lib/fuchsia-async",
-  ]
+
+  if (is_fuchsia) {
+    deps += []
+  } else {
+    deps += [ "//third_party/rust_crates:async-fs" ]
+  }
 
   sources = [ "src/lib.rs" ]
-
   inputs = [
     "//third_party/rust_crates/mirrors/quiche/quiche/examples/cert.crt",
     "//third_party/rust_crates/mirrors/quiche/quiche/examples/cert.key",
@@ -29,9 +30,9 @@ rustc_library("stream_link") {
   ]
 }
 
-fuchsia_unittest_package("overnet-stream-link-tests") {
+fuchsia_unittest_package("overnet-test-util-tests") {
   deps = [
-    ":stream_link_test",
+    ":onet_test_util_test",
     "//src/connectivity/overnet/overnetstack:certificates",
   ]
 }
@@ -39,7 +40,7 @@ fuchsia_unittest_package("overnet-stream-link-tests") {
 group("tests") {
   testonly = true
   deps = [
-    ":overnet-stream-link-tests",
-    ":stream_link_test($host_toolchain)",
+    ":onet_test_util_test($host_toolchain)",
+    ":overnet-test-util-tests",
   ]
 }

@@ -11,6 +11,3 @@ mod lossy_text;
 mod reassembler;
 pub mod report_skipped;
 pub mod run;
-
-#[cfg(test)]
-mod test_util;

@@ -274,10 +274,10 @@ mod test {
 
     use super::Role;
     use crate::report_skipped::ReportSkipped;
-    use crate::test_util::{test_security_context, DodgyPipe};
     use anyhow::{format_err, Error};
     use fuchsia_async::{Task, TimeoutExt};
     use futures::prelude::*;
+    use onet_test_util::{test_security_context, DodgyPipe};
     use overnet_core::{NodeId, Router, RouterOptions};
     use std::sync::Arc;
     use std::time::Duration;

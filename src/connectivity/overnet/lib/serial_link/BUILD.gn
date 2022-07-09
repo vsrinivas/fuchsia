@@ -28,7 +28,7 @@ rustc_library("serial_link") {
   }
 
   test_deps = [
-    "//third_party/rust_crates:rand",
+    "//src/connectivity/overnet/lib/onet_test_util",
     "//third_party/rust_crates:tracing-subscriber",
   ]
 
@@ -40,7 +40,6 @@ rustc_library("serial_link") {
     "src/reassembler.rs",
     "src/report_skipped.rs",
     "src/run.rs",
-    "src/test_util.rs",
   ]
 
   inputs = [
