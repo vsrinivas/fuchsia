@@ -157,8 +157,8 @@ rustc_binary("socket_puppet_bin") {
   source_root = "src/socket_puppet.rs"
 
   deps = [
+    "fidl:fidl-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
-    "//src/diagnostics/archivist/tests/v2/components/fidl:fidl-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -182,7 +182,7 @@ rustc_binary("stdio_puppet_bin") {
   source_root = "src/stdio_puppet.rs"
 
   deps = [
-    "//src/diagnostics/archivist/tests/v2/components/fidl:fidl-rustc",
+    "fidl:fidl-rustc",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",

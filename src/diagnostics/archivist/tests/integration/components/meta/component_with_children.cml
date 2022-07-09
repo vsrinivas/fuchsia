@@ -13,12 +13,12 @@
     children: [
         {
             name: "stub_inspect_1",
-            url: "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/stub_inspect_component.cm",
+            url: "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/stub_inspect_component.cm",
             startup: "eager",
         },
         {
             name: "stub_inspect_2",
-            url: "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/stub_inspect_component.cm",
+            url: "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/stub_inspect_component.cm",
             startup: "eager",
         },
     ],

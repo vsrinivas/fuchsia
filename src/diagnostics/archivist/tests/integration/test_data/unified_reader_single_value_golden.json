@@ -2,11 +2,11 @@
     {
         "data_source": "Inspect",
         "metadata": {
-            "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/test_component.cm",
+            "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/test_component.cm",
             "filename": "fuchsia.inspect.Tree",
             "timestamp": 0
         },
-        "moniker": "memory_monitor.cmx",
+        "moniker": "test_component",
         "payload": {
             "root": {
                 "lazy-double": 3.25
@@ -17,11 +17,11 @@
     {
         "data_source": "Inspect",
         "metadata": {
-            "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/test_component.cm",
+            "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/test_component.cm",
             "filename": "fuchsia.inspect.deprecated.Inspect",
             "timestamp": 0
         },
-        "moniker": "memory_monitor.cmx",
+        "moniker": "test_component",
         "payload": {
             "root": {}
         },
@@ -30,11 +30,11 @@
     {
         "data_source": "Inspect",
         "metadata": {
-            "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/test_component.cm",
+            "component_url": "fuchsia-pkg://fuchsia.com/archivist-integration-tests#meta/test_component.cm",
             "filename": "root.inspect",
             "timestamp": 0
         },
-        "moniker": "memory_monitor.cmx",
+        "moniker": "test_component",
         "payload": {
             "root": {}
         },

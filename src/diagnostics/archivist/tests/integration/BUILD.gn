@@ -6,12 +6,13 @@ import("//build/components.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//src/diagnostics/archivist/build/pipeline.gni")
-import("//src/diagnostics/archivist/tests/v2/configs.gni")
+import("//src/diagnostics/archivist/tests/integration/configs.gni")
 
 rustc_test("integration_tests_bin") {
   output_name = "archivist_integration_tests"
   edition = "2021"
   deps = [
+    "components/fidl:fidl-rustc",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
@@ -21,7 +22,6 @@ rustc_test("integration_tests_bin") {
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/diagnostics/archivist:lib",
     "//src/diagnostics/archivist/fidl:controller-rustc",
-    "//src/diagnostics/archivist/tests/v2/components/fidl:fidl-rustc",
     "//src/lib/diagnostics/data/rust",
     "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/diagnostics/log/message/rust",
@@ -243,7 +243,7 @@ resource("configure_legacy_metrics_pipeline") {
   outputs = [ "data/config/pipelines/legacy_metrics_filtered/legacy_metrics/legacy_selectors.cfg" ]
 }
 
-fuchsia_test_package("archivist-integration-tests-v2") {
+fuchsia_test_package("archivist-integration-tests") {
   test_components = [ ":archivist_integration_tests" ]
   deps = [
     ":archivist-for-integration",
@@ -273,5 +273,5 @@ fuchsia_test_package("archivist-integration-tests-v2") {
 
 group("tests") {
   testonly = true
-  deps = [ ":archivist-integration-tests-v2" ]
+  deps = [ ":archivist-integration-tests" ]
 }

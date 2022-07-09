@@ -4,7 +4,7 @@
 {
     include: [
         "//src/diagnostics/archivist/meta/common.shard.cml",
-        "//src/diagnostics/archivist/tests/v2/meta/test.shard.cml",
+        "//src/diagnostics/archivist/tests/integration/meta/test.shard.cml",
         "syslog/client.shard.cml",
     ],
     program: {
