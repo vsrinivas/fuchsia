@@ -8,7 +8,6 @@ use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_mem as fmem;
 use fuchsia_zircon_status as zxs;
-use futures::StreamExt;
 use std::borrow::Cow;
 use thiserror::Error;
 
@@ -25,66 +24,29 @@ pub async fn open_file_data(
         fidl::endpoints::create_proxy::<fio::FileMarker>().map_err(FileError::CreateProxy)?;
     parent
         .open(
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
+            fio::OpenFlags::RIGHT_READABLE,
             fio::MODE_TYPE_FILE,
             path,
             ServerEnd::new(server_end.into_channel()),
         )
         .map_err(FileError::SendOpenRequest)?;
 
-    // wait for the server to reply to the DESCRIBE flag by sending an event
-    let describe_reply = file
-        .take_event_stream()
-        .next()
+    match file
+        .get_backing_memory(fio::VmoFlags::READ)
         .await
-        .ok_or(FileError::FileEventStreamClosed)?
-        .map_err(FileError::FileEventDecode)?;
+        .map_err(FileError::GetBufferError)?
+        .map_err(zxs::Status::from_raw)
+    {
+        Ok(vmo) => {
+            let size = vmo.get_content_size().expect("failed to get VMO size");
 
-    // retrieve a buffer from the reply event, if any
-    let buffer_from_describe = match describe_reply {
-        fio::FileEvent::OnOpen_ { info: Some(nodeinfo), .. } => match *nodeinfo {
-            fio::NodeInfo::Vmofile(fio::Vmofile { vmo, offset, length }) => {
-                Some(fmem::Buffer { vmo, size: offset + length })
-            }
-            _ => None,
-        },
-        fio::FileEvent::OnConnectionInfo {
-            payload:
-                fio::ConnectionInfo {
-                    representation:
-                        Some(fio::Representation::Memory(fio::MemoryInfo {
-                            buffer: Some(fmem::Range { vmo, offset, size }),
-                            ..
-                        })),
-                    ..
-                },
-        } => Some(fmem::Buffer { vmo, size: offset + size }),
-        _ => None,
-    };
-
-    // return if we got a VMO handle from the DESCRIBE reply
-    if let Some(buffer) = buffer_from_describe {
-        Ok(fmem::Data::Buffer(buffer))
-    } else {
-        // we didn't get a VMO handle from DESCRIBE, explicitly ask. ignore the status code, we'll
-        // fall back to trying to read over the channel if it doesn't return a handle
-        match file
-            .get_backing_memory(fio::VmoFlags::READ)
-            .await
-            .map_err(FileError::GetBufferError)?
-            .map_err(zxs::Status::from_raw)
-        {
-            Ok(vmo) => {
-                let size = vmo.get_content_size().expect("failed to get VMO size");
-
-                Ok(fmem::Data::Buffer(fmem::Buffer { vmo, size }))
-            }
-            Err(e) => {
-                let _: zxs::Status = e;
-                // we still didn't get a VMO handle, fallback to reads over the channel
-                let bytes = fuchsia_fs::file::read(&file).await?;
-                Ok(fmem::Data::Bytes(bytes))
-            }
+            Ok(fmem::Data::Buffer(fmem::Buffer { vmo, size }))
+        }
+        Err(e) => {
+            let _: zxs::Status = e;
+            // we still didn't get a VMO handle, fallback to reads over the channel
+            let bytes = fuchsia_fs::file::read(&file).await?;
+            Ok(fmem::Data::Bytes(bytes))
         }
     }
 }
@@ -166,35 +128,6 @@ mod tests {
         let fs = pseudo_directory! {
             // `read_only_static` is a vmo file, returns the buffer in OnOpen
             "foo" => read_only_static("hello, world!"),
-        };
-        let directory = serve_vfs_dir(fs);
-
-        let data = open_file_data(&directory, "foo").await.unwrap();
-        match bytes_from_data(&data).unwrap() {
-            Cow::Owned(b) => assert_eq!(b, b"hello, world!"),
-            _ => panic!("must produce an owned value from reading contents of fmem::Data::Buffer"),
-        }
-    }
-
-    /// Test that we get a VMO in the fast path where the handle is from the DESCRIBE response.
-    #[fuchsia::test]
-    async fn bytes_from_vmo_from_on_open() {
-        let channel_only_foo: RoutingFn = Box::new(|_scope, _flags, _mode, _path, server_end| {
-            let server_end: ServerEnd<fio::FileMarker> = ServerEnd::new(server_end.into_channel());
-            let (_, control) = server_end.into_stream_and_control_handle().unwrap();
-
-            // ack the open request with our handle
-            let vmo = fidl::Vmo::create(13).unwrap();
-            vmo.write(b"hello, world!", 0).unwrap();
-            control
-                .send_on_open_(
-                    zxs::Status::OK.into_raw(),
-                    Some(&mut fio::NodeInfo::Vmofile(fio::Vmofile { offset: 0, length: 13, vmo })),
-                )
-                .unwrap();
-        });
-        let fs = pseudo_directory! {
-            "foo" => remote_boxed_with_type(channel_only_foo, fio::DirentType::File),
         };
         let directory = serve_vfs_dir(fs);
 
