@@ -20,7 +20,7 @@ impl<T: std::fmt::Display> AsyncWrite for ReportSkipped<T> {
         _ctx: &mut Context<'_>,
         bytes: &[u8],
     ) -> Poll<Result<usize, std::io::Error>> {
-        log::info!("{}: {:?} {:?}", self.0, bytes, std::str::from_utf8(bytes));
+        tracing::info!("{}: {:?} {:?}", self.0, bytes, std::str::from_utf8(bytes));
         Poll::Ready(Ok(bytes.len()))
     }
 

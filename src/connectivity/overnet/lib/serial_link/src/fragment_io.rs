@@ -78,14 +78,19 @@ async fn read_fragments(
                     frame.pop().ok_or_else(|| format_err!("packet too short (no msg id)"))?;
                 if fragment_id & ACK == ACK {
                     if !frame.is_empty() {
-                        log::warn!("non-empty ack received for ({}, {})", msg_id, fragment_id);
+                        tracing::warn!("non-empty ack received for ({}, {})", msg_id, fragment_id);
                     }
                     if let Some(tx) = ack_set.lock().await.remove(&(msg_id, fragment_id & !ACK)) {
                         let _ = tx.send(());
                     }
                     continue;
                 }
-                log::trace!("READ FRAG: msg_id={} fragment_id={} {:?}", msg_id, fragment_id, frame);
+                tracing::trace!(
+                    "READ FRAG: msg_id={} fragment_id={} {:?}",
+                    msg_id,
+                    fragment_id,
+                    frame
+                );
                 framer_writer.lock().await.write(&[msg_id, fragment_id | ACK]).await?;
                 if let Some(frame) = reassembler.recv(msg_id, fragment_id, frame) {
                     tx_read.send(ReadBytes::Framed(frame)).await?;
@@ -135,7 +140,7 @@ async fn fragment_sender(
         let tag = (msg_id, fragment_id);
         ack_set.lock().await.insert(tag, tx_ack);
 
-        log::trace!(
+        tracing::trace!(
             "SEND FRAG: msg_id={:?} fragment_id={:?} bytes={:?}",
             msg_id,
             fragment_id,
@@ -197,7 +202,7 @@ mod test {
 
     use super::{new_fragment_io, FragmentReader, FragmentWriter};
     use crate::lossy_text::LossyText;
-    use crate::test_util::{init, DodgyPipe};
+    use crate::test_util::DodgyPipe;
     use anyhow::{format_err, Error};
     use fuchsia_async::TimeoutExt;
     use futures::future::{try_join, try_join4};
@@ -245,7 +250,7 @@ mod test {
         failures_per_64kib: u16,
         messages: &'static [&[u8]],
     ) -> Result<(), Error> {
-        init();
+        let _ = tracing_subscriber::fmt::try_init();
         const INCOMING_BYTE_TIMEOUT: std::time::Duration = std::time::Duration::from_millis(100);
         let (c2s_rx, c2s_tx) = DodgyPipe::new(failures_per_64kib).split();
         let (s2c_rx, s2c_tx) = DodgyPipe::new(failures_per_64kib).split();
@@ -290,9 +295,9 @@ mod test {
         try_join(
             async move {
                 for (i, message) in messages.iter().enumerate() {
-                    log::info!("{}[run {}, msg {}] begin write", name, iteration, i);
+                    tracing::info!("{}[run {}, msg {}] begin write", name, iteration, i);
                     tx.write(message.to_vec()).await?;
-                    log::info!("{}[run {}, msg {}] done write", name, iteration, i);
+                    tracing::info!("{}[run {}, msg {}] done write", name, iteration, i);
                 }
                 Ok(())
             },
@@ -300,7 +305,7 @@ mod test {
                 let n = messages.len();
                 let mut found = HashSet::new();
                 while found.len() != n {
-                    log::info!("{}[run {}, msg {}] begin read", name, iteration, found.len());
+                    tracing::info!("{}[run {}, msg {}] begin read", name, iteration, found.len());
                     let msg = match rx.read().await? {
                         ReadBytes::Unframed(_) => continue,
                         ReadBytes::Framed(msg) => msg,

@@ -54,13 +54,13 @@ impl Format for LossyText {
         let mut start = 0;
         loop {
             let buf = &bytes[start..];
-            log::trace!("buf = {:?} [start={}]", buf, start);
+            tracing::trace!("buf = {:?} [start={}]", buf, start);
             if buf.len() == 0 {
                 return Ok(Deframed { frame: None, unframed_bytes: start, new_start_pos: start });
             }
             if buf[0] != b'*' {
                 // Not a start marker: remove and continue
-                log::trace!("skip non-start marker {:?}", buf[0]);
+                tracing::trace!("skip non-start marker {:?}", buf[0]);
                 start += 1;
                 continue;
             }
@@ -69,7 +69,7 @@ impl Format for LossyText {
             }
             if buf[1] < 32 || buf[1] >= 127 {
                 // Not a start marker: remove and continue
-                log::trace!("skip non-length byte {:?}", buf[2]);
+                tracing::trace!("skip non-length byte {:?}", buf[2]);
                 start += 2;
                 continue;
             }
@@ -78,23 +78,23 @@ impl Format for LossyText {
             }
             if buf[2] < 32 || buf[2] >= 127 {
                 // Not a start marker: remove and continue
-                log::trace!("skip non-length2 byte {:?}", buf[3]);
+                tracing::trace!("skip non-length2 byte {:?}", buf[3]);
                 start += 3;
                 continue;
             }
             let len = 1usize + ((buf[1] - 32) as usize * 95) + (buf[2] - 32) as usize;
-            log::trace!("len={:?} have:{:?}", len, buf.len());
+            tracing::trace!("len={:?} have:{:?}", len, buf.len());
             if buf.len() < 3 + len + 1 {
-                log::trace!("insufficient bytes; start:{}", start);
+                tracing::trace!("insufficient bytes; start:{}", start);
                 // Not enough bytes to deframe: done for now
                 return Ok(Deframed { frame: None, unframed_bytes: start, new_start_pos: start });
             }
-            log::trace!("Tail: {:?}", buf[3 + len]);
+            tracing::trace!("Tail: {:?}", buf[3 + len]);
             let tail_bytes = match buf[3 + len] {
                 b'\r' => {
                     // We allow our '\n' to be replaced with a '\r\n'.
                     if buf.len() < 3 + len + 2 {
-                        log::trace!("insufficient bytes; start:{}", start);
+                        tracing::trace!("insufficient bytes; start:{}", start);
                         // Not enough bytes to deframe: done for now
                         return Ok(Deframed {
                             frame: None,
@@ -104,7 +104,7 @@ impl Format for LossyText {
                     }
                     if buf[3 + len + 1] != b'\n' {
                         // Does not end with an end marker: remove start bytes and continue
-                        log::trace!(
+                        tracing::trace!(
                             "skip no end marker after \\r {:?}; len={}",
                             buf[3 + len + 1],
                             len
@@ -117,7 +117,7 @@ impl Format for LossyText {
                 b'\n' => 1,
                 _ => {
                     // Does not end with an end marker: remove start bytes and continue
-                    log::trace!(
+                    tracing::trace!(
                         "skip no end marker {:?}; len={}; buf={:?}",
                         buf[3 + len],
                         len,
@@ -128,7 +128,7 @@ impl Format for LossyText {
                 }
             };
             let enc_frame = &buf[3..3 + len];
-            log::trace!("enc_frame={:?}", enc_frame);
+            tracing::trace!("enc_frame={:?}", enc_frame);
             let dec = match base64::decode(enc_frame) {
                 Ok(dec) => dec,
                 Err(_) => {
@@ -139,11 +139,11 @@ impl Format for LossyText {
             };
             let crc = u32::from_le_bytes(dec[..4].try_into()?);
             let frame = &dec[4..];
-            log::trace!("got: {:?}", frame);
+            tracing::trace!("got: {:?}", frame);
             let crc_actual = crc32::checksum_ieee(&frame);
-            log::trace!("crc: expect:{:?} got:{:?}", crc, crc_actual);
+            tracing::trace!("crc: expect:{:?} got:{:?}", crc, crc_actual);
             if crc != crc_actual {
-                log::trace!("skip crc mismatch {} vs {}", crc, crc_actual);
+                tracing::trace!("skip crc mismatch {} vs {}", crc, crc_actual);
                 // CRC mismatch: skip start marker and continue
                 start += 1;
                 continue;

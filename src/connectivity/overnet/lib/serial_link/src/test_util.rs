@@ -9,67 +9,7 @@ use overnet_core::SecurityContext;
 use rand::Rng;
 use std::collections::VecDeque;
 use std::pin::Pin;
-use std::sync::Once;
 use std::task::{Context, Poll, Waker};
-
-const LOG_LEVEL: log::Level = log::Level::Info;
-const MAX_LOG_LEVEL: log::LevelFilter = log::LevelFilter::Info;
-
-struct Logger;
-
-fn short_log_level(level: &log::Level) -> &'static str {
-    match *level {
-        log::Level::Error => "E",
-        log::Level::Warn => "W",
-        log::Level::Info => "I",
-        log::Level::Debug => "D",
-        log::Level::Trace => "T",
-    }
-}
-
-impl log::Log for Logger {
-    fn enabled(&self, metadata: &log::Metadata<'_>) -> bool {
-        metadata.level() <= LOG_LEVEL
-    }
-
-    fn log(&self, record: &log::Record<'_>) {
-        if self.enabled(record.metadata()) {
-            let msg = format!(
-                "{:?} {:?} {} {} [{}]: {}",
-                std::time::Instant::now(),
-                std::thread::current().id(),
-                record.target(),
-                record
-                    .file()
-                    .map(|file| {
-                        if let Some(line) = record.line() {
-                            format!("{}:{}: ", file, line)
-                        } else {
-                            format!("{}: ", file)
-                        }
-                    })
-                    .unwrap_or(String::new()),
-                short_log_level(&record.level()),
-                record.args()
-            );
-            let _ = std::panic::catch_unwind(|| {
-                println!("{}", msg);
-            });
-        }
-    }
-
-    fn flush(&self) {}
-}
-
-static LOGGER: Logger = Logger;
-static START: Once = Once::new();
-
-pub fn init() {
-    START.call_once(|| {
-        log::set_logger(&LOGGER).unwrap();
-        log::set_max_level(MAX_LOG_LEVEL);
-    })
-}
 
 #[cfg(not(target_os = "fuchsia"))]
 pub fn test_security_context() -> Box<dyn SecurityContext> {
@@ -143,7 +83,7 @@ impl AsyncWrite for DodgyPipe {
         _ctx: &mut Context<'_>,
         bytes: &[u8],
     ) -> Poll<Result<usize, std::io::Error>> {
-        log::trace!("DODGY_WRITE:{:?}", std::str::from_utf8(bytes).unwrap());
+        tracing::trace!("DODGY_WRITE:{:?}", std::str::from_utf8(bytes).unwrap());
         self.queue.extend(bytes.iter());
         self.read_waker.take().map(|w| w.wake());
         Poll::Ready(Ok(bytes.len()))

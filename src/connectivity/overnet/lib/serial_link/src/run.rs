@@ -41,7 +41,7 @@ pub async fn run(
                 )
                 .await
                 {
-                    log::warn!("serial handler failed: {:?}", e);
+                    tracing::warn!("serial handler failed: {:?}", e);
                 }
                 Ok(())
             })
@@ -142,11 +142,11 @@ async fn write_bytes(
 ) -> Result<(), Error> {
     loop {
         let bytes = framer_reader.read().await.context("framer_reader failed")?;
-        log::trace!("SERIAL WRITE: {:?}", bytes);
+        tracing::trace!("SERIAL WRITE: {:?}", bytes);
         f_write.write_all(&bytes).await.context("serial.write_all failed")?;
-        log::trace!("WRITE COMPLETE");
+        tracing::trace!("WRITE COMPLETE");
         f_write.flush().await?;
-        log::trace!("FLUSHED");
+        tracing::trace!("FLUSHED");
     }
 }
 
@@ -156,15 +156,15 @@ async fn read_bytes(
 ) -> Result<(), Error> {
     let mut buf = [0u8; 1024];
     loop {
-        log::trace!("SERIAL READ");
+        tracing::trace!("SERIAL READ");
         let n = f_read.read(&mut buf).await.context("serial.read failed")?;
-        log::trace!("SERIAL GOT BYTES: {:?}", &buf[..n]);
+        tracing::trace!("SERIAL GOT BYTES: {:?}", &buf[..n]);
         if n == 0 {
             return Ok(());
         }
         let deframe_time = std::time::Instant::now();
         deframer_writer.write(&buf[..n]).await?;
-        log::trace!(
+        tracing::trace!(
             "SERIAL QUEUED BYTES after {:?}: {:?}",
             std::time::Instant::now() - deframe_time,
             &buf[..n]
@@ -177,7 +177,7 @@ async fn reset<OutputSink: AsyncWrite + Unpin>(
     mut fragment_reader: StreamSplitter<OutputSink>,
     mut fragment_writer: FragmentWriter,
 ) -> Result<(), Error> {
-    log::trace!("RESET SERIAL BEGIN");
+    tracing::trace!("RESET SERIAL BEGIN");
     let drain_time = match role {
         Role::Client => Duration::from_secs(3),
         Role::Server => Duration::from_secs(3),
@@ -202,7 +202,7 @@ async fn reset<OutputSink: AsyncWrite + Unpin>(
             Err(DrainError::FromRead(e)) => return Err(e),
         }
     }
-    log::trace!("RESET SERIAL END");
+    tracing::trace!("RESET SERIAL END");
     Ok(())
 }
 
@@ -226,7 +226,7 @@ async fn deframer_to_link<OutputSink: AsyncWrite + Unpin>(
     let mut know_peer_id = false;
     loop {
         let mut frame = fragment_reader.read().await?;
-        log::trace!("READ FRAME: {:?}", frame);
+        tracing::trace!("READ FRAME: {:?}", frame);
         if frame.is_empty() {
             return Err(format_err!("reset received"));
         }
@@ -234,7 +234,7 @@ async fn deframer_to_link<OutputSink: AsyncWrite + Unpin>(
         if !know_peer_id {
             if let Some(peer_node_id) = link_receiver.peer_node_id() {
                 // This log line is load bearing to the Overnet serial test.
-                log::info!(
+                tracing::info!(
                     "Established {:?} Overnet serial connection to peer {:?}",
                     role,
                     peer_node_id
@@ -274,7 +274,7 @@ mod test {
 
     use super::Role;
     use crate::report_skipped::ReportSkipped;
-    use crate::test_util::{init, test_security_context, DodgyPipe};
+    use crate::test_util::{test_security_context, DodgyPipe};
     use anyhow::{format_err, Error};
     use fuchsia_async::{Task, TimeoutExt};
     use futures::prelude::*;
@@ -289,7 +289,7 @@ mod test {
     }
 
     async fn end2end(run: usize, failures_per_64kib: u16) -> Result<(), Error> {
-        init();
+        let _ = tracing_subscriber::fmt::try_init();
         let rtr_client = Router::new(
             RouterOptions::new().set_node_id((100 * (run as u64) + 1).into()),
             test_security_context(),

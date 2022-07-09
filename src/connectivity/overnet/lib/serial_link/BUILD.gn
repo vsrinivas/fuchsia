@@ -19,13 +19,18 @@ rustc_library("serial_link") {
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:crc",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
   ]
 
   if (!is_fuchsia && !is_mac) {
     deps += [ "//third_party/rust_crates:async-fs" ]
   }
+
+  test_deps = [
+    "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:tracing-subscriber",
+  ]
 
   sources = [
     "src/descriptor.rs",
@@ -37,8 +42,6 @@ rustc_library("serial_link") {
     "src/run.rs",
     "src/test_util.rs",
   ]
-
-  test_deps = [ "//third_party/rust_crates:rand" ]
 
   inputs = [
     "//third_party/rust_crates/mirrors/quiche/quiche/examples/cert.crt",
