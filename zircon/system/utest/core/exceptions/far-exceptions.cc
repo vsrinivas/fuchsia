@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/arch/arm64/system.h>
-#include <lib/elf-psabi/sp.h>
+#include <lib/elfldltl/machine.h>
 #include <lib/zircon-internal/default_stack_size.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/process.h>
@@ -81,8 +81,8 @@ arch::ArmExceptionSyndromeRegister::ExceptionClass GetEC(uint64_t esr) {
 TEST(ExceptionsTest, PCAlignmentFault) {
   uintptr_t unaligned_pc = reinterpret_cast<uintptr_t>(DoNothing) + 1;
   std::unique_ptr<std::byte[]> thread_stack = std::make_unique<std::byte[]>(kThreadStackSize);
-  uintptr_t sp = compute_initial_stack_pointer(reinterpret_cast<uintptr_t>(thread_stack.get()),
-                                               kThreadStackSize);
+  uintptr_t sp = elfldltl::AbiTraits<>::InitialStackPointer(
+      reinterpret_cast<uintptr_t>(thread_stack.get()), kThreadStackSize);
   zx_exception_report_t report = {};
   zx_thread_state_general_regs_t general_regs = {};
 
@@ -102,8 +102,8 @@ TEST(ExceptionsTest, InstructionAbort) {
   // instruction set.
   uintptr_t pc = reinterpret_cast<uintptr_t>(&kUdf0);
   std::unique_ptr<std::byte[]> thread_stack = std::make_unique<std::byte[]>(kThreadStackSize);
-  uintptr_t sp = compute_initial_stack_pointer(reinterpret_cast<uintptr_t>(thread_stack.get()),
-                                               kThreadStackSize);
+  uintptr_t sp = elfldltl::AbiTraits<>::InitialStackPointer(
+      reinterpret_cast<uintptr_t>(thread_stack.get()), kThreadStackSize);
   zx_exception_report_t report = {};
   zx_thread_state_general_regs_t general_regs = {};
 
@@ -127,8 +127,8 @@ BadAccess(uintptr_t arg1) {
 TEST(ExceptionsTest, DataAbort) {
   uintptr_t pc = reinterpret_cast<uintptr_t>(BadAccess);
   std::unique_ptr<std::byte[]> thread_stack = std::make_unique<std::byte[]>(kThreadStackSize);
-  uintptr_t sp = compute_initial_stack_pointer(reinterpret_cast<uintptr_t>(thread_stack.get()),
-                                               kThreadStackSize);
+  uintptr_t sp = elfldltl::AbiTraits<>::InitialStackPointer(
+      reinterpret_cast<uintptr_t>(thread_stack.get()), kThreadStackSize);
   zx_exception_report_t report = {};
   zx_thread_state_general_regs_t general_regs = {};
 
@@ -148,8 +148,8 @@ TEST(ExceptionsTest, SPMisalignment) {
   // for showing correct usage.
   uintptr_t pc = reinterpret_cast<uintptr_t>(DoNothing);
   std::unique_ptr<std::byte[]> thread_stack = std::make_unique<std::byte[]>(kThreadStackSize);
-  uintptr_t sp = compute_initial_stack_pointer(reinterpret_cast<uintptr_t>(thread_stack.get()),
-                                               kThreadStackSize);
+  uintptr_t sp = elfldltl::AbiTraits<>::InitialStackPointer(
+      reinterpret_cast<uintptr_t>(thread_stack.get()), kThreadStackSize);
   --sp;
   zx_exception_report_t report = {};
   zx_thread_state_general_regs_t general_regs = {};

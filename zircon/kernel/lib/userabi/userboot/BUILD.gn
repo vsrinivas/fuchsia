@@ -97,11 +97,11 @@ if (toolchain_environment == "userboot") {
     deps = [
       ":gen-vdso-syms-ld",
       "//sdk/lib/fidl",
+      "//src/lib/elfldltl",
       "//src/lib/zbitl",
       "//src/zircon/lib/zircon",
       "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/lib/userabi:headers",
-      "//zircon/system/ulib/elf-psabi",
       "//zircon/system/ulib/elfload",
       "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/ldmsg",

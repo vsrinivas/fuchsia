@@ -10,9 +10,9 @@ source_set("property") {
   ]
   deps = [
     "//sdk/lib/fit",
+    "//src/lib/elfldltl",
     "//src/zircon/lib/zircon",
     "//zircon/kernel/lib/arch",
-    "//zircon/system/ulib/elf-psabi",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]

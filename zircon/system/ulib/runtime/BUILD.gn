@@ -14,8 +14,8 @@ zx_library("runtime") {
   sources = [ "thread.cc" ]
   deps = [
     "//sdk/lib/stdcompat",
+    "//src/lib/elfldltl",
     "//src/zircon/lib/zircon",
-    "//zircon/system/ulib/elf-psabi",
     "//zircon/system/ulib/zircon-internal",
   ]
 

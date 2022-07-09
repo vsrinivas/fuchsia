@@ -17,7 +17,7 @@
 
 #include <cpuid.h>
 #include <lib/arch/x86/cpuid.h>
-#include <lib/elf-psabi/sp.h>
+#include <lib/elfldltl/machine.h>
 #include <lib/fit/defer.h>
 #include <lib/zx/exception.h>
 #include <lib/zx/thread.h>
@@ -269,7 +269,7 @@ void TestInThread(const WhichRegister& reg, TestData& test, uint32_t expected_re
   ASSERT_OK(thread.suspend(&suspended));
 
   // The thread will start with the call TestFsGsThread(reg, test).
-  const uintptr_t sp = compute_initial_stack_pointer(
+  const uintptr_t sp = elfldltl::AbiTraits<>::InitialStackPointer<uintptr_t>(
       reinterpret_cast<uintptr_t>(thread_stack.get()), zx_system_get_page_size());
   const uintptr_t pc = reinterpret_cast<uintptr_t>(&TestFsGsThread);
   const uintptr_t arg1 = reinterpret_cast<uintptr_t>(&reg);

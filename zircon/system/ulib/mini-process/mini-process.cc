@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <dlfcn.h>
-#include <lib/elf-psabi/sp.h>
+#include <lib/elfldltl/machine.h>
 #include <stdint.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -92,7 +92,7 @@ zx_status_t mini_process_load_stack(zx_handle_t vmar, bool with_code, zx_vaddr_t
     goto exit;
 
   // Compute a valid starting SP for the machine's ABI.
-  *sp = compute_initial_stack_pointer(*stack_base, stack_size);
+  *sp = elfldltl::AbiTraits<>::InitialStackPointer(*stack_base, stack_size);
 
 exit:
   // Close the VMO handle no matter what; if we failed we want to release it, and if

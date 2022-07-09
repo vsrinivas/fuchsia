@@ -72,7 +72,7 @@ test("zircon-internal-unittests") {
 
   if (is_fuchsia) {
     deps += [
-      "//zircon/system/ulib/elf-psabi",
+      "//src/lib/elfldltl",
       "//zircon/system/ulib/zx",
     ]
   }

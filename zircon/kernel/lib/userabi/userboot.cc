@@ -9,7 +9,7 @@
 #include <lib/console.h>
 #include <lib/counters.h>
 #include <lib/crashlog.h>
-#include <lib/elf-psabi/sp.h>
+#include <lib/elfldltl/machine.h>
 #include <lib/instrumentation/vmo.h>
 #include <lib/userabi/rodso.h>
 #include <lib/userabi/userboot.h>
@@ -386,7 +386,7 @@ void userboot_init(uint) {
     ASSERT(status == ZX_OK);
     stack_base = stack_mapping->base();
   }
-  uintptr_t sp = compute_initial_stack_pointer(stack_base, stack_size);
+  uintptr_t sp = elfldltl::AbiTraits<>::InitialStackPointer(stack_base, stack_size);
 
   // Create the user thread.
   fbl::RefPtr<ThreadDispatcher> thread;

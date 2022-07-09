@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/elf-psabi/sp.h>
+#include <lib/elfldltl/machine.h>
 #include <lib/stdcompat/atomic.h>
 #include <lib/zircon-internal/unique-backtrace.h>
 #include <stddef.h>
@@ -168,7 +168,7 @@ zx_status_t zxr_thread_start(zxr_thread_t* thread, uintptr_t stack_addr, size_t 
   to_internal(thread)->entry = entry;
 
   // compute the starting address of the stack
-  uintptr_t sp = compute_initial_stack_pointer(stack_addr, stack_size);
+  uintptr_t sp = elfldltl::AbiTraits<>::InitialStackPointer(stack_addr, stack_size);
 
   // kick off the new thread
   zx_status_t status = _zx_thread_start(to_internal(thread)->handle, (uintptr_t)thread_trampoline,

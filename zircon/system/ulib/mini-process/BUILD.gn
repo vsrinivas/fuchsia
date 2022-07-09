@@ -13,7 +13,7 @@ zx_library("mini-process") {
   sources = [ "mini-process.cc" ]
   deps = [
     ":subprocess",
-    "//zircon/system/ulib/elf-psabi",
+    "//src/lib/elfldltl",
     "//zircon/system/ulib/elfload",
   ]
 }

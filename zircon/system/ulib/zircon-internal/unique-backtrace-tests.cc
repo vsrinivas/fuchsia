@@ -9,7 +9,7 @@
 #include <zxtest/zxtest.h>
 
 #ifdef __Fuchsia__
-#include <lib/elf-psabi/sp.h>
+#include <lib/elfldltl/machine.h>
 #include <lib/zircon-internal/default_stack_size.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/exception.h>
@@ -177,7 +177,7 @@ void CatchCrash(void (*crash_function)(), uintptr_t& crash_pc) {
   std::unique_ptr<std::byte[]> crash_thread_stack =
       std::make_unique<std::byte[]>(kCrashThreadStackSize);
   const uintptr_t pc = reinterpret_cast<uintptr_t>(crash_function);
-  const uintptr_t sp = compute_initial_stack_pointer(
+  const uintptr_t sp = elfldltl::AbiTraits<>::InitialStackPointer(
       reinterpret_cast<uintptr_t>(crash_thread_stack.get()), kCrashThreadStackSize);
   ASSERT_OK(crash_thread.start(pc, sp, 0, 0));
 

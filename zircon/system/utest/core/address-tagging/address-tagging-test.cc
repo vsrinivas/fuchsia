@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/arch/arm64/system.h>
-#include <lib/elf-psabi/sp.h>
+#include <lib/elfldltl/machine.h>
 #include <lib/fit/defer.h>
 #include <lib/zircon-internal/default_stack_size.h>
 #include <lib/zx/exception.h>
@@ -92,7 +92,7 @@ void CatchCrash(crash_function_t crash_function, uintptr_t arg1,
   constexpr size_t kThreadStackSize = ZIRCON_DEFAULT_STACK_SIZE;
   std::unique_ptr<std::byte[]> crash_thread_stack = std::make_unique<std::byte[]>(kThreadStackSize);
   const uintptr_t pc = reinterpret_cast<uintptr_t>(crash_function);
-  const uintptr_t sp = compute_initial_stack_pointer(
+  const uintptr_t sp = elfldltl::AbiTraits<>::InitialStackPointer(
       reinterpret_cast<uintptr_t>(crash_thread_stack.get()), kThreadStackSize);
   ASSERT_OK(crash_thread.start(pc, sp, arg1, 0));
 
@@ -419,7 +419,7 @@ DoNothing() {
 TEST(TopByteIgnoreTests, ThreadStartTaggedAddress) {
   std::unique_ptr<std::byte[]> thread_stack = std::make_unique<std::byte[]>(kThreadStackSize);
   const uintptr_t pc = reinterpret_cast<uintptr_t>(DoNothing);
-  const uintptr_t sp = compute_initial_stack_pointer(
+  const uintptr_t sp = elfldltl::AbiTraits<>::InitialStackPointer(
       reinterpret_cast<uintptr_t>(thread_stack.get()), kThreadStackSize);
 
   auto run_thread = [](uintptr_t pc, uintptr_t sp) {

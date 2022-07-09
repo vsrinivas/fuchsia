@@ -260,7 +260,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/system/ulib/driver-integration-test/*",
     "//zircon/system/ulib/driver-unit-test/*",
     "//zircon/system/ulib/edid/*",
-    "//zircon/system/ulib/elf-psabi/*",
     "//zircon/system/ulib/elf-search/*",
     "//zircon/system/ulib/elfload/*",
     "//zircon/system/ulib/explicit-memory/*",

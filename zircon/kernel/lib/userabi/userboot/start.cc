@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/elf-psabi/sp.h>
+#include <lib/elfldltl/machine.h>
 #include <lib/processargs/processargs.h>
 #include <lib/stdcompat/source_location.h>
 #include <lib/userabi/userboot.h>
@@ -296,7 +296,7 @@ zx::channel StartChildProcess(const zx::debuglog& log, const Options& options,
   check(log, status, "zx_vmar_map failed for child stack");
 
   // Allocate the stack for the child.
-  uintptr_t sp = compute_initial_stack_pointer(stack_base, stack_size);
+  uintptr_t sp = elfldltl::AbiTraits<>::InitialStackPointer(stack_base, stack_size);
   printl(log, "stack [%p, %p) sp=%p", reinterpret_cast<void*>(stack_base),
          reinterpret_cast<void*>(stack_base + stack_size), reinterpret_cast<void*>(sp));
 
