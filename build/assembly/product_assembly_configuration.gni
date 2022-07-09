@@ -31,20 +31,10 @@ import("//build/group_with_inputs.gni")
 #     product-provided package to place into the base set. The scope can have a
 #     'package_target' field pointing to the GN target of the fuchsia_package.
 #
-#   # Transitory
-#   base_package_deprecated [optional]
-#     [list, GN targets] A list of GN targets that are the specific targets for
-#     the product-provided packages to place into the base set.
-#
 #   cache_packages [optional]
 #     [list, GN scopes] A list of GN scopes that hold the information for a
 #     product-provided package to place into the cache set. The scope can have a
 #     'package_target' field pointing to the GN target of the fuchsia_package.
-#
-#   # Transitory
-#   cache_packages_deprecated [optional]
-#     [list, GN targets] A list of GN targets that are the specific targets for
-#     the product-provided packages to place into the cache set.
 #
 #   platform [optional]
 #   [scope] This is the platform configuration scope
@@ -80,9 +70,6 @@ template("product_assembly_configuration") {
         base_package_labels += [ package.package_target ]
       }
     }
-    if (defined(invoker.base_packages_deprecated)) {
-      base_package_labels += invoker.base_packages_deprecated
-    }
 
     # Cache packages specified by the invoker, used to create the list of
     # manifests and as the deps for the package set targets.
@@ -93,9 +80,6 @@ template("product_assembly_configuration") {
                "package_target must be supplied")
         cache_package_labels += [ package.package_target ]
       }
-    }
-    if (defined(invoker.cache_packages_deprecated)) {
-      cache_package_labels += invoker.cache_packages_deprecated
     }
   }
 
