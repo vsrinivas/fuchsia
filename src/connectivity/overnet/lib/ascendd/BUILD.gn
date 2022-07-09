@@ -12,27 +12,21 @@ if (is_host) {
     edition = "2021"
 
     deps = [
-      "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
       "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
       "//src/connectivity/overnet/lib/core",
       "//src/connectivity/overnet/lib/hoist",
       "//src/connectivity/overnet/lib/serial_link",
       "//src/connectivity/overnet/lib/stream_link",
-      "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:async-fs",
       "//third_party/rust_crates:async-net",
       "//third_party/rust_crates:blocking",
-      "//third_party/rust_crates:clap",
       "//third_party/rust_crates:futures",
-      "//third_party/rust_crates:libc",
       "//third_party/rust_crates:log",
       "//third_party/rust_crates:nix",
-      "//third_party/rust_crates:rand",
       "//third_party/rust_crates:termios",
-      "//third_party/rust_crates:thiserror",
     ]
 
     non_rust_deps = [ "//third_party/boringssl" ]

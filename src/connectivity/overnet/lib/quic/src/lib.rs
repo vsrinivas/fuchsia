@@ -4,6 +4,9 @@
 
 //! Async wrapper around QUIC
 
+// TODO(fxb/104019): Consider enabling globally.
+#![deny(unused_crate_dependencies)]
+
 use anyhow::{format_err, Context as _, Error};
 use async_utils::mutex_ticket::MutexTicket;
 use fuchsia_async::{Task, Timer};
@@ -244,11 +247,7 @@ impl std::fmt::Debug for AsyncConnection {
 }
 
 impl AsyncConnection {
-    fn from_connection(
-        local_addr: SocketAddr,
-        conn: Connection,
-        endpoint: Endpoint,
-    ) -> Arc<Self> {
+    fn from_connection(local_addr: SocketAddr, conn: Connection, endpoint: Endpoint) -> Arc<Self> {
         Arc::new(Self {
             trace_id: conn.trace_id().to_string(),
             io: Mutex::new(ConnState {

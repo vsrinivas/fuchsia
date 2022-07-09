@@ -10,11 +10,10 @@ SOURCES = [ "src/lib.rs" ]
 DEPS = [
   "//src/lib/async-utils",
   "//src/lib/fuchsia-async",
-  "//third_party/rust_crates/mirrors/quiche",
+  "//third_party/rust_crates/mirrors/quiche/quiche",
   "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:futures",
   "//third_party/rust_crates:log",
-  "//third_party/rust_crates:rand",
 ]
 
 rustc_library("quic") {
@@ -26,7 +25,10 @@ rustc_library("quic") {
 rustc_test("quic_test") {
   edition = "2021"
   sources = SOURCES
-  deps = DEPS + [ "//src/lib/fuchsia" ]
+  deps = DEPS + [
+           "//src/lib/fuchsia",
+           "//third_party/rust_crates:rand",
+         ]
   if (is_host) {
     deps += [ "//src/connectivity/overnet/lib/core:test_certs" ]
   }

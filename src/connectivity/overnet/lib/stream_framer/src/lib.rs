@@ -4,6 +4,9 @@
 
 //! Handles framing/deframing of stream links
 
+// TODO(fxb/104019): Consider enabling globally.
+#![deny(unused_crate_dependencies)]
+
 use anyhow::{format_err, Error};
 use async_utils::mutex_ticket::MutexTicket;
 use fuchsia_async::{Task, Timer};

@@ -4,6 +4,9 @@
 
 //! Controls one link to another node over a zx socket.
 
+// TODO(fxb/104019): Consider enabling globally.
+#![deny(unused_crate_dependencies)]
+
 use {
     anyhow::Error,
     byteorder::WriteBytesExt,

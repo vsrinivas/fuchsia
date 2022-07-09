@@ -18,7 +18,6 @@ CORE_DEPS = [
   "//src/lib/fidl/rust/fidl",
   "//src/lib/fuchsia-async",
   "//src/lib/zircon/rust:fuchsia-zircon-status",
-  "//third_party/boringssl/rust/boringssl-sys",
   "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:async-lock",
   "//third_party/rust_crates:base64",
@@ -26,16 +25,10 @@ CORE_DEPS = [
   "//third_party/rust_crates:crc",
   "//third_party/rust_crates:event-listener",
   "//third_party/rust_crates:futures",
-  "//third_party/rust_crates:lazy_static",
   "//third_party/rust_crates:libc",
   "//third_party/rust_crates:log",
-  "//third_party/rust_crates:assert_matches",
-  "//third_party/rust_crates:parking_lot",
-  "//third_party/rust_crates:pin-project",
   "//third_party/rust_crates:rand",
-  "//third_party/rust_crates:thiserror",
-  "//third_party/rust_crates/mirrors/quiche",
-  "//third_party/boringssl",
+  "//third_party/rust_crates/mirrors/quiche/quiche",
 ]
 
 if (is_fuchsia) {
@@ -89,7 +82,7 @@ rustc_test("core_test") {
 
   deps = CORE_DEPS + [
            "//src/lib/fuchsia",
-           "//third_party/rust_crates:arbitrary",
+           "//third_party/rust_crates:parking_lot",
          ]
 
   if (is_host) {

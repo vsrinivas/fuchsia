@@ -9,15 +9,13 @@ rustc_library("stream_link") {
   with_unit_tests = true
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
     "//src/connectivity/overnet/lib/core",
     "//src/connectivity/overnet/lib/stream_framer",
-    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
   ]
+  test_deps = [ "//src/lib/fuchsia-async" ]
 
   sources = [ "src/lib.rs" ]
 }
