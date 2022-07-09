@@ -150,6 +150,13 @@ async fn run_test<W: 'static + Write + Send + Sync>(
         Ok(true) => true,
         Ok(false) | Err(_) => false,
     };
+
+    let experimental_parallel_exec_enabled =
+        match ffx_config::get("test.enable_experimental_parallel_execution").await {
+            Ok(true) => true,
+            Ok(false) | Err(_) => false,
+        };
+
     let run_params = run_test_suite_lib::RunParams {
         timeout_behavior: match cmd.continue_on_timeout {
             false => run_test_suite_lib::TimeoutBehavior::TerminateRemaining,
@@ -159,6 +166,21 @@ async fn run_test<W: 'static + Write + Send + Sync>(
             None => None,
             Some(None) => ffx_bail!("--stop-after-failures should be greater than zero."),
             Some(Some(stop_after)) => Some(stop_after),
+        },
+        experimental_parallel_execution: match (
+            cmd.experimental_parallel_execution.map(std::num::NonZeroU16::new),
+            experimental_parallel_exec_enabled,
+        ) {
+            (None, _) => None,
+            (Some(None), true) => {
+                ffx_bail!("--experimental-parallel-execution should be greater than zero.")
+            }
+            (Some(Some(max_parallel_suites)), true) => Some(max_parallel_suites),
+            (_, false) => ffx_bail!(
+              "Parallel test suite execution is experimental and is subject to breaking changes. \
+              To enable parallel test suite execution, run: \n \
+              'ffx config set test.enable_experimental_parallel_execution true'"
+            ),
         },
     };
     let test_definitions = test_params_from_args(cmd, std::io::stdin, json_input_experiment)?;
@@ -574,6 +596,7 @@ mod test {
                     disable_output_directory: false,
                     continue_on_timeout: false,
                     stop_after_failures: None,
+                    experimental_parallel_execution: None,
                 },
                 vec![run_test_suite_lib::TestParams {
                     test_url: "my-test-url".to_string(),
@@ -602,6 +625,7 @@ mod test {
                     disable_output_directory: false,
                     continue_on_timeout: false,
                     stop_after_failures: None,
+                    experimental_parallel_execution: None,
                 },
                 vec![
                     run_test_suite_lib::TestParams {
@@ -633,6 +657,7 @@ mod test {
                     disable_output_directory: false,
                     continue_on_timeout: false,
                     stop_after_failures: None,
+                    experimental_parallel_execution: None,
                 },
                 vec![run_test_suite_lib::TestParams {
                     test_url: "my-test-url".to_string(),
@@ -661,6 +686,7 @@ mod test {
                     disable_output_directory: false,
                     continue_on_timeout: false,
                     stop_after_failures: None,
+                    experimental_parallel_execution: None,
                 },
                 vec![
                     run_test_suite_lib::TestParams {
@@ -716,6 +742,7 @@ mod test {
                     disable_output_directory: false,
                     continue_on_timeout: false,
                     stop_after_failures: None,
+                    experimental_parallel_execution: None,
                 },
                 vec![
                     run_test_suite_lib::TestParams {
@@ -796,6 +823,7 @@ mod test {
                     disable_output_directory: false,
                     continue_on_timeout: false,
                     stop_after_failures: None,
+                    experimental_parallel_execution: None,
                 },
             ),
             (
@@ -817,6 +845,7 @@ mod test {
                     disable_output_directory: false,
                     continue_on_timeout: false,
                     stop_after_failures: None,
+                    experimental_parallel_execution: None,
                 },
             ),
             (
@@ -838,6 +867,7 @@ mod test {
                     disable_output_directory: false,
                     continue_on_timeout: false,
                     stop_after_failures: None,
+                    experimental_parallel_execution: None,
                 },
             ),
         ];

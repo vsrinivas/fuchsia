@@ -39,6 +39,9 @@ pub struct RunParams {
 
     /// If set, stop executing tests after this number of normal test failures occur.
     pub stop_after_failures: Option<std::num::NonZeroU32>,
+
+    /// If set, execute this number of test suites in parallel.
+    pub experimental_parallel_execution: Option<std::num::NonZeroU16>,
 }
 
 /// Sets the behavior of the overall run if a suite terminates with a timeout.

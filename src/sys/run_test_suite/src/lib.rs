@@ -1404,7 +1404,11 @@ mod test {
         run_tests_and_get_outcome(
             params.builder_proxy,
             params.test_params,
-            RunParams { timeout_behavior: TimeoutBehavior::Continue, stop_after_failures: None },
+            RunParams {
+                timeout_behavior: TimeoutBehavior::Continue,
+                stop_after_failures: None,
+                experimental_parallel_execution: None,
+            },
             None,
             params.run_reporter,
             futures::future::pending(),

@@ -137,6 +137,7 @@ async fn main() {
             }
             Some(Some(stop_after)) => Some(stop_after),
         },
+        experimental_parallel_execution: None,
     };
 
     let outcome = run_test_suite_lib::run_tests_and_get_outcome(
