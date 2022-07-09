@@ -147,6 +147,7 @@ fx test ffx_example_lib_test
 ```
 
 If fx test doesn't find your test, check that the product configuration includes your test. You can include all the ffx tests with this command:
+
 ```posix-terminal
 fx set ... --with=//src/developer/ffx:tests
 ```
