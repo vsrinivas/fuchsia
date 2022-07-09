@@ -6,12 +6,14 @@ use crate::fragment_io::{new_fragment_io, FragmentReader, FragmentWriter};
 use crate::lossy_text::LossyText;
 use anyhow::{format_err, Context as _, Error};
 use fuchsia_async::TimeoutExt;
+use fuchsia_async::Timer;
 use future::Either;
+use futures::channel::mpsc;
 use futures::prelude::*;
 use overnet_core::{LinkReceiver, LinkSender, Router};
 use std::sync::{Arc, Weak};
 use std::time::Duration;
-use stream_framer::{new_deframer, new_framer, DeframerWriter, FramerReader, ReadBytes};
+use stream_framer::{Deframer, Framer, ReadBytes};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Role {
@@ -73,17 +75,19 @@ impl<R: AsyncRead + Unpin + Send, W: AsyncWrite + Unpin + Send, S: AsyncWrite + 
         F: FnOnce(StreamSplitter<&'a mut S>, FragmentWriter) -> Fut,
         Fut: Send + Future<Output = Result<(), Error>>,
     {
-        const INCOMING_BYTE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
-        let (framer_writer, framer_reader) = new_framer(LossyText::new(INCOMING_BYTE_TIMEOUT), 256);
-        let (deframer_writer, deframer_reader) =
-            new_deframer(LossyText::new(INCOMING_BYTE_TIMEOUT));
+        let framer = Framer::new(LossyText);
+        let (framer_writer, framer_reader) = mpsc::channel(0);
+
+        let deframer = Deframer::new(LossyText);
+        let (deframer_writer, deframer_reader) = mpsc::channel(0);
+
         let (fragment_writer, fragment_reader, fragment_io_runner) =
-            new_fragment_io(framer_writer, deframer_reader);
+            new_fragment_io(framer, framer_writer, deframer_reader);
         let fragment_reader = StreamSplitter { fragment_reader, skipped_bytes: &mut self.skipped };
 
         let support = future::try_join3(
             write_bytes(framer_reader, &mut self.write),
-            read_bytes(&mut self.read, deframer_writer),
+            read_bytes(&mut self.read, deframer, deframer_writer),
             fragment_io_runner,
         )
         .map_ok(drop)
@@ -137,38 +141,104 @@ impl<OutputSink: AsyncWrite + Unpin> StreamSplitter<OutputSink> {
 }
 
 async fn write_bytes(
-    mut framer_reader: FramerReader<LossyText>,
+    mut framer_reader: mpsc::Receiver<Vec<u8>>,
     mut f_write: impl AsyncWrite + Unpin,
 ) -> Result<(), Error> {
-    loop {
-        let bytes = framer_reader.read().await.context("framer_reader failed")?;
+    while let Some(bytes) = framer_reader.next().await {
         tracing::trace!("SERIAL WRITE: {:?}", bytes);
         f_write.write_all(&bytes).await.context("serial.write_all failed")?;
         tracing::trace!("WRITE COMPLETE");
         f_write.flush().await?;
         tracing::trace!("FLUSHED");
     }
+
+    Ok(())
 }
 
 async fn read_bytes(
     mut f_read: impl AsyncRead + Unpin,
-    mut deframer_writer: DeframerWriter<LossyText>,
+    mut deframer: Deframer<LossyText>,
+    mut deframer_writer: mpsc::Sender<ReadBytes>,
 ) -> Result<(), Error> {
+    const INCOMING_BYTE_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(5);
+
     let mut buf = [0u8; 1024];
+    let mut parse_frame_timeout = None;
+
     loop {
         tracing::trace!("SERIAL READ");
-        let n = f_read.read(&mut buf).await.context("serial.read failed")?;
-        tracing::trace!("SERIAL GOT BYTES: {:?}", &buf[..n]);
-        if n == 0 {
+
+        let read_fut = f_read.read(&mut buf);
+
+        let bytes_read = if let Some(timeout) = parse_frame_timeout.take() {
+            // If we have a timeout, then that means we have some pending bytes in the deframer. If
+            // the timeout happens before the read, we'll skip over a pending byte to see if that
+            // lets us find a valid frame.
+            match future::select(read_fut, timeout).await {
+                Either::Left((res, timeout)) => {
+                    // The read finished! Return the bytes read.
+                    let bytes_read = res?;
+
+                    // Preserve the timer since we don't know if we parsed any frames yet.
+                    parse_frame_timeout = Some(timeout);
+
+                    Some(bytes_read)
+                }
+                Either::Right(((), _)) => {
+                    // We timed out, so return None to signal we need to skip the next unparsed byte.
+                    None
+                }
+            }
+        } else {
+            Some(read_fut.await.context("serial.read failed")?)
+        };
+
+        let deframe_time = std::time::Instant::now();
+
+        // If we received any bytes, try to parse them. Otherwise skip any pending bytes to see if
+        // that will let us parse a frame.
+        //
+        // Note: we intentionally try to parse frames before we check if the incoming channel was
+        // closed (signified by reading zero bytes). This will allow the deframer to pass along any
+        // other pending bytes as unframed data.
+        let frames = if let Some(bytes_read) = bytes_read {
+            tracing::trace!("SERIAL GOT BYTES: {:?}", &buf[..bytes_read]);
+
+            deframer.parse_frames(&buf[..bytes_read])
+        } else {
+            tracing::trace!("SERIAL TIMED OUT");
+
+            deframer.skip_byte_and_parse_frames()
+        };
+
+        // Send along any frames we parsed.
+        let mut got_frames = false;
+        for frame in frames {
+            got_frames = true;
+            deframer_writer.feed(frame?).await?;
+        }
+        deframer_writer.flush().await?;
+
+        if let Some(bytes_read) = bytes_read {
+            tracing::trace!(
+                "SERIAL QUEUED BYTES after {:?}: {:?}",
+                std::time::Instant::now() - deframe_time,
+                &buf[..bytes_read]
+            );
+        }
+
+        // Exit if the incoming stream was closed.
+        if bytes_read == Some(0) {
             return Ok(());
         }
-        let deframe_time = std::time::Instant::now();
-        deframer_writer.write(&buf[..n]).await?;
-        tracing::trace!(
-            "SERIAL QUEUED BYTES after {:?}: {:?}",
-            std::time::Instant::now() - deframe_time,
-            &buf[..n]
-        );
+
+        // Clear the timer if we don't have any pending bytes. Otherwise, reset the timer if we
+        // parsed at least one frame.
+        if !deframer.has_pending_bytes() {
+            parse_frame_timeout = None;
+        } else if got_frames {
+            parse_frame_timeout = Some(Timer::new(INCOMING_BYTE_TIMEOUT));
+        }
     }
 }
 
@@ -270,11 +340,10 @@ async fn main<OutputSink: AsyncWrite + Unpin>(
 }
 
 #[cfg(test)]
-mod test {
-
+mod tests {
     use super::Role;
     use crate::report_skipped::ReportSkipped;
-    use anyhow::{format_err, Error};
+    use anyhow::format_err;
     use fuchsia_async::{Task, TimeoutExt};
     use futures::prelude::*;
     use onet_test_util::{test_security_context, DodgyPipe};
@@ -282,24 +351,29 @@ mod test {
     use std::sync::Arc;
     use std::time::Duration;
 
-    async fn await_peer(router: Arc<Router>, peer: NodeId) -> Result<(), Error> {
+    async fn await_peer(router: Arc<Router>, peer: NodeId) {
         let lp = router.new_list_peers_context();
-        while lp.list_peers().await?.into_iter().find(|p| peer == p.id.into()).is_none() {}
-        Ok(())
+        while lp.list_peers().await.unwrap().into_iter().find(|p| peer == p.id.into()).is_none() {}
     }
 
-    async fn end2end(run: usize, failures_per_64kib: u16) -> Result<(), Error> {
+    async fn end2end(run: usize, failures_per_64kib: u16) {
         let _ = tracing_subscriber::fmt::try_init();
+
         let rtr_client = Router::new(
             RouterOptions::new().set_node_id((100 * (run as u64) + 1).into()),
             test_security_context(),
-        )?;
+        )
+        .unwrap();
+
         let rtr_server = Router::new(
             RouterOptions::new().set_node_id((100 * (run as u64) + 2).into()),
             test_security_context(),
-        )?;
+        )
+        .unwrap();
+
         let (c2s_rx, c2s_tx) = DodgyPipe::new(failures_per_64kib).split();
         let (s2c_rx, s2c_tx) = DodgyPipe::new(failures_per_64kib).split();
+
         let run_client = super::run(
             Role::Client,
             s2c_rx,
@@ -308,6 +382,7 @@ mod test {
             ReportSkipped::new("client"),
             None,
         );
+
         let run_server = super::run(
             Role::Server,
             c2s_rx,
@@ -316,6 +391,7 @@ mod test {
             ReportSkipped::new("server"),
             None,
         );
+
         let _fwd = Task::spawn(
             futures::future::join(
                 async move { panic!("should never terminate: {:?}", run_client.await) },
@@ -323,22 +399,24 @@ mod test {
             )
             .map(drop),
         );
-        futures::future::try_join(
+
+        futures::future::join(
             await_peer(rtr_client.clone(), rtr_server.node_id()),
             await_peer(rtr_server.clone(), rtr_client.node_id()),
         )
-        .map_ok(drop)
+        .map(Ok)
         .on_timeout(Duration::from_secs(120), || Err(format_err!("timeout")))
         .await
+        .unwrap();
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn reliable(run: usize) -> Result<(), Error> {
+    async fn reliable(run: usize) {
         end2end(run, 0).await
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn mostly_reliable(run: usize) -> Result<(), Error> {
+    async fn mostly_reliable(run: usize) {
         end2end(run, 1).await
     }
 }

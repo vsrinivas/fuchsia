@@ -10,10 +10,10 @@
 use {
     anyhow::Error,
     byteorder::WriteBytesExt,
-    futures::{io::AsyncWriteExt, prelude::*},
+    futures::prelude::*,
     overnet_core::{ConfigProducer, LinkIntroductionFacts, Router},
-    std::{sync::Arc, time::Duration},
-    stream_framer::{new_deframer, new_framer, Deframed, Format, ReadBytes},
+    std::sync::Arc,
+    stream_framer::{Deframed, Deframer, Format, Framer, ReadBytes},
 };
 
 pub fn run_stream_link<'a>(
@@ -26,42 +26,38 @@ pub fn run_stream_link<'a>(
     let (mut link_sender, mut link_receiver) = node.new_link(introduction_facts, config);
     drop(node);
 
-    let (mut framer, mut framer_read) = new_framer(LosslessBinary, 4096);
-    let (mut deframer_write, mut deframer) = new_deframer(LosslessBinary);
+    let framer = Framer::new(LosslessBinary);
+    let mut deframer = Deframer::new(LosslessBinary);
 
-    futures::future::try_join4(
+    futures::future::try_join(
         async move {
-            loop {
-                let msg = framer_read.read().await?;
+            while let Some(frame) = link_sender.next_send().await {
+                let msg = framer.write_frame(frame.bytes())?;
                 tx_bytes.write_all(&msg).await?;
                 tx_bytes.flush().await?;
             }
+            Ok(())
         },
         async move {
-            let mut buf = [0u8; 4096];
+            let mut buf = [0; 4096];
             loop {
                 let n = rx_bytes.read(&mut buf).await?;
+
+                // If we've reached the end of the stream, then we can exit early. Any left over
+                // data in the deframer would be unframed, which we don't care about.
                 if n == 0 {
-                    return Ok::<_, Error>(());
+                    return Ok(());
                 }
-                deframer_write.write(&buf[..n]).await?;
-            }
-        },
-        async move {
-            loop {
-                if let ReadBytes::Framed(mut frame) = deframer.read().await? {
-                    link_receiver.received_frame(frame.as_mut()).await;
+
+                for frame in deframer.parse_frames(&buf[..n]) {
+                    if let ReadBytes::Framed(mut frame) = frame? {
+                        link_receiver.received_frame(&mut frame).await;
+                    }
                 }
             }
-        },
-        async move {
-            while let Some(frame) = link_sender.next_send().await {
-                framer.write(frame.bytes()).await?;
-            }
-            Ok::<_, Error>(())
         },
     )
-    .map_ok(|((), (), (), ())| ())
+    .map_ok(|((), ())| ())
 }
 
 /// Framing format that assumes a lossless underlying byte stream that can transport all 8 bits of a
@@ -97,14 +93,10 @@ impl Format for LosslessBinary {
             new_start_pos: 2 + len,
         });
     }
-
-    fn deframe_timeout(&self, _have_pending_bytes: bool) -> Option<Duration> {
-        None
-    }
 }
 
 #[cfg(test)]
-mod test {
+mod tests {
     use super::*;
     use anyhow::anyhow;
     use fuchsia_async::{Task, TimeoutExt};
@@ -118,25 +110,31 @@ mod test {
         while lp.list_peers().await.unwrap().into_iter().find(|p| peer == p.id.into()).is_none() {}
     }
 
-    #[fuchsia_async::run(1, test)]
-    async fn simple_frame() -> Result<(), Error> {
-        let (mut framer_writer, mut framer_reader) = new_framer(LosslessBinary, 1024);
-        framer_writer.write(&[1, 2, 3, 4]).await?;
-        let (mut deframer_writer, mut deframer_reader) = new_deframer(LosslessBinary);
-        deframer_writer.write(framer_reader.read().await?.as_slice()).await?;
-        assert_eq!(deframer_reader.read().await?, ReadBytes::Framed(vec![1, 2, 3, 4]));
-        framer_writer.write(&[5, 6, 7, 8]).await?;
-        deframer_writer.write(framer_reader.read().await?.as_slice()).await?;
-        assert_eq!(deframer_reader.read().await?, ReadBytes::Framed(vec![5, 6, 7, 8]));
-        Ok(())
+    #[test]
+    fn simple_frame() {
+        let framer = Framer::new(LosslessBinary);
+        let body = vec![1, 2, 3, 4];
+        let msg = framer.write_frame(&body).unwrap();
+
+        let mut deframer = Deframer::new(LosslessBinary);
+        assert_eq!(
+            deframer.parse_frames(&msg).map(|frame| frame.unwrap()).collect::<Vec<_>>(),
+            vec![ReadBytes::Framed(body)]
+        );
+
+        let body = vec![5, 6, 7, 8];
+        let msg = framer.write_frame(&body).unwrap();
+        assert_eq!(
+            deframer.parse_frames(&msg).map(|frame| frame.unwrap()).collect::<Vec<_>>(),
+            vec![ReadBytes::Framed(body)]
+        );
     }
 
-    #[fuchsia_async::run(1, test)]
-    async fn large_frame() -> Result<(), Error> {
+    #[test]
+    fn framer_rejects_large_frame() {
         let big_slice = vec![0u8; 100000];
-        let (mut framer_writer, _framer_reader) = new_framer(LosslessBinary, 1024);
-        assert!(framer_writer.write(&big_slice).await.is_err());
-        Ok(())
+        let framer = Framer::new(LosslessBinary);
+        assert!(framer.write_frame(&big_slice).is_err());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
