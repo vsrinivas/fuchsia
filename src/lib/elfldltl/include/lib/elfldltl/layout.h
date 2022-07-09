@@ -215,6 +215,8 @@ struct Elf : private Layout<Class, Data> {
   using NoteSegment = ElfNoteSegment<kData>;
 
   struct Ehdr {
+    using ElfLayout = Elf;
+
     constexpr bool Valid() const {
       return magic == kMagic &&                        // It's ELF at all,
              elfclass == Class && elfdata == Data &&   // of the right sort,

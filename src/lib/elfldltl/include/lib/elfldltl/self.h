@@ -115,6 +115,10 @@ class Self : public SelfBase {
   // Examine the calling ELF module's file header to find its own program
   // headers.  See Ehdr() above about link-time constraints.
   static cpp20::span<const typename Elf::Phdr> Phdrs() {
+    // This could just use ReadPhdrsFromFile with Memory() as the File API and
+    // TrapDiagnostics() as the Diagnostics API.  But even those degenerate
+    // uses introduce some extra dependencies and checks we don't really need
+    // here, and complicate compiling/linking bootstrapping code using this.
     const auto phoff = Ehdr().phoff;
     size_t phnum;
     if (Ehdr().phnum == Elf::Ehdr::kPnXnum) [[unlikely]] {

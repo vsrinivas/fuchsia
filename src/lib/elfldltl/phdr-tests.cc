@@ -4,6 +4,7 @@
 
 #include <lib/elfldltl/constants.h>
 #include <lib/elfldltl/diagnostics.h>
+#include <lib/elfldltl/memory.h>
 #include <lib/elfldltl/phdr.h>
 #include <lib/stdcompat/span.h>
 
@@ -1458,5 +1459,289 @@ constexpr auto ContiguousLoadObserverCompliantTest = [](auto&& elf) {
 TEST(ElfldltlPhdrTests, ContiguousLoadObserverCompliant) {
   TestAllFormats(ContiguousLoadObserverCompliantTest);
 }
+
+constexpr auto ReadPhdrsFromFileBadSizeTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Ehdr = typename Elf::Ehdr;
+  using Phdr = typename Elf::Phdr;
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  Ehdr ehdr{.phentsize = sizeof(Phdr) + 1, .phnum = 1};
+  elfldltl::DirectMemory file;
+  auto result = ReadPhdrsFromFile(diag, file, elfldltl::NoArrayFromFile<Phdr>(), ehdr);
+
+  EXPECT_EQ(1, diag.errors());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_EQ("e_phentsize has unexpected value", errors[0]);
+  EXPECT_EQ(0, diag.warnings());
+  EXPECT_FALSE(result);
+};
+
+TEST(ElfldltlPhdrTests, ReadPhdrsFromFileBadSize) { TestAllFormats(ReadPhdrsFromFileBadSizeTest); }
+
+constexpr auto ReadPhdrsFromFileBadOffsetTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Ehdr = typename Elf::Ehdr;
+  using Phdr = typename Elf::Phdr;
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  Ehdr ehdr{.phoff = 0, .phentsize = sizeof(Phdr), .phnum = 1};
+  elfldltl::DirectMemory file;
+  auto result = ReadPhdrsFromFile(diag, file, elfldltl::NoArrayFromFile<Phdr>(), ehdr);
+
+  EXPECT_EQ(1, diag.errors());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_EQ("e_phoff overlaps with ELF file header", errors[0]);
+  EXPECT_EQ(0, diag.warnings());
+  EXPECT_FALSE(result);
+};
+
+TEST(ElfldltlPhdrTests, ReadPhdrsFromFileBadOffset) {
+  TestAllFormats(ReadPhdrsFromFileBadOffsetTest);
+}
+
+constexpr auto ReadPhdrsFromFileBadAlignTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Ehdr = typename Elf::Ehdr;
+  using Phdr = typename Elf::Phdr;
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  Ehdr ehdr{.phoff = sizeof(Ehdr) + 1, .phentsize = sizeof(Phdr), .phnum = 1};
+  elfldltl::DirectMemory file;
+  auto result = ReadPhdrsFromFile(diag, file, elfldltl::NoArrayFromFile<Phdr>(), ehdr);
+
+  EXPECT_EQ(1, diag.errors());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_EQ("e_phoff has insufficient alignment", errors[0]);
+  EXPECT_EQ(0, diag.warnings());
+  EXPECT_FALSE(result);
+};
+
+TEST(ElfldltlPhdrTests, ReadPhdrsFromFileBadAlign) {
+  TestAllFormats(ReadPhdrsFromFileBadAlignTest);
+}
+
+constexpr auto ReadPhdrsFromFilePhXNumBadShSizeTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Ehdr = typename Elf::Ehdr;
+  using Phdr = typename Elf::Phdr;
+  using Shdr = typename Elf::Shdr;
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  Ehdr ehdr{.phoff = sizeof(Ehdr),
+            .phentsize = sizeof(Phdr),
+            .phnum = Ehdr::kPnXnum,
+            .shentsize = sizeof(Shdr) + 1,
+            .shnum = 1};
+  elfldltl::DirectMemory file;
+  auto result = ReadPhdrsFromFile(diag, file, elfldltl::NoArrayFromFile<Phdr>(), ehdr);
+
+  EXPECT_EQ(1, diag.errors());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_EQ("e_shentsize has unexpected value", errors[0]);
+  EXPECT_EQ(0, diag.warnings());
+  EXPECT_FALSE(result);
+};
+
+TEST(ElfldltlPhdrTests, ReadPhdrsFromFilePhXNumBadShSize) {
+  TestAllFormats(ReadPhdrsFromFilePhXNumBadShSizeTest);
+}
+
+constexpr auto ReadPhdrsFromFilePhXNumBadShOffTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Ehdr = typename Elf::Ehdr;
+  using Phdr = typename Elf::Phdr;
+  using Shdr = typename Elf::Shdr;
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  Ehdr ehdr{.phoff = sizeof(Ehdr),
+            .shoff = 0,
+            .phentsize = sizeof(Phdr),
+            .phnum = Ehdr::kPnXnum,
+            .shentsize = sizeof(Shdr),
+            .shnum = 1};
+  elfldltl::DirectMemory file;
+  auto result = ReadPhdrsFromFile(diag, file, elfldltl::NoArrayFromFile<Phdr>(), ehdr);
+
+  EXPECT_EQ(1, diag.errors());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_EQ("e_shoff overlaps with ELF file header", errors[0]);
+  EXPECT_EQ(0, diag.warnings());
+  EXPECT_FALSE(result);
+};
+
+TEST(ElfldltlPhdrTests, ReadPhdrsFromFilePhXNumBadShOff) {
+  TestAllFormats(ReadPhdrsFromFilePhXNumBadShOffTest);
+}
+
+constexpr auto ReadPhdrsFromFilePhXNumNoShdrsTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Ehdr = typename Elf::Ehdr;
+  using Phdr = typename Elf::Phdr;
+  using Shdr = typename Elf::Shdr;
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  Ehdr ehdr{.phoff = sizeof(Ehdr),
+            .shoff = sizeof(Ehdr),
+            .phentsize = sizeof(Phdr),
+            .phnum = Ehdr::kPnXnum,
+            .shentsize = sizeof(Shdr),
+            .shnum = 0};
+  elfldltl::DirectMemory file;
+  auto result = ReadPhdrsFromFile(diag, file, elfldltl::NoArrayFromFile<Phdr>(), ehdr);
+
+  EXPECT_EQ(1, diag.errors());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_EQ("PN_XNUM with no section headers", errors[0]);
+  EXPECT_EQ(0, diag.warnings());
+  EXPECT_FALSE(result);
+};
+
+TEST(ElfldltlPhdrTests, ReadPhdrsFromFilePhXNumNoShdrs) {
+  TestAllFormats(ReadPhdrsFromFilePhXNumNoShdrsTest);
+}
+
+constexpr auto ReadPhdrsFromFilePhXNumCantReadShdrTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Ehdr = typename Elf::Ehdr;
+  using Phdr = typename Elf::Phdr;
+  using Shdr = typename Elf::Shdr;
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  Ehdr ehdr{.phoff = sizeof(Ehdr),
+            .shoff = sizeof(Ehdr),
+            .phentsize = sizeof(Phdr),
+            .phnum = Ehdr::kPnXnum,
+            .shentsize = sizeof(Shdr),
+            .shnum = 1};
+  elfldltl::DirectMemory file;
+  auto result = ReadPhdrsFromFile(diag, file, elfldltl::NoArrayFromFile<Phdr>(), ehdr);
+
+  EXPECT_EQ(1, diag.errors());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_EQ("cannot read section header 0 from ELF file", errors[0]);
+  EXPECT_EQ(0, diag.warnings());
+  EXPECT_FALSE(result);
+};
+
+TEST(ElfldltlPhdrTests, ReadPhdrsFromFilePhXNumCantReadShdr) {
+  TestAllFormats(ReadPhdrsFromFilePhXNumCantReadShdrTest);
+}
+
+constexpr auto ReadPhdrsFromFileCantReadPhdrTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Ehdr = typename Elf::Ehdr;
+  using Phdr = typename Elf::Phdr;
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  Ehdr ehdr{.phoff = sizeof(Ehdr), .phentsize = sizeof(Phdr), .phnum = 1};
+  elfldltl::DirectMemory file;
+  auto result = ReadPhdrsFromFile(diag, file, elfldltl::NoArrayFromFile<Phdr>(), ehdr);
+
+  EXPECT_EQ(1, diag.errors());
+  ASSERT_EQ(1, errors.size());
+  EXPECT_EQ("cannot read program headers from ELF file", errors[0]);
+  EXPECT_EQ(0, diag.warnings());
+  EXPECT_FALSE(result);
+};
+
+TEST(ElfldltlPhdrTests, ReadPhdrsFromFileCantReadPhdr) {
+  TestAllFormats(ReadPhdrsFromFileCantReadPhdrTest);
+}
+
+constexpr auto ReadPhdrsFromFileNoPhdrsTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Ehdr = typename Elf::Ehdr;
+  using Phdr = typename Elf::Phdr;
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  Ehdr ehdr{.phnum = 0};
+  elfldltl::DirectMemory file;
+  auto result = ReadPhdrsFromFile(diag, file, elfldltl::NoArrayFromFile<Phdr>(), ehdr);
+
+  EXPECT_EQ(0, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_TRUE(result);
+  EXPECT_EQ(0, result->size());
+};
+
+TEST(ElfldltlPhdrTests, ReadPhdrsFromFileNoPhdrs) { TestAllFormats(ReadPhdrsFromFileNoPhdrsTest); }
+
+constexpr auto ReadPhdrsFromFileTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Ehdr = typename Elf::Ehdr;
+  using Phdr = typename Elf::Phdr;
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  struct [[gnu::packed]] {
+    Ehdr ehdr{.phoff = sizeof(Ehdr), .phentsize = sizeof(Phdr), .phnum = 1};
+    Phdr phdrs[1]{};
+  } elfbytes;
+  elfldltl::DirectMemory file{
+      cpp20::span<std::byte>{reinterpret_cast<std::byte*>(&elfbytes), sizeof(elfbytes)}};
+  auto result = ReadPhdrsFromFile(diag, file, elfldltl::NoArrayFromFile<Phdr>(), elfbytes.ehdr);
+
+  EXPECT_EQ(0, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_TRUE(result);
+  auto& phdrs = *result;
+  EXPECT_EQ(1, phdrs.size());
+  EXPECT_FALSE((memcmp(elfbytes.phdrs, std::addressof(phdrs[0]), sizeof(Phdr))));
+};
+
+TEST(ElfldltlPhdrTests, ReadPhdrsFromFile) { TestAllFormats(ReadPhdrsFromFileTest); }
+
+constexpr auto ReadPhdrsFromFilePhXNumTest = [](auto&& elf) {
+  using Elf = std::decay_t<decltype(elf)>;
+  using Ehdr = typename Elf::Ehdr;
+  using Phdr = typename Elf::Phdr;
+  using Shdr = typename Elf::Shdr;
+
+  std::vector<std::string> errors;
+  auto diag = elfldltl::CollectStringsDiagnostics(errors, kFlags);
+
+  struct [[gnu::packed]] {
+    Ehdr ehdr{.phoff = sizeof(Ehdr) + sizeof(Shdr),
+              .shoff = sizeof(Ehdr),
+              .phentsize = sizeof(Phdr),
+              .phnum = Ehdr::kPnXnum,
+              .shentsize = sizeof(Shdr),
+              .shnum = 1};
+    Shdr shdrs[1]{{.info = 1}};
+    Phdr phdrs[1]{};
+  } elfbytes;
+  elfldltl::DirectMemory file{
+      cpp20::span<std::byte>{reinterpret_cast<std::byte*>(&elfbytes), sizeof(elfbytes)}};
+  auto result = ReadPhdrsFromFile(diag, file, elfldltl::NoArrayFromFile<Phdr>(), elfbytes.ehdr);
+
+  EXPECT_EQ(0, diag.errors());
+  EXPECT_EQ(0, diag.warnings());
+  ASSERT_TRUE(result);
+  auto& phdrs = *result;
+  EXPECT_EQ(1, phdrs.size());
+  EXPECT_FALSE((memcmp(elfbytes.phdrs, std::addressof(phdrs[0]), sizeof(Phdr))));
+};
+
+TEST(ElfldltlPhdrTests, ReadPhdrsFromFilePhXNum) { TestAllFormats(ReadPhdrsFromFilePhXNumTest); }
 
 }  // namespace

@@ -19,7 +19,95 @@
 
 namespace elfldltl {
 
-using namespace std::literals::string_view_literals;
+// Read program headers from an ELF file using the File API (see memory.h),
+// given its file header (Ehdr) already read and validated.
+//
+// This takes a Diagnostics object (see diagnostics.h) and a File object (see
+// memory.h) by reference.  It ultimately calls `file.ReadArrayFromFile<Phdr>`
+// and returns that value if all goes well.  The Allocator argument is just
+// forwarded to File::ReadArrayFromFile; see memory.h for API details.
+//
+// All the template parameters are normally deduced, including the Elf layout
+// to use based on the Ehdr type used for the last argument.
+template <class Diagnostics, class File, typename Allocator, class Ehdr>
+constexpr auto ReadPhdrsFromFile(Diagnostics& diagnostics, File& file, Allocator&& allocator,
+                                 const Ehdr& ehdr) {
+  using namespace std::literals::string_view_literals;
+
+  using Elf = typename Ehdr::ElfLayout;
+  using size_type = typename Elf::size_type;
+  using Phdr = typename Elf::Phdr;
+  using Shdr = typename Elf::Shdr;
+
+  const size_type phoff = ehdr.phoff;
+  auto read_phdrs = [&](size_t phnum) {
+    auto result = file.template ReadArrayFromFile<Phdr>(  //
+        phoff, std::forward<Allocator>(allocator), phnum);
+    if (!result) {
+      diagnostics.FormatError("cannot read program headers from ELF file"sv);
+    }
+    return result;
+  };
+  using Result = std::decay_t<decltype(read_phdrs(0).value())>;
+  using OptionalResult = std::optional<Result>;
+  static_assert(std::is_same_v<OptionalResult, decltype(read_phdrs(0))>);
+
+  // An empty phdr table is not an error, just an empty result.
+  if (ehdr.phnum == 0) [[unlikely]] {
+    return OptionalResult(Result());
+  }
+
+  // Validate the Ehdr fields related to the phdr.
+
+  if (ehdr.phentsize != sizeof(Phdr)) [[unlikely]] {
+    diagnostics.FormatError("e_phentsize has unexpected value"sv);
+    return OptionalResult();
+  }
+
+  if (phoff < sizeof(Ehdr)) [[unlikely]] {
+    diagnostics.FormatError("e_phoff overlaps with ELF file header"sv);
+    return OptionalResult();
+  }
+
+  if (phoff % alignof(Phdr) != 0) [[unlikely]] {
+    diagnostics.FormatError("e_phoff has insufficient alignment"sv);
+    return OptionalResult();
+  }
+
+  // Things look valid, so find the count.  Usually it's directly in the field.
+  if (ehdr.phnum != Elf::Ehdr::kPnXnum) [[likely]] {
+    return read_phdrs(ehdr.phnum);
+  }
+
+  // This is the marker that the count might exceed 16 bits.  In that case,
+  // it's instead stored in the special stub section header at index 0.
+  // This is the only time the section header table is used at runtime,
+  // and there are still no actual sections (index 0 is always a stub).
+
+  if (ehdr.shnum == 0) [[unlikely]] {
+    diagnostics.FormatError("PN_XNUM with no section headers"sv);
+    return OptionalResult();
+  }
+
+  if (ehdr.shentsize != sizeof(Shdr)) [[unlikely]] {
+    diagnostics.FormatError("e_shentsize has unexpected value"sv);
+    return OptionalResult();
+  }
+
+  const size_type shoff = ehdr.shoff;
+  if (shoff < sizeof(Ehdr)) [[unlikely]] {
+    diagnostics.FormatError("e_shoff overlaps with ELF file header"sv);
+    return OptionalResult();
+  }
+
+  if (auto read_shdr = file.template ReadFromFile<Shdr>(shoff)) [[likely]] {
+    const Shdr& shdr = *read_shdr;
+    return read_phdrs(shdr.info);
+  }
+
+  diagnostics.FormatError("cannot read section header 0 from ELF file"sv);
+  return OptionalResult();
+}
 
 // elfldltl::DecodePhdrs does a single-pass decoding of a program
 // header table by statically combining multiple "observer" objects.  Various
@@ -34,10 +122,10 @@ struct PhdrTypeMatch {};
 
 // This is the base class for Phdr*Observer classes.
 // Each Observer subclass should define these two methods:
-//  * template <class Diag, typename Phdr>
-//    bool Observe(Diag& diag, PhdrTypeMatch<Type> type, const Phdr& val);
-//  * template <class Diag>
-//    bool Finish(Diag& diag);
+//  * template <class Diagnostics, typename Phdr>
+//    bool Observe(Diagnostics& diagnostics, PhdrTypeMatch<Type> type, const Phdr& val);
+//  * template <class Diagnostics>
+//    bool Finish(Diagnostics& diagnostics);
 // Observe will be called with each entry matching any Type of the Types...
 // list. Then Finish will be called at the end of all entries unless processing
 // was terminated early for some reason, in which case the observer object is
@@ -55,22 +143,22 @@ struct PhdrObserver {};
 // indicates the segment type it matches.  If any matching observer returns
 // false then this stops processing early and returns false.  Otherwise, each
 // observer's Finish method is called, stopping early if one returns false.
-template <class Diag, class Phdr, size_t N, class... Observers>
-constexpr bool DecodePhdrs(Diag&& diag, cpp20::span<const Phdr, N> phdrs,
+template <class Diagnostics, class Phdr, size_t N, class... Observers>
+constexpr bool DecodePhdrs(Diagnostics&& diagnostics, cpp20::span<const Phdr, N> phdrs,
                            Observers&&... observers) {
   for (const Phdr& phdr : phdrs) {
-    if ((!DecodePhdr(diag, phdr, observers) || ...)) {
+    if ((!DecodePhdr(diagnostics, phdr, observers) || ...)) {
       return false;
     }
   }
-  return (observers.Finish(diag) && ...);
+  return (observers.Finish(diagnostics) && ...);
 }
 
 // Match a single program header against a single observer.  If the
 // observer matches, its Observe overload for the matching tag is called.
 // Returns the value of that call, or true if this observer didn't match.
-template <class Diag, class Phdr, class Observer, ElfPhdrType... Type>
-constexpr bool DecodePhdr(Diag&& diag, const Phdr& phdr,
+template <class Diagnostics, class Phdr, class Observer, ElfPhdrType... Type>
+constexpr bool DecodePhdr(Diagnostics&& diagnostics, const Phdr& phdr,
                           PhdrObserver<Observer, Type...>& observer) {
   constexpr auto kKnownFlags = Phdr::kRead | Phdr::kWrite | Phdr::kExecute;
 
@@ -79,7 +167,7 @@ constexpr bool DecodePhdr(Diag&& diag, const Phdr& phdr,
     using Error = decltype(error);
 
     if ((phdr.flags() & ~kKnownFlags) != 0) {
-      if (ok = diag.FormatWarning(Error::kUnknownFlags); !ok) {
+      if (ok = diagnostics.FormatWarning(Error::kUnknownFlags); !ok) {
         return false;
       }
     }
@@ -88,7 +176,7 @@ constexpr bool DecodePhdr(Diag&& diag, const Phdr& phdr,
     // means an alignment of 1.
     auto align = phdr.align() > 0 ? phdr.align() : 1;
     if (!cpp20::has_single_bit(align)) {
-      if (ok = diag.FormatError(Error::kBadAlignment); !ok) {
+      if (ok = diagnostics.FormatError(Error::kBadAlignment); !ok) {
         return false;
       }
     }
@@ -98,7 +186,7 @@ constexpr bool DecodePhdr(Diag&& diag, const Phdr& phdr,
     // `p_offset` and `p_vaddr` being `p_align`-aligned (e.g., zero) is
     // expected to hold.
     if (phdr.offset() % align != phdr.vaddr() % align) {
-      if (ok = diag.FormatError(Error::kOffsetNotEquivVaddr); !ok) {
+      if (ok = diagnostics.FormatError(Error::kOffsetNotEquivVaddr); !ok) {
         return false;
       }
     }
@@ -106,7 +194,7 @@ constexpr bool DecodePhdr(Diag&& diag, const Phdr& phdr,
     return true;
   };
   auto call_observer = [&](auto type) {
-    ok = static_cast<Observer&>(observer).Observe(diag, type, phdr);
+    ok = static_cast<Observer&>(observer).Observe(diagnostics, type, phdr);
     return ok;
   };
 
@@ -121,13 +209,14 @@ class PhdrNullObserver : public PhdrObserver<PhdrNullObserver<Elf>, ElfPhdrType:
  public:
   using Phdr = typename Elf::Phdr;
 
-  template <class Diag>
-  constexpr bool Observe(Diag& diag, PhdrTypeMatch<ElfPhdrType::kNull> type, const Phdr& phdr) {
-    return diag.FormatWarning("PT_NULL header encountered");
+  template <class Diagnostics>
+  constexpr bool Observe(Diagnostics& diagnostics, PhdrTypeMatch<ElfPhdrType::kNull> type,
+                         const Phdr& phdr) {
+    return diagnostics.FormatWarning("PT_NULL header encountered");
   }
 
-  template <class Diag>
-  constexpr bool Finish(Diag& diag) {
+  template <class Diagnostics>
+  constexpr bool Finish(Diagnostics& diagnostics) {
     return true;
   }
 };
@@ -142,20 +231,20 @@ class PhdrSingletonObserver : public PhdrObserver<PhdrSingletonObserver<Elf, Typ
 
   explicit PhdrSingletonObserver(std::optional<Phdr>& phdr) : phdr_(phdr) {}
 
-  template <class Diag>
-  constexpr bool Observe(Diag& diag, PhdrTypeMatch<Type> type, const Phdr& phdr) {
+  template <class Diagnostics>
+  constexpr bool Observe(Diagnostics& diagnostics, PhdrTypeMatch<Type> type, const Phdr& phdr) {
     // Warning, since a wrong PHDRS clause in a linker script could cause
     // this and be harmless in practice rather than indicating a linker bug
     // or corrupted data.
-    if (phdr_ && !diag.FormatWarning(internal::PhdrError<Type>::kDuplicateHeader)) {
+    if (phdr_ && !diagnostics.FormatWarning(internal::PhdrError<Type>::kDuplicateHeader)) {
       return false;
     }
     phdr_ = phdr;
     return true;
   }
 
-  template <class Diag>
-  constexpr bool Finish(Diag& diag) {
+  template <class Diagnostics>
+  constexpr bool Finish(Diagnostics& diagnostics) {
     return true;
   }
 
@@ -189,8 +278,8 @@ class PhdrStackObserver : public PhdrSingletonObserver<Elf, ElfPhdrType::kStack>
   PhdrStackObserver(std::optional<size_type>& size, bool& executable)
       : Base(phdr_), size_(size), executable_(executable) {}
 
-  template <class Diag>
-  constexpr bool Finish(Diag& diag) {
+  template <class Diagnostics>
+  constexpr bool Finish(Diagnostics& diagnostics) {
     using namespace std::literals::string_view_literals;
 
     if (!phdr_) {
@@ -198,17 +287,18 @@ class PhdrStackObserver : public PhdrSingletonObserver<Elf, ElfPhdrType::kStack>
         executable_ = true;
         return true;
       } else {
-        return diag.FormatError("executable stack not supported: PT_GNU_STACK header required"sv);
+        return diagnostics.FormatError(
+            "executable stack not supported: PT_GNU_STACK header required"sv);
       }
     }
 
     const auto flags = phdr_->flags();
     if ((flags & Phdr::kRead) == 0 &&
-        !diag.FormatError("stack is not readable: PF_R is not set"sv)) {
+        !diagnostics.FormatError("stack is not readable: PF_R is not set"sv)) {
       return false;
     }
     if ((flags & Phdr::kWrite) == 0 &&
-        !diag.FormatError("stack is not writable: PF_W is not set"sv)) {
+        !diagnostics.FormatError("stack is not writable: PF_W is not set"sv)) {
       return false;
     }
 
@@ -216,7 +306,7 @@ class PhdrStackObserver : public PhdrSingletonObserver<Elf, ElfPhdrType::kStack>
       executable_ = (flags & Phdr::kExecute) != 0;
     } else {
       if ((flags & Phdr::kExecute) != 0 &&
-          !diag.FormatError("executable stack not supported: PF_X is set"sv)) {
+          !diagnostics.FormatError("executable stack not supported: PF_X is set"sv)) {
         return false;
       }
     }
@@ -247,8 +337,8 @@ class PhdrMetadataObserver : public PhdrSingletonObserver<Elf, Type> {
  public:
   using Base::Base;
 
-  template <class Diag>
-  constexpr bool Finish(Diag& diag) {
+  template <class Diagnostics>
+  constexpr bool Finish(Diagnostics& diagnostics) {
     using PhdrError = internal::PhdrError<Type>;
 
     const std::optional<Phdr>& phdr = this->phdr();
@@ -257,7 +347,7 @@ class PhdrMetadataObserver : public PhdrSingletonObserver<Elf, Type> {
     }
 
     if (alignof(EntryType) > phdr->align() &&  //
-        !diag.FormatError(PhdrError::kIncompatibleEntryAlignment)) {
+        !diagnostics.FormatError(PhdrError::kIncompatibleEntryAlignment)) {
       return false;
     }
 
@@ -265,17 +355,17 @@ class PhdrMetadataObserver : public PhdrSingletonObserver<Elf, Type> {
     // `p_offset % p_align == 0` by virtue of the general equivalence check
     // made in DecodePhdrs().
     if (phdr->vaddr() % phdr->align() != 0 &&  //
-        !diag.FormatError(PhdrError::kUnalignedVaddr)) {
+        !diagnostics.FormatError(PhdrError::kUnalignedVaddr)) {
       return false;
     }
 
     if (phdr->memsz != phdr->filesz &&  //
-        !diag.FormatError(PhdrError::kFileszNotEqMemsz)) {
+        !diagnostics.FormatError(PhdrError::kFileszNotEqMemsz)) {
       return false;
     }
 
     if (phdr->filesz() % sizeof(EntryType) != 0 &&  //
-        !diag.FormatError(PhdrError::kIncompatibleEntrySize)) {
+        !diagnostics.FormatError(PhdrError::kIncompatibleEntrySize)) {
       return false;
     }
 

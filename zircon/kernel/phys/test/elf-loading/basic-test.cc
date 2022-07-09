@@ -89,13 +89,11 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
   const Ehdr& ehdr = *ehdr_result;
   ZX_ASSERT(ehdr.Loadable());
 
-  // TODO(fxbug.dev/91400): Handle this case.
-  ZX_ASSERT(ehdr.phnum != Ehdr::kPnXnum);
+  auto diag = elfldltl::PanicDiagnostics("FAILED: ");
 
   auto phdr_allocator = elfldltl::NoArrayFromFile<Phdr>();
   ktl::span<const Phdr> phdrs;
-  if (auto result = file.ReadArrayFromFile<Phdr>(ehdr.phoff(), phdr_allocator,
-                                                 ehdr.phnum() * ehdr.phentsize() / sizeof(Phdr))) {
+  if (auto result = elfldltl::ReadPhdrsFromFile(diag, file, phdr_allocator, ehdr)) {
     phdrs = *result;
   } else {
     printf("FAILED: to read phdrs\n");
@@ -110,8 +108,6 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
   // purposes in physboot is the right thing to do now, but should be
   // revisited.
   static_assert(ZX_PAGE_SIZE <= ZBI_BOOTFS_PAGE_SIZE);
-
-  auto diag = elfldltl::PanicDiagnostics("FAILED: ");
 
   // Parse phdrs to find the dynamic sections and to validate that the load
   // segments comprise a contiguous layout. A contiguous layout - paired with
