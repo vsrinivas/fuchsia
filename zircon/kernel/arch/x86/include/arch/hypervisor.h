@@ -25,6 +25,7 @@
 #include <kernel/timer.h>
 #include <ktl/unique_ptr.h>
 
+class AutoVmcs;
 struct VmxInfo;
 
 // Maximum VCPUs per guest.
@@ -129,13 +130,14 @@ class Vcpu {
   VmxPage host_msr_page_;
   VmxPage guest_msr_page_;
   VmxPage vmcs_page_;
-  ktl::unique_ptr<uint8_t[]> guest_extended_registers_;
+  // The guest may enable any state, so the XSAVE area is the maximum size.
+  alignas(64) uint8_t extended_register_state_[X86_MAX_EXTENDED_REGISTER_SIZE];
 
   Vcpu(Guest* guest, hypervisor::Id<uint16_t>& vpid, Thread* thread);
 
   void MigrateCpu(Thread* thread, Thread::MigrateStage stage) TA_REQ(ThreadLock::Get());
-  void SaveGuestExtendedRegisters(Thread* thread);
-  void RestoreGuestExtendedRegisters(Thread* thread);
+  void SaveGuestExtendedRegisters(Thread* thread, AutoVmcs& vmcs);
+  void RestoreGuestExtendedRegisters(Thread* thread, AutoVmcs& vmcs);
 };
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_HYPERVISOR_H_

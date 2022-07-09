@@ -165,6 +165,19 @@ void edit_msr_list(VmxPage* msr_list_page, size_t index, uint32_t msr, uint64_t 
   entry->value = value;
 }
 
+void swap_extended_registers(uint8_t* save_extended_registers, uint64_t& save_xcr0, bool save,
+                             uint8_t* restore_extended_registers, uint64_t& restore_xcr0,
+                             bool restore) {
+  x86_extended_register_save_state(save_extended_registers);
+  if (save) {
+    save_xcr0 = x86_xgetbv(0);
+  }
+  if (restore) {
+    x86_xsetbv(0, restore_xcr0);
+  }
+  x86_extended_register_restore_state(restore_extended_registers);
+}
+
 template <typename Out, typename In>
 void register_copy(Out* out, const In& in) {
   out->rax = in.rax;
@@ -186,7 +199,8 @@ void register_copy(Out* out, const In& in) {
 
 zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, uintptr_t entry,
                       paddr_t msr_bitmaps_address, paddr_t pml4_address, VmxState* vmx_state,
-                      VmxPage* host_msr_page, VmxPage* guest_msr_page) {
+                      VmxPage* host_msr_page, VmxPage* guest_msr_page,
+                      uint8_t* extended_register_state) {
   vmclear(vmcs_address);
   AutoVmcs vmcs(vmcs_address);
   // Setup secondary processor-based VMCS controls.
@@ -457,7 +471,8 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, uint
   // 60000010H (CD and ET are set.)
   vmcs.Write(VmcsFieldXX::CR0_READ_SHADOW, X86_CR0_CD | X86_CR0_ET);
 
-  uint64_t cr4 = X86_CR4_VMXE;  // Enable VMX
+  // Enable FXSAVE, XSAVE, and VMX.
+  uint64_t cr4 = X86_CR4_OSFXSR | X86_CR4_VMXE;
   if (vpid.val() == kBaseProcessorVpid) {
     // Enable the PAE bit on the BSP for 64-bit paging.
     cr4 |= X86_CR4_PAE;
@@ -555,9 +570,11 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, uint
   // failures (see Section 26.3.1.5).
   vmcs.Write(VmcsField64::LINK_POINTER, kLinkPointerInvalidate);
 
-  if (x86_feature_test(X86_FEATURE_XSAVE)) {
-    // Enable x87 state in guest XCR0.
+  if (x86_xsave_supported()) {
+    // Set initial guest XCR0 to host XCR0.
+    vmx_state->host_state.xcr0 = x86_xgetbv(0);
     vmx_state->guest_state.xcr0 = X86_XSAVE_STATE_BIT_X87;
+    x86_extended_register_init_state_from_bv(extended_register_state, X86_XSAVE_STATE_BIT_X87);
   }
 
   return ZX_OK;
@@ -816,19 +833,16 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
     return status;
   }
 
-  // Initialize a 64-byte aligned XSAVE area. The guest may enable any non-supervisor state so we
-  // allocate the maximum possible size. It is then initialized with the minimum possible XSTATE
-  // bit vector, which corresponds to the guest's initial state.
-  vcpu->guest_extended_registers_.reset(new (std::align_val_t(64), &ac)
-                                            uint8_t[x86_extended_register_max_size()]);
-  if (!ac.check()) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  x86_extended_register_init_state_from_bv(vcpu->guest_extended_registers_.get(),
-                                           X86_XSAVE_STATE_BIT_X87);
-
   VmxRegion* region = vcpu->vmcs_page_.VirtualAddress<VmxRegion>();
   region->revision_id = vmx_info.revision_id;
+
+  zx_paddr_t pml4_address = gpas.arch_table_phys();
+  status = vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), *vpid, entry, guest->MsrBitmapsAddress(),
+                     pml4_address, &vcpu->vmx_state_, &vcpu->host_msr_page_, &vcpu->guest_msr_page_,
+                     vcpu->extended_register_state_);
+  if (status != ZX_OK) {
+    return status;
+  }
 
   // Only set the thread migrate function after we have initialised the VMCS.
   // Otherwise, the migrate function may interact with an uninitialised VMCS.
@@ -837,14 +851,6 @@ zx_status_t Vcpu::Create(Guest* guest, zx_vaddr_t entry, ktl::unique_ptr<Vcpu>* 
   // realize that SetMigrateFn will always be called with the ThreadLock.
   thread->SetMigrateFn([vcpu = vcpu.get()](Thread* thread, auto stage)
                            TA_NO_THREAD_SAFETY_ANALYSIS { vcpu->MigrateCpu(thread, stage); });
-
-  zx_paddr_t pml4_address = gpas.arch_table_phys();
-  status =
-      vmcs_init(vcpu->vmcs_page_.PhysicalAddress(), *vpid, entry, guest->MsrBitmapsAddress(),
-                pml4_address, &vcpu->vmx_state_, &vcpu->host_msr_page_, &vcpu->guest_msr_page_);
-  if (status != ZX_OK) {
-    return status;
-  }
 
   *out = ktl::move(vcpu);
   return ZX_OK;
@@ -964,42 +970,20 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
   }
 }
 
-void Vcpu::RestoreGuestExtendedRegisters(Thread* thread) {
-  DEBUG_ASSERT(arch_ints_disabled());
-  if (!x86_xsave_supported()) {
-    // Save host and restore guest x87/SSE state with fxrstor/fxsave.
-    x86_extended_register_save_state(thread->arch().extended_register_buffer);
-    x86_extended_register_restore_state(guest_extended_registers_.get());
-    return;
-  }
-
-  // Save host state.
-  vmx_state_.host_state.xcr0 = x86_xgetbv(0);
-  x86_extended_register_save_state(thread->arch().extended_register_buffer);
-
-  // Restore guest state.
-  x86_xsetbv(0, x86_extended_xcr0_component_bitmap());
-  x86_extended_register_restore_state(guest_extended_registers_.get());
-  x86_xsetbv(0, vmx_state_.guest_state.xcr0);
+void Vcpu::RestoreGuestExtendedRegisters(Thread* thread, AutoVmcs& vmcs) {
+  bool save_host = x86_xsave_supported();
+  bool restore_guest = vmcs.Read(VmcsFieldXX::GUEST_CR4) & X86_CR4_OSXSAVE;
+  swap_extended_registers(thread->arch().extended_register_buffer, vmx_state_.host_state.xcr0,
+                          save_host, extended_register_state_, vmx_state_.guest_state.xcr0,
+                          restore_guest);
 }
 
-void Vcpu::SaveGuestExtendedRegisters(Thread* thread) {
-  DEBUG_ASSERT(arch_ints_disabled());
-  if (!x86_xsave_supported()) {
-    // Save host and restore guest x87/SSE state with fxrstor/fxsave.
-    x86_extended_register_save_state(guest_extended_registers_.get());
-    x86_extended_register_restore_state(thread->arch().extended_register_buffer);
-    return;
-  }
-
-  // Save guest state.
-  vmx_state_.guest_state.xcr0 = x86_xgetbv(0);
-  x86_xsetbv(0, x86_extended_xcr0_component_bitmap());
-  x86_extended_register_save_state(guest_extended_registers_.get());
-
-  // Restore host state.
-  x86_xsetbv(0, vmx_state_.host_state.xcr0);
-  x86_extended_register_restore_state(thread->arch().extended_register_buffer);
+void Vcpu::SaveGuestExtendedRegisters(Thread* thread, AutoVmcs& vmcs) {
+  bool save_guest = vmcs.Read(VmcsFieldXX::GUEST_CR4) & X86_CR4_OSXSAVE;
+  bool restore_host = x86_xsave_supported();
+  swap_extended_registers(extended_register_state_, vmx_state_.guest_state.xcr0, save_guest,
+                          thread->arch().extended_register_buffer, vmx_state_.host_state.xcr0,
+                          restore_host);
 }
 
 zx_status_t vmx_enter(VmxState* vmx_state) {
@@ -1024,7 +1008,12 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
     return ZX_ERR_BAD_STATE;
   }
 
-  auto defer = fit::defer(gBootOptions->x86_disable_spec_mitigations ? [] {} : [] {
+  bool extended_registers_restored = false;
+  auto defer = fit::defer([this, current_thread, &extended_registers_restored] {
+    if (extended_registers_restored) {
+      AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
+      SaveGuestExtendedRegisters(current_thread, vmcs);
+    }
     // Spectre V2: Ensure that code executed in the VM guest cannot influence
     // indirect branch prediction in the host.
     //
@@ -1032,7 +1021,7 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
     // is either built with a retpoline or has Enhanced IBRS enabled. We
     // currently execute an IBPB on contessxt-switch to a new aspace. The IBPB is
     // currently only here to protect hypervisor user threads.
-    if (x86_cpu_has_ibpb()) {
+    if (!gBootOptions->x86_disable_spec_mitigations && x86_cpu_has_ibpb()) {
       arch::IssueIbpb(arch::BootCpuidIo{}, hwreg::X86MsrIo{});
     }
   });
@@ -1068,10 +1057,13 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
       return status;
     }
 
-    RestoreGuestExtendedRegisters(current_thread);
-
     // Updates guest system time if the guest subscribed to updates.
     pv_clock_update_system_time(&pv_clock_state_, &guest_->AddressSpace());
+
+    if (!extended_registers_restored) {
+      RestoreGuestExtendedRegisters(current_thread, vmcs);
+      extended_registers_restored = true;
+    }
 
     if (x86_cpu_should_l1d_flush_on_vmentry()) {
       // L1TF: Flush L1D$ before entering vCPU. If the CPU is affected by MDS, also flush
@@ -1087,8 +1079,6 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
     GUEST_STATS_INC(vm_entries);
     status = vmx_enter(&vmx_state_);
     GUEST_STATS_INC(vm_exits);
-
-    SaveGuestExtendedRegisters(current_thread);
 
     if (!gBootOptions->x86_disable_spec_mitigations) {
       // Spectre V2: Ensure that code executed in the VM guest cannot influence
