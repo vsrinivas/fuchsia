@@ -5,11 +5,12 @@
 import("//build/zircon/zx_library.gni")
 
 zx_library("mini-process") {
-  sdk = "shared"
-  sdk_headers = [ "mini-process/mini-process.h" ]
   testonly = true
 
-  sources = [ "mini-process.c" ]
+  sdk = "shared"
+  sdk_headers = [ "mini-process/mini-process.h" ]
+
+  sources = [ "mini-process.cc" ]
   deps = [
     ":subprocess",
     "//zircon/system/ulib/elf-psabi",
@@ -29,11 +30,12 @@ if (toolchain_variant.instrumented) {
 } else {
   source_set("subprocess") {
     visibility = [ ":*" ]
-
     testonly = true
+
+    public = [ "subprocess.h" ]
     sources = [
       "include/mini-process/mini-process.h",
-      "subprocess.c",
+      "subprocess.cc",
     ]
     deps = [ "//zircon/system/ulib/backtrace-request" ]
 

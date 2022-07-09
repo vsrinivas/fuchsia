@@ -15,11 +15,13 @@
 
 #include "subprocess.h"
 
-static void* get_syscall_addr(const void* syscall_fn, uintptr_t vdso_base) {
+template <typename Fn>
+static Fn* get_syscall_addr(Fn* syscall_fn, uintptr_t vdso_base) {
   Dl_info dl_info;
-  if (dladdr(syscall_fn, &dl_info) == 0)
-    return 0;
-  return (void*)(vdso_base + ((uintptr_t)dl_info.dli_saddr - (uintptr_t)dl_info.dli_fbase));
+  if (dladdr(reinterpret_cast<const void*>(syscall_fn), &dl_info) == 0)
+    return nullptr;
+  return reinterpret_cast<Fn*>(vdso_base + (reinterpret_cast<uintptr_t>(dl_info.dli_saddr) -
+                                            reinterpret_cast<uintptr_t>(dl_info.dli_fbase)));
 }
 
 static zx_status_t write_ctx_message(zx_handle_t channel, uintptr_t vdso_base,
@@ -71,7 +73,8 @@ zx_status_t mini_process_load_stack(zx_handle_t vmar, bool with_code, zx_vaddr_t
   if (with_code) {
     // We assume that the code to execute is less than kSizeLimit bytes.
     const uint32_t kSizeLimit = 2000;
-    status = zx_vmo_write(stack_vmo, &minipr_thread_loop, 0u, kSizeLimit);
+    status =
+        zx_vmo_write(stack_vmo, reinterpret_cast<const void*>(&minipr_thread_loop), 0u, kSizeLimit);
     if (status != ZX_OK)
       goto exit;
 

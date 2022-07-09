@@ -5,7 +5,10 @@
 #ifndef ZIRCON_SYSTEM_ULIB_MINI_PROCESS_SUBPROCESS_H_
 #define ZIRCON_SYSTEM_ULIB_MINI_PROCESS_SUBPROCESS_H_
 
+#include <zircon/compiler.h>
 #include <zircon/syscalls.h>
+
+__BEGIN_CDECLS
 
 // This struct defines the first message that the child process gets.
 typedef struct {
@@ -39,5 +42,7 @@ typedef struct {
 } minip_cmd_t;
 
 void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr);
+
+__END_CDECLS
 
 #endif  // ZIRCON_SYSTEM_ULIB_MINI_PROCESS_SUBPROCESS_H_

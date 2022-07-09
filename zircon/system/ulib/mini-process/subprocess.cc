@@ -47,7 +47,7 @@ __attribute__((section(".text.not-split"))) void minipr_thread_loop(zx_handle_t 
     uint32_t actual = 0u;
     uint32_t actual_handles = 0u;
     zx_handle_t original_handle = ZX_HANDLE_INVALID;
-    minip_ctx_t ctx = {0};
+    minip_ctx_t ctx = {};
 
     zx_status_t status =
         (*read_fn)(channel, 0u, &ctx, &original_handle, sizeof(ctx), 1, &actual, &actual_handles);
@@ -69,7 +69,7 @@ __attribute__((section(".text.not-split"))) void minipr_thread_loop(zx_handle_t 
       if (status != ZX_OK)
         break;
 
-      minip_cmd_t cmd = {0};
+      minip_cmd_t cmd = {};
       status = ctx.channel_read(channel, 0u, &cmd, NULL, sizeof(cmd), 0u, &actual, &actual_handles);
 
       if (status != ZX_OK)
