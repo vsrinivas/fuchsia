@@ -29,11 +29,9 @@ if (is_host) {
       "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
       "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
       "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
-      "//src/developer/ffx/config:lib",
       "//src/developer/ffx/daemon/core:lib",
       "//src/developer/ffx/daemon/events:lib",
       "//src/developer/ffx/daemon/target:lib",
-      "//src/developer/ffx/lib/addr:lib",
       "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext",
       "//src/developer/ffx/lib/pkg",
       "//src/developer/ffx/lib/protocols:lib",
@@ -50,14 +48,16 @@ if (is_host) {
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:itertools",
       "//third_party/rust_crates:log",
-      "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:tuf",
       "//third_party/rust_crates:url",
     ]
     test_deps = [
       ":empty-repo",
+      "//src/developer/ffx/config:lib",
+      "//src/developer/ffx/lib/addr:lib",
       "//third_party/rust_crates:assert_matches",
       "//third_party/rust_crates:lazy_static",
+      "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:simplelog",
     ]
 

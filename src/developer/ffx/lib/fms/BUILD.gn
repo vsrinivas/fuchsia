@@ -14,14 +14,15 @@ if (is_host) {
 
     deps = [
       "//build/sdk/meta:rust",
-      "//src/developer/ffx/config:lib",
-      "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:glob",
       "//third_party/rust_crates:log",
     ]
 
-    test_deps = [ "//third_party/rust_crates:tempfile" ]
+    test_deps = [
+      "//src/lib/fuchsia-async",
+      "//third_party/rust_crates:tempfile",
+    ]
 
     inputs = [
       "test_data/test_physical_device.json",

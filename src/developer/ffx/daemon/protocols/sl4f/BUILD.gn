@@ -15,23 +15,15 @@ if (is_host) {
       "//src/developer/ffx/config:lib",
       "//src/developer/ffx/lib/pkg:pkg",
       "//src/developer/ffx/lib/protocols:lib",
-      "//src/lib/async-utils",
-      "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-async",
       "//src/lib/fuchsia-hyper",
       "//src/testing/sl4f_ffx/fidl:fuchsia.sl4f.ffx-rustc",
       "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:async-channel",
       "//third_party/rust_crates:async-net",
       "//third_party/rust_crates:async-trait",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:hyper",
       "//third_party/rust_crates:log",
-    ]
-
-    test_deps = [
-      "//third_party/rust_crates:assert_matches",
-      "//third_party/rust_crates:pretty_assertions",
     ]
 
     sources = [ "src/lib.rs" ]

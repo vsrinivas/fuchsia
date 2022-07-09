@@ -4,6 +4,9 @@
 
 //! Library for Fuchsia device diagnostics utilities.
 
+// TODO(fxb/104019): Consider enabling globally.
+#![deny(unused_crate_dependencies)]
+
 use {
     anyhow::Result,
     diagnostics_data::Timestamp,

@@ -10,10 +10,7 @@ if (is_host) {
     version = "0.1.0"
     edition = "2021"
 
-    deps = [
-      "proc_macro:config-proc-macros",
-      "//third_party/rust_crates:anyhow",
-    ]
+    deps = [ "proc_macro:config-proc-macros" ]
 
     sources = [ "src/lib.rs" ]
   }

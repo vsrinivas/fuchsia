@@ -12,11 +12,12 @@ rustc_library("lib") {
 
   deps = [
     "//src/lib/diagnostics/data/rust",
-    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
   ]
+
+  test_deps = [ "//src/lib/fuchsia-async" ]
 
   sources = [ "src/lib.rs" ]
 }

@@ -41,7 +41,6 @@ if (is_host) {
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:proc-macro2",
       "//third_party/rust_crates:quote",
-      "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:syn",
     ]

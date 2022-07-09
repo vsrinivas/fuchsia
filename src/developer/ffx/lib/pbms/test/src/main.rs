@@ -4,6 +4,9 @@
 
 //! A tool to test product bundle code.
 
+// TODO(fxb/104019): Consider enabling globally.
+#![deny(unused_crate_dependencies)]
+
 use {
     anyhow::{Context as _, Result},
     args::{CreateCommand, GetCommand, ListCommand, ProductBundleCommand, SubCommand},
