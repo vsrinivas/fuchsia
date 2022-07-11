@@ -75,6 +75,16 @@
         "name": "fuchsia.net.mdns/HostAddress"
     },
     {
+        "declaration": "bool",
+        "kind": "table/member",
+        "name": "fuchsia.net.mdns/HostNameResolutionOptions.exclude_local"
+    },
+    {
+        "declaration": "bool",
+        "kind": "table/member",
+        "name": "fuchsia.net.mdns/HostNameResolutionOptions.exclude_local_proxies"
+    },
+    {
         "declaration": "fuchsia.net.mdns/IpVersions",
         "kind": "table/member",
         "name": "fuchsia.net.mdns/HostNameResolutionOptions.ip_versions"
@@ -114,6 +124,16 @@
     {
         "kind": "protocol",
         "name": "fuchsia.net.mdns/HostNameSubscriptionListener"
+    },
+    {
+        "declaration": "bool",
+        "kind": "table/member",
+        "name": "fuchsia.net.mdns/HostNameSubscriptionOptions.exclude_local"
+    },
+    {
+        "declaration": "bool",
+        "kind": "table/member",
+        "name": "fuchsia.net.mdns/HostNameSubscriptionOptions.exclude_local_proxies"
     },
     {
         "declaration": "fuchsia.net.mdns/IpVersions",
@@ -611,6 +631,16 @@
         "strictness": "strict"
     },
     {
+        "declaration": "bool",
+        "kind": "table/member",
+        "name": "fuchsia.net.mdns/ServiceInstanceResolutionOptions.exclude_local"
+    },
+    {
+        "declaration": "bool",
+        "kind": "table/member",
+        "name": "fuchsia.net.mdns/ServiceInstanceResolutionOptions.exclude_local_proxies"
+    },
+    {
         "declaration": "fuchsia.net.mdns/IpVersions",
         "kind": "table/member",
         "name": "fuchsia.net.mdns/ServiceInstanceResolutionOptions.ip_versions"
@@ -689,6 +719,16 @@
     {
         "kind": "protocol",
         "name": "fuchsia.net.mdns/ServiceSubscriptionListener"
+    },
+    {
+        "declaration": "bool",
+        "kind": "table/member",
+        "name": "fuchsia.net.mdns/ServiceSubscriptionOptions.exclude_local"
+    },
+    {
+        "declaration": "bool",
+        "kind": "table/member",
+        "name": "fuchsia.net.mdns/ServiceSubscriptionOptions.exclude_local_proxies"
     },
     {
         "declaration": "fuchsia.net.mdns/IpVersions",

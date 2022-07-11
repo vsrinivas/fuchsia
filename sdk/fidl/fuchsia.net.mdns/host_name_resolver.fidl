@@ -8,7 +8,7 @@ using fuchsia.net;
 using zx;
 
 /// Discoverable protocol for resolving host names to IP addresses.
-@available(added=HEAD)
+@available(added=9)
 @discoverable
 protocol HostNameResolver {
     /// Gets the addresses for the specified host.
@@ -30,7 +30,7 @@ protocol HostNameResolver {
 };
 
 /// Options for `HostNameResolver.ResolveHostName`.
-@available(added=HEAD)
+@available(added=9)
 type HostNameResolutionOptions = table {
     /// The media (wired, wireless, both) of the interfaces on which the host name should be
     /// resolved. The default is both wired and wireless media.
@@ -39,18 +39,29 @@ type HostNameResolutionOptions = table {
     /// The IP versions (V4, V6, both) with which the host name should resolved. The default
     /// value is both IPv4 and IPv6.
     2: ip_versions IpVersions;
+
+    // Whether to exclude the local host when resolving the host name. The default value is false.
+    3: exclude_local bool;
+
+    // Whether to exclude local proxies when resolving the host name. The default value is false.
+    4: exclude_local_proxies bool;
 };
 
 /// An IPv4 or IPv6 host address with the id of the interface through which the address was
 /// received.
-@available(added=HEAD)
+@available(added=9)
 type HostAddress = struct {
-    /// IPv4 or IPv6 host address.
+    /// IPv4 or IPv6 host address. In the case of the local host, this will be the address of the
+    /// interface idenfied by `interface`. In the case of local proxy hosts, this value will be a
+    /// non-link-local address.
     address fuchsia.net.IpAddress;
 
-    /// Interface through which the address was received.
+    /// Interface through which the address was received. In the case of the local host, this will
+    /// be the interface id of the interface whose address is given by `address`. In the case of
+    /// local proxy hosts, this value will be zero.
     interface fuchsia.net.interface_id;
 
-    /// Time-to-live of the relevant A or AAAA resource.
+    /// Time-to-live of the relevant A or AAAA resource. In the case of the local host or local
+    /// proxy hosts, this value will be 2 minutes, the default A/AAAA TTL.
     ttl zx.duration;
 };

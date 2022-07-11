@@ -8,7 +8,7 @@ using fuchsia.net;
 using zx;
 
 /// Discoverable protocol for publishing service instances.
-@available(added=HEAD)
+@available(added=9)
 @discoverable
 protocol ServiceInstancePublisher {
     /// Publishes a service instance. `publication_responder` is consulted via its
@@ -38,7 +38,7 @@ protocol ServiceInstancePublisher {
 };
 
 /// Options for `ServiceInstancePublisher.PublishServiceInstance`.
-@available(added=HEAD)
+@available(added=9)
 type ServiceInstancePublicationOptions = table {
     /// The media (wired, wireless, both) of the interfaces on which the service instance should
     /// be published. The default `media` value depends on whether the `ServiceInstancePublisher`
@@ -60,7 +60,7 @@ type ServiceInstancePublicationOptions = table {
 };
 
 /// Error values for `ServiceInstancePublisher.PublishServiceInstance`.
-@available(added=HEAD)
+@available(added=9)
 type PublishServiceInstanceError = strict enum : uint32 {
     /// The specified service instance is already being published by the mDNS local implementation.
     ALREADY_PUBLISHED_LOCALLY = 1;
@@ -71,7 +71,7 @@ type PublishServiceInstanceError = strict enum : uint32 {
 };
 
 /// Client-supplied publication responder interface.
-@available(added=HEAD)
+@available(added=9)
 protocol ServiceInstancePublicationResponder {
     /// Provides instance information for initial announcements and query
     /// responses relating to the service instance specified in
@@ -109,14 +109,14 @@ protocol ServiceInstancePublicationResponder {
 };
 
 /// Error values for `ServiceInstancePublicationResponder.OnPublication`.
-@available(added=HEAD)
+@available(added=9)
 type OnPublicationError = strict enum : uint32 {
     /// Indicates the publisher should not respond to this publication request.
     DO_NOT_RESPOND = 1;
 };
 
 /// Describes the cause of a publication.
-@available(added=HEAD)
+@available(added=9)
 type ServiceInstancePublicationCause = strict enum : uint32 {
     /// Indicates the publication is part of an initial announcement.
     ANNOUNCEMENT = 1;
@@ -135,7 +135,7 @@ type ServiceInstancePublicationCause = strict enum : uint32 {
 /// values are rounded down to the nearest second. TTL values less than one
 /// second are not permitted and will result in the `ServiceInstancePublicationResponder`
 /// channel being closed.
-@available(added=HEAD)
+@available(added=9)
 type ServiceInstancePublication = table {
     /// The port at which the service instance is addressable. This value is required.
     1: port uint16;

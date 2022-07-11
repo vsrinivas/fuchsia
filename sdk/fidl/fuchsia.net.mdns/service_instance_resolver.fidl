@@ -42,4 +42,14 @@ type ServiceInstanceResolutionOptions = table {
     /// The IP versions (V4, V6, both) with which the service instance should resolved. The default
     /// value is both IPv4 and IPv6.
     2: ip_versions IpVersions;
+
+    // Whether to exclude services published locally when resolving the instance. The default
+    // value is false.
+    @available(added=9)
+    3: exclude_local bool;
+
+    // Whether to exclude services published via local proxies when resolving the instance. The
+    // default value is false.
+    @available(added=9)
+    4: exclude_local_proxies bool;
 };
