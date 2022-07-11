@@ -435,7 +435,6 @@ group("cmx_allowlist") {
     "//src/security/kms:kms_tests_component_manifest_compile",
     "//src/security/tee_manager:tee_manager_cmp_legacy_manifest_compile",
     "//src/settings/service:setui_service_v1_manifest_compile",
-    "//src/storage/ext4/server:ext4_readonly_comp-v1_manifest_compile",
     "//src/storage/extractor:disk-extractor-lib-tests_component_manifest_compile",
     "//src/storage/extractor/c:c-lib-test-component_manifest_compile",
     "//src/storage/fuchsia-fatfs:fat-fuzzer_component_manifest_compile",
