@@ -126,10 +126,10 @@ class Vcpu {
   ktl::atomic<bool> kicked_ = false;
   LocalApicState local_apic_state_;
   PvClockState pv_clock_state_;
-  VmxState vmx_state_;
   VmxPage host_msr_page_;
   VmxPage guest_msr_page_;
   VmxPage vmcs_page_;
+  VmxState vmx_state_;
   // The guest may enable any state, so the XSAVE area is the maximum size.
   alignas(64) uint8_t extended_register_state_[X86_MAX_EXTENDED_REGISTER_SIZE];
 
