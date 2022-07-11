@@ -1,0 +1,50 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.observation.scope;
+
+using fuchsia.ui.observation.geometry;
+using zx;
+
+/// *** ONLY FOR USE IN PLATFORM COMPONENTS ***
+/// This is a sensitive protocol. It provides unlimited visibility into any
+/// view tree, if handed the tree root's view ref KOID. Hand it out ONLY to
+/// platform components, such as Accessibility Manager or UI Test Manager.
+///
+/// Regular UI clients uses should obtain observation protocols through a
+/// graphics factory function (see |fuchsia.ui.composition.ViewBoundProtocols|),
+/// which securely ties observation protocols to a specific view client.
+@discoverable
+protocol Registry {
+    /// Sets up a `geometry` observation channel for receiving a the view tree
+    /// geometry for a specific view, identified by `context_view`. The data
+    /// received describes the `context_view` and its descendant views.
+    ///
+    /// This method may be called multiple times to obtain multiple geometry
+    /// observers. Typical usage is to obtain just one geometry observer.
+    ///
+    /// Client can freely disconnect this `Provider` endpoint after this method
+    /// returns.
+    ///
+    /// Flow control. The caller is allowed at most one in-flight call at a
+    /// time. Subsequent calls must wait until the acknowledgment returns.
+    /// Non-compliance results in channel closure.
+    ///
+    /// Client synchronization. The method response signifies that the server
+    /// has processed the channel endpoint. A client can synchronize its next
+    /// actions based on this guarantee (for example, trigger a change in view
+    /// geometry without the change "getting lost").
+    ///
+    /// View lifecycle. The view represented by `context_view` must first be
+    /// created. Otherwise, `geometry` channel's server endpoint is closed.
+    ///
+    /// + request `context_view` a view's identity, which serves as the root of
+    ///   a view tree
+    /// + request `geometry` a channel to observe `context_view`'s view tree
+    /// - response acknowledgement that `geometry` is connected to the server
+    RequestGeometry(resource struct {
+        context_view zx.koid;
+        geometry server_end:fuchsia.ui.observation.geometry.Provider;
+    }) -> ();
+};

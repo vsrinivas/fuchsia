@@ -11,8 +11,8 @@ using fuchsia.ui.observation.geometry;
 /// view tree. Hand it out ONLY to test components.
 ///
 /// Production uses should obtain observation protocols through a graphics
-/// factory function (such as |fuchsia.ui.scenic.Scenic.CreateSessionT|), which
-/// securely ties observation protocols to a specific graphics client.
+/// factory function (see |fuchsia.ui.composition.ViewBoundProtocols|), which
+/// securely ties observation protocols to a specific view client.
 @discoverable
 protocol Registry {
     /// Sets up a channel for receiving global view geometry.
