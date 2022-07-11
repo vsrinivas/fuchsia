@@ -201,6 +201,7 @@ impl AdvertisingProxyInner {
             let (client, server) = create_endpoints::<ServiceInstancePublisherMarker>()
                 .context("Failed to create FIDL endpoints")?;
 
+            let local_name_copy = local_name.to_string();
             let mut addrs = srp_host
                 .addresses()
                 .iter()
@@ -226,15 +227,15 @@ impl AdvertisingProxyInner {
                     },
                     server,
                 )
-                .map(|x| match x {
+                .map(move |x| match x {
                     Ok(Ok(())) => {
-                        debug!("publish_proxy_host: success");
+                        debug!("publish_proxy_host: {:?}: Successfully published", local_name_copy);
                     }
                     Ok(Err(err)) => {
-                        error!("publish_proxy_host: {:?}", err);
+                        error!("publish_proxy_host: {:?}: {:?}", err, local_name_copy);
                     }
                     Err(err) => {
-                        error!("publish_proxy_host: {:?}", err);
+                        error!("publish_proxy_host: {:?}: {:?}", err, local_name_copy);
                     }
                 });
 
@@ -375,18 +376,16 @@ impl AdvertisingProxyInner {
                 move |ServiceInstancePublicationResponder_Request::OnPublication {
                           responder,
                           publication_cause,
-                          subtype,
-                          source_addresses,
                           ..
                       }| {
-                    let info =
-                        service_info_clone.lock().clone().into_service_instance_publication();
+                    let service_info = service_info_clone.lock().clone();
 
-                    debug!("publish_responder_future: On Publication for {:?}", info);
-                    debug!("publish_responder_future: publication_cause: {:?}", publication_cause);
-                    debug!("publish_responder_future: subtype: {:?}", subtype);
-                    debug!("publish_responder_future: source_addresses: {:?}", source_addresses);
+                    debug!(
+                        "publish_responder_future: {:?} publication {:?}",
+                        publication_cause, service_info
+                    );
 
+                    let info = service_info.into_service_instance_publication();
                     async move { responder.send(&mut Ok(info)).map_err(Into::into) }
                 },
             );
