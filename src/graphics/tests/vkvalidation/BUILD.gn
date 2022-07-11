@@ -32,7 +32,7 @@ fuchsia_component("vkvalidation_cmp") {
     ":vkvalidation_bin",
     "//src/lib/vulkan/validation_layers",
   ]
-  manifest = "meta/vkvalidation.cmx"
+  manifest = "meta/vkvalidation.cml"
 }
 
 fuchsia_test_package("vkvalidation-pkg") {
