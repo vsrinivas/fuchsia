@@ -20,7 +20,7 @@ pub(crate) struct TrelInstance {
     publication_responder: Option<Task<Result<(), anyhow::Error>>>,
     instance_name: String,
     peer_instance_sockaddr_map: HashMap<String, ot::SockAddr>,
-    subscriber_request_stream: ServiceSubscriberRequestStream,
+    subscriber_request_stream: ServiceSubscriptionListenerRequestStream,
 }
 
 // Converts an optional vector of strings to a single DNS-compatible string.
@@ -37,6 +37,51 @@ fn flatten_txt(txt: Option<Vec<Vec<u8>>>) -> Vec<u8> {
     }
 
     ret
+}
+
+/// Converts an iterator over [`fidl_fuchsia_net::SocketAddress`]es to a vector of
+/// [`ot::Ip6Address`]es and a port.
+fn process_addresses_from_socket_addresses<
+    T: IntoIterator<Item = fidl_fuchsia_net::SocketAddress>,
+>(
+    addresses: T,
+) -> (Vec<ot::Ip6Address>, Option<u16>) {
+    let mut ret_port: Option<u16> = None;
+    let mut addresses =
+        addresses
+            .into_iter()
+            .flat_map(|x| {
+                if let fidl_fuchsia_net::SocketAddress::Ipv6(
+                    fidl_fuchsia_net::Ipv6SocketAddress { address, port, .. },
+                ) = x
+                {
+                    let addr = ot::Ip6Address::from(address.addr);
+                    if ret_port.is_none() {
+                        ret_port = Some(port);
+                    } else if ret_port != Some(port) {
+                        warn!(
+                            "mDNS service has multiple ports for the same service, {:?} != {:?}",
+                            ret_port.unwrap(),
+                            port
+                        );
+                    }
+                    if !ipv6addr_is_unicast_link_local(&addr) {
+                        return Some(addr);
+                    }
+                }
+                None
+            })
+            .collect::<Vec<_>>();
+    addresses.sort();
+    (addresses, ret_port)
+}
+
+/// Returns `true` if the address is a unicast address with link-local scope.
+///
+/// The official equivalent of this method is [`std::net::Ipv6Addr::is_unicast_link_local()`],
+/// however that method is [still experimental](https://github.com/rust-lang/rust/issues/27709).
+fn ipv6addr_is_unicast_link_local(addr: &std::net::Ipv6Addr) -> bool {
+    (addr.segments()[0] & 0xffc0) == 0xfe80
 }
 
 // Splits the TXT record into individual values.
@@ -64,13 +109,17 @@ impl TrelInstance {
         })
     }
 
-    fn make_subscriber_request_stream() -> ServiceSubscriberRequestStream {
-        let (client, server) = create_endpoints::<ServiceSubscriberMarker>().unwrap();
+    fn make_subscriber_request_stream() -> ServiceSubscriptionListenerRequestStream {
+        let (client, server) = create_endpoints::<ServiceSubscriptionListenerMarker>().unwrap();
 
         let subscriber =
-            fuchsia_component::client::connect_to_protocol::<SubscriberMarker>().unwrap();
+            fuchsia_component::client::connect_to_protocol::<ServiceSubscriber2Marker>().unwrap();
 
-        if let Err(err) = subscriber.subscribe_to_service(ot::TREL_DNSSD_SERVICE_NAME, client) {
+        if let Err(err) = subscriber.subscribe_to_service(
+            ot::TREL_DNSSD_SERVICE_NAME,
+            ServiceSubscriptionOptions::EMPTY,
+            client,
+        ) {
             error!("Unable to subscribe to {:?}: {:?}", ot::TREL_DNSSD_SERVICE_NAME, err);
         }
 
@@ -136,86 +185,95 @@ impl TrelInstance {
     pub fn handle_service_subscriber_request(
         &mut self,
         ot_instance: &ot::Instance,
-        service_subscriber_request: ServiceSubscriberRequest,
+        service_subscriber_request: ServiceSubscriptionListenerRequest,
     ) -> Result<(), anyhow::Error> {
         match service_subscriber_request {
             // A DNS-SD IPv6 service instance has been discovered.
-            ServiceSubscriberRequest::OnInstanceDiscovered {
+            ServiceSubscriptionListenerRequest::OnInstanceDiscovered {
                 instance:
                     ServiceInstance {
                         instance: Some(instance_name),
-                        ipv6_endpoint: Some(ipv6_endpoint),
+                        addresses: Some(addresses),
                         text_strings,
                         ..
                     },
                 responder,
             } => {
                 let txt = flatten_txt(text_strings);
-                let sockaddr: ot::SockAddr = ipv6_endpoint.into();
 
-                self.peer_instance_sockaddr_map.insert(instance_name, sockaddr);
+                let (addresses, port) = process_addresses_from_socket_addresses(addresses);
 
-                let info = ot::PlatTrelPeerInfo::new(false, &txt, sockaddr);
-                info!("otPlatTrelHandleDiscoveredPeerInfo: {:?}", info);
-                ot_instance.plat_trel_handle_discovered_peer_info(&info);
+                if let Some(address) = addresses.first() {
+                    let sockaddr = ot::SockAddr::new(*address, port.unwrap());
+
+                    self.peer_instance_sockaddr_map.insert(instance_name, sockaddr);
+
+                    let info = ot::PlatTrelPeerInfo::new(false, &txt, sockaddr);
+                    info!("otPlatTrelHandleDiscoveredPeerInfo: Adding {:?}", info);
+                    ot_instance.plat_trel_handle_discovered_peer_info(&info);
+                };
 
                 responder.send()?;
             }
 
             // A DNS-SD IPv6 service instance has changed.
-            ServiceSubscriberRequest::OnInstanceChanged {
+            ServiceSubscriptionListenerRequest::OnInstanceChanged {
                 instance:
                     ServiceInstance {
                         instance: Some(instance_name),
-                        ipv6_endpoint: Some(ipv6_endpoint),
+                        addresses: Some(addresses),
                         text_strings,
                         ..
                     },
                 responder,
             } => {
                 let txt = flatten_txt(text_strings);
-                let sockaddr: ot::SockAddr = ipv6_endpoint.into();
+                let (addresses, port) = process_addresses_from_socket_addresses(addresses);
 
-                if let Some(old_sockaddr) =
-                    self.peer_instance_sockaddr_map.insert(instance_name, sockaddr)
-                {
-                    if old_sockaddr != sockaddr {
-                        // Remove old sockaddr with the same instance name
-                        let info = ot::PlatTrelPeerInfo::new(true, &[], old_sockaddr);
-                        info!("otPlatTrelHandleDiscoveredPeerInfo: {:?}", info);
+                if let Some(address) = addresses.first() {
+                    let sockaddr = ot::SockAddr::new(*address, port.unwrap());
+
+                    if let Some(old_sockaddr) =
+                        self.peer_instance_sockaddr_map.insert(instance_name, sockaddr)
+                    {
+                        if old_sockaddr != sockaddr {
+                            // Remove old sockaddr with the same instance name
+                            let info_old = ot::PlatTrelPeerInfo::new(true, &[], old_sockaddr);
+                            info!("otPlatTrelHandleDiscoveredPeerInfo: Removing {:?}", info_old);
+                            ot_instance.plat_trel_handle_discovered_peer_info(&info_old);
+                        }
+
+                        let info = ot::PlatTrelPeerInfo::new(false, &txt, sockaddr);
+                        info!("otPlatTrelHandleDiscoveredPeerInfo: Updating {:?}", info);
                         ot_instance.plat_trel_handle_discovered_peer_info(&info);
                     }
-                }
-
-                let info = ot::PlatTrelPeerInfo::new(false, &txt, sockaddr);
-                info!("otPlatTrelHandleDiscoveredPeerInfo: {:?}", info);
-                ot_instance.plat_trel_handle_discovered_peer_info(&info);
+                };
 
                 responder.send()?;
             }
 
             // A DNS-SD IPv6 service instance has been lost.
-            ServiceSubscriberRequest::OnInstanceLost { instance, responder, .. } => {
+            ServiceSubscriptionListenerRequest::OnInstanceLost { instance, responder, .. } => {
                 if let Some(sockaddr) = self.peer_instance_sockaddr_map.remove(&instance) {
                     let info = ot::PlatTrelPeerInfo::new(true, &[], sockaddr);
-                    info!("otPlatTrelHandleDiscoveredPeerInfo: {:?}", info);
+                    info!("otPlatTrelHandleDiscoveredPeerInfo: Removing {:?}", info);
                     ot_instance.plat_trel_handle_discovered_peer_info(&info);
                 }
 
                 responder.send()?;
             }
 
-            ServiceSubscriberRequest::OnInstanceChanged { responder, .. } => {
+            ServiceSubscriptionListenerRequest::OnInstanceChanged { responder, .. } => {
                 // Skip changes without an IPv6 address.
                 responder.send()?;
             }
 
-            ServiceSubscriberRequest::OnInstanceDiscovered { responder, .. } => {
+            ServiceSubscriptionListenerRequest::OnInstanceDiscovered { responder, .. } => {
                 // Skip discoveries without an IPv6 address.
                 responder.send()?;
             }
 
-            ServiceSubscriberRequest::OnQuery { responder, .. } => {
+            ServiceSubscriptionListenerRequest::OnQuery { responder, .. } => {
                 // We don't care about queries.
                 responder.send()?;
             }
