@@ -200,8 +200,9 @@ fuchsia::ui::input::accessibility::PointerEvent InputSystem::CreateAccessibility
 
   glm::vec2 top_hit_view_local;
   if (view_ref_koid != ZX_KOID_INVALID) {
-    std::optional<glm::mat4> view_from_context = GetDestinationViewFromSourceViewTransform(
-        /*source*/ event.context, /*destination*/ view_ref_koid);
+    std::optional<glm::mat4> view_from_context =
+        view_tree_snapshot_->GetDestinationViewFromSourceViewTransform(
+            /*source*/ event.context, /*destination*/ view_ref_koid);
     FX_DCHECK(view_from_context)
         << "could only happen if the view_tree_view_tree_snapshot_ was updated "
            "between the event arriving and now";
@@ -369,7 +370,8 @@ std::vector<zx_koid_t> InputSystem::HitTest(const Viewport& viewport,
     return {};
   }
 
-  const std::optional<glm::mat4> world_from_context_transform = GetWorldFromViewTransform(context);
+  const std::optional<glm::mat4> world_from_context_transform =
+      view_tree_snapshot_->GetWorldFromViewTransform(context);
   if (!world_from_context_transform) {
     num_empty_hit_tests_.Add(1);
     context_view_missing_.Add(1);
@@ -437,7 +439,7 @@ void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerIn
   }
 
   const std::optional<glm::mat4> context_from_world_transform =
-      GetViewFromWorldTransform(root_koid);
+      view_tree_snapshot_->GetViewFromWorldTransform(root_koid);
   FX_DCHECK(context_from_world_transform);
 
   const uint32_t screen_width = first_layer->width();
@@ -525,7 +527,8 @@ void InputSystem::InjectTouchEventExclusive(const InternalTouchEvent& event, Str
       touch_source.UpdateStream(stream_id, event, /*is_end_of_stream=*/true, /*bounding_box=*/{});
     } else {
       touch_source.UpdateStream(
-          stream_id, EventWithReceiverFromViewportTransform(event, event.target),
+          stream_id,
+          EventWithReceiverFromViewportTransform(event, event.target, *view_tree_snapshot_),
           /*is_end_of_stream=*/event.phase == Phase::kRemove || event.phase == Phase::kCancel,
           view_tree_snapshot_->view_tree.at(event.target).bounding_box);
     }
@@ -662,8 +665,9 @@ void InputSystem::UpdateGestureContest(const InternalTouchEvent& event, StreamId
   // Update remaining contenders.
   // Copy the vector to avoid problems if the arena is destroyed inside of UpdateStream().
   const std::vector<ContenderId> contenders = arena.contenders();
-  const glm::mat4 world_from_viewport_transform = GetWorldFromViewTransform(event.context).value() *
-                                                  event.viewport.context_from_viewport_transform;
+  const glm::mat4 world_from_viewport_transform =
+      view_tree_snapshot_->GetWorldFromViewTransform(event.context).value() *
+      event.viewport.context_from_viewport_transform;
   for (const auto contender_id : contenders) {
     // Don't use the arena obtained above the loop, because it may have been removed from
     // gesture_arenas_ in a previous loop iteration.
@@ -692,9 +696,11 @@ void InputSystem::UpdateGestureContest(const InternalTouchEvent& event, StreamId
     const zx_koid_t view_ref_koid = contender_ptr->view_ref_koid_;
     if (view_tree_snapshot_->view_tree.count(view_ref_koid) != 0) {
       // Everything is fine. Send as normal.
-      contender_ptr->UpdateStream(
-          stream_id, EventWithReceiverFromViewportTransform(event, /*destination=*/view_ref_koid),
-          is_end_of_stream, view_tree_snapshot_->view_tree.at(view_ref_koid).bounding_box);
+      contender_ptr->UpdateStream(stream_id,
+                                  EventWithReceiverFromViewportTransform(
+                                      event, /*destination=*/view_ref_koid, *view_tree_snapshot_),
+                                  is_end_of_stream,
+                                  view_tree_snapshot_->view_tree.at(view_ref_koid).bounding_box);
     } else if (contender_id == a11y_contender_id_) {
       // TODO(fxbug.dev/50549): A11yLegacyContender doesn't need correct transforms or view bounds.
       // Remove this branch when legacy a11y api goes away.
@@ -852,8 +858,9 @@ void InputSystem::SendEventToMouse(zx_koid_t receiver, const InternalMouseEvent&
       // pointer samples), and we are likely working with a broken ViewTree, so skip them.
       it->second->UpdateStream(stream_id, event, {}, view_exit);
     } else {
-      it->second->UpdateStream(stream_id, EventWithReceiverFromViewportTransform(event, receiver),
-                               view_tree_snapshot_->view_tree.at(receiver).bounding_box, view_exit);
+      it->second->UpdateStream(
+          stream_id, EventWithReceiverFromViewportTransform(event, receiver, *view_tree_snapshot_),
+          view_tree_snapshot_->view_tree.at(receiver).bounding_box, view_exit);
     }
   }
 }
@@ -964,8 +971,9 @@ void InputSystem::ReportPointerEventToPointerCaptureListener(
 
   const PointerCaptureListener& listener = pointer_capture_listener_.value();
   const zx_koid_t view_ref_koid = utils::ExtractKoid(listener.view_ref);
-  std::optional<glm::mat4> view_from_context_transform = GetDestinationViewFromSourceViewTransform(
-      /*source*/ event.context, /*destination*/ view_ref_koid);
+  std::optional<glm::mat4> view_from_context_transform =
+      view_tree_snapshot_->GetDestinationViewFromSourceViewTransform(
+          /*source*/ event.context, /*destination*/ view_ref_koid);
   if (!view_from_context_transform)
     return;
 
@@ -990,8 +998,9 @@ void InputSystem::ReportPointerEventToGfxLegacyView(const InternalTouchEvent& ev
   if (!event_reporter)
     return;
 
-  std::optional<glm::mat4> view_from_context_transform = GetDestinationViewFromSourceViewTransform(
-      /*source*/ event.context, /*destination*/ view_ref_koid);
+  std::optional<glm::mat4> view_from_context_transform =
+      view_tree_snapshot_->GetDestinationViewFromSourceViewTransform(
+          /*source*/ event.context, /*destination*/ view_ref_koid);
   if (!view_from_context_transform)
     return;
 
@@ -1004,37 +1013,6 @@ void InputSystem::ReportPointerEventToGfxLegacyView(const InternalTouchEvent& ev
   ChattyGfxLog(input_event);
   contender_inspector_.OnInjectedEvents(view_ref_koid, 1);
   event_reporter->EnqueueEvent(std::move(input_event));
-}
-
-std::optional<glm::mat4> InputSystem::GetViewFromWorldTransform(zx_koid_t view_ref_koid) const {
-  if (view_tree_snapshot_->view_tree.count(view_ref_koid) == 0) {
-    return std::nullopt;
-  }
-
-  return view_tree_snapshot_->view_tree.at(view_ref_koid).local_from_world_transform;
-}
-
-std::optional<glm::mat4> InputSystem::GetWorldFromViewTransform(zx_koid_t view_ref_koid) const {
-  const std::optional<glm::mat4> view_from_world_transform =
-      GetViewFromWorldTransform(view_ref_koid);
-  if (!view_from_world_transform.has_value()) {
-    return std::nullopt;
-  }
-
-  return glm::inverse(view_from_world_transform.value());
-}
-
-std::optional<glm::mat4> InputSystem::GetDestinationViewFromSourceViewTransform(
-    zx_koid_t source, zx_koid_t destination) const {
-  std::optional<glm::mat4> world_from_source_transform = GetWorldFromViewTransform(source);
-  std::optional<glm::mat4> destination_from_world_transform =
-      GetViewFromWorldTransform(destination);
-
-  if (!world_from_source_transform.has_value() || !destination_from_world_transform.has_value()) {
-    return std::nullopt;
-  }
-
-  return destination_from_world_transform.value() * world_from_source_transform.value();
 }
 
 }  // namespace scenic_impl::input

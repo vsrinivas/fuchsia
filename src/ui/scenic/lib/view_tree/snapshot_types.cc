@@ -96,6 +96,34 @@ std::vector<zx_koid_t> Snapshot::GetAncestorsOf(zx_koid_t koid) const {
   return ancestors;
 }
 
+std::optional<glm::mat4> Snapshot::GetViewFromWorldTransform(zx_koid_t view_ref_koid) const {
+  if (view_tree.count(view_ref_koid) == 0) {
+    return std::nullopt;
+  }
+  return view_tree.at(view_ref_koid).local_from_world_transform;
+}
+
+std::optional<glm::mat4> Snapshot::GetWorldFromViewTransform(zx_koid_t view_ref_koid) const {
+  const std::optional<glm::mat4> view_from_world_transform =
+      GetViewFromWorldTransform(view_ref_koid);
+  if (!view_from_world_transform.has_value()) {
+    return std::nullopt;
+  }
+  return glm::inverse(view_from_world_transform.value());
+}
+
+std::optional<glm::mat4> Snapshot::GetDestinationViewFromSourceViewTransform(
+    zx_koid_t source, zx_koid_t destination) const {
+  std::optional<glm::mat4> world_from_source_transform = GetWorldFromViewTransform(source);
+  std::optional<glm::mat4> destination_from_world_transform =
+      GetViewFromWorldTransform(destination);
+
+  if (!world_from_source_transform.has_value() || !destination_from_world_transform.has_value()) {
+    return std::nullopt;
+  }
+  return destination_from_world_transform.value() * world_from_source_transform.value();
+}
+
 std::ostream& operator<<(std::ostream& os, const ViewNode& node) {
   const std::string indent = "  ";
   os << "[\n";

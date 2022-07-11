@@ -135,6 +135,17 @@ class Snapshot {
     return root == other.root && view_tree == other.view_tree &&
            unconnected_views == other.unconnected_views;
   }
+
+  // Helper methods for getting transforms out of the ViewTree. Return std::nullopt if any of the
+  // passed in koids were not present in the ViewTree.
+
+  // Returns the transform from world space to view space.
+  std::optional<glm::mat4> GetViewFromWorldTransform(zx_koid_t view_ref_koid) const;
+  // Returns the transform from view space to world space.
+  std::optional<glm::mat4> GetWorldFromViewTransform(zx_koid_t view_ref_koid) const;
+  // Returns the transform from source view space to destination view space.
+  std::optional<glm::mat4> GetDestinationViewFromSourceViewTransform(zx_koid_t source,
+                                                                     zx_koid_t destination) const;
 };
 
 // Input to ViewTreeSnapshotter.

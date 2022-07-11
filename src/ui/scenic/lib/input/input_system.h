@@ -183,39 +183,6 @@ class InputSystem : public System,
   // stream ended).
   void DestroyArenaIfComplete(StreamId stream_id);
 
-  // Helper methods for getting transforms out of |view_tree_snapshot_|. Return std::nullopt if the
-  // passed in koids weren't represented in the |view_tree_snapshot_|.
-
-  // Returns the transform from world space to view space.
-  std::optional<glm::mat4> GetViewFromWorldTransform(zx_koid_t view_ref_koid) const;
-  // Returns the transform from view space to world space.
-  std::optional<glm::mat4> GetWorldFromViewTransform(zx_koid_t view_ref_koid) const;
-  // Returns the transform from source view space to destination view space.
-  std::optional<glm::mat4> GetDestinationViewFromSourceViewTransform(zx_koid_t source,
-                                                                     zx_koid_t destination) const;
-
-  // Returns the 2D-transform from the viewport space of |event| to the destination view space as
-  // a mat3 in column-major array form.
-  // Prereq: |destination| must exist in the |view_tree_snapshot_|.
-  template <typename T>
-  Mat3ColumnMajorArray GetDestinationFromViewportTransform(const T& event,
-                                                           zx_koid_t destination) const {
-    FX_DCHECK(view_tree_snapshot_->view_tree.count(destination) != 0);
-    const glm::mat4 destination_from_viewport_transform =
-        GetDestinationViewFromSourceViewTransform(/*source*/ event.context, destination).value() *
-        event.viewport.context_from_viewport_transform;
-    return Mat4ToMat3ColumnMajorArray(destination_from_viewport_transform);
-  }
-
-  // Returns a copy of |event| with a new |receiver_from_viewport_transform| set on the viewport.
-  template <typename T>
-  T EventWithReceiverFromViewportTransform(const T& event, zx_koid_t receiver) const {
-    T event_copy = event;
-    event_copy.viewport.receiver_from_viewport_transform =
-        GetDestinationFromViewportTransform(event, event.target);
-    return event_copy;
-  }
-
   // For a view hierarchy where |top| is an ancestor of |bottom|, returns |bottom|'s ancestor
   // hierarchy starting at |top| and ending at |bottom|.
   std::vector<zx_koid_t> GetAncestorChainTopToBottom(zx_koid_t bottom, zx_koid_t top) const;
