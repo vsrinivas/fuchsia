@@ -46,6 +46,8 @@ template("golden_file") {
       rebase_path(current, root_build_dir),
       "--stamp",
       rebase_path(stamp_file, root_build_dir),
+      "--label",
+      get_label_info(":${target_name}", "label_no_toolchain"),
     ]
 
     if (bless_goldens) {

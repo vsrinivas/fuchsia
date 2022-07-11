@@ -15,6 +15,7 @@ import sys
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument('--label', help='GN label for this test', required=True)
     parser.add_argument(
         '--golden', help='Path to the golden file', required=True)
     parser.add_argument(
@@ -39,14 +40,18 @@ def main():
             if args.bless:
                 shutil.copyfile(args.current, args.golden)
             else:
-                print('Please acknowledge this change by updating the golden.\n')
-                print('You can rebuild with `bless_goldens=true` in your GN args,')
-                print('or you can run this command:')
+                print(
+                    'Please acknowledge this change by updating the golden.\n')
+                print('You can run this command:')
                 # Use abspath in cp command so it works regardless of current
                 # working directory.
                 print(
                     '  cp ' + os.path.abspath(args.current) + ' ' +
                     os.path.abspath(args.golden))
+                print(
+                    'Or you can rebuild with `bless_goldens=true` in your GN args and'
+                )
+                print(f'`{args.label}` in your build graph.')
                 if not args.warn:
                     return 1
 
