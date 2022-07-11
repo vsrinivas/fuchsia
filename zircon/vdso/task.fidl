@@ -8,8 +8,93 @@ protocol task {
     // TODO(scottmg): Need something like handle:TASK in this file to mean {job, process, thread}.
     // Or otherwise some way to express multiple options for constraints on inputs in this protocol.
 
+    /// ## Summary
+    ///
     /// Suspend the given task. Currently only thread or process handles may be suspended.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_THREAD or ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_task_suspend(zx_handle_t handle, zx_handle_t* token);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_task_suspend()` causes the requested task to suspend
+    /// execution. Task suspension is not synchronous and the task might not
+    /// be suspended before the call returns. The task will be suspended soon
+    /// after `zx_task_suspend()` is invoked, unless it is currently blocked in
+    /// the kernel, in which case it will suspend after being unblocked.
+    ///
+    /// Tasks can be suspended and/or resumed before they are started. If a task is
+    /// started while suspended, it will enter suspension before executing any code.
+    /// Similarly, starting a new thread on a suspended process will suspend the thread
+    /// before it executes any code.
+    ///
+    /// Invoking [`zx_task_kill()`] on a task that is suspended will successfully kill
+    /// the task.
+    ///
+    /// A task cannot suspend itself or any of its parent tasks because it would never
+    /// receive the suspend token and would be unable to resume execution.
+    ///
+    /// ## RESUMING
+    ///
+    /// To allow the task to resume, close the suspend token handle. The task will
+    /// remain suspended as long as there are any open suspend tokens. Like suspending,
+    /// resuming is asynchronous so the thread may not be in a running state when the
+    /// [`zx_handle_close()`] call returns, even if no other suspend tokens
+    /// are open.
+    ///
+    /// ## SIGNALS AND EXCEPTIONS
+    ///
+    /// There are two relevant signals that a thread can assert:
+    ///
+    /// - **ZX_THREAD_RUNNING**
+    /// - **ZX_THREAD_SUSPENDED**
+    ///
+    /// Neither of these will be asserted until the thread is started via
+    /// [`zx_process_start()`] or [`zx_thread_start()`]. When
+    /// a thread starts, it will assert **ZX_THREAD_RUNNING** whether it is suspended
+    /// or not, but if it is suspended will then switch to **ZX_THREAD_SUSPENDED**
+    /// before executing any code.
+    ///
+    /// The **ZX_EXCP_PROCESS_STARTING** and **ZX_EXCP_THREAD_STARTING** debug
+    /// exceptions will also be sent on start whether the task is suspended or not.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_THREAD** or **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_task_suspend()` returns **ZX_OK** on success.
+    /// In the event of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE** *handle* is not a thread or process handle.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *token*  was an invalid pointer.
+    ///
+    /// **ZX_ERR_BAD_STATE**  The task is already dying or dead and cannot be suspended.
+    ///
+    /// **ZX_ERR_NO_MEMORY**  Failed to allocate memory.
+    ///
+    /// **ZX_ERR_NOT_SUPPORTED**  The calling thread is attempting to suspend itself or
+    ///                           one of its parent tasks.
+    ///
+    /// ## LIMITATIONS
+    ///
+    /// Currently only thread and process handles are supported.
+    ///
+    /// [`zx_handle_close()`]: handle_close.md
+    /// [`zx_process_start()`]: process_start.md
+    /// [`zx_task_kill()`]: task_kill.md
+    /// [`zx_thread_start()`]: thread_start.md
     task_suspend(resource struct {
         handle handle;
     }) -> (resource struct {
@@ -17,8 +102,67 @@ protocol task {
         token handle;
     });
 
+    /// This function replaces [task_suspend](task_suspend.md). When all callers are
+    /// updated, [`zx_task_suspend()`] will be deleted and this function will be renamed
+    /// [`zx_task_suspend()`].
+    ///
+    /// ## Summary
+    ///
     /// Suspend the given task. Currently only thread or process handles may be suspended.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_THREAD or ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_task_suspend_token(zx_handle_t handle, zx_handle_t* token);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_task_suspend_token()` causes the requested task to suspend execution. Task
+    /// suspension is not synchronous and the task might not be suspended before the
+    /// call returns. The task will be suspended soon after `zx_task_suspend_token()` is
+    /// invoked, unless it is currently blocked in the kernel, in which case it will
+    /// suspend after being unblocked.
+    ///
+    /// Invoking [`zx_task_kill()`] on a task that is suspended will successfully kill
+    /// the task.
+    ///
+    /// ## RESUMING
+    ///
+    /// The allow the task to resume, close the suspend token handle. The task will
+    /// remain suspended as long as there are any open suspend tokens. Like suspending,
+    /// resuming is asynchronous so the thread may not be in a running state when the
+    /// [`zx_handle_close()`] call returns, even if no other suspend tokens
+    /// are open.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_THREAD** or **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// [`zx_task_suspend()`] returns **ZX_OK** on success.
+    /// In the event of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE** *handle* is not a thread handle.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *token*  was an invalid pointer.
+    ///
+    /// **ZX_ERR_BAD_STATE**  The task is not in a state where suspending is possible.
+    ///
+    /// ## LIMITATIONS
+    ///
+    /// Currently only thread handles are supported.
+    ///
+    /// [`zx_handle_close()`]: handle_close.md
+    /// [`zx_task_kill()`]: task_kill.md
+    /// [`zx_task_suspend()`]: task_suspend.md
     task_suspend_token(resource struct {
         handle handle;
     }) -> (resource struct {
@@ -26,9 +170,91 @@ protocol task {
         token handle;
     });
 
+    /// ## Summary
+    ///
     /// Create an exception channel for a given job, process, or thread.
-    /// Rights: handle must have ZX_RIGHT_INSPECT and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_TRANSFER and have ZX_RIGHT_MANAGE_THREAD.
-    /// Rights: If handle is of type ZX_OBJ_TYPE_JOB or ZX_OBJ_TYPE_PROCESS, it must have ZX_RIGHT_ENUMERATE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_task_create_exception_channel(zx_handle_t handle,
+    ///                                              uint32_t options,
+    ///                                              zx_handle_t* out);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_task_create_exception_channel()` creates a channel that will receive
+    /// exceptions from the thread, process, or job.
+    ///
+    /// *handle* is the thread, process, or job handle to receive exceptions from.
+    ///
+    /// *options* can be 0 or **ZX_EXCEPTION_CHANNEL_DEBUGGER** to register for debug
+    /// exceptions (process or job only).
+    ///
+    /// *out* will be filled with the newly created channel endpoint on success. This
+    /// channel will be read-only with the following rights:
+    ///
+    /// * **ZX_RIGHT_TRANSFER**
+    /// * **ZX_RIGHT_WAIT**
+    /// * **ZX_RIGHT_READ**
+    ///
+    /// ### Exception Messages
+    ///
+    /// When an exception occurs, the channel will receive a message containing one
+    /// exception handle and one `zx_exception_info_t` data.
+    ///
+    /// The thread will remain blocked in the exception until the received exception
+    /// handle is closed, at which point it will either resume or exception processing
+    /// will continue according to the chosen behavior (see **ZX_PROP_EXCEPTION_STATE**
+    /// in [`zx_object_get_property()`]).
+    ///
+    /// ### Unbinding
+    ///
+    /// Closing the created channel handle will unregister the exception handler. If
+    /// an exception message is waiting in the channel at the time it's closed, exception
+    /// handling will continue on to the next handler in the search order.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must have **ZX_RIGHT_INSPECT** and have **ZX_RIGHT_DUPLICATE** and have **ZX_RIGHT_TRANSFER** and have **ZX_RIGHT_MANAGE_THREAD**.
+    ///
+    /// If *handle* is of type **ZX_OBJ_TYPE_JOB** or **ZX_OBJ_TYPE_PROCESS**, it must have **ZX_RIGHT_ENUMERATE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_task_create_exception_channel()` returns **ZX_OK** on success.
+    /// In the event of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_ACCESS_DENIED** The caller has a job policy in place preventing the
+    /// creation of new channels.
+    ///
+    /// **ZX_ERR_ALREADY_BOUND** *handle* is already bound to an exception channel.
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_BAD_STATE** *handle* is dying or dead.
+    ///
+    /// **ZX_ERR_INVALID_ARGS** A bad value has been passed in *options*.
+    ///
+    /// **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+    /// There is no good way for userspace to handle this (unlikely) error.
+    /// In a future build this error will no longer occur.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not that of a job, process, or thread.
+    ///
+    /// ## See also
+    ///
+    ///  - [exceptions]
+    ///  - [`zx_channel_read()`]
+    ///
+    /// [exceptions]: /docs/concepts/kernel/exceptions.md
+    /// [`zx_channel_read()`]: channel_read.md
+    /// [`zx_object_get_property()`]: object_get_property.md
     task_create_exception_channel(resource struct {
         handle handle;
         options uint32;
@@ -37,8 +263,65 @@ protocol task {
         out handle:CHANNEL;
     });
 
+    /// ## Summary
+    ///
     /// Kill the provided task (job, process, or thread).
-    /// Rights: handle must have ZX_RIGHT_DESTROY.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_task_kill(zx_handle_t handle);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// This asynchronously kills the given process or job and its children recursively,
+    /// until the entire task tree rooted at *handle* is dead.
+    /// Killing a thread is not supported.
+    ///
+    /// It is possible to wait for the task to be dead via the **ZX_TASK_TERMINATED**
+    /// signal. When the procedure completes, as observed by the signal, the task and
+    /// all its children are considered to be in the dead state and most operations
+    /// will no longer succeed.
+    ///
+    /// If *handle* is a job and the syscall is successful, the job can no longer be
+    /// used to create new processes.
+    ///
+    /// When a process or job is killed via this syscall, the `return_code` is
+    /// **ZX_TASK_RETCODE_SYSCALL_KILL** as reported by [`zx_object_get_info()`] via
+    /// the **ZX_INFO_PROCESS** or **ZX_INFO_JOB** topic.
+    ///
+    /// Processes and Jobs can also be killed by other agents such as the Job policy with
+    /// **ZX_POL_ACTION_KILL** or when the system is running low on memory [OOM](/docs/development/kernel/memory/oom.md).
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must have **ZX_RIGHT_DESTROY**.
+    ///
+    /// ## Return value
+    ///
+    /// On success, `zx_task_kill()` returns **ZX_OK**. If a process uses
+    /// this syscall to kill itself, this syscall does not return.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a task handle.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have the **ZX_RIGHT_DESTROY**
+    /// right.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_job_create()`]
+    ///  - [`zx_process_create()`]
+    ///
+    /// [`zx_job_create()`]: job_create.md
+    /// [`zx_object_get_info()`]: object_get_info.md
+    /// [`zx_process_create()`]: process_create.md
     task_kill(resource struct {
         handle handle;
     }) -> (struct {

@@ -9,7 +9,45 @@ protocol ktrace {
     //   (handle, data, offset, data_size)
     // rather than:
     //   (handle, data, data_size, offset).
-    /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
+    /// ## Summary
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_ktrace_read(zx_handle_t handle,
+    ///                            void* data,
+    ///                            uint32_t offset,
+    ///                            size_t data_size,
+    ///                            size_t* actual);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// To use the `zx_ktrace_read()` function, you must specify
+    /// `kernel.enable-debugging-syscalls=true` on the kernel command line. Otherwise,
+    /// the function returns **ZX_ERR_NOT_SUPPORTED**.
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must have resource kind **ZX_RSRC_KIND_ROOT**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     @arg_reorder("handle, data, offset, data_size, actual")
     ktrace_read(resource struct {
         handle handle:RESOURCE;
@@ -21,7 +59,44 @@ protocol ktrace {
     });
 
     // TODO(scottmg): syscalls.banjo had the length of |ptr| being |action|?
-    /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
+    /// ## Summary
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_ktrace_control(zx_handle_t handle,
+    ///                               uint32_t action,
+    ///                               uint32_t options,
+    ///                               void* ptr);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// To use the `zx_trace_control()` function, you must specify
+    /// `kernel.enable-debugging-syscalls=true` on the kernel command line. Otherwise,
+    /// the function returns **ZX_ERR_NOT_SUPPORTED**.
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must have resource kind **ZX_RSRC_KIND_ROOT**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     ktrace_control(resource struct {
         handle handle:RESOURCE;
         action uint32;
@@ -31,7 +106,44 @@ protocol ktrace {
         status status;
     });
 
-    /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
+    /// ## Summary
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_ktrace_write(zx_handle_t handle,
+    ///                             uint32_t id,
+    ///                             uint32_t arg0,
+    ///                             uint32_t arg1);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// To use the `zx_ktrace_write()` function, you must specify
+    /// `kernel.enable-debugging-syscalls=true` on the kernel command line. Otherwise,
+    /// the function returns **ZX_ERR_NOT_SUPPORTED**.
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must have resource kind **ZX_RSRC_KIND_ROOT**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     ktrace_write(resource struct {
         handle handle:RESOURCE;
         id uint32;

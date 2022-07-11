@@ -175,7 +175,7 @@ impl FidldocTemplate for SyscallTemplate<'_> {
             for method in methods {
                 // Skip documenting any methods annotated with certain attributes.
                 let mut has_prohibited = false;
-                for attr in &["no_doc", "testonly", "internal", "vdsocall"] {
+                for attr in &["no_doc", "testonly", "internal"] {
                     has_prohibited = has_prohibited || (attribute_with_name(method, attr) != None);
                 }
 

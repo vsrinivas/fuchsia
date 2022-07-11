@@ -5,8 +5,51 @@ library zx;
 
 @transport("Syscall")
 protocol exception {
+    /// ## Summary
+    ///
     /// Create a handle for the exception's thread.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_EXCEPTION.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_exception_get_thread(zx_handle_t handle, zx_handle_t* out);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// *handle* is the exception handle.
+    ///
+    /// *out* will be filled with a new handle to the exception thread. This handle
+    /// will have the same rights as the task given to
+    /// [`zx_task_create_exception_channel()`].
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_EXCEPTION**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_exception_get_thread()` returns **ZX_OK** on success.
+    /// In the event of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_NO_MEMORY**  Failed to allocate memory for a new handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not an exception.
+    ///
+    /// ## See also
+    ///
+    ///  - [exceptions]
+    ///  - [`zx_exception_get_process()`]
+    ///
+    /// [exceptions]: /docs/concepts/kernel/exceptions.md
+    /// [`zx_exception_get_process()`]: exception_get_process.md
+    /// [`zx_task_create_exception_channel()`]: task_create_exception_channel.md
     exception_get_thread(resource struct {
         handle handle:EXCEPTION;
     }) -> (resource struct {
@@ -14,8 +57,56 @@ protocol exception {
         out handle:THREAD;
     });
 
+    /// ## Summary
+    ///
     /// Create a handle for the exception's process.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_EXCEPTION.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_exception_get_process(zx_handle_t handle, zx_handle_t* out);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// The exception process is only available for job and process exception channels,
+    /// thread exceptions cannot access their parent process handles.
+    ///
+    /// *handle* is the exception handle.
+    ///
+    /// *out* will be filled with a new handle to the exception process. This handle
+    /// will have the same rights as the task given to
+    /// [`zx_task_create_exception_channel()`].
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_EXCEPTION**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_exception_get_process()` returns **ZX_OK** on success.
+    /// In the event of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_ACCESS_DENIED** *handle* was received via a thread exception channel.
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_NO_MEMORY**  Failed to allocate memory for a new handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not an exception.
+    ///
+    /// ## See also
+    ///
+    ///  - [exceptions]
+    ///  - [`zx_exception_get_thread()`]
+    ///
+    /// [exceptions]: /docs/concepts/kernel/exceptions.md
+    /// [`zx_exception_get_thread()`]: exception_get_thread.md
+    /// [`zx_task_create_exception_channel()`]: task_create_exception_channel.md
     exception_get_process(resource struct {
         handle handle:EXCEPTION;
     }) -> (resource struct {

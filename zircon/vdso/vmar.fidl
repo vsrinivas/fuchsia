@@ -8,10 +8,137 @@ alias VmOption = uint32;
 // TODO(scottmg): bits for ZX_VM_xyz flags, and const for ZX_VM_ALIGN_xyz.
 @transport("Syscall")
 protocol vmar {
+    /// ## Summary
+    ///
     /// Allocate a new subregion.
-    /// Rights: If options & ZX_VM_CAN_MAP_READ, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_READ.
-    /// Rights: If options & ZX_VM_CAN_MAP_WRITE, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_WRITE.
-    /// Rights: If options & ZX_VM_CAN_MAP_EXECUTE, parent_vmar must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_EXECUTE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vmar_allocate(zx_handle_t parent_vmar,
+    ///                              zx_vm_option_t options,
+    ///                              size_t offset,
+    ///                              size_t size,
+    ///                              zx_handle_t* child_vmar,
+    ///                              zx_vaddr_t* child_addr);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// Creates a new VMAR within the one specified by *parent_vmar*.
+    ///
+    /// *options* is a bit vector that contains one more of the following:
+    ///
+    /// - **ZX_VM_COMPACT**  A hint to the kernel that allocations and mappings
+    ///   within the newly created subregion should be kept close together.   See the
+    ///   NOTES section below for discussion.
+    /// - **ZX_VM_SPECIFIC**  Use the *offset* to place the mapping, invalid if
+    ///   *parent_vmar* does not have the **ZX_VM_CAN_MAP_SPECIFIC** permission.  *offset*
+    ///   is an offset relative to the base address of the parent region.  It is an error
+    ///   to specify an address range that overlaps with another VMAR or mapping.
+    /// - **ZX_VM_OFFSET_IS_UPPER_LIMIT**  Interpret the *offset* as an upper limit
+    ///   to constrain the selection of the offset by the kernel, invalid if *parent_vmar*
+    ///   does not have the **ZX_VM_CAN_MAP_SPECIFIC** permission. The resulting mapping
+    ///   will have an offset + *size* that is <= *offset*. This option cannot be
+    ///   specified if **ZX_VM_SPECIFIC** is used.
+    /// - **ZX_VM_CAN_MAP_SPECIFIC**  The new VMAR can have subregions/mappings
+    ///   created with **ZX_VM_SPECIFIC**.  It is NOT an error if the parent does
+    ///   not have **ZX_VM_CAN_MAP_SPECIFIC** permissions.
+    /// - **ZX_VM_CAN_MAP_READ**  The new VMAR can contain readable mappings.
+    ///   It is an error if the parent does not have **ZX_VM_CAN_MAP_READ** permissions.
+    /// - **ZX_VM_CAN_MAP_WRITE**  The new VMAR can contain writable mappings.
+    ///   It is an error if the parent does not have **ZX_VM_CAN_MAP_WRITE** permissions.
+    /// - **ZX_VM_CAN_MAP_EXECUTE**  The new VMAR can contain executable mappings.
+    ///   It is an error if the parent does not have **ZX_VM_CAN_MAP_EXECUTE** permissions.
+    ///
+    /// *offset* must be 0 if *options* does not have **ZX_VM_SPECIFIC** or
+    /// **ZX_VM_OFFSET_IS_UPPER_LIMIT** set.
+    ///
+    /// In addition, the following power-of-two alignment flags can added:
+    ///
+    /// - **ZX_VM_ALIGN_1KB** aligns *child_addr* to a power-of-2 at least 1K bytes.
+    /// - **ZX_VM_ALIGN_2KB** aligns *child_addr* to a power-of-2 at least 2K bytes.
+    /// - **ZX_VM_ALIGN_4KB** aligns *child_addr* to a power-of-2 at least 4K bytes.
+    /// - **ZX_VM_ALIGN_8KB** aligns *child_addr* to a power-of-2 at least 8K bytes.
+    ///
+    /// and continues up to
+    ///
+    /// - **ZX_VM_ALIGN_4GB** aligns *child_addr* to a power-of-2 at least 4G bytes.
+    ///
+    /// Using **ZX_VM_ALIGN** flags with **ZX_VM_SPECIFIC** will fail if the
+    /// *parent_vmar* base address + *offset* are not aligned to the requested
+    /// value.
+    ///
+    /// ## Rights
+    ///
+    /// If *options* & **ZX_VM_CAN_MAP_READ**, *parent_vmar* must be of type **ZX_OBJ_TYPE_VMAR** and have **ZX_RIGHT_READ**.
+    ///
+    /// If *options* & **ZX_VM_CAN_MAP_WRITE**, *parent_vmar* must be of type **ZX_OBJ_TYPE_VMAR** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// If *options* & **ZX_VM_CAN_MAP_EXECUTE**, *parent_vmar* must be of type **ZX_OBJ_TYPE_VMAR** and have **ZX_RIGHT_EXECUTE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vmar_allocate()` returns **ZX_OK**, the absolute base address of the
+    /// subregion (via *child_addr*), and a handle to the new subregion (via
+    /// *child_vmar*) on success.  The base address will be page-aligned and non-zero.
+    /// In the event of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *parent_vmar* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *parent_vmar* is not a VMAR handle.
+    ///
+    /// **ZX_ERR_BAD_STATE**  *parent_vmar* refers to a destroyed VMAR.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  for any of the following:
+    ///  - *child_vmar* or *child_addr* are not valid,
+    ///  - *offset* is non-zero when **ZX_VM_SPECIFIC** or **ZX_VM_OFFSET_IS_UPPER_LIMIT** is not given.
+    ///  - **ZX_VM_OFFSET_IS_UPPER_LIMIT** is specified together with **ZX_VM_SPECIFIC**.
+    ///  - *offset* and *size* describe an unsatisfiable allocation due to exceeding the region bounds
+    ///  - *offset* or *size* is not page-aligned, or *size* is 0.
+    ///
+    /// **ZX_ERR_NO_MEMORY**  This may be due to the following:
+    ///
+    /// * A free address range of the requested size is not available within
+    /// *parent_vmar*.
+    /// * The system is out of memory resources.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  Insufficient privileges to make the requested allocation.
+    ///
+    /// ## Notes
+    ///
+    /// ### Deallocation
+    ///
+    /// The address space occupied by a VMAR will remain allocated (within its
+    /// parent VMAR) until the VMAR is destroyed by calling [`zx_vmar_destroy()`].
+    ///
+    /// Note that just closing the VMAR's handle does not deallocate the address
+    /// space occupied by the VMAR.
+    ///
+    /// ### The COMPACT flag
+    ///
+    /// The kernel interprets this flag as a request to reduce sprawl in allocations.
+    /// While this does not necessitate reducing the absolute entropy of the allocated
+    /// addresses, there will potentially be a very high correlation between allocations.
+    /// This is a trade-off that the developer can make to increase locality of
+    /// allocations and reduce the number of page tables necessary, if they are willing
+    /// to have certain addresses be more correlated.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_vmar_destroy()`]
+    ///  - [`zx_vmar_map()`]
+    ///  - [`zx_vmar_protect()`]
+    ///  - [`zx_vmar_unmap()`]
+    ///
+    /// [`zx_vmar_destroy()`]: vmar_destroy.md
+    /// [`zx_vmar_map()`]: vmar_map.md
+    /// [`zx_vmar_protect()`]: vmar_protect.md
+    /// [`zx_vmar_unmap()`]: vmar_unmap.md
     vmar_allocate(resource struct {
         parent_vmar handle:VMAR;
         options VmOption;
@@ -24,7 +151,59 @@ protocol vmar {
     });
 
     // TODO(fxbug.dev/32803): handle No rights required?
+    /// ## Summary
+    ///
     /// Destroy a virtual memory address region.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vmar_destroy(zx_handle_t handle);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vmar_destroy()` unmaps all mappings within the given region, and destroys
+    /// all sub-regions of the region.  Note that this operation is logically recursive.
+    ///
+    /// This operation does not close *handle*.  Any outstanding handles to this
+    /// VMAR will remain valid handles, but all VMAR operations on them will fail.
+    ///
+    /// The root VMAR, as obtained by `zx_process_create()`, cannot be destroyed.
+    ///
+    /// ## Rights
+    ///
+    /// TODO(fxbug.dev/32253)
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vmar_destroy()` returns **ZX_OK** on success.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a VMAR handle.
+    ///
+    /// **ZX_ERR_BAD_STATE**  This region is already destroyed.
+    ///
+    /// **ZX_ERR_NOT_SUPPORTED** *handle* is a root VMAR.
+    ///
+    /// ## Notes
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_vmar_allocate()`]
+    ///  - [`zx_vmar_map()`]
+    ///  - [`zx_vmar_protect()`]
+    ///  - [`zx_vmar_unmap()`]
+    ///
+    /// [`zx_vmar_allocate()`]: vmar_allocate.md
+    /// [`zx_vmar_map()`]: vmar_map.md
+    /// [`zx_vmar_protect()`]: vmar_protect.md
+    /// [`zx_vmar_unmap()`]: vmar_unmap.md
     vmar_destroy(resource struct {
         handle handle:VMAR;
     }) -> (struct {
@@ -32,9 +211,161 @@ protocol vmar {
     });
 
     // TODO(fxbug.dev/32253): TODO handle and vmo and options must all match, and options can't specify them.
+    /// ## Summary
+    ///
     /// Add a memory mapping.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_VMAR.
-    /// Rights: vmo must be of type ZX_OBJ_TYPE_VMO.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vmar_map(zx_handle_t handle,
+    ///                         zx_vm_option_t options,
+    ///                         size_t vmar_offset,
+    ///                         zx_handle_t vmo,
+    ///                         uint64_t vmo_offset,
+    ///                         size_t len,
+    ///                         zx_vaddr_t* mapped_addr);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// Maps the given VMO into the given virtual memory address region.  The mapping
+    /// retains a reference to the underlying virtual memory object, which means
+    /// closing the VMO handle does not remove the mapping added by this function.
+    ///
+    /// *options* is a bit vector of the following:
+    ///
+    /// - **ZX_VM_SPECIFIC**  Use the *vmar_offset* to place the mapping, invalid if
+    ///   *handle* does not have the **ZX_VM_CAN_MAP_SPECIFIC** permission.
+    ///   *vmar_offset* is an offset relative to the base address of the given VMAR.
+    ///   It is an error to specify a range that overlaps with another VMAR or mapping.
+    /// - **ZX_VM_SPECIFIC_OVERWRITE**  Same as **ZX_VM_SPECIFIC**, but can
+    ///   overlap another mapping.  It is still an error to partially-overlap another VMAR.
+    ///   If the range meets these requirements, it will atomically (with respect to all
+    ///   other map/unmap/protect operations) replace existing mappings in the range
+    ///   specified by *vmar_offset* and *len*. If that range partially overlaps any
+    ///   mappings, then the portions of those mappings outside the range will remain mapped.
+    /// - **ZX_VM_OFFSET_IS_UPPER_LIMIT**  Interpret the *vmar_offset* as an upper limit
+    ///   to constrain the selection of the offset by the kernel, invalid if *handle*
+    ///   does not have the **ZX_VM_CAN_MAP_SPECIFIC** permission. The resulting mapping
+    ///   will have an offset + *len* that is <= *vmar_offset*. This option cannot be
+    ///   specified if **ZX_VM_SPECIFIC** or **ZX_VM_SPECIFIC_OVERWRITE** is used.
+    /// - **ZX_VM_PERM_READ**  Map *vmo* as readable.  It is an error if *handle*
+    ///   does not have **ZX_VM_CAN_MAP_READ** permissions, the *handle* does
+    ///   not have the **ZX_RIGHT_READ** right, or the *vmo* handle does not have the
+    ///   **ZX_RIGHT_READ** right.
+    /// - **ZX_VM_PERM_WRITE**  Map *vmo* as writable.  It is an error if *handle*
+    ///   does not have **ZX_VM_CAN_MAP_WRITE** permissions, the *handle* does
+    ///   not have the **ZX_RIGHT_WRITE** right, the *vmo* handle does not have the
+    ///   **ZX_RIGHT_WRITE** right, or *options* does not specify **ZX_VM_PERM_READ**.
+    /// - **ZX_VM_PERM_EXECUTE**  Map *vmo* as executable.  It is an error if *handle*
+    ///   does not have **ZX_VM_CAN_MAP_EXECUTE** permissions, the *handle* handle does
+    ///   not have the **ZX_RIGHT_EXECUTE** right, the *vmo* handle does not have the
+    ///   **ZX_RIGHT_EXECUTE** right, or *options* does not specify **ZX_VM_PERM_READ**.
+    /// - **ZX_VM_MAP_RANGE**  Immediately page into the new mapping all backed
+    ///   regions of the VMO.  This cannot be specified if
+    ///   **ZX_VM_SPECIFIC_OVERWRITE** is used.
+    /// - **ZX_VM_ALLOW_FAULTS** Required if it would be possible for the created
+    ///   mapping to generate faults. In particular, it is required if *vmo* is resizable,
+    ///   if *vmo* is non-resizable but the mapping extends past the end of *vmo*, if
+    ///   *vmo* is discardable, or if *vmo* was created from [`zx_pager_create_vmo()`].
+    /// - **ZX_VM_PERM_READ_IF_XOM_UNSUPPORTED** Map *vmo* as readable if the system does
+    ///   not support mapping execute-only pages. If the system can map execute-only
+    ///   this flag is ignored.
+    ///
+    /// *vmar_offset* must be 0 if *options* does not have **ZX_VM_SPECIFIC**,
+    /// **ZX_VM_SPECIFIC_OVERWRITE** or **ZX_VM_OFFSET_IS_UPPER_LIMIT** set.
+    /// **ZX_VM_OFFSET_IS_UPPER_LIMIT** serves to constrain the selection range, and
+    /// otherwise behaves similarly to the case where neither **ZX_VM_SPECIFIC** nor
+    /// **ZX_VM_SPECIFIC_OVERWRITE** are set, with the mapping being assigned an offset
+    /// at random by the kernel (with an allocator determined by policy set on the
+    /// target VMAR).
+    ///
+    /// *len* must be non-zero and page-aligned.
+    ///
+    /// In addition one of the following power-of-two alignment flags can added:
+    ///
+    /// - **ZX_VM_ALIGN_1KB** aligns *child_addr* to a power-of-2 at least 1K bytes.
+    /// - **ZX_VM_ALIGN_2KB** aligns *child_addr* to a power-of-2 at least 2K bytes.
+    /// - **ZX_VM_ALIGN_4KB** aligns *child_addr* to a power-of-2 at least 4K bytes.
+    /// - **ZX_VM_ALIGN_8KB** aligns *child_addr* to a power-of-2 at least 8K bytes.
+    /// and continues up to
+    /// - **ZX_VM_ALIGN_4GB** aligns *child_addr* to a power-of-2 at least 4G bytes.
+    ///
+    /// Using **ZX_VM_ALIGN** flags with **ZX_VM_SPECIFIC** will fail if the vmar
+    /// base address + *vmo_offset* are not aligned to the requested value.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_VMAR**.
+    ///
+    /// *vmo* must be of type **ZX_OBJ_TYPE_VMO**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vmar_map()` returns **ZX_OK** and the absolute base address of the
+    /// mapping (via *mapped_addr*) on success.  The base address will be page-aligned
+    /// and non-zero.  In the event of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* or *vmo* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* or *vmo* is not a VMAR or VMO handle, respectively.
+    ///
+    /// **ZX_ERR_BAD_STATE**  *handle* refers to a destroyed VMAR.
+    ///
+    /// **ZX_ERR_INVALID_ARGS** for any of the following:
+    ///  - *mapped_addr* or *options* is not valid.
+    ///  - *vmar_offset* is non-zero when none of **ZX_VM_SPECIFIC**, **ZX_VM_SPECIFIC_OVERWRITE** or
+    ///    **ZX_VM_OFFSET_IS_UPPER_LIMIT** is specified.
+    ///  - **ZX_VM_SPECIFIC_OVERWRITE** and **ZX_VM_MAP_RANGE** are both specified.
+    ///  - **ZX_VM_OFFSET_IS_UPPER_LIMIT** is specified together with either **ZX_VM_SPECIFIC**
+    ///    or **ZX_VM_SPECIFIC_OVERWRITE**.
+    ///  - *vmar_offset* and *len* describe an unsatisfiable allocation due to exceeding the region bounds.
+    ///  - *vmar_offset* or *vmo_offset* is not page-aligned.
+    ///  - *len* is 0 or not page-aligned.
+    ///
+    /// **ZX_ERR_ALREADY_EXISTS**  **ZX_VM_SPECIFIC** has been specified without
+    /// **ZX_VM_SPECIFIC_OVERWRITE**, and the requested range overlaps with another mapping.
+    ///
+    /// **ZX_ERR_NO_RESOURCES** If a spot could not be found in the VMAR to create the mapping.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  Insufficient privileges to make the requested mapping.
+    ///
+    /// **ZX_ERR_NOT_SUPPORTED** If the vmo is resizable, discardable, or backed by a pager but
+    /// **ZX_VM_ALLOW_FAULTS** is not set.
+    ///
+    /// **ZX_ERR_BUFFER_TOO_SMALL** The VMO is not resizable and the mapping extends past the end
+    /// of the VMO but **ZX_VM_ALLOW_FAULTS** is not set.
+    ///
+    /// **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+    /// There is no good way for userspace to handle this (unlikely) error.
+    /// In a future build this error will no longer occur.
+    ///
+    /// **ZX_ERR_OUT_OF_RANGE** `vmo_offset + ROUNDUP(len, PAGE_SIZE)` overflows.
+    ///
+    /// ## Notes
+    ///
+    /// The VMO that backs a memory mapping can be resized to a smaller size. This can cause the
+    /// thread is reading or writing to the VMAR region to fault. To avoid this hazard, services
+    /// that receive VMOs from clients should use **ZX_VM_REQUIRE_NON_RESIZABLE** when mapping
+    /// the VMO.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_vmar_allocate()`]
+    ///  - [`zx_vmar_destroy()`]
+    ///  - [`zx_vmar_protect()`]
+    ///  - [`zx_vmar_unmap()`]
+    ///
+    /// [`zx_pager_create_vmo()`]: pager_create_vmo.md
+    /// [`zx_vmar_allocate()`]: vmar_allocate.md
+    /// [`zx_vmar_destroy()`]: vmar_destroy.md
+    /// [`zx_vmar_protect()`]: vmar_protect.md
+    /// [`zx_vmar_unmap()`]: vmar_unmap.md
     vmar_map(resource struct {
         handle handle:VMAR;
         options VmOption;
@@ -48,7 +379,63 @@ protocol vmar {
     });
 
     // TODO(fxbug.dev/32803): handle No rights required?
+    /// ## Summary
+    ///
     /// Unmap virtual memory pages.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vmar_unmap(zx_handle_t handle, zx_vaddr_t addr, size_t len);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vmar_unmap()` unmaps all VMO mappings and destroys (as if [`zx_vmar_destroy()`]
+    /// were called) all sub-regions within the absolute range including *addr* and ending
+    /// before exclusively at `addr + len`.  Any sub-region that is in the range must
+    /// be fully in the range (i.e. partial overlaps are an error).  If a mapping is
+    /// only partially in the range, the mapping is split and the requested portion is
+    /// unmapped.
+    ///
+    /// *len* must be page-aligned.
+    ///
+    /// ## Rights
+    ///
+    /// TODO(fxbug.dev/32253)
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vmar_unmap()` returns **ZX_OK** on success.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a VMAR handle.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *addr* is not page-aligned, *len* is 0 or not page-aligned,
+    /// or the requested range partially overlaps a sub-region.
+    ///
+    /// **ZX_ERR_BAD_STATE**  *handle* refers to a destroyed handle.
+    ///
+    /// **ZX_ERR_NOT_FOUND**  Could not find the requested mapping.
+    ///
+    /// ## Notes
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_vmar_allocate()`]
+    ///  - [`zx_vmar_destroy()`]
+    ///  - [`zx_vmar_map()`]
+    ///  - [`zx_vmar_protect()`]
+    ///
+    /// [`zx_vmar_allocate()`]: vmar_allocate.md
+    /// [`zx_vmar_destroy()`]: vmar_destroy.md
+    /// [`zx_vmar_map()`]: vmar_map.md
+    /// [`zx_vmar_protect()`]: vmar_protect.md
     vmar_unmap(resource struct {
         handle handle:VMAR;
         addr vaddr;
@@ -57,10 +444,88 @@ protocol vmar {
         status status;
     });
 
+    /// ## Summary
+    ///
     /// Set protection of virtual memory pages.
-    /// Rights: If options & ZX_VM_PERM_READ, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_READ.
-    /// Rights: If options & ZX_VM_PERM_WRITE, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_WRITE.
-    /// Rights: If options & ZX_VM_PERM_EXECUTE, handle must be of type ZX_OBJ_TYPE_VMAR and have ZX_RIGHT_EXECUTE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vmar_protect(zx_handle_t handle,
+    ///                             zx_vm_option_t options,
+    ///                             zx_vaddr_t addr,
+    ///                             size_t len);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vmar_protect()` alters the access protections for the memory mappings
+    /// in the range of *len* bytes starting from *addr*. The *options* argument should
+    /// be a bitwise-or of one or more of the following:
+    ///
+    /// - **ZX_VM_PERM_READ**  Map as readable.  It is an error if *handle*
+    ///   does not have **ZX_VM_CAN_MAP_READ** permissions or *handle* does
+    ///   not have the **ZX_RIGHT_READ** right.  It is also an error if the VMO handle
+    ///   used to create the mapping did not have the **ZX_RIGHT_READ** right.
+    /// - **ZX_VM_PERM_WRITE**  Map as writable.  It is an error if *handle*
+    ///   does not have **ZX_VM_CAN_MAP_WRITE** permissions or *handle* does
+    ///   not have the **ZX_RIGHT_WRITE** right.  It is also an error if the VMO handle
+    ///   used to create the mapping did not have the **ZX_RIGHT_WRITE** right.
+    /// - **ZX_VM_PERM_EXECUTE**  Map as executable.  It is an error if *handle*
+    ///   does not have **ZX_VM_CAN_MAP_EXECUTE** permissions or *handle* does
+    ///   not have the **ZX_RIGHT_EXECUTE** right.  It is also an error if the VMO handle
+    ///   used to create the mapping did not have the **ZX_RIGHT_EXECUTE** right.
+    /// - **ZX_VM_PERM_READ_IF_XOM_UNSUPPORTED** Map as readable if the system does
+    ///   not support mapping execute-only pages. If the system can map execute-only
+    ///   this flag is ignored.
+    ///
+    /// *len* must be page-aligned.
+    ///
+    /// ## Rights
+    ///
+    /// If *options* & **ZX_VM_PERM_READ**, *handle* must be of type **ZX_OBJ_TYPE_VMAR** and have **ZX_RIGHT_READ**.
+    ///
+    /// If *options* & **ZX_VM_PERM_WRITE**, *handle* must be of type **ZX_OBJ_TYPE_VMAR** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// If *options* & **ZX_VM_PERM_EXECUTE**, *handle* must be of type **ZX_OBJ_TYPE_VMAR** and have **ZX_RIGHT_EXECUTE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vmar_protect()` returns **ZX_OK** on success.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a VMAR handle.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *prot_flags* is an unsupported combination of flags
+    /// (e.g., **ZX_VM_PERM_WRITE** but not **ZX_VM_PERM_READ**), *addr* is
+    /// not page-aligned, *len* is 0, or some subrange of the requested range is
+    /// occupied by a subregion.
+    ///
+    /// **ZX_ERR_NOT_FOUND**  Some subrange of the requested range is not mapped.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have the proper rights for the
+    /// requested change, the original VMO handle used to create the mapping did not
+    /// have the rights for the requested change, or the VMAR itself does not allow
+    /// the requested change.
+    ///
+    /// ## Notes
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_vmar_allocate()`]
+    ///  - [`zx_vmar_destroy()`]
+    ///  - [`zx_vmar_map()`]
+    ///  - [`zx_vmar_unmap()`]
+    ///
+    /// [`zx_vmar_allocate()`]: vmar_allocate.md
+    /// [`zx_vmar_destroy()`]: vmar_destroy.md
+    /// [`zx_vmar_map()`]: vmar_map.md
+    /// [`zx_vmar_unmap()`]: vmar_unmap.md
     vmar_protect(resource struct {
         handle handle:VMAR;
         options VmOption;
@@ -70,9 +535,108 @@ protocol vmar {
         status status;
     });
 
+    /// ## Summary
+    ///
     /// Perform an operation on VMOs mapped into this VMAR.
-    /// Rights: If op is ZX_VMAR_OP_DECOMMIT, handle must have ZX_RIGHT_WRITE.
-    /// Rights: If op is ZX_VMAR_OP_COMMIT, handle must have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vmar_op_range(zx_handle_t handle,
+    ///                              uint32_t op,
+    ///                              zx_vaddr_t address,
+    ///                              size_t size,
+    ///                              void* buffer,
+    ///                              size_t buffer_size);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vmar_op_range()` performs operation *op* on VMOs mapped in the range *address* to
+    /// *address*+*size*.
+    ///
+    /// *address* and *size* must fall entirely within this VMAR, and must meet the alignment requirements
+    /// specified for the corresponding VMO *op* (if there is one) by [`zx_vmo_op_range()`].
+    ///
+    /// *buffer* and *buffer_size* are currently unused, and must be empty.
+    ///
+    /// The supported operations are:
+    ///
+    /// **ZX_VMAR_OP_COMMIT** - Requires that *handle*, and the VMO handles used to create any affected
+    /// mappings, have the **ZX_RIGHT_WRITE** right. The operation's semantics are otherwise as described by
+    /// [`zx_vmo_op_range()`](/docs/reference/syscalls/vmo_op_range.md) **ZX_VMO_OP_COMMIT**.
+    ///
+    /// **ZX_VMO_OP_DECOMMIT** - Deprecated. Use **ZX_VMAR_OP_DECOMMIT** instead.
+    ///
+    /// **ZX_VMAR_OP_DECOMMIT** - Requires that *handle*, and the VMO handles used to create any affected
+    /// mappings, have the **ZX_RIGHT_WRITE** right. The operation's semantics are otherwise as described by
+    /// [`zx_vmo_op_range()`](/docs/reference/syscalls/vmo_op_range.md) **ZX_VMO_OP_DECOMMIT**.
+    ///
+    /// **ZX_VMAR_OP_MAP_RANGE** - Populates entries in the CPU page tables (or architectural equivalent)
+    /// for committed pages in the given range. Entries for uncommitted pages in the range are not
+    /// populated. Skips entries that already exist for any page in the range.
+    ///
+    /// **ZX_VMAR_OP_DONT_NEED** - Hints that pages in the specified range are not needed anymore and should
+    /// be considered for memory reclamation. Intended to be used on mappings for VMOs created with
+    /// [`zx_pager_create_vmo()`](/docs/reference/syscalls/pager_create_vmo.md); trivially succeeds for
+    /// mappings for other VMO types.
+    ///
+    /// Please refer to [`zx_vmo_op_range()`](/docs/reference/syscalls/vmo_op_range.md)
+    /// **ZX_VMO_OP_DONT_NEED** for more details.
+    ///
+    /// **ZX_VMAR_OP_ALWAYS_NEED** - Hints that pages in the specified range are important and should be
+    /// protected from memory reclamation. Intended to be used on mappings for VMOs created with
+    /// [`zx_pager_create_vmo()`](/docs/reference/syscalls/pager_create_vmo.md); trivially succeeds for
+    /// mappings for other VMO types.
+    ///
+    /// Please refer to [`zx_vmo_op_range()`](/docs/reference/syscalls/vmo_op_range.md)
+    /// **ZX_VMO_OP_ALWAYS_NEED** for more details.
+    ///
+    /// ## Rights
+    ///
+    /// If *op* is **ZX_VMAR_OP_DECOMMIT**, *handle* must have **ZX_RIGHT_WRITE**.
+    ///
+    /// If *op* is **ZX_VMAR_OP_COMMIT**, *handle* must have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vmar_op_range()` returns **ZX_OK** on success. In the event of failure, a negative error value
+    /// is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have the proper rights for the requested change, or the
+    /// original VMO handle used to created one of the affected mappings did not have the rights for the
+    /// requested change, or the VMAR itself did not allow the requested change.
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_BAD_STATE**  *handle* is not a live VMAR, or the range specified by *address* and *size*
+    /// spans unmapped regions.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *buffer* is non-null, or *buffer_size* is non-zero, *op* is not a valid
+    /// operation, *size* is zero, or *address* was not page-aligned.
+    ///
+    /// **ZX_ERR_NOT_SUPPORTED**  *op* was not **ZX_VMO_OP_DECOMMIT**, or one or more mapped VMOs do not
+    /// support the requested *op*.
+    ///
+    /// **ZX_ERR_OUT_OF_RANGE**  The range specified by *address* and *size* is not wholly within the VM
+    /// address range specified by *handle*.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a VMAR handle.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_vmar_map()`]
+    ///  - [`zx_vmar_unmap()`]
+    ///  - [`zx_vmo_op_range()`]
+    ///
+    /// [`zx_pager_create_vmo()`]: pager_create_vmo.md
+    /// [`zx_vmar_map()`]: vmar_map.md
+    /// [`zx_vmar_unmap()`]: vmar_unmap.md
+    /// [`zx_vmo_op_range()`]: vmo_op_range.md
     vmar_op_range(resource struct {
         handle handle:VMAR;
         op uint32;

@@ -5,8 +5,112 @@ library zx;
 
 @transport("Syscall")
 protocol vmo {
+
+    /// ## Summary
+    ///
     /// Create a VM object.
-    /// Rights: Caller job policy must allow ZX_POL_NEW_VMO.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vmo_create(uint64_t size, uint32_t options, zx_handle_t* out);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vmo_create()` creates a new, zero-filled, [virtual memory
+    /// object](/docs/reference/kernel_objects/vm_object.md) (VMO), which represents a container of zero to
+    /// *size* bytes of memory managed by the operating system.
+    ///
+    /// The size of the VMO will be rounded up to the next system page size boundary,
+    /// as reported by [`zx_system_get_page_size()`]. Use [`zx_vmo_get_size()`] to
+    /// return the current size of the VMO.
+    ///
+    /// The content size of the VMO will be initialized to the given (unrounded) size.
+    /// Use [`zx_object_get_property()`] with **ZX_PROP_VMO_CONTENT_SIZE** to read the
+    /// content size of the VMO. Use [`zx_object_set_property()`] with
+    /// **ZX_PROP_VMO_CONTENT_SIZE** to set the content size of the VMO without
+    /// actually resizing the VMO.
+    ///
+    /// One handle is returned on success, representing an object with the requested
+    /// size.
+    ///
+    /// The following rights will be set on the handle by default:
+    ///
+    ///   - **ZX_RIGHT_DUPLICATE** - The handle may be duplicated.
+    ///
+    ///   - **ZX_RIGHT_TRANSFER** - The handle may be transferred to another process.
+    ///
+    ///   - **ZX_RIGHT_READ** - May be read from or mapped with read permissions.
+    ///
+    ///   - **ZX_RIGHT_WRITE** - May be written to or mapped with write permissions.
+    ///
+    ///   - **ZX_RIGHT_MAP** - May be mapped.
+    ///
+    ///   - **ZX_RIGHT_GET_PROPERTY** - May get its properties using [`zx_object_get_property()`].
+    ///
+    ///   - **ZX_RIGHT_SET_PROPERTY** - May set its properties using [`zx_object_set_property()`].
+    ///
+    /// The *options* field can be 0 or a combination of:
+    ///
+    ///   - **ZX_VMO_RESIZABLE** to create a VMO that can change size. Children of a non-resizable VMO can
+    ///     be resized.
+    ///
+    ///   - **ZX_VMO_DISCARDABLE** to create a VMO that the kernel can discard pages from under memory
+    ///     pressure. Use [`zx_vmo_op_range()`] with **ZX_VMO_OP_LOCK** to lock discardable VMOs when in
+    ///     use, and unlock them when done with **ZX_VMO_OP_UNLOCK** making them eligible for reclamation by
+    ///     the kernel. A newly created discardable VMO is initially unlocked.
+    ///
+    /// The **ZX_VMO_ZERO_CHILDREN** signal is active on a newly created VMO. It becomes
+    /// inactive whenever a child of the VMO is created and becomes active again when
+    /// all children have been destroyed and no mappings of those children into address
+    /// spaces exist.
+    ///
+    /// ## Rights
+    ///
+    /// Caller job policy must allow **ZX_POL_NEW_VMO**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vmo_create()` returns **ZX_OK** on success. In the event
+    /// of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *out* is an invalid pointer or NULL or *options* is
+    /// any value other than 0.
+    ///
+    /// **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+    /// There is no good way for userspace to handle this (unlikely) error.
+    /// In a future build this error will no longer occur.
+    ///
+    /// **ZX_ERR_OUT_OF_RANGE**  Requested size is too large.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_system_get_page_size()`]
+    ///  - [`zx_vmar_map()`]
+    ///  - [`zx_vmo_create_child()`]
+    ///  - [`zx_vmo_get_size()`]
+    ///  - [`zx_vmo_op_range()`]
+    ///  - [`zx_vmo_read()`]
+    ///  - [`zx_vmo_replace_as_executable()`]
+    ///  - [`zx_vmo_set_size()`]
+    ///  - [`zx_vmo_write()`]
+    ///
+    /// [`zx_object_get_property()`]: object_get_property.md
+    /// [`zx_object_set_property()`]: object_set_property.md
+    /// [`zx_system_get_page_size()`]: system_get_page_size.md
+    /// [`zx_vmar_map()`]: vmar_map.md
+    /// [`zx_vmo_create_child()`]: vmo_create_child.md
+    /// [`zx_vmo_get_size()`]: vmo_get_size.md
+    /// [`zx_vmo_op_range()`]: vmo_op_range.md
+    /// [`zx_vmo_read()`]: vmo_read.md
+    /// [`zx_vmo_replace_as_executable()`]: vmo_replace_as_executable.md
+    /// [`zx_vmo_set_size()`]: vmo_set_size.md
+    /// [`zx_vmo_write()`]: vmo_write.md
     vmo_create(struct {
         size uint64;
         options uint32;
@@ -22,8 +126,84 @@ protocol vmo {
     // which means the vector<byte> buffer won't work. Unfortunately offset and
     // buffer_size have the same underlying type, so moving them will be
     // error-prone.
+    /// ## Summary
+    ///
     /// Read bytes from the VMO.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vmo_read(zx_handle_t handle,
+    ///                         void* buffer,
+    ///                         uint64_t offset,
+    ///                         size_t buffer_size);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vmo_read()` attempts to read exactly *buffer_size* bytes from a [virtual memory
+    /// object](/docs/reference/kernel_objects/vm_object.md) (VMO) at *offset*.
+    ///
+    /// *buffer* pointer to a user buffer to read bytes into.
+    ///
+    /// *buffer_size* number of bytes to attempt to read. *buffer* buffer should be large
+    /// enough for at least this many bytes.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_READ**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vmo_read()` returns **ZX_OK** on success, and exactly *buffer_size* bytes will
+    /// have been written to *buffer*.
+    /// In the event of failure, a negative error value is returned, and the number of
+    /// bytes written to *buffer* is undefined.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a VMO handle.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have the **ZX_RIGHT_READ** right.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *buffer* is an invalid pointer or NULL.
+    ///
+    /// **ZX_ERR_NOT_FOUND** *buffer* address does not map to address in address space.
+    ///
+    /// **ZX_ERR_OUT_OF_RANGE**  *offset* + *buffer_size* is greater than the size of
+    ///                          the VMO.
+    ///
+    /// **ZX_ERR_BAD_STATE**  VMO has been marked uncached and is not directly readable, or the VMO is
+    /// backed by a pager and the pager or the VMO is in a bad state preventing requested pages from being
+    /// populated.
+    ///
+    /// **ZX_ERR_IO** The VMO is backed by a pager and the pager encountered an I/O error while reading in
+    /// the requested pages.
+    ///
+    /// **ZX_ERR_IO_DATA_INTEGRITY** The VMO is backed by a pager and the contents that were read in by the
+    /// pager are corrupted.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_vmo_create()`]
+    ///  - [`zx_vmo_create_child()`]
+    ///  - [`zx_vmo_get_size()`]
+    ///  - [`zx_vmo_op_range()`]
+    ///  - [`zx_vmo_set_cache_policy()`]
+    ///  - [`zx_vmo_set_size()`]
+    ///  - [`zx_vmo_write()`]
+    ///
+    /// [`zx_vmo_create()`]: vmo_create.md
+    /// [`zx_vmo_create_child()`]: vmo_create_child.md
+    /// [`zx_vmo_get_size()`]: vmo_get_size.md
+    /// [`zx_vmo_op_range()`]: vmo_op_range.md
+    /// [`zx_vmo_set_cache_policy()`]: vmo_set_cache_policy.md
+    /// [`zx_vmo_set_size()`]: vmo_set_size.md
+    /// [`zx_vmo_write()`]: vmo_write.md
     @blocking
     @arg_reorder("handle, buffer, offset, buffer_size")
     vmo_read(resource struct {
@@ -35,8 +215,77 @@ protocol vmo {
     });
 
     // TODO(scottmg): Same problem as Read() above.
+    /// ## Summary
+    ///
     /// Write bytes to the VMO.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vmo_write(zx_handle_t handle,
+    ///                          const void* buffer,
+    ///                          uint64_t offset,
+    ///                          size_t buffer_size);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vmo_write()` attempts to write exactly *buffer_size* bytes to a [virtual memory
+    /// object](/docs/reference/kernel_objects/vm_object.md) (VMO) at *offset*.
+    ///
+    /// *buffer* pointer to a user buffer to write bytes from.
+    ///
+    /// *buffer_size* number of bytes to attempt to write.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vmo_write()` returns **ZX_OK** on success, and exactly *buffer_size* bytes will
+    /// have been written from *buffer*.
+    /// In the event of failure, a negative error value is returned, and the number of
+    /// bytes written from *buffer* is undefined.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a VMO handle.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have the **ZX_RIGHT_WRITE** right.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *buffer* is an invalid pointer or NULL.
+    ///
+    /// **ZX_ERR_NOT_FOUND** *buffer* address does not map to address in address space.
+    ///
+    /// **ZX_ERR_NO_MEMORY**  Failure to allocate system memory to complete write.
+    ///
+    /// **ZX_ERR_OUT_OF_RANGE**  *offset* + *buffer_size* is greater than the size of
+    ///                          the VMO.
+    ///
+    /// **ZX_ERR_BAD_STATE**  VMO has been marked uncached and is not directly writable.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_vmo_create()`]
+    ///  - [`zx_vmo_create_child()`]
+    ///  - [`zx_vmo_get_size()`]
+    ///  - [`zx_vmo_op_range()`]
+    ///  - [`zx_vmo_read()`]
+    ///  - [`zx_vmo_set_cache_policy()`]
+    ///  - [`zx_vmo_set_size()`]
+    ///
+    /// [`zx_vmo_create()`]: vmo_create.md
+    /// [`zx_vmo_create_child()`]: vmo_create_child.md
+    /// [`zx_vmo_get_size()`]: vmo_get_size.md
+    /// [`zx_vmo_op_range()`]: vmo_op_range.md
+    /// [`zx_vmo_read()`]: vmo_read.md
+    /// [`zx_vmo_set_cache_policy()`]: vmo_set_cache_policy.md
+    /// [`zx_vmo_set_size()`]: vmo_set_size.md
     @blocking
     @arg_reorder("handle, buffer, offset, buffer_size")
     vmo_write(resource struct {
@@ -48,6 +297,55 @@ protocol vmo {
     });
 
     // TODO(fxbug.dev/32803): No rights required?
+    /// ## SUMMARY
+    ///
+    /// Read the current size of a VMO object.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vmo_get_size(zx_handle_t handle, uint64_t* size);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vmo_get_size()` returns the current size of the [virtual memory
+    /// object](/docs/reference/kernel_objects/vm_object.md) (VMO).
+    ///
+    /// ## Rights
+    ///
+    /// TODO(fxbug.dev/32253)
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vmo_get_size()` returns **ZX_OK** on success. In the event
+    /// of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a VMO handle.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *size* is an invalid pointer or NULL.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_vmo_create()`]
+    ///  - [`zx_vmo_create_child()`]
+    ///  - [`zx_vmo_op_range()`]
+    ///  - [`zx_vmo_read()`]
+    ///  - [`zx_vmo_set_size()`]
+    ///  - [`zx_vmo_write()`]
+    ///
+    /// [`zx_vmo_create()`]: vmo_create.md
+    /// [`zx_vmo_create_child()`]: vmo_create_child.md
+    /// [`zx_vmo_op_range()`]: vmo_op_range.md
+    /// [`zx_vmo_read()`]: vmo_read.md
+    /// [`zx_vmo_set_size()`]: vmo_set_size.md
+    /// [`zx_vmo_write()`]: vmo_write.md
     /// Read the current size of a VMO object.
     vmo_get_size(resource struct {
         handle handle:VMO;
@@ -56,8 +354,78 @@ protocol vmo {
         size uint64;
     });
 
+    /// ## SUMMARY
+    ///
     /// Resize a VMO object.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vmo_set_size(zx_handle_t handle, uint64_t size);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vmo_set_size()` sets the new size of a [virtual memory
+    /// object](/docs/reference/kernel_objects/vm_object.md) (VMO).
+    ///
+    /// The size will be rounded up to the next page size boundary.
+    /// Subsequent calls to [`zx_vmo_get_size()`] will return the rounded up size.
+    ///
+    /// The content size of the VMO will be set to the given (unrounded) size.
+    /// Use [`zx_object_get_property()`] with **ZX_PROP_VMO_CONTENT_SIZE** to read the
+    /// content size of the VMO. Use [`zx_object_set_property()`] with
+    /// **ZX_PROP_VMO_CONTENT_SIZE** to set the content size of the VMO without
+    /// actually resizing the VMO.
+    ///
+    /// The data in the VMO between the given size and the end of the VMO (i.e., the next page boundary)
+    /// will be overritten with zeros.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vmo_set_size()` returns **ZX_OK** on success. In the event
+    /// of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a VMO handle.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have the **ZX_RIGHT_WRITE** right.
+    ///
+    /// **ZX_ERR_UNAVAILABLE** The VMO was not created with **ZX_VMO_RESIZABLE**
+    /// or **ZX_VMO_CHILD_RESIZABLE**.
+    ///
+    /// **ZX_ERR_OUT_OF_RANGE**  Requested size is too large.
+    ///
+    /// **ZX_ERR_NO_MEMORY**  Failure due to lack of system memory.
+    ///
+    /// **ZX_ERR_BAD_STATE**  Requested size would discard pinned pages.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_vmo_create()`]
+    ///  - [`zx_vmo_create_child()`]
+    ///  - [`zx_vmo_get_size()`]
+    ///  - [`zx_vmo_op_range()`]
+    ///  - [`zx_vmo_read()`]
+    ///  - [`zx_vmo_write()`]
+    ///
+    /// [`zx_object_get_property()`]: object_get_property.md
+    /// [`zx_object_set_property()`]: object_set_property.md
+    /// [`zx_vmo_create()`]: vmo_create.md
+    /// [`zx_vmo_create_child()`]: vmo_create_child.md
+    /// [`zx_vmo_get_size()`]: vmo_get_size.md
+    /// [`zx_vmo_op_range()`]: vmo_op_range.md
+    /// [`zx_vmo_read()`]: vmo_read.md
+    /// [`zx_vmo_write()`]: vmo_write.md
     vmo_set_size(resource struct {
         handle handle:VMO;
         size uint64;
@@ -65,13 +433,206 @@ protocol vmo {
         status status;
     });
 
+    /// ## SUMMARY
+    ///
     /// Perform an operation on a range of a VMO.
-    /// Rights: If op is ZX_VMO_OP_COMMIT, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
-    /// Rights: If op is ZX_VMO_OP_DECOMMIT, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
-    /// Rights: If op is ZX_VMO_OP_CACHE_SYNC, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
-    /// Rights: If op is ZX_VMO_OP_CACHE_INVALIDATE, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_WRITE.
-    /// Rights: If op is ZX_VMO_OP_CACHE_CLEAN, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
-    /// Rights: If op is ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vmo_op_range(zx_handle_t handle,
+    ///                             uint32_t op,
+    ///                             uint64_t offset,
+    ///                             uint64_t size,
+    ///                             void* buffer,
+    ///                             size_t buffer_size);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vmo_op_range()` performs cache and memory operations against pages held by the [virtual memory
+    /// object](/docs/reference/kernel_objects/vm_object.md) (VMO).
+    ///
+    /// *offset* byte offset specifying the starting location for *op* in the VMO's held memory.
+    ///
+    /// *size* length, in bytes, to perform the operation on.
+    ///
+    /// *op* the operation to perform:
+    ///
+    /// *buffer* and *buffer_size* are currently unused.
+    ///
+    /// **ZX_VMO_OP_COMMIT** - Commit *size* bytes worth of pages starting at byte *offset* for the VMO.
+    /// More information can be found in the [vm object documentation](/docs/reference/kernel_objects/vm_object.md).
+    /// Requires the **ZX_RIGHT_WRITE** right.
+    ///
+    /// **ZX_VMO_OP_DECOMMIT** - Release a range of pages previously committed to the VMO from *offset*
+    /// to *offset*+*size*, which resets that range's bytes to 0. Requires the **ZX_RIGHT_WRITE** right.
+    /// This is only supported for vmos created from [`zx_vmo_create()`], which do not have non-slice
+    /// children, and for slice children of such vmos. Provided range must be page aligned.
+    ///
+    /// **ZX_VMO_OP_ZERO** - Resets the range of bytes in the VMO from *offset* to *offset*+*size* to
+    /// 0. This is semantically equivalent to writing 0's with
+    /// [`zx_vmo_write()`](/docs/reference/syscalls/vmo_write.md), except that it is able to be done more
+    /// efficiently and save memory by de-duping to shared zero pages. Requires the **ZX_RIGHT_WRITE** right.
+    ///
+    /// **ZX_VMO_OP_LOCK** - Locks a range of pages in a discardable VMO, preventing them from being
+    /// discarded by the kernel. Guaranteed to successfully lock the VMO and return **ZX_OK** if the
+    /// arguments are valid.  *buffer* should point to a `zx_vmo_lock_state_t` struct, and *buffer_size*
+    /// should accommodate the struct. Returns information about the locked and previously discarded ranges
+    /// in *buffer*, so that clients can reinitialize discarded contents if needed.
+    ///
+    /// The entire VMO should be locked at once, so *offset* should be 0 and *size* should be the current
+    /// size of the VMO.  Requires the **ZX_RIGHT_READ** or **ZX_RIGHT_WRITE** right. Note that locking
+    /// itself does not commit any pages in the VMO; it just marks the state of the VMO as “undiscardable”
+    /// by the kernel.
+    ///
+    /// *buffer* should be a pointer of type `zx_info_lock_state_t`.
+    ///
+    /// ```c
+    /// typedef struct zx_vmo_lock_state {
+    ///   // |offset| and |size| track the locked range, and will be set to the |offset|
+    ///   // and |size| arguments passed in if the ZX_VMO_OP_LOCK is successful.
+    ///   uint64_t offset;
+    ///   uint64_t size;
+    ///   // |discarded_offset| and |discarded_size| track the discarded range prior to
+    ///   // the lock operation. This is the maximal range within the locked range that
+    ///   // contains discarded pages; not all pages within this range might have been
+    ///   // discarded. Both |discarded_offset| and |discarded_size| will be set to 0 if
+    ///   // the range was not discarded.
+    ///   uint64_t discarded_offset;
+    ///   uint64_t discarded_size;
+    /// } zx_vmo_lock_state_t;
+    /// ```
+    ///
+    /// **ZX_VMO_OP_TRY_LOCK** - Locks a range of pages in a discardable VMO, preventing them from being
+    /// discarded by the kernel. Will only succeed if the range has not already been discarded by the
+    /// kernel, and will fail with **ZX_ERR_UNAVAILABLE** otherwise. This operation is meant as a
+    /// lightweight alternative to **ZX_VMO_OP_LOCK** for trying to lock the VMO without having to set up
+    /// the *buffer* argument. It also affords clients the choice to not take any action following failure
+    /// to lock the VMO; clients must use **ZX_VMO_OP_LOCK** if they wish to lock the VMO again.
+    ///
+    /// The entire VMO should be locked at once, so *offset* should be 0 and *size* should be the current
+    /// size of the VMO.  Requires the **ZX_RIGHT_READ** or **ZX_RIGHT_WRITE** right. Note that locking
+    /// itself does not commit any pages in the VMO; it just marks the state of the VMO as “undiscardable”
+    /// by the kernel.
+    ///
+    /// **ZX_VMO_OP_UNLOCK** - Unlocks a range of pages in a discardable VMO, indicating that the kernel is
+    /// free to discard them under memory pressure. Unlocked pages that have not been discarded yet will be
+    /// counted as committed pages.
+    ///
+    /// The entire VMO should be unlocked at once, so *offset* should be 0 and *size* should be the current
+    /// size of the VMO. Requires the **ZX_RIGHT_READ** or **ZX_RIGHT_WRITE** right.
+    ///
+    /// **ZX_VMO_OP_CACHE_SYNC** - Synchronize instruction caches with data caches, so previous writes are
+    /// visible to instruction fetches.
+    /// Requires the **ZX_RIGHT_READ** right.
+    ///
+    /// **ZX_VMO_OP_CACHE_INVALIDATE** - Performs a cache invalidation operation so that future reads see
+    /// external changes to main memory. Note, this operation is only available when
+    /// `kernel.enable-debugging-syscalls` is true. When debugging syscalls are not enabled, this operation
+    /// will fail with **ZX_ERR_NOT_SUPPORTED**
+    /// Requires the **ZX_RIGHT_WRITE** right.
+    ///
+    /// **ZX_VMO_OP_CACHE_CLEAN** - Clean (write back) data caches, so previous writes are visible in main
+    /// memory.
+    /// Requires the **ZX_RIGHT_READ** right.
+    ///
+    /// **ZX_VMO_OP_CACHE_CLEAN_INVALIDATE** - Performs cache clean and invalidate operations together.
+    /// Requires the **ZX_RIGHT_READ** right.
+    ///
+    /// **ZX_VMO_OP_DONT_NEED** - Hints that pages in the specified range are not needed anymore and should
+    /// be considered for memory reclamation. Intended to be used with VMOs created with
+    /// [`zx_pager_create_vmo()`](/docs/reference/syscalls/pager_create_vmo.md); trivially succeeds for
+    /// other VMOs.
+    ///
+    /// This only applies to pages in the given range that are already committed, i.e. no new pages will be
+    /// committed as a result of this op. If required, *offset* will be rounded down to the previous page
+    /// boundary and *offset*+*size* will be rounded up to the next page boundary.
+    ///
+    /// **ZX_VMO_OP_ALWAYS_NEED** - Hints that pages in the specified range are important and should be
+    /// protected from memory reclamation. The kernel may decide to override this hint when the system is
+    /// under extreme memory pressure. This hint also does not prevent pages from being freed by means other
+    /// than memory reclamation (e.g. a decommit, VMO resize, or VMO destruction). Intended to be used with
+    /// VMOs created with [`zx_pager_create_vmo()`](/docs/reference/syscalls/pager_create_vmo.md); trivially
+    /// succeeds for other VMOs.
+    ///
+    /// This may commit pages in the given range where applicable, e.g. if the VMO is directly backed by a
+    /// pager, its pages will be committed, or in the case of a clone, pages in the parent that are visible
+    /// to the clone will be committed. If required, *offset* will be rounded down to the previous page
+    /// boundary and *offset*+*size* will be rounded up to the next page boundary.
+    ///
+    /// ## Rights
+    ///
+    /// If *op* is **ZX_VMO_OP_COMMIT**, *handle* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// If *op* is **ZX_VMO_OP_DECOMMIT**, *handle* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// If *op* is **ZX_VMO_OP_CACHE_SYNC**, *handle* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_READ**.
+    ///
+    /// If *op* is **ZX_VMO_OP_CACHE_INVALIDATE**, *handle* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// If *op* is **ZX_VMO_OP_CACHE_CLEAN**, *handle* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_READ**.
+    ///
+    /// If *op* is **ZX_VMO_OP_CACHE_CLEAN_INVALIDATE**, *handle* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_READ**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vmo_op_range()` returns **ZX_OK** on success. In the event of failure, a negative error
+    /// value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_OUT_OF_RANGE**  An invalid memory range specified by *offset* and *size*.
+    ///
+    /// **ZX_ERR_NO_MEMORY**  Allocations to commit pages for **ZX_VMO_OP_COMMIT** or **ZX_VMO_OP_ZERO**
+    /// failed.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a VMO handle.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have sufficient rights to perform the operation.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *buffer* is an invalid pointer (if required by the operation), *op* is not
+    /// a valid operation, *size* is zero and *op* is a cache operation, or *op* was **ZX_VMO_OP_DECOMMIT**
+    /// and range was not page aligned.
+    ///
+    /// **ZX_ERR_NOT_SUPPORTED**  *op* was **ZX_VMO_OP_LOCK**, **ZX_VMO_OP_TRY_LOCK** or
+    /// **ZX_VMO_OP_UNLOCK** and the VMO is not discardable, or *op* was **ZX_VMO_OP_DECOMMIT** and the
+    /// underlying VMO does not allow decommiting, or *op* was **ZX_VMO_OP_CACHE_INVALIDATE** and
+    /// `kernel.enable-debugging-syscalls` is false.
+    ///
+    /// **ZX_ERR_UNAVAILABLE** *op* was **ZX_VMO_OP_TRY_LOCK**, the VMO was discardable and the VMO has been
+    /// discarded by the kernel.
+    ///
+    /// **ZX_ERR_BAD_STATE**  *op* was **ZX_VMO_OP_COMMIT**, the VMO is backed by a pager and the pager or
+    /// the VMO is in a bad state preventing requested pages from being populated. *op* was
+    /// **ZX_VMO_OP_UNLOCK**, the VMO is discardable and the VMO was not previously locked.
+    ///
+    /// **ZX_ERR_IO** *op* was **ZX_VMO_OP_COMMIT**, the VMO is backed by a pager and the pager encountered
+    /// an I/O error while committing the requested pages.
+    ///
+    /// **ZX_ERR_IO_DATA_INTEGRITY** *op* was **ZX_VMO_OP_COMMIT**, the VMO is backed by a pager and the
+    /// contents that were read in by the pager for the pages being committed are corrupted.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_vmo_create()`]
+    ///  - [`zx_vmo_create_child()`]
+    ///  - [`zx_vmo_get_size()`]
+    ///  - [`zx_vmo_read()`]
+    ///  - [`zx_vmo_set_size()`]
+    ///  - [`zx_vmo_write()`]
+    ///
+    /// [`zx_pager_create_vmo()`]: pager_create_vmo.md
+    /// [`zx_vmo_create()`]: vmo_create.md
+    /// [`zx_vmo_create_child()`]: vmo_create_child.md
+    /// [`zx_vmo_get_size()`]: vmo_get_size.md
+    /// [`zx_vmo_read()`]: vmo_read.md
+    /// [`zx_vmo_set_size()`]: vmo_set_size.md
+    /// [`zx_vmo_write()`]: vmo_write.md
     @blocking
     vmo_op_range(resource struct {
         handle handle:VMO;
@@ -83,8 +644,162 @@ protocol vmo {
         status status;
     });
 
+    /// ## SUMMARY
+    ///
     /// Create a child of a VM Object.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_READ.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vmo_create_child(zx_handle_t handle,
+    ///                                 uint32_t options,
+    ///                                 uint64_t offset,
+    ///                                 uint64_t size,
+    ///                                 zx_handle_t* out);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vmo_create_child()` creates a new [virtual memory
+    /// object](/docs/reference/kernel_objects/vm_object.md) (VMO) a child of an existing vmo. The behavior
+    /// of the semantics depends on the type of the child.
+    ///
+    /// One handle is returned on success, representing an object with the requested
+    /// size.
+    ///
+    /// *options* must contain exactly one of the following flags to specify the
+    /// child type:
+    ///
+    /// - **ZX_VMO_CHILD_SNAPSHOT** -  Create a child that behaves as if an eager copy is performed. When a
+    /// write occurs, both the parent and child perform a lazy copy. Lazy copying allows both the child and
+    /// the parent to diverge from each other. Any reads from ranges outside of the parent VMO's size
+    /// contain zeros, and writes allocate new zero filled pages.
+    /// This flag is not supported on:
+    ///  - VMOs with pinned regions.
+    ///  - VMOs created with or descended from [`zx_vmo_create_physical()`] or
+    ///    [`zx_vmo_create_contiguous()`]
+    ///  - VMOs backed by a user pager.
+    /// For information on VMO syscall interactions with children, see [Notes](#notes).
+    ///
+    /// ZX_VMO_CHILD_SNAPSHOT creates an immutable VMO when the ZX_VMO_CHILD_NO_WRITE
+    /// option is enabled and the ZX_VMO_CHILD_RESIZABLE option is disabled.
+    ///
+    /// - **ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE** -  Create a child that behaves with at least copy on
+    /// write semantics. Any write operation on the child brings in a copy of the page from the parent,
+    /// after which its contents may diverge from the parent. Until a page is written to, and copied, reads
+    /// are permitted, although not guaranteed, to return changing values if the parent performs writes.
+    /// This flag may not be used for VMOs created with [`zx_vmo_create_physical()`],
+    /// [`zx_vmo_create_contiguous()`] or descendants of such VMOs.
+    /// For information on VMO syscall interactions with children, see [Notes](#notes).
+    ///
+    /// - **ZX_VMO_CHILD_SLICE** - Create a slice that has direct read/write access into
+    /// a section of the parent. All operations on the slice vmo behave as if they were
+    /// done on the parent. A slice differs from a duplicate handle to the parent by allowing
+    /// access to only a subrange of the parent vmo, and allowing for the
+    /// **ZX_VMO_ZERO_CHILDREN** signal to be used. This flag may be used with vmos created with
+    /// [`zx_vmo_create_physical()`] or [`zx_vmo_create_contiguous()`] and their descendants.
+    ///
+    /// In addition, *options* can contain zero or more of the following flags to
+    /// further specify the child's behavior:
+    ///
+    /// - **ZX_VMO_CHILD_RESIZABLE** - Create a resizable child VMO.
+    ///
+    /// - **ZX_VMO_CHILD_NO_WRITE** - Create a child that cannot be written to. This is incompatible with
+    ///                               **ZX_VMO_CHILD_RESIZABLE**.
+    ///
+    /// *offset* must be page aligned.
+    ///
+    /// *offset* + *size* may not exceed the range of a 64bit unsigned value.
+    ///
+    /// Both offset and size may start or extend beyond the original VMO's size.
+    ///
+    /// The size of the VMO will be rounded up to the next page size boundary.
+    ///
+    /// The content size of the VMO will be initialized to the given (unrounded) size.
+    /// Use [`zx_object_get_property()`] with **ZX_PROP_VMO_CONTENT_SIZE** to read the
+    /// content size of the VMO. Use [`zx_object_set_property()`] with
+    /// **ZX_PROP_VMO_CONTENT_SIZE** to set the content size of the VMO without
+    /// actually resizing the VMO.
+    ///
+    /// By default the rights of the child handle will be the same as the
+    /// original with a few exceptions. See [`zx_vmo_create()`] for a
+    /// discussion of the details of each right.
+    ///
+    /// In all cases if **ZX_VMO_NO_WRITE** is set then **ZX_RIGHT_WRITE** will be removed.
+    ///
+    /// If *options* is **ZX_VMO_CHILD_SNAPSHOT** or **ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE** and
+    /// **ZX_VMO_CHILD_NO_WRITE** is not set then **ZX_RIGHT_WRITE** will be added and **ZX_RIGHT_EXECUTE**
+    /// will be removed.
+    ///
+    /// ## Notes
+    ///
+    /// Creating a child VMO causes the existing (source) VMO **ZX_VMO_ZERO_CHILDREN** signal
+    /// to become inactive. Only when the last child is destroyed and no mappings
+    /// of those child into address spaces exist, will **ZX_VMO_ZERO_CHILDREN** become
+    /// active again.
+    ///
+    /// Non-slice child vmos will interact with the VMO syscalls in the following ways:
+    ///
+    /// - The COMMIT mode of [`zx_vmo_op_range()`] on a child will commit pages into the child that
+    ///   have the same content as its parent's corresponding pages. If those pages are supplied by a
+    ///   pager, this operation will also commit those pages in the parent. Otherwise, if those pages
+    ///   are not comitted in the parent, zero-filled pages will be comitted directly into
+    ///   child, without affecting the parent.
+    /// - The DECOMMIT mode of [`zx_vmo_op_range()`] is not supported.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_DUPLICATE** and have **ZX_RIGHT_READ**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vmo_create_child()` returns **ZX_OK** on success. In the event
+    /// of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_TYPE**  Input handle is not a VMO.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  Input handle does not have sufficient rights.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *out* is an invalid pointer or NULL
+    /// or the offset is not page aligned, or an incompatible combination of *options* was given.
+    ///
+    /// **ZX_ERR_OUT_OF_RANGE**  *offset* + *size* is too large.
+    ///
+    /// **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+    /// There is no good way for userspace to handle this (unlikely) error.
+    /// In a future build this error will no longer occur.
+    ///
+    /// **ZX_ERR_BAD_STATE**  A COW child could not be created because the vmo has some
+    /// pinned pages.
+    ///
+    /// **ZX_ERR_NOT_SUPPORTED**  Input handle is a discardable VMO.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_vmar_map()`]
+    ///  - [`zx_vmo_create()`]
+    ///  - [`zx_vmo_get_size()`]
+    ///  - [`zx_vmo_op_range()`]
+    ///  - [`zx_vmo_read()`]
+    ///  - [`zx_vmo_set_size()`]
+    ///  - [`zx_vmo_write()`]
+    ///
+    /// [`zx_object_get_property()`]: object_get_property.md
+    /// [`zx_object_set_property()`]: object_set_property.md
+    /// [`zx_pager_create_vmo()`]: pager_create_vmo.md
+    /// [`zx_vmar_map()`]: vmar_map.md
+    /// [`zx_vmo_create()`]: vmo_create.md
+    /// [`zx_vmo_create_contiguous()`]: vmo_create_contiguous.md
+    /// [`zx_vmo_create_physical()`]: vmo_create_physical.md
+    /// [`zx_vmo_get_size()`]: vmo_get_size.md
+    /// [`zx_vmo_op_range()`]: vmo_op_range.md
+    /// [`zx_vmo_read()`]: vmo_read.md
+    /// [`zx_vmo_set_size()`]: vmo_set_size.md
+    /// [`zx_vmo_write()`]: vmo_write.md
     vmo_create_child(resource struct {
         handle handle:VMO;
         options uint32;
@@ -95,8 +810,91 @@ protocol vmo {
         out handle:VMO;
     });
 
+    /// ## SUMMARY
+    ///
     /// Set the caching policy for pages held by a VMO.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_MAP.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vmo_set_cache_policy(zx_handle_t handle, uint32_t cache_policy);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vmo_set_cache_policy()` sets caching policy for a [virtual memory
+    /// object](/docs/reference/kernel_objects/vm_object.md) (VMO). Generally used on VMOs
+    /// that point directly at physical memory. Such VMOs are generally only handed to
+    /// userspace via bus protocol interfaces, so this syscall will typically only be
+    /// used by drivers dealing with device memory. This call can also be used on a
+    /// regular memory backed VMO with similar limitations and uses.
+    ///
+    /// A handle must have the **ZX_RIGHT_MAP** right for this call to be
+    /// permitted. Additionally, the VMO must not presently be mapped by any process,
+    /// have any children, be a child itself, or have any pinned pages. Having committed
+    /// pages is only allowed if transitioning from a cached state, and the pages will be
+    /// cleaned and invalidated.
+    ///
+    /// *cache_policy* cache flags to use:
+    ///
+    ///   - **ZX_CACHE_POLICY_CACHED** - Use hardware caching. On Aarch64 this corresponds to the Normal
+    ///     Memory, Outer Write-back non-transient Read and Write allocate, Inner Write-back non-transient
+    ///     Read and Write allocate memory attributes
+    ///
+    ///   - **ZX_CACHE_POLICY_UNCACHED** - Disable caching. On Aarch64 this corresponds to the Device-nGnRnE
+    ///     memory attributes.
+    ///
+    ///   - **ZX_CACHE_POLICY_UNCACHED_DEVICE** - Disable cache and treat as device memory. This is
+    ///     architecture dependent and may be equivalent to **ZX_CACHE_POLICY_UNCACHED** on some
+    ///     architectures. On Aarch64 this corresponds to the Device-nGnRE memory attributes.
+    ///
+    ///   - **ZX_CACHE_POLICY_WRITE_COMBINING** - Uncached with write combining. On Aarch64 this corresponds
+    ///     to the Normal memory, uncached memory attributes.
+    ///
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_MAP**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vmo_set_cache_policy()` returns **ZX_OK** on success. In the event of
+    /// failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_ACCESS_DENIED** Cache policy has been configured for this VMO already and
+    /// may not be changed, or *handle* lacks the **ZX_RIGHT_MAP** right.
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_INVALID_ARGS** *cache_policy* contains flags outside of the ones listed
+    /// above, or *cache_policy* contains an invalid mix of cache policy flags.
+    ///
+    /// **ZX_ERR_NOT_SUPPORTED** The VMO *handle* corresponds to is not one holding
+    /// physical memory.
+    ///
+    /// **ZX_ERR_BAD_STATE** Cache policy cannot be changed because the VMO is presently
+    /// mapped, has children, is a child itself, has pinned pages, or has committed pages
+    /// and the VMO is currently not cached.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_vmo_create()`]
+    ///  - [`zx_vmo_get_size()`]
+    ///  - [`zx_vmo_op_range()`]
+    ///  - [`zx_vmo_read()`]
+    ///  - [`zx_vmo_set_size()`]
+    ///  - [`zx_vmo_write()`]
+    ///
+    /// [`zx_vmo_create()`]: vmo_create.md
+    /// [`zx_vmo_get_size()`]: vmo_get_size.md
+    /// [`zx_vmo_op_range()`]: vmo_op_range.md
+    /// [`zx_vmo_read()`]: vmo_read.md
+    /// [`zx_vmo_set_size()`]: vmo_set_size.md
+    /// [`zx_vmo_write()`]: vmo_write.md
     vmo_set_cache_policy(resource struct {
         handle handle:VMO;
         cache_policy uint32;
@@ -106,9 +904,55 @@ protocol vmo {
 
     // TODO(fxbug.dev/32803): handle: No rights required, ZX_RIGHT_EXECUTE added to dup out
     // TODO(fxbug.dev/32803): vmex == ZX_HANDLE_INVALID also accepted.
+    /// ## SUMMARY
+    ///
     /// Add execute rights to a VMO.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_VMO.
-    /// Rights: vmex must have resource kind ZX_RSRC_KIND_VMEX.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vmo_replace_as_executable(zx_handle_t handle,
+    ///                                          zx_handle_t vmex,
+    ///                                          zx_handle_t* out);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vmo_replace_as_executable()` creates a replacement for *handle*, referring
+    /// to the same underlying [virtual memory object](/docs/reference/kernel_objects/vm_object.md) (VMO),
+    /// adding the right **ZX_RIGHT_EXECUTE**.
+    ///
+    /// *handle* is always invalidated.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_VMO**.
+    ///
+    /// *vmex* must have resource kind **ZX_RSRC_KIND_VMEX**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vmo_replace_as_executable()` returns **ZX_OK** on success. In the event
+    /// of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* isn't a valid VM object handle, or
+    /// *vmex* isn't a valid **ZX_RSRC_KIND_VMEX** resource handle.
+    ///
+    /// **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+    /// There is no good way for userspace to handle this (unlikely) error.
+    /// In a future build this error will no longer occur.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_resource_create()`]
+    ///  - [`zx_vmar_map()`]
+    ///
+    /// [`zx_resource_create()`]: resource_create.md
+    /// [`zx_vmar_map()`]: vmar_map.md
     vmo_replace_as_executable(resource struct {
         @release
         handle handle:VMO;
@@ -118,7 +962,40 @@ protocol vmo {
         out handle:VMO;
     });
 
-    /// Rights: bti must be of type ZX_OBJ_TYPE_BTI and have ZX_RIGHT_MAP.
+    /// ## SUMMARY
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vmo_create_contiguous(zx_handle_t bti,
+    ///                                      size_t size,
+    ///                                      uint32_t alignment_log2,
+    ///                                      zx_handle_t* out);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Rights
+    ///
+    /// *bti* must be of type **ZX_OBJ_TYPE_BTI** and have **ZX_RIGHT_MAP**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     vmo_create_contiguous(resource struct {
         bti handle:BTI;
         size usize;
@@ -128,8 +1005,98 @@ protocol vmo {
         out handle:VMO;
     });
 
+    /// ## SUMMARY
+    ///
     /// Create a VM object referring to a specific contiguous range of physical memory.
-    /// Rights: resource must have resource kind ZX_RSRC_KIND_MMIO.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vmo_create_physical(zx_handle_t resource,
+    ///                                    zx_paddr_t paddr,
+    ///                                    size_t size,
+    ///                                    zx_handle_t* out);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vmo_create_physical()` creates a new [virtual memory
+    /// object](/docs/reference/kernel_objects/vm_object.md) (VMO), which represents the
+    /// *size* bytes of physical memory beginning at physical address *paddr*.
+    ///
+    /// The content size of the VMO will be initialized to the given (unrounded) size.
+    /// Use [`zx_object_get_property()`] with **ZX_PROP_VMO_CONTENT_SIZE** to read the
+    /// content size of the VMO. Use [`zx_object_set_property()`] with
+    /// **ZX_PROP_VMO_CONTENT_SIZE** to set the content size of the VMO without
+    /// actually resizing the VMO.
+    ///
+    /// One handle is returned on success, representing an object with the requested
+    /// size.
+    ///
+    /// The following rights will be set on the handle by default:
+    ///
+    ///   - **ZX_RIGHT_DUPLICATE** - The handle may be duplicated.
+    ///
+    ///   - **ZX_RIGHT_TRANSFER** - The handle may be transferred to another process.
+    ///
+    ///   - **ZX_RIGHT_READ** - May be read from or mapped with read permissions.
+    ///
+    ///   - **ZX_RIGHT_WRITE** - May be written to or mapped with write permissions.
+    ///
+    ///   - **ZX_RIGHT_EXECUTE** - May be mapped with execute permissions.
+    ///
+    ///   - **ZX_RIGHT_MAP** - May be mapped.
+    ///
+    ///   - **ZX_RIGHT_GET_PROPERTY** - May get its properties using [`zx_object_get_property()`].
+    ///
+    ///   - **ZX_RIGHT_SET_PROPERTY** - May set its properties using [`zx_object_set_property()`].
+    ///
+    /// The **ZX_VMO_ZERO_CHILDREN** signal is active on a newly created VMO. It becomes
+    /// inactive whenever a child of the VMO is created and becomes active again when
+    /// all children have been destroyed and no mappings of those children into address
+    /// spaces exist.
+    ///
+    /// ## Notes
+    ///
+    /// The VMOs created by this syscall are not usable with [`zx_vmo_read()`] and
+    /// [`zx_vmo_write()`].
+    ///
+    /// ## Rights
+    ///
+    /// *resource* must have resource kind **ZX_RSRC_KIND_MMIO**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vmo_create_physical()` returns **ZX_OK** on success. In the event
+    /// of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZER_ERR_WRONG_TYPE** *resource* is not a handle to a Resource object.
+    ///
+    /// **ZER_ERR_ACCESS_DENIED** *resource* does not grant access to the requested
+    /// range of memory.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *out* is an invalid pointer or NULL, or *paddr* or
+    /// *size* are not page-aligned.
+    ///
+    /// **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+    /// There is no good way for userspace to handle this (unlikely) error.
+    /// In a future build this error will no longer occur.
+    ///
+    /// **ZX_ERR_OUT_OF_RANGE**  Requested size is too large.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_vmar_map()`]
+    ///
+    /// [`zx_object_get_property()`]: object_get_property.md
+    /// [`zx_object_set_property()`]: object_set_property.md
+    /// [`zx_vmar_map()`]: vmar_map.md
+    /// [`zx_vmo_read()`]: vmo_read.md
+    /// [`zx_vmo_write()`]: vmo_write.md
     vmo_create_physical(resource struct {
         resource handle:RESOURCE;
         paddr paddr;

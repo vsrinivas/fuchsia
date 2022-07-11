@@ -5,8 +5,91 @@ library zx;
 
 @transport("Syscall")
 protocol interrupt {
+    /// ## Summary
+    ///
     /// Create an interrupt object.
-    /// Rights: src_obj must have resource kind ZX_RSRC_KIND_IRQ.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_interrupt_create(zx_handle_t src_obj,
+    ///                                 uint32_t src_num,
+    ///                                 uint32_t options,
+    ///                                 zx_handle_t* out_handle);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_interrupt_create()` creates an interrupt object that represents a physical
+    /// or virtual interrupt.
+    ///
+    /// If *options* is **ZX_INTERRUPT_VIRTUAL**, *src_obj* and *src_num* are ignored and
+    /// a virtual interrupt is returned.
+    ///
+    /// Otherwise *src_obj* must be a suitable resource for creating platform interrupts
+    /// or a PCI object, and *src_num* is the associated interrupt number.  This restricts
+    /// the creation of interrupts to the internals of the DDK (driver development kit).
+    /// Physical interrupts are obtained by drivers through various DDK APIs.
+    ///
+    /// Physical interrupts honor the options **ZX_INTERRUPT_EDGE_LOW**, **ZX_INTERRUPT_EDGE_HIGH**,
+    /// **ZX_INTERRUPT_LEVEL_LOW**, **ZX_INTERRUPT_LEVEL_HIGH**, and **ZX_INTERRUPT_REMAP_IRQ**.
+    ///
+    /// The handles will have **ZX_RIGHT_INSPECT**, **ZX_RIGHT_DUPLICATE**, **ZX_RIGHT_TRANSFER**
+    /// (allowing them to be sent to another process via [`zx_channel_write()`]), **ZX_RIGHT_READ**,
+    /// **ZX_RIGHT_WRITE** (required for [`zx_interrupt_ack()`]), **ZX_RIGHT_WAIT** (required for
+    /// [`zx_interrupt_wait()`], and **ZX_RIGHT_SIGNAL** (required for [`zx_interrupt_trigger()`]).
+    ///
+    /// Interrupts are said to be "triggered" when the underlying physical interrupt occurs
+    /// or when [`zx_interrupt_trigger()`] is called on a virtual interrupt.  A triggered interrupt,
+    /// when bound to a port with [`zx_interrupt_bind()`], causes a packet to be delivered to the port.
+    ///
+    /// If not bound to a port, an interrupt object may be waited on with [`zx_interrupt_wait()`].
+    ///
+    /// Interrupts cannot be waited on with the `zx_object_wait_` family of calls.
+    ///
+    /// ## Rights
+    ///
+    /// *src_obj* must have resource kind **ZX_RSRC_KIND_IRQ**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_interrupt_create()` returns **ZX_OK** on success. In the event
+    /// of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE** the *src_obj* handle is invalid (if this is not a virtual interrupt)
+    ///
+    /// **ZX_ERR_WRONG_TYPE** the *src_obj* handle is not of an appropriate type to create an interrupt.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED** the *src_obj* handle does not allow this operation.
+    ///
+    /// **ZX_ERR_INVALID_ARGS** *options* contains invalid flags or the *out_handle*
+    /// parameter is an invalid pointer.
+    ///
+    /// **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+    /// There is no good way for userspace to handle this (unlikely) error.
+    /// In a future build this error will no longer occur.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_handle_close()`]
+    ///  - [`zx_interrupt_ack()`]
+    ///  - [`zx_interrupt_bind()`]
+    ///  - [`zx_interrupt_destroy()`]
+    ///  - [`zx_interrupt_wait()`]
+    ///  - [`zx_port_wait()`]
+    ///
+    /// [`zx_channel_write()`]: channel_write.md
+    /// [`zx_handle_close()`]: handle_close.md
+    /// [`zx_interrupt_ack()`]: interrupt_ack.md
+    /// [`zx_interrupt_bind()`]: interrupt_bind.md
+    /// [`zx_interrupt_destroy()`]: interrupt_destroy.md
+    /// [`zx_interrupt_trigger()`]: interrupt_trigger.md
+    /// [`zx_interrupt_wait()`]: interrupt_wait.md
+    /// [`zx_port_wait()`]: port_wait.md
     interrupt_create(resource struct {
         src_obj handle:RESOURCE;
         src_num uint32;
@@ -16,9 +99,101 @@ protocol interrupt {
         out_handle handle:INTERRUPT;
     });
 
+    /// ## Summary
+    ///
     /// Bind an interrupt object to a port.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_READ.
-    /// Rights: port_handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_interrupt_bind(zx_handle_t handle,
+    ///                               zx_handle_t port_handle,
+    ///                               uint64_t key,
+    ///                               uint32_t options);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_interrupt_bind()` binds or unbinds an interrupt object to a port.
+    ///
+    /// An interrupt object may only be bound to a single port and may only be bound once.
+    /// The interrupt can only bind to a port created with **ZX_PORT_BIND_TO_INTERRUPT**
+    /// option.
+    ///
+    /// When a bound interrupt object is triggered, a **ZX_PKT_TYPE_INTERRUPT** packet will
+    /// be delivered to the port it is bound to, with the timestamp (relative to **ZX_CLOCK_MONOTONIC**)
+    /// of when the interrupt was triggered in the `zx_packet_interrupt_t`.  The *key* used
+    /// when binding the interrupt will be present in the `key` field of the `zx_port_packet_t`.
+    ///
+    /// If the interrupt being bound is in a triggered state, then a
+    /// **ZX_PKT_TYPE_INTERRUPT** packet will be sent to the port the interrupt is being bound to,
+    /// with the timestamp of when the interrupt was triggered. This packet will need
+    /// to be processed normally.
+    ///
+    /// To bind to a port pass **ZX_INTERRUPT_BIND** in *options*.
+    ///
+    /// To unbind a previously bound port pass **ZX_INTERRUPT_UNBIND** in *options*. For unbind the
+    /// *port_handle* is required but the *key* is ignored. Unbinding the port removes previously
+    /// queued packets to the port.
+    ///
+    /// Before another packet may be delivered, the bound interrupt must be re-armed using the
+    /// [`zx_interrupt_ack()`] syscall.  This is (in almost all cases) best done after the interrupt
+    /// packet has been fully processed.  Especially in the case of multiple threads reading
+    /// packets from a port, if the processing thread re-arms the interrupt and it has triggered,
+    /// a packet will immediately be delivered to a waiting thread.
+    ///
+    /// Interrupt packets are delivered via a dedicated queue on ports and are higher priority
+    /// than non-interrupt packets.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_INTERRUPT** and have **ZX_RIGHT_READ**.
+    ///
+    /// *port_handle* must be of type **ZX_OBJ_TYPE_PORT** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_interrupt_bind()` returns **ZX_OK** on success. In the event
+    /// of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *handle* or *port_handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE** *handle* is not an interrupt object or *port_handle* is not a port object.
+    ///
+    /// **ZX_ERR_CANCELED**  [`zx_interrupt_destroy()`] was called on *handle*.
+    ///
+    /// **ZX_ERR_BAD_STATE**  A thread is waiting on the interrupt using [`zx_interrupt_wait()`]
+    ///
+    /// **ZX_ERR_ACCESS_DENIED** the *handle* handle lacks **ZX_RIGHT_READ** or the *port_handle* handle
+    /// lacks **ZX_RIGHT_WRITE**
+    ///
+    /// **ZX_ERR_ALREADY_BOUND** this interrupt object is already bound.
+    ///
+    /// **ZX_ERR_INVALID_ARGS** *options* is not **ZX_INTERRUPT_BIND** or **ZX_INTERRUPT_UNBIND**.
+    ///
+    /// **ZX_ERR_NOT_FOUND** the *port* does not match the bound port.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_handle_close()`]
+    ///  - [`zx_interrupt_ack()`]
+    ///  - [`zx_interrupt_create()`]
+    ///  - [`zx_interrupt_destroy()`]
+    ///  - [`zx_interrupt_trigger()`]
+    ///  - [`zx_interrupt_wait()`]
+    ///  - [`zx_port_wait()`]
+    ///
+    /// [`zx_handle_close()`]: handle_close.md
+    /// [`zx_interrupt_ack()`]: interrupt_ack.md
+    /// [`zx_interrupt_create()`]: interrupt_create.md
+    /// [`zx_interrupt_destroy()`]: interrupt_destroy.md
+    /// [`zx_interrupt_trigger()`]: interrupt_trigger.md
+    /// [`zx_interrupt_wait()`]: interrupt_wait.md
+    /// [`zx_port_wait()`]: port_wait.md
     interrupt_bind(resource struct {
         handle handle:INTERRUPT;
         port_handle handle:PORT;
@@ -28,8 +203,71 @@ protocol interrupt {
         status status;
     });
 
+    /// ## Summary
+    ///
     /// Wait for an interrupt.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_WAIT.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_interrupt_wait(zx_handle_t handle, zx_time_t* out_timestamp);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_interrupt_wait()` is a blocking syscall that causes the caller to
+    /// wait until an interrupt is triggered.  It can only be used on interrupt
+    /// objects that have not been bound to a port with [`zx_interrupt_bind()`]
+    ///
+    /// It also, before the waiting begins, will acknowledge the interrupt object,
+    /// as if [`zx_interrupt_ack()`] were called on it.
+    ///
+    /// The wait may be aborted with [`zx_interrupt_destroy()`] or by closing the handle.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_INTERRUPT** and have **ZX_RIGHT_WAIT**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_interrupt_wait()` returns **ZX_OK** on success, and *out_timestamp*, if
+    /// non-NULL, returns the timestamp of when the interrupt was triggered (relative
+    /// to **ZX_CLOCK_MONOTONIC**)
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *handle* is an invalid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE** *handle* is not a handle to an interrupt object.
+    ///
+    /// **ZX_ERR_BAD_STATE** the interrupt object is bound to a port.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED** *handle* lacks **ZX_RIGHT_WAIT**.
+    ///
+    /// **ZX_ERR_CANCELED**  *handle* was closed while waiting or [`zx_interrupt_destroy()`] was called
+    /// on it.
+    ///
+    /// **ZX_ERR_INVALID_ARGS** the *out_timestamp* parameter is an invalid pointer.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_handle_close()`]
+    ///  - [`zx_interrupt_ack()`]
+    ///  - [`zx_interrupt_bind()`]
+    ///  - [`zx_interrupt_create()`]
+    ///  - [`zx_interrupt_destroy()`]
+    ///  - [`zx_interrupt_trigger()`]
+    ///  - [`zx_port_wait()`]
+    ///
+    /// [`zx_handle_close()`]: handle_close.md
+    /// [`zx_interrupt_ack()`]: interrupt_ack.md
+    /// [`zx_interrupt_bind()`]: interrupt_bind.md
+    /// [`zx_interrupt_create()`]: interrupt_create.md
+    /// [`zx_interrupt_destroy()`]: interrupt_destroy.md
+    /// [`zx_interrupt_trigger()`]: interrupt_trigger.md
+    /// [`zx_port_wait()`]: port_wait.md
     @blocking
     interrupt_wait(resource struct {
         handle handle:INTERRUPT;
@@ -39,23 +277,212 @@ protocol interrupt {
     });
 
     // TODO(fxbug.dev/32803): No DESTROY rights here.
+    /// ## Summary
+    ///
     /// Destroys an interrupt object.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_interrupt_destroy(zx_handle_t handle);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_interrupt_destroy()` "destroys" an interrupt object, putting it in a state
+    /// where any [`zx_interrupt_wait()`] operations on it will return **ZX_ERR_CANCELED**,
+    /// and it is unbound from any ports it was bound to.
+    ///
+    /// This provides a clean shut down mechanism.  Closing the last handle to the
+    /// interrupt object results in similar cancellation but could result in use-after-close
+    /// of the handle.
+    ///
+    /// If the interrupt object is bound to a port when cancellation happens, if it
+    /// has not yet triggered, or it has triggered but the packet has not yet been
+    /// received by a caller of [`zx_port_wait()`], success is returned and any packets
+    /// in flight are removed.  Otherwise, **ZX_ERR_NOT_FOUND** is returned, indicating
+    /// that the packet has been read but the interrupt has not been re-armed by calling
+    /// [`zx_interrupt_ack()`].
+    ///
+    /// ## Rights
+    ///
+    /// TODO(fxbug.dev/32253)
+    ///
+    /// ## Return value
+    ///
+    /// `zx_interrupt_destroy()` returns **ZX_OK** on success. In the event
+    /// of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *handle* is an invalid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE** *handle* is not an interrupt object.
+    ///
+    /// **ZX_ERR_NOT_FOUND**  *handle* was bound (and now no longer is) but was not
+    /// being waited for.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED** *handle* lacks **ZX_RIGHT_WRITE**.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_handle_close()`]
+    ///  - [`zx_interrupt_ack()`]
+    ///  - [`zx_interrupt_bind()`]
+    ///  - [`zx_interrupt_create()`]
+    ///  - [`zx_interrupt_trigger()`]
+    ///  - [`zx_interrupt_wait()`]
+    ///  - [`zx_port_wait()`]
+    ///
+    /// [`zx_handle_close()`]: handle_close.md
+    /// [`zx_interrupt_ack()`]: interrupt_ack.md
+    /// [`zx_interrupt_bind()`]: interrupt_bind.md
+    /// [`zx_interrupt_create()`]: interrupt_create.md
+    /// [`zx_interrupt_trigger()`]: interrupt_trigger.md
+    /// [`zx_interrupt_wait()`]: interrupt_wait.md
+    /// [`zx_port_wait()`]: port_wait.md
     interrupt_destroy(resource struct {
         handle handle:INTERRUPT;
     }) -> (struct {
         status status;
     });
 
+    /// ## Summary
+    ///
     /// Acknowledge an interrupt and re-arm it.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_interrupt_ack(zx_handle_t handle);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_interrupt_ack()` acknowledges an interrupt object, causing it to be eligible
+    /// to trigger again (and delivering a packet to the port it is bound to).
+    ///
+    /// If the interrupt object is a physical interrupt, if it is a level interrupt and
+    /// still asserted, or is an edge interrupt that has been asserted since it last
+    /// triggered, the interrupt will trigger immediately, delivering a packet to the
+    /// port it is bound to.
+    ///
+    /// Virtual interrupts behave as edge interrupts.
+    ///
+    /// This syscall only operates on interrupts bound to a port.  Interrupts
+    /// being waited upon with [`zx_interrupt_wait()`] do not need to be re-armed with this
+    /// call -- it happens automatically when [`zx_interrupt_wait()`] is called.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_INTERRUPT** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_interrupt_ack()` returns **ZX_OK** on success. In the event
+    /// of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *handle* is an invalid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE** *handle* is not an interrupt object.
+    ///
+    /// **ZX_ERR_BAD_STATE** *handle* is not bound to a port.
+    ///
+    /// **ZX_ERR_CANCELED**  [`zx_interrupt_destroy()`] was called on *handle*.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED** *handle* lacks **ZX_RIGHT_WRITE**.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_handle_close()`]
+    ///  - [`zx_interrupt_bind()`]
+    ///  - [`zx_interrupt_create()`]
+    ///  - [`zx_interrupt_destroy()`]
+    ///  - [`zx_interrupt_trigger()`]
+    ///  - [`zx_interrupt_wait()`]
+    ///  - [`zx_port_wait()`]
+    ///
+    /// [`zx_handle_close()`]: handle_close.md
+    /// [`zx_interrupt_bind()`]: interrupt_bind.md
+    /// [`zx_interrupt_create()`]: interrupt_create.md
+    /// [`zx_interrupt_destroy()`]: interrupt_destroy.md
+    /// [`zx_interrupt_trigger()`]: interrupt_trigger.md
+    /// [`zx_interrupt_wait()`]: interrupt_wait.md
+    /// [`zx_port_wait()`]: port_wait.md
     interrupt_ack(resource struct {
         handle handle:INTERRUPT;
     }) -> (struct {
         status status;
     });
 
+    /// ## Summary
+    ///
     /// Triggers a virtual interrupt object.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_SIGNAL.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_interrupt_trigger(zx_handle_t handle,
+    ///                                  uint32_t options,
+    ///                                  zx_time_t timestamp);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_interrupt_trigger()` is used to trigger a virtual interrupt interrupt object,
+    /// causing an interrupt message packet to arrive on the bound port, if it is bound
+    /// to a port, or [`zx_interrupt_wait()`] to return if it is waiting on this interrupt.
+    ///
+    /// *options* must be zero.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_INTERRUPT** and have **ZX_RIGHT_SIGNAL**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_interrupt_trigger()` returns **ZX_OK** on success. In the event
+    /// of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *handle* is an invalid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE** *handle* is not an interrupt object.
+    ///
+    /// **ZX_ERR_BAD_STATE** *handle* is not a virtual interrupt.
+    ///
+    /// **ZX_ERR_CANCELED**  [`zx_interrupt_destroy()`] was called on *handle*.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED** *handle* lacks **ZX_RIGHT_SIGNAL**.
+    ///
+    /// **ZX_ERR_INVALID_ARGS** *options* is non-zero.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_handle_close()`]
+    ///  - [`zx_interrupt_ack()`]
+    ///  - [`zx_interrupt_bind()`]
+    ///  - [`zx_interrupt_create()`]
+    ///  - [`zx_interrupt_destroy()`]
+    ///  - [`zx_interrupt_wait()`]
+    ///  - [`zx_port_wait()`]
+    ///
+    /// [`zx_handle_close()`]: handle_close.md
+    /// [`zx_interrupt_ack()`]: interrupt_ack.md
+    /// [`zx_interrupt_bind()`]: interrupt_bind.md
+    /// [`zx_interrupt_create()`]: interrupt_create.md
+    /// [`zx_interrupt_destroy()`]: interrupt_destroy.md
+    /// [`zx_interrupt_wait()`]: interrupt_wait.md
+    /// [`zx_port_wait()`]: port_wait.md
     interrupt_trigger(resource struct {
         handle handle:INTERRUPT;
         options uint32;
@@ -64,9 +491,69 @@ protocol interrupt {
         status status;
     });
 
+    /// ## Summary
+    ///
     /// Bind an interrupt object to a VCPU.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_INTERRUPT and have ZX_RIGHT_READ.
-    /// Rights: vcpu must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_interrupt_bind_vcpu(zx_handle_t handle,
+    ///                                    zx_handle_t vcpu,
+    ///                                    uint32_t options);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_interrupt_bind_vcpu()` binds an interrupt object to a VCPU. When the
+    /// interrupt object is triggered, the interrupt is redirected to the VCPU, in order
+    /// to be processed by a guest with no host intervention.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_INTERRUPT** and have **ZX_RIGHT_READ**.
+    ///
+    /// *vcpu* must be of type **ZX_OBJ_TYPE_VCPU** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_interrupt_bind_vcpu()` returns **ZX_OK** on success. On failure, an error value
+    /// is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *handle* or *vcpu* are not valid handles.
+    ///
+    /// **ZX_ERR_WRONG_TYPE** *handle* is not an interrupt object or *vcpu* is not a
+    /// VCPU.
+    ///
+    /// **ZX_ERR_CANCELED** [`zx_interrupt_destroy()`] was called on *handle*.
+    ///
+    /// **ZX_ERR_BAD_STATE**  a thread is waiting on the interrupt using
+    /// [`zx_interrupt_wait()`].
+    ///
+    /// **ZX_ERR_ACCESS_DENIED** *handle* lacks **ZX_RIGHT_READ** or *vcpu* lacks
+    /// **ZX_RIGHT_WRITE**.
+    ///
+    /// **ZX_ERR_ALREADY_BOUND** *handle* is already bound to another vcpu or to a
+    /// port.
+    ///
+    /// **ZX_ERR_INVALID_ARGS** *vcpu* is bound to a different guest than previously
+    /// bound VCPUs, or *options* is non-zero.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_guest_create()`]
+    ///  - [`zx_interrupt_create()`]
+    ///  - [`zx_vcpu_create()`]
+    ///
+    /// [`zx_guest_create()`]: guest_create.md
+    /// [`zx_interrupt_create()`]: interrupt_create.md
+    /// [`zx_interrupt_destroy()`]: interrupt_destroy.md
+    /// [`zx_interrupt_wait()`]: interrupt_wait.md
+    /// [`zx_vcpu_create()`]: vcpu_create.md
     interrupt_bind_vcpu(resource struct {
         handle handle:INTERRUPT;
         vcpu handle:VCPU;

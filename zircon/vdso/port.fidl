@@ -126,8 +126,70 @@ type PortPacket = struct {
 
 @transport("Syscall")
 protocol port {
+    /// ## Summary
+    ///
     /// Create an IO port.
-    /// Rights: Caller job policy must allow ZX_POL_NEW_PORT.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_port_create(uint32_t options, zx_handle_t* out);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_port_create()` creates a port: a waitable object that can be used to read
+    /// packets queued by kernel or by user-mode.
+    ///
+    /// If you need this port to be bound to an interrupt, pass **ZX_PORT_BIND_TO_INTERRUPT** to *options*,
+    /// otherwise it should be **0**.
+    ///
+    /// In the case where a port is bound to an interrupt, the interrupt packets are delivered via a
+    /// dedicated queue on ports and are higher priority than other non-interrupt packets.
+    ///
+    /// The returned handle will have:
+    ///
+    ///   * `ZX_RIGHT_TRANSFER`: allowing them to be sent to another process through [`zx_channel_write()`].
+    ///   * `ZX_RIGHT_WRITE`: allowing packets to be *queued*.
+    ///   * `ZX_RIGHT_READ`: allowing packets to be *read*.
+    ///   * `ZX_RIGHT_DUPLICATE`: allowing them to be *duplicated*.
+    ///
+    /// ## Rights
+    ///
+    /// Caller job policy must allow **ZX_POL_NEW_PORT**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_port_create()` returns **ZX_OK** and a valid IO port handle via *out* on
+    /// success. In the event of failure, an error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_INVALID_ARGS** *options* has an invalid value, or *out* is an
+    /// invalid pointer or NULL.
+    ///
+    /// **ZX_ERR_NO_MEMORY** Failure due to lack of memory.
+    /// There is no good way for userspace to handle this (unlikely) error.
+    /// In a future builds this error will no longer occur.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_handle_close()`]
+    ///  - [`zx_handle_duplicate()`]
+    ///  - [`zx_handle_replace()`]
+    ///  - [`zx_object_wait_async()`]
+    ///  - [`zx_port_queue()`]
+    ///  - [`zx_port_wait()`]
+    ///
+    /// [`zx_channel_write()`]: channel_write.md
+    /// [`zx_handle_close()`]: handle_close.md
+    /// [`zx_handle_duplicate()`]: handle_duplicate.md
+    /// [`zx_handle_replace()`]: handle_replace.md
+    /// [`zx_object_wait_async()`]: object_wait_async.md
+    /// [`zx_port_queue()`]: port_queue.md
+    /// [`zx_port_wait()`]: port_wait.md
     port_create(struct {
         options uint32;
     }) -> (resource struct {
@@ -135,8 +197,78 @@ protocol port {
         out handle:PORT;
     });
 
+    /// ## Summary
+    ///
     /// Queue a packet to a port.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    /// #include <zircon/syscalls/port.h>
+    ///
+    /// zx_status_t zx_port_queue(zx_handle_t handle, const zx_port_packet_t* packet);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_port_queue()` queues a user *packet* to the port specified by *handle*.
+    ///
+    /// User packets are drained by [`zx_port_wait()`]. Failure to drain packets in a
+    /// timely fashion can cause excessive kernel memory to be used, which might generate
+    /// an exception. See [ipc limits](/docs/concepts/kernel/ipc_limits.md) for details.
+    ///
+    /// ```
+    /// typedef struct zx_port_packet {
+    ///     uint64_t key;
+    ///     uint32_t type;
+    ///     zx_status_t status;
+    ///     union {
+    ///         zx_packet_user_t user;
+    ///         zx_packet_signal_t signal;
+    ///     };
+    /// } zx_port_packet_t;
+    ///
+    /// ```
+    ///
+    /// In *packet* *type* should be **ZX_PKT_TYPE_USER** and only the **user**
+    /// union element is considered valid:
+    ///
+    /// ```
+    /// typedef union zx_packet_user {
+    ///     uint64_t u64[4];
+    ///     uint32_t u32[8];
+    ///     uint16_t u16[16];
+    ///     uint8_t   c8[32];
+    /// } zx_packet_user_t;
+    ///
+    /// ```
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_PORT** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_port_queue()` returns **ZX_OK** on successful queue of a packet.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *handle* isn't a valid handle
+    ///
+    /// **ZX_ERR_INVALID_ARGS** *packet* is an invalid pointer.
+    ///
+    /// **ZX_ERR_WRONG_TYPE** *handle* is not a port handle.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED** *handle* does not have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_port_create()`]
+    ///  - [`zx_port_wait()`]
+    ///
+    /// [`zx_port_create()`]: port_create.md
+    /// [`zx_port_wait()`]: port_wait.md
     port_queue(resource struct {
         handle handle:PORT;
         packet PortPacket;
@@ -144,8 +276,127 @@ protocol port {
         status status;
     });
 
+    /// ## Summary
+    ///
     /// Wait for a packet arrival in a port.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_READ.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    /// #include <zircon/syscalls/port.h>
+    ///
+    /// zx_status_t zx_port_wait(zx_handle_t handle,
+    ///                          zx_time_t deadline,
+    ///                          zx_port_packet_t* packet);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_port_wait()` is a blocking syscall, which causes the caller to wait until at least
+    /// one packet is available.
+    ///
+    /// Upon return, if successful *packet* will contain the earliest (in FIFO order)
+    /// available packet data.
+    ///
+    /// The *deadline* indicates when to stop waiting for a packet (with respect to
+    /// **ZX_CLOCK_MONOTONIC**) and will be automatically adjusted according to the job's
+    /// [timer slack] policy. If no packet has arrived by the deadline,
+    /// **ZX_ERR_TIMED_OUT** is returned.  The value **ZX_TIME_INFINITE** will result in
+    /// waiting forever.  A value in the past will result in an immediate timeout,
+    /// unless a packet is already available for reading.
+    ///
+    /// Unlike [`zx_object_wait_one()`] and [`zx_object_wait_many()`] only one
+    /// waiting thread is released (per available packet), which makes ports
+    /// amenable to be serviced by thread pools.
+    ///
+    /// There are two classes of packets: packets queued by userspace with [`zx_port_queue()`]
+    /// and packets queued by the kernel when objects a port is registered with change state. In both
+    /// cases the packet is always of type `zx_port_packet_t`:
+    ///
+    /// ```
+    /// struct zx_port_packet_t {
+    ///     uint64_t key;
+    ///     uint32_t type;
+    ///     zx_status_t status;
+    ///     union {
+    ///         zx_packet_user_t user;
+    ///         zx_packet_signal_t signal;
+    ///         zx_packet_guest_bell_t guest_bell;
+    ///         zx_packet_guest_mem_t guest_mem;
+    ///         zx_packet_guest_io_t guest_io;
+    ///         zx_packet_guest_vcpu_t guest_vcpu;
+    ///         zx_packet_interrupt_t interrupt;
+    ///         zx_packet_page_request_t page_request;
+    ///     };
+    /// };
+    /// ```
+    ///
+    /// In the case of packets generated via [`zx_port_queue()`], *type* will be set to
+    /// **ZX_PKT_TYPE_USER**, and the caller of [`zx_port_queue()`] controls all other values in the
+    /// `zx_port_packet_t` structure. Access to the packet data is provided by the *user* member, with
+    /// type `zx_packet_user_t`:
+    ///
+    /// ```
+    /// typedef union zx_packet_user {
+    ///     uint64_t u64[4];
+    ///     uint32_t u32[8];
+    ///     uint16_t u16[16];
+    ///     uint8_t   c8[32];
+    /// } zx_packet_user_t;
+    /// ```
+    ///
+    /// For packets generated by the kernel, type can be one of the following values:
+    ///
+    /// **ZX_PKT_TYPE_SIGNAL_ONE** - generated by objects registered via
+    /// [`zx_object_wait_async()`].
+    ///
+    /// **ZX_PKT_TYPE_GUEST_BELL**, **ZX_PKT_TYPE_GUEST_MEM**, **ZX_PKT_TYPE_GUEST_IO**,
+    /// or **ZX_PKT_TYPE_GUEST_VCPU** - generated by objects registered via [`zx_guest_set_trap()`].
+    ///
+    /// **ZX_PKT_TYPE_INTERRUPT** - generated by objects registered via [`zx_interrupt_bind()`].
+    ///
+    /// **ZX_PKT_TYPE_PAGE_REQUEST** - generated by objects registered via [`zx_pager_create_vmo()`].
+    ///
+    /// All kernel queued packets will have *status* set to **ZX_OK** and *key* set to the
+    /// value provided to the registration syscall. For details on how to interpret the union, see
+    /// the corresponding registration syscall.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_PORT** and have **ZX_RIGHT_READ**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_port_wait()` returns **ZX_OK** on successful packet dequeuing.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_INVALID_ARGS** *packet* isn't a valid pointer
+    ///
+    /// **ZX_ERR_ACCESS_DENIED** *handle* does not have **ZX_RIGHT_READ** and may
+    /// not be waited upon.
+    ///
+    /// **ZX_ERR_TIMED_OUT** *deadline* passed and no packet was available.
+    ///
+    /// ## See also
+    ///
+    ///  - [timer slack]
+    ///  - [`zx_object_wait_async()`]
+    ///  - [`zx_port_create()`]
+    ///  - [`zx_port_queue()`]
+    ///
+    /// [timer slack]: /docs/concepts/kernel/timer_slack.md
+    /// [`zx_guest_set_trap()`]: guest_set_trap.md
+    /// [`zx_interrupt_bind()`]: interrupt_bind.md
+    /// [`zx_object_wait_async()`]: object_wait_async.md
+    /// [`zx_object_wait_many()`]: object_wait_many.md
+    /// [`zx_object_wait_one()`]: object_wait_one.md
+    /// [`zx_pager_create_vmo()`]: pager_create_vmo.md
+    /// [`zx_port_create()`]: port_create.md
+    /// [`zx_port_queue()`]: port_queue.md
     @blocking
     port_wait(resource struct {
         handle handle:PORT;
@@ -155,8 +406,58 @@ protocol port {
         packet optional_PortPacket;
     });
 
+    /// ## Summary
+    ///
     /// Cancels async port notifications on an object.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_PORT and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_port_cancel(zx_handle_t handle,
+    ///                            zx_handle_t source,
+    ///                            uint64_t key);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_port_cancel()` is a non-blocking syscall that cancels
+    /// pending [`zx_object_wait_async()`] calls done with *source* and *key*.
+    ///
+    /// When this call succeeds no new packets from the object pointed by
+    /// *source* with *key* will be delivered to *handle*, and pending queued
+    /// packets that match *source* and *key* are removed from the port.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_PORT** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_port_cancel()` returns **ZX_OK** if cancellation succeeded and
+    /// either queued packets were removed or pending [`zx_object_wait_async()`] were
+    /// canceled.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *source* or *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a port handle.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *source* or *handle* does not have **ZX_RIGHT_WRITE**.
+    ///
+    /// **ZX_ERR_NOT_SUPPORTED**  *source* is a handle that cannot be waited on.
+    ///
+    /// **ZX_ERR_NOT_FOUND** if either no pending packets or pending
+    /// [`zx_object_wait_async()`] calls with *source* and *key* were found.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_port_wait()`]
+    ///
+    /// [`zx_object_wait_async()`]: object_wait_async.md
+    /// [`zx_port_wait()`]: port_wait.md
     port_cancel(resource struct {
         handle handle:PORT;
         source handle;

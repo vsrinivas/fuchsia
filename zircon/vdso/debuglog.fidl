@@ -6,9 +6,57 @@ library zx;
 @transport("Syscall")
 protocol debuglog {
     // TODO(fxbug.dev/32803): handle == ZX_HANDLE_INVALID accepted.
+    /// ## Summary
+    ///
     /// Create an object allowing access to the kernel debuglog.
     ///
-    /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_debuglog_create(zx_handle_t resource,
+    ///                                uint32_t options,
+    ///                                zx_handle_t* out);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_debuglog_create()` creates an object allowing access to the kernel
+    /// debuglog using the `zx_debuglog_read()` and `zx_debuglog_write()` syscalls.
+    ///
+    /// If *options* is set to `0`, the returned handle will have the
+    /// **ZX_RIGHT_WRITE** right, giving write-only access to the kernel debuglog. If
+    /// *options* is set to **ZX_LOG_FLAG_READABLE**, the returned handle will
+    /// additionally have **ZX_RIGHT_READ**, giving read/write access to the kernel
+    /// debuglog.
+    ///
+    /// ## Rights
+    ///
+    /// *resource* must have resource kind **ZX_RSRC_KIND_ROOT**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_debuglog_create()` returns **ZX_OK** on success, returning a handle to the
+    /// created object in *out*.
+    ///
+    /// In the event of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *options* contained a value not understood by the kernel
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *resource* was not of the kind **ZX_RSRC_KIND_ROOT**.
+    ///
+    /// **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_debuglog_read()`]
+    ///  - [`zx_debuglog_write()`]
+    ///
+    /// [`zx_debuglog_read()`]: debuglog_read.md
+    /// [`zx_debuglog_write()`]: debuglog_write.md
     debuglog_create(resource struct {
         resource handle:RESOURCE;
         options uint32;
@@ -17,9 +65,66 @@ protocol debuglog {
         out handle:LOG;
     });
 
+    /// ## Summary
+    ///
     /// Write a message to the kernel debuglog.
     ///
-    /// Rights: handle must be of type ZX_OBJ_TYPE_LOG and have ZX_RIGHT_WRITE.
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_debuglog_write(zx_handle_t handle,
+    ///                               uint32_t options,
+    ///                               const void* buffer,
+    ///                               size_t buffer_size);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_debuglog_write()` attempts to write *buffer* of size *buffer_size* bytes
+    /// to the kernel debuglog. The log entry is written at severity `ZX_LOG_INFO`.
+    ///
+    /// *buffer* does not strictly require any particular format, but most userspace
+    /// tooling assumes the contents will be a valid UTF-8 string without any
+    /// NUL-termination. *buffer* will be truncated to some size less than
+    /// ZX_LOG_RECORD_MAX so that it may fit in the `data` field of `zx_log_record_t`.
+    ///
+    /// <!-- TODO(fxbug.dev/72345): Consider documenting ZX_LOG_LOCAL -->
+    ///
+    /// *options* must be set to `0`.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_LOG** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_debuglog_read()` returns **ZX_OK** on success. In the event of failure,
+    /// a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_WRITE**.
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  An invalid value to *options* was given, or *buffer*
+    /// was an invalid pointer.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a debuglog handle.
+    ///
+    /// ## See also
+    ///
+    ///  - [`fuchsia.boot.WriteOnlyLog`](https://fuchsia.dev/reference/fidl/fuchsia.boot#WriteOnlyLog)
+    ///
+    ///  - [`zx_debug_write()`]
+    ///  - [`zx_debuglog_create()`]
+    ///  - [`zx_debuglog_read()`]
+    ///
+    /// [`zx_debug_write()`]: debug_write.md
+    /// [`zx_debuglog_create()`]: debuglog_create.md
+    /// [`zx_debuglog_read()`]: debuglog_read.md
     debuglog_write(resource struct {
         handle handle:LOG;
         options uint32;
@@ -28,9 +133,107 @@ protocol debuglog {
         status status;
     });
 
+    /// ## Summary
+    ///
     /// Read a single log record from the kernel debuglog.
     ///
-    /// Rights: handle must be of type ZX_OBJ_TYPE_LOG and have ZX_RIGHT_READ.
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_debuglog_read(zx_handle_t handle,
+    ///                              uint32_t options,
+    ///                              void* buffer,
+    ///                              size_t buffer_size);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_debuglog_read()` attempts to read a single record from the kernel debug
+    /// log into the given *buffer* of size *buffer_size* bytes.
+    ///
+    /// *options* must be set to `0`.
+    ///
+    /// On success, a single record of type **zx_log_record_t** is written into
+    /// *buffer*. The length of the record in bytes is given in the syscall's
+    /// return value.
+    ///
+    /// The returned record will have the following format:
+    ///
+    /// ```c
+    /// typedef struct zx_log_record {
+    ///   uint64_t sequence;
+    ///   uint32_t unused;
+    ///   uint16_t datalen;
+    ///   uint8_t severity;
+    ///   uint8_t flags;
+    ///   zx_time_t timestamp;
+    ///   uint64_t pid;
+    ///   uint64_t tid;
+    ///   char data[];
+    /// } zx_log_record_t;
+    /// ```
+    ///
+    /// The fields are defined as follows:
+    ///
+    /// | Field       | Description                                                    |
+    /// | ----------- | -------------------------------------------------------------- |
+    /// | *sequence*  | The sequence number of this record. Each record's sequence     :
+    /// :             : number is 1 greater than the preceding records's. The sequence :
+    /// :             : starts with 0. Gaps in the sequence indidate dropped log       :
+    /// :             : records.                                                       :
+    /// | *datalen*   | Number of bytes of data in the *data* field.                   |
+    /// | *severity*  | Severity of this log message. Standard severity levels are     |
+    /// :             : defined in the header `zircon/syscalls/log.h`.                 :
+    /// | *flags*     | Extra flags associated with this message. Flags are defined in |
+    /// :             : the header `zircon/syscalls/log.h`.                            :
+    /// | *timestamp* | Timestamp describing when this record was first written.       |
+    /// | *pid*       | Koid of the process that wrote this log record, or             |
+    /// :             : **ZX_KOID_INVALID** if the record was generated by the kernel. :
+    /// | *tid*       | Koid of the thread that wrote this log record, or              |
+    /// :             : **ZX_KOID_INVALID** if the record was generated by the kernel. :
+    /// | *data*      | The log message, consisting of *datalen* bytes. The log        |
+    /// :             : message may contain embedded NUL characters, and is not        :
+    /// :             : guaranteed to be NUL-terminated.                               :
+    ///
+    /// If *buffer_size* is smaller than the size of the log record, the first
+    /// *buffer_size* bytes of the record will be written to the buffer, and the rest
+    /// discarded. Callers should ensure that their input buffer is at least
+    /// **ZX_LOG_RECORD_MAX** bytes to avoid log records from being truncated.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_LOG** and have **ZX_RIGHT_READ**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_debuglog_read()` returns a non-negative value on success, indicating
+    /// the number of bytes written into *buffer*. On failure, a negative error value
+    /// is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_READ**.
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  An invalid value to *options* was given, or *buffer*
+    /// was an invalid pointer.
+    ///
+    /// **ZX_ERR_SHOULD_WAIT**  The debuglog contained no records to read.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a debuglog handle.
+    ///
+    /// ## See also
+    ///
+    ///  - [`fuchsia.boot.ReadOnlyLog`](https://fuchsia.dev/reference/fidl/fuchsia.boot#ReadOnlyLog)
+    ///
+    ///  - [`zx_debuglog_create()`]
+    ///  - [`zx_debuglog_write()`]
+    ///
+    /// [`zx_debuglog_create()`]: debuglog_create.md
+    /// [`zx_debuglog_write()`]: debuglog_write.md
     debuglog_read(resource struct {
         handle handle:LOG;
         options uint32;

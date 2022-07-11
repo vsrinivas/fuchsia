@@ -12,7 +12,36 @@ type clock = strict enum : uint32 {
 @transport("Syscall")
 @no_protocol_prefix
 protocol clockfuncs {
+    /// ## Summary
+    ///
     /// Acquire the current monotonic time.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_time_t zx_clock_get_monotonic(void);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_clock_get_monotonic()` returns the current time in the system
+    /// monotonic clock. This is the number of nanoseconds since the system was
+    /// powered on. It does not always reset on reboot and does not adjust during
+    /// sleep, and thus should not be used as a reliable source of uptime.
+    ///
+    /// ## Rights
+    ///
+    /// TODO(fxbug.dev/32253)
+    ///
+    /// ## Return value
+    ///
+    /// `zx_clock_get_monotonic()` returns the current monotonic time.
+    ///
+    /// ## Errors
+    ///
+    /// `zx_clock_get_monotonic()` cannot fail.
     @vdsocall
     clock_get_monotonic() -> (struct {
         time time;
@@ -30,8 +59,113 @@ protocol clockfuncs {
 
     // TODO: handle:CLOCK for all of these.
 
+    /// ## Summary
+    ///
     /// Create a new clock object.
-    /// Rights: None.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_clock_create(uint64_t options,
+    ///                             const void* args,
+    ///                             zx_handle_t* out);
+    /// ```
+    ///
+    /// ## Rights
+    ///
+    /// None.
+    ///
+    /// ## Description
+    ///
+    /// Creates a new zircon clock object. See [clocks](/docs/reference/kernel_objects/clock.md) for an
+    /// overview of clock objects.
+    ///
+    /// ### Options
+    ///
+    /// The following options are defined for clock objects:
+    ///
+    /// + **ZX_CLOCK_OPT_MONOTONIC** : When set, creates a clock object that is
+    ///   guaranteed to never run backwards. Monotonic clocks must always move forward.
+    /// + **ZX_CLOCK_OPT_CONTINUOUS** : When set, creates a clock that is guaranteed to
+    ///   never jump either forwards or backwards. Continuous clocks may only be
+    ///   maintained using frequency adjustments and are, by definition, also monotonic.
+    ///   Attempting to create a clock object with the **ZX_CLOCK_OPT_CONTINUOUS** option
+    ///   specified, but without the **ZX_CLOCK_OPT_MONOTONIC** option specified is an
+    ///   error, which will be signalled with **ZX_ERR_INVALID_ARGS**.
+    /// + **ZX_CLOCK_OPT_AUTO_START** : When set, creates a clock that is started
+    ///   automatically for the user. You don't need to call zx_clock_update() to start
+    ///   the clock running. Initially, the clock will be a clone of clock monotonic,
+    ///   meaning that the internal transformation from clock monotonic to the newly
+    ///   created synthetic clock is the identity function. The created clock does not
+    ///   have to be created with either the **ZX_CLOCK_OPT_MONOTONIC** or
+    ///   **ZX_CLOCK_OPT_CONTINUOUS** flags set, however. Once created, users may still
+    ///   update the clock within the limits defined by the monotonic and continuous
+    ///   properties specified at create time, the handle rights, and the backstop time
+    ///   of the clock.
+    ///
+    /// ### Arguments
+    ///
+    /// One additional creation-time argument may be specified when configuring the clock, the backstop
+    /// time. See [clocks](/docs/reference/kernel_objects/clock.md) for more details about backstop times.
+    ///
+    /// In order to configure a backstop time, a user must pass a `zx_clock_create_args_v1_t` structure to
+    /// the `zx_clock_create` call via the `args` parameter. Additionally, the `options` bits must have
+    /// `ZX_CLOCK_ARGS_VERSION(1)` set in them.
+    ///
+    /// For example, a user who wished to create a monotonic clock with a backstop time of 5500 might do
+    /// something like the following.
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    /// #include <zircon/syscalls/clock.h>
+    ///
+    /// zx_handle_t MakeAClock() {
+    ///   zx_clock_create_args_v1_t args;
+    ///   zx_handle_t the_clock;
+    ///   zx_status_t status;
+    ///
+    ///   args.backstop_time = 5500;
+    ///   status = zx_clock_create(ZX_CLOCK_ARGS_VERSION(1) | ZX_CLOCK_OPT_MONOTONIC, &args, &the_clock);
+    ///   if (status != ZX_OK) {
+    ///     // Log the error
+    ///     return ZX_HANDLE_INVALID;
+    ///   }
+    ///
+    ///   return the_clock;
+    /// }
+    /// ```
+    ///
+    /// Users do not have to supply an arguments structure. If an explicit backstop is not required, users
+    /// may omit the version bits from the options parameter and simply pass nullptr for args.
+    ///
+    /// ## Return value
+    ///
+    /// On success, returns **ZX_OK** along with a new clock object via the *out*
+    /// handle. Handles to newly created clock objects will have the **ZX_RIGHT_READ**
+    /// and **ZX_RIGHT_WRITE** rights assigned to them.
+    ///
+    /// ## Errors
+    ///
+    ///  - **ZX_ERR_INVALID_ARGS** : An invalid option flag was specified, a bad args
+    ///    structure version or pointer was passed, **ZX_CLOCK_OPT_CONTINUOUS** was
+    ///    specified without also specifying **ZX_CLOCK_OPT_MONOTONIC**, or the initial
+    ///    backstop time of an automatically started clock is after the current clock
+    ///    monotonic time.
+    ///  - **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+    ///
+    /// ## See also
+    ///
+    ///  - [clocks]
+    ///  - [`zx_clock_get_details()`]
+    ///  - [`zx_clock_read()`]
+    ///  - [`zx_clock_update()`]
+    ///
+    /// [clocks]: /docs/reference/kernel_objects/clock.md
+    /// [`zx_clock_get_details()`]: clock_get_details.md
+    /// [`zx_clock_read()`]: clock_read.md
+    /// [`zx_clock_update()`]: clock_update.md
     clock_create(struct {
         options uint64;
         args const_voidptr;
@@ -40,8 +174,48 @@ protocol clockfuncs {
         out handle;
     });
 
+    /// ## Summary
+    ///
     /// Perform a basic read of the clock.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_CLOCK and have ZX_RIGHT_READ.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_clock_read(zx_handle_t handle, zx_time_t* now);
+    /// ```
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_CLOCK** and have **ZX_RIGHT_READ**.
+    ///
+    /// ## Description
+    ///
+    /// Perform a basic read of the clock object and return its current time in the
+    /// *now* out parameter.
+    ///
+    /// ## Return value
+    ///
+    /// On success, returns **ZX_OK** along with the clock's current time in the *now* output parameter.
+    ///
+    /// ## Errors
+    ///
+    ///  - **ZX_ERR_BAD_HANDLE** : *handle* is either an invalid handle, or a handle to
+    ///    an object type that is not **ZX_OBJ_TYPE_CLOCK**.
+    ///  - **ZX_ERR_ACCESS_DENIED** : *handle* lacks the **ZX_RIGHT_READ** right.
+    ///
+    /// ## See also
+    ///
+    ///  - [clocks]
+    ///  - [`zx_clock_create()`]
+    ///  - [`zx_clock_get_details()`]
+    ///  - [`zx_clock_update()`]
+    ///
+    /// [clocks]: /docs/reference/kernel_objects/clock.md
+    /// [`zx_clock_create()`]: clock_create.md
+    /// [`zx_clock_get_details()`]: clock_get_details.md
+    /// [`zx_clock_update()`]: clock_update.md
     clock_read(resource struct {
         handle handle;
     }) -> (struct {
@@ -49,8 +223,75 @@ protocol clockfuncs {
         now time;
     });
 
+    /// ## Summary
+    ///
     /// Fetch all of the low level details of the clock's current status.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_CLOCK and have ZX_RIGHT_READ.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_clock_get_details(zx_handle_t handle,
+    ///                                  uint64_t options,
+    ///                                  void* details);
+    /// ```
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_CLOCK** and have **ZX_RIGHT_READ**.
+    ///
+    /// ## Description
+    ///
+    /// Fetches the fine grained details of the clock object. See
+    /// [clocks](/docs/reference/kernel_objects/clock.md) for the specifics of the details
+    /// reported. Currently, there is only one details structure defined for clocks,
+    /// `zx_clock_details_v1_t`. Users must specify the version of the structure using
+    /// the options parameter as well as providing at least
+    /// `sizeof(zx_clock_details_v1_t)` bytes of storage via the `details`. For
+    /// example:
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    /// #include <zircon/syscalls/clock.h>
+    ///
+    /// void GetSomeDetails(zx_handle_t the_clock) {
+    ///   zx_clock_details_v1_t details;
+    ///   zx_status_t status;
+    ///
+    ///   status = zx_clock_get_details(the_clock, ZX_CLOCK_ARGS_VERSION(1), &details);
+    ///   if (status == ZX_OK) {
+    ///     // Do great things with our details.
+    ///   }
+    /// }
+    /// ```
+    ///
+    /// ## Return value
+    ///
+    /// On success, returns **ZX_OK** along with clock details stored in the *details*
+    /// out parameter.
+    ///
+    /// ## Errors
+    ///
+    ///  - **ZX_ERR_BAD_HANDLE** : *handle* is either an invalid handle, or a handle to
+    ///    an object type that is not **ZX_OBJ_TYPE_CLOCK**.
+    ///  - **ZX_ERR_ACCESS_DENIED** : *handle* lacks the **ZX_RIGHT_READ** right.
+    ///  - **ZX_ERR_INVALID_ARGS** : The version of the details structure signaled by
+    ///    `options` is invalid, or the pointer of the structure passed via `details` is bad.
+    ///
+    /// ## See also
+    ///
+    ///  - [clock transformations]
+    ///  - [clocks]
+    ///  - [`zx_clock_create()`]
+    ///  - [`zx_clock_read()`]
+    ///  - [`zx_clock_update()`]
+    ///
+    /// [clock transformations]: /docs/concepts/kernel/clock_transformations.md
+    /// [clocks]: /docs/reference/kernel_objects/clock.md
+    /// [`zx_clock_create()`]: clock_create.md
+    /// [`zx_clock_read()`]: clock_read.md
+    /// [`zx_clock_update()`]: clock_update.md
     clock_get_details(resource struct {
         handle handle;
         options uint64;
@@ -59,8 +300,231 @@ protocol clockfuncs {
         details voidptr;
     });
 
+    /// ## Summary
+    ///
     /// Make adjustments to a clock object.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_CLOCK and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_clock_update(zx_handle_t handle,
+    ///                             uint64_t options,
+    ///                             const void* args);
+    /// ```
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_CLOCK** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Description
+    ///
+    /// Three different parameters may be dynamically controlled by a clock maintainer.
+    /// They are
+    ///
+    /// + The clock's current value.
+    /// + The clock's rate adjustment, expressed in PPM deviation from nominal.
+    /// + The clock's current estimated error bounds.
+    ///
+    /// When a clock maintainer wishes to change one or more of these parameters, they
+    /// may do so using the `zx_clock_update` syscall. Updating a clock's parameters is
+    /// an atomic operation from the perspective of all other users in the system.
+    ///
+    /// The first update operation performed by a clock maintainer must include a valid
+    /// value. This update is the update that starts the clock and defines its initial
+    /// value. Before this update operation has succeeded, the **ZX_CLOCK_STARTED**
+    /// signal will be de-asserted, and afterwards it will be asserted and remain so for
+    /// the lifetime of the clock.
+    ///
+    /// In order to update a clock, a user fills out the fields of a
+    /// `zx_clock_update_args_v2_t` structure that they wish to adjust, then passes the
+    /// structure to the update call, setting the bits in `options` which indicate both
+    /// the explicit version of the structure (version 2), and which of these fields are
+    /// valid and should be set. Defined `options` bits are
+    ///
+    /// + **ZX_CLOCK_UPDATE_OPTION_SYNTHETIC_VALUE_VALID**
+    /// + **ZX_CLOCK_UPDATE_OPTION_REFERENCE_VALUE_VALID**
+    /// + **ZX_CLOCK_UPDATE_OPTION_RATE_ADJUST_VALID**
+    /// + **ZX_CLOCK_UPDATE_OPTION_ERROR_BOUND_VALID**
+    ///
+    /// The version of the structure is passed using the `ZX_CLOCK_ARGS_VERSION(...)`
+    /// macro, specifically `ZX_CLOCK_ARGS_VERSION(2)` for the version 2 structure.
+    ///
+    /// For example
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    /// #include <zircon/syscalls/clock.h>
+    ///
+    /// void MaintainMyClock(zx_handle_t the_clock) {
+    ///   zx_clock_update_args_v2_t args;
+    ///   zx_status_t status;
+    ///
+    ///   // Set the clock's value to 1500. Note that this also starts the clock.
+    ///   args.synthetic_value = 1500;
+    ///   status = zx_clock_update(the_clock,
+    ///                            ZX_CLOCK_ARGS_VERSION(2) | ZX_CLOCK_UPDATE_OPTION_SYNTHETIC_VALUE_VALID,
+    ///                            &args);
+    ///   if (status != ZX_OK) {
+    ///     // Panic!
+    ///     return;
+    ///   }
+    ///
+    ///   // Make the clock run 23 PPM slower than nominal relative to clock monotonic.
+    ///   args.rate_adjust = -23;
+    ///   status = zx_clock_update(the_clock,
+    ///                            ZX_CLOCK_ARGS_VERSION(2) | ZX_CLOCK_UPDATE_OPTION_RATE_ADJUST_VALID,
+    ///                            &args);
+    ///   if (status != ZX_OK) {
+    ///     // Halt and catch fire
+    ///     return;
+    ///   }
+    ///
+    ///   // Set the clock to 100,000, make it run 50 PPM faster than nominal, and specify an error bound of
+    ///   // +/- 400mSec, all at the same time.
+    ///   const uint64_t options = ZX_CLOCK_ARGS_VERSION(2) |
+    ///                            ZX_CLOCK_UPDATE_OPTION_SYNTHETIC_VALUE_VALID |
+    ///                            ZX_CLOCK_UPDATE_OPTION_RATE_ADJUST_VALID |
+    ///                            ZX_CLOCK_UPDATE_OPTION_ERROR_BOUND_VALID;
+    ///   args.synthetic_value = 100000;
+    ///   args.rate_adjust = 50;
+    ///   args.error_bound = ZX_MSEC(400);
+    ///   status = zx_clock_update(the_clock, options, &args);
+    ///   if (status != ZX_OK) {
+    ///     // Burn down, fall over, and then sink into the swamp.
+    ///     return;
+    ///   }
+    /// }
+    /// ```
+    ///
+    /// ### Explicitly provided reference times. {#explicit-reference-time}
+    ///
+    /// With the addition of the V2 update structure, it is now possible (with some
+    /// limitations) to explicitly control the reference time used for a clock update
+    /// operation. Note that, upon success, the actual new reference <-> synthetic
+    /// transformation specified by the user's update arguments will replace the old
+    /// transformation during the call to `zx_clock_update`. Supplying an explicit
+    /// reference time does _not_ affect when the actual transformation is updated, it
+    /// will always take effect during the call to `zx_clock_update`.
+    ///
+    /// Diagrams provided in
+    /// [RFC-0077](/docs/contribute/governance/rfcs/0077_zx_clock_update_accuracy.md)
+    /// may help to understand the effects of the operations described below.
+    ///
+    /// #### Synthetic value updates with an explicitly provided reference time.
+    ///
+    /// When users update the synthetic value (`S`) of a clock with an explicitly
+    /// provided reference time (`R`), they are specifying a point (`[R, S]`) through
+    /// which the new transformation will pass. In other words, the new transformation
+    /// explicitly specifies that "when it is time R on the reference timeline, it will
+    /// be time S on the synthetic timeline".
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    /// #include <zircon/syscalls/clock.h>
+    ///
+    /// // Set the syntheic value of the clock to be "synth" at the explicitly provided
+    /// // reference time "ref". In other words, upon success, this update operation will
+    /// // cause the clock's transformation from reference to synthetic time to
+    /// // specifically pass through the point (ref, synth)
+    /// zx_status_t SetSynthAtRef(zx_handle_t the_clock, zx_time_t ref, zx_time_t synth) {
+    ///   zx_clock_update_args_v2_t args;
+    ///
+    ///   uint64_t options = ZX_CLOCK_ARGS_VERSION(2) |
+    ///                      ZX_CLOCK_UPDATE_OPTION_REFERENCE_VALUE_VALID |
+    ///                      ZX_CLOCK_UPDATE_OPTION_SYNTHETIC_VALUE_VALID;
+    ///
+    ///   // Note that these options are equivalent, they just use a shorthand to
+    ///   // specify that both values are valid.
+    ///   options = ZX_CLOCK_ARGS_VERSION(2) | ZX_CLOCK_UPDATE_OPTION_BOTH_VALUES_VALID;
+    ///
+    ///   args.reference_value = ref;
+    ///   args.synthetic_value = synth;
+    ///   return zx_clock_update(the_clock, options, args);
+    /// }
+    /// ```
+    ///
+    /// #### Rate adjustment updates with an explicitly provided reference time.
+    ///
+    /// Let `T(R)` be the function which transforms a reference time `R` to a synthetic
+    /// time for a clock before an update operation. When users adjust the rate of a
+    /// clock with an explicitly provided reference time (`R`), they are specifying the
+    /// slope of the new transformation `T'(R)` for the clock, such that `T'(R) = T(R)`.
+    /// In other words, at reference time `R`, the new transformation will pass through
+    /// the same synthetic time that the old transformation did, but with a different
+    /// slope.
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    /// #include <zircon/syscalls/clock.h>
+    ///
+    /// zx_status_t SetRateAtRef(zx_handle_t the_clock, zx_time_t ref, int32_t ppm_adj) {
+    ///   zx_clock_update_args_v2_t args;
+    ///
+    ///   const uint64_t options = ZX_CLOCK_ARGS_VERSION(2) |
+    ///                            ZX_CLOCK_UPDATE_OPTION_REFERENCE_VALUE_VALID |
+    ///                            ZX_CLOCK_UPDATE_OPTION_RATE_ADJUST_VALID;
+    ///   args.reference_value = ref;
+    ///   args.rate_adjust = ppm_adj;
+    ///
+    ///   return zx_clock_update(the_clock, options, args);
+    /// }
+    /// ```
+    ///
+    /// #### Notes, rules, and limitations.
+    ///
+    ///  - Explicit reference values are _not required_. It is still possible to omit
+    ///    the reference value during an update operation. The update operation will
+    ///    simply use the current reference time when the operation is processed.
+    ///  - When providing an explicit reference value for a clock update operation,
+    ///    either a synthetic value, or a rate adjustment, or both, must also be
+    ///    provided. It is not legal to attempt to update only the error bounds at an
+    ///    explicit reference value.
+    ///  - Explicitly providing a reference value to an update operation for a continuous
+    ///    clock is never allowed as it would virtually always imply a discontinuity.
+    ///  - Explicitly providing a reference value to an update operation for a monotonic
+    ///    clock _is_ allowed, but _only_ if the behavior of the clock remains monotonic
+    ///    after the update.
+    ///  - An explicitly provided reference value during an update operation which would
+    ///    cause a read performed at a reference time of "now" to violate the configured
+    ///    backstop time of the clock will cause the operation to be rejected.
+    ///  - When updating a monotonic clock, it is not possible to effect both a
+    ///    synthetic value update and a rate adjustment simultaneously.
+    ///
+    /// Details provided in
+    /// [RFC-0077](/docs/contribute/governance/rfcs/0077_zx_clock_update_accuracy.md)
+    /// may help to understand the reasoning behind some of these rules and limitations.
+    ///
+    /// ## Return value
+    ///
+    /// On success, returns **ZX_OK**.
+    ///
+    /// ## Errors
+    ///
+    ///  - **ZX_ERR_BAD_HANDLE** : *handle* is either an invalid handle, or a handle to
+    ///    an object type that is not **ZX_OBJ_TYPE_CLOCK**.
+    ///  - **ZX_ERR_ACCESS_DENIED** : *handle* lacks the **ZX_RIGHT_WRITE** right.
+    ///  - **ZX_ERR_INVALID_ARGS** : The update request made is incompatible with the
+    ///    properties of the clock. See the **DESCRIPTION** section for details of
+    ///    permissible clock update operations. Otherwise, the version/pointer of
+    ///    the arguments structure is incorrect.
+    ///
+    /// ## See also
+    ///
+    ///  - [RFC-0077](/docs/contribute/governance/rfcs/0077_zx_clock_update_accuracy.md)
+    ///
+    ///  - [clock transformations]
+    ///  - [clocks]
+    ///  - [`zx_clock_create()`]
+    ///  - [`zx_clock_get_details()`]
+    ///  - [`zx_clock_read()`]
+    ///
+    /// [clock transformations]: /docs/concepts/kernel/clock_transformations.md
+    /// [clocks]: /docs/reference/kernel_objects/clock.md
+    /// [`zx_clock_create()`]: clock_create.md
+    /// [`zx_clock_get_details()`]: clock_get_details.md
+    /// [`zx_clock_read()`]: clock_read.md
     clock_update(resource struct {
         handle handle;
         options uint64;

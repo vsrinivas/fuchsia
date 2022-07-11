@@ -12284,10 +12284,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "new", "bus", "transaction", "initiator", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "iommu", "must", "be", "of", "type", "ZX_OBJ_TYPE_IOMMU", "and", "have", "ZX_RIGHT_NONE", "."
       ],
       "arguments": [
         {
@@ -12327,14 +12326,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Pin", "pages", "and", "grant", "devices", "access", "to", "them", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_BTI", "and", "have", "ZX_RIGHT_MAP", ".",
-        "vmo", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "and", "have", "ZX_RIGHT_MAP", ".",
-        "If", "options", "&", "ZX_BTI_PERM_READ", ",", "vmo", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "and", "have", "ZX_RIGHT_READ", ".",
-        "If", "options", "&", "ZX_BTI_PERM_WRITE", ",", "vmo", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "and", "have", "ZX_RIGHT_WRITE", ".",
-        "If", "options", "&", "ZX_BTI_PERM_EXECUTE", ",", "vmo", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "and", "have", "ZX_RIGHT_READ", "."
       ],
       "arguments": [
         {
@@ -12402,10 +12396,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Releases", "all", "quarantined", "PMTs", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_BTI", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -12425,7 +12418,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "vdsocall"
       ],
       "top_description": [
-        "Flush", "CPU", "data", "and", "/", "or", "instruction", "caches", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -12461,10 +12454,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "channel", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_CHANNEL", "."
       ],
       "arguments": [
         {
@@ -12498,10 +12490,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "handle_unchecked"
       ],
       "top_description": [
-        "Read", "a", "message", "from", "a", "channel", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_CHANNEL", "and", "have", "ZX_RIGHT_READ", "."
       ],
       "arguments": [
         {
@@ -12569,10 +12560,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Read", "a", "message", "from", "a", "channel", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_CHANNEL", "and", "have", "ZX_RIGHT_READ", "."
       ],
       "arguments": [
         {
@@ -12640,11 +12630,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Write", "a", "message", "to", "a", "channel", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_CHANNEL", "and", "have", "ZX_RIGHT_WRITE", ".",
-        "Every", "entry", "of", "handles", "must", "have", "ZX_RIGHT_TRANSFER", "."
       ],
       "arguments": [
         {
@@ -12700,11 +12688,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Write", "a", "message", "to", "a", "channel", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_CHANNEL", "and", "have", "ZX_RIGHT_WRITE", ".",
-        "Every", "entry", "of", "handles", "must", "have", "ZX_RIGHT_TRANSFER", "."
       ],
       "arguments": [
         {
@@ -12762,8 +12748,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "top_description": [
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_CHANNEL", "and", "have", "ZX_RIGHT_READ", "and", "have", "ZX_RIGHT_WRITE", ".",
-        "All", "wr_handles", "of", "args", "must", "have", "ZX_RIGHT_TRANSFER", "."
       ],
       "arguments": [
         {
@@ -12863,11 +12847,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "vdsocall"
       ],
       "top_description": [
-        "Send", "a", "message", "to", "a", "channel", "and", "await", "a", "reply", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_CHANNEL", "and", "have", "ZX_RIGHT_READ", "and", "have", "ZX_RIGHT_WRITE", ".",
-        "All", "wr_handles", "of", "args", "must", "have", "ZX_RIGHT_TRANSFER", "."
       ],
       "arguments": [
         {
@@ -12925,8 +12907,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "top_description": [
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_CHANNEL", "and", "have", "ZX_RIGHT_READ", "and", "have", "ZX_RIGHT_WRITE", ".",
-        "All", "wr_handles", "of", "args", "must", "have", "ZX_RIGHT_TRANSFER", "."
       ],
       "arguments": [
         {
@@ -13024,11 +13004,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "vdsocall"
       ],
       "top_description": [
-        "Send", "a", "message", "to", "a", "channel", "and", "await", "a", "reply", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_CHANNEL", "and", "have", "ZX_RIGHT_READ", "and", "have", "ZX_RIGHT_WRITE", ".",
-        "All", "wr_handles", "of", "args", "must", "have", "ZX_RIGHT_TRANSFER", "."
       ],
       "arguments": [
         {
@@ -13083,7 +13061,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "vdsocall"
       ],
       "top_description": [
-        "Acquire", "the", "current", "monotonic", "time", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -13111,10 +13089,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "new", "clock", "object", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "None", "."
       ],
       "arguments": [
         {
@@ -13148,10 +13125,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Perform", "a", "basic", "read", "of", "the", "clock", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_CLOCK", "and", "have", "ZX_RIGHT_READ", "."
       ],
       "arguments": [
         {
@@ -13177,10 +13153,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Fetch", "all", "of", "the", "low", "level", "details", "of", "the", "clock", "'", "s", "current", "status", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_CLOCK", "and", "have", "ZX_RIGHT_READ", "."
       ],
       "arguments": [
         {
@@ -13213,10 +13188,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Make", "adjustments", "to", "a", "clock", "object", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_CLOCK", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -13279,10 +13253,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "vdsocall"
       ],
       "top_description": [
-        "Draw", "from", "the", "kernel", "'", "s", "CPRNG", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "None", "."
       ],
       "arguments": [
         {
@@ -13308,10 +13281,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Add", "entropy", "to", "the", "kernel", "CPRNG", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "None", "."
       ],
       "arguments": [
         {
@@ -13338,10 +13310,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Read", "a", "message", "from", "the", "debug", "serial", "port", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
       ],
       "arguments": [
         {
@@ -13381,10 +13352,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Write", "a", "message", "to", "the", "debug", "serial", "port", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "None", "."
       ],
       "arguments": [
         {
@@ -13411,9 +13381,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "resource", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
       ],
       "arguments": [
         {
@@ -13447,10 +13417,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "an", "object", "allowing", "access", "to", "the", "kernel", "debuglog", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "resource", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
       ],
       "arguments": [
         {
@@ -13483,10 +13452,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Write", "a", "message", "to", "the", "kernel", "debuglog", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_LOG", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -13527,10 +13495,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Read", "a", "single", "log", "record", "from", "the", "kernel", "debuglog", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_LOG", "and", "have", "ZX_RIGHT_READ", "."
       ],
       "arguments": [
         {
@@ -13570,10 +13537,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "an", "event", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_EVENT", "."
       ],
       "arguments": [
         {
@@ -13599,10 +13565,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "an", "event", "pair", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_EVENTPAIR", "."
       ],
       "arguments": [
         {
@@ -13635,10 +13600,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "handle", "for", "the", "exception", "'", "s", "thread", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_EXCEPTION", "."
       ],
       "arguments": [
         {
@@ -13664,10 +13628,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "handle", "for", "the", "exception", "'", "s", "process", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_EXCEPTION", "."
       ],
       "arguments": [
         {
@@ -13693,10 +13656,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "fifo", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_FIFO", "."
       ],
       "arguments": [
         {
@@ -13743,10 +13705,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Read", "data", "from", "a", "fifo", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_FIFO", "and", "have", "ZX_RIGHT_READ", "."
       ],
       "arguments": [
         {
@@ -13793,10 +13754,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Write", "data", "to", "a", "fifo", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_FIFO", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -13844,9 +13804,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "resource", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
       ],
       "arguments": [
         {
@@ -13893,9 +13853,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "resource", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
       ],
       "arguments": [
         {
@@ -13957,10 +13917,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "blocking"
       ],
       "top_description": [
-        "Wait", "on", "a", "futex", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "None", "."
       ],
       "arguments": [
         {
@@ -14001,10 +13960,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Wake", "some", "number", "of", "threads", "waiting", "on", "a", "futex", ",", "and", "set", "the", "ownership", "of", "the", "futex", "to", "nothing", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "None", "."
       ],
       "arguments": [
         {
@@ -14031,10 +13989,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Wake", "some", "number", "of", "threads", "waiting", "on", "a", "futex", ",", "and", "move", "more", "waiters", "to", "another", "wait", "queue", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "None", "."
       ],
       "arguments": [
         {
@@ -14090,10 +14047,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Wake", "one", "thread", "waiting", "on", "a", "futex", ",", "and", "set", "the", "ownership", "of", "the", "futex", "to", "that", "thread", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "None", "."
       ],
       "arguments": [
         {
@@ -14113,10 +14069,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Wake", "one", "thread", "waiting", "on", "a", "futex", ",", "and", "requeue", "more", "waiters", "to", "another", "futex", "wait", "queue", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "None", "."
       ],
       "arguments": [
         {
@@ -14165,10 +14120,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Fetch", "the", "koid", "current", "owner", "of", "a", "futex", ",", "if", "any", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "None", "."
       ],
       "arguments": [
         {
@@ -14195,10 +14149,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "guest", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "resource", "must", "have", "resource", "kind", "ZX_RSRC_KIND_HYPERVISOR", "."
       ],
       "arguments": [
         {
@@ -14238,11 +14191,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Sets", "a", "trap", "within", "a", "guest", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_GUEST", "and", "have", "ZX_RIGHT_WRITE", ".",
-        "port_handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PORT", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -14296,10 +14247,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Close", "a", "handle", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "None", "."
       ],
       "arguments": [
         {
@@ -14318,10 +14268,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Close", "a", "number", "of", "handles", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "None", "."
       ],
       "arguments": [
         {
@@ -14348,10 +14297,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Duplicate", "a", "handle", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "ZX_RIGHT_DUPLICATE", "."
       ],
       "arguments": [
         {
@@ -14384,10 +14332,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Replace", "a", "handle", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "None", "."
       ],
       "arguments": [
         {
@@ -14420,10 +14367,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "an", "interrupt", "object", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "src_obj", "must", "have", "resource", "kind", "ZX_RSRC_KIND_IRQ", "."
       ],
       "arguments": [
         {
@@ -14463,11 +14409,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Bind", "an", "interrupt", "object", "to", "a", "port", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_INTERRUPT", "and", "have", "ZX_RIGHT_READ", ".",
-        "port_handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PORT", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -14508,10 +14452,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "blocking"
       ],
       "top_description": [
-        "Wait", "for", "an", "interrupt", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_INTERRUPT", "and", "have", "ZX_RIGHT_WAIT", "."
       ],
       "arguments": [
         {
@@ -14537,7 +14480,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Destroys", "an", "interrupt", "object", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -14558,10 +14501,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Acknowledge", "an", "interrupt", "and", "re", "-", "arm", "it", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_INTERRUPT", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -14580,10 +14522,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Triggers", "a", "virtual", "interrupt", "object", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_INTERRUPT", "and", "have", "ZX_RIGHT_SIGNAL", "."
       ],
       "arguments": [
         {
@@ -14616,11 +14557,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Bind", "an", "interrupt", "object", "to", "a", "VCPU", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_INTERRUPT", "and", "have", "ZX_RIGHT_READ", ".",
-        "vcpu", "must", "be", "of", "type", "ZX_OBJ_TYPE_VCPU", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -14653,10 +14592,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "new", "IOMMU", "object", "in", "the", "kernel", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "resource", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
       ],
       "arguments": [
         {
@@ -14704,9 +14642,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "resource", "must", "have", "resource", "kind", "ZX_RSRC_KIND_IOPORT", "."
       ],
       "arguments": [
         {
@@ -14739,9 +14677,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "resource", "must", "have", "resource", "kind", "ZX_RSRC_KIND_IOPORT", "."
       ],
       "arguments": [
         {
@@ -14774,10 +14712,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "new", "job", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "parent_job", "must", "be", "of", "type", "ZX_OBJ_TYPE_JOB", "and", "have", "ZX_RIGHT_MANAGE_JOB", "."
       ],
       "arguments": [
         {
@@ -14810,10 +14747,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Set", "job", "security", "and", "resource", "policies", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_JOB", "and", "have", "ZX_RIGHT_SET_POLICY", "."
       ],
       "arguments": [
         {
@@ -14861,11 +14797,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Set", "a", "process", "as", "critical", "to", "a", "job", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "job", "must", "have", "ZX_RIGHT_DESTROY", ".",
-        "process", "must", "have", "ZX_RIGHT_WAIT", "."
       ],
       "arguments": [
         {
@@ -14898,9 +14832,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
       ],
       "arguments": [
         {
@@ -14947,9 +14881,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
       ],
       "arguments": [
         {
@@ -14989,9 +14923,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
       ],
       "arguments": [
         {
@@ -15032,10 +14966,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "blocking"
       ],
       "top_description": [
-        "High", "resolution", "sleep", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "None", "."
       ],
       "arguments": [
         {
@@ -15055,7 +14988,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "vdsocall"
       ],
       "top_description": [
-        "Read", "the", "number", "of", "high", "-", "precision", "timer", "ticks", "since", "boot", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -15071,7 +15004,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "vdsocall"
       ],
       "top_description": [
-        "Read", "the", "number", "of", "high", "-", "precision", "timer", "ticks", "in", "a", "second", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -15086,7 +15019,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "vdsocall"
       ],
       "top_description": [
-        "Convert", "a", "time", "relative", "to", "now", "to", "an", "absolute", "deadline", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -15108,7 +15041,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "vdsocall"
       ],
       "top_description": [
-        "Unmap", "memory", ",", "close", "handle", ",", "exit", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -15152,7 +15085,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "vdsocall"
       ],
       "top_description": [
-        "Write", "to", "futex", ",", "wake", "futex", ",", "close", "handle", ",", "exit", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -15209,10 +15142,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Allocate", "Message", "-", "Signaled", "Interrupts", "(", "MSIs", ")", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
       ],
       "arguments": [
         {
@@ -15245,12 +15177,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "an", "Interrupt", "object", "from", "a", "Messaged", "-", "Signaled", "Interrupt", "(", "MSI", ")", "allocation", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_MSI", ".",
-        "vmo", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", ".",
-        "vmo", "must", "have", "ZX_RIGHT_MAP", "."
       ],
       "arguments": [
         {
@@ -15304,9 +15233,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
       ],
       "arguments": [
         {
@@ -15361,10 +15290,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "blocking"
       ],
       "top_description": [
-        "Wait", "for", "signals", "on", "an", "object", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "ZX_RIGHT_WAIT", "."
       ],
       "arguments": [
         {
@@ -15405,10 +15333,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "blocking"
       ],
       "top_description": [
-        "Wait", "for", "signals", "on", "multiple", "objects", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "Every", "entry", "of", "items", "must", "have", "a", "handle", "field", "with", "ZX_RIGHT_WAIT", "."
       ],
       "arguments": [
         {
@@ -15441,11 +15368,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Subscribe", "for", "signals", "on", "an", "object", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "ZX_RIGHT_WAIT", ".",
-        "port", "must", "be", "of", "type", "ZX_OBJ_TYPE_PORT", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -15492,10 +15417,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Signal", "an", "object", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "ZX_RIGHT_SIGNAL", "."
       ],
       "arguments": [
         {
@@ -15528,10 +15452,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Signal", "an", "object", "'", "s", "peer", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "ZX_RIGHT_SIGNAL_PEER", "."
       ],
       "arguments": [
         {
@@ -15564,15 +15487,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Ask", "for", "various", "properties", "of", "various", "kernel", "objects", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "ZX_RIGHT_GET_PROPERTY", ".",
-        "If", "property", "is", "ZX_PROP_PROCESS_DEBUG_ADDR", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PROCESS", ".",
-        "If", "property", "is", "ZX_PROP_PROCESS_BREAK_ON_LOAD", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PROCESS", ".",
-        "If", "property", "is", "ZX_PROP_PROCESS_VDSO_BASE_ADDRESS", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PROCESS", ".",
-        "If", "property", "is", "ZX_PROP_SOCKET_RX_THRESHOLD", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_SOCKET", ".",
-        "If", "property", "is", "ZX_PROP_SOCKET_TX_THRESHOLD", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_SOCKET", "."
       ],
       "arguments": [
         {
@@ -15612,15 +15529,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Set", "various", "properties", "of", "various", "kernel", "objects", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "ZX_RIGHT_SET_PROPERTY", ".",
-        "If", "property", "is", "ZX_PROP_PROCESS_DEBUG_ADDR", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PROCESS", ".",
-        "If", "property", "is", "ZX_PROP_PROCESS_BREAK_ON_LOAD", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PROCESS", ".",
-        "If", "property", "is", "ZX_PROP_SOCKET_RX_THRESHOLD", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_SOCKET", ".",
-        "If", "property", "is", "ZX_PROP_SOCKET_TX_THRESHOLD", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_SOCKET", ".",
-        "If", "property", "is", "ZX_PROP_JOB_KILL_ON_OOM", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_JOB", "."
       ],
       "arguments": [
         {
@@ -15661,33 +15572,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Query", "information", "about", "an", "object", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "If", "topic", "is", "ZX_INFO_PROCESS", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PROCESS", "and", "have", "ZX_RIGHT_INSPECT", ".",
-        "If", "topic", "is", "ZX_INFO_JOB", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_JOB", "and", "have", "ZX_RIGHT_INSPECT", ".",
-        "If", "topic", "is", "ZX_INFO_PROCESS_THREADS", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PROCESS", "and", "have", "ZX_RIGHT_ENUMERATE", ".",
-        "If", "topic", "is", "ZX_INFO_JOB_CHILDREN", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_JOB", "and", "have", "ZX_RIGHT_ENUMERATE", ".",
-        "If", "topic", "is", "ZX_INFO_JOB_PROCESSES", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_JOB", "and", "have", "ZX_RIGHT_ENUMERATE", ".",
-        "If", "topic", "is", "ZX_INFO_THREAD", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_THREAD", "and", "have", "ZX_RIGHT_INSPECT", ".",
-        "If", "topic", "is", "ZX_INFO_THREAD_EXCEPTION_REPORT", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_THREAD", "and", "have", "ZX_RIGHT_INSPECT", ".",
-        "If", "topic", "is", "ZX_INFO_THREAD_STATS", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_THREAD", "and", "have", "ZX_RIGHT_INSPECT", ".",
-        "If", "topic", "is", "ZX_INFO_TASK_STATS", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PROCESS", "and", "have", "ZX_RIGHT_INSPECT", ".",
-        "If", "topic", "is", "ZX_INFO_PROCESS_MAPS", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PROCESS", "and", "have", "ZX_RIGHT_INSPECT", ".",
-        "If", "topic", "is", "ZX_INFO_PROCESS_VMOS", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PROCESS", "and", "have", "ZX_RIGHT_INSPECT", ".",
-        "If", "topic", "is", "ZX_INFO_VMO", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", ".",
-        "If", "topic", "is", "ZX_INFO_VMAR", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMAR", "and", "have", "ZX_RIGHT_INSPECT", ".",
-        "If", "topic", "is", "ZX_INFO_GUEST_STATS", ",", "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_SYSTEM", "with", "base", "ZX_RSRC_SYSTEM_INFO_BASE", ".",
-        "If", "topic", "is", "ZX_INFO_CPU_STATS", ",", "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_SYSTEM", "with", "base", "ZX_RSRC_SYSTEM_INFO_BASE", ".",
-        "If", "topic", "is", "ZX_INFO_KMEM_STATS", ",", "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_SYSTEM", "with", "base", "ZX_RSRC_SYSTEM_INFO_BASE", ".",
-        "If", "topic", "is", "ZX_INFO_KMEM_STATS_EXTENDED", ",", "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_SYSTEM", "with", "base", "ZX_RSRC_SYSTEM_INFO_BASE", ".",
-        "If", "topic", "is", "ZX_INFO_RESOURCE", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_RESOURCE", "and", "have", "ZX_RIGHT_INSPECT", ".",
-        "If", "topic", "is", "ZX_INFO_HANDLE_COUNT", ",", "handle", "must", "have", "ZX_RIGHT_INSPECT", ".",
-        "If", "topic", "is", "ZX_INFO_BTI", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_BTI", "and", "have", "ZX_RIGHT_INSPECT", ".",
-        "If", "topic", "is", "ZX_INFO_PROCESS_HANDLE_STATS", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PROCESS", "and", "have", "ZX_RIGHT_INSPECT", ".",
-        "If", "topic", "is", "ZX_INFO_SOCKET", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_SOCKET", "and", "have", "ZX_RIGHT_INSPECT", ".",
-        "If", "topic", "is", "ZX_INFO_MSI", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_MSI", "and", "have", "ZX_RIGHT_INSPECT", ".",
-        "If", "topic", "is", "ZX_INFO_TASK_RUNTIME", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_THREAD", ",", "ZX_OBJ_TYPE_PROCESS", ",", "or", "ZX_OBJ_TYPE_JOB", ",", "and", "have", "ZX_RIGHT_INSPECT", "."
       ],
       "arguments": [
         {
@@ -15741,10 +15628,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Given", "a", "kernel", "object", "with", "children", "objects", ",", "obtain", "a", "handle", "to", "the", "child", "specified", "by", "the", "provided", "kernel", "object", "id", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "ZX_RIGHT_ENUMERATE", "."
       ],
       "arguments": [
         {
@@ -15784,11 +15670,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Apply", "a", "scheduling", "profile", "to", "a", "thread", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_THREAD", "and", "have", "ZX_RIGHT_MANAGE_THREAD", ".",
-        "profile", "must", "be", "of", "type", "ZX_OBJ_TYPE_PROFILE", "and", "have", "ZX_RIGHT_APPLY_PROFILE", "."
       ],
       "arguments": [
         {
@@ -15821,10 +15705,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "new", "pager", "object", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_PAGER", "."
       ],
       "arguments": [
         {
@@ -15850,11 +15733,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "pager", "owned", "vmo", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "pager", "must", "be", "of", "type", "ZX_OBJ_TYPE_PAGER", ".",
-        "port", "must", "be", "of", "type", "ZX_OBJ_TYPE_PORT", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -15908,11 +15789,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Detaches", "a", "vmo", "from", "a", "pager", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "pager", "must", "be", "of", "type", "ZX_OBJ_TYPE_PAGER", ".",
-        "vmo", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "."
       ],
       "arguments": [
         {
@@ -15938,12 +15817,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Supply", "pages", "into", "a", "pager", "owned", "vmo", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "pager", "must", "be", "of", "type", "ZX_OBJ_TYPE_PAGER", ".",
-        "pager_vmo", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", ".",
-        "aux_vmo", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "and", "have", "ZX_RIGHT_READ", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -15997,11 +15873,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Perform", "an", "operation", "on", "a", "range", "of", "a", "pager", "owned", "vmo", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "pager", "must", "be", "of", "type", "ZX_OBJ_TYPE_PAGER", ".",
-        "pager_vmo", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "."
       ],
       "arguments": [
         {
@@ -16056,11 +15930,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "next"
       ],
       "top_description": [
-        "Query", "contiguous", "ranges", "of", "dirty", "pages", "in", "a", "pager", "owned", "vmo", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "pager", "must", "be", "of", "type", "ZX_OBJ_TYPE_PAGER", ".",
-        "pager_vmo", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "."
       ],
       "arguments": [
         {
@@ -16129,11 +16001,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "next"
       ],
       "top_description": [
-        "Query", "pager", "related", "statistics", "on", "a", "pager", "owned", "VMO", "."
+        "#", "#", "NAME"
       ],
       "requirements": [
-        "pager", "must", "be", "of", "type", "ZX_OBJ_TYPE_PAGER", ".",
-        "pager_vmo", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "."
       ],
       "arguments": [
         {
@@ -16180,9 +16050,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
       ],
       "arguments": [
         {
@@ -16215,10 +16085,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
       ],
       "arguments": [
         {
@@ -16258,10 +16127,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PCI_DEVICE", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -16287,10 +16155,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PCI_DEVICE", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -16309,10 +16176,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PCI_DEVICE", "and", "have", "ZX_RIGHT_READ", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -16352,10 +16218,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PCI_DEVICE", "and", "have", "ZX_RIGHT_READ", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -16395,10 +16260,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
       ],
       "arguments": [
         {
@@ -16466,10 +16330,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PCI_DEVICE", "and", "have", "ZX_RIGHT_READ", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -16509,10 +16372,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PCI_DEVICE", "and", "have", "ZX_RIGHT_READ", "."
       ],
       "arguments": [
         {
@@ -16545,10 +16407,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PCI_DEVICE", "and", "have", "ZX_RIGHT_READ", "."
       ],
       "arguments": [
         {
@@ -16581,10 +16442,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PCI_DEVICE", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -16617,10 +16477,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
       ],
       "arguments": [
         {
@@ -16654,10 +16513,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "This", "function", "is", "obsolete", "and", "should", "not", "be", "used", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
       ],
       "arguments": [
         {
@@ -16704,7 +16562,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Unpin", "pages", "and", "revoke", "device", "access", "to", "them", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -16725,10 +16583,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "an", "IO", "port", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_PORT", "."
       ],
       "arguments": [
         {
@@ -16754,10 +16611,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Queue", "a", "packet", "to", "a", "port", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PORT", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -16785,10 +16641,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "blocking"
       ],
       "top_description": [
-        "Wait", "for", "a", "packet", "arrival", "in", "a", "port", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PORT", "and", "have", "ZX_RIGHT_READ", "."
       ],
       "arguments": [
         {
@@ -16821,10 +16676,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Cancels", "async", "port", "notifications", "on", "an", "object", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PORT", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -16858,10 +16712,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "noreturn"
       ],
       "top_description": [
-        "Exits", "the", "currently", "running", "process", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "None", "."
       ],
       "arguments": [
         {
@@ -16880,11 +16733,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "new", "process", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "job", "must", "be", "of", "type", "ZX_OBJ_TYPE_JOB", "and", "have", "ZX_RIGHT_MANAGE_PROCESS", ".",
-        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_PROCESS", "."
       ],
       "arguments": [
         {
@@ -16939,12 +16790,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Start", "execution", "on", "a", "process", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PROCESS", "and", "have", "ZX_RIGHT_WRITE", ".",
-        "thread", "must", "be", "of", "type", "ZX_OBJ_TYPE_THREAD", "and", "have", "ZX_RIGHT_WRITE", ".",
-        "arg1", "must", "have", "ZX_RIGHT_TRANSFER", "."
       ],
       "arguments": [
         {
@@ -16998,10 +16846,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Read", "from", "the", "given", "process", "'", "s", "address", "space", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PROCESS", "and", "have", "ZX_RIGHT_READ", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -17048,10 +16895,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Write", "into", "the", "given", "process", "'", "s", "address", "space", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_PROCESS", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -17099,11 +16945,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "scheduler", "profile", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "root_job", "must", "be", "of", "type", "ZX_OBJ_TYPE_JOB", "and", "have", "ZX_RIGHT_MANAGE_PROCESS", ".",
-        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_PROFILE", "."
       ],
       "arguments": [
         {
@@ -17144,10 +16988,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "resource", "object", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "parent_rsrc", "must", "be", "of", "type", "ZX_OBJ_TYPE_RESOURCE", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -17209,7 +17052,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Make", "Secure", "Monitor", "Call", "(", "SMC", ")", "from", "user", "space", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -17245,10 +17088,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "socket", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_SOCKET", "."
       ],
       "arguments": [
         {
@@ -17281,10 +17123,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Write", "data", "to", "a", "socket", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_SOCKET", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -17332,10 +17173,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Read", "data", "from", "a", "socket", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_SOCKET", "and", "have", "ZX_RIGHT_READ", "."
       ],
       "arguments": [
         {
@@ -17382,10 +17222,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Set", "disposition", "of", "writes", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_SOCKET", "and", "have", "ZX_RIGHT_MANAGE_SOCKET", "."
       ],
       "arguments": [
         {
@@ -17418,7 +17257,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "stream", "from", "a", "VMO", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -17461,10 +17300,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "blocking"
       ],
       "top_description": [
-        "Write", "data", "to", "a", "stream", "at", "the", "current", "seek", "offset", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_STREAM", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -17513,10 +17351,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "blocking"
       ],
       "top_description": [
-        "Write", "data", "to", "a", "stream", "at", "the", "given", "offset", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_STREAM", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -17572,10 +17409,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "blocking"
       ],
       "top_description": [
-        "Read", "data", "from", "a", "stream", "at", "the", "current", "seek", "offset", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_STREAM", "and", "have", "ZX_RIGHT_READ", "."
       ],
       "arguments": [
         {
@@ -17623,10 +17459,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "blocking"
       ],
       "top_description": [
-        "Read", "data", "from", "a", "stream", "at", "the", "given", "offset", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_STREAM", "and", "have", "ZX_RIGHT_READ", "."
       ],
       "arguments": [
         {
@@ -17680,10 +17515,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Modify", "the", "seek", "offset", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_STREAM", "and", "have", "ZX_RIGHT_READ", "or", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -17724,6 +17558,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "testonly"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -17739,6 +17574,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "testonly"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -17761,6 +17597,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "testonly"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -17790,6 +17627,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "testonly"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -17825,6 +17663,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "testonly"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -17867,6 +17706,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "testonly"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -17916,6 +17756,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "testonly"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -17972,6 +17813,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "testonly"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -18035,6 +17877,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "testonly"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -18102,7 +17945,8 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "syscall_next_1",
       "attributes": [
         "*",
-        "next"
+        "next",
+        "no_doc"
       ],
       "top_description": [
       ],
@@ -18126,6 +17970,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "testonly"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -18161,6 +18006,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "testonly"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -18358,6 +18204,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "vdsocall"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -18373,7 +18220,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "vdsocall"
       ],
       "top_description": [
-        "Get", "number", "of", "logical", "processors", "on", "the", "system", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -18389,7 +18236,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "vdsocall"
       ],
       "top_description": [
-        "Get", "version", "string", "for", "system", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -18405,7 +18252,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "vdsocall"
       ],
       "top_description": [
-        "Get", "the", "page", "size", "for", "the", "system", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -18420,7 +18267,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "vdsocall"
       ],
       "top_description": [
-        "Get", "amount", "of", "physical", "memory", "on", "the", "system", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -18435,7 +18282,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "vdsocall"
       ],
       "top_description": [
-        "Get", "supported", "hardware", "capabilities", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -18463,10 +18310,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Retrieve", "a", "handle", "to", "a", "system", "event", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "None", "."
       ],
       "arguments": [
         {
@@ -18499,10 +18345,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Set", "CPU", "performance", "parameters", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "resource", "must", "have", "resource", "kind", "ZX_RSRC_KIND_SYSTEM", "."
       ],
       "arguments": [
         {
@@ -18543,10 +18388,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Get", "CPU", "performance", "parameters", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "resource", "must", "have", "resource", "kind", "ZX_RSRC_KIND_SYSTEM", "."
       ],
       "arguments": [
         {
@@ -18593,12 +18437,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Soft", "reboot", "the", "system", "with", "a", "new", "kernel", "and", "bootimage", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "resource", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", ".",
-        "kernel_vmo", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "and", "have", "ZX_RIGHT_READ", ".",
-        "bootimage_vmo", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "and", "have", "ZX_RIGHT_READ", "."
       ],
       "arguments": [
         {
@@ -18631,10 +18472,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Return", "a", "ZBI", "containing", "ZBI", "entries", "necessary", "to", "boot", "this", "system", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "resource", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
       ],
       "arguments": [
         {
@@ -18667,9 +18507,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "resource", "must", "have", "resource", "kind", "ZX_RSRC_KIND_SYSTEM", "with", "base", "ZX_RSRC_SYSTEM_POWER_BASE", "."
       ],
       "arguments": [
         {
@@ -18703,10 +18543,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Suspend", "the", "given", "task", ".", "Currently", "only", "thread", "or", "process", "handles", "may", "be", "suspended", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_THREAD", "or", "ZX_OBJ_TYPE_PROCESS", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -18732,10 +18571,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Suspend", "the", "given", "task", ".", "Currently", "only", "thread", "or", "process", "handles", "may", "be", "suspended", "."
+        "This", "function", "replaces", "[", "task_suspend", "]", "(", "task_suspend", ".", "md", ")", ".", "When", "all", "callers", "are"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_THREAD", "or", "ZX_OBJ_TYPE_PROCESS", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -18761,11 +18599,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "an", "exception", "channel", "for", "a", "given", "job", ",", "process", ",", "or", "thread", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "ZX_RIGHT_INSPECT", "and", "have", "ZX_RIGHT_DUPLICATE", "and", "have", "ZX_RIGHT_TRANSFER", "and", "have", "ZX_RIGHT_MANAGE_THREAD", ".",
-        "If", "handle", "is", "of", "type", "ZX_OBJ_TYPE_JOB", "or", "ZX_OBJ_TYPE_PROCESS", ",", "it", "must", "have", "ZX_RIGHT_ENUMERATE", "."
       ],
       "arguments": [
         {
@@ -18798,10 +18634,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Kill", "the", "provided", "task", "(", "job", ",", "process", ",", "or", "thread", ")", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "have", "ZX_RIGHT_DESTROY", "."
       ],
       "arguments": [
         {
@@ -18821,7 +18656,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "noreturn"
       ],
       "top_description": [
-        "Terminate", "the", "current", "running", "thread", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -18835,10 +18670,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "thread", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "process", "must", "be", "of", "type", "ZX_OBJ_TYPE_PROCESS", "and", "have", "ZX_RIGHT_MANAGE_THREAD", "."
       ],
       "arguments": [
         {
@@ -18886,10 +18720,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Start", "execution", "on", "a", "thread", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_THREAD", "and", "have", "ZX_RIGHT_MANAGE_THREAD", "."
       ],
       "arguments": [
         {
@@ -18936,10 +18769,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Read", "one", "aspect", "of", "thread", "state", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_THREAD", "and", "have", "ZX_RIGHT_READ", "."
       ],
       "arguments": [
         {
@@ -18979,10 +18811,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Write", "one", "aspect", "of", "thread", "state", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_THREAD", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -19023,7 +18854,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Yield", "the", "CPU", "of", "the", "current", "thread", "back", "to", "the", "scheduler", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -19044,10 +18875,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "timer", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_TIMER", "."
       ],
       "arguments": [
         {
@@ -19080,10 +18910,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Start", "a", "timer", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_TIMER", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -19116,10 +18945,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Cancel", "a", "timer", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_TIMER", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -19138,10 +18966,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "VCPU", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "guest", "must", "be", "of", "type", "ZX_OBJ_TYPE_GUEST", "and", "have", "ZX_RIGHT_MANAGE_PROCESS", "."
       ],
       "arguments": [
         {
@@ -19182,10 +19009,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "blocking"
       ],
       "top_description": [
-        "Enter", "a", "VCPU", ",", "causing", "it", "to", "resume", "execution", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VCPU", "and", "have", "ZX_RIGHT_EXECUTE", "."
       ],
       "arguments": [
         {
@@ -19211,10 +19037,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Kick", "a", "VCPU", ",", "causing", "it", "to", "stop", "execution", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VCPU", "and", "have", "ZX_RIGHT_EXECUTE", "."
       ],
       "arguments": [
         {
@@ -19233,10 +19058,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Raise", "an", "interrupt", "on", "a", "VCPU", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VCPU", "and", "have", "ZX_RIGHT_SIGNAL", "."
       ],
       "arguments": [
         {
@@ -19262,10 +19086,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Read", "the", "state", "of", "a", "VCPU", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VCPU", "and", "have", "ZX_RIGHT_READ", "."
       ],
       "arguments": [
         {
@@ -19305,10 +19128,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Write", "the", "state", "of", "a", "VCPU", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VCPU", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -19349,12 +19171,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Allocate", "a", "new", "subregion", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "If", "options", "&", "ZX_VM_CAN_MAP_READ", ",", "parent_vmar", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMAR", "and", "have", "ZX_RIGHT_READ", ".",
-        "If", "options", "&", "ZX_VM_CAN_MAP_WRITE", ",", "parent_vmar", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMAR", "and", "have", "ZX_RIGHT_WRITE", ".",
-        "If", "options", "&", "ZX_VM_CAN_MAP_EXECUTE", ",", "parent_vmar", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMAR", "and", "have", "ZX_RIGHT_EXECUTE", "."
       ],
       "arguments": [
         {
@@ -19408,7 +19227,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Destroy", "a", "virtual", "memory", "address", "region", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -19429,11 +19248,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Add", "a", "memory", "mapping", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMAR", ".",
-        "vmo", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "."
       ],
       "arguments": [
         {
@@ -19494,7 +19311,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Unmap", "virtual", "memory", "pages", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
       ],
@@ -19529,12 +19346,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Set", "protection", "of", "virtual", "memory", "pages", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "If", "options", "&", "ZX_VM_PERM_READ", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMAR", "and", "have", "ZX_RIGHT_READ", ".",
-        "If", "options", "&", "ZX_VM_PERM_WRITE", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMAR", "and", "have", "ZX_RIGHT_WRITE", ".",
-        "If", "options", "&", "ZX_VM_PERM_EXECUTE", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMAR", "and", "have", "ZX_RIGHT_EXECUTE", "."
       ],
       "arguments": [
         {
@@ -19574,11 +19388,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Perform", "an", "operation", "on", "VMOs", "mapped", "into", "this", "VMAR", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "If", "op", "is", "ZX_VMAR_OP_DECOMMIT", ",", "handle", "must", "have", "ZX_RIGHT_WRITE", ".",
-        "If", "op", "is", "ZX_VMAR_OP_COMMIT", ",", "handle", "must", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -19632,10 +19444,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "VM", "object", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "Caller", "job", "policy", "must", "allow", "ZX_POL_NEW_VMO", "."
       ],
       "arguments": [
         {
@@ -19669,10 +19480,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "blocking"
       ],
       "top_description": [
-        "Read", "bytes", "from", "the", "VMO", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "and", "have", "ZX_RIGHT_READ", "."
       ],
       "arguments": [
         {
@@ -19713,10 +19523,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "blocking"
       ],
       "top_description": [
-        "Write", "bytes", "to", "the", "VMO", "."
+        "#", "#", "Summary"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -19757,7 +19566,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Read", "the", "current", "size", "of", "a", "VMO", "object", "."
+        "#", "#", "SUMMARY"
       ],
       "requirements": [
       ],
@@ -19785,10 +19594,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Resize", "a", "VMO", "object", "."
+        "#", "#", "SUMMARY"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "and", "have", "ZX_RIGHT_WRITE", "."
       ],
       "arguments": [
         {
@@ -19815,15 +19623,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "blocking"
       ],
       "top_description": [
-        "Perform", "an", "operation", "on", "a", "range", "of", "a", "VMO", "."
+        "#", "#", "SUMMARY"
       ],
       "requirements": [
-        "If", "op", "is", "ZX_VMO_OP_COMMIT", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "and", "have", "ZX_RIGHT_WRITE", ".",
-        "If", "op", "is", "ZX_VMO_OP_DECOMMIT", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "and", "have", "ZX_RIGHT_WRITE", ".",
-        "If", "op", "is", "ZX_VMO_OP_CACHE_SYNC", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "and", "have", "ZX_RIGHT_READ", ".",
-        "If", "op", "is", "ZX_VMO_OP_CACHE_INVALIDATE", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "and", "have", "ZX_RIGHT_WRITE", ".",
-        "If", "op", "is", "ZX_VMO_OP_CACHE_CLEAN", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "and", "have", "ZX_RIGHT_READ", ".",
-        "If", "op", "is", "ZX_VMO_OP_CACHE_CLEAN_INVALIDATE", ",", "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "and", "have", "ZX_RIGHT_READ", "."
       ],
       "arguments": [
         {
@@ -19877,10 +19679,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "child", "of", "a", "VM", "Object", "."
+        "#", "#", "SUMMARY"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "and", "have", "ZX_RIGHT_DUPLICATE", "and", "have", "ZX_RIGHT_READ", "."
       ],
       "arguments": [
         {
@@ -19927,10 +19728,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Set", "the", "caching", "policy", "for", "pages", "held", "by", "a", "VMO", "."
+        "#", "#", "SUMMARY"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", "and", "have", "ZX_RIGHT_MAP", "."
       ],
       "arguments": [
         {
@@ -19956,11 +19756,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Add", "execute", "rights", "to", "a", "VMO", "."
+        "#", "#", "SUMMARY"
       ],
       "requirements": [
-        "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_VMO", ".",
-        "vmex", "must", "have", "resource", "kind", "ZX_RSRC_KIND_VMEX", "."
       ],
       "arguments": [
         {
@@ -19993,9 +19791,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "#", "#", "SUMMARY"
       ],
       "requirements": [
-        "bti", "must", "be", "of", "type", "ZX_OBJ_TYPE_BTI", "and", "have", "ZX_RIGHT_MAP", "."
       ],
       "arguments": [
         {
@@ -20035,10 +19833,9 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
-        "Create", "a", "VM", "object", "referring", "to", "a", "specific", "contiguous", "range", "of", "physical", "memory", "."
+        "#", "#", "SUMMARY"
       ],
       "requirements": [
-        "resource", "must", "have", "resource", "kind", "ZX_RSRC_KIND_MMIO", "."
       ],
       "arguments": [
         {

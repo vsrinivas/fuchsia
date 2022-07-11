@@ -412,25 +412,3 @@ toc:
     path: /docs/reference/syscalls/pci_reset_device.md
   - title: "zx_pci_set_irq_mode"
     path: /docs/reference/syscalls/pci_set_irq_mode.md
-  - title: "zx_syscall_test_0"
-    path: /docs/reference/syscalls/syscall_test_0.md
-  - title: "zx_syscall_test_1"
-    path: /docs/reference/syscalls/syscall_test_1.md
-  - title: "zx_syscall_test_2"
-    path: /docs/reference/syscalls/syscall_test_2.md
-  - title: "zx_syscall_test_3"
-    path: /docs/reference/syscalls/syscall_test_3.md
-  - title: "zx_syscall_test_4"
-    path: /docs/reference/syscalls/syscall_test_4.md
-  - title: "zx_syscall_test_5"
-    path: /docs/reference/syscalls/syscall_test_5.md
-  - title: "zx_syscall_test_6"
-    path: /docs/reference/syscalls/syscall_test_6.md
-  - title: "zx_syscall_test_7"
-    path: /docs/reference/syscalls/syscall_test_7.md
-  - title: "zx_syscall_test_8"
-    path: /docs/reference/syscalls/syscall_test_8.md
-  - title: "zx_syscall_test_wrapper"
-    path: /docs/reference/syscalls/syscall_test_wrapper.md
-  - title: "zx_syscall_test_handle_create"
-    path: /docs/reference/syscalls/syscall_test_handle_create.md

@@ -5,7 +5,41 @@ library zx;
 
 @transport("Syscall")
 protocol framebuffer {
-    /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
+    /// ## Summary
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_framebuffer_get_info(zx_handle_t resource,
+    ///                                     uint32_t* format,
+    ///                                     uint32_t* width,
+    ///                                     uint32_t* height,
+    ///                                     uint32_t* stride);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Rights
+    ///
+    /// *resource* must have resource kind **ZX_RSRC_KIND_ROOT**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     framebuffer_get_info(resource struct {
         resource handle:RESOURCE;
     }) -> (struct {
@@ -17,7 +51,43 @@ protocol framebuffer {
     });
 
     // TODO(fxbug.dev/32803): vmo ZX_OBJ_TYPE_VMO; No rights required?
-    /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
+    /// ## Summary
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_framebuffer_set_range(zx_handle_t resource,
+    ///                                      zx_handle_t vmo,
+    ///                                      uint32_t len,
+    ///                                      uint32_t format,
+    ///                                      uint32_t width,
+    ///                                      uint32_t height,
+    ///                                      uint32_t stride);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Rights
+    ///
+    /// *resource* must have resource kind **ZX_RSRC_KIND_ROOT**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     framebuffer_set_range(resource struct {
         resource handle:RESOURCE;
         vmo handle:VMO;

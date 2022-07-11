@@ -62,8 +62,41 @@ type PciInitArg = struct {
 
 @transport("Syscall")
 protocol pci {
+    /// ## Summary
+    ///
     /// This function is obsolete and should not be used.
-    /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_pci_get_nth_device(zx_handle_t handle,
+    ///                                   uint32_t index,
+    ///                                   zx_pcie_device_info_t* out_info,
+    ///                                   zx_handle_t* out_handle);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// This function is obsolete and should not be used. Drivers should instead use the PCI protocol
+    /// Typically, you obtain this in your **bind()** function through **device_get_protocol()**.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must have resource kind **ZX_RSRC_KIND_ROOT**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     pci_get_nth_device(resource struct {
         handle handle:RESOURCE;
         index uint32;
@@ -73,8 +106,38 @@ protocol pci {
         out_handle handle;
     });
 
+    /// ## Summary
+    ///
     /// This function is obsolete and should not be used.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_pci_enable_bus_master(zx_handle_t handle, uint32_t enable);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// This function is obsolete and should not be used. Drivers should instead use the PCI protocol
+    /// Typically, you obtain this in your **bind()** function through **device_get_protocol()**.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_PCI_DEVICE** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     pci_enable_bus_master(resource struct {
         handle handle:PCI_DEVICE;
         enable uint32;
@@ -82,8 +145,38 @@ protocol pci {
         status status;
     });
 
+    /// ## Summary
+    ///
     /// This function is obsolete and should not be used.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_pci_reset_device(zx_handle_t handle);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// This function is obsolete and should not be used. Drivers should instead use the PCI protocol
+    /// Typically, you obtain this in your **bind()** function through **device_get_protocol()**.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_PCI_DEVICE** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     pci_reset_device(resource struct {
         handle handle:PCI_DEVICE;
     }) -> (struct {
@@ -94,9 +187,41 @@ protocol pci {
     // OUT, so didn't get the __NONNULL() tag, so we match by making it optional
     // here. I think this is probably not the intention, and it should be
     // non-optional.
-    //
+    /// ## Summary
+    ///
     /// This function is obsolete and should not be used.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_pci_config_read(zx_handle_t handle,
+    ///                                uint16_t offset,
+    ///                                size_t width,
+    ///                                uint32_t* out_val);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// This function is obsolete and should not be used. Drivers should instead use the PCI protocol
+    /// Typically, you obtain this in your **bind()** function through **device_get_protocol()**.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_PCI_DEVICE** and have **ZX_RIGHT_READ** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     pci_config_read(resource struct {
         handle handle:PCI_DEVICE;
         offset uint16;
@@ -106,8 +231,41 @@ protocol pci {
         out_val optional_uint32;
     });
 
+    /// ## Summary
+    ///
     /// This function is obsolete and should not be used.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_pci_config_write(zx_handle_t handle,
+    ///                                 uint16_t offset,
+    ///                                 size_t width,
+    ///                                 uint32_t val);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// This function is obsolete and should not be used. Drivers should instead use the PCI protocol
+    /// Typically, you obtain this in your **bind()** function through **device_get_protocol()**.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_PCI_DEVICE** and have **ZX_RIGHT_READ** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     pci_config_write(resource struct {
         handle handle:PCI_DEVICE;
         offset uint16;
@@ -117,8 +275,45 @@ protocol pci {
         status status;
     });
 
+    /// ## Summary
+    ///
     /// This function is obsolete and should not be used.
-    /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_pci_cfg_pio_rw(zx_handle_t handle,
+    ///                               uint8_t bus,
+    ///                               uint8_t dev,
+    ///                               uint8_t func,
+    ///                               uint8_t offset,
+    ///                               uint32_t* val,
+    ///                               size_t width,
+    ///                               uint32_t write);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// This function is obsolete and should not be used. Drivers should instead use the PCI protocol
+    /// Typically, you obtain this in your **bind()** function through **device_get_protocol()**.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must have resource kind **ZX_RSRC_KIND_ROOT**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     pci_cfg_pio_rw(resource struct {
         handle handle:RESOURCE;
         bus uint8;
@@ -135,9 +330,42 @@ protocol pci {
     // TODO(scottmg): type of out_handle?
     // TODO(scottmg): In banjo/abigen out_bar wasn't optional, but was an input
     // OUT, so has no __NONNULL(). I think this is probably not the intention.
-    //
+    /// ## Summary
+    ///
     /// This function is obsolete and should not be used.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_pci_get_bar(zx_handle_t handle,
+    ///                            uint32_t bar_num,
+    ///                            zx_pci_bar_t* out_bar,
+    ///                            zx_handle_t* out_handle);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// This function is obsolete and should not be used. Drivers should instead get the PCI Base Address
+    /// Register information from the [PCI driver
+    /// interface](/docs/development/drivers/concepts/driver_development/bar.md);
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_PCI_DEVICE** and have **ZX_RIGHT_READ** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     pci_get_bar(resource struct {
         handle handle:PCI_DEVICE;
         bar_num uint32;
@@ -147,8 +375,40 @@ protocol pci {
         out_handle handle;
     });
 
+    /// ## Summary
+    ///
     /// This function is obsolete and should not be used.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_pci_map_interrupt(zx_handle_t handle,
+    ///                                  int32_t which_irq,
+    ///                                  zx_handle_t* out_handle);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// This function is obsolete and should not be used. Drivers should instead use the PCI protocol
+    /// Typically, you obtain this in your **bind()** function through **device_get_protocol()**.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_PCI_DEVICE** and have **ZX_RIGHT_READ**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     pci_map_interrupt(resource struct {
         handle handle:PCI_DEVICE;
         which_irq int32;
@@ -157,8 +417,40 @@ protocol pci {
         out_handle handle;
     });
 
+    /// ## Summary
+    ///
     /// This function is obsolete and should not be used.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_READ.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_pci_query_irq_mode(zx_handle_t handle,
+    ///                                   uint32_t mode,
+    ///                                   uint32_t* out_max_irqs);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// This function is obsolete and should not be used. Drivers should instead use the PCI protocol
+    /// Typically, you obtain this in your **bind()** function through **device_get_protocol()**.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_PCI_DEVICE** and have **ZX_RIGHT_READ**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     pci_query_irq_mode(resource struct {
         handle handle:PCI_DEVICE;
         mode uint32;
@@ -167,8 +459,40 @@ protocol pci {
         out_max_irqs uint32;
     });
 
+    /// ## Summary
+    ///
     /// This function is obsolete and should not be used.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_PCI_DEVICE and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_pci_set_irq_mode(zx_handle_t handle,
+    ///                                 uint32_t mode,
+    ///                                 uint32_t requested_irq_count);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// This function is obsolete and should not be used. Drivers should instead use the PCI protocol
+    /// Typically, you obtain this in your **bind()** function through **device_get_protocol()**.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_PCI_DEVICE** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     pci_set_irq_mode(resource struct {
         handle handle:PCI_DEVICE;
         mode uint32;
@@ -179,9 +503,40 @@ protocol pci {
 
     // Note that init_buf isn't a vector of PciInitArg, it's a variable sized
     // structure starting with a zx_pci_init_arg_t.
-    //
+    /// ## Summary
+    ///
     /// This function is obsolete and should not be used.
-    /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_pci_init(zx_handle_t handle,
+    ///                         const zx_pci_init_arg_t* init_buf,
+    ///                         uint32_t len);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// This function is obsolete and should not be used. Drivers should instead use the PCI protocol
+    /// Typically, you obtain this in your **bind()** function through **device_get_protocol()**.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must have resource kind **ZX_RSRC_KIND_ROOT**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     pci_init(resource struct {
         handle handle:RESOURCE;
         init_buf PciInitArg;
@@ -190,8 +545,42 @@ protocol pci {
         status status;
     });
 
+    /// ## Summary
+    ///
     /// This function is obsolete and should not be used.
-    /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_pci_add_subtract_io_range(zx_handle_t handle,
+    ///                                          uint32_t mmio,
+    ///                                          uint64_t base,
+    ///                                          uint64_t len,
+    ///                                          uint32_t add);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// This function is obsolete and should not be used. Drivers should instead use the PCI protocol
+    /// Typically, you obtain this in your **bind()** function through **device_get_protocol()**.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must have resource kind **ZX_RSRC_KIND_ROOT**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     pci_add_subtract_io_range(resource struct {
         handle handle:RESOURCE;
         mmio uint32;

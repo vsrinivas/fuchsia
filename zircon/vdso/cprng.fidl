@@ -11,15 +11,91 @@ protocol cprng {
         buffer vector_void;
     });
 
+    /// ## Summary
+    ///
     /// Draw from the kernel's CPRNG.
-    /// Rights: None.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// void zx_cprng_draw(void* buffer, size_t buffer_size);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_cprng_draw()` draws random bytes from the kernel CPRNG.  This data should
+    /// be suitable for cryptographic applications.
+    ///
+    /// Clients that require a large volume of randomness should consider using these
+    /// bytes to seed a user-space random number generator for better performance.
+    /// "Large" here would mean a large multiple of **ZX_CPRNG_DRAW_MAX_LEN**, which is
+    /// currently 256. As always, test the actual latency of your call site before
+    /// optimizing.
+    ///
+    /// ## Rights
+    ///
+    /// None.
+    ///
+    /// ## Notes
+    ///
+    /// `zx_cprng_draw()` terminates the calling process if **buffer** is not a valid
+    /// userspace pointer.
+    ///
+    /// There are no other error conditions.  If its arguments are valid,
+    /// `zx_cprng_draw()` will succeed.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_cprng_add_entropy()`]
+    ///
+    /// [`zx_cprng_add_entropy()`]: cprng_add_entropy.md
     @vdsocall
     cprng_draw() -> (struct {
         buffer vector_void;
     });
 
+    /// ## Summary
+    ///
     /// Add entropy to the kernel CPRNG.
-    /// Rights: None.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_cprng_add_entropy(const void* buffer, size_t buffer_size);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_cprng_add_entropy()` mixes the given entropy into the kernel CPRNG.
+    /// a privileged operation.  It will accept at most **ZX_CPRNG_ADD_ENTROPY_MAX_LEN**
+    /// bytes of entropy at a time.
+    ///
+    /// ## Rights
+    ///
+    /// None.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_cprng_add_entropy()` returns **ZX_OK** on success.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_INVALID_ARGS** *buffer_size* is too large, or *buffer* is not a valid
+    /// userspace pointer.
+    ///
+    /// ## BUGS
+    ///
+    /// This syscall should be very privileged.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_cprng_draw()`]
+    ///
+    /// [`zx_cprng_draw()`]: cprng_draw.md
     cprng_add_entropy(struct {
         buffer vector_void;
     }) -> (struct {

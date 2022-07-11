@@ -9,8 +9,57 @@ library zx;
 @transport("Syscall")
 @no_protocol_prefix
 protocol misc {
+    /// ## Summary
+    ///
     /// High resolution sleep.
-    /// Rights: None.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_nanosleep(zx_time_t deadline);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_nanosleep()` suspends the calling thread execution until *deadline* passes
+    /// on **ZX_CLOCK_MONOTONIC**. A *deadline* value less than or equal to **0** immediately
+    /// yields the thread. *deadline* will be automatically adjusted according to the job's
+    /// [timer slack] policy.
+    ///
+    /// To sleep for a duration, use [`zx_deadline_after()`] and the
+    /// **ZX_\<time-unit\>** helpers:
+    ///
+    /// ```
+    /// #include <zircon/syscalls.h> // zx_deadline_after, zx_nanosleep
+    /// #include <zircon/types.h> // ZX_MSEC et al.
+    ///
+    /// // Sleep 50 milliseconds
+    /// zx_nanosleep(zx_deadline_after(ZX_MSEC(50)));
+    /// ```
+    ///
+    /// ## Rights
+    ///
+    /// None.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_nanosleep()` always returns **ZX_OK**.
+    ///
+    /// ## See also
+    ///
+    ///  - [timer slack]
+    ///  - [`zx_deadline_after()`]
+    ///  - [`zx_timer_cancel()`]
+    ///  - [`zx_timer_create()`]
+    ///  - [`zx_timer_set()`]
+    ///
+    /// [timer slack]: /docs/concepts/kernel/timer_slack.md
+    /// [`zx_deadline_after()`]: deadline_after.md
+    /// [`zx_timer_cancel()`]: timer_cancel.md
+    /// [`zx_timer_create()`]: timer_create.md
+    /// [`zx_timer_set()`]: timer_set.md
     @blocking
     nanosleep(struct {
         deadline time;
@@ -18,20 +67,156 @@ protocol misc {
         status status;
     });
 
+    /// ## Summary
+    ///
     /// Read the number of high-precision timer ticks since boot.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_ticks_t zx_ticks_get(void);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_ticks_get()` returns the number of high-precision timer ticks since boot.
+    ///
+    /// These ticks may be processor cycles, high speed timer, profiling timer, etc.
+    /// They are not guaranteed to continue advancing when the system is asleep.
+    ///
+    /// ## Rights
+    ///
+    /// TODO(fxbug.dev/32253)
+    ///
+    /// ## Return value
+    ///
+    /// `zx_ticks_get()` returns the number of high-precision timer ticks since boot.
+    ///
+    /// ## Errors
+    ///
+    /// `zx_ticks_get()` does not report any error conditions.
+    ///
+    /// ## Notes
+    ///
+    /// The returned value may be highly variable. Factors that can affect it include:
+    ///
+    /// - Changes in processor frequency
+    /// - Migration between processors
+    /// - Reset of the processor cycle counter
+    /// - Reordering of instructions (if required, use a memory barrier)
+    ///
+    /// ## See also
+    ///
+    /// [ticks_per_second](ticks_per_second.md)
     @vdsocall
     ticks_get() -> (struct {
         ticks ticks;
     });
 
+    /// ## Summary
+    ///
     /// Read the number of high-precision timer ticks in a second.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_ticks_t zx_ticks_per_second(void);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_ticks_per_second()` returns the number of high-precision timer ticks in a
+    /// second.
+    ///
+    /// This can be used together with [`zx_ticks_get()`] to calculate the amount of
+    /// time elapsed between two subsequent calls to [`zx_ticks_get()`].
+    ///
+    /// This value can vary from boot to boot of a given system. Once booted,
+    /// this value is guaranteed not to change.
+    ///
+    /// ## Rights
+    ///
+    /// TODO(fxbug.dev/32253)
+    ///
+    /// ## Return value
+    ///
+    /// `zx_ticks_per_second()` returns the number of high-precision timer ticks in a
+    /// second.
+    ///
+    /// ## Errors
+    ///
+    /// `zx_ticks_per_second()` does not report any error conditions.
+    ///
+    /// ## EXAMPLES
+    ///
+    /// ```
+    /// zx_ticks_t ticks_per_second = zx_ticks_per_second();
+    /// zx_ticks_t ticks_start = zx_ticks_get();
+    ///
+    /// // do some more work
+    ///
+    /// zx_ticks_t ticks_end = zx_ticks_get();
+    /// double elapsed_seconds = (ticks_end - ticks_start) / (double)ticks_per_second;
+    ///
+    /// ```
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_ticks_get()`]
+    ///
+    /// [`zx_ticks_get()`]: ticks_get.md
     @const
     @vdsocall
     ticks_per_second() -> (struct {
         ticks ticks;
     });
 
+    /// ## Summary
+    ///
     /// Convert a time relative to now to an absolute deadline.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_time_t zx_deadline_after(zx_duration_t nanoseconds);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_deadline_after()` is a utility for converting from now-relative durations
+    /// to absolute deadlines. If *nanoseconds* plus the current time is bigger than the
+    /// maximum value for `zx_time_t`, the output is clamped to **ZX_TIME_INFINITE**.
+    ///
+    /// ## Rights
+    ///
+    /// TODO(fxbug.dev/32253)
+    ///
+    /// ## Return value
+    ///
+    /// `zx_deadline_after()` returns the absolute time (with respect to **ZX_CLOCK_MONOTONIC**)
+    /// that is *nanoseconds* nanoseconds from now.
+    ///
+    /// ## Errors
+    ///
+    /// `zx_deadline_after()` does not report any error conditions.
+    ///
+    /// ## EXAMPLES
+    ///
+    /// ```
+    /// // Sleep 50 milliseconds
+    /// zx_time_t deadline = zx_deadline_after(ZX_MSEC(50));
+    /// zx_nanosleep(deadline);
+    /// ```
+    ///
+    /// ## See also
+    ///
+    /// [ticks_get](ticks_get.md)
     @vdsocall
     deadline_after(struct {
         nanoseconds duration;
@@ -39,7 +224,73 @@ protocol misc {
         time time;
     });
 
+    /// ## Summary
+    ///
     /// Unmap memory, close handle, exit.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vmar_unmap_handle_close_thread_exit(zx_handle_t vmar_handle,
+    ///                                                    zx_vaddr_t addr,
+    ///                                                    size_t size,
+    ///                                                    zx_handle_t close_handle);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vmar_unmap_handle_close_thread_exit()` does a sequence of three operations:
+    ///
+    /// 1. `zx_vmar_unmap(vmar_handle, addr, size)`
+    /// 2. `zx_handle_close(close_handle)`
+    /// 3. `zx_thread_exit()`
+    ///
+    /// The expectation is that the first operation unmaps a region including the
+    /// calling thread's own stack.  (It's not required, but it's permitted.)  This
+    /// is valid for this call, though it would be invalid for [`zx_vmar_unmap()`] or
+    /// any other call.
+    ///
+    /// If the [`zx_vmar_unmap()`] operation is successful, then this call never returns.
+    /// If *close_handle* is an invalid handle so that the [`zx_handle_close()`] operation
+    /// fails, then the thread takes a trap (as if by `__builtin_trap();`).
+    ///
+    /// ## Rights
+    ///
+    /// TODO(fxbug.dev/32253)
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vmar_unmap_handle_close_thread_exit()` does not return on success.
+    ///
+    /// ## Errors
+    ///
+    /// Same as [`zx_vmar_unmap()`].
+    ///
+    /// ## Notes
+    ///
+    /// The intended use for this is for a dying thread to unmap its own stack,
+    /// close its own thread handle, and exit.  The thread handle cannot be closed
+    /// beforehand because closing the last handle to a thread kills that thread.
+    /// The stack cannot be unmapped beforehand because the thread must have some
+    /// stack space on which to make its final system calls.
+    ///
+    /// This call is used for detached threads, while
+    /// [`zx_futex_wake_handle_close_thread_exit()`]
+    /// is used for joinable threads.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_futex_wake_handle_close_thread_exit()`]
+    ///  - [`zx_handle_close()`]
+    ///  - [`zx_thread_exit()`]
+    ///  - [`zx_vmar_unmap()`]
+    ///
+    /// [`zx_futex_wake_handle_close_thread_exit()`]: futex_wake_handle_close_thread_exit.md
+    /// [`zx_handle_close()`]: handle_close.md
+    /// [`zx_thread_exit()`]: thread_exit.md
+    /// [`zx_vmar_unmap()`]: vmar_unmap.md
     @vdsocall
     vmar_unmap_handle_close_thread_exit(resource struct {
         vmar_handle handle:VMAR;
@@ -51,7 +302,77 @@ protocol misc {
         status status;
     });
 
+    /// ## Summary
+    ///
     /// Write to futex, wake futex, close handle, exit.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// [[noreturn]] void zx_futex_wake_handle_close_thread_exit(
+    ///     const zx_futex_t* value_ptr,
+    ///     uint32_t wake_count,
+    ///     int32_t new_value,
+    ///     zx_handle_t close_handle);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_futex_wake_handle_close_thread_exit()` does a sequence of four operations:
+    ///
+    /// 1. `atomic_store_explicit(value_ptr, new_value, memory_order_release);`
+    /// 2. `zx_futex_wake(value_ptr, wake_count);`
+    /// 3. `zx_handle_close(close_handle);`
+    /// 4. `zx_thread_exit();`
+    ///
+    /// The expectation is that as soon as the first operation completes,
+    /// other threads may unmap or reuse the memory containing the calling
+    /// thread's own stack.  This is valid for this call, though it would be
+    /// invalid for plain [`zx_futex_wake()`] or any other call.
+    ///
+    /// If any of the operations fail, then the thread takes a trap (as if by `__builtin_trap();`).
+    ///
+    /// ## Rights
+    ///
+    /// TODO(fxbug.dev/32253)
+    ///
+    /// ## Return value
+    ///
+    /// `zx_futex_wake_handle_close_thread_exit()` does not return.
+    ///
+    /// ## Errors
+    ///
+    /// None.
+    ///
+    /// ## Notes
+    ///
+    /// The intended use for this is for a dying thread to alert another thread
+    /// waiting for its completion, close its own thread handle, and exit.
+    /// The thread handle cannot be closed beforehand because closing the last
+    /// handle to a thread kills that thread.  The write to *value_ptr* can't be
+    /// done before this call because any time after the write, a joining thread might
+    /// reuse or deallocate this thread's stack, which may cause issues with calling
+    /// conventions into this function.
+    ///
+    /// This call is used for joinable threads, while
+    /// [`zx_vmar_unmap_handle_close_thread_exit()`]
+    /// is used for detached threads.
+    ///
+    /// ## See also
+    ///
+    ///  - [futex objects]
+    ///  - [`zx_futex_wake()`]
+    ///  - [`zx_handle_close()`]
+    ///  - [`zx_thread_exit()`]
+    ///  - [`zx_vmar_unmap_handle_close_thread_exit()`]
+    ///
+    /// [futex objects]: /docs/reference/kernel_objects/futex.md
+    /// [`zx_futex_wake()`]: futex_wake.md
+    /// [`zx_handle_close()`]: handle_close.md
+    /// [`zx_thread_exit()`]: thread_exit.md
+    /// [`zx_vmar_unmap_handle_close_thread_exit()`]: vmar_unmap_handle_close_thread_exit.md
     @noreturn
     @vdsocall
     futex_wake_handle_close_thread_exit(resource struct {

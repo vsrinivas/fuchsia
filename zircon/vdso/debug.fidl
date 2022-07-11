@@ -5,8 +5,66 @@ library zx;
 
 @transport("Syscall")
 protocol debug {
+    /// ## Summary
+    ///
     /// Read a message from the debug serial port.
-    /// Rights: handle must have resource kind ZX_RSRC_KIND_ROOT.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_debug_read(zx_handle_t handle,
+    ///                           char* buffer,
+    ///                           size_t buffer_size,
+    ///                           size_t* actual);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_debug_read()` attempts to read data from the debug serial port.
+    /// The parameter *buffer_size* is used to specify the byte size of the read buffer.
+    /// The length of *buffer*, in bytes, is stored in the location pointed to by
+    /// *actual*.
+    ///
+    /// This function will wait until at least one byte is available before it returns.
+    /// This can return up to *buffer_size* bytes.
+    ///
+    /// **NOTE:** There is only one buffer of the data that is coming from the debug
+    /// serial, and calling `zx_debug_read` consumes this data. If multiple programs are calling
+    /// this at once, they will each receive pieces of the data stream.
+    ///
+    /// To use the `zx_debug_read()` function, you must specify
+    /// `kernel.enable-serial-syscalls=true` on the kernel command line. Otherwise,
+    /// the function returns **ZX_ERR_NOT_SUPPORTED**.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must have resource kind **ZX_RSRC_KIND_ROOT**.
+    ///
+    /// ## Return value
+    ///
+    /// Returns **ZX_OK** on success. The location pointed to by *buffer* contains
+    /// *actual* bytes that were read.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_NOT_SUPPORTED**  `kernel.enable-serial-syscalls` is not set to `true`
+    /// on the kernel command line.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *buffer* or *actual* are NULL.
+    ///
+    /// ## See also
+    ///
+    ///  - [kernel command line]
+    ///  - [`zx_debug_write()`]
+    ///  - [`zx_debuglog_read()`]
+    ///  - [`zx_debuglog_write()`]
+    ///
+    /// [kernel command line]: /docs/reference/kernel/kernel_cmdline.md
+    /// [`zx_debug_write()`]: debug_write.md
+    /// [`zx_debuglog_read()`]: debuglog_read.md
+    /// [`zx_debuglog_write()`]: debuglog_write.md
     debug_read(resource struct {
         handle handle:RESOURCE;
     }) -> (struct {
@@ -15,15 +73,100 @@ protocol debug {
         actual usize;
     });
 
+    /// ## Summary
+    ///
     /// Write a message to the debug serial port.
-    /// Rights: None.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_debug_write(const char* buffer, size_t buffer_size);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_debug_write()` attempts to write data of *buffer_size* bytes to the debug serial port.
+    ///
+    /// To use the `zx_debug_write()` function, you must specify
+    /// `kernel.enable-serial-syscalls=true` or
+    /// `kernel.enable-serial-syscalls=output-only` on the kernel command line.
+    /// Otherwise, the function returns **ZX_ERR_NOT_SUPPORTED**.
+    ///
+    /// `zx_debug_write` is intended for diagnostic use.  Data may be dropped or
+    /// truncated, but the data from two different `zx_debug_write` calls will not be
+    /// interleaved or reordered.
+    ///
+    /// ## Rights
+    ///
+    /// None.
+    ///
+    /// ## Return value
+    ///
+    /// Returns **ZX_OK** on success.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_NOT_SUPPORTED**  `kernel.enable-serial-syscalls` is not set to `true`
+    /// or `output-only` on the kernel command line.
+    ///
+    /// **ZX_ERR_INVALID_ARGS** *buffer* is NULL.
+    ///
+    /// ## See also
+    ///
+    ///  - [kernel command line]
+    ///  - [`zx_debug_read()`]
+    ///  - [`zx_debuglog_read()`]
+    ///  - [`zx_debuglog_write()`]
+    ///
+    /// [kernel command line]: /docs/reference/kernel/kernel_cmdline.md
+    /// [`zx_debug_read()`]: debug_read.md
+    /// [`zx_debuglog_read()`]: debuglog_read.md
+    /// [`zx_debuglog_write()`]: debuglog_write.md
     debug_write(struct {
         buffer string;
     }) -> (struct {
         status status;
     });
 
-    /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
+    /// ## Summary
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_debug_send_command(zx_handle_t resource,
+    ///                                   const char* buffer,
+    ///                                   size_t buffer_size);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// To use the `zx_debug_send_command()` function, you must specify
+    /// `kernel.enable-debugging-syscalls=true` on the kernel command line. Otherwise,
+    /// the function returns **ZX_ERR_NOT_SUPPORTED**.
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Rights
+    ///
+    /// *resource* must have resource kind **ZX_RSRC_KIND_ROOT**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     debug_send_command(resource struct {
         resource handle:RESOURCE;
         buffer string;

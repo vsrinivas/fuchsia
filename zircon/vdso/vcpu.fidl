@@ -5,8 +5,99 @@ library zx;
 
 @transport("Syscall")
 protocol vcpu {
+    /// ## Summary
+    ///
     /// Create a VCPU.
-    /// Rights: guest must be of type ZX_OBJ_TYPE_GUEST and have ZX_RIGHT_MANAGE_PROCESS.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vcpu_create(zx_handle_t guest,
+    ///                            uint32_t options,
+    ///                            zx_vaddr_t entry,
+    ///                            zx_handle_t* out);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vcpu_create()` creates a VCPU within a guest, which allows for execution
+    /// within the virtual machine. One or more VCPUs may be created per guest, where
+    /// the number of VCPUs does not need to match the number of physical CPUs on the
+    /// machine.
+    ///
+    /// *entry* is the instruction pointer used to indicate where in guest physical
+    /// memory execution of the VCPU should start.
+    ///
+    /// *out* is bound to the thread that created it, and all syscalls that operate on
+    /// it must be called from the same thread, with the exception of
+    /// [`zx_vcpu_interrupt()`].
+    ///
+    /// Only one VCPU may exist on a thread at a time. A thread can create another VCPU
+    /// after it has closed the existing one.
+    ///
+    /// N.B. VCPU is an abbreviation of virtual CPU.
+    ///
+    /// The following rights will be set on the handle *out* by default:
+    ///
+    /// **ZX_RIGHT_DUPLICATE** &mdash; *out* may be duplicated.
+    ///
+    /// **ZX_RIGHT_TRANSFER** &mdash; *out* may be transferred over a channel.
+    ///
+    /// **ZX_RIGHT_EXECUTE** &mdash; *out* may have its execution resumed (or begun)
+    ///
+    /// **ZX_RIGHT_SIGNAL** &mdash; *out* may be interrupted
+    ///
+    /// **ZX_RIGHT_READ** &mdash; *out* may have its state read
+    ///
+    /// **ZX_RIGHT_WRITE** &mdash; may have its state written
+    ///
+    /// ## Rights
+    ///
+    /// *guest* must be of type **ZX_OBJ_TYPE_GUEST** and have **ZX_RIGHT_MANAGE_PROCESS**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vcpu_create()` returns **ZX_OK** on success. On failure, an error value is
+    /// returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_ACCESS_DENIED** *guest* does not have the **ZX_RIGHT_MANAGE_PROCESS**
+    /// right.
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *guest* is an invalid handle.
+    ///
+    /// **ZX_ERR_BAD_STATE** The thread currently has a VCPU. Only one VCPU can be
+    /// active on a thread at a time.
+    ///
+    /// **ZX_ERR_INVALID_ARGS** *args* contains an invalid argument, or *out* is an
+    /// invalid pointer, or *options* is nonzero.
+    ///
+    /// **ZX_ERR_NO_MEMORY** Failure due to lack of memory.
+    /// There is no good way for userspace to handle this (unlikely) error.
+    /// In a future build this error will no longer occur.
+    ///
+    /// **ZX_ERR_WRONG_TYPE** *guest* is not a handle to a guest.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_guest_create()`]
+    ///  - [`zx_guest_set_trap()`]
+    ///  - [`zx_vcpu_enter()`]
+    ///  - [`zx_vcpu_interrupt()`]
+    ///  - [`zx_vcpu_kick()`]
+    ///  - [`zx_vcpu_read_state()`]
+    ///  - [`zx_vcpu_write_state()`]
+    ///
+    /// [`zx_guest_create()`]: guest_create.md
+    /// [`zx_guest_set_trap()`]: guest_set_trap.md
+    /// [`zx_vcpu_enter()`]: vcpu_enter.md
+    /// [`zx_vcpu_interrupt()`]: vcpu_interrupt.md
+    /// [`zx_vcpu_kick()`]: vcpu_kick.md
+    /// [`zx_vcpu_read_state()`]: vcpu_read_state.md
+    /// [`zx_vcpu_write_state()`]: vcpu_write_state.md
     vcpu_create(resource struct {
         guest handle:GUEST;
         options uint32;
@@ -17,8 +108,77 @@ protocol vcpu {
     });
 
     // See port.fidl for definition of PortPacket.
+    /// ## Summary
+    ///
     /// Enter a VCPU, causing it to resume execution.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_EXECUTE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    /// #include <zircon/syscalls/port.h>
+    ///
+    /// zx_status_t zx_vcpu_enter(zx_handle_t handle, zx_port_packet_t* packet);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vcpu_enter()` begins or resumes execution of *handle*, and blocks until it
+    /// has paused execution. On pause of execution, *packet* is populated with reason
+    /// for the pause. After handling the reason, execution may be resumed by calling
+    /// `zx_vcpu_enter()` again.
+    ///
+    /// If `zx_vcpu_enter()` returns **ZX_ERR_CANCELED** due to `zx_vcpu_kick()` being
+    /// called on *handle*, execution may be resumed by calling `zx_vcpu_enter()` again.
+    ///
+    /// `zx_vcpu_enter()` must be called on the same thread *handle* was created on.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_VCPU** and have **ZX_RIGHT_EXECUTE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vcpu_enter()` returns **ZX_OK** on success. On failure, an error value is
+    /// returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_ACCESS_DENIED** *handle* does not have the **ZX_RIGHT_EXECUTE** right.
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *handle* is an invalid handle.
+    ///
+    /// **ZX_ERR_BAD_STATE** *handle* is in a bad state, and can not be executed.
+    ///
+    /// **ZX_ERR_CANCELED** execution of *handle* was canceled, due to `zx_vcpu_kick()`
+    /// being called on *handle*.
+    ///
+    /// **ZX_ERR_INTERNAL** There was an error executing *handle*.
+    ///
+    /// **ZX_ERR_INVALID_ARGS** *packet* is an invalid pointer.
+    ///
+    /// **ZX_ERR_NOT_SUPPORTED** An unsupported operation was encountered while
+    /// executing *handle*.
+    ///
+    /// **ZX_ERR_WRONG_TYPE** *handle* is not a handle to a VCPU.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_guest_create()`]
+    ///  - [`zx_guest_set_trap()`]
+    ///  - [`zx_vcpu_create()`]
+    ///  - [`zx_vcpu_interrupt()`]
+    ///  - [`zx_vcpu_kick()`]
+    ///  - [`zx_vcpu_read_state()`]
+    ///  - [`zx_vcpu_write_state()`]
+    ///
+    /// [`zx_guest_create()`]: guest_create.md
+    /// [`zx_guest_set_trap()`]: guest_set_trap.md
+    /// [`zx_vcpu_create()`]: vcpu_create.md
+    /// [`zx_vcpu_interrupt()`]: vcpu_interrupt.md
+    /// [`zx_vcpu_kick()`]: vcpu_kick.md
+    /// [`zx_vcpu_read_state()`]: vcpu_read_state.md
+    /// [`zx_vcpu_write_state()`]: vcpu_write_state.md
     @blocking
     vcpu_enter(resource struct {
         handle handle:VCPU;
@@ -27,16 +187,120 @@ protocol vcpu {
         packet PortPacket;
     });
 
+    /// ## Summary
+    ///
     /// Kick a VCPU, causing it to stop execution.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_EXECUTE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vcpu_kick(zx_handle_t handle);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vcpu_kick()` forces the current or next execution of `zx_vcpu_enter()` on
+    /// *handle* to return immediately with **ZX_ERR_CANCELED**.
+    ///
+    /// `zx_vcpu_kick()` may be called multiple times on *handle*, but will only affect
+    /// the current or next execution of `zx_vcpu_enter()`.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_VCPU** and have **ZX_RIGHT_EXECUTE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vcpu_kick()` returns **ZX_OK** on success. On failure, an error value is
+    /// returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_ACCESS_DENIED** *handle* does not have the **ZX_RIGHT_EXECUTE** right.
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *handle* is an invalid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE** *handle* is not a handle to a VCPU.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_guest_create()`]
+    ///  - [`zx_guest_set_trap()`]
+    ///  - [`zx_vcpu_create()`]
+    ///  - [`zx_vcpu_enter()`]
+    ///  - [`zx_vcpu_interrupt()`]
+    ///  - [`zx_vcpu_read_state()`]
+    ///  - [`zx_vcpu_write_state()`]
+    ///
+    /// [`zx_guest_create()`]: guest_create.md
+    /// [`zx_guest_set_trap()`]: guest_set_trap.md
+    /// [`zx_vcpu_create()`]: vcpu_create.md
+    /// [`zx_vcpu_enter()`]: vcpu_enter.md
+    /// [`zx_vcpu_interrupt()`]: vcpu_interrupt.md
+    /// [`zx_vcpu_read_state()`]: vcpu_read_state.md
+    /// [`zx_vcpu_write_state()`]: vcpu_write_state.md
     vcpu_kick(resource struct {
         handle handle:VCPU;
     }) -> (struct {
         status status;
     });
 
+    /// ## Summary
+    ///
     /// Raise an interrupt on a VCPU.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_SIGNAL.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vcpu_interrupt(zx_handle_t handle, uint32_t vector);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vcpu_interrupt()` raises an interrupt of *vector* on *handle*, and may be
+    /// called from any thread.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_VCPU** and have **ZX_RIGHT_SIGNAL**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vcpu_interrupt()` returns **ZX_OK** on success. On failure, an error value is
+    /// returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_ACCESS_DENIED** *handle* does not have the **ZX_RIGHT_SIGNAL** right.
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *handle* is an invalid handle.
+    ///
+    /// **ZX_ERR_OUT_OF_RANGE** *vector* is outside of the range interrupts supported by
+    /// the current architecture.
+    ///
+    /// **ZX_ERR_WRONG_TYPE** *handle* is not a handle to a VCPU.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_guest_create()`]
+    ///  - [`zx_guest_set_trap()`]
+    ///  - [`zx_vcpu_create()`]
+    ///  - [`zx_vcpu_enter()`]
+    ///  - [`zx_vcpu_kick()`]
+    ///  - [`zx_vcpu_read_state()`]
+    ///  - [`zx_vcpu_write_state()`]
+    ///
+    /// [`zx_guest_create()`]: guest_create.md
+    /// [`zx_guest_set_trap()`]: guest_set_trap.md
+    /// [`zx_vcpu_create()`]: vcpu_create.md
+    /// [`zx_vcpu_enter()`]: vcpu_enter.md
+    /// [`zx_vcpu_kick()`]: vcpu_kick.md
+    /// [`zx_vcpu_read_state()`]: vcpu_read_state.md
+    /// [`zx_vcpu_write_state()`]: vcpu_write_state.md
     vcpu_interrupt(resource struct {
         handle handle:VCPU;
         vector uint32;
@@ -44,8 +308,71 @@ protocol vcpu {
         status status;
     });
 
+    /// ## Summary
+    ///
     /// Read the state of a VCPU.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_READ.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vcpu_read_state(zx_handle_t handle,
+    ///                                uint32_t kind,
+    ///                                void* buffer,
+    ///                                size_t buffer_size);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vcpu_read_state()` reads the state of *handle* as specified by *kind* into
+    /// *buffer*. It is only valid to read the state of *handle* when execution has been
+    /// paused.
+    ///
+    /// *kind* must be **ZX_VCPU_STATE**.
+    ///
+    /// `zx_vcpu_read_state()` must be called on the same thread *handle* was created
+    /// on.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_VCPU** and have **ZX_RIGHT_READ**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vcpu_read_state()` returns **ZX_OK** on success. On failure, an error value
+    /// is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_ACCESS_DENIED** *handle* does not have the **ZX_RIGHT_READ** right.
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *handle* is an invalid handle.
+    ///
+    /// **ZX_ERR_BAD_STATE** *handle* is in a bad state, and state can not be read.
+    ///
+    /// **ZX_ERR_INVALID_ARGS** *kind* does not name a known VCPU state, *buffer* is an
+    /// invalid pointer, or *buffer_size* does not match the expected size of *kind*.
+    ///
+    /// **ZX_ERR_WRONG_TYPE** *handle* is not a handle to a VCPU.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_guest_create()`]
+    ///  - [`zx_guest_set_trap()`]
+    ///  - [`zx_vcpu_create()`]
+    ///  - [`zx_vcpu_enter()`]
+    ///  - [`zx_vcpu_interrupt()`]
+    ///  - [`zx_vcpu_kick()`]
+    ///  - [`zx_vcpu_write_state()`]
+    ///
+    /// [`zx_guest_create()`]: guest_create.md
+    /// [`zx_guest_set_trap()`]: guest_set_trap.md
+    /// [`zx_vcpu_create()`]: vcpu_create.md
+    /// [`zx_vcpu_enter()`]: vcpu_enter.md
+    /// [`zx_vcpu_interrupt()`]: vcpu_interrupt.md
+    /// [`zx_vcpu_kick()`]: vcpu_kick.md
+    /// [`zx_vcpu_write_state()`]: vcpu_write_state.md
     vcpu_read_state(resource struct {
         handle handle:VCPU;
         kind uint32;
@@ -54,8 +381,71 @@ protocol vcpu {
         buffer vector_void;
     });
 
+    /// ## Summary
+    ///
     /// Write the state of a VCPU.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_VCPU and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_vcpu_write_state(zx_handle_t handle,
+    ///                                 uint32_t kind,
+    ///                                 const void* buffer,
+    ///                                 size_t buffer_size);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_vcpu_write_state()` writes the state of *handle* as specified by *kind* from
+    /// *buffer*. It is only valid to write the state of *handle* when execution has
+    /// been paused.
+    ///
+    /// *kind* may be **ZX_VCPU_STATE** or **ZX_VCPU_IO**.
+    ///
+    /// `zx_vcpu_write_state()` must be called on the same thread *handle* was created
+    /// on.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_VCPU** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_vcpu_write_state()` returns **ZX_OK** on success. On failure, an error value
+    /// is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_ACCESS_DENIED** *handle* does not have the **ZX_RIGHT_WRITE** right.
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *handle* is an invalid handle.
+    ///
+    /// **ZX_ERR_BAD_STATE** *handle* is in a bad state, and state can not be written.
+    ///
+    /// **ZX_ERR_INVALID_ARGS** *kind* does not name a known VCPU state, *buffer* is an
+    /// invalid pointer, or *buffer_size* does not match the expected size of *kind*.
+    ///
+    /// **ZX_ERR_WRONG_TYPE** *handle* is not a handle to a VCPU.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_guest_create()`]
+    ///  - [`zx_guest_set_trap()`]
+    ///  - [`zx_vcpu_create()`]
+    ///  - [`zx_vcpu_enter()`]
+    ///  - [`zx_vcpu_interrupt()`]
+    ///  - [`zx_vcpu_kick()`]
+    ///  - [`zx_vcpu_read_state()`]
+    ///
+    /// [`zx_guest_create()`]: guest_create.md
+    /// [`zx_guest_set_trap()`]: guest_set_trap.md
+    /// [`zx_vcpu_create()`]: vcpu_create.md
+    /// [`zx_vcpu_enter()`]: vcpu_enter.md
+    /// [`zx_vcpu_interrupt()`]: vcpu_interrupt.md
+    /// [`zx_vcpu_kick()`]: vcpu_kick.md
+    /// [`zx_vcpu_read_state()`]: vcpu_read_state.md
     vcpu_write_state(resource struct {
         handle handle:VCPU;
         kind uint32;

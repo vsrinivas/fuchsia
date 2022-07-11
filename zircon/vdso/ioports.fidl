@@ -5,7 +5,39 @@ library zx;
 
 @transport("Syscall")
 protocol ioports {
-    /// Rights: resource must have resource kind ZX_RSRC_KIND_IOPORT.
+    /// ## Summary
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_ioports_request(zx_handle_t resource,
+    ///                                uint16_t io_addr,
+    ///                                uint32_t len);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Rights
+    ///
+    /// *resource* must have resource kind **ZX_RSRC_KIND_IOPORT**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     ioports_request(resource struct {
         resource handle:RESOURCE;
         io_addr uint16;
@@ -14,7 +46,39 @@ protocol ioports {
         status status;
     });
 
-    /// Rights: resource must have resource kind ZX_RSRC_KIND_IOPORT.
+    /// ## Summary
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_ioports_release(zx_handle_t resource,
+    ///                                uint16_t io_addr,
+    ///                                uint32_t len);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Rights
+    ///
+    /// *resource* must have resource kind **ZX_RSRC_KIND_IOPORT**.
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     ioports_release(resource struct {
         resource handle:RESOURCE;
         io_addr uint16;

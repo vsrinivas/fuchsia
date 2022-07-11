@@ -11,7 +11,76 @@ type stream_seek_origin = strict enum : uint32 {
 
 @transport("Syscall")
 protocol stream {
+    /// ## Summary
+    ///
     /// Create a stream from a VMO.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_stream_create(uint32_t options,
+    ///                              zx_handle_t vmo,
+    ///                              zx_off_t seek,
+    ///                              zx_handle_t* out_stream);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_stream_create()` creates a stream, which reads and writes the data in an
+    /// underlying VMO.
+    ///
+    /// The seek offset for the stream is initialized to *seek*.
+    ///
+    /// # Options
+    ///
+    /// **ZX_STREAM_MODE_READ**  The stream will be used for reading.  If the given
+    /// *vmo* lacks **ZX_RIGHT_READ**, this function will return
+    /// **ZX_ERR_ACCESS_DENIED**.  Otherwise, **ZX_RIGHT_READ** will be included as a
+    /// right on the created stream object.
+    ///
+    /// **ZX_STREAM_MODE_WRITE**  The stream will be used for writing.  If the given
+    /// *vmo* lacks **ZX_RIGHT_WRITE**, this function will return
+    /// **ZX_ERR_ACCESS_DENIED**.  Otherwise, **ZX_RIGHT_WRITE** will be included as a
+    /// right on the created stream object.
+    ///
+    /// ## Rights
+    ///
+    /// TODO(fxbug.dev/32253)
+    ///
+    /// ## Return value
+    ///
+    /// `zx_stream_create()` returns **ZX_OK** on success. In the event of
+    /// failure, one of the following values is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *vmo* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *vmo* is not a VMO handle.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *vmo* does not have the rights required for the given
+    /// options.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *out_stream* is an invalid pointer or NULL, *options*
+    /// has an unsupported bit set to 1.
+    ///
+    /// **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_stream_readv()`]
+    ///  - [`zx_stream_readv_at()`]
+    ///  - [`zx_stream_seek()`]
+    ///  - [`zx_stream_writev()`]
+    ///  - [`zx_stream_writev_at()`]
+    ///
+    /// [`zx_stream_readv()`]: stream_readv.md
+    /// [`zx_stream_readv_at()`]: stream_readv_at.md
+    /// [`zx_stream_seek()`]: stream_seek.md
+    /// [`zx_stream_writev()`]: stream_writev.md
+    /// [`zx_stream_writev_at()`]: stream_writev_at.md
     stream_create(resource struct {
         options uint32;
         vmo handle:VMO;
@@ -21,8 +90,91 @@ protocol stream {
         out_stream handle:STREAM;
     });
 
+    /// ## Summary
+    ///
     /// Write data to a stream at the current seek offset.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_stream_writev(zx_handle_t handle,
+    ///                              uint32_t options,
+    ///                              const zx_iovec_t* vector,
+    ///                              size_t num_vector,
+    ///                              size_t* actual);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_stream_writev()` attempts to write bytes to the stream, starting at the
+    /// current seek offset, from the buffers specified by *vector* and *num_vector*.
+    /// If successful, the number of bytes actually written are return via *actual*.
+    ///
+    /// If *options* contains **ZX_STREAM_APPEND**, the seek offset of the stream is
+    /// atomically set to the content size of the stream prior to writing the data.
+    ///
+    /// If the write operation would write beyond the end of the stream, the function
+    /// will attempt to increase the content size of the stream in order to receive the
+    /// given data, filling any new, unwritten content with zero bytes.
+    ///
+    /// If the resize operation fails after some amount of data was written to the
+    /// stream, the function will return successfully.  If no bytes were written to
+    /// stream, the operation will return **ZX_ERR_FILE_BIG** or **ZX_ERR_NO_SPACE**,
+    /// as appropriate.
+    ///
+    /// If a NULL *actual* is passed in, it will be ignored.
+    ///
+    /// Advances the seek offset of the stream by the actual number of bytes written.
+    /// If the write fails, the seek offset could either remain the same or have
+    /// been changed to an unspecified value.
+    ///
+    /// If the contents of *vector* change during this operation, if any of the buffers
+    /// overlap, or if any of the buffers overlap *vector*, the behavior is unspecified.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_STREAM** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_stream_writev()` returns **ZX_OK** on success, and writes into
+    /// *actual* (if non-NULL) the exact number of bytes written.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a stream handle.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have the **ZX_RIGHT_WRITE** right.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**   *vector* is an invalid `zx_iovec_t` or *options* has an
+    /// unsupported bit set to 1.
+    ///
+    /// **ZX_ERR_NOT_FOUND**  the *vector* address, or an address specified within
+    /// *vector* does not map to address in address space.
+    ///
+    /// **ZX_ERR_BAD_STATE**  the underlying data source cannot be written.
+    ///
+    /// **ZX_ERR_FILE_BIG**  the stream has exceeded a predefined maximum size limit.
+    ///
+    /// **ZX_ERR_NO_SPACE**  the underlying storage medium does not have sufficient space.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_stream_create()`]
+    ///  - [`zx_stream_readv()`]
+    ///  - [`zx_stream_readv_at()`]
+    ///  - [`zx_stream_seek()`]
+    ///  - [`zx_stream_writev_at()`]
+    ///
+    /// [`zx_stream_create()`]: stream_create.md
+    /// [`zx_stream_readv()`]: stream_readv.md
+    /// [`zx_stream_readv_at()`]: stream_readv_at.md
+    /// [`zx_stream_seek()`]: stream_seek.md
+    /// [`zx_stream_writev_at()`]: stream_writev_at.md
     @blocking
     stream_writev(resource struct {
         handle handle:STREAM;
@@ -33,8 +185,89 @@ protocol stream {
         actual optional_usize;
     });
 
+    /// ## Summary
+    ///
     /// Write data to a stream at the given offset.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_stream_writev_at(zx_handle_t handle,
+    ///                                 uint32_t options,
+    ///                                 zx_off_t offset,
+    ///                                 const zx_iovec_t* vector,
+    ///                                 size_t num_vector,
+    ///                                 size_t* actual);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_stream_writev_at()` attempts to write bytes to the stream, starting at the
+    /// given *offset*, from the buffers specified by *vector* and *num_vector*.
+    /// If successful, the number of bytes actually written are return via *actual*.
+    ///
+    /// If the write operation would write beyond the end of the stream, the function
+    /// will attempt to increase the content size of the stream in order to receive the
+    /// given data, filling any new, unwritten content with zero bytes.
+    ///
+    /// If the resize operation fails after some amount of data was written to the
+    /// stream, the function will return successfully.  If no bytes were written to
+    /// stream, the operation will return **ZX_ERR_FILE_BIG** or **ZX_ERR_NO_SPACE**,
+    /// as appropriate.
+    ///
+    /// If a NULL *actual* is passed in, it will be ignored.
+    ///
+    /// Does not advance the seek offset of the stream.
+    ///
+    /// If the contents of *vector* change during this operation, if any of the buffers
+    /// overlap, or if any of the buffers overlap *vector*, the behavior is unspecified.
+    ///
+    /// *options* is reserved for future use and must be 0.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_STREAM** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_stream_writev_at()` returns **ZX_OK** on success, and writes into
+    /// *actual* (if non-NULL) the exact number of bytes written.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a stream handle.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have the ZX_RIGHT_WRITE right.
+    ///
+    /// **ZX_ERR_INVALID_ARGS** *vector* is an invalid zx_iovec_t or *options* has an
+    /// unsupported bit set to 1.
+    ///
+    /// **ZX_ERR_NOT_FOUND**  the *vector* address, or an address specified within
+    /// *vector* does not map to address in address space.
+    ///
+    /// **ZX_ERR_BAD_STATE**  the underlying data source cannot be written.
+    ///
+    /// **ZX_ERR_FILE_BIG**  the stream has exceeded a predefined maximum size limit.
+    ///
+    /// **ZX_ERR_NO_SPACE**  the underlying storage medium does not have sufficient space.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_stream_create()`]
+    ///  - [`zx_stream_readv()`]
+    ///  - [`zx_stream_readv_at()`]
+    ///  - [`zx_stream_seek()`]
+    ///  - [`zx_stream_writev()`]
+    ///
+    /// [`zx_stream_create()`]: stream_create.md
+    /// [`zx_stream_readv()`]: stream_readv.md
+    /// [`zx_stream_readv_at()`]: stream_readv_at.md
+    /// [`zx_stream_seek()`]: stream_seek.md
+    /// [`zx_stream_writev()`]: stream_writev.md
     @blocking
     stream_writev_at(resource struct {
         handle handle:STREAM;
@@ -46,8 +279,80 @@ protocol stream {
         actual optional_usize;
     });
 
+    /// ## Summary
+    ///
     /// Read data from a stream at the current seek offset.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_READ.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_stream_readv(zx_handle_t handle,
+    ///                             uint32_t options,
+    ///                             zx_iovec_t* vector,
+    ///                             size_t num_vector,
+    ///                             size_t* actual);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_stream_readv()` attempts to read bytes from the stream, starting at the
+    /// current seek offset, into the buffers specified by *vector* and *num_vector*.
+    /// If successful, the number of bytes actually read are return via *actual*.
+    ///
+    /// If the current seek offset is beyond the end of the stream, `zx_stream_readv()`
+    /// will succeed in reading zero bytes.
+    ///
+    /// If a NULL *actual* is passed in, it will be ignored.
+    ///
+    /// Advances the seek offset of the stream by the actual number of bytes read.
+    /// If the read fails, the seek offset could either remain the same or have
+    /// been changed to an unspecified value.
+    ///
+    /// If the contents of *vector* change during this operation, if any of the buffers
+    /// overlap, or if any of the buffers overlap *vector*, the behavior is unspecified.
+    ///
+    /// *options* is reserved for future use and must be 0.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_STREAM** and have **ZX_RIGHT_READ**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_stream_readv()` returns **ZX_OK** on success, and writes into
+    /// *actual* (if non-NULL) the exact number of bytes read.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a stream handle.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have the **ZX_RIGHT_READ** right.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *vector* is an invalid `zx_iovec_t` or *options* is
+    /// nonzero.
+    ///
+    /// **ZX_ERR_NOT_FOUND**  the *vector* address, or an address specified within
+    /// *vector* does not map to address in address space.
+    ///
+    /// **ZX_ERR_BAD_STATE**  the underlying data source cannot be read.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_stream_create()`]
+    ///  - [`zx_stream_readv_at()`]
+    ///  - [`zx_stream_seek()`]
+    ///  - [`zx_stream_writev()`]
+    ///  - [`zx_stream_writev_at()`]
+    ///
+    /// [`zx_stream_create()`]: stream_create.md
+    /// [`zx_stream_readv_at()`]: stream_readv_at.md
+    /// [`zx_stream_seek()`]: stream_seek.md
+    /// [`zx_stream_writev()`]: stream_writev.md
+    /// [`zx_stream_writev_at()`]: stream_writev_at.md
     @blocking
     stream_readv(resource struct {
         handle handle:STREAM;
@@ -58,8 +363,79 @@ protocol stream {
         actual optional_usize;
     });
 
+    /// ## Summary
+    ///
     /// Read data from a stream at the given offset.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_READ.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_stream_readv_at(zx_handle_t handle,
+    ///                                uint32_t options,
+    ///                                zx_off_t offset,
+    ///                                zx_iovec_t* vector,
+    ///                                size_t num_vector,
+    ///                                size_t* actual);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_stream_readv_at()` attempts to read bytes from the stream, starting at the
+    /// given *offset*, into the buffers specified by *vector* and *num_vector*. If
+    /// successful, the number of bytes actually read are return via *actual*.
+    ///
+    /// If the given *offset* is beyond the end of the stream, `zx_stream_readv_at()`
+    /// will succeed in reading zero bytes.
+    ///
+    /// If a NULL *actual* is passed in, it will be ignored.
+    ///
+    /// Does not advance the seek offset of the stream.
+    ///
+    /// If the contents of *vector* change during this operation, if any of the buffers
+    /// overlap, or if any of the buffers overlap *vector*, the behavior is unspecified.
+    ///
+    /// *options* is reserved for future use and must be 0.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_STREAM** and have **ZX_RIGHT_READ**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_stream_readv_at()` returns **ZX_OK** on success, and writes into
+    /// *actual* (if non-NULL) the exact number of bytes read.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**   *handle* is not a stream handle.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have the **ZX_RIGHT_READ** right.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  vector is an invalid `zx_iovec_t` or *options* is
+    /// nonzero.
+    ///
+    /// **ZX_ERR_NOT_FOUND**  the *vector* address, or an address specified within
+    /// *vector* does not map to address in address space.
+    ///
+    /// **ZX_ERR_BAD_STATE**  the underlying data source cannot be read.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_stream_create()`]
+    ///  - [`zx_stream_readv()`]
+    ///  - [`zx_stream_seek()`]
+    ///  - [`zx_stream_writev()`]
+    ///  - [`zx_stream_writev_at()`]
+    ///
+    /// [`zx_stream_create()`]: stream_create.md
+    /// [`zx_stream_readv()`]: stream_readv.md
+    /// [`zx_stream_seek()`]: stream_seek.md
+    /// [`zx_stream_writev()`]: stream_writev.md
+    /// [`zx_stream_writev_at()`]: stream_writev_at.md
     @blocking
     stream_readv_at(resource struct {
         handle handle:STREAM;
@@ -71,8 +447,79 @@ protocol stream {
         actual optional_usize;
     });
 
+    /// ## Summary
+    ///
     /// Modify the seek offset.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_STREAM and have ZX_RIGHT_READ or have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_stream_seek(zx_handle_t handle,
+    ///                            zx_stream_seek_origin_t whence,
+    ///                            int64_t offset,
+    ///                            zx_off_t* out_seek);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_stream_seek()` sets the seek offset of the stream to *offset* relative to
+    /// *whence*.
+    ///
+    /// If the resulting seek offset were to be negative or exceed the maximum
+    /// representable `zx_off_t`, `zx_stream_seek()` returns **ZX_ERR_INVALID_ARGS**.
+    ///
+    /// The resulting seek offset might extend beyond the end of the stream. Setting
+    /// such a seek offset does not cause `zx_stream_seek()` to return an error, but
+    /// attempting to read or write data at that seek offset might generate an error.
+    ///
+    /// ## WHENCE
+    ///
+    /// **ZX_STREAM_SEEK_ORIGIN_START**  set the seek offset relative to the start of
+    /// the stream.
+    ///
+    /// **ZX_STREAM_SEEK_ORIGIN_CURRENT**  set the seek offset relative to the current
+    /// seek offset of the stream.
+    ///
+    /// **ZX_STREAM_SEEK_ORIGIN_END**  set the seek offset relative to the end of the
+    /// stream, as defined by the content size of the stream.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_STREAM** and have **ZX_RIGHT_WRITE** or have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_stream_seek()` returns **ZX_OK** on success, and writes the resulting seek
+    /// offset, relative to the start of the stream, into *out_offset* (if non-NULL).
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a stream handle.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have the **ZX_RIGHT_READ** or
+    /// **ZX_RIGHT_WRITE** right.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *whence* is an invalid `zx_stream_seek_origin_t` or
+    /// the resulting seek would be negative or exceed the maximum representable
+    /// `zx_off_t`.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_stream_create()`]
+    ///  - [`zx_stream_readv()`]
+    ///  - [`zx_stream_readv_at()`]
+    ///  - [`zx_stream_writev()`]
+    ///  - [`zx_stream_writev_at()`]
+    ///
+    /// [`zx_stream_create()`]: stream_create.md
+    /// [`zx_stream_readv()`]: stream_readv.md
+    /// [`zx_stream_readv_at()`]: stream_readv_at.md
+    /// [`zx_stream_writev()`]: stream_writev.md
+    /// [`zx_stream_writev_at()`]: stream_writev_at.md
     stream_seek(resource struct {
         handle handle:STREAM;
         whence stream_seek_origin;

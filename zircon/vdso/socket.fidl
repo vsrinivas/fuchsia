@@ -5,8 +5,62 @@ library zx;
 
 @transport("Syscall")
 protocol socket {
+    /// ## Summary
+    ///
     /// Create a socket.
-    /// Rights: Caller job policy must allow ZX_POL_NEW_SOCKET.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_socket_create(uint32_t options,
+    ///                              zx_handle_t* out0,
+    ///                              zx_handle_t* out1);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_socket_create()` creates a socket, a connected pair of
+    /// bidirectional stream transports, that can move only data, and that
+    /// have a maximum capacity.
+    ///
+    /// Data written to one handle may be read from the opposite.
+    ///
+    /// The *options* must set either the **ZX_SOCKET_STREAM** or
+    /// **ZX_SOCKET_DATAGRAM** flag.
+    ///
+    /// ## Rights
+    ///
+    /// Caller job policy must allow **ZX_POL_NEW_SOCKET**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_socket_create()` returns **ZX_OK** on success. In the event of
+    /// failure, one of the following values is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *out0* or *out1* is an invalid pointer or NULL or
+    /// *options* is any value other than **ZX_SOCKET_STREAM** or **ZX_SOCKET_DATAGRAM**.
+    ///
+    /// **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+    /// There is no good way for userspace to handle this (unlikely) error.
+    /// In a future build this error will no longer occur.
+    ///
+    /// ## LIMITATIONS
+    ///
+    /// The maximum capacity is not currently set-able.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_socket_read()`]
+    ///  - [`zx_socket_set_disposition()`]
+    ///  - [`zx_socket_write()`]
+    ///
+    /// [`zx_socket_read()`]: socket_read.md
+    /// [`zx_socket_set_disposition()`]: socket_set_disposition.md
+    /// [`zx_socket_write()`]: socket_write.md
     socket_create(struct {
         options uint32;
     }) -> (resource struct {
@@ -15,8 +69,86 @@ protocol socket {
         out1 handle;
     });
 
+    /// ## Summary
+    ///
     /// Write data to a socket.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_socket_write(zx_handle_t handle,
+    ///                             uint32_t options,
+    ///                             const void* buffer,
+    ///                             size_t buffer_size,
+    ///                             size_t* actual);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_socket_write()` attempts to write *buffer_size* bytes to the socket
+    /// specified by *handle*. The pointer to *bytes* may be NULL if *buffer_size* is
+    /// zero.
+    ///
+    /// If a NULL *actual* is passed in, it will be ignored.
+    ///
+    /// A **ZX_SOCKET_STREAM** socket write can be short if the socket does not have
+    /// enough space for all of *buffer*. If a non-zero amount of data was written to
+    /// the socket, the amount written is returned via *actual* and the call succeeds.
+    /// Otherwise, if the socket was already full, the call returns
+    /// **ZX_ERR_SHOULD_WAIT** and the client should wait (e.g., with
+    /// [`zx_object_wait_one()`] or [`zx_object_wait_async()`]).
+    ///
+    /// A **ZX_SOCKET_DATAGRAM** socket write is never short. If the socket has
+    /// insufficient space for *buffer*, it writes nothing and returns
+    /// **ZX_ERR_SHOULD_WAIT**. If the write succeeds, *buffer_size* is returned via
+    /// *actual*. Attempting to write a packet larger than the datagram socket's
+    /// capacity will fail with **ZX_ERR_OUT_OF_RANGE**.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_SOCKET** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_socket_write()` returns **ZX_OK** on success.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_BAD_STATE**  writing has been disabled for this socket endpoint via
+    /// [`zx_socket_set_disposition()`].
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a socket handle.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *buffer* is an invalid pointer.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_WRITE**.
+    ///
+    /// **ZX_ERR_SHOULD_WAIT**  The buffer underlying the socket is full.
+    ///
+    /// **ZX_ERR_OUT_OF_RANGE**  The socket was created with **ZX_SOCKET_DATAGRAM** and
+    /// *buffer* is larger than the remaining space in the socket.
+    ///
+    /// **ZX_ERR_PEER_CLOSED**  The other side of the socket is closed.
+    ///
+    /// **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+    /// There is no good way for userspace to handle this (unlikely) error.
+    /// In a future build this error will no longer occur.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_socket_create()`]
+    ///  - [`zx_socket_read()`]
+    ///  - [`zx_socket_set_disposition()`]
+    ///
+    /// [`zx_object_wait_async()`]: object_wait_async.md
+    /// [`zx_object_wait_one()`]: object_wait_one.md
+    /// [`zx_socket_create()`]: socket_create.md
+    /// [`zx_socket_read()`]: socket_read.md
+    /// [`zx_socket_set_disposition()`]: socket_set_disposition.md
     socket_write(resource struct {
         handle handle:SOCKET;
         options uint32;
@@ -26,8 +158,81 @@ protocol socket {
         actual optional_usize;
     });
 
+    /// ## Summary
+    ///
     /// Read data from a socket.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_READ.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_socket_read(zx_handle_t handle,
+    ///                            uint32_t options,
+    ///                            void* buffer,
+    ///                            size_t buffer_size,
+    ///                            size_t* actual);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_socket_read()` attempts to read *buffer_size* bytes into *buffer*. If
+    /// successful, the number of bytes actually read are return via
+    /// *actual*.
+    ///
+    /// If a NULL *actual* is passed in, it will be ignored.
+    ///
+    /// If the socket was created with **ZX_SOCKET_DATAGRAM**, this syscall reads
+    /// only the first available datagram in the socket (if one is present).
+    /// If *buffer* is too small for the datagram, then the read will be
+    /// truncated, and any remaining bytes in the datagram will be discarded.
+    ///
+    /// Supported *options* are:
+    ///
+    /// * **ZX_SOCKET_PEEK** to leave the message in the socket.
+    ///
+    /// To determine how many bytes are available to read, use the **rx_buf_available**
+    /// field of the resulting `zx_info_socket_t`, which you can obtain using the
+    /// **ZX_INFO_SOCKET** topic for [`zx_object_get_info()`].
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_SOCKET** and have **ZX_RIGHT_READ**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_socket_read()` returns **ZX_OK** on success, and writes into
+    /// *actual* (if non-NULL) the exact number of bytes read.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_BAD_STATE**  writing to *handle*'s peer has been disabled via
+    /// [`zx_socket_set_disposition()`] and no pending data remains on *handle*.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a socket handle.
+    ///
+    /// **ZX_ERR_INVALID_ARGS** If any of *buffer* or *actual* are non-NULL
+    /// but invalid pointers, or if *buffer* is NULL, or if *options* is zero.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_READ**.
+    ///
+    /// **ZX_ERR_SHOULD_WAIT**  The socket contained no data to read.
+    ///
+    /// **ZX_ERR_PEER_CLOSED**  The other side of the socket is closed and no data is
+    /// readable.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_socket_create()`]
+    ///  - [`zx_socket_set_disposition()`]
+    ///  - [`zx_socket_write()`]
+    ///
+    /// [`zx_object_get_info()`]: object_get_info.md
+    /// [`zx_socket_create()`]: socket_create.md
+    /// [`zx_socket_set_disposition()`]: socket_set_disposition.md
+    /// [`zx_socket_write()`]: socket_write.md
     socket_read(resource struct {
         handle handle:SOCKET;
         options uint32;
@@ -37,8 +242,80 @@ protocol socket {
         actual optional_usize;
     });
 
+    /// ## Summary
+    ///
     /// Set disposition of writes.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_SOCKET and have ZX_RIGHT_MANAGE_SOCKET.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_socket_set_disposition(zx_handle_t handle,
+    ///                                       uint32_t disposition,
+    ///                                       uint32_t disposition_peer);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_socket_set_disposition` sets the disposition of
+    /// [`zx_socket_write()`] calls for a socket handle and its peer.
+    ///
+    /// Valid disposition flags that can be used:
+    ///
+    /// **ZX_SOCKET_DISPOSITION_WRITE_DISABLED** - Disable writes for the specified
+    /// socket endpoint. Once set, writes to the specified socket endpoint will fail
+    /// with **ZX_ERR_BAD_STATE**. Reads from the specified socket endpoint will
+    /// succeed until all data buffered in the specified socket endpoint is consumed,
+    /// and fail with **ZX_ERR_BAD_STATE** thereafter.
+    ///
+    /// **ZX_SOCKET_DISPOSITION_WRITE_ENABLED** - Enable writes for the specified
+    /// socket endpoint.  Once set, writes to and reads from the specified socket
+    /// endpoint will behave as specified in [`zx_socket_write()`] and
+    /// [`zx_socket_read()`], respectively.
+    ///
+    /// It is invalid to specify **ZX_SOCKET_DISPOSITION_WRITE_ENABLED** on a socket
+    /// endpoint that has buffered data; doing so will result in
+    /// `zx_socket_set_disposition` returning **ZX_ERR_BAD_STATE** and no action being
+    /// taken.
+    ///
+    /// It is invalid to specify both **ZX_SOCKET_DISPOSITION_WRITE_DISABLED** and
+    /// **ZX_SOCKET_DISPOSITION_WRITE_ENABLED** in *disposition* or *disposition_peer*;
+    /// doing so will result in `zx_socket_set_disposition` returning
+    /// **ZX_ERR_INVALID_ARGS** and no action being taken.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_SOCKET** and have **ZX_RIGHT_MANAGE_SOCKET**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_socket_set_disposition()` returns **ZX_OK** on success.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_BAD_STATE**  *disposition* or *disposition_peer* contains
+    /// **ZX_SOCKET_DISPOSITION_WRITE_ENABLED** and *handle* refers to a socket with
+    /// buffered data on the specified socket endpoint.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a socket handle.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_MANAGE_SOCKET**.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *disposition* or *disposition_peer* contains flags
+    /// outside of the ones listed above or an invalid combination of flags.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_socket_create()`]
+    ///  - [`zx_socket_read()`]
+    ///  - [`zx_socket_write()`]
+    ///
+    /// [`zx_socket_create()`]: socket_create.md
+    /// [`zx_socket_read()`]: socket_read.md
+    /// [`zx_socket_write()`]: socket_write.md
     socket_set_disposition(resource struct {
         handle handle:<SOCKET, rights.MANAGE_SOCKET>;
         disposition uint32;

@@ -5,8 +5,66 @@ library zx;
 
 @transport("Syscall")
 protocol fifo {
+    /// ## Summary
+    ///
     /// Create a fifo.
-    /// Rights: Caller job policy must allow ZX_POL_NEW_FIFO.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_fifo_create(size_t elem_count,
+    ///                            size_t elem_size,
+    ///                            uint32_t options,
+    ///                            zx_handle_t* out0,
+    ///                            zx_handle_t* out1);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_fifo_create()` creates a fifo, which is actually a pair of fifos
+    /// of *elem_count* entries of *elem_size* bytes.  Two endpoints are
+    /// returned.  Writing to one endpoint enqueues an element into the fifo
+    /// that the opposing endpoint reads from.
+    ///
+    /// Fifos are intended to be the control plane for shared memory transports.
+    /// Their read and write operations are more efficient than *sockets* or
+    /// *channels*, but there are severe restrictions on the size of elements
+    /// and buffers.
+    ///
+    /// The total size of each fifo (`elem_count * elem_size`) may not exceed 4096 bytes.
+    ///
+    /// The *options* argument must be 0.
+    ///
+    /// ## Rights
+    ///
+    /// Caller job policy must allow **ZX_POL_NEW_FIFO**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_fifo_create()` returns **ZX_OK** on success. In the event of
+    /// failure, one of the following values is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *out0* or *out1* is an invalid pointer or NULL or
+    /// *options* is any value other than 0.
+    ///
+    /// **ZX_ERR_OUT_OF_RANGE**  *elem_count* or *elem_size* is zero, or
+    /// *elem_count* * *elem_size* is greater than 4096.
+    ///
+    /// **ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
+    /// There is no good way for userspace to handle this (unlikely) error.
+    /// In a future build this error will no longer occur.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_fifo_read()`]
+    ///  - [`zx_fifo_write()`]
+    ///
+    /// [`zx_fifo_read()`]: fifo_read.md
+    /// [`zx_fifo_write()`]: fifo_write.md
     fifo_create(struct {
         elem_count usize;
         elem_size usize;
@@ -17,8 +75,76 @@ protocol fifo {
         out1 handle:FIFO;
     });
 
+    /// ## Summary
+    ///
     /// Read data from a fifo.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_FIFO and have ZX_RIGHT_READ.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_fifo_read(zx_handle_t handle,
+    ///                          size_t elem_size,
+    ///                          void* data,
+    ///                          size_t data_size,
+    ///                          size_t* actual_count);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_fifo_read()` attempts to read up to *count* elements from the fifo
+    /// *handle* into *data*.
+    ///
+    /// Fewer elements may be read than requested if there are insufficient
+    /// elements in the fifo to fulfill the entire request. The number of
+    /// elements actually read is returned via *actual_count*.
+    ///
+    /// The element size specified by *elem_size* must match the element size
+    /// that was passed into [`zx_fifo_create()`].
+    ///
+    /// *data* must have a size of at least `count * elem_size` bytes.
+    ///
+    /// *actual_count* is allowed to be NULL. This is useful when reading
+    /// a single element: if *count* is 1 and `zx_fifo_read()` returns **ZX_OK**,
+    /// *actual_count* is guaranteed to be 1 and thus can be safely ignored.
+    ///
+    /// It is not legal to read zero elements.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_FIFO** and have **ZX_RIGHT_READ**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_fifo_read()` returns **ZX_OK** on success, and returns
+    /// the number of elements read (at least one) via *actual_count*.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a fifo handle.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *data* is an invalid pointer or *actual_count*
+    /// is an invalid pointer.
+    ///
+    /// **ZX_ERR_OUT_OF_RANGE**  *count* is zero or *elem_size* is not equal
+    /// to the element size of the fifo.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_READ**.
+    ///
+    /// **ZX_ERR_PEER_CLOSED**  The other side of the fifo is closed.
+    ///
+    /// **ZX_ERR_SHOULD_WAIT**  The fifo is empty.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_fifo_create()`]
+    ///  - [`zx_fifo_write()`]
+    ///
+    /// [`zx_fifo_create()`]: fifo_create.md
+    /// [`zx_fifo_write()`]: fifo_write.md
     fifo_read(resource struct {
         handle handle:FIFO;
         elem_size usize;
@@ -28,8 +154,74 @@ protocol fifo {
         actual_count optional_usize;
     });
 
+    /// ## Summary
+    ///
     /// Write data to a fifo.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_FIFO and have ZX_RIGHT_WRITE.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_fifo_write(zx_handle_t handle,
+    ///                           size_t elem_size,
+    ///                           const void* data,
+    ///                           size_t count,
+    ///                           size_t* actual_count);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_fifo_write()` attempts to write up to *count* elements
+    /// (`count * elem_size` bytes) from *data* to the fifo specified by *handle*.
+    ///
+    /// Fewer elements may be written than requested if there is insufficient
+    /// room in the fifo to contain all of them. The number of
+    /// elements actually written is returned via *actual_count*.
+    ///
+    /// The element size specified by *elem_size* must match the element size
+    /// that was passed into [`zx_fifo_create()`].
+    ///
+    /// *actual_count* is allowed to be NULL. This is useful when writing
+    /// a single element: if *count* is 1 and `zx_fifo_write()` returns **ZX_OK**,
+    /// *actual_count* is guaranteed to be 1 and thus can be safely ignored.
+    ///
+    /// It is not legal to write zero elements.
+    ///
+    /// ## Rights
+    ///
+    /// *handle* must be of type **ZX_OBJ_TYPE_FIFO** and have **ZX_RIGHT_WRITE**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_fifo_write()` returns **ZX_OK** on success, and returns
+    /// the number of elements written (at least one) via *actual_count*.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE**  *handle* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE**  *handle* is not a fifo handle.
+    ///
+    /// **ZX_ERR_INVALID_ARGS**  *data* is an invalid pointer or *actual_count*
+    /// is an invalid pointer.
+    ///
+    /// **ZX_ERR_OUT_OF_RANGE**  *count* is zero or *elem_size* is not equal
+    /// to the element size of the fifo.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED**  *handle* does not have **ZX_RIGHT_WRITE**.
+    ///
+    /// **ZX_ERR_PEER_CLOSED**  The other side of the fifo is closed.
+    ///
+    /// **ZX_ERR_SHOULD_WAIT**  The fifo is full.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_fifo_create()`]
+    ///  - [`zx_fifo_read()`]
+    ///
+    /// [`zx_fifo_create()`]: fifo_create.md
+    /// [`zx_fifo_read()`]: fifo_read.md
     fifo_write(resource struct {
         handle handle:FIFO;
         elem_size usize;

@@ -22,41 +22,288 @@ type SystemPowerctlArg = struct {
 
 @transport("Syscall")
 protocol system {
+    /// ## Summary
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// uint32_t zx_system_get_dcache_line_size(void);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Rights
+    ///
+    /// TODO(fxbug.dev/32253)
+    ///
+    /// ## Return value
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Errors
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     @const
     @vdsocall
     system_get_dcache_line_size() -> (struct {
         size uint32;
     });
 
+    /// ## Summary
+    ///
     /// Get number of logical processors on the system.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// uint32_t zx_system_get_num_cpus(void);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_system_get_num_cpus()` returns the number of CPUs (logical processors)
+    /// that exist on the system currently running.  This number cannot change
+    /// during a run of the system, only at boot time.
+    ///
+    /// ## Rights
+    ///
+    /// TODO(fxbug.dev/32253)
+    ///
+    /// ## Return value
+    ///
+    /// `zx_system_get_num_cpus()` returns the number of CPUs.
+    ///
+    /// ## Errors
+    ///
+    /// `zx_system_get_num_cpus()` cannot fail.
+    ///
+    /// ## Notes
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_system_get_physmem()`]
+    ///
+    /// [`zx_system_get_physmem()`]: system_get_physmem.md
     @const
     @vdsocall
     system_get_num_cpus() -> (struct {
         count uint32;
     });
 
+    /// ## Summary
+    ///
     /// Get version string for system.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_string_view_t zx_system_get_version_string(void);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_system_get_version_string()` returns a string identifying the version of
+    /// the Zircon system currently running.
+    ///
+    /// The returned object is a simple pair of C string pointer and length.  The
+    /// string is guaranteed to be NUL-terminated and to be valid UTF-8.  The length
+    /// does not include the NUL terminator.  In C++ the return value can be coerced
+    /// implicitly to `std::string_view`, `std::u8string_view`, or other types with
+    /// equivalent two-argument constructor signatures.
+    ///
+    /// The string constant may be of any length.  It is in read-only memory provided
+    /// by the [vDSO](../../concepts/kernel/vdso.md).  Thus it is always accessible at
+    /// the same address for the life of the process and its contents never change.
+    ///
+    /// The first four characters identify the version scheme. An example of the string
+    /// returned is "git-8a07d52603404521038d8866b297f99de36f9162".
+    ///
+    /// ## Rights
+    ///
+    /// TODO(fxbug.dev/32253)
+    ///
+    /// ## Return value
+    ///
+    /// `zx_system_get_version_string()` returns a `zx_string_view_t` object.
+    ///
+    /// ## Errors
+    ///
+    /// `zx_system_get_version_string()` cannot fail.
+    ///
+    /// ## Notes
+    ///
+    /// ## See also
+    ///
     @const
     @vdsocall
     system_get_version_string() -> (struct {
         version string_view;
     });
 
+    /// ## Summary
+    ///
     /// Get the page size for the system.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// uint32_t zx_system_get_page_size(void);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_system_get_page_size()` returns the base memory page size of the system in
+    /// bytes. This number cannot change during a run of the system, only at boot time,
+    /// and is guaranteed to be an exact power of 2.
+    ///
+    /// The page size represents the allocation and alignment granularity of VMOs in
+    /// `zx_vmo_create()` and the smallest unit that can be mapped via `zx_vmar_map()`.
+    ///
+    /// For every architecture there are well defined minimum and maximum values,
+    /// `ZX_MIN_PAGE_SIZE` and `ZX_MAX_PAGE_SIZE`, that this will return.
+    ///
+    /// | Architecture | `ZX_MIN_PAGE_SIZE` | `ZX_MAX_PAGE_SIZE` |
+    /// | ------------ | ------------------ | ------------------ |
+    /// | ARM          | 4KiB               | 64KiB              |
+    /// | X86-64       | 4KiB               | 2MiB               |
+    ///
+    /// ## Rights
+    ///
+    /// TODO(fxbug.dev/32253)
+    ///
+    /// ## Return value
+    ///
+    /// `zx_system_get_page_size()` returns the page size in bytes.
+    ///
+    /// ## Errors
+    ///
+    /// `zx_system_get_page_size()` cannot fail.
+    ///
+    /// ## Notes
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_vmar_map()`]
+    ///  - [`zx_vmo_create()`]
+    ///
+    /// [`zx_vmar_map()`]: vmar_map.md
+    /// [`zx_vmo_create()`]: vmo_create.md
     @const
     @vdsocall
     system_get_page_size() -> (struct {
         size uint32;
     });
 
+    /// ## Summary
+    ///
     /// Get amount of physical memory on the system.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// uint64_t zx_system_get_physmem(void);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_system_get_physmem()` returns the total size of physical memory on
+    /// the machine, in bytes.
+    ///
+    /// ## Rights
+    ///
+    /// TODO(fxbug.dev/32253)
+    ///
+    /// ## Return value
+    ///
+    /// `zx_system_get_physmem()` returns a number in bytes.
+    ///
+    /// ## Errors
+    ///
+    /// `zx_system_get_physmem()` cannot fail.
+    ///
+    /// ## Notes
+    ///
+    /// Currently the total size of physical memory cannot change during a run of
+    /// the system, only at boot time.  This might change in the future.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_system_get_num_cpus()`]
+    ///
+    /// [`zx_system_get_num_cpus()`]: system_get_num_cpus.md
     @vdsocall
     system_get_physmem() -> (struct {
         physmem uint64;
     });
 
     // TODO(scottmg): "features" has a features attribute. I'm not sure if/how it's used.
+    /// ## Summary
+    ///
     /// Get supported hardware capabilities.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_system_get_features(uint32_t kind, uint32_t* features);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_system_get_features()` populates *features* with a bit mask of
+    /// hardware-specific features.  *kind* indicates the specific type of features
+    /// to retrieve, e.g. **ZX_FEATURE_KIND_CPU**.  The supported kinds and the meaning
+    /// of individual feature bits is hardware-dependent.  **ZX_FEATURE_KIND_VM** is not
+    /// hardware-dependent and returns a bitset currently the only meaningful bit
+    /// is **ZX_VM_FEATURE_CAN_MAP_XOM** which is 1 if the system can map pages with
+    /// execute only permission.
+    ///
+    /// ## Rights
+    ///
+    /// TODO(fxbug.dev/32253)
+    ///
+    /// ## Return value
+    ///
+    /// `zx_system_get_features()`  returns **ZX_OK** on success.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_NOT_SUPPORTED**  The requested feature kind is not available on this
+    /// platform.
+    ///
+    /// ## Notes
+    /// Refer to [Install Fuchsia on a device](/docs/development/hardware/README.md)
+    /// for supported processor architectures.
+    ///
+    /// Refer to [zircon/features.h](/zircon/system/public/zircon/features.h) for kinds
+    /// of features and individual feature bits.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_system_get_num_cpus()`]
+    ///  - [`zx_system_get_physmem()`]
+    ///
+    /// [`zx_system_get_num_cpus()`]: system_get_num_cpus.md
+    /// [`zx_system_get_physmem()`]: system_get_physmem.md
     @vdsocall
     system_get_features(struct {
         kind uint32;
@@ -65,8 +312,99 @@ protocol system {
         features uint32;
     });
 
+    /// ## Summary
+    ///
     /// Retrieve a handle to a system event.
-    /// Rights: None.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_system_get_event(zx_handle_t root_job,
+    ///                                 uint32_t kind,
+    ///                                 zx_handle_t* event);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// *root_job* must be a handle to the root job of the system.
+    ///
+    /// *kind* must be one of the following:
+    ///
+    /// - **ZX_SYSTEM_EVENT_OUT_OF_MEMORY** - An *event* will be returned that will
+    /// assert ZX_EVENT_SIGNALED when the system is in an out-of-memory situation.
+    /// A process that is waiting on this event must quickly perform any important
+    /// shutdown work. It is unspecified how much memory is available at the time this
+    /// event is signaled, and unspecified how long the waiting process has to act
+    /// before the kernel starts terminating processes or starting a full system reboot.
+    ///
+    /// - **ZX_SYSTEM_EVENT_IMMINENT_OUT_OF_MEMORY** - An *event* will be returned that
+    /// will assert ZX_EVENT_SIGNALED when the system is nearing an out-of-memory
+    /// situation. This event is signaled a little earlier than the
+    /// ZX_SYSTEM_EVENT_OUT_OF_MEMORY event. The intent of this event is to allow the
+    /// waiter to gather diagnostics related to the impending
+    /// ZX_SYSTEM_EVENT_OUT_OF_MEMORY event, since it might be too late to do so
+    /// reliably when ZX_SYSTEM_EVENT_OUT_OF_MEMORY is signaled.
+    ///
+    /// - **ZX_SYSTEM_EVENT_MEMORY_PRESSURE_CRITICAL** - An *event* will be returned
+    /// that will assert ZX_EVENT_SIGNALED when available memory on the system is
+    /// critically low. The memory pressure level in this case is less severe than in
+    /// the case of ZX_SYSTEM_EVENT_OUT_OF_MEMORY. The exact amount of memory available
+    /// at the time the event is signaled is unspecified.
+    ///
+    /// - **ZX_SYSTEM_EVENT_MEMORY_PRESSURE_WARNING** - An *event* will be returned
+    /// that will assert ZX_EVENT_SIGNALED when available memory on the system is
+    /// approaching the critically low range. The memory pressure level in this case is
+    /// less severe than in the case of ZX_SYSTEM_EVENT_MEMORY_PRESSURE_CRITICAL. The
+    /// exact amount of memory available at the time the event is signaled is
+    /// unspecified.
+    ///
+    /// - **ZX_SYSTEM_EVENT_MEMORY_PRESSURE_NORMAL** - An *event* will be returned that
+    /// will assert ZX_EVENT_SIGNALED when available memory on the system is
+    /// healthy. The exact amount of memory available at the time the event is signaled
+    /// is unspecified.
+    ///
+    /// The kernel will assert ZX_EVENT_SIGNALED on these five events in the following
+    /// order of increasing severity: ZX_SYSTEM_EVENT_MEMORY_PRESSURE_NORMAL,
+    /// ZX_SYSTEM_EVENT_MEMORY_PRESSURE_WARNING,
+    /// ZX_SYSTEM_EVENT_MEMORY_PRESSURE_CRITICAL, ZX_SYSTEM_EVENT_IMMINENT_OUT_OF_MEMORY,
+    /// and ZX_SYSTEM_EVENT_OUT_OF_MEMORY. Exactly one of these events will assert
+    /// ZX_EVENT_SIGNALED at a given time.
+    ///
+    /// Both ZX_SYSTEM_EVENT_OUT_OF_MEMORY and ZX_SYSTEM_EVENT_MEMORY_PRESSURE_\*
+    /// retrieve events corresponding to system memory pressure levels, but there is a
+    /// key difference in the way these events are intended to be used. A process
+    /// waiting on the any of the ZX_SYSTEM_EVENT_MEMORY_PRESSURE_\* events must
+    /// undertake actions that free up memory and attempt to relieve the memory
+    /// pressure on the system. On the other hand, a process waiting on the
+    /// ZX_SYSTEM_EVENT_OUT_OF_MEMORY event must perform necessary actions in
+    /// preparation for a clean shutdown - at this point it is too late to attempt
+    /// recovery to a healthy memory pressure level.
+    ///
+    /// The ZX_SYSTEM_EVENT_IMMINENT_OUT_OF_MEMORY event can be seen as a companion event
+    /// for ZX_SYSTEM_EVENT_OUT_OF_MEMORY, which does not trigger memory reclamation
+    /// itself, but instead is used to capture memory diagnostics what will help debug
+    /// the closely following ZX_SYSTEM_EVENT_OUT_OF_MEMORY event (if there is one).
+    ///
+    /// ## Rights
+    ///
+    /// None.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_system_get_event()` returns ZX_OK on success, and *event* will be a valid
+    /// handle, or an error code from below on failure.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_ACCESS_DENIED** The calling process' policy was invalid, the handle
+    /// *root_job* did not have ZX_RIGHT_MANAGE_PROCESS rights for *kind*
+    /// ZX_SYSTEM_EVENT_OUT_OF_MEMORY, *root_job* was not the
+    /// root job of the system.
+    ///
+    /// **ZX_ERR_INVALID_ARGS** *kind* was not one of the supported values specified
+    /// above.
     system_get_event(resource struct {
         root_job handle:JOB;
         kind uint32;
@@ -75,8 +413,82 @@ protocol system {
         event handle:EVENT;
     });
 
+    /// ## Summary
+    ///
     /// Set CPU performance parameters.
-    /// Rights: resource must have resource kind ZX_RSRC_KIND_SYSTEM.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_system_set_performance_info(zx_handle_t resource,
+    ///                                            uint32_t topic,
+    ///                                            const void* info,
+    ///                                            size_t count);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_system_set_performance_info()` sets CPU performance parameters maintained by the kernel. The
+    /// *topic* parameter indicates what specific parameters are affected.
+    ///
+    /// *count* indicates the number of items to set. Topics may impose requriements on this value.
+    ///
+    /// *info* is a pointer to a buffer of sufficient size to accommodate *count* entries of the type
+    /// specified by *topic*.
+    ///
+    /// [TOC]
+    ///
+    /// ## TOPICS
+    ///
+    /// ### ZX_CPU_PERF_SCALE
+    ///
+    /// *count*: Must be non-zero and less than or equal to the number of logical CPUs in the system.
+    ///
+    /// *info* type: `zx_cpu_performance_scale_t[count]`
+    ///
+    /// An array of `zx_cpu_performance_scale_t` with entries specifying the performance scales (scalar
+    /// values representing relative operating points) of the respective logical CPUs in the system. Only
+    /// the CPUs specified in the array are updated, other CPUs are not affected.
+    ///
+    /// Logical CPU numbers must be stored in increasing order in the array. The scale values are unsigned
+    /// fixed point Q32.32 format. The scale values should indicate the relative performance of the CPUs,
+    /// with 1.0 corresponding to the highest operating point of the fastest CPU in the system.
+    ///
+    /// See [RFC 0123](/docs/contribute/governance/rfcs/0123_cpu_performance_info.md)
+    /// for further details on values and update protocols.
+    ///
+    /// ## Rights
+    ///
+    /// *resource* must have resource kind **ZX_RSRC_KIND_SYSTEM**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_system_set_performance_info()` returns **ZX_OK** on success. In the event of a failure, a
+    /// negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *resource* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE** *resource* is not resource kind **ZX_RSRC_KIND_SYSTEM**.
+    ///
+    /// **ZX_ERR_OUT_OF_RANGE** *resource* is not in the range [**ZX_RSRC_SYSTEM_CPU_BASE**, **ZX_RSRC_SYSTEM_CPU_BASE**+1).
+    ///
+    /// **ZX_ERR_INVALID_ARGS** *topic* or *info* have invalid values or *info* has out-of-order entries.
+    ///
+    /// **ZX_ERR_OUT_OF_RANGE** *count* or *info* entry values do not meet the requirements of the topic.
+    ///
+    /// **ZX_ERR_NO_MEMORY** Failure due to lack of memory. There is no good way for userspace to handle this (unlikely) error. In a future build this error will no longer occur.
+    ///
+    /// ## See also
+    ///
+    /// - [RFC 0123: CPU performance info syscalls](/docs/contribute/governance/rfcs/0123_cpu_performance_info.md)
+    ///
+    ///  - [`zx_system_get_performance_info()`]
+    ///
+    /// [`zx_system_get_performance_info()`]: system_get_performance_info.md
     system_set_performance_info(resource struct {
         resource handle:RESOURCE;
         topic uint32;
@@ -86,8 +498,95 @@ protocol system {
         status status;
     });
 
+    /// ## Summary
+    ///
     /// Get CPU performance parameters.
-    /// Rights: resource must have resource kind ZX_RSRC_KIND_SYSTEM.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_system_get_performance_info(zx_handle_t resource,
+    ///                                            uint32_t topic,
+    ///                                            size_t count,
+    ///                                            void* info,
+    ///                                            size_t* output_count);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_system_get_performance_info()` requests CPU performance parameters maintained by the kernel. The
+    /// *topic* parameter indicates what specific information is desired.
+    ///
+    /// *count* indicates the number of items to query. Topics may impose requriements on this value.
+    ///
+    /// *info* is a pointer to a buffer of sufficient size to accommodate *count* entries of the type
+    /// specified by *topic*. The values stored in this array are undefined if the syscall returns an error.
+    ///
+    /// *output_count* is updated with the number of info entries populated by the kernel on success. The
+    /// value stored in this memory location is undefined if the syscall returns an error.
+    ///
+    /// [TOC]
+    ///
+    /// ## TOPICS
+    ///
+    /// ### ZX_CPU_PERF_SCALE
+    ///
+    /// *count*: Must be equal to the number of logical CPUs in the system.
+    ///
+    /// *info* type: `zx_cpu_performance_scale_t[count]`
+    ///
+    /// Returns an array of `zx_cpu_performance_scale_t` with entries indicating the current performance
+    /// scales (scalar values representing relative operating points) of each logical CPU in the system. The
+    /// values reflect the most recent call to `zx_system_set_performance_info`, even if the values have not
+    /// yet taken effect.
+    ///
+    /// See [RFC 0123](/docs/contribute/governance/rfcs/0123_cpu_performance_info.md)
+    /// for further details on values and update protocols.
+    ///
+    /// ### ZX_CPU_DEFAULT_PERF_SCALE
+    ///
+    /// *count*: Must be equal to the number of logical CPUs in the system.
+    ///
+    /// *info* type: `zx_cpu_performance_scale_t[count]`
+    ///
+    /// Returns an array of `zx_cpu_performance_scale_t` with entries indicating the default performance
+    /// scales used during boot of each logical CPU in the system.
+    ///
+    /// See [RFC 0123](/docs/contribute/governance/rfcs/0123_cpu_performance_info.md)
+    /// for further details.
+    ///
+    /// ## Rights
+    ///
+    /// *resource* must have resource kind **ZX_RSRC_KIND_SYSTEM**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_system_get_performance_info()` returns **ZX_OK** on success. In the event of a failure, a
+    /// negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_BAD_HANDLE** *resource* is not a valid handle.
+    ///
+    /// **ZX_ERR_WRONG_TYPE** *resource* is not resource kind **ZX_RSRC_KIND_SYSTEM**.
+    ///
+    /// **ZX_ERR_ACCESS_DENIED** *resource* is not in the range [**ZX_RSRC_SYSTEM_CPU_BASE**, **ZX_RSRC_SYSTEM_CPU_BASE**+1).
+    ///
+    /// **ZX_ERR_INVALID_ARGS** *topic*, *info*, or *output_count* have invalid values.
+    ///
+    /// **ZX_ERR_OUT_OF_RANGE** *count* does not meet the requirements of the topic.
+    ///
+    /// **ZX_ERR_NO_MEMORY** Failure due to lack of memory. There is no good way for userspace to handle this (unlikely) error. In a future build this error will no longer occur.
+    ///
+    /// ## See also
+    ///
+    /// - [RFC 0123: CPU performance info syscalls](/docs/contribute/governance/rfcs/0123_cpu_performance_info.md)
+    ///
+    ///  - [`zx_system_set_performance_info()`]
+    ///
+    /// [`zx_system_set_performance_info()`]: system_set_performance_info.md
     system_get_performance_info(resource struct {
         resource handle:RESOURCE;
         topic uint32;
@@ -98,10 +597,59 @@ protocol system {
         output_count usize;
     });
 
+    /// ## Summary
+    ///
     /// Soft reboot the system with a new kernel and bootimage.
-    /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
-    /// Rights: kernel_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
-    /// Rights: bootimage_vmo must be of type ZX_OBJ_TYPE_VMO and have ZX_RIGHT_READ.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_system_mexec(zx_handle_t resource,
+    ///                             zx_handle_t kernel_vmo,
+    ///                             zx_handle_t bootimage_vmo);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_system_mexec()` accepts two vmo handles: *kernel_vmo* should contain a
+    /// kernel image and *bootimage_vmo* should contain an initrd whose address shall
+    /// be passed to the new kernel as a kernel argument.
+    ///
+    /// To supplant the running kernel, a *resource* of **ZX_RSRC_KIND_ROOT** must be
+    /// supplied.
+    ///
+    /// Upon success, `zx_system_mexec()` shall supplant the currently running kernel
+    /// image with the kernel image contained within *kernel_vmo*, load the ramdisk
+    /// contained within *bootimage_vmo* to a location in physical memory and branch
+    /// directly into the new kernel while providing the address of the loaded initrd
+    /// to the new kernel.
+    ///
+    /// To use the `zx_system_mexec()` function, you must specify
+    /// `kernel.enable-debugging-syscalls=true` on the kernel command line. Otherwise,
+    /// the function returns **ZX_ERR_NOT_SUPPORTED**.
+    ///
+    /// ## Rights
+    ///
+    /// *resource* must have resource kind **ZX_RSRC_KIND_ROOT**.
+    ///
+    /// *kernel_vmo* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_READ**.
+    ///
+    /// *bootimage_vmo* must be of type **ZX_OBJ_TYPE_VMO** and have **ZX_RIGHT_READ**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_system_mexec()` shall not return upon success.
+    ///
+    /// **ZX_ERR_NOT_SUPPORTED**  `kernel.enable-debugging-syscalls` is not set to `true`
+    /// on the kernel command line.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_system_mexec_payload_get()`]
+    ///
+    /// [`zx_system_mexec_payload_get()`]: system_mexec_payload_get.md
     system_mexec(resource struct {
         resource handle:RESOURCE;
         kernel_vmo handle:VMO;
@@ -110,8 +658,56 @@ protocol system {
         status status;
     });
 
+    /// ## Summary
+    ///
     /// Return a ZBI containing ZBI entries necessary to boot this system.
-    /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_system_mexec_payload_get(zx_handle_t resource,
+    ///                                         void* buffer,
+    ///                                         size_t buffer_size);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// `zx_system_mexec_payload_get()` accepts a resource handle and a
+    /// pointer/length corresponding to an output buffer. The head of the buffer is
+    /// overwritten with non-bootable ZBI containing a sequence of entries that should
+    /// be appended to a ZBI before passing that image to [`zx_system_mexec()`]; the
+    /// tail of the buffer is left untouched.
+    ///
+    /// *resource* must be of type **ZX_RSRC_KIND_ROOT**.
+    ///
+    /// *buffer* and *buffer_size* must point to a buffer that is no longer than 16KiB.
+    ///
+    /// To use the `zx_system_mexec_payload_get()` function, you must specify
+    /// `kernel.enable-debugging-syscalls=true` on the kernel command line. Otherwise,
+    /// the function returns **ZX_ERR_NOT_SUPPORTED**.
+    ///
+    /// ## Rights
+    ///
+    /// *resource* must have resource kind **ZX_RSRC_KIND_ROOT**.
+    ///
+    /// ## Return value
+    ///
+    /// `zx_system_mexec_payload_get()` returns **ZX_OK** on success.
+    ///
+    /// **ZX_ERR_NOT_SUPPORTED**  `kernel.enable-debugging-syscalls` is not set to `true`
+    /// on the kernel command line.
+    ///
+    /// **ZX_ERR_BUFFER_TOO_SMALL**  If the provided buffer is too small for the ZBI.
+    /// In this case, the caller is expected to make the syscall again with a larger
+    /// buffer.
+    ///
+    /// ## See also
+    ///
+    ///  - [`zx_system_mexec()`]
+    ///
+    /// [`zx_system_mexec()`]: system_mexec.md
     system_mexec_payload_get(resource struct {
         resource handle:RESOURCE;
     }) -> (struct {
@@ -119,7 +715,64 @@ protocol system {
         buffer vector_void;
     });
 
-    /// Rights: resource must have resource kind ZX_RSRC_KIND_SYSTEM with base ZX_RSRC_SYSTEM_POWER_BASE.
+    /// ## Summary
+    ///
+    /// TODO(fxbug.dev/32938)
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls.h>
+    ///
+    /// zx_status_t zx_system_powerctl(zx_handle_t resource,
+    ///                                uint32_t cmd,
+    ///                                const zx_system_powerctl_arg_t* arg);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// Changes the power state of the system based on the value of `arg`. Zircon may
+    /// not be able to put the system in a given power state, depending on its level of
+    /// support for the architecture being used.
+    ///
+    /// If the architecture is fully support the following are the behaviors of the
+    /// given value:
+    ///
+    /// * **ZX_SYSTEM_POWERCTL_ENABLE_ALL_CPUS** - set all processor cores as active
+    /// * **ZX_SYSTEM_POWERCTL_DISABLE_ALL_CPUS_BUT_PRIMARY** - set only the primary CPU
+    ///   as active
+    /// * **ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE** - TODO(fxbug.dev/32938)
+    /// * **ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1** - set CPU to power level 1 (x86 only)
+    /// * **ZX_SYSTEM_POWERCTL_REBOOT** - restart the system, control should go through
+    ///   any relevant firmware and bootloaders
+    /// * **ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER** - restart the system, but stop in the
+    ///   bootloader instead of loading the operating system
+    /// * **ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY** - restart the system, but load the
+    ///   recovery operating system instead of the primary OS
+    /// * **ZX_SYSTEM_POWERCTL_SHUTDOWN** - turn the system off
+    /// * **ZX_SYSTEM_POWERCTL_ACK_KERNEL_INITIATED_REBOOT** - used by userspace when it
+    ///   is ready for a reboot in response to a previous signal from the kernel that
+    ///   the kernel wanted to reboot the system
+    ///
+    /// ## Rights
+    ///
+    /// *resource* must have resource kind **ZX_RSRC_KIND_SYSTEM** with base **ZX_RSRC_SYSTEM_POWER_BASE**.
+    ///
+    /// ## Return value
+    ///
+    /// **ZX_OK**
+    ///
+    /// ## Errors
+    ///
+    /// Returns **ZX_ERR_BAD_STATE** if
+    /// **ZX_SYSTEM_POWERCTL_ACK_KERNEL_INITIATED_REBOOT** is supplied and the kernel
+    /// had not previously signaled a desire to reboot.
+    ///
+    /// Returns **ZX_ERR_INVALID_ARGS** when an unrecognized `cmd` value is supplied.
+    ///
+    /// ## See also
+    ///
+    /// TODO(fxbug.dev/32938)
     system_powerctl(resource struct {
         resource handle:RESOURCE;
         cmd uint32;
