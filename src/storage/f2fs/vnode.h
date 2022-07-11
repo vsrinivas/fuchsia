@@ -94,7 +94,7 @@ class VnodeF2fs : public fs::Vnode,
                                      fs::VnodeRepresentation *info) final;
 
   // For fs::PagedVnode
-  zx_status_t GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo *out_vmo, size_t *out_size) final
+  zx_status_t GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo *out_vmo) final
       __TA_EXCLUDES(mutex_);
   void VmoRead(uint64_t offset, uint64_t length) final __TA_EXCLUDES(mutex_);
   void VmoDirty(uint64_t offset, uint64_t length) final {
@@ -447,8 +447,8 @@ class VnodeF2fs : public fs::Vnode,
 
 #ifdef __Fuchsia__
   zx_status_t CreatePagedVmo(size_t size) __TA_REQUIRES(mutex_);
-  zx_status_t ClonePagedVmo(fuchsia_io::wire::VmoFlags flags, size_t size, zx::vmo *out_vmo,
-                            size_t *out_size) __TA_REQUIRES(mutex_);
+  zx_status_t ClonePagedVmo(fuchsia_io::wire::VmoFlags flags, size_t size, zx::vmo *out_vmo)
+      __TA_REQUIRES(mutex_);
   void SetPagedVmoName() __TA_REQUIRES(mutex_);
   void ReportPagerError(const uint64_t offset, const uint64_t length, const zx_status_t err)
       __TA_REQUIRES_SHARED(mutex_);

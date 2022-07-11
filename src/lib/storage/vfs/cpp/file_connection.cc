@@ -132,7 +132,7 @@ void FileConnection::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sy
 }
 
 zx_status_t FileConnection::GetBackingMemoryInternal(fuchsia_io::wire::VmoFlags flags,
-                                                     zx::vmo* out_vmo, size_t* out_size) {
+                                                     zx::vmo* out_vmo) {
   if (options().flags.node_reference) {
     return ZX_ERR_BAD_HANDLE;
   }
@@ -149,17 +149,16 @@ zx_status_t FileConnection::GetBackingMemoryInternal(fuchsia_io::wire::VmoFlags 
   if (!options().rights.execute && (flags & fio::wire::VmoFlags::kExecute)) {
     return ZX_ERR_ACCESS_DENIED;
   }
-  if (!options().rights.read) {
+  if (!options().rights.read && (flags & fio::wire::VmoFlags::kRead)) {
     return ZX_ERR_ACCESS_DENIED;
   }
-  return vnode()->GetVmo(flags, out_vmo, out_size);
+  return vnode()->GetVmo(flags, out_vmo);
 }
 
 void FileConnection::GetBackingMemory(GetBackingMemoryRequestView request,
                                       GetBackingMemoryCompleter::Sync& completer) {
   zx::vmo vmo;
-  size_t size = 0;
-  zx_status_t status = GetBackingMemoryInternal(request->flags, &vmo, &size);
+  zx_status_t status = GetBackingMemoryInternal(request->flags, &vmo);
   if (status != ZX_OK) {
     completer.ReplyError(status);
   } else {

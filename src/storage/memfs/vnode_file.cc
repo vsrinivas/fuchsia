@@ -28,8 +28,7 @@ zx_status_t VnodeFile::CreateStream(uint32_t stream_options, zx::stream* out_str
 
 void VnodeFile::DidModifyStream() { UpdateModified(); }
 
-zx_status_t VnodeFile::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo,
-                              size_t* out_size) {
+zx_status_t VnodeFile::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo) {
   zx_status_t status = CreateBackingStoreIfNeeded();
   if (status != ZX_OK) {
     return status;
@@ -58,7 +57,6 @@ zx_status_t VnodeFile::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo
   }
 
   *out_vmo = std::move(result);
-  *out_size = content_size;
   return ZX_OK;
 }
 

@@ -202,8 +202,10 @@ TEST_P(BlobTest, ReadingBlobZerosTail) {
   EXPECT_EQ(file->Read(&data, 1, 0, &actual), ZX_OK);
 
   zx::vmo vmo;
-  size_t data_size;
-  EXPECT_EQ(file->GetVmo(fio::wire::VmoFlags::kRead, &vmo, &data_size), ZX_OK);
+  EXPECT_EQ(file->GetVmo(fio::wire::VmoFlags::kRead, &vmo), ZX_OK);
+
+  uint64_t data_size;
+  EXPECT_EQ(vmo.get_prop_content_size(&data_size), ZX_OK);
   EXPECT_EQ(data_size, 64ul);
 
   size_t vmo_size;
@@ -301,10 +303,13 @@ TEST_P(BlobTest, UnlinkBlocksUntilNoVmoChildren) {
 
     // Open the blob, get the vmo, and close the blob.
     TestScopedVnodeOpen open(file);
-    zx::vmo vmo = {};
-    size_t data_size;
-    EXPECT_EQ(file->GetVmo(fio::wire::VmoFlags::kRead, &vmo, &data_size), ZX_OK);
+    zx::vmo vmo;
+    EXPECT_EQ(file->GetVmo(fio::wire::VmoFlags::kRead, &vmo), ZX_OK);
+
+    uint64_t data_size;
+    EXPECT_EQ(vmo.get_prop_content_size(&data_size), ZX_OK);
     EXPECT_EQ(data_size, info->size_data);
+
     return vmo;
   }();
 
@@ -335,13 +340,16 @@ TEST_P(BlobTest, VmoChildDeletedTriggersPurging) {
     fbl::RefPtr<fs::Vnode> file;
     // Lookup doesn't call Open, so no need to Close later.
     EXPECT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
-    zx::vmo vmo = {};
-    size_t data_size;
+    zx::vmo vmo;
 
     // Open the blob, get the vmo, and close the blob.
     TestScopedVnodeOpen open(file);
-    EXPECT_EQ(file->GetVmo(fio::wire::VmoFlags::kRead, &vmo, &data_size), ZX_OK);
+    EXPECT_EQ(file->GetVmo(fio::wire::VmoFlags::kRead, &vmo), ZX_OK);
+
+    uint64_t data_size;
+    EXPECT_EQ(vmo.get_prop_content_size(&data_size), ZX_OK);
     EXPECT_EQ(data_size, info->size_data);
+
     return vmo;
   }();
 
@@ -391,13 +399,16 @@ TEST_P(BlobTest, ReadErrorsTemporary) {
     fbl::RefPtr<fs::Vnode> file;
     // Lookup doesn't call Open, so no need to Close later.
     EXPECT_EQ(root->Lookup(info->path + 1, &file), ZX_OK);
-    zx::vmo vmo = {};
-    size_t data_size;
+    zx::vmo vmo;
 
     // Open the blob, get the vmo, and close the blob.
     TestScopedVnodeOpen open(file);
-    EXPECT_EQ(file->GetVmo(fio::wire::VmoFlags::kRead, &vmo, &data_size), ZX_OK);
+    EXPECT_EQ(file->GetVmo(fio::wire::VmoFlags::kRead, &vmo), ZX_OK);
+
+    uint64_t data_size;
+    EXPECT_EQ(vmo.get_prop_content_size(&data_size), ZX_OK);
     EXPECT_EQ(data_size, info->size_data);
+
     return vmo;
   }();
 
@@ -507,8 +518,7 @@ TEST_P(BlobTest, VmoNameActiveWhileVmoClonesExist) {
   auto blob = fbl::RefPtr<Blob>::Downcast(std::move(file));
 
   zx::vmo vmo;
-  size_t size;
-  ASSERT_EQ(blob->GetVmo(fio::wire::VmoFlags::kRead, &vmo, &size), ZX_OK);
+  ASSERT_EQ(blob->GetVmo(fio::wire::VmoFlags::kRead, &vmo), ZX_OK);
   ASSERT_EQ(blob->Close(), ZX_OK);
   EXPECT_EQ(GetVmoName(GetPagedVmo(*blob)), active_name);
 

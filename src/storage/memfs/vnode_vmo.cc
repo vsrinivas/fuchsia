@@ -31,8 +31,8 @@ VnodeVmo::VnodeVmo(PlatformVfs* vfs, zx_handle_t vmo, zx_off_t offset, zx_off_t 
   // Check whether the backing VMO has ZX_RIGHT_EXECUTE, which influences later validation and
   // behavior.
   zx_info_handle_basic_t handle_info;
-  zx_status_t status =
-      zx_object_get_info(vmo_, ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info), NULL, NULL);
+  zx_status_t status = zx_object_get_info(vmo_, ZX_INFO_HANDLE_BASIC, &handle_info,
+                                          sizeof(handle_info), nullptr, nullptr);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "zx_object_get_info failed in VnodeVmo constructor: " << status;
     return;
@@ -106,7 +106,7 @@ zx_status_t VnodeVmo::GetAttributes(fs::VnodeAttributes* attr) {
   return ZX_OK;
 }
 
-zx_status_t VnodeVmo::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo, size_t* out_size) {
+zx_status_t VnodeVmo::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo) {
   if (flags & fuchsia_io::wire::VmoFlags::kWrite) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -153,7 +153,6 @@ zx_status_t VnodeVmo::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo,
   }
 
   *out_vmo = zx::vmo(vmo);
-  *out_size = length_;
   return ZX_OK;
 }
 

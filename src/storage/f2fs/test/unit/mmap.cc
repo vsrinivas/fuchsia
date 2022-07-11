@@ -37,9 +37,7 @@ TEST_F(MmapTest, GetVmo) {
 
   zx::vmo vmo;
   uint8_t read_buf[PAGE_SIZE];
-  size_t read_size = 0;
-  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &read_size), ZX_OK);
-  ASSERT_EQ(read_size, static_cast<size_t>(PAGE_SIZE));
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo), ZX_OK);
   vmo.read(read_buf, 0, PAGE_SIZE);
   vmo.reset();
   loop_.RunUntilIdle();
@@ -68,9 +66,7 @@ TEST_F(MmapTest, GetVmoSize) {
 
   // Create paged_vmo
   zx::vmo vmo;
-  size_t read_size = 0;
-  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &read_size), ZX_OK);
-  ASSERT_EQ(read_size, static_cast<size_t>(PAGE_SIZE));
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo), ZX_OK);
   vmo.reset();
 
   // Increase file size
@@ -78,17 +74,15 @@ TEST_F(MmapTest, GetVmoSize) {
 
   // Get new Private VMO, but paged_vmo size is not increased.
   zx::vmo private_vmo;
-  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &private_vmo, &read_size), ZX_OK);
-  ASSERT_EQ(read_size, static_cast<size_t>(PAGE_SIZE));
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &private_vmo), ZX_OK);
   private_vmo.reset();
 
   // Get new Shared VMO, but paged_vmo size is not increased.
   zx::vmo shared_vmo;
   ASSERT_EQ(test_vnode->GetVmo(
                 fuchsia_io::wire::VmoFlags::kSharedBuffer | fuchsia_io::wire::VmoFlags::kRead,
-                &shared_vmo, &read_size),
+                &shared_vmo),
             ZX_OK);
-  ASSERT_EQ(read_size, static_cast<size_t>(PAGE_SIZE));
   shared_vmo.reset();
   loop_.RunUntilIdle();
 
@@ -104,9 +98,7 @@ TEST_F(MmapTest, GetVmoZeroSize) {
 
   zx::vmo vmo;
   uint8_t read_buf[PAGE_SIZE];
-  size_t read_size = 0;
-  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &read_size), ZX_OK);
-  ASSERT_EQ(read_size, static_cast<size_t>(PAGE_SIZE));
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo), ZX_OK);
   vmo.read(read_buf, 0, PAGE_SIZE);
   vmo.reset();
   loop_.RunUntilIdle();
@@ -122,10 +114,7 @@ TEST_F(MmapTest, GetVmoOnDirectory) {
   fbl::RefPtr<VnodeF2fs> test_vnode = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_fs_vnode));
 
   zx::vmo vmo;
-  size_t read_size = 0;
-  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &read_size),
-            ZX_ERR_NOT_SUPPORTED);
-  ASSERT_EQ(read_size, 0LU);
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo), ZX_ERR_NOT_SUPPORTED);
   vmo.reset();
   loop_.RunUntilIdle();
 
@@ -150,12 +139,10 @@ TEST_F(MmapTest, GetVmoTruncatePartial) {
   ASSERT_EQ(test_vnode->GetSize(), kBufferSize);
 
   zx::vmo vmo;
-  size_t read_size = 0;
-  ASSERT_EQ(test_vnode->GetVmo(
-                fuchsia_io::wire::VmoFlags::kSharedBuffer | fuchsia_io::wire::VmoFlags::kRead, &vmo,
-                &read_size),
-            ZX_OK);
-  ASSERT_EQ(read_size, kBufferSize);
+  ASSERT_EQ(
+      test_vnode->GetVmo(
+          fuchsia_io::wire::VmoFlags::kSharedBuffer | fuchsia_io::wire::VmoFlags::kRead, &vmo),
+      ZX_OK);
 
   uint8_t read_buf[kBufferSize];
   uint8_t zero_buf[kBufferSize];
@@ -202,12 +189,10 @@ TEST_F(MmapTest, GetVmoTruncatePage) {
   ASSERT_EQ(test_vnode->GetSize(), kBufferSize);
 
   zx::vmo vmo;
-  size_t read_size = 0;
-  ASSERT_EQ(test_vnode->GetVmo(
-                fuchsia_io::wire::VmoFlags::kSharedBuffer | fuchsia_io::wire::VmoFlags::kRead, &vmo,
-                &read_size),
-            ZX_OK);
-  ASSERT_EQ(read_size, kBufferSize);
+  ASSERT_EQ(
+      test_vnode->GetVmo(
+          fuchsia_io::wire::VmoFlags::kSharedBuffer | fuchsia_io::wire::VmoFlags::kRead, &vmo),
+      ZX_OK);
 
   uint8_t read_buf[kBufferSize];
   uint8_t zero_buf[kBufferSize];
@@ -245,18 +230,15 @@ TEST_F(MmapTest, GetVmoException) {
   fbl::RefPtr<VnodeF2fs> test_vnode = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(test_fs_vnode));
 
   zx::vmo vmo;
-  size_t read_size = 0;
 
   // Execute flag
   fuchsia_io::wire::VmoFlags flags;
   flags = fuchsia_io::wire::VmoFlags::kExecute;
-  ASSERT_EQ(test_vnode->GetVmo(flags, &vmo, &read_size), ZX_ERR_NOT_SUPPORTED);
-  ASSERT_EQ(read_size, 0LU);
+  ASSERT_EQ(test_vnode->GetVmo(flags, &vmo), ZX_ERR_NOT_SUPPORTED);
 
   // Shared write flag
   flags = fuchsia_io::wire::VmoFlags::kSharedBuffer | fuchsia_io::wire::VmoFlags::kWrite;
-  ASSERT_EQ(test_vnode->GetVmo(flags, &vmo, &read_size), ZX_ERR_NOT_SUPPORTED);
-  ASSERT_EQ(read_size, 0LU);
+  ASSERT_EQ(test_vnode->GetVmo(flags, &vmo), ZX_ERR_NOT_SUPPORTED);
   vmo.reset();
   loop_.RunUntilIdle();
 
@@ -282,9 +264,7 @@ TEST_F(MmapTest, VmoRead) {
 
   zx::vmo vmo;
   uint8_t read_buf[PAGE_SIZE];
-  size_t read_size = 0;
-  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &read_size), ZX_OK);
-  ASSERT_EQ(read_size, static_cast<size_t>(PAGE_SIZE));
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo), ZX_OK);
   test_vnode->VmoRead(0, PAGE_SIZE);
   vmo.read(read_buf, 0, PAGE_SIZE);
   vmo.reset();
@@ -314,9 +294,7 @@ TEST_F(MmapTest, VmoReadException) {
 
   zx::vmo vmo;
   uint8_t read_buf[PAGE_SIZE];
-  size_t read_size = 0;
-  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &read_size), ZX_OK);
-  ASSERT_EQ(read_size, static_cast<size_t>(PAGE_SIZE));
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo), ZX_OK);
   vmo.reset();
   loop_.RunUntilIdle();
   test_vnode->VmoRead(0, PAGE_SIZE);
@@ -345,9 +323,7 @@ TEST_F(MmapTest, VmoReadSizeException) {
 
   zx::vmo vmo;
   uint8_t read_buf[PAGE_SIZE];
-  size_t read_size = 0;
-  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &read_size), ZX_OK);
-  ASSERT_EQ(read_size, static_cast<size_t>(PAGE_SIZE));
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo), ZX_OK);
   test_vnode->VmoRead(0, PAGE_SIZE);
   vmo.read(read_buf, 0, PAGE_SIZE);
   ASSERT_EQ(memcmp(read_buf, write_buf, PAGE_SIZE), 0);
@@ -384,8 +360,7 @@ TEST_F(MmapTest, AvoidPagedVmoRaceCondition) {
 
   // Clone a VMO from pager-backed VMO
   zx::vmo vmo;
-  size_t read_size = 0;
-  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &read_size), ZX_OK);
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo), ZX_OK);
 
   // Close the cloned VMO
   vmo.reset();
@@ -426,8 +401,7 @@ TEST_F(MmapTest, ReleasePagedVmoInVnodeRecycle) {
   fs_->SyncFs();
 
   zx::vmo vmo;
-  size_t read_size = 0;
-  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &read_size), ZX_OK);
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo), ZX_OK);
 
   // Pager-backed VMO is not freed becasue vnode is in vnode cache
   vmo.reset();
@@ -442,7 +416,7 @@ TEST_F(MmapTest, ReleasePagedVmoInVnodeRecycle) {
   // Make sure pager-backed VMO is freed
   ASSERT_EQ(test_vnode->HasPagedVmo(), false);
 
-  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &read_size), ZX_OK);
+  ASSERT_EQ(test_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo), ZX_OK);
 
   // Pager-backed VMO has been reallocated
   ASSERT_EQ(test_vnode->HasPagedVmo(), true);

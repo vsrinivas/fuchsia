@@ -74,6 +74,7 @@ class VmoFile : public Vnode {
   zx_status_t Write(const void* data, size_t length, size_t offset, size_t* out_actual) final;
   zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
                                      VnodeRepresentation* info) final;
+  zx_status_t GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo) final;
 
  protected:
   friend fbl::internal::MakeRefCountedHelper<VmoFile>;

@@ -85,7 +85,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final __TA_EXCLUDES(mutex_);
   zx_status_t Truncate(size_t len) final __TA_EXCLUDES(mutex_);
   zx::status<std::string> GetDevicePath() const final __TA_EXCLUDES(mutex_);
-  zx_status_t GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo, size_t* out_size) final
+  zx_status_t GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo) final
       __TA_EXCLUDES(mutex_);
   void Sync(SyncCallback on_complete) final __TA_EXCLUDES(mutex_);
 
@@ -191,8 +191,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   //
   // Monitors the current VMO, keeping a reference to the Vnode alive while the |out| VMO (and any
   // clones it may have) are open.
-  zx_status_t CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_size)
-      __TA_REQUIRES(mutex_);
+  zx_status_t CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo) __TA_REQUIRES(mutex_);
 
   // Invokes |Purge()| if the vnode is purgeable.
   zx_status_t TryPurge() __TA_REQUIRES(mutex_);

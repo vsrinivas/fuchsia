@@ -121,13 +121,15 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
     TestScopedVnodeOpen opener(blob);  // Blob must be open to get the vmo.
 
     zx::vmo vmo;
-    size_t size = 0;
-    if (zx_status_t status = blob->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo, &size);
-        status != ZX_OK)
+    if (zx_status_t status = blob->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo); status != ZX_OK)
       return status;
     EXPECT_TRUE(vmo.is_valid());  // Always expect a valid blob on success.
 
     // Use vmo::read instead of direct read so that we can synchronously fail if the pager fails.
+    uint64_t size;
+    if (zx_status_t status = vmo.get_prop_content_size(&size); status != ZX_OK) {
+      return status;
+    }
     data.resize(size);
     if (zx_status_t status = vmo.read(data.data(), 0, size); status != ZX_OK) {
       data.resize(0);

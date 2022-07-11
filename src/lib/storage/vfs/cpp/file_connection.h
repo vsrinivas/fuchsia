@@ -62,8 +62,7 @@ class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::Fi
 
  private:
   zx_status_t ResizeInternal(uint64_t length);
-  zx_status_t GetBackingMemoryInternal(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo,
-                                       size_t* out_size);
+  zx_status_t GetBackingMemoryInternal(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo);
 };
 
 }  // namespace internal

@@ -29,7 +29,7 @@ zx_status_t VnodeDir::WatchDir(fs::Vfs* vfs, fuchsia_io::wire::WatchMask mask, u
   return watcher_.WatchDir(vfs, this, mask, options, std::move(watcher));
 }
 
-zx_status_t VnodeDir::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo, size_t* out_size) {
+zx_status_t VnodeDir::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo) {
   return ZX_ERR_ACCESS_DENIED;
 }
 
@@ -276,7 +276,7 @@ zx_status_t VnodeDir::CreateFromVmo(std::string_view name, zx_handle_t vmo, zx_o
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  if ((status = AttachVnode(std::move(vn), name, false)) != ZX_OK) {
+  if ((status = AttachVnode(vn, name, false)) != ZX_OK) {
     return status;
   }
 

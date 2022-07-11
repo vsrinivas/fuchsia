@@ -54,6 +54,7 @@ class TestHarness : public fio_test::Io1Harness {
     // Supported options
     config.set_mutable_file(true);
     config.set_supports_vmo_file(true);
+    config.set_supports_get_backing_memory(true);
     config.set_supports_remote_dir(true);
     config.set_supports_get_token(true);
     config.set_conformant_path_handling(true);
@@ -61,7 +62,6 @@ class TestHarness : public fio_test::Io1Harness {
     // Unsupported options
     config.set_supports_create(false);
     config.set_supports_executable_file(false);
-    config.set_supports_get_backing_memory(false);
     config.set_supports_rename(false);
     config.set_supports_link(false);
     config.set_supports_set_attr(false);

@@ -57,7 +57,7 @@ class VnodeDir final : public Vnode {
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                      fs::VnodeRepresentation* info) final;
-  zx_status_t GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo, size_t* out_size) final;
+  zx_status_t GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo) final;
 
   fs::RemoteContainer remoter_;
   fs::WatcherContainer watcher_;

@@ -66,8 +66,7 @@ zx_status_t VnodeF2fs::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol
   return ZX_OK;
 }
 
-zx_status_t VnodeF2fs::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo *out_vmo,
-                              size_t *out_size) {
+zx_status_t VnodeF2fs::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo *out_vmo) {
   if (flags & fuchsia_io::wire::VmoFlags::kExecute) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -93,7 +92,7 @@ zx_status_t VnodeF2fs::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo *out_vmo
     return status;
   }
 
-  return ClonePagedVmo(flags, rounded_size, out_vmo, out_size);
+  return ClonePagedVmo(flags, rounded_size, out_vmo);
 }
 
 zx_status_t VnodeF2fs::CreatePagedVmo(size_t size) {
@@ -123,7 +122,7 @@ void VnodeF2fs::SetPagedVmoName() {
 }
 
 zx_status_t VnodeF2fs::ClonePagedVmo(fuchsia_io::wire::VmoFlags flags, size_t size,
-                                     zx::vmo *out_vmo, size_t *out_size) {
+                                     zx::vmo *out_vmo) {
   if (!paged_vmo()) {
     return ZX_ERR_NOT_FOUND;
   }
@@ -155,7 +154,6 @@ zx_status_t VnodeF2fs::ClonePagedVmo(fuchsia_io::wire::VmoFlags flags, size_t si
     return status;
   }
 
-  *out_size = clone_size;
   *out_vmo = std::move(clone);
   return ZX_OK;
 }

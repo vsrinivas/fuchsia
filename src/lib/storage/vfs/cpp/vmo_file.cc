@@ -120,6 +120,29 @@ zx_status_t VmoFile::GetNodeInfoForProtocol([[maybe_unused]] VnodeProtocol proto
   return ZX_OK;
 }
 
+zx_status_t VmoFile::GetVmo(fio::wire::VmoFlags flags, zx::vmo* out_vmo) {
+  zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY;
+  if (flags & fio::wire::VmoFlags::kRead) {
+    rights |= ZX_RIGHT_READ;
+  }
+  if (flags & fio::wire::VmoFlags::kWrite) {
+    rights |= ZX_RIGHT_WRITE | ZX_RIGHT_SET_PROPERTY;
+  }
+  if (flags & fio::wire::VmoFlags::kPrivateClone) {
+    zx::vmo vmo;
+    if (zx_status_t status =
+            vmo_.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, 0, length_, &vmo);
+        status != ZX_OK) {
+      return status;
+    }
+    return vmo.replace(rights, out_vmo);
+  }
+  if (flags & fio::wire::VmoFlags::kSharedBuffer) {
+    return vmo_.duplicate(rights, out_vmo);
+  }
+  return AcquireVmo(rights, out_vmo);
+}
+
 zx_status_t VmoFile::AcquireVmo(zx_rights_t rights, zx::vmo* out_vmo) {
   switch (vmo_sharing_) {
     case VmoSharing::NONE:

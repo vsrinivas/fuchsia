@@ -626,7 +626,7 @@ zx_status_t Blob::GetReadableEvent(zx::event* out) {
   return ZX_OK;
 }
 
-zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_size) {
+zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo) {
   TRACE_DURATION("blobfs", "Blobfs::CloneVmo", "rights", rights);
 
   if (state_ != BlobState::kReadable) {
@@ -669,7 +669,6 @@ zx_status_t Blob::CloneDataVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out
     return status;
   }
   *out_vmo = std::move(clone);
-  *out_size = blob_size_;
 
   return ZX_OK;
 }
@@ -979,7 +978,7 @@ zx_status_t Blob::Truncate(size_t len) {
 
 zx::status<std::string> Blob::GetDevicePath() const { return blobfs_->Device()->GetDevicePath(); }
 
-zx_status_t Blob::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo, size_t* out_size) {
+zx_status_t Blob::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo) {
   TRACE_DURATION("blobfs", "Blob::GetVmo", "flags", static_cast<uint32_t>(flags));
 
   std::lock_guard lock(mutex_);
@@ -1000,7 +999,7 @@ zx_status_t Blob::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo, siz
   // both be satisfied with a clone due to the immutability of blobfs blobs.
   rights |= (flags & fuchsia_io::wire::VmoFlags::kRead) ? ZX_RIGHT_READ : 0;
   rights |= (flags & fuchsia_io::wire::VmoFlags::kExecute) ? ZX_RIGHT_EXECUTE : 0;
-  return CloneDataVmo(rights, out_vmo, out_size);
+  return CloneDataVmo(rights, out_vmo);
 }
 
 #endif  // defined(__Fuchsia__)
