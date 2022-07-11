@@ -2286,6 +2286,19 @@
   submitted: '2022-06-03'
   reviewed: '2022-07-06'
 
+- name: 'RFC-0176'
+  title: 'Disallow New Dart programs in the Fuchsia Source Tree'
+  short_description: 'Adding a new Dart program to the Fuchsia Source Tree requires an exemption.'
+  authors: ['dworsham@google.com']
+  file: '0176_disallow_new_dart_programs.md'
+  area: ['Build', 'Developer']
+  issue: ['91164']
+  gerrit_change_id: ['687859']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com', 'akbiggs@google.com', 'chaselatta@google.com', 'fmeawad@google.com', 'hjfreyer@google.com', 'sanjayc@google.com', 'shaibarack@google.com', 'yuanzhi@google.com']
+  submitted: '2022-06-07'
+  reviewed: '2022-07-06'
+
 - name: 'RFC-0177'
   title: 'Focus Observer for Parent Views'
   short_description: 'API for parent view to learn how focus moves in its view tree'
