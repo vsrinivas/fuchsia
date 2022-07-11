@@ -21,6 +21,7 @@
 #include <sanitizer/asan_interface.h>
 
 void __asan_early_init(void) __attribute__((visibility("hidden")));
+#define ADDR_MASK UINTPTR_MAX
 
 #elif __has_feature(hwaddress_sanitizer)
 
@@ -34,6 +35,9 @@ void __asan_early_init(void) __attribute__((visibility("hidden")));
 // its own references before the sanitizer runtime is loaded.
 #define __asan_weak_alias(name) __typeof(name) __hwasan_##name __attribute__((weak, alias(#name)));
 
+// With ARM TBI, the bottom 56 bits are the relevant addressing bits.
+#define ADDR_MASK (~(UINT64_C(0xFF) << 56))
+
 #else  // !__has_feature(address_sanitizer)
 
 #define __asan_weak_alias(name)  // Do nothing in unsanitized build.
@@ -42,5 +46,6 @@ void __asan_early_init(void) __attribute__((visibility("hidden")));
 // stick `!__has_feature(address_sanitizer) && !__has_feature(hwaddress_sanitizer)`
 // in a bunch of places.
 static inline void __asan_early_init(void) {}
+#define ADDR_MASK UINTPTR_MAX
 
 #endif  // __has_feature(address_sanitizer)

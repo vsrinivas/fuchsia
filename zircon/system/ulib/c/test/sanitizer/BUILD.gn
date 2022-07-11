@@ -48,6 +48,7 @@ source_set("memory-snapshot-test") {
     ":sanitizer-memory-snapshot-test-needed-dso",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
+    "//zircon/third_party/ulib/musl:musl_internal",
   ]
   data_deps = [ ":sanitizer-memory-snapshot-test-dlopen-dso" ]
 

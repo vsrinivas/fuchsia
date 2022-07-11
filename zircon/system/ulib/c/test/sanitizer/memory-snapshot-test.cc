@@ -21,6 +21,7 @@
 
 #include <zxtest/zxtest.h>
 
+#include "asan_impl.h"
 #include "sanitizer-memory-snapshot-test-dso.h"
 
 // Use the GNU global register variable extension to steal an available
@@ -141,7 +142,13 @@ struct SnapshotResult {
 };
 
 bool ChunksCover(const MemoryChunks& chunks, const void* ptr) {
-  const auto addr = reinterpret_cast<uintptr_t>(ptr);
+  auto addr = reinterpret_cast<uintptr_t>(ptr);
+  // When hwasan is enabled, `ptr` can be tagged if it points to a static local variable. However,
+  // globals received here from __sanitizer_memory_snapshot will not be tagged since we currently
+  // disable tagging on globals. We can safely strip the tag here because the actual static data
+  // will be within expected memory chunks, but the tag is added to the C ptr afterwards due to how
+  // hwasan instruments local variables.
+  addr &= ADDR_MASK;
   for (const auto& chunk : chunks) {
     const auto start = reinterpret_cast<uintptr_t>(chunk.mem);
     if (addr >= start && (addr - start < chunk.len)) {
@@ -569,6 +576,12 @@ void StartArgClearedUnsanitizedStackCallback(void* mem, size_t len, void* arg) {
   uintptr_t data_ptr = reinterpret_cast<uintptr_t>(args->data_ptr);
   uintptr_t stack_begin = reinterpret_cast<uintptr_t>(mem);
   uintptr_t stack_end = reinterpret_cast<uintptr_t>(stack_begin + len);
+  // When HWASan is enabled, `data_ptr` can be tagged since it points to a local variable in the
+  // `StartArgCleared` test. However, the underlying stack base will not be tagged if came from
+  // regions allocated by syscalls (zx_vmar_allocate + zx_vmar_map). Even if the pointer is
+  // instrumented to include a tag, the addressing bits should still point to something on this stack
+  // if the thing it points to is actually on this stack.
+  data_ptr &= ADDR_MASK;
   args->found_in_stack = (stack_begin <= data_ptr && data_ptr < stack_end);
 }
 
