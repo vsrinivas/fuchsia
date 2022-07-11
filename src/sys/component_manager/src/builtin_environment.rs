@@ -23,6 +23,7 @@ use {
             lifecycle_controller::LifecycleController,
             log::{ReadOnlyLog, WriteOnlyLog},
             mmio_resource::MmioResource,
+            pkg_dir::PkgDirectory,
             power_resource::PowerResource,
             process_launcher::ProcessLauncher,
             realm_builder::{
@@ -415,6 +416,7 @@ pub struct BuiltinEnvironment {
     pub realm_query: Option<Arc<RealmQuery>>,
     pub lifecycle_controller: Option<Arc<LifecycleController>>,
     pub route_validator: Option<Arc<RouteValidator>>,
+    pub pkg_directory: Arc<PkgDirectory>,
     pub builtin_runners: Vec<Arc<BuiltinRunner>>,
     pub event_registry: Arc<EventRegistry>,
     pub event_source_factory: Arc<EventSourceFactory>,
@@ -835,6 +837,10 @@ impl BuiltinEnvironment {
             None
         };
 
+        // Set up the handler for routes involving the "pkg" directory
+        let pkg_directory = Arc::new(PkgDirectory {});
+        model.root().hooks.install(pkg_directory.hooks()).await;
+
         // Set up the Component Tree Diagnostics runtime statistics.
         let component_tree_stats =
             ComponentTreeStats::new(inspector.root().create_child("cpu_stats")).await;
@@ -915,6 +921,7 @@ impl BuiltinEnvironment {
             realm_query,
             lifecycle_controller,
             route_validator,
+            pkg_directory,
             builtin_runners,
             event_registry,
             event_source_factory,

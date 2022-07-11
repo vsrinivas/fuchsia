@@ -23,6 +23,7 @@ group("tests") {
     "lifecycle_controller:tests",
     "namespace_capabilities:tests",
     "panic-test:component_manager_panic_test",
+    "pkg_from_framework:tests",
     "reboot_on_terminate:tests",
     "resolvers:tests",
     "rights:tests",

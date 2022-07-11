@@ -18,6 +18,7 @@ pub mod kernel_stats;
 pub mod lifecycle_controller;
 pub mod log;
 pub mod mmio_resource;
+pub mod pkg_dir;
 pub mod power_resource;
 pub mod process_launcher;
 pub mod realm_builder;
