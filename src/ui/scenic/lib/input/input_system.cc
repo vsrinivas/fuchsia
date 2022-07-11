@@ -32,17 +32,6 @@ using fuchsia::ui::input::PointerEventType;
 
 namespace {
 
-bool IsOutsideViewport(const Viewport& viewport, const glm::vec2& position_in_viewport) {
-  FX_DCHECK(!std::isunordered(position_in_viewport.x, viewport.extents.min.x) &&
-            !std::isunordered(position_in_viewport.x, viewport.extents.max.x) &&
-            !std::isunordered(position_in_viewport.y, viewport.extents.min.y) &&
-            !std::isunordered(position_in_viewport.y, viewport.extents.max.y));
-  return position_in_viewport.x < viewport.extents.min.x ||
-         position_in_viewport.y < viewport.extents.min.y ||
-         position_in_viewport.x > viewport.extents.max.x ||
-         position_in_viewport.y > viewport.extents.max.y;
-}
-
 // Helper function to build an AccessibilityPointerEvent when there is a
 // registered accessibility listener.
 AccessibilityPointerEvent BuildAccessibilityPointerEvent(const InternalTouchEvent& internal_event,
@@ -105,13 +94,10 @@ const char* InputSystem::kName = "InputSystem";
 InputSystem::InputSystem(SystemContext context, fxl::WeakPtr<gfx::SceneGraph> scene_graph,
                          fit::function<void(zx_koid_t)> request_focus)
     : System(std::move(context)),
+      hit_tester_(view_tree_snapshot_, *System::context()->inspect_node()),
       scene_graph_(scene_graph),
       request_focus_(std::move(request_focus)),
-      contender_inspector_(System::context()->inspect_node()->CreateChild("GestureContenders")),
-      hit_test_stats_node_(System::context()->inspect_node()->CreateChild("HitTestStats")),
-      num_empty_hit_tests_(hit_test_stats_node_.CreateUint("num_empty_hit_tests", 0)),
-      hits_outside_viewport_(hit_test_stats_node_.CreateUint("hit_outside_viewport", 0)),
-      context_view_missing_(hit_test_stats_node_.CreateUint("context_view_missing", 0)) {
+      contender_inspector_(System::context()->inspect_node()->CreateChild("GestureContenders")) {
   a11y_pointer_event_registry_ = std::make_unique<A11yPointerEventRegistry>(
       System::context()->app_context(),
       /*on_register=*/
@@ -196,7 +182,7 @@ CommandDispatcherUniquePtr InputSystem::CreateCommandDispatcher(
 fuchsia::ui::input::accessibility::PointerEvent InputSystem::CreateAccessibilityEvent(
     const InternalTouchEvent& event) {
   // Find top-hit target and send it to accessibility.
-  const zx_koid_t view_ref_koid = TopHitTest(event, /*semantic_hit_test*/ true);
+  const zx_koid_t view_ref_koid = hit_tester_.TopHitTest(event, /*semantic_hit_test*/ true);
 
   glm::vec2 top_hit_view_local;
   if (view_ref_koid != ZX_KOID_INVALID) {
@@ -360,33 +346,6 @@ void InputSystem::Upgrade(fidl::InterfaceHandle<fuchsia::ui::pointer::MouseSourc
 
     callback(std::move(handle), nullptr);
   }
-}
-
-std::vector<zx_koid_t> InputSystem::HitTest(const Viewport& viewport,
-                                            const glm::vec2 position_in_viewport,
-                                            const zx_koid_t context, const zx_koid_t target,
-                                            const bool semantic_hit_test) {
-  if (IsOutsideViewport(viewport, position_in_viewport)) {
-    return {};
-  }
-
-  const std::optional<glm::mat4> world_from_context_transform =
-      view_tree_snapshot_->GetWorldFromViewTransform(context);
-  if (!world_from_context_transform) {
-    num_empty_hit_tests_.Add(1);
-    context_view_missing_.Add(1);
-    return {};
-  }
-
-  const auto world_from_viewport_transform =
-      world_from_context_transform.value() * viewport.context_from_viewport_transform;
-  const auto world_space_point =
-      utils::TransformPointerCoords(position_in_viewport, world_from_viewport_transform);
-  auto hits = view_tree_snapshot_->HitTest(target, world_space_point, semantic_hit_test);
-  if (hits.empty()) {
-    num_empty_hit_tests_.Add(1);
-  }
-  return hits;
 }
 
 void InputSystem::DispatchPointerCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
@@ -625,7 +584,7 @@ std::vector<ContenderId> InputSystem::CollectContenders(StreamId stream_id,
     contenders.push_back(a11y_contender_id_);
   }
 
-  const zx_koid_t top_koid = TopHitTest(event, /*semantic_hit_test*/ false);
+  const zx_koid_t top_koid = hit_tester_.TopHitTest(event, /*semantic_hit_test*/ false);
   if (top_koid != ZX_KOID_INVALID) {
     // Find TouchSource contenders in priority order from furthest (valid) ancestor to top hit view.
     std::vector<zx_koid_t> ancestors = GetAncestorChainTopToBottom(top_koid, event.target);
@@ -803,7 +762,8 @@ void InputSystem::LegacyInjectMouseEventHitTested(const InternalTouchEvent& even
 
   if (pointer_phase == Phase::kDown) {
     // Find top-hit target and associated properties.
-    const std::vector<zx_koid_t> hit_views = HitTest(event, /*semantic_hit_test*/ false);
+    const std::vector<zx_koid_t> hit_views =
+        hit_tester_.HitTest(event, /*semantic_hit_test*/ false);
 
     FX_VLOGS(1) << "View hits: ";
     for (auto view_ref_koid : hit_views) {
@@ -838,7 +798,7 @@ void InputSystem::LegacyInjectMouseEventHitTested(const InternalTouchEvent& even
   // Deal with unlatched MOVE events.
   if (pointer_phase == Phase::kChange && mouse_targets_.count(device_id) == 0) {
     // Find top-hit target and send it this move event.
-    const zx_koid_t top_view_koid = TopHitTest(event, /*semantic_hit_test*/ false);
+    const zx_koid_t top_view_koid = hit_tester_.TopHitTest(event, /*semantic_hit_test*/ false);
     if (top_view_koid != ZX_KOID_INVALID) {
       ReportPointerEventToGfxLegacyView(event, top_view_koid,
                                         fuchsia::ui::input::PointerEventType::MOUSE);
@@ -866,7 +826,7 @@ void InputSystem::SendEventToMouse(zx_koid_t receiver, const InternalMouseEvent&
 }
 
 void InputSystem::UpdateGlobalMouse(const InternalMouseEvent& event) {
-  const auto hits = HitTest(event, /*semantic_hit_test*/ false);
+  const auto hits = hit_tester_.HitTest(event, /*semantic_hit_test*/ false);
   for (auto& [koid, mouse] : global_mouse_sources_) {
     FX_DCHECK(koid == event.target ||
               view_tree_snapshot_->IsDescendant(/*descendant*/ koid, /*ancestor*/ event.target));
@@ -887,7 +847,7 @@ void InputSystem::InjectMouseEventExclusive(const InternalMouseEvent& event,
   // If the exclusive receiver is a MouseSourceWithGlobalMouse, add the global values to it.
   const auto it = global_mouse_sources_.find(event.target);
   if (it != global_mouse_sources_.end()) {
-    const auto hits = HitTest(event, /*semantic_hit_test*/ false);
+    const auto hits = hit_tester_.HitTest(event, /*semantic_hit_test*/ false);
     const bool inside_view = std::find(hits.begin(), hits.end(), event.target) != hits.end();
     it->second->AddGlobalEvent(event, inside_view);
   }
@@ -917,7 +877,7 @@ void InputSystem::InjectMouseEventHitTested(const InternalMouseEvent& event,
 
   // If not latched, choose the current target by finding the top view.
   if (!mouse_receiver.latched) {
-    const zx_koid_t top_koid = TopHitTest(event, /*semantic_hit_test*/ false);
+    const zx_koid_t top_koid = hit_tester_.TopHitTest(event, /*semantic_hit_test*/ false);
 
     // Determine the currently hovered view. If it's different than previously, send the
     // previous one a "View Exited" event.

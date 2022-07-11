@@ -19,6 +19,7 @@
 #include "src/ui/scenic/lib/input/gesture_arena.h"
 #include "src/ui/scenic/lib/input/gfx_legacy_contender.h"
 #include "src/ui/scenic/lib/input/helper.h"
+#include "src/ui/scenic/lib/input/hit_tester.h"
 #include "src/ui/scenic/lib/input/injector.h"
 #include "src/ui/scenic/lib/input/input_command_dispatcher.h"
 #include "src/ui/scenic/lib/input/mouse_source_base.h"
@@ -124,24 +125,6 @@ class InputSystem : public System,
   void LegacyInjectMouseEventHitTested(const InternalTouchEvent& event);
 
  private:
-  // Perform a hit test with |event| in |view_tree| and returns the koids of all hit views, in order
-  // from geometrically closest to furthest from the |event|.
-  std::vector<zx_koid_t> HitTest(const Viewport& viewport, glm::vec2 position_in_viewport,
-                                 zx_koid_t context, zx_koid_t target, bool semantic_hit_test);
-
-  template <typename T>
-  std::vector<zx_koid_t> HitTest(const T& event, bool semantic_hit_test) {
-    return HitTest(event.viewport, event.position_in_viewport, event.context, event.target,
-                   semantic_hit_test);
-  }
-
-  // Returns the koid of the top hit, or ZX_KOID_INVALID if there is none.
-  template <typename T>
-  zx_koid_t TopHitTest(const T& event, bool semantic_hit_test) {
-    const auto hits = HitTest(event, semantic_hit_test);
-    return hits.empty() ? ZX_KOID_INVALID : hits.front();
-  }
-
   // Finds the ViewRef koid registered with the other side of the |original| channel and returns it.
   // Returns ZX_KOID_INVALID if the related channel isn't found.
   zx_koid_t FindViewRefKoidOfRelatedChannel(
@@ -186,6 +169,9 @@ class InputSystem : public System,
   // For a view hierarchy where |top| is an ancestor of |bottom|, returns |bottom|'s ancestor
   // hierarchy starting at |top| and ending at |bottom|.
   std::vector<zx_koid_t> GetAncestorChainTopToBottom(zx_koid_t bottom, zx_koid_t top) const;
+
+  // Helper class for doing hit testing and tracking inspect state.
+  HitTester hit_tester_;
 
   // TODO(fxbug.dev/64206): Remove when we no longer have any legacy clients.
   fxl::WeakPtr<gfx::SceneGraph> scene_graph_;
@@ -279,12 +265,6 @@ class InputSystem : public System,
   // Map of pointers to all MouseSourceWithGlobalMouse instances.
   // Must be cleaned up when the owning pointer in |mouse_sources_| is cleaned up.
   std::unordered_map<zx_koid_t, MouseSourceWithGlobalMouse*> global_mouse_sources_;
-
-  // Inspect data.
-  inspect::Node hit_test_stats_node_;
-  inspect::UintProperty num_empty_hit_tests_;
-  inspect::UintProperty hits_outside_viewport_;
-  inspect::UintProperty context_view_missing_;
 };
 
 }  // namespace scenic_impl::input
