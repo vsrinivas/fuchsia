@@ -117,7 +117,8 @@ fuchsia_unittest_package("flatland_display_compositor_pixeltests") {
     # to display controller image capture features
     # can run this test suite.
     environments = [
-      astro_env,
+      # TODO(fxbug.dev/104169): Re-enable on astro.
+      #astro_env,
       sherlock_env,
       vim3_env,
     ]
