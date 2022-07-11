@@ -209,25 +209,27 @@ template("fidl_library") {
     # A kill switch for API summarization and compatibility testing.
     # Set to true to permit compilations that have summary errors.
     lenient_api_summary = false
+    not_needed([ "lenient_api_summary" ])
     if (defined(invoker.lenient_api_summary)) {
       lenient_api_summary = invoker.lenient_api_summary
     }
 
-    # Ensure changes to API level HEAD are acknowledged.
-    test_target = "${target_name}_compatibility_test"
-    fidl_api_compatibility_test(test_target) {
-      forward_variables_from(invoker, [ "testonly" ])
-      warn_on_changes = lenient_api_summary
-      target_api_level = "HEAD"
-      golden = "$library_name.api_summary.json"
-      current = summary_file_json
-      deps = [ ":$compilation_target_name" ]
-      policy = "ack_changes"
+    # The current level might be a supported level. Don't double count it.
+    current_level = platform_version.current_fuchsia_api_level
+    policy_for_current_level = "no_breaking_changes"
+    api_levels = [
+      "HEAD",
+      "$current_level",
+    ]
+    foreach(supported_level, platform_version.supported_fuchsia_api_levels) {
+      if (supported_level == current_level) {
+        policy_for_current_level = "no_changes"
+      } else {
+        api_levels += [ "$supported_level" ]
+      }
     }
-    sdk_atom_deps += [ ":$test_target" ]
 
-    # Check for compatibility with supported API levels.
-    foreach(level, platform_version.supported_fuchsia_api_levels) {
+    foreach(level, api_levels) {
       fidl_ir_target_name = "${main_target_name}_compile_$level"
       fidl_ir(fidl_ir_target_name) {
         forward_variables_from(invoker,
@@ -240,7 +242,7 @@ template("fidl_library") {
                                ])
         fidl_target_name = main_target_name
         fidl_library_name = library_name
-        target_api_level = "$level"
+        target_api_level = level
         goldens_dir = goldens_dir
 
         # Avoid clobbering existing FIDL sources.
@@ -263,15 +265,20 @@ template("fidl_library") {
         fidl_api_compatibility_test(test_target) {
           forward_variables_from(invoker, [ "testonly" ])
           warn_on_changes = lenient_api_summary
-          target_api_level = "$level"
-
-          golden = "$goldens_dir/$level/$library_name.api_summary.json"
+          target_api_level = level
           current = "$target_gen_dir/$level/$library_name.api_summary.json"
-          if (level == platform_version.current_fuchsia_api_level) {
-            policy = "no_breaking_changes"
+
+          if (level == "HEAD") {
+            golden = "$library_name.api_summary.json"
+            policy = "ack_changes"
+          } else if (level == "$current_level") {
+            golden = "$goldens_dir/$level/$library_name.api_summary.json"
+            policy = policy_for_current_level
           } else {
+            golden = "$goldens_dir/$level/$library_name.api_summary.json"
             policy = "no_changes"
           }
+
           deps = [ ":$fidl_ir_target_name" ]
         }
         sdk_atom_deps += [ ":$test_target" ]
