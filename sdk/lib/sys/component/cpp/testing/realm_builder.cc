@@ -128,11 +128,11 @@ Realm& Realm::RouteReadOnlyDirectory(const std::string& name, std::vector<Ref> t
   return *this;
 }
 
-Realm& Realm::ReplaceConfigValue(const std::string& name, const std::string& key,
-                                 ConfigValue value) {
+Realm& Realm::SetConfigValue(const std::string& name, const std::string& key, ConfigValue value) {
+  // TODO(https://fxbug.dev/103951) switch to SetConfigValue
   fuchsia::component::test::Realm_ReplaceConfigValue_Result result;
   ZX_COMPONENT_ASSERT_STATUS_AND_RESULT_OK(
-      "Realm/ReplaceConfigValue",
+      "Realm/SetConfigValue",
       realm_proxy_->ReplaceConfigValue(name, key, value.TakeAsFidl(), &result), result);
   return *this;
 }
@@ -276,9 +276,9 @@ RealmBuilder& RealmBuilder::RouteReadOnlyDirectory(const std::string& name, std:
   return *this;
 }
 
-RealmBuilder& RealmBuilder::ReplaceConfigValue(const std::string& name, const std::string& key,
-                                               ConfigValue value) {
-  root_.ReplaceConfigValue(name, key, std::move(value));
+RealmBuilder& RealmBuilder::SetConfigValue(const std::string& name, const std::string& key,
+                                           ConfigValue value) {
+  root_.SetConfigValue(name, key, std::move(value));
   return *this;
 }
 

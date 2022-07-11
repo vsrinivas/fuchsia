@@ -881,37 +881,33 @@ async fn echo_client_structured_config_replace() -> Result<(), Error> {
 
     // fail to replace a config field in a component that doesn't have a config schema
     assert_matches!(
-        builder.replace_config_value_bool(&echo_server, "echo_bool", false).await,
+        builder.set_config_value_bool(&echo_server, "echo_bool", false).await,
         Err(RealmBuilderError::ServerError(ftest::RealmBuilderError::NoConfigSchema))
     );
 
     // fail to replace a field that doesn't exist
     assert_matches!(
-        builder.replace_config_value_string(&echo_client, "doesnt_exist", "test").await,
+        builder.set_config_value_string(&echo_client, "doesnt_exist", "test").await,
         Err(RealmBuilderError::ServerError(ftest::RealmBuilderError::NoSuchConfigField))
     );
 
     // fail to replace a field with the wrong type
     assert_matches!(
-        builder.replace_config_value_string(&echo_client, "echo_bool", "test").await,
+        builder.set_config_value_string(&echo_client, "echo_bool", "test").await,
         Err(RealmBuilderError::ServerError(ftest::RealmBuilderError::ConfigValueInvalid))
     );
 
     // fail to replace a string that violates max_len
     let long_string = String::from_utf8(vec![b'F'; 20]).unwrap();
     assert_matches!(
-        builder.replace_config_value_string(&echo_client, "echo_string", long_string.clone()).await,
+        builder.set_config_value_string(&echo_client, "echo_string", long_string.clone()).await,
         Err(RealmBuilderError::ServerError(ftest::RealmBuilderError::ConfigValueInvalid))
     );
 
     // fail to replace a vector whose string element violates max_len
     assert_matches!(
         builder
-            .replace_config_value_string_vector(
-                &echo_client,
-                "echo_string_vector",
-                vec![long_string]
-            )
+            .set_config_value_string_vector(&echo_client, "echo_string_vector", vec![long_string])
             .await,
         Err(RealmBuilderError::ServerError(ftest::RealmBuilderError::ConfigValueInvalid))
     );
@@ -919,7 +915,7 @@ async fn echo_client_structured_config_replace() -> Result<(), Error> {
     // fail to replace a vector that violates max_count
     assert_matches!(
         builder
-            .replace_config_value_string_vector(
+            .set_config_value_string_vector(
                 &echo_client,
                 "echo_string_vector",
                 vec!["a", "b", "c", "d"],
@@ -929,13 +925,13 @@ async fn echo_client_structured_config_replace() -> Result<(), Error> {
     );
 
     // succeed at replacing all fields with proper constraints
-    builder.replace_config_value_string(&echo_client, "echo_string", "Foobar!").await.unwrap();
+    builder.set_config_value_string(&echo_client, "echo_string", "Foobar!").await.unwrap();
     builder
-        .replace_config_value_string_vector(&echo_client, "echo_string_vector", ["Hey", "Folks"])
+        .set_config_value_string_vector(&echo_client, "echo_string_vector", ["Hey", "Folks"])
         .await
         .unwrap();
-    builder.replace_config_value_bool(&echo_client, "echo_bool", true).await.unwrap();
-    builder.replace_config_value_uint64(&echo_client, "echo_num", 42).await.unwrap();
+    builder.set_config_value_bool(&echo_client, "echo_bool", true).await.unwrap();
+    builder.set_config_value_uint64(&echo_client, "echo_num", 42).await.unwrap();
     builder
         .add_route(
             Route::new()

@@ -215,7 +215,7 @@ class WebSemanticsTest : public SemanticsIntegrationTestV2 {
 
     FX_LOGS(INFO) << "Override html config";
     // Override "html" config value for web client.
-    realm()->ReplaceConfigValue(kWebView, "html", HtmlForTestCase());
+    realm()->SetConfigValue(kWebView, "html", HtmlForTestCase());
 
     FX_LOGS(INFO) << "OVerrode html config";
   }
