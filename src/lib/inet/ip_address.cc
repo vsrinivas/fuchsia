@@ -13,11 +13,16 @@
 namespace inet {
 namespace {
 
-// Parses a string. Match functions either return true and update the position
-// of the parser or return false and leave the position unchanged.
+constexpr size_t kV6WordCount = 8;
+
+// Parses a string. Match functions either return true and update the position of the parser or
+// return false and leave the position unchanged. If a Match function has an out-parameter, the
+// actual out-parameter is only modified if the function returns true.
 class Parser {
  public:
-  Parser(const std::string& str) : str_(str), pos_(0) {}
+  Parser(const std::string_view& str) : str_(str), pos_(0) {}
+
+  size_t position() const { return pos_; }
 
   // Matches end-of-string.
   bool MatchEnd() { return pos_ == str_.length(); }
@@ -47,8 +52,8 @@ class Parser {
     return true;
   }
 
-  // Matches a single lowercase hexadecimal digit.
-  bool MatchLowerHexDigit(uint8_t* out) {
+  // Matches a single hexadecimal digit.
+  bool MatchHexDigit(uint8_t* out) {
     FX_DCHECK(out);
 
     if (pos_ == str_.length() || !std::isxdigit(static_cast<unsigned char>(str_[pos_]))) {
@@ -60,8 +65,7 @@ class Parser {
     } else if (std::islower(static_cast<unsigned char>(str_[pos_]))) {
       *out = 10 + (str_[pos_] - 'a');
     } else {
-      // Uppercase hexadecimal is not permitted.
-      return false;
+      *out = 10 + (str_[pos_] - 'A');
     }
 
     ++pos_;
@@ -69,9 +73,9 @@ class Parser {
     return true;
   }
 
-  // Matches a decimal byte of at most 3 digits. The match will succeed even
-  // if the decimal byte is followed immediately by a digit. If matching three
-  // digits would produce a value greater than 255, only two digits are matched.
+  // Matches a decimal byte of at most 3 digits. The match will succeed even if the decimal byte is
+  // followed immediately by a digit. If matching three digits would produce a value greater than
+  // 255, only two digits are matched.
   bool MatchMax3DigitDecByte(uint8_t* byte_out) {
     FX_DCHECK(byte_out);
 
@@ -98,29 +102,54 @@ class Parser {
     return true;
   }
 
-  // Matches a lowercase hexadecimal word of at most 4 digits. The match will
-  // succeed even if the hexadecimal word is followed immediately by a
-  // hexadecimal digit.
-  bool MatchMax4DigitLowerHexWord(uint16_t* word_out) {
+  // Matches a hexadecimal word of at most 4 digits. The match will succeed even if the hexadecimal
+  // word is followed immediately by a hexadecimal digit.
+  bool MatchMax4DigitHexWord(uint16_t* word_out) {
     FX_DCHECK(word_out);
 
     uint8_t digit = 0;
-    if (!MatchLowerHexDigit(&digit)) {
+    if (!MatchHexDigit(&digit)) {
       return false;
     }
 
     uint16_t accum = digit;
-    if (MatchLowerHexDigit(&digit)) {
+    if (MatchHexDigit(&digit)) {
       accum = accum * 16 + digit;
-      if (MatchLowerHexDigit(&digit)) {
+      if (MatchHexDigit(&digit)) {
         accum = accum * 16 + digit;
-        if (MatchLowerHexDigit(&digit)) {
+        if (MatchHexDigit(&digit)) {
           accum = accum * 16 + digit;
         }
       }
     }
 
     *word_out = accum;
+    return true;
+  }
+
+  // Matches 1..max hexadecimal words of at most 4 digits separated by colons.
+  bool MatchMax4DigitHexWordList(size_t max, std::vector<uint16_t>* words_out) {
+    FX_DCHECK(words_out);
+
+    std::vector<uint16_t> words;
+    uint16_t word;
+    if (!MatchMax4DigitHexWord(&word)) {
+      return false;
+    }
+
+    words.push_back(word);
+
+    while (words.size() < max) {
+      size_t old_pos = pos_;
+      if (!Match(':') || !MatchMax4DigitHexWord(&word)) {
+        pos_ = old_pos;
+        break;
+      }
+
+      words.push_back(word);
+    }
+
+    *words_out = std::move(words);
     return true;
   }
 
@@ -145,88 +174,47 @@ class Parser {
     FX_DCHECK(address_out);
 
     size_t old_pos = pos_;
-    uint16_t words[8];
-    size_t word_index = 0;
-    ssize_t ellipsis_word_index = -1;
 
-    if (Match(':')) {
-      ellipsis_word_index = 0;
-      words[0] = 0;
-    } else if (!MatchMax4DigitLowerHexWord(&words[word_index])) {
-      pos_ = old_pos;
-      return false;
-    }
-
-    if (Match(':')) {
-      while (true) {
-        // At this point, we've matched at least one word, we've just matched a
-        // colon, and |word_index| indexes the last word we matched.
-        ++word_index;
-
-        // Check for "::" ellipsis.
-        if (Match(':')) {
-          if (ellipsis_word_index != -1) {
-            // More than one "::" ellipsis.
-            break;
-          }
-
-          ellipsis_word_index = word_index;
-        }
-
-        if (MatchMax4DigitLowerHexWord(&words[word_index])) {
-          if (word_index < 7 && Match(':')) {
-            // More words to read.
-            continue;
-          }
-        } else {
-          // We didn't match that last word.
-          --word_index;
-          if (word_index == 0) {
-            if (ellipsis_word_index != 1) {
-              // Need at least two words, if we don't have a trailing pair of colons.
-              break;
-            }
-          } else {
-            // We've read a ':' past the end.
-            --pos_;
-          }
-        }
-
-        if (word_index == 7) {
-          if (ellipsis_word_index != -1) {
-            // We parsed 8 words, and there's an ellipsis.
-            break;
-          }
-        } else {
-          if (ellipsis_word_index == -1) {
-            // We parsed less than 8 words, and there's no ellipsis.
-            break;
-          }
-
-          // Insert zeros for the ellipsis.
-          ssize_t to = 7;
-          for (ssize_t from = word_index; from >= ellipsis_word_index; --from) {
-            words[to] = words[from];
-            --to;
-          }
-
-          for (; to >= ellipsis_word_index; --to) {
-            words[to] = 0;
-          }
-        }
-
-        *address_out = IpAddress(words[0], words[1], words[2], words[3], words[4], words[5],
-                                 words[6], words[7]);
+    std::vector<uint16_t> words;
+    if (MatchMax4DigitHexWordList(kV6WordCount, &words)) {
+      if (words.size() == kV6WordCount) {
+        // List of 8 words.
+        *address_out = IpAddress(words);
         return true;
       }
     }
 
+    if (Match(':') && Match(':')) {
+      if (words.size() == kV6WordCount - 1) {
+        // 7 words followed by a pair of colons.
+        *address_out = IpAddress(words);
+        return true;
+      }
+
+      std::vector<uint16_t> more_words;
+      if (MatchMax4DigitHexWordList(kV6WordCount - 1 - words.size(), &more_words)) {
+        while (words.size() + more_words.size() < kV6WordCount) {
+          words.push_back(0);
+        }
+
+        for (const auto word : more_words) {
+          words.push_back(word);
+        }
+
+        FX_CHECK(words.size() == kV6WordCount);
+      }
+
+      *address_out = IpAddress(words);
+      return true;
+    }
+
+    // Fail.
     pos_ = old_pos;
     return false;
   }
 
  private:
-  const std::string& str_;
+  const std::string_view& str_;
   size_t pos_;
 };
 
@@ -240,17 +228,35 @@ const IpAddress IpAddress::kV4Loopback(127, 0, 0, 1);
 const IpAddress IpAddress::kV6Loopback(0, 0, 0, 0, 0, 0, 0, 1);
 
 // static
-IpAddress IpAddress::FromString(const std::string address_string, sa_family_t family) {
+IpAddress IpAddress::FromString(const std::string& address_string, sa_family_t family) {
   FX_DCHECK(family == AF_UNSPEC || family == AF_INET || family == AF_INET6);
 
-  Parser parser(address_string);
+  std::string_view address_string_view(address_string);
+  Parser parser(address_string_view);
   IpAddress address;
-  if ((parser.MatchIpV4Address(&address) || parser.MatchIpV6Address(&address)) &&
+
+  if (((family != AF_INET6 && parser.MatchIpV4Address(&address)) ||
+       (family != AF_INET && parser.MatchIpV6Address(&address))) &&
       parser.MatchEnd()) {
     return address;
   }
 
   return kInvalid;
+}
+
+// static
+std::pair<IpAddress, size_t> IpAddress::FromStringView(const std::string_view string_view,
+                                                       sa_family_t family) {
+  FX_DCHECK(family == AF_UNSPEC || family == AF_INET || family == AF_INET6);
+
+  Parser parser(string_view);
+  IpAddress address;
+  if ((family != AF_INET6 && parser.MatchIpV4Address(&address)) ||
+      (family != AF_INET && parser.MatchIpV6Address(&address))) {
+    return std::make_pair(address, parser.position());
+  }
+
+  return std::make_pair(kInvalid, 0);
 }
 
 IpAddress::IpAddress() : family_(AF_UNSPEC) { std::memset(&v6_, 0, sizeof(v6_)); }
@@ -279,6 +285,24 @@ IpAddress::IpAddress(uint16_t w0, uint16_t w1, uint16_t w2, uint16_t w3, uint16_
   words[5] = htobe16(w5);
   words[6] = htobe16(w6);
   words[7] = htobe16(w7);
+}
+
+IpAddress::IpAddress(const std::vector<uint16_t>& source, size_t start) : family_(AF_INET6) {
+  FX_DCHECK(start + source.size() <= kV6WordCount);
+
+  uint16_t* words = v6_.s6_addr16;
+
+  for (size_t i = 0; i < start; ++i) {
+    words[i] = 0;
+  }
+
+  for (size_t i = start; i < start + source.size(); ++i) {
+    words[i] = htobe16(source[i - start]);
+  }
+
+  for (size_t i = start + source.size(); i < kV6WordCount; ++i) {
+    words[i] = 0;
+  }
 }
 
 IpAddress::IpAddress(uint16_t w0, uint16_t w7) : family_(AF_INET6) {
@@ -411,7 +435,7 @@ std::ostream& operator<<(std::ostream& os, const IpAddress& value) {
     // Don't bother if the longest sequence is length 1.
     uint8_t best_zeros_seen = 1;
 
-    for (uint8_t i = 0; i < 8; ++i) {
+    for (uint8_t i = 0; i < kV6WordCount; ++i) {
       if (words[i] == 0) {
         if (zeros_seen == 0) {
           start_of_zeros = i;
@@ -432,7 +456,7 @@ std::ostream& operator<<(std::ostream& os, const IpAddress& value) {
     }
 
     os << std::hex;
-    for (uint8_t i = 0; i < 8; ++i) {
+    for (uint8_t i = 0; i < kV6WordCount; ++i) {
       if (i < start_of_best_zeros || i >= start_of_best_zeros + best_zeros_seen) {
         os << be16toh(words[i]);
         if (i != 7) {

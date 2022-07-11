@@ -154,9 +154,6 @@ TEST(IpAddressTest, FromString) {
   EXPECT_EQ(IpAddress(0x01, 0x02, 0x03, 0x04, 0, 0, 0x07, 0x08),
             IpAddress::FromString("1:2:3:4::7:8"));
   EXPECT_EQ(IpAddress(0x01, 0x02, 0x03, 0x04, 0, 0, 0, 0x08), IpAddress::FromString("1:2:3:4::8"));
-  EXPECT_EQ(IpAddress(0x01, 0x02, 0x03, 0x04, 0, 0, 0x07, 0x08),
-            IpAddress::FromString("1:2:3:4::7:8"));
-  EXPECT_EQ(IpAddress(0x01, 0x02, 0x03, 0x04, 0, 0, 0, 0x08), IpAddress::FromString("1:2:3:4::8"));
   EXPECT_EQ(IpAddress(0x01, 0x02, 0x03, 0x04, 0x05, 0, 0, 0x08),
             IpAddress::FromString("1:2:3:4:5::8"));
   EXPECT_EQ(IpAddress(0x1234, 0x5678, 0x9abc, 0xdef0, 0x0fed, 0xcba9, 0x8765, 0x4321),
@@ -165,6 +162,18 @@ TEST(IpAddressTest, FromString) {
             IpAddress::FromString("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"));
   EXPECT_EQ(IpAddress(0, 0, 0, 0, 0, 0, 0, 1), IpAddress::FromString("::1"));
   EXPECT_EQ(IpAddress(1, 0, 0, 0, 0, 0, 0, 0), IpAddress::FromString("1::"));
+  EXPECT_EQ(IpAddress(0, 0, 0, 0, 0, 0, 0, 0), IpAddress::FromString("::"));
+
+  // Regression test for fxb/103890.
+  EXPECT_EQ(IpAddress(0xb043, 0x5c50, 0x7f6a, 0xd804, 0x9eff, 0x47df, 0, 0),
+            IpAddress::FromString("b043:5c50:7f6a:d804:9eff:47df::"));
+
+  // Allow uppercase hexadecimal.
+  EXPECT_EQ(IpAddress(0x1234, 0x5678, 0x9ABC, 0xDEF0, 0x0FED, 0xCBA9, 0x8765, 0x4321),
+            IpAddress::FromString("1234:5678:9abc:def0:0fed:cba9:8765:4321"));
+
+  // Allow zeros adjacent to '::'.
+  EXPECT_EQ(IpAddress(0, 0, 0, 0, 0, 0, 0, 0x08), IpAddress::FromString("0:0:0:0:0:0::8"));
 
   EXPECT_EQ(IpAddress::kInvalid, IpAddress::FromString("1:::2"));
   EXPECT_EQ(IpAddress::kInvalid, IpAddress::FromString("1::2::3"));
@@ -182,6 +191,140 @@ TEST(IpAddressTest, FromString) {
   EXPECT_EQ(IpAddress::kInvalid, IpAddress::FromString("1:2:3:4:5::6:7:8"));
   EXPECT_EQ(IpAddress::kInvalid, IpAddress::FromString("1:2:3:4:5:6::7:8"));
   EXPECT_EQ(IpAddress::kInvalid, IpAddress::FromString("1:2:3:4:5:6:7::8"));
+
+  // Test |family| parameter.
+  EXPECT_EQ(IpAddress::kInvalid, IpAddress::FromString("1:2:3:4:5:6:7:8", AF_INET));
+  EXPECT_EQ(IpAddress::kInvalid, IpAddress::FromString("1.2.3.4", AF_INET6));
+}
+
+// Tests FromStringView static method.
+TEST(IpAddressTest, FromStringView) {
+  EXPECT_EQ(std::make_pair(IpAddress(1, 2, 3, 4), 7ul), IpAddress::FromStringView("1.2.3.4"));
+  EXPECT_EQ(std::make_pair(IpAddress(1, 2, 3, 4), 15ul),
+            IpAddress::FromStringView("001.002.003.004"));
+  EXPECT_EQ(std::make_pair(IpAddress(0, 0, 0, 0), 7ul), IpAddress::FromStringView("0.0.0.0"));
+  EXPECT_EQ(std::make_pair(IpAddress(255, 255, 255, 255), 15ul),
+            IpAddress::FromStringView("255.255.255.255"));
+
+  EXPECT_EQ(std::make_pair(IpAddress::kInvalid, 0ul), IpAddress::FromStringView("1"));
+  EXPECT_EQ(std::make_pair(IpAddress::kInvalid, 0ul), IpAddress::FromStringView("1.2"));
+  EXPECT_EQ(std::make_pair(IpAddress::kInvalid, 0ul), IpAddress::FromStringView("1.2.3"));
+  EXPECT_EQ(std::make_pair(IpAddress(1, 2, 3, 4), 7ul), IpAddress::FromStringView("1.2.3.4.5"));
+  EXPECT_EQ(std::make_pair(IpAddress(1, 2, 3, 4), 7ul), IpAddress::FromStringView("1.2.3.4.5.6"));
+  EXPECT_EQ(std::make_pair(IpAddress(1, 2, 3, 4), 7ul), IpAddress::FromStringView("1.2.3.4foo"));
+  EXPECT_EQ(std::make_pair(IpAddress::kInvalid, 0ul), IpAddress::FromStringView("0001.2.3.4"));
+  EXPECT_EQ(std::make_pair(IpAddress::kInvalid, 0ul), IpAddress::FromStringView("1.2.3..4"));
+  EXPECT_EQ(std::make_pair(IpAddress(1, 2, 3, 4), 7ul), IpAddress::FromStringView("1.2.3.4."));
+  EXPECT_EQ(std::make_pair(IpAddress::kInvalid, 0ul), IpAddress::FromStringView(".1.2.3.4"));
+  EXPECT_EQ(std::make_pair(IpAddress::kInvalid, 0ul), IpAddress::FromStringView("256.2.3.4"));
+  EXPECT_EQ(std::make_pair(IpAddress::kInvalid, 0ul), IpAddress::FromStringView("1234.2.3.4"));
+
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08), 15ul),
+            IpAddress::FromStringView("1:2:3:4:5:6:7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08), 14ul),
+            IpAddress::FromStringView("1::3:4:5:6:7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0, 0x04, 0x05, 0x06, 0x07, 0x08), 14ul),
+            IpAddress::FromStringView("1:2::4:5:6:7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0x03, 0, 0x05, 0x06, 0x07, 0x08), 14ul),
+            IpAddress::FromStringView("1:2:3::5:6:7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0x03, 0x04, 0, 0x06, 0x07, 0x08), 14ul),
+            IpAddress::FromStringView("1:2:3:4::6:7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0x03, 0x04, 0x05, 0, 0x07, 0x08), 14ul),
+            IpAddress::FromStringView("1:2:3:4:5::7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0, 0x08), 14ul),
+            IpAddress::FromStringView("1:2:3:4:5:6::8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0, 0, 0x04, 0x05, 0x06, 0x07, 0x08), 12ul),
+            IpAddress::FromStringView("1::4:5:6:7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0, 0, 0, 0x05, 0x06, 0x07, 0x08), 10ul),
+            IpAddress::FromStringView("1::5:6:7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0, 0, 0, 0, 0x06, 0x07, 0x08), 8ul),
+            IpAddress::FromStringView("1::6:7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0, 0, 0, 0, 0, 0x07, 0x08), 6ul),
+            IpAddress::FromStringView("1::7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0, 0, 0, 0, 0, 0, 0x08), 4ul),
+            IpAddress::FromStringView("1::8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0, 0, 0x05, 0x06, 0x07, 0x08), 12ul),
+            IpAddress::FromStringView("1:2::5:6:7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0, 0, 0, 0x06, 0x07, 0x08), 10ul),
+            IpAddress::FromStringView("1:2::6:7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0, 0, 0, 0, 0x07, 0x08), 8ul),
+            IpAddress::FromStringView("1:2::7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0, 0, 0, 0, 0, 0x08), 6ul),
+            IpAddress::FromStringView("1:2::8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0x03, 0, 0, 0x06, 0x07, 0x08), 12ul),
+            IpAddress::FromStringView("1:2:3::6:7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0x03, 0, 0, 0, 0x07, 0x08), 10ul),
+            IpAddress::FromStringView("1:2:3::7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0x03, 0, 0, 0, 0, 0x08), 8ul),
+            IpAddress::FromStringView("1:2:3::8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0x03, 0x04, 0, 0, 0x07, 0x08), 12ul),
+            IpAddress::FromStringView("1:2:3:4::7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0x03, 0x04, 0, 0, 0, 0x08), 10ul),
+            IpAddress::FromStringView("1:2:3:4::8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0x03, 0x04, 0x05, 0, 0, 0x08), 12ul),
+            IpAddress::FromStringView("1:2:3:4:5::8"));
+  EXPECT_EQ(std::make_pair(
+                IpAddress(0x1234, 0x5678, 0x9abc, 0xdef0, 0x0fed, 0xcba9, 0x8765, 0x4321), 39ul),
+            IpAddress::FromStringView("1234:5678:9abc:def0:0fed:cba9:8765:4321"));
+  EXPECT_EQ(std::make_pair(
+                IpAddress(0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff, 0xffff), 39ul),
+            IpAddress::FromStringView("ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff"));
+  EXPECT_EQ(std::make_pair(IpAddress(0, 0, 0, 0, 0, 0, 0, 1), 3ul),
+            IpAddress::FromStringView("::1"));
+  EXPECT_EQ(std::make_pair(IpAddress(1, 0, 0, 0, 0, 0, 0, 0), 3ul),
+            IpAddress::FromStringView("1::"));
+  EXPECT_EQ(std::make_pair(IpAddress(0, 0, 0, 0, 0, 0, 0, 0), 2ul),
+            IpAddress::FromStringView("::"));
+
+  // Regression test for fxb/103890.
+  EXPECT_EQ(std::make_pair(IpAddress(0xb043, 0x5c50, 0x7f6a, 0xd804, 0x9eff, 0x47df, 0, 0), 31ul),
+            IpAddress::FromStringView("b043:5c50:7f6a:d804:9eff:47df::"));
+
+  // Allow uppercase hexadecimal.
+  EXPECT_EQ(std::make_pair(
+                IpAddress(0x1234, 0x5678, 0x9ABC, 0xDEF0, 0x0FED, 0xCBA9, 0x8765, 0x4321), 39ul),
+            IpAddress::FromStringView("1234:5678:9abc:def0:0fed:cba9:8765:4321"));
+
+  // Allow zeros adjacent to '::'.
+  EXPECT_EQ(std::make_pair(IpAddress(0, 0, 0, 0, 0, 0, 0, 0x08), 14ul),
+            IpAddress::FromStringView("0:0:0:0:0:0::8"));
+
+  EXPECT_EQ(std::make_pair(IpAddress(1, 0, 0, 0, 0, 0, 0, 0), 3ul),
+            IpAddress::FromStringView("1:::2"));
+  EXPECT_EQ(std::make_pair(IpAddress(1, 0, 0, 0, 0, 0, 0, 2), 4ul),
+            IpAddress::FromStringView("1::2::3"));
+  EXPECT_EQ(std::make_pair(IpAddress::kInvalid, 0ul), IpAddress::FromStringView(":1::2"));
+  EXPECT_EQ(std::make_pair(IpAddress(1, 0, 0, 0, 0, 0, 0, 2), 4ul),
+            IpAddress::FromStringView("1::2:"));
+  EXPECT_EQ(std::make_pair(IpAddress::kInvalid, 0ul), IpAddress::FromStringView("00000::ffff"));
+  EXPECT_EQ(std::make_pair(IpAddress(0, 0, 0, 0, 0, 0, 0, 0xffff), 10ul),
+            IpAddress::FromStringView("0000::fffff"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08), 15ul),
+            IpAddress::FromStringView("1:2:3:4:5:6:7:8:9"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08), 15ul),
+            IpAddress::FromStringView("1:2:3:4:5:6:7:8:"));
+  EXPECT_EQ(std::make_pair(IpAddress::kInvalid, 0ul),
+            IpAddress::FromStringView(":1:2:3:4:5:6:7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x00, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07), 14ul),
+            IpAddress::FromStringView("1::2:3:4:5:6:7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0x00, 0x03, 0x04, 0x05, 0x06, 0x07), 14ul),
+            IpAddress::FromStringView("1:2::3:4:5:6:7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0x03, 0x00, 0x04, 0x05, 0x06, 0x07), 14ul),
+            IpAddress::FromStringView("1:2:3::4:5:6:7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0x03, 0x04, 0x00, 0x05, 0x06, 0x07), 14ul),
+            IpAddress::FromStringView("1:2:3:4::5:6:7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x06, 0x07), 14ul),
+            IpAddress::FromStringView("1:2:3:4:5::6:7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x00, 0x07), 14ul),
+            IpAddress::FromStringView("1:2:3:4:5:6::7:8"));
+  EXPECT_EQ(std::make_pair(IpAddress(0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x00), 15ul),
+            IpAddress::FromStringView("1:2:3:4:5:6:7::8"));
+
+  // Test |family| parameter.
+  EXPECT_EQ(std::make_pair(IpAddress::kInvalid, 0ul),
+            IpAddress::FromStringView("1:2:3:4:5:6:7:8", AF_INET));
+  EXPECT_EQ(std::make_pair(IpAddress::kInvalid, 0ul),
+            IpAddress::FromStringView("1.2.3.4", AF_INET6));
 }
 
 // Tests FromString and ToString against each other.
@@ -209,6 +352,36 @@ TEST(IpAddressTest, StringRoundTrip) {
 
     IpAddress v6(addr6);
     EXPECT_EQ(v6, IpAddress::FromString(v6.ToString()));
+  }
+}
+
+// Tests FromStringView and ToString against each other.
+TEST(IpAddressTest, StringViewRoundTrip) {
+#if !defined(__Fuchsia__)
+  std::srand(testing::UnitTest::GetInstance()->random_seed());
+#endif
+
+  for (size_t i = 0; i < 1000; ++i) {
+    struct in_addr addr;
+    struct in6_addr addr6;
+
+#if defined(__Fuchsia__)
+    zx_cprng_draw(&addr, sizeof(addr));
+    zx_cprng_draw(&addr6, sizeof(addr6));
+#else
+    addr.s_addr = std::rand();
+    for (auto& i : addr6.s6_addr32) {
+      i = std::rand();
+    }
+#endif
+
+    IpAddress v4(addr);
+    std::string v4_string = v4.ToString();
+    EXPECT_EQ(std::make_pair(v4, v4_string.size()), IpAddress::FromStringView(v4_string));
+
+    IpAddress v6(addr6);
+    std::string v6_string = v6.ToString();
+    EXPECT_EQ(std::make_pair(v6, v6_string.size()), IpAddress::FromStringView(v6_string));
   }
 }
 

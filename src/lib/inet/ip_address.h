@@ -18,9 +18,46 @@ class IpAddress {
   static const IpAddress kV4Loopback;
   static const IpAddress kV6Loopback;
 
-  // Creates an IpAddress from a string containing a numeric IP address. Returns
-  // |kInvalid| if |address_string| cannot be converted into a valid IP address.
-  static IpAddress FromString(const std::string address_string, sa_family_t family = AF_UNSPEC);
+  // Creates an IpAddress from a string containing a numeric IP address. Returns |kInvalid| if
+  // |address_string| cannot be converted into a valid IP address.
+  //
+  // If |family| is |AF_UNSPEC|, this function accepts both IPv4 and IPv6 address strings. If
+  // |family| is |AF_INET| only IPv4 strings are accepted, and if |family| is |AF_INET6|, only
+  // IPv6 strings are accepted.
+  //
+  // IPv6 address strings may be non-canonical in the following respects:
+  // 1) A pair of colons may be substituted for one or more zeros (rather than two or more).
+  // 2) The run of zeros replaced by a pair of colons need not be the longest run of zeros, and,
+  //    in the case of a tie, need not be the left-most run of zeros.
+  // 3) Zeros may occur adjacent to a pair of colons.
+  // 4) Upper-case hexadecimal digits are allowed.
+  // 5) Hexadecimal words may have leading zeros.
+  //
+  // The following constraints apply to IPv6 address strings:
+  // 1) At most one pair of colons may appear in the string.
+  // 2) A string that has no colon pairs must contain exactly eight words.
+  // 3) Hexadecimal words may have at most 4 digits.
+  // 4) Mixed (IPv6 and IPv4) address strings are not supported.
+  static IpAddress FromString(const std::string& address_string, sa_family_t family = AF_UNSPEC);
+
+  // Parses an IpAddress prefixing a string view. If the parse succeeds, this method returns the
+  // valid IpAddress and the number of characters that were parsed to produce it. If the parse
+  // fails, this method returns an invalid IpAddress and zero. See |FromString| for details about
+  // how the string is parsed.
+  //
+  // Note that this method looks for a valid address string in the initial position in the string
+  // view. This means that inputs such as "::anything" will produce a successful result: in this
+  // case, the IPv6 unspecified address "::" and 2 characters parsed. If the caller wants to
+  // know whether the entire string view constitutes a valid address, it will be necessary to
+  // compare the returned number of parsed characters to the length of the string view, e.g.
+  //
+  //     auto result = IpAddress::FromStringView(string_view);
+  //     if (result.first.is_valid() && result.second == string_view.size()) {
+  //         // Do something with result.first.
+  //     }
+  //
+  static std::pair<IpAddress, size_t> FromStringView(std::string_view string_view,
+                                                     sa_family_t family = AF_UNSPEC);
 
   // Creates an invalid IP address.
   IpAddress();
@@ -40,6 +77,10 @@ class IpAddress {
 
   // Creates an IPV6 address from two address words (first and last).
   IpAddress(uint16_t w0, uint16_t w7);
+
+  // Creates an IPV6 address from a vector of words. The address starts with |start| words of value
+  // zero followed by the values from |source|, followed by zeros to fill the remainder.
+  explicit IpAddress(const std::vector<uint16_t>& source, size_t start = 0);
 
   // Creates an IPV6 address from an in6_addr struct.
   explicit IpAddress(const in6_addr& addr);
