@@ -2850,6 +2850,12 @@ From //build/config/sanitizers/sanitizer_default_options.gni:35
 
 From //src/graphics/lib/magma/gnbuild/magma.gni:13
 
+### magma_debug
+
+**Current value (from the default):** `false`
+
+From //src/graphics/lib/magma/src/magma_util/BUILD.gn:14
+
 ### magma_enable_tracing
 Enable this to include fuchsia tracing capability
 
