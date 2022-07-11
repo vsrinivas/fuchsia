@@ -6,6 +6,7 @@ use {
     ansi_term::Color,
     anyhow::{Context, Result},
     component_hub::show::{find_instances, Instance, Resolved},
+    errors::ffx_bail,
     ffx_component_show_args::ComponentShowCommand,
     ffx_core::ffx_plugin,
     ffx_writer::Writer,
@@ -45,8 +46,8 @@ pub async fn show(
         writer.machine(&instances)?;
     } else {
         if instances.is_empty() {
-            writeln!(&mut writer, "No matching components found for query \"{}\"", filter)?;
-            return Ok(());
+            // TODO(fxbug.dev/104031): Clarify the exit code policy of this plugin.
+            ffx_bail!("No matching components found for query \"{}\"", filter);
         }
 
         for instance in instances {
