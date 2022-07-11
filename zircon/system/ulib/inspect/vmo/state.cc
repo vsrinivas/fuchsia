@@ -265,8 +265,7 @@ const zx::vmo& State::GetVmo() const {
 
 bool State::DuplicateVmo(zx::vmo* vmo) const {
   std::lock_guard<std::mutex> lock(mutex_);
-  return ZX_OK == heap_->GetVmo().duplicate(
-                      ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY, vmo);
+  return ZX_OK == heap_->GetVmo().duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_MAP, vmo);
 }
 
 cpp17::optional<zx::vmo> State::FrozenVmoCopy() const {

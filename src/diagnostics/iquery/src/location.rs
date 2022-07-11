@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_inspect_deprecated::InspectMarker,
     fidl_fuchsia_io as fio, fuchsia_fs,
     fuchsia_inspect::reader::{self, DiagnosticsHierarchy, PartialNodeHierarchy},
-    fuchsia_zircon::{self as zx, DurationNum as _},
+    fuchsia_zircon::DurationNum,
     futures::stream::StreamExt,
     inspect_fidl_load as inspect_fidl,
     lazy_static::lazy_static,
@@ -183,22 +183,20 @@ impl InspectObject {
             fuchsia_fs::OpenFlags::RIGHT_READABLE,
         )?;
 
-        // Obtain the backing vmo.
-        let vmo = proxy.get_backing_memory(fio::VmoFlags::READ).await?;
-
-        let hierarchy = match vmo.map_err(zx::Status::from_raw) {
-            Ok(vmo) => PartialNodeHierarchy::try_from(&vmo),
-            Err(err) => {
-                match err {
-                    zx::Status::NOT_SUPPORTED => {}
-                    err => return Err(err.into()),
-                }
-                let bytes = fuchsia_fs::read_file_bytes(&proxy).await?;
-                PartialNodeHierarchy::try_from(bytes)
+        // Obtain the vmo backing any VmoFiles.
+        let node_info = proxy.describe().await?;
+        match node_info {
+            fio::NodeInfo::Vmofile(vmofile) => {
+                self.hierarchy = Some(PartialNodeHierarchy::try_from(&vmofile.vmo)?.into());
+                Ok(())
             }
-        }?;
-        self.hierarchy = Some(hierarchy.into());
-        Ok(())
+            fio::NodeInfo::File(_) => {
+                let bytes = fuchsia_fs::read_file_bytes(&proxy).await?;
+                self.hierarchy = Some(PartialNodeHierarchy::try_from(bytes)?.into());
+                Ok(())
+            }
+            _ => Err(format_err!("Unknown inspect file at {}", self.location.path.display())),
+        }
     }
 
     async fn load_from_fidl(&mut self) -> Result<(), Error> {

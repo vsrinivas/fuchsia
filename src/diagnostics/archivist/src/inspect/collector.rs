@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_inspect_deprecated::{InspectMarker, InspectProxy},
     fidl_fuchsia_io as fio, fuchsia_fs, fuchsia_zircon as zx,
     futures::stream::StreamExt,
+    futures::TryFutureExt,
     pin_utils::pin_mut,
     std::collections::HashMap,
     std::path::Path,
@@ -100,52 +101,30 @@ pub async fn populate_data_map(inspect_proxy: &fio::DirectoryProxy) -> DataMap {
             fuchsia_fs::OpenFlags::RIGHT_READABLE,
         ) {
             Ok(proxy) => proxy,
-            Err(err) => {
-                error!(
-                    file = %entry.name, ?err,
-                    "failed to open",
-                );
+            Err(_) => {
                 continue;
             }
         };
 
-        // Obtain the backing vmo.
-        let vmo = match file_proxy.get_backing_memory(fio::VmoFlags::READ).await {
-            Ok(vmo) => vmo,
-            Err(err) => {
-                error!(
-                    file = %entry.name, ?err,
-                    "unexpected error calling GetBackingMemory",
-                );
-                continue;
-            }
-        };
-
-        let data = match vmo.map_err(zx::Status::from_raw) {
-            Ok(vmo) => InspectData::Vmo(vmo),
-            Err(err) => {
-                match err {
-                    zx::Status::NOT_SUPPORTED => {}
-                    err => {
-                        error!(
-                            file = %entry.name, ?err,
-                            "unexpected error from GetBackingMemory",
-                        )
+        // Obtain the vmo backing any VmoFiles.
+        if let Ok(node_info) = file_proxy.describe().err_into::<anyhow::Error>().await {
+            match node_info {
+                fio::NodeInfo::Vmofile(vmofile) => {
+                    data_map.insert(entry.name.into_boxed_str(), InspectData::Vmo(vmofile.vmo));
+                }
+                fio::NodeInfo::File(_) => {
+                    if let Ok(contents) = fuchsia_fs::read_file_bytes(&file_proxy).await {
+                        data_map.insert(entry.name.into_boxed_str(), InspectData::File(contents));
                     }
                 }
-                match fuchsia_fs::read_file_bytes(&file_proxy).await {
-                    Ok(contents) => InspectData::File(contents),
-                    Err(err) => {
-                        error!(
-                            file = %entry.name, ?err,
-                            "failed to read inspect file content",
-                        );
-                        continue;
-                    }
+                ty => {
+                    error!(
+                        file = %entry.name, ?ty,
+                        "found an inspect file of unexpected type",
+                    );
                 }
             }
-        };
-        data_map.insert(entry.name.into_boxed_str(), data);
+        }
     }
 
     data_map

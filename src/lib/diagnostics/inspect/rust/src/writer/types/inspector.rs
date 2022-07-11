@@ -21,7 +21,7 @@ pub struct Inspector {
     root_node: Arc<Node>,
 
     /// The VMO backing the inspector
-    pub(crate) vmo: Option<Arc<zx::Vmo>>,
+    pub(in crate) vmo: Option<Arc<zx::Vmo>>,
 }
 
 impl fmt::Debug for Inspector {
@@ -69,14 +69,12 @@ impl Inspector {
     ///
     /// The duplicated VMO will be read-only, and is suitable to send to clients over FIDL.
     pub fn duplicate_vmo(&self) -> Option<zx::Vmo> {
-        self.vmo.as_ref().and_then(|vmo| {
-            vmo.duplicate_handle(
-                // TODO(https://fxbug.dev/104159): s/PROPERTY/GET_PROPERTY/ when SET_PROPERTY is no
-                // longer required by Rust VFS' GetBackingMemory implementation.
-                zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP | zx::Rights::PROPERTY,
-            )
-            .ok()
-        })
+        self.vmo
+            .as_ref()
+            .map(|vmo| {
+                vmo.duplicate_handle(zx::Rights::BASIC | zx::Rights::READ | zx::Rights::MAP).ok()
+            })
+            .unwrap_or(None)
     }
 
     /// This produces a copy-on-write VMO with a generation count marked as
