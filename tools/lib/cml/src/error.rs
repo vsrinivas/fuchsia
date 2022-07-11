@@ -214,6 +214,9 @@ impl From<ParseError> for Error {
     fn from(err: ParseError) -> Self {
         match err {
             ParseError::InvalidValue => Self::internal("invalid value"),
+            ParseError::InvalidComponentUrl { details } => {
+                Self::internal(&format!("invalid component url: {details}"))
+            }
             ParseError::InvalidLength => Self::internal("invalid length"),
             ParseError::NotAName => Self::internal("not a name"),
             ParseError::NotAPath => Self::internal("not a path"),

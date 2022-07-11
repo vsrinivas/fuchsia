@@ -7931,7 +7931,7 @@ mod tests {
             },
             result = Err(ErrorList::new(vec![
                 Error::invalid_field("Child", "name"),
-                Error::invalid_url("Child", "url", "bad-scheme&://blah: invalid scheme"),
+                Error::invalid_url("Child", "url", "\"bad-scheme&://blah\": Invalid scheme"),
             ])),
         },
         test_validate_children_long_identifiers => {

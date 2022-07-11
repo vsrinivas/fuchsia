@@ -227,6 +227,7 @@ group("workstation") {
     # TODO(fxbug.dev/102651): Remove these tests when Subpackages is made
     # generally available. Until then, subpackage tests will only run in CQ if
     # added to the workstation_eng packages, here:
+    "//examples/components/routing/with_subpackages:tests",
     "//examples/components/subpackages:tests",
   ]
 }

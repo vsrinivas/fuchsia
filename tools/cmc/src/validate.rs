@@ -2563,7 +2563,7 @@ mod tests {
                 "children": [
                     {
                         "name": "child",
-                        "url": "fuchsia-pkg://",
+                        "url": "fuchsia-pkg://fuchsia.com/pkg#comp.cm",
                     },
                 ],
             }),
@@ -2639,7 +2639,7 @@ mod tests {
                 "children": [
                     {
                         "name": "child",
-                        "url": "fuchsia-pkg://",
+                        "url": "fuchsia-pkg://fuchsia.com/pkg#comp.cm",
                     },
                 ],
             }),
@@ -2678,7 +2678,7 @@ mod tests {
                 "children": [
                     {
                         "name": "child",
-                        "url": "fuchsia-pkg://",
+                        "url": "fuchsia-pkg://fuchsia.com/pkg#comp.cm",
                     },
                 ],
             }),
@@ -2857,7 +2857,7 @@ mod tests {
                 "children": [
                     {
                         "name": "child",
-                        "url": "fuchsia-pkg://",
+                        "url": "fuchsia-pkg://fuchsia.com/pkg#comp.cm",
                     },
                 ],
             }),
@@ -3236,7 +3236,7 @@ mod tests {
                 "children": [
                     {
                         "name": "child",
-                        "url": "fuchsia-pkg://",
+                        "url": "fuchsia-pkg://fuchsia.com/pkg#comp.cm",
                     },
                 ],
             }),

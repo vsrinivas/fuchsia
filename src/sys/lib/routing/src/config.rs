@@ -887,109 +887,128 @@ mod tests {
     }
 
     test_config_err! {
-        invalid_job_policy => (component_internal::Config {
-            debug: None,
-            list_children_batch_size: None,
-            maintain_utc_clock: None,
-            use_builtin_process_launcher: None,
-            builtin_pkg_resolver: None,
-            security_policy: Some(component_internal::SecurityPolicy {
-                job_policy: Some(component_internal::JobPolicyAllowlists {
-                    main_process_critical: None,
-                    ambient_mark_vmo_exec: Some(vec!["/".to_string(), "bad".to_string()]),
-                    create_raw_processes: None,
-                    ..component_internal::JobPolicyAllowlists::EMPTY
+        invalid_job_policy => (
+            component_internal::Config {
+                debug: None,
+                list_children_batch_size: None,
+                maintain_utc_clock: None,
+                use_builtin_process_launcher: None,
+                builtin_pkg_resolver: None,
+                security_policy: Some(component_internal::SecurityPolicy {
+                    job_policy: Some(component_internal::JobPolicyAllowlists {
+                        main_process_critical: None,
+                        ambient_mark_vmo_exec: Some(vec!["/".to_string(), "bad".to_string()]),
+                        create_raw_processes: None,
+                        ..component_internal::JobPolicyAllowlists::EMPTY
+                    }),
+                    capability_policy: None,
+                    ..component_internal::SecurityPolicy::EMPTY
                 }),
-                capability_policy: None,
-                ..component_internal::SecurityPolicy::EMPTY
-            }),
-            num_threads: None,
-            namespace_capabilities: None,
-            builtin_capabilities: None,
-            out_dir_contents: None,
-            root_component_url: None,
-            component_id_index_path: None,
-            reboot_on_terminate_enabled: None,
-            ..component_internal::Config::EMPTY
-        }, AllowlistEntryError, AllowlistEntryError::OtherInvalidMoniker(
-            "bad".into(),
-            MonikerError::InvalidMoniker { rep: "bad".into()})),
-        invalid_capability_policy_empty_allowlist_cap => (component_internal::Config {
-            debug: None,
-            list_children_batch_size: None,
-            maintain_utc_clock: None,
-            use_builtin_process_launcher: None,
-            builtin_pkg_resolver: None,
-            security_policy: Some(component_internal::SecurityPolicy {
-                job_policy: None,
-                capability_policy: Some(component_internal::CapabilityPolicyAllowlists {
-                    allowlist: Some(vec![
-                    component_internal::CapabilityAllowlistEntry {
-                        source_moniker: Some("<component_manager>".to_string()),
-                        source_name: Some("fuchsia.kernel.RootResource".to_string()),
-                        source: Some(fdecl::Ref::Self_(fdecl::SelfRef{})),
-                        capability: None,
-                        target_monikers: Some(vec!["/core".to_string()]),
-                        ..component_internal::CapabilityAllowlistEntry::EMPTY
-                    }]),
-                    ..component_internal::CapabilityPolicyAllowlists::EMPTY
+                num_threads: None,
+                namespace_capabilities: None,
+                builtin_capabilities: None,
+                out_dir_contents: None,
+                root_component_url: None,
+                component_id_index_path: None,
+                reboot_on_terminate_enabled: None,
+                ..component_internal::Config::EMPTY
+            },
+            AllowlistEntryError,
+            AllowlistEntryError::OtherInvalidMoniker(
+                "bad".into(),
+                MonikerError::InvalidMoniker { rep: "bad".into()},
+            )
+        ),
+        invalid_capability_policy_empty_allowlist_cap => (
+            component_internal::Config {
+                debug: None,
+                list_children_batch_size: None,
+                maintain_utc_clock: None,
+                use_builtin_process_launcher: None,
+                builtin_pkg_resolver: None,
+                security_policy: Some(component_internal::SecurityPolicy {
+                    job_policy: None,
+                    capability_policy: Some(component_internal::CapabilityPolicyAllowlists {
+                        allowlist: Some(vec![
+                        component_internal::CapabilityAllowlistEntry {
+                            source_moniker: Some("<component_manager>".to_string()),
+                            source_name: Some("fuchsia.kernel.RootResource".to_string()),
+                            source: Some(fdecl::Ref::Self_(fdecl::SelfRef{})),
+                            capability: None,
+                            target_monikers: Some(vec!["/core".to_string()]),
+                            ..component_internal::CapabilityAllowlistEntry::EMPTY
+                        }]),
+                        ..component_internal::CapabilityPolicyAllowlists::EMPTY
+                    }),
+                    ..component_internal::SecurityPolicy::EMPTY
                 }),
-                ..component_internal::SecurityPolicy::EMPTY
-            }),
-            num_threads: None,
-            namespace_capabilities: None,
-            builtin_capabilities: None,
-            out_dir_contents: None,
-            root_component_url: None,
-            component_id_index_path: None,
-        ..component_internal::Config::EMPTY
-    }, PolicyConfigError, PolicyConfigError::EmptyAllowlistedCapability),
-    invalid_capability_policy_empty_source_moniker => (component_internal::Config {
-        debug: None,
-        list_children_batch_size: None,
-        maintain_utc_clock: None,
-        use_builtin_process_launcher: None,
-        builtin_pkg_resolver: None,
-        security_policy: Some(component_internal::SecurityPolicy {
-            job_policy: None,
-            capability_policy: Some(component_internal::CapabilityPolicyAllowlists {
-                allowlist: Some(vec![
-                component_internal::CapabilityAllowlistEntry {
-                    source_moniker: None,
-                    source_name: Some("fuchsia.kernel.RootResource".to_string()),
-                    capability: Some(component_internal::AllowlistedCapability::Protocol(component_internal::AllowlistedProtocol::EMPTY)),
-                    target_monikers: Some(vec!["/core".to_string()]),
-                    ..component_internal::CapabilityAllowlistEntry::EMPTY
-                }]),
-                ..component_internal::CapabilityPolicyAllowlists::EMPTY
-            }),
-            ..component_internal::SecurityPolicy::EMPTY
-        }),
-        num_threads: None,
-        namespace_capabilities: None,
-        builtin_capabilities: None,
-        out_dir_contents: None,
-        root_component_url: None,
-        component_id_index_path: None,
-        reboot_on_terminate_enabled: None,
-        ..component_internal::Config::EMPTY
-    }, PolicyConfigError, PolicyConfigError::EmptySourceMoniker),
-    invalid_root_component_url => (component_internal::Config {
-        debug: None,
-        list_children_batch_size: None,
-        maintain_utc_clock: None,
-        use_builtin_process_launcher: None,
-        builtin_pkg_resolver: None,
-        security_policy: None,
-        num_threads: None,
-        namespace_capabilities: None,
-        builtin_capabilities: None,
-        out_dir_contents: None,
-        root_component_url: Some("invalid url".to_string()),
-        component_id_index_path: None,
-        reboot_on_terminate_enabled: None,
-        ..component_internal::Config::EMPTY
-    }, ParseError, ParseError::InvalidValue),
+                num_threads: None,
+                namespace_capabilities: None,
+                builtin_capabilities: None,
+                out_dir_contents: None,
+                root_component_url: None,
+                component_id_index_path: None,
+                ..component_internal::Config::EMPTY
+            },
+            PolicyConfigError,
+            PolicyConfigError::EmptyAllowlistedCapability
+        ),
+        invalid_capability_policy_empty_source_moniker => (
+            component_internal::Config {
+                debug: None,
+                list_children_batch_size: None,
+                maintain_utc_clock: None,
+                use_builtin_process_launcher: None,
+                builtin_pkg_resolver: None,
+                security_policy: Some(component_internal::SecurityPolicy {
+                    job_policy: None,
+                    capability_policy: Some(component_internal::CapabilityPolicyAllowlists {
+                        allowlist: Some(vec![
+                        component_internal::CapabilityAllowlistEntry {
+                            source_moniker: None,
+                            source_name: Some("fuchsia.kernel.RootResource".to_string()),
+                            capability: Some(component_internal::AllowlistedCapability::Protocol(component_internal::AllowlistedProtocol::EMPTY)),
+                            target_monikers: Some(vec!["/core".to_string()]),
+                            ..component_internal::CapabilityAllowlistEntry::EMPTY
+                        }]),
+                        ..component_internal::CapabilityPolicyAllowlists::EMPTY
+                    }),
+                    ..component_internal::SecurityPolicy::EMPTY
+                }),
+                num_threads: None,
+                namespace_capabilities: None,
+                builtin_capabilities: None,
+                out_dir_contents: None,
+                root_component_url: None,
+                component_id_index_path: None,
+                reboot_on_terminate_enabled: None,
+                ..component_internal::Config::EMPTY
+            },
+            PolicyConfigError,
+            PolicyConfigError::EmptySourceMoniker
+        ),
+        invalid_root_component_url => (
+            component_internal::Config {
+                debug: None,
+                list_children_batch_size: None,
+                maintain_utc_clock: None,
+                use_builtin_process_launcher: None,
+                builtin_pkg_resolver: None,
+                security_policy: None,
+                num_threads: None,
+                namespace_capabilities: None,
+                builtin_capabilities: None,
+                out_dir_contents: None,
+                root_component_url: Some("invalid url".to_string()),
+                component_id_index_path: None,
+                reboot_on_terminate_enabled: None,
+                ..component_internal::Config::EMPTY
+            },
+            ParseError,
+            ParseError::InvalidComponentUrl {
+                details: String::from("Relative URL has no resource fragment.")
+            }
+        ),
     }
 
     fn write_config_to_file(

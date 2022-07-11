@@ -9,6 +9,7 @@ group("components-routing-example") {
   deps = [
     ":components-routing-example-cpp",
     ":components-routing-example-rust",
+    "with_subpackages",
   ]
 }
 
@@ -37,5 +38,6 @@ group("tests") {
   deps = [
     "integration_tests/cpp:echo_integration_test_cpp",
     "integration_tests/rust:echo_integration_test_rust",
+    "with_subpackages:tests",
   ]
 }

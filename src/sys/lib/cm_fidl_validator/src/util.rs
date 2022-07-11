@@ -2,16 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::error::*, fidl_fuchsia_component_decl as fdecl, lazy_static::lazy_static,
-    std::collections::HashMap, url::Url,
-};
-
-lazy_static! {
-    /// A default base URL from which to parse relative component URL
-    /// components.
-    static ref A_BASE_URL: Url = Url::parse("relative:///").unwrap();
-}
+use {crate::error::*, fidl_fuchsia_component_decl as fdecl, std::collections::HashMap};
 
 const MAX_PATH_LENGTH: usize = 1024;
 const MAX_URL_LENGTH: usize = 4096;
@@ -229,7 +220,6 @@ pub(crate) fn check_offer_availability(
     }
 }
 
-// TODO: This should probably be checking with the `url` crate
 pub(crate) fn check_url(
     prop: Option<&String>,
     decl_type: &str,
@@ -238,62 +228,18 @@ pub(crate) fn check_url(
 ) -> bool {
     let start_err_len = errors.len();
     check_presence_and_length(MAX_URL_LENGTH, prop, decl_type, keyword, errors);
-    if let Some(url_str) = prop {
-        match Url::parse(url_str).map(|url| (url, false)).or_else(|err| {
-            if err == url::ParseError::RelativeUrlWithoutBase {
-                A_BASE_URL.join(url_str).map(|url| (url, true))
-            } else {
-                Err(err)
-            }
-        }) {
-            Ok((url, is_relative)) => {
-                let path = &url.path()[1..]; // skip leading "/"
-                if is_relative && path.contains("://") {
-                    errors.push(Error::invalid_url(
-                        decl_type,
-                        keyword,
-                        &format!("{}: invalid scheme", url_str),
-                    ));
-                    return false;
-                }
-                if is_relative && url.fragment().is_none() {
-                    // Historically, a component URL string without a scheme
-                    // was considered invalid, unless it was only a fragment.
-                    // Subpackages allow a relative path URL, and by current
-                    // definition they require a fragment. By declaring a
-                    // relative path without a fragment "invalid", we can avoid
-                    // breaking tests that expect a path-only string to be
-                    // invalid. Sadly this appears to be a behavior of the
-                    // public API.
-                    errors.push(Error::invalid_url(
-                        decl_type,
-                        keyword,
-                        &format!("Relative URL \"{}\" has no resource fragment.", url_str),
-                    ));
-                    return false;
-                }
-                if url.host_str().unwrap_or("").is_empty()
-                    && path.is_empty()
-                    && url.fragment().is_none()
-                {
-                    errors.push(Error::invalid_url(
-                        decl_type,
-                        keyword,
-                        &format!(
-                            "URL \"{}\" is missing either `host`, `path`, and/or `resource`.",
-                            url_str
-                        ),
-                    ));
-                    return false;
-                }
-            }
-            Err(err) => {
+    if start_err_len == errors.len() {
+        if let Some(url_str) = prop {
+            if let Err(err) = cm_types::Url::validate(url_str) {
+                let message = match &err {
+                    cm_types::ParseError::InvalidComponentUrl { details } => details.to_owned(),
+                    _ => err.to_string(),
+                };
                 errors.push(Error::invalid_url(
                     decl_type,
                     keyword,
-                    &format!("URL \"{}\" is invalid: {:?}.", url_str, err),
+                    &format!(r#""{url_str}": {message}"#),
                 ));
-                return false;
             }
         }
     }
@@ -332,7 +278,7 @@ pub(crate) fn check_url_scheme(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, lazy_static::lazy_static, proptest::prelude::*, regex::Regex};
+    use {super::*, lazy_static::lazy_static, proptest::prelude::*, regex::Regex, url::Url};
 
     const PATH_REGEX_STR: &str = r"(/[^/]+)+";
     const NAME_REGEX_STR: &str = r"[0-9a-zA-Z_][0-9a-zA-Z_\-\.]*";
@@ -344,6 +290,7 @@ mod tests {
         static ref NAME_REGEX: Regex =
             Regex::new(&("^".to_string() + NAME_REGEX_STR + "$")).unwrap();
         static ref URL_REGEX: Regex = Regex::new(&("^".to_string() + URL_REGEX_STR + "$")).unwrap();
+        static ref A_BASE_URL: Url = Url::parse("relative:///").unwrap();
     }
 
     proptest! {
@@ -547,17 +494,17 @@ mod tests {
         test_relative_path_url_without_resource_invalid => {
             check_fn = check_url,
             input = "path/segments",
-            result = Err(ErrorList::new(vec![Error::invalid_url("FooDecl", "foo", "Relative URL \"path/segments\" has no resource fragment.")])),
+            result = Err(ErrorList::new(vec![Error::invalid_url("FooDecl", "foo", "\"path/segments\": Relative URL has no resource fragment.")])),
         },
         test_identifier_url_invalid => {
             check_fn = check_url,
             input = "fuchsia-pkg://",
-            result = Err(ErrorList::new(vec![Error::invalid_url("FooDecl", "foo","URL \"fuchsia-pkg://\" is missing either `host`, `path`, and/or `resource`.")])),
+            result = Err(ErrorList::new(vec![Error::invalid_url("FooDecl", "foo","\"fuchsia-pkg://\": URL is missing either `host`, `path`, and/or `resource`.")])),
         },
         test_url_bad_scheme => {
             check_fn = check_url,
             input = "bad-scheme&://blah",
-            result = Err(ErrorList::new(vec![Error::invalid_url("FooDecl", "foo", "bad-scheme&://blah: invalid scheme")])),
+            result = Err(ErrorList::new(vec![Error::invalid_url("FooDecl", "foo", "\"bad-scheme&://blah\": Invalid scheme")])),
         },
         test_identifier_url_too_long => {
             check_fn = check_url,

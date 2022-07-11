@@ -144,14 +144,16 @@ template("generate_meta_subpackages") {
   rebased_subpackages = []
   subpackage_targets = []
   foreach(subpackage, invoker.subpackages) {
-    # name = "" # subpackage name, if explicitly provided
-    # meta_package_file = "" # to retrieve the package name, if no subpackage name
     if (defined(subpackage.name)) {
       name = subpackage.name
     } else {
-      package_outputs = []
-      package_outputs = get_target_outputs(subpackage.package + "_meta_package")
-      meta_package_file = rebase_path(package_outputs[0], root_build_dir)
+      subpackage_target = subpackage.package + "_meta_package"
+      subpackage_target_gen_dir =
+          get_label_info(subpackage_target, "target_gen_dir")
+      subpackage_target_name = get_label_info(subpackage_target, "name")
+      package_output =
+          subpackage_target_gen_dir + "/" + subpackage_target_name + ".txt"
+      meta_package_file = rebase_path(package_output, root_build_dir)
     }
     merkle_file = rebase_path(
             get_label_info(subpackage.package, "target_out_dir") + "/" +
@@ -160,7 +162,7 @@ template("generate_meta_subpackages") {
 
     rebased_subpackages += [
       {
-        if (defined(name)) {
+        if (defined(subpackage.name)) {
           name = name
         } else {
           meta_package_file =

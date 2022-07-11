@@ -6,10 +6,12 @@ import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/security.gni")
 
+# TODO(fxbug.dev/102652): Remove security.gni when Subpackages are generally available
+
 group("tests") {
   testonly = true
 
-  # This subpackages example will only work if subpackage resolution is enabled
+  # This Subpackages example will only work if subpackage resolution is enabled
   # in the universe-resolver.
   if (universe_resolver_enable_subpackages) {
     deps = [ ":package-with-subs" ]

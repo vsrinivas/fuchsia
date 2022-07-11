@@ -368,5 +368,10 @@ group("output_dir_leaking_allowlist") {
 # TODO(fxbug.dev/102652): remove this allow list (and allow anyone to use
 # subpackages) when Fuchsia makes subpackages generally available.
 group("declare_subpackages_allowlist") {
-  visibility = [ "//examples/components/subpackages:*" ]
+  visibility = [
+    "//examples/components/routing/integration_tests/cpp:*",
+    "//examples/components/routing/integration_tests/rust:*",
+    "//examples/components/routing/with_subpackages:*",
+    "//examples/components/subpackages:*",
+  ]
 }

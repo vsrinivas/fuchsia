@@ -8,12 +8,19 @@
 
 use {
     fidl_fuchsia_component_decl as fdecl,
+    lazy_static::lazy_static,
     serde::de,
     serde::{Deserialize, Serialize},
     std::{borrow::Cow, default::Default, fmt, str::FromStr},
     thiserror::Error,
     url,
 };
+
+lazy_static! {
+    /// A default base URL from which to parse relative component URL
+    /// components.
+    static ref DEFAULT_BASE_URL: url::Url = url::Url::parse("relative:///").unwrap();
+}
 
 /// Generate `impl From` for two trivial enums with identical values, allowing
 /// converting to/from each other.
@@ -85,6 +92,9 @@ pub enum ParseError {
     /// The string did not match a valid value.
     #[error("invalid value")]
     InvalidValue,
+    /// The string did not match a valid absolute or relative component URL
+    #[error("invalid URL: {details}")]
+    InvalidComponentUrl { details: String },
     /// The string was too long or too short.
     #[error("invalid length")]
     InvalidLength,
@@ -388,25 +398,61 @@ impl Url {
     }
 
     fn from_str_impl(url_str: Cow<'_, str>) -> Result<Self, ParseError> {
-        if url_str.is_empty() || url_str.len() > 4096 {
+        Self::validate(&url_str)?;
+        Ok(Self(url_str.into_owned()))
+    }
+
+    /// Verifies the given string is a valid absolute or relative component URL.
+    pub fn validate(url_str: &str) -> Result<(), ParseError> {
+        const MAX_URL_LENGTH: usize = 4096;
+        if url_str.is_empty() || url_str.len() > MAX_URL_LENGTH {
             return Err(ParseError::InvalidLength);
         }
-        let parsed_url = url::Url::parse(&url_str);
-        // We are considering relative URLs to be valid URLs, but only if it starts
-        // with the resource.
-        if parsed_url == Err(url::ParseError::RelativeUrlWithoutBase) {
-            if url_str.chars().nth(0) == Some('#') {
-                // Use the unparsed URL string so that the original format is preserved.
-                return Ok(Self(url_str.into_owned()));
+        match url::Url::parse(url_str).map(|url| (url, false)).or_else(|err| {
+            if err == url::ParseError::RelativeUrlWithoutBase {
+                DEFAULT_BASE_URL.join(url_str).map(|url| (url, true))
+            } else {
+                Err(err)
+            }
+        }) {
+            Ok((url, is_relative)) => {
+                let path = &url.path()[1..]; // skip leading "/"
+                if is_relative && path.contains("://") {
+                    return Err(ParseError::InvalidComponentUrl {
+                        details: "Invalid scheme".to_string(),
+                    });
+                }
+                if is_relative && url.fragment().is_none() {
+                    // Historically, a component URL string without a scheme
+                    // was considered invalid, unless it was only a fragment.
+                    // Subpackages allow a relative path URL, and by current
+                    // definition they require a fragment. By declaring a
+                    // relative path without a fragment "invalid", we can avoid
+                    // breaking tests that expect a path-only string to be
+                    // invalid. Sadly this appears to be a behavior of the
+                    // public API.
+                    return Err(ParseError::InvalidComponentUrl {
+                        details: "Relative URL has no resource fragment.".to_string(),
+                    });
+                }
+                if url.host_str().unwrap_or("").is_empty()
+                    && path.is_empty()
+                    && url.fragment().is_none()
+                {
+                    return Err(ParseError::InvalidComponentUrl {
+                        details: "URL is missing either `host`, `path`, and/or `resource`."
+                            .to_string(),
+                    });
+                }
+            }
+            Err(err) => {
+                return Err(ParseError::InvalidComponentUrl {
+                    details: format!("Malformed URL: {err:?}."),
+                });
             }
         }
-
-        let parsed_url = parsed_url.map_err(|_| ParseError::InvalidValue)?;
-        if parsed_url.cannot_be_a_base() {
-            return Err(ParseError::InvalidValue);
-        }
         // Use the unparsed URL string so that the original format is preserved.
-        Ok(Self(url_str.into_owned()))
+        Ok(())
     }
 
     pub fn as_str(&self) -> &str {
@@ -447,7 +493,7 @@ impl<'de> de::Deserialize<'de> for Url {
                 E: de::Error,
             {
                 s.parse().map_err(|err| match err {
-                    ParseError::InvalidValue => {
+                    ParseError::InvalidComponentUrl { details: _ } => {
                         E::invalid_value(de::Unexpected::Str(s), &"a valid URL")
                     }
                     ParseError::InvalidLength => E::invalid_length(

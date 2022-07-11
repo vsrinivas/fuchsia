@@ -1,0 +1,65 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// [START example_snippet]
+{
+    // [START_EXCLUDE]
+    include: [
+        "//sdk/lib/sys/testing/hermetic-tier-2-test.shard.cml",
+
+        // TODO(fxbug.dev/102193): The hermetic-tier-2-test is currently
+        // required in order to resolve subpackages. The default hermetic test
+        // tier only allows component dependencies bundled in the same package.
+        // But tests with subpackages are also expected to be "hermetic".
+        // Subpackages may be preferred over, if not replace, embedding
+        // components in a single package; if so, the test shard configuration
+        // for tests with subpackages should become the default.
+        //
+        // In the near term, there should probably be a new test shard for tests
+        // that depend on subpackaged components only, and not on components
+        // from absolute package URLs.
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+
+    // Information about the program to run.
+    program: {
+        // The binary to run for this component.
+        binary: "bin/echo_integration_test_cpp",
+    },
+
+    // [END_EXCLUDE]
+
+    // Child components orchestrated by the integration test.
+    children: [
+        {
+            name: "echo_server",
+
+            // TODO(fxbug.dev/100060): When subpackages can be renamed,
+            // simplify this example by renaming the `echo_server_package_cpp`
+            // target to subpackage name `echo_server_package`, and remove the
+            // the `_cpp` suffix here.
+            url: "echo_server_package_cpp#meta/echo_server.cm",
+        },
+    ],
+
+    // Capabilities used by this component.
+    use: [
+        {
+            protocol: [ "fidl.examples.routing.echo.Echo" ],
+            from: "#echo_server",
+        },
+    ],
+
+    // Capabilities required by components under test.
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#echo_server",
+        },
+    ],
+}
+
+// [END example_snippet]

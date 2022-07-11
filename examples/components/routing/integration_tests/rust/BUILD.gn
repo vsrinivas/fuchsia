@@ -33,4 +33,22 @@ fuchsia_test_package("echo_integration_test_rust") {
   deps =
       [ "//examples/components/routing/rust/echo_server:echo_server_component" ]
 }
+
 # [END example_snippet]
+
+fuchsia_component("subpackaged_echo_integration_test_component") {
+  testonly = true
+  component_name = "echo_integration_test"
+  manifest = "meta/subpackaged_echo_integration_test.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_test_package("subpackaged_echo_integration_test_rust") {
+  test_components = [ ":subpackaged_echo_integration_test_component" ]
+  subpackages = [
+    {
+      package =
+          "//examples/components/routing/rust/echo_server:echo_server_package"
+    },
+  ]
+}
