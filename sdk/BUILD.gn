@@ -526,6 +526,7 @@ sdk("fuchsia_dart") {
     "//sdk/dart/fuchsia_inspect:fuchsia_inspect_sdk($dart_toolchain)",
     "//sdk/dart/fuchsia_logger:fuchsia_logger_sdk($dart_toolchain)",
     "//sdk/dart/fuchsia_modular:fuchsia_modular_sdk($dart_toolchain)",
+    "//sdk/dart/fuchsia_modular_testing:fuchsia_modular_testing_sdk($dart_toolchain)",
     "//sdk/dart/fuchsia_scenic:fuchsia_scenic_sdk($dart_toolchain)",
     "//sdk/dart/fuchsia_scenic_flutter:fuchsia_scenic_flutter_sdk($dart_toolchain)",
     "//sdk/dart/fuchsia_services:fuchsia_services_sdk($dart_toolchain)",

@@ -77,3 +77,45 @@ flutter_test("fuchsia_modular_package_unittests") {
     "//third_party/dart-pkg/pub/test",
   ]
 }
+
+# Run these tests using:
+#  fx set x64 --packages topaz/packages/buildbot
+# Start a qemu emulator (using a real device is also possible):
+#  fx run -kN  (tip: to terminate the emulator press "ctrl+a x")
+# Run integration tests:
+#  fx test fuchsia-pkg://fuchsia.com/fuchsia-modular-integration-tests#meta/fuchsia-modular-integration-tests.cmx
+dart_test_component("integration-tests-component") {
+  component_name = "fuchsia-modular-integration-tests"
+  manifest = "meta/fuchsia-modular-integration-tests.cmx"
+
+  # TODO(ianloic): these seem wrong, actually...
+  sources = [
+    "internal/component_context_integ_test.dart",
+    "lifecycle/internal/lifecycle_impl_test.dart",
+  ]
+
+  deps = [
+    ":fuchsia_modular",
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/fidl/fuchsia.modular",
+    "//sdk/fidl/fuchsia.modular.session",
+    "//sdk/fidl/fuchsia.modular.testing",
+    "//sdk/fidl/fuchsia.sys",
+    "//third_party/dart-pkg/pub/mockito",  # TODO(fxbug.dev/3114): Remove
+    "//third_party/dart-pkg/pub/test",
+  ]
+}
+
+fuchsia_test_package("fuchsia-modular-integration-tests") {
+  test_components = [ ":integration-tests-component" ]
+
+  # TODO(fxb/65865): This check shouldn't be necessary.
+  if (is_fuchsia) {
+    test_specs = {
+      log_settings = {
+        max_severity = "ERROR"
+      }
+    }
+  }
+}
