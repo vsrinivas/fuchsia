@@ -109,6 +109,83 @@ glm::mat4 Convert2DTransformTo3D(glm::mat3 in_matrix) {
   return out_matrix;
 }
 
+// Easier-to-read input data to HitTest() below.
+struct HitTestingData {
+  const flatland::GlobalTopologyData::TopologyVector transforms;
+  const flatland::GlobalTopologyData::ChildCountVector children_vector;
+  const flatland::GlobalTopologyData::ParentIndexVector parent_indices;
+  const std::unordered_map<flatland::TransformHandle, flatland::TransformHandle> root_transforms;
+  const std::unordered_map<flatland::TransformHandle,
+                           std::shared_ptr<const fuchsia::ui::views::ViewRef>>
+      view_refs;
+  const std::unordered_map<flatland::TransformHandle,
+                           std::vector<fuchsia::ui::composition::HitRegion>>
+      hit_regions;
+  const std::vector<flatland::TransformClipRegion> global_clip_regions;
+};
+
+view_tree::SubtreeHitTestResult HitTest(const HitTestingData& data, zx_koid_t start_node,
+                                        glm::vec2 world_point, bool is_semantic_hit_test) {
+  const auto& [transforms, children_vector, parent_indices, root_transforms, view_refs, hit_regions,
+               global_clip_regions] = data;
+  FX_DCHECK(transforms.size() == children_vector.size());
+  FX_DCHECK(transforms.size() == parent_indices.size());
+  FX_DCHECK(transforms.size() == global_clip_regions.size());
+
+  size_t start = 0, end = 0;
+  if (auto result = GetViewRefIndex(start_node, transforms, view_refs)) {
+    start = *result;
+    end = GetSubtreeEndIndex(start, transforms, parent_indices);
+  } else {
+    // Start node not in view tree.
+    return view_tree::SubtreeHitTestResult{};
+  }
+
+  FX_DCHECK(0 <= start && start < end && end <= transforms.size());
+
+  const auto x = world_point[0];
+  const auto y = world_point[1];
+
+  std::vector<zx_koid_t> hits = {};
+
+  for (size_t i = start; i < end; ++i) {
+    const auto& transform = transforms[i];
+    FX_DCHECK(root_transforms.find(transform) != root_transforms.end());
+    const auto& root_transform = root_transforms.at(transform);
+
+    const auto clip_region = utils::ConvertRectToRectF(global_clip_regions[i]);
+
+    if (const auto local_root = view_refs.find(root_transform); local_root != view_refs.end()) {
+      if (const auto hit_region_vec = hit_regions.find(transform);
+          hit_region_vec != hit_regions.end()) {
+        for (const auto& region : hit_region_vec->second) {
+          const auto rect = region.region;
+          const bool semantically_invisible =
+              region.hit_test ==
+              fuchsia::ui::composition::HitTestInteraction::SEMANTICALLY_INVISIBLE;
+
+          // Deliver a hit in all cases except for when it is a semantic hit test and the region
+          // is semantically invisible.
+          if (is_semantic_hit_test && semantically_invisible) {
+            continue;
+          }
+
+          // Instead of clipping the hit region with the clip region, simply check if the hit
+          // point is in both.
+          if (utils::RectFContainsPoint(rect, x, y) &&
+              utils::RectFContainsPoint(clip_region, x, y)) {
+            hits.push_back(utils::ExtractKoid(*(local_root->second)));
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  std::reverse(hits.begin(), hits.end());
+  return view_tree::SubtreeHitTestResult{.hits = hits};
+}
+
 }  // namespace
 
 namespace flatland {
@@ -417,66 +494,16 @@ view_tree::SubtreeSnapshot GlobalTopologyData::GenerateViewTreeSnapshot(
   // important that it contains no references to live data. This means the hit testing closure must
   // contain only plain values or data with value semantics like shared_ptr<const>, to ensure that
   // it's safe to call from any thread.
-  hit_tester = [transforms = data.topology_vector, view_refs = data.view_refs,
-                parent_indices = data.parent_indices, hit_regions = data.hit_regions,
-                global_clip_regions, children_vector = data.child_counts,
-                root_transforms = data.root_transforms](zx_koid_t start_node, glm::vec2 world_point,
-                                                        bool is_semantic_hit_test) {
-    FX_DCHECK(transforms.size() == parent_indices.size());
-    FX_DCHECK(transforms.size() == global_clip_regions.size());
-    FX_DCHECK(transforms.size() == children_vector.size());
-
-    size_t start = 0, end = 0;
-    if (auto result = GetViewRefIndex(start_node, transforms, view_refs)) {
-      start = *result;
-      end = GetSubtreeEndIndex(start, transforms, parent_indices);
-    } else {
-      return view_tree::SubtreeHitTestResult{};
-    }
-
-    FX_DCHECK(0 <= start && start < end && end <= transforms.size());
-
-    const auto x = world_point[0];
-    const auto y = world_point[1];
-
-    std::vector<zx_koid_t> hits = {};
-
-    for (size_t i = start; i < end; ++i) {
-      const auto& transform = transforms[i];
-      FX_DCHECK(root_transforms.find(transform) != root_transforms.end());
-      const auto& root_transform = root_transforms.at(transform);
-
-      const auto clip_region = utils::ConvertRectToRectF(global_clip_regions[i]);
-
-      if (const auto local_root = view_refs.find(root_transform); local_root != view_refs.end()) {
-        if (const auto hit_region_vec = hit_regions.find(transform);
-            hit_region_vec != hit_regions.end()) {
-          for (const auto& region : hit_region_vec->second) {
-            const auto rect = region.region;
-            const bool semantically_invisible =
-                region.hit_test ==
-                fuchsia::ui::composition::HitTestInteraction::SEMANTICALLY_INVISIBLE;
-
-            // Deliver a hit in all cases except for when it is a semantic hit test and the region
-            // is semantically invisible.
-            if (is_semantic_hit_test && semantically_invisible) {
-              continue;
-            }
-
-            // Instead of clipping the hit region with the clip region, simply check if the hit
-            // point is in both.
-            if (utils::RectFContainsPoint(rect, x, y) &&
-                utils::RectFContainsPoint(clip_region, x, y)) {
-              hits.push_back(utils::ExtractKoid(*(local_root->second)));
-              break;
-            }
-          }
-        }
-      }
-    }
-
-    std::reverse(hits.begin(), hits.end());
-    return view_tree::SubtreeHitTestResult{.hits = hits};
+  hit_tester = [hit_test_data = HitTestingData{
+                    .transforms = data.topology_vector,
+                    .children_vector = data.child_counts,
+                    .parent_indices = data.parent_indices,
+                    .root_transforms = data.root_transforms,
+                    .view_refs = data.view_refs,
+                    .hit_regions = data.hit_regions,
+                    .global_clip_regions = global_clip_regions,
+                }](zx_koid_t start_node, glm::vec2 world_point, bool is_semantic_hit_test) {
+    return HitTest(hit_test_data, start_node, world_point, is_semantic_hit_test);
   };
 
   // Add unconnected views to the snapshot.
