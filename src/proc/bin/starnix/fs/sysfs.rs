@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 use super::*;
+use crate::auth::FsCred;
+use crate::fs::tmpfs::TmpfsDirectory;
 use crate::task::*;
 use crate::types::*;
 
@@ -27,7 +29,11 @@ impl SysFs {
                     )
                     .add_node_entry(
                         b"cgroup",
-                        StaticDirectoryBuilder::new(&fs).set_mode(mode!(IFDIR, 0o755)).build(),
+                        fs.create_node(
+                            Box::new(TmpfsDirectory::new()),
+                            mode!(IFDIR, 0o755),
+                            FsCred::root(),
+                        ),
                     )
                     .add_node_entry(
                         b"fuse",
