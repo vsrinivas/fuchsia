@@ -1,0 +1,31 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "sys/testing/system-test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/magma_conformance_tests_hermetic",
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+        {
+            directory: "dev-gpu",
+            rights: [ "r*" ],
+            path: "/dev/class/gpu",
+        },
+        {
+            directory: "dev-gpu-performance-counters",
+            rights: [ "r*" ],
+            path: "/dev/class/gpu-performance-counters",
+        },
+    ],
+}

@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/graphics/lib/magma/src/libmagma/hermetic_static_library.gni")
 
 group("libmagma") {
   public_deps = [ ":libmagma_static" ]
@@ -41,7 +42,9 @@ static_library("libmagma_static") {
   ]
 }
 
-# This library is complete, so it's usable outside BUILD.gn
+# This library is complete, so it's usable outside BUILD.gn.
+# TODO(fxbug.dev/92268): Remove in favor of magma_client, which is hermetic and usable when linking
+# against code built with a different C++ ABI and standard library version.
 static_library("libmagma_complete") {
   complete_static_lib = true
 
@@ -55,9 +58,27 @@ static_library("zxio") {
   deps = [ "//sdk/lib/zxio" ]
 }
 
+config("libmagma_lib") {
+  libs = [ "$target_out_dir/libmagma_client.a" ]
+}
+
+# The libmagma static library uses the C++ standard library. That library
+# doesn't necessarily have a static ABI (on Fuchsia), so combining the current
+# version with a Vulkan ICD built in a different toolchain could break. To avoid
+# that, link it statically against the C++ standard library, then use
+# --localize-hidden to hide all the unwanted symbols.
+hermetic_static_library("magma_client") {
+  deps = [ ":libmagma_static" ]
+}
+
+# Targets can depend on this to link in the hermetic magma client library.
+group("magma_hermetic") {
+  deps = [ ":magma_client" ]
+  public_configs = [ ":libmagma_lib" ]
+}
+
+# This is a set of extra dependencies that ICDs may use. It's depended on by
+# out-of-tree targets.
 group("magma_deps") {
-  deps = [
-    ":libmagma_complete($shlib_toolchain)",
-    ":zxio($shlib_toolchain)",
-  ]
+  deps = [ ":zxio($shlib_toolchain)" ]
 }

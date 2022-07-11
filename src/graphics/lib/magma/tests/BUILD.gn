@@ -11,6 +11,7 @@ group("tests") {
   public_deps = [
     ":magma-conformance-tests",
     ":magma-conformance-tests-arm",
+    ":magma-conformance-tests-hermetic",
     ":magma-conformance-tests-vsi",
     ":magma_nonhardware_tests",
     "codegen",
@@ -98,6 +99,17 @@ fuchsia_unittest_package("magma_nonhardware_tests") {
 # GPUs are present the vendor must be specified.
 fuchsia_unittest_package("magma-conformance-tests") {
   manifest = "meta/magma-conformance-tests.cml"
+  deps = [ "integration" ]
+  test_specs = {
+    environments = magma_hardware_envs - [ arm_gpu_envs ]
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+fuchsia_unittest_package("magma-conformance-tests-hermetic") {
+  manifest = "meta/magma-conformance-tests-hermetic.cml"
   deps = [ "integration" ]
   test_specs = {
     environments = magma_hardware_envs - [ arm_gpu_envs ]

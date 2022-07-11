@@ -864,8 +864,10 @@ class TestConnection {
                                           server_endpoint.release()));
     EXPECT_EQ(MAGMA_STATUS_OK, magma_initialize_tracing(local_endpoint.release()));
 
+#if !defined(MAGMA_HERMETIC)
     if (magma::PlatformTraceProvider::Get())
       EXPECT_TRUE(magma::PlatformTraceProvider::Get()->IsInitialized());
+#endif
 #endif
   }
 
@@ -888,9 +890,12 @@ class TestConnection {
 #if !defined(__Fuchsia__)
     GTEST_SKIP();
 #else
+#if !defined(MAGMA_HERMETIC)
     // Logging should be set up by the test fixture, so just add more logs here to help manually
     // verify that the fixture is working correctly.
+    EXPECT_TRUE(magma::PlatformLogger::IsInitialized());
     MAGMA_LOG(INFO, "LoggingInit test complete");
+#endif
 #endif
   }
 

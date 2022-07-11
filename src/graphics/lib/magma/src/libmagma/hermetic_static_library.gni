@@ -1,0 +1,110 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/clang/clang.gni")
+import("//build/config/current_target_tuple.gni")
+import("//build/zircon/c_utils.gni")
+
+# A static library that links hermetically against the C++ standard library and won't accidentally
+# expose any C++ library implementations to clients. Only exported symbols and symbols listed in
+# globalize_symbols_file will be available to external code.
+#
+# Parameters
+#
+#  globalize_symbols_file (optional)
+#    A filename containing a list of additional symbols to be exported.
+#
+#  deps (all optional)
+#  public_deps
+#  public_configs
+#  testonly
+#  visibility
+#    Same as a normal static_library_target
+
+template("hermetic_static_library") {
+  output_target = target_name
+
+  # This library is complete, so it can be linked relocatably.
+  static_library("${target_name}_nonhermetic") {
+    complete_static_lib = true
+
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "public_configs",
+                             "testonly",
+                             "visibility",
+                           ])
+  }
+
+  # This links the static library into a complete object file which objcopy can
+  # act on.
+  action("${output_target}_relocated") {
+    script = "$clang_prefix/clang"
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    deps = [ ":${output_target}_nonhermetic($shlib_toolchain)" ]
+    inputs = [ get_label_info(deps[0], "target_out_dir") +
+               "/lib${output_target}_nonhermetic.a" ]
+    outputs = [ "$target_out_dir/${output_target}_temp.o" ]
+
+    # The build seems to write the output to a temp file, which the action tracer complains about.
+    # TODO(fxbug.dev/94463): Fix the action tracer and remove this.
+    hermetic_deps = false
+
+    args = [
+      # Relocatable link.
+      "-r",
+      "--target=${current_target_tuple}",
+      "-Wl,--whole-archive",
+      rebase_path(inputs[0], root_build_dir),
+      "-Wl,--no-whole-archive",
+      "-o",
+      rebase_path(outputs[0], root_build_dir),
+      rebase_path("$clang_prefix/../lib/${current_target_tuple}/libc++.a",
+                  root_build_dir),
+    ]
+  }
+
+  # This action localize all non-exported symbols in the object file, so other
+  # linker inputs won't see them.
+  toolchain_utils_action("${output_target}_localized") {
+    utils = [ "objcopy" ]
+
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    deps = [ ":${output_target}_relocated" ]
+    inputs = [ "$target_out_dir/${output_target}_temp.o" ]
+    outputs = [ "$target_out_dir/${output_target}.o" ]
+    args = [
+      "--localize-hidden",
+      rebase_path(inputs[0], root_build_dir),
+      rebase_path(outputs[0], root_build_dir),
+    ]
+
+    if (defined(invoker.globalize_symbols_file)) {
+      inputs += [ invoker.globalize_symbols_file ]
+      args += [
+        "--globalize-symbols",
+        rebase_path(invoker.globalize_symbols_file, root_build_dir),
+      ]
+    }
+  }
+
+  # Out-of-tree builds expect static library inputs, so this target archives the
+  # localized object file into a static library.
+  static_library(target_name) {
+    deps = [ ":${output_target}_localized" ]
+    output_name = output_target
+    sources = [ "$target_out_dir/${output_target}.o" ]
+  }
+}

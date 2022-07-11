@@ -11,8 +11,13 @@
 extern "C" {
 #endif
 
-// At the moment magma is statically linked into ICDs, so symbols don't need to be exported.
+#if defined(__Fuchsia__)
+// The entrypoints should be exported from libmagma_client.a. ICDs should use a
+// version script to re-exporting magma entrypoints.
+#define MAGMA_EXPORT __attribute__((visibility("default")))
+#else
 #define MAGMA_EXPORT
+#endif
 
 // This is a list of vendor-neutral queries that can be passed to magma_query.
 // Returns the hardware vendor ID (simple result) - should be the PCI ID of the GPU vendor

@@ -10,6 +10,7 @@ group("integration") {
   public_deps = [
     ":linux_x64",
     ":magma_conformance_tests",
+    ":magma_conformance_tests_hermetic",
   ]
 }
 
@@ -34,6 +35,43 @@ executable("magma_conformance_tests") {
   deps = [
     "$magma_build_root/include:magma",
     "$magma_build_root/src/libmagma",
+    "$magma_build_root/tests/helper:magma_map_cpu",
+    "//src/graphics/drivers/msd-arm-mali/include",
+    "//src/graphics/drivers/msd-intel-gen/include",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//src/lib/testing/loop_fixture",
+    "//third_party/googletest:gtest",
+  ]
+
+  if (is_fuchsia) {
+    deps += [
+      "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_llcpp",
+      "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
+      "//sdk/fidl/fuchsia.sysmem",
+      "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_llcpp",
+      "//sdk/lib/fdio",
+      "//src/graphics/lib/magma/src/magma_util/platform:logger",
+      "//src/graphics/lib/magma/src/magma_util/platform:trace_provider",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+    ]
+  }
+}
+
+executable("magma_conformance_tests_hermetic") {
+  testonly = true
+
+  defines = [ "MAGMA_HERMETIC=1" ]
+  sources = [
+    "main.cc",
+    "test_magma.cc",
+    "test_magma_c.c",
+    "test_magma_fidl.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/include:magma",
+    "$magma_build_root/src/libmagma:magma_hermetic",
     "$magma_build_root/tests/helper:magma_map_cpu",
     "//src/graphics/drivers/msd-arm-mali/include",
     "//src/graphics/drivers/msd-intel-gen/include",
