@@ -56,7 +56,7 @@ class FakeBootItemsFixture : public testing::Test {
     auto str_path = std::string(path);
     path_to_koid_[str_path] = koid;
 
-    auto file = std::make_unique<vfs::VmoFile>(std::move(path_vmo), 0, 4096);
+    auto file = std::make_unique<vfs::VmoFile>(std::move(path_vmo), 4096);
     ASSERT_EQ(kernel_dir_.AddEntry(str_path, std::move(file)), ZX_OK);
   }
 

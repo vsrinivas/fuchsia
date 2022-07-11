@@ -60,18 +60,18 @@ std::vector<uint8_t> ReadVmo(const zx::vmo& vmo, size_t offset, size_t length) {
 }
 
 TEST(VmoFile, ConstructTransferOwnership) {
-  vfs::VmoFile file(MakeTestVmo(), 24, 1000);
+  vfs::VmoFile file(MakeTestVmo(), 1000);
   std::vector<uint8_t> output;
   EXPECT_EQ(ZX_OK, file.ReadAt(1000, 0, &output));
   EXPECT_EQ(1000u, output.size());
 }
 
 TEST(VmoFile, Reading) {
-  // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
+  // Create a VmoFile wrapping 1000 bytes of the VMO.
   zx::vmo test_vmo = MakeTestVmo();
   zx::vmo dup;
   ASSERT_EQ(ZX_OK, test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
-  vfs::VmoFile file(std::move(dup), 24, 1000, vfs::VmoFile::WriteOption::READ_ONLY,
+  vfs::VmoFile file(std::move(dup), 1000, vfs::VmoFile::WriteOption::READ_ONLY,
                     vfs::VmoFile::Sharing::NONE);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -80,27 +80,27 @@ TEST(VmoFile, Reading) {
   auto file_ptr = OpenAsFile(&file, loop.dispatcher());
   ASSERT_TRUE(file_ptr.is_bound());
 
-  // Reading the VMO from offset 24 should match reading the file from offset 0.
+  // Reading the VMO should match reading the file.
   {
     fuchsia::io::File2_Read_Result result;
     EXPECT_EQ(ZX_OK, file_ptr->Read(500, &result));
     ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
-    EXPECT_EQ(ReadVmo(test_vmo, 24, 500), result.response().data);
+    EXPECT_EQ(ReadVmo(test_vmo, 0, 500), result.response().data);
   }
   {
     fuchsia::io::File2_Read_Result result;
     EXPECT_EQ(ZX_OK, file_ptr->Read(500, &result));
     ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
-    EXPECT_EQ(ReadVmo(test_vmo, 524, 500), result.response().data);
+    EXPECT_EQ(ReadVmo(test_vmo, 500, 500), result.response().data);
   }
 }
 
 TEST(VmoFile, GetAttrReadOnly) {
-  // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
+  // Create a VmoFile wrapping 1000 bytes of the VMO.
   zx::vmo test_vmo = MakeTestVmo();
   zx::vmo dup;
   ASSERT_EQ(ZX_OK, test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
-  vfs::VmoFile file(std::move(dup), 24, 1000, vfs::VmoFile::WriteOption::READ_ONLY,
+  vfs::VmoFile file(std::move(dup), 1000, vfs::VmoFile::WriteOption::READ_ONLY,
                     vfs::VmoFile::Sharing::NONE);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -121,11 +121,11 @@ TEST(VmoFile, GetAttrReadOnly) {
 }
 
 TEST(VmoFile, GetAttrWritable) {
-  // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
+  // Create a VmoFile wrapping 1000 bytes of the VMO.
   zx::vmo test_vmo = MakeTestVmo();
   zx::vmo dup;
   ASSERT_EQ(ZX_OK, test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
-  vfs::VmoFile file(std::move(dup), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE,
+  vfs::VmoFile file(std::move(dup), 1000, vfs::VmoFile::WriteOption::WRITABLE,
                     vfs::VmoFile::Sharing::NONE);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -147,11 +147,11 @@ TEST(VmoFile, GetAttrWritable) {
 }
 
 TEST(VmoFile, ReadOnlyNoSharing) {
-  // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
+  // Create a VmoFile wrapping 1000 bytes of the VMO.
   zx::vmo test_vmo = MakeTestVmo();
   zx::vmo dup;
   ASSERT_EQ(ZX_OK, test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
-  vfs::VmoFile file(std::move(dup), 24, 1000, vfs::VmoFile::WriteOption::READ_ONLY,
+  vfs::VmoFile file(std::move(dup), 1000, vfs::VmoFile::WriteOption::READ_ONLY,
                     vfs::VmoFile::Sharing::NONE);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -169,11 +169,11 @@ TEST(VmoFile, ReadOnlyNoSharing) {
     EXPECT_EQ(ZX_ERR_BAD_HANDLE, result.err());
   }
 
-  // Reading the VMO from offset 24 should match reading the file from offset 0.
+  // Reading the VMO should match reading the file.
   {
-    std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 1000);
+    std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 500);
     fuchsia::io::File2_ReadAt_Result result;
-    EXPECT_EQ(ZX_OK, file_ptr->ReadAt(1000, 0, &result));
+    EXPECT_EQ(ZX_OK, file_ptr->ReadAt(500, 24, &result));
     EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     EXPECT_EQ(vmo_result, result.response().data);
   }
@@ -186,11 +186,11 @@ TEST(VmoFile, ReadOnlyNoSharing) {
 }
 
 TEST(VmoFile, WritableNoSharing) {
-  // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
+  // Create a VmoFile wrapping 1000 bytes of the VMO.
   zx::vmo test_vmo = MakeTestVmo();
   zx::vmo dup;
   ASSERT_EQ(ZX_OK, test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
-  vfs::VmoFile file(std::move(dup), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE,
+  vfs::VmoFile file(std::move(dup), 1000, vfs::VmoFile::WriteOption::WRITABLE,
                     vfs::VmoFile::Sharing::NONE);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -208,11 +208,11 @@ TEST(VmoFile, WritableNoSharing) {
     EXPECT_EQ(value.size(), result.response().actual_count);
   }
 
-  // Reading the VMO from offset 24 should match reading the file from offset 0.
+  // Reading the VMO should match reading the file.
   {
-    std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 1000);
+    std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 0, 500);
     fuchsia::io::File2_ReadAt_Result result;
-    EXPECT_EQ(ZX_OK, file_ptr->ReadAt(1000, 0, &result));
+    EXPECT_EQ(ZX_OK, file_ptr->ReadAt(500, 0, &result));
     EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     EXPECT_EQ(vmo_result, result.response().data);
     EXPECT_EQ('a', result.response().data[0]);
@@ -226,11 +226,11 @@ TEST(VmoFile, WritableNoSharing) {
 }
 
 TEST(VmoFile, ReadOnlyDuplicate) {
-  // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
+  // Create a VmoFile wrapping 1000 bytes of the VMO.
   zx::vmo test_vmo = MakeTestVmo();
   zx::vmo dup;
   ASSERT_EQ(ZX_OK, test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
-  vfs::VmoFile file(std::move(dup), 24, 1000);
+  vfs::VmoFile file(std::move(dup), 1000);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("vfs test thread");
@@ -247,11 +247,11 @@ TEST(VmoFile, ReadOnlyDuplicate) {
     EXPECT_EQ(ZX_ERR_BAD_HANDLE, result.err());
   }
 
-  // Reading the VMO from offset 24 should match reading the file from offset 0.
+  // Reading the VMO should match reading the file.
   {
-    std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 1000);
+    std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 500);
     fuchsia::io::File2_ReadAt_Result result;
-    EXPECT_EQ(ZX_OK, file_ptr->ReadAt(1000, 0, &result));
+    EXPECT_EQ(ZX_OK, file_ptr->ReadAt(500, 24, &result));
     EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     EXPECT_EQ(vmo_result, result.response().data);
   }
@@ -261,7 +261,7 @@ TEST(VmoFile, ReadOnlyDuplicate) {
   EXPECT_EQ(ZX_OK, file_ptr->Describe(&info));
   ASSERT_TRUE(info.is_vmofile());
   ASSERT_EQ(1000u, info.vmofile().length);
-  ASSERT_EQ(24u, info.vmofile().offset);
+  ASSERT_EQ(0u, info.vmofile().offset);
   EXPECT_EQ(ReadVmo(test_vmo, 0, 4096), ReadVmo(info.vmofile().vmo, 0, 4096));
 
   // Writing should fail on the new VMO.
@@ -269,11 +269,11 @@ TEST(VmoFile, ReadOnlyDuplicate) {
 }
 
 TEST(VmoFile, WritableDuplicate) {
-  // Create a VmoFile wrapping 1000 bytes starting at offset 24 of the vmo.
+  // Create a VmoFile wrapping 1000 bytes of the VMO.
   zx::vmo test_vmo = MakeTestVmo();
   zx::vmo dup;
   ASSERT_EQ(ZX_OK, test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
-  vfs::VmoFile file(std::move(dup), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE);
+  vfs::VmoFile file(std::move(dup), 1000, vfs::VmoFile::WriteOption::WRITABLE);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("vfs test thread");
@@ -290,11 +290,11 @@ TEST(VmoFile, WritableDuplicate) {
     EXPECT_EQ(value.size(), result.response().actual_count);
   }
 
-  // Reading the VMO from offset 24 should match reading the file from offset 0.
+  // Reading the VMO should match reading the file.
   {
-    std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 1000);
+    std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 0, 500);
     fuchsia::io::File2_ReadAt_Result result;
-    EXPECT_EQ(ZX_OK, file_ptr->ReadAt(1000, 0, &result));
+    EXPECT_EQ(ZX_OK, file_ptr->ReadAt(500, 0, &result));
     EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     EXPECT_EQ(vmo_result, result.response().data);
     EXPECT_EQ('a', result.response().data[0]);
@@ -305,7 +305,7 @@ TEST(VmoFile, WritableDuplicate) {
   EXPECT_EQ(ZX_OK, file_ptr->Describe(&info));
   ASSERT_TRUE(info.is_vmofile());
   ASSERT_EQ(1000u, info.vmofile().length);
-  ASSERT_EQ(24u, info.vmofile().offset);
+  ASSERT_EQ(0u, info.vmofile().offset);
   EXPECT_EQ(ReadVmo(test_vmo, 0, 4096), ReadVmo(info.vmofile().vmo, 0, 4096));
 
   // TODO(fxbug.dev/45287): As part of fxbug.dev/85334 it was discovered that Describe leaks
@@ -320,7 +320,7 @@ TEST(VmoFile, ReadOnlyCopyOnWrite) {
   zx::vmo test_vmo = MakeTestVmo();
   zx::vmo dup;
   ASSERT_EQ(ZX_OK, test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
-  vfs::VmoFile file(std::move(dup), 0, 4096, vfs::VmoFile::WriteOption::READ_ONLY,
+  vfs::VmoFile file(std::move(dup), 4096, vfs::VmoFile::WriteOption::READ_ONLY,
                     vfs::VmoFile::Sharing::CLONE_COW);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -365,7 +365,7 @@ TEST(VmoFile, WritableCopyOnWrite) {
   zx::vmo test_vmo = MakeTestVmo();
   zx::vmo dup;
   ASSERT_EQ(ZX_OK, test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
-  vfs::VmoFile file(std::move(dup), 0, 4096, vfs::VmoFile::WriteOption::WRITABLE,
+  vfs::VmoFile file(std::move(dup), 4096, vfs::VmoFile::WriteOption::WRITABLE,
                     vfs::VmoFile::Sharing::CLONE_COW);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -407,13 +407,13 @@ TEST(VmoFile, WritableCopyOnWrite) {
 }
 
 TEST(VmoFile, VmoWithNoRights) {
-  // Create a VmoFile wrapping 1000 bytes of the VMO starting at offset 24.
+  // Create a VmoFile wrapping 1000 bytes of the VMO.
   // The vmo we use has no rights, so reading, writing, and duplication will
   // fail.
   zx::vmo test_vmo = MakeTestVmo();
   zx::vmo bad_vmo;
   ASSERT_EQ(ZX_OK, test_vmo.duplicate(0, &bad_vmo));
-  vfs::VmoFile file(std::move(bad_vmo), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE);
+  vfs::VmoFile file(std::move(bad_vmo), 1000, vfs::VmoFile::WriteOption::WRITABLE);
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop.StartThread("vfs test thread");
@@ -436,41 +436,6 @@ TEST(VmoFile, VmoWithNoRights) {
     EXPECT_EQ(ZX_OK, file_ptr->ReadAt(1000, 0, &result));
     EXPECT_TRUE(result.is_err());
     EXPECT_EQ(ZX_ERR_ACCESS_DENIED, result.err());
-  }
-}
-
-TEST(VmoFile, UnalignedCopyOnWrite) {
-  // Create a VmoFile wrapping 1000 bytes of the VMO starting at offset 24.
-  // This offset is not page-aligned, so cloning will fail.
-  zx::vmo test_vmo = MakeTestVmo();
-  zx::vmo dup;
-  ASSERT_EQ(ZX_OK, test_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
-  vfs::VmoFile file(std::move(dup), 24, 1000, vfs::VmoFile::WriteOption::WRITABLE,
-                    vfs::VmoFile::Sharing::CLONE_COW);
-
-  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  loop.StartThread("vfs test thread");
-
-  auto file_ptr = OpenAsFile(&file, loop.dispatcher(), /*writable=*/true);
-  ASSERT_TRUE(file_ptr.is_bound());
-
-  // Writes should succeed.
-  {
-    std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
-    fuchsia::io::File2_WriteAt_Result result;
-    EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &result));
-    EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
-    EXPECT_EQ(value.size(), result.response().actual_count);
-  }
-
-  // Reading the VMO from offset 24 should match reading the file from offset 0.
-  {
-    std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 1000);
-    fuchsia::io::File2_ReadAt_Result result;
-    EXPECT_EQ(ZX_OK, file_ptr->ReadAt(1000, 0, &result));
-    EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
-    EXPECT_EQ(vmo_result, result.response().data);
-    EXPECT_EQ('a', result.response().data[0]);
   }
 }
 

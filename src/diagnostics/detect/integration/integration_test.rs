@@ -212,7 +212,7 @@ fn create_mock_component(
                 let size = contents.len() as u64;
                 let vmo = zx::Vmo::create(size).unwrap();
                 vmo.write(contents.as_bytes(), 0).unwrap();
-                data_dir.add_vmo_file_at(name, vmo, 0, size);
+                data_dir.add_vmo_file_at(name, vmo, size);
             }
 
             // Serve crash reporter, crash reporting product register, and archive accessor

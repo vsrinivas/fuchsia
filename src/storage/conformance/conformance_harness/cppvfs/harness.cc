@@ -128,9 +128,11 @@ class TestHarness : public fio_test::Io1Harness {
       }
       case fio_test::DirectoryEntry::Tag::kVmoFile: {
         fio_test::VmoFile vmo_file = std::move(entry.vmo_file());
-        fuchsia::mem::Range buffer = std::move(*vmo_file.mutable_buffer());
-        dest.AddEntry(vmo_file.name(), fbl::MakeRefCounted<fs::VmoFile>(std::move(buffer.vmo),
-                                                                        buffer.offset, buffer.size,
+        zx::vmo& vmo = *vmo_file.mutable_vmo();
+        uint64_t size;
+        zx_status_t status = vmo.get_prop_content_size(&size);
+        ZX_ASSERT_MSG(status == ZX_OK, "%s", zx_status_get_string(status));
+        dest.AddEntry(vmo_file.name(), fbl::MakeRefCounted<fs::VmoFile>(std::move(vmo), size,
                                                                         /*writable=*/true));
         break;
       }

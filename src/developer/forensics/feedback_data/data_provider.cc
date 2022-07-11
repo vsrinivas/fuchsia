@@ -16,6 +16,7 @@
 
 #include <map>
 #include <memory>
+#include <utility>
 
 #include "src/developer/forensics/feedback/annotations/annotation_manager.h"
 #include "src/developer/forensics/feedback/annotations/encode.h"
@@ -61,7 +62,7 @@ DataProvider::DataProvider(async_dispatcher_t* dispatcher,
                            feedback::AttachmentManager* attachment_manager,
                            InspectDataBudget* inspect_data_budget)
     : dispatcher_(dispatcher),
-      services_(services),
+      services_(std::move(services)),
       metadata_(dispatcher_, clock, redactor, is_first_instance, annotation_allowlist,
                 attachment_allowlist),
       cobalt_(cobalt),
@@ -209,7 +210,7 @@ bool DataProvider::ServeArchive(fsl::SizedVmo archive, zx::channel server_end) {
 }
 
 ServedArchive::ServedArchive(fsl::SizedVmo archive)
-    : file_(std::move(archive.vmo()), 0, archive.size()) {}
+    : file_(std::move(archive.vmo()), archive.size()) {}
 
 bool ServedArchive::Serve(zx::channel server_end, async_dispatcher_t* dispatcher,
                           std::function<void()> completed) {

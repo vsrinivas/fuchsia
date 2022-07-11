@@ -195,10 +195,10 @@ mod tests {
         let vmo2 = get_vmo(b"test2");
         let vmo3 = get_vmo(b"test3");
         let vmo4 = get_vmo(b"test4");
-        fs.dir("diagnostics").add_vmo_file_at("root.inspect", vmo, 0, 4096);
-        fs.dir("diagnostics").add_vmo_file_at("root_not_inspect", vmo2, 0, 4096);
-        fs.dir("diagnostics").dir("a").add_vmo_file_at("root.inspect", vmo3, 0, 4096);
-        fs.dir("diagnostics").dir("b").add_vmo_file_at("root.inspect", vmo4, 0, 4096);
+        fs.dir("diagnostics").add_vmo_file_at("root.inspect", vmo, 4096);
+        fs.dir("diagnostics").add_vmo_file_at("root_not_inspect", vmo2, 4096);
+        fs.dir("diagnostics").dir("a").add_vmo_file_at("root.inspect", vmo3, 4096);
+        fs.dir("diagnostics").dir("b").add_vmo_file_at("root.inspect", vmo4, 4096);
         // Create a connection to the ServiceFs.
         let (h0, h1) = zx::Channel::create().unwrap();
         fs.serve_connection(h1).unwrap();

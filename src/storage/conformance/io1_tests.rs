@@ -257,11 +257,11 @@ fn file(name: &str, contents: Vec<u8>) -> io_test::DirectoryEntry {
 fn vmo_file(name: &str, contents: &[u8]) -> io_test::DirectoryEntry {
     let size = contents.len() as u64;
     let vmo = zx::Vmo::create(size).expect("Cannot create VMO");
-    vmo.write(contents, 0).expect("Cannot write to VMO");
-    let range = fidl_fuchsia_mem::Range { vmo, offset: 0, size };
+    let () = vmo.write(contents, 0).expect("Cannot write to VMO");
+    let () = vmo.set_content_size(&size).expect("Cannot set VMO content size");
     io_test::DirectoryEntry::VmoFile(io_test::VmoFile {
         name: Some(name.to_string()),
-        buffer: Some(range),
+        vmo: Some(vmo),
         ..io_test::VmoFile::EMPTY
     })
 }
@@ -1335,12 +1335,11 @@ async fn file_get_backing_memory_exact_same_koid() {
         return;
     }
 
-    let size = TEST_FILE_CONTENTS.len() as u64;
-    let vmo = zx::Vmo::create(size).expect("Cannot create VMO");
+    let vmo = zx::Vmo::create(1).expect("Cannot create VMO");
     let original_koid = vmo.get_koid();
     let vmofile_object = io_test::DirectoryEntry::VmoFile(io_test::VmoFile {
         name: Some(TEST_FILE.to_string()),
-        buffer: Some(fidl_fuchsia_mem::Range { vmo, offset: 0, size }),
+        vmo: Some(vmo),
         ..io_test::VmoFile::EMPTY
     });
 

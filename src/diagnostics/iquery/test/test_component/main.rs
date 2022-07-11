@@ -201,12 +201,7 @@ async fn main() -> Result<(), Error> {
             .ok_or(format_err!("Failed to duplicate VMO"))
             .and_then(|vmo| {
                 let size = vmo.get_size()?;
-                fs.dir("diagnostics").add_vmo_file_at(
-                    "root.inspect",
-                    vmo,
-                    0, /* vmo offset */
-                    size,
-                );
+                fs.dir("diagnostics").add_vmo_file_at("root.inspect", vmo, size);
                 Ok(())
             })
             .unwrap_or_else(|e| {

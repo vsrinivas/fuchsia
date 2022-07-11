@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
     if (auto res = kernel_vmo.write("kernel", 0, 7); res != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to write Kernel VMO contents. Error: " << zx_status_get_string(res);
     }
-    auto kernel_file = std::make_unique<vfs::VmoFile>(std::move(kernel_vmo), 0, 4096);
+    auto kernel_file = std::make_unique<vfs::VmoFile>(std::move(kernel_vmo), 4096);
     data->AddEntry("zircon.elf.profraw", std::move(kernel_file));
   }
 
@@ -53,7 +53,7 @@ int main(int argc, char** argv) {
     if (auto res = phys_vmo.write("physboot", 0, 9); res != ZX_OK) {
       FX_LOGS(ERROR) << "Failed to write Kernel VMO contents. Error: " << zx_status_get_string(res);
     }
-    auto physboot_file = std::make_unique<vfs::VmoFile>(std::move(phys_vmo), 0, 4096);
+    auto physboot_file = std::make_unique<vfs::VmoFile>(std::move(phys_vmo), 4096);
     phys->AddEntry("physboot.profraw", std::move(physboot_file));
   }
 

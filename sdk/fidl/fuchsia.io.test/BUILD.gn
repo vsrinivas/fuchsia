@@ -10,7 +10,6 @@ fidl("fuchsia.io.test") {
   sources = [ "io.test.fidl" ]
   public_deps = [
     "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.mem",
     "//zircon/vdso/zx",
   ]
 }

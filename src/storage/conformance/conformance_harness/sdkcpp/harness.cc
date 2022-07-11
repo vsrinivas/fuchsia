@@ -110,9 +110,12 @@ class SdkCppHarness : public fio_test::Io1Harness {
       }
       case fio_test::DirectoryEntry::Tag::kVmoFile: {
         fio_test::VmoFile vmo_file = std::move(entry.vmo_file());
-        fuchsia::mem::Range buffer = std::move(*vmo_file.mutable_buffer());
-        auto vmo_file_entry = std::make_unique<vfs::VmoFile>(
-            std::move(buffer.vmo), buffer.offset, buffer.size, vfs::VmoFile::WriteOption::WRITABLE);
+        zx::vmo& vmo = *vmo_file.mutable_vmo();
+        uint64_t size;
+        zx_status_t status = vmo.get_prop_content_size(&size);
+        ZX_ASSERT_MSG(status == ZX_OK, "%s", zx_status_get_string(status));
+        auto vmo_file_entry = std::make_unique<vfs::VmoFile>(std::move(vmo), size,
+                                                             vfs::VmoFile::WriteOption::WRITABLE);
         ZX_ASSERT_MSG(dest.AddEntry(vmo_file.name(), std::move(vmo_file_entry)) == ZX_OK,
                       "Failed to add VmoFile entry!");
         break;

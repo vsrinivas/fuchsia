@@ -486,17 +486,13 @@ macro_rules! add_functions {
         ///
         /// The path must be a single component containing no `/` characters.
         ///
-        /// For now, a non-zero `offset` is not supported (and will trigger a panic).
-        ///
         /// Panics if any node has already been added at the given path.
         pub fn add_vmo_file_at(
             &mut self,
             path: impl Into<String>,
             vmo: zx::Vmo,
-            offset: u64,
             length: u64,
         ) -> &mut Self {
-            assert_eq!(offset, 0);
             self.add_entry_at(path.into(), Arc::new(ReadOnlyVmoFile::new(vmo, length)))
         }
 

@@ -173,7 +173,7 @@ DeviceInspect::DeviceInspect(inspect::Node& devices, inspect::UintProperty& devi
     uint64_t size;
     zx_status_t status = vmo.get_size(&size);
     ZX_ASSERT_MSG(status == ZX_OK, "%s", zx_status_get_string(status));
-    vmo_file_.emplace(fbl::MakeRefCounted<fs::VmoFile>(std::move(vmo), 0, size));
+    vmo_file_.emplace(fbl::MakeRefCounted<fs::VmoFile>(std::move(vmo), size));
   }
   device_node_ = devices.CreateChild(name);
   // Increment device count.

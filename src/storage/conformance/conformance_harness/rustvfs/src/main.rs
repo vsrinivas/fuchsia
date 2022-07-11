@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_io_test::{
         self as io_test, Io1Config, Io1HarnessRequest, Io1HarnessRequestStream,
     },
-    fidl_fuchsia_mem, fuchsia_async as fasync,
+    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog as syslog,
     fuchsia_zircon::{self as zx, HandleBased},
@@ -40,15 +40,12 @@ const HARNESS_EXEC_PATH: &'static str = "/pkg/bin/io_conformance_harness_rustvfs
 ///
 /// The VMO backing the buffer is duplicated so that tests can ensure the same VMO is returned by
 /// subsequent GetBackingMemory calls.
-fn new_vmo_file(buffer: &fidl_fuchsia_mem::Range) -> Result<Arc<dyn DirectoryEntry>, Error> {
-    let size = buffer.size;
-    // Duplicate the VMO so we can move it into the init closure.
-    let vmo: zx::Vmo = buffer.vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?.into();
+fn new_vmo_file(vmo: zx::Vmo, size: u64) -> Result<Arc<dyn DirectoryEntry>, Error> {
     let init_vmo = move || {
-        // Need to clone VMO again as this might be invoked multiple times.
-        let vmo_clone: zx::Vmo =
+        // Need to clone VMO as this might be invoked multiple times.
+        let vmo =
             vmo.duplicate_handle(zx::Rights::SAME_RIGHTS).expect("Failed to duplicate VMO!").into();
-        async move { Ok(vmo::NewVmo { vmo: vmo_clone, size, capacity: size }) }
+        async move { Ok(vmo::NewVmo { vmo, size, capacity: size }) }
     };
     Ok(vmo::read_write(init_vmo))
 }
@@ -73,10 +70,10 @@ fn add_entry(
     dest: &Arc<Simple<MutableConnection>>,
 ) -> Result<(), Error> {
     match entry {
-        io_test::DirectoryEntry::Directory(dir) => {
-            let name = dir.name.expect("Directory must have name");
+        io_test::DirectoryEntry::Directory(io_test::Directory { name, entries, .. }) => {
+            let name = name.expect("Directory must have name");
             let new_dir = simple();
-            if let Some(entries) = dir.entries {
+            if let Some(entries) = entries {
                 for entry in entries {
                     let entry = *entry.expect("Directory entries must not be null");
                     add_entry(entry, &new_dir)?;
@@ -84,29 +81,34 @@ fn add_entry(
             }
             dest.add_entry(name, new_dir)?;
         }
-        io_test::DirectoryEntry::RemoteDirectory(dir) => {
-            let name = dir.name.expect("RemoteDirectory must have name");
-            let dir_proxy = dir
-                .remote_client
-                .expect("RemoteDirectory must have a remote client")
-                .into_proxy()?;
+        io_test::DirectoryEntry::RemoteDirectory(io_test::RemoteDirectory {
+            name,
+            remote_client,
+            ..
+        }) => {
+            let name = name.expect("RemoteDirectory must have name");
+            let dir_proxy =
+                remote_client.expect("RemoteDirectory must have a remote client").into_proxy()?;
             dest.add_entry(name, remote_dir(dir_proxy))?;
         }
-        io_test::DirectoryEntry::File(file) => {
-            let name = file.name.as_ref().expect("File must have name");
-            let contents = file.contents.as_ref().expect("File must have contents").clone();
+        io_test::DirectoryEntry::File(io_test::File { name, contents, .. }) => {
+            let name = name.expect("File must have name");
+            let contents = contents.expect("File must have contents");
             let new_file =
                 vmo::read_write(vmo::simple_init_vmo_resizable_with_capacity(&contents, 100));
             dest.add_entry(name, new_file)?;
         }
-        io_test::DirectoryEntry::VmoFile(vmo_file) => {
-            let name = vmo_file.name.expect("VMO file must have a name");
-            let buffer = vmo_file.buffer.expect("VMO file must have a buffer");
-            dest.add_entry(name, new_vmo_file(&buffer)?)?;
+        io_test::DirectoryEntry::VmoFile(io_test::VmoFile { name, vmo, .. }) => {
+            let name = name.expect("VMO file must have a name");
+            let vmo = vmo.expect("VMO file must have a VMO");
+            let size = vmo.get_content_size().expect("VMO file must have a content size");
+            let vmo_file = new_vmo_file(vmo, size)?;
+            dest.add_entry(name, vmo_file)?;
         }
-        io_test::DirectoryEntry::ExecutableFile(executable_file) => {
-            let name = executable_file.name.expect("Exec file must have a name");
-            dest.add_entry(name, new_executable_file()?)?;
+        io_test::DirectoryEntry::ExecutableFile(io_test::ExecutableFile { name, .. }) => {
+            let name = name.expect("Executable file must have a name");
+            let executable_file = new_executable_file()?;
+            dest.add_entry(name, executable_file)?;
         }
     }
     Ok(())

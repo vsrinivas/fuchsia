@@ -58,7 +58,7 @@ class FakeDirectory final {
     if (!fsl::VmoFromString(data, &file_vmo)) {
       return nullptr;
     }
-    return std::make_unique<vfs::VmoFile>(std::move(file_vmo.vmo()), 0, file_vmo.size(),
+    return std::make_unique<vfs::VmoFile>(std::move(file_vmo.vmo()), file_vmo.size(),
                                           vfs::VmoFile::WriteOption::WRITABLE,
                                           vfs::VmoFile::Sharing::CLONE_COW);
   }

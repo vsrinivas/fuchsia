@@ -31,31 +31,30 @@ class VmoFile : public Vnode {
 
     // The VMO handle is duplicated for each client.
     //
-    // This is appropriate when it is okay for clients to access the entire contents of the VMO,
-    // possibly extending beyond the pages spanned by the file.
+    // This is appropriate when it is okay for clients to access the entire
+    // contents of the VMO, possibly extending beyond the pages spanned by the
+    // file.
     //
-    // This mode is significantly more efficient than |CLONE| and |CLONE_COW| and should be
-    // preferred when file spans the whole VMO or when the VMO's entire content is safe for clients
-    // to read.
+    // This mode is significantly more efficient than |CLONE_COW| and should be
+    // preferred when file spans the whole VMO or when the VMO's entire content
+    // is safe for clients to read.
     //
-    // As size changes are currently untracked, all handles given out in this mode will lack
-    // ZX_RIGHT_WRITE and ZX_RIGHT_SET_PROPERTY.
+    // As size changes are currently untracked, all handles given out in this
+    // mode will lack ZX_RIGHT_WRITE and ZX_RIGHT_SET_PROPERTY.
     DUPLICATE,
 
-    // The VMO range spanned by the file is cloned on demand, using copy-on-write semantics to
-    // isolate modifications of clients which open the file in a writable mode.
+    // The VMO range spanned by the file is cloned on demand, using
+    // copy-on-write semantics to isolate modifications of clients which open
+    // the file in a writable mode.
     //
-    // This is appropriate when clients need to be restricted from accessing portions of the VMO
-    // outside of the range of the file and when file modifications by clients should not be visible
-    // to each other.
+    // This is appropriate when clients need to be restricted from accessing
+    // portions of the VMO outside of the range of the file and when file
+    // modifications by clients should not be visible to each other.
     CLONE_COW,
   };
 
   // The underlying VMO handle.
   const zx::vmo& vmo() const { return vmo_; }
-
-  // The offset of the start of the file within the VMO in bytes.
-  size_t offset() const { return offset_; }
 
   // The length of the file in bytes.
   size_t length() const { return length_; }
@@ -80,30 +79,19 @@ class VmoFile : public Vnode {
   friend fbl::internal::MakeRefCountedHelper<VmoFile>;
   friend fbl::RefPtr<VmoFile>;
 
-  // Creates a file node backed an VMO owned by the creator. The creator retains ownership of
-  // |unowned_vmo| which must outlive this object.
-  VmoFile(zx::vmo vmo, size_t offset, size_t length, bool writable = false,
+  // Creates a file node backed by a VMO.
+  VmoFile(zx::vmo vmo, size_t length, bool writable = false,
           VmoSharing vmo_sharing = VmoSharing::DUPLICATE);
 
   ~VmoFile() override;
 
  private:
-  zx_status_t AcquireVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_offset);
-  zx_status_t DuplicateVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_offset);
-  zx_status_t CloneVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_offset);
+  zx_status_t AcquireVmo(zx_rights_t rights, zx::vmo* out_vmo);
 
   zx::vmo vmo_;
-  size_t const offset_;
   size_t const length_;
   bool const writable_;
   VmoSharing const vmo_sharing_;
-
-  // Clone of the portion of the VMO which contains the file's data. In |CLONE_COW| mode, this is
-  // shared among read-only clients.
-  struct {
-    std::once_flag once;
-    zx::vmo vmo;
-  } shared_clone_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(VmoFile);
 };

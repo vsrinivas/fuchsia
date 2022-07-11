@@ -43,7 +43,7 @@ zx::status<> Export(vfs::PseudoDir& out_dir, cpp20::span<ExportedFd> exported_fd
       return zx::error(res);
     }
 
-    auto file = std::make_unique<vfs::VmoFile>(std::move(vmo), 0, size);
+    auto file = std::make_unique<vfs::VmoFile>(std::move(vmo), size);
     if (auto res = out_dir.AddEntry(export_as, std::move(file)); res != ZX_OK) {
       return zx::error(res);
     }

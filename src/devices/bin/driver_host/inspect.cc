@@ -13,8 +13,9 @@
 DriverHostInspect::DriverHostInspect() {
   zx::vmo vmo = inspect_.DuplicateVmo();
   uint64_t size;
-  ZX_ASSERT(vmo.get_size(&size) == ZX_OK);
-  auto vmo_file = fbl::MakeRefCounted<fs::VmoFile>(std::move(vmo), 0, size);
+  zx_status_t status = vmo.get_size(&size);
+  ZX_ASSERT_MSG(status == ZX_OK, "%s", zx_status_get_string(status));
+  fbl::RefPtr vmo_file = fbl::MakeRefCounted<fs::VmoFile>(std::move(vmo), size);
 
   diagnostics_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
   diagnostics_dir_->AddEntry("root.inspect", vmo_file);

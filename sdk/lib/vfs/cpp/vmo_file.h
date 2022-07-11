@@ -114,7 +114,6 @@ class VmoFile final : public vfs::internal::File {
   NodeKind::Type GetKind() const override;
 
  private:
-  const size_t offset_;
   const size_t length_;
   const WriteOption write_option_;
   const Sharing vmo_sharing_;

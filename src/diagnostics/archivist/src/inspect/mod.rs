@@ -363,10 +363,10 @@ mod tests {
         let vmo2 = get_vmo(b"test2");
         let vmo3 = get_vmo(b"test3");
         let vmo4 = get_vmo(b"test4");
-        fs.dir("diagnostics").add_vmo_file_at("root.inspect", vmo, 0, 4096);
-        fs.dir("diagnostics").add_vmo_file_at("root_not_inspect", vmo2, 0, 4096);
-        fs.dir("diagnostics").dir("a").add_vmo_file_at("root.inspect", vmo3, 0, 4096);
-        fs.dir("diagnostics").dir("b").add_vmo_file_at("root.inspect", vmo4, 0, 4096);
+        fs.dir("diagnostics").add_vmo_file_at("root.inspect", vmo, 4096);
+        fs.dir("diagnostics").add_vmo_file_at("root_not_inspect", vmo2, 4096);
+        fs.dir("diagnostics").dir("a").add_vmo_file_at("root.inspect", vmo3, 4096);
+        fs.dir("diagnostics").dir("b").add_vmo_file_at("root.inspect", vmo4, 4096);
         // Create a connection to the ServiceFs.
         let (h0, h1) = zx::Channel::create().unwrap();
         fs.serve_connection(h1).unwrap();
@@ -500,7 +500,7 @@ mod tests {
 
         let data = inspector.copy_vmo_data().unwrap();
         vmo.write(&data, 0).unwrap();
-        fs.dir("diagnostics").add_vmo_file_at("test.inspect", vmo, 0, 4096);
+        fs.dir("diagnostics").add_vmo_file_at("test.inspect", vmo, 4096);
 
         // Create a connection to the ServiceFs.
         let (h0, h1) = zx::Channel::create().unwrap();
@@ -572,7 +572,7 @@ mod tests {
         // Make a ServiceFs containing something that looks like an inspect file but is not.
         let mut fs = ServiceFs::new();
         let vmo = zx::Vmo::create(4096).unwrap();
-        fs.dir("diagnostics").add_vmo_file_at("test.inspect", vmo, 0, 4096);
+        fs.dir("diagnostics").add_vmo_file_at("test.inspect", vmo, 4096);
 
         // Create a connection to the ServiceFs.
         let (h0, h1) = zx::Channel::create().unwrap();
@@ -692,7 +692,6 @@ mod tests {
                 fs.dir(directory_name.clone()).add_vmo_file_at(
                     format!("root_{}.inspect", i),
                     vmo,
-                    0, /* vmo offset */
                     size,
                 );
             }

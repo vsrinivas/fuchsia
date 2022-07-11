@@ -35,12 +35,8 @@ zx_rights_t GetVmoRightsForAccessMode(fs::Rights fs_rights) {
 
 }  // namespace
 
-VmoFile::VmoFile(zx::vmo vmo, size_t offset, size_t length, bool writable, VmoSharing vmo_sharing)
-    : vmo_(std::move(vmo)),
-      offset_(offset),
-      length_(length),
-      writable_(writable),
-      vmo_sharing_(vmo_sharing) {
+VmoFile::VmoFile(zx::vmo vmo, size_t length, bool writable, VmoSharing vmo_sharing)
+    : vmo_(std::move(vmo)), length_(length), writable_(writable), vmo_sharing_(vmo_sharing) {
   ZX_ASSERT(vmo_.is_valid());
 }
 
@@ -81,7 +77,7 @@ zx_status_t VmoFile::Read(void* data, size_t length, size_t offset, size_t* out_
   if (length > remaining_length) {
     length = remaining_length;
   }
-  zx_status_t status = vmo_.read(data, offset_ + offset, length);
+  zx_status_t status = vmo_.read(data, offset, length);
   if (status != ZX_OK) {
     return status;
   }
@@ -90,8 +86,6 @@ zx_status_t VmoFile::Read(void* data, size_t length, size_t offset, size_t* out_
 }
 
 zx_status_t VmoFile::Write(const void* data, size_t length, size_t offset, size_t* out_actual) {
-  ZX_DEBUG_ASSERT(writable_);  // checked by the VFS
-
   if (length == 0u) {
     *out_actual = 0u;
     return ZX_OK;
@@ -104,7 +98,7 @@ zx_status_t VmoFile::Write(const void* data, size_t length, size_t offset, size_
   if (length > remaining_length) {
     length = remaining_length;
   }
-  zx_status_t status = vmo_.write(data, offset_ + offset, length);
+  zx_status_t status = vmo_.write(data, offset, length);
   if (status == ZX_OK) {
     *out_actual = length;
   }
@@ -113,81 +107,39 @@ zx_status_t VmoFile::Write(const void* data, size_t length, size_t offset, size_
 
 zx_status_t VmoFile::GetNodeInfoForProtocol([[maybe_unused]] VnodeProtocol protocol, Rights rights,
                                             VnodeRepresentation* info) {
-  ZX_DEBUG_ASSERT(!rights.write || writable_);  // checked by the VFS
-
   zx::vmo vmo;
-  size_t offset;
-  zx_status_t status = AcquireVmo(GetVmoRightsForAccessMode(rights), &vmo, &offset);
+  zx_status_t status = AcquireVmo(GetVmoRightsForAccessMode(rights), &vmo);
   if (status != ZX_OK) {
     return status;
   }
 
-  *info =
-      fs::VnodeRepresentation::Memory{.vmo = std::move(vmo), .offset = offset, .length = length_};
+  *info = fs::VnodeRepresentation::Memory{
+      .vmo = std::move(vmo),
+      .length = length_,
+  };
   return ZX_OK;
 }
 
-zx_status_t VmoFile::AcquireVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_offset) {
-  ZX_DEBUG_ASSERT(!(rights & ZX_RIGHT_WRITE) || writable_);  // checked by the VFS
-
+zx_status_t VmoFile::AcquireVmo(zx_rights_t rights, zx::vmo* out_vmo) {
   switch (vmo_sharing_) {
     case VmoSharing::NONE:
       return ZX_ERR_NOT_SUPPORTED;
     case VmoSharing::DUPLICATE:
-      return DuplicateVmo(rights, out_vmo, out_offset);
-    case VmoSharing::CLONE_COW:
-      return CloneVmo(rights, out_vmo, out_offset);
+      // As size changes are currently untracked, we remove WRITE and SET_PROPERTY rights before
+      // duplicating the VMO handle. If this restriction needs to be eased in the future, size
+      // changes need to be tracked accordingly, or a fixed-size child slice should be provided.
+      rights &= ~(ZX_RIGHT_WRITE | ZX_RIGHT_SET_PROPERTY);
+      return vmo_.duplicate(rights, out_vmo);
+    case VmoSharing::CLONE_COW: {
+      zx::vmo vmo;
+      if (zx_status_t status =
+              vmo_.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, 0, length_, &vmo);
+          status != ZX_OK) {
+        return status;
+      }
+      return vmo.replace(rights, out_vmo);
+    }
   }
-  __UNREACHABLE;
-}
-
-zx_status_t VmoFile::DuplicateVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_offset) {
-  // As size changes are currently untracked, we remove WRITE and SET_PROPERTY rights before
-  // duplicating the VMO handle. If this restriction needs to be eased in the future, size
-  // changes need to be tracked accordingly, or a fixed-size child slice should be provided.
-  rights &= ~(ZX_RIGHT_WRITE | ZX_RIGHT_SET_PROPERTY);
-  zx_status_t status = vmo_.duplicate(rights, out_vmo);
-  if (status != ZX_OK)
-    return status;
-
-  *out_offset = offset_;
-  return ZX_OK;
-}
-
-zx_status_t VmoFile::CloneVmo(zx_rights_t rights, zx::vmo* out_vmo, size_t* out_offset) {
-  size_t clone_offset = fbl::round_down(offset_, static_cast<size_t>(zx_system_get_page_size()));
-  size_t clone_length =
-      fbl::round_up(offset_ + length_, static_cast<size_t>(zx_system_get_page_size())) -
-      clone_offset;
-
-  if (!(rights & ZX_RIGHT_WRITE)) {
-    // Use a shared clone for read-only content.
-    zx_status_t status = ZX_OK;
-    std::call_once(shared_clone_.once, [&]() {
-      status = vmo_.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, clone_offset,
-                                 clone_length, &shared_clone_.vmo);
-    });
-    if (status != ZX_OK)
-      return status;
-
-    status = shared_clone_.vmo.duplicate(rights, out_vmo);
-    if (status != ZX_OK)
-      return status;
-  } else {
-    // Use separate clone for each client with writable COW access.
-    zx::vmo private_clone;
-    zx_status_t status = vmo_.create_child(ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE, clone_offset,
-                                           clone_length, &private_clone);
-    if (status != ZX_OK)
-      return status;
-
-    status = private_clone.replace(rights, out_vmo);
-    if (status != ZX_OK)
-      return status;
-  }
-
-  *out_offset = offset_ - clone_offset;
-  return ZX_OK;
 }
 
 }  // namespace fs

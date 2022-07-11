@@ -32,7 +32,7 @@ zx::status<ExposedInspector> ExposedInspector::Create(
 
   auto vfs = std::make_unique<fs::SynchronousVfs>(dispatcher);
   auto diagnostics_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-  auto vmo_file = fbl::MakeRefCounted<fs::VmoFile>(std::move(vmo), 0, vmo_size);
+  auto vmo_file = fbl::MakeRefCounted<fs::VmoFile>(std::move(vmo), vmo_size);
   status = diagnostics_dir->AddEntry("root.inspect", std::move(vmo_file));
   if (status != ZX_OK) {
     return zx::error(status);
