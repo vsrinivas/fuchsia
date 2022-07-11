@@ -90,5 +90,10 @@
             from: "#soundplayer",
             to: "#session-manager",
         },
+        {
+            protocol: [ "fuchsia.feedback.CrashReporter" ],
+            from: "#feedback",
+            to: "#session-manager",
+        },
     ],
 }
