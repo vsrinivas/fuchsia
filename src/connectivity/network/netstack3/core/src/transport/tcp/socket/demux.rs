@@ -20,10 +20,8 @@ use thiserror::Error;
 use crate::{
     ip::{BufferIpTransportContext, BufferTransportIpContext, TransportReceiveError},
     socket::{
-        posix::{
-            ConnAddr, ConnIpAddr, ListenerAddr, PosixAddrState, PosixAddrVecIter,
-            PosixSharingOptions,
-        },
+        address::{ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr},
+        posix::{PosixAddrState, PosixAddrVecIter, PosixSharingOptions},
         AddrVec,
     },
     transport::tcp::{
@@ -32,8 +30,7 @@ use crate::{
         seqnum::WindowSize,
         socket::{
             isn::generate_isn, Acceptor, Connection, ConnectionId, ListenerId, MaybeListener,
-            SocketAddr, TcpIpTransportContext, TcpNonSyncContext, TcpPosixSocketSpec,
-            TcpSyncContext,
+            SocketAddr, TcpIpTransportContext, TcpNonSyncContext, TcpSyncContext,
         },
         state::{Closed, State},
         Control, UserError,
@@ -88,9 +85,8 @@ where
         let conn_addr =
             ConnIpAddr { local: (local_ip, local_port), remote: (remote_ip, remote_port) };
 
-        let mut addrs_to_search = PosixAddrVecIter::<
-            TcpPosixSocketSpec<I, _, C::Instant, C::ReceiveBuffer, C::SendBuffer>,
-        >::with_device(conn_addr.clone(), device);
+        let mut addrs_to_search =
+            PosixAddrVecIter::<IpPortSpec<I, SC::DeviceId>>::with_device(conn_addr.clone(), device);
 
         let conn_id = addrs_to_search.find_map(|addr| -> Option<ConnectionId> {match addr {
             // Connections are always searched before listeners because they

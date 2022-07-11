@@ -48,10 +48,8 @@ use crate::{
         BufferTransportIpContext, IpDeviceId,
     },
     socket::{
-        posix::{
-            ConnAddr, ConnIpAddr, ListenerAddr, ListenerIpAddr, PosixSharingOptions,
-            PosixSocketMapSpec,
-        },
+        address::{ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr, ListenerIpAddr},
+        posix::{PosixConflictPolicy, PosixSharingOptions, PosixSocketStateSpec},
         AddrVec, Bound, BoundSocketMap, InsertError,
     },
     transport::tcp::{
@@ -93,23 +91,23 @@ struct TcpPosixSocketSpec<Ip, Device, Instant, ReceiveBuffer, SendBuffer>(
     Never,
 );
 
-impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer> PosixSocketMapSpec
+impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer> PosixSocketStateSpec
     for TcpPosixSocketSpec<I, D, II, R, S>
 {
-    type IpAddress = I::Addr;
-    type DeviceId = D;
-    type RemoteIdentifier = NonZeroU16;
-    type LocalIdentifier = NonZeroU16;
     type ListenerId = MaybeListenerId;
     type ConnId = ConnectionId;
 
     type ListenerState = MaybeListener;
     type ConnState = Connection<I, D, II, R, S>;
+}
 
+impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer>
+    PosixConflictPolicy<IpPortSpec<I, D>> for TcpPosixSocketSpec<I, D, II, R, S>
+{
     fn check_posix_sharing(
         new_sharing: PosixSharingOptions,
-        addr: AddrVec<Self>,
-        socketmap: &SocketMap<AddrVec<Self>, Bound<Self>>,
+        addr: AddrVec<IpPortSpec<I, D>>,
+        socketmap: &SocketMap<AddrVec<IpPortSpec<I, D>>, Bound<Self>>,
     ) -> Result<(), InsertError> {
         match new_sharing {
             PosixSharingOptions::Exclusive => {}
@@ -156,13 +154,13 @@ struct TcpSockets<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: Sen
     // since the beginning and that information will then be used to generate
     // ISNs being requested.
     isn_ts: II,
-    port_alloc: PortAlloc<BoundSocketMap<TcpPosixSocketSpec<I, D, II, R, S>>>,
+    port_alloc: PortAlloc<BoundSocketMap<IpPortSpec<I, D>, TcpPosixSocketSpec<I, D, II, R, S>>>,
     inactive: IdMap<Inactive>,
-    socketmap: BoundSocketMap<TcpPosixSocketSpec<I, D, II, R, S>>,
+    socketmap: BoundSocketMap<IpPortSpec<I, D>, TcpPosixSocketSpec<I, D, II, R, S>>,
 }
 
 impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer> PortAllocImpl
-    for BoundSocketMap<TcpPosixSocketSpec<I, D, II, R, S>>
+    for BoundSocketMap<IpPortSpec<I, D>, TcpPosixSocketSpec<I, D, II, R, S>>
 {
     const TABLE_SIZE: NonZeroUsize = nonzero!(20usize);
     const EPHEMERAL_RANGE: RangeInclusive<u16> = 49152..=65535;
@@ -172,7 +170,7 @@ impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer> Port
         // We can safely unwrap here, because the ports received in
         // `is_port_available` are guaranteed to be in `EPHEMERAL_RANGE`.
         let port = NonZeroU16::new(port).unwrap();
-        let root_addr = AddrVec::<TcpPosixSocketSpec<I, D, II, R, S>>::from(ListenerAddr {
+        let root_addr = AddrVec::from(ListenerAddr {
             ip: ListenerIpAddr { addr: SpecifiedAddr::new(*addr), identifier: port },
             device: None,
         });

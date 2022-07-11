@@ -52,12 +52,12 @@ use crate::{
         IpTransportContext, TransportIpContext, TransportReceiveError,
     },
     socket::{
+        address::{ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr, ListenerIpAddr},
         posix::{
-            ConnAddr, ConnIpAddr, ListenerAddr, ListenerIpAddr, PosixAddrState, PosixAddrType,
-            PosixAddrVecIter, PosixAddrVecTag, PosixSharingOptions, PosixSocketMapSpec,
-            ToPosixSharingOptions,
+            PosixAddrState, PosixAddrType, PosixAddrVecIter, PosixAddrVecTag, PosixConflictPolicy,
+            PosixSharingOptions, PosixSocketStateSpec, ToPosixSharingOptions,
         },
-        AddrVec, Bound, BoundSocketMap, InsertError,
+        AddrVec, Bound, BoundSocketMap, InsertError, SocketMapAddrSpec,
     },
     NonSyncContext, SyncCtx,
 };
@@ -133,7 +133,7 @@ struct Udp<I, D, S>(PhantomData<(I, D, S)>, Never);
 #[derive(Derivative)]
 #[derivative(Default(bound = ""))]
 struct UdpConnectionState<I: Ip, D: IpDeviceId, S> {
-    bound: BoundSocketMap<Udp<I, D, S>>,
+    bound: BoundSocketMap<IpPortSpec<I, D>, Udp<I, D, S>>,
 }
 
 #[derive(Debug, Derivative)]
@@ -179,10 +179,10 @@ impl<I: Ip, D> Default for UnboundSocketState<I, D> {
 }
 
 /// Produces an iterator over eligible receiving socket addresses.
-fn iter_receiving_addrs<I: Ip, D: IpDeviceId, S>(
+fn iter_receiving_addrs<I: Ip, D: IpDeviceId>(
     addr: ConnIpAddr<I::Addr, NonZeroU16, NonZeroU16>,
     device: D,
-) -> impl Iterator<Item = AddrVec<Udp<I, D, S>>> {
+) -> impl Iterator<Item = AddrVec<IpPortSpec<I, D>>> {
     PosixAddrVecIter::with_device(addr, device)
 }
 
@@ -197,10 +197,10 @@ struct ConnState<A: Eq + Hash, D: Eq + Hash, S> {
     multicast_memberships: MulticastMemberships<A, D>,
 }
 
-pub(crate) fn check_posix_sharing<P: PosixSocketMapSpec>(
+pub(crate) fn check_posix_sharing<A: SocketMapAddrSpec, P: PosixSocketStateSpec>(
     new_sharing: PosixSharingOptions,
-    dest: AddrVec<P>,
-    socketmap: &SocketMap<AddrVec<P>, Bound<P>>,
+    dest: AddrVec<A>,
+    socketmap: &SocketMap<AddrVec<A>, Bound<P>>,
 ) -> Result<(), InsertError> {
     // Having a value present at a shadowed address is disqualifying, unless
     // both the new and existing sockets allow port sharing.
@@ -240,10 +240,10 @@ pub(crate) fn check_posix_sharing<P: PosixSocketMapSpec>(
     // from the other in the socketmap without a linear scan. Instead. we
     // rely on the fact that the tag values in the socket map have different
     // values for entries with and without device IDs specified.
-    fn conflict_exists<P: PosixSocketMapSpec>(
+    fn conflict_exists<A: SocketMapAddrSpec, P: PosixSocketStateSpec>(
         new_sharing: PosixSharingOptions,
-        socketmap: &SocketMap<AddrVec<P>, Bound<P>>,
-        addr: impl Into<AddrVec<P>>,
+        socketmap: &SocketMap<AddrVec<A>, Bound<P>>,
+        addr: impl Into<AddrVec<A>>,
         mut is_conflicting: impl FnMut(&PosixAddrVecTag) -> bool,
     ) -> bool {
         socketmap.descendant_counts(&addr.into()).any(|(tag, _): &(_, NonZeroUsize)| {
@@ -390,21 +390,19 @@ pub(crate) fn check_posix_sharing<P: PosixSocketMapSpec>(
     }
 }
 
-impl<I: Ip, D: IpDeviceId, S> PosixSocketMapSpec for Udp<I, D, S> {
-    type IpAddress = I::Addr;
-    type DeviceId = D;
-    type RemoteIdentifier = NonZeroU16;
-    type LocalIdentifier = NonZeroU16;
+impl<I: Ip, D: IpDeviceId, S> PosixSocketStateSpec for Udp<I, D, S> {
     type ListenerId = UdpListenerId<I>;
     type ConnId = UdpConnId<I>;
 
     type ListenerState = ListenerState<I::Addr, D>;
     type ConnState = ConnState<I::Addr, D, S>;
+}
 
+impl<I: Ip, D: IpDeviceId, S> PosixConflictPolicy<IpPortSpec<I, D>> for Udp<I, D, S> {
     fn check_posix_sharing(
         new_sharing: PosixSharingOptions,
-        addr: AddrVec<Self>,
-        socketmap: &SocketMap<AddrVec<Self>, Bound<Self>>,
+        addr: AddrVec<IpPortSpec<I, D>>,
+        socketmap: &SocketMap<AddrVec<IpPortSpec<I, D>>, Bound<Self>>,
     ) -> Result<(), InsertError> {
         check_posix_sharing(new_sharing, addr, socketmap)
     }
@@ -448,18 +446,18 @@ impl<T> PosixAddrState<T> {
     }
 }
 
-enum AddrEntry<'a, I: Ip, P: PosixSocketMapSpec> {
+enum AddrEntry<'a, A: SocketMapAddrSpec> {
     Listen(
-        &'a PosixAddrState<UdpListenerId<I>>,
-        ListenerAddr<P::IpAddress, P::DeviceId, P::LocalIdentifier>,
+        &'a PosixAddrState<UdpListenerId<<A::IpAddr as IpAddress>::Version>>,
+        ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
     ),
     Conn(
-        &'a PosixAddrState<UdpConnId<I>>,
-        ConnAddr<P::IpAddress, P::DeviceId, P::LocalIdentifier, P::RemoteIdentifier>,
+        &'a PosixAddrState<UdpConnId<<A::IpAddr as IpAddress>::Version>>,
+        ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
     ),
 }
 
-impl<'a, I: Ip, D: IpDeviceId + 'a, S: 'a> AddrEntry<'a, I, Udp<I, D, S>> {
+impl<'a, I: Ip, D: IpDeviceId + 'a> AddrEntry<'a, IpPortSpec<I, D>> {
     /// Returns an iterator that yields a `LookupResult` for each contained ID.
     fn collect_all_ids(self) -> impl Iterator<Item = LookupResult<I, D>> + 'a {
         match self {
@@ -504,7 +502,7 @@ impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
             ConnIpAddr { local: (dst_ip, dst_port), remote: (src_ip, src_port) },
             device,
         )
-        .filter_map(move |addr: AddrVec<Udp<I, D, S>>| match addr {
+        .filter_map(move |addr: AddrVec<IpPortSpec<I, D>>| match addr {
             AddrVec::Listen(l) => {
                 bound.get_listener_by_addr(&l).map(|state| AddrEntry::Listen(state, l))
             }
@@ -512,7 +510,7 @@ impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
         });
 
         if dst_ip.is_multicast() {
-            let all_ids = matching_entries.flat_map(AddrEntry::<I, Udp<I, D, S>>::collect_all_ids);
+            let all_ids = matching_entries.flat_map(AddrEntry::collect_all_ids);
             Either::Left(all_ids)
         } else {
             let selector = SocketSelectorParams::<I, _> {
@@ -628,7 +626,7 @@ impl<I: Ip, D: IpDeviceId, S> PortAllocImpl for UdpConnectionState<I, D, S> {
 
         // A port is free if there are no sockets currently using it, and if
         // there are no sockets that are shadowing it.
-        AddrVec::< Udp<I, D, S>>::from(conn).iter_shadows().all(|a| match &a {
+        AddrVec::from(conn).iter_shadows().all(|a| match &a {
             AddrVec::Listen(l) => bound.get_listener_by_addr(&l).is_none(),
             AddrVec::Conn(c) => bound.get_conn_by_addr(&c).is_none(),
         } && bound.get_shadower_counts(&a) == 0)
@@ -2339,7 +2337,7 @@ mod tests {
     const LOCAL_PORT: NonZeroU16 = nonzero!(100u16);
     const REMOTE_PORT: NonZeroU16 = nonzero!(200u16);
 
-    fn conn_addr<I>(device: Option<DummyDeviceId>) -> AddrVec<Udp<I, DummyDeviceId, ()>>
+    fn conn_addr<I>(device: Option<DummyDeviceId>) -> AddrVec<IpPortSpec<I, DummyDeviceId>>
     where
         I: Ip + TestIpExt,
     {
@@ -2352,7 +2350,7 @@ mod tests {
         .into()
     }
 
-    fn local_listener<I>(device: Option<DummyDeviceId>) -> AddrVec<Udp<I, DummyDeviceId, ()>>
+    fn local_listener<I>(device: Option<DummyDeviceId>) -> AddrVec<IpPortSpec<I, DummyDeviceId>>
     where
         I: Ip + TestIpExt,
     {
@@ -2361,7 +2359,7 @@ mod tests {
             .into()
     }
 
-    fn wildcard_listener<I>(device: Option<DummyDeviceId>) -> AddrVec<Udp<I, DummyDeviceId, ()>>
+    fn wildcard_listener<I>(device: Option<DummyDeviceId>) -> AddrVec<IpPortSpec<I, DummyDeviceId>>
     where
         I: Ip + TestIpExt,
     {
@@ -2382,8 +2380,8 @@ mod tests {
     #[test_case(local_listener(None), [wildcard_listener(None)]; "local listener no device")]
     #[test_case(wildcard_listener(None), []; "wildcard listener no device")]
     fn test_udp_addr_vec_iter_shadows_conn<I: Ip, D: IpDeviceId, const N: usize>(
-        addr: AddrVec<Udp<I, D, ()>>,
-        expected_shadows: [AddrVec<Udp<I, D, ()>>; N],
+        addr: AddrVec<IpPortSpec<I, D>>,
+        expected_shadows: [AddrVec<IpPortSpec<I, D>>; N],
     ) {
         assert_eq!(addr.iter_shadows().collect::<HashSet<_>>(), HashSet::from(expected_shadows));
     }
@@ -2395,7 +2393,7 @@ mod tests {
             remote: (remote_ip::<I>(), REMOTE_PORT),
         };
         assert_eq!(
-            iter_receiving_addrs::<I, DummyDeviceId, ()>(addr, DummyDeviceId).collect::<Vec<_>>(),
+            iter_receiving_addrs::<I, _>(addr, DummyDeviceId).collect::<Vec<_>>(),
             vec![
                 // A socket connected on exactly the receiving vector has precedence.
                 conn_addr(Some(DummyDeviceId)),

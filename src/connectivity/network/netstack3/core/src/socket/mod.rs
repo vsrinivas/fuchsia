@@ -10,6 +10,7 @@ pub(crate) mod posix;
 
 use alloc::{collections::HashMap, vec::Vec};
 use core::{fmt::Debug, hash::Hash};
+use net_types::ip::IpAddress;
 
 use derivative::Derivative;
 
@@ -19,6 +20,8 @@ use crate::{
         IdMap,
     },
     error::ExistsError,
+    ip::IpDeviceId,
+    socket::address::{ConnAddr, ListenerAddr},
 };
 
 /// A bidirectional map between connection sockets and addresses.
@@ -62,13 +65,19 @@ impl<A: Eq + Hash, S> Default for ConnSocketMap<A, S> {
     }
 }
 
-/// Specifies the types parameters for [`BoundSocketMap`] as a single bundle.
-pub(crate) trait SocketMapSpec {
-    /// The type of a listener socket address.
-    type ListenerAddr: Clone + Debug + Hash + Eq;
-    /// The type of a connected socket address.
-    type ConnAddr: Clone + Debug + Hash + Eq;
+pub(crate) trait SocketMapAddrSpec {
+    /// The type of IP addresses in the socket address.
+    type IpAddr: IpAddress;
+    /// The type of the device component of a socket address.
+    type DeviceId: IpDeviceId;
+    /// The local identifier portion of a socket address.
+    type LocalIdentifier: Clone + Debug + Hash + Eq;
+    /// The remote identifier portion of a socket address.
+    type RemoteIdentifier: Clone + Debug + Hash + Eq;
+}
 
+/// Specifies the types parameters for [`BoundSocketMap`] state as a single bundle.
+pub(crate) trait SocketMapStateSpec {
     /// The tag value of a socket address vector entry.
     ///
     /// These values are derived from [`Self::ListenerAddrState`] and
@@ -93,26 +102,23 @@ pub(crate) trait SocketMapSpec {
     type ConnSharingState;
 
     /// The state stored for a listener socket address.
-    type ListenerAddrState: SocketMapAddrStateSpec<
-        Self::ListenerAddr,
-        Self::ListenerSharingState,
-        Self::ListenerId,
-        Self,
-    >;
+    type ListenerAddrState;
 
     /// The state stored for a connected socket address.
-    type ConnAddrState: SocketMapAddrStateSpec<
-        Self::ConnAddr,
-        Self::ConnSharingState,
-        Self::ConnId,
-        Self,
-    >;
+    type ConnAddrState;
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) struct IncompatibleError;
 
-pub(crate) trait SocketMapAddrStateSpec<Addr, SharingState, Id, S: SocketMapSpec + ?Sized> {
+pub(crate) trait SocketMapAddrStateSpec<
+    Addr,
+    SharingState,
+    Id,
+    A: SocketMapAddrSpec,
+    S: SocketMapStateSpec + ?Sized,
+>
+{
     /// Checks whether a new socket with the provided state can be inserted at
     /// the given address in the existing socket map, returning an error
     /// otherwise.
@@ -124,10 +130,10 @@ pub(crate) trait SocketMapAddrStateSpec<Addr, SharingState, Id, S: SocketMapSpec
     fn check_for_conflicts(
         new_sharing_state: &SharingState,
         addr: &Addr,
-        socketmap: &SocketMap<AddrVec<S>, Bound<S>>,
+        socketmap: &SocketMap<AddrVec<A>, Bound<S>>,
     ) -> Result<(), InsertError>
     where
-        Bound<S>: Tagged<AddrVec<S>>;
+        Bound<S>: Tagged<AddrVec<A>>;
 
     /// Gets the target in the existing socket(s) in `self` for a new socket
     /// with the provided state.
@@ -153,32 +159,36 @@ pub(crate) trait SocketMapAddrStateSpec<Addr, SharingState, Id, S: SocketMapSpec
 
 #[derive(Derivative)]
 #[derivative(Debug(bound = "S::ListenerAddrState: Debug, S::ConnAddrState: Debug"))]
-pub(crate) enum Bound<S: SocketMapSpec + ?Sized> {
+pub(crate) enum Bound<S: SocketMapStateSpec + ?Sized> {
     Listen(S::ListenerAddrState),
     Conn(S::ConnAddrState),
 }
 
 #[derive(Derivative)]
 #[derivative(
-    Debug(bound = "S::ListenerAddr: Debug, S::ConnAddr: Debug"),
-    Clone(bound = "S::ListenerAddr: Clone, S::ConnAddr: Clone"),
-    Eq(bound = "S::ListenerAddr: Eq, S::ConnAddr: Eq"),
-    PartialEq(bound = "S::ListenerAddr: PartialEq, S::ConnAddr: PartialEq"),
-    Hash(bound = "S::ListenerAddr: Hash, S::ConnAddr: Hash")
+    Debug(bound = ""),
+    Clone(bound = ""),
+    Eq(bound = ""),
+    PartialEq(bound = ""),
+    Hash(bound = "")
 )]
-pub(crate) enum AddrVec<S: SocketMapSpec + ?Sized> {
-    Listen(S::ListenerAddr),
-    Conn(S::ConnAddr),
+pub(crate) enum AddrVec<A: SocketMapAddrSpec + ?Sized> {
+    Listen(ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>),
+    Conn(ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>),
 }
 
-impl<S: SocketMapSpec> Tagged<AddrVec<S>> for Bound<S>
+impl<A: SocketMapAddrSpec, S: SocketMapStateSpec> Tagged<AddrVec<A>> for Bound<S>
 where
-    S::ListenerAddrState: Tagged<S::ListenerAddr, Tag = S::AddrVecTag>,
-    S::ConnAddrState: Tagged<S::ConnAddr, Tag = S::AddrVecTag>,
+    S::ListenerAddrState:
+        Tagged<ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>, Tag = S::AddrVecTag>,
+    S::ConnAddrState: Tagged<
+        ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
+        Tag = S::AddrVecTag,
+    >,
 {
     type Tag = S::AddrVecTag;
 
-    fn tag(&self, address: &AddrVec<S>) -> Self::Tag {
+    fn tag(&self, address: &AddrVec<A>) -> Self::Tag {
         match (self, address) {
             (Bound::Listen(l), AddrVec::Listen(addr)) => l.tag(addr),
             (Bound::Conn(c), AddrVec::Conn(addr)) => c.tag(addr),
@@ -204,27 +214,53 @@ pub(crate) enum RemoveResult {
 /// A bidirectional map between sockets and their state, keyed in one direction
 /// by socket IDs, and in the other by socket addresses.
 ///
-/// The types of keys and IDs is determined by the [`SocketMapSpec`] parameter.
-/// Each listener and connected socket stores additional state. Listener and
-/// connected sockets are keyed independently, but share the same address vector
-/// space. Conflicts are detected on attempted insertion of new sockets.
+/// The types of keys and IDs is determined by the [`SocketMapStateSpec`]
+/// parameter. Each listener and connected socket stores additional state.
+/// Listener and connected sockets are keyed independently, but share the same
+/// address vector space. Conflicts are detected on attempted insertion of new
+/// sockets.
 #[derive(Derivative)]
 #[derivative(Default(bound = ""))]
-pub(crate) struct BoundSocketMap<S: SocketMapSpec>
+pub(crate) struct BoundSocketMap<A: SocketMapAddrSpec, S: SocketMapStateSpec>
 where
-    Bound<S>: Tagged<AddrVec<S>>,
+    Bound<S>: Tagged<AddrVec<A>>,
 {
-    listener_id_to_sock: IdMap<(S::ListenerState, S::ListenerSharingState, S::ListenerAddr)>,
-    conn_id_to_sock: IdMap<(S::ConnState, S::ConnSharingState, S::ConnAddr)>,
-    addr_to_state: SocketMap<AddrVec<S>, Bound<S>>,
+    listener_id_to_sock: IdMap<(
+        S::ListenerState,
+        S::ListenerSharingState,
+        ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
+    )>,
+    conn_id_to_sock: IdMap<(
+        S::ConnState,
+        S::ConnSharingState,
+        ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
+    )>,
+    addr_to_state: SocketMap<AddrVec<A>, Bound<S>>,
 }
 
-impl<S: SocketMapSpec> BoundSocketMap<S>
+impl<A: SocketMapAddrSpec, S: SocketMapStateSpec> BoundSocketMap<A, S>
 where
-    Bound<S>: Tagged<AddrVec<S>>,
-    AddrVec<S>: IterShadows,
+    Bound<S>: Tagged<AddrVec<A>>,
+    AddrVec<A>: IterShadows,
+    S::ConnAddrState: SocketMapAddrStateSpec<
+        ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
+        S::ConnSharingState,
+        S::ConnId,
+        A,
+        S,
+    >,
+    S::ListenerAddrState: SocketMapAddrStateSpec<
+        ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
+        S::ListenerSharingState,
+        S::ListenerId,
+        A,
+        S,
+    >,
 {
-    pub(crate) fn get_conn_by_addr(&self, addr: &S::ConnAddr) -> Option<&S::ConnAddrState> {
+    pub(crate) fn get_conn_by_addr(
+        &self,
+        addr: &ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
+    ) -> Option<&S::ConnAddrState> {
         let Self { listener_id_to_sock: _, conn_id_to_sock: _, addr_to_state } = self;
         addr_to_state.get(&AddrVec::Conn(addr.clone())).map(|state| match state {
             Bound::Conn(conn) => conn,
@@ -234,7 +270,7 @@ where
 
     pub(crate) fn get_listener_by_addr(
         &self,
-        addr: &S::ListenerAddr,
+        addr: &ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
     ) -> Option<&S::ListenerAddrState> {
         let Self { listener_id_to_sock: _, conn_id_to_sock: _, addr_to_state } = self;
         addr_to_state.get(&AddrVec::Listen(addr.clone())).map(|state| match state {
@@ -246,7 +282,11 @@ where
     pub(crate) fn get_conn_by_id(
         &self,
         id: &S::ConnId,
-    ) -> Option<&(S::ConnState, S::ConnSharingState, S::ConnAddr)> {
+    ) -> Option<&(
+        S::ConnState,
+        S::ConnSharingState,
+        ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
+    )> {
         let Self { listener_id_to_sock: _, conn_id_to_sock, addr_to_state: _ } = self;
         conn_id_to_sock.get(id.clone().into())
     }
@@ -254,7 +294,11 @@ where
     pub(crate) fn get_listener_by_id(
         &self,
         id: &S::ListenerId,
-    ) -> Option<&(S::ListenerState, S::ListenerSharingState, S::ListenerAddr)> {
+    ) -> Option<&(
+        S::ListenerState,
+        S::ListenerSharingState,
+        ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
+    )> {
         let Self { listener_id_to_sock, conn_id_to_sock: _, addr_to_state: _ } = self;
         listener_id_to_sock.get(id.clone().into())
     }
@@ -262,7 +306,11 @@ where
     pub(crate) fn get_listener_by_id_mut(
         &mut self,
         id: &S::ListenerId,
-    ) -> Option<(&mut S::ListenerState, &S::ListenerSharingState, &S::ListenerAddr)> {
+    ) -> Option<(
+        &mut S::ListenerState,
+        &S::ListenerSharingState,
+        &ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
+    )> {
         let Self { listener_id_to_sock, conn_id_to_sock: _, addr_to_state: _ } = self;
         listener_id_to_sock
             .get_mut(id.clone().into())
@@ -272,21 +320,25 @@ where
     pub(crate) fn get_conn_by_id_mut(
         &mut self,
         id: &S::ConnId,
-    ) -> Option<(&mut S::ConnState, &S::ConnSharingState, &S::ConnAddr)> {
+    ) -> Option<(
+        &mut S::ConnState,
+        &S::ConnSharingState,
+        &ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
+    )> {
         let Self { listener_id_to_sock: _, conn_id_to_sock, addr_to_state: _ } = self;
         conn_id_to_sock
             .get_mut(id.clone().into())
             .map(|(state, sharing_state, addr)| (state, &*sharing_state, &*addr))
     }
 
-    pub(crate) fn iter_addrs(&self) -> impl Iterator<Item = &AddrVec<S>> {
+    pub(crate) fn iter_addrs(&self) -> impl Iterator<Item = &AddrVec<A>> {
         let Self { listener_id_to_sock: _, conn_id_to_sock: _, addr_to_state } = self;
         addr_to_state.iter().map(|(a, _v): (_, &Bound<S>)| a)
     }
 
     pub(crate) fn try_insert_listener(
         &mut self,
-        listener_addr: S::ListenerAddr,
+        listener_addr: ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
         state: S::ListenerState,
         sharing_state: S::ListenerSharingState,
     ) -> Result<S::ListenerId, (InsertError, S::ListenerState, S::ListenerSharingState)> {
@@ -309,7 +361,7 @@ where
 
     pub(crate) fn try_insert_conn(
         &mut self,
-        conn_addr: S::ConnAddr,
+        conn_addr: ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
         state: S::ConnState,
         sharing_state: S::ConnSharingState,
     ) -> Result<S::ConnId, (InsertError, S::ConnState, S::ConnSharingState)> {
@@ -330,19 +382,19 @@ where
         )
     }
 
-    fn try_insert<St, A, V, T, I>(
-        socket_addr: A,
+    fn try_insert<St, SA, V, T, I>(
+        socket_addr: SA,
         state: V,
         sharing_state: T,
-        addr_to_state: &mut SocketMap<AddrVec<S>, Bound<S>>,
-        id_to_sock: &mut IdMap<(V, T, A)>,
+        addr_to_state: &mut SocketMap<AddrVec<A>, Bound<S>>,
+        id_to_sock: &mut IdMap<(V, T, SA)>,
         state_to_bound: impl FnOnce(St) -> Bound<S>,
-        addr_to_addr_vec: impl FnOnce(A) -> AddrVec<S>,
+        addr_to_addr_vec: impl FnOnce(SA) -> AddrVec<A>,
         unwrap_bound: impl FnOnce(&mut Bound<S>) -> &mut St,
     ) -> Result<I, (InsertError, V, T)>
     where
-        St: SocketMapAddrStateSpec<A, T, I, S>,
-        A: Clone,
+        St: SocketMapAddrStateSpec<SA, T, I, A, S>,
+        SA: Clone,
         I: Clone + From<usize>,
     {
         match St::check_for_conflicts(&sharing_state, &socket_addr, &addr_to_state) {
@@ -350,7 +402,7 @@ where
             Ok(()) => (),
         };
 
-        let addr: AddrVec<S> = addr_to_addr_vec(socket_addr.clone());
+        let addr = addr_to_addr_vec(socket_addr.clone());
 
         match addr_to_state.entry(addr) {
             Entry::Occupied(mut o) => {
@@ -368,7 +420,7 @@ where
             }
             Entry::Vacant(v) => {
                 let index = id_to_sock.push((state, sharing_state, socket_addr));
-                let (_state, sharing_state, _addr): &(V, _, A) = id_to_sock.get(index).unwrap();
+                let (_state, sharing_state, _addr): &(V, _, SA) = id_to_sock.get(index).unwrap();
                 v.insert(state_to_bound(St::new_addr_state(sharing_state, index.into())));
                 Ok(index.into())
             }
@@ -378,7 +430,9 @@ where
     pub(crate) fn try_update_listener_addr(
         &mut self,
         id: &S::ListenerId,
-        new_addr: impl FnOnce(S::ListenerAddr) -> S::ListenerAddr,
+        new_addr: impl FnOnce(
+            ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
+        ) -> ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
     ) -> Result<(), ExistsError> {
         let Self { listener_id_to_sock, conn_id_to_sock: _, addr_to_state } = self;
         let (_state, _sharing_state, addr) =
@@ -398,7 +452,14 @@ where
     pub(crate) fn try_update_conn_addr(
         &mut self,
         id: &S::ConnId,
-        new_addr: impl FnOnce(S::ConnAddr) -> S::ConnAddr,
+        new_addr: impl FnOnce(
+            ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
+        ) -> ConnAddr<
+            A::IpAddr,
+            A::DeviceId,
+            A::LocalIdentifier,
+            A::RemoteIdentifier,
+        >,
     ) -> Result<(), ExistsError> {
         let Self { listener_id_to_sock: _, conn_id_to_sock, addr_to_state } = self;
         let (_state, _sharing_state, addr) = conn_id_to_sock.get_mut(id.clone().into()).unwrap();
@@ -415,9 +476,9 @@ where
     }
 
     fn try_update_addr(
-        addr: AddrVec<S>,
-        new_addr: AddrVec<S>,
-        addr_to_state: &mut SocketMap<AddrVec<S>, Bound<S>>,
+        addr: AddrVec<A>,
+        new_addr: AddrVec<A>,
+        addr_to_state: &mut SocketMap<AddrVec<A>, Bound<S>>,
     ) -> Result<(), ExistsError> {
         let state = addr_to_state.remove(&addr).expect("existing entry not found");
         let result = match addr_to_state.entry(new_addr) {
@@ -447,7 +508,11 @@ where
     pub(crate) fn remove_listener_by_id(
         &mut self,
         id: S::ListenerId,
-    ) -> Option<(S::ListenerState, S::ListenerSharingState, S::ListenerAddr)> {
+    ) -> Option<(
+        S::ListenerState,
+        S::ListenerSharingState,
+        ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
+    )> {
         let Self { listener_id_to_sock, conn_id_to_sock: _, addr_to_state } = self;
         Self::remove_by_id(addr_to_state, id, listener_id_to_sock, AddrVec::Listen, |value, id| {
             S::ListenerAddrState::remove_by_id(
@@ -463,7 +528,11 @@ where
     pub(crate) fn remove_conn_by_id(
         &mut self,
         id: S::ConnId,
-    ) -> Option<(S::ConnState, S::ConnSharingState, S::ConnAddr)> {
+    ) -> Option<(
+        S::ConnState,
+        S::ConnSharingState,
+        ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
+    )> {
         let Self { listener_id_to_sock: _, conn_id_to_sock, addr_to_state } = self;
         Self::remove_by_id(addr_to_state, id, conn_id_to_sock, AddrVec::Conn, |value, id| {
             S::ConnAddrState::remove_by_id(
@@ -476,13 +545,13 @@ where
         })
     }
 
-    fn remove_by_id<I: Into<usize> + Clone, V, T, A: Clone>(
-        addr_to_state: &mut SocketMap<AddrVec<S>, Bound<S>>,
+    fn remove_by_id<I: Into<usize> + Clone, V, T, AA: Clone>(
+        addr_to_state: &mut SocketMap<AddrVec<A>, Bound<S>>,
         id: I,
-        id_to_sock: &mut IdMap<(V, T, A)>,
-        addr_to_addr_vec: impl FnOnce(A) -> AddrVec<S>,
+        id_to_sock: &mut IdMap<(V, T, AA)>,
+        addr_to_addr_vec: impl FnOnce(AA) -> AddrVec<A>,
         remove_from_state: impl FnOnce(&mut Bound<S>, I) -> RemoveResult,
-    ) -> Option<(V, T, A)> {
+    ) -> Option<(V, T, AA)> {
         id_to_sock.remove(id.clone().into()).map(move |(state, sharing_state, addr)| {
             let mut entry = match addr_to_state.entry(addr_to_addr_vec(addr.clone())) {
                 Entry::Vacant(_) => unreachable!("state is inconsistent"),
@@ -498,7 +567,7 @@ where
         })
     }
 
-    pub(crate) fn get_shadower_counts(&self, addr: &AddrVec<S>) -> usize {
+    pub(crate) fn get_shadower_counts(&self, addr: &AddrVec<A>) -> usize {
         let Self { listener_id_to_sock: _, conn_id_to_sock: _, addr_to_state } = self;
         addr_to_state.descendant_counts(&addr).map(|(_sharing, size)| size.get()).sum()
     }
@@ -516,43 +585,18 @@ pub(crate) enum InsertError {
 mod tests {
     use alloc::{collections::HashSet, vec, vec::Vec};
 
-    use crate::testutil::set_logger_for_test;
+    use net_declare::net_ip_v4;
+    use net_types::{ip::Ipv4Addr, SpecifiedAddr};
+
+    use crate::{
+        ip::DummyDeviceId,
+        socket::address::{ConnIpAddr, ListenerIpAddr},
+        testutil::set_logger_for_test,
+    };
 
     use super::*;
 
     enum FakeSpec {}
-
-    type ListenerAddr = (u16, Option<&'static str>);
-    type ConnAddr = (u16, &'static str, &'static str);
-
-    impl From<ListenerAddr> for AddrVec<FakeSpec> {
-        fn from((port, name): (u16, Option<&'static str>)) -> Self {
-            Self::Listen((port, name))
-        }
-    }
-
-    impl From<ConnAddr> for AddrVec<FakeSpec> {
-        fn from((port, name, remote): (u16, &'static str, &'static str)) -> Self {
-            Self::Conn((port, name, remote))
-        }
-    }
-
-    impl IterShadows for AddrVec<FakeSpec> {
-        type IterShadows = <Vec<Self> as IntoIterator>::IntoIter;
-
-        fn iter_shadows(&self) -> Self::IterShadows {
-            match *self {
-                AddrVec::Listen((_port, None)) => vec![],
-                AddrVec::Listen((port, Some(_))) => {
-                    vec![AddrVec::Listen((port, None))]
-                }
-                AddrVec::Conn((port, name, _remote)) => {
-                    vec![AddrVec::Listen((port, Some(name))), AddrVec::Listen((port, None))]
-                }
-            }
-            .into_iter()
-        }
-    }
 
     #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
     struct Listener(usize);
@@ -595,9 +639,16 @@ mod tests {
     #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
     struct Conn(usize);
 
-    impl SocketMapSpec for FakeSpec {
-        type ListenerAddr = (u16, Option<&'static str>);
-        type ConnAddr = (u16, &'static str, &'static str);
+    enum FakeAddrSpec {}
+
+    impl SocketMapAddrSpec for FakeAddrSpec {
+        type IpAddr = Ipv4Addr;
+        type DeviceId = DummyDeviceId;
+        type LocalIdentifier = u16;
+        type RemoteIdentifier = ();
+    }
+
+    impl SocketMapStateSpec for FakeSpec {
         type AddrVecTag = char;
 
         type ListenerId = Listener;
@@ -612,13 +663,15 @@ mod tests {
         type ConnAddrState = Multiple<Conn>;
     }
 
-    impl<A: Into<AddrVec<FakeSpec>> + Clone, I: Eq> SocketMapAddrStateSpec<A, char, I, FakeSpec>
-        for Multiple<I>
+    type FakeBoundSocketMap = BoundSocketMap<FakeAddrSpec, FakeSpec>;
+
+    impl<A: Into<AddrVec<FakeAddrSpec>> + Clone, I: Eq>
+        SocketMapAddrStateSpec<A, char, I, FakeAddrSpec, FakeSpec> for Multiple<I>
     {
         fn check_for_conflicts(
             new_state: &char,
             addr: &A,
-            socketmap: &SocketMap<AddrVec<FakeSpec>, Bound<FakeSpec>>,
+            socketmap: &SocketMap<AddrVec<FakeAddrSpec>, Bound<FakeSpec>>,
         ) -> Result<(), InsertError> {
             let dest = addr.clone().into();
             if dest.iter_shadows().any(|a| socketmap.get(&a).is_some()) {
@@ -663,12 +716,30 @@ mod tests {
         }
     }
 
+    const LISTENER_ADDR: ListenerAddr<Ipv4Addr, DummyDeviceId, u16> = ListenerAddr {
+        ip: ListenerIpAddr {
+            addr: Some(unsafe { SpecifiedAddr::new_unchecked(net_ip_v4!("1.2.3.4")) }),
+            identifier: 0,
+        },
+        device: None,
+    };
+
+    const CONN_ADDR: ConnAddr<Ipv4Addr, DummyDeviceId, u16, ()> = ConnAddr {
+        ip: unsafe {
+            ConnIpAddr {
+                local: (SpecifiedAddr::new_unchecked(net_ip_v4!("5.6.7.8")), 0),
+                remote: (SpecifiedAddr::new_unchecked(net_ip_v4!("8.7.6.5")), ()),
+            }
+        },
+        device: None,
+    };
+
     #[test]
     fn bound_insert_get_remove_listener() {
         set_logger_for_test();
-        let mut bound = BoundSocketMap::<FakeSpec>::default();
+        let mut bound = FakeBoundSocketMap::default();
 
-        let addr = (1, Some("aaa"));
+        let addr = LISTENER_ADDR;
 
         let id = bound.try_insert_listener(addr, 0, 'v').unwrap();
         assert_eq!(bound.get_listener_by_id(&id), Some(&(0, 'v', addr)));
@@ -682,9 +753,9 @@ mod tests {
     #[test]
     fn bound_insert_get_remove_conn() {
         set_logger_for_test();
-        let mut bound = BoundSocketMap::<FakeSpec>::default();
+        let mut bound = FakeBoundSocketMap::default();
 
-        let addr = (1, "aaa", "remote");
+        let addr = CONN_ADDR;
 
         let id = bound.try_insert_conn(addr, 0, 'v').unwrap();
         assert_eq!(bound.get_conn_by_id(&id), Some(&(0, 'v', addr)));
@@ -698,18 +769,35 @@ mod tests {
     #[test]
     fn bound_iter_addrs() {
         set_logger_for_test();
-        let mut bound = BoundSocketMap::<FakeSpec>::default();
+        let mut bound = FakeBoundSocketMap::default();
 
-        let listener_addrs = [(1, Some("aaa")), (2, Some("aaa")), (3, Some("aaa")), (4, None)];
-        let conn_addrs = [(1, "bbb", "xxx"), (2, "bbb", "xxx"), (3, "bbb", "yyy")];
+        let listener_addrs = [
+            (Some(net_ip_v4!("1.1.1.1")), 1),
+            (Some(net_ip_v4!("2.2.2.2")), 2),
+            (Some(net_ip_v4!("1.1.1.1")), 3),
+            (None, 4),
+        ]
+        .map(|(ip, identifier)| ListenerAddr {
+            device: None,
+            ip: ListenerIpAddr { addr: ip.map(|x| SpecifiedAddr::new(x).unwrap()), identifier },
+        });
+        let conn_addrs = [
+            (net_ip_v4!("3.3.3.3"), 3, net_ip_v4!("4.4.4.4")),
+            (net_ip_v4!("4.4.4.4"), 3, net_ip_v4!("3.3.3.3")),
+        ]
+        .map(|(local_ip, local_identifier, remote_ip)| ConnAddr {
+            ip: ConnIpAddr {
+                local: (SpecifiedAddr::new(local_ip).unwrap(), local_identifier),
+                remote: (SpecifiedAddr::new(remote_ip).unwrap(), ()),
+            },
+            device: None,
+        });
 
-        for (port, local) in listener_addrs.iter().cloned() {
-            let value = char::from_u32(u32::from(port)).unwrap();
-            let _: Listener = bound.try_insert_listener((port, local), 1, value).unwrap();
+        for addr in listener_addrs.iter().cloned() {
+            let _: Listener = bound.try_insert_listener(addr, 1, 'a').unwrap();
         }
-        for (port, local, remote) in conn_addrs.iter().cloned() {
-            let value = char::from_u32(u32::from(port)).unwrap();
-            let _: Conn = bound.try_insert_conn((port, local, remote), 1, value).unwrap();
+        for addr in conn_addrs.iter().cloned() {
+            let _: Conn = bound.try_insert_conn(addr, 1, 'a').unwrap();
         }
         let expected_addrs = IntoIterator::into_iter(listener_addrs)
             .map(Into::into)
@@ -722,8 +810,8 @@ mod tests {
     #[test]
     fn insert_listener_conflict_with_listener() {
         set_logger_for_test();
-        let mut bound = BoundSocketMap::<FakeSpec>::default();
-        let addr = (1, None);
+        let mut bound = FakeBoundSocketMap::default();
+        let addr = LISTENER_ADDR;
 
         let _id = bound.try_insert_listener(addr, 0, 'a').unwrap();
         assert_eq!(bound.try_insert_listener(addr, 0, 'b'), Err((InsertError::Exists, 0, 'b')));
@@ -732,9 +820,12 @@ mod tests {
     #[test]
     fn insert_listener_conflict_with_shadower() {
         set_logger_for_test();
-        let mut bound = BoundSocketMap::<FakeSpec>::default();
-        let addr = (1, None);
-        let shadows_addr = (1, Some("abc"));
+        let mut bound = FakeBoundSocketMap::default();
+        let addr = LISTENER_ADDR;
+        let shadows_addr = {
+            assert_eq!(addr.device, None);
+            ListenerAddr { device: Some(DummyDeviceId), ..addr }
+        };
 
         let _id = bound.try_insert_listener(addr, 0, 'a').unwrap();
         assert_eq!(
@@ -746,9 +837,15 @@ mod tests {
     #[test]
     fn insert_conn_conflict_with_listener() {
         set_logger_for_test();
-        let mut bound = BoundSocketMap::<FakeSpec>::default();
-        let addr = (1, None);
-        let shadows_addr = (1, "abc", "remote");
+        let mut bound = FakeBoundSocketMap::default();
+        let addr = LISTENER_ADDR;
+        let shadows_addr = ConnAddr {
+            device: None,
+            ip: ConnIpAddr {
+                local: (addr.ip.addr.unwrap(), addr.ip.identifier),
+                remote: (SpecifiedAddr::new(net_ip_v4!("1.1.1.1")).unwrap(), ()),
+            },
+        };
 
         let _id = bound.try_insert_listener(addr, 0, 'a').unwrap();
         assert_eq!(
@@ -760,8 +857,8 @@ mod tests {
     #[test]
     fn insert_and_remove_listener() {
         set_logger_for_test();
-        let mut bound = BoundSocketMap::<FakeSpec>::default();
-        let addr = (1, None);
+        let mut bound = FakeBoundSocketMap::default();
+        let addr = LISTENER_ADDR;
 
         let a = bound.try_insert_listener(addr, 0, 'x').unwrap();
         let b = bound.try_insert_listener(addr, 0, 'x').unwrap();
@@ -774,8 +871,8 @@ mod tests {
     #[test]
     fn insert_and_remove_conn() {
         set_logger_for_test();
-        let mut bound = BoundSocketMap::<FakeSpec>::default();
-        let addr = (1, "a", "b");
+        let mut bound = FakeBoundSocketMap::default();
+        let addr = CONN_ADDR;
 
         let a = bound.try_insert_conn(addr, 0, 'x').unwrap();
         let b = bound.try_insert_conn(addr, 0, 'x').unwrap();
@@ -787,23 +884,34 @@ mod tests {
 
     #[test]
     fn update_listener_to_shadowed_addr_fails() {
-        let mut bound = BoundSocketMap::<FakeSpec>::default();
-        const FIRST: (u16, Option<&'static str>) = (1, Some("aaa"));
-        const SECOND: (u16, Option<&'static str>) = (1, Some("yyy"));
+        let mut bound = FakeBoundSocketMap::default();
 
-        let first = bound.try_insert_listener(FIRST, 0, 'a').unwrap();
-        let second = bound.try_insert_listener(SECOND, 0, 'b').unwrap();
+        let first_addr = LISTENER_ADDR;
+        let second_addr = ListenerAddr {
+            ip: ListenerIpAddr {
+                addr: Some(SpecifiedAddr::new(net_ip_v4!("1.1.1.1")).unwrap()),
+                ..LISTENER_ADDR.ip
+            },
+            ..LISTENER_ADDR
+        };
+        let both_shadow = ListenerAddr {
+            ip: ListenerIpAddr { addr: None, identifier: first_addr.ip.identifier },
+            device: None,
+        };
+
+        let first = bound.try_insert_listener(first_addr, 0, 'a').unwrap();
+        let second = bound.try_insert_listener(second_addr, 0, 'b').unwrap();
 
         // Moving from (1, "aaa") to (1, None) should fail since it is shadowed
         // by (1, "yyy"), and vise versa.
-        assert_eq!(bound.try_update_listener_addr(&second, |(a, _b)| (a, None)), Err(ExistsError));
-        assert_eq!(bound.try_update_listener_addr(&first, |(a, _b)| (a, None)), Err(ExistsError));
+        assert_eq!(bound.try_update_listener_addr(&second, |_| both_shadow), Err(ExistsError));
+        assert_eq!(bound.try_update_listener_addr(&first, |_| both_shadow), Err(ExistsError));
     }
 
     #[test]
     fn get_listener_by_id_mut() {
-        let mut map = BoundSocketMap::<FakeSpec>::default();
-        let addr = (1, Some("aaa"));
+        let mut map = FakeBoundSocketMap::default();
+        let addr = LISTENER_ADDR;
         let listener_id = map.try_insert_listener(addr.clone(), 0, 'x').expect("failed to insert");
         let (val, _, _) = map.get_listener_by_id_mut(&listener_id).expect("failed to get listener");
         *val = 2;
@@ -813,8 +921,8 @@ mod tests {
 
     #[test]
     fn get_conn_by_id_mut() {
-        let mut map = BoundSocketMap::<FakeSpec>::default();
-        let addr = (1, "a", "b");
+        let mut map = FakeBoundSocketMap::default();
+        let addr = CONN_ADDR;
         let conn_id = map.try_insert_conn(addr.clone(), 0, 'a').expect("failed to insert");
         let (val, _, _) = map.get_conn_by_id_mut(&conn_id).expect("failed to get conn");
         *val = 2;
