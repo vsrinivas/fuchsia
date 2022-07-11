@@ -152,15 +152,15 @@ verifying, submit the CL and file a bug against the Release Team.
 
 ## How do I temporarily disable a CTS test? {#disable-a-test}
 
-You can disable a test by adding the test's package and component name to the list
-of `disabled_tests` on the appropriate `compatibility_test_suite` target in
-`//sdk/cts/release/BUILD.gn`.
+You can disable a test by adding the test's archive name and component name to
+the list of `disabled_tests` on the appropriate `compatibility_test_suite`
+target in `//sdk/cts/release/BUILD.gn`.
 
 For example, a test running in Fuchsia's canary release might have the package
 URL:
 
 ```
-fuchsia-pkg://fuchsia.com/my_test_canary#meta/my_test_component.cm
+fuchsia-pkg://fuchsia.com/my_test_8.20220629.3.1#meta/my_test_component.cm
 ```
 
 This can be disabled as follows:
@@ -169,8 +169,8 @@ This can be disabled as follows:
 compatibility_test_suite("canary") {
   {{ '<strong>' }}disabled_tests = [
     {
-      package = "my_test_canary"
-      component_name = "my_test_component"
+      archive_name = "my_test"
+      component_name = "my_test_component.cm"
     },
   ]{{ '</strong>' }}
 }
@@ -178,19 +178,6 @@ compatibility_test_suite("canary") {
 
 Please include a comment with a bug ID as a reminder to enable the test again.
 Tests should be enabled again within 72 hours.
-
-If you need to disable a test for an extended period of time, please instead
-remove the test from the CTS release by submitting a change like the following:
-
-```
-cts_fuchsia_test_package("my_test") {
-  test_components = [ ":my_test_component" ]
-  {{ '<strong>' }}internal_only_skip_on_cq = true{{ '</strong>' }}
-}
-```
-
-Then ask the release team to cherry pick this CL onto the appropriate release
-branch which will generate a new CTS without the test.
 
 ## Additional questions
 
