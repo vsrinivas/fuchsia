@@ -55,7 +55,7 @@ static const uint32_t kExitCtlsSaveIa32Efer             = 1u << 20;
 static const uint32_t kExitCtlsLoadIa32Efer             = 1u << 21;
 
 // ENTRY_CTLS flags.
-static const uint32_t kEntryCtlsIa32eMode               = 1u << 9;
+static const uint32_t kEntryCtls64bitMode               = 1u << 9;
 static const uint32_t kEntryCtlsLoadIa32Pat             = 1u << 14;
 static const uint32_t kEntryCtlsLoadIa32Efer            = 1u << 15;
 

@@ -344,7 +344,7 @@ zx_status_t handle_cr0_write(AutoVmcs& vmcs, uint64_t val, LocalApicState& local
   }
   vmcs.Write(VmcsField64::GUEST_IA32_EFER, efer | X86_EFER_LMA);
   return vmcs.SetControl(VmcsField32::ENTRY_CTLS, read_msr(X86_MSR_IA32_VMX_TRUE_ENTRY_CTLS),
-                         read_msr(X86_MSR_IA32_VMX_ENTRY_CTLS), kEntryCtlsIa32eMode, 0);
+                         read_msr(X86_MSR_IA32_VMX_ENTRY_CTLS), kEntryCtls64bitMode, 0);
 }
 
 zx_status_t register_value(AutoVmcs& vmcs, const GuestState& guest_state, uint8_t register_id,

@@ -297,8 +297,8 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, uint
   // Load the guest IA32_PAT MSR and IA32_EFER MSR on entry.
   uint32_t entry_ctls = kEntryCtlsLoadIa32Pat | kEntryCtlsLoadIa32Efer;
   if (vpid.val() == kBaseProcessorVpid) {
-    // On the BSP, go straight to IA32E mode on entry.
-    entry_ctls |= kEntryCtlsIa32eMode;
+    // On the BSP, go straight to 64-bit mode on entry.
+    entry_ctls |= kEntryCtls64bitMode;
   }
   status = vmcs.SetControl(VmcsField32::ENTRY_CTLS, read_msr(X86_MSR_IA32_VMX_TRUE_ENTRY_CTLS),
                            read_msr(X86_MSR_IA32_VMX_ENTRY_CTLS), entry_ctls, 0);
