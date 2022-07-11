@@ -6,7 +6,6 @@ group("telephony") {
   testonly = true
   deps = [
     ":tests",
-    "//src/connectivity/telephony/config",
     "//src/connectivity/telephony/ril-at",
     "//src/connectivity/telephony/ril-qmi",
     "//src/connectivity/telephony/telephony",
@@ -29,12 +28,11 @@ group("tests") {
   deps = [
     "//src/connectivity/telephony/drivers:tests",
     "//src/connectivity/telephony/lib/qmi-protocol:tests",
-    "//src/connectivity/telephony/ril-at:ril-at-tests",
-    "//src/connectivity/telephony/ril-qmi:ril-qmi-tests",
+    "//src/connectivity/telephony/ril-at:tests",
+    "//src/connectivity/telephony/ril-qmi:tests",
     "//src/connectivity/telephony/telephony:tests",
     "//src/connectivity/telephony/telephony-snooper",
-    "//src/connectivity/telephony/tests:telephony-tests",
-    "//src/connectivity/telephony/tests:telephony-tests-with-error-logs",
+    "//src/connectivity/telephony/tests",
     "//src/connectivity/telephony/tests/fake-drivers/at-fake-transport:tests",
     "//src/connectivity/telephony/tests/fake-drivers/usb-qmi-function:tests",
   ]

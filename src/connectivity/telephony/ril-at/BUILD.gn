@@ -31,11 +31,11 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_package_with_single_component("ril-at") {
-  manifest = "meta/ril-at.cmx"
+group("ril-at") {
   deps = [ ":bin" ]
 }
 
-fuchsia_unittest_package("ril-at-tests") {
+group("tests") {
+  testonly = true
   deps = [ ":bin_test" ]
 }

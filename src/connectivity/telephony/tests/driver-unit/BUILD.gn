@@ -25,3 +25,8 @@ executable("tel-driver-unit-test") {
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
 }
+
+group("driver-unit") {
+  testonly = true
+  deps = [ ":tel-driver-unit-test" ]
+}

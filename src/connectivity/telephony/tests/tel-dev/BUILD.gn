@@ -31,3 +31,7 @@ rustc_library("tel_dev") {
     "src/snooper_test.rs",
   ]
 }
+
+group("tel-dev") {
+  deps = [ ":tel_dev" ]
+}

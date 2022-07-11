@@ -28,3 +28,8 @@ rustc_test("multi-clients") {
 
   sources = [ "src/multi_clients.rs" ]
 }
+
+group("snooper") {
+  testonly = true
+  deps = [ ":multi-clients" ]
+}

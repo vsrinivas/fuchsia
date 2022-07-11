@@ -2,21 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("fake-at-driver-test") {
+group("component-integration") {
   testonly = true
-  deps = [ "fake-at-driver-test" ]
-}
-
-group("fake-qmi-query") {
-  testonly = true
-  deps = [ "fake-qmi-query" ]
-}
-
-group("fake-at-query") {
-  testonly = true
-  deps = [ "fake-at-query" ]
-}
-group("snooper") {
-  testonly = true
-  deps = [ "snooper:multi-clients" ]
+  deps = [
+    "fake-at-driver-test",
+    "fake-at-query",
+    "fake-qmi-query",
+    "snooper",
+  ]
 }

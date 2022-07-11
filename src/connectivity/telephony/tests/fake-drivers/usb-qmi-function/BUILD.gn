@@ -13,6 +13,11 @@ driver_bind_rules("usb_qmi_function_bind") {
   deps = [ "//src/devices/bind/fuchsia.usb" ]
 }
 
+group("usb-qmi-function") {
+  testonly = true
+  deps = [ ":tests" ]
+}
+
 group("tests") {
   testonly = true
   deps = [ ":usb_qmi_function_bind_test" ]
