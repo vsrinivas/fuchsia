@@ -25,8 +25,8 @@ use netstack3_core::{
     get_all_ip_addr_subnets, get_ipv4_configuration, get_ipv6_configuration,
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
     update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither, BufferUdpContext,
-    Ctx, DeviceId, DeviceLayerEventDispatcher, IpExt, NonSyncContext, TimerId, UdpBoundId,
-    UdpContext,
+    Ctx, DeviceId, DeviceLayerEventDispatcher, IpExt, NonSyncContext, RingBuffer,
+    TcpNonSyncContext, TimerId, UdpBoundId, UdpContext,
 };
 use packet::{Buf, BufferMut, Serializer};
 use packet_formats::icmp::{IcmpEchoReply, IcmpMessage, IcmpUnusedCode};
@@ -157,6 +157,11 @@ impl InstantContext for TestNonSyncCtx {
     fn now(&self) -> StackTime {
         self.ctx.now()
     }
+}
+
+impl TcpNonSyncContext for TestNonSyncCtx {
+    type ReceiveBuffer = RingBuffer;
+    type SendBuffer = RingBuffer;
 }
 
 impl TimerContext<TimerId> for TestNonSyncCtx {

@@ -59,13 +59,20 @@ mod integration;
 // TODO(https://fxbug.dev/95688): Integrate TCP with the rest of netstack3 core.
 // Note: we can't use `todo_unused` here because of the following issue:
 // https://github.com/rust-lang/rust/issues/54727
-#[cfg(test)]
-mod tcp;
+#[allow(unused)]
+pub(crate) mod tcp;
 pub(crate) mod udp;
 
 use net_types::ip::{Ipv4, Ipv6};
 
-use crate::{device::DeviceId, transport::udp::UdpStateBuilder, NonSyncContext, SyncCtx};
+use crate::{
+    device::DeviceId,
+    transport::{
+        tcp::socket::{TcpSockets, TcpSyncContext},
+        udp::{UdpState, UdpStateBuilder},
+    },
+    NonSyncContext, RngContext, SyncCtx, TcpNonSyncContext,
+};
 
 /// A builder for transport layer state.
 #[derive(Default, Clone)]
@@ -79,15 +86,37 @@ impl TransportStateBuilder {
         &mut self.udp
     }
 
-    pub(crate) fn build(self) -> TransportLayerState {
-        TransportLayerState { udpv4: self.udp.clone().build(), udpv6: self.udp.build() }
+    pub(crate) fn build_with_ctx<C: TcpNonSyncContext + RngContext>(
+        self,
+        ctx: &mut C,
+    ) -> TransportLayerState<C> {
+        TransportLayerState {
+            udpv4: self.udp.clone().build(),
+            udpv6: self.udp.build(),
+            tcpv4: TcpSockets::new(ctx.now(), ctx.rng_mut()),
+            tcpv6: TcpSockets::new(ctx.now(), ctx.rng_mut()),
+        }
     }
 }
 
 /// The state associated with the transport layer.
-pub(crate) struct TransportLayerState {
-    udpv4: self::udp::UdpState<Ipv4, DeviceId>,
-    udpv6: self::udp::UdpState<Ipv6, DeviceId>,
+pub(crate) struct TransportLayerState<C: TcpNonSyncContext> {
+    udpv4: UdpState<Ipv4, DeviceId>,
+    udpv6: UdpState<Ipv6, DeviceId>,
+    tcpv4: TcpSockets<Ipv4, DeviceId, C>,
+    tcpv6: TcpSockets<Ipv6, DeviceId, C>,
+}
+
+impl<C: NonSyncContext> TcpSyncContext<Ipv4, C> for SyncCtx<C> {
+    fn get_tcp_state_mut(&mut self) -> &mut TcpSockets<Ipv4, Self::DeviceId, C> {
+        &mut self.state.transport.tcpv4
+    }
+}
+
+impl<C: NonSyncContext> TcpSyncContext<Ipv6, C> for SyncCtx<C> {
+    fn get_tcp_state_mut(&mut self) -> &mut TcpSockets<Ipv6, Self::DeviceId, C> {
+        &mut self.state.transport.tcpv6
+    }
 }
 
 /// The identifier for timer events in the transport layer.

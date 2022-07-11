@@ -38,10 +38,11 @@ use net_types::{
 };
 use packet::Buf;
 use packet_formats::ip::IpProto;
+use rand::RngCore;
 
 use crate::{
     algorithm::{PortAlloc, PortAllocImpl},
-    context::InstantContext,
+    context::{InstantContext, RngContext},
     data_structures::socketmap::{IterShadows as _, SocketMap},
     ip::{
         socket::{IpSock, IpSocket as _},
@@ -62,17 +63,17 @@ use crate::{
 };
 
 /// Non-sync context for TCP.
-trait TcpNonSyncContext: InstantContext {
+pub trait TcpNonSyncContext: InstantContext {
     /// Receive buffer used by TCP.
     type ReceiveBuffer: ReceiveBuffer;
     /// Send buffer used by TCP.
     type SendBuffer: SendBuffer;
 }
 
-trait TcpSyncContext<I: IpExt, C: TcpNonSyncContext>: IpDeviceIdContext<I> {
-    fn get_tcp_state_mut(
-        &mut self,
-    ) -> &mut TcpSockets<I, Self::DeviceId, C::Instant, C::ReceiveBuffer, C::SendBuffer>;
+pub(crate) trait TcpSyncContext<I: IpExt, C: TcpNonSyncContext>:
+    IpDeviceIdContext<I>
+{
+    fn get_tcp_state_mut(&mut self) -> &mut TcpSockets<I, Self::DeviceId, C>;
 }
 
 /// Socket address includes the ip address and the port number.
@@ -83,7 +84,7 @@ struct SocketAddr<A: IpAddress> {
 }
 
 /// An implementation of [`IpTransportContext`] for TCP.
-enum TcpIpTransportContext {}
+pub(crate) enum TcpIpTransportContext {}
 
 /// Uninstantiatable type for implementing [`PosixSocketMapSpec`].
 struct TcpPosixSocketSpec<Ip, Device, Instant, ReceiveBuffer, SendBuffer>(
@@ -144,7 +145,7 @@ impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer>
 struct Inactive;
 
 /// Holds all the TCP socket states.
-struct TcpSockets<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer> {
+pub struct TcpSockets<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> {
     // Secret used to choose initial sequence numbers. It will be filled by a
     // CSPRNG upon initialization. RFC suggests an implementation "could"
     // change the secret key on a regular basis, this is not something we are
@@ -153,10 +154,18 @@ struct TcpSockets<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: Sen
     // The initial timestamp that will be used to calculate the elapsed time
     // since the beginning and that information will then be used to generate
     // ISNs being requested.
-    isn_ts: II,
-    port_alloc: PortAlloc<BoundSocketMap<IpPortSpec<I, D>, TcpPosixSocketSpec<I, D, II, R, S>>>,
+    isn_ts: C::Instant,
+    port_alloc: PortAlloc<
+        BoundSocketMap<
+            IpPortSpec<I, D>,
+            TcpPosixSocketSpec<I, D, C::Instant, C::ReceiveBuffer, C::SendBuffer>,
+        >,
+    >,
     inactive: IdMap<Inactive>,
-    socketmap: BoundSocketMap<IpPortSpec<I, D>, TcpPosixSocketSpec<I, D, II, R, S>>,
+    socketmap: BoundSocketMap<
+        IpPortSpec<I, D>,
+        TcpPosixSocketSpec<I, D, C::Instant, C::ReceiveBuffer, C::SendBuffer>,
+    >,
 }
 
 impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer> PortAllocImpl
@@ -186,9 +195,7 @@ impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer> Port
     }
 }
 
-impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer>
-    TcpSockets<I, D, II, R, S>
-{
+impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> TcpSockets<I, D, C> {
     fn get_listener_by_id_mut(&mut self, id: ListenerId) -> Option<&mut Listener> {
         self.socketmap.get_listener_by_id_mut(&MaybeListenerId::from(id)).map(
             |(maybe_listener, _sharing, _local_addr)| match maybe_listener {
@@ -199,6 +206,18 @@ impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer>
             },
         )
     }
+
+    pub(crate) fn new(now: C::Instant, rng: &mut impl RngCore) -> Self {
+        let mut secret = [0; 16];
+        rng.fill_bytes(&mut secret);
+        Self {
+            secret,
+            isn_ts: now,
+            port_alloc: PortAlloc::new(rng),
+            inactive: IdMap::new(),
+            socketmap: Default::default(),
+        }
+    }
 }
 
 /// A link stored in each passively created connections that points back to the
@@ -207,7 +226,7 @@ impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer>
 /// The link is an [`Acceptor::Pending`] iff the acceptee is in the pending
 /// state; The link is an [`Acceptor::Ready`] iff the acceptee is ready and has
 /// an established connection.
-#[cfg_attr(test, derive(Debug))]
+#[derive(Debug)]
 enum Acceptor {
     Pending(ListenerId),
     Ready(ListenerId),
@@ -218,7 +237,7 @@ enum Acceptor {
 /// Note: the `state` is not guaranteed to be [`State::Established`]. The
 /// connection can be in any state as long as both the local and remote socket
 /// addresses are specified.
-#[cfg_attr(test, derive(Debug))]
+#[derive(Debug)]
 struct Connection<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer> {
     acceptor: Option<Acceptor>,
     state: State<II, R, S>,
@@ -599,7 +618,7 @@ mod tests {
     }
 
     struct TcpState<I: TcpTestIpExt> {
-        sockets: TcpSockets<I, DummyDeviceId, DummyInstant, RingBuffer, RingBuffer>,
+        sockets: TcpSockets<I, DummyDeviceId, TcpNonSyncCtx>,
         ip_socket_ctx: DummyIpSocketCtx<I, DummyDeviceId>,
     }
 
@@ -639,9 +658,7 @@ mod tests {
     }
 
     impl<I: TcpTestIpExt> TcpSyncContext<I, TcpNonSyncCtx> for TcpSyncCtx<I> {
-        fn get_tcp_state_mut(
-            &mut self,
-        ) -> &mut TcpSockets<I, DummyDeviceId, DummyInstant, RingBuffer, RingBuffer> {
+        fn get_tcp_state_mut(&mut self) -> &mut TcpSockets<I, DummyDeviceId, TcpNonSyncCtx> {
             &mut self.get_mut().sockets
         }
     }

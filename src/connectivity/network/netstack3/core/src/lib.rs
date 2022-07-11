@@ -69,6 +69,10 @@ pub use crate::{
         Ipv4StateBuilder, Ipv6StateBuilder, TransportIpContext,
     },
     transport::{
+        tcp::{
+            buffer::{ReceiveBuffer, RingBuffer, SendBuffer},
+            socket::TcpNonSyncContext,
+        },
         udp::{
             connect_udp, create_udp_unbound, get_udp_bound_device, get_udp_conn_info,
             get_udp_listener_info, get_udp_posix_reuse_port, listen_udp, remove_udp_conn,
@@ -196,9 +200,9 @@ impl StackStateBuilder {
     }
 
     /// Consume this builder and produce a `StackState`.
-    pub fn build<I: Instant>(self) -> StackState<I> {
+    pub fn build_with_ctx<C: NonSyncContext>(self, ctx: &mut C) -> StackState<C> {
         StackState {
-            transport: self.transport.build(),
+            transport: self.transport.build_with_ctx(ctx),
             ipv4: self.ipv4.build(),
             ipv6: self.ipv6.build(),
             device: Default::default(),
@@ -207,16 +211,16 @@ impl StackStateBuilder {
 }
 
 /// The state associated with the network stack.
-pub struct StackState<I: Instant> {
-    transport: TransportLayerState,
-    ipv4: Ipv4State<I, DeviceId>,
-    ipv6: Ipv6State<I, DeviceId>,
-    device: DeviceLayerState<I>,
+pub struct StackState<C: NonSyncContext> {
+    transport: TransportLayerState<C>,
+    ipv4: Ipv4State<C::Instant, DeviceId>,
+    ipv6: Ipv6State<C::Instant, DeviceId>,
+    device: DeviceLayerState<C::Instant>,
 }
 
-impl<I: Instant> Default for StackState<I> {
-    fn default() -> StackState<I> {
-        StackStateBuilder::default().build()
+impl<C: NonSyncContext + Default> Default for StackState<C> {
+    fn default() -> StackState<C> {
+        StackStateBuilder::default().build_with_ctx(&mut Default::default())
     }
 }
 
@@ -264,6 +268,7 @@ pub trait NonSyncContext:
     + UdpContext<Ipv6>
     + IcmpContext<Ipv4>
     + IcmpContext<Ipv6>
+    + TcpNonSyncContext
 {
 }
 impl<
@@ -281,7 +286,8 @@ impl<
             + UdpContext<Ipv4>
             + UdpContext<Ipv6>
             + IcmpContext<Ipv4>
-            + IcmpContext<Ipv6>,
+            + IcmpContext<Ipv6>
+            + TcpNonSyncContext,
     > NonSyncContext for C
 {
 }
@@ -289,7 +295,7 @@ impl<
 /// The synchronized context.
 pub struct SyncCtx<NonSyncCtx: NonSyncContext> {
     /// Contains the state of the stack.
-    pub state: StackState<NonSyncCtx::Instant>,
+    pub state: StackState<NonSyncCtx>,
     /// A marker for the non-synchronized context type.
     pub non_sync_ctx_marker: PhantomData<NonSyncCtx>,
 }
@@ -308,7 +314,7 @@ pub struct Ctx<NonSyncCtx: NonSyncContext> {
 
 impl<NonSyncCtx: NonSyncContext + Default> Default for Ctx<NonSyncCtx>
 where
-    StackState<NonSyncCtx::Instant>: Default,
+    StackState<NonSyncCtx>: Default,
 {
     fn default() -> Ctx<NonSyncCtx> {
         Ctx {
@@ -320,11 +326,18 @@ where
 
 impl<NonSyncCtx: NonSyncContext + Default> Ctx<NonSyncCtx> {
     /// Constructs a new `Ctx`.
-    pub fn new(state: StackState<NonSyncCtx::Instant>) -> Ctx<NonSyncCtx> {
+    pub fn new(state: StackState<NonSyncCtx>) -> Ctx<NonSyncCtx> {
         Ctx {
             sync_ctx: SyncCtx { state, non_sync_ctx_marker: PhantomData },
             non_sync_ctx: Default::default(),
         }
+    }
+
+    #[cfg(test)]
+    pub(crate) fn new_with_builder(builder: StackStateBuilder) -> Self {
+        let mut non_sync_ctx = Default::default();
+        let state = builder.build_with_ctx(&mut non_sync_ctx);
+        Self { sync_ctx: SyncCtx { state, non_sync_ctx_marker: PhantomData }, non_sync_ctx }
     }
 }
 

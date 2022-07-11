@@ -265,11 +265,13 @@ trait IpTransportLayerContext<I: IpExt, C>: IpDeviceIdContext<I> {
 
 impl<
         I: IpExt,
-        C: crate::transport::udp::UdpStateNonSyncContext<I>,
-        SC: crate::transport::udp::UdpStateContext<I, C>,
+        C: crate::transport::udp::UdpStateNonSyncContext<I>
+            + crate::transport::tcp::socket::TcpNonSyncContext,
+        SC: crate::transport::udp::UdpStateContext<I, C>
+            + crate::transport::tcp::socket::TcpSyncContext<I, C>,
     > IpTransportLayerContext<I, C> for SC
 {
-    type Tcp = ();
+    type Tcp = crate::transport::tcp::socket::TcpIpTransportContext;
     type Udp = crate::transport::udp::UdpIpTransportContext;
 }
 
@@ -976,37 +978,37 @@ pub(crate) struct IpStateInner<I: Ip, Instant: crate::Instant, DeviceId> {
 }
 
 pub(crate) trait GetStateIpExt: Ip {
-    fn get_state_inner<Instant: crate::Instant>(
-        state: &StackState<Instant>,
-    ) -> &IpStateInner<Self, Instant, DeviceId>;
+    fn get_state_inner<C: NonSyncContext>(
+        state: &StackState<C>,
+    ) -> &IpStateInner<Self, C::Instant, DeviceId>;
 
-    fn get_state_inner_mut<Instant: crate::Instant>(
-        state: &mut StackState<Instant>,
-    ) -> &mut IpStateInner<Self, Instant, DeviceId>;
+    fn get_state_inner_mut<C: NonSyncContext>(
+        state: &mut StackState<C>,
+    ) -> &mut IpStateInner<Self, C::Instant, DeviceId>;
 }
 
 impl GetStateIpExt for Ipv4 {
-    fn get_state_inner<Instant: crate::Instant>(
-        state: &StackState<Instant>,
-    ) -> &IpStateInner<Self, Instant, DeviceId> {
+    fn get_state_inner<C: NonSyncContext>(
+        state: &StackState<C>,
+    ) -> &IpStateInner<Self, C::Instant, DeviceId> {
         return &state.ipv4.inner;
     }
-    fn get_state_inner_mut<Instant: crate::Instant>(
-        state: &mut StackState<Instant>,
-    ) -> &mut IpStateInner<Self, Instant, DeviceId> {
+    fn get_state_inner_mut<C: NonSyncContext>(
+        state: &mut StackState<C>,
+    ) -> &mut IpStateInner<Self, C::Instant, DeviceId> {
         return &mut state.ipv4.inner;
     }
 }
 
 impl GetStateIpExt for Ipv6 {
-    fn get_state_inner<Instant: crate::Instant>(
-        state: &StackState<Instant>,
-    ) -> &IpStateInner<Self, Instant, DeviceId> {
+    fn get_state_inner<C: NonSyncContext>(
+        state: &StackState<C>,
+    ) -> &IpStateInner<Self, C::Instant, DeviceId> {
         return &state.ipv6.inner;
     }
-    fn get_state_inner_mut<Instant: crate::Instant>(
-        state: &mut StackState<Instant>,
-    ) -> &mut IpStateInner<Self, Instant, DeviceId> {
+    fn get_state_inner_mut<C: NonSyncContext>(
+        state: &mut StackState<C>,
+    ) -> &mut IpStateInner<Self, C::Instant, DeviceId> {
         return &mut state.ipv6.inner;
     }
 }

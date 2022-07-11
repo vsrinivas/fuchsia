@@ -4,11 +4,11 @@
 
 //! The Transmission Control Protocol (TCP).
 
-mod buffer;
+pub(crate) mod buffer;
 mod rtt;
 mod segment;
 mod seqnum;
-mod socket;
+pub(crate) mod socket;
 mod state;
 
 /// Control flags that can alter the state of a TCP control block.

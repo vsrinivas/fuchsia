@@ -30,7 +30,10 @@ use crate::{
         icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
         AddableEntryEither, IpLayerEvent, SendIpPacketMeta,
     },
-    transport::udp::{BufferUdpContext, UdpContext},
+    transport::{
+        tcp::{buffer::RingBuffer, socket::TcpNonSyncContext},
+        udp::{BufferUdpContext, UdpContext},
+    },
     Ctx, NonSyncContext, StackStateBuilder, SyncCtx, TimerId,
 };
 
@@ -114,6 +117,12 @@ pub(crate) type DummyNonSyncCtx =
     crate::context::testutil::DummyNonSyncCtx<TimerId, DispatchedEvent, DummyNonSyncCtxState>;
 
 impl NonSyncContext for DummyNonSyncCtx {}
+
+impl TcpNonSyncContext for DummyNonSyncCtx {
+    type ReceiveBuffer = RingBuffer;
+
+    type SendBuffer = RingBuffer;
+}
 
 impl DummyNonSyncCtx {
     pub(crate) fn take_frames(&mut self) -> Vec<(DeviceId, Vec<u8>)> {
@@ -507,7 +516,7 @@ impl DummyEventDispatcherBuilder {
         self,
         state_builder: StackStateBuilder,
     ) -> Ctx<NonSyncCtx> {
-        let mut ctx = Ctx::new(state_builder.build());
+        let mut ctx = Ctx::new_with_builder(state_builder);
         let Ctx { sync_ctx, non_sync_ctx } = &mut ctx;
 
         let DummyEventDispatcherBuilder {

@@ -1204,7 +1204,7 @@ mod tests {
         } = Ipv6::DUMMY_CONFIG;
 
         let crate::testutil::DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            Ctx::new(StackStateBuilder::default().build());
+            Ctx::new_with_builder(StackStateBuilder::default());
         let device_id =
             sync_ctx.state.device.add_ethernet_device(local_mac, Ipv6::MINIMUM_LINK_MTU.into());
 

@@ -3142,7 +3142,7 @@ mod tests {
         for proto in 0u8..=255 {
             let v4proto = Ipv4Proto::from(proto);
             match v4proto {
-                Ipv4Proto::Proto(IpProto::Tcp) | Ipv4Proto::Other(_) => {
+                Ipv4Proto::Other(_) => {
                     test_receive_ip_packet::<Ipv4, _, _, _, _, _>(
                         |_| {},
                         |_| {},
@@ -3159,7 +3159,10 @@ mod tests {
                         |packet| assert_eq!(packet.original_packet().bytes().len(), 84),
                     );
                 }
-                Ipv4Proto::Icmp | Ipv4Proto::Igmp | Ipv4Proto::Proto(IpProto::Udp) => {}
+                Ipv4Proto::Icmp
+                | Ipv4Proto::Igmp
+                | Ipv4Proto::Proto(IpProto::Udp)
+                | Ipv4Proto::Proto(IpProto::Tcp) => {}
             }
 
             // TODO(fxbug.dev/47953): We seem to fail to parse an IPv6 packet if
@@ -3169,26 +3172,10 @@ mod tests {
             // ensure we don't regress.
             let v6proto = Ipv6Proto::from(proto);
             match v6proto {
-                Ipv6Proto::Proto(IpProto::Tcp) => {
-                    test_receive_ip_packet::<Ipv6, _, _, _, _, _>(
-                        |_| {},
-                        |_| {},
-                        &mut [0u8; 128],
-                        DUMMY_CONFIG_V6.local_ip,
-                        64,
-                        v6proto,
-                        &["send_icmpv6_protocol_unreachable"],
-                        Some((
-                            Icmpv6ParameterProblem::new(40),
-                            Icmpv6ParameterProblemCode::UnrecognizedNextHeaderType,
-                        )),
-                        // Ensure packet is truncated to the right length.
-                        |packet| assert_eq!(packet.original_packet().bytes().len(), 168),
-                    );
-                }
                 Ipv6Proto::Icmpv6
                 | Ipv6Proto::NoNextHeader
                 | Ipv6Proto::Proto(IpProto::Udp)
+                | Ipv6Proto::Proto(IpProto::Tcp)
                 | Ipv6Proto::Other(_) => {}
             }
         }

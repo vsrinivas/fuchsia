@@ -284,8 +284,8 @@ impl Ipv6SocketBuilder {
 }
 
 /// The production implementation of the [`IpSocket`] trait.
-#[derive(Clone)]
-#[cfg_attr(test, derive(Debug, PartialEq))]
+#[derive(Clone, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct IpSock<I: IpExt, D> {
     defn: IpSockDefinition<I, D>,
 }
@@ -293,8 +293,8 @@ pub struct IpSock<I: IpExt, D> {
 /// The definition of an IP socket.
 ///
 /// These values are part of the socket's definition, and never change.
-#[derive(Clone)]
-#[cfg_attr(test, derive(Debug, PartialEq))]
+#[derive(Clone, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 struct IpSockDefinition<I: IpExt, D> {
     remote_ip: SpecifiedAddr<I::Addr>,
     // Guaranteed to be unicast in its subnet since it's always equal to an

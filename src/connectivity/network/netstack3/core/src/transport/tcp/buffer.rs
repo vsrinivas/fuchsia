@@ -15,7 +15,7 @@ use crate::transport::tcp::{
 };
 
 /// Common super trait for both sending and receiving buffer.
-pub trait Buffer: Default + Debug {
+pub trait Buffer: Default + Debug + Send + Sync {
     /// Returns the number of bytes in the buffer that can be read.
     fn len(&self) -> usize;
 
@@ -154,7 +154,7 @@ impl Payload for SendPayload<'_> {
 /// A circular buffer implementation.
 #[derive(Debug, Clone)]
 #[cfg_attr(test, derive(PartialEq, Eq))]
-pub(crate) struct RingBuffer {
+pub struct RingBuffer {
     storage: Vec<u8>,
     // The index where the reader starts to read.
     head: usize,

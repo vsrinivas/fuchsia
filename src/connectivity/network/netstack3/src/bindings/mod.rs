@@ -59,8 +59,9 @@ use netstack3_core::{
     context::{CounterContext, EventContext, InstantContext, RngContext, TimerContext},
     handle_timer, icmp, update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither,
     BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, IpDeviceConfiguration, IpExt,
-    Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, NonSyncContext, SlaacConfiguration, TimerId,
-    UdpBoundId, UdpConnId, UdpContext, UdpListenerId,
+    Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, NonSyncContext, RingBuffer,
+    SlaacConfiguration, TcpNonSyncContext, TimerId, UdpBoundId, UdpConnId, UdpContext,
+    UdpListenerId,
 };
 
 /// Default MTU for loopback.
@@ -460,6 +461,11 @@ impl EventContext<netstack3_core::Ipv6RouteDiscoveryEvent<DeviceId>> for Binding
         // TODO(https://fxbug.dev/97203): Update forwarding table in response to
         // the event.
     }
+}
+
+impl TcpNonSyncContext for BindingsNonSyncCtxImpl {
+    type ReceiveBuffer = RingBuffer;
+    type SendBuffer = RingBuffer;
 }
 
 impl BindingsNonSyncCtxImpl {
