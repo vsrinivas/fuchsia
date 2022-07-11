@@ -17,9 +17,11 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/lib/fit",
+    "//src/lib/utf_conversion",
     "//zircon/kernel/lib/efi",
     "//zircon/kernel/phys/efi:main",
     "//zircon/kernel/phys/efi:protocol",
+    "//zircon/system/ulib/fbl",
   ]
 
   if (is_kernel) {
@@ -27,6 +29,8 @@ source_set("lib") {
       "//zircon/kernel/lib/ktl",
       "//zircon/kernel/lib/libc",
     ]
+
+    include_dirs = [ "//" ]  # utf_conversion isn't a proper library.
   }
 }
 

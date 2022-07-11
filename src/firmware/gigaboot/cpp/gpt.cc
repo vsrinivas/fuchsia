@@ -8,11 +8,27 @@
 #include <zircon/assert.h>
 
 #include <optional>
+#include <vector>
 
 #include "device_path.h"
 #include "utils.h"
 
+#include "src/lib/utf_conversion/utf_conversion.h"
+
 namespace gigaboot {
+namespace {
+bool ValidateHeader(const gpt_header_t &header) {
+  if (header.magic != GPT_MAGIC || header.size != GPT_HEADER_SIZE ||
+      header.entries_size != GPT_ENTRY_SIZE || header.entries_count > 256) {
+    return false;
+  }
+
+  // TODO(b/235489025): Implement checksum validation
+
+  return true;
+}
+
+}  // namespace
 
 fitx::result<efi_status, EfiGptBlockDevice> EfiGptBlockDevice::Create(efi_handle device_handle) {
   EfiGptBlockDevice ret;
@@ -33,6 +49,68 @@ fitx::result<efi_status, EfiGptBlockDevice> EfiGptBlockDevice::Create(efi_handle
   ret.disk_io_protocol_ = std::move(disk_io.value());
 
   return fitx::ok(std::move(ret));
+}
+
+fitx::result<efi_status> EfiGptBlockDevice::Load() {
+  // First block is MBR. Read the second block for the GPT header.
+  if (efi_status status = Read(&gpt_header_, BlockSize(), sizeof(gpt_header_t));
+      status != EFI_SUCCESS) {
+    return fitx::error(status);
+  }
+
+  if (!ValidateHeader(gpt_header_)) {
+    // TODO(b/235489025): Implement checksum validation and backup gpt logic.
+    return fitx::error(EFI_NOT_FOUND);
+  }
+
+  // Load all the partition entries
+
+  // Allocate entries buffer
+  entries_.resize(gpt_header_.entries_count);
+  size_t offset = gpt_header_.entries * BlockSize();
+  for (size_t i = 0; i < gpt_header_.entries_count; i++) {
+    GptEntryInfo &new_entry = entries_[i];
+    if (efi_status status = Read(&new_entry.entry, offset, gpt_header_.entries_size);
+        status != EFI_SUCCESS) {
+      return fitx::error(status);
+    }
+
+    // Pre-compute the utf8 name
+    size_t dst_len = sizeof(new_entry.utf8_name);
+    zx_status_t conv_status =
+        utf16_to_utf8(reinterpret_cast<const uint16_t *>(new_entry.entry.name), GPT_NAME_LEN / 2,
+                      reinterpret_cast<uint8_t *>(new_entry.utf8_name), &dst_len);
+    if (conv_status != ZX_OK || dst_len > sizeof(new_entry.utf8_name)) {
+      printf("Failed to convert partition name to utf8, %d, %zu\n", conv_status, dst_len);
+      return fitx::error(EFI_UNSUPPORTED);
+    }
+
+    offset += gpt_header_.entries_size;
+  }
+
+  return fitx::ok();
+}
+
+efi_status EfiGptBlockDevice::Read(void *buffer, size_t offset, size_t length) {
+  // According to UEFI specification chapter 13.7, disk-io protocol allows unaligned access.
+  // Thus we don't check block alignment.
+  return disk_io_protocol_->ReadDisk(disk_io_protocol_.get(), block_io_protocol_->Media->MediaId,
+                                     offset, length, buffer);
+}
+
+const gpt_entry_t *EfiGptBlockDevice::FindPartition(const char *name) {
+  for (const GptEntryInfo &ele : GetGptEntries()) {
+    const gpt_entry_t &entry = ele.entry;
+    if (entry.first == 0 && entry.last == 0) {
+      continue;
+    }
+
+    if (strcmp(name, ele.utf8_name) == 0) {
+      return &entry;
+    }
+  }
+
+  return nullptr;
 }
 
 // TODO(https://fxbug.dev/79197): The function currently only finds the storage devie that hosts

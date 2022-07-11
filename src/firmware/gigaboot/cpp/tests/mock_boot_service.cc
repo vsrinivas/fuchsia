@@ -30,7 +30,8 @@ void Device::InitDevicePathProtocol(std::vector<std::string_view> path_nodes) {
   device_path_buffer_.push_back(0);
 }
 
-BlockDevice::BlockDevice(std::vector<std::string_view> paths, size_t blocks) : Device(paths) {
+BlockDevice::BlockDevice(std::vector<std::string_view> paths, size_t blocks)
+    : Device(paths), total_blocks_(blocks) {
   memset(&block_io_media_, 0, sizeof(block_io_media_));
   block_io_media_.BlockSize = kBlockSize;
   block_io_media_.LastBlock = blocks - 1;
@@ -45,6 +46,48 @@ BlockDevice::BlockDevice(std::vector<std::string_view> paths, size_t blocks) : D
   };
   // Only support MediaId = 0. Allocate buffer to serve as block storage.
   fake_disk_io_protocol_.contents(/*MediaId=*/0) = std::vector<uint8_t>(blocks * kBlockSize);
+}
+
+void BlockDevice::InitializeGpt() {
+  ASSERT_GT(total_blocks_, 2 * kGptHeaderBlocks + 1);
+  gpt_header_t primary;
+  primary.magic = GPT_MAGIC;
+  primary.size = GPT_HEADER_SIZE;
+  primary.first = kGptFirstUsableBlocks;
+  primary.last = total_blocks_ - kGptHeaderBlocks - 1;
+  primary.entries = 2;
+  primary.entries_count = kGptEntries;
+  primary.entries_size = GPT_ENTRY_SIZE;
+
+  uint8_t* start = fake_disk_io_protocol_.contents(0).data();
+
+  // Copy over the primary header. Skip mbr partition.
+  memcpy(start + kBlockSize, &primary, sizeof(primary));
+
+  // Initialize partition entries to 0s
+  memset(start + 2 * kBlockSize, 0, kGptEntries * sizeof(gpt_entry_t));
+}
+
+void BlockDevice::FinalizeGpt() {
+  // TODO(b/235489025): Implement backup GPT sync and crc computation once we support full
+  // validation and fall back.
+}
+
+void BlockDevice::AddGptPartition(const gpt_entry_t& new_entry) {
+  ASSERT_GE(new_entry.first, kGptFirstUsableBlocks);
+  ASSERT_LE(new_entry.last, total_blocks_ - kGptHeaderBlocks - 1);
+  // Search for an empty entry
+  uint8_t* start = fake_disk_io_protocol_.contents(0).data() + 2 * kBlockSize;
+  for (size_t i = 0; i < kGptEntries; i++) {
+    uint8_t* entry_ptr = start + i * sizeof(gpt_entry_t);
+    gpt_entry_t current;
+    memcpy(&current, entry_ptr, sizeof(gpt_entry_t));
+    if (current.first == 0 && current.last == 0) {
+      memcpy(entry_ptr, &new_entry, sizeof(gpt_entry_t));
+      return;
+    }
+  }
+  ASSERT_TRUE(false);
 }
 
 efi_status MockStubService::LocateHandleBuffer(efi_locate_search_type search_type,

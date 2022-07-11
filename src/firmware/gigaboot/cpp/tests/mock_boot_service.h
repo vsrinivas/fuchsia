@@ -8,6 +8,7 @@
 #include <lib/efi/testing/fake_disk_io_protocol.h>
 #include <lib/efi/testing/stub_boot_services.h>
 #include <lib/fit/defer.h>
+#include <zircon/hw/gpt.h>
 
 #include <efi/protocol/block-io.h>
 #include <efi/protocol/device-path.h>
@@ -41,6 +42,12 @@ class Device {
 // Use a fixed block size for test.
 constexpr size_t kBlockSize = 512;
 
+constexpr size_t kGptEntries = 128;
+// Total header blocks = 1 block for header + blocks needed for 128 gpt entries.
+constexpr size_t kGptHeaderBlocks = 1 + (kGptEntries * GPT_ENTRY_SIZE) / kBlockSize;
+// First usable block come after mbr and primary GPT header/entries.
+constexpr size_t kGptFirstUsableBlocks = kGptHeaderBlocks + 1;
+
 // A class that mocks a block device backed by storage.
 class BlockDevice : public Device {
  public:
@@ -49,11 +56,15 @@ class BlockDevice : public Device {
   efi_disk_io_protocol* GetDiskIoProtocol() override { return fake_disk_io_protocol_.protocol(); }
   efi::FakeDiskIoProtocol& fake_disk_io_protocol() { return fake_disk_io_protocol_; }
   efi_block_io_media& block_io_media() { return block_io_media_; }
+  void InitializeGpt();
+  void FinalizeGpt();
+  void AddGptPartition(const gpt_entry_t& new_entry);
 
  private:
   efi_block_io_media block_io_media_;
   efi_block_io_protocol block_io_protocol_;
   efi::FakeDiskIoProtocol fake_disk_io_protocol_;
+  size_t total_blocks_;
 };
 
 // Check if the given guid correspond to the protocol of a efi protocol structure.
