@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod diagnosis;
+
 use {
+    crate::diagnosis::{Analysis, Diagnosis},
     anyhow::{Context, Result},
     errors::{ffx_bail, ffx_error},
     ffx_component_doctor_args::DoctorCommand,
@@ -54,50 +57,104 @@ fn new_table(title: &str) -> Table {
 }
 
 // Add the given route report into the appropriate table in the tables map.
-async fn report_to_table(
-    report: &fsys::RouteReport,
-    tables: &mut BTreeMap<fsys::DeclType, Table>,
-) -> Result<()> {
-    let report_type = report.decl_type.ok_or(ffx_error!("empty report"))?;
-
-    let table = tables.entry(report_type).or_insert_with_key(|key| match key {
-        fsys::DeclType::Use => new_table(USE_TITLE),
-        fsys::DeclType::Expose => new_table(EXPOSE_TITLE),
-        fsys::DeclTypeUnknown!() => new_table(UNKNOWN_TITLE),
-    });
-
+async fn report_to_diagnosis(report: fsys::RouteReport) -> Result<Diagnosis> {
+    let report_type = match report.decl_type.ok_or(ffx_error!("empty report"))? {
+        fsys::DeclType::Use => "use".to_string(),
+        fsys::DeclType::Expose => "expose".to_string(),
+        _ => "unknown".to_string(),
+    };
     let capability =
         report.capability.as_ref().ok_or(ffx_error!("could not read report capability"))?;
     let capability = textwrap::fill(&capability, CAPABILITY_COLUMN_WIDTH);
-    let summary = textwrap::fill(DEFAULT_SUMMARY_TEXT, SUMMARY_COLUMN_WIDTH);
-    let check = format!("[{}{}{}]", color::Fg(color::Green), "✓", style::Reset);
-    let mut row = row!(check, capability, summary);
+    let mut summary: Option<String> = None;
+    let mut is_error = false;
     if let Some(error) = &report.error {
-        let summary = error.summary.as_ref().ok_or(ffx_error!("could not read report summary"))?;
-        let summary = textwrap::fill(summary, SUMMARY_COLUMN_WIDTH);
-        let x = format!("[{}{}{}]", color::Fg(color::Red), "✗", style::Reset);
-        row = row!(x, capability, FR->summary);
+        summary = Some(textwrap::fill(
+            error.summary.as_ref().ok_or(ffx_error!("could not read report summary"))?,
+            SUMMARY_COLUMN_WIDTH,
+        ));
+        is_error = true;
     };
-    table.add_row(row);
+    Ok(Diagnosis { report_type, is_error, capability, summary })
+}
+
+// Define the table display of the diagnoses.
+async fn add_diagnosis_to_table(
+    diagnosis: Diagnosis,
+    tables: &mut BTreeMap<fsys::DeclType, Table>,
+) -> Result<()> {
+    let report_type = match diagnosis.report_type.as_ref() {
+        "use" => 1,
+        "expose" => 2,
+        _ => 0,
+    };
+    let table = tables
+        .entry(fsys::DeclType::from_primitive_allow_unknown(report_type))
+        .or_insert_with_key(|key| match key {
+            fsys::DeclType::Use => new_table(USE_TITLE),
+            fsys::DeclType::Expose => new_table(EXPOSE_TITLE),
+            fsys::DeclTypeUnknown!() => new_table(UNKNOWN_TITLE),
+        });
+
+    let summary = diagnosis.summary.unwrap_or(DEFAULT_SUMMARY_TEXT.to_string());
+    if diagnosis.is_error {
+        let mark = format!("[{}{}{}]", color::Fg(color::Red), "✗", style::Reset);
+        table.add_row(row!(mark, diagnosis.capability, FR->summary));
+    } else {
+        let mark = format!("[{}{}{}]", color::Fg(color::Green), "✓", style::Reset);
+        table.add_row(row!(mark, diagnosis.capability, summary));
+    };
     Ok(())
 }
 
-// Given the reports, construct the output tables and print them.
-async fn create_tables(reports: Vec<fsys::RouteReport>) -> Result<BTreeMap<fsys::DeclType, Table>> {
-    // Collect all of the reports into tables, sorted by type.
-    let mut tables = BTreeMap::new();
+// Analyze the reports into diagnoses.
+async fn diagnose(reports: Vec<fsys::RouteReport>) -> Result<Vec<Diagnosis>> {
+    let mut diagnoses = vec![];
     for report in reports {
-        report_to_table(&report, &mut tables).await?;
+        let diagnosis = report_to_diagnosis(report).await?;
+        diagnoses.push(diagnosis);
+    }
+    Ok(diagnoses)
+}
+
+// Given the reports, construct the output tables and print them.
+async fn create_tables(diagnoses: Vec<Diagnosis>) -> Result<BTreeMap<fsys::DeclType, Table>> {
+    let mut tables = BTreeMap::new();
+    for diagnosis in diagnoses {
+        add_diagnosis_to_table(diagnosis, &mut tables).await?;
     }
     Ok(tables)
+}
+
+// Write all of the tables to stdout.
+async fn print_tables(mut writer: Writer, analysis: Analysis) -> Result<()> {
+    // Print the basic information.
+    write!(writer, "URL: {}\n", analysis.url)?;
+    let instance_id = if let Some(i) = analysis.instance_id { i } else { "None".to_string() };
+    write!(writer, "Instance ID: {}\n\n", instance_id)?;
+
+    // Print the tables.
+    let tables =
+        create_tables(analysis.diagnoses).await.context("couldn't create the result tables.")?;
+    for (_, table) in tables.into_iter() {
+        if table.len() > 0 {
+            // TODO(fxbug.dev/104187): The table should be printed with the writer using:
+            //     table.print(&mut writer)?;
+            // However, text that wraps in the second column is printed in the color of the third
+            // column.
+            table.printstd();
+            println!("");
+        }
+    }
+    Ok(())
 }
 
 /// Perform a series of diagnostic checks on a component at runtime.
 #[ffx_plugin("component.experimental")]
 pub async fn doctor(
     rcs: rc::RemoteControlProxy,
-    mut writer: Writer,
     cmd: DoctorCommand,
+    #[ffx(machine = Analysis)] mut writer: Writer,
 ) -> Result<()> {
     // Check the moniker.
     let moniker = AbsoluteMoniker::parse_str(&cmd.moniker)
@@ -128,17 +185,6 @@ pub async fn doctor(
         }
     };
 
-    // TODO(gboone@): Support more flexible output, including:
-    // 1) writing the table without wrapping so it will work with Unix pipes,
-    // 2) dropping the colors so that their escape sequences don't appear in non-tty output such as
-    // pipes,
-    // 3) emitting structured output for machine readability [use `writer.is_machine()`].
-
-    // Print the basic information.
-    writeln!(writer, "URL: {}", info.url)?;
-    let instance_id = if let Some(i) = info.instance_id { i } else { "None".to_string() };
-    writeln!(writer, "Instance ID: {}\n", instance_id)?;
-
     if state.is_none() {
         ffx_bail!(
             "Instance is not resolved.\n\
@@ -147,7 +193,6 @@ pub async fn doctor(
         );
     }
 
-    // Pull reports.
     let reports = match route_validator.validate(&rel_moniker).await? {
         Ok(reports) => reports,
         Err(e) => {
@@ -160,21 +205,17 @@ pub async fn doctor(
         }
     };
 
-    let tables = create_tables(reports).await.context("couldn't create the result tables.")?;
+    let analysis = Analysis {
+        url: info.url,
+        instance_id: info.instance_id,
+        diagnoses: diagnose(reports).await?,
+    };
 
-    // Write all of the tables to stdout.
-    for (_, table) in tables.into_iter() {
-        if table.len() > 0 {
-            // TODO(gboone@): The table should be printed with the writer using:
-            //     table.print(&mut writer)?;
-            // However, text that wraps in the second column is printed in the color of the third
-            // column. Investigate and fix this defect.
-            table.printstd();
-            println!("");
-        }
+    if writer.is_machine() {
+        writer.machine(&analysis).context("writing machine representation of analysis")
+    } else {
+        print_tables(writer, analysis).await
     }
-
-    Ok(())
 }
 
 #[cfg(test)]
@@ -196,103 +237,91 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_report_to_table_for_empty_report() {
-        let mut tables = BTreeMap::new();
+    async fn test_report_to_diagnosis_for_empty_report() {
         let report = fsys::RouteReport::EMPTY;
-        let result = report_to_table(&report, &mut tables).await;
+        let result = report_to_diagnosis(report).await;
         assert_matches!(result.map_err(|e| format!("{:?}", e)), Err(e) if e.contains("empty report"));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_report_to_table_for_missing_decl_type() {
-        let mut tables = BTreeMap::new();
-        let report =
-            fsys::RouteReport { capability: Some("foo".to_string()), ..fsys::RouteReport::EMPTY };
-        let result = report_to_table(&report, &mut tables).await;
-        assert_matches!(result.map_err(|e| format!("{:?}", e)), Err(e) if e.contains("empty report"));
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_report_to_table_for_unknown_report() {
-        let mut tables = BTreeMap::new();
-        let report = fsys::RouteReport {
-            capability: Some("foo".to_string()),
-            decl_type: Some(fsys::DeclType::unknown()),
-            ..fsys::RouteReport::EMPTY
-        };
-        assert_matches!(report_to_table(&report, &mut tables).await, Ok(()));
-        let s = tables[&fsys::DeclType::unknown()].to_string();
-        assert!(s.contains("Unknown Capability"));
-        assert!(s.to_string().contains("Error"));
-        // Checkmark "[✓]" includes color codes.
-        assert!(s.to_string().contains("[\u{1b}[38;5;2m✓\u{1b}[m]"));
-        assert!(s.to_string().contains("foo"));
-        assert!(s.to_string().contains("N/A"));
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_report_to_table_for_valid_report() {
-        // Valid Use report.
-        let mut tables = BTreeMap::new();
+    async fn test_report_to_diagnosis_for_valid_report() {
         let report = fsys::RouteReport {
             capability: Some("foo".to_string()),
             decl_type: Some(fsys::DeclType::Use),
             ..fsys::RouteReport::EMPTY
         };
-        assert_matches!(report_to_table(&report, &mut tables).await, Ok(()));
-        assert_eq!(tables.len(), 1);
-        assert_eq!(tables[&fsys::DeclType::Use].len(), 1);
-        assert_eq!(
-            tables[&fsys::DeclType::Use].get_row(0).unwrap()[0].get_content(),
-            "[\u{1b}[38;5;2m✓\u{1b}[m]"
-        );
-        assert_eq!(tables[&fsys::DeclType::Use].get_row(0).unwrap()[1].get_content(), "foo");
-        assert_eq!(tables[&fsys::DeclType::Use].get_row(0).unwrap()[2].get_content(), "N/A");
+        let diagnosis = report_to_diagnosis(report).await.unwrap();
+        assert_eq!(diagnosis.is_error, false);
+        assert_eq!(diagnosis.report_type, "use".to_string());
+        assert_eq!(diagnosis.capability, "foo".to_string());
+        assert_eq!(diagnosis.summary, None);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_report_to_table_for_valid_expose_report() {
+    async fn test_add_diagnosis_to_table() {
         let mut tables = BTreeMap::new();
-        let report = fsys::RouteReport {
-            capability: Some("foo".to_string()),
-            decl_type: Some(fsys::DeclType::Expose),
-            ..fsys::RouteReport::EMPTY
+        let diagnosis = Diagnosis {
+            is_error: false,
+            report_type: "use".to_string(),
+            capability: "foo".to_string(),
+            summary: Some("bar".to_string()),
         };
-        assert_matches!(report_to_table(&report, &mut tables).await, Ok(()));
-        assert_eq!(tables.len(), 1);
-        assert_eq!(tables[&fsys::DeclType::Expose].len(), 1);
-        assert_eq!(
-            tables[&fsys::DeclType::Expose].get_row(0).unwrap()[0].get_content(),
-            "[\u{1b}[38;5;2m✓\u{1b}[m]"
-        );
-        assert_eq!(tables[&fsys::DeclType::Expose].get_row(0).unwrap()[1].get_content(), "foo");
-        assert_eq!(tables[&fsys::DeclType::Expose].get_row(0).unwrap()[2].get_content(), "N/A");
+        assert_matches!(add_diagnosis_to_table(diagnosis, &mut tables).await, Ok(()));
+
+        let s = tables[&fsys::DeclType::Use].to_string();
+        assert!(s.contains("Used"));
+        assert!(s.contains("Capability"));
+        assert!(s.contains("Error"));
+        // Checkmark "[✓]" includes color codes.
+        assert!(s.contains("[\u{1b}[38;5;2m✓\u{1b}[m]"));
+        assert!(s.contains("foo"));
+        assert!(s.contains("bar"));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_write_tables_no_reports() {
-        // No reports.
-        let reports: Vec<fsys::RouteReport> = vec![];
-        let tables = create_tables(reports).await.unwrap();
+    async fn test_add_diagnosis_to_table_for_error() {
+        let mut tables = BTreeMap::new();
+        let diagnosis = Diagnosis {
+            is_error: true,
+            report_type: "use".to_string(),
+            capability: "foo".to_string(),
+            summary: Some("bar".to_string()),
+        };
+        assert_matches!(add_diagnosis_to_table(diagnosis, &mut tables).await, Ok(()));
+
+        let s = tables[&fsys::DeclType::Use].to_string();
+        // Error mark "[x]" includes color codes.
+        assert!(s.contains("[\u{1b}[38;5;1m✗\u{1b}[m]"));
+        assert!(s.contains("foo"));
+        assert!(s.contains("bar"));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_create_tables_no_diagnoses() {
+        // No diagnoses.
+        let diagnoses: Vec<Diagnosis> = vec![];
+        let tables = create_tables(diagnoses).await.unwrap();
         assert_eq!(tables.len(), 0);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_write_tables_valid_reports() {
-        let reports: Vec<fsys::RouteReport> = vec![
-            fsys::RouteReport {
-                capability: Some("foo".to_string()),
-                decl_type: Some(fsys::DeclType::Use),
-                ..fsys::RouteReport::EMPTY
+    async fn test_create_tables_valid_diagnoses() {
+        let diagnoses: Vec<Diagnosis> = vec![
+            Diagnosis {
+                is_error: false,
+                report_type: "use".to_string(),
+                capability: "foo".to_string(),
+                summary: Some("bar".to_string()),
             },
-            fsys::RouteReport {
-                capability: Some("foo".to_string()),
-                decl_type: Some(fsys::DeclType::Expose),
-                ..fsys::RouteReport::EMPTY
+            Diagnosis {
+                is_error: true,
+                report_type: "expose".to_string(),
+                capability: "foo2".to_string(),
+                summary: Some("bar2".to_string()),
             },
         ];
 
-        let tables = create_tables(reports).await.unwrap();
+        let tables = create_tables(diagnoses).await.unwrap();
         assert_eq!(tables.len(), 2);
         assert_eq!(tables[&fsys::DeclType::Use].len(), 1);
         assert_eq!(
@@ -300,13 +329,13 @@ mod tests {
             "[\u{1b}[38;5;2m✓\u{1b}[m]"
         );
         assert_eq!(tables[&fsys::DeclType::Use].get_row(0).unwrap()[1].get_content(), "foo");
-        assert_eq!(tables[&fsys::DeclType::Use].get_row(0).unwrap()[2].get_content(), "N/A");
+        assert_eq!(tables[&fsys::DeclType::Use].get_row(0).unwrap()[2].get_content(), "bar");
         assert_eq!(tables[&fsys::DeclType::Expose].len(), 1);
         assert_eq!(
             tables[&fsys::DeclType::Expose].get_row(0).unwrap()[0].get_content(),
-            "[\u{1b}[38;5;2m✓\u{1b}[m]"
+            "[\u{1b}[38;5;1m✗\u{1b}[m]"
         );
-        assert_eq!(tables[&fsys::DeclType::Expose].get_row(0).unwrap()[1].get_content(), "foo");
-        assert_eq!(tables[&fsys::DeclType::Expose].get_row(0).unwrap()[2].get_content(), "N/A");
+        assert_eq!(tables[&fsys::DeclType::Expose].get_row(0).unwrap()[1].get_content(), "foo2");
+        assert_eq!(tables[&fsys::DeclType::Expose].get_row(0).unwrap()[2].get_content(), "bar2");
     }
 }
