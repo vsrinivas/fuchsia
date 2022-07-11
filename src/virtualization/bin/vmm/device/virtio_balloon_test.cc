@@ -62,8 +62,6 @@ class VirtioBalloonTest : public TestWithDevice {
 
     status = balloon_->Start(std::move(start_info));
     ASSERT_EQ(ZX_OK, status);
-    status = balloon_->Ready(VIRTIO_BALLOON_F_STATS_VQ);
-    ASSERT_EQ(ZX_OK, status);
 
     // Configure device queues.
     VirtioQueueFake* queues[kNumQueues] = {&inflate_queue_, &deflate_queue_, &stats_queue_};
@@ -73,6 +71,9 @@ class VirtioBalloonTest : public TestWithDevice {
       status = balloon_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
       ASSERT_EQ(ZX_OK, status);
     }
+
+    status = balloon_->Ready(VIRTIO_BALLOON_F_STATS_VQ);
+    ASSERT_EQ(ZX_OK, status);
   }
 
  public:
