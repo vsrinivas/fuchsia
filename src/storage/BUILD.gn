@@ -9,6 +9,7 @@ group("storage") {
 group("tests") {
   testonly = true
   deps = [
+    "benchmarks:tests",
     "bin:tests",
     "blobfs:tests",
     "conformance:tests",
@@ -29,6 +30,7 @@ group("tests") {
     "memfs:tests",
     "minfs:tests",
     "stress-tests",
+    "testing:tests",
     "tools:tests",
     "volume_image:tests",
   ]
