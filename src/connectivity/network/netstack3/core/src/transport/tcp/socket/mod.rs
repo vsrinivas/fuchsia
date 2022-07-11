@@ -572,6 +572,7 @@ mod tests {
     use packet::ParseBuffer as _;
     use packet_formats::tcp::{TcpParseArgs, TcpSegment};
     use specialize_ip_macro::ip_test;
+    use test_case::test_case;
 
     use crate::{
         context::testutil::{
@@ -585,13 +586,13 @@ mod tests {
             socket::{testutil::DummyIpSocketCtx, BufferIpSocketHandler, IpSocketHandler},
             BufferIpTransportContext as _, DummyDeviceId, SendIpPacketMeta,
         },
-        testutil::{set_logger_for_test, FakeCryptoRng},
+        testutil::{set_logger_for_test, FakeCryptoRng, TestIpExt},
         transport::tcp::{buffer::RingBuffer, UserError},
     };
 
     use super::*;
 
-    trait TcpTestIpExt: IpExt + crate::testutil::TestIpExt + IpDeviceStateIpExt<DummyInstant> {
+    trait TcpTestIpExt: IpExt + TestIpExt + IpDeviceStateIpExt<DummyInstant> {
         fn recv_src_addr(addr: Self::Addr) -> Self::RecvSrcAddr;
 
         fn new_device_state(addr: Self::Addr, prefix: u8) -> IpDeviceState<DummyInstant, Self>;
@@ -894,11 +895,10 @@ mod tests {
         }
     }
 
-    // TODO(https://fxbug.dev/102105): The following tests are similar in that
-    // they should be able to be unified with the `test_case` macro. Rewrite the
-    // tests when `test_case` works well with `ip_test`.
     #[ip_test]
-    fn bind_conflict_same_addr<I: Ip + TcpTestIpExt>()
+    #[test_case(*<I as TestIpExt>::DUMMY_CONFIG.local_ip; "same addr")]
+    #[test_case(I::UNSPECIFIED_ADDRESS; "any addr")]
+    fn bind_conflict<I: Ip + TcpTestIpExt>(conflict_addr: I::Addr)
     where
         TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
             + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
@@ -916,37 +916,10 @@ mod tests {
             bind(&mut sync_ctx, &mut non_sync_ctx, s1, *I::DUMMY_CONFIG.local_ip, Some(PORT_1))
                 .expect("first bind should succeed");
         assert_matches!(
-            bind(&mut sync_ctx, &mut non_sync_ctx, s2, *I::DUMMY_CONFIG.local_ip, Some(PORT_1)),
+            bind(&mut sync_ctx, &mut non_sync_ctx, s2, conflict_addr, Some(PORT_1)),
             Err(BindError::Conflict(_))
         );
-        let _b2 =
-            bind(&mut sync_ctx, &mut non_sync_ctx, s2, *I::DUMMY_CONFIG.local_ip, Some(PORT_2))
-                .expect("able to rebind to a free address");
-    }
-
-    #[ip_test]
-    fn bind_conflict_any_addr<I: Ip + TcpTestIpExt>()
-    where
-        TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
-            + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
-    {
-        set_logger_for_test();
-        let TcpCtx { mut sync_ctx, mut non_sync_ctx } = TcpCtx::with_state(TcpState::new(
-            I::DUMMY_CONFIG.local_ip,
-            I::DUMMY_CONFIG.local_ip,
-            I::DUMMY_CONFIG.subnet.prefix(),
-        ));
-        let s1 = create_socket(&mut sync_ctx, &mut non_sync_ctx);
-        let s2 = create_socket(&mut sync_ctx, &mut non_sync_ctx);
-
-        let _b1 =
-            bind(&mut sync_ctx, &mut non_sync_ctx, s1, *I::DUMMY_CONFIG.local_ip, Some(PORT_1))
-                .expect("first bind should succeed");
-        assert_matches!(
-            bind(&mut sync_ctx, &mut non_sync_ctx, s2, I::UNSPECIFIED_ADDRESS, Some(PORT_1)),
-            Err(BindError::Conflict(_))
-        );
-        let _b2 = bind(&mut sync_ctx, &mut non_sync_ctx, s2, I::UNSPECIFIED_ADDRESS, Some(PORT_2))
+        let _b2 = bind(&mut sync_ctx, &mut non_sync_ctx, s2, conflict_addr, Some(PORT_2))
             .expect("able to rebind to a free address");
     }
 

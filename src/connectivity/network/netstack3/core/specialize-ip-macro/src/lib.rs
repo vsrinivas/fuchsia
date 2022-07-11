@@ -16,6 +16,7 @@ use proc_macro::TokenStream;
 use proc_macro2::{Span, TokenStream as TokenStream2};
 use quote::ToTokens;
 use syn::{
+    parse::{ParseStream, Parser},
     punctuated::Punctuated,
     spanned::Spanned,
     visit_mut::{self, VisitMut},
@@ -234,9 +235,10 @@ fn ip_test_inner(
             .iter()
             .cloned()
             .map(|mut attr| {
-                if let Ok(mut punctuated) =
-                    attr.parse_args_with(Punctuated::<Expr, syn::token::Comma>::parse_terminated)
-                {
+                let parser = parse_with_ignoring_trailing(
+                    Punctuated::<Expr, Token![,]>::parse_separated_nonempty,
+                );
+                if let Ok(mut punctuated) = attr.parse_args_with(parser) {
                     let mut visit = TraitToConcreteVisit {
                         concrete: ip_type_ident.clone().into(),
                         trait_path: trait_path.clone(),
@@ -252,7 +254,11 @@ fn ip_test_inner(
             })
             .collect();
 
-        let mut input_visitor = RenameVisit::new(type_ident.clone(), ip_type_ident.clone());
+        let mut input_visitor = TraitToConcreteVisit {
+            concrete: ip_type_ident.clone().into(),
+            trait_path: trait_path.clone(),
+            type_ident: type_ident.clone(),
+        };
         let inputs = sig
             .inputs
             .iter()
@@ -849,18 +855,38 @@ struct TraitToConcreteVisit {
     trait_path: Path,
 }
 
+impl TraitToConcreteVisit {
+    fn update_type_path(&self, qself: &mut Option<syn::QSelf>, path: &mut Path) {
+        let Self { type_ident, concrete, trait_path } = self;
+        if qself == &None {
+            let mut segments = path.segments.iter();
+            if segments.next().map_or(false, |p| &p.ident == type_ident) {
+                let remaining_path = segments.cloned().collect::<Vec<_>>();
+                let TypePath { path: new_path, qself: new_qself } = if remaining_path.is_empty() {
+                    parse_quote!(#concrete)
+                } else {
+                    parse_quote!(<#concrete as #trait_path>::#(#remaining_path)::*)
+                };
+                *path = new_path;
+                *qself = new_qself;
+            }
+        }
+    }
+}
+
 impl VisitMut for TraitToConcreteVisit {
     fn visit_expr_path_mut(&mut self, i: &mut ExprPath) {
-        let Self { type_ident, concrete, trait_path } = self;
-        let mut path = i.path.segments.clone().into_iter();
-        let path_first = path.next();
-        if i.qself == None && path_first == Some(parse_quote!(#type_ident)) {
-            let TypePath { path, qself } = parse_quote!(<#concrete as #trait_path>::#(#path)::*);
-            i.path = path;
-            i.qself = qself;
-        }
+        let ExprPath { attrs: _, qself, path } = i;
+        self.update_type_path(qself, path);
 
         visit_mut::visit_expr_path_mut(self, i);
+    }
+
+    fn visit_type_path_mut(&mut self, i: &mut TypePath) {
+        let TypePath { qself, path } = i;
+        self.update_type_path(qself, path);
+
+        visit_mut::visit_type_path_mut(self, i)
     }
 }
 
@@ -957,4 +983,36 @@ fn with_stmt_attrs<O, F: FnOnce(&mut Vec<Attribute>) -> O>(stmt: &mut Stmt, f: F
         #[deny(non_exhaustive_omitted_patterns)]
         _ => unreachable!(),
     })
+}
+
+/// Constructs a parser that parses with the provided function, consuming the
+/// rest of the input on success.
+///
+/// This is useful for "successfully" parsing a stream of tokens with a known
+/// prefix. Consuming the rest of the input makes this useful for adapting `P`
+/// for [`syn::parse`], which returns an error if any tokens are left
+/// unconsumed.
+fn parse_with_ignoring_trailing<P>(
+    parser: for<'a> fn(ParseStream<'a>) -> syn::Result<P>,
+) -> impl Parser<Output = P> {
+    fn consume_input<'a>(input: ParseStream<'a>) {
+        while !input.is_empty() {
+            input
+                .step(|cursor| {
+                    let mut rest = *cursor;
+                    while let Some((_, next)) = rest.token_tree() {
+                        rest = next
+                    }
+                    Ok(((), rest))
+                })
+                .expect("step fn can't fail");
+        }
+    }
+
+    move |input: ParseStream<'_>| {
+        parser(input).map(|p| {
+            consume_input(input);
+            p
+        })
+    }
 }

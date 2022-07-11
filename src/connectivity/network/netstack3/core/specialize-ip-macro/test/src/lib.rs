@@ -16,6 +16,7 @@ pub(crate) mod net_types {
         /// `specialize_ip` attribute specializes function for the various types
         /// that implement this trait.
         pub(crate) trait Ip {
+            type Addr: IpAddress;
             const VERSION: usize;
         }
 
@@ -24,12 +25,14 @@ pub(crate) mod net_types {
         /// various types that implement this trait.
         pub(crate) trait IpAddress {
             const VERSION: usize;
+            fn new() -> Self;
         }
 
         /// Test type with the identifier `Ipv4` that the `specialize_ip`
         /// attribute can specialize a function for.
         pub(crate) struct Ipv4;
         impl Ip for Ipv4 {
+            type Addr = Ipv4Addr;
             const VERSION: usize = 4;
         }
 
@@ -37,6 +40,7 @@ pub(crate) mod net_types {
         /// attribute can specialize a function for.
         pub(crate) struct Ipv6;
         impl Ip for Ipv6 {
+            type Addr = Ipv6Addr;
             const VERSION: usize = 6;
         }
 
@@ -45,6 +49,9 @@ pub(crate) mod net_types {
         pub(crate) struct Ipv4Addr;
         impl IpAddress for Ipv4Addr {
             const VERSION: usize = 4;
+            fn new() -> Self {
+                Self
+            }
         }
 
         /// Test type with the identifier `Ipv6Addr` that the
@@ -52,6 +59,9 @@ pub(crate) mod net_types {
         pub(crate) struct Ipv6Addr;
         impl IpAddress for Ipv6Addr {
             const VERSION: usize = 6;
+            fn new() -> Self {
+                Self
+            }
         }
     }
 }
@@ -725,6 +735,22 @@ mod tests {
         #[test_case(I::VERSION, "usize")]
         fn test_with_test_case<I: Ip, A: core::fmt::Debug>(_arg: A, name: &str) {
             assert!(std::any::type_name::<A>().contains(name))
+        }
+
+        fn templated_fn<I>() -> &'static str {
+            std::any::type_name::<I>()
+        }
+        #[ip_test]
+        #[test_case(std::any::type_name::<I>(), "Ipv")]
+        #[test_case(Some(templated_fn::<I>()), "Ipv"; "with_name")]
+        fn test_with_i_as_template_param<I: Ip>(full_name: impl core::fmt::Debug, name: &str) {
+            assert!(format!("{:?}", full_name).contains(name))
+        }
+
+        #[ip_test]
+        #[test_case(Some(Some(I::Addr::new())))]
+        fn test_with_i_in_arg_type<I: Ip>(addr: Option<Option<I::Addr>>) {
+            let _: I::Addr = addr.unwrap().unwrap();
         }
     }
 }

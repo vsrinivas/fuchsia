@@ -965,6 +965,7 @@ mod tests {
     };
     use rand::Rng;
     use specialize_ip_macro::ip_test;
+    use test_case::test_case;
 
     use super::*;
     use crate::{
@@ -1151,6 +1152,9 @@ mod tests {
         assert_eq!(2, state.add_pending_frame(ip, Buf::new(vec![255], ..)).unwrap().as_ref()[0]);
     }
 
+    #[ip_test]
+    #[test_case(true; "enabled")]
+    #[test_case(false; "disabled")]
     fn test_receive_ip_frame<I: Ip + TestIpExt>(enable: bool) {
         // Should only receive a frame if the device is enabled.
 
@@ -1190,18 +1194,9 @@ mod tests {
         assert_eq!(get_counter_val(&non_sync_ctx, counter), expected_received);
     }
 
-    // TODO(https://fxbug.dev/102105): Unify these when #[ip_test] works with
-    // #[test_case].
     #[ip_test]
-    fn receive_frame_disabled<I: Ip + TestIpExt>() {
-        test_receive_ip_frame::<I>(false);
-    }
-
-    #[ip_test]
-    fn receive_frame_enabled<I: Ip + TestIpExt>() {
-        test_receive_ip_frame::<I>(true);
-    }
-
+    #[test_case(true; "enabled")]
+    #[test_case(false; "disabled")]
     fn test_send_ip_frame<I: Ip + TestIpExt>(enable: bool) {
         // Should only send a frame if the device is enabled.
 
@@ -1265,18 +1260,6 @@ mod tests {
         }
 
         assert_eq!(get_counter_val(&non_sync_ctx, "ethernet::send_ip_frame"), expected_sent);
-    }
-
-    // TODO(https://fxbug.dev/102105): Unify these when #[ip_test] works with
-    // #[test_case].
-    #[ip_test]
-    fn test_send_frame_disabled<I: Ip + TestIpExt>() {
-        test_send_ip_frame::<I>(false);
-    }
-
-    #[ip_test]
-    fn test_send_frame_enabled<I: Ip + TestIpExt>() {
-        test_send_ip_frame::<I>(true);
     }
 
     #[test]

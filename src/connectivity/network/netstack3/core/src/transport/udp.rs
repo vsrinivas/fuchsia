@@ -4227,7 +4227,17 @@ mod tests {
         .into()
     }
 
-    fn test_join_leave_multicast_succeeds_inner<I: Ip + TestIpExt>(
+    #[ip_test]
+    #[test_case(None, Some(MultipleDevicesId::A), leave_unbound::<I>; "device_no_addr_unbound")]
+    #[test_case(Some(local_ip::<I>()), None, leave_unbound::<I>; "addr_no_device_unbound")]
+    #[test_case(Some(local_ip::<I>()), Some(MultipleDevicesId::A), leave_unbound::<I>; "device_and_addr_unbound")]
+    #[test_case(None, Some(MultipleDevicesId::A), bind_as_listener::<I>; "device_no_addr_listener")]
+    #[test_case(Some(local_ip::<I>()), None, bind_as_listener::<I>; "addr_no_device_listener")]
+    #[test_case(Some(local_ip::<I>()), Some(MultipleDevicesId::A), bind_as_listener::<I>; "device_and_addr_listener")]
+    #[test_case(None, Some(MultipleDevicesId::A), bind_as_connected::<I>; "device_no_addr_connected")]
+    #[test_case(Some(local_ip::<I>()), None, bind_as_connected::<I>; "addr_no_device_connected")]
+    #[test_case(Some(local_ip::<I>()), Some(MultipleDevicesId::A), bind_as_connected::<I>; "device_and_addr_connected")]
+    fn test_join_leave_multicast_succeeds<I: Ip + TestIpExt>(
         interface_addr: Option<SpecifiedAddr<I::Addr>>,
         interface_id: Option<MultipleDevicesId>,
         make_socket: impl FnOnce(
@@ -4249,50 +4259,14 @@ mod tests {
         );
     }
 
-    // TODO(https://fxbug.dev/102105): Combine test cases when #[ip_test] works with #[test_case].
-    #[test_case(None, Some(MultipleDevicesId::A), leave_unbound; "device_no_addr_unbound")]
-    #[test_case(Some(local_ip::<Ipv4>()), None, leave_unbound; "addr_no_device_unbound")]
-    #[test_case(Some(local_ip::<Ipv4>()), Some(MultipleDevicesId::A), leave_unbound; "device_and_addr_unbound")]
-    #[test_case(None, Some(MultipleDevicesId::A), bind_as_listener; "device_no_addr_listener")]
-    #[test_case(Some(local_ip::<Ipv4>()), None, bind_as_listener; "addr_no_device_listener")]
-    #[test_case(Some(local_ip::<Ipv4>()), Some(MultipleDevicesId::A), bind_as_listener; "device_and_addr_listener")]
-    #[test_case(None, Some(MultipleDevicesId::A), bind_as_connected; "device_no_addr_connected")]
-    #[test_case(Some(local_ip::<Ipv4>()), None, bind_as_connected; "addr_no_device_connected")]
-    #[test_case(Some(local_ip::<Ipv4>()), Some(MultipleDevicesId::A), bind_as_connected; "device_and_addr_connected")]
-    fn test_join_leave_multicast_succeeds_v4(
-        interface_addr: Option<SpecifiedAddr<Ipv4Addr>>,
-        interface_id: Option<MultipleDevicesId>,
-        make_socket: impl FnOnce(
-            &mut MultiDeviceDummySyncCtx<Ipv4>,
-            &mut DummyNonSyncCtx<Ipv4>,
-            UdpUnboundId<Ipv4>,
-        ) -> UdpSocketId<Ipv4>,
-    ) {
-        test_join_leave_multicast_succeeds_inner(interface_addr, interface_id, make_socket);
-    }
-
-    #[test_case(None, Some(MultipleDevicesId::A), leave_unbound; "device_no_addr_unbound")]
-    #[test_case(Some(local_ip::<Ipv6>()), None, leave_unbound; "addr_no_device_unbound")]
-    #[test_case(Some(local_ip::<Ipv6>()), Some(MultipleDevicesId::A), leave_unbound; "device_and_addr_unbound")]
-    #[test_case(None, Some(MultipleDevicesId::A), bind_as_listener; "device_no_addr_listener")]
-    #[test_case(Some(local_ip::<Ipv6>()), None, bind_as_listener; "addr_no_device_listener")]
-    #[test_case(Some(local_ip::<Ipv6>()), Some(MultipleDevicesId::A), bind_as_listener; "device_and_addr_listener")]
-    #[test_case(None, Some(MultipleDevicesId::A), bind_as_connected; "device_no_addr_connected")]
-    #[test_case(Some(local_ip::<Ipv6>()), None, bind_as_connected; "addr_no_device_connected")]
-    #[test_case(Some(local_ip::<Ipv6>()), Some(MultipleDevicesId::A), bind_as_connected; "device_and_addr_connected")]
-    fn test_join_leave_multicast_v6(
-        interface_addr: Option<SpecifiedAddr<Ipv6Addr>>,
-        interface_id: Option<MultipleDevicesId>,
-        make_socket: impl FnOnce(
-            &mut MultiDeviceDummySyncCtx<Ipv6>,
-            &mut DummyNonSyncCtx<Ipv6>,
-            UdpUnboundId<Ipv6>,
-        ) -> UdpSocketId<Ipv6>,
-    ) {
-        test_join_leave_multicast_succeeds_inner(interface_addr, interface_id, make_socket);
-    }
-
-    fn test_join_leave_multicast_interface_id_and_ip_mismatch_inner<I: Ip + TestIpExt>(
+    #[ip_test]
+    #[test_case(local_ip::<I>(), MultipleDevicesId::B, leave_unbound;
+        "wrong_addr_unbound")]
+    #[test_case(local_ip::<I>(), MultipleDevicesId::B, bind_as_listener;
+        "wrong_addr_listener")]
+    #[test_case(local_ip::<I>(), MultipleDevicesId::B, bind_as_connected;
+        "wrong_addr_connected")]
+    fn test_join_leave_multicast_interface_id_and_ip_mismatch<I: Ip + TestIpExt>(
         interface_addr: SpecifiedAddr<I::Addr>,
         interface_id: MultipleDevicesId,
         make_socket: impl FnOnce(
@@ -4314,51 +4288,16 @@ mod tests {
         assert_eq!(multicast_memberships, HashMap::default());
     }
 
-    #[test_case(local_ip::<Ipv4>(), MultipleDevicesId::B, leave_unbound;
-        "wrong_addr_unbound")]
-    #[test_case(local_ip::<Ipv4>(), MultipleDevicesId::B, bind_as_listener;
-        "wrong_addr_listener")]
-    #[test_case(local_ip::<Ipv4>(), MultipleDevicesId::B, bind_as_connected;
-        "wrong_addr_connected")]
-    fn test_join_leave_multicast_interface_id_and_ip_mismatch_v4(
-        interface_addr: SpecifiedAddr<Ipv4Addr>,
-        interface_id: MultipleDevicesId,
-        make_socket: impl FnOnce(
-            &mut MultiDeviceDummySyncCtx<Ipv4>,
-            &mut DummyNonSyncCtx<Ipv4>,
-            UdpUnboundId<Ipv4>,
-        ) -> UdpSocketId<Ipv4>,
-    ) {
-        test_join_leave_multicast_interface_id_and_ip_mismatch_inner(
-            interface_addr,
-            interface_id,
-            make_socket,
-        )
-    }
-
-    #[test_case(local_ip::<Ipv6>(), MultipleDevicesId::B, leave_unbound;
-        "wrong_addr_unbound")]
-    #[test_case(local_ip::<Ipv6>(), MultipleDevicesId::B, bind_as_listener;
-        "wrong_addr_listener")]
-    #[test_case(local_ip::<Ipv6>(), MultipleDevicesId::B, bind_as_connected;
-        "wrong_addr_connected")]
-    fn test_join_leave_multicast_interface_id_and_ip_mismatch_v6(
-        interface_addr: SpecifiedAddr<Ipv6Addr>,
-        interface_id: MultipleDevicesId,
-        make_socket: impl FnOnce(
-            &mut MultiDeviceDummySyncCtx<Ipv6>,
-            &mut DummyNonSyncCtx<Ipv6>,
-            UdpUnboundId<Ipv6>,
-        ) -> UdpSocketId<Ipv6>,
-    ) {
-        test_join_leave_multicast_interface_id_and_ip_mismatch_inner(
-            interface_addr,
-            interface_id,
-            make_socket,
-        )
-    }
-
-    fn test_join_leave_multicast_interface_inferred_from_bound_device_inner<I: Ip + TestIpExt>(
+    #[ip_test]
+    #[test_case(MultipleDevicesId::A, Some(local_ip::<I>()), leave_unbound, Ok(());
+        "with_ip_unbound")]
+    #[test_case(MultipleDevicesId::A, None, leave_unbound, Ok(());
+        "without_ip_unbound")]
+    #[test_case(MultipleDevicesId::A, Some(local_ip::<I>()), bind_as_listener, Ok(());
+        "with_ip_listener")]
+    #[test_case(MultipleDevicesId::A, Some(local_ip::<I>()), bind_as_connected, Ok(());
+        "with_ip_connected")]
+    fn test_join_leave_multicast_interface_inferred_from_bound_device<I: Ip + TestIpExt>(
         bound_device: MultipleDevicesId,
         interface_addr: Option<SpecifiedAddr<I::Addr>>,
         make_socket: impl FnOnce(
@@ -4387,58 +4326,6 @@ mod tests {
                 (bound_device, mcast_addr),
                 nonzero!(1usize)
             )]))
-        );
-    }
-
-    #[test_case(MultipleDevicesId::A, Some(local_ip::<Ipv4>()), leave_unbound, Ok(());
-        "with_ip_unbound")]
-    #[test_case(MultipleDevicesId::A, None, leave_unbound, Ok(());
-        "without_ip_unbound")]
-    #[test_case(MultipleDevicesId::A, Some(local_ip::<Ipv4>()), bind_as_listener, Ok(());
-        "with_ip_listener")]
-    #[test_case(MultipleDevicesId::A, Some(local_ip::<Ipv4>()), bind_as_connected, Ok(());
-        "with_ip_connected")]
-    fn test_join_leave_multicast_interface_inferred_from_bound_device_v4(
-        bound_device: MultipleDevicesId,
-        interface_addr: Option<SpecifiedAddr<Ipv4Addr>>,
-        make_socket: impl FnOnce(
-            &mut MultiDeviceDummySyncCtx<Ipv4>,
-            &mut DummyNonSyncCtx<Ipv4>,
-            UdpUnboundId<Ipv4>,
-        ) -> UdpSocketId<Ipv4>,
-        expected_result: Result<(), UdpSetMulticastMembershipError>,
-    ) {
-        test_join_leave_multicast_interface_inferred_from_bound_device_inner(
-            bound_device,
-            interface_addr,
-            make_socket,
-            expected_result,
-        );
-    }
-
-    #[test_case(MultipleDevicesId::A, Some(local_ip::<Ipv6>()), leave_unbound, Ok(());
-        "with_ip_unbound")]
-    #[test_case(MultipleDevicesId::A, None, leave_unbound, Ok(());
-        "without_ip_unbound")]
-    #[test_case(MultipleDevicesId::A, Some(local_ip::<Ipv6>()), bind_as_listener, Ok(());
-        "with_ip_listener")]
-    #[test_case(MultipleDevicesId::A, Some(local_ip::<Ipv6>()), bind_as_connected, Ok(());
-        "with_ip_connected")]
-    fn test_join_leave_multicast_interface_inferred_from_bound_device_v6(
-        bound_device: MultipleDevicesId,
-        interface_addr: Option<SpecifiedAddr<Ipv6Addr>>,
-        make_socket: impl FnOnce(
-            &mut MultiDeviceDummySyncCtx<Ipv6>,
-            &mut DummyNonSyncCtx<Ipv6>,
-            UdpUnboundId<Ipv6>,
-        ) -> UdpSocketId<Ipv6>,
-        expected_result: Result<(), UdpSetMulticastMembershipError>,
-    ) {
-        test_join_leave_multicast_interface_inferred_from_bound_device_inner(
-            bound_device,
-            interface_addr,
-            make_socket,
-            expected_result,
         );
     }
 
