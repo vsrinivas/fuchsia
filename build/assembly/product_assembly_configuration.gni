@@ -91,20 +91,78 @@ template("product_assembly_configuration") {
     # closely coupled with how fuchsia_package() and prebuilt_package() both
     # create a package manifest from their label.
 
+    base_packages = []
     base_package_manifests = []
-    foreach(package_target, labels.base_package_labels) {
-      _package_out_dir = get_label_info(package_target, "target_out_dir")
-      _package_name = get_label_info(package_target, "name")
-      base_package_manifests +=
-          [ "${_package_out_dir}/${_package_name}/package_manifest.json" ]
+    if (defined(invoker.base_packages)) {
+      foreach(package, invoker.base_packages) {
+        assert(defined(package.package_target),
+               "package_target must be supplied")
+        _package_out_dir =
+            get_label_info(package.package_target, "target_out_dir")
+        _package_name = get_label_info(package.package_target, "name")
+        _manifest_path =
+            "${_package_out_dir}/${_package_name}/package_manifest.json"
+        _manifest_path_rebased = rebase_path(_manifest_path, root_build_dir)
+
+        _config_data = []
+        if (defined(package.config_data)) {
+          foreach(c, package.config_data) {
+            _config_data += [
+              {
+                source = rebase_path(c.source, root_build_dir)
+                destination = c.destination
+              },
+            ]
+          }
+        }
+
+        base_package_manifests += [ _manifest_path ]
+        base_packages += [
+          {
+            manifest = _manifest_path_rebased
+            if (defined(package.config_data)) {
+              config_data = _config_data
+            }
+          },
+        ]
+      }
     }
 
+    cache_packages = []
     cache_package_manifests = []
-    foreach(package_target, labels.cache_package_labels) {
-      _package_out_dir = get_label_info(package_target, "target_out_dir")
-      _package_name = get_label_info(package_target, "name")
-      cache_package_manifests +=
-          [ "${_package_out_dir}/${_package_name}/package_manifest.json" ]
+    if (defined(invoker.cache_packages)) {
+      foreach(package, invoker.cache_packages) {
+        assert(defined(package.package_target),
+               "package_target must be supplied")
+        _package_out_dir =
+            get_label_info(package.package_target, "target_out_dir")
+        _package_name = get_label_info(package.package_target, "name")
+        _manifest_path =
+            "${_package_out_dir}/${_package_name}/package_manifest.json"
+        _manifest_path_rebased = rebase_path(_manifest_path, root_build_dir)
+
+        _config_data = []
+        if (defined(package.config_data)) {
+          foreach(c, package.config_data) {
+            _config_data += [
+              {
+                source = rebase_path(c.source, root_build_dir)
+                destination = c.destination
+              },
+            ]
+          }
+        }
+
+        cache_package_manifests += [ _manifest_path ]
+        cache_packages += [
+          {
+            manifest = _manifest_path_rebased
+            if (defined(package.config_data)) {
+              config_data = _config_data
+            }
+          },
+        ]
+      }
     }
   }
 
@@ -122,33 +180,12 @@ template("product_assembly_configuration") {
       if (defined(invoker.product)) {
         forward_variables_from(invoker.product, "*")
       }
+      assert(!defined(packages),
+             "Packages cannot be directly supplied under product")
 
-      # Create the packages.base and package.cache sets if they weren't passed
-      # in from the invoker.
-      if (!defined(packages)) {
-        packages = {
-        }
-      }
-      if (!defined(packages.base)) {
-        packages.base = []
-      }
-      if (!defined(packages.cache)) {
-        packages.cache = []
-      }
-
-      foreach(manifest_path, files.base_package_manifests) {
-        packages.base += [
-          {
-            manifest = rebase_path(manifest_path, root_build_dir)
-          },
-        ]
-      }
-      foreach(manifest_path, files.cache_package_manifests) {
-        packages.cache += [
-          {
-            manifest = rebase_path(manifest_path, root_build_dir)
-          },
-        ]
+      packages = {
+        base = files.base_packages
+        cache = files.cache_packages
       }
     }
   }
