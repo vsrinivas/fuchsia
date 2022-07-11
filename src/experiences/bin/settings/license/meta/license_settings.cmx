@@ -1,7 +1,4 @@
 {
-    "include": [
-        "//src/lib/vulkan/application-container.shard.cmx"
-    ],
     "program": {
         "data": "data/license_settings"
     },
@@ -20,11 +17,14 @@
             "fuchsia.process.Launcher",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.input.ImeVisibilityService",
             "fuchsia.ui.input3.Keyboard",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic",
+            "fuchsia.vulkan.loader.Loader",
             "fuchsia.web.ContextProvider"
         ]
     }
