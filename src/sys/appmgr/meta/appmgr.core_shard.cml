@@ -36,6 +36,7 @@
                 "fuchsia.sys.internal.CrashIntrospect",
                 "fuchsia.sys.Launcher",
                 "fuchsia.sys.Loader",
+                "fuchsia.testing.sl4f.FacadeProvider",
                 "fuchsia.ui.annotation.Registry",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
