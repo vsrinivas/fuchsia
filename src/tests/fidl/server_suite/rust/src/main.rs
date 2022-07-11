@@ -6,7 +6,8 @@ use {
     anyhow::{Context as _, Error},
     fidl::endpoints::{create_endpoints, ServerEnd},
     fidl_fidl_serversuite::{
-        ReporterProxy, RunnerRequest, RunnerRequestStream, TargetMarker, TargetRequest, Test,
+        ReporterProxy, RunnerRequest, RunnerRequestStream, TargetMarker, TargetRequest,
+        TargetTwoWayResultRequest, Test,
     },
     fuchsia_component::server::ServiceFs,
     futures::prelude::*,
@@ -30,6 +31,14 @@ async fn run_target_server(
                 TargetRequest::TwoWayNoPayload { responder } => {
                     println!("TwoWayNoPayload");
                     responder.send().expect("failed to send two way payload response");
+                }
+                TargetRequest::TwoWayResult { payload, responder } => {
+                    println!("TwoWayResult");
+                    match payload {
+                        TargetTwoWayResultRequest::Payload(value) => responder.send(&mut Ok(value)),
+                        TargetTwoWayResultRequest::Error(value) => responder.send(&mut Err(value)),
+                    }
+                    .expect("failed to send two way payload response");
                 }
             }
             Ok(())

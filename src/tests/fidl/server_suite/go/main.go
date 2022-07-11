@@ -35,6 +35,20 @@ func (t *targetImpl) TwoWayNoPayload(_ fidl.Context) error {
 	return nil
 }
 
+func (t *targetImpl) TwoWayResult(_ fidl.Context, request serversuite.TargetTwoWayResultRequest) (serversuite.TargetTwoWayResultResult, error) {
+	log.Println("serversuite.Target TwoWayResult() called")
+	var result serversuite.TargetTwoWayResultResult
+	switch request.Which() {
+	case serversuite.TargetTwoWayResultRequestPayload:
+		result.SetResponse(serversuite.TargetTwoWayResultResponse{
+			Payload: request.Payload,
+		})
+	case serversuite.TargetTwoWayResultRequestError:
+		result.SetErr(request.Error)
+	}
+	return result, nil
+}
+
 type runnerImpl struct{}
 
 var _ serversuite.RunnerWithCtx = (*runnerImpl)(nil)

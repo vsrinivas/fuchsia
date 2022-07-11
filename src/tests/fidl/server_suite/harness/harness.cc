@@ -6,6 +6,8 @@
 
 #include <lib/service/llcpp/service.h>
 
+namespace server_suite {
+
 void Reporter::ReceivedOneWayNoPayload(ReceivedOneWayNoPayloadRequest& request,
                                        ReceivedOneWayNoPayloadCompleter::Sync& completer) {
   received_one_way_no_payload_ = true;
@@ -41,8 +43,8 @@ void ServerTest::SetUp() {
   auto startResult =
       runner_->Start(fidl_serversuite::RunnerStartRequest(std::move(reporter_endpoints->client)));
   ASSERT_TRUE(startResult.is_ok()) << startResult.error_value();
-  target_ = startResult->target().TakeHandle();
-  ASSERT_OK(target_.get_info(ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
+  target_ = Channel(startResult->target().TakeHandle());
+  ASSERT_OK(target_.get().get_info(ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr));
 }
 
 void ServerTest::TearDown() {
@@ -53,3 +55,5 @@ void ServerTest::TearDown() {
   auto result = runner_->CheckAlive();
   ASSERT_TRUE(result.is_ok()) << result.error_value();
 }
+
+}  // namespace server_suite

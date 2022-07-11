@@ -10,6 +10,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include "src/tests/fidl/server_suite/harness/channel.h"
 
 #define WAIT_UNTIL(condition) ASSERT_TRUE(_wait_until(condition));
 #define ASSERT_OK(value) ASSERT_EQ(ZX_OK, value)
@@ -22,6 +23,8 @@
     ServerTestWrapper##test_name() : ServerTest(fidl_serversuite::Test::k##test_name) {} \
   };                                                                                     \
   TEST_F(ServerTestWrapper##test_name, test_name)
+
+namespace server_suite {
 
 class Reporter : public fidl::Server<fidl_serversuite::Reporter> {
  public:
@@ -42,7 +45,7 @@ class ServerTest : private ::loop_fixture::RealLoop, public ::testing::Test {
   void TearDown() override;
 
   const Reporter& reporter() { return reporter_; }
-  zx::channel& client_end() { return target_; }
+  Channel& client_end() { return target_; }
 
   bool _wait_until(fit::function<bool()> condition) {
     constexpr zx::duration kTimeoutDuration = zx::sec(5);
@@ -54,9 +57,11 @@ class ServerTest : private ::loop_fixture::RealLoop, public ::testing::Test {
 
   fidl::SyncClient<fidl_serversuite::Runner> runner_;
 
-  zx::channel target_;
+  Channel target_;
 
   Reporter reporter_;
 };
+
+}  // namespace server_suite
 
 #endif  // SRC_TESTS_FIDL_SERVER_SUITE_HARNESS_HARNESS_H_

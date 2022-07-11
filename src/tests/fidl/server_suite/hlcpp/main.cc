@@ -28,6 +28,24 @@ class TargetServer : public fidl::serversuite::Target {
     callback();
   }
 
+  void TwoWayResult(::fidl::serversuite::TargetTwoWayResultRequest request,
+                    TwoWayResultCallback callback) override {
+    std::cout << "Target.TwoWayResult()" << std::endl;
+    switch (request.Which()) {
+      case fidl::serversuite::TargetTwoWayResultRequest::kPayload:
+        callback(fidl::serversuite::Target_TwoWayResult_Result::WithResponse(
+            fidl::serversuite::Target_TwoWayResult_Response(request.payload())));
+        break;
+      case fidl::serversuite::TargetTwoWayResultRequest::kError:
+        callback(
+            fidl::serversuite::Target_TwoWayResult_Result::WithErr(std::move(request.error())));
+        break;
+      case fidl::serversuite::TargetTwoWayResultRequest::Invalid:
+        ZX_PANIC("unexpected invalid case");
+        break;
+    }
+  }
+
  private:
   fidl::InterfacePtr<fidl::serversuite::Reporter> reporter_;
 };

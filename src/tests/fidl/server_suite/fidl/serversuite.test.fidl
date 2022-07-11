@@ -28,7 +28,15 @@ protocol Runner {
 // The Target is the server under test.
 protocol Target {
     OneWayNoPayload();
+
     TwoWayNoPayload() -> ();
+
+    TwoWayResult(strict union {
+        1: payload string:MAX;
+        2: error uint32;
+    }) -> (struct {
+        payload string:MAX;
+    }) error uint32;
 };
 
 // The Reporter sends results of the test to the test harness.
@@ -36,11 +44,13 @@ protocol Reporter {
     ReceivedOneWayNoPayload();
 };
 
-type Test = enum {
+type Test = flexible enum {
     SETUP = 1;
     ONE_WAY_NO_PAYLOAD = 2;
     ONE_WAY_WITH_NON_ZERO_TXID = 3;
     UNKNOWN_ORDINAL_CAUSES_CLOSE = 4;
     TWO_WAY_NO_PAYLOAD = 5;
     TWO_WAY_NO_PAYLOAD_WITH_ZERO_TXID = 6;
+    TWO_WAY_RESULT_WITH_PAYLOAD = 7;
+    TWO_WAY_RESULT_WITH_ERROR = 8;
 };

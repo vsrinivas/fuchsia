@@ -3,11 +3,14 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/test.gni")
 
 executable("bin") {
   testonly = true
   output_name = "server_suite_harness"
   sources = [
+    "bytes.h",
+    "channel.h",
     "harness.cc",
     "harness.h",
     "ordinals.h",
@@ -26,4 +29,21 @@ executable("bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/service:service-llcpp",
   ]
+}
+
+test("harness_test") {
+  output_name = "harness_test"
+  sources = [
+    "bytes.h",
+    "bytes_tests.cc",
+  ]
+  deps = [
+    "//src/lib/fidl/cpp:cpp_base",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":harness_test($host_toolchain)" ]
 }

@@ -27,6 +27,19 @@ class TargetServer : public fidl::Server<fidl_serversuite::Target> {
     completer.Reply();
   }
 
+  void TwoWayResult(TwoWayResultRequest& request, TwoWayResultCompleter::Sync& completer) override {
+    std::cout << "Target.TwoWayResult()" << std::endl;
+    switch (request.Which()) {
+      case TwoWayResultRequest::Tag::kPayload:
+        completer.Reply(fitx::ok(request.payload().value()));
+        return;
+      case TwoWayResultRequest::Tag::kError:
+        completer.Reply(fitx::error(request.error().value()));
+        return;
+    }
+    ZX_PANIC("unhandled case");
+  }
+
  private:
   fidl::SyncClient<fidl_serversuite::Reporter> reporter_;
 };

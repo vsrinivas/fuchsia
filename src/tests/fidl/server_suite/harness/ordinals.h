@@ -7,6 +7,8 @@
 
 #include <cstdint>
 
+namespace server_suite {
+
 // To find all ordinals:
 //
 //     cat
@@ -20,5 +22,8 @@
 // binding definitions to ensure they are unchanged by changes in the bindings.
 static const uint64_t kOrdinalOneWayNoPayload = 5311082811961759320lu;
 static const uint64_t kOrdinalTwoWayNoPayload = 6235614372471446922lu;
+static const uint64_t kOrdinalTwoWayResult = 4276344194462732275lu;
+
+}  // namespace server_suite
 
 #endif  // SRC_TESTS_FIDL_SERVER_SUITE_HARNESS_ORDINALS_H_
