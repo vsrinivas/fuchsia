@@ -11,6 +11,7 @@ group("tests") {
   deps = [
     ":device_tests_package",
     ":device_unittests_package",
+    "virtio_balloon_rs:tests",
     "virtio_block:tests",
     "virtio_gpu_rs:tests",
     "virtio_sound:tests",
@@ -30,6 +31,7 @@ group("packages") {
     ":virtio_input",
     ":virtio_magma",
     ":virtio_wl",
+    "virtio_balloon_rs",
     "virtio_block",
     "virtio_gpu_rs",
     "virtio_net",
