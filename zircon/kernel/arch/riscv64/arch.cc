@@ -81,7 +81,7 @@ void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
   dprintf(INFO, "RISCV: mvendorid %#lx marchid %#lx mimpid %#lx\n",
           sbi_call(SBI_GET_MVENDORID).value, sbi_call(SBI_GET_MARCHID).value,
           sbi_call(SBI_GET_MIMPID).value);
-  dprintf(INFO, "RISCV: MMU enabled sv49\n");
+  dprintf(INFO, "RISCV: MMU enabled sv39\n");
   dprintf(INFO, "RISCV: SBI impl id %#lx version %#lx\n", sbi_call(SBI_GET_SBI_IMPL_ID).value, sbi_call(SBI_GET_SBI_IMPL_VERSION).value);
 
   // probe some SBI extensions

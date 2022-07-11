@@ -11,14 +11,20 @@
 #include <arch/kernel_aspace.h>
 #include <lib/zircon-internal/macros.h>
 
-#define MMU_LX_X(page_shift, level) ((4 - (level)) * ((page_shift) - 3) + 3)
+// This macros is needed for building the tests.
+#define MMU_LX_X(page_shift, level) ((3 - (level)) * ((page_shift) - 3) + 3)
+
+// These macros assume the sv39 virtual memory scheme which maps 39-bit
+// virtual addresses to 56-bit physical addresses.  For details see sections
+// 4.1.12, 4.2, and 4.3 in the RISC-V Privileged Spec.
+//
+// https://github.com/riscv/riscv-isa-manual/releases/download/Ratified-IMFDQC-and-Priv-v1.11/riscv-privileged-20190608.pdf
+
 #define MMU_KERNEL_PAGE_SIZE_SHIFT      (PAGE_SIZE_SHIFT)
 #define MMU_USER_PAGE_SIZE_SHIFT 12
-#define MMU_USER_SIZE_SHIFT 48
+#define MMU_USER_SIZE_SHIFT 39
 
-typedef uintptr_t pte_t;
-
-#define RISCV64_MMU_PT_LEVELS 4
+#define RISCV64_MMU_PT_LEVELS 3
 #define RISCV64_MMU_PT_SHIFT  9
 #define RISCV64_MMU_PT_ENTRIES 512 // 1 << PT_SHIFT
 #define RISCV64_MMU_CANONICAL_MASK ((1UL << 48) - 1)
@@ -39,6 +45,9 @@ typedef uintptr_t pte_t;
 #define RISCV64_PTE_PPN_MASK  (((1UL << (RISCV64_MMU_PPN_BITS - PAGE_SIZE_SHIFT)) - 1) << RISCV64_PTE_PPN_SHIFT)
 
 // riscv PPN is stored shifed over 2 from the natural alignment
+#define RISCV64_PTE_IS_VALID(pte) ((pte) & RISCV64_PTE_V)
+#define RISCV64_PTE_IS_LEAF(pte) ((pte) & RISCV64_PTE_PERM_MASK)
+
 #define RISCV64_PTE_PPN(pte) (((pte) & RISCV64_PTE_PPN_MASK) << (PAGE_SIZE_SHIFT - RISCV64_PTE_PPN_SHIFT))
 #define RISCV64_PTE_PPN_TO_PTE(paddr) (((paddr) >> PAGE_SIZE_SHIFT) << RISCV64_PTE_PPN_SHIFT)
 
@@ -56,10 +65,16 @@ typedef uintptr_t pte_t;
 #define RISCV64_SATP_ASID_SIZE  (16)
 #define RISCV64_SATP_ASID_MASK  ((1UL << RISCV64_SATP_ASID_SIZE) - 1)
 
+#ifndef __ASSEMBLER__
+
+typedef uintptr_t pte_t;
+
 const size_t MMU_RISCV64_ASID_BITS = 16;
 const uint16_t MMU_RISCV64_GLOBAL_ASID = (1u << MMU_RISCV64_ASID_BITS) - 1;
 const uint16_t MMU_RISCV64_UNUSED_ASID = 0;
 const uint16_t MMU_RISCV64_FIRST_USER_ASID = 1;
 const uint16_t MMU_RISCV64_MAX_USER_ASID = MMU_RISCV64_GLOBAL_ASID - 1;
+
+#endif // __ASSEMBLER__
 
 #endif  // ZIRCON_KERNEL_ARCH_RISCV64_INCLUDE_ARCH_RISCV64_MMU_H_

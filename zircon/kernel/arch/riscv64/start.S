@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <asm.h>
+#include <arch/riscv64/mmu.h>
 #include <arch/riscv64.h>
 #include <arch/defines.h>
 #include <arch/kernel_aspace.h>
@@ -62,7 +63,7 @@ FUNCTION(_start)
     li      a1, 0
     li      a2, 0
     li      a3, ARCH_PHYSMAP_SIZE
-    li      a4, (0 | (1<<7) | (1<<6) | (1<<5) | (1<<3) | (1<<2) | (1<<1) | (1<<0))
+    li      a4, RISCV64_PTE_G | RISCV64_PTE_A | RISCV64_PTE_D | RISCV64_PTE_PERM_MASK | RISCV64_PTE_V
     jal     riscv64_boot_map
 
     // map a large run of physical memory at the base of the kernel's address space
@@ -71,7 +72,7 @@ FUNCTION(_start)
     li      a1, KERNEL_ASPACE_BASE
     li      a2, 0
     li      a3, ARCH_PHYSMAP_SIZE
-    li      a4, (0 | (1<<7) | (1<<6) | (1<<5) | (1<<3) | (1<<2) | (1<<1) | (1<<0))
+    li      a4, RISCV64_PTE_G | RISCV64_PTE_A | RISCV64_PTE_D | RISCV64_PTE_PERM_MASK | RISCV64_PTE_V
     jal     riscv64_boot_map
 
     // map the kernel to a fixed address
@@ -83,7 +84,7 @@ FUNCTION(_start)
     lla     a2, __code_start
     lla     a3, _end
     sub     a3, a3, a2
-    li      a4, (0 | (1<<7) | (1<<6) | (1<<5) | (1<<3) | (1<<2) | (1<<1) | (1<<0))
+    li      a4, RISCV64_PTE_G | RISCV64_PTE_A | RISCV64_PTE_D | RISCV64_PTE_PERM_MASK | RISCV64_PTE_V
     jal     riscv64_boot_map
 
     // ensure it's written out
@@ -92,8 +93,8 @@ FUNCTION(_start)
     // set the satp register and enable the mmu
     // ASID 0, riscv64_kernel_translation_table address
     lla     t0, riscv64_kernel_translation_table
-    srli    t1, t0, 12
-    li      t2, (9 << 60)   // mode 9, SV48
+    srli    t1, t0, PAGE_SIZE_SHIFT
+    li      t2, (RISCV64_SATP_MODE_SV39 << RISCV64_SATP_MODE_SHIFT)
     or      t1, t1, t2
     csrw    satp, t1
 
@@ -129,7 +130,7 @@ FUNCTION(_secondary_start)
     // Enable the MMU with the ASID 0, prefilled by _start
     lla     t0, riscv64_kernel_translation_table
     srli    t1, t0, 12
-    li      t2, (9 << 60)   // mode 9, SV48
+    li      t2, (RISCV64_SATP_MODE_SV39 << RISCV64_SATP_MODE_SHIFT)
     or      t1, t1, t2
     csrw    satp, t1
     sfence.vma  zero, zero
