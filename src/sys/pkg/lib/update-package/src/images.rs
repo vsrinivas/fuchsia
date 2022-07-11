@@ -3,14 +3,17 @@
 // found in the LICENSE file.
 
 use {
-    crate::{image::Image, image::ImageClass, image::ImageType, update_mode::UpdateMode},
+    crate::{
+        image::{Image, ImageClass, ImageType},
+        update_mode::UpdateMode,
+    },
     fidl_fuchsia_io as fio,
     fuchsia_hash::Hash,
-    fuchsia_url::PinnedAbsolutePackageUrl,
+    fuchsia_url::{AbsoluteComponentUrl, ParseError, PinnedAbsolutePackageUrl},
     fuchsia_zircon_status::Status,
     serde::{Deserialize, Serialize},
     std::{
-        collections::{BTreeMap, BTreeSet},
+        collections::{BTreeMap, BTreeSet, HashSet},
         path::Path,
     },
     thiserror::Error,
@@ -32,6 +35,17 @@ pub enum VerifyError {
 
     #[error("images list unexpectedly contained an entry for 'zbi' or 'zbi.signed'")]
     UnexpectedZbi,
+}
+
+/// An error encountered while handling [`ImageMetadata`].
+#[derive(Debug, Error)]
+#[allow(missing_docs)]
+pub enum ImageMetadataError {
+    #[error("while reading the image")]
+    Io(#[source] std::io::Error),
+
+    #[error("invalid resource path")]
+    InvalidResourcePath(#[source] ParseError),
 }
 
 /// An error encountered while loading the images.json manifest.
@@ -135,10 +149,10 @@ pub(crate) async fn resolve_images(
     Ok(resolve(requests, &files))
 }
 
-/// A builder of [`VersionedImagePackagesManifest`].
+/// A builder of [`ImagePackagesManifest`].
 #[derive(Debug, Clone)]
 pub struct ImagePackagesManifestBuilder {
-    manifest: ImagePackagesManifest,
+    slots: ImagePackagesSlots,
 }
 
 /// A versioned [`ImagePackagesManifest`].
@@ -150,56 +164,82 @@ pub enum VersionedImagePackagesManifest {
     Version1(ImagePackagesManifest),
 }
 
-/// A manifest describing the various image packages, all of which are optional, and each contains
-/// a fuchsia-pkg URI for that package and a description of the assets it contains.
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-#[serde(deny_unknown_fields)]
+/// A manifest describing the various images and firmware packages that should be fetched and
+/// written during a system update, as well as metadata about those images and where to find them.
+#[derive(Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct ImagePackagesManifest {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    fuchsia: Option<BootSlotImagePackage>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    recovery: Option<BootSlotImagePackage>,
-
-    #[serde(skip_serializing_if = "Option::is_none")]
-    firmware: Option<FirmwareImagePackage>,
+    partitions: Vec<AssemblyImageFormat>,
+    firmware: Vec<FirmwareImageFormat>,
 }
 
-/// An image package representing an A/B/R bootslot, expected to have a "zbi" and optional
-/// "vbmeta" entry, and nothing else.
-pub type BootSlotImagePackage = ImagePackage<BootSlot>;
-
-/// An image package that can hold arbitrary assets.
-pub type FirmwareImagePackage = ImagePackage<BTreeMap<String, ImageMetadata>>;
-
-/// Metadata for an image package.
 #[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(deny_unknown_fields)]
-pub struct ImagePackage<Images> {
-    /// The pavable images stored in this package.
-    images: Images,
-
-    /// Pinned fuchsia-pkg URI of package containing these images.
-    url: PinnedAbsolutePackageUrl,
+pub struct FirmwareImageFormat {
+    r#type: String,
+    size: u64,
+    hash: Hash,
+    url: AbsoluteComponentUrl,
 }
 
-impl<Images> ImagePackage<Images> {
-    /// Returns an immutable borrow of the pinned fuchsia-pkg URI of package containing these
-    /// images.
-    pub fn url(&self) -> &PinnedAbsolutePackageUrl {
-        &self.url
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
+#[serde(deny_unknown_fields)]
+pub struct AssemblyImageFormat {
+    slot: Slot,
+    r#type: SlotImage,
+    size: u64,
+    hash: Hash,
+    url: AbsoluteComponentUrl,
+}
+
+/// Location for where an image should be written.
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash)]
+#[serde(rename_all = "lowercase")]
+pub enum Slot {
+    /// The primary Fuchsia boot slot or slots, typically A or B, depending on which is currently
+    /// in use.
+    Fuchsia,
+
+    /// The recovery boot slot.
+    Recovery,
+}
+
+/// Image asset type.
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy, Hash)]
+#[serde(rename_all = "lowercase")]
+pub enum SlotImage {
+    /// A Zircon Boot Image.
+    Zbi,
+
+    /// Verified Boot Metadata.
+    Vbmeta,
+}
+
+impl From<ImagePackagesManifest> for ImagePackagesSlots {
+    fn from(manifest: ImagePackagesManifest) -> Self {
+        ImagePackagesSlots {
+            fuchsia: manifest.fuchsia(),
+            recovery: manifest.recovery(),
+            firmware: manifest.firmware(),
+        }
     }
 }
 
+/// A manifest describing the various image packages, all of which are optional, and each contains
+/// a fuchsia-pkg URI for that package and a description of the assets it contains.
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct ImagePackagesSlots {
+    fuchsia: Option<BootSlot>,
+    recovery: Option<BootSlot>,
+    firmware: BTreeMap<String, ImageMetadata>,
+}
+
 /// Metadata for artifacts unique to an A/B/R boot slot.
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct BootSlot {
     /// The zircon boot image.
     zbi: ImageMetadata,
 
     /// The optional slot metadata.
-    #[serde(skip_serializing_if = "Option::is_none")]
     vbmeta: Option<ImageMetadata>,
 }
 
@@ -208,12 +248,16 @@ impl BootSlot {
     pub fn zbi(&self) -> &ImageMetadata {
         &self.zbi
     }
+
+    /// Returns an immutable borrow to the VBMeta designated in this boot slot, if one exists.
+    pub fn vbmeta(&self) -> Option<&ImageMetadata> {
+        self.vbmeta.as_ref()
+    }
 }
 
 /// Metadata necessary to determine if a payload matches an image without needing to have the
 /// actual image.
-#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Clone, Copy)]
-#[serde(deny_unknown_fields)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ImageMetadata {
     /// The size of the image, in bytes.
     size: u64,
@@ -221,12 +265,94 @@ pub struct ImageMetadata {
     /// The sha256 hash of the image. Note this is not the merkle root of a
     /// `fuchsia_merkle::MerkleTree`. It is the content hash of the image.
     hash: Hash,
+
+    /// The URL of the image in its package.
+    url: AbsoluteComponentUrl,
+}
+
+impl FirmwareImageFormat {
+    /// Creates a new [`FirmwareImageFormat`] from the given image metadata and target subtype.
+    pub fn new_from_metadata(subtype: impl Into<String>, metadata: ImageMetadata) -> Self {
+        Self { r#type: subtype.into(), size: metadata.size, hash: metadata.hash, url: metadata.url }
+    }
+
+    fn key(&self) -> &str {
+        &self.r#type
+    }
+
+    /// Returns the [`ImageMetadata`] for this image.
+    pub fn metadata(&self) -> ImageMetadata {
+        ImageMetadata { size: self.size, hash: self.hash, url: self.url.clone() }
+    }
+}
+
+impl AssemblyImageFormat {
+    /// Creates a new [`AssemblyImageFormat`] from the given image metadata and target slot/type.
+    pub fn new_from_metadata(slot: Slot, kind: SlotImage, metadata: ImageMetadata) -> Self {
+        Self { slot, r#type: kind, size: metadata.size, hash: metadata.hash, url: metadata.url }
+    }
+
+    fn key(&self) -> (Slot, SlotImage) {
+        (self.slot, self.r#type)
+    }
+
+    /// Returns the [`ImageMetadata`] for this image.
+    pub fn metadata(&self) -> ImageMetadata {
+        ImageMetadata { size: self.size, hash: self.hash, url: self.url.clone() }
+    }
+}
+
+impl ImagePackagesManifest {
+    /// Returns a [`ImagePackagesManifestBuilder`] with no configured images.
+    pub fn builder() -> ImagePackagesManifestBuilder {
+        ImagePackagesManifestBuilder {
+            slots: ImagePackagesSlots {
+                fuchsia: None,
+                recovery: None,
+                firmware: Default::default(),
+            },
+        }
+    }
+
+    fn image(&self, slot: Slot, kind: SlotImage) -> Option<&AssemblyImageFormat> {
+        self.partitions.iter().find(|image| image.slot == slot && image.r#type == kind)
+    }
+
+    fn image_metadata(&self, slot: Slot, kind: SlotImage) -> Option<ImageMetadata> {
+        self.image(slot, kind).map(|image| image.metadata())
+    }
+
+    fn slot_metadata(&self, slot: Slot) -> Option<BootSlot> {
+        let zbi = self.image_metadata(slot, SlotImage::Zbi);
+        let vbmeta = self.image_metadata(slot, SlotImage::Vbmeta);
+
+        match zbi {
+            Some(zbi) => Some(BootSlot { zbi, vbmeta }),
+            None => None,
+        }
+    }
+
+    /// Returns metadata for the fuchsia boot slot, if present.
+    pub fn fuchsia(&self) -> Option<BootSlot> {
+        self.slot_metadata(Slot::Fuchsia)
+    }
+
+    /// Returns metadata for the recovery boot slot, if present.
+    pub fn recovery(&self) -> Option<BootSlot> {
+        self.slot_metadata(Slot::Recovery)
+    }
+
+    /// Returns metadata for the firmware images.
+    pub fn firmware(&self) -> BTreeMap<String, ImageMetadata> {
+        self.firmware.iter().map(|image| (image.r#type.to_owned(), image.metadata())).collect()
+    }
 }
 
 impl ImageMetadata {
-    /// Returns new image metadata that designates the given `size` and `hash`.
-    pub fn new(size: u64, hash: Hash) -> Self {
-        Self { size, hash }
+    /// Returns new image metadata that designates the given `size` and `hash`, which can be found
+    /// at the given `url`.
+    pub fn new(size: u64, hash: Hash, url: AbsoluteComponentUrl) -> Self {
+        Self { size, hash, url }
     }
 
     /// Returns the size of the image, in bytes.
@@ -239,71 +365,105 @@ impl ImageMetadata {
         self.hash
     }
 
-    /// Compute the size and hash for the image file located at `path`.
-    pub fn for_path(path: &Path) -> Result<Self, std::io::Error> {
+    /// Returns the url of the image.
+    pub fn url(&self) -> &AbsoluteComponentUrl {
+        &self.url
+    }
+
+    /// Compute the size and hash for the image file located at `path`, determining the image's
+    /// fuchsia-pkg URL using the given base `url` and `resource` path within the package.
+    pub fn for_path(
+        path: &Path,
+        url: PinnedAbsolutePackageUrl,
+        resource: String,
+    ) -> Result<Self, ImageMetadataError> {
         use sha2::{Digest, Sha256};
 
         let mut hasher = Sha256::new();
-        let mut file = std::fs::File::open(path)?;
-        let size = std::io::copy(&mut file, &mut hasher)?;
+        let mut file = std::fs::File::open(path).map_err(ImageMetadataError::Io)?;
+        let size = std::io::copy(&mut file, &mut hasher).map_err(ImageMetadataError::Io)?;
         let hash = Hash::from(*AsRef::<[u8; 32]>::as_ref(&hasher.finalize()));
 
-        Ok(Self { size, hash })
+        let url = AbsoluteComponentUrl::from_package_url_and_resource(url.into(), resource)
+            .map_err(ImageMetadataError::InvalidResourcePath)?;
+
+        Ok(Self { size, hash, url })
     }
 }
 
 impl ImagePackagesManifestBuilder {
-    /// Configures the "fuchsia" images package to use the given url, zbi metadata, and optional
+    /// Configures the "fuchsia" images package to use the given zbi metadata, and optional
     /// vbmeta metadata.
     pub fn fuchsia_package(
         &mut self,
-        url: PinnedAbsolutePackageUrl,
         zbi: ImageMetadata,
         vbmeta: Option<ImageMetadata>,
     ) -> &mut Self {
-        self.manifest.fuchsia =
-            Some(BootSlotImagePackage { url, images: BootSlot { zbi, vbmeta } });
+        self.slots.fuchsia = Some(BootSlot { zbi, vbmeta });
         self
     }
 
-    /// Configures the "recovery" images package to use the given url, zbi metadata, and optional
+    /// Configures the "recovery" images package to use the given zbi metadata, and optional
     /// vbmeta metadata.
     pub fn recovery_package(
         &mut self,
-        url: PinnedAbsolutePackageUrl,
         zbi: ImageMetadata,
         vbmeta: Option<ImageMetadata>,
     ) -> &mut Self {
-        self.manifest.recovery =
-            Some(BootSlotImagePackage { url, images: BootSlot { zbi, vbmeta } });
+        self.slots.recovery = Some(BootSlot { zbi, vbmeta });
         self
     }
 
-    /// Configures the "firmware" images package to use the given url and mapping of firmware kinds
-    /// to metadata for them.
-    pub fn firmware_package(
-        &mut self,
-        url: PinnedAbsolutePackageUrl,
-        firmware: BTreeMap<String, ImageMetadata>,
-    ) -> &mut Self {
-        self.manifest.firmware = Some(FirmwareImagePackage { url, images: firmware });
+    /// Configures the "firmware" images package from a BTreeMap of ImageMetadata
+    pub fn firmware_package(&mut self, firmware: BTreeMap<String, ImageMetadata>) -> &mut Self {
+        self.slots.firmware = firmware;
         self
     }
 
-    /// Returns the constructed versioned manifest.
+    /// Returns the constructed manifest.
     pub fn build(self) -> VersionedImagePackagesManifest {
-        VersionedImagePackagesManifest::Version1(self.manifest)
+        let mut partitions = vec![];
+        let mut firmware = vec![];
+
+        if let Some(slot) = self.slots.fuchsia {
+            partitions.push(AssemblyImageFormat::new_from_metadata(
+                Slot::Fuchsia,
+                SlotImage::Zbi,
+                slot.zbi,
+            ));
+            if let Some(vbmeta) = slot.vbmeta {
+                partitions.push(AssemblyImageFormat::new_from_metadata(
+                    Slot::Fuchsia,
+                    SlotImage::Vbmeta,
+                    vbmeta,
+                ));
+            }
+        }
+
+        if let Some(slot) = self.slots.recovery {
+            partitions.push(AssemblyImageFormat::new_from_metadata(
+                Slot::Recovery,
+                SlotImage::Zbi,
+                slot.zbi,
+            ));
+            if let Some(vbmeta) = slot.vbmeta {
+                partitions.push(AssemblyImageFormat::new_from_metadata(
+                    Slot::Recovery,
+                    SlotImage::Vbmeta,
+                    vbmeta,
+                ));
+            }
+        }
+
+        for (subtype, metadata) in self.slots.firmware {
+            firmware.push(FirmwareImageFormat::new_from_metadata(subtype, metadata));
+        }
+
+        VersionedImagePackagesManifest::Version1(ImagePackagesManifest { partitions, firmware })
     }
 }
 
-impl ImagePackagesManifest {
-    /// Returns a [`ImagePackagesManifestBuilder`] with no configured images packages.
-    pub fn builder() -> ImagePackagesManifestBuilder {
-        ImagePackagesManifestBuilder {
-            manifest: Self { fuchsia: None, recovery: None, firmware: None },
-        }
-    }
-
+impl ImagePackagesSlots {
     /// Verify that this image package manifest is appropriate for the given update mode.
     ///
     /// * `UpdateMode::Normal` - a non-recovery kernel image is required.
@@ -319,8 +479,64 @@ impl ImagePackagesManifest {
 
     /// Returns an immutable borrow to the boot slot image package designated as "fuchsia" in this
     /// image packages manifest.
-    pub fn fuchsia(&self) -> Option<&BootSlotImagePackage> {
+    pub fn fuchsia(&self) -> Option<&BootSlot> {
         self.fuchsia.as_ref()
+    }
+}
+
+impl<'de> Deserialize<'de> for ImagePackagesManifest {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        use serde::de::Error;
+
+        #[derive(Debug, Deserialize)]
+        pub struct DeImagePackagesManifest {
+            partitions: Vec<AssemblyImageFormat>,
+            firmware: Vec<FirmwareImageFormat>,
+        }
+
+        let parsed = DeImagePackagesManifest::deserialize(deserializer)?;
+
+        // Check for duplicate image destinations and check that a zbi is present if vbmeta is present.
+        {
+            let mut keys = HashSet::new();
+            for image in &parsed.partitions {
+                if !keys.insert(image.key()) {
+                    return Err(D::Error::custom(format!(
+                        "duplicate image entry: {:?}",
+                        image.key()
+                    )));
+                }
+            }
+
+            for slot in [Slot::Fuchsia, Slot::Recovery] {
+                if keys.contains(&(slot, SlotImage::Vbmeta))
+                    && !keys.contains(&(slot, SlotImage::Zbi))
+                {
+                    return Err(D::Error::custom(format!(
+                        "vbmeta without zbi entry in partition {:?}",
+                        slot
+                    )));
+                }
+            }
+        }
+
+        // Check for duplicate firmware destinations
+        {
+            let mut keys = HashSet::new();
+            for image in &parsed.firmware {
+                if !keys.insert(image.key()) {
+                    return Err(D::Error::custom(format!(
+                        "duplicate firmware entry: {:?}",
+                        image.key()
+                    )));
+                }
+            }
+        }
+
+        Ok(ImagePackagesManifest { partitions: parsed.partitions, firmware: parsed.firmware })
     }
 }
 
@@ -585,6 +801,20 @@ mod tests {
         hash(n).to_string()
     }
 
+    fn test_url(data: &str) -> AbsoluteComponentUrl {
+        format!("fuchsia-pkg://fuchsia.com/update-images-firmware/0?hash=000000000000000000000000000000000000000000000000000000000000000a#{data}").parse().unwrap()
+    }
+
+    fn image_package_url(name: &str, hash: u8) -> PinnedAbsolutePackageUrl {
+        format!("fuchsia-pkg://fuchsia.com/{name}/0?hash={}", hashstr(hash)).parse().unwrap()
+    }
+
+    fn image_package_resource_url(name: &str, hash: u8, resource: &str) -> AbsoluteComponentUrl {
+        format!("fuchsia-pkg://fuchsia.com/{name}/0?hash={}#{resource}", hashstr(hash))
+            .parse()
+            .unwrap()
+    }
+
     #[test]
     fn image_metadata_for_path_empty() {
         let tmp = tempfile::tempdir().expect("/tmp to exist");
@@ -593,11 +823,15 @@ mod tests {
         f.write_all(b"").unwrap();
         drop(f);
 
+        let resource = "resource";
+        let url = image_package_url("package", 1);
+
         assert_eq!(
-            ImageMetadata::for_path(&path).unwrap(),
+            ImageMetadata::for_path(&path, url, resource.to_string()).unwrap(),
             ImageMetadata::new(
                 0,
                 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855".parse().unwrap(),
+                image_package_resource_url("package", 1, resource)
             ),
         );
     }
@@ -610,11 +844,16 @@ mod tests {
         f.write_all(&[0; 8192 + 4096]).unwrap();
         drop(f);
 
+        let resource = "resource";
+
+        let url = image_package_url("package", 1);
+
         assert_eq!(
-            ImageMetadata::for_path(&path).unwrap(),
+            ImageMetadata::for_path(&path, url, resource.to_string()).unwrap(),
             ImageMetadata::new(
                 8192 + 4096,
                 "f3cc103136423a57975750907ebc1d367e2985ac6338976d4d5a439f50323f4a".parse().unwrap(),
+                image_package_resource_url("package", 1, resource)
             ),
         );
     }
@@ -623,12 +862,12 @@ mod tests {
     fn parses_minimal_manifest() {
         let raw_json = json!({
             "version": "1",
-            "contents": {},
+            "contents": { "partitions" : [], "firmware" : []},
         })
         .to_string();
 
         let actual = parse_image_packages_json(raw_json.as_bytes()).unwrap();
-        assert_eq!(actual, ImagePackagesManifest { fuchsia: None, recovery: None, firmware: None });
+        assert_eq!(actual, ImagePackagesManifest { partitions: vec![], firmware: vec![] });
     }
 
     #[test]
@@ -636,9 +875,8 @@ mod tests {
         assert_eq!(
             ImagePackagesManifest::builder().build(),
             VersionedImagePackagesManifest::Version1(ImagePackagesManifest {
-                fuchsia: None,
-                recovery: None,
-                firmware: None
+                partitions: vec![],
+                firmware: vec![],
             }),
         );
     }
@@ -647,21 +885,19 @@ mod tests {
     fn builder_builds_populated_manifest() {
         let actual = ImagePackagesManifest::builder()
             .fuchsia_package(
-                "fuchsia-pkg://fuchsia.com/update-images-fuchsia/0?hash=000000000000000000000000000000000000000000000000000000000000000a".parse().unwrap(),
-                ImageMetadata::new(1, hash(1)),
-                Some(ImageMetadata::new(2, hash(2))),
+                ImageMetadata::new(1, hash(1),  image_package_resource_url("update-images-fuchsia", 9, "zbi")),
+                Some(ImageMetadata::new(2, hash(2), image_package_resource_url("update-images-fuchsia", 8, "vbmeta"))),
             )
             .recovery_package(
-                "fuchsia-pkg://fuchsia.com/update-images-recovery/0?hash=000000000000000000000000000000000000000000000000000000000000000b".parse().unwrap(),
-                ImageMetadata::new(3, hash(3)),
+                ImageMetadata::new(3, hash(3),  image_package_resource_url("update-images-recovery", 7, "zbi")),
                 None,
             )
             .firmware_package(
-
-                    "fuchsia-pkg://fuchsia.com/update-images-firmware/0?hash=000000000000000000000000000000000000000000000000000000000000000c".parse().unwrap(),
                     btreemap! {
-                        "".to_owned() => ImageMetadata::new(5, hash(5)),
-                        "2bl".to_owned() => ImageMetadata::new(6, hash(6)),
+                        "".to_owned() => ImageMetadata::new(5, hash(5), image_package_resource_url("update-images-firmware", 6, "a")
+                    ),
+                        "bl2".to_owned() => ImageMetadata::new(6, hash(6), image_package_resource_url("update-images-firmware", 5, "b")
+                    ),
                     },
                 )
             .clone()
@@ -669,27 +905,43 @@ mod tests {
         assert_eq!(
             actual,
             VersionedImagePackagesManifest::Version1(ImagePackagesManifest {
-                fuchsia: Some(BootSlotImagePackage {
-                    url: "fuchsia-pkg://fuchsia.com/update-images-fuchsia/0?hash=000000000000000000000000000000000000000000000000000000000000000a".parse().unwrap(),
-                    images: BootSlot {
-                        zbi: ImageMetadata::new(1, hash(1)),
-                        vbmeta: Some(ImageMetadata::new(2, hash(2))),
+                partitions: vec![
+                    AssemblyImageFormat {
+                        slot: Slot::Fuchsia,
+                        r#type: SlotImage::Zbi,
+                        size: 1,
+                        hash: hash(1),
+                        url: image_package_resource_url("update-images-fuchsia", 9, "zbi"),
                     },
-                }),
-                recovery: Some(BootSlotImagePackage {
-                    url: "fuchsia-pkg://fuchsia.com/update-images-recovery/0?hash=000000000000000000000000000000000000000000000000000000000000000b".parse().unwrap(),
-                    images: BootSlot {
-                        zbi: ImageMetadata::new(3, hash(3)),
-                        vbmeta: None,
+                    AssemblyImageFormat {
+                        slot: Slot::Fuchsia,
+                        r#type: SlotImage::Vbmeta,
+                        size: 2,
+                        hash: hash(2),
+                        url: image_package_resource_url("update-images-fuchsia", 8, "vbmeta"),
                     },
-                }),
-                firmware: Some(FirmwareImagePackage {
-                    url: "fuchsia-pkg://fuchsia.com/update-images-firmware/0?hash=000000000000000000000000000000000000000000000000000000000000000c".parse().unwrap(),
-                    images: btreemap! {
-                        "".to_owned() => ImageMetadata::new(5, hash(5)),
-                        "2bl".to_owned() => ImageMetadata::new(6, hash(6)),
+                    AssemblyImageFormat {
+                        slot: Slot::Recovery,
+                        r#type: SlotImage::Zbi,
+                        size: 3,
+                        hash: hash(3),
+                        url: image_package_resource_url("update-images-recovery", 7, "zbi"),
                     },
-                }),
+                ],
+                firmware: vec![
+                    FirmwareImageFormat {
+                        r#type: "".to_owned(),
+                        size: 5,
+                        hash: hash(5),
+                        url: image_package_resource_url("update-images-firmware", 6, "a"),
+                    },
+                    FirmwareImageFormat {
+                        r#type: "bl2".to_owned(),
+                        size: 6,
+                        hash: hash(6),
+                        url: image_package_resource_url("update-images-firmware", 5, "b"),
+                    },
+                ],
             })
         );
     }
@@ -698,116 +950,198 @@ mod tests {
     fn parses_example_manifest() {
         let raw_json = json!({
             "version": "1",
-            "contents": {
-                "fuchsia": {
-                    "images": {
-                        "zbi": {
-                            "size": 1,
-                            "hash": hashstr(1),
-                        },
-                        "vbmeta": {
-                            "size": 2,
-                            "hash": hashstr(2),
-                        },
-                    },
-                    "url": "fuchsia-pkg://fuchsia.com/update-images-fuchsia/0?hash=000000000000000000000000000000000000000000000000000000000000000a"
+            "contents":  {
+                "partitions": [
+                    {
+                    "slot" : "fuchsia",
+                    "type" : "zbi",
+                    "size" : 1,
+                    "hash" : hashstr(1),
+                    "url" : image_package_resource_url("package", 1, "zbi")
+                }, {
+                    "slot" : "fuchsia",
+                    "type" : "vbmeta",
+                    "size" : 2,
+                    "hash" : hashstr(2),
+                    "url" : image_package_resource_url("package", 1, "vbmeta")
                 },
-                "recovery": {
-                    "images": {
-                        "zbi": {
-                            "size": 3,
-                            "hash": hashstr(3),
-                        },
-                        "vbmeta": {
-                            "size": 4,
-                            "hash": hashstr(4),
-                        },
+                {
+                    "slot" : "recovery",
+                    "type" : "zbi",
+                    "size" : 3,
+                    "hash" : hashstr(3),
+                    "url" : image_package_resource_url("package", 1, "rzbi")
+                }, {
+                    "slot" : "recovery",
+                    "type" : "vbmeta",
+                    "size" : 3,
+                    "hash" : hashstr(3),
+                    "url" : image_package_resource_url("package", 1, "rvbmeta")
                     },
-                    "url": "fuchsia-pkg://fuchsia.com/update-images-recovery/0?hash=000000000000000000000000000000000000000000000000000000000000000b"
-                },
-                "firmware": {
-                    "images": {
-                        "": {
-                            "size": 5,
-                            "hash": hashstr(5),
-                        },
-                        "2bl": {
-                            "size": 6,
-                            "hash": hashstr(6),
-                        },
+                ],
+                "firmware": [
+                    {
+                        "type" : "",
+                        "size" : 5,
+                        "hash" : hashstr(5),
+                        "url" : image_package_resource_url("package", 1, "firmware")
+                    }, {
+                        "type" : "bl2",
+                        "size" : 6,
+                        "hash" : hashstr(6),
+                        "url" : image_package_resource_url("package", 1, "firmware")
                     },
-                    "url": "fuchsia-pkg://fuchsia.com/update-images-firmware/0?hash=000000000000000000000000000000000000000000000000000000000000000c"
-                }
+                ],
+
             }
-        }).to_string();
+
+            }
+        )
+        .to_string();
 
         let actual = parse_image_packages_json(raw_json.as_bytes()).unwrap();
         assert_eq!(
-            actual,
-            ImagePackagesManifest {
-                fuchsia: Some(BootSlotImagePackage {
-                    url: "fuchsia-pkg://fuchsia.com/update-images-fuchsia/0?hash=000000000000000000000000000000000000000000000000000000000000000a".parse().unwrap(),
-                    images: BootSlot {
-                        zbi: ImageMetadata::new(1, hash(1)),
-                        vbmeta: Some(ImageMetadata::new(2, hash(2))),
-                    },
+            ImagePackagesSlots::from(actual),
+            ImagePackagesSlots {
+                fuchsia: Some(BootSlot {
+                    zbi: ImageMetadata::new(
+                        1,
+                        hash(1),
+                        image_package_resource_url("package", 1, "zbi")
+                    ),
+                    vbmeta: Some(ImageMetadata::new(
+                        2,
+                        hash(2),
+                        image_package_resource_url("package", 1, "vbmeta")
+                    )),
+                },),
+                recovery: Some(BootSlot {
+                    zbi: ImageMetadata::new(
+                        3,
+                        hash(3),
+                        image_package_resource_url("package", 1, "rzbi")
+                    ),
+                    vbmeta: Some(ImageMetadata::new(
+                        3,
+                        hash(3),
+                        image_package_resource_url("package", 1, "rvbmeta")
+                    )),
                 }),
-                recovery: Some(BootSlotImagePackage {
-                    url: "fuchsia-pkg://fuchsia.com/update-images-recovery/0?hash=000000000000000000000000000000000000000000000000000000000000000b".parse().unwrap(),
-                    images: BootSlot {
-                        zbi: ImageMetadata::new(3, hash(3)),
-                        vbmeta: Some(ImageMetadata::new(4, hash(4))),
-                    },
-                }),
-                firmware: Some(FirmwareImagePackage {
-                    url: "fuchsia-pkg://fuchsia.com/update-images-firmware/0?hash=000000000000000000000000000000000000000000000000000000000000000c".parse().unwrap(),
-                    images: btreemap! {
-                        "".to_owned() => ImageMetadata::new(5, hash(5)),
-                        "2bl".to_owned() => ImageMetadata::new(6, hash(6)),
-                    },
-                }),
+                firmware: btreemap! {
+                    "".to_owned() => ImageMetadata::new(5, hash(5),  image_package_resource_url("package", 1, "firmware")),
+                    "bl2".to_owned() => ImageMetadata::new(6, hash(6),  image_package_resource_url("package", 1, "firmware")),
+                },
             }
         );
     }
 
     #[test]
-    fn verify_mode_normal_requires_zbi() {
-        let with_zbi = ImagePackagesManifest {
-            fuchsia: Some(BootSlotImagePackage {
-                url: "fuchsia-pkg://fuchsia.com/update-images-fuchsia/0?hash=000000000000000000000000000000000000000000000000000000000000000a".parse().unwrap(),
-                images: BootSlot {
-                    zbi: ImageMetadata::new(1, hash(1)),
-                    vbmeta: None,
+    fn rejects_duplicate_image_keys() {
+        let raw_json = json!({
+            "version": "1",
+            "contents":  {
+                "partitions": [ {
+                    "slot" : "fuchsia",
+                    "type" : "zbi",
+                    "size" : 1,
+                    "hash" : hashstr(1),
+                    "url" : image_package_resource_url("package", 1, "zbi")
+                }, {
+                    "slot" : "fuchsia",
+                    "type" : "zbi",
+                    "size" : 1,
+                    "hash" : hashstr(1),
+                    "url" : image_package_resource_url("package", 1, "zbi")
                 },
+                ],
+                "firmware": [],
+            }
+        })
+        .to_string();
+
+        assert_matches!(parse_image_packages_json(raw_json.as_bytes()), Err(_));
+    }
+
+    #[test]
+    fn rejects_duplicate_firmware_keys() {
+        let raw_json = json!({
+            "version": "1",
+            "contents":  {
+                "partitions": [],
+                "firmware": [
+                    {
+                        "type" : "",
+                        "size" : 5,
+                        "hash" : hashstr(5),
+                        "url" : image_package_resource_url("package", 1, "firmware")
+                    }, {
+                        "type" : "",
+                        "size" : 5,
+                        "hash" : hashstr(5),
+                        "url" : image_package_resource_url("package", 1, "firmware")
+                    },
+                ],
+            }
+        })
+        .to_string();
+
+        assert_matches!(parse_image_packages_json(raw_json.as_bytes()), Err(_));
+    }
+
+    #[test]
+    fn rejects_vbmeta_without_zbi() {
+        let raw_json = json!({
+            "version": "1",
+            "contents":  {
+                "partitions": [{
+                    "slot" : "fuchsia",
+                    "type" : "vbmeta",
+                    "size" : 1,
+                    "hash" : hashstr(1),
+                    "url" : image_package_resource_url("package", 1, "vbmeta")
+                }],
+                "firmware": [],
+            }
+        })
+        .to_string();
+
+        assert_matches!(parse_image_packages_json(raw_json.as_bytes()), Err(_));
+    }
+
+    #[test]
+    fn verify_mode_normal_requires_zbi() {
+        let with_zbi = ImagePackagesSlots {
+            fuchsia: Some(BootSlot {
+                zbi: ImageMetadata::new(1, hash(1), test_url("zbi")),
+                vbmeta: None,
             }),
             recovery: None,
-            firmware: None,
+            firmware: btreemap! {},
         };
 
         assert_eq!(with_zbi.verify(UpdateMode::Normal), Ok(()));
 
-        let without_zbi = ImagePackagesManifest { fuchsia: None, recovery: None, firmware: None };
+        let without_zbi =
+            ImagePackagesSlots { fuchsia: None, recovery: None, firmware: btreemap! {} };
 
         assert_eq!(without_zbi.verify(UpdateMode::Normal), Err(VerifyError::MissingZbi));
     }
 
     #[test]
     fn verify_mode_force_recovery_requires_no_zbi() {
-        let with_zbi = ImagePackagesManifest {
-            fuchsia: Some(BootSlotImagePackage {
-                url: "fuchsia-pkg://fuchsia.com/update-images-fuchsia/0?hash=000000000000000000000000000000000000000000000000000000000000000a".parse().unwrap(),
-                images: BootSlot {
-                    zbi: ImageMetadata::new(1, hash(1)),
-                    vbmeta: None,
-                },
+        let with_zbi = ImagePackagesSlots {
+            fuchsia: Some(BootSlot {
+                zbi: ImageMetadata::new(1, hash(1), test_url("zbi")),
+                vbmeta: None,
             }),
             recovery: None,
-            firmware: None,
+            firmware: btreemap! {},
         };
 
         assert_eq!(with_zbi.verify(UpdateMode::ForceRecovery), Err(VerifyError::UnexpectedZbi));
 
-        let without_zbi = ImagePackagesManifest { fuchsia: None, recovery: None, firmware: None };
+        let without_zbi =
+            ImagePackagesSlots { fuchsia: None, recovery: None, firmware: btreemap! {} };
 
         assert_eq!(without_zbi.verify(UpdateMode::ForceRecovery), Ok(()));
     }
@@ -847,35 +1181,188 @@ mod tests {
         let proxy = spawn_vfs(pseudo_directory! {
             "images.json" => read_only_static(r#"{
 "version": "1",
-"contents": {}
+"contents": { "partitions" : [], "firmware" : [] }
 }"#),
         });
 
         assert_eq!(
             image_packages(&proxy).await.unwrap(),
-            ImagePackagesManifest { fuchsia: None, recovery: None, firmware: None }
+            ImagePackagesManifest { partitions: vec![], firmware: vec![] }
         );
     }
 
     #[fuchsia::test]
-    fn accessors() {
-        let fuchsia = BootSlotImagePackage {
-            url: "fuchsia-pkg://fuchsia.com/update-images-fuchsia/0?hash=000000000000000000000000000000000000000000000000000000000000000a".parse().unwrap(),
-            images: BootSlot {
-                zbi: ImageMetadata::new(1, hash(1)),
-                vbmeta: Some(ImageMetadata::new(2, hash(2))),
-            },
+    fn boot_slot_accessors() {
+        let slot = BootSlot {
+            zbi: ImageMetadata::new(1, hash(1), test_url("zbi")),
+            vbmeta: Some(ImageMetadata::new(2, hash(2), test_url("vbmeta"))),
+        };
+
+        assert_eq!(slot.zbi(), &ImageMetadata::new(1, hash(1), test_url("zbi")));
+        assert_eq!(slot.vbmeta(), Some(&ImageMetadata::new(2, hash(2), test_url("vbmeta"))));
+
+        let slot = BootSlot { zbi: ImageMetadata::new(1, hash(1), test_url("zbi")), vbmeta: None };
+        assert_eq!(slot.vbmeta(), None);
+    }
+
+    #[fuchsia::test]
+    fn image_packages_manifest_accessors() {
+        let slot = BootSlot {
+            zbi: ImageMetadata::new(1, hash(1), test_url("zbi")),
+            vbmeta: Some(ImageMetadata::new(2, hash(2), test_url("vbmeta"))),
         };
 
         let mut builder = ImagePackagesManifest::builder();
         builder.fuchsia_package(
-            "fuchsia-pkg://fuchsia.com/update-images-fuchsia/0?hash=000000000000000000000000000000000000000000000000000000000000000a".parse().unwrap(),
-            ImageMetadata::new(1, hash(1)),
-            Some(ImageMetadata::new(2, hash(2))),
+            ImageMetadata::new(1, hash(1), test_url("zbi")),
+            Some(ImageMetadata::new(2, hash(2), test_url("vbmeta"))),
         );
-        let versioned_manifest = builder.build();
+        let VersionedImagePackagesManifest::Version1(manifest) = builder.build();
 
-        let VersionedImagePackagesManifest::Version1(manifest) = versioned_manifest;
-        assert_eq!(manifest.fuchsia(), Some(&fuchsia));
+        assert_eq!(manifest.fuchsia(), Some(slot.clone()));
+        assert_eq!(manifest.recovery(), None);
+        assert_eq!(manifest.firmware(), btreemap! {});
+
+        let mut builder = ImagePackagesManifest::builder();
+        builder.recovery_package(
+            ImageMetadata::new(1, hash(1), test_url("zbi")),
+            Some(ImageMetadata::new(2, hash(2), test_url("vbmeta"))),
+        );
+        let VersionedImagePackagesManifest::Version1(manifest) = builder.build();
+
+        assert_eq!(manifest.fuchsia(), None);
+        assert_eq!(manifest.recovery(), Some(slot.clone()));
+        assert_eq!(manifest.firmware(), btreemap! {});
+
+        let mut builder = ImagePackagesManifest::builder();
+        builder.firmware_package(btreemap! {
+            "".to_owned() => ImageMetadata::new(5, hash(5), image_package_resource_url("update-images-firmware", 6, "a")) }
+        );
+        let VersionedImagePackagesManifest::Version1(manifest) = builder.build();
+        assert_eq!(manifest.fuchsia(), None);
+        assert_eq!(manifest.recovery(), None);
+        assert_eq!(
+            manifest.firmware(),
+            btreemap! {"".to_owned() => ImageMetadata::new(5, hash(5), image_package_resource_url("update-images-firmware", 6, "a"))}
+        )
+    }
+
+    #[fuchsia::test]
+    fn firmware_image_format_to_image_metadata() {
+        let assembly_firmware = FirmwareImageFormat {
+            r#type: "".to_string(),
+            size: 1,
+            hash: hash(1),
+            url: image_package_resource_url("package", 1, "firmware"),
+        };
+
+        let image_meta_data = ImageMetadata {
+            size: 1,
+            hash: hash(1),
+            url: image_package_resource_url("package", 1, "firmware"),
+        };
+
+        let firmware_into: ImageMetadata = assembly_firmware.metadata();
+
+        assert_eq!(firmware_into, image_meta_data);
+    }
+
+    #[fuchsia::test]
+    fn assembly_image_format_to_image_metadata() {
+        let assembly_image = AssemblyImageFormat {
+            slot: Slot::Fuchsia,
+            r#type: SlotImage::Zbi,
+            size: 1,
+            hash: hash(1),
+            url: image_package_resource_url("package", 1, "image"),
+        };
+
+        let image_meta_data = ImageMetadata {
+            size: 1,
+            hash: hash(1),
+            url: image_package_resource_url("package", 1, "image"),
+        };
+
+        let image_into: ImageMetadata = assembly_image.metadata();
+
+        assert_eq!(image_into, image_meta_data);
+    }
+
+    #[fuchsia::test]
+    fn manifest_conversion_minimal() {
+        let manifest = ImagePackagesManifest { partitions: vec![], firmware: vec![] };
+
+        let slots = ImagePackagesSlots { fuchsia: None, recovery: None, firmware: btreemap! {} };
+
+        let translated_manifest: ImagePackagesSlots = manifest.into();
+        assert_eq!(translated_manifest, slots);
+    }
+
+    #[fuchsia::test]
+    fn manifest_conversion_maximal() {
+        let manifest = ImagePackagesManifest {
+            partitions: vec![
+                AssemblyImageFormat {
+                    slot: Slot::Fuchsia,
+                    r#type: SlotImage::Zbi,
+                    size: 1,
+                    hash: hash(1),
+                    url: test_url("1"),
+                },
+                AssemblyImageFormat {
+                    slot: Slot::Fuchsia,
+                    r#type: SlotImage::Vbmeta,
+                    size: 2,
+                    hash: hash(2),
+                    url: test_url("2"),
+                },
+                AssemblyImageFormat {
+                    slot: Slot::Recovery,
+                    r#type: SlotImage::Zbi,
+                    size: 3,
+                    hash: hash(3),
+                    url: test_url("3"),
+                },
+                AssemblyImageFormat {
+                    slot: Slot::Recovery,
+                    r#type: SlotImage::Vbmeta,
+                    size: 4,
+                    hash: hash(4),
+                    url: test_url("4"),
+                },
+            ],
+            firmware: vec![
+                FirmwareImageFormat {
+                    r#type: "".to_string(),
+                    size: 5,
+                    hash: hash(5),
+                    url: test_url("5"),
+                },
+                FirmwareImageFormat {
+                    r#type: "bl2".to_string(),
+                    size: 6,
+                    hash: hash(6),
+                    url: test_url("6"),
+                },
+            ],
+        };
+
+        let slots = ImagePackagesSlots {
+            fuchsia: Some(BootSlot {
+                zbi: ImageMetadata::new(1, hash(1), test_url("1")),
+                vbmeta: Some(ImageMetadata::new(2, hash(2), test_url("2"))),
+            }),
+            recovery: Some(BootSlot {
+                zbi: ImageMetadata::new(3, hash(3), test_url("3")),
+                vbmeta: Some(ImageMetadata::new(4, hash(4), test_url("4"))),
+            }),
+            firmware: btreemap! {
+                "".to_owned() => ImageMetadata::new(5, hash(5), test_url("5")),
+                "bl2".to_owned() => ImageMetadata::new(6, hash(6), test_url("6")),
+            },
+        };
+
+        let translated_manifest: ImagePackagesSlots = manifest.into();
+        assert_eq!(translated_manifest, slots);
     }
 }

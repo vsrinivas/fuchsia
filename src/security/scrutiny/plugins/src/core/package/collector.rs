@@ -330,13 +330,14 @@ impl PackageDataCollector {
             .context("Failed to open images manifest blob designated in update package")?;
         let image_packages_manifest = parse_image_packages_json(images_json_contents.as_slice())
             .context("Failed to parse images manifest in update package")?;
-        let images_package_url = image_packages_manifest
-            .fuchsia()
-            .ok_or(anyhow!("Update package images manifest contains no fuchsia boot slot images"))?
-            .url();
+        let fuchsia_metadata = image_packages_manifest.fuchsia().ok_or(anyhow!(
+            "Update package images manifest contains no fuchsia boot slot images"
+        ))?;
+        let images_package_url = fuchsia_metadata.zbi().url();
+
         let images_package = fuchsia_packages
             .iter()
-            .find(|&pkg_def| pkg_def.url == images_package_url.clone().into())
+            .find(|&pkg_def| &pkg_def.url == images_package_url.clone().package_url())
             .ok_or_else(|| {
                 anyhow!(
                     "Failed to locate update package images package with URL {} ",
@@ -1029,13 +1030,10 @@ pub mod tests {
         },
         fuchsia_hash::{Hash, HASH_SIZE},
         fuchsia_merkle::MerkleTree,
-        fuchsia_url::{
-            AbsoluteComponentUrl, AbsolutePackageUrl, PackageName, PackageVariant,
-            PinnedAbsolutePackageUrl,
-        },
+        fuchsia_url::{AbsoluteComponentUrl, AbsolutePackageUrl, PackageName, PackageVariant},
         fuchsia_zbi_abi::zbi_container_header,
         maplit::{hashmap, hashset},
-        scrutiny_testing::{artifact::MockArtifactReader, fake::fake_model_config, TEST_REPO_URL},
+        scrutiny_testing::{artifact::MockArtifactReader, fake::fake_model_config},
         scrutiny_utils::artifact::ArtifactReader,
         sha2::{Digest, Sha256},
         std::{collections::HashMap, convert::TryInto, path::PathBuf, str::FromStr, sync::Arc},
@@ -2025,18 +2023,13 @@ pub mod tests {
         let zbi_contents = zero_content_zbi();
         let zbi_content_hash = content_hash(zbi_contents.as_slice());
         let zbi_hash = MerkleTree::from_reader(zbi_contents.as_slice()).unwrap().root();
-        let images_pkg_hash = Hash::from([0; HASH_SIZE]);
 
-        // Create valid images.json with "fuchsia" images that includes a ZBI.
+        // Create valid images.json with images that includes a ZBI.
         let mut images_json_builder = ImagePackagesManifest::builder();
+        let url = "fuchsia-pkg://test.fuchsia.com/update-images-fuchsia/0?hash=0000000000000000000000000000000000000000000000000000000000000000#data".parse().unwrap();
+
         images_json_builder.fuchsia_package(
-            PinnedAbsolutePackageUrl::new(
-                TEST_REPO_URL.clone(),
-                "update-images-fuchsia".parse().unwrap(),
-                Some(fuchsia_url::PackageVariant::zero()),
-                images_pkg_hash.clone(),
-            ),
-            ImageMetadata::new(zbi_contents.len().try_into().unwrap(), zbi_content_hash),
+            ImageMetadata::new(zbi_contents.len().try_into().unwrap(), zbi_content_hash, url),
             None,
         );
         let images_json = images_json_builder.build();
@@ -2076,6 +2069,7 @@ pub mod tests {
             &update_pkg,
             &vec![images_pkg],
         );
+
         match result {
             Ok(_) => return,
             Err(err) => panic!("Unexpected error: {:?}", err),
@@ -2088,21 +2082,17 @@ pub mod tests {
         let zbi_content_hash = content_hash(zbi_contents.as_slice());
         let zbi_hash = MerkleTree::from_reader(zbi_contents.as_slice()).unwrap().root();
         let zbi_mismatch_hash = Hash::from([9; HASH_SIZE]);
-        let images_pkg_hash = Hash::from([0; HASH_SIZE]);
         assert!(zbi_hash != zbi_mismatch_hash);
 
         // Create valid images.json with "fuchsia" images that includes a ZBI.
         let mut images_json_builder = ImagePackagesManifest::builder();
+        let url = "fuchsia-pkg://test.fuchsia.com/update-images-fuchsia/0?hash=0000000000000000000000000000000000000000000000000000000000000000#data".parse().unwrap();
+
         images_json_builder.fuchsia_package(
-            PinnedAbsolutePackageUrl::new(
-                TEST_REPO_URL.clone(),
-                "update-images-fuchsia".parse().unwrap(),
-                Some(fuchsia_url::PackageVariant::zero()),
-                images_pkg_hash.clone(),
-            ),
-            ImageMetadata::new(zbi_contents.len().try_into().unwrap(), zbi_content_hash),
+            ImageMetadata::new(zbi_contents.len().try_into().unwrap(), zbi_content_hash, url),
             None,
         );
+
         let images_json = images_json_builder.build();
         let images_json_contents = serde_json::to_vec(&images_json).unwrap();
         let images_json_hash =
@@ -2152,18 +2142,13 @@ pub mod tests {
         let zbi_contents = zero_content_zbi();
         let zbi_content_hash = content_hash(zbi_contents.as_slice());
         let zbi_hash = MerkleTree::from_reader(zbi_contents.as_slice()).unwrap().root();
-        let images_pkg_hash = Hash::from([0; HASH_SIZE]);
 
         // Create valid images.json with "fuchsia" images that includes a ZBI.
         let mut images_json_builder = ImagePackagesManifest::builder();
+        let url = "fuchsia-pkg://fuchsia.com/update-images-firmware/0?hash=000000000000000000000000000000000000000000000000000000000000000a#data".parse().unwrap();
+
         images_json_builder.fuchsia_package(
-            PinnedAbsolutePackageUrl::new(
-                TEST_REPO_URL.clone(),
-                "update-images-fuchsia".parse().unwrap(),
-                Some(fuchsia_url::PackageVariant::zero()),
-                images_pkg_hash.clone(),
-            ),
-            ImageMetadata::new(zbi_contents.len().try_into().unwrap(), zbi_content_hash),
+            ImageMetadata::new(zbi_contents.len().try_into().unwrap(), zbi_content_hash, url),
             None,
         );
         let images_json = images_json_builder.build();

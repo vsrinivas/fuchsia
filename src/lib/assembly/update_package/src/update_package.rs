@@ -138,8 +138,8 @@ impl ImageMapping {
         }
     }
 
-    fn metadata(&self) -> Result<ImageMetadata> {
-        ImageMetadata::for_path(&self.source)
+    fn metadata(&self, url: PinnedAbsolutePackageUrl) -> Result<ImageMetadata> {
+        ImageMetadata::for_path(&self.source, url, self.destination.clone())
             .with_context(|| format!("Failed to read/hash {:?}", self.source))
     }
 }
@@ -297,9 +297,8 @@ impl UpdatePackageBuilder {
 
             let url = builder.build(&mut blobfs_builder)?;
             images_manifest.fuchsia_package(
-                url,
-                zbi.metadata()?,
-                vbmeta.map(|vbmeta| vbmeta.metadata()).transpose()?,
+                zbi.metadata(url.clone())?,
+                vbmeta.map(|vbmeta| vbmeta.metadata(url)).transpose()?,
             );
         } else {
             builder.build(&mut blobfs_builder)?;
@@ -320,10 +319,10 @@ impl UpdatePackageBuilder {
             }
 
             let url = builder.build(&mut blobfs_builder)?;
+
             images_manifest.recovery_package(
-                url,
-                zbi.metadata()?,
-                vbmeta.map(|vbmeta| vbmeta.metadata()).transpose()?,
+                zbi.metadata(url.clone())?,
+                vbmeta.map(|vbmeta| vbmeta.metadata(url)).transpose()?,
             );
         } else {
             builder.build(&mut blobfs_builder)?;
@@ -342,15 +341,23 @@ impl UpdatePackageBuilder {
                 builder
                     .package
                     .add_file_as_blob(destination, bootloader.image.path_to_string()?)?;
+            }
+
+            let url = builder.build(&mut blobfs_builder)?;
+
+            for bootloader in &self.partitions.bootloader_partitions {
+                let destination = match bootloader.partition_type.as_str() {
+                    "" => "firmware".to_string(),
+                    t => format!("firmware_{}", t),
+                };
                 firmware.insert(
                     bootloader.partition_type.clone(),
-                    ImageMetadata::for_path(&bootloader.image)
+                    ImageMetadata::for_path(&bootloader.image, url.clone(), destination)
                         .with_context(|| format!("Failed to read/hash {:?}", &bootloader.image))?,
                 );
             }
 
-            let url = builder.build(&mut blobfs_builder)?;
-            images_manifest.firmware_package(url, firmware);
+            images_manifest.firmware_package(firmware);
         } else {
             builder.build(&mut blobfs_builder)?;
         }
@@ -491,28 +498,28 @@ mod tests {
         let file = File::open(outdir.path().join("images.json.orig")).unwrap();
         let reader = BufReader::new(file);
         let i: serde_json::Value = serde_json::from_reader(reader).unwrap();
+
         assert_eq!(
             serde_json::json!({
                 "version": "1",
                 "contents": {
-                    "fuchsia": {
-                        "url": "fuchsia-pkg://fuchsia.com/update_images_fuchsia/0?hash=f9e2033364bdbb0e28d07882c8811a6219d266b7f5e1a7810b424f878ea19b30",
-                        "images": {
-                            "zbi": {
+                    "partitions": [
+                            {
                                 "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                                 "size": 0,
+                                "slot": "fuchsia",
+                                "type": "zbi",
+                                "url": "fuchsia-pkg://fuchsia.com/update_images_fuchsia/0?hash=f9e2033364bdbb0e28d07882c8811a6219d266b7f5e1a7810b424f878ea19b30#zbi",
                             },
-                        },
-                    },
-                    "firmware": {
-                        "url": "fuchsia-pkg://fuchsia.com/update_images_firmware/0?hash=795b05ab882f4f5959b50fcddeea18dba67b5ec6309c761460f0777e73c3f12d",
-                        "images": {
-                            "tpl": {
+                    ],
+                    "firmware":
+                            [{
                                 "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                                 "size": 0,
-                            },
-                        },
-                    },
+                                "url": "fuchsia-pkg://fuchsia.com/update_images_firmware/0?hash=795b05ab882f4f5959b50fcddeea18dba67b5ec6309c761460f0777e73c3f12d#firmware_tpl",
+                                "type": "tpl",
+                            }],
+
                 },
             }),
             i
@@ -542,7 +549,7 @@ mod tests {
             board=9c579992f6e9f8cbd4ba81af6e23b1d5741e280af60f795e9c2bbcc76c4b7065\n\
             epoch.json=0362de83c084397826800778a1cf927280a5d5388cb1f828d77f74108726ad69\n\
             firmware_tpl=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n\
-            images.json.orig=73894a190e5658901049dc9f83087309669b687ee5d6f40fd63de20e0196e76a\n\
+            images.json.orig=ef4f252bc4fbfdadd6d2b0363e1ecf668ff82e600ad80753749ca8e212ea3ac4\n\
             packages.json=85a3911ff39c118ee1a4be5f7a117f58a5928a559f456b6874440a7fb8c47a9a\n\
             version=d2ff44655653e2cbbecaf89dbf33a8daa8867e41dade2c6b4f127c3f0450c96b\n\
             zbi.signed=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n\
@@ -672,37 +679,41 @@ mod tests {
             serde_json::json!({
                 "version": "1",
                 "contents": {
-                    "fuchsia": {
-                        "url": "fuchsia-pkg://fuchsia.com/update_images_fuchsia/0?hash=f9e2033364bdbb0e28d07882c8811a6219d266b7f5e1a7810b424f878ea19b30",
-                        "images": {
-                            "zbi": {
+                    "partitions": [
+                            {
+                                "type": "zbi",
+                                "slot": "fuchsia",
                                 "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                                 "size": 0,
+                                "url": "fuchsia-pkg://fuchsia.com/update_images_fuchsia/0?hash=f9e2033364bdbb0e28d07882c8811a6219d266b7f5e1a7810b424f878ea19b30#zbi",
                             },
-                        },
-                    },
-                    "recovery": {
-                        "url": "fuchsia-pkg://fuchsia.com/update_images_recovery/0?hash=c0be02242469c633ddcaeaef1493b67158688f10e41131c7e19fbd2b5bc86acd",
-                        "images": {
-                            "vbmeta": {
+                            {
+                                "type": "zbi",
+                                "slot": "recovery",
                                 "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                                 "size": 0,
+                                "url": "fuchsia-pkg://fuchsia.com/update_images_recovery/0?hash=c0be02242469c633ddcaeaef1493b67158688f10e41131c7e19fbd2b5bc86acd#zbi",
+
                             },
-                            "zbi": {
+
+                    {
+                                "type": "vbmeta",
+                                "slot": "recovery",
                                 "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                                 "size": 0,
+                                "url": "fuchsia-pkg://fuchsia.com/update_images_recovery/0?hash=c0be02242469c633ddcaeaef1493b67158688f10e41131c7e19fbd2b5bc86acd#vbmeta",
+
                             },
-                        },
-                    },
-                    "firmware": {
-                        "url": "fuchsia-pkg://fuchsia.com/update_images_firmware/0?hash=795b05ab882f4f5959b50fcddeea18dba67b5ec6309c761460f0777e73c3f12d",
-                        "images": {
-                            "tpl": {
+
+                    ],
+                    "firmware": [
+                             {
+                                "type" : "tpl",
                                 "hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                                 "size": 0,
+                                "url": "fuchsia-pkg://fuchsia.com/update_images_firmware/0?hash=795b05ab882f4f5959b50fcddeea18dba67b5ec6309c761460f0777e73c3f12d#firmware_tpl",
                             },
-                        },
-                    },
+                    ],
                 },
             }),
             i
@@ -732,7 +743,7 @@ mod tests {
             board=9c579992f6e9f8cbd4ba81af6e23b1d5741e280af60f795e9c2bbcc76c4b7065\n\
             epoch.json=0362de83c084397826800778a1cf927280a5d5388cb1f828d77f74108726ad69\n\
             firmware_tpl=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n\
-            images.json.orig=9ad58f6f9d561c019c85fa616be925828a0d02b5c1805d02cebdbe47a4d5dbad\n\
+            images.json.orig=ae9f785959bd2a0fdd136cf42fa17b96e39728fc04616e273059e8e706fdc76e\n\
             packages.json=85a3911ff39c118ee1a4be5f7a117f58a5928a559f456b6874440a7fb8c47a9a\n\
             recovery=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n\
             recovery.vbmeta=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n\
