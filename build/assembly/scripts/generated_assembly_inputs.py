@@ -60,10 +60,8 @@ def main():
             manifest = json.load(f)
             for blob in manifest.get("blobs", []):
                 add_source(blob["source_path"])
-        config_data: Optional[Dict[str, str]] = entry.get("config_data")
-        if config_data:
-            for (_dest, source) in config_data.items():
-                add_source(source)
+        for config in entry.get("config_data", []):
+            add_source(config["source"])
 
     # Add the product config.
     add_source(args.product_config.name)

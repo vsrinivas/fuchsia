@@ -142,20 +142,29 @@ pub struct ProductPackageDetails {
     /// Map of config_data entries for this package, from the destination path
     /// within the package, to the path where the source file is to be found.
     #[serde(default)]
-    #[serde(skip_serializing_if = "BTreeMap::is_empty")]
-    pub config_data: BTreeMap<PackageInternalPathBuf, SourcePathBuf>,
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub config_data: Vec<ProductConfigData>,
 }
 
 impl From<PackageManifestPathBuf> for ProductPackageDetails {
     fn from(manifest: PackageManifestPathBuf) -> Self {
-        Self { manifest, config_data: BTreeMap::default() }
+        Self { manifest, config_data: Vec::default() }
     }
 }
 
 impl From<&str> for ProductPackageDetails {
     fn from(s: &str) -> Self {
-        ProductPackageDetails { manifest: s.into(), config_data: BTreeMap::default() }
+        ProductPackageDetails { manifest: s.into(), config_data: Vec::default() }
     }
+}
+
+#[derive(Debug, PartialEq, Deserialize, Serialize)]
+pub struct ProductConfigData {
+    /// Path to the config file on the host.
+    pub source: SourcePathBuf,
+
+    /// Path to find the file in the package on the target.
+    pub destination: PackageInternalPathBuf,
 }
 
 /// A bundle of inputs to be used in the assembly of a product.  This is closely
@@ -263,14 +272,14 @@ mod tests {
             config.product.packages.base,
             vec![ProductPackageDetails {
                 manifest: "path/to/base/package_manifest.json".into(),
-                config_data: BTreeMap::default()
+                config_data: Vec::default()
             }]
         );
         assert_eq!(
             config.product.packages.cache,
             vec![ProductPackageDetails {
                 manifest: "path/to/cache/package_manifest.json".into(),
-                config_data: BTreeMap::default()
+                config_data: Vec::default()
             }]
         );
         assert_eq!(config.platform.identity.password_pinweaver, FeatureControl::Allowed);
@@ -286,10 +295,16 @@ mod tests {
                     },
                     {
                         manifest: "some/other/manifest.json",
-                        config_data: {
-                            "dest/path/cfg.txt": "source/path/cfg.txt",
-                            "other_data.json": "source_other_data.json",
-                        }
+                        config_data: [
+                            {
+                                destination: "dest/path/cfg.txt",
+                                source: "source/path/cfg.txt",
+                            },
+                            {
+                                destination: "other_data.json",
+                                source: "source_other_data.json",
+                            },
+                        ]
                     }
                   ],
                 cache: [
@@ -308,10 +323,16 @@ mod tests {
                 ProductPackageDetails::from("path/to/base/package_manifest.json"),
                 ProductPackageDetails {
                     manifest: "some/other/manifest.json".into(),
-                    config_data: BTreeMap::from([
-                        ("dest/path/cfg.txt".into(), "source/path/cfg.txt".into()),
-                        ("other_data.json".into(), "source_other_data.json".into())
-                    ])
+                    config_data: vec![
+                        ProductConfigData {
+                            destination: "dest/path/cfg.txt".into(),
+                            source: "source/path/cfg.txt".into(),
+                        },
+                        ProductConfigData {
+                            destination: "other_data.json".into(),
+                            source: "source_other_data.json".into(),
+                        },
+                    ]
                 }
             ]
         );
@@ -323,18 +344,30 @@ mod tests {
         let json5 = r#"
             {
                 manifest: "some/other/manifest.json",
-                config_data: {
-                    "dest/path/cfg.txt": "source/path/cfg.txt",
-                    "other_data.json": "source_other_data.json",
-                }
+                config_data: [
+                    {
+                        destination: "dest/path/cfg.txt",
+                        source: "source/path/cfg.txt",
+                    },
+                    {
+                        destination: "other_data.json",
+                        source: "source_other_data.json",
+                    },
+                ]
             }
         "#;
         let expected = ProductPackageDetails {
             manifest: "some/other/manifest.json".into(),
-            config_data: BTreeMap::from([
-                ("dest/path/cfg.txt".into(), "source/path/cfg.txt".into()),
-                ("other_data.json".into(), "source_other_data.json".into()),
-            ]),
+            config_data: vec![
+                ProductConfigData {
+                    destination: "dest/path/cfg.txt".into(),
+                    source: "source/path/cfg.txt".into(),
+                },
+                ProductConfigData {
+                    destination: "other_data.json".into(),
+                    source: "source_other_data.json".into(),
+                },
+            ],
         };
         let mut cursor = std::io::Cursor::new(json5);
         let details: ProductPackageDetails = util::from_reader(&mut cursor).unwrap();
@@ -346,14 +379,20 @@ mod tests {
         let entries = vec![
             ProductPackageDetails {
                 manifest: "path/to/manifest.json".into(),
-                config_data: BTreeMap::default(),
+                config_data: Vec::default(),
             },
             ProductPackageDetails {
                 manifest: "another/path/to/a/manifest.json".into(),
-                config_data: BTreeMap::from([
-                    ("dest/path/A".into(), "source/path/A".into()),
-                    ("dest/path/B".into(), "source/path/B".into()),
-                ]),
+                config_data: vec![
+                    ProductConfigData {
+                        destination: "dest/path/A".into(),
+                        source: "source/path/A".into(),
+                    },
+                    ProductConfigData {
+                        destination: "dest/path/B".into(),
+                        source: "source/path/B".into(),
+                    },
+                ],
             },
         ];
         let serialized = serde_json::to_value(&entries).unwrap();
@@ -364,10 +403,16 @@ mod tests {
                 },
                 {
                     "manifest": "another/path/to/a/manifest.json",
-                    "config_data": {
-                        "dest/path/A": "source/path/A",
-                        "dest/path/B": "source/path/B"
-                    }
+                    "config_data": [
+                        {
+                            "destination": "dest/path/A",
+                            "source": "source/path/A",
+                        },
+                        {
+                            "destination": "dest/path/B",
+                            "source": "source/path/B",
+                        },
+                    ]
                 }
             ]
         );

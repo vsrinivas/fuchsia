@@ -6,10 +6,12 @@ use crate::util;
 use anyhow::{anyhow, ensure, Context, Result};
 use assembly_config_data::ConfigDataBuilder;
 use assembly_config_schema::{
-    product_config::{AssemblyInputBundle, ProductPackageDetails, ProductPackagesConfig},
+    product_config::{
+        AssemblyInputBundle, ProductConfigData, ProductPackageDetails, ProductPackagesConfig,
+    },
     FileEntry,
 };
-use assembly_package_utils::{PackageInternalPathBuf, PackageManifestPathBuf, SourcePathBuf};
+use assembly_package_utils::PackageManifestPathBuf;
 use assembly_platform_configuration::{PackageConfigPatch, StructuredConfigPatches};
 use assembly_structured_config::Repackager;
 use assembly_util::{InsertAllUniqueExt, InsertUniqueExt, MapEntry};
@@ -238,7 +240,7 @@ impl ImageAssemblyConfigBuilder {
             .into_iter()
             // Explicitly call out the path types to make sure that they
             // are ordered as expected in the tuple.
-            .map(|(destination, source): (PackageInternalPathBuf, SourcePathBuf)| FileEntry {
+            .map(|ProductConfigData { destination, source }| FileEntry {
                 destination: destination.to_string(),
                 source: source.into_std_path_buf(),
             })
@@ -685,14 +687,20 @@ mod tests {
                 write_empty_pkg(&outdir, "base_a").into(),
                 ProductPackageDetails {
                     manifest: write_empty_pkg(&outdir, "base_b").into(),
-                    config_data: BTreeMap::default(),
+                    config_data: Vec::default(),
                 },
                 ProductPackageDetails {
                     manifest: write_empty_pkg(&outdir, "base_c").into(),
-                    config_data: BTreeMap::from([
-                        ("dest/path/cfg.txt".into(), config_data_source_a.to_str().unwrap().into()),
-                        ("other_data.json".into(), config_data_source_b.to_str().unwrap().into()),
-                    ]),
+                    config_data: vec![
+                        ProductConfigData {
+                            destination: "dest/path/cfg.txt".into(),
+                            source: config_data_source_a.to_str().unwrap().into(),
+                        },
+                        ProductConfigData {
+                            destination: "other_data.json".into(),
+                            source: config_data_source_b.to_str().unwrap().into(),
+                        },
+                    ],
                 }
                 .into(),
             ],
