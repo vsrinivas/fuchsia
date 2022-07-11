@@ -12,6 +12,7 @@ use lowpan_driver_common::net::BackboneInterface;
 use lowpan_driver_common::AsyncConditionWait;
 use lowpan_driver_common::Driver as LowpanDriver;
 use lowpan_driver_common::ZxResult;
+use openthread::ot::LeaderData;
 use std::ffi::CString;
 
 /// Helpers for API-related tasks.
@@ -491,8 +492,7 @@ where
     }
 
     async fn get_thread_router_id(&self) -> ZxResult<u8> {
-        let rloc16 = self.driver_state.lock().ot_instance.get_rloc16();
-        Ok(self.driver_state.lock().ot_instance.get_router_info(rloc16)?.get_router_id())
+        self.get_thread_rloc16().await.map(ot::rloc16_to_router_id)
     }
 
     async fn send_mfg_command(&self, command: &str) -> ZxResult<String> {
@@ -818,30 +818,27 @@ where
 
     /// Returns telemetry information of the device.
     async fn get_telemetry(&self) -> ZxResult<Telemetry> {
-        let (thread_link_mode, leader_data, rcp_version, tx_power) = {
-            let driver_state = self.driver_state.lock();
-            (
-                Some(driver_state.ot_instance.get_link_mode().bits()),
-                driver_state.ot_instance.get_leader_data().ok(),
-                Some(driver_state.ot_instance.radio_get_version_string().to_string()),
-                driver_state.ot_instance.get_transmit_power().ok(),
-            )
-        };
+        let driver_state = self.driver_state.lock();
+
+        let ot = &driver_state.ot_instance;
+        let leader_data = ot.get_leader_data().ok();
+
         Ok(Telemetry {
-            rssi: self.get_current_rssi().await.ok(),
-            partition_id: self.get_partition_id().await.ok(),
-            stack_version: self.get_ncp_version().await.ok(),
-            rcp_version,
-            thread_link_mode,
-            thread_router_id: self.get_thread_router_id().await.ok(),
-            thread_rloc: self.get_thread_rloc16().await.ok(),
-            thread_network_data_version: leader_data.as_ref().map(|x| x.data_version()),
-            thread_stable_network_data_version: leader_data
-                .as_ref()
-                .map(|x| x.stable_data_version()),
-            thread_leader_weight: leader_data.as_ref().map(|x| x.weighting()),
-            channel_index: self.get_current_channel().await.ok(),
-            tx_power,
+            rssi: Some(ot.get_rssi()),
+            partition_id: Some(ot.get_partition_id()),
+            stack_version: Some(ot::get_version_string().to_string()),
+            rcp_version: Some(ot.radio_get_version_string().to_string()),
+            thread_link_mode: Some(ot.get_link_mode().bits()),
+            thread_rloc: Some(ot.get_rloc16()),
+            thread_router_id: Some(ot::rloc16_to_router_id(ot.get_rloc16())),
+            thread_network_data_version: Some(ot.net_data_get_version()),
+            thread_stable_network_data_version: Some(ot.net_data_get_stable_version()),
+            thread_leader_weight: leader_data.as_ref().map(LeaderData::weighting),
+            channel_index: Some(ot.get_channel().into()),
+            tx_power: ot.get_transmit_power().ok(),
+            thread_leader_router_id: leader_data.as_ref().map(LeaderData::leader_router_id),
+            thread_network_data: ot.net_data_as_vec(false).ok(),
+            thread_stable_network_data: ot.net_data_as_vec(true).ok(),
             ..Telemetry::EMPTY
         })
     }
