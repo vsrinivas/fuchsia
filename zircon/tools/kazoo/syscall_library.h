@@ -288,7 +288,6 @@ class Syscall {
   Syscall() = default;
   ~Syscall() = default;
 
-  const std::string& short_description() const { return short_description_; }
   const std::map<std::string, std::string>& attributes() const { return attributes_; }
 
   const std::string& id() const { return id_; }
@@ -298,7 +297,6 @@ class Syscall {
   bool is_noreturn() const { return is_noreturn_; }
   const Struct& request() const { return request_; }
   const Struct& response() const { return response_; }
-  const std::vector<std::string>& rights_specs() const { return rights_specs_; }
 
   bool HasAttribute(const char* attrib_name) const;
   std::string GetAttribute(const char* attrib_name) const;
@@ -316,12 +314,10 @@ class Syscall {
   std::string original_name_;  // "GetInfo"
   std::string category_;       // "object"
   std::string name_;           // "object_get_info"
-  std::string short_description_;
   bool is_noreturn_ = false;
   std::map<std::string, std::string> attributes_;
   Struct request_;
   Struct response_;
-  std::vector<std::string> rights_specs_;
 
   // request_ and response_ mapped to C/Kernel-style call style.
   Type kernel_return_type_;

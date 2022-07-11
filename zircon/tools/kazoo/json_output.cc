@@ -6,38 +6,6 @@
 #include "tools/kazoo/outputs.h"
 #include "tools/kazoo/string_util.h"
 
-namespace {
-
-// This is almost list SplitString() on spaces, but punctuation needs to be treated differently as
-// it's broken on, but not discarded (for example, '-' in the middle of words, or '.' attached the
-// last word of a sentence.)
-//
-// TODO(syscall-fidl-transition): 1) This is probably more particular than consumers of the .json
-// file really are; 2) There may only be one consumer of this field anyway (update-docs-from-abigen)
-// which is in-tree and can just be rewritten in some other way.
-std::vector<std::string> BreakAsAbigenParser(const std::string& docstr) {
-  std::vector<std::string> tokens;
-  std::string tok;
-
-  for (const auto& c : docstr) {
-    if (isalnum(c) || c == '_') {
-      tok += c;
-    } else {
-      if (!tok.empty())
-        tokens.push_back(tok);
-      tok.clear();
-      if (ispunct(c))
-        tokens.emplace_back(1, c);
-    }
-  }
-  if (!tok.empty())
-    tokens.push_back(tok);
-
-  return tokens;
-}
-
-}  // namespace
-
 bool JsonOutput(const SyscallLibrary& library, Writer* writer) {
   // Note, no comments allowed in plain json, so no copyright or "is generated" note.
 
@@ -83,26 +51,6 @@ bool JsonOutput(const SyscallLibrary& library, Writer* writer) {
     iprintn("\"attributes\": [");
     in();
     output_attributes_list(syscall.attributes());
-    out();
-    iprintn("],");
-
-    iprintn("\"top_description\": [");
-    in();
-    const auto doc_split = BreakAsAbigenParser(syscall.short_description());
-    if (!doc_split.empty()) {
-      iprintn(("\"" + JoinStrings(doc_split, "\", \"") + "\"").c_str());
-    }
-    out();
-    iprintn("],");
-
-    iprintn("\"requirements\": [");
-    in();
-    for (size_t i = 0; i < syscall.rights_specs().size(); ++i) {
-      std::string rights = syscall.rights_specs()[i];
-      const bool last_right = i == syscall.rights_specs().size() - 1;
-      iprintn("%s%s", ("\"" + JoinStrings(BreakAsAbigenParser(rights), "\", \"") + "\"").c_str(),
-              last_right ? "" : ",");
-    }
     out();
     iprintn("],");
 

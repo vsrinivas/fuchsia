@@ -12283,11 +12283,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "iommu",
@@ -12324,11 +12319,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "bti_pin",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -12395,11 +12385,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -12416,11 +12401,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*",
         "vdsocall"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -12453,11 +12433,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "options",
@@ -12488,11 +12463,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*",
         "handle_unchecked"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -12559,11 +12529,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -12629,11 +12594,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -12686,11 +12646,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "channel_write_etc",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -12745,10 +12700,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "internal"
       ],
-      "top_description": [
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -12802,10 +12753,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "internal"
       ],
-      "top_description": [
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "deadline",
@@ -12845,11 +12792,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "blocking",
         "vdsocall"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -12904,10 +12846,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "internal"
       ],
-      "top_description": [
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -12960,10 +12898,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "internal"
       ],
-      "top_description": [
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "deadline",
@@ -13002,11 +12936,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "blocking",
         "vdsocall"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -13060,11 +12989,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "vdsocall"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
       ],
       "return_type": "zx_time_t"
@@ -13075,10 +12999,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "internal"
       ],
-      "top_description": [
-      ],
-      "requirements": [
-      ],
       "arguments": [
       ],
       "return_type": "zx_time_t"
@@ -13087,11 +13007,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "clock_create",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -13124,11 +13039,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -13151,11 +13061,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "clock_get_details",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -13186,11 +13091,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "clock_update",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -13224,10 +13124,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "internal"
       ],
-      "top_description": [
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "buffer",
@@ -13252,11 +13148,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "vdsocall"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "buffer",
@@ -13279,11 +13170,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "cprng_add_entropy",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -13308,11 +13194,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "debug_read",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -13351,11 +13232,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "buffer",
@@ -13379,11 +13255,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "debug_send_command",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -13416,11 +13287,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "resource",
@@ -13450,11 +13316,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "debuglog_write",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -13494,11 +13355,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -13536,11 +13392,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "options",
@@ -13563,11 +13414,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "eventpair_create",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -13599,11 +13445,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -13627,11 +13468,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -13654,11 +13490,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "fifo_create",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -13704,11 +13535,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -13752,11 +13578,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "fifo_write",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -13803,11 +13624,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "resource",
@@ -13851,11 +13667,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "framebuffer_set_range",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -13916,11 +13727,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "blocking"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "value_ptr",
@@ -13959,11 +13765,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "value_ptr",
@@ -13987,11 +13788,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "futex_requeue",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -14046,11 +13842,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "value_ptr",
@@ -14067,11 +13858,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "futex_requeue_single_owner",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -14119,11 +13905,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "value_ptr",
@@ -14147,11 +13928,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "guest_create",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -14189,11 +13965,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "guest_set_trap",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -14246,11 +14017,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -14266,11 +14032,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "handle_close_many",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -14295,11 +14056,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "handle_duplicate",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -14331,11 +14087,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -14365,11 +14116,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "interrupt_create",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -14407,11 +14153,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "interrupt_bind",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -14451,11 +14192,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "blocking"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -14479,11 +14215,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -14500,11 +14231,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -14520,11 +14246,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "interrupt_trigger",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -14556,11 +14277,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -14590,11 +14306,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "iommu_create",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -14641,11 +14352,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "resource",
@@ -14675,11 +14381,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "ioports_release",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -14711,11 +14412,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "parent_job",
@@ -14745,11 +14441,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "job_set_policy",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -14796,11 +14487,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "job",
@@ -14830,11 +14516,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "ktrace_read",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -14880,11 +14561,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -14921,11 +14597,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "ktrace_write",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -14965,11 +14636,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "blocking"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "deadline",
@@ -14987,11 +14653,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "vdsocall"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
       ],
       "return_type": "zx_ticks_t"
@@ -15003,11 +14664,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "const",
         "vdsocall"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
       ],
       "return_type": "zx_ticks_t"
@@ -15017,11 +14673,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*",
         "vdsocall"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -15039,11 +14690,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*",
         "vdsocall"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -15084,11 +14730,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "noreturn",
         "vdsocall"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "value_ptr",
@@ -15128,10 +14769,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "internal"
       ],
-      "top_description": [
-      ],
-      "requirements": [
-      ],
       "arguments": [
       ],
       "return_type": "zx_ticks_t"
@@ -15140,11 +14777,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "msi_allocate",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -15175,11 +14807,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "msi_create",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -15231,11 +14858,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "mtrace_control",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -15289,11 +14911,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "blocking"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -15332,11 +14949,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "blocking"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "items",
@@ -15366,11 +14978,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "object_wait_async",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -15416,11 +15023,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -15451,11 +15053,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -15485,11 +15082,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "object_get_property",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -15528,11 +15120,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -15570,11 +15157,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "object_get_info",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -15627,11 +15209,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -15669,11 +15246,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -15704,11 +15276,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "options",
@@ -15731,11 +15298,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "pager_create_vmo",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -15788,11 +15350,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "pager",
@@ -15815,11 +15372,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "pager_supply_pages",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -15872,11 +15424,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "pager",
@@ -15928,11 +15475,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*",
         "next"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -16000,11 +15542,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "next"
       ],
-      "top_description": [
-        "#", "#", "NAME"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "pager",
@@ -16049,11 +15586,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -16083,11 +15615,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "pci_get_nth_device",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -16126,11 +15653,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -16154,11 +15676,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -16174,11 +15691,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "pci_config_read",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -16217,11 +15729,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -16258,11 +15765,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "pci_cfg_pio_rw",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -16329,11 +15831,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -16371,11 +15868,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -16405,11 +15897,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "pci_query_irq_mode",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -16441,11 +15928,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -16475,11 +15957,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "pci_init",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -16511,11 +15988,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "pci_add_subtract_io_range",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -16561,11 +16033,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -16581,11 +16048,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "port_create",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -16609,11 +16071,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "port_queue",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -16639,11 +16096,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*",
         "blocking"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -16674,11 +16126,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "port_cancel",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -16711,11 +16158,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "noreturn"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "retcode",
@@ -16731,11 +16173,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "process_create",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -16789,11 +16226,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -16845,11 +16277,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -16893,11 +16320,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "process_write_memory",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -16944,11 +16366,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "root_job",
@@ -16986,11 +16403,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "resource_create",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -17051,11 +16463,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -17087,11 +16494,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "options",
@@ -17121,11 +16523,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "socket_write",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -17172,11 +16569,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -17221,11 +16613,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -17255,11 +16642,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "stream_create",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -17298,11 +16680,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*",
         "blocking"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -17349,11 +16726,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*",
         "blocking"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -17408,11 +16780,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "blocking"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -17457,11 +16824,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*",
         "blocking"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -17514,11 +16876,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -17557,11 +16914,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "testonly"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
       ],
       "return_type": "zx_status_t"
@@ -17572,11 +16924,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "test_category1",
         "testonly"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -17595,11 +16942,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "test_category1",
         "testonly"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -17625,11 +16967,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "test_category2",
         "testonly"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -17661,11 +16998,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*",
         "testonly"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -17704,11 +17036,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*",
         "testonly"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -17754,11 +17081,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*",
         "testonly"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -17811,11 +17133,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*",
         "testonly"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -17875,11 +17192,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*",
         "testonly"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -17948,10 +17260,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "next",
         "no_doc"
       ],
-      "top_description": [
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "arg",
@@ -17968,11 +17276,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*",
         "testonly"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -18005,11 +17308,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "testonly"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "return_value",
@@ -18033,10 +17331,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*",
         "testonly"
-      ],
-      "top_description": [
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -18076,10 +17370,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "testonly"
       ],
-      "top_description": [
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "a",
@@ -18118,10 +17408,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "testonly"
       ],
-      "top_description": [
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "a",
@@ -18159,10 +17445,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*",
         "testonly"
-      ],
-      "top_description": [
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -18203,11 +17485,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "const",
         "vdsocall"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
       ],
       "return_type": "uint32_t"
@@ -18218,11 +17495,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "const",
         "vdsocall"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
       ],
@@ -18235,11 +17507,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "const",
         "vdsocall"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
       ],
       "return_type": "zx_string_view_t"
@@ -18251,11 +17518,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "const",
         "vdsocall"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
       ],
       "return_type": "uint32_t"
@@ -18266,11 +17528,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "vdsocall"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
       ],
       "return_type": "uint64_t"
@@ -18280,11 +17537,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*",
         "vdsocall"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -18308,11 +17560,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "system_get_event",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -18343,11 +17590,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "system_set_performance_info",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -18386,11 +17628,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "system_get_performance_info",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -18436,11 +17673,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "resource",
@@ -18471,11 +17703,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "resource",
@@ -18505,11 +17732,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "system_powerctl",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -18542,11 +17764,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -18570,11 +17787,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "This", "function", "replaces", "[", "task_suspend", "]", "(", "task_suspend", ".", "md", ")", ".", "When", "all", "callers", "are"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -18597,11 +17809,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "task_create_exception_channel",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -18633,11 +17840,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -18655,11 +17857,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "noreturn"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
       ],
       "return_type": "void"
@@ -18668,11 +17865,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "thread_create",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -18719,11 +17911,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -18768,11 +17955,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -18809,11 +17991,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "thread_write_state",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -18853,11 +18030,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "options",
@@ -18873,11 +18045,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "timer_create",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -18909,11 +18076,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -18944,11 +18106,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -18964,11 +18121,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "vcpu_create",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -19008,11 +18160,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "blocking"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -19036,11 +18183,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -19056,11 +18198,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "vcpu_interrupt",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -19084,11 +18221,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "vcpu_read_state",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -19127,11 +18259,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -19169,11 +18296,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "vmar_allocate",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -19226,11 +18348,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -19246,11 +18363,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "vmar_map",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -19310,11 +18422,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -19344,11 +18451,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "vmar_protect",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -19386,11 +18488,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "vmar_op_range",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -19443,11 +18540,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "size",
@@ -19478,11 +18570,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*",
         "blocking"
-      ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -19522,11 +18609,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*",
         "blocking"
       ],
-      "top_description": [
-        "#", "#", "Summary"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -19565,11 +18647,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "SUMMARY"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -19592,11 +18669,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "vmo_set_size",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "SUMMARY"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -19621,11 +18693,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*",
         "blocking"
-      ],
-      "top_description": [
-        "#", "#", "SUMMARY"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -19678,11 +18745,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "SUMMARY"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -19727,11 +18789,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "#", "#", "SUMMARY"
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -19754,11 +18811,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "vmo_replace_as_executable",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "SUMMARY"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -19789,11 +18841,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "vmo_create_contiguous",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "SUMMARY"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -19831,11 +18878,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "name": "vmo_create_physical",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-        "#", "#", "SUMMARY"
-      ],
-      "requirements": [
       ],
       "arguments": [
         {

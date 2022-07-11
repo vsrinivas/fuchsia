@@ -28,10 +28,6 @@ TEST(JsonOutput, KernelCases) {
       "attributes": [
         "*"
       ],
-      "top_description": [
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -98,10 +94,6 @@ TEST(JsonOutput, KernelCases) {
         "*",
         "noreturn"
       ],
-      "top_description": [
-      ],
-      "requirements": [
-      ],
       "arguments": [
       ],
       "return_type": "void"
@@ -110,10 +102,6 @@ TEST(JsonOutput, KernelCases) {
       "name": "kernelcases_mtrace_control",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -165,10 +153,6 @@ TEST(JsonOutput, KernelCases) {
       "name": "kernelcases_read",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -236,10 +220,6 @@ TEST(JsonOutput, KernelCases) {
         "*",
         "testonly"
       ],
-      "top_description": [
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "a",
@@ -278,10 +258,6 @@ TEST(JsonOutput, RustCases) {
       "attributes": [
         "*"
       ],
-      "top_description": [
-      ],
-      "requirements": [
-      ],
       "arguments": [
       ],
       "return_type": "zx_time_t"
@@ -290,10 +266,6 @@ TEST(JsonOutput, RustCases) {
       "name": "rust_multiple_in_handles",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -320,10 +292,6 @@ TEST(JsonOutput, RustCases) {
         "*",
         "noreturn"
       ],
-      "top_description": [
-      ],
-      "requirements": [
-      ],
       "arguments": [
       ],
       "return_type": "void"
@@ -332,10 +300,6 @@ TEST(JsonOutput, RustCases) {
       "name": "rust_no_return_value",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -352,10 +316,6 @@ TEST(JsonOutput, RustCases) {
       "name": "rust_inout_args",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -408,10 +368,6 @@ TEST(JsonOutput, RustCases) {
       "attributes": [
         "*"
       ],
-      "top_description": [
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "input",
@@ -435,10 +391,6 @@ TEST(JsonOutput, RustCases) {
       "name": "rust_various_basic_type_names",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -548,10 +500,6 @@ TEST(JsonOutput, SelectionCases) {
       "attributes": [
         "*"
       ],
-      "top_description": [
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "value_ptr",
@@ -605,10 +553,6 @@ TEST(JsonOutput, SelectionCases) {
       "attributes": [
         "*"
       ],
-      "top_description": [
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -645,10 +589,6 @@ TEST(JsonOutput, SelectionCases) {
       "name": "selection_ktrace_read",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -693,10 +633,6 @@ TEST(JsonOutput, SelectionCases) {
       "name": "selection_pci_cfg_pio_rw",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-      ],
-      "requirements": [
       ],
       "arguments": [
         {
@@ -763,10 +699,6 @@ TEST(JsonOutput, SelectionCases) {
       "attributes": [
         "*"
       ],
-      "top_description": [
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -812,10 +744,6 @@ TEST(JsonOutput, SelectionCases) {
       "attributes": [
         "*"
       ],
-      "top_description": [
-      ],
-      "requirements": [
-      ],
       "arguments": [
         {
           "name": "clock_id",
@@ -854,13 +782,6 @@ TEST(JsonOutput, RightsSpecs) {
       "attributes": [
         "*"
       ],
-      "top_description": [
-        "Create", "an", "exception", "channel", "for", "a", "given", "job", ",", "process", ",", "or", "thread", "."
-      ],
-      "requirements": [
-        "handle", "must", "have", "ZX_RIGHT_INSPECT", "and", "have", "ZX_RIGHT_DUPLICATE", "and", "have", "ZX_RIGHT_TRANSFER", "and", "have", "ZX_RIGHT_MANAGE_THREAD", ".",
-        "If", "handle", "is", "of", "type", "ZX_OBJ_TYPE_JOB", "or", "ZX_OBJ_TYPE_PROCESS", ",", "it", "must", "have", "ZX_RIGHT_ENUMERATE", "."
-      ],
       "arguments": [
         {
           "name": "handle",
@@ -890,11 +811,6 @@ TEST(JsonOutput, RightsSpecs) {
       "name": "rightstest_no_short_desc",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-      ],
-      "requirements": [
-        "handle", "must", "have", "ZX_RIGHT_DESTROY", "."
       ],
       "arguments": [
         {
@@ -926,10 +842,6 @@ TEST(JsonOutput, OutVoidptr) {
       "name": "ovp_void_pointer_out",
       "attributes": [
         "*"
-      ],
-      "top_description": [
-      ],
-      "requirements": [
       ],
       "arguments": [
         {

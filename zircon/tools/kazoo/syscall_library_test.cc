@@ -30,7 +30,6 @@ TEST(SyscallLibrary, LoaderSingleMethod) {
   EXPECT_EQ(sc->original_name(), "DoThing");
   EXPECT_EQ(sc->category(), "single");
   EXPECT_EQ(sc->name(), "single_do_thing");
-  EXPECT_EQ(sc->short_description(), "This does a single thing.");
   EXPECT_EQ(sc->attributes().size(), 1u);  // Doc is an attribute.
   EXPECT_TRUE(sc->HasAttribute("Doc"));
   EXPECT_FALSE(sc->is_noreturn());

@@ -97,16 +97,6 @@ Required GetRequiredAttribute(const rapidjson::Value& field) {
   return HasAttributeWithNoArgs(field, "required") ? Required::kYes : Required::kNo;
 }
 
-constexpr char kRightsPrefix[] = " Rights: ";
-
-std::string GetShortDescriptionFromDocAttribute(const std::string& full_doc_attribute) {
-  auto lines = SplitString(full_doc_attribute, '\n', kKeepWhitespace);
-  if (lines.size() < 1 || lines[0].substr(0, strlen(kRightsPrefix)) == kRightsPrefix) {
-    return std::string();
-  }
-  return TrimString(lines[0], " \t\n");
-}
-
 std::vector<std::string> GetCleanDocAttribute(const std::string& full_doc_attribute) {
   auto lines = SplitString(full_doc_attribute, '\n', kTrimWhitespace);
   if (!lines.empty() && lines[lines.size() - 1].empty()) {
@@ -115,18 +105,6 @@ std::vector<std::string> GetCleanDocAttribute(const std::string& full_doc_attrib
   std::for_each(lines.begin(), lines.end(),
                 [](std::string& line) { return TrimString(line, " \t\n"); });
   return lines;
-}
-
-std::vector<std::string> GetRightsSpecsFromDocAttribute(const std::string& full_doc_attribute) {
-  auto lines = SplitString(full_doc_attribute, '\n', kKeepWhitespace);
-  std::vector<std::string> ret;
-  for (const auto& line : lines) {
-    if (line.substr(0, strlen(kRightsPrefix)) == kRightsPrefix) {
-      ret.push_back(line.substr(strlen(kRightsPrefix)));
-    }
-  }
-
-  return ret;
 }
 
 std::optional<Type> PrimitiveTypeFromName(std::string subtype) {
@@ -644,8 +622,6 @@ bool SyscallLibraryLoader::LoadProtocols(const rapidjson::Document& document,
       syscall->name_ = snake_name;
       syscall->is_noreturn_ = !method["has_response"].GetBool();
       const auto doc_attribute = GetDocAttribute(method);
-      syscall->short_description_ = GetShortDescriptionFromDocAttribute(doc_attribute);
-      syscall->rights_specs_ = GetRightsSpecsFromDocAttribute(doc_attribute);
       if (method.HasMember("maybe_attributes")) {
         for (const auto& attrib : method["maybe_attributes"].GetArray()) {
           const auto attrib_name = attrib["name"].GetString();
