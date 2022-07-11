@@ -7,7 +7,6 @@ import("//build/components.gni")
 group("scenic") {
   deps = [
     ":input",
-    ":present_view",
     ":print_input",
   ]
 }
@@ -15,7 +14,6 @@ group("scenic") {
 group("tools") {
   deps = [
     ":input",
-    ":present_view",
     ":print_input",
     "paper_shader_compiler",
     "print-input-report",
@@ -28,24 +26,10 @@ group("tests") {
   testonly = true
 
   deps = [
-    "present_view:tests",
     "print-input-report:print-input-report-test",
     "tiles:tiles_tests",
     "tiles/flatland:tiles-flatland-tests",
   ]
-}
-
-# Component shell tools can be run as shell command or as components via a
-# component URI. The following list contains the names of such components that
-# follow the pattern:
-# name/meta/name.cmx contains the component manifest
-# name is the name of a subdirectory that builds the output binary `name`
-component_shell_tools = [ "present_view" ]
-foreach(tool, component_shell_tools) {
-  fuchsia_shell_package(tool) {
-    manifest = "$tool/meta/$tool.cmx"
-    deps = [ tool ]
-  }
 }
 
 # Non-component tools contains the names of shell command tools that do not

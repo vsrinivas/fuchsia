@@ -20,7 +20,6 @@ Future<void> _killProcesses(PerfTestHelper helper) async {
   print('Killing processes for flatland_benchmarks_test');
   await helper.sl4fDriver.ssh.run('killall "basemgr*"');
   await helper.sl4fDriver.ssh.run('killall "a11y-manager*"');
-  await helper.sl4fDriver.ssh.run('killall "present_view*"');
   await helper.sl4fDriver.ssh.run('killall "root_presenter*"');
   await helper.sl4fDriver.ssh.run('killall "scenic*"');
   await helper.sl4fDriver.ssh.run('killall "tiles*"');
