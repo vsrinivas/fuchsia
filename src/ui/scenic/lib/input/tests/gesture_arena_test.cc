@@ -378,7 +378,7 @@ TEST_P(GestureArenaParameterizedTest, Basic) {
     ++update_count;
     const auto& response = update.response;
     const auto& expected_result = update.result;
-    const auto result = arena.RecordResponse(response.contender_id, response.responses);
+    const auto result = arena.RecordResponses(response.contender_id, response.responses);
     EXPECT_EQ(result.end_of_contest, expected_result.end_of_contest)
         << "Failed on update " << update_count;
     EXPECT_EQ(result.winner.has_value(), expected_result.winner.has_value())
@@ -498,8 +498,8 @@ TEST_P(GestureArenaResponsePairTest, PairWiseComparisonTest) {
   GestureArena arena(/*contenders*/ {kId1, kId2});
   arena.UpdateStream(1, /*is_last_message*/ true);
 
-  arena.RecordResponse(kId1, {response1});
-  const auto result = arena.RecordResponse(kId2, {response2});
+  arena.RecordResponses(kId1, {response1});
+  const auto result = arena.RecordResponses(kId2, {response2});
 
   switch (expected_winner) {
     case Win::kLeft:

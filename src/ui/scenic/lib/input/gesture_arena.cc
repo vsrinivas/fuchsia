@@ -6,10 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include <map>
 #include <set>
-
-#include "src/lib/fxl/macros.h"
 
 namespace scenic_impl::input {
 
@@ -126,6 +123,23 @@ ContenderId Resolve(const std::vector<std::pair<ContenderId, GestureResponse>>& 
   return winner.first;
 }
 
+// Find the next place in the queue where contender with |priority| hasn't placed a response.
+size_t FindResponseIndex(
+    const std::deque<std::map<GestureArena::Priority, GestureResponse>>& response_queue,
+    const GestureArena::Priority priority, const bool queue_is_full) {
+  size_t i = 0;
+  while (i < response_queue.size() && response_queue.at(i).count(priority) != 0) {
+    ++i;
+  }
+
+  // When the queue is full we want to replace the last value instead of extending the queue.
+  if (queue_is_full && i == response_queue.size()) {
+    --i;
+  }
+
+  return i;
+}
+
 }  // namespace
 
 GestureArena::GestureArena(std::vector<ContenderId> contenders) {
@@ -151,24 +165,110 @@ GestureArena::GestureArena(std::vector<ContenderId> contenders) {
   }
 }
 
-void GestureArena::UpdateStream(uint64_t added_length, bool is_last_message) {
+void GestureArena::UpdateStream(uint64_t new_message_count, bool is_last_message) {
   FX_DCHECK(!stream_has_ended_);
-  stream_length_ += added_length;
-  if (is_last_message) {
-    stream_has_ended_ = true;
+  response_queue_expected_size_ += new_message_count;
+  stream_has_ended_ = is_last_message;
+}
+
+ContestResults GestureArena::RecordResponses(ContenderId contender_id,
+                                             const std::vector<GestureResponse>& responses) {
+  FX_DCHECK(!contest_has_ended_);
+  FX_DCHECK(std::count(responses.begin(), responses.end(), GestureResponse::kUndefined) == 0);
+  FX_DCHECK(contenders_.count(contender_id));
+  for (const auto response : responses) {
+    if (auto resolution = RecordResponse(contender_id, response)) {
+      return *resolution;
+    }
+  }
+
+  return {};
+}
+
+std::optional<ContestResults> GestureArena::RecordResponse(ContenderId contender_id,
+                                                           GestureResponse response) {
+  const bool self_remove = response == GestureResponse::kNo;
+  if (self_remove) {
+    RemoveContender(contender_id);
+  } else {
+    AddResponseToQueue(contender_id, response);
+  }
+
+  std::optional<ContestResults> results = std::nullopt;
+  if (auto resolution = TryResolve()) {
+    results = *resolution;
+    if (self_remove) {
+      results->losers.push_back(contender_id);
+    }
+  } else if (self_remove) {
+    results = ContestResults{.losers = {contender_id}};
+  }
+
+  return results;
+}
+
+void GestureArena::RemoveContender(ContenderId contender_id) {
+  // Remove all traces of the contender represented by |contender_id|.
+  const auto priority = contenders_.at(contender_id).priority;
+  const auto num_removed1 = contenders_.erase(contender_id);
+  FX_DCHECK(num_removed1 == 1);
+  const auto num_removed2 = priority_to_id_.erase(priority);
+  FX_DCHECK(num_removed2 == 1);
+  for (auto& response_map : response_queue_) {
+    response_map.erase(priority);
   }
 }
 
-std::vector<ContenderId> GestureArena::contenders() const {
-  std::vector<ContenderId> contenders;
-  for (const auto& [id, _] : contenders_) {
-    FX_DCHECK(_.response_status != GestureResponse::kNo);
-    contenders.emplace_back(id);
+void GestureArena::AddResponseToQueue(ContenderId contender_id, GestureResponse response) {
+  Contender& contender = contenders_.at(contender_id);
+  const size_t index = FindResponseIndex(response_queue_, contender.priority, QueueIsFullLength());
+  // If the index is past the end of the queue, extend the queue.
+  if (index == response_queue_.size()) {
+    response_queue_.emplace_back();
   }
-  return contenders;
+  response_queue_.at(index).insert_or_assign(contender.priority, response);
 }
 
-ContestResults GestureArena::SetWinner(ContenderId id) {
+std::optional<ContestResults> GestureArena::TryResolve() {
+  if (contenders_.empty()) {
+    return ContestResults{.end_of_contest = true};
+  }
+
+  std::optional<ContestResults> results = std::nullopt;
+  const bool can_resolve = AdvanceQueue();
+  if (can_resolve) {
+    std::vector<std::pair<ContenderId, GestureResponse>> ordered_responses;
+    for (const auto& [priority, response] : response_queue_.front()) {
+      ordered_responses.emplace_back(priority_to_id_.at(priority), response);
+    }
+    const ContenderId winner = Resolve(ordered_responses);
+    results = SetUpWinner(winner);
+  }
+
+  return results;
+}
+
+bool GestureArena::AdvanceQueue() {
+  const size_t num_contenders = contenders_.size();
+  const bool all_responses_received = AllResponsesReceived();
+  // Walk all complete sets of responses and try to resolve each response vector.
+  bool can_resolve = false;
+  while (!response_queue_.empty() && response_queue_.front().size() == num_contenders) {
+    const bool at_sweep = all_responses_received && response_queue_.size() == 1;
+    can_resolve = at_sweep ? CanResolveAtSweep(response_queue_.front())
+                           : CanResolveMidContest(response_queue_.front());
+    if (can_resolve || at_sweep) {
+      break;
+    } else {
+      response_queue_.pop_front();
+      --response_queue_expected_size_;
+    }
+  }
+
+  return can_resolve;
+}
+
+ContestResults GestureArena::SetUpWinner(ContenderId id) {
   const auto contender = contenders_.at(id);
   contenders_.erase(id);
 
@@ -184,123 +284,16 @@ ContestResults GestureArena::SetWinner(ContenderId id) {
   priority_to_id_.emplace(contender.priority, id);
   contenders_.insert({id, contender});
 
+  contest_has_ended_ = true;
   return results;
 }
 
-ContestResults GestureArena::RecordResponse(ContenderId contender_id,
-                                            const std::vector<GestureResponse>& responses) {
-  FX_DCHECK(!contest_has_ended_);
-  FX_DCHECK(std::count(responses.begin(), responses.end(), GestureResponse::kUndefined) == 0);
-  FX_DCHECK(contenders_.count(contender_id));
-  FX_DCHECK(!IsHoldType(contenders_.at(contender_id).response_status) || responses.size() == 1)
-      << "Can only have a single response after kHold.";
-
-  ContestResults results;
-  for (const auto response : responses) {
-    // Remove contender from the arena on a NO response.
-    const bool remove_contender = response == GestureResponse::kNo;
-    if (remove_contender) {
-      RemoveContender(contender_id);
-      results.losers.push_back(contender_id);
-      if (contenders_.empty()) {
-        // No winners, but the contest is over.
-        results.end_of_contest = true;
-        break;
-      }
-    } else {
-      AddResponse(contender_id, response);
-    }
-
-    const std::optional<ContenderId> winner = TryResolve();
-    if (winner.has_value()) {
-      results = SetWinner(winner.value());
-      // Add the removed id back in if necessary.
-      if (remove_contender) {
-        results.losers.push_back(contender_id);
-      }
-      break;
-    }
-
-    if (remove_contender)
-      break;
+std::vector<ContenderId> GestureArena::contenders() const {
+  std::vector<ContenderId> contenders;
+  for (const auto& [id, _] : contenders_) {
+    contenders.emplace_back(id);
   }
-
-  contest_has_ended_ = results.end_of_contest;
-  return results;
-}
-
-void GestureArena::AddResponse(ContenderId contender_id, GestureResponse response) {
-  FX_DCHECK(contenders_.count(contender_id) != 0);
-  auto& contender = contenders_.at(contender_id);
-  const Priority priority = contender.priority;
-
-  // Find the next place in the queue that this contender hasn't placed a response, or the last one
-  // if we're at stream end.
-  size_t i = 0;
-  while (i + index_of_current_responses_ < stream_length_ - 1 && i < responses_.size() &&
-         responses_.at(i).count(priority) != 0) {
-    ++i;
-  }
-
-  // Push events onto the end of this contender's queue.
-  if (i == responses_.size()) {
-    responses_.emplace_back();
-  }
-  FX_DCHECK(i < responses_.size());
-
-  // Some DCHECKs to ensure the hold state is handled correctly.
-  if (i + index_of_current_responses_ == stream_length_ - 1 &&
-      responses_.at(i).count(priority) != 0) {
-    FX_DCHECK(stream_has_ended_) << "Should only be able to receive extra responses on stream end.";
-    FX_DCHECK(IsHoldType(responses_.at(i).at(priority)))
-        << "Should only receive extra responses in the kHold phase.";
-    FX_DCHECK(!IsHoldType(response)) << "Responses during kHold must not also be kHold";
-  }
-
-  responses_.at(i).insert_or_assign(priority, response);
-
-  // Update current response status.
-  FX_DCHECK(contender.response_status != GestureResponse::kNo);
-  contender.response_status = response;
-}
-
-void GestureArena::RemoveContender(ContenderId contender_id) {
-  // Remove all traces of the contender represented by |contender_id|.
-  const auto priority = contenders_.at(contender_id).priority;
-  const auto num_removed1 = contenders_.erase(contender_id);
-  FX_DCHECK(num_removed1 == 1);
-  const auto num_removed2 = priority_to_id_.erase(priority);
-  FX_DCHECK(num_removed2 == 1);
-  for (auto& response_map : responses_) {
-    response_map.erase(priority);
-  }
-}
-
-std::optional<ContenderId> GestureArena::TryResolve() {
-  // Walk all complete sets of responses and try to resolve each response vector.
-  while (!responses_.empty() && responses_.front().size() == contenders_.size()) {
-    const auto& response_map = responses_.front();
-
-    const bool at_sweep = stream_has_ended_ && index_of_current_responses_ == stream_length_ - 1;
-    const bool can_resolve =
-        at_sweep ? CanResolveAtSweep(response_map) : CanResolveMidContest(response_map);
-    if (can_resolve) {
-      std::vector<std::pair<ContenderId, GestureResponse>> ordered_responses;
-      for (const auto& [priority, response] : response_map) {
-        ordered_responses.emplace_back(priority_to_id_.at(priority), response);
-      }
-      return Resolve(ordered_responses);
-    } else if (at_sweep) {
-      // Don't drop the final set of responses if we're at sweep and still can't resolve.
-      FX_DCHECK(responses_.size() == 1);
-      break;
-    }
-
-    index_of_current_responses_++;
-    responses_.pop_front();
-  }
-
-  return std::nullopt;
+  return contenders;
 }
 
 }  // namespace scenic_impl::input

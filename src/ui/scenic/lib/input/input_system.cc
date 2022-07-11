@@ -700,7 +700,7 @@ void InputSystem::RecordGestureDisambiguationResponse(
   // No need to record after the contest has ended.
   if (!arena.contest_has_ended()) {
     // Update the arena.
-    const ContestResults result = arena.RecordResponse(contender_id, responses);
+    const ContestResults result = arena.RecordResponses(contender_id, responses);
     for (auto loser_id : result.losers) {
       // Need to check for existence, since a loser could be the result of a NO response upon
       // destruction.
