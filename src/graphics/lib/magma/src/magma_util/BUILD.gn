@@ -10,8 +10,12 @@ visibility_list = [
   "//third_party/imgtec-pvr-rgx-km/*",
 ]
 
+declare_args() {
+  magma_debug = is_debug
+}
+
 config("magma_util_config") {
-  if (is_debug) {
+  if (magma_debug) {
     defines = [ "MAGMA_DEBUG_INTERNAL_USE_ONLY=1" ]
   } else {
     defines = [ "MAGMA_DEBUG_INTERNAL_USE_ONLY=0" ]
