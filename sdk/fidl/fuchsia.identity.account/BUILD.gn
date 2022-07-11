@@ -5,6 +5,8 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.identity.account") {
+  sdk_category = "internal"
+
   sources = [
     "account_manager.fidl",
     "auth_state.fidl",
