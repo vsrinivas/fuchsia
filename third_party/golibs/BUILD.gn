@@ -2180,6 +2180,7 @@ go_library("gvisor.dev/gvisor") {
     "pkg/cpuid/native_amd64.go",
     "pkg/cpuid/native_amd64.s",
     "pkg/cpuid/native_arm64.go",
+    "pkg/cpuid/static_amd64.go",
     "pkg/gohacks/gohacks_unsafe.go",
     "pkg/goid/goid.go",
     "pkg/goid/goid_amd64.s",

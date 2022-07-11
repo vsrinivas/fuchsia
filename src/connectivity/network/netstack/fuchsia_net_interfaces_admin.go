@@ -156,31 +156,29 @@ func (pi *adminAddressStateProviderImpl) onRemoveLocked(reason admin.AddressRemo
 // TODO(https://fxbug.dev/80621): Add support for updating an address's
 // properties (valid and expected lifetimes).
 func (pi *adminAddressStateProviderImpl) UpdateAddressProperties(_ fidl.Context, properties admin.AddressProperties) error {
-	deprecated := func() bool {
-		if properties.HasPreferredLifetimeInfo() {
-			switch preferred := properties.GetPreferredLifetimeInfo(); preferred.Which() {
-			case admin.PreferredLifetimeInfoPreferredLifetimeEnd:
-				// TODO(https://fxbug.dev/93825): Store the preferred lifetime.
-				panic(fmt.Sprintf("UpdateAddressProperties on addr %s with preferred lifetime %d not supported", pi.protocolAddr.AddressWithPrefix.Address, preferred))
-				return false
-			case admin.PreferredLifetimeInfoDeprecated:
-				return true
-			default:
-				panic(fmt.Sprintf("unexpected preferred lifetime info tag: %+v", preferred))
-			}
+	var lifetimes stack.AddressLifetimes
+	// Note that absence of preferred lifetime means infinite preferred lifetime,
+	// so the zero value for Deprecated is left untouched.
+	if properties.HasPreferredLifetimeInfo() {
+		switch preferred := properties.GetPreferredLifetimeInfo(); preferred.Which() {
+		case admin.PreferredLifetimeInfoPreferredLifetimeEnd:
+			// TODO(https://fxbug.dev/93825): Store the preferred lifetime.
+			panic(fmt.Sprintf("UpdateAddressProperties on addr %s with preferred lifetime %d not supported", pi.protocolAddr.AddressWithPrefix.Address, preferred))
+		case admin.PreferredLifetimeInfoDeprecated:
+			lifetimes.Deprecated = true
+		default:
+			panic(fmt.Sprintf("unexpected preferred lifetime info tag: %+v", preferred))
 		}
-		// Absence of preferred lifetime means infinite preferred lifetime, so not deprecated.
-		return false
-	}()
-	switch err := pi.controlImpl.ns.stack.SetAddressDeprecated(pi.controlImpl.nicid, pi.protocolAddr.AddressWithPrefix.Address, deprecated); err.(type) {
+	}
+	switch err := pi.controlImpl.ns.stack.SetAddressLifetimes(pi.controlImpl.nicid, pi.protocolAddr.AddressWithPrefix.Address, lifetimes); err.(type) {
 	case nil:
 	case *tcpip.ErrUnknownNICID, *tcpip.ErrBadLocalAddress:
 		// TODO(https://fxbug.dev/94442): Upgrade to panic once we're guaranteed that we get here iff the address still exists.
-		_ = syslog.WarnTf(addressStateProviderName, "SetAddressDeprecated(%d, %s, %t) failed: %s",
-			pi.controlImpl.nicid, pi.protocolAddr.AddressWithPrefix.Address, deprecated, err)
+		_ = syslog.WarnTf(addressStateProviderName, "SetAddressLifetimes(%d, %s, %#v) failed: %s",
+			pi.controlImpl.nicid, pi.protocolAddr.AddressWithPrefix.Address, lifetimes, err)
 	default:
-		panic(fmt.Sprintf("SetAddressDeprecated(%d, %s, %t) failed with unexpected error: %s",
-			pi.controlImpl.nicid, pi.protocolAddr.AddressWithPrefix.Address, deprecated, err))
+		panic(fmt.Sprintf("SetAddressLifetimes(%d, %s, %#v) failed with unexpected error: %s",
+			pi.controlImpl.nicid, pi.protocolAddr.AddressWithPrefix.Address, lifetimes, err))
 	}
 
 	if properties.HasValidLifetimeEnd() {
@@ -336,22 +334,19 @@ func (ci *adminControlImpl) AddAddress(_ fidl.Context, interfaceAddr net.Subnet,
 				// TODO(https://fxbug.dev/93825): Store the valid lifetime.
 				panic(fmt.Sprintf("adding address %s with valid lifetime %d is not supported", addr, initProperties.GetValidLifetimeEnd()))
 			}
-			properties.Deprecated = func() bool {
-				if initProperties.HasPreferredLifetimeInfo() {
-					switch preferred := initProperties.GetPreferredLifetimeInfo(); preferred.Which() {
-					case admin.PreferredLifetimeInfoDeprecated:
-						return true
-					case admin.PreferredLifetimeInfoPreferredLifetimeEnd:
-						// TODO(https://fxbug.dev/93825): Store the preferred lifetime.
-						panic(fmt.Sprintf("adding address %s with preferred lifetime %d is not supported", addr, preferred))
-					default:
-						panic(fmt.Sprintf("unknown preferred lifetime info tag: %+v", preferred))
-					}
+			// Note that absence of preferred lifetime means infinite preferred lifetime,
+			// so the zero value for Deprecated is left untouched.
+			if initProperties.HasPreferredLifetimeInfo() {
+				switch preferred := initProperties.GetPreferredLifetimeInfo(); preferred.Which() {
+				case admin.PreferredLifetimeInfoDeprecated:
+					properties.Lifetimes.Deprecated = true
+				case admin.PreferredLifetimeInfoPreferredLifetimeEnd:
+					// TODO(https://fxbug.dev/93825): Store the preferred lifetime.
+					panic(fmt.Sprintf("adding address %s with preferred lifetime %d is not supported", addr, preferred))
+				default:
+					panic(fmt.Sprintf("unknown preferred lifetime info tag: %+v", preferred))
 				}
-				// The absence of preferred lifetime means an infinite preferred lifetime,
-				// so the address is not deprecated.
-				return false
-			}()
+			}
 		}
 
 		if protocolAddr.AddressWithPrefix.PrefixLen > 8*len(protocolAddr.AddressWithPrefix.Address) {

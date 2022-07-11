@@ -204,7 +204,7 @@ func (n *ndpDispatcher) OnOnLinkPrefixInvalidated(nicID tcpip.NICID, prefix tcpi
 }
 
 // OnAutoGenAddress implements ipv6.NDPDispatcher.
-func (n *ndpDispatcher) OnAutoGenAddress(nicID tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix) {
+func (n *ndpDispatcher) OnAutoGenAddress(nicID tcpip.NICID, addrWithPrefix tcpip.AddressWithPrefix) stack.AddressDispatcher {
 	_ = syslog.VLogTf(syslog.DebugVerbosity, ndpSyslogTagName, "OnAutoGenAddress(%d, %s)", nicID, addrWithPrefix)
 	n.addEvent(&ndpGeneratedAutoGenAddrEvent{ndpAutoGenAddrEventCommon: ndpAutoGenAddrEventCommon{nicID: nicID, addrWithPrefix: addrWithPrefix}})
 
@@ -213,6 +213,9 @@ func (n *ndpDispatcher) OnAutoGenAddress(nicID tcpip.NICID, addrWithPrefix tcpip
 	if !header.IsV6LinkLocalUnicastAddress(addrWithPrefix.Address) {
 		n.dynamicAddressSourceTracker.incGlobalSLAAC(nicID)
 	}
+	// TODO(https://fxbug.dev/104108): Return a stack.AddressDispatcher impl and
+	// expose lifetimes via fuchsia.net.interfaces/Watcher.
+	return nil
 }
 
 // OnAutoGenAddressDeprecated implements ipv6.NDPDispatcher.

@@ -312,7 +312,7 @@ func (*Client) GSOMaxSize() uint32 {
 
 // SupportedGSO implements stack.GSOEndpoint.
 func (*Client) SupportedGSO() stack.SupportedGSO {
-	return stack.SWGSOSupported
+	return stack.GvisorGSOSupported
 }
 
 func checkStatus(status int32, text string) error {

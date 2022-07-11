@@ -848,7 +848,8 @@ func (*testNDPDispatcher) OnOnLinkPrefixInvalidated(tcpip.NICID, tcpip.Subnet) {
 }
 
 // OnAutoGenAddress implements ipv6.NDPDispatcher.
-func (*testNDPDispatcher) OnAutoGenAddress(tcpip.NICID, tcpip.AddressWithPrefix) {
+func (*testNDPDispatcher) OnAutoGenAddress(tcpip.NICID, tcpip.AddressWithPrefix) tcpipstack.AddressDispatcher {
+	return nil
 }
 
 // OnAutoGenAddressDeprecated implements ipv6.NDPDispatcher.

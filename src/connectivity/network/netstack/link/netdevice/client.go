@@ -449,7 +449,7 @@ func (*Port) GSOMaxSize() uint32 {
 // SupportedGSO implements stack.GSOEndpoint.
 func (*Port) SupportedGSO() stack.SupportedGSO {
 	// TODO(https://fxbug.dev/76010): expose hardware offloading capabilities.
-	return stack.SWGSOSupported
+	return stack.GvisorGSOSupported
 }
 
 func (p *Port) Up() error {
