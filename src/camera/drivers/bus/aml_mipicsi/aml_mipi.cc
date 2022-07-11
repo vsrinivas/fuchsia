@@ -210,11 +210,7 @@ zx_status_t AmlMipiDevice::Create(zx_device_t* parent) {
     return status;
   }
 
-  zx_device_prop_t props[] = {
-      {BIND_PLATFORM_PROTO, 0, ZX_PROTOCOL_MIPI_CSI},
-  };
-
-  status = mipi_device->DdkAdd(ddk::DeviceAddArgs("aml-mipi").set_props(props));
+  status = mipi_device->DdkAdd(ddk::DeviceAddArgs("aml-mipi"));
   if (status != ZX_OK) {
     zxlogf(ERROR, "aml-mipi driver failed to get added");
     return status;

@@ -21,11 +21,8 @@ zx_status_t Ge2dBind(void* ctx, zx_device_t* device) {
     FX_PLOGST(ERROR, kTag, status) << "Could not setup ge2d device";
     return status;
   }
-  zx_device_prop_t props[] = {
-      {BIND_PLATFORM_PROTO, 0, ZX_PROTOCOL_GE2D},
-  };
 
-  status = ge2d_device->DdkAdd(ddk::DeviceAddArgs("ge2d").set_props(props));
+  status = ge2d_device->DdkAdd(ddk::DeviceAddArgs("ge2d"));
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "Could not add ge2d device";
     return status;

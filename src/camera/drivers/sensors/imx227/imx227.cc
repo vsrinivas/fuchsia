@@ -481,12 +481,8 @@ zx_status_t Imx227Device::CreateAndBind(void* /*ctx*/, zx_device_t* parent) {
     zxlogf(ERROR, "imx227: Could not setup imx227 sensor device: %d", status);
     return status;
   }
-  std::array<zx_device_prop_t, 1> props = {{
-      {BIND_PLATFORM_PROTO, 0, ZX_PROTOCOL_CAMERA_SENSOR2},
-  }};
 
-  status = device->DdkAdd(
-      ddk::DeviceAddArgs("imx227").set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE).set_props(props));
+  status = device->DdkAdd(ddk::DeviceAddArgs("imx227").set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE));
   if (status != ZX_OK) {
     zxlogf(ERROR, "imx227: Could not add imx227 sensor device: %d", status);
     return status;
