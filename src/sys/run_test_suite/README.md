@@ -26,7 +26,7 @@ can be added to builds by including `--with //src/sys/run_test_suite` to the
 ### run-test-suite
 
 ```
-$ fx shell run run-test-suite <v2_test_component_url>
+$ fx shell run-test-suite <v2_test_component_url>
 ```
 
 ## Testing
