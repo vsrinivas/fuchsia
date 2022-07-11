@@ -6,7 +6,7 @@ import("//src/developer/ffx/build/ffx_plugin.gni")
 
 group("blackout") {
   testonly = true
-  public_deps = [
+  deps = [
     "blobfs-checkerboard",
     "minfs-tree",
   ]
@@ -28,7 +28,7 @@ ffx_plugin("ffx_storage_blackout") {
 
 group("tests") {
   testonly = true
-  public_deps = [
+  deps = [
     "blackout-host:tests",
     "blackout-integration:tests",
     "blackout-target:tests",
@@ -40,5 +40,5 @@ group("tests") {
 # conditions in CI as opposed to for every change in CQ or being run locally.
 group("integration") {
   testonly = true
-  public_deps = [ "blobfs-checkerboard:integration" ]
+  deps = [ "blobfs-checkerboard:integration" ]
 }

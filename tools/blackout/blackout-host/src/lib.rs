@@ -5,6 +5,8 @@
 //! library for host-side of filesystem integrity host-target interaction tests.
 
 #![deny(missing_docs)]
+// TODO(fxb/104019): Consider enabling globally.
+#![deny(unused_crate_dependencies)]
 
 use {
     ffx_isolate,

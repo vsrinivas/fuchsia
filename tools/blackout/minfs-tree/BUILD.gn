@@ -11,10 +11,7 @@ ffx_plugin("ffx_storage_blackout_minfs_tree") {
   edition = "2021"
   args_sources = [ "src/args.rs" ]
   sources = [ "src/lib.rs" ]
-  deps = [
-    "//src/lib/fuchsia-async",
-    "//tools/blackout/blackout-host",
-  ]
+  deps = [ "//tools/blackout/blackout-host" ]
 }
 
 rustc_binary("blackout-minfs-tree-target-bin") {
@@ -24,12 +21,9 @@ rustc_binary("blackout-minfs-tree-target-bin") {
   edition = "2021"
   deps = [
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-fs",
     "//src/lib/storage/fs_management/rust:fs_management",
-    "//src/sys/pkg/lib/fuchsia-merkle",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
     "//tools/blackout/blackout-target",

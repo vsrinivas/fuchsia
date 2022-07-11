@@ -11,10 +11,7 @@ ffx_plugin("ffx_storage_blackout_blobfs_checkerboard") {
   edition = "2021"
   args_sources = [ "src/args.rs" ]
   sources = [ "src/lib.rs" ]
-  deps = [
-    "//src/lib/fuchsia-async",
-    "//tools/blackout/blackout-host",
-  ]
+  deps = [ "//tools/blackout/blackout-host" ]
 }
 
 rustc_binary("blackout-blobfs-checkerboard-target-bin") {

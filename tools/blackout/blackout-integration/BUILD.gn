@@ -15,9 +15,8 @@ ffx_plugin("ffx_storage_blackout_integration") {
   args_sources = [ "src/args.rs" ]
 
   sources = [ "src/lib.rs" ]
-  deps = [
-    "//src/lib/fuchsia-async",
-    "//tools/blackout/blackout-host",
+  deps = [ "//tools/blackout/blackout-host" ]
+  test_deps = [
     "//tools/blackout/fidl/fuchsia.blackout.test:fuchsia.blackout.test-rustc",
   ]
 }
