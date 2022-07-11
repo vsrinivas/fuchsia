@@ -1429,7 +1429,7 @@ TEST_F(DwarfExprEvalTest, Casts) {
   int64_t expected_int64 = 0;
   memcpy(&expected_int64, &kDoubleSource, sizeof(int64_t));
   DoEvalTest(reint_double_to_int64, true, DwarfExprEval::Completion::kSync,
-             DwarfStackEntry(int64_type, DwarfStackEntry::UnsignedType(expected_int64)),
+             DwarfStackEntry(int64_type, DwarfStackEntry::SignedType(expected_int64)),
              DwarfExprEval::ResultType::kPointer,
              "DW_OP_const_type(die_offset=0x35, data_size=8, data_bytes=0x44 0x17 0x41 0x54 0xfb "
              "0x21 0x09 0x40), DW_OP_reinterpret(die_offset=0x29)");
