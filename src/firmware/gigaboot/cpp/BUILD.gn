@@ -5,6 +5,31 @@
 import("//build/images/vboot/vboot.gni")
 import("//zircon/kernel/phys/efi/efi_executable.gni")
 
+source_set("lib") {
+  sources = [
+    "device_path.cc",
+    "device_path.h",
+    "gpt.cc",
+    "gpt.h",
+    "utils.cc",
+    "utils.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/fit",
+    "//zircon/kernel/lib/efi",
+    "//zircon/kernel/phys/efi:main",
+    "//zircon/kernel/phys/efi:protocol",
+  ]
+
+  if (is_kernel) {
+    public_deps += [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+    ]
+  }
+}
+
 efi_executable("gigaboot") {
   sources = [
     "main.cc",
@@ -14,6 +39,7 @@ efi_executable("gigaboot") {
   ]
 
   deps = [
+    ":lib",
     "//src/firmware/lib/zircon_boot:in_tree",
     "//src/lib/zbitl",
     "//zircon/kernel/lib/ktl",

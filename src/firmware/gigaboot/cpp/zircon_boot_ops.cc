@@ -4,6 +4,8 @@
 
 #include <lib/zircon_boot/zircon_boot.h>
 
+#include "gpt.h"
+
 namespace gigaboot {
 namespace {
 
@@ -11,6 +13,11 @@ bool ReadFromPartition(ZirconBootOps* ops, const char* part, size_t offset, size
                        size_t* read_size) {
   // TODO(b/235489025): To implement. Read data from the GPT partition. Refer to logic in
   // `src/firmware/gigaboot/src/diskio.c`
+  auto gpt_device = FindEfiGptDevice();
+  if (gpt_device.is_error()) {
+    return false;
+  }
+
   return false;
 }
 
@@ -18,6 +25,11 @@ bool WriteToPartition(ZirconBootOps* ops, const char* part, size_t offset, size_
                       const void* src, size_t* write_size) {
   // TODO(b/235489025): To implement. Write data to the GPT partition. Refer to logic in
   // `src/firmware/gigaboot/src/diskio.c`
+  auto gpt_device = FindEfiGptDevice();
+  if (gpt_device.is_error()) {
+    return false;
+  }
+
   return false;
 }
 
