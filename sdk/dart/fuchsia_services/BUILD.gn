@@ -40,6 +40,7 @@ flutter_test("fuchsia_services_package_unittests") {
 
   deps = [
     ":fuchsia_services",
+    "//sdk/dart/fuchsia_logger",
     "//sdk/fidl/fuchsia.io",
     "//third_party/dart-pkg/pub/test",
   ]
@@ -48,7 +49,7 @@ flutter_test("fuchsia_services_package_unittests") {
 # fx test fuchsia-pkg://fuchsia.com/fuchsia-services-integration-tests#meta/fuchsia-services-integration-tests.cmx
 dart_test_component("integration-test-component") {
   component_name = "fuchsia-services-integration-tests"
-  manifest = "meta/fuchsia-services-integration-tests.cmx"
+  manifest = "meta/fuchsia-services-integration-tests.cml"
   sources = [
     "component_context_test.dart",
     "incoming_test.dart",
@@ -61,6 +62,8 @@ dart_test_component("integration-test-component") {
     ":fuchsia_services",
     "test_support:test-foo-fidl",
     "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia_component_test:dart_realm_builder_deps",
+    "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_vfs",
     "//sdk/dart/zircon",
     "//sdk/fidl/fuchsia.io",
@@ -71,6 +74,7 @@ dart_test_component("integration-test-component") {
 
 fuchsia_test_package("fuchsia-services-integration-tests") {
   test_components = [ ":integration-test-component" ]
+  deps = [ "test_support:fuchsia-services-foo-test-server" ]
 }
 
 group("tests") {

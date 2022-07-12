@@ -2,21 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart'; // ignore: implementation_imports
 import 'package:test/test.dart';
 
 void main() {
-  final context = ComponentContext.createAndServe();
+  setupLogger(name: 'fuchsia-services-test');
+  // We don't use createAndServe here because the test case gets no outgoing directory handle,
+  // so it would crash.
+  final context = ComponentContext.create();
 
   group('ComponentContext: ', () {
     test('createAndServe does not return null instance', () {
       expect(context, isNotNull);
-    });
-
-    test('createAndServe serves the outgoing directory', () {
-      // If outgoing is already serving, it will throw another exception if
-      // `.serveFromStartupInfo` is called again.
-      expect(context.outgoing.serveFromStartupInfo, throwsException);
     });
 
     test('create throws an error when called twice', () {

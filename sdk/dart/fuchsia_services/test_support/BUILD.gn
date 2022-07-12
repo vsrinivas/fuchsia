@@ -2,7 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dart/dart_app.gni")
+import("//build/components/fuchsia_package.gni")
+import("//build/dart/dart_component.gni")
 import("//build/fidl/fidl.gni")
 
 fidl("test-foo-fidl") {
@@ -19,22 +20,21 @@ fidl("test-foo-fidl") {
 }
 
 # The foo test server used for integration testing
-dart_app("fuchsia-services-foo-test-server") {
+dart_library("lib") {
   null_safe = true
-
-  main_dart = "lib/main.dart"
-
-  meta = [
-    {
-      path = rebase_path("meta/fuchsia-services-foo-test-server.cmx")
-      dest = "fuchsia-services-foo-test-server.cmx"
-    },
-  ]
-
+  package_name = "fuchsia-services-foo-test-server"
   sources = [ "main.dart" ]
   deps = [
     ":test-foo-fidl",
     "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_services",
   ]
+}
+
+dart_component("fuchsia-services-foo-test-server") {
+  null_safe = true
+  manifest = "meta/fuchsia-services-foo-test-server.cml"
+  main_package = "fuchsia-services-foo-test-server"
+  deps = [ ":lib" ]
 }

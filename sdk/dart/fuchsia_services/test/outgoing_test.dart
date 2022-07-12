@@ -8,11 +8,13 @@ import 'dart:convert' show utf8;
 
 import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_io/fidl_async.dart' as io;
+import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/src/outgoing.dart';
 import 'package:fuchsia_vfs/vfs.dart';
 import 'package:test/test.dart';
 
 void main() {
+  setupLogger(name: 'fuchsia-services-test');
   late StreamController<bool> _streamController;
   late Stream<bool> _stream;
 
