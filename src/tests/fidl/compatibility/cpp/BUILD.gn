@@ -1,0 +1,30 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/go/toolchain.gni")
+import("//build/rust/rustc_binary.gni")
+
+executable("bin") {
+  output_name = "cpp-server"
+  output_dir = target_out_dir
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//sdk/lib/fdio",
+    "//sdk/lib/stdcompat",
+    "//sdk/lib/sys/cpp",
+    "//src/tests/fidl/compatibility/fidl:fidl_service_cpp",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("cpp-server") {
+  manifest = "meta/cpp-server.cmx"
+  deps = [ ":bin" ]
+}

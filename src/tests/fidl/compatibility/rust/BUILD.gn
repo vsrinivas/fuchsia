@@ -1,0 +1,33 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/go/toolchain.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  output_name = "rust-server"
+  output_dir = target_out_dir
+  edition = "2021"
+  source_root = "main.rs"
+
+  deps = [
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/tests/fidl/compatibility/fidl:fidl_import-rustc",
+    "//src/tests/fidl/compatibility/fidl:fidl_service-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  sources = [ "main.rs" ]
+}
+
+fuchsia_component("rust-server") {
+  manifest = "meta/rust-server.cmx"
+  deps = [ ":bin" ]
+}

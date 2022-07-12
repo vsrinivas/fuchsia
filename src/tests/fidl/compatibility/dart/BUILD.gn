@@ -1,0 +1,26 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/dart/dart_component.gni")
+import("//build/dart/dart_library.gni")
+import("//build/go/toolchain.gni")
+
+dart_library("bin") {
+  package_name = "dart-server"
+  sources = [ "main.dart" ]
+  deps = [
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/fidl/fuchsia.sys",
+    "//src/tests/fidl/compatibility/fidl:fidl_import",
+    "//src/tests/fidl/compatibility/fidl:fidl_service",
+  ]
+}
+
+dart_component("dart-server") {
+  manifest = "meta/dart-server.cmx"
+  main_package = "dart-server"
+  deps = [ ":bin" ]
+}

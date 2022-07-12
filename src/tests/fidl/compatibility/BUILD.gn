@@ -3,165 +3,23 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/dart/dart_component.gni")
-import("//build/dart/dart_library.gni")
-import("//build/fidl/fidl.gni")
-import("//build/rust/rustc_binary.gni")
-
-# Import definitions into the protocol being tested.
-fidl("fidl_import") {
-  name = "fidl.test.imported"
-  sources = [ "compatibility_imported.test.fidl" ]
-}
-
-# The protocol used in the test.
-fidl("fidl_service") {
-  name = "fidl.test.compatibility"
-  sources = [ "compatibility_service.test.fidl" ]
-  public_deps = [
-    ":fidl_import",
-    "//zircon/vdso/zx",
-  ]
-}
 
 # Shared between the hlcpp test server and the test harness.
 source_set("hlcpp_client_app") {
-  visibility = [ ":*" ]
+  visibility = [
+    ":*",
+    "hlcpp:*",
+  ]
   sources = [
     "hlcpp_client_app.cc",
     "hlcpp_client_app.h",
   ]
 
   deps = [
-    ":fidl_service",
+    "fidl:fidl_service",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/zx",
   ]
-}
-
-# CPP (unified bindings / natural types) Test Server
-
-executable("cpp_server") {
-  output_name = "cpp-server"
-  output_dir = target_out_dir
-
-  sources = [ "cpp_server.cc" ]
-
-  deps = [
-    ":fidl_service_cpp",
-    "//sdk/lib/fdio",
-    "//sdk/lib/stdcompat",
-    "//sdk/lib/sys/cpp",
-    "//zircon/system/ulib/async-default",
-    "//zircon/system/ulib/async-loop",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-fuchsia_component("cpp-server") {
-  manifest = "meta/cpp-server.cmx"
-  deps = [ ":cpp_server" ]
-}
-
-# HLCPP Test Server
-
-executable("hlcpp_server") {
-  output_name = "hlcpp-server"
-  output_dir = target_out_dir
-
-  sources = [ "hlcpp_server.cc" ]
-
-  deps = [
-    ":fidl_service",
-    ":hlcpp_client_app",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
-    "//zircon/system/ulib/async-default",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-fuchsia_component("hlcpp-server") {
-  manifest = "meta/hlcpp-server.cmx"
-  deps = [ ":hlcpp_server" ]
-}
-
-# LLCPP Test Server
-
-executable("llcpp_server") {
-  output_name = "llcpp-server"
-  output_dir = target_out_dir
-  testonly = true
-
-  sources = [ "llcpp_server.cc" ]
-
-  deps = [
-    ":fidl_service_llcpp_testing",
-    "//sdk/lib/fdio",
-    "//sdk/lib/sys/cpp",
-    "//zircon/system/ulib/async-default",
-    "//zircon/system/ulib/async-loop",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-fuchsia_component("llcpp-server") {
-  manifest = "meta/llcpp-server.cmx"
-  deps = [ ":llcpp_server" ]
-  testonly = true
-}
-
-# Rust Test Server
-
-rustc_binary("rust_server") {
-  output_name = "rust_server"
-  output_dir = target_out_dir
-  edition = "2021"
-  source_root = "rust_server.rs"
-
-  deps = [
-    ":fidl_import-rustc",
-    ":fidl_service-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:thiserror",
-  ]
-
-  sources = [ "rust_server.rs" ]
-}
-
-fuchsia_component("rust-server") {
-  manifest = "meta/rust-server.cmx"
-  deps = [ ":rust_server" ]
-}
-
-# Dart Test Server
-
-dart_library("dart_server") {
-  package_name = "dart_server"
-  package_root = "dart"
-  sources = [ "main.dart" ]
-  deps = [
-    "//sdk/dart/fidl",
-    "//sdk/dart/fuchsia_services",
-    "//sdk/fidl/fuchsia.sys",
-    "//src/tests/fidl/compatibility:fidl_import",
-    "//src/tests/fidl/compatibility:fidl_service",
-  ]
-}
-
-dart_component("dart-server") {
-  manifest = "meta/dart-server.cmx"
-  main_package = "dart_server"
-  deps = [ ":dart_server" ]
 }
 
 # Categories of behaviors to be tested for compatibility.
@@ -208,8 +66,8 @@ foreach(test, fidl_compatibility_tests_categories) {
     ]
 
     deps = [
-      ":fidl_service",
       ":hlcpp_client_app",
+      "fidl:fidl_service",
       "//sdk/lib/fidl/cpp",
       "//sdk/lib/sys/cpp",
       "//src/lib/files",
@@ -260,12 +118,12 @@ foreach(test, fidl_compatibility_tests_categories) {
 fuchsia_test_package("fidl_compatibility_test_package") {
   package_name = "fidl-compatibility-test"
   deps = [
-    ":cpp-server",
-    ":dart-server",
-    ":hlcpp-server",
-    ":llcpp-server",
-    ":rust-server",
-    "golang:go-server",
+    "cpp:cpp-server",
+    "dart:dart-server",
+    "go:go-server",
+    "hlcpp:hlcpp-server",
+    "llcpp:llcpp-server",
+    "rust:rust-server",
   ]
   test_components = test_component_labels
 }

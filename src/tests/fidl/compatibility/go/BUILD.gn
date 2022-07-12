@@ -14,11 +14,11 @@ go_library("lib") {
   deps = [
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
     "//src/lib/component",
-    "//src/tests/fidl/compatibility:fidl_service($go_toolchain)",
+    "//src/tests/fidl/compatibility/fidl:fidl_service($go_toolchain)",
   ]
-  sources = [ "go_server.go" ]
+  sources = [ "main.go" ]
 }
-go_binary("go_server") {
+go_binary("bin") {
   gopackage = "compatibility_test"
   output_name = "go-server"
   output_dir = target_out_dir
@@ -28,5 +28,5 @@ go_binary("go_server") {
 
 fuchsia_component("go-server") {
   manifest = "meta/go-server.cmx"
-  deps = [ ":go_server" ]
+  deps = [ ":bin" ]
 }

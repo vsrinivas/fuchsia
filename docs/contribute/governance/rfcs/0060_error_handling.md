@@ -207,7 +207,7 @@ We're adopting a more conservative idea of error representation for now.
 [http]: https://tools.ietf.org/html/rfc1945#section-9
 [language]: /docs/reference/fidl/language/language.md
 [rubric]: /docs/development/api/fidl.md
-[testinterface]: /src/tests/fidl/compatibility/compatibility_service.test.fidl
+[testinterface]: /src/tests/fidl/compatibility/fidl/compatibility_service.test.fidl
 [tutorial]: /docs/development/languages/fidl/tutorials/overview.md
 [wire-format]: /docs/reference/fidl/language/wire-format/README.md
 [grpc_status_code]: https://github.com/grpc/grpc/blob/HEAD/include/grpc/impl/codegen/status.h#L26
