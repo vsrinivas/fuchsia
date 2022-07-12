@@ -8,8 +8,8 @@
 
 #include <perftest/perftest.h>
 
-#include "src/connectivity/network/netstack/udp_serde.h"
-#include "src/connectivity/network/netstack/udp_serde_test_util.h"
+#include "src/connectivity/network/netstack/udp_serde/udp_serde.h"
+#include "src/connectivity/network/netstack/udp_serde/udp_serde_test_util.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 // Measure the times to serialize and deserialize the SendMsgMeta and RecvMsgMeta FIDL messages

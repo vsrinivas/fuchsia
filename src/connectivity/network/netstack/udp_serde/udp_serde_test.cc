@@ -35,7 +35,7 @@ TEST_P(UdpSerdeTest, SendSerializeThenDeserialize) {
   ASSERT_EQ(res.err, DeserializeSendMsgMetaErrorNone);
   EXPECT_EQ(res.port, meta.Port());
   EXPECT_EQ(res.to_addr.addr_type, meta.AddrType());
-  const span found_addr(res.to_addr.addr, res.to_addr.addr_size);
+  const span found_addr(res.to_addr.addr, meta.AddrLen());
   const span expected(meta.Addr(), meta.AddrLen());
   EXPECT_EQ(found_addr, expected);
 }

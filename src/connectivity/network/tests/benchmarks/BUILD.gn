@@ -21,8 +21,8 @@ test("udp_serde_benchmarks") {
   deps = [
     "//sdk/lib/fidl/cpp/wire",
     "//sdk/lib/syslog/cpp",
-    "//src/connectivity/network/netstack:udp_serde",
-    "//src/connectivity/network/netstack:udp_serde_test_util",
+    "//src/connectivity/network/netstack/udp_serde",
+    "//src/connectivity/network/netstack/udp_serde:udp_serde_test_util",
     "//src/lib/fxl",
     "//zircon/system/ulib/perftest",
   ]

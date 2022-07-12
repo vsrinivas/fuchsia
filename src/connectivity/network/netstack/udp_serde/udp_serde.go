@@ -5,7 +5,7 @@
 //go:build !build_with_native_toolchain
 // +build !build_with_native_toolchain
 
-package netstack
+package udp_serde
 
 import (
 	fidlnet "fidl/fuchsia/net"
@@ -14,6 +14,7 @@ import (
 	"reflect"
 	"unsafe"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"gvisor.dev/gvisor/pkg/tcpip"
 	"gvisor.dev/gvisor/pkg/tcpip/header"
 )
@@ -24,37 +25,35 @@ import (
 // #include "udp_serde.h"
 import "C"
 
-func txUdpPreludeSize() uint32 {
+func TxUdpPreludeSize() uint32 {
 	return uint32(C.kTxUdpPreludeSize)
 }
 
-func rxUdpPreludeSize() uint32 {
+func RxUdpPreludeSize() uint32 {
 	return uint32(C.kRxUdpPreludeSize)
 }
 
-func deserializeSendMsgMetaErrToString(err C.DeserializeSendMsgMetaError) string {
+func convertDeserializeSendMsgMetaErr(err C.DeserializeSendMsgMetaError) error {
 	switch err {
-	case C.DeserializeSendMsgMetaErrorNone:
-		return "DeserializeSendMsgMetaErrorNone"
 	case C.DeserializeSendMsgMetaErrorInputBufferNull:
-		return "DeserializeSendMsgMetaErrorInputBufferNull"
+		return InputBufferNullErr{}
 	case C.DeserializeSendMsgMetaErrorInputBufferTooSmall:
-		return "DeserializeSendMsgMetaErrorInputBufferTooSmall"
+		return InputBufferTooSmallErr{}
 	case C.DeserializeSendMsgMetaErrorNonZeroPrelude:
-		return "DeserializeSendMsgMetaErrorNonZeroPrelude"
+		return NonZeroPreludeErr{}
 	case C.DeserializeSendMsgMetaErrorFailedToDecode:
-		return "DeserializeSendMsgMetaErrorFailedToDecode"
+		return FailedToDecodeErr{}
 	default:
 		panic(fmt.Sprintf("unknown deserialization result %#v", err))
 	}
 }
 
-// deserializeSendMsgAddress deserializes metadata contained within `buf`
+// DeserializeSendMsgAddress deserializes metadata contained within `buf`
 // as a SendMsgMeta FIDL message using the LLCPP bindings.
 //
 // If the deserialized metadata contains an address, returns that address.
 // Else, returns nil.
-func deserializeSendMsgAddress(buf []byte) *tcpip.FullAddress {
+func DeserializeSendMsgAddress(buf []byte) (*tcpip.FullAddress, error) {
 	bufIn := C.Buffer{
 		buf:      (*C.uchar)(unsafe.Pointer(((*reflect.SliceHeader)(unsafe.Pointer(&buf))).Data)),
 		buf_size: C.ulong(len(buf)),
@@ -62,57 +61,49 @@ func deserializeSendMsgAddress(buf []byte) *tcpip.FullAddress {
 
 	res := C.deserialize_send_msg_meta(bufIn)
 	if res.err != C.DeserializeSendMsgMetaErrorNone {
-		panic(fmt.Sprintf("deserialization error: %s", deserializeSendMsgMetaErrToString(res.err)))
+		return nil, convertDeserializeSendMsgMetaErr(res.err)
 	}
 
 	if res.has_addr {
 		var addr tcpip.Address
 		switch res.to_addr.addr_type {
 		case C.Ipv4:
-			if res.to_addr.addr_size != header.IPv4AddressSize {
-				panic(fmt.Sprintf("expect IPv4 address has size %d, found size %d", header.IPv4AddressSize, res.to_addr.addr_size))
-			}
 			foundAddr := (*[header.IPv4AddressSize]uint8)(unsafe.Pointer(&res.to_addr.addr))
 			addr = tcpip.Address(foundAddr[:])
 		case C.Ipv6:
-			if res.to_addr.addr_size != header.IPv6AddressSize {
-				panic(fmt.Sprintf("expect IPv6 address has size %d, found size %d", header.IPv6AddressSize, res.to_addr.addr_size))
-			}
 			foundAddr := (*[header.IPv6AddressSize]uint8)(unsafe.Pointer(&res.to_addr.addr))
 			addr = tcpip.Address(foundAddr[:])
 		}
 		return &tcpip.FullAddress{
 			Addr: addr,
 			Port: uint16(res.port),
-		}
+		}, nil
 	}
 
-	return nil
+	return nil, nil
 }
 
-func serializeRecvMsgMetaErrorToString(err C.SerializeRecvMsgMetaError) string {
+func convertSerializeRecvMsgMetaErr(err C.SerializeRecvMsgMetaError) error {
 	switch err {
-	case C.SerializeRecvMsgMetaErrorNone:
-		return "SerializeRecvMsgMetaErrorNone"
 	case C.SerializeRecvMsgMetaErrorOutputBufferNull:
-		return "SerializeRecvMsgMetaErrorOutputBufferNull"
+		return InputBufferNullErr{}
 	case C.SerializeRecvMsgMetaErrorOutputBufferTooSmall:
-		return "SerializeRecvMsgMetaErrorOutputBufferTooSmall"
+		return InputBufferTooSmallErr{}
 	case C.SerializeRecvMsgMetaErrorFromAddrBufferNull:
-		return "SerializeRecvMsgMetaErrorFromAddrBufferNull"
+		panic(fmt.Sprintf("got unexpected C.SerializeRecvMsgMetaErrorFromAddrBufferNull error"))
 	case C.SerializeRecvMsgMetaErrorFromAddrBufferTooSmall:
-		return "SerializeRecvMsgMetaErrorFromAddrBufferTooSmall"
+		panic(fmt.Sprintf("got unexpected C.SerializeRecvMsgMetaErrorFromAddrBufferTooSmall error"))
 	case C.SerializeRecvMsgMetaErrorFailedToEncode:
-		return "SerializeRecvMsgMetaErrorFailedToEncode"
+		return FailedToEncodeErr{}
 	default:
-		panic(fmt.Sprintf("unknown serialization result %#v", err))
+		panic(fmt.Sprintf("unknown deserialization result %#v", err))
 	}
 }
 
-// serializeRecvMsgMeta serializes metadata contained within `res` into `buf`
+// SerializeRecvMsgMeta serializes metadata contained within `res` into `buf`
 // as a RecvMsgMeta FIDL message using the LLCPP bindings.
-func serializeRecvMsgMeta(protocol tcpip.NetworkProtocolNumber, res tcpip.ReadResult, buf []byte) {
-	fidlAddr := toNetSocketAddress(protocol, res.RemoteAddr)
+func SerializeRecvMsgMeta(protocol tcpip.NetworkProtocolNumber, res tcpip.ReadResult, buf []byte) error {
+	fidlAddr := fidlconv.ToNetSocketAddressWithProto(protocol, res.RemoteAddr)
 	var fromAddrType C.IpAddrType
 	var addrBuf C.ConstBuffer
 	var addrSlice []byte
@@ -137,7 +128,7 @@ func serializeRecvMsgMeta(protocol tcpip.NetworkProtocolNumber, res tcpip.ReadRe
 	}
 
 	if res.Count > int(math.MaxUint16) {
-		panic(fmt.Sprintf("payload size (%d) exceeds max allowed (%d)", res.Count, math.MaxUint16))
+		return PayloadSizeExceedsMaxAllowedErr{payloadSize: res.Count, maxAllowed: math.MaxUint16}
 	}
 
 	recv_meta := C.RecvMsgMeta{
@@ -168,6 +159,7 @@ func serializeRecvMsgMeta(protocol tcpip.NetworkProtocolNumber, res tcpip.ReadRe
 	}
 
 	if err := C.serialize_recv_msg_meta(&recv_meta, addrBuf, bufOut); err != C.SerializeRecvMsgMetaErrorNone {
-		panic(fmt.Sprintf("serialization error: %s", serializeRecvMsgMetaErrorToString(err)))
+		return convertSerializeRecvMsgMetaErr(err)
 	}
+	return nil
 }

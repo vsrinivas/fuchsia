@@ -3,15 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/cpp/sdk_source_set.gni")
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
-import("//build/test.gni")
 import("gentool/generated.gni")
 import("tracing/go_tracing_include_dirs.gni")
-import("udp_serde_include_dirs.gni")
+import("udp_serde/udp_serde_include_dirs.gni")
 
 go_binary("bin") {
   gopackage = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/stub"
@@ -154,6 +152,7 @@ go_library("lib") {
     "sync",
     "time",
     "tracing",
+    "udp_serde:golib",
     "util",
     "//sdk/fidl/fuchsia.hardware.ethernet($go_toolchain)",
     "//sdk/fidl/fuchsia.hardware.network($go_toolchain)",
@@ -185,8 +184,6 @@ go_library("lib") {
     "//third_party/golibs:gvisor.dev/gvisor",
   ]
 
-  non_go_deps = [ ":udp_serde_for_cgo" ]
-
   sources = [
     "errors.go",
     "fuchsia_inspect_inspect.go",
@@ -216,8 +213,6 @@ go_library("lib") {
     "netstack_test.go",
     "noop_endpoint_test.go",
     "socket_conv.go",
-    "udp_serde.go",
-    "udp_serde.h",
   ]
 }
 
@@ -235,76 +230,10 @@ fuchsia_unittest_package("netstack-gotests") {
   manifest = "meta/netstack_test.cml"
 }
 
-udp_serde_public_deps =
-    [ "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp" ]
-
-# Source set for use by targets in the SDK, which can't depend on a
-# shared library defined outside the SDK.
-source_set("udp_serde") {
-  sources = [ "udp_serde.cc" ]
-  public_deps = udp_serde_public_deps
-  public = [ "udp_serde.h" ]
-}
-
-# Shared library for use by golang targets. Fuchsia's build system doesn't
-# support directly compiling C++ files that #include generated FIDL headers
-# from CGo. This library lets golang targets get around this limitation by
-# using LLCPP internally while exposing a header without referencing any
-# generated FIDL types.
-shared_library("udp_serde_for_cgo") {
-  sources = [ "udp_serde.cc" ]
-  public = [ "udp_serde.h" ]
-  public_deps = udp_serde_public_deps
-}
-
-source_set("udp_serde_test_util") {
-  testonly = true
-
-  sources = [
-    "udp_serde_test_util.cc",
-    "udp_serde_test_util.h",
-  ]
-
-  public_deps = [
-    ":udp_serde",
-    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp",
-  ]
-}
-
-test("udp_serde_test") {
-  sources = [ "udp_serde_test.cc" ]
-
-  deps = [
-    ":udp_serde",
-    ":udp_serde_test_util",
-    "//sdk/lib/fidl/cpp/wire",
-    "//src/lib/fxl/test:gtest_main",
-  ]
-}
-
-test("udp_serde_c_compilation_test") {
-  sources = [ "udp_serde_c_compilation_test.c" ]
-
-  deps = [
-    ":udp_serde",
-    "//zircon/system/ulib/zxtest",
-  ]
-}
-
-fuchsia_unittest_package("udp_serde-unittests") {
-  deps = [ ":udp_serde_test" ]
-}
-
-fuchsia_unittest_package("udp_serde_c_compilation-unittest") {
-  deps = [ ":udp_serde_c_compilation_test" ]
-}
-
 group("tests") {
   testonly = true
   deps = [
     ":netstack-gotests",
-    ":udp_serde-unittests",
-    ":udp_serde_c_compilation-unittest",
     "bench:tests",
     "dhcp:tests",
     "dns:tests",
@@ -319,6 +248,7 @@ group("tests") {
     "tests",
     "time:tests",
     "tracing:tests",
+    "udp_serde:tests",
     "util:tests",
   ]
 }

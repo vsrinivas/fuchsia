@@ -28,7 +28,7 @@
 #include <safemath/safe_conversions.h>
 
 #include "fdio_unistd.h"
-#include "src/connectivity/network/netstack/udp_serde.h"
+#include "src/connectivity/network/netstack/udp_serde/udp_serde.h"
 #include "zxio.h"
 
 namespace fsocket = fuchsia_posix_socket;

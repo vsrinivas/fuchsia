@@ -155,7 +155,6 @@ DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf) {
         const fnet::wire::Ipv4SocketAddress& ipv4 = sockaddr.ipv4();
         res.port = ipv4.port;
         res.to_addr.addr_type = IpAddrType::Ipv4;
-        res.to_addr.addr_size = decltype(ipv4.address.addr)::size();
         std::copy(ipv4.address.addr.begin(), ipv4.address.addr.end(), res.to_addr.addr);
         break;
       }
@@ -163,7 +162,6 @@ DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf) {
         const fnet::wire::Ipv6SocketAddress& ipv6 = sockaddr.ipv6();
         res.port = ipv6.port;
         res.to_addr.addr_type = IpAddrType::Ipv6;
-        res.to_addr.addr_size = decltype(ipv6.address.addr)::size();
         std::copy(ipv6.address.addr.begin(), ipv6.address.addr.end(), res.to_addr.addr);
         break;
       }

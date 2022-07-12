@@ -27,6 +27,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/tracing/trace"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/udp_serde"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
@@ -509,7 +510,7 @@ func (ep *endpoint) GetSockName(fidl.Context) (socket.BaseNetworkSocketGetSockNa
 		return socket.BaseNetworkSocketGetSockNameResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	return socket.BaseNetworkSocketGetSockNameResultWithResponse(socket.BaseNetworkSocketGetSockNameResponse{
-		Addr: toNetSocketAddress(ep.netProto, addr),
+		Addr: fidlconv.ToNetSocketAddressWithProto(ep.netProto, addr),
 	}), nil
 }
 
@@ -519,7 +520,7 @@ func (ep *endpoint) GetPeerName(fidl.Context) (socket.BaseNetworkSocketGetPeerNa
 		return socket.BaseNetworkSocketGetPeerNameResultWithErr(tcpipErrorToCode(err)), nil
 	}
 	return socket.BaseNetworkSocketGetPeerNameResultWithResponse(socket.BaseNetworkSocketGetPeerNameResponse{
-		Addr: toNetSocketAddress(ep.netProto, addr),
+		Addr: fidlconv.ToNetSocketAddressWithProto(ep.netProto, addr),
 	}), nil
 }
 
@@ -1918,8 +1919,8 @@ var _ socket.DatagramSocketWithCtx = (*datagramSocketImpl)(nil)
 var _ waiter.EventListener = (*datagramSocketImpl)(nil)
 
 var (
-	udpTxPreludeSize = txUdpPreludeSize()
-	udpRxPreludeSize = rxUdpPreludeSize()
+	udpTxPreludeSize = udp_serde.TxUdpPreludeSize()
+	udpRxPreludeSize = udp_serde.RxUdpPreludeSize()
 )
 
 func newDatagramSocket(eps *endpointWithSocket) (socket.DatagramSocketWithCtxInterface, error) {
@@ -1984,7 +1985,9 @@ func (s *datagramSocketImpl) loopRead(ch chan<- struct{}) {
 			continue
 		}
 
-		serializeRecvMsgMeta(s.netProto, res, buf[:udpRxPreludeSize])
+		if err := udp_serde.SerializeRecvMsgMeta(s.netProto, res, buf[:udpRxPreludeSize]); err != nil {
+			panic(fmt.Sprintf("serialization error: %s", err))
+		}
 
 		v := buf[:udpRxPreludeSize+uint32(res.Count)]
 		for {
@@ -2049,7 +2052,11 @@ func (s *datagramSocketImpl) loopWrite(ch chan<- struct{}) {
 			Atomic: true,
 		}
 
-		addr := deserializeSendMsgAddress(v[:udpTxPreludeSize])
+		addr, err := udp_serde.DeserializeSendMsgAddress(v[:udpTxPreludeSize])
+
+		if err != nil {
+			panic(fmt.Sprintf("deserialization error: %s", err))
+		}
 
 		if addr != nil {
 			opts.To = addr
@@ -2572,7 +2579,7 @@ func (s *datagramSocketImpl) SendMsgPreflight(_ fidl.Context, req socket.Datagra
 
 	response.SetValidity([]zx.Handle{nsEventPair, socketEventPair})
 	if useConnectedAddr {
-		response.SetTo(toNetSocketAddress(s.netProto, addr))
+		response.SetTo(fidlconv.ToNetSocketAddressWithProto(s.netProto, addr))
 	}
 
 	return socket.DatagramSocketSendMsgPreflightResultWithResponse(response), nil
@@ -2885,7 +2892,7 @@ func (s *networkDatagramSocket) recvMsg(wantAddr bool, dataLen uint32, peek bool
 
 	var addr fidlnet.SocketAddress
 	if wantAddr {
-		sockaddr := toNetSocketAddress(s.netProto, res.RemoteAddr)
+		sockaddr := fidlconv.ToNetSocketAddressWithProto(s.netProto, res.RemoteAddr)
 		addr = sockaddr
 	}
 	return addr, bytes, uint32(res.Total - res.Count), res.ControlMessages, nil
@@ -3238,7 +3245,7 @@ func (s *streamSocketImpl) Accept(_ fidl.Context, wantAddr bool) (socket.StreamS
 			S: streamSocketInterface,
 		}
 		if addr != nil {
-			sockaddr := toNetSocketAddress(s.netProto, *addr)
+			sockaddr := fidlconv.ToNetSocketAddressWithProto(s.netProto, *addr)
 			response.Addr = &sockaddr
 		}
 		return socket.StreamSocketAcceptResultWithResponse(response), nil

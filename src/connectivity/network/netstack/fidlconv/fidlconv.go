@@ -116,6 +116,47 @@ func ToNetSocketAddress(addr tcpip.FullAddress) net.SocketAddress {
 	return out
 }
 
+// isLinkLocal determines if the given IPv6 address is link-local. This is the
+// case when it has the fe80::/10 prefix. This check is used to determine when
+// the NICID is relevant for a given IPv6 address.
+func isLinkLocal(addr net.Ipv6Address) bool {
+	return addr.Addr[0] == 0xfe && addr.Addr[1]&0xc0 == 0x80
+}
+
+// ToNetSocketAddress converts a tcpip.FullAddress into a fidlnet.SocketAddress
+// taking the protocol into consideration. If addr is unspecified, the
+// unspecified address for the provided protocol is returned.
+//
+// Panics if protocol is neither IPv4 nor IPv6.
+func ToNetSocketAddressWithProto(protocol tcpip.NetworkProtocolNumber, addr tcpip.FullAddress) net.SocketAddress {
+	switch protocol {
+	case ipv4.ProtocolNumber:
+		out := net.Ipv4SocketAddress{
+			Port: addr.Port,
+		}
+		copy(out.Address.Addr[:], addr.Addr)
+		return net.SocketAddressWithIpv4(out)
+	case ipv6.ProtocolNumber:
+		out := net.Ipv6SocketAddress{
+			Port: addr.Port,
+		}
+		if len(addr.Addr) == header.IPv4AddressSize {
+			// Copy address in v4-mapped format.
+			copy(out.Address.Addr[header.IPv6AddressSize-header.IPv4AddressSize:], addr.Addr)
+			out.Address.Addr[header.IPv6AddressSize-header.IPv4AddressSize-1] = 0xff
+			out.Address.Addr[header.IPv6AddressSize-header.IPv4AddressSize-2] = 0xff
+		} else {
+			copy(out.Address.Addr[:], addr.Addr)
+			if isLinkLocal(out.Address) {
+				out.ZoneIndex = uint64(addr.NIC)
+			}
+		}
+		return net.SocketAddressWithIpv6(out)
+	default:
+		panic(fmt.Sprintf("invalid protocol for conversion: %d", protocol))
+	}
+}
+
 func toTCPIPAddressWithPrefix(sn net.Subnet) tcpip.AddressWithPrefix {
 	return tcpip.AddressWithPrefix{
 		Address:   ToTCPIPAddress(sn.Addr),
