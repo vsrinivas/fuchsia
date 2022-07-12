@@ -8,6 +8,7 @@ use {
     anyhow::Error,
     argh::FromArgs,
     fidl_fuchsia_kernel::{CounterMarker, CounterProxy},
+    fidl_fuchsia_mem::Buffer,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     fuchsia_zircon as zx,
     futures::prelude::*,
@@ -27,16 +28,17 @@ async fn publish_kcounter_inspect(
     kcounter: CounterProxy,
     inspector: &fuchsia_inspect::Inspector,
 ) -> Result<(), Error> {
-    let (state, inspect_vmo) = kcounter.get_inspect_vmo().await?;
-    zx::ok(state)?;
-    let vmo = Arc::new(inspect_vmo.vmo);
+    let (status, Buffer { vmo, size: _ }) = kcounter.get_inspect_vmo().await?;
+    let () = zx::ok(status)?;
+    let vmo = Arc::new(vmo);
     // We are adding the VMO as lazy values to root; there won't be a node called "kcounter".
     inspector.root().record_lazy_values("kcounter", move || {
-        let kcounter_clone = kcounter.clone();
-        let vmo_clone = vmo.clone();
+        let kcounter = kcounter.clone();
+        let vmo = vmo.clone();
         async move {
-            zx::ok(kcounter_clone.update_inspect_vmo().await?)?;
-            Ok(fuchsia_inspect::Inspector::no_op_from_vmo(vmo_clone))
+            let status = kcounter.update_inspect_vmo().await?;
+            let () = zx::ok(status)?;
+            Ok(fuchsia_inspect::Inspector::no_op_from_vmo(vmo))
         }
         .boxed()
     });
@@ -59,8 +61,7 @@ pub async fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, fidl_fuchsia_kernel::CounterRequest, fidl_fuchsia_mem::Buffer,
-        fuchsia_async as fasync, std::sync::Mutex,
+        super::*, fidl_fuchsia_kernel::CounterRequest, fuchsia_async as fasync, std::sync::Mutex,
     };
 
     #[fasync::run_until_stalled(test)]
