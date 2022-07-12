@@ -6,8 +6,15 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <ostream>
+#include <string>
+#include <vector>
+
 #include <ffl/string.h>
 #include <gtest/gtest.h>
+
+#include "src/media/audio/lib/format2/fixed.h"
+#include "src/media/audio/lib/format2/format.h"
 
 namespace media_audio {
 

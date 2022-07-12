@@ -9,8 +9,6 @@
 
 #include <limits>
 
-#include "src/media/audio/lib/format2/fixed.h"
-#include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/lib/timeline/timeline_function.h"
 #include "src/media/audio/lib/timeline/timeline_rate.h"
 

@@ -12,6 +12,9 @@
 #include <lib/fzl/vmo-mapper.h>
 
 #include <memory>
+#include <string_view>
+#include <utility>
+#include <vector>
 
 #include <fbl/algorithm.h>
 #include <gmock/gmock.h>
@@ -22,9 +25,11 @@
 #include "lib/fidl/llcpp/object_view.h"
 #include "lib/fidl/llcpp/vector_view.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/media/audio/services/mixer/common/basic_types.h"
+#include "src/media/audio/lib/format2/fixed.h"
+#include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/mixer/common/thread_checker.h"
 #include "src/media/audio/services/mixer/mix/detached_thread.h"
+#include "src/media/audio/services/mixer/mix/mix_job_context.h"
 #include "src/media/audio/services/mixer/mix/packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/ptr_decls.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"

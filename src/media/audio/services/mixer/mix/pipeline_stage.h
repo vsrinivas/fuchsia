@@ -5,8 +5,6 @@
 #ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_PIPELINE_STAGE_H_
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_PIPELINE_STAGE_H_
 
-#include <fidl/fuchsia.audio.mixer/cpp/wire.h>
-#include <lib/fpromise/result.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <atomic>
@@ -16,6 +14,8 @@
 
 #include <ffl/string.h>
 
+#include "src/media/audio/lib/format2/fixed.h"
+#include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
 #include "src/media/audio/services/mixer/mix/packet_view.h"
@@ -130,8 +130,6 @@ class PipelineStage {
   // Put differently, time advances when `Read` is called, when a packet is consumed, and on
   // explicit calls to `Advance`. Time does not go backwards, hence, each call to `Read` must have
   // `start_frame` that is not lesser than the last advanced frame.
-  //
-  // TODO(fxbug.dev/87651): Pass in `context` for metrics etc (similar to `ReadableStream`).
   std::optional<Packet> Read(MixJobContext& ctx, Fixed start_frame, int64_t frame_count);
 
   // Returns the stage's name. This is used for diagnostics only.

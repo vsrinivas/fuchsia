@@ -10,7 +10,8 @@
 #include <optional>
 #include <utility>
 
-#include "src/media/audio/services/mixer/common/basic_types.h"
+#include "src/media/audio/lib/format2/fixed.h"
+#include "src/media/audio/services/mixer/mix/mix_job_context.h"
 
 namespace media_audio {
 

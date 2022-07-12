@@ -8,6 +8,8 @@
 
 #include <ffl/string.h>
 
+#include "src/media/audio/lib/format2/fixed.h"
+
 namespace media_audio {
 
 PacketView::PacketView(Args args)

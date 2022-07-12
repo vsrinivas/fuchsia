@@ -4,9 +4,12 @@
 
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
 
-#include <optional>
+#include <lib/syslog/cpp/macros.h>
 
-#include "src/media/audio/services/mixer/common/basic_types.h"
+#include <optional>
+#include <utility>
+
+#include "src/media/audio/lib/format2/fixed.h"
 
 namespace media_audio {
 

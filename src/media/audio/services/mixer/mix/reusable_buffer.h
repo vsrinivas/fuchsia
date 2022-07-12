@@ -11,7 +11,8 @@
 #include <utility>
 #include <vector>
 
-#include "src/media/audio/services/mixer/common/basic_types.h"
+#include "src/media/audio/lib/format2/fixed.h"
+#include "src/media/audio/lib/format2/format.h"
 
 namespace media_audio {
 

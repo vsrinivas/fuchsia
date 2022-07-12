@@ -10,7 +10,9 @@
 #include <ffl/string.h>
 #include <gtest/gtest.h>
 
-#include "src/media/audio/services/mixer/common/basic_types.h"
+#include "src/media/audio/lib/format2/fixed.h"
+#include "src/media/audio/lib/format2/format.h"
+#include "src/media/audio/services/mixer/mix/mix_job_context.h"
 #include "src/media/audio/services/mixer/mix/packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/packet_view.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"

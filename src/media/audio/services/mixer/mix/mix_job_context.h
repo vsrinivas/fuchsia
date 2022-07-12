@@ -13,7 +13,6 @@
 #include <fbl/static_vector.h>
 
 #include "src/media/audio/lib/clock/clock_snapshot.h"
-#include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/mix/mix_job_subtask.h"
 
 namespace media_audio {
