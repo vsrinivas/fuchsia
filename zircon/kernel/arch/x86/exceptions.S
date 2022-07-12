@@ -120,6 +120,24 @@
   push_reg %rbp
   push_reg %rsi
   push_reg %rdi
+  // Zero general-purpose registers to constrain speculative execution with
+  // potentially-hostile register values; the values may have come from user
+  // mode and could be consumed by in-kernel speculative execution.
+  xorl %eax, %eax
+  xorl %ebx, %ebx
+  xorl %ecx, %ecx
+  xorl %edx, %edx
+  xorl %esi, %esi
+  xorl %edi, %edi
+  xorl %ebp, %ebp
+  xorq %r8, %r8
+  xorq %r9, %r9
+  xorq %r10, %r10
+  xorq %r11, %r11
+  xorq %r12, %r12
+  xorq %r13, %r13
+  xorq %r14, %r14
+  xorq %r15, %r15
 
   // At this point the stack contains a complete iframe_t.
 
