@@ -1,0 +1,96 @@
+digraph {
+  label="CLICK RECOGNIZER" labelloc="t"
+  rankdir="LR"
+
+  // The gesture arena, which invokes methods on the various states of the recognizer.
+  arena [shape="doublecircle"]
+
+  // `InitialContender` definition.
+  arena -> examine_at_initial_contender [label="examine\nevent()"]
+  examine_at_initial_contender [shape="diamond" label="exactly\none\nfinger?"]
+  examine_at_initial_contender -> examine2_at_initial_contender [label="yes"]
+  examine2_at_initial_contender [shape="diamond" label="button\npressed?"]
+  examine_at_initial_contender -> return_mismatch_at_initial_contender [label="no"]
+  examine2_at_initial_contender -> return_pressed_contender_at_initial_contender [label="yes"]
+  examine2_at_initial_contender -> return_unpressed_contender_at_initial_contender [label="no"]
+  return_mismatch_at_initial_contender [shape="rectangle" label="return\nMismatch"]
+  return_pressed_contender_at_initial_contender [shape="rectangle" label="return\nPressedContender"]
+  return_unpressed_contender_at_initial_contender [shape="rectangle" label="return\nUnpressedContender"]
+  subgraph cluster_initial_contender {
+    label="InitialContender\n`impl Contender`"
+    examine_at_initial_contender
+    examine2_at_initial_contender
+    return_mismatch_at_initial_contender
+    return_pressed_contender_at_initial_contender
+    return_unpressed_contender_at_initial_contender
+  }
+
+  // `UnpressedContender` definition.
+  arena -> examine_at_unpressed_contender [label="examine\nevent()"]
+  examine_at_unpressed_contender [shape="diamond" label="exactly\none\nfinger?"]
+  examine_at_unpressed_contender -> return_mismatch_at_unpressed_contender [label="no"]
+  examine_at_unpressed_contender -> examine2_at_unpressed_contender [label="yes"]
+  examine2_at_unpressed_contender [shape="diamond" label="displacement\n>\nthreshold?"]
+  examine2_at_unpressed_contender -> return_mismatch_at_unpressed_contender [label="yes"]
+  examine2_at_unpressed_contender -> examine3_at_unpressed_contender [label="no"]
+  examine3_at_unpressed_contender [shape="diamond" label="button\npressed?"]
+  examine3_at_unpressed_contender -> return_self_at_unpressed_contender [label="no"]
+  examine3_at_unpressed_contender -> return_pressed_contender_at_unpressed_contender [label="yes"]
+  return_mismatch_at_unpressed_contender [shape="rectangle" label="return\nMismatch"]
+  return_self_at_unpressed_contender [shape="rectangle" label="return\n`self`"]
+  return_pressed_contender_at_unpressed_contender [shape="rectangle" label="return\nPressedContender"]
+  subgraph cluster_unpressed_contender {
+    label="UnpressedContender\n`impl Contender`"
+    examine_at_unpressed_contender
+    examine2_at_unpressed_contender
+    examine3_at_unpressed_contender
+    return_mismatch_at_unpressed_contender
+    return_self_at_unpressed_contender
+    return_pressed_contender_at_unpressed_contender
+  }
+
+  // `PressedContender` definition.
+  arena -> examine_at_pressed_contender [label="examine\nevent()"]
+  examine_at_pressed_contender [shape="diamond" label="exactly\none\nfinger?"]
+  examine_at_pressed_contender -> return_mismatch_at_pressed_contender [label="no"]
+  examine_at_pressed_contender -> examine2_at_pressed_contender [label="yes"]
+  examine2_at_pressed_contender [shape="diamond" label="displacement\n>\nthreshold?"]
+  examine2_at_pressed_contender -> return_mismatch_at_pressed_contender [label="yes"]
+  examine2_at_pressed_contender -> examine3_at_pressed_contender [label="no"]
+  examine3_at_pressed_contender [shape="diamond" label="button\nreleased?"]
+  examine3_at_pressed_contender -> return_matched_contender_at_pressed_contender [label="yes"]
+  examine3_at_pressed_contender -> return_self_at_pressed_contender [label="no"]
+  return_mismatch_at_pressed_contender [shape="rectangle" label="return\nMismatch"]
+  return_matched_contender_at_pressed_contender [shape="rectangle" label="return\nMatchedContender"]
+  return_self_at_pressed_contender [shape="rectangle" label="return\n`self`"]
+  subgraph cluster_pressed_contender {
+    label="PressedContender\n`impl Contender`"
+    examine_at_pressed_contender
+    examine2_at_pressed_contender
+    examine3_at_pressed_contender
+    return_mismatch_at_pressed_contender
+    return_matched_contender_at_pressed_contender
+    return_self_at_pressed_contender [shape="rectangle" label="return\n`self`"]
+  }
+
+  // `MatchedContender` definition.
+  arena -> verify_at_matched_contender [label="verify\nevent()"]
+  verify_at_matched_contender [shape="diamond" label="button\npressed?"]
+  verify_at_matched_contender -> return_mismatch_at_matched_contender [label="yes"]
+  verify_at_matched_contender -> verify2_at_matched_contender [label="no"]
+  verify2_at_matched_contender [shape="diamond" label="fingers\npresent?"]
+  verify2_at_matched_contender -> return_mismatch_at_matched_contender [label=">1"]
+  verify2_at_matched_contender -> return_self_at_matched_contender [label="0 or 1"]
+  return_mismatch_at_matched_contender [shape="rectangle" label="return\nMismatch"]
+  return_self_at_matched_contender [shape="rectangle" label="return\n`self`"]
+  arena -> send_click [label="process\nbuffered\nevents()"]
+  send_click [shape="rectangle" label="return\nvec![Down, Up], None, Click"]
+  subgraph cluster_matched_contender {
+    label="MatchedContender"
+    verify_at_matched_contender
+    verify2_at_matched_contender
+    return_mismatch_at_matched_contender
+    return_self_at_matched_contender
+    send_click
+  }
+}

@@ -6,31 +6,35 @@ use {
     crate::{input_device, input_handler::UnhandledInputHandler, mouse_binding, touch_binding},
     async_trait::async_trait,
     fuchsia_zircon as zx,
+    std::any::Any,
+    std::fmt::Debug,
 };
 
 // TODO(https://fxbug.dev/102654): check that we've removed all leading `_` from types
 // and variables in this file.
-
-pub(super) struct _TouchpadEvent {
+#[derive(Debug, Clone)]
+pub(super) struct TouchpadEvent {
     pub(super) timestamp: zx::Time,
     // TODO(https://fxbug.dev/102655): replace these fields with a field that embeds
     // `touch_data: super::touch_binding::TouchpadEvent`.
-    _pressed_buttons: Vec<u8>,
+    pub(super) pressed_buttons: Vec<u8>,
     pub(super) contacts: Vec<touch_binding::TouchContact>,
 }
 
-pub(super) struct _MouseEvent {
-    _timestamp: zx::Time,
-    _mouse_data: mouse_binding::MouseEvent,
+#[derive(Debug, PartialEq)]
+pub(super) struct MouseEvent {
+    pub(super) _timestamp: zx::Time,
+    pub(super) _mouse_data: mouse_binding::MouseEvent,
 }
 
-pub(super) enum _ExamineEventResult {
+#[derive(Debug)]
+pub(super) enum ExamineEventResult {
     Contender(Box<dyn Contender>),
     MatchedContender(Box<dyn MatchedContender>),
     Mismatch,
 }
 
-pub(super) trait Contender {
+pub(super) trait Contender: std::fmt::Debug + AsAny {
     /// Examines `event`, to determine whether or not the gesture
     /// is relevant to this `Recognizer`.
     ///
@@ -42,31 +46,45 @@ pub(super) trait Contender {
     ///   contending for the gesture, OR
     /// * `ExamineEventResult::Mismatch` if this recognizer no longer
     ///   wants to contend for this gesture
-    fn examine_event(self: Box<Self>, event: &_TouchpadEvent) -> _ExamineEventResult;
+    fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult;
 }
 
-pub(super) enum _VerifyEventResult {
+pub trait AsAny {
+    fn as_any(&self) -> &dyn Any;
+}
+
+impl<T: Any> AsAny for T {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
+}
+
+#[derive(Debug)]
+pub(super) enum VerifyEventResult {
     MatchedContender(Box<dyn MatchedContender>),
     Mismatch,
 }
 
-pub(super) enum _RecognizedGesture {
+#[derive(Debug, PartialEq)]
+pub(super) enum RecognizedGesture {
     /// Contains one variant for each recognizer, and the
     /// special value `Unrecognized` for when no recognizer
     /// claims the gesture.
     _Unrecognized,
+    Click,
 }
 
-pub(super) struct _ProcessBufferedEventsResult {
+#[derive(Debug)]
+pub(super) struct ProcessBufferedEventsResult {
     #[allow(dead_code)] // Unread until we implement the gesture arena.
-    pub(super) generated_events: Vec<_MouseEvent>,
+    pub(super) generated_events: Vec<MouseEvent>,
     #[allow(dead_code)] // Unread until we implement the gesture arena.
     pub(super) winner: Option<Box<dyn Winner>>,
     #[allow(dead_code)] // Unread until we implement the gesture arena.
-    pub(super) recognized_gesture: _RecognizedGesture, // for latency breakdown
+    pub(super) recognized_gesture: RecognizedGesture, // for latency breakdown
 }
 
-pub(super) trait MatchedContender {
+pub(super) trait MatchedContender: std::fmt::Debug + AsAny {
     /// Verifies that `event` still matches the gesture that is relevant
     /// to this `Recognizer`.
     ///
@@ -75,7 +93,7 @@ pub(super) trait MatchedContender {
     ///   to send (or start sending) events downstream, OR
     /// * `VerifyEventResult::Mismatch` if this recognizer no longer
     ///   wants to contend for this gesture
-    fn verify_event(self: Box<Self>, event: &_TouchpadEvent) -> _VerifyEventResult;
+    fn verify_event(self: Box<Self>, event: &TouchpadEvent) -> VerifyEventResult;
 
     /// Takes `events`, and generates corresponding `MouseEvent`s.
     ///
@@ -100,16 +118,16 @@ pub(super) trait MatchedContender {
     ///     `events` to generate the appropriate motion
     fn process_buffered_events(
         self: Box<Self>,
-        events: Vec<_TouchpadEvent>,
-    ) -> _ProcessBufferedEventsResult;
+        events: Vec<TouchpadEvent>,
+    ) -> ProcessBufferedEventsResult;
 }
 
 pub(super) enum _ProcessNewEventResult {
-    ContinueGesture(Option<_MouseEvent>, Box<dyn Winner>),
-    EndGesture(Option<_TouchpadEvent>),
+    ContinueGesture(Option<MouseEvent>, Box<dyn Winner>),
+    EndGesture(Option<TouchpadEvent>),
 }
 
-pub(super) trait Winner {
+pub(super) trait Winner: std::fmt::Debug {
     /// Takes `event`, and generates corresponding `MouseEvent`s.
     ///
     /// Returns:
@@ -125,7 +143,7 @@ pub(super) trait Winner {
     /// * `EndGesture(None)` if `event` matches a normal end
     ///   of the gesture; might be used, e.g., if the user lifts
     ///   their finger off the touchpad after a motion gesture
-    fn process_new_event(self: Box<Self>, event: _TouchpadEvent) -> _ProcessNewEventResult;
+    fn process_new_event(self: Box<Self>, event: TouchpadEvent) -> _ProcessNewEventResult;
 }
 
 struct _GestureArena {}
