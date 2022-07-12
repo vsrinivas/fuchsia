@@ -143,6 +143,12 @@ void test_memory_ops(zx_handle_t inferior, zx_handle_t thread) {
   test_data_addr = regs.r9;
 #elif defined(__aarch64__)
   test_data_addr = regs.r[9];
+  // When HWASan is enabled, r9 will contain a tag because it points to `test_data` from
+  // `test_memory_ops` which is also tagged. This value is passed directly to zx_process_read_memory
+  // which does not allow tags and incorrectly attempt to read from the address with the tag rather
+  // than the untagged address.
+  constexpr uintptr_t kAddrMask = ~(UINT64_C(0xFF) << 56);
+  test_data_addr &= kAddrMask;
 #endif
 
   size_t size = read_inferior_memory(inferior, test_data_addr, test_data, sizeof(test_data));
