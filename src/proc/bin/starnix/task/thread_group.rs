@@ -145,21 +145,22 @@ impl ZombieProcess {
     }
 
     pub fn as_signal_info(&self) -> SignalInfo {
-        match &self.exit_status {
-            ExitStatus::Exit(_) => SignalInfo::new(
-                SIGCHLD,
-                CLD_EXITED,
-                SignalDetail::SigChld {
-                    pid: self.pid,
-                    uid: self.uid,
-                    status: self.exit_status.wait_status(),
-                },
-            ),
-            ExitStatus::Kill(si)
-            | ExitStatus::CoreDump(si)
-            | ExitStatus::Stop(si)
-            | ExitStatus::Continue(si) => si.clone(),
-        }
+        let code = match &self.exit_status {
+            ExitStatus::Exit(_) => CLD_EXITED,
+            ExitStatus::Kill(_) => CLD_KILLED,
+            ExitStatus::CoreDump(_) => CLD_DUMPED,
+            ExitStatus::Stop(_) => CLD_STOPPED,
+            ExitStatus::Continue(_) => CLD_CONTINUED,
+        };
+        SignalInfo::new(
+            SIGCHLD,
+            code,
+            SignalDetail::SigChld {
+                pid: self.pid,
+                uid: self.uid,
+                status: self.exit_status.wait_status(),
+            },
+        )
     }
 }
 
@@ -743,13 +744,14 @@ state_implementation!(ThreadGroup, ThreadGroupMutableState, {
 
             let zombie = self.zombie_leader.take().expect("Failed to capture zombie leader.");
 
+            let signal_info = zombie.as_signal_info();
             parent_writer.children.remove(&self.leader());
             parent_writer.zombie_children.push(zombie);
 
             // Send signals
             // TODO: Should this be zombie_leader.exit_signal?
             if let Some(signal_target) = parent_writer.get_signal_target(&SIGCHLD.into()) {
-                send_signal(&signal_target, SignalInfo::default(SIGCHLD));
+                send_signal(&signal_target, signal_info);
             }
             parent_writer.interrupt(InterruptionType::ChildChange);
         }
