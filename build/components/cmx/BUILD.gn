@@ -341,7 +341,6 @@ group("cmx_allowlist") {
     "//src/lib/ui/carnelian:spinning-square-rs_v1_manifest_compile",
     "//src/lib/ui/carnelian:svg-rs_v1_manifest_compile",
     "//src/lib/ui/carnelian:textgrid-rs_v1_manifest_compile",
-    "//src/lib/ui/fuchsia-framebuffer:fb_box_rs_component_manifest_compile",
     "//src/lib/utf_conversion:utf_conversion_fuzzer_component_manifest_compile",
     "//src/lib/zbitl/tests:append-fuzzer_component_manifest_compile",
     "//src/lib/zbitl/tests:bootfs-iteration-fuzzer_component_manifest_compile",

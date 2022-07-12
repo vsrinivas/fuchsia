@@ -38,28 +38,6 @@ fuchsia_unittest_package("fuchsia-framebuffer-tests") {
   deps = [ ":fuchsia-framebuffer_test" ]
 }
 
-rustc_binary("box") {
-  version = "0.1.0"
-  edition = "2018"
-  with_unit_tests = true
-  source_root = "examples/box.rs"
-  deps = [
-    "//src/lib/fuchsia-async",
-    "//src/lib/ui/fuchsia-framebuffer",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:thiserror",
-  ]
-
-  sources = [ "examples/box.rs" ]
-}
-
-fuchsia_package_with_single_component("fb_box_rs") {
-  deps = [ ":box" ]
-  manifest = "meta/box.cmx"
-}
-
 rustc_binary("fb_integration_test_bin") {
   name = "fb_integration_test"
   edition = "2018"
@@ -85,8 +63,4 @@ fuchsia_unittest_package("fb_integration_test") {
   test_specs = {
     environments = [ nuc_env ]
   }
-}
-
-group("examples") {
-  public_deps = [ "//src/lib/ui/fuchsia-framebuffer:fb_box_rs" ]
 }
