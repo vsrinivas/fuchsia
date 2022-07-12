@@ -2055,7 +2055,13 @@ func (s *datagramSocketImpl) loopWrite(ch chan<- struct{}) {
 		addr, err := udp_serde.DeserializeSendMsgAddress(v[:udpTxPreludeSize])
 
 		if err != nil {
-			panic(fmt.Sprintf("deserialization error: %s", err))
+			// Ideally, we'd like to close the socket so as to inform the client
+			// that they're mishandling the ABI. This is complicated by the fact
+			// that the zircon socket can be shared by multiple clients, and we
+			// can't tell which client sent the bad payload. Instead, we just
+			// log the error and drop the payload on the floor.
+			_ = syslog.Errorf("error deserializing payload from socket: %s", err)
+			continue
 		}
 
 		if addr != nil {
