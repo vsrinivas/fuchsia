@@ -26,7 +26,7 @@ static GRAPHVIZ_START: &str = r##"digraph {
 /// contents of the graph.
 static GRAPHVIZ_END: &str = "}";
 
-#[ffx_plugin("component.experimental")]
+#[ffx_plugin()]
 pub async fn graph(rcs_proxy: rc::RemoteControlProxy, cmd: ComponentGraphCommand) -> Result<()> {
     let (query_proxy, query_server) = fidl::endpoints::create_proxy::<fsys::RealmQueryMarker>()
         .context("creating hub root proxy")?;

@@ -29,12 +29,6 @@ to try it out:
     > fx build
     ```
 
-1.  Enable the `component.experimental` flag for ffx:
-
-    ```
-    > ffx config set component.experimental true
-    ```
-
 1.  Start up an emulator and/or connect to a device using the build from step 2.
 
 1.  Choose a component moniker and start exploring:

@@ -16,10 +16,7 @@ use {
 };
 
 // TODO(https://fxbug.dev/102835): This plugin needs E2E tests.
-#[ffx_plugin(
-    "component.experimental",
-    LauncherProxy = "core/dash-launcher:expose:fuchsia.dash.Launcher"
-)]
+#[ffx_plugin(LauncherProxy = "core/dash-launcher:expose:fuchsia.dash.Launcher")]
 pub async fn explore(launcher_proxy: LauncherProxy, cmd: ExploreComponentCommand) -> Result<()> {
     let moniker = AbsoluteMoniker::parse_str(&cmd.moniker)
         .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;

@@ -150,7 +150,7 @@ async fn print_tables(mut writer: Writer, analysis: Analysis) -> Result<()> {
 }
 
 /// Perform a series of diagnostic checks on a component at runtime.
-#[ffx_plugin("component.experimental")]
+#[ffx_plugin()]
 pub async fn doctor(
     rcs: rc::RemoteControlProxy,
     cmd: DoctorCommand,
