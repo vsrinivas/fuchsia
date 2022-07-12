@@ -6,7 +6,6 @@
         // Select the appropriate test runner shard here:
         // rust, gtest, go, etc.
         "//src/sys/test_runners/rust/default.shard.cml",
-        "sys/testing/hermetic-tier-2-test.shard.cml",
 
         // Enable system logging
         "syslog/client.shard.cml",

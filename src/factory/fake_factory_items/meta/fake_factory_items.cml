@@ -3,16 +3,12 @@
 // found in the LICENSE file.
 {
     include: [
-        // Select the appropriate test runner shard here:
-        // rust, gtest, go, etc.
-        "//src/sys/test_manager/cmx_runner/default.shard.cml",
-
         // Enable system logging
         "syslog/client.shard.cml",
     ],
     program: {
-        // wrap v1 component
-        legacy_url: "fuchsia-pkg://fuchsia.com/fake_factory_items_tests#meta/fake_factory_items.cmx",
+        runner: "elf",
+        binary: "bin/fake_factory_items",
     },
     capabilities: [
         {

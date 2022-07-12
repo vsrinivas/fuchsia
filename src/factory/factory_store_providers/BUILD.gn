@@ -185,11 +185,6 @@ resource("fake_factory_items_json") {
   outputs = "data/fake_factory_items.json"
 }
 
-fuchsia_component("fake_factory_items_comp") {
-  component_name = "fake_factory_items"
-  manifest = "meta/fake_factory_items.cml"
-}
-
 fuchsia_test_component("factory_store_providers_test_comp") {
   component_name = "factory_store_providers_test"
   manifest = "meta/factory_store_providers_test.cml"
@@ -210,7 +205,6 @@ fuchsia_test_package("factory_store_providers_tests") {
   deps = [
            ":factory_store_providers_comp",
            ":factory_store_providers_tests_config",
-           ":fake_factory_items_comp",
            ":fake_factory_items_json",
            ":items_zbi",
            "../fake_factory_items:fake_factory_items_comp",

@@ -34,7 +34,7 @@ rustc_binary("bin") {
 
 fuchsia_component("fake_factory_items_comp") {
   component_name = "fake_factory_items"
-  manifest = "meta/fake_factory_items.cmx"
+  manifest = "meta/fake_factory_items.cml"
   deps = [ ":bin" ]
 }
 
@@ -69,12 +69,6 @@ resource("testdata") {
   outputs = [ "data/{{source_file_part}}" ]
 }
 
-fuchsia_component("fake_factory_items_comp_V2") {
-  component_name = "fake_factory_items"
-  manifest = "meta/fake_factory_items.cml"
-  deps = [ ":fake_factory_items_comp" ]
-}
-
 fuchsia_test_component("fake_factory_items_test_comp") {
   component_name = "fake_factory_items_test"
   manifest = "meta/fake_factory_items_test.cml"
@@ -84,7 +78,7 @@ fuchsia_test_component("fake_factory_items_test_comp") {
 fuchsia_test_package("fake_factory_items_tests") {
   test_components = [ ":fake_factory_items_test_comp" ]
   deps = [
-    ":fake_factory_items_comp_V2",
+    ":fake_factory_items_comp",
     ":testdata",
   ]
 }
