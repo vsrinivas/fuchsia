@@ -10,11 +10,12 @@ use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fidl_fuchsia_net_interfaces_ext as fnet_interfaces_ext;
+use fuchsia_zircon as zx;
 use futures::TryStreamExt as _;
 use net_declare::fidl_mac;
 use netstack_testing_common::{
     devices::{create_tun_device, create_tun_port, install_device},
-    realms::{Netstack, Netstack2, TestRealmExt as _, TestSandboxExt as _},
+    realms::{Netstack, Netstack2, NetstackVersion, TestRealmExt as _, TestSandboxExt as _},
 };
 use netstack_testing_macros::variants_test;
 
@@ -31,12 +32,10 @@ async fn get_loopback_id(realm: &netemul::TestRealm<'_>) -> u64 {
     id
 }
 
-#[fuchsia::test]
-async fn get_admin_unknown() {
-    // TODO(https://fxbug.dev/88797): Test against Netstack3.
-    type N = Netstack2;
+#[variants_test]
+async fn get_admin_unknown<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<N, _>("get_admin_unknown").expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
 
     let id = get_loopback_id(&realm).await;
 
@@ -48,20 +47,23 @@ async fn get_admin_unknown() {
         fidl::endpoints::create_proxy::<fnet_interfaces_admin::ControlMarker>()
             .expect("create proxy");
     let () = debug_interfaces.get_admin(id + 1, server_end).expect("get admin failed");
-    assert_matches!(
-        admin_control.take_event_stream().try_collect::<Vec<_>>().await.as_ref().map(Vec::as_slice),
+
+    let events = admin_control.take_event_stream().try_collect::<Vec<_>>().await;
+    if N::VERSION == NetstackVersion::Netstack3 {
+        assert_matches!(
+            events,
+            Err(fidl::Error::ClientChannelClosed { status: zx::Status::NOT_FOUND, .. })
+        );
+    } else {
         // TODO(https://fxbug.dev/8018): Sending epitaphs not supported in Go.
-        // TODO(https://fxbug.dev/88797): Verify epitaph from Nestack3 (Rust).
-        Ok([])
-    );
+        assert_matches!(events.as_ref().map(Vec::as_slice), Ok([]));
+    }
 }
 
-#[fuchsia::test]
-async fn get_admin_loopback() {
-    // TODO(https://fxbug.dev/88797): Test against Netstack3.
-    type N = Netstack2;
+#[variants_test]
+async fn get_admin_loopback<N: Netstack>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
-    let realm = sandbox.create_netstack_realm::<N, _>("get_admin_loopback").expect("create realm");
+    let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
     let debug_interfaces =
         realm.connect_to_protocol::<fnet_debug::InterfacesMarker>().expect("connect to protocol");
 
@@ -76,9 +78,7 @@ async fn get_admin_loopback() {
 }
 
 #[variants_test]
-async fn get_admin_netemul_endpoint<E: netemul::Endpoint>(name: &str) {
-    // TODO(https://fxbug.dev/88797): Test against Netstack3.
-    type N = Netstack2;
+async fn get_admin_netemul_endpoint<N: Netstack, E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
     let debug_interfaces =

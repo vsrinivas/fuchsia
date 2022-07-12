@@ -97,7 +97,7 @@ impl<C: EthernetWorkerContext> EthernetWorker<C> {
                                     device.info(),
                                     DeviceSpecificInfo::Ethernet(device) => device
                                 );
-                                let EthernetInfo { common_info: _, client, mac: _, features: _, phy_up: _} = device;
+                                let EthernetInfo { common_info: _, client, mac: _, features: _, phy_up: _, interface_control: _} = device;
                                 if let Ok(status) = client.get_status().await {
                                     info!("device {:?} status changed to: {:?}", id, status);
                                     // Handle the new device state. If this results in no change, no
@@ -106,7 +106,7 @@ impl<C: EthernetWorkerContext> EthernetWorker<C> {
                                         ctx.update_device_state(id, |dev_info| {
                                             let phy_up: &mut bool = assert_matches!(
                                                 dev_info.info_mut(),
-                                                DeviceSpecificInfo::Ethernet(EthernetInfo { common_info: _, client: _, mac: _, features: _, phy_up}) => phy_up
+                                                DeviceSpecificInfo::Ethernet(EthernetInfo { common_info: _, client: _, mac: _, features: _, phy_up, interface_control: _}) => phy_up
                                             );
                                             *phy_up = true;
                                         });
@@ -117,7 +117,7 @@ impl<C: EthernetWorkerContext> EthernetWorker<C> {
                                         ctx.update_device_state(id, |dev_info| {
                                             let phy_up: &mut bool = assert_matches!(
                                                 dev_info.info_mut(),
-                                                DeviceSpecificInfo::Ethernet(EthernetInfo { common_info: _, client: _, mac: _, features: _, phy_up}) => phy_up
+                                                DeviceSpecificInfo::Ethernet(EthernetInfo { common_info: _, client: _, mac: _, features: _, phy_up, interface_control: _}) => phy_up
                                             );
                                             *phy_up = false;
                                         });

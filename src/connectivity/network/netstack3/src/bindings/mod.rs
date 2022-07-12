@@ -32,6 +32,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use fidl::endpoints::{DiscoverableProtocolMarker, RequestStream};
+use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fuchsia_async as fasync;
 use fuchsia_component::server::{ServiceFs, ServiceFsDir};
@@ -299,18 +300,21 @@ where
 
         match dev.info_mut() {
             DeviceSpecificInfo::Ethernet(EthernetInfo {
-                common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
+                common_info:
+                    CommonInfo { admin_enabled, mtu: _, events: _, name: _, control_hook: _ },
                 client,
                 mac: _,
                 features: _,
                 phy_up,
+                interface_control: _,
             }) => {
                 if *admin_enabled && *phy_up {
                     client.send(frame.as_ref())
                 }
             }
             DeviceSpecificInfo::Netdevice(NetdeviceInfo {
-                common_info: CommonInfo { admin_enabled, mtu: _, events: _, name: _ },
+                common_info:
+                    CommonInfo { admin_enabled, mtu: _, events: _, name: _, control_hook: _ },
                 handler,
                 mac: _,
                 phy_up,
@@ -521,20 +525,21 @@ fn set_interface_enabled<NonSyncCtx: NonSyncContext + AsRef<Devices> + AsMut<Dev
 
     let (dev_enabled, events) = match device.info_mut() {
         DeviceSpecificInfo::Ethernet(EthernetInfo {
-            common_info: CommonInfo { admin_enabled, mtu: _, events, name: _ },
+            common_info: CommonInfo { admin_enabled, mtu: _, events, name: _, control_hook: _ },
             client: _,
             mac: _,
             features: _,
             phy_up,
+            interface_control: _,
         })
         | DeviceSpecificInfo::Netdevice(NetdeviceInfo {
-            common_info: CommonInfo { admin_enabled, mtu: _, events, name: _ },
+            common_info: CommonInfo { admin_enabled, mtu: _, events, name: _, control_hook: _ },
             handler: _,
             mac: _,
             phy_up,
         }) => (*admin_enabled && *phy_up, events),
         DeviceSpecificInfo::Loopback(LoopbackInfo {
-            common_info: CommonInfo { admin_enabled, mtu: _, events, name: _ },
+            common_info: CommonInfo { admin_enabled, mtu: _, events, name: _, control_hook: _ },
         }) => (*admin_enabled, events),
     };
 
@@ -625,6 +630,35 @@ impl InterfaceEventProducerFactory for Netstack {
     }
 }
 
+pub(crate) trait InterfaceControlRunner {
+    fn spawn_interface_control(
+        &self,
+        id: BindingId,
+        stop_receiver: futures::channel::oneshot::Receiver<
+            fnet_interfaces_admin::InterfaceRemovedReason,
+        >,
+        control_receiver: futures::channel::mpsc::Receiver<interfaces_admin::OwnedControlHandle>,
+    ) -> fuchsia_async::Task<()>;
+}
+
+impl InterfaceControlRunner for Netstack {
+    fn spawn_interface_control(
+        &self,
+        id: BindingId,
+        stop_receiver: futures::channel::oneshot::Receiver<
+            fnet_interfaces_admin::InterfaceRemovedReason,
+        >,
+        control_receiver: futures::channel::mpsc::Receiver<interfaces_admin::OwnedControlHandle>,
+    ) -> fuchsia_async::Task<()> {
+        fuchsia_async::Task::spawn(interfaces_admin::run_interface_control(
+            self.ctx.clone(),
+            id,
+            stop_receiver,
+            control_receiver,
+        ))
+    }
+}
+
 enum Service {
     Stack(fidl_fuchsia_net_stack::StackRequestStream),
     Socket(fidl_fuchsia_posix_socket::ProviderRequestStream),
@@ -667,7 +701,10 @@ impl NetstackSeed {
 
         let Self { netstack, interfaces_worker, interfaces_watcher_sink } = self;
 
-        {
+        // The Sender is unused because Loopback should never be canceled.
+        let (_loopback_interface_control_stop_sender, loopback_interface_control_stop_receiver) =
+            futures::channel::oneshot::channel();
+        let loopback_interface_control_task = {
             let mut ctx = netstack.lock().await;
             let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
 
@@ -676,7 +713,9 @@ impl NetstackSeed {
             let loopback = netstack3_core::add_loopback_device(sync_ctx, DEFAULT_LOOPBACK_MTU)
                 .expect("error adding loopback device");
             let devices: &mut Devices = non_sync_ctx.as_mut();
-            let _binding_id: u64 = devices
+            let (control_sender, control_receiver) =
+                interfaces_admin::OwnedControlHandle::new_channel();
+            let binding_id = devices
                 .add_device(loopback, |id| {
                     const LOOPBACK_NAME: &'static str = "lo";
                     let events = netstack.create_interface_event_producer(
@@ -697,6 +736,7 @@ impl NetstackSeed {
                             admin_enabled: true,
                             events,
                             name: LOOPBACK_NAME.to_string(),
+                            control_hook: control_sender,
                         },
                     })
                 })
@@ -768,7 +808,13 @@ impl NetstackSeed {
                 udp_sockets: _,
             } = non_sync_ctx;
             timers.spawn(netstack.clone());
-        }
+
+            netstack.spawn_interface_control(
+                binding_id,
+                loopback_interface_control_stop_receiver,
+                control_receiver,
+            )
+        };
 
         let interfaces_worker_task = fuchsia_async::Task::spawn(async move {
             let result = interfaces_worker.run().await;
@@ -838,7 +884,8 @@ impl NetstackSeed {
             }
         });
 
-        let ((), ()) = futures::future::join(work_items_fut, interfaces_worker_task).await;
+        let ((), (), ()) =
+            futures::join!(work_items_fut, interfaces_worker_task, loopback_interface_control_task);
         debug!("Services stream finished");
         Ok(())
     }

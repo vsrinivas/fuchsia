@@ -5,17 +5,20 @@
 use core::ops::{Deref as _, DerefMut as _};
 
 use super::{
-    devices::{CommonInfo, DeviceSpecificInfo, Devices, EthernetInfo},
-    ethernet_worker,
+    devices::{
+        self, CommonInfo, DeviceSpecificInfo, Devices, EthernetInfo, EthernetInterfaceControl,
+    },
+    ethernet_worker, interfaces_admin,
     util::{IntoFidl, TryFromFidlWithContext as _, TryIntoCore as _, TryIntoFidlWithContext as _},
-    DeviceStatusNotifier, InterfaceControl as _, InterfaceEventProducerFactory, Lockable,
-    LockableContext, MutableDeviceState as _,
+    DeviceStatusNotifier, InterfaceControl as _, InterfaceControlRunner,
+    InterfaceEventProducerFactory, Lockable, LockableContext, MutableDeviceState as _,
 };
 
 use fidl_fuchsia_hardware_ethernet as fhardware_ethernet;
 use fidl_fuchsia_hardware_network as fhardware_network;
 use fidl_fuchsia_net as fidl_net;
 use fidl_fuchsia_net_interfaces as finterfaces;
+use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fidl_fuchsia_net_stack::{
     self as fidl_net_stack, ForwardingEntry, StackRequest, StackRequestStream,
 };
@@ -44,7 +47,9 @@ impl<C: LockableContext> StackFidlWorker<C> {
 
 impl<C> StackFidlWorker<C>
 where
-    C: ethernet_worker::EthernetWorkerContext + InterfaceEventProducerFactory,
+    C: ethernet_worker::EthernetWorkerContext
+        + InterfaceEventProducerFactory
+        + InterfaceControlRunner,
     C: Clone,
 {
     pub(crate) async fn serve(ctx: C, stream: StackRequestStream) -> Result<(), fidl::Error> {
@@ -64,7 +69,7 @@ where
                     StackRequest::DelEthernetInterface { id, responder } => {
                         responder_send!(
                             responder,
-                            &mut worker.lock_worker().await.fidl_del_ethernet_interface(id)
+                            &mut worker.lock_worker().await.fidl_del_ethernet_interface(id).await
                         );
                     }
                     StackRequest::EnableInterfaceDeprecated { id, responder } => {
@@ -144,7 +149,9 @@ where
 
 impl<'a, C> LockedFidlWorker<'a, C>
 where
-    C: ethernet_worker::EthernetWorkerContext + InterfaceEventProducerFactory,
+    C: ethernet_worker::EthernetWorkerContext
+        + InterfaceEventProducerFactory
+        + InterfaceControlRunner,
     C: Clone,
 {
     async fn fidl_add_ethernet_interface(
@@ -180,6 +187,10 @@ where
         let id = {
             let Ctx { sync_ctx, non_sync_ctx } = &mut *ctx;
             let eth_id = netstack3_core::add_ethernet_device(sync_ctx, non_sync_ctx, mac_addr, mtu);
+            let (interface_control_stop_sender, interface_control_stop_receiver) =
+                futures::channel::oneshot::channel();
+            let (control_sender, control_receiver) =
+                interfaces_admin::OwnedControlHandle::new_channel();
 
             let devices: &mut Devices = non_sync_ctx.as_mut();
             devices
@@ -210,11 +221,20 @@ where
                                 super::InterfaceProperties { name: name.clone(), device_class },
                             ),
                             name,
+                            control_hook: control_sender,
                         },
                         client,
                         mac: mac_addr,
                         features,
                         phy_up: online,
+                        interface_control: EthernetInterfaceControl {
+                            worker: self.worker.ctx.spawn_interface_control(
+                                id,
+                                interface_control_stop_receiver,
+                                control_receiver,
+                            ),
+                            cancelation_sender: interface_control_stop_sender,
+                        },
                     })
                 })
                 .unwrap_or_else(|| {
@@ -237,9 +257,28 @@ where
     C: LockableContext,
     C::NonSyncCtx: AsMut<Devices>,
 {
-    fn fidl_del_ethernet_interface(mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
+    async fn fidl_del_ethernet_interface(mut self, id: u64) -> Result<(), fidl_net_stack::Error> {
         match self.ctx.non_sync_ctx.as_mut().remove_device(id) {
-            Some(_info) => {
+            Some(info) => {
+                match info.into_info() {
+                    devices::DeviceSpecificInfo::Ethernet(devices::EthernetInfo {
+                        common_info: _,
+                        client: _,
+                        mac: _,
+                        features: _,
+                        phy_up: _,
+                        interface_control: EthernetInterfaceControl { worker, cancelation_sender },
+                    }) => {
+                        cancelation_sender
+                            .send(fnet_interfaces_admin::InterfaceRemovedReason::User)
+                            .expect("failed to cancel interface control");
+                        worker.await;
+                    }
+                    i @ devices::DeviceSpecificInfo::Loopback(_)
+                    | i @ devices::DeviceSpecificInfo::Netdevice(_) => {
+                        log::error!("unexpected device info {:?} for interface {}", i, id)
+                    }
+                }
                 // TODO(rheacock): ensure that the core client deletes all data
                 Ok(())
             }

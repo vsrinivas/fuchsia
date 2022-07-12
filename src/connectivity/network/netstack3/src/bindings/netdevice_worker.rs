@@ -16,7 +16,8 @@ use futures::{lock::Mutex, FutureExt as _, TryStreamExt as _};
 use netstack3_core::Ctx;
 
 use crate::bindings::{
-    devices, BindingId, DeviceId, InterfaceEventProducerFactory as _, Netstack, NetstackContext,
+    devices, interfaces_admin, BindingId, DeviceId, InterfaceEventProducerFactory as _, Netstack,
+    NetstackContext,
 };
 
 #[derive(Clone)]
@@ -135,6 +136,7 @@ impl DeviceHandler {
         ns: &Netstack,
         InterfaceOptions { name }: InterfaceOptions,
         port: fhardware_network::PortId,
+        control_hook: futures::channel::mpsc::Sender<interfaces_admin::OwnedControlHandle>,
     ) -> Result<
         (
             BindingId,
@@ -231,6 +233,7 @@ impl DeviceHandler {
                         },
                     ),
                     name,
+                    control_hook: control_hook,
                 },
                 handler: PortHandler { id, port_id: port, inner: self.inner.clone() },
                 mac: mac_addr,

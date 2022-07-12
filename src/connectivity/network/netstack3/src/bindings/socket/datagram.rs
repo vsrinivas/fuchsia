@@ -2410,7 +2410,7 @@ where
         let index =
             device.try_into_fidl_with_ctx(&self.ctx.non_sync_ctx).map_err(IntoErrno::into_errno)?;
         Ok(self.ctx.non_sync_ctx.as_ref().get_device(index).map(|device_info| {
-            let CommonInfo { name, mtu: _, admin_enabled: _, events: _ } =
+            let CommonInfo { name, mtu: _, admin_enabled: _, events: _, control_hook: _ } =
                 device_info.info().common_info();
             name.to_string()
         }))

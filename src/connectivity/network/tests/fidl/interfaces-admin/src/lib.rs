@@ -4,6 +4,7 @@
 
 #![cfg(test)]
 
+use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_interfaces_admin as finterfaces_admin;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fuchsia_async::TimeoutExt as _;
@@ -969,29 +970,21 @@ async fn control_terminal_events<N: Netstack>(
             (control, vec![])
         }
         fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::User => {
-            if N::VERSION == NetstackVersion::Netstack3 {
-                // TODO(https://fxbug.dev/88797): Update this test to observe
-                // epitaphs on fuchsia.net.debug once Netstack3 supports it.
-                // It's a bad idea to test this API in terms of the deprecated
-                // one, and not worth it implementing this machinery in NS3.
-                return;
-            }
             let (port, port_id) = create_port(base_port_config).await;
             let control =
                 create_interface(port_id, fidl_fuchsia_net_interfaces_admin::Options::EMPTY);
             let interface_id = control.get_id().await.expect("get id");
-
-            // Remove the interface using legacy API.
-            let stack = realm
-                .connect_to_protocol::<fidl_fuchsia_net_stack::StackMarker>()
+            // Setup a control handle via the debug API, and drop the original control handle.
+            let debug_interfaces = realm
+                .connect_to_protocol::<fnet_debug::InterfacesMarker>()
                 .expect("connect to protocol");
-            let () = stack
-                .del_ethernet_interface(interface_id)
-                .await
-                .expect("calling del_ethernet_interface")
-                .expect("del_ethernet_interface failed");
-
-            (control, vec![KeepResource::Port(port)])
+            let (debug_control, server_end) =
+                fidl::endpoints::create_proxy::<finterfaces_admin::ControlMarker>()
+                    .expect("create proxy");
+            debug_interfaces.get_admin(interface_id, server_end).expect("get admin failed");
+            // Wait for the debug handle to be fully installed by synchronizing on `get_id`.
+            assert_eq!(debug_control.get_id().await.expect("get id"), interface_id);
+            (debug_control, vec![KeepResource::Port(port)])
         }
         unknown_reason => panic!("unknown reason {:?}", unknown_reason),
     };
@@ -1414,23 +1407,14 @@ async fn control_owns_interface_lifetime<N: Netstack>(name: &str, detach: bool) 
         ) if id == iface_id
     );
 
-    let debug_control = if N::VERSION == NetstackVersion::Netstack3 {
-        // TODO(https://fxbug.dev/88797): Observe termination through the debug
-        // handle once we support it. For now, just check that the interface is
-        // removed on detach
-        None
-    } else {
-        let debug = realm
-            .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
-            .expect("connect to protocol");
-        let (debug_control, control_server_end) =
-            fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
-                .expect("create proxy");
-        let () = debug.get_admin(iface_id, control_server_end).expect("get admin");
-        let same_iface_id = debug_control.get_id().await.expect("get id");
-        assert_eq!(same_iface_id, iface_id);
-        Some(debug_control)
-    };
+    let debug = realm
+        .connect_to_protocol::<fidl_fuchsia_net_debug::InterfacesMarker>()
+        .expect("connect to protocol");
+    let (debug_control, control_server_end) =
+        fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints().expect("create proxy");
+    let () = debug.get_admin(iface_id, control_server_end).expect("get admin");
+    let same_iface_id = debug_control.get_id().await.expect("get id");
+    assert_eq!(same_iface_id, iface_id);
 
     if detach {
         let () = control.detach().expect("detach");
@@ -1439,14 +1423,9 @@ async fn control_owns_interface_lifetime<N: Netstack>(name: &str, detach: bool) 
         let watcher_fut =
             watcher.select_next_some().map(|event| panic!("unexpected event {:?}", event));
 
-        let debug_control_fut = if let Some(debug_control) = debug_control {
-            debug_control
-                .wait_termination()
-                .map(|event| panic!("unexpected termination {:?}", event))
-                .left_future()
-        } else {
-            futures::future::pending().right_future()
-        };
+        let debug_control_fut = debug_control
+            .wait_termination()
+            .map(|event| panic!("unexpected termination {:?}", event));
 
         let ((), ()) = futures::future::join(watcher_fut, debug_control_fut)
             .on_timeout(
@@ -1465,16 +1444,14 @@ async fn control_owns_interface_lifetime<N: Netstack>(name: &str, detach: bool) 
             fidl_fuchsia_net_interfaces::Event::Removed(id) if id == iface_id
         );
 
-        if let Some(debug_control) = debug_control {
-            // The debug control channel is a weak ref, it didn't prevent destruction,
-            // but is closed now.
-            assert_matches::assert_matches!(
-                debug_control.wait_termination().await,
-                fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Terminal(
-                    fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::User
-                )
-            );
-        }
+        // The debug control channel is a weak ref, it didn't prevent destruction,
+        // but is closed now.
+        assert_matches::assert_matches!(
+            debug_control.wait_termination().await,
+            fidl_fuchsia_net_interfaces_ext::admin::TerminalError::Terminal(
+                fidl_fuchsia_net_interfaces_admin::InterfaceRemovedReason::User
+            )
+        );
     }
 }
 

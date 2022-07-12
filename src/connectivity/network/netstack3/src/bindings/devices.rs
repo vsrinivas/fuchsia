@@ -4,10 +4,14 @@
 
 use std::collections::hash_map::HashMap;
 
+use derivative::Derivative;
 use ethernet as eth;
 use fidl_fuchsia_hardware_ethernet::Features;
+use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use net_types::{ethernet::Mac, UnicastAddr};
 use netstack3_core::{DeviceId, Entry, IdMapCollection, IdMapCollectionKey};
+
+use crate::bindings::interfaces_admin;
 
 pub const LOOPBACK_MAC: Mac = Mac::new([0, 0, 0, 0, 0, 0]);
 
@@ -145,12 +149,17 @@ impl DeviceSpecificInfo {
 }
 
 /// Information common to all devices.
-#[derive(Debug)]
+#[derive(Derivative)]
+#[derivative(Debug)]
 pub struct CommonInfo {
     pub mtu: u32,
     pub admin_enabled: bool,
     pub events: super::InterfaceEventProducer,
     pub name: String,
+    // An attach point to send `fuchsia.net.interfaces.admin/Control` handles to the Interfaces
+    // Admin worker.
+    #[derivative(Debug = "ignore")]
+    pub control_hook: futures::channel::mpsc::Sender<interfaces_admin::OwnedControlHandle>,
 }
 
 /// Loopback device information.
@@ -167,6 +176,14 @@ pub struct EthernetInfo {
     pub mac: UnicastAddr<Mac>,
     pub features: Features,
     pub phy_up: bool,
+    pub interface_control: EthernetInterfaceControl,
+}
+
+#[derive(Debug)]
+pub struct EthernetInterfaceControl {
+    pub worker: fuchsia_async::Task<()>,
+    pub cancelation_sender:
+        futures::channel::oneshot::Sender<fnet_interfaces_admin::InterfaceRemovedReason>,
 }
 
 impl From<EthernetInfo> for DeviceSpecificInfo {

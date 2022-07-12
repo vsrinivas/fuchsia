@@ -4,13 +4,16 @@
 
 use std::ops::DerefMut as _;
 
-use fidl::endpoints::ProtocolMarker as _;
+use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_hardware_network as fhardware_network;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 
-use futures::{FutureExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _};
+use futures::{
+    future::FusedFuture as _, FutureExt as _, SinkExt as _, StreamExt as _, TryFutureExt as _,
+    TryStreamExt as _,
+};
 use netstack3_core::Ctx;
 
 use crate::bindings::{
@@ -125,6 +128,62 @@ async fn run_device_control(
     res
 }
 
+const INTERFACES_ADMIN_CHANNEL_SIZE: usize = 16;
+/// A wrapper over `fuchsia.net.interfaces.admin/Control` handles to express ownership semantics.
+///
+/// If `owns_interface` is true, this handle 'owns' the interfaces, and when the handle closes the
+/// interface should be removed.
+pub struct OwnedControlHandle {
+    request_stream: fnet_interfaces_admin::ControlRequestStream,
+    control_handle: fnet_interfaces_admin::ControlControlHandle,
+    owns_interface: bool,
+}
+
+impl OwnedControlHandle {
+    pub(crate) fn new_unowned(
+        handle: fidl::endpoints::ServerEnd<fnet_interfaces_admin::ControlMarker>,
+    ) -> OwnedControlHandle {
+        let (stream, control) =
+            handle.into_stream_and_control_handle().expect("failed to decompose control handle");
+        OwnedControlHandle {
+            request_stream: stream,
+            control_handle: control,
+            owns_interface: false,
+        }
+    }
+
+    // Constructs a new channel of `OwnedControlHandle` with no owner.
+    pub(crate) fn new_channel() -> (
+        futures::channel::mpsc::Sender<OwnedControlHandle>,
+        futures::channel::mpsc::Receiver<OwnedControlHandle>,
+    ) {
+        futures::channel::mpsc::channel(INTERFACES_ADMIN_CHANNEL_SIZE)
+    }
+
+    // Constructs a new channel of `OwnedControlHandle` with the given handle as the owner.
+    // TODO(https://fxbug.dev/87963): This currently enforces that there is only ever one owner,
+    // which will need to be revisited to implement `Clone`.
+    pub(crate) async fn new_channel_with_owned_handle(
+        handle: fidl::endpoints::ServerEnd<fnet_interfaces_admin::ControlMarker>,
+    ) -> (
+        futures::channel::mpsc::Sender<OwnedControlHandle>,
+        futures::channel::mpsc::Receiver<OwnedControlHandle>,
+    ) {
+        let (mut sender, receiver) = Self::new_channel();
+        let (stream, control) =
+            handle.into_stream_and_control_handle().expect("failed to decompose control handle");
+        sender
+            .send(OwnedControlHandle {
+                request_stream: stream,
+                control_handle: control,
+                owns_interface: true,
+            })
+            .await
+            .expect("failed to attach initial control handle");
+        (sender, receiver)
+    }
+}
+
 /// Operates a fuchsia.net.interfaces.admin/DeviceControl.CreateInterface
 /// request.
 ///
@@ -137,18 +196,25 @@ async fn create_interface(
     options: fnet_interfaces_admin::Options,
     ns: &Netstack,
     handler: &netdevice_worker::DeviceHandler,
-    stop_fut: async_utils::event::EventWaitResult,
+    device_stopped_fut: async_utils::event::EventWaitResult,
 ) -> Result<Option<fuchsia_async::Task<()>>, DeviceControlError> {
     log::debug!("creating interface from {:?} with {:?}", port, options);
     let fnet_interfaces_admin::Options { name, metric: _, .. } = options;
-    match handler.add_port(&ns, netdevice_worker::InterfaceOptions { name }, port).await {
-        Ok((binding_id, status_stream)) => Ok(Some(fasync::Task::spawn(run_interface_control(
-            ns.ctx.clone(),
-            binding_id,
-            stop_fut,
-            status_stream,
-            control,
-        )))),
+    let (control_sender, mut control_receiver) =
+        OwnedControlHandle::new_channel_with_owned_handle(control).await;
+    match handler
+        .add_port(&ns, netdevice_worker::InterfaceOptions { name }, port, control_sender)
+        .await
+    {
+        Ok((binding_id, status_stream)) => {
+            Ok(Some(fasync::Task::spawn(run_netdevice_interface_control(
+                ns.ctx.clone(),
+                binding_id,
+                status_stream,
+                device_stopped_fut,
+                control_receiver,
+            ))))
+        }
         Err(e) => {
             log::warn!("failed to add port {:?} to device: {:?}", port, e);
             let removed_reason = match e {
@@ -192,9 +258,13 @@ async fn create_interface(
                 | netdevice_worker::Error::InvalidPortInfo(_) => None,
             };
             if let Some(removed_reason) = removed_reason {
-                let (_stream, control) =
-                    control.into_stream_and_control_handle().expect("failed to acquire stream");
-                control.send_on_interface_removed(removed_reason).unwrap_or_else(|e| {
+                // Retrieve the original control handle from the receiver.
+                let OwnedControlHandle { request_stream: _, control_handle, owns_interface: _ } =
+                    control_receiver
+                        .try_next()
+                        .expect("expected control handle to be ready in the receiver")
+                        .expect("expected receiver to not be closed/empty");
+                control_handle.send_on_interface_removed(removed_reason).unwrap_or_else(|e| {
                     log::warn!("failed to send removed reason: {:?}", e);
                 });
             }
@@ -203,59 +273,51 @@ async fn create_interface(
     }
 }
 
-async fn run_interface_control<
+/// Manages the lifetime of a newly created Netdevice interface, including spawning an
+/// interface control worker, spawning a link state worker, and cleaning up the interface on
+/// deletion.
+async fn run_netdevice_interface_control<
     S: futures::Stream<Item = netdevice_client::Result<netdevice_client::client::PortStatus>>,
 >(
     ctx: NetstackContext,
     id: BindingId,
-    cancel: async_utils::event::EventWaitResult,
     status_stream: S,
-    server_end: fidl::endpoints::ServerEnd<fnet_interfaces_admin::ControlMarker>,
+    mut device_stopped_fut: async_utils::event::EventWaitResult,
+    control_receiver: futures::channel::mpsc::Receiver<OwnedControlHandle>,
 ) {
-    let (mut stream, control_handle) =
-        server_end.into_stream_and_control_handle().expect("failed to create stream");
-    let stream_fut = async {
-        while let Some(req) = stream.try_next().await? {
-            log::debug!("serving {:?}", req);
-            let () = match req {
-                fnet_interfaces_admin::ControlRequest::AddAddress {
-                    address: _,
-                    parameters: _,
-                    address_state_provider: _,
-                    control_handle: _,
-                } => todo!("https://fxbug.dev/100870 support add address"),
-                fnet_interfaces_admin::ControlRequest::RemoveAddress {
-                    address: _,
-                    responder: _,
-                } => {
-                    todo!("https://fxbug.dev/100870 support remove address")
-                }
-                fnet_interfaces_admin::ControlRequest::GetId { responder } => responder.send(id),
-                fnet_interfaces_admin::ControlRequest::SetConfiguration {
-                    config: _,
-                    responder: _,
-                } => {
-                    todo!("https://fxbug.dev/76987 support enable/disable forwarding")
-                }
-                fnet_interfaces_admin::ControlRequest::GetConfiguration { responder: _ } => {
-                    todo!("https://fxbug.dev/76987 support enable/disable forwarding")
-                }
-                fnet_interfaces_admin::ControlRequest::Enable { responder } => {
-                    responder.send(&mut Ok(set_interface_enabled(&ctx, true, id).await))
-                }
-                fnet_interfaces_admin::ControlRequest::Disable { responder } => {
-                    responder.send(&mut Ok(set_interface_enabled(&ctx, false, id).await))
-                }
-                fnet_interfaces_admin::ControlRequest::Detach { control_handle: _ } => {
-                    todo!("https://fxbug.dev/100867 support detach");
-                }
-            }?;
-        }
-        Result::<_, fidl::Error>::Ok(())
+    let link_state_fut = run_link_state_watcher(ctx.clone(), id, status_stream).fuse();
+    let (interface_control_stop_sender, interface_control_stop_receiver) =
+        futures::channel::oneshot::channel();
+    let interface_control_fut =
+        run_interface_control(ctx.clone(), id, interface_control_stop_receiver, control_receiver)
+            .fuse();
+    futures::pin_mut!(link_state_fut);
+    futures::pin_mut!(interface_control_fut);
+    futures::select! {
+        o = device_stopped_fut => o.expect("event was orphaned"),
+        () = link_state_fut => {},
+        () = interface_control_fut => {},
+    };
+    if !interface_control_fut.is_terminated() {
+        // Cancel interface control and drive it to completion, allowing it to terminate each
+        // control handle.
+        interface_control_stop_sender
+            .send(fnet_interfaces_admin::InterfaceRemovedReason::PortClosed)
+            .expect("failed to cancel interface control");
+        interface_control_fut.await;
     }
-    .fuse();
+    remove_interface(ctx, id).await;
+}
 
-    let link_state_fut = status_stream
+/// Runs a worker to watch the given status_stream and update the interface state accordingly.
+async fn run_link_state_watcher<
+    S: futures::Stream<Item = netdevice_client::Result<netdevice_client::client::PortStatus>>,
+>(
+    ctx: NetstackContext,
+    id: BindingId,
+    status_stream: S,
+) {
+    let result = status_stream
         .try_for_each(|netdevice_client::client::PortStatus { flags, mtu: _ }| {
             let ctx = &ctx;
             async move {
@@ -291,72 +353,153 @@ async fn run_interface_control<
                 Ok(())
             }
         })
-        .fuse();
-
-    enum Outcome {
-        Cancelled,
-        StreamEnded(Result<(), fidl::Error>),
-        StateStreamEnded(Result<(), netdevice_client::Error>),
+        .await;
+    match result {
+        Ok(()) => log::debug!("state stream closed for interface {}", id),
+        Err(e) => {
+            let level = match &e {
+                netdevice_client::Error::Fidl(e) if e.is_closed() => log::Level::Debug,
+                _ => log::Level::Error,
+            };
+            log::log!(level, "error operating port state stream {:?} for interface {}", e, id);
+        }
     }
-    futures::pin_mut!(stream_fut);
-    futures::pin_mut!(cancel);
-    futures::pin_mut!(link_state_fut);
-    let outcome = futures::select! {
-        o = stream_fut => Outcome::StreamEnded(o),
-        o = cancel => {o.expect("event was orphaned"); Outcome::Cancelled},
-        o = link_state_fut => Outcome::StateStreamEnded(o),
-    };
-    let remove_reason = match outcome {
-        Outcome::Cancelled => {
-            // Device has been removed from under us, inform the user that's the
-            // case.
-            Some(fnet_interfaces_admin::InterfaceRemovedReason::PortClosed)
-        }
-        Outcome::StreamEnded(Err(e)) => {
-            log::error!(
-                "error operating {} stream: {:?} for interface {}",
-                fnet_interfaces_admin::ControlMarker::DEBUG_NAME,
-                e,
-                id
-            );
-            None
-        }
-        Outcome::StateStreamEnded(r) => {
-            match r {
-                Ok(()) => log::debug!("state stream closed for interface {}", id),
-                Err(e) => {
-                    let level = match &e {
-                        netdevice_client::Error::Fidl(e) if e.is_closed() => log::Level::Debug,
-                        _ => log::Level::Error,
-                    };
-                    log::log!(
-                        level,
-                        "error operating port state stream {:?} for interface {}",
-                        e,
-                        id
-                    );
+}
+
+/// Runs a worker to serve incoming `fuchsia.net.interfaces.admin/Control` handles.
+pub(crate) async fn run_interface_control(
+    ctx: NetstackContext,
+    id: BindingId,
+    mut stop_receiver: futures::channel::oneshot::Receiver<
+        fnet_interfaces_admin::InterfaceRemovedReason,
+    >,
+    control_receiver: futures::channel::mpsc::Receiver<OwnedControlHandle>,
+) {
+    // An event indicating that the individual control request streams should stop.
+    let cancel_request_streams = async_utils::event::Event::new();
+    // A struct to retain per-handle state of the individual request streams in `control_receiver`.
+    struct ReqStreamState {
+        owns_interface: bool,
+        control_handle: fnet_interfaces_admin::ControlControlHandle,
+        ctx: NetstackContext,
+        id: BindingId,
+    }
+    // Convert `control_receiver` (a stream-of-streams) into a stream of futures, where each future
+    // represents the termination of an inner `ControlRequestStream`.
+    let stream_of_fut = control_receiver
+        .map(|OwnedControlHandle { request_stream, control_handle, owns_interface }| {
+            let initial_state =
+                ReqStreamState { owns_interface, control_handle, ctx: ctx.clone(), id };
+            // Attach `cancel_request_streams` as a short-circuit mechanism to stop handling new
+            // `ControlRequest`.
+            request_stream
+                .take_until(cancel_request_streams.wait_or_dropped())
+                // Convert the request stream into a future, dispatching each incoming
+                // `ControlRequest` and retaining the `ReqStreamState` along the way.
+                .fold(initial_state, |state, request| async move {
+                    let ReqStreamState { ctx, id, owns_interface: _, control_handle: _ } = &state;
+                    match request {
+                        Err(e) => log::error!(
+                            "error operating {} stream for interface {}: {:?}",
+                            fnet_interfaces_admin::ControlMarker::DEBUG_NAME,
+                            id,
+                            e,
+                        ),
+                        Ok(req) => match dispatch_control_request(req, ctx, *id).await {
+                            Err(e) => {
+                                log::error!(
+                                    "failed to handle request for interface {}: {:?}",
+                                    id,
+                                    e
+                                )
+                            }
+                            Ok(()) => {}
+                        },
+                    }
+                    // Return `state` to be used when handling the next `ControlRequest`.
+                    state
+                })
+        })
+        // Attach `cancel_request_streams` as a short-circuit mechanism to stop attaching new
+        // `ControlRequestStreams`.
+        .take_until(cancel_request_streams.wait_or_dropped());
+    // Enable the stream of futures to be polled concurrently.
+    let mut stream_of_fut = stream_of_fut.buffer_unordered(std::usize::MAX);
+
+    let remove_reason = {
+        // Drive the `ControlRequestStreams` to completion, short-circuiting if an owner terminates.
+        let interface_control_fut = async {
+            while let Some(ReqStreamState { owns_interface, control_handle: _, ctx: _, id: _ }) =
+                stream_of_fut.next().await
+            {
+                if owns_interface {
+                    return;
                 }
             }
-            Some(fnet_interfaces_admin::InterfaceRemovedReason::PortClosed)
         }
-        Outcome::StreamEnded(Ok(())) => None,
+        .fuse();
+
+        futures::pin_mut!(interface_control_fut);
+        futures::select! {
+            // One of the interface's owning channels hung up; inform the other channels.
+            () = interface_control_fut => fnet_interfaces_admin::InterfaceRemovedReason::User,
+            // Cancelation event was received with a specified remove reason.
+            reason = stop_receiver => reason.expect("failed to receive stop"),
+        }
     };
 
-    if let Some(remove_reason) = remove_reason {
+    // Cancel the active request streams, and drive the remaining `ControlRequestStreams` to
+    // completion, allowing each handle to send termination events.
+    assert!(cancel_request_streams.signal(), "expected the event to be unsignaled");
+    while let Some(ReqStreamState { owns_interface: _, control_handle, ctx: _, id: _ }) =
+        stream_of_fut.next().await
+    {
         control_handle.send_on_interface_removed(remove_reason).unwrap_or_else(|e| {
             if !e.is_closed() {
                 log::error!("failed to send terminal event: {:?} for interface {}", e, id)
             }
         });
     }
+}
 
-    // Cleanup and remove the interface.
+/// Serves a `fuchsia.net.interfaces.admin/Control` Request.
+async fn dispatch_control_request(
+    req: fnet_interfaces_admin::ControlRequest,
+    ctx: &NetstackContext,
+    id: BindingId,
+) -> Result<(), fidl::Error> {
+    log::debug!("serving {:?}", req);
+    match req {
+        fnet_interfaces_admin::ControlRequest::AddAddress {
+            address: _,
+            parameters: _,
+            address_state_provider: _,
+            control_handle: _,
+        } => todo!("https://fxbug.dev/100870 support add address"),
+        fnet_interfaces_admin::ControlRequest::RemoveAddress { address: _, responder: _ } => {
+            todo!("https://fxbug.dev/100870 support remove address")
+        }
+        fnet_interfaces_admin::ControlRequest::GetId { responder } => responder.send(id),
+        fnet_interfaces_admin::ControlRequest::SetConfiguration { config: _, responder: _ } => {
+            todo!("https://fxbug.dev/76987 support enable/disable forwarding")
+        }
+        fnet_interfaces_admin::ControlRequest::GetConfiguration { responder: _ } => {
+            todo!("https://fxbug.dev/76987 support enable/disable forwarding")
+        }
+        fnet_interfaces_admin::ControlRequest::Enable { responder } => {
+            responder.send(&mut Ok(set_interface_enabled(ctx, true, id).await))
+        }
+        fnet_interfaces_admin::ControlRequest::Disable { responder } => {
+            responder.send(&mut Ok(set_interface_enabled(ctx, false, id).await))
+        }
+        fnet_interfaces_admin::ControlRequest::Detach { control_handle: _ } => {
+            todo!("https://fxbug.dev/100867 support detach");
+        }
+    }
+}
 
-    // TODO(https://fxbug.dev/88797): We're not supposed to cleanup if this is a
-    // debug channel.
-    // TODO(https://fxbug.dev/100867): We're not supposed to cleanup if we're
-    // detached.
-
+/// Cleans up and removes the specified NetDevice interface.
+async fn remove_interface(ctx: NetstackContext, id: BindingId) {
     let device_info = {
         let mut ctx = ctx.lock().await;
         let Ctx { sync_ctx, non_sync_ctx } = ctx.deref_mut();
@@ -401,6 +544,7 @@ async fn set_interface_enabled(ctx: &NetstackContext, enabled: bool, id: Binding
                 mac: _,
                 features: _,
                 phy_up: _,
+                interface_control: _,
             })
             | devices::DeviceSpecificInfo::Loopback(devices::LoopbackInfo { common_info }) => {
                 (common_info, None)

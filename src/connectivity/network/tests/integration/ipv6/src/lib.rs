@@ -9,6 +9,7 @@ use std::{convert::TryInto as _, mem::size_of};
 use fidl_fuchsia_net as net;
 use fidl_fuchsia_net_interfaces_admin as finterfaces_admin;
 use fidl_fuchsia_net_stack as net_stack;
+use fidl_fuchsia_netemul_network as fnetemul_network;
 use fidl_fuchsia_posix_socket as fposix_socket;
 use fidl_fuchsia_posix_socket_raw as fposix_socket_raw;
 use fuchsia_async::{DurationExt as _, TimeoutExt as _};
@@ -1233,17 +1234,22 @@ async fn sending_ra_with_autoconf_flag_triggers_slaac() {
 }
 
 #[variants_test]
-async fn add_device_adds_link_local_subnet_route<N: Netstack>(name: &str) {
-    // TODO(https://fxbug.dev/88797): Make this test variable on endpoint type
-    // once Netstack3 can administrate Ethernet interfaces over admin/Control.
-    type E = netemul::NetworkDevice;
+async fn add_device_adds_link_local_subnet_route<N: Netstack, E: netemul::Endpoint>(name: &str) {
+    let test_is_ns3_eth = N::VERSION == NetstackVersion::Netstack3
+        && E::NETEMUL_BACKING == fnetemul_network::EndpointBacking::Ethertap;
+
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<N, _>(name).expect("create realm");
     let endpoint = sandbox.create_endpoint::<E, _>(name).await.expect("create endpoint");
     endpoint.set_link_up(true).await.expect("set link up");
     let iface = endpoint.into_interface_in_realm(&realm).await.expect("install interface");
     let did_enable = iface.control().enable().await.expect("calling enable").expect("enable");
-    assert!(did_enable);
+    if test_is_ns3_eth {
+        // Ethernet devices start enabled in NS3.
+        assert!(!did_enable);
+    } else {
+        assert!(did_enable);
+    }
 
     let id = iface.id();
 
@@ -1283,6 +1289,11 @@ async fn add_device_adds_link_local_subnet_route<N: Netstack>(name: &str) {
         .next()
         .await
         .expect("stream ended");
+
+    // NS3 does not remove Ethernet interfaces on device destruction; skip the rest of the test.
+    if test_is_ns3_eth {
+        return;
+    }
 
     // Removing the device should also remove the subnet route.
     drop(iface);

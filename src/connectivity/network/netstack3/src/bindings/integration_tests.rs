@@ -11,6 +11,7 @@ use std::sync::{Arc, Once};
 use anyhow::{format_err, Context as _, Error};
 use assert_matches::assert_matches;
 use fidl_fuchsia_net as fidl_net;
+use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fidl_fuchsia_net_stack_ext::FidlReturn as _;
 use fidl_fuchsia_netemul_network as net;
@@ -35,13 +36,14 @@ use rand::rngs::OsRng;
 use crate::bindings::{
     context::Lockable,
     devices::{
-        CommonInfo, DeviceInfo, DeviceSpecificInfo, Devices, EthernetInfo, LoopbackInfo,
+        BindingId, CommonInfo, DeviceInfo, DeviceSpecificInfo, Devices, EthernetInfo, LoopbackInfo,
         NetdeviceInfo,
     },
+    interfaces_admin,
     socket::datagram::{IcmpEcho, SocketCollectionIpExt, Udp},
     util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
-    BindingsNonSyncCtxImpl, DeviceStatusNotifier, LockableContext, RequestStreamExt as _,
-    StackTime, DEFAULT_LOOPBACK_MTU,
+    BindingsNonSyncCtxImpl, DeviceStatusNotifier, InterfaceControlRunner, LockableContext,
+    RequestStreamExt as _, StackTime, DEFAULT_LOOPBACK_MTU,
 };
 
 /// log::Log implementation that uses stdout.
@@ -294,6 +296,23 @@ impl LockableContext for TestContext {
     type NonSyncCtx = TestNonSyncCtx;
 }
 
+impl InterfaceControlRunner for TestContext {
+    fn spawn_interface_control(
+        &self,
+        _id: BindingId,
+        stop_receiver: futures::channel::oneshot::Receiver<
+            fnet_interfaces_admin::InterfaceRemovedReason,
+        >,
+        _control_receiver: futures::channel::mpsc::Receiver<interfaces_admin::OwnedControlHandle>,
+    ) -> fuchsia_async::Task<()> {
+        // Placeholder interface_control implementation that waits to be canceled.
+        fuchsia_async::Task::spawn(async move {
+            let _removed_reason: fnet_interfaces_admin::InterfaceRemovedReason =
+                stop_receiver.await.expect("failed to receive stop");
+        })
+    }
+}
+
 /// A holder for a [`TestContext`].
 /// `TestStack` is obtained from [`TestSetupBuilder`] and offers utility methods
 /// to connect to the FIDL APIs served by [`TestContext`], as well as keeps
@@ -338,21 +357,20 @@ impl TestStack {
     fn is_interface_link_up(info: &DeviceInfo) -> bool {
         match info.info() {
             DeviceSpecificInfo::Ethernet(EthernetInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _, name: _ },
+                common_info: _,
                 client: _,
                 mac: _,
                 features: _,
                 phy_up,
+                interface_control: _,
             })
             | DeviceSpecificInfo::Netdevice(NetdeviceInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _, name: _ },
+                common_info: _,
                 handler: _,
                 mac: _,
                 phy_up,
             }) => *phy_up,
-            DeviceSpecificInfo::Loopback(LoopbackInfo {
-                common_info: CommonInfo { admin_enabled: _, mtu: _, events: _, name: _ },
-            }) => true,
+            DeviceSpecificInfo::Loopback(LoopbackInfo { common_info: _ }) => true,
         }
     }
 
@@ -438,11 +456,13 @@ impl TestStack {
                     mtu: _,
                     events: _,
                     name: _,
+                    control_hook: _,
                 },
                 client: _,
                 mac: _,
                 features: _,
-                phy_up
+                phy_up,
+                interface_control: _,
             }) => (*admin_enabled, *phy_up));
         InterfaceInfo { admin_enabled, phy_up, addresses }
     }

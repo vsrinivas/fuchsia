@@ -8,10 +8,12 @@ use fidl::endpoints::{ProtocolMarker as _, ServerEnd};
 use fidl_fuchsia_net_debug as fnet_debug;
 use fidl_fuchsia_net_interfaces_admin as fnet_interfaces_admin;
 use fuchsia_zircon as zx;
-use futures::TryStreamExt as _;
-use tracing::{debug, error, warn};
+use futures::{SinkExt as _, TryStreamExt as _};
+use tracing::{debug, error};
 
-use crate::bindings::{devices::LOOPBACK_MAC, util::IntoFidl, DeviceSpecificInfo, Netstack};
+use crate::bindings::{
+    devices::LOOPBACK_MAC, interfaces_admin, util::IntoFidl, DeviceSpecificInfo, Netstack,
+};
 
 // Serve a stream of fuchsia.net.debug.Interfaces API requests for a single
 // channel (e.g. a single client connection).
@@ -23,10 +25,10 @@ pub(crate) async fn serve(
     rs.try_for_each(|req| async {
         match req {
             fnet_debug::InterfacesRequest::GetAdmin { id, control, control_handle: _ } => {
-                handle_get_admin(id, control).await;
+                handle_get_admin(&ns, id, control).await;
             }
             fnet_debug::InterfacesRequest::GetMac { id, responder } => {
-                responder_send!(responder, &mut handle_get_mac(ns.clone(), id).await);
+                responder_send!(responder, &mut handle_get_mac(&ns, id).await);
             }
         }
         Ok(())
@@ -35,21 +37,35 @@ pub(crate) async fn serve(
 }
 
 async fn handle_get_admin(
+    ns: &Netstack,
     interface_id: u64,
     control: ServerEnd<fnet_interfaces_admin::ControlMarker>,
 ) {
     debug!(interface_id, "handling fuchsia.net.debug.Interfaces::GetAdmin");
-    control.close_with_epitaph(zx::Status::NOT_SUPPORTED).unwrap_or_else(|e| {
-        if e.is_closed() {
-            debug!(err = ?e, "control handle closed before sending epitaph")
-        } else {
-            error!(err = ?e, "failed to send epitaph")
+    let mut ctx = ns.ctx.lock().await;
+    let device_info = match ctx.non_sync_ctx.devices.get_device_mut(interface_id) {
+        Some(device_info) => device_info,
+        None => {
+            control.close_with_epitaph(zx::Status::NOT_FOUND).unwrap_or_else(|e| {
+                if e.is_closed() {
+                    debug!(err = ?e, "control handle closed before sending epitaph")
+                } else {
+                    error!(err = ?e, "failed to send epitaph")
+                }
+            });
+            return;
         }
-    });
-    warn!("TODO(https://fxbug.dev/88797): fuchsia.net.debug/Interfaces not implemented");
+    };
+    device_info
+        .info_mut()
+        .common_info_mut()
+        .control_hook
+        .send(interfaces_admin::OwnedControlHandle::new_unowned(control))
+        .await
+        .expect("failed to attach to control");
 }
 
-async fn handle_get_mac(ns: Netstack, interface_id: u64) -> fnet_debug::InterfacesGetMacResult {
+async fn handle_get_mac(ns: &Netstack, interface_id: u64) -> fnet_debug::InterfacesGetMacResult {
     debug!(interface_id, "handling fuchsia.net.debug.Interfaces::GetMac");
     let ctx = ns.ctx.lock().await;
     ctx.non_sync_ctx
