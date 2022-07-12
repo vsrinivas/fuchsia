@@ -4,9 +4,6 @@
 
 #include "src/media/audio/services/mixer/fidl/fidl_graph_creator.h"
 
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/async-loop/testing/cpp/real_loop.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
@@ -21,8 +18,8 @@ namespace {
 class FidlGraphCreatorTest : public ::testing::Test {
  public:
   void SetUp() {
-    loop_.StartThread("fidl_thread");
-    creator_wrapper_ = std::make_unique<TestServerAndClient<FidlGraphCreator>>(loop_.dispatcher());
+    thread_ = FidlThread::CreateFromNewThread("test_fidl_thread");
+    creator_wrapper_ = std::make_unique<TestServerAndClient<FidlGraphCreator>>(thread_);
   }
 
   void TearDown() {
@@ -39,7 +36,7 @@ class FidlGraphCreatorTest : public ::testing::Test {
   fidl::Arena<> arena_;
 
  private:
-  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+  std::shared_ptr<FidlThread> thread_;
   std::unique_ptr<TestServerAndClient<FidlGraphCreator>> creator_wrapper_;
 };
 

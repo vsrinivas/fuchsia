@@ -27,7 +27,7 @@
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"
-#include "src/media/audio/services/mixer/common/thread_checker.h"
+#include "src/media/audio/services/common/thread_checker.h"
 #include "src/media/audio/services/mixer/mix/detached_thread.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
 #include "src/media/audio/services/mixer/mix/packet_queue_producer_stage.h"

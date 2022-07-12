@@ -13,9 +13,9 @@ namespace media_audio {
 
 // static
 std::shared_ptr<FidlSyntheticClock> FidlSyntheticClock::Create(
-    async_dispatcher_t* fidl_thread_dispatcher,
+    std::shared_ptr<const FidlThread> thread,
     fidl::ServerEnd<fuchsia_audio_mixer::SyntheticClock> server_end, std::shared_ptr<Clock> clock) {
-  return BaseFidlServer::Create(fidl_thread_dispatcher, std::move(server_end), std::move(clock));
+  return BaseFidlServer::Create(std::move(thread), std::move(server_end), std::move(clock));
 }
 
 void FidlSyntheticClock::Now(NowRequestView request, NowCompleter::Sync& completer) {
@@ -51,9 +51,9 @@ void FidlSyntheticClock::SetRate(SetRateRequestView request, SetRateCompleter::S
 
 // static
 std::shared_ptr<FidlSyntheticClockRealm> FidlSyntheticClockRealm::Create(
-    async_dispatcher_t* fidl_thread_dispatcher,
+    std::shared_ptr<const FidlThread> thread,
     fidl::ServerEnd<fuchsia_audio_mixer::SyntheticClockRealm> server_end) {
-  return BaseFidlServer::Create(fidl_thread_dispatcher, std::move(server_end));
+  return BaseFidlServer::Create(std::move(thread), std::move(server_end));
 }
 
 void FidlSyntheticClockRealm::CreateClock(CreateClockRequestView request,
@@ -82,7 +82,7 @@ void FidlSyntheticClockRealm::CreateClock(CreateClockRequestView request,
 
   // If the user wants explicit control, create a server.
   if (request->has_control()) {
-    AddChildServer(FidlSyntheticClock::Create(dispatcher(), std::move(request->control()), clock));
+    AddChildServer(FidlSyntheticClock::Create(thread_ptr(), std::move(request->control()), clock));
   }
 
   // Since the underlying zx::clock does not represent the SyntheticClock's actual value, send the
@@ -127,7 +127,7 @@ void FidlSyntheticClockRealm::ObserveClock(ObserveClockRequestView request,
 
   // ObserveClock does not give permission to adjust.
   auto clock = std::make_shared<::media_audio::UnadjustableClockWrapper>(clock_result.value());
-  AddChildServer(FidlSyntheticClock::Create(dispatcher(), std::move(request->observe()), clock));
+  AddChildServer(FidlSyntheticClock::Create(thread_ptr(), std::move(request->observe()), clock));
 
   fidl::Arena arena;
   completer.ReplySuccess(

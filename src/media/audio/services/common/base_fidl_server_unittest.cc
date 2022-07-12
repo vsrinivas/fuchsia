@@ -5,8 +5,6 @@
 #include "src/media/audio/services/common/base_fidl_server.h"
 
 #include <fidl/fuchsia.audio.mixer/cpp/wire.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
 
 #include <gtest/gtest.h>
 
@@ -17,9 +15,9 @@ namespace {
 class TestFidlServer : public BaseFidlServer<TestFidlServer, fuchsia_audio_mixer::GraphCreator> {
  public:
   static std::shared_ptr<TestFidlServer> CreateServer(
-      async_dispatcher_t* dispatcher, fidl::ServerEnd<fuchsia_audio_mixer::GraphCreator> server_end,
-      int x, int y) {
-    return BaseFidlServer::Create(dispatcher, std::move(server_end), x, y);
+      std::shared_ptr<const FidlThread> thread,
+      fidl::ServerEnd<fuchsia_audio_mixer::GraphCreator> server_end, int x, int y) {
+    return BaseFidlServer::Create(std::move(thread), std::move(server_end), x, y);
   }
 
   int x() const { return x_; }
@@ -28,9 +26,8 @@ class TestFidlServer : public BaseFidlServer<TestFidlServer, fuchsia_audio_mixer
 
   // Create a child server.
   std::shared_ptr<TestFidlServer> CreateChildServer(
-      async_dispatcher_t* dispatcher,
       fidl::ServerEnd<fuchsia_audio_mixer::GraphCreator> server_end) {
-    auto child = CreateServer(dispatcher, std::move(server_end), 0, 0);
+    auto child = CreateServer(thread_ptr(), std::move(server_end), 0, 0);
     AddChildServer(child);
     return child;
   }
@@ -52,13 +49,10 @@ class TestFidlServer : public BaseFidlServer<TestFidlServer, fuchsia_audio_mixer
   bool called_on_shutdown_ = false;
 };
 
-TEST(BaseFidlServer, CreateAndShutdownOneServer) {
-  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
-  loop.StartThread("test-fidl-thread");
-
+TEST(BaseFidlServerTest, CreateAndShutdownOneServer) {
+  auto thread = FidlThread::CreateFromNewThread("test_fidl_thread");
   auto endpoints = fidl::CreateEndpoints<fuchsia_audio_mixer::GraphCreator>().value();
-  auto server =
-      TestFidlServer::CreateServer(loop.dispatcher(), std::move(endpoints.server), 42, 99);
+  auto server = TestFidlServer::CreateServer(thread, std::move(endpoints.server), 42, 99);
 
   EXPECT_EQ(server->x(), 42);
   EXPECT_EQ(server->y(), 99);
@@ -67,9 +61,8 @@ TEST(BaseFidlServer, CreateAndShutdownOneServer) {
   EXPECT_TRUE(server->called_on_shutdown());
 }
 
-TEST(BaseFidlServer, CreateAndShutdownRecursive) {
-  async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
-  loop.StartThread("test-fidl-thread");
+TEST(BaseFidlServerTest, CreateAndShutdownRecursive) {
+  auto thread = FidlThread::CreateFromNewThread("test_fidl_thread");
 
   std::shared_ptr<TestFidlServer> root;
   std::shared_ptr<TestFidlServer> child;
@@ -77,15 +70,15 @@ TEST(BaseFidlServer, CreateAndShutdownRecursive) {
 
   {
     auto endpoints = fidl::CreateEndpoints<fuchsia_audio_mixer::GraphCreator>().value();
-    root = TestFidlServer::CreateServer(loop.dispatcher(), std::move(endpoints.server), 42, 99);
+    root = TestFidlServer::CreateServer(thread, std::move(endpoints.server), 42, 99);
   }
   {
     auto endpoints = fidl::CreateEndpoints<fuchsia_audio_mixer::GraphCreator>().value();
-    child = root->CreateChildServer(loop.dispatcher(), std::move(endpoints.server));
+    child = root->CreateChildServer(std::move(endpoints.server));
   }
   {
     auto endpoints = fidl::CreateEndpoints<fuchsia_audio_mixer::GraphCreator>().value();
-    grandchild = child->CreateChildServer(loop.dispatcher(), std::move(endpoints.server));
+    grandchild = child->CreateChildServer(std::move(endpoints.server));
   }
 
   root->Shutdown();

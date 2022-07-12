@@ -21,15 +21,9 @@ namespace media_audio {
 class FidlGraph : public BaseFidlServer<FidlGraph, fuchsia_audio_mixer::Graph> {
  public:
   struct Args {
-    fidl::ServerEnd<fuchsia_audio_mixer::Graph> server_end;
-
     // Name of this graph.
     // For debugging only: may be empty or not unique.
     std::string name;
-
-    // Dispatcher for the main (not-real-time) FIDL thread, which may be shared
-    // with other Graph servers.
-    async_dispatcher_t* main_fidl_thread_dispatcher;
 
     // Deadline profile for the real-time FIDL thread.
     zx::profile realtime_fidl_thread_deadline_profile;
@@ -38,8 +32,10 @@ class FidlGraph : public BaseFidlServer<FidlGraph, fuchsia_audio_mixer::Graph> {
     std::shared_ptr<ClockRegistry> clock_registry;
   };
 
-  // The returned server will live until the `args.server_end` channel is closed.
-  static std::shared_ptr<FidlGraph> Create(Args args);
+  // The returned server will live until the `server_end` channel is closed.
+  static std::shared_ptr<FidlGraph> Create(std::shared_ptr<const FidlThread> main_fidl_thread,
+                                           fidl::ServerEnd<fuchsia_audio_mixer::Graph> server_end,
+                                           Args args);
 
   // Implementation of fidl::WireServer<fuchsia_audio_mixer::Graph>.
   void CreateProducer(CreateProducerRequestView request,

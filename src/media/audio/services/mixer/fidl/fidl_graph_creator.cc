@@ -15,23 +15,21 @@ namespace media_audio {
 
 // static
 std::shared_ptr<FidlGraphCreator> FidlGraphCreator::Create(
-    async_dispatcher_t* fidl_thread_dispatcher,
+    std::shared_ptr<const FidlThread> thread,
     fidl::ServerEnd<fuchsia_audio_mixer::GraphCreator> server_end) {
-  return BaseFidlServer::Create(fidl_thread_dispatcher, std::move(server_end));
+  return BaseFidlServer::Create(std::move(thread), std::move(server_end));
 }
 
 void FidlGraphCreator::Create(CreateRequestView request, CreateCompleter::Sync& completer) {
   TRACE_DURATION("audio", "GraphCreator::Create");
+  ScopedThreadChecker checker(thread().checker());
 
   if (!request->has_graph()) {
     completer.ReplyError(fuchsia_audio_mixer::CreateGraphError::kInvalidGraphChannel);
     return;
   }
 
-  FidlGraph::Args args = {
-      .server_end = std::move(request->graph()),
-      .main_fidl_thread_dispatcher = dispatcher(),
-  };
+  FidlGraph::Args args;
 
   if (request->has_name()) {
     args.name = std::string(request->name().get());
@@ -44,7 +42,7 @@ void FidlGraphCreator::Create(CreateRequestView request, CreateCompleter::Sync& 
 
   if (request->has_synthetic_clock_realm()) {
     auto realm =
-        FidlSyntheticClockRealm::Create(dispatcher(), std::move(request->synthetic_clock_realm()));
+        FidlSyntheticClockRealm::Create(thread_ptr(), std::move(request->synthetic_clock_realm()));
     args.clock_registry = realm->registry();
   } else {
     args.clock_registry = std::make_shared<ClockRegistry>(std::make_shared<RealClockFactory>());
@@ -52,7 +50,7 @@ void FidlGraphCreator::Create(CreateRequestView request, CreateCompleter::Sync& 
 
   // Create a server to control this graph.
   // The created object will live until `args.sever_end` is closed.
-  AddChildServer(FidlGraph::Create(std::move(args)));
+  AddChildServer(FidlGraph::Create(thread_ptr(), std::move(request->graph()), std::move(args)));
 
   fidl::Arena arena;
   completer.ReplySuccess(

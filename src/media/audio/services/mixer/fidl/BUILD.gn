@@ -44,14 +44,10 @@ source_set("fidl") {
     "//src/media/audio/services/common",
     "//src/media/audio/services/mixer/common",
     "//src/media/audio/services/mixer/mix",
-    "//zircon/system/ulib/sync:sync-cpp",
     "//zircon/system/ulib/trace",
   ]
 
-  deps = [
-    "//sdk/lib/syslog/cpp",
-    "//zircon/system/ulib/sync:sync-cpp",
-  ]
+  deps = [ "//sdk/lib/syslog/cpp" ]
 }
 
 executable("fidl_unittests") {
@@ -75,9 +71,6 @@ executable("fidl_unittests") {
     "//src/media/audio/services/common/testing",
     "//src/media/audio/services/mixer/fidl/testing",
     "//third_party/googletest:gmock",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/async-loop/testing:async-loop-testing",
   ]
 }
 

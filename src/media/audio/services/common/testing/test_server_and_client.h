@@ -9,6 +9,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/media/audio/services/common/base_fidl_server.h"
+#include "src/media/audio/services/common/fidl_thread.h"
 
 namespace media_audio {
 
@@ -34,9 +35,10 @@ class TestServerAndClient {
   using Protocol = typename ServerT::Protocol;
 
   template <typename... Args>
-  explicit TestServerAndClient(async_dispatcher_t* dispatcher, Args... args) {
+  explicit TestServerAndClient(std::shared_ptr<const FidlThread> thread, Args... args) {
     auto [client, server_end] = CreateClientOrDie<Protocol>();
-    server_ = ServerT::Create(dispatcher, std::move(server_end), std::forward<Args>(args)...);
+    server_ =
+        ServerT::Create(std::move(thread), std::move(server_end), std::forward<Args>(args)...);
     client_ = std::move(client);
   }
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_COMMON_THREAD_CHECKER_H_
-#define SRC_MEDIA_AUDIO_SERVICES_MIXER_COMMON_THREAD_CHECKER_H_
+#ifndef SRC_MEDIA_AUDIO_SERVICES_COMMON_THREAD_CHECKER_H_
+#define SRC_MEDIA_AUDIO_SERVICES_COMMON_THREAD_CHECKER_H_
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -33,7 +33,10 @@ class TA_CAP("thread") ThreadChecker final {
   bool IsValid() const { return !id_ || std::this_thread::get_id() == *id_; }
 
   // Crashes if not running on the correct thread.
-  void Check() const TA_ACQ() { FX_CHECK(IsValid()); }
+  void Check() const TA_ACQ() {
+    FX_CHECK(IsValid()) << "running on thread " << std::this_thread::get_id() << ", expect "
+                        << *id_;
+  }
 
  private:
   // This is needed to make thread analysis happy.
@@ -68,4 +71,4 @@ class TA_SCOPED_CAP ScopedThreadChecker final {
 
 }  // namespace media_audio
 
-#endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_COMMON_THREAD_CHECKER_H_
+#endif  // SRC_MEDIA_AUDIO_SERVICES_COMMON_THREAD_CHECKER_H_

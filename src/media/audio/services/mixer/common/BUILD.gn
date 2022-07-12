@@ -30,7 +30,6 @@ source_set("common") {
     "//src/media/audio/lib/clock",
     "//src/media/audio/lib/format2",
     "//src/media/audio/lib/timeline",
-    "//zircon/system/ulib/zircon-internal",
   ]
 
   deps = [ "//sdk/lib/syslog/cpp" ]
@@ -46,7 +45,6 @@ executable("common_unittests") {
     ":common",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
-    "//zircon/system/ulib/sync:sync-cpp",
   ]
 }
 

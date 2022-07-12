@@ -8,8 +8,8 @@
 #include <memory>
 #include <string>
 
+#include "src/media/audio/services/common/thread_checker.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
-#include "src/media/audio/services/mixer/common/thread_checker.h"
 #include "src/media/audio/services/mixer/mix/ptr_decls.h"
 
 namespace media_audio {

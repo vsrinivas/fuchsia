@@ -20,7 +20,7 @@ class FidlGraphCreator
  public:
   // The returned server will live until the `server_end` channel is closed.
   static std::shared_ptr<FidlGraphCreator> Create(
-      async_dispatcher_t* fidl_thread_dispatcher,
+      std::shared_ptr<const FidlThread> thread,
       fidl::ServerEnd<fuchsia_audio_mixer::GraphCreator> server_end);
 
   // Implementation of fidl::WireServer<fuchsia_audio_mixer::GraphCreator>.

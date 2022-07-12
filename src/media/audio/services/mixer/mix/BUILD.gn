@@ -43,6 +43,7 @@ source_set("mix") {
   ]
 
   public_deps = [
+    "//src/media/audio/services/common",
     "//src/media/audio/services/mixer/common",
     "//zircon/system/ulib/fzl",
   ]

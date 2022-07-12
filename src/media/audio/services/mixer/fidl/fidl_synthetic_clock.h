@@ -6,7 +6,6 @@
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_FIDL_SYNTHETIC_CLOCK_H_
 
 #include <fidl/fuchsia.audio.mixer/cpp/wire.h>
-#include <lib/sync/cpp/completion.h>
 #include <zircon/errors.h>
 
 #include <optional>
@@ -27,7 +26,7 @@ class FidlSyntheticClock
  public:
   // The returned server will live until the `server_end` channel is closed.
   static std::shared_ptr<FidlSyntheticClock> Create(
-      async_dispatcher_t* fidl_thread_dispatcher,
+      std::shared_ptr<const FidlThread> thread,
       fidl::ServerEnd<fuchsia_audio_mixer::SyntheticClock> server_end,
       std::shared_ptr<Clock> clock);
 
@@ -53,7 +52,7 @@ class FidlSyntheticClockRealm
  public:
   // The returned server will live until the `server_end` channel is closed.
   static std::shared_ptr<FidlSyntheticClockRealm> Create(
-      async_dispatcher_t* fidl_thread_dispatcher,
+      std::shared_ptr<const FidlThread> thread,
       fidl::ServerEnd<fuchsia_audio_mixer::SyntheticClockRealm> server_end);
 
   // Returns the clock registry used by this realm.

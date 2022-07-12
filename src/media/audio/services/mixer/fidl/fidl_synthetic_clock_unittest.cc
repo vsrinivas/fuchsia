@@ -4,9 +4,6 @@
 
 #include "src/media/audio/services/mixer/fidl/fidl_synthetic_clock.h"
 
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
-#include <lib/async-loop/testing/cpp/real_loop.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
@@ -28,9 +25,8 @@ zx::clock CreateArbitraryZxClock() {
 class FidlSyntheticClockTest : public ::testing::Test {
  public:
   void SetUp() {
-    loop_.StartThread("fidl_thread");
-    realm_wrapper_ =
-        std::make_unique<TestServerAndClient<FidlSyntheticClockRealm>>(loop_.dispatcher());
+    thread_ = FidlThread::CreateFromNewThread("test_fidl_thread");
+    realm_wrapper_ = std::make_unique<TestServerAndClient<FidlSyntheticClockRealm>>(thread_);
   }
 
   void TearDown() {
@@ -54,7 +50,7 @@ class FidlSyntheticClockTest : public ::testing::Test {
   fidl::Arena<> arena_;
 
  private:
-  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+  std::shared_ptr<FidlThread> thread_;
   std::unique_ptr<TestServerAndClient<FidlSyntheticClockRealm>> realm_wrapper_;
 };
 
