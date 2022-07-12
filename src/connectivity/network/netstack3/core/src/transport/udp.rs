@@ -2042,7 +2042,6 @@ mod tests {
     struct DummyUdpCtx<I: TestIpExt, D: IpDeviceId> {
         state: UdpState<I, D>,
         ip_socket_ctx: DummyIpSocketCtx<I, D>,
-        extra_local_addrs: Vec<I::Addr>,
         multicast_memberships: HashMap<(D, MulticastAddr<I::Addr>), NonZeroUsize>,
     }
 
@@ -2060,7 +2059,6 @@ mod tests {
             DummyUdpCtx {
                 state: Default::default(),
                 ip_socket_ctx,
-                extra_local_addrs: Vec::new(),
                 multicast_memberships: Default::default(),
             }
         }
@@ -2149,12 +2147,8 @@ mod tests {
         Self: IpDeviceIdContext<I, DeviceId = D> + IpSocketHandler<I, DummyDeviceNonSyncCtx<I>>,
     {
         fn get_device_with_assigned_addr(&self, addr: SpecifiedAddr<<I as Ip>::Addr>) -> Option<D> {
-            if local_ip::<I>() == addr || self.get_ref().extra_local_addrs.contains(&addr) {
-                let ip = &self.get_ref();
-                ip.ip_socket_ctx.find_device_with_addr(addr)
-            } else {
-                None
-            }
+            let ip = &self.get_ref();
+            ip.ip_socket_ctx.find_device_with_addr(addr)
         }
     }
 
@@ -3793,7 +3787,6 @@ mod tests {
         );
 
         let remote_ip = remote_ip::<I>();
-        sync_ctx.get_mut().extra_local_addrs.push(local_ip_2.get());
 
         let pa = NonZeroU16::new(10).unwrap();
         let pb = NonZeroU16::new(11).unwrap();
