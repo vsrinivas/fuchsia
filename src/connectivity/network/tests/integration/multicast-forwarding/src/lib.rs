@@ -4,6 +4,7 @@
 
 #![cfg(test)]
 
+use assert_matches::assert_matches;
 use derivative::Derivative;
 use fidl::endpoints::Proxy as _;
 use fidl_fuchsia_net as fnet;
@@ -573,6 +574,17 @@ enum DeviceAddress {
     Other(fnet::Ipv4Address),
 }
 
+/// An action that should be executed with the multicast routing controller.
+enum ControllerAction {
+    None,
+    /// Drop the controller (causing the route table to be dropped).
+    Drop,
+    /// Read the next routing event and expect a missing route event.
+    ExpectMissingRouteEvent,
+    /// Read the next routing event and expect a wrong input interface event.
+    ExpectWrongInputInterfaceEvent,
+}
+
 /// Defaultable options for a multicast forwarding test.
 #[derive(Derivative)]
 #[derivative(Default)]
@@ -581,8 +593,8 @@ struct MulticastForwardingTestOptions {
     route_input_interface: Server,
     #[derivative(Default(value = "DeviceAddress::Server(Server::A)"))]
     route_source_address: DeviceAddress,
-    #[derivative(Default(value = "false"))]
-    drop_multicast_controller: bool,
+    #[derivative(Default(value = "ControllerAction::None"))]
+    controller_action: ControllerAction,
 }
 
 #[variants_test]
@@ -662,6 +674,7 @@ struct MulticastForwardingTestOptions {
     MulticastForwardingTestOptions {
         route_source_address: DeviceAddress::Server(Server::A),
         route_input_interface: Server::B,
+        controller_action: ControllerAction::ExpectWrongInputInterfaceEvent,
         ..MulticastForwardingTestOptions::default()
     };
     "unexpected input interface"
@@ -694,7 +707,7 @@ struct MulticastForwardingTestOptions {
     },
     MulticastForwardingNetworkOptions::default(),
     MulticastForwardingTestOptions {
-        drop_multicast_controller: true,
+        controller_action: ControllerAction::Drop,
         ..MulticastForwardingTestOptions::default()
     };
     "multicast controller dropped"
@@ -745,6 +758,7 @@ struct MulticastForwardingTestOptions {
     },
     MulticastForwardingTestOptions {
         route_source_address: DeviceAddress::Server(Server::B),
+        controller_action: ControllerAction::ExpectMissingRouteEvent,
         ..MulticastForwardingTestOptions::default()
     };
     "missing route"
@@ -759,7 +773,7 @@ async fn multicast_forwarding<E: netemul::Endpoint>(
     let MulticastForwardingTestOptions {
         route_input_interface,
         route_source_address,
-        drop_multicast_controller,
+        controller_action,
     } = options;
     let test_name = format!("{}_{}", name, case_name);
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
@@ -770,9 +784,11 @@ async fn multicast_forwarding<E: netemul::Endpoint>(
         MulticastForwardingNetwork::new::<E>(&test_name, &sandbox, &router_realm, network_options)
             .await;
 
-    let controller = router_realm
-        .connect_to_protocol::<fnet_multicast_admin::Ipv4RoutingTableControllerMarker>()
-        .expect("connect to protocol");
+    let mut controller = Some(
+        router_realm
+            .connect_to_protocol::<fnet_multicast_admin::Ipv4RoutingTableControllerMarker>()
+            .expect("connect to protocol"),
+    );
 
     let mut addresses = fnet_multicast_admin::Ipv4UnicastSourceAndMulticastDestination {
         unicast_source: test_network.get_device_address(route_source_address),
@@ -796,13 +812,18 @@ async fn multicast_forwarding<E: netemul::Endpoint>(
     };
 
     controller
+        .as_ref()
+        .expect("controller not present")
         .add_route(&mut addresses, route)
         .await
         .expect("add_route failed")
         .expect("add_route error");
 
-    if drop_multicast_controller {
-        drop(controller);
+    match controller_action {
+        ControllerAction::Drop => drop(controller.take()),
+        ControllerAction::None
+        | ControllerAction::ExpectMissingRouteEvent
+        | ControllerAction::ExpectWrongInputInterfaceEvent => {}
     }
 
     let expectations = clients
@@ -811,6 +832,41 @@ async fn multicast_forwarding<E: netemul::Endpoint>(
         .collect();
 
     test_network.send_and_receive_multicast_packet(expectations).await;
+
+    let expected_event = match controller_action {
+        ControllerAction::ExpectMissingRouteEvent => {
+            Some(fnet_multicast_admin::RoutingEvent::MissingRoute(fnet_multicast_admin::Empty {}))
+        }
+        ControllerAction::ExpectWrongInputInterfaceEvent => {
+            Some(fnet_multicast_admin::RoutingEvent::WrongInputInterface(
+                fnet_multicast_admin::WrongInputInterface {
+                    expected_input_interface: Some(
+                        test_network.get_server(route_input_interface).router_interface.id(),
+                    ),
+                    ..fnet_multicast_admin::WrongInputInterface::EMPTY
+                },
+            ))
+        }
+        ControllerAction::None | ControllerAction::Drop => None,
+    };
+
+    match expected_event {
+        None => {}
+        Some(expected_event) => {
+            let (dropped_events, event_addresses, input_interface, event) = controller
+                .expect("controller not present")
+                .watch_routing_events()
+                .await
+                .expect("watch_routing_events failed");
+            assert_eq!(dropped_events, 0);
+            assert_eq!(
+                event_addresses,
+                test_network.default_unicast_source_and_multicast_destination()
+            );
+            assert_eq!(input_interface, test_network.get_source_router_interface_id());
+            assert_eq!(event, expected_event);
+        }
+    }
 }
 
 /// An interface owned by the router.
@@ -1157,4 +1213,174 @@ async fn multiple_multicast_controllers<E: netemul::Endpoint>(name: &str) {
             Client::A => true,
         })
         .await;
+}
+
+#[variants_test]
+async fn watch_routing_events_hanging<E: netemul::Endpoint>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let router_realm = sandbox
+        .create_netstack_realm::<Netstack2, _>(format!("{}_router_realm", name))
+        .expect("create realm");
+    let test_network = MulticastForwardingNetwork::new::<E>(
+        name,
+        &sandbox,
+        &router_realm,
+        MulticastForwardingNetworkOptions::default(),
+    )
+    .await;
+
+    let controller = router_realm
+        .connect_to_protocol::<fnet_multicast_admin::Ipv4RoutingTableControllerMarker>()
+        .expect("connect to protocol");
+
+    let watch_routing_events_fut = async {
+        let (dropped_events, addresses, input_interface, event) =
+            controller.watch_routing_events().await.expect("watch_routing_events failed");
+        assert_eq!(dropped_events, 0);
+        assert_eq!(addresses, test_network.default_unicast_source_and_multicast_destination());
+        assert_eq!(input_interface, test_network.get_source_router_interface_id());
+        assert_eq!(
+            event,
+            fnet_multicast_admin::RoutingEvent::MissingRoute(fnet_multicast_admin::Empty {})
+        );
+    };
+
+    let send_packet_fut = async {
+        const WAIT_BEFORE_SEND_DURATION: zx::Duration = zx::Duration::from_seconds(5);
+        // Before sending a packet, sleep for a few seconds to ensure that the
+        // call to watch_routing_events hangs.
+        netstack_testing_common::sleep(WAIT_BEFORE_SEND_DURATION.into_seconds()).await;
+        test_network.send_multicast_packet().await;
+    };
+
+    let ((), ()) = futures::future::join(watch_routing_events_fut, send_packet_fut).await;
+}
+
+#[variants_test]
+async fn watch_routing_events_already_hanging<E: netemul::Endpoint>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let router_realm = sandbox
+        .create_netstack_realm::<Netstack2, _>(format!("{}_router_realm", name))
+        .expect("create realm");
+    let test_network = MulticastForwardingNetwork::new::<E>(
+        name,
+        &sandbox,
+        &router_realm,
+        MulticastForwardingNetworkOptions::default(),
+    )
+    .await;
+
+    let controller = router_realm
+        .connect_to_protocol::<fnet_multicast_admin::Ipv4RoutingTableControllerMarker>()
+        .expect("connect to protocol");
+
+    let mut addresses = test_network.default_unicast_source_and_multicast_destination();
+    let route = test_network.default_multicast_route();
+
+    controller
+        .add_route(&mut addresses, route)
+        .await
+        .expect("add_route failed")
+        .expect("add_route error");
+
+    // Before the controller is closed due to multiple hanging gets, multicast
+    // packets should be forwarded.
+    test_network.send_and_receive_multicast_packet(hashmap! { Client::A => true }).await;
+
+    async fn watch_routing_events(
+        controller: &fnet_multicast_admin::Ipv4RoutingTableControllerProxy,
+    ) {
+        let err =
+            controller.watch_routing_events().await.expect_err("should fail with PEER_CLOSED");
+        let status = assert_matches!(err, fidl::Error::ClientChannelClosed{status, ..} => status);
+        assert_eq!(status, zx::Status::PEER_CLOSED);
+    }
+
+    let ((), ()) =
+        futures::future::join(watch_routing_events(&controller), watch_routing_events(&controller))
+            .await;
+
+    expect_table_controller_closed_with_reason(
+        &controller,
+        fnet_multicast_admin::TableControllerCloseReason::HangingGetError,
+    )
+    .await;
+
+    // The routing table should be dropped when the controller is closed. As a
+    // result, a packet should no longer be forwarded
+    test_network.send_and_receive_multicast_packet(hashmap! { Client::A => false }).await;
+}
+
+#[variants_test]
+async fn watch_routing_events_dropped_events<E: netemul::Endpoint>(name: &str) {
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let router_realm = sandbox
+        .create_netstack_realm::<Netstack2, _>(format!("{}_router_realm", name))
+        .expect("create realm");
+    let test_network = MulticastForwardingNetwork::new::<E>(
+        name,
+        &sandbox,
+        &router_realm,
+        MulticastForwardingNetworkOptions::default(),
+    )
+    .await;
+
+    let controller = router_realm
+        .connect_to_protocol::<fnet_multicast_admin::Ipv4RoutingTableControllerMarker>()
+        .expect("connect to protocol");
+
+    let mut addresses = test_network.default_unicast_source_and_multicast_destination();
+    let route = fnet_multicast_admin::Route {
+        expected_input_interface: Some(test_network.get_server(Server::B).router_interface.id()),
+        action: Some(fnet_multicast_admin::Action::OutgoingInterfaces(vec![
+            fnet_multicast_admin::OutgoingInterfaces {
+                id: test_network.get_client(Client::A).device.router_interface.id(),
+                min_ttl: 1,
+            },
+        ])),
+        ..fnet_multicast_admin::Route::EMPTY
+    };
+
+    controller
+        .add_route(&mut addresses, route)
+        .await
+        .expect("add_route failed")
+        .expect("add_route error");
+
+    async fn add_wrong_input_interface_events(
+        test_network: &MulticastForwardingNetwork<'_>,
+        num: u16,
+    ) {
+        const WAIT_AFTER_SEND_DURATION: zx::Duration = zx::Duration::from_seconds(5);
+        futures::stream::iter(0..num)
+            .for_each_concurrent(None, |_| async {
+                test_network.send_multicast_packet().await;
+            })
+            .await;
+        // Insert a brief sleep to ensure that events are fully queued before
+        // checking expectations.
+        netstack_testing_common::sleep(WAIT_AFTER_SEND_DURATION.into_seconds()).await;
+    }
+
+    async fn expect_num_dropped_events(
+        controller: &fnet_multicast_admin::Ipv4RoutingTableControllerProxy,
+        expected_num_dropped_events: u64,
+    ) {
+        let (dropped_events, _event_addresses, _input_interface, _event) =
+            controller.watch_routing_events().await.expect("watch_routing_events failed");
+        assert_eq!(dropped_events, expected_num_dropped_events);
+    }
+
+    // Add the maximum number of events to the buffer. No events should be
+    // dropped.
+    add_wrong_input_interface_events(&test_network, fnet_multicast_admin::MAX_ROUTING_EVENTS).await;
+    expect_num_dropped_events(&controller, 0).await;
+
+    // Push the max events buffer over the limit. Events should be dropped.
+    add_wrong_input_interface_events(&test_network, 3).await;
+    expect_num_dropped_events(&controller, 2).await;
+
+    // Immediately reading the next event should result in the dropped events
+    // counter getting reset.
+    expect_num_dropped_events(&controller, 0).await;
 }

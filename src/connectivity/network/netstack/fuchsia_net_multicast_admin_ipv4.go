@@ -27,9 +27,10 @@ func addMulticastIpv4RoutingTableControllerService(componentCtx *component.Conte
 	componentCtx.OutgoingService.AddService(
 		admin.Ipv4RoutingTableControllerName,
 		func(ctx context.Context, c zx.Channel) error {
-			eventDispatcher := multicastEventDispatcher{}
+			cancelCtx, cancel := context.WithCancel(ctx)
 
-			alreadyEnabled, err := stack.EnableMulticastForwardingForProtocol(ipv4.ProtocolNumber, &eventDispatcher)
+			eventDispatcher := newMulticastEventDispatcher(cancel)
+			alreadyEnabled, err := stack.EnableMulticastForwardingForProtocol(ipv4.ProtocolNumber, eventDispatcher)
 
 			if err != nil {
 				return WrapTcpIpError(err)
@@ -46,12 +47,12 @@ func addMulticastIpv4RoutingTableControllerService(componentCtx *component.Conte
 				Impl: &multicastIpv4RoutingTableControllerImpl{
 					stack:       stack,
 					eventSender: eventSender,
-					disp:        &eventDispatcher,
+					disp:        eventDispatcher,
 				},
 			}
 
 			go func() {
-				component.Serve(ctx, &multicastIPv4Stub, c, component.ServeOptions{
+				component.Serve(cancelCtx, &multicastIPv4Stub, c, component.ServeOptions{
 					Concurrent: true,
 					OnError: func(err error) {
 						_ = syslog.WarnTf(admin.Ipv4RoutingTableControllerName, "%s", err)
@@ -123,7 +124,19 @@ func (m *multicastIpv4RoutingTableControllerImpl) GetRouteStats(fidl.Context, ad
 	return admin.Ipv4RoutingTableControllerGetRouteStatsResult{}, errors.New("Ipv4RoutingTableController.GetRouteStats unimplemented. See fxbug.dev/102565.")
 }
 
-func (m *multicastIpv4RoutingTableControllerImpl) WatchRoutingEvents(fidl.Context) (uint64, admin.Ipv4UnicastSourceAndMulticastDestination, uint64, admin.RoutingEvent, error) {
-	// TODO(https://fxbug.dev/102559): Implement WatchRoutingEvents.
-	return 0, admin.Ipv4UnicastSourceAndMulticastDestination{}, 0, admin.RoutingEvent{}, errors.New("Ipv4RoutingTableController.WatchRoutingEvents unimplemented. See fxbug.dev/102559.")
+func (m *multicastIpv4RoutingTableControllerImpl) WatchRoutingEvents(ctx fidl.Context) (uint64, admin.Ipv4UnicastSourceAndMulticastDestination, uint64, admin.RoutingEvent, error) {
+	event, numDroppedEvents, err := m.disp.nextMulticastEvent(ctx, func() {
+		m.eventSender.OnClose(admin.TableControllerCloseReasonHangingGetError)
+	})
+
+	if err != nil {
+		return 0, admin.Ipv4UnicastSourceAndMulticastDestination{}, 0, admin.RoutingEvent{}, err
+	}
+
+	addresses := admin.Ipv4UnicastSourceAndMulticastDestination{
+		UnicastSource:        fidlconv.ToNetIpAddress(event.context.SourceAndDestination.Source).Ipv4,
+		MulticastDestination: fidlconv.ToNetIpAddress(event.context.SourceAndDestination.Destination).Ipv4,
+	}
+
+	return numDroppedEvents, addresses, uint64(event.context.InputInterface), event.event, nil
 }

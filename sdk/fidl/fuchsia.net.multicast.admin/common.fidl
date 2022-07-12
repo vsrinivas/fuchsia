@@ -18,6 +18,9 @@ type Empty = struct {};
 /// https://github.com/torvalds/linux/blob/5bfc75d92efd494db37f5c4c173d3639d4772966/include/uapi/linux/mroute6.h#L47
 const MAX_MULTICAST_INTERFACES uint8 = 32;
 
+/// The maximum number of queued routing events.
+const MAX_ROUTING_EVENTS uint16 = 128;
+
 /// A multicast route.
 type Route = table {
     /// The expected input interface for a multicast packet using this route.
