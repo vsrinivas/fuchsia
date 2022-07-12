@@ -241,8 +241,10 @@ zx_status_t handle_cpuid(const ExitInfo& exit_info, AutoVmcs& vmcs, GuestState& 
           if ((vmcs.Read(VmcsField32::PROCBASED_CTLS2) & kProcbasedCtls2Invpcid) == 0) {
             guest_state.rbx &= ~(1u << X86_FEATURE_INVPCID.bit);
           }
-          // Disable the Processor Trace bit.
-          guest_state.rbx &= ~(1u << X86_FEATURE_PT.bit);
+          // Disable:
+          //  * Processor Trace bit
+          //  * TSC Adjust bit
+          guest_state.rbx &= ~(1u << X86_FEATURE_PT.bit | 1u << X86_FEATURE_TSC_ADJUST.bit);
           // Disable:
           //  * Indirect Branch Prediction Barrier bit
           //  * Single Thread Indirect Branch Predictors bit
