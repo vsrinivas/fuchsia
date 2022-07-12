@@ -1,0 +1,31 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.boot;
+
+using fuchsia.io;
+using zx;
+
+/// Protocol for storing svc server ends of 'svc' for later processing during early boot.
+@for_deprecated_c_bindings
+protocol SvcStash {
+    /// Store a svc_endpoint in the stash. Stored endpoints will remain in transit,
+    /// since there might not be a server side implementation. The server end
+    /// is retrieved by |SvcStashProvider/Get|.
+    Store(resource struct {
+        svc_endpoint server_end:fuchsia.io.Directory;
+    });
+};
+
+/// Protocol for providing the server end of the 'SvcStash'.
+@discoverable
+protocol SvcStashProvider {
+    /// Get the SvcStash server endpoint.
+    ///
+    /// There is at most one instance for the system, meaning only the first caller
+    /// may consume the handle.
+    Get() -> (resource struct {
+        resource server_end:SvcStash;
+    }) error zx.status;
+};
