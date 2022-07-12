@@ -355,17 +355,17 @@ impl<'a> ThermalPolicyTest<'a> {
         // used by the simulator. This could be leveraged to simulate discrepancies between
         // the on-device power model (in the thermal policy) and reality (as represented by the
         // simulator).
-        let cpu_control_params = cpu_control_handler::CpuControlParams {
-            p_states: cpu_params.p_states.clone(),
-            capacitance: cpu_params.capacitance,
-            logical_cpu_numbers: cpu_params.logical_cpu_numbers.clone(),
-        };
-        let cpu_control_node = cpu_control_handler::tests::setup_test_node(
-            cpu_control_params,
-            cpu_stats_node.clone(),
-            cpu_dev_handler,
-        )
-        .await;
+        let cpu_control_node = cpu_control_handler::CpuControlHandlerBuilder::new()
+            .capacitance(cpu_params.capacitance)
+            .logical_cpu_numbers(cpu_params.logical_cpu_numbers.clone())
+            .cpu_stats_handler(cpu_stats_node.clone())
+            .cpu_dev_handler(cpu_dev_handler)
+            .cpu_ctrl_proxy(cpu_control_handler::tests::fake_cpu_ctrl_driver_with_p_states(
+                cpu_params.p_states.clone(),
+            ))
+            .build()
+            .await
+            .unwrap();
 
         let thermal_config = ThermalConfig {
             temperature_node,

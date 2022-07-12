@@ -54,6 +54,34 @@ mod log_err_with_debug_assert_tests {
     }
 }
 
+/// Exports a convenience macro, `ok_or_default_err`, which acts as a wrapper for `Option::ok_or` to
+/// provide a default Err value. The macro transforms an Option<T> into a Result<T, E>, mapping
+/// Some(v) to Ok(v) and None to Err("$var_name is None").
+#[macro_use]
+pub mod ok_or_default_err {
+    #[macro_export]
+    macro_rules! ok_or_default_err {
+        ($result:expr) => {
+            $result.ok_or(anyhow::format_err!("{} is None", stringify!($result)))
+        };
+    }
+
+    #[cfg(test)]
+    mod tests {
+        #[test]
+        fn test_some() {
+            let foo = Some(1);
+            assert_eq!(ok_or_default_err!(foo).unwrap(), 1);
+        }
+
+        #[test]
+        fn test_none() {
+            let foo: Option<()> = None;
+            assert_eq!(ok_or_default_err!(foo).unwrap_err().to_string(), "foo is None")
+        }
+    }
+}
+
 /// Export the `connect_to_driver` function to be used throughout the crate.
 pub use connect_to_driver::connect_to_driver;
 mod connect_to_driver {
