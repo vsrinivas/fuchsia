@@ -84,17 +84,15 @@ The test runner and all of the test server components are in a single package,
 
 ## Running
 
-Beacuse individual tests have timeouts the test is split across 5 different 
+Because individual tests have timeouts the test is split across 6 different
 components in the same package:
 
+- `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_minimal.cmx`
 - `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_struct.cmx`
 - `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_array.cmx`
 - `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_vector.cmx`
 - `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_table.cmx`
 - `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_union.cmx`
-
-They all invoke the same test runner but use a `--gtest_filter` argument to filter which
-tests are run.
 
 To run all of the tests:
 

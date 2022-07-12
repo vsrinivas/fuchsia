@@ -24,7 +24,7 @@ fidl("fidl_service") {
   ]
 }
 
-# Shared between the hlcpp test server and the test harness
+# Shared between the hlcpp test server and the test harness.
 source_set("hlcpp_client_app") {
   visibility = [ ":*" ]
   sources = [
@@ -39,7 +39,7 @@ source_set("hlcpp_client_app") {
   ]
 }
 
-## CPP (unified bindings / natural types) Test Server
+# CPP (unified bindings / natural types) Test Server
 
 executable("cpp_server") {
   output_name = "cpp-server"
@@ -64,7 +64,7 @@ fuchsia_component("cpp-server") {
   deps = [ ":cpp_server" ]
 }
 
-## HLCPP Test Server
+# HLCPP Test Server
 
 executable("hlcpp_server") {
   output_name = "hlcpp-server"
@@ -89,7 +89,7 @@ fuchsia_component("hlcpp-server") {
   deps = [ ":hlcpp_server" ]
 }
 
-## LLCPP Test Server
+# LLCPP Test Server
 
 executable("llcpp_server") {
   output_name = "llcpp-server"
@@ -115,7 +115,7 @@ fuchsia_component("llcpp-server") {
   testonly = true
 }
 
-## Rust Test Server
+# Rust Test Server
 
 rustc_binary("rust_server") {
   output_name = "rust_server"
@@ -143,7 +143,7 @@ fuchsia_component("rust-server") {
   deps = [ ":rust_server" ]
 }
 
-## Dart Test Server
+# Dart Test Server
 
 dart_library("dart_server") {
   package_name = "dart_server"
@@ -164,60 +164,17 @@ dart_component("dart-server") {
   deps = [ ":dart_server" ]
 }
 
-## Test Runner
-
-executable("fidl_compatibility_test_executable") {
-  output_name = "fidl_compatibility_test"
-
-  testonly = true
-
-  sources = [ "compatibility_test.cc" ]
-
-  deps = [
-    ":fidl_service",
-    ":hlcpp_client_app",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/files",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:test_settings",
-    "//third_party/googletest:gtest",
-    "//third_party/re2",
-    "//zircon/system/ulib/async-default",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-## Tests
-
-fidl_compatibility_tests = [
-  {
-    name = "minimal"
-    filter = "Minimal.*"
-  },
-  {
-    name = "struct"
-    filter = "Struct.*"
-  },
-  {
-    name = "array"
-    filter = "Array.*"
-  },
-  {
-    name = "vector"
-    filter = "Vector.*"
-  },
-  {
-    name = "table"
-    filter = "Table.*"
-  },
-  {
-    name = "union"
-    filter = "Union.*"
-  },
+# Categories of behaviors to be tested for compatibility.
+fidl_compatibility_tests_categories = [
+  "minimal",
+  "struct",
+  "array",
+  "vector",
+  "table",
+  "union",
 ]
 
+# Binding implementations under test.
 fidl_compatibilty_test_servers = [
   "cpp",
   "hlcpp",
@@ -227,19 +184,48 @@ fidl_compatibilty_test_servers = [
   "dart",
 ]
 
+# Generate a test-running component for each category.
 test_component_labels = []
-foreach(test, fidl_compatibility_tests) {
-  component_name = "fidl_compatibility_test_${test.name}"
+foreach(test, fidl_compatibility_tests_categories) {
+  component_name = "fidl_compatibility_test_${test}"
   component_label = "${component_name}_component"
+  output = "${component_name}_output"
+  executable_name = "${component_name}_executable"
   test_label = component_name
-  generate_label = "generate_${test.name}"
+  generate_label = "generate_${test}"
   generate_output = "${target_gen_dir}/${component_name}.cmx"
 
-  test_component_labels += [ ":${component_label}" ]
+  # Build the test runner binary for this test category.
+  executable(executable_name) {
+    output_name = output
 
-  ## Generate a CMX
+    testonly = true
+
+    sources = [
+      "${test}_test.cc",
+      "helpers.cc",
+      "helpers.h",
+    ]
+
+    deps = [
+      ":fidl_service",
+      ":hlcpp_client_app",
+      "//sdk/lib/fidl/cpp",
+      "//sdk/lib/sys/cpp",
+      "//src/lib/files",
+      "//src/lib/fxl",
+      "//src/lib/fxl/test:test_settings",
+      "//third_party/googletest:gtest",
+      "//third_party/re2",
+      "//zircon/system/ulib/async-default",
+      "//zircon/system/ulib/async-loop:async-loop-cpp",
+      "//zircon/system/ulib/async-loop:async-loop-default",
+    ]
+  }
+
+  # Generate a CMX.
   fuchsia_test_component_manifest(generate_label) {
-    deps = [ ":fidl_compatibility_test_executable" ]
+    deps = [ ":$executable_name" ]
     visibility = [ ":*" ]
     v2 = false
 
@@ -247,8 +233,7 @@ foreach(test, fidl_compatibility_tests) {
       test_component_manifest_cmx = [
         {
           program = {
-            args = [ "--gtest_filter=${test.filter}" ] +
-                   fidl_compatibilty_test_servers
+            args = fidl_compatibilty_test_servers
           }
           sandbox = {
             services = [ "fuchsia.sys.Launcher" ]
@@ -260,21 +245,16 @@ foreach(test, fidl_compatibility_tests) {
   generate_output = get_target_outputs(":$generate_label")
   generate_output = generate_output[0]
 
-  ## The test component
+  # Define the test component for this category.
   fuchsia_test_component(component_label) {
     visibility = [ ":*" ]
     component_name = component_name
     manifest = generate_output
     manifest_deps = [ ":$generate_label" ]
   }
-}
 
-fuchsia_component("fidl_compatibility_test_component") {
-  testonly = true
-
-  component_name = "fidl_compatibility_test"
-  manifest = "meta/fidl_compatibility_test.cmx"
-  deps = [ ":fidl_compatibility_test_executable" ]
+  # Save the component label, so that it may be included as a dependency of the test package.
+  test_component_labels += [ ":${component_label}" ]
 }
 
 fuchsia_test_package("fidl_compatibility_test_package") {
