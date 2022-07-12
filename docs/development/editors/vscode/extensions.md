@@ -4,9 +4,28 @@
 
 The following VS Code extensions may provide a productive development environment for Fuchsia:
 
-## Fuchsia-specific extensions
+## Official Fuchsia-specific extensions
 
-Fuchsia-specific extensions provide support with custom Fuchsia files.
+Fuchsia-specific extensions provide support with custom Fuchsia files. These extensions are developed 
+and are currently supported by Fuchsia developers.
+
+### Fuchsia developer extension
+
+The [Fuchsia developer extension][extension-link]{: .external} provides support for debugging
+Fuchsia devices, logging, and syntax highlighting. This extension is Fuchsia’s official extension 
+and can be used with the source tree and the SDK. For more information see the 
+[Fuchsia developer extension page][extension-install].
+
+<img class="vscode-image vscode-image-center"
+     alt="This figure shows the image of the fuchsia extension logo "
+     src="images/extensions/extension-logo.png"
+     width = "10%"/>
+
+## Community contributed extensions
+
+These extensions are developed by Fuchsia contributors. Extensions listed are unsupported 
+and could conflict with the official Fuchsia developer extension. It is recommended to use 
+the [Fuchsia developer extension.][extension-link]{: .external} 
 
 ### FIDL Language Support
 
@@ -182,3 +201,5 @@ from [Configuring workflow](#rust-configure-workflow):
 [supported-rust-analyzer-version]: /docs/development/languages/rust/editors.md#supported-rust-analyzer-version
 [lsp-definition]: https://microsoft.github.io/language-server-protocol/
 [vscode-remote-workspaces]: /docs/development/editors/vscode/remote-workspaces.md
+[extension-install]: /docs/development/editors/vscode/fuchsia-ext-install.md
+[extension-link]: https://code.visualstudio.com/
