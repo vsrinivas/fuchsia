@@ -4,7 +4,7 @@
 
 use crate::ot::BadSystemTime;
 use crate::prelude_internal::*;
-use std::fmt::{Debug, Formatter};
+use std::fmt::{Debug, Display, Formatter};
 use std::ops::{Add, AddAssign};
 use std::time::{Duration, SystemTime};
 
@@ -93,7 +93,6 @@ impl Timestamp {
     }
 
     /// Returns the subsecond fraction of the timestamp, measured in 1/32768ths of a second.
-    /// Least significant bit will always be clear.
     pub const fn subsec_fraction(&self) -> u64 {
         (self.0 & SUBSEC_MASK) >> 1
     }
@@ -109,6 +108,11 @@ impl Timestamp {
         SystemTime::UNIX_EPOCH + Duration::from_micros(self.as_micros())
     }
 
+    /// Returns this timestamp as a duration since the UNIX epoch (`1970-01-01T00:00:00UTC`)
+    pub fn to_duration_since_epoch(&self) -> Duration {
+        self.to_system_time().duration_since(SystemTime::UNIX_EPOCH).unwrap()
+    }
+
     /// Returns the timestamp as big-endian bytes.
     pub const fn to_be_bytes(&self) -> [u8; 8] {
         self.0.to_be_bytes()
@@ -117,6 +121,15 @@ impl Timestamp {
     /// Returns the timestamp as little-endian bytes.
     pub const fn to_le_bytes(&self) -> [u8; 8] {
         self.0.to_le_bytes()
+    }
+
+    /// Returns the timestamp as an instance of `chrono::naive::NaiveDateTime`.
+    pub fn to_naive_date_time(&self) -> chrono::naive::NaiveDateTime {
+        let duration = self.to_duration_since_epoch();
+        chrono::naive::NaiveDateTime::from_timestamp(
+            duration.as_secs().try_into().unwrap(),
+            duration.subsec_nanos().try_into().unwrap(),
+        )
     }
 }
 
@@ -148,8 +161,15 @@ impl From<u64> for Timestamp {
 
 impl Debug for Timestamp {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        let utc = if self.is_utc() { "UTC" } else { "?" };
-        write!(f, "Timestamp(0x{:06X}.{:04X}-{})", self.as_secs(), self.subsec_fraction() << 1, utc)
+        let utc = if self.is_utc() { "UTC" } else { "" };
+        write!(f, "{:12X} ({:?}{})", self.0, self.to_naive_date_time(), utc)
+    }
+}
+
+impl Display for Timestamp {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        let utc = if self.is_utc() { " UTC" } else { "" };
+        write!(f, "{}{}", self.to_naive_date_time(), utc)
     }
 }
 
@@ -210,6 +230,18 @@ mod test {
 
         assert_eq!(Timestamp(1).to_be_bytes(), [0, 0, 0, 0, 0, 0, 0, 1]);
         assert_eq!(Timestamp(1).to_le_bytes(), [1, 0, 0, 0, 0, 0, 0, 0]);
+
+        assert_eq!(
+            format!("{:?}", Timestamp::from(0x62CC8DE70000)),
+            "62CC8DE70000 (2022-07-11T20:53:59)".to_string()
+        );
+
+        assert_eq!(Timestamp::from(0x62CC8DE70000).to_string(), "2022-07-11 20:53:59".to_string());
+
+        assert_eq!(
+            Timestamp::from(0x62CC8DE70001).to_string(),
+            "2022-07-11 20:53:59 UTC".to_string()
+        );
 
         assert!(!Timestamp::from(0u64).is_utc());
         assert!(Timestamp::from(1u64).is_utc());
