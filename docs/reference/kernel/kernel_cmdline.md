@@ -480,15 +480,6 @@ is no prefix so paths are treated as exact relative paths from the root of the
 BOOTFS. e.g. with `userboot.root=pkg/foo` and `userboot.next=bin/app`, the names
 found in the BOOTFS will be `pkg/foo/bin/app`, `pkg/foo/lib/ld.so.1`, etc.
 
-## userboot.reboot
-
-If this option is set, userboot will attempt to reboot the machine after waiting
-3 seconds when the process it launches exits.
-
-*If running a "ZBI test" image in QEMU, this will cause the system to
-continually run tests and reboot.* For QEMU, `userboot.shutdown` is usually
-preferable.
-
 ## userboot.shutdown
 
 If this option is set, userboot will attempt to power off the machine when the

@@ -17,7 +17,6 @@ constexpr std::string_view kOptPrefix = "userboot";
 constexpr std::string_view kRootOpt = "userboot.root";
 constexpr std::string_view kNextOpt = "userboot.next";
 constexpr std::string_view kShutdownOpt = "userboot.shutdown";
-constexpr std::string_view kRebootOpt = "userboot.reboot";
 
 // TODO(joshuaseaton): This should really be defined as a default value of
 // `Options::next` and expressed as a std::string_view; however, that can
@@ -58,8 +57,6 @@ void ParseCmdline(const zx::debuglog& log, std::string_view cmdline, Options& op
       opts.root = value;
     } else if (key == kShutdownOpt) {
       opts.epilogue = Epilogue::kPowerOffAfterChildExit;
-    } else if (key == kRebootOpt) {
-      opts.epilogue = Epilogue::kRebootAfterChildExit;
     } else {
       printl(log, "WARNING: unknown option %.*s ignored\n", static_cast<int>(key.size()),
              key.data());

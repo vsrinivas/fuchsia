@@ -347,18 +347,9 @@ zx::channel StartChildProcess(const zx::debuglog& log, const Options& options,
 
   wait_till_child_exits();
 
-  uint32_t reason = ZX_SYSTEM_POWERCTL_SHUTDOWN;
-  const char* reason_str = "poweroff";
-  if (options.epilogue == Epilogue::kRebootAfterChildExit) {
-    reason = ZX_SYSTEM_POWERCTL_REBOOT;
-    reason_str = "reboot";
-    printl(log, "Waiting 3 seconds...");
-    zx::nanosleep(zx::deadline_after(zx::sec(3)));
-  }
-
-  printl(log, "Process exited.  Executing \"%s\".", reason_str);
-  zx_system_powerctl(power.get(), reason, nullptr);
-  printl(log, "still here after %s!", reason_str);
+  printl(log, "Process exited.  Executing poweroff");
+  zx_system_powerctl(power.get(), ZX_SYSTEM_POWERCTL_SHUTDOWN, nullptr);
+  printl(log, "still here after poweroff!");
 
   while (true)
     __builtin_trap();

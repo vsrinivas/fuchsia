@@ -14,7 +14,6 @@
 // Userboot's terminal behaviour.
 enum class Epilogue {
   kExitAfterChildLaunch,
-  kRebootAfterChildExit,    // If `userboot.reboot` is set.
   kPowerOffAfterChildExit,  // If `userboot.shutdown` is set.
 };
 
