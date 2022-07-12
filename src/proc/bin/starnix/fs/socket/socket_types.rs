@@ -40,7 +40,7 @@ bitflags! {
         /// Further receptions will be disallowed.
         const READ = 1 << 0;
 
-        /// Durther transmissions will be disallowed.
+        /// Further transmissions will be disallowed.
         const WRITE = 1 << 2;
     }
 }
