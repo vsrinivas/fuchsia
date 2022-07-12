@@ -90,7 +90,7 @@ void main() {
     PackageManagerRepo repoServer;
     String testPackageName = 'package-manager-sample';
     String testRepoRewriteRule =
-        '{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"%%NAME%%","path_prefix_match":"/","path_prefix_replacement":"/"}]}';
+        '{"version":"1","content":[{"host_match":"package-manager-test","host_replacement":"%%NAME%%","path_prefix_match":"/","path_prefix_replacement":"/"}]}';
 
     setUp(() async {
       repoServer = await PackageManagerRepo.initRepo(sl4fDriver, pmPath, log);
@@ -361,16 +361,16 @@ void main() {
       // Covers these commands (success cases only):
       //
       // Newly covered:
-      // pkgctl resolve fuchsia-pkg://fuchsia.com/<name>
+      // pkgctl resolve fuchsia-pkg://package-manager-test/<name>
       var resolveProcessResult = await repoServer.pkgctlResolve(
           'Confirm that `$testPackageName` does not exist.',
-          'fuchsia-pkg://fuchsia.com/$testPackageName',
+          'fuchsia-pkg://package-manager-test/$testPackageName',
           1);
       expect(resolveProcessResult.exitCode, isNonZero);
       expect(
           resolveProcessResult.stdout.toString(),
           equals(
-              'resolving fuchsia-pkg://fuchsia.com/package-manager-sample\n'));
+              'resolving fuchsia-pkg://package-manager-test/package-manager-sample\n'));
 
       await repoServer.setupServe('$testPackageName-0.far', manifestPath, []);
       final optionalPort = repoServer.getServePort();
@@ -398,13 +398,13 @@ void main() {
 
       resolveProcessResult = await repoServer.pkgctlResolve(
           'Confirm that `$testPackageName` now exists.',
-          'fuchsia-pkg://fuchsia.com/$testPackageName',
+          'fuchsia-pkg://package-manager-test/$testPackageName',
           0);
       expect(resolveProcessResult.exitCode, isZero);
       expect(
           resolveProcessResult.stdout.toString(),
           equals(
-              'resolving fuchsia-pkg://fuchsia.com/package-manager-sample\n'));
+              'resolving fuchsia-pkg://package-manager-test/package-manager-sample\n'));
 
       await repoServer.pkgctlRuleReplace(
           'Restoring rewriting rule to original state',
@@ -415,10 +415,10 @@ void main() {
       // Covers these commands (success cases only):
       //
       // Newly covered:
-      // pkgctl resolve --verbose fuchsia-pkg://fuchsia.com/<name>
+      // pkgctl resolve --verbose fuchsia-pkg://package-manager-test/<name>
       var resolveVProcessResult = await repoServer.pkgctlResolveV(
           'Confirm that `$testPackageName` does not exist.',
-          'fuchsia-pkg://fuchsia.com/$testPackageName',
+          'fuchsia-pkg://package-manager-test/$testPackageName',
           1);
       expect(resolveVProcessResult.exitCode, isNonZero);
       expect(resolveVProcessResult.stdout.toString(),
@@ -450,7 +450,7 @@ void main() {
 
       resolveVProcessResult = await repoServer.pkgctlResolveV(
           'Confirm that `$testPackageName` now exists.',
-          'fuchsia-pkg://fuchsia.com/$testPackageName',
+          'fuchsia-pkg://package-manager-test/$testPackageName',
           0);
       expect(resolveVProcessResult.exitCode, isZero);
       expect(resolveVProcessResult.stdout.toString(),
@@ -473,7 +473,7 @@ void main() {
       // 5. The given component contains the expected content.
       var resolveExitCode = (await repoServer.pkgctlResolve(
               'Confirm that `$testPackageName` does not exist.',
-              'fuchsia-pkg://fuchsia.com/$testPackageName',
+              'fuchsia-pkg://package-manager-test/$testPackageName',
               1))
           .exitCode;
       expect(resolveExitCode, isNonZero);
@@ -499,11 +499,11 @@ void main() {
           'Setting rewriting rule for new repository', localRewriteRule, 0);
 
       var response = await sl4fDriver.ssh.run(
-          'run fuchsia-pkg://fuchsia.com/$testPackageName#meta/package-manager-sample.cmx');
+          'run fuchsia-pkg://package-manager-test/$testPackageName#meta/package-manager-sample.cmx');
       expect(response.exitCode, 0);
       expect(response.stdout.toString(), 'Hello, World!\n');
       response = await sl4fDriver.ssh.run(
-          'run fuchsia-pkg://fuchsia.com/$testPackageName#meta/package-manager-sample2.cmx');
+          'run fuchsia-pkg://package-manager-test/$testPackageName#meta/package-manager-sample2.cmx');
       expect(response.exitCode, 0);
       expect(response.stdout.toString(), 'Hello, World2!\n');
 
