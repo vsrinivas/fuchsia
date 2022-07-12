@@ -323,12 +323,16 @@ protocol Device {
         info DeviceInfo;
     });
 
-    /// Retrieves information for a specified Base Address Register.
+    /// Retrieves information for a specified Base Address Register (BAR). If the BAR contains
+    /// MSI-X capability tables then an attempt will be made to return an MMIO region excluding
+    /// those tables, if possible. Otherwise, an error will be returned.
     ///
     /// Parameters:
     /// |bar_id|: The id of the BAR being requested. Valid range is [0, 6).
     ///
     /// Errors:
+    /// |ZX_ERR_ACCESS_DENIED|: The specified BAR does not have a driver-accessible region due to
+    /// the presence of MSI-X tables. To use MSI-X see the |SetInterruptMode| method.
     /// |ZX_ERR_INTERNAL|: A bus driver error has occurred.
     /// |ZX_ERR_INVALID_ARGS|: The |bar_id| specified is outside of the acceptable range.
     /// |ZX_ERR_NOT_FOUND|: The specified |bar_id| does not exist for this device.
