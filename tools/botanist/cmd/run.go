@@ -590,11 +590,23 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target, args []stri
 			constants.DeviceAddrEnvKey: addr.String(),
 			constants.IPv4AddrEnvKey:   ipv4.String(),
 			constants.IPv6AddrEnvKey:   ipv6.String(),
-			constants.SSHKeyEnvKey:     t.SSHKey(),
 		}
 		for k, v := range env {
 			subprocessEnv[k] = v
 		}
+	}
+
+	// One would assume this should only be provisioned when paving, but
+	// there are some tests that attempt to SSH into a netbooted image that
+	// has our SSH keys baked into it. Therefore, we add the SSH key to the
+	// environment unconditionally. Additionally, some tools like FFX often
+	// require the SSH key path to be absolute (https://fxbug.dev/101081).
+	if t.SSHKey() != "" {
+		absKeyPath, err := filepath.Abs(t.SSHKey())
+		if err != nil {
+			return err
+		}
+		subprocessEnv[constants.SSHKeyEnvKey] = absKeyPath
 	}
 
 	// Run the provided command against t0, adding |subprocessEnv| into
