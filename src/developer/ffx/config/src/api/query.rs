@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::{
-    cache::load_config, check_config_files, get_config, nested::RecursiveMap, save_config,
+    api::ConfigResult, cache::load_config, check_config_files, nested::RecursiveMap, save_config,
     validate_type, ConfigError, ConfigLevel, ConfigValue, ValueStrategy,
 };
 use anyhow::{bail, Result};
@@ -70,6 +70,20 @@ impl<'a> ConfigQuery<'a> {
         Self { select, ..self }
     }
 
+    async fn get_config(&self) -> ConfigResult {
+        let config = load_config(self.get_build_dir().await.as_deref()).await?;
+        let read_guard = config.read().await;
+        let result = match self {
+            Self { name: Some(name), level: None, select, .. } => read_guard.get(*name, *select),
+            Self { name: Some(name), level: Some(level), .. } => {
+                read_guard.get_in_level(*name, *level)
+            }
+            Self { name: None, level: Some(level), .. } => read_guard.get_level(*level).cloned(),
+            _ => bail!("Invalid query: {self:?}"),
+        };
+        Ok(result.into())
+    }
+
     /// Get a value with as little processing as possible
     pub async fn get_raw<T>(&self) -> std::result::Result<T, T::Error>
     where
@@ -77,7 +91,7 @@ impl<'a> ConfigQuery<'a> {
         <T as std::convert::TryFrom<ConfigValue>>::Error: std::convert::From<ConfigError>,
     {
         T::validate_query(self)?;
-        get_config(self).await.map_err(|e| e.into())?.recursive_map(&validate_type::<T>).try_into()
+        self.get_config().await.map_err(|e| e.into())?.recursive_map(&validate_type::<T>).try_into()
     }
 
     /// Get a value with the normal processing of substitution strings
@@ -90,7 +104,7 @@ impl<'a> ConfigQuery<'a> {
 
         T::validate_query(self)?;
 
-        get_config(self)
+        self.get_config()
             .await
             .map_err(|e| e.into())?
             .recursive_map(&runtime)
@@ -113,7 +127,7 @@ impl<'a> ConfigQuery<'a> {
         use crate::mapping::*;
 
         T::validate_query(self)?;
-        get_config(self)
+        self.get_config()
             .await
             .map_err(|e| e.into())?
             .recursive_map(&runtime)
@@ -127,18 +141,29 @@ impl<'a> ConfigQuery<'a> {
             .try_into()
     }
 
+    fn validate_write_query(&self) -> Result<(&str, ConfigLevel)> {
+        match self {
+            ConfigQuery { name: None, .. } => {
+                bail!("Name of configuration is required to write to a value")
+            }
+            ConfigQuery { level: None, .. } => {
+                bail!("Level of configuration is required to write to a value")
+            }
+            ConfigQuery { level: Some(level), .. } if level == &ConfigLevel::Default => {
+                bail!("Cannot override defaults")
+            }
+            ConfigQuery { name: Some(key), level: Some(level), .. } => Ok((*key, *level)),
+        }
+    }
+
     /// Set the queried location to the given Value.
     pub async fn set(&self, value: Value) -> Result<()> {
-        let level = if let Some(l) = self.level {
-            l
-        } else {
-            bail!("level of configuration is required to set a value");
-        };
+        let (key, level) = self.validate_write_query()?;
         let build_dir = self.get_build_dir().await;
         check_config_files(&level, build_dir.as_deref())?;
         let config = load_config(build_dir.as_deref()).await?;
         let mut write_guard = config.write().await;
-        let config_changed = (*write_guard).set(&self, value)?;
+        let config_changed = (*write_guard).set(key, level, value)?;
 
         // FIXME(81502): There is a race between the ffx CLI and the daemon service
         // in updating the config. We can lose changes if both try to change the
@@ -153,39 +178,36 @@ impl<'a> ConfigQuery<'a> {
 
     /// Remove the value at the queried location.
     pub async fn remove(&self) -> Result<()> {
+        let (key, level) = self.validate_write_query()?;
         let build_dir = self.get_build_dir().await;
         let config = load_config(build_dir.as_deref()).await?;
         let mut write_guard = config.write().await;
-        (*write_guard).remove(&self)?;
+        (*write_guard).remove(key, level)?;
         save_config(&mut *write_guard, build_dir.as_deref())
     }
 
     /// Add this value at the queried location as an array item, converting the location to an array
     /// if necessary.
     pub async fn add(&self, value: Value) -> Result<()> {
-        let level = if let Some(l) = self.level {
-            l
-        } else {
-            bail!("level of configuration is required to add a value");
-        };
+        let (key, level) = self.validate_write_query()?;
         let build_dir = self.get_build_dir().await;
         check_config_files(&level, build_dir.as_deref())?;
         let config = load_config(build_dir.as_deref()).await?;
         let mut write_guard = config.write().await;
-        let config_changed = if let Some(mut current) = (*write_guard).get(&self) {
+        let config_changed = if let Some(mut current) = (*write_guard).get_in_level(key, level) {
             if current.is_object() {
                 bail!("cannot add a value to a subtree");
             } else {
                 match current.as_array_mut() {
                     Some(v) => {
                         v.push(value);
-                        (*write_guard).set(&self, Value::Array(v.to_vec()))?
+                        (*write_guard).set(key, level, Value::Array(v.to_vec()))?
                     }
-                    None => (*write_guard).set(&self, Value::Array(vec![current, value]))?,
+                    None => (*write_guard).set(key, level, Value::Array(vec![current, value]))?,
                 }
             }
         } else {
-            (*write_guard).set(&self, value)?
+            (*write_guard).set(key, level, value)?
         };
 
         // FIXME(81502): There is a race between the ffx CLI and the daemon service

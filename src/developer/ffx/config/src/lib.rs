@@ -6,7 +6,7 @@
 #![deny(unused_crate_dependencies)]
 
 use crate::api::{
-    get_config, validate_type,
+    validate_type,
     value::{ConfigValue, ValueStrategy},
     ConfigError,
 };

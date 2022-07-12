@@ -6,8 +6,8 @@ use {
     crate::api::query::SelectMode,
     crate::environment::Environment,
     crate::nested::{nested_get, nested_remove, nested_set},
-    crate::{ConfigLevel, ConfigQuery},
-    anyhow::{bail, Context, Result},
+    crate::ConfigLevel,
+    anyhow::{Context, Result},
     config_macros::include_default,
     serde_json::{Map, Value},
     std::{
@@ -152,91 +152,62 @@ impl Config {
         })
     }
 
-    pub fn get(&self, key: &ConfigQuery<'_>) -> Option<Value> {
-        if let Some(name) = key.name {
-            // Check for nested config values if there's a '.' in the key
-            let key_vec: Vec<&str> = name.split('.').collect();
-            if let Some(level) = key.level {
-                let config = match level {
-                    ConfigLevel::Runtime => &self.runtime,
-                    ConfigLevel::User => &self.user,
-                    ConfigLevel::Build => &self.build,
-                    ConfigLevel::Global => &self.global,
-                    ConfigLevel::Default => &self.default,
-                };
-                nested_get(config.as_ref(), key_vec[0], &key_vec[1..]).cloned()
-            } else {
-                match key.select {
-                    SelectMode::First => self
-                        .iter()
-                        .find_map(|c| nested_get(c.as_ref(), key_vec[0], &key_vec[1..]))
-                        .cloned(),
-                    SelectMode::All => {
-                        let result: Vec<Value> = self
-                            .iter()
-                            .filter_map(|c| nested_get(c.as_ref(), key_vec[0], &key_vec[1..]))
-                            .cloned()
-                            .collect();
-                        if result.len() > 0 {
-                            Some(Value::Array(result))
-                        } else {
-                            None
-                        }
-                    }
+    pub fn get_level(&self, level: ConfigLevel) -> Option<&Value> {
+        match level {
+            ConfigLevel::Runtime => self.runtime.as_ref(),
+            ConfigLevel::User => self.user.as_ref(),
+            ConfigLevel::Build => self.build.as_ref(),
+            ConfigLevel::Global => self.global.as_ref(),
+            ConfigLevel::Default => self.default.as_ref(),
+        }
+    }
+
+    pub fn get_in_level(&self, key: &str, level: ConfigLevel) -> Option<Value> {
+        let key_vec: Vec<&str> = key.split('.').collect();
+        nested_get(self.get_level(level), key_vec.get(0)?, &key_vec[1..]).cloned()
+    }
+
+    pub fn get(&self, key: &str, select: SelectMode) -> Option<Value> {
+        let key_vec: Vec<&str> = key.split('.').collect();
+        match select {
+            SelectMode::First => self
+                .iter()
+                .find_map(|c| nested_get(c.as_ref(), key_vec.get(0)?, &key_vec[1..]))
+                .cloned(),
+            SelectMode::All => {
+                let result: Vec<Value> = self
+                    .iter()
+                    .filter_map(|c| nested_get(c.as_ref(), key_vec.get(0)?, &key_vec[1..]))
+                    .cloned()
+                    .collect();
+                if result.len() > 0 {
+                    Some(Value::Array(result))
+                } else {
+                    None
                 }
             }
-        } else {
-            if let Some(level) = key.level {
-                let config = match level {
-                    ConfigLevel::Runtime => &self.runtime,
-                    ConfigLevel::User => &self.user,
-                    ConfigLevel::Build => &self.build,
-                    ConfigLevel::Global => &self.global,
-                    ConfigLevel::Default => &self.default,
-                };
-                config.clone()
-            } else {
-                // Not really supported now.  Maybe in the future.
-                None
-            }
         }
     }
 
-    fn validate_write_query<'a>(query: &'a ConfigQuery<'a>) -> Result<(&'a str, &'a ConfigLevel)> {
-        match query {
-            ConfigQuery { name: None, .. } => {
-                bail!("Name of configuration is required to write to a value")
-            }
-            ConfigQuery { level: None, .. } => {
-                bail!("Level of configuration is required to write to a value")
-            }
-            ConfigQuery { level: Some(level), .. } if level == &ConfigLevel::Default => {
-                bail!("Cannot override defaults")
-            }
-            ConfigQuery { name: Some(key), level: Some(level), .. } => Ok((*key, level)),
-        }
-    }
-
-    pub fn set(&mut self, query: &ConfigQuery<'_>, value: Value) -> Result<bool> {
-        let (key, level) = Self::validate_write_query(query)?;
-
+    pub fn set(&mut self, key: &str, level: ConfigLevel, value: Value) -> Result<bool> {
+        anyhow::ensure!(level != ConfigLevel::Default, "Can't set values at Default level");
         let key_vec: Vec<&str> = key.split('.').collect();
         let config_changed =
             nested_set(&mut self.get_level_map(level), key_vec[0], &key_vec[1..], value);
         Ok(config_changed)
     }
 
-    pub fn remove(&mut self, query: &ConfigQuery<'_>) -> Result<()> {
-        let (key, level) = Self::validate_write_query(query)?;
+    pub fn remove(&mut self, key: &str, level: ConfigLevel) -> Result<()> {
+        anyhow::ensure!(level != ConfigLevel::Default, "Can't remove values at Default level");
         let key_vec: Vec<&str> = key.split('.').collect();
-        nested_remove(&mut self.get_level_map(&level), key_vec[0], &key_vec[1..])
+        nested_remove(&mut self.get_level_map(level), key_vec[0], &key_vec[1..])
     }
 
     fn iter(&self) -> PriorityIterator<'_> {
         PriorityIterator { curr: None, config: self }
     }
 
-    fn get_level_map(&mut self, level: &ConfigLevel) -> &mut Map<String, Value> {
+    fn get_level_map(&mut self, level: ConfigLevel) -> &mut Map<String, Value> {
         let config = match level {
             ConfigLevel::Runtime => &mut self.runtime,
             ConfigLevel::User => &mut self.user,
@@ -311,7 +282,7 @@ impl fmt::Display for Config {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{nested::RecursiveMap, query};
+    use crate::nested::RecursiveMap;
     use regex::Regex;
     use serde_json::json;
     use std::io::{BufReader, BufWriter};
@@ -379,7 +350,7 @@ mod test {
             None,
         );
 
-        let value = persistent_config.get(&"name".into());
+        let value = persistent_config.get("name", SelectMode::First);
         assert!(value.is_some());
         assert_eq!(value.unwrap(), Value::String(String::from("Build")));
 
@@ -458,7 +429,7 @@ mod test {
             runtime: None,
         };
 
-        let value = test.get(&"name".into());
+        let value = test.get("name", SelectMode::First);
         assert!(value.is_some());
         assert_eq!(value.unwrap(), Value::String(String::from("Build")));
 
@@ -470,7 +441,7 @@ mod test {
             runtime: None,
         };
 
-        let value_build = test_build.get(&"name".into());
+        let value_build = test_build.get("name", SelectMode::First);
         assert!(value_build.is_some());
         assert_eq!(value_build.unwrap(), Value::String(String::from("User")));
 
@@ -482,7 +453,7 @@ mod test {
             runtime: None,
         };
 
-        let value_global = test_global.get(&"name".into());
+        let value_global = test_global.get("name", SelectMode::First);
         assert!(value_global.is_some());
         assert_eq!(value_global.unwrap(), Value::String(String::from("Global")));
 
@@ -494,14 +465,14 @@ mod test {
             runtime: None,
         };
 
-        let value_default = test_default.get(&"name".into());
+        let value_default = test_default.get("name", SelectMode::First);
         assert!(value_default.is_some());
         assert_eq!(value_default.unwrap(), Value::String(String::from("Default")));
 
         let test_none =
             Config { user: None, build: None, global: None, default: None, runtime: None };
 
-        let value_none = test_none.get(&"name".into());
+        let value_none = test_none.get("name", SelectMode::First);
         assert!(value_none.is_none());
         Ok(())
     }
@@ -515,11 +486,8 @@ mod test {
             default: None,
             runtime: None,
         };
-        test.set(
-            &query("name").level(Some(ConfigLevel::User)),
-            Value::String(String::from("whatever")),
-        )?;
-        let value = test.get(&"name".into());
+        test.set("name", ConfigLevel::User, Value::String(String::from("whatever")))?;
+        let value = test.get("name", SelectMode::First);
         assert_eq!(value, Some(Value::String(String::from("whatever"))));
         Ok(())
     }
@@ -533,7 +501,7 @@ mod test {
             default: Some(serde_json::from_str(DEFAULT)?),
             runtime: None,
         };
-        let value = test.get(&"field that does not exist".into());
+        let value = test.get("field that does not exist", SelectMode::First);
         assert!(value.is_none());
         Ok(())
     }
@@ -547,11 +515,8 @@ mod test {
             default: Some(serde_json::from_str(DEFAULT)?),
             runtime: None,
         };
-        test.set(
-            &query("name").level(Some(ConfigLevel::Build)),
-            Value::String(String::from("build-test")),
-        )?;
-        let value = test.get(&"name".into());
+        test.set("name", ConfigLevel::Build, Value::String(String::from("build-test")))?;
+        let value = test.get("name", SelectMode::First);
         assert!(value.is_some());
         assert_eq!(value.unwrap(), Value::String(String::from("build-test")));
         Ok(())
@@ -567,22 +532,34 @@ mod test {
             runtime: None,
         };
         assert!(test.set(
-            &query("name").level(Some(ConfigLevel::Build)),
+            "name",
+            ConfigLevel::Build,
             Value::String(String::from("build-test1"))
         )?);
-        assert_eq!(test.get(&"name".into()).unwrap(), Value::String(String::from("build-test1")));
+        assert_eq!(
+            test.get("name", SelectMode::First).unwrap(),
+            Value::String(String::from("build-test1"))
+        );
 
         assert!(!test.set(
-            &query("name").level(Some(ConfigLevel::Build)),
+            "name",
+            ConfigLevel::Build,
             Value::String(String::from("build-test1"))
         )?);
-        assert_eq!(test.get(&"name".into()).unwrap(), Value::String(String::from("build-test1")));
+        assert_eq!(
+            test.get("name", SelectMode::First).unwrap(),
+            Value::String(String::from("build-test1"))
+        );
 
         assert!(test.set(
-            &query("name").level(Some(ConfigLevel::Build)),
+            "name",
+            ConfigLevel::Build,
             Value::String(String::from("build-test2"))
         )?);
-        assert_eq!(test.get(&"name".into()).unwrap(), Value::String(String::from("build-test2")));
+        assert_eq!(
+            test.get("name", SelectMode::First).unwrap(),
+            Value::String(String::from("build-test2"))
+        );
 
         Ok(())
     }
@@ -591,37 +568,26 @@ mod test {
     fn test_set_build_from_none() -> Result<()> {
         let mut test =
             Config { user: None, build: None, global: None, default: None, runtime: None };
-        let value_none = test.get(&"name".into());
+        let value_none = test.get("name", SelectMode::First);
         assert!(value_none.is_none());
-        let error_set = test.set(
-            &query("name").level(Some(ConfigLevel::Default)),
-            Value::String(String::from("default")),
-        );
+        let error_set =
+            test.set("name", ConfigLevel::Default, Value::String(String::from("default")));
         assert!(error_set.is_err(), "Should not be able to set default values at runtime");
-        let value_default = test.get(&"name".into());
+        let value_default = test.get("name", SelectMode::First);
         assert!(
             value_default.is_none(),
             "Default value should be unset after failed attempt to set it"
         );
-        test.set(
-            &query("name").level(Some(ConfigLevel::Global)),
-            Value::String(String::from("global")),
-        )?;
-        let value_global = test.get(&"name".into());
+        test.set("name", ConfigLevel::Global, Value::String(String::from("global")))?;
+        let value_global = test.get("name", SelectMode::First);
         assert!(value_global.is_some());
         assert_eq!(value_global.unwrap(), Value::String(String::from("global")));
-        test.set(
-            &query("name").level(Some(ConfigLevel::User)),
-            Value::String(String::from("user")),
-        )?;
-        let value_user = test.get(&"name".into());
+        test.set("name", ConfigLevel::User, Value::String(String::from("user")))?;
+        let value_user = test.get("name", SelectMode::First);
         assert!(value_user.is_some());
         assert_eq!(value_user.unwrap(), Value::String(String::from("user")));
-        test.set(
-            &query("name").level(Some(ConfigLevel::Build)),
-            Value::String(String::from("build")),
-        )?;
-        let value_build = test.get(&"name".into());
+        test.set("name", ConfigLevel::Build, Value::String(String::from("build")))?;
+        let value_build = test.get("name", SelectMode::First);
         assert!(value_build.is_some());
         assert_eq!(value_build.unwrap(), Value::String(String::from("build")));
         Ok(())
@@ -636,21 +602,21 @@ mod test {
             default: Some(serde_json::from_str(DEFAULT)?),
             runtime: None,
         };
-        test.remove(&query("name").level(Some(ConfigLevel::User)))?;
-        let user_value = test.get(&"name".into());
+        test.remove("name", ConfigLevel::User)?;
+        let user_value = test.get("name", SelectMode::First);
         assert!(user_value.is_some());
         assert_eq!(user_value.unwrap(), Value::String(String::from("Build")));
-        test.remove(&query("name").level(Some(ConfigLevel::Build)))?;
-        let global_value = test.get(&"name".into());
+        test.remove("name", ConfigLevel::Build)?;
+        let global_value = test.get("name", SelectMode::First);
         assert!(global_value.is_some());
         assert_eq!(global_value.unwrap(), Value::String(String::from("Global")));
-        test.remove(&query("name").level(Some(ConfigLevel::Global)))?;
-        let default_value = test.get(&"name".into());
+        test.remove("name", ConfigLevel::Global)?;
+        let default_value = test.get("name", SelectMode::First);
         assert!(default_value.is_some());
         assert_eq!(default_value.unwrap(), Value::String(String::from("Default")));
-        let error_removed = test.remove(&query("name").level(Some(ConfigLevel::Default)));
+        let error_removed = test.remove("name", ConfigLevel::Default);
         assert!(error_removed.is_err(), "Should not be able to remove a default value");
-        let default_value = test.get(&"name".into());
+        let default_value = test.get("name", SelectMode::First);
         assert_eq!(
             default_value,
             Some(Value::String(String::from("Default"))),
@@ -663,7 +629,7 @@ mod test {
     #[test]
     fn test_default() {
         let test = Config::new(None, None, None, None);
-        let default_value = test.get(&"log.enabled".into());
+        let default_value = test.get("log.enabled", SelectMode::First);
         assert_eq!(
             default_value.unwrap(),
             Value::Array(vec![Value::String("$FFX_LOG_ENABLED".to_string()), Value::Bool(true)])
@@ -713,9 +679,9 @@ mod test {
         };
         let test_mapping = "TEST_MAP".to_string();
         let test_passed = "passed".to_string();
-        let mapped_value = test.get(&"name".into()).as_ref().recursive_map(&test_map);
+        let mapped_value = test.get("name", SelectMode::First).as_ref().recursive_map(&test_map);
         assert_eq!(mapped_value, Some(Value::String(test_passed)));
-        let identity_value = test.get(&"name".into());
+        let identity_value = test.get("name", SelectMode::First);
         assert_eq!(identity_value, Some(Value::String(test_mapping)));
         Ok(())
     }
@@ -729,7 +695,7 @@ mod test {
             default: None,
             runtime: Some(serde_json::from_str(NESTED)?),
         };
-        let value = test.get(&"name.nested".into());
+        let value = test.get("name.nested", SelectMode::First);
         assert_eq!(value, Some(Value::String("Nested".to_string())));
         Ok(())
     }
@@ -743,7 +709,7 @@ mod test {
             default: Some(serde_json::from_str(DEFAULT)?),
             runtime: Some(serde_json::from_str(NESTED)?),
         };
-        let value = test.get(&"name".into());
+        let value = test.get("name", SelectMode::First);
         assert_eq!(value, Some(serde_json::from_str("{\"nested\": \"Nested\"}")?));
         Ok(())
     }
@@ -757,7 +723,7 @@ mod test {
             default: Some(serde_json::from_str(NESTED)?),
             runtime: Some(serde_json::from_str(RUNTIME)?),
         };
-        let value = test.get(&"name.nested".into());
+        let value = test.get("name.nested", SelectMode::First);
         assert_eq!(value, Some(Value::String("Nested".to_string())));
         Ok(())
     }
@@ -771,7 +737,7 @@ mod test {
             default: Some(serde_json::from_str(NESTED)?),
             runtime: Some(serde_json::from_str(DEEP)?),
         };
-        let value = test.get(&"name.nested".into()).as_ref().recursive_map(&test_map);
+        let value = test.get("name.nested", SelectMode::First).as_ref().recursive_map(&test_map);
         assert_eq!(value, Some(serde_json::from_str("{\"deep\": {\"name\": \"passed\"}}")?));
         Ok(())
     }
@@ -780,8 +746,8 @@ mod test {
     fn test_nested_set_from_none() -> Result<()> {
         let mut test =
             Config { user: None, build: None, global: None, default: None, runtime: None };
-        test.set(&query("name.nested").level(Some(ConfigLevel::User)), Value::Bool(false))?;
-        let nested_value = test.get(&"name".into());
+        test.set("name.nested", ConfigLevel::User, Value::Bool(false))?;
+        let nested_value = test.get("name", SelectMode::First);
         assert_eq!(nested_value, Some(serde_json::from_str("{\"nested\": false}")?));
         Ok(())
     }
@@ -795,12 +761,12 @@ mod test {
             default: None,
             runtime: None,
         };
-        test.set(&query("name.updated").level(Some(ConfigLevel::User)), Value::Bool(true))?;
+        test.set("name.updated", ConfigLevel::User, Value::Bool(true))?;
         let expected = json!({
            "nested": "Nested",
            "updated": true
         });
-        let nested_value = test.get(&"name".into());
+        let nested_value = test.get("name", SelectMode::First);
         assert_eq!(nested_value, Some(expected));
         Ok(())
     }
@@ -814,17 +780,14 @@ mod test {
             default: None,
             runtime: None,
         };
-        test.set(&query("name.updated").level(Some(ConfigLevel::User)), Value::Bool(true))?;
+        test.set("name.updated", ConfigLevel::User, Value::Bool(true))?;
         let expected = json!({
            "updated": true
         });
-        let nested_value = test.get(&"name".into());
+        let nested_value = test.get("name", SelectMode::First);
         assert_eq!(nested_value, Some(expected));
-        test.set(
-            &query("name.updated").level(Some(ConfigLevel::User)),
-            serde_json::from_str(NESTED)?,
-        )?;
-        let nested_value = test.get(&"name.updated.name.nested".into());
+        test.set("name.updated", ConfigLevel::User, serde_json::from_str(NESTED)?)?;
+        let nested_value = test.get("name.updated.name.nested", SelectMode::First);
         assert_eq!(nested_value, Some(Value::String(String::from("Nested"))));
         Ok(())
     }
@@ -833,7 +796,7 @@ mod test {
     fn test_nested_remove_from_none() -> Result<()> {
         let mut test =
             Config { user: None, build: None, global: None, default: None, runtime: None };
-        let result = test.remove(&query("name.nested").level(Some(ConfigLevel::User)));
+        let result = test.remove("name.nested", ConfigLevel::User);
         assert!(result.is_err());
         Ok(())
     }
@@ -847,7 +810,7 @@ mod test {
             default: None,
             runtime: None,
         };
-        let result = test.remove(&query("name.unknown").level(Some(ConfigLevel::User)));
+        let result = test.remove("name.unknown", ConfigLevel::User);
         assert!(result.is_err());
         Ok(())
     }
@@ -861,8 +824,8 @@ mod test {
             default: None,
             runtime: None,
         };
-        test.remove(&query("name.nested.deep.name").level(Some(ConfigLevel::User)))?;
-        let value = test.get(&"name".into());
+        test.remove("name.nested.deep.name", ConfigLevel::User)?;
+        let value = test.get("name", SelectMode::First);
         assert_eq!(value, None);
         Ok(())
     }
@@ -876,8 +839,8 @@ mod test {
             default: None,
             runtime: None,
         };
-        test.remove(&query("name.nested").level(Some(ConfigLevel::User)))?;
-        let value = test.get(&"name".into());
+        test.remove("name.nested", ConfigLevel::User)?;
+        let value = test.get("name", SelectMode::First);
         assert_eq!(value, None);
         Ok(())
     }
@@ -891,7 +854,7 @@ mod test {
             default: Some(serde_json::from_str(DEFAULT)?),
             runtime: Some(serde_json::from_str(RUNTIME)?),
         };
-        let value = test.get(&query("name").select(SelectMode::All));
+        let value = test.get("name", SelectMode::All);
         match value {
             Some(Value::Array(v)) => {
                 assert_eq!(v.len(), 5);
@@ -902,7 +865,7 @@ mod test {
                 assert_eq!(v.next(), Some(Value::String("Global".to_string())));
                 assert_eq!(v.next(), Some(Value::String("Default".to_string())));
             }
-            _ => bail!("additive mode should return a Value::Array full of all values."),
+            _ => anyhow::bail!("additive mode should return a Value::Array full of all values."),
         }
         Ok(())
     }

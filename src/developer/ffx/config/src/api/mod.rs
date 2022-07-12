@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::cache::load_config,
     anyhow::Result,
     serde_json::Value,
     std::convert::{From, TryFrom, TryInto},
@@ -25,11 +24,6 @@ impl ConfigError {
     pub fn new(e: anyhow::Error) -> Self {
         Self(e)
     }
-}
-pub(crate) async fn get_config<'a>(query: &'a ConfigQuery<'a>) -> ConfigResult {
-    let config = load_config(query.get_build_dir().await.as_deref()).await?;
-    let read_guard = config.read().await;
-    Ok((*read_guard).get(&query).into())
 }
 
 pub(crate) fn validate_type<T>(value: Value) -> Option<Value>
