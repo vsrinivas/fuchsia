@@ -114,9 +114,18 @@ func (m *multicastIpv4RoutingTableControllerImpl) AddRoute(_ fidl.Context, addre
 	}
 }
 
-func (m *multicastIpv4RoutingTableControllerImpl) DelRoute(fidl.Context, admin.Ipv4UnicastSourceAndMulticastDestination) (admin.Ipv4RoutingTableControllerDelRouteResult, error) {
-	// TODO(https://fxbug.dev/102563): Implement DelRoute.
-	return admin.Ipv4RoutingTableControllerDelRouteResult{}, errors.New("Ipv4RoutingTableController.DelRoute unimplemented. See fxbug.dev/102563.")
+func (m *multicastIpv4RoutingTableControllerImpl) DelRoute(_ fidl.Context, addresses admin.Ipv4UnicastSourceAndMulticastDestination) (admin.Ipv4RoutingTableControllerDelRouteResult, error) {
+	stackAddresses := toStackUnicastSourceAndMulticastDestination(addresses)
+	switch err := m.stack.RemoveMulticastRoute(ipv4.ProtocolNumber, stackAddresses); err.(type) {
+	case nil:
+		return admin.Ipv4RoutingTableControllerDelRouteResultWithResponse(admin.Ipv4RoutingTableControllerDelRouteResponse{}), nil
+	case *tcpip.ErrBadAddress:
+		return admin.Ipv4RoutingTableControllerDelRouteResultWithErr(admin.Ipv4RoutingTableControllerDelRouteErrorInvalidAddress), nil
+	case *tcpip.ErrNoRoute:
+		return admin.Ipv4RoutingTableControllerDelRouteResultWithErr(admin.Ipv4RoutingTableControllerDelRouteErrorNotFound), nil
+	default:
+		panic(fmt.Sprintf("m.stack.RemoveMulticastRoute(ipv4.ProtocolNumber, %#v): %s", stackAddresses, err))
+	}
 }
 
 func (m *multicastIpv4RoutingTableControllerImpl) GetRouteStats(fidl.Context, admin.Ipv4UnicastSourceAndMulticastDestination) (admin.Ipv4RoutingTableControllerGetRouteStatsResult, error) {

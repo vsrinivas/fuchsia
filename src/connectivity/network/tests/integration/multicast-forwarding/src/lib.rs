@@ -57,6 +57,7 @@ lazy_static! {
 }
 
 const IPV4_MULTICAST_ADDR: fnet::Ipv4Address = fidl_ip_v4!("225.0.0.0");
+const IPV4_OTHER_MULTICAST_ADDR: fnet::Ipv4Address = fidl_ip_v4!("225.0.0.1");
 const IPV4_ANY_ADDR: fnet::Ipv4Address = fidl_ip_v4!("0.0.0.0");
 const IPV4_LINK_LOCAL_UNICAST_ADDR: fnet::Ipv4Address = fidl_ip_v4!("169.254.0.10");
 const IPV4_UNICAST_ADDR: fnet::Ipv4Address = fidl_ip_v4!("192.168.0.2");
@@ -1233,6 +1234,8 @@ async fn watch_routing_events_hanging<E: netemul::Endpoint>(name: &str) {
         .connect_to_protocol::<fnet_multicast_admin::Ipv4RoutingTableControllerMarker>()
         .expect("connect to protocol");
 
+    wait_for_controller_to_start(&controller, &test_network).await;
+
     let watch_routing_events_fut = async {
         let (dropped_events, addresses, input_interface, event) =
             controller.watch_routing_events().await.expect("watch_routing_events failed");
@@ -1383,4 +1386,124 @@ async fn watch_routing_events_dropped_events<E: netemul::Endpoint>(name: &str) {
     // Immediately reading the next event should result in the dropped events
     // counter getting reset.
     expect_num_dropped_events(&controller, 0).await;
+}
+
+#[variants_test]
+#[test_case(
+    "success",
+    DeviceAddress::Server(Server::A),
+    IPV4_MULTICAST_ADDR,
+    Ok(());
+    "success"
+)]
+#[test_case(
+    "no_matching_route_for_source_address",
+    DeviceAddress::Server(Server::B),
+    IPV4_MULTICAST_ADDR,
+    Err(fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError::NotFound);
+    "no matching route for source address"
+)]
+#[test_case(
+    "no_matching_route_for_destination_address",
+    DeviceAddress::Server(Server::A),
+    IPV4_OTHER_MULTICAST_ADDR,
+    Err(fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError::NotFound);
+    "no matching route for destination address"
+)]
+#[test_case(
+    "multicast_source_address",
+    DeviceAddress::Other(IPV4_MULTICAST_ADDR),
+    IPV4_MULTICAST_ADDR,
+    Err(fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError::InvalidAddress);
+    "multicast source address"
+)]
+#[test_case(
+    "any_source_address",
+    DeviceAddress::Other(IPV4_ANY_ADDR),
+    IPV4_MULTICAST_ADDR,
+    Err(fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError::InvalidAddress);
+    "any source address"
+)]
+#[test_case(
+    "link_local_unicast_source_address",
+    DeviceAddress::Other(IPV4_LINK_LOCAL_UNICAST_ADDR),
+    IPV4_MULTICAST_ADDR,
+    Err(fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError::InvalidAddress);
+    "link local unicast source address"
+)]
+#[test_case(
+    "unicast_destination_address",
+    DeviceAddress::Server(Server::A),
+    IPV4_UNICAST_ADDR,
+    Err(fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError::InvalidAddress);
+    "unicast destination address"
+)]
+#[test_case(
+    "link_local_multicast_destination_address",
+    DeviceAddress::Server(Server::A),
+    IPV4_LINK_LOCAL_MULTICAST_ADDR,
+    Err(fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError::InvalidAddress);
+    "link local multicast destination address"
+)]
+async fn del_multicast_route<E: netemul::Endpoint>(
+    name: &str,
+    case_name: &str,
+    source_address: DeviceAddress,
+    destination_address: fnet::Ipv4Address,
+    expected_del_route_result: Result<
+        (),
+        fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError,
+    >,
+) {
+    let test_name = format!("{}_{}", name, case_name);
+    let sandbox = netemul::TestSandbox::new().expect("create sandbox");
+    let router_realm = sandbox
+        .create_netstack_realm::<Netstack2, _>(format!("{}_router_realm", &test_name))
+        .expect("create realm");
+    let test_network = MulticastForwardingNetwork::new::<E>(
+        &test_name,
+        &sandbox,
+        &router_realm,
+        MulticastForwardingNetworkOptions::default(),
+    )
+    .await;
+
+    let controller = router_realm
+        .connect_to_protocol::<fnet_multicast_admin::Ipv4RoutingTableControllerMarker>()
+        .expect("connect to protocol");
+
+    let mut addresses = test_network.default_unicast_source_and_multicast_destination();
+    let route = test_network.default_multicast_route();
+
+    controller
+        .add_route(&mut addresses, route)
+        .await
+        .expect("add_route failed")
+        .expect("add_route error");
+
+    // Before the route is removed, multicast packets should be successfully
+    // forwarded.
+    test_network
+        .send_and_receive_multicast_packet(hashmap! {
+            Client::A => true,
+        })
+        .await;
+
+    let mut del_addresses = fnet_multicast_admin::Ipv4UnicastSourceAndMulticastDestination {
+        unicast_source: test_network.get_device_address(source_address),
+        multicast_destination: destination_address,
+    };
+
+    assert_eq!(
+        controller.del_route(&mut del_addresses).await.expect("del_route failed"),
+        expected_del_route_result
+    );
+
+    // After del_route has been called, multicast packets should no longer be
+    // forwarded if the route was successfully removed.
+    test_network
+        .send_and_receive_multicast_packet(hashmap! {
+            Client::A => expected_del_route_result.is_err(),
+        })
+        .await;
 }
