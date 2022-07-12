@@ -503,6 +503,16 @@ impl<'a> ValidationContext<'a> {
                 None => continue,
             };
 
+            // Capability paths must not conflict with `/pkg`, or namespace generation might fail
+            if let Some(path) = capability_id.get_dir_path() {
+                if path == Path::new("/pkg") || path.starts_with("/pkg/") {
+                    return Err(Error::validate(format!(
+                        "{} \"{}\" conflicts with the protected path \"/pkg\", please use this capability with a different path",
+                        capability_id.type_str(), capability_id,
+                    )));
+                }
+            }
+
             // Validate that paths-based capabilities (service, directory, protocol)
             // are not prefixes of each other.
             for (_, used_id) in used_ids.iter() {
@@ -2163,6 +2173,30 @@ mod tests {
                 ],
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "directory \"/foo/bar\" is a prefix of \"use\" target protocol \"/foo/bar/fuchsia.2\""
+        ),
+        test_cml_use_disallows_pkg_conflicts_for_directories(
+            json!({
+                "use": [
+                    { "directory": "dir", "path": "/pkg/dir", "rights": [ "r*" ] },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "directory \"/pkg/dir\" conflicts with the protected path \"/pkg\", please use this capability with a different path"
+        ),
+        test_cml_use_disallows_pkg_conflicts_for_protocols(
+            json!({
+                "use": [
+                    { "protocol": "prot", "path": "/pkg/protocol" },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "protocol \"/pkg/protocol\" conflicts with the protected path \"/pkg\", please use this capability with a different path"
+        ),
+        test_cml_use_disallows_pkg_conflicts_for_storage(
+            json!({
+                "use": [
+                    { "storage": "store", "path": "/pkg/storage" },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "storage \"/pkg/storage\" conflicts with the protected path \"/pkg\", please use this capability with a different path"
         ),
         test_cml_use_disallows_filter_on_non_events(
             json!({

@@ -61,6 +61,9 @@ pub enum Error {
     #[error("Path \"{path}\" from {decl} overlaps with \"{other_path}\" path from {other_decl}. Paths across decls must be unique in order to avoid namespace collisions.")]
     InvalidPathOverlap { decl: DeclField, path: String, other_decl: DeclField, other_path: String },
 
+    #[error("{} \"{}\" path overlaps with \"/pkg\", which is a protected path", decl, path)]
+    PkgPathOverlap { decl: DeclField, path: String },
+
     #[error("Source path \"{1}\" provided to {0} decl is unnecessary. Built-in capabilities don't need this field as they originate from the framework.")]
     ExtraneousSourcePath(DeclField, String),
 
@@ -238,6 +241,13 @@ impl Error {
             path: path.into(),
             other_decl: DeclField { decl: other_decl.into(), field: "target_path".to_string() },
             other_path: other_path.into(),
+        }
+    }
+
+    pub fn pkg_path_overlap(decl: impl Into<String>, path: impl Into<String>) -> Self {
+        Error::PkgPathOverlap {
+            decl: DeclField { decl: decl.into(), field: "target_path".to_string() },
+            path: path.into(),
         }
     }
 

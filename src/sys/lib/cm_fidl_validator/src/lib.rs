@@ -675,7 +675,7 @@ impl<'a> ValidationContext<'a> {
     }
 
     /// Validates that paths-based capabilities (service, directory, protocol)
-    /// are different and not prefixes of each other.
+    /// are different, are not prefixes of each other, and do not collide "/pkg".
     fn validate_use_paths(&mut self, uses: &[fdecl::Use]) {
         #[derive(Debug, PartialEq, Clone, Copy)]
         struct PathCapability<'a> {
@@ -756,6 +756,11 @@ impl<'a> ValidationContext<'a> {
                     capability_b.decl,
                     path_b,
                 ));
+            }
+        }
+        for (used_path, capability) in used_paths.iter() {
+            if used_path.as_str() == "/pkg" || used_path.starts_with("/pkg/") {
+                self.errors.push(Error::pkg_path_overlap(capability.decl, *used_path));
             }
         }
     }
@@ -2792,6 +2797,50 @@ mod tests {
                 Err(ErrorList::new(vec![
                     Error::invalid_path_overlap(
                         "UseDirectory", "/foo/bar", "UseService", "/foo/bar/baz/fuchsia.logger.Log"),
+                ])),
+            ],
+        },
+        test_validate_use_disallows_pkg => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
+                    fdecl::Use::Directory(fdecl::UseDirectory {
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                        source_name: Some("abc".to_string()),
+                        target_path: Some("/pkg".to_string()),
+                        rights: Some(fio::Operations::CONNECT),
+                        subdir: None,
+                        ..fdecl::UseDirectory::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            results = vec![
+                Err(ErrorList::new(vec![
+                    Error::pkg_path_overlap("UseDirectory", "/pkg"),
+                ])),
+            ],
+        },
+        test_validate_use_disallows_pkg_overlap => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.uses = Some(vec![
+                    fdecl::Use::Directory(fdecl::UseDirectory {
+                        dependency_type: Some(fdecl::DependencyType::Strong),
+                        source: Some(fdecl::Ref::Parent(fdecl::ParentRef {})),
+                        source_name: Some("abc".to_string()),
+                        target_path: Some("/pkg/foo".to_string()),
+                        rights: Some(fio::Operations::CONNECT),
+                        subdir: None,
+                        ..fdecl::UseDirectory::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            results = vec![
+                Err(ErrorList::new(vec![
+                    Error::pkg_path_overlap("UseDirectory", "/pkg/foo"),
                 ])),
             ],
         },
