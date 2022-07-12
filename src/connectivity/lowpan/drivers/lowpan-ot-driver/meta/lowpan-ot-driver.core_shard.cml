@@ -6,14 +6,17 @@
         {
             name: "lowpan-ot-driver",
             url: "fuchsia-pkg://fuchsia.com/lowpan-ot-driver#meta/lowpan-ot-driver.cm",
-
-            // It won't expose any capability so cannot be launched when being connected.
-            // It registers service at boot time so that Matter/Weave can use it when they are brought up.
+            environment: "#full-resolver-env",
+        },
+        {
+            name: "lowpan-monitor",
+            url: "fuchsia-pkg://fuchsia.com/lowpan-ot-driver#meta/lowpan-monitor.cm",
             startup: "eager",
             environment: "#full-resolver-env",
         },
     ],
     offer: [
+        // offers for lowpan-ot-driver
         {
             protocol: [
                 "fuchsia.factory.lowpan.FactoryLookup",
@@ -90,6 +93,18 @@
             as: "dev-class-ot-radio",
             to: "#lowpan-ot-driver",
             subdir: "class/ot-radio",
+        },
+
+        // offers for lowpan-monitor
+        {
+            protocol: [ "fuchsia.component.Binder" ],
+            from: "#lowpan-ot-driver",
+            to: "#lowpan-monitor",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#lowpan-monitor" ],
         },
     ],
 }

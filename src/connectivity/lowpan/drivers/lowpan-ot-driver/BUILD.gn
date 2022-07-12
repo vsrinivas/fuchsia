@@ -106,6 +106,7 @@ fuchsia_package("lowpan-ot-driver") {
   deps = [
     ":lowpan-ot-driver-cv1",
     ":lowpan-ot-driver-cv2",
+    "//src/connectivity/lowpan/monitor:lowpan-monitor",
   ]
 }
 
