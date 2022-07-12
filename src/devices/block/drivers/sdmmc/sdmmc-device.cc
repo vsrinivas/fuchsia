@@ -378,11 +378,14 @@ zx_status_t SdmmcDevice::SdioIoRwExtended(uint32_t caps, bool write, uint32_t fn
     cmd_arg |= SDIO_IO_RW_EXTD_OP_CODE_INCR;
   }
 
+  uint32_t cmd_flags = SDIO_IO_RW_DIRECT_EXTENDED_FLAGS | (write ? 0 : SDMMC_CMD_READ);
+
   if (blk_count > 1) {
     if (caps & SDIO_CARD_MULTI_BLOCK) {
       cmd_arg |= SDIO_IO_RW_EXTD_BLOCK_MODE;
       UpdateBits(&cmd_arg, SDIO_IO_RW_EXTD_BYTE_BLK_COUNT_MASK, SDIO_IO_RW_EXTD_BYTE_BLK_COUNT_LOC,
                  blk_count);
+      cmd_flags |= SDMMC_CMD_MULTI_BLK | SDMMC_CMD_BLKCNT_EN;
     } else {
       // Convert the request into byte mode?
       return ZX_ERR_NOT_SUPPORTED;
@@ -396,8 +399,7 @@ zx_status_t SdmmcDevice::SdioIoRwExtended(uint32_t caps, bool write, uint32_t fn
   sdmmc_req_t req = {};
   req.cmd_idx = SDIO_IO_RW_DIRECT_EXTENDED;
   req.arg = cmd_arg;
-  req.cmd_flags = write ? (SDIO_IO_RW_DIRECT_EXTENDED_FLAGS)
-                        : (SDIO_IO_RW_DIRECT_EXTENDED_FLAGS | SDMMC_CMD_READ),
+  req.cmd_flags = cmd_flags;
   req.blockcount = static_cast<uint16_t>(blk_count);
   req.blocksize = static_cast<uint16_t>(blk_size);
 

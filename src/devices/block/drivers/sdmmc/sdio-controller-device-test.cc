@@ -253,6 +253,16 @@ TEST_F(SdioControllerDeviceTest, SdioDoRwTxn) {
   EXPECT_OK(dut_->SdioGetBlockSize(3, &block_size));
   EXPECT_EQ(block_size, 8);
 
+  sdmmc_.set_command_callback(SDIO_IO_RW_DIRECT_EXTENDED, [](sdmmc_req_t* req) -> void {
+    if (req->blockcount > 1) {
+      EXPECT_TRUE(req->cmd_flags & SDMMC_CMD_BLKCNT_EN);
+      EXPECT_TRUE(req->cmd_flags & SDMMC_CMD_MULTI_BLK);
+    } else {
+      EXPECT_FALSE(req->cmd_flags & SDMMC_CMD_BLKCNT_EN);
+      EXPECT_FALSE(req->cmd_flags & SDMMC_CMD_MULTI_BLK);
+    }
+  });
+
   constexpr uint8_t kTestData[52] = {
       0xff, 0x7c, 0xa6, 0x24, 0x6f, 0x69, 0x7a, 0x39, 0x63, 0x68, 0xef, 0x28, 0xf3,
       0x18, 0x91, 0xf1, 0x68, 0x48, 0x78, 0x2f, 0xbb, 0xb2, 0x9a, 0x63, 0x51, 0xd4,
