@@ -199,7 +199,6 @@ if (is_fuchsia) {
   # some of the tests require the root resource handle or no system
   # services whatsoever.
   zbi_test_executable("core-tests-standalone") {
-    sources = [ "test-main-with-filter.cc" ]
     deps = [
       "//src/zircon/testing/standalone-test",
       "//zircon/system/ulib/zxtest",

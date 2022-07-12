@@ -19,6 +19,7 @@ static_library("standalone-test") {
   sources = [
     "standalone-io.cc",
     "standalone-options.cc",
+    "zxtest-main.cc",
   ]
   public_deps = [
     ":headers",
@@ -28,6 +29,7 @@ static_library("standalone-test") {
     "//src/lib/zbitl",
     "//zircon/kernel/lib/boot-options",
     "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
   ]
 }
 

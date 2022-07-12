@@ -12,7 +12,7 @@
 // a "normal" argc/argv.
 int main() {
   int argc = 1;
-  const char* argv[4] = {"core-tests", nullptr, nullptr, nullptr};
+  const char* argv[4] = {"standalone-test"};
 
   standalone::Option filter = {"--gtest_filter="};
   standalone::Option repeat = {"--gtest_repeat="};
