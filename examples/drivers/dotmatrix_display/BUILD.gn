@@ -19,6 +19,8 @@ executable("bin") {
     "//sdk/fidl/fuchsia.hardware.ftdi:fuchsia.hardware.ftdi_llcpp",
     "//sdk/lib/fdio",
   ]
+
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 executable("bin2") {
@@ -39,21 +41,9 @@ executable("bin2") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-fuchsia_component("dotmatrix_display_component") {
-  component_name = "dotmatrix_display"
-  manifest = "meta/dotmatrix_display.cmx"
-  deps = [ ":bin" ]
-}
-
-fuchsia_component("create_ssd1306_component") {
-  component_name = "create_ssd1306"
-  manifest = "meta/create_ssd1306.cmx"
-  deps = [ ":bin2" ]
-}
-
 fuchsia_shell_package("dotmatrix_display") {
   deps = [
-    ":create_ssd1306_component",
-    ":dotmatrix_display_component",
+    ":bin",
+    ":bin2",
   ]
 }

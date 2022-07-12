@@ -16,6 +16,7 @@ config("fidl-llcpp-deprecated-raw-channels") {
   #
   # and replace the contents of `visibility` with the script output.
   visibility = [
+    "//examples/drivers/dotmatrix_display:bin",
     "//examples/drivers/dotmatrix_display:bin2",
     "//src/bringup/bin/pwrbtn-monitor",
     "//src/bringup/bin/svchost",
