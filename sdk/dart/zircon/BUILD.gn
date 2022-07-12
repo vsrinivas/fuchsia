@@ -99,7 +99,7 @@ dart_library("zircon") {
 
 dart_test_component("unittests_component") {
   component_name = "zircon_unittests"
-  manifest = "meta/zircon_unittests.cmx"
+  manifest = "meta/zircon_unittests.cml"
   sources = [
     "channel_test.dart",
     "clock_test.dart",
