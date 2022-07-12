@@ -12,7 +12,8 @@ def run_product_assembly(
         input_bundles,
         legacy_bundle,
         outdir,
-        extra_config=[]):
+        extra_config=[],
+        **kwargs):
     """
     Run `ffx assembly product ...` with appropriate configuration and arguments for host tests.
 
@@ -21,6 +22,8 @@ def run_product_assembly(
 
     Assumes that the script calling this function is an action or host test invoked such that
     cwd=root_build_dir.
+
+    Optional arguments can be passed by name.
     """
 
     # assume we're in the root build dir right now and that is where we'll find ffx env
@@ -53,5 +56,9 @@ def run_product_assembly(
         "--outdir",
         outdir,
     ]
+
+    for arg_name, value in kwargs.items():
+        args.append("--" + arg_name.replace('_', '-'))
+        args.append(value)
 
     return subprocess.run(args, capture_output=True)

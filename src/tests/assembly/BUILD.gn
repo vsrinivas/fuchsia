@@ -5,11 +5,11 @@
 if (is_host) {
   group("host_tests") {
     testonly = true
-    deps = [ "structured_config:host_tests" ]
+    deps = [ "assemble_image:host_tests" ]
   }
 }
 
 group("tests") {
   testonly = true
-  deps = [ "structured_config:tests" ]
+  deps = [ "assemble_image:tests" ]
 }

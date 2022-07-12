@@ -12,9 +12,7 @@ from run_assembly import run_product_assembly
 
 def main():
     parser = argparse.ArgumentParser(
-        description=
-        "Ensure that ffx assembly product adds structured config with the right ffx config."
-    )
+        description="Run ffx assembly with the provided arguments.")
     parser.add_argument(
         "--ffx-bin",
         type=pathlib.Path,
@@ -45,7 +43,23 @@ def main():
         type=pathlib.Path,
         required=True,
         help="Path to stampfile for telling ninja we're done.")
+    parser.add_argument(
+        "--additional-packages-path",
+        type=pathlib.Path,
+        required=False,
+        help="Path to additional packages configuration.")
+    parser.add_argument(
+        "--config",
+        action="append",
+        required=False,
+        help="Package config arguments.")
     args = parser.parse_args()
+
+    kwargs = {}
+    if args.additional_packages_path:
+        kwargs['additional_packages_path'] = args.additional_packages_path
+    if args.config:
+        kwargs['extra_config'] = args.config
 
     output = run_product_assembly(
         ffx_bin=args.ffx_bin,
@@ -53,7 +67,7 @@ def main():
         input_bundles=args.input_bundles_dir,
         legacy_bundle=args.legacy_bundle_dir,
         outdir=args.outdir,
-        extra_config=["assembly_example_enabled=true"])
+        **kwargs)
     if output.returncode != 0:
         print('command failed! stderr:')
         print(output.stderr.decode('UTF-8'))

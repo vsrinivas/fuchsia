@@ -9,6 +9,10 @@ group("tests") {
 if (is_host) {
   group("host_tests") {
     testonly = true
-    deps = [ "assembled_config" ]
+    deps = [
+      "assemble_image",
+      "developer_packages",
+      "structured_config",
+    ]
   }
 }

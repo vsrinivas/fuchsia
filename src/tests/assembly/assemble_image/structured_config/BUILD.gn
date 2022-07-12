@@ -1,0 +1,21 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/host_test.gni")
+import("//src/tests/assembly/assemble_image/test_assembly_config.gni")
+
+test_assembly_config("structured_config") {
+  base_packages = [ "//examples/assembly/structured_config/configured_by_assembly($default_toolchain)" ]
+  additional_args = [
+    "--config",
+    "assembly_example_enabled=true",
+  ]
+  config_json = {
+    platform = {
+      build_type = "eng"
+    }
+    product = {
+    }
+  }
+}

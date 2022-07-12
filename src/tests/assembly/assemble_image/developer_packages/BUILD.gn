@@ -1,0 +1,32 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Test to assemble an image with developer packages
+import("//build/testing/host_test.gni")
+import("//src/tests/assembly/assemble_image/test_assembly_config.gni")
+add_packages_output = "$target_out_dir/add_packages.json"
+generated_file("add_packages") {
+  testonly = true
+  outputs = [ add_packages_output ]
+  output_conversion = "json"
+  contents = {
+    base = []
+    cache = []
+  }
+}
+
+test_assembly_config("developer_packages") {
+  additional_args = [
+    "--additional-packages-path",
+    rebase_path(add_packages_output, root_build_dir),
+  ]
+  additional_deps = [ ":add_packages" ]
+  config_json = {
+    platform = {
+      build_type = "eng"
+    }
+    product = {
+    }
+  }
+}
