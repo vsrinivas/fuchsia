@@ -40,7 +40,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app.Start(forward_to_server);
+      app.Connect();
       bool called_back = false;
       app.echo()->EchoMinimal("", [this, &called_back, &callback]() {
         called_back = true;
@@ -66,7 +66,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app.Start(forward_to_server);
+      app.Connect();
       bool called_back = false;
       app.echo()->EchoMinimalWithError(
           "", result_variant,
@@ -97,7 +97,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app->Start(forward_to_server);
+      app->Connect();
       app->echo().events().EchoMinimalEvent = [this]() { this->HandleEchoMinimalEvent(); };
       app->echo()->EchoMinimalNoRetVal("");
       client_apps_.push_back(std::move(app));
@@ -118,7 +118,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app.Start(forward_to_server);
+      app.Connect();
       bool called_back = false;
       app.echo()->EchoStruct(std::move(value), "", [this, &called_back, &callback](Struct resp) {
         called_back = true;
@@ -145,7 +145,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app.Start(forward_to_server);
+      app.Connect();
       bool called_back = false;
       app.echo()->EchoStructWithError(
           std::move(value), std::move(err), "", result_variant,
@@ -176,7 +176,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app->Start(forward_to_server);
+      app->Connect();
       app->echo().events().EchoEvent = [this](Struct resp) {
         this->HandleEchoEvent(std::move(resp));
       };
@@ -201,7 +201,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app.Start(forward_to_server);
+      app.Connect();
       bool called_back = false;
       app.echo()->EchoArrays(std::move(value), "",
                              [this, &called_back, &callback](ArraysStruct resp) {
@@ -229,7 +229,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app.Start(forward_to_server);
+      app.Connect();
       bool called_back = false;
       app.echo()->EchoArraysWithError(
           std::move(value), std::move(err), "", result_variant,
@@ -263,7 +263,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app.Start(forward_to_server);
+      app.Connect();
       bool called_back = false;
       app.echo()->EchoVectors(std::move(value), "",
                               [this, &called_back, &callback](VectorsStruct resp) {
@@ -291,7 +291,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app.Start(forward_to_server);
+      app.Connect();
       bool called_back = false;
       app.echo()->EchoVectorsWithError(
           std::move(value), std::move(err), "", result_variant,
@@ -325,7 +325,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app.Start(forward_to_server);
+      app.Connect();
       bool called_back = false;
       app.echo()->EchoTable(std::move(value), "",
                             [this, &called_back, &callback](AllTypesTable resp) {
@@ -353,7 +353,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app.Start(forward_to_server);
+      app.Connect();
       bool called_back = false;
       app.echo()->EchoTableWithError(
           std::move(value), std::move(err), "", result_variant,
@@ -387,7 +387,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app.Start(forward_to_server);
+      app.Connect();
       bool called_back = false;
       app.echo()->EchoXunions(std::move(value), "",
                               [this, &called_back, &callback](std::vector<AllTypesXunion> resp) {
@@ -415,7 +415,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app.Start(forward_to_server);
+      app.Connect();
       bool called_back = false;
       app.echo()->EchoXunionsWithError(
           std::move(value), std::move(err), "", result_variant,
@@ -449,7 +449,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app.Start(forward_to_server);
+      app.Connect();
       bool called_back = false;
       app.echo()->EchoNamedStruct(std::move(value), "",
                                   [this, &called_back, &callback](imported::SimpleStruct resp) {
@@ -478,7 +478,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app.Start(forward_to_server);
+      app.Connect();
       bool called_back = false;
       app.echo()->EchoNamedStructWithError(
           std::move(value), std::move(err), "", result_variant,
@@ -510,7 +510,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app->Start(forward_to_server);
+      app->Connect();
       app->echo().events().OnEchoNamedEvent = [this](imported::SimpleStruct resp) {
         this->HandleOnEchoNamedEvent(std::move(resp));
       };
@@ -535,7 +535,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app.Start(forward_to_server);
+      app.Connect();
       bool called_back = false;
       payload.clear_forward_to_server();
       app.echo()->EchoTablePayload(std::move(payload),
@@ -563,7 +563,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app->Start(forward_to_server);
+      app->Connect();
       app->echo().events().OnEchoTablePayloadEvent = [this](ResponseTable resp) {
         this->HandleOnTablePayloadEvent(std::move(resp));
       };
@@ -590,7 +590,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app.Start(forward_to_server);
+      app.Connect();
       bool called_back = false;
       payload.clear_forward_to_server();
       app.echo()->EchoTablePayloadWithError(
@@ -629,7 +629,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app.Start(forward_to_server);
+      app.Connect();
       bool called_back = false;
       payload.clear_forward_to_server();
       app.echo()->EchoTableRequestComposed(
@@ -660,7 +660,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app.Start(forward_to_server);
+      app.Connect();
       bool called_back = false;
       if (payload.is_signed_()) {
         payload.signed_().forward_to_server = "";
@@ -701,7 +701,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app.Start(forward_to_server);
+      app.Connect();
       bool called_back = false;
       if (payload.is_signed_()) {
         payload.signed_().forward_to_server = "";
@@ -749,7 +749,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app->Start(forward_to_server);
+      app->Connect();
       app->echo().events().OnEchoUnionPayloadEvent = [this](ResponseUnion resp) {
         this->HandleOnUnionPayloadEvent(std::move(resp));
       };
@@ -785,7 +785,7 @@ class EchoServerApp : public Echo {
         loop_->Quit();
         FX_LOGS(ERROR) << "error communicating with " << forward_to_server << ": " << status;
       });
-      app.Start(forward_to_server);
+      app.Connect();
       bool called_back = false;
       app.echo()->EchoUnionResponseWithErrorComposed(
           value, want_absolute_value, "", err, result_variant,

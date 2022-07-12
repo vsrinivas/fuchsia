@@ -36,11 +36,42 @@ fidl_compatibility_tests_categories = [
 fidl_compatibilty_test_impls = [
   "cpp",
   "hlcpp",
+
+  # TODO(fxbug.dev/91343): re-enable Dart tests once they are converted to CML.
+  # "dart",
   "go",
   "llcpp",
   "rust",
-  "dart",
 ]
+
+# Gather the child definitions and capability offers for every possible proxy + server combination.
+test_component_cml_children = []
+test_component_cml_offers = []
+foreach(impl, fidl_compatibilty_test_impls) {
+  # Define proxy and server instances for this binding implementation.
+  test_component_cml_children += [
+    {
+      name = "${impl}_proxy"
+      url = "#meta/${impl}-impl.cm"
+    },
+    {
+      name = "${impl}_server"
+      url = "#meta/${impl}-impl.cm"
+    },
+  ]
+
+  # Enable logging for both the proxy and server instances of the given implementation.
+  test_component_cml_offers += [
+    {
+      protocol = [ "fuchsia.logger.LogSink" ]
+      from = "parent"
+      to = [
+        "#${impl}_proxy",
+        "#${impl}_server",
+      ]
+    },
+  ]
+}
 
 # Generate a test-running component for each category.
 test_component_labels = []
@@ -51,7 +82,7 @@ foreach(test, fidl_compatibility_tests_categories) {
   executable_name = "${component_name}_executable"
   test_label = component_name
   generate_label = "generate_${test}"
-  generate_output = "${target_gen_dir}/${component_name}.cmx"
+  generate_output = "${target_gen_dir}/${component_name}.cml"
 
   # Build the test runner binary for this test category.
   executable(executable_name) {
@@ -69,6 +100,7 @@ foreach(test, fidl_compatibility_tests_categories) {
       ":hlcpp_client_app",
       "fidl:fidl_service",
       "//sdk/lib/fidl/cpp",
+      "//sdk/lib/sys/component/cpp/testing:cpp",
       "//sdk/lib/sys/cpp",
       "//src/lib/files",
       "//src/lib/fxl",
@@ -81,21 +113,24 @@ foreach(test, fidl_compatibility_tests_categories) {
     ]
   }
 
-  # Generate a CMX.
+  # Generate a CML.
   fuchsia_test_component_manifest(generate_label) {
-    deps = [ ":$executable_name" ]
     visibility = [ ":*" ]
-    v2 = false
+    v2 = true
 
     metadata = {
-      test_component_manifest_cmx = [
+      test_component_manifest_cml = [
         {
+          include = [
+            "//sdk/lib/sys/component/realm_builder.shard.cml",
+            "//sdk/lib/sys/testing/elf_test_runner.shard.cml",
+          ]
           program = {
+            binary = "bin/$output"
             args = fidl_compatibilty_test_impls
           }
-          sandbox = {
-            services = [ "fuchsia.sys.Launcher" ]
-          }
+          children = test_component_cml_children
+          offer = test_component_cml_offers
         },
       ]
     }
@@ -107,8 +142,10 @@ foreach(test, fidl_compatibility_tests_categories) {
   fuchsia_test_component(component_label) {
     visibility = [ ":*" ]
     component_name = component_name
+    experimental_force_runner = "elf_test_runner"
     manifest = generate_output
     manifest_deps = [ ":$generate_label" ]
+    deps = [ ":$executable_name" ]
   }
 
   # Save the component label, so that it may be included as a dependency of the test package.

@@ -31,24 +31,16 @@ class EchoImpl extends Echo {
     _binding.bind(this, request);
   }
 
-  Future<Echo> proxy(String url) async {
-    assert(url.isNotEmpty);
-    final incoming = Incoming();
-    final launchInfo = LaunchInfo(
-        url: url, directoryRequest: incoming.request().passChannel());
-    final controller = ComponentControllerProxy();
-    final launcher = LauncherProxy();
-    Incoming.fromSvcPath().connectToService(launcher);
-    await launcher.createComponent(launchInfo, controller.ctrl.request());
+  Future<Echo> proxy() async {
     final echo = EchoProxy();
-    incoming.connectToService(echo);
+    Incoming.fromSvcPath()..connectToService(echo);
     return echo;
   }
 
   @override
   Future<void> echoMinimal(String forwardToServer) async {
     if (forwardToServer != null && forwardToServer.isNotEmpty) {
-      return (await proxy(forwardToServer)).echoMinimal('');
+      return (await proxy()).echoMinimal('');
     }
     return null;
   }
@@ -57,8 +49,7 @@ class EchoImpl extends Echo {
   Future<void> echoMinimalWithError(
       String forwardToServer, RespondWith resultVariant) async {
     if (forwardToServer != null && forwardToServer.isNotEmpty) {
-      return (await proxy(forwardToServer))
-          .echoMinimalWithError('', resultVariant);
+      return (await proxy()).echoMinimalWithError('', resultVariant);
     }
     if (resultVariant == RespondWith.err) {
       throw MethodException(0);
@@ -77,7 +68,7 @@ class EchoImpl extends Echo {
   @override
   Future<void> echoMinimalNoRetVal(String forwardToServer) async {
     if (forwardToServer != null && forwardToServer.isNotEmpty) {
-      final echo = await proxy(forwardToServer);
+      final echo = await proxy();
       // Keep echo around until we process the expected event.
       proxies[forwardToServer] = echo;
       echo.echoMinimalEvent.listen((v) {
@@ -94,7 +85,7 @@ class EchoImpl extends Echo {
   @override
   Future<Struct> echoStruct(Struct value, String forwardToServer) async {
     if (forwardToServer != null && forwardToServer.isNotEmpty) {
-      return (await proxy(forwardToServer)).echoStruct(value, '');
+      return (await proxy()).echoStruct(value, '');
     }
     return value;
   }
@@ -103,8 +94,7 @@ class EchoImpl extends Echo {
   Future<Struct> echoStructWithError(Struct value, DefaultEnum err,
       String forwardToServer, RespondWith resultVariant) async {
     if (forwardToServer != null && forwardToServer.isNotEmpty) {
-      return (await proxy(forwardToServer))
-          .echoStructWithError(value, err, '', resultVariant);
+      return (await proxy()).echoStructWithError(value, err, '', resultVariant);
     }
     if (resultVariant == RespondWith.err) {
       throw MethodException(err);
@@ -123,7 +113,7 @@ class EchoImpl extends Echo {
   @override
   Future<void> echoStructNoRetVal(Struct value, String forwardToServer) async {
     if (forwardToServer != null && forwardToServer.isNotEmpty) {
-      final echo = await proxy(forwardToServer);
+      final echo = await proxy();
       // Keep echo around until we process the expected event.
       proxies[forwardToServer] = echo;
       echo.echoEvent.listen((Struct val) {
@@ -141,7 +131,7 @@ class EchoImpl extends Echo {
   Future<ArraysStruct> echoArrays(
       ArraysStruct value, String forwardToServer) async {
     if (forwardToServer != null && forwardToServer.isNotEmpty) {
-      return (await proxy(forwardToServer)).echoArrays(value, '');
+      return (await proxy()).echoArrays(value, '');
     }
     return value;
   }
@@ -150,8 +140,7 @@ class EchoImpl extends Echo {
   Future<ArraysStruct> echoArraysWithError(ArraysStruct value, DefaultEnum err,
       String forwardToServer, RespondWith resultVariant) async {
     if (forwardToServer != null && forwardToServer.isNotEmpty) {
-      return (await proxy(forwardToServer))
-          .echoArraysWithError(value, err, '', resultVariant);
+      return (await proxy()).echoArraysWithError(value, err, '', resultVariant);
     }
     if (resultVariant == RespondWith.err) {
       throw MethodException(err);
@@ -164,7 +153,7 @@ class EchoImpl extends Echo {
   Future<VectorsStruct> echoVectors(
       VectorsStruct value, String forwardToServer) async {
     if (forwardToServer != null && forwardToServer.isNotEmpty) {
-      return (await proxy(forwardToServer)).echoVectors(value, '');
+      return (await proxy()).echoVectors(value, '');
     }
     return value;
   }
@@ -176,7 +165,7 @@ class EchoImpl extends Echo {
       String forwardToServer,
       RespondWith resultVariant) async {
     if (forwardToServer != null && forwardToServer.isNotEmpty) {
-      return (await proxy(forwardToServer))
+      return (await proxy())
           .echoVectorsWithError(value, err, '', resultVariant);
     }
     if (resultVariant == RespondWith.err) {
@@ -190,7 +179,7 @@ class EchoImpl extends Echo {
   Future<AllTypesTable> echoTable(
       AllTypesTable value, String forwardToServer) async {
     if (forwardToServer != null && forwardToServer.isNotEmpty) {
-      return (await proxy(forwardToServer)).echoTable(value, '');
+      return (await proxy()).echoTable(value, '');
     }
     return value;
   }
@@ -199,8 +188,7 @@ class EchoImpl extends Echo {
   Future<AllTypesTable> echoTableWithError(AllTypesTable value, DefaultEnum err,
       String forwardToServer, RespondWith resultVariant) async {
     if (forwardToServer != null && forwardToServer.isNotEmpty) {
-      return (await proxy(forwardToServer))
-          .echoTableWithError(value, err, '', resultVariant);
+      return (await proxy()).echoTableWithError(value, err, '', resultVariant);
     }
     if (resultVariant == RespondWith.err) {
       throw MethodException(err);
@@ -213,7 +201,7 @@ class EchoImpl extends Echo {
   Future<List<AllTypesXunion>> echoXunions(
       List<AllTypesXunion> value, String forwardToServer) async {
     if (forwardToServer != null && forwardToServer.isNotEmpty) {
-      return (await proxy(forwardToServer)).echoXunions(value, '');
+      return (await proxy()).echoXunions(value, '');
     }
     return value;
   }
@@ -225,7 +213,7 @@ class EchoImpl extends Echo {
       String forwardToServer,
       RespondWith resultVariant) async {
     if (forwardToServer != null && forwardToServer.isNotEmpty) {
-      return (await proxy(forwardToServer))
+      return (await proxy())
           .echoXunionsWithError(value, err, '', resultVariant);
     }
     if (resultVariant == RespondWith.err) {
@@ -239,7 +227,7 @@ class EchoImpl extends Echo {
   Future<imported.SimpleStruct> echoNamedStruct(
       imported.SimpleStruct value, String forwardToServer) async {
     if (forwardToServer != null && forwardToServer.isNotEmpty) {
-      return (await proxy(forwardToServer)).echoNamedStruct(value, '');
+      return (await proxy()).echoNamedStruct(value, '');
     }
     return value;
   }
@@ -251,7 +239,7 @@ class EchoImpl extends Echo {
       String forwardToServer,
       imported.WantResponse resultVariant) async {
     if (forwardToServer != null && forwardToServer.isNotEmpty) {
-      return (await proxy(forwardToServer))
+      return (await proxy())
           .echoNamedStructWithError(value, err, '', resultVariant);
     }
     if (resultVariant == imported.WantResponse.err) {
@@ -272,7 +260,7 @@ class EchoImpl extends Echo {
   Future<void> echoNamedStructNoRetVal(
       imported.SimpleStruct value, String forwardToServer) async {
     if (forwardToServer != null && forwardToServer.isNotEmpty) {
-      final echo = await proxy(forwardToServer);
+      final echo = await proxy();
       // Keep echo around until we process the expected event.
       proxies[forwardToServer] = echo;
       echo.onEchoNamedEvent.listen((imported.SimpleStruct val) {
@@ -292,7 +280,7 @@ class EchoImpl extends Echo {
     if (payload != null &&
         payload.forwardToServer != null &&
         payload.forwardToServer.isNotEmpty) {
-      return (await proxy(payload.forwardToServer))
+      return (await proxy())
           .echoTablePayload(RequestTable(value: payload.value));
     }
     return ResponseTable(value: payload.value);
@@ -304,7 +292,7 @@ class EchoImpl extends Echo {
     if (payload != null &&
         payload.forwardToServer != null &&
         payload.forwardToServer.isNotEmpty) {
-      return (await proxy(payload.forwardToServer)).echoTablePayloadWithError(
+      return (await proxy()).echoTablePayloadWithError(
           EchoEchoTablePayloadWithErrorRequest(
               value: payload.value,
               resultErr: payload.resultErr,
@@ -329,7 +317,7 @@ class EchoImpl extends Echo {
     if (payload != null &&
         payload.forwardToServer != null &&
         payload.forwardToServer.isNotEmpty) {
-      final echo = await proxy(payload.forwardToServer);
+      final echo = await proxy();
       // Keep echo around until we process the expected event.
       proxies[payload.forwardToServer] = echo;
       echo.onEchoTablePayloadEvent.listen((ResponseTable val) {
@@ -351,7 +339,7 @@ class EchoImpl extends Echo {
     if (payload != null &&
         payload.forwardToServer != null &&
         payload.forwardToServer.isNotEmpty) {
-      return (await proxy(payload.forwardToServer)).echoTableRequestComposed(
+      return (await proxy()).echoTableRequestComposed(
           imported.ComposedEchoTableRequestComposedRequest(
               value: payload.value));
     }
@@ -363,18 +351,16 @@ class EchoImpl extends Echo {
     // Unsigned variant path.
     if (payload.$tag == RequestUnionTag.unsigned) {
       if (payload.unsigned.forwardToServer.isNotEmpty) {
-        return (await proxy(payload.unsigned.forwardToServer)).echoUnionPayload(
-            RequestUnion.withUnsigned(
-                Unsigned(value: payload.unsigned.value, forwardToServer: '')));
+        return (await proxy()).echoUnionPayload(RequestUnion.withUnsigned(
+            Unsigned(value: payload.unsigned.value, forwardToServer: '')));
       }
       return ResponseUnion.withUnsigned(payload.unsigned.value);
     }
 
     // Signed variant path.
     if (payload.signed.forwardToServer.isNotEmpty) {
-      return (await proxy(payload.signed.forwardToServer)).echoUnionPayload(
-          RequestUnion.withSigned(
-              Signed(value: payload.signed.value, forwardToServer: '')));
+      return (await proxy()).echoUnionPayload(RequestUnion.withSigned(
+          Signed(value: payload.signed.value, forwardToServer: '')));
     }
     return ResponseUnion.withSigned(payload.signed.value);
   }
@@ -385,14 +371,12 @@ class EchoImpl extends Echo {
     // Unsigned variant path.
     if (payload.$tag == EchoEchoUnionPayloadWithErrorRequestTag.unsigned) {
       if (payload.unsigned.forwardToServer.isNotEmpty) {
-        return (await proxy(payload.unsigned.forwardToServer))
-            .echoUnionPayloadWithError(
-                EchoEchoUnionPayloadWithErrorRequest.withUnsigned(
-                    UnsignedErrorable(
-                        value: payload.unsigned.value,
-                        forwardToServer: '',
-                        resultErr: payload.unsigned.resultErr,
-                        resultVariant: payload.unsigned.resultVariant)));
+        return (await proxy()).echoUnionPayloadWithError(
+            EchoEchoUnionPayloadWithErrorRequest.withUnsigned(UnsignedErrorable(
+                value: payload.unsigned.value,
+                forwardToServer: '',
+                resultErr: payload.unsigned.resultErr,
+                resultVariant: payload.unsigned.resultVariant)));
       }
       if (payload.unsigned.resultVariant == RespondWith.err) {
         throw MethodException(payload.unsigned.resultErr);
@@ -403,13 +387,12 @@ class EchoImpl extends Echo {
 
     // Signed variant path.
     if (payload.signed.forwardToServer.isNotEmpty) {
-      return (await proxy(payload.signed.forwardToServer))
-          .echoUnionPayloadWithError(
-              EchoEchoUnionPayloadWithErrorRequest.withSigned(SignedErrorable(
-                  value: payload.signed.value,
-                  forwardToServer: '',
-                  resultErr: payload.signed.resultErr,
-                  resultVariant: payload.signed.resultVariant)));
+      return (await proxy()).echoUnionPayloadWithError(
+          EchoEchoUnionPayloadWithErrorRequest.withSigned(SignedErrorable(
+              value: payload.signed.value,
+              forwardToServer: '',
+              resultErr: payload.signed.resultErr,
+              resultVariant: payload.signed.resultVariant)));
     }
     if (payload.signed.resultVariant == RespondWith.err) {
       throw MethodException(payload.signed.resultErr);
@@ -430,7 +413,7 @@ class EchoImpl extends Echo {
     // Unsigned variant path.
     if (payload.$tag == RequestUnionTag.unsigned) {
       if (payload.unsigned.forwardToServer.isNotEmpty) {
-        final echo = await proxy(payload.unsigned.forwardToServer);
+        final echo = await proxy();
         // Keep echo around until we process the expected event.
         proxies[payload.unsigned.forwardToServer] = echo;
         echo.onEchoUnionPayloadEvent.listen((ResponseUnion val) {
@@ -445,7 +428,7 @@ class EchoImpl extends Echo {
 
     // Signed variant path.
     if (payload.signed.forwardToServer.isNotEmpty) {
-      final echo = await proxy(payload.signed.forwardToServer);
+      final echo = await proxy();
       // Keep echo around until we process the expected event.
       proxies[payload.signed.forwardToServer] = echo;
       echo.onEchoUnionPayloadEvent.listen((ResponseUnion val) {
@@ -471,7 +454,7 @@ class EchoImpl extends Echo {
           int resultErr,
           imported.WantResponse resultVariant) async {
     if (forwardToServer != null && forwardToServer.isNotEmpty) {
-      return (await proxy(forwardToServer)).echoUnionResponseWithErrorComposed(
+      return (await proxy()).echoUnionResponseWithErrorComposed(
           value, wantAbsoluteValue, '', resultErr, resultVariant);
     }
 

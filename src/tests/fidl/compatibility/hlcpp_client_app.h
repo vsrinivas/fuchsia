@@ -6,16 +6,15 @@
 // In its own library so that both the C++ server and the compatibility test
 // itself can use it.
 
-#ifndef SRCS_TESTS_FIDL_COMPATIBILITY_TEST_HLCPP_CLIENT_APP_H_
-#define SRCS_TESTS_FIDL_COMPATIBILITY_TEST_HLCPP_CLIENT_APP_H_
+#ifndef SRC_TESTS_FIDL_COMPATIBILITY_HLCPP_CLIENT_APP_H_
+#define SRC_TESTS_FIDL_COMPATIBILITY_HLCPP_CLIENT_APP_H_
 
+#include <fidl/test/compatibility/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <memory>
 #include <string>
-
-#include <fidl/test/compatibility/cpp/fidl.h>
 
 namespace fidl {
 namespace test {
@@ -27,15 +26,13 @@ class EchoClientApp {
 
   EchoPtr& echo();
 
-  void Start(std::string server_url);
+  void Connect();
 
  private:
   EchoClientApp(const EchoClientApp&) = delete;
   EchoClientApp& operator=(const EchoClientApp&) = delete;
 
   std::unique_ptr<sys::ComponentContext> context_;
-  std::shared_ptr<sys::ServiceDirectory> echo_provider_;
-  fuchsia::sys::ComponentControllerPtr controller_;
   EchoPtr echo_;
 };
 
@@ -43,4 +40,4 @@ class EchoClientApp {
 }  // namespace test
 }  // namespace fidl
 
-#endif  // SRCS_TESTS_FIDL_COMPATIBILITY_TEST_HLCPP_CLIENT_APP_H_
+#endif  // SRC_TESTS_FIDL_COMPATIBILITY_HLCPP_CLIENT_APP_H_

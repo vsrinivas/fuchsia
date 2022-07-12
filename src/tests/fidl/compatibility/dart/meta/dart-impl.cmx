@@ -4,9 +4,10 @@
     },
     "sandbox": {
         "services": [
+            "fidl.test.compatibility.Echo",
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Launcher"
+            "fuchsia.testing.runner.TestRunner"
         ]
     }
 }

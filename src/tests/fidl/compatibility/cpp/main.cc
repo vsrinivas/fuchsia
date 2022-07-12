@@ -62,17 +62,16 @@ class EventProxy : public fidl::AsyncEventHandler<Echo> {
 
 class EchoClientApp {
  public:
-  EchoClientApp(::std::string server_url)
+  EchoClientApp()
       : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
         loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-        client_(fidl::SharedClient<Echo>(ConnectTo(server_url), loop_.dispatcher())) {
+        client_(fidl::SharedClient<Echo>(ConnectTo(), loop_.dispatcher())) {
     loop_.StartThread();
   }
-  EchoClientApp(::std::string server_url, EventProxy* event_handler)
+  EchoClientApp(EventProxy* event_handler)
       : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
         loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-        client_(
-            fidl::SharedClient<Echo>(ConnectTo(server_url), loop_.dispatcher(), event_handler)) {
+        client_(fidl::SharedClient<Echo>(ConnectTo(), loop_.dispatcher(), event_handler)) {
     loop_.StartThread();
   }
 
@@ -272,27 +271,18 @@ class EchoClientApp {
   EchoClientApp& operator=(const EchoClientApp&) = delete;
 
  private:
-  // Called once upon construction to launch and connect to the server.
-  ::fidl::ClientEnd<Echo> ConnectTo(::std::string server_url) {
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = std::string(server_url.data(), server_url.size());
-    echo_provider_ = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
-
-    fuchsia::sys::LauncherPtr launcher;
-    context_->svc()->Connect(launcher.NewRequest());
-    launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-
-    auto echo_ends = ::fidl::CreateEndpoints<Echo>();
+  // Called once upon construction to connect to the server.
+  ::fidl::ClientEnd<Echo> ConnectTo() {
+    auto context = sys::ComponentContext::Create();
+    auto echo_ends = ::fidl::CreateEndpoints<fidl_test_compatibility::Echo>();
     ZX_ASSERT(echo_ends.is_ok());
-    ZX_ASSERT(echo_provider_->Connect(kEchoInterfaceName, echo_ends->server.TakeChannel()) ==
+    ZX_ASSERT(context->svc()->Connect(kEchoInterfaceName, echo_ends->server.TakeChannel()) ==
               ZX_OK);
 
     return std::move(echo_ends->client);
   }
 
   std::unique_ptr<sys::ComponentContext> context_;
-  std::shared_ptr<sys::ServiceDirectory> echo_provider_;
-  fuchsia::sys::ComponentControllerPtr controller_;
   async::Loop loop_;
   fidl::SharedClient<Echo> client_;
 };
@@ -305,8 +295,7 @@ class EchoConnection final : public fidl::Server<Echo> {
     if (request.forward_to_server().empty()) {
       completer.Reply();
     } else {
-      std::shared_ptr<EchoClientApp> app =
-          std::make_shared<EchoClientApp>(request.forward_to_server());
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
       app->EchoMinimal("", [completer = completer.ToAsync(), extend_lifetime = app](
                                fidl::Result<Echo::EchoMinimal>& result) mutable {
         ZX_ASSERT_MSG(result.is_ok(), "Forwarding failed: %s",
@@ -325,8 +314,7 @@ class EchoConnection final : public fidl::Server<Echo> {
         completer.Reply(fitx::ok());
       }
     } else {
-      std::shared_ptr<EchoClientApp> app =
-          std::make_shared<EchoClientApp>(request.forward_to_server());
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
       app->EchoMinimalWithError(
           "", request.result_variant(),
           [completer = completer.ToAsync(),
@@ -351,7 +339,7 @@ class EchoConnection final : public fidl::Server<Echo> {
                     result.error_value().FormatDescription().c_str());
     } else {
       EventProxy event_handler(server_binding_.value());
-      EchoClientApp app(request.forward_to_server(), &event_handler);
+      EchoClientApp app(&event_handler);
       zx_status_t status = app.EchoMinimalNoRetVal("");
       ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
                     zx_status_get_string(status));
@@ -365,8 +353,7 @@ class EchoConnection final : public fidl::Server<Echo> {
     if (request.forward_to_server().empty()) {
       completer.Reply(std::move(request.value()));
     } else {
-      std::shared_ptr<EchoClientApp> app =
-          std::make_shared<EchoClientApp>(request.forward_to_server());
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
       app->EchoStruct(std::move(request.value()), "",
                       [completer = completer.ToAsync(),
                        extend_lifetime = app](fidl::Result<Echo::EchoStruct>& result) mutable {
@@ -386,8 +373,7 @@ class EchoConnection final : public fidl::Server<Echo> {
         completer.Reply(fitx::ok(std::move(request.value())));
       }
     } else {
-      std::shared_ptr<EchoClientApp> app =
-          std::make_shared<EchoClientApp>(request.forward_to_server());
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
       app->EchoStructWithError(
           std::move(request.value()), request.result_err(), "", request.result_variant(),
           [completer = completer.ToAsync(),
@@ -413,7 +399,7 @@ class EchoConnection final : public fidl::Server<Echo> {
                     result.error_value().FormatDescription().c_str());
     } else {
       EventProxy event_handler(server_binding_.value());
-      EchoClientApp app(request.forward_to_server(), &event_handler);
+      EchoClientApp app(&event_handler);
       zx_status_t status = app.EchoStructNoRetVal(std::move(request.value()), "");
       ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
                     zx_status_get_string(status));
@@ -428,8 +414,7 @@ class EchoConnection final : public fidl::Server<Echo> {
     if (request.forward_to_server().empty()) {
       completer.Reply(std::move(request.value()));
     } else {
-      std::shared_ptr<EchoClientApp> app =
-          std::make_shared<EchoClientApp>(request.forward_to_server());
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
       app->EchoNamedStruct(std::move(request.value()), "",
                            [completer = completer.ToAsync(), extend_lifetime = app](
                                fidl::Result<Echo::EchoNamedStruct>& result) mutable {
@@ -449,8 +434,7 @@ class EchoConnection final : public fidl::Server<Echo> {
         completer.Reply(fitx::ok(std::move(request.value())));
       }
     } else {
-      std::shared_ptr<EchoClientApp> app =
-          std::make_shared<EchoClientApp>(request.forward_to_server());
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
       app->EchoNamedStructWithError(
           std::move(request.value()), request.result_err(), "", request.result_variant(),
           [completer = completer.ToAsync(),
@@ -476,7 +460,7 @@ class EchoConnection final : public fidl::Server<Echo> {
                     result.error_value().FormatDescription().c_str());
     } else {
       EventProxy event_handler(server_binding_.value());
-      EchoClientApp app(request.forward_to_server(), &event_handler);
+      EchoClientApp app(&event_handler);
       zx_status_t status = app.EchoNamedStructNoRetVal(std::move(request.value()), "");
       ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
                     zx_status_get_string(status));
@@ -490,8 +474,7 @@ class EchoConnection final : public fidl::Server<Echo> {
     if (request.forward_to_server().empty()) {
       completer.Reply(std::move(request.value()));
     } else {
-      std::shared_ptr<EchoClientApp> app =
-          std::make_shared<EchoClientApp>(request.forward_to_server());
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
       app->EchoArrays(std::move(request.value()), "",
                       [completer = completer.ToAsync(),
                        extend_lifetime = app](fidl::Result<Echo::EchoArrays>& result) mutable {
@@ -511,8 +494,7 @@ class EchoConnection final : public fidl::Server<Echo> {
         completer.Reply(fitx::ok(std::move(request.value())));
       }
     } else {
-      std::shared_ptr<EchoClientApp> app =
-          std::make_shared<EchoClientApp>(request.forward_to_server());
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
       app->EchoArraysWithError(
           std::move(request.value()), request.result_err(), "", request.result_variant(),
           [completer = completer.ToAsync(),
@@ -533,8 +515,7 @@ class EchoConnection final : public fidl::Server<Echo> {
     if (request.forward_to_server().empty()) {
       completer.Reply(std::move(request.value()));
     } else {
-      std::shared_ptr<EchoClientApp> app =
-          std::make_shared<EchoClientApp>(request.forward_to_server());
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
       app->EchoVectors(std::move(request.value()), "",
                        [completer = completer.ToAsync(),
                         extend_lifetime = app](fidl::Result<Echo::EchoVectors>& result) mutable {
@@ -554,8 +535,7 @@ class EchoConnection final : public fidl::Server<Echo> {
         completer.Reply(fitx::ok(std::move(request.value())));
       }
     } else {
-      std::shared_ptr<EchoClientApp> app =
-          std::make_shared<EchoClientApp>(request.forward_to_server());
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
       app->EchoVectorsWithError(
           std::move(request.value()), request.result_err(), "", request.result_variant(),
           [completer = completer.ToAsync(),
@@ -576,8 +556,7 @@ class EchoConnection final : public fidl::Server<Echo> {
     if (request.forward_to_server().empty()) {
       completer.Reply(std::move(request.value()));
     } else {
-      std::shared_ptr<EchoClientApp> app =
-          std::make_shared<EchoClientApp>(request.forward_to_server());
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
       app->EchoTable(std::move(request.value()), "",
                      [completer = completer.ToAsync(),
                       extend_lifetime = app](fidl::Result<Echo::EchoTable>& result) mutable {
@@ -597,8 +576,7 @@ class EchoConnection final : public fidl::Server<Echo> {
         completer.Reply(fitx::ok(std::move(request.value())));
       }
     } else {
-      std::shared_ptr<EchoClientApp> app =
-          std::make_shared<EchoClientApp>(request.forward_to_server());
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
       app->EchoTableWithError(
           std::move(request.value()), request.result_err(), "", request.result_variant(),
           [completer = completer.ToAsync(),
@@ -619,8 +597,7 @@ class EchoConnection final : public fidl::Server<Echo> {
     if (request.forward_to_server().empty()) {
       completer.Reply(std::move(request.value()));
     } else {
-      std::shared_ptr<EchoClientApp> app =
-          std::make_shared<EchoClientApp>(request.forward_to_server());
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
       app->EchoXunions(std::move(request.value()), "",
                        [completer = completer.ToAsync(),
                         extend_lifetime = app](fidl::Result<Echo::EchoXunions>& result) mutable {
@@ -640,8 +617,7 @@ class EchoConnection final : public fidl::Server<Echo> {
         completer.Reply(fitx::ok(std::move(request.value())));
       }
     } else {
-      std::shared_ptr<EchoClientApp> app =
-          std::make_shared<EchoClientApp>(request.forward_to_server());
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
       app->EchoXunionsWithError(
           std::move(request.value()), request.result_err(), "", request.result_variant(),
           [completer = completer.ToAsync(),
@@ -664,8 +640,7 @@ class EchoConnection final : public fidl::Server<Echo> {
       ::fidl_test_compatibility::ResponseTable resp{{.value = request.value()}};
       completer.Reply(std::move(resp));
     } else {
-      std::shared_ptr<EchoClientApp> app =
-          std::make_shared<EchoClientApp>(request.forward_to_server().value());
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
       fidl_test_compatibility::RequestTable req{{.value = request.value()}};
       app->EchoTablePayload(std::move(req),
                             [completer = completer.ToAsync(), extend_lifetime = app](
@@ -687,8 +662,7 @@ class EchoConnection final : public fidl::Server<Echo> {
         completer.Reply(fitx::ok(std::move(resp)));
       }
     } else {
-      std::shared_ptr<EchoClientApp> app =
-          std::make_shared<EchoClientApp>(request.forward_to_server().value());
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
       EchoEchoTablePayloadWithErrorRequest req{{
           .value = request.value(),
           .result_err = request.result_err(),
@@ -720,7 +694,7 @@ class EchoConnection final : public fidl::Server<Echo> {
                     result.error_value().FormatDescription().c_str());
     } else {
       EventProxy event_handler(server_binding_.value());
-      EchoClientApp app(request.forward_to_server().value(), &event_handler);
+      EchoClientApp app(&event_handler);
       ::fidl_test_compatibility::RequestTable req{{.value = request.value()}};
       zx_status_t status = app.EchoTablePayloadNoRetVal(std::move(req));
       ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
@@ -737,8 +711,7 @@ class EchoConnection final : public fidl::Server<Echo> {
       fidl_test_imported::SimpleStruct resp(true, request.value().value());
       completer.Reply(std::move(resp));
     } else {
-      std::shared_ptr<EchoClientApp> app =
-          std::make_shared<EchoClientApp>(request.forward_to_server().value());
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
       fidl_test_imported::ComposedEchoTableRequestComposedRequest req{{.value = request.value()}};
       app->EchoTableRequestComposed(
           std::move(req), [completer = completer.ToAsync(), extend_lifetime = app](
@@ -762,7 +735,7 @@ class EchoConnection final : public fidl::Server<Echo> {
         completer.Reply(ResponseUnion::WithUnsigned_(request.unsigned_()->value()));
       }
     } else {
-      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>(forward_to_server);
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
       RequestUnion req;
       if (request.Which() == RequestUnion::Tag::kSigned) {
         req = RequestUnion::WithSigned_(
@@ -801,7 +774,7 @@ class EchoConnection final : public fidl::Server<Echo> {
         }
       }
     } else {
-      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>(forward_to_server);
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
       EchoEchoUnionPayloadWithErrorRequest req;
       if (request.Which() == EchoEchoUnionPayloadWithErrorRequest::Tag::kSigned) {
         auto variant = request.signed_();
@@ -845,7 +818,7 @@ class EchoConnection final : public fidl::Server<Echo> {
                     result.error_value().FormatDescription().c_str());
     } else {
       EventProxy event_handler(server_binding_.value());
-      EchoClientApp app(forward_to_server, &event_handler);
+      EchoClientApp app(&event_handler);
       RequestUnion req;
       if (request.Which() == RequestUnion::Tag::kSigned) {
         req = RequestUnion::WithSigned_(
@@ -883,8 +856,7 @@ class EchoConnection final : public fidl::Server<Echo> {
                 request.value())));
       }
     } else {
-      std::shared_ptr<EchoClientApp> app =
-          std::make_shared<EchoClientApp>(request.forward_to_server());
+      std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
       request.forward_to_server() = "";
       fidl_test_imported::ComposedEchoTableRequestComposedRequest req{{.value = request.value()}};
       app->EchoUnionResponseWithErrorComposed(

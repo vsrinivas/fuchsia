@@ -13,15 +13,15 @@ import (
 	"log"
 	"sync"
 	"syscall/zx"
-	"syscall/zx/fdio"
+	// "syscall/zx/fdio"
 	"syscall/zx/fidl"
 
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 
 	"fidl/fidl/test/compatibility"
 	"fidl/fidl/test/imported"
-	"fidl/fuchsia/io"
-	"fidl/fuchsia/sys"
+	// "fidl/fuchsia/io"
+	// "fidl/fuchsia/sys"
 )
 
 var _ compatibility.EchoWithCtx = (*echoImpl)(nil)
@@ -30,39 +30,22 @@ type echoImpl struct {
 	ctx *component.Context
 }
 
-func (echo *echoImpl) getServer(url string) (*compatibility.EchoWithCtxInterface, error) {
-	directoryReq, directoryWithCtxInterface, err := io.NewDirectoryWithCtxInterfaceRequest()
+func (echo *echoImpl) getServer() (*compatibility.EchoWithCtxInterface, error) {
+	echoServerEnd, echoClientEnd, err := compatibility.NewEchoWithCtxInterfaceRequest()
 	if err != nil {
-		return nil, err
-	}
-	launchInfo := sys.LaunchInfo{
-		Url:              url,
-		DirectoryRequest: directoryReq.Channel,
-	}
-
-	componentControllerReq, _, err := sys.NewComponentControllerWithCtxInterfaceRequest()
-	if err != nil {
-		return nil, err
-	}
-	if err := echo.ctx.Launcher().CreateComponent(context.Background(), launchInfo, componentControllerReq); err != nil {
 		return nil, err
 	}
 
-	echoReq, echoWithCtxInterface, err := compatibility.NewEchoWithCtxInterfaceRequest()
-	if err != nil {
-		return nil, err
-	}
-	if err := fdio.ServiceConnectAt(zx.Handle(directoryWithCtxInterface.Channel), echoReq.Name(), zx.Handle(echoReq.Channel)); err != nil {
-		return nil, err
-	}
-	return echoWithCtxInterface, nil
+	ctx := component.NewContextFromStartupInfo()
+	ctx.ConnectToEnvService(echoServerEnd)
+	return echoClientEnd, nil
 }
 
 func (echo *echoImpl) EchoMinimal(_ fidl.Context, forwardURL string) error {
 	if forwardURL == "" {
 		return nil
 	}
-	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	echoWithCtxInterface, err := echo.getServer()
 	if err != nil {
 		log.Printf("Connecting to %s failed: %s", forwardURL, err)
 		return err
@@ -82,7 +65,7 @@ func (echo *echoImpl) EchoMinimalWithError(_ fidl.Context, forwardURL string, re
 			return compatibility.EchoEchoMinimalWithErrorResultWithResponse(compatibility.EchoEchoMinimalWithErrorResponse{}), nil
 		}
 	}
-	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	echoWithCtxInterface, err := echo.getServer()
 	if err != nil {
 		log.Printf("Connecting to %s failed: %s", forwardURL, err)
 		return compatibility.EchoEchoMinimalWithErrorResult{}, err
@@ -97,7 +80,7 @@ func (echo *echoImpl) EchoMinimalWithError(_ fidl.Context, forwardURL string, re
 
 func (echo *echoImpl) EchoMinimalNoRetVal(_ fidl.Context, forwardURL string) error {
 	if forwardURL != "" {
-		echoWithCtxInterface, err := echo.getServer(forwardURL)
+		echoWithCtxInterface, err := echo.getServer()
 		if err != nil {
 			log.Printf("Connecting to %s failed: %s", forwardURL, err)
 			return err
@@ -131,7 +114,7 @@ func (echo *echoImpl) EchoStruct(_ fidl.Context, value compatibility.Struct, for
 	if forwardURL == "" {
 		return value, nil
 	}
-	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	echoWithCtxInterface, err := echo.getServer()
 	if err != nil {
 		log.Printf("Connecting to %s failed: %s", forwardURL, err)
 		return compatibility.Struct{}, err
@@ -154,7 +137,7 @@ func (echo *echoImpl) EchoStructWithError(_ fidl.Context, value compatibility.St
 			}), nil
 		}
 	}
-	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	echoWithCtxInterface, err := echo.getServer()
 	if err != nil {
 		log.Printf("Connecting to %s failed: %s", forwardURL, err)
 		return compatibility.EchoEchoStructWithErrorResult{}, err
@@ -169,7 +152,7 @@ func (echo *echoImpl) EchoStructWithError(_ fidl.Context, value compatibility.St
 
 func (echo *echoImpl) EchoStructNoRetVal(_ fidl.Context, value compatibility.Struct, forwardURL string) error {
 	if forwardURL != "" {
-		echoWithCtxInterface, err := echo.getServer(forwardURL)
+		echoWithCtxInterface, err := echo.getServer()
 		if err != nil {
 			log.Printf("Connecting to %s failed: %s", forwardURL, err)
 			return err
@@ -204,7 +187,7 @@ func (echo *echoImpl) EchoArrays(_ fidl.Context, value compatibility.ArraysStruc
 	if forwardURL == "" {
 		return value, nil
 	}
-	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	echoWithCtxInterface, err := echo.getServer()
 	if err != nil {
 		log.Printf("Connecting to %s failed: %s", forwardURL, err)
 		return compatibility.ArraysStruct{}, err
@@ -227,7 +210,7 @@ func (echo *echoImpl) EchoArraysWithError(_ fidl.Context, value compatibility.Ar
 			}), nil
 		}
 	}
-	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	echoWithCtxInterface, err := echo.getServer()
 	if err != nil {
 		log.Printf("Connecting to %s failed: %s", forwardURL, err)
 		return compatibility.EchoEchoArraysWithErrorResult{}, err
@@ -244,7 +227,7 @@ func (echo *echoImpl) EchoVectors(_ fidl.Context, value compatibility.VectorsStr
 	if forwardURL == "" {
 		return value, nil
 	}
-	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	echoWithCtxInterface, err := echo.getServer()
 	if err != nil {
 		log.Printf("Connecting to %s failed: %s", forwardURL, err)
 		return compatibility.VectorsStruct{}, err
@@ -267,7 +250,7 @@ func (echo *echoImpl) EchoVectorsWithError(_ fidl.Context, value compatibility.V
 			}), nil
 		}
 	}
-	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	echoWithCtxInterface, err := echo.getServer()
 	if err != nil {
 		log.Printf("Connecting to %s failed: %s", forwardURL, err)
 		return compatibility.EchoEchoVectorsWithErrorResult{}, err
@@ -284,7 +267,7 @@ func (echo *echoImpl) EchoTable(_ fidl.Context, value compatibility.AllTypesTabl
 	if forwardURL == "" {
 		return value, nil
 	}
-	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	echoWithCtxInterface, err := echo.getServer()
 	if err != nil {
 		log.Printf("Connecting to %s failed: %s", forwardURL, err)
 		return compatibility.AllTypesTable{}, err
@@ -307,7 +290,7 @@ func (echo *echoImpl) EchoTableWithError(_ fidl.Context, value compatibility.All
 			}), nil
 		}
 	}
-	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	echoWithCtxInterface, err := echo.getServer()
 	if err != nil {
 		log.Printf("Connecting to %s failed: %s", forwardURL, err)
 		return compatibility.EchoEchoTableWithErrorResult{}, err
@@ -324,7 +307,7 @@ func (echo *echoImpl) EchoXunions(_ fidl.Context, value []compatibility.AllTypes
 	if forwardURL == "" {
 		return value, nil
 	}
-	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	echoWithCtxInterface, err := echo.getServer()
 	if err != nil {
 		log.Printf("Connecting to %s failed: %s", forwardURL, err)
 		return nil, err
@@ -348,7 +331,7 @@ func (echo *echoImpl) EchoXunionsWithError(_ fidl.Context, value []compatibility
 			}), nil
 		}
 	}
-	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	echoWithCtxInterface, err := echo.getServer()
 	if err != nil {
 		log.Printf("Connecting to %s failed: %s", forwardURL, err)
 		return compatibility.EchoEchoXunionsWithErrorResult{}, err
@@ -365,7 +348,7 @@ func (echo *echoImpl) EchoNamedStruct(_ fidl.Context, value imported.SimpleStruc
 	if forwardURL == "" {
 		return value, nil
 	}
-	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	echoWithCtxInterface, err := echo.getServer()
 	if err != nil {
 		log.Printf("Connecting to %s failed: %s", forwardURL, err)
 		return imported.SimpleStruct{}, err
@@ -388,7 +371,7 @@ func (echo *echoImpl) EchoNamedStructWithError(_ fidl.Context, value imported.Si
 			}), nil
 		}
 	}
-	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	echoWithCtxInterface, err := echo.getServer()
 	if err != nil {
 		log.Printf("Connecting to %s failed: %s", forwardURL, err)
 		return compatibility.EchoEchoNamedStructWithErrorResult{}, err
@@ -403,7 +386,7 @@ func (echo *echoImpl) EchoNamedStructWithError(_ fidl.Context, value imported.Si
 
 func (echo *echoImpl) EchoNamedStructNoRetVal(_ fidl.Context, value imported.SimpleStruct, forwardURL string) error {
 	if forwardURL != "" {
-		echoWithCtxInterface, err := echo.getServer(forwardURL)
+		echoWithCtxInterface, err := echo.getServer()
 		if err != nil {
 			log.Printf("Connecting to %s failed: %s", forwardURL, err)
 			return err
@@ -440,7 +423,7 @@ func (echo *echoImpl) EchoTablePayload(_ fidl.Context, payload compatibility.Req
 		resp.SetValue(payload.GetValue())
 		return resp, nil
 	}
-	echoWithCtxInterface, err := echo.getServer(payload.GetForwardToServer())
+	echoWithCtxInterface, err := echo.getServer()
 	if err != nil {
 		log.Printf("Connecting to %s failed: %s", payload.GetForwardToServer(), err)
 		return compatibility.ResponseTable{}, err
@@ -465,7 +448,7 @@ func (echo *echoImpl) EchoTablePayloadWithError(_ fidl.Context, payload compatib
 			return compatibility.EchoEchoTablePayloadWithErrorResultWithResponse(resp), nil
 		}
 	}
-	echoWithCtxInterface, err := echo.getServer(payload.GetForwardToServer())
+	echoWithCtxInterface, err := echo.getServer()
 	if err != nil {
 		log.Printf("Connecting to %s failed: %s", payload.GetForwardToServer(), err)
 		return compatibility.EchoEchoTablePayloadWithErrorResult{}, err
@@ -484,7 +467,7 @@ func (echo *echoImpl) EchoTablePayloadNoRetVal(_ fidl.Context, payload compatibi
 	if payload.HasForwardToServer() {
 		forwardURL := payload.GetForwardToServer()
 		payload.ClearForwardToServer()
-		echoWithCtxInterface, err := echo.getServer(forwardURL)
+		echoWithCtxInterface, err := echo.getServer()
 		if err != nil {
 			log.Printf("Connecting to %s failed: %s", forwardURL, err)
 			return err
@@ -524,7 +507,7 @@ func (echo *echoImpl) EchoTableRequestComposed(_ fidl.Context, payload imported.
 			F2: payload.GetValue(),
 		}, nil
 	}
-	echoWithCtxInterface, err := echo.getServer(payload.GetForwardToServer())
+	echoWithCtxInterface, err := echo.getServer()
 	if err != nil {
 		log.Printf("Connecting to %s failed: %s", payload.GetForwardToServer(), err)
 		return imported.SimpleStruct{}, err
@@ -557,7 +540,7 @@ func (echo *echoImpl) EchoUnionPayload(_ fidl.Context, payload compatibility.Req
 		return compatibility.ResponseUnion{}, fmt.Errorf("unknown union ordinal")
 	}
 
-	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	echoWithCtxInterface, err := echo.getServer()
 	if err != nil {
 		log.Printf("Connecting to %s failed: %s", forwardURL, err)
 		return compatibility.ResponseUnion{}, err
@@ -596,7 +579,7 @@ func (echo *echoImpl) EchoUnionPayloadWithError(_ fidl.Context, payload compatib
 		return compatibility.EchoEchoUnionPayloadWithErrorResult{}, fmt.Errorf("unknown union ordinal")
 	}
 
-	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	echoWithCtxInterface, err := echo.getServer()
 	if err != nil {
 		log.Printf("Connecting to %s failed: %s", forwardURL, err)
 		return compatibility.EchoEchoUnionPayloadWithErrorResult{}, err
@@ -631,7 +614,7 @@ func (echo *echoImpl) EchoUnionPayloadNoRetVal(_ fidl.Context, payload compatibi
 	}
 
 	if forwardURL != "" {
-		echoWithCtxInterface, err := echo.getServer(forwardURL)
+		echoWithCtxInterface, err := echo.getServer()
 		if err != nil {
 			log.Printf("Connecting to %s failed: %s", forwardURL, err)
 			return err
@@ -680,7 +663,7 @@ func (echo *echoImpl) EchoUnionResponseWithErrorComposed(_ fidl.Context, value i
 			), nil
 		}
 	}
-	echoWithCtxInterface, err := echo.getServer(forwardURL)
+	echoWithCtxInterface, err := echo.getServer()
 	if err != nil {
 		log.Printf("Connecting to %s failed: %s", forwardURL, err)
 		return imported.ComposedEchoUnionResponseWithErrorComposedResult{}, err

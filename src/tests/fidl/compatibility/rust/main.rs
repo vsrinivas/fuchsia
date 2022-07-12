@@ -18,37 +18,27 @@ use {
         ComposedEchoUnionResponseWithErrorComposedResponse,
         ComposedEchoUnionResponseWithErrorComposedResult, SimpleStruct, WantResponse,
     },
-    fidl_fuchsia_sys::LauncherProxy,
     fuchsia_async as fasync,
-    fuchsia_component::{
-        client::{launch, launcher, App},
-        server::ServiceFs,
-    },
+    fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
     futures::{StreamExt, TryStreamExt},
     std::thread,
 };
 
-fn launch_and_connect_to_echo(
-    launcher: &LauncherProxy,
-    url: String,
-) -> Result<(EchoProxy, App), Error> {
-    let app = launch(&launcher, url, None)?;
-    let echo = app.connect_to_protocol::<EchoMarker>()?;
-    Ok((echo, app))
+fn connect_to_echo() -> Result<EchoProxy, Error> {
+    let echo = connect_to_protocol::<EchoMarker>()?;
+    Ok(echo)
 }
 
-async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Result<(), Error> {
+async fn echo_server(stream: EchoRequestStream) -> Result<(), Error> {
     let handler = move |request| {
         Box::pin(async move {
             match request {
                 EchoRequest::EchoMinimal { forward_to_server, responder } => {
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         echo.echo_minimal("")
                             .await
                             .context("Error calling echo_minimal on proxy")?;
-                        drop(app);
                     }
                     responder.send().context("Error responding")?;
                 }
@@ -58,13 +48,11 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     responder,
                 } => {
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         let mut result = echo
                             .echo_minimal_with_error("", result_variant)
                             .await
                             .context("Error calling echo_minimal_with_error on proxy")?;
-                        drop(app);
                         responder.send(&mut result).context("Error responding")?;
                     } else {
                         let mut result = if let RespondWith::Err = result_variant {
@@ -77,8 +65,7 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                 }
                 EchoRequest::EchoMinimalNoRetVal { forward_to_server, control_handle } => {
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         echo.echo_minimal_no_ret_val("")
                             .context("Error sending echo_minimal_no_ret_val to proxy")?;
                         let mut event_stream = echo.take_event_stream();
@@ -91,7 +78,6 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                             EchoEvent::EchoMinimalEvent {} => (),
                             _ => panic!("Unexpected event type"),
                         };
-                        drop(app);
                     }
                     control_handle
                         .send_echo_minimal_event()
@@ -99,13 +85,11 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                 }
                 EchoRequest::EchoStruct { mut value, forward_to_server, responder } => {
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         value = echo
                             .echo_struct(&mut value, "")
                             .await
                             .context("Error calling echo_struct on proxy")?;
-                        drop(app);
                     }
                     responder.send(&mut value).context("Error responding")?;
                 }
@@ -117,13 +101,11 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     responder,
                 } => {
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         let mut result = echo
                             .echo_struct_with_error(&mut value, result_err, "", result_variant)
                             .await
                             .context("Error calling echo_struct_with_error on proxy")?;
-                        drop(app);
                         responder.send(&mut result).context("Error responding")?;
                     } else {
                         let mut result = if let RespondWith::Err = result_variant {
@@ -140,8 +122,7 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     control_handle,
                 } => {
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         echo.echo_struct_no_ret_val(&mut value, "")
                             .context("Error sending echo_struct_no_ret_val to proxy")?;
                         let mut event_stream = echo.take_event_stream();
@@ -155,7 +136,6 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                         } else {
                             panic!("Unexpected event type");
                         }
-                        drop(app);
                     }
                     control_handle
                         .send_echo_event(&mut value)
@@ -163,13 +143,11 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                 }
                 EchoRequest::EchoArrays { mut value, forward_to_server, responder } => {
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         value = echo
                             .echo_arrays(&mut value, "")
                             .await
                             .context("Error calling echo_arrays on proxy")?;
-                        drop(app);
                     }
                     responder.send(&mut value).context("Error responding")?;
                 }
@@ -181,13 +159,11 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     responder,
                 } => {
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         let mut result = echo
                             .echo_arrays_with_error(&mut value, result_err, "", result_variant)
                             .await
                             .context("Error calling echo_struct_with_error on proxy")?;
-                        drop(app);
                         responder.send(&mut result).context("Error responding")?;
                     } else {
                         let mut result = if let RespondWith::Err = result_variant {
@@ -200,13 +176,11 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                 }
                 EchoRequest::EchoVectors { mut value, forward_to_server, responder } => {
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         value = echo
                             .echo_vectors(&mut value, "")
                             .await
                             .context("Error calling echo_vectors on proxy")?;
-                        drop(app);
                     }
                     responder.send(&mut value).context("Error responding")?;
                 }
@@ -218,13 +192,11 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     responder,
                 } => {
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         let mut result = echo
                             .echo_vectors_with_error(&mut value, result_err, "", result_variant)
                             .await
                             .context("Error calling echo_struct_with_error on proxy")?;
-                        drop(app);
                         responder.send(&mut result).context("Error responding")?;
                     } else {
                         let mut result = if let RespondWith::Err = result_variant {
@@ -237,13 +209,11 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                 }
                 EchoRequest::EchoTable { mut value, forward_to_server, responder } => {
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         value = echo
                             .echo_table(value, "")
                             .await
                             .context("Error calling echo_table on proxy")?;
-                        drop(app);
                     }
                     responder.send(value).context("Error responding")?;
                 }
@@ -255,13 +225,11 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     responder,
                 } => {
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         let mut result = echo
                             .echo_table_with_error(value, result_err, "", result_variant)
                             .await
                             .context("Error calling echo_struct_with_error on proxy")?;
-                        drop(app);
                         responder.send(&mut result).context("Error responding")?;
                     } else {
                         let mut result = if let RespondWith::Err = result_variant {
@@ -274,13 +242,11 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                 }
                 EchoRequest::EchoXunions { mut value, forward_to_server, responder } => {
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         value = echo
                             .echo_xunions(&mut value.iter_mut(), "")
                             .await
                             .context("Error calling echo_xunions on proxy")?;
-                        drop(app);
                     }
                     responder.send(&mut value.iter_mut()).context("Error responding")?;
                 }
@@ -292,8 +258,7 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     responder,
                 } => {
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         let mut result = echo
                             .echo_xunions_with_error(
                                 &mut value.iter_mut(),
@@ -303,7 +268,6 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                             )
                             .await
                             .context("Error calling echo_struct_with_error on proxy")?;
-                        drop(app);
                         responder.send(&mut result).context("Error responding")?;
                     } else {
                         let mut result = if let RespondWith::Err = result_variant {
@@ -317,13 +281,11 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
 
                 EchoRequest::EchoNamedStruct { mut value, forward_to_server, responder } => {
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         value = echo
                             .echo_named_struct(&mut value, "")
                             .await
                             .context("Error calling echo_named_struct on proxy")?;
-                        drop(app);
                     }
                     responder.send(&mut value).context("Error responding")?;
                 }
@@ -335,8 +297,7 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     responder,
                 } => {
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         let mut result = echo
                             .echo_named_struct_with_error(
                                 &mut value,
@@ -346,7 +307,6 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                             )
                             .await
                             .context("Error calling echo_named_struct_with_error on proxy")?;
-                        drop(app);
                         responder.send(&mut result).context("Error responding")?;
                     } else {
                         let mut result = if let WantResponse::Err = result_variant {
@@ -363,8 +323,7 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     control_handle,
                 } => {
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         echo.echo_named_struct_no_ret_val(&mut value, "")
                             .context("Error sending echo_named_struct_no_ret_val to proxy")?;
                         let mut event_stream = echo.take_event_stream();
@@ -378,7 +337,6 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                         } else {
                             panic!("Unexpected event type");
                         }
-                        drop(app);
                     }
                     control_handle
                         .send_on_echo_named_event(&mut value)
@@ -388,15 +346,12 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                 EchoRequest::EchoTablePayload { mut payload, responder } => {
                     let forward_to_server = payload.forward_to_server.take();
                     match forward_to_server {
-                        Some(forward_to_server) => {
-                            let (echo, app) =
-                                launch_and_connect_to_echo(launcher, forward_to_server)
-                                    .context("Error connecting to proxy")?;
+                        Some(_forward_to_server) => {
+                            let echo = connect_to_echo().context("Error connecting to proxy")?;
                             let resp = echo
                                 .echo_table_payload(payload)
                                 .await
                                 .context("Error calling echo_table_payload on proxy")?;
-                            drop(app);
                             responder.send(resp).context("Error responding")?;
                         }
                         None => {
@@ -409,16 +364,13 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                 EchoRequest::EchoTablePayloadWithError { mut payload, responder } => {
                     let forward_to_server = payload.forward_to_server.take();
                     match forward_to_server {
-                        Some(forward_to_server) => {
-                            let (echo, app) =
-                                launch_and_connect_to_echo(launcher, forward_to_server)
-                                    .context("Error connecting to proxy")?;
+                        Some(_forward_to_server) => {
+                            let echo = connect_to_echo().context("Error connecting to proxy")?;
                             let mut res = echo
                                 .echo_table_payload_with_error(payload)
                                 .await
                                 .context("Error calling echo_table_payload_with_error on proxy")?;
                             responder.send(&mut res).context("Error responding")?;
-                            drop(app);
                         }
                         None => {
                             let mut result =
@@ -439,10 +391,8 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     let mut resp = ResponseTable::EMPTY;
                     let forward_to_server = payload.forward_to_server.take();
                     match forward_to_server {
-                        Some(forward_to_server) => {
-                            let (echo, app) =
-                                launch_and_connect_to_echo(launcher, forward_to_server)
-                                    .context("Error connecting to proxy")?;
+                        Some(_forward_to_server) => {
+                            let echo = connect_to_echo().context("Error connecting to proxy")?;
                             echo.echo_table_payload_no_ret_val(payload)
                                 .context("Error sending echo_table_payload_no_ret_val to proxy")?;
                             let mut event_stream = echo.take_event_stream();
@@ -457,7 +407,6 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                             } else {
                                 panic!("Unexpected event type");
                             }
-                            drop(app);
                         }
                         None => {
                             resp.value = payload.value;
@@ -470,15 +419,12 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                 EchoRequest::EchoTableRequestComposed { mut payload, responder } => {
                     let forward_to_server = payload.forward_to_server.take();
                     match forward_to_server {
-                        Some(forward_to_server) => {
-                            let (echo, app) =
-                                launch_and_connect_to_echo(launcher, forward_to_server)
-                                    .context("Error connecting to proxy")?;
+                        Some(_forward_to_server) => {
+                            let echo = connect_to_echo().context("Error connecting to proxy")?;
                             let mut resp = echo
                                 .echo_table_request_composed(payload)
                                 .await
                                 .context("Error calling echo_table_payload on proxy")?;
-                            drop(app);
                             responder.send(&mut resp).context("Error responding")?;
                         }
                         None => {
@@ -500,13 +446,11 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                         RequestUnionUnknown!() => String::new(),
                     };
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         let mut resp = echo
                             .echo_union_payload(&mut payload)
                             .await
                             .context("Error calling echo_union_payload on proxy")?;
-                        drop(app);
                         responder.send(&mut resp).context("Error responding")?
                     } else {
                         let mut resp = match payload {
@@ -534,14 +478,12 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                         EchoEchoUnionPayloadWithErrorRequestUnknown!() => String::new(),
                     };
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         let mut res = echo
                             .echo_union_payload_with_error(&mut payload)
                             .await
                             .context("Error calling echo_union_payload_with_error on proxy")?;
                         responder.send(&mut res).context("Error responding")?;
-                        drop(app);
                     } else {
                         let mut result = match payload {
                             EchoEchoUnionPayloadWithErrorRequest::Unsigned(ref mut unsigned) => {
@@ -580,8 +522,7 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                         RequestUnionUnknown!() => String::new(),
                     };
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         echo.echo_union_payload_no_ret_val(&mut payload)
                             .context("Error sending echo_union_payload_no_ret_val to proxy")?;
                         let mut event_stream = echo.take_event_stream();
@@ -598,7 +539,6 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                         } else {
                             panic!("Unexpected event type");
                         }
-                        drop(app);
                     } else {
                         let mut resp = match payload {
                             RequestUnion::Unsigned(unsigned) => {
@@ -625,8 +565,7 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     responder,
                 } => {
                     if !forward_to_server.is_empty() {
-                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
-                            .context("Error connecting to proxy")?;
+                        let echo = connect_to_echo().context("Error connecting to proxy")?;
                         let mut res = echo
                             .echo_union_response_with_error_composed(
                                 value,
@@ -640,7 +579,6 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                                 "Error calling echo_union_response_with_error_composed on proxy",
                             )?;
                         responder.send(&mut res).context("Error responding")?;
-                        drop(app);
                     } else {
                         let mut resp = match result_variant {
                             WantResponse::Err => {
@@ -691,15 +629,13 @@ fn main() -> Result<(), Error> {
 
 fn run_test() -> Result<(), Error> {
     let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
-    let launcher = launcher().context("Error connecting to application launcher")?;
-
     let mut fs = ServiceFs::new_local();
     fs.dir("svc").add_fidl_service(|stream| stream);
     fs.take_and_serve_directory_handle().context("Error serving directory handle")?;
 
     let serve_fut =
         fs.for_each_concurrent(None /* max concurrent connections */, |stream| async {
-            if let Err(e) = echo_server(stream, &launcher).await {
+            if let Err(e) = echo_server(stream).await {
                 eprintln!("Closing echo server {:?}", e);
             }
         });

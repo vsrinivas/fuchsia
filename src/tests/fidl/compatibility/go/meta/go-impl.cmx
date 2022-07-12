@@ -4,8 +4,7 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.sys.Launcher",
-            "fuchsia.testing.runner.TestRunner"
+            "fidl.test.compatibility.Echo"
         ]
     }
 }

@@ -4,6 +4,8 @@
 
 #include <src/tests/fidl/compatibility/helpers.h>
 
+using namespace component_testing;
+
 namespace fidl_test_compatibility_helpers {
 
 // Helper text for how to invoke the proper compatibility test combination.
@@ -25,14 +27,14 @@ AllowImplPair Exclude(std::initializer_list<const char*> substrings) {
 
 std::string ExtractShortName(const std::string& pkg_url) {
   std::string short_name;
-  re2::RE2::PartialMatch(pkg_url, "(meta/fidl_compatibility_test_server_)(.*)(\\.cmx)", nullptr,
-                         nullptr, &short_name);
+  re2::RE2::PartialMatch(pkg_url, "(fidl-compatibility-test#meta/)(.*)(-impl\\.cm)", nullptr,
+                         &short_name);
   return short_name;
 }
 
 void ForAllImpls(Impls impls, TestBody body) {
   ForSomeImpls(
-      impls, [](const std::string& _p, const std::string& _s) { return true; }, body);
+      impls, [](const std::string& p, const std::string& s) { return true; }, body);
 }
 
 void ForSomeImpls(Impls impls, AllowImplPair allow, TestBody body) {
@@ -41,19 +43,39 @@ void ForSomeImpls(Impls impls, AllowImplPair allow, TestBody body) {
       if (!allow(proxy_url, server_url)) {
         continue;
       }
-      std::cerr << proxy_url << " <-> " << server_url << std::endl;
-      async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-      fidl::test::compatibility::EchoClientApp proxy;
       bool test_completed = false;
-      proxy.echo().set_error_handler([&proxy_url, &loop, &test_completed](zx_status_t status) {
+      const std::string& proxy_short = ExtractShortName(proxy_url);
+      const std::string& server_short = ExtractShortName(server_url);
+      const std::string proxy_component = proxy_short + "_proxy";
+      const std::string server_component = server_short + "_server";
+      std::cerr << "Executing test for: " << proxy_short << " <-> " << server_short << std::endl;
+
+      auto builder = RealmBuilder::Create();
+      builder.AddLegacyChild(proxy_component, proxy_url,
+                             ChildOptions{.startup_mode = StartupMode::EAGER});
+      builder.AddLegacyChild(server_component, server_url,
+                             ChildOptions{.startup_mode = StartupMode::EAGER});
+      builder.AddRoute(Route{.capabilities = {Protocol{"fidl.test.compatibility.Echo"}},
+                             .source = ChildRef{server_component},
+                             .targets = {ChildRef{proxy_component}}});
+      builder.AddRoute(Route{.capabilities = {Protocol{"fidl.test.compatibility.Echo"}},
+                             .source = ChildRef{proxy_component},
+                             .targets = {ParentRef()}});
+      builder.AddRoute(Route{.capabilities = {Protocol{"fuchsia.logger.LogSink"}},
+                             .source = ParentRef(),
+                             .targets = {ChildRef{server_component}, ChildRef{proxy_component}}});
+
+      async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+      auto realm = builder.Build(loop.dispatcher());
+      auto echo = realm.Connect<fidl::test::compatibility::Echo>();
+      echo.set_error_handler([&proxy_url, &loop, &test_completed](zx_status_t status) {
         if (!test_completed) {
           loop.Quit();
           FAIL() << "Connection to " << proxy_url << " failed unexpectedly: " << status;
         }
       });
-      proxy.Start(proxy_url);
 
-      body(loop, proxy.echo(), server_url, proxy_url);
+      body(loop, echo, server_url, proxy_url);
       test_completed = true;
     }
   }
@@ -75,7 +97,7 @@ bool GetImplsUnderTest(int argc, char** argv, Impls* out_impls) {
   if (!out_impls->empty()) {
     return true;
   }
-  FX_CHECK(!out_impls->empty()) << kUsage;
+  FX_CHECK(!out_impls->empty()) << "\n\n" << *argv << "\n\n" << kUsage;
   return false;
 }
 

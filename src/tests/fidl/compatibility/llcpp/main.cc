@@ -29,9 +29,9 @@ using namespace fidl_test_compatibility;
 
 class EchoClientApp {
  public:
-  EchoClientApp(::fidl::StringView server_url)
+  EchoClientApp()
       : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
-        client_(fidl::WireSyncClient<Echo>(ConnectTo(server_url))) {}
+        client_(fidl::WireSyncClient<Echo>(ConnectTo())) {}
 
   // Half the methods are testing the managed flavor; the other half are testing caller-allocate.
 
@@ -200,27 +200,18 @@ class EchoClientApp {
   EchoClientApp& operator=(const EchoClientApp&) = delete;
 
  private:
-  // Called once upon construction to launch and connect to the server.
-  ::fidl::ClientEnd<fidl_test_compatibility::Echo> ConnectTo(::fidl::StringView server_url) {
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = std::string(server_url.data(), server_url.size());
-    echo_provider_ = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
-
-    fuchsia::sys::LauncherPtr launcher;
-    context_->svc()->Connect(launcher.NewRequest());
-    launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-
+  // Called once upon construction to connect to the server.
+  ::fidl::ClientEnd<fidl_test_compatibility::Echo> ConnectTo() {
+    auto context = sys::ComponentContext::Create();
     auto echo_ends = ::fidl::CreateEndpoints<fidl_test_compatibility::Echo>();
     ZX_ASSERT(echo_ends.is_ok());
-    ZX_ASSERT(echo_provider_->Connect(kEchoInterfaceName, echo_ends->server.TakeChannel()) ==
+    ZX_ASSERT(context->svc()->Connect(kEchoInterfaceName, echo_ends->server.TakeChannel()) ==
               ZX_OK);
 
     return std::move(echo_ends->client);
   }
 
   std::unique_ptr<sys::ComponentContext> context_;
-  std::shared_ptr<sys::ServiceDirectory> echo_provider_;
-  fuchsia::sys::ComponentControllerPtr controller_;
   fidl::WireSyncClient<Echo> client_;
 };
 
@@ -237,7 +228,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
     if (request->forward_to_server.empty()) {
       completer.Reply();
     } else {
-      EchoClientApp app(request->forward_to_server);
+      EchoClientApp app;
       auto result = app.EchoMinimal("");
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
                     result.FormatDescription().c_str());
@@ -254,7 +245,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
         completer.ReplySuccess();
       }
     } else {
-      EchoClientApp app(request->forward_to_server);
+      EchoClientApp app;
       auto result = app.EchoMinimalWithError("", request->result_variant);
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
                     result.FormatDescription().c_str());
@@ -288,7 +279,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
         fidl::Status result_ = fidl::Status::Ok();
       };
 
-      EchoClientApp app(request->forward_to_server);
+      EchoClientApp app;
       EventHandler event_handler(this);
       fidl::Status status = app.EchoMinimalNoRetVal("", event_handler);
       ZX_ASSERT_MSG(status.ok(), "Replying with event failed direct: %s",
@@ -302,7 +293,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
     if (request->forward_to_server.empty()) {
       completer.Reply(std::move(request->value));
     } else {
-      EchoClientApp app(request->forward_to_server);
+      EchoClientApp app;
       auto result = app.EchoStruct(std::move(request->value), "");
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
                     result.FormatDescription().c_str());
@@ -319,7 +310,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
         completer.ReplySuccess(std::move(request->value));
       }
     } else {
-      EchoClientApp app(request->forward_to_server);
+      EchoClientApp app;
       auto result = app.EchoStructWithError(std::move(request->value), request->result_err, "",
                                             request->result_variant);
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
@@ -356,7 +347,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
         fidl::Status result_ = fidl::Status::Ok();
       };
 
-      EchoClientApp app(request->forward_to_server);
+      EchoClientApp app;
       EventHandler event_handler(this);
       fidl::Status status = app.EchoStructNoRetVal(std::move(request->value), "", event_handler);
       ZX_ASSERT_MSG(status.ok(), "Replying with event failed direct: %s",
@@ -371,7 +362,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       completer.Reply(std::move(request->value));
     } else {
       fidl::SyncClientBuffer<Echo::EchoArrays> buffer;
-      EchoClientApp app(request->forward_to_server);
+      EchoClientApp app;
       auto result = app.EchoArrays(buffer.view(), std::move(request->value), "");
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
                     result.FormatDescription().c_str());
@@ -388,7 +379,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
         completer.ReplySuccess(std::move(request->value));
       }
     } else {
-      EchoClientApp app(request->forward_to_server);
+      EchoClientApp app;
       auto result = app.EchoArraysWithError(std::move(request->value), request->result_err, "",
                                             request->result_variant);
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
@@ -405,7 +396,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
     if (request->forward_to_server.empty()) {
       completer.Reply(std::move(request->value));
     } else {
-      EchoClientApp app(request->forward_to_server);
+      EchoClientApp app;
       auto result = app.EchoVectors(std::move(request->value), "");
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
                     zx_status_get_string(result.status()), result.FormatDescription().c_str());
@@ -422,7 +413,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
         completer.ReplySuccess(std::move(request->value));
       }
     } else {
-      EchoClientApp app(request->forward_to_server);
+      EchoClientApp app;
       auto result = app.EchoVectorsWithError(std::move(request->value), request->result_err, "",
                                              request->result_variant);
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
@@ -440,7 +431,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       completer.Reply(request->value);
     } else {
       fidl::SyncClientBuffer<Echo::EchoTable> buffer;
-      EchoClientApp app(request->forward_to_server);
+      EchoClientApp app;
       auto result = app.EchoTable(buffer.view(), request->value, "");
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
                     zx_status_get_string(result.status()), result.FormatDescription().c_str());
@@ -458,7 +449,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       }
     } else {
       fidl::SyncClientBuffer<Echo::EchoTableWithError> buffer;
-      EchoClientApp app(request->forward_to_server);
+      EchoClientApp app;
       auto result = app.EchoTableWithError(buffer.view(), request->value, request->result_err, "",
                                            request->result_variant);
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
@@ -475,7 +466,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
     if (request->forward_to_server.empty()) {
       completer.Reply(std::move(request->value));
     } else {
-      EchoClientApp app(request->forward_to_server);
+      EchoClientApp app;
       auto result = app.EchoXunions(std::move(request->value), "");
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
                     zx_status_get_string(result.status()), result.FormatDescription().c_str());
@@ -492,7 +483,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
         completer.ReplySuccess(std::move(request->value));
       }
     } else {
-      EchoClientApp app(request->forward_to_server);
+      EchoClientApp app;
       auto result = app.EchoXunionsWithError(std::move(request->value), request->result_err, "",
                                              request->result_variant);
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s: %s",
@@ -510,7 +501,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
     if (request->forward_to_server.empty()) {
       completer.Reply(std::move(request->value));
     } else {
-      EchoClientApp app(request->forward_to_server);
+      EchoClientApp app;
       auto result = app.EchoNamedStruct(std::move(request->value), "");
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
                     result.FormatDescription().c_str());
@@ -527,7 +518,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
         completer.ReplySuccess(std::move(request->value));
       }
     } else {
-      EchoClientApp app(request->forward_to_server);
+      EchoClientApp app;
       auto result = app.EchoNamedStructWithError(std::move(request->value), request->result_err, "",
                                                  request->result_variant);
       ZX_ASSERT_MSG(result.status() == ZX_OK, "Forwarding failed: %s",
@@ -564,7 +555,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
         fidl::Status result_ = fidl::Status::Ok();
       };
 
-      EchoClientApp app(request->forward_to_server);
+      EchoClientApp app;
       EventHandler event_handler(this);
       fidl::Status status = app.EchoNamedStructNoRetVal(request->value, "", event_handler);
       ZX_ASSERT_MSG(status.ok(), "Replying with event failed direct: %s",
@@ -582,7 +573,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
                           .value(request->value())
                           .Build());
     } else {
-      EchoClientApp app(request->forward_to_server());
+      EchoClientApp app;
       fidl::Arena allocator;
       ;
       auto result =
@@ -609,7 +600,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
         completer.Reply(::fitx::ok(&res.response()));
       }
     } else {
-      EchoClientApp app(request->forward_to_server());
+      EchoClientApp app;
       fidl::Arena allocator;
       auto builder = wire::EchoEchoTablePayloadWithErrorRequest::Builder(allocator);
       builder.result_variant(request->result_variant());
@@ -658,7 +649,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
         fidl::Status result_ = fidl::Status::Ok();
       };
 
-      EchoClientApp app(request->forward_to_server());
+      EchoClientApp app;
       EventHandler event_handler(this);
       fidl::Arena allocator;
       fidl::Status status = app.EchoTablePayloadNoRetVal(
@@ -676,7 +667,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       completer.Reply(
           std::move(fidl_test_imported::wire::SimpleStruct{.f1 = true, .f2 = request->value()}));
     } else {
-      EchoClientApp app(request->forward_to_server());
+      EchoClientApp app;
       fidl::Arena allocator;
 
       auto result = app.EchoTableRequestComposed(
@@ -706,7 +697,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       }
       completer.Reply(std::move(resp));
     } else {
-      EchoClientApp app(forward_to_server);
+      EchoClientApp app;
       fidl::Arena allocator;
       fidl_test_compatibility::wire::RequestUnion req;
 
@@ -750,7 +741,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
         completer.ReplySuccess(resp);
       }
     } else {
-      EchoClientApp app(forward_to_server);
+      EchoClientApp app;
       fidl::Arena allocator;
       fidl_test_compatibility::wire::EchoEchoUnionPayloadWithErrorRequest req;
 
@@ -810,7 +801,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
         fidl::Status result_ = fidl::Status::Ok();
       };
 
-      EchoClientApp app(forward_to_server);
+      EchoClientApp app;
       EventHandler event_handler(this);
       fidl::Arena allocator;
       fidl_test_compatibility::wire::RequestUnion req;
@@ -854,7 +845,7 @@ class EchoConnection final : public fidl::WireServer<Echo> {
       }
       completer.ReplySuccess(resp);
     } else {
-      EchoClientApp app(request->forward_to_server);
+      EchoClientApp app;
       auto result =
           app.EchoUnionResponseWithErrorComposed(request->value, request->want_absolute_value, "",
                                                  request->result_err, request->result_variant);
