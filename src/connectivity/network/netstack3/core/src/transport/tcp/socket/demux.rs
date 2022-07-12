@@ -22,7 +22,7 @@ use crate::{
     socket::{
         address::{ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr},
         posix::{PosixAddrState, PosixAddrVecIter, PosixSharingOptions},
-        AddrVec,
+        AddrVec, SocketTypeState as _, SocketTypeStateMut as _,
     },
     transport::tcp::{
         buffer::SendPayload,
@@ -92,7 +92,7 @@ where
             // Connections are always searched before listeners because they
             // are more specific.
             AddrVec::Conn(conn_addr) => {
-                sync_ctx.get_tcp_state_mut().socketmap.get_conn_by_addr(&conn_addr).map(|addr_state| {
+                sync_ctx.get_tcp_state_mut().socketmap.conns().get_by_addr(&conn_addr).map(|addr_state| {
                     match addr_state {
                         PosixAddrState::Exclusive(conn_id) => *conn_id,
                         PosixAddrState::ReusePort(_) =>  {
@@ -111,7 +111,7 @@ where
                 // allocate a new connection entry in the demuxer.
                 // TODO(https://fxbug.dev/101992): Support SYN cookies.
                 let maybe_listener_id =
-                    sync_ctx.get_tcp_state_mut().socketmap.get_listener_by_addr(&listener_addr).map(
+                    sync_ctx.get_tcp_state_mut().socketmap.listeners().get_by_addr(&listener_addr).map(
                         |addr_state| match addr_state {
                             PosixAddrState::Exclusive(listener_id) => *listener_id,
                             PosixAddrState::ReusePort(_) => {
@@ -122,7 +122,7 @@ where
                 maybe_listener_id.and_then(|listener_id| {
                     let socketmap = &mut sync_ctx.get_tcp_state_mut().socketmap;
                     let (maybe_listener, _, _): &(_, PosixSharingOptions, ListenerAddr<_, _, _>) =
-                        socketmap.get_listener_by_id(&listener_id).expect("invalid listener_id");
+                        socketmap.listeners().get_by_id(&listener_id).expect("invalid listener_id");
 
                     let listener = match maybe_listener {
                         MaybeListener::Bound(_) => {
@@ -170,7 +170,7 @@ where
                     // TODO(https://fxbug.dev/102135): Inherit the socket
                     // options from the listener.
                     let conn_id = socketmap
-                        .try_insert_conn(
+                        .conns_mut().try_insert(
                             ConnAddr {
                                 ip: ConnIpAddr {
                                     local: (local_ip,
@@ -192,7 +192,7 @@ where
                     let (maybe_listener, _, _): (_, &PosixSharingOptions, &ListenerAddr<_, _, _>) = sync_ctx
                         .get_tcp_state_mut()
                         .socketmap
-                        .get_listener_by_id_mut(&listener_id)
+                        .listeners_mut().get_by_id_mut(&listener_id)
                         .expect("the listener must still be active");
 
                     match maybe_listener {
@@ -217,7 +217,8 @@ where
                 ) = sync_ctx
                     .get_tcp_state_mut()
                     .socketmap
-                    .get_conn_by_id_mut(id)
+                    .conns_mut()
+                    .get_by_id_mut(id)
                     .expect("inconsistent state: invalid connection id");
 
                 // Note: We should avoid the clone if we can teach rustc that
@@ -269,7 +270,8 @@ where
             let (conn, _, _): (_, &PosixSharingOptions, &ConnAddr<_, _, _, _>) = sync_ctx
                 .get_tcp_state_mut()
                 .socketmap
-                .get_conn_by_id_mut(&conn_id)
+                .conns_mut()
+                .get_by_id_mut(&conn_id)
                 .expect("inconsistent state: invalid connection id");
             let acceptor_id = match conn {
                 Connection {

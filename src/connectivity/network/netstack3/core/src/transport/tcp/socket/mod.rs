@@ -51,7 +51,7 @@ use crate::{
     socket::{
         address::{ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr, ListenerIpAddr},
         posix::{PosixConflictPolicy, PosixSharingOptions, PosixSocketStateSpec},
-        AddrVec, Bound, BoundSocketMap, InsertError,
+        AddrVec, Bound, BoundSocketMap, InsertError, SocketTypeState as _, SocketTypeStateMut as _,
     },
     transport::tcp::{
         buffer::{ReceiveBuffer, SendBuffer},
@@ -187,7 +187,7 @@ impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer> Port
         // A port is free if there are no sockets currently using it, and if
         // there are no sockets that are shadowing it.
         root_addr.iter_shadows().all(|a| match &a {
-            AddrVec::Listen(l) => self.get_listener_by_addr(&l).is_none(),
+            AddrVec::Listen(l) => self.listeners().get_by_addr(&l).is_none(),
             AddrVec::Conn(_c) => {
                 unreachable!("no connection shall be included in an iteration from a listener")
             }
@@ -197,7 +197,7 @@ impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer> Port
 
 impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> TcpSockets<I, D, C> {
     fn get_listener_by_id_mut(&mut self, id: ListenerId) -> Option<&mut Listener> {
-        self.socketmap.get_listener_by_id_mut(&MaybeListenerId::from(id)).map(
+        self.socketmap.listeners_mut().get_by_id_mut(&MaybeListenerId::from(id)).map(
             |(maybe_listener, _sharing, _local_addr)| match maybe_listener {
                 MaybeListener::Bound(_) => {
                     unreachable!("contract violated: ListenerId points to an inactive entry")
@@ -351,7 +351,8 @@ where
     sync_ctx
         .get_tcp_state_mut()
         .socketmap
-        .try_insert_listener(
+        .listeners_mut()
+        .try_insert(
             ListenerAddr { ip: ListenerIpAddr { addr: local_ip, identifier: port }, device: None },
             MaybeListener::Bound(inactive.clone()),
             // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
@@ -379,7 +380,8 @@ where
     let (listener, _, _): (_, &PosixSharingOptions, &ListenerAddr<_, _, _>) = sync_ctx
         .get_tcp_state_mut()
         .socketmap
-        .get_listener_by_id_mut(&id)
+        .listeners_mut()
+        .get_by_id_mut(&id)
         .expect("invalid listener id");
     match listener {
         MaybeListener::Bound(_) => {
@@ -413,7 +415,8 @@ where
     let (conn, _, conn_addr): (_, &PosixSharingOptions, _) = sync_ctx
         .get_tcp_state_mut()
         .socketmap
-        .get_conn_by_id_mut(&conn_id)
+        .conns_mut()
+        .get_by_id_mut(&conn_id)
         .expect("failed to retrieve the connection state");
     conn.acceptor = None;
     let (remote_ip, remote_port) = conn_addr.ip.remote;
@@ -442,7 +445,8 @@ where
     let (bound, sharing, bound_addr) = sync_ctx
         .get_tcp_state_mut()
         .socketmap
-        .get_listener_by_id(&bound_id)
+        .listeners()
+        .get_by_id(&bound_id)
         .expect("invalid socket id");
     assert_matches!(bound, MaybeListener::Bound(_));
     assert_eq!(sharing, &PosixSharingOptions::Exclusive);
@@ -452,7 +456,7 @@ where
         .new_ip_socket(ctx, device, local_ip, remote.ip, IpProto::Tcp.into(), None)
         .map_err(ConnectError::IpSockCreationError)?;
     let conn_id = connect_inner(sync_ctx, ctx, ip_sock, local_port, remote.port)?;
-    let _: Option<_> = sync_ctx.get_tcp_state_mut().socketmap.remove_listener_by_id(bound_id);
+    let _: Option<_> = sync_ctx.get_tcp_state_mut().socketmap.listeners_mut().remove(&bound_id);
     Ok(conn_id)
 }
 
@@ -514,7 +518,8 @@ where
     let conn_id = sync_ctx
         .get_tcp_state_mut()
         .socketmap
-        .try_insert_conn(
+        .conns_mut()
+        .try_insert(
             conn_addr.clone(),
             Connection {
                 acceptor: None,
@@ -530,7 +535,7 @@ where
         .map_err(|(body, err)| {
             warn!("tcp: failed to send ip packet {:?}: {:?}", body, err);
             assert_matches!(
-                sync_ctx.get_tcp_state_mut().socketmap.remove_conn_by_id(conn_id),
+                sync_ctx.get_tcp_state_mut().socketmap.conns_mut().remove(&conn_id),
                 Some(_)
             );
             ConnectError::IpSocketSendError(err)
@@ -879,7 +884,8 @@ mod tests {
                 .get_ref()
                 .sockets
                 .socketmap
-                .get_conn_by_id(&conn_id)
+                .conns()
+                .get_by_id(&conn_id)
                 .expect("failed to retrieve the client socket");
             assert_matches!(
                 state,
@@ -989,7 +995,8 @@ mod tests {
             .get_ref()
             .sockets
             .socketmap
-            .get_conn_by_id(&client)
+            .conns()
+            .get_by_id(&client)
             .expect("failed to retrieve the client socket");
         assert_matches!(
             state,

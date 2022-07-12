@@ -57,7 +57,8 @@ use crate::{
             PosixAddrState, PosixAddrType, PosixAddrVecIter, PosixAddrVecTag, PosixConflictPolicy,
             PosixSharingOptions, PosixSocketStateSpec, ToPosixSharingOptions,
         },
-        AddrVec, Bound, BoundSocketMap, InsertError, SocketMapAddrSpec,
+        AddrVec, Bound, BoundSocketMap, InsertError, SocketMapAddrSpec, SocketTypeState as _,
+        SocketTypeStateMut as _,
     },
     NonSyncContext, SyncCtx,
 };
@@ -504,9 +505,11 @@ impl<I: Ip, D: IpDeviceId, S> UdpConnectionState<I, D, S> {
         )
         .filter_map(move |addr: AddrVec<IpPortSpec<I, D>>| match addr {
             AddrVec::Listen(l) => {
-                bound.get_listener_by_addr(&l).map(|state| AddrEntry::Listen(state, l))
+                bound.listeners().get_by_addr(&l).map(|state| AddrEntry::Listen(state, l))
             }
-            AddrVec::Conn(c) => bound.get_conn_by_addr(&c).map(|state| AddrEntry::Conn(state, c)),
+            AddrVec::Conn(c) => {
+                bound.conns().get_by_addr(&c).map(|state| AddrEntry::Conn(state, c))
+            }
         });
 
         if dst_ip.is_multicast() {
@@ -627,8 +630,8 @@ impl<I: Ip, D: IpDeviceId, S> PortAllocImpl for UdpConnectionState<I, D, S> {
         // A port is free if there are no sockets currently using it, and if
         // there are no sockets that are shadowing it.
         AddrVec::from(conn).iter_shadows().all(|a| match &a {
-            AddrVec::Listen(l) => bound.get_listener_by_addr(&l).is_none(),
-            AddrVec::Conn(c) => bound.get_conn_by_addr(&c).is_none(),
+            AddrVec::Listen(l) => bound.listeners().get_by_addr(&l).is_none(),
+            AddrVec::Conn(c) => bound.conns().get_by_addr(&c).is_none(),
         } && bound.get_shadower_counts(&a) == 0)
     }
 }
@@ -1253,7 +1256,7 @@ pub fn send_udp_conn<
     let state = sync_ctx.get_state();
     let UdpConnectionState { ref bound } = state.conn_state;
     let (ConnState { socket, multicast_memberships: _ }, _sharing, addr) =
-        bound.get_conn_by_id(&conn).expect("no such connection");
+        bound.conns().get_by_id(&conn).expect("no such connection");
     let sock = socket.clone();
     let ConnAddr {
         ip: ConnIpAddr { local: (local_ip, local_port), remote: (remote_ip, remote_port) },
@@ -1322,7 +1325,7 @@ pub fn send_udp_listener<
     let state = sync_ctx.get_state();
     let UdpConnectionState { ref bound } = state.conn_state;
     let (_, _, addr): &(ListenerState<_, _>, PosixSharingOptions, _) =
-        bound.get_listener_by_id(&listener).expect("specified listener not found");
+        bound.listeners().get_by_id(&listener).expect("specified listener not found");
     let ListenerAddr { ip: ListenerIpAddr { addr: local_ip, identifier: local_port }, device } =
         *addr;
 
@@ -1484,13 +1487,16 @@ fn create_udp_conn<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I
         ip: ConnIpAddr { local: (local_ip, local_port), remote: (remote_ip, remote_port) },
         device,
     };
-    bound.try_insert_conn(c, ConnState { socket: ip_sock, multicast_memberships }, sharing).map_err(
-        |(_, ConnState { socket: _, multicast_memberships }, _): (
-            InsertError,
-            _,
-            PosixSharingOptions,
-        )| { (UdpSockCreationError::SockAddrConflict, multicast_memberships) },
-    )
+    bound
+        .conns_mut()
+        .try_insert(c, ConnState { socket: ip_sock, multicast_memberships }, sharing)
+        .map_err(
+            |(_, ConnState { socket: _, multicast_memberships }, _): (
+                InsertError,
+                _,
+                PosixSharingOptions,
+            )| { (UdpSockCreationError::SockAddrConflict, multicast_memberships) },
+        )
 }
 
 /// Sets the device to be bound to for an unbound socket.
@@ -1526,16 +1532,15 @@ pub fn set_bound_udp_device<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpState
     let UdpConnectionState { ref mut bound } = sync_ctx.get_state_mut().conn_state;
     match id {
         UdpBoundId::Listening(id) => bound
-            .try_update_listener_addr(&id, |ListenerAddr { ip, device: _ }| ListenerAddr {
+            .listeners_mut()
+            .try_update_addr(&id, |ListenerAddr { ip, device: _ }| ListenerAddr {
                 ip,
                 device: device_id,
             })
             .map_err(|ExistsError {}| LocalAddressError::AddressInUse),
         UdpBoundId::Connected(id) => bound
-            .try_update_conn_addr(&id, |ConnAddr { ip, device: _ }| ConnAddr {
-                ip,
-                device: device_id,
-            })
+            .conns_mut()
+            .try_update_addr(&id, |ConnAddr { ip, device: _ }| ConnAddr { ip, device: device_id })
             .map_err(|ExistsError| LocalAddressError::AddressInUse),
     }
 }
@@ -1561,13 +1566,13 @@ pub fn get_udp_bound_device<I: IpExt, SC: UdpStateContext<I, C>, C: UdpStateNonS
             match id {
                 UdpBoundId::Listening(id) => {
                     let (_, _, addr): &(ListenerState<_, _>, PosixSharingOptions, _) =
-                        bound.get_listener_by_id(&id).expect("UDP listener not found");
+                        bound.listeners().get_by_id(&id).expect("UDP listener not found");
                     let ListenerAddr { device, ip: _ } = addr;
                     *device
                 }
                 UdpBoundId::Connected(id) => {
                     let (_, _, addr): &(ConnState<_, _, _>, PosixSharingOptions, _) =
-                        bound.get_conn_by_id(&id).expect("UDP connected socket not found");
+                        bound.conns().get_by_id(&id).expect("UDP connected socket not found");
                     let ConnAddr { device, ip: _ } = addr;
                     *device
                 }
@@ -1624,12 +1629,12 @@ pub fn get_udp_posix_reuse_port<
             match id {
                 UdpBoundId::Listening(id) => {
                     let (_, sharing, _): &(ListenerState<_, _>, _, ListenerAddr<_, _, _>) =
-                        bound.get_listener_by_id(&id).expect("listener UDP socket not found");
+                        bound.listeners().get_by_id(&id).expect("listener UDP socket not found");
                     sharing
                 }
                 UdpBoundId::Connected(id) => {
                     let (_, sharing, _): &(ConnState<_, _, _>, _, ConnAddr<_, _, _, _>) =
-                        bound.get_conn_by_id(&id).expect("conneted UDP socket not found");
+                        bound.conns().get_by_id(&id).expect("conneted UDP socket not found");
                     sharing
                 }
             }
@@ -1725,7 +1730,7 @@ pub fn set_udp_multicast_membership<
                         ListenerState<_, _>,
                         PosixSharingOptions,
                         _,
-                    ) = bound.get_listener_by_id(&id).expect("Listening socket not found");
+                    ) = bound.listeners().get_by_id(&id).expect("Listening socket not found");
                     device
                 }
                 UdpBoundId::Connected(id) => {
@@ -1733,7 +1738,7 @@ pub fn set_udp_multicast_membership<
                         ConnState<_, _, _>,
                         PosixSharingOptions,
                         _,
-                    ) = bound.get_conn_by_id(&id).expect("Connected socket not found");
+                    ) = bound.conns().get_by_id(&id).expect("Connected socket not found");
                     device
                 }
             }
@@ -1773,7 +1778,10 @@ pub fn set_udp_multicast_membership<
                         _,
                         &PosixSharingOptions,
                         &ListenerAddr<_, _, _>,
-                    ) = bound.get_listener_by_id_mut(&id).expect("Listening socket not found");
+                    ) = bound
+                        .listeners_mut()
+                        .get_by_id_mut(&id)
+                        .expect("Listening socket not found");
                     multicast_memberships
                 }
                 UdpBoundId::Connected(id) => {
@@ -1781,7 +1789,7 @@ pub fn set_udp_multicast_membership<
                         _,
                         &PosixSharingOptions,
                         &ConnAddr<_, _, _, _>,
-                    ) = bound.get_conn_by_id_mut(&id).expect("Connected socket not found");
+                    ) = bound.conns_mut().get_by_id_mut(&id).expect("Connected socket not found");
                     multicast_memberships
                 }
             };
@@ -1829,7 +1837,7 @@ pub fn remove_udp_conn<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateConte
 ) -> UdpConnInfo<I::Addr> {
     let UdpConnectionState { ref mut bound } = sync_ctx.get_state_mut().conn_state;
     let (state, _sharing, addr): (_, PosixSharingOptions, _) =
-        bound.remove_conn_by_id(id.into()).expect("UDP connection not found");
+        bound.conns_mut().remove(&id).expect("UDP connection not found");
 
     let ConnState { socket: _, multicast_memberships } = state;
     leave_all_joined_groups(sync_ctx, ctx, multicast_memberships);
@@ -1849,7 +1857,7 @@ pub fn get_udp_conn_info<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateCon
     id: UdpConnId<I>,
 ) -> UdpConnInfo<I::Addr> {
     let UdpConnectionState { ref bound } = sync_ctx.get_state().conn_state;
-    let (_state, _sharing, addr) = bound.get_conn_by_id(&id).expect("UDP connection not found");
+    let (_state, _sharing, addr) = bound.conns().get_by_id(&id).expect("UDP connection not found");
     let ConnAddr { ip, device: _ } = addr;
     ip.clone().into()
 }
@@ -1903,7 +1911,8 @@ pub fn listen_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I,
     let UnboundSocketState { device, sharing, multicast_memberships } = unbound_entry.get_mut();
     let UdpConnectionState { ref mut bound } = conn_state;
     match bound
-        .try_insert_listener(
+        .listeners_mut()
+        .try_insert(
             ListenerAddr { ip: ListenerIpAddr { addr, identifier: port }, device: *device },
             ListenerState { multicast_memberships: core::mem::take(multicast_memberships) },
             *sharing,
@@ -1935,7 +1944,7 @@ pub fn remove_udp_listener<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateC
 ) -> UdpListenerInfo<I::Addr> {
     let UdpConnectionState { ref mut bound } = sync_ctx.get_state_mut().conn_state;
     let (state, _, addr): (_, PosixSharingOptions, _) =
-        bound.remove_listener_by_id(id).expect("Invalid UDP listener ID");
+        bound.listeners_mut().remove(&id).expect("Invalid UDP listener ID");
 
     let ListenerState { multicast_memberships } = state;
     leave_all_joined_groups(sync_ctx, ctx, multicast_memberships);
@@ -1956,7 +1965,7 @@ pub fn get_udp_listener_info<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStat
 ) -> UdpListenerInfo<I::Addr> {
     let UdpConnectionState { ref bound } = sync_ctx.get_state().conn_state;
     let (_, _sharing, addr): &(ListenerState<_, _>, PosixSharingOptions, _) =
-        bound.get_listener_by_id(&id).expect("UDP listener not found");
+        bound.listeners().get_by_id(&id).expect("UDP listener not found");
     addr.clone().into()
 }
 
@@ -3671,7 +3680,7 @@ mod tests {
             lazy_port_alloc: _,
             send_port_unreachable: _,
         } = &sync_ctx.get_ref().state;
-        let (_state, _tag_state, addr) = bound.get_conn_by_id(&conn).unwrap();
+        let (_state, _tag_state, addr) = bound.conns().get_by_id(&conn).unwrap();
 
         assert_eq!(
             addr,
@@ -3751,19 +3760,19 @@ mod tests {
         let bound = &sync_ctx.get_ref().state.conn_state.bound;
         let valid_range =
             &UdpConnectionState::<I, DummyDeviceId, IpSock<I, DummyDeviceId>>::EPHEMERAL_RANGE;
-        let port_a = assert_matches!(bound.get_conn_by_id(&conn_a),
+        let port_a = assert_matches!(bound.conns().get_by_id(&conn_a),
             Some((_state, _tag_state, ConnAddr{ip: ConnIpAddr{local: (_, local_identifier), ..}, device: _})) => local_identifier)
         .get();
         assert!(valid_range.contains(&port_a));
-        let port_b = assert_matches!(bound.get_conn_by_id(&conn_b),
+        let port_b = assert_matches!(bound.conns().get_by_id(&conn_b),
             Some((_state, _tag_state, ConnAddr{ip: ConnIpAddr{local: (_, local_identifier), ..}, device: _})) => local_identifier)
         .get();
         assert_ne!(port_a, port_b);
-        let port_c = assert_matches!(bound.get_conn_by_id(&conn_c),
+        let port_c = assert_matches!(bound.conns().get_by_id(&conn_c),
             Some((_state, _tag_state, ConnAddr{ip: ConnIpAddr{local: (_, local_identifier), ..}, device: _})) => local_identifier)
         .get();
         assert_ne!(port_a, port_c);
-        let port_d = assert_matches!(bound.get_conn_by_id(&conn_d),
+        let port_d = assert_matches!(bound.conns().get_by_id(&conn_d),
             Some((_state, _tag_state, ConnAddr{ip: ConnIpAddr{local: (_, local_identifier), ..}, device: _})) => local_identifier)
         .get();
         assert_ne!(port_a, port_d);
@@ -3953,13 +3962,13 @@ mod tests {
 
         let conn_state =
             &StateContext::<_, UdpState<I, DummyDeviceId>>::get_state(&sync_ctx).conn_state;
-        let wildcard_port = assert_matches!(conn_state.bound.get_listener_by_id(&wildcard_list),
+        let wildcard_port = assert_matches!(conn_state.bound.listeners().get_by_id(&wildcard_list),
             Some((
                 _,
                 _,
                 ListenerAddr{ ip: ListenerIpAddr {identifier, addr: None}, device: None}
             )) => identifier);
-        let specified_port = assert_matches!(conn_state.bound.get_listener_by_id(&specified_list),
+        let specified_port = assert_matches!(conn_state.bound.listeners().get_by_id(&specified_list),
             Some((
                 _,
                 _,
@@ -3995,7 +4004,7 @@ mod tests {
         let conn_state =
             &StateContext::<_, UdpState<I, DummyDeviceId>>::get_state(&sync_ctx).conn_state;
         for listener in listeners {
-            assert_matches!(conn_state.bound.get_listener_by_id(&listener),
+            assert_matches!(conn_state.bound.listeners().get_by_id(&listener),
                 Some((_, _, addr)) => assert_eq!(addr, &expected_addr));
         }
     }
@@ -4064,7 +4073,8 @@ mod tests {
             StateContext::<_, UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
                 .conn_state
                 .bound
-                .get_conn_by_id(&conn),
+                .conns()
+                .get_by_id(&conn),
             None
         );
     }
@@ -4097,7 +4107,8 @@ mod tests {
             StateContext::<_, UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
                 .conn_state
                 .bound
-                .get_listener_by_id(&list),
+                .listeners()
+                .get_by_id(&list),
             None
         );
 
@@ -4118,7 +4129,8 @@ mod tests {
             StateContext::<_, UdpState<I, DummyDeviceId>>::get_state(&sync_ctx)
                 .conn_state
                 .bound
-                .get_listener_by_id(&list),
+                .listeners()
+                .get_by_id(&list),
             None
         );
     }

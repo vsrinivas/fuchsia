@@ -428,7 +428,7 @@ mod tests {
     use super::*;
     use crate::{
         ip::DummyDeviceId,
-        socket::{BoundSocketMap, InsertError},
+        socket::{BoundSocketMap, InsertError, SocketTypeStateMut as _},
     };
 
     struct TransportSocketPosixSpec<I: Ip> {
@@ -600,8 +600,8 @@ mod tests {
         let mut spec = spec.into_iter().peekable();
         let mut try_insert = |(addr, options)| {
             match addr {
-                AddrVec::Conn(c) => map.try_insert_conn(c, (), options).map(|_| ()),
-                AddrVec::Listen(l) => map.try_insert_listener(l, (), options).map(|_| ()),
+                AddrVec::Conn(c) => map.conns_mut().try_insert(c, (), options).map(|_| ()),
+                AddrVec::Listen(l) => map.listeners_mut().try_insert(l, (), options).map(|_| ()),
             }
             .map_err(|(e, (), _)| e)
         };
@@ -648,10 +648,12 @@ mod tests {
                 .map(|(addr, options)| {
                     match addr {
                         AddrVec::Conn(c) => map
-                            .try_insert_conn(c.clone(), (), options)
+                            .conns_mut()
+                            .try_insert(c.clone(), (), options)
                             .map(|id| Socket::Conn(id, c)),
                         AddrVec::Listen(l) => map
-                            .try_insert_listener(l.clone(), (), options)
+                            .listeners_mut()
+                            .try_insert(l.clone(), (), options)
                             .map(|id| Socket::Listener(id, l)),
                     }
                     .expect("insert_failed")
@@ -661,11 +663,11 @@ mod tests {
             for socket in sockets {
                 match socket {
                     Socket::Listener(l, addr) => {
-                        assert_matches!(map.remove_listener_by_id(l),
+                        assert_matches!(map.listeners_mut().remove(&l),
                                         Some((_, _, a)) => assert_eq!(a, addr));
                     }
                     Socket::Conn(c, addr) => {
-                        assert_matches!(map.remove_conn_by_id(c),
+                        assert_matches!(map.conns_mut().remove(&c),
                                         Some((_, _, a)) => assert_eq!(a, addr));
                     }
                 }
