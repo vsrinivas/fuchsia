@@ -207,9 +207,6 @@ ZirconComponentManager::ZirconComponentManager(std::shared_ptr<sys::ServiceDirec
           !instace_info_res.response().resolved->started->runtime_dir) {
         continue;
       }
-      // TODO: remove this after fxbug.dev/103480 is fixed.
-      if (info.moniker == "./core/session-manager/session:session/workstation_session")
-        continue;
       zx_koid_t job_id =
           ReadElfJobId(std::move(instace_info_res.response().resolved->started->runtime_dir));
       if (job_id != ZX_KOID_INVALID) {
