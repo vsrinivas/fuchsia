@@ -129,6 +129,7 @@ impl<'a, M: DriverMem> GpuDevice<'a, M> {
             wire::VIRTIO_GPU_CMD_GET_DISPLAY_INFO => self.get_display_info(chain)?,
             wire::VIRTIO_GPU_CMD_RESOURCE_CREATE_2D => self.resource_create_2d(chain).await?,
             wire::VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING => self.resource_attach_backing(chain)?,
+            wire::VIRTIO_GPU_CMD_RESOURCE_DETACH_BACKING => self.resource_detach_backing(chain)?,
             wire::VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D => self.transfer_to_host_2d(chain)?,
             cmd => self.unsupported_command(chain, cmd)?,
         }
@@ -318,6 +319,39 @@ impl<'a, M: DriverMem> GpuDevice<'a, M> {
 
         // Insert the backing pages into the resource.
         resource.attach_backing(device_ranges);
+
+        write_to_chain(
+            WritableChain::from_readable(chain)?,
+            wire::VirtioGpuCtrlHeader {
+                ty: wire::VIRTIO_GPU_RESP_OK_NODATA.into(),
+                ..Default::default()
+            },
+        )
+    }
+
+    fn resource_detach_backing<'b, N: DriverNotify>(
+        &mut self,
+        mut chain: ReadableChain<'a, 'b, N, M>,
+    ) -> Result<(), Error> {
+        let cmd: wire::VirtioGpuResourceDetachBacking = match read_from_chain(&mut chain) {
+            Ok(cmd) => cmd,
+            Err(e) => {
+                tracing::warn!("Failed to read VirtioGpuResourceDetachBacking from queue: {}", e);
+                return write_error_to_chain(chain, wire::VirtioGpuError::Unspecified);
+            }
+        };
+
+        // Lookup resource
+        let resource = match self.get_resource_mut(cmd.resource_id.get()) {
+            None => {
+                tracing::warn!("DetachBacking to unknown resource_id {}", cmd.resource_id.get());
+                return write_error_to_chain(chain, wire::VirtioGpuError::InvalidResourceId);
+            }
+            Some(resource) => resource,
+        };
+
+        // Detach backing memory
+        resource.detach_backing();
 
         write_to_chain(
             WritableChain::from_readable(chain)?,
@@ -644,6 +678,51 @@ mod tests {
             (alloc, response)
         }
 
+        async fn resource_detach_backing(&mut self, resource_id: u32) -> wire::VirtioGpuCtrlHeader {
+            self.state
+                .fake_queue
+                .publish(
+                    ChainBuilder::new()
+                        // Header
+                        .readable(
+                            std::slice::from_ref(&wire::VirtioGpuCtrlHeader {
+                                ty: wire::VIRTIO_GPU_CMD_RESOURCE_DETACH_BACKING.into(),
+                                ..Default::default()
+                            }),
+                            self.mem,
+                        )
+                        // Command
+                        .readable(
+                            std::slice::from_ref(&wire::VirtioGpuResourceDetachBacking {
+                                resource_id: resource_id.into(),
+                                ..Default::default()
+                            }),
+                            self.mem,
+                        )
+                        .writable(std::mem::size_of::<wire::VirtioGpuCtrlHeader>() as u32, self.mem)
+                        .build(),
+                )
+                .unwrap();
+
+            self.device
+                .process_control_chain(ReadableChain::new(
+                    self.state.queue.next_chain().unwrap(),
+                    self.mem,
+                ))
+                .await
+                .expect("Failed to process control chain");
+
+            let returned = self.state.fake_queue.next_used().unwrap();
+            assert_eq!(
+                std::mem::size_of::<wire::VirtioGpuCtrlHeader>(),
+                returned.written() as usize
+            );
+
+            // Read and return the header.
+            let mut iter = returned.data_iter();
+            read_returned::<wire::VirtioGpuCtrlHeader>(iter.next().unwrap())
+        }
+
         async fn transfer_to_host_2d(
             &mut self,
             resource_id: u32,
@@ -704,6 +783,22 @@ mod tests {
             // Read and return the header.
             let mut iter = returned.data_iter();
             read_returned::<wire::VirtioGpuCtrlHeader>(iter.next().unwrap())
+        }
+
+        async fn transfer_entire_resource(
+            &mut self,
+            create_request: &wire::VirtioGpuResourceCreate2d,
+        ) -> wire::VirtioGpuCtrlHeader {
+            self.transfer_to_host_2d(
+                create_request.resource_id.get(),
+                wire::VirtioGpuRect {
+                    x: 0.into(),
+                    y: 0.into(),
+                    width: create_request.width,
+                    height: create_request.height,
+                },
+            )
+            .await
         }
 
         /// Like `check_resource_rect` except the entire resource is checked.
@@ -1097,5 +1192,47 @@ mod tests {
             wire::VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER,
         )
         .await;
+    }
+
+    #[fuchsia::test]
+    async fn test_resource_detach_backing() {
+        let mem = IdentityDriverMem::new();
+        let mut test = TestFixture::new(&mem);
+
+        // Create a resource
+        let (create_request, response) = test.default_resource_create_2d().await;
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
+
+        // Attach backing
+        let (_alloc, response) = test.default_resource_attach_backing(&create_request).await;
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
+
+        // Transfer the resource. The should succeed.
+        let response = test.transfer_entire_resource(&create_request).await;
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
+
+        // Now detach backing memory.
+        let response = test.resource_detach_backing(create_request.resource_id.get()).await;
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
+
+        // Transfer the resource again. The should fail now that there is no backing memory.
+        let response = test.transfer_entire_resource(&create_request).await;
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_ERR_UNSPEC);
+    }
+
+    #[fuchsia::test]
+    async fn test_resource_detach_backing_invalid_resource_id() {
+        let mem = IdentityDriverMem::new();
+        let mut test = TestFixture::new(&mem);
+
+        // Detach backing with no created resource. This should fail.
+        let create_request = wire::VirtioGpuResourceCreate2d {
+            resource_id: VALID_RESOURCE_ID.into(),
+            width: VALID_RESOURCE_WIDTH.into(),
+            height: VALID_RESOURCE_HEIGHT.into(),
+            format: VALID_RESOURCE_FORMAT.into(),
+        };
+        let response = test.resource_detach_backing(create_request.resource_id.get()).await;
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID);
     }
 }

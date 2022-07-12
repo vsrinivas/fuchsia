@@ -173,6 +173,10 @@ impl<'a> Resource2D<'a> {
         );
     }
 
+    pub fn detach_backing(&mut self) {
+        self.backing = None
+    }
+
     fn compute_expected_offset(
         &self,
         rect: &wire::VirtioGpuRect,
