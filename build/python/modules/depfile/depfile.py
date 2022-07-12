@@ -111,8 +111,11 @@ class DepFile:
         return dep_file
 
     def __repr__(self) -> str:
-        return "{}: \\\n  {}\n".format(
-            self.output, " \\\n  ".join(sorted(self.deps)))
+        if self.deps:
+            return "{}: \\\n  {}\n".format(
+                self.output, " \\\n  ".join(sorted(self.deps)))
+        else:
+            return "{}:\n".format(self.output)
 
     def write_to(self, file) -> None:
         """Write out the depfile contents to the given writeable `file-like` object.

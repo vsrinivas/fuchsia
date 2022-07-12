@@ -75,6 +75,9 @@ class DepFileTests(unittest.TestCase):
             contents = outfile.read()
             self.assertEqual(contents, DepFileTests.expected)
 
+    def test_empty(self):
+        depfile = DepFile("foo/bar/baz/output")
+        self.assertEqual(str(depfile), "foo/bar/baz/output:\n")
 
 if __name__ == '__main__':
     unittest.main()

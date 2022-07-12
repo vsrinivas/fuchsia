@@ -23,6 +23,22 @@ pub struct ProductAssemblyConfig {
 /// platform itself, not anything provided by the product.
 #[derive(Debug, Deserialize, Serialize, PartialEq)]
 pub struct PlatformConfig {
+    /// The minimum service-level that the platform will provide, or the main
+    /// set of platform features that are necessary (or desired) by the product.
+    ///
+    /// This is the most-significant determination of the availability of major
+    /// subsystems.
+    #[serde(default)]
+    pub feature_set_level: FeatureSupportLevel,
+
+    /// The RFC-0115 Build Type of the assembled product + platform.
+    ///
+    /// https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0115_build_types
+    ///
+    /// After the FeatureSupportLevel, this is the next most-influential
+    /// determinant of the makeup of the platform.  It selects platform
+    /// components and configuration, and is used to disallow various platform
+    /// configuration settings when producing Userdebug and User images.
     pub build_type: BuildType,
 
     /// List of logging tags to forward to the serial console.
@@ -34,6 +50,52 @@ pub struct PlatformConfig {
     /// Platform configuration options for the identity area.
     #[serde(default)]
     pub identity: PlatformIdentityConfig,
+}
+
+/// The platform's base service level.
+///
+/// This is the basis for the contract with the product as to what the minimal
+/// set of services that are available in the platform will be.  Features can
+/// be enabled on top of this most-basic level, but some features will require
+/// a higher basic level of support.
+///
+/// These are (initially) based on the product definitions that are used to
+/// provide the basis for all other products:
+///
+/// bringup.gni
+///   +--> minimal.gni
+///         +--> core.gni
+///               +--> (everything else)
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
+pub enum FeatureSupportLevel {
+    /// THIS IS FOR TESTING AND MIGRATIONS ONLY!
+    ///
+    /// It creates an assembly with no platform.
+    #[serde(rename = "none")]
+    None,
+
+    /// Bootable, but serial-only.  No netstack, no storage drivers, etc.  this
+    /// is the smallest bootable system, and is primarily used for board-level
+    /// bringup.
+    ///
+    /// https://fuchsia.dev/fuchsia-src/development/build/build_system/bringup
+    #[serde(rename = "bringup")]
+    Bringup,
+
+    /// This is the smallest "full Fuchsia" configuration.  This has a netstack,
+    /// can update itself, and has all the subsystems that are required to
+    /// ship a production-level product.
+    ///
+    /// This is the default level unless otherwise specified.
+    #[serde(rename = "minimal")]
+    Minimal,
+    // Core  (in the future)
+}
+
+impl Default for FeatureSupportLevel {
+    fn default() -> Self {
+        FeatureSupportLevel::Minimal
+    }
 }
 
 /// The platform BuildTypes.
@@ -208,6 +270,61 @@ mod tests {
         let mut cursor = std::io::Cursor::new(json5);
         let config: ProductAssemblyConfig = util::from_reader(&mut cursor).unwrap();
         assert_eq!(config.platform.build_type, BuildType::Eng);
+        assert_eq!(config.platform.feature_set_level, FeatureSupportLevel::Minimal);
+    }
+
+    #[test]
+    fn test_bringup_product_assembly_config_from_json5() {
+        let json5 = r#"
+            {
+              platform: {
+                feature_set_level: "bringup",
+                build_type: "eng",
+              },
+              product: {},
+            }
+        "#;
+
+        let mut cursor = std::io::Cursor::new(json5);
+        let config: ProductAssemblyConfig = util::from_reader(&mut cursor).unwrap();
+        assert_eq!(config.platform.build_type, BuildType::Eng);
+        assert_eq!(config.platform.feature_set_level, FeatureSupportLevel::Bringup);
+    }
+
+    #[test]
+    fn test_minimal_product_assembly_config_from_json5() {
+        let json5 = r#"
+            {
+              platform: {
+                feature_set_level: "minimal",
+                build_type: "eng",
+              },
+              product: {},
+            }
+        "#;
+
+        let mut cursor = std::io::Cursor::new(json5);
+        let config: ProductAssemblyConfig = util::from_reader(&mut cursor).unwrap();
+        assert_eq!(config.platform.build_type, BuildType::Eng);
+        assert_eq!(config.platform.feature_set_level, FeatureSupportLevel::Minimal);
+    }
+
+    #[test]
+    fn test_empty_product_assembly_config_from_json5() {
+        let json5 = r#"
+            {
+              platform: {
+                feature_set_level: "none",
+                build_type: "eng",
+              },
+              product: {},
+            }
+        "#;
+
+        let mut cursor = std::io::Cursor::new(json5);
+        let config: ProductAssemblyConfig = util::from_reader(&mut cursor).unwrap();
+        assert_eq!(config.platform.build_type, BuildType::Eng);
+        assert_eq!(config.platform.feature_set_level, FeatureSupportLevel::None);
     }
 
     #[test]
