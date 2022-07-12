@@ -5,7 +5,7 @@
 use fidl_fuchsia_bluetooth_avrcp as fidl_avrcp;
 use fidl_fuchsia_media as fidl_media_types;
 use fidl_fuchsia_media_sessions2::{self as fidl_media, SessionControlProxy, SessionInfoDelta};
-use tracing::{trace, warn};
+use tracing::{info, warn};
 
 use crate::media::media_types::{
     avrcp_repeat_mode_to_media, avrcp_shuffle_mode_to_media, media_repeat_mode_to_avrcp,
@@ -109,7 +109,7 @@ impl MediaState {
             fidl_avrcp::AvcPanelCommand::Forward => self.session_control.next_item(),
             fidl_avrcp::AvcPanelCommand::Backward => self.session_control.prev_item(),
             fidl_avrcp::AvcPanelCommand::VolumeUp | fidl_avrcp::AvcPanelCommand::VolumeDown => {
-                trace!("Received Volume passthrough command - no-op.");
+                info!("Received Volume command - ignoring");
                 Ok(())
             }
             _ => return Err(fidl_avrcp::TargetPassthroughError::CommandNotImplemented),
@@ -170,8 +170,11 @@ impl SessionInfo {
         }
     }
 
-    pub fn get_play_status(&self) -> &ValidPlayStatus {
-        &self.play_status
+    pub fn get_play_status(&self) -> ValidPlayStatus {
+        let mut play_status = self.play_status.clone();
+        // Need to update the reported time, since we only update with new info from media.
+        play_status.song_position = self.playback_rate.current_position();
+        play_status
     }
 
     pub fn get_media_info(&self) -> &MediaInfo {
@@ -288,10 +291,12 @@ impl SessionInfo {
         metadata: Option<fidl_media_types::Metadata>,
     ) {
         if let Some(info) = player_info {
-            let _ = info.timeline_function.map(|f| self.playback_rate.update_playback_rate(f));
+            if let Some(timeline_fn) = info.timeline_function {
+                self.playback_rate = timeline_fn.into();
+            }
             self.play_status.update_play_status(
                 info.duration,
-                info.timeline_function,
+                self.playback_rate,
                 info.player_state,
             );
             self.player_application_settings
@@ -541,6 +546,69 @@ pub(crate) mod tests {
         let unsupported_ids = vec![fidl_avrcp::PlayerApplicationSettingAttributeId::Equalizer];
         let settings = media_state.session_info().get_player_application_settings(unsupported_ids);
         assert!(settings.is_err());
+    }
+
+    #[fuchsia::test]
+    /// Test that given the current view of the world, getting PlayStatus
+    /// returns as expected after time passes.
+    fn test_get_play_status() {
+        let exec = fasync::TestExecutor::new_with_fake_time().expect("executor should build");
+        exec.set_fake_time(fasync::Time::from_nanos(555555555));
+
+        let (session_proxy, _) = create_proxy::<SessionControlMarker>().expect("Should work");
+        let mut media_state = MediaState::new(session_proxy);
+
+        // Add the media session status.
+        exec.set_fake_time(fasync::Time::from_nanos(555555555));
+        let info = fidl_media::SessionInfoDelta {
+            metadata: Some(create_metadata()),
+            player_status: Some(create_player_status()),
+            ..fidl_media::SessionInfoDelta::EMPTY
+        };
+        media_state.update_session_info(info);
+
+        let expected_play_status =
+            ValidPlayStatus::new(Some(123), Some(55), Some(fidl_avrcp::PlaybackStatus::Playing));
+
+        assert_eq!(media_state.session_info().get_play_status(), expected_play_status);
+
+        // Fast forward time by a little bit.
+        exec.set_fake_time(fasync::Time::after(fasync::Duration::from_seconds(7)));
+
+        let expected_play_status =
+            ValidPlayStatus::new(Some(123), Some(7055), Some(fidl_avrcp::PlaybackStatus::Playing));
+
+        assert_eq!(media_state.session_info().get_play_status(), expected_play_status);
+
+        // On an update from media, updates the play status ahain.
+        let player_status = fidl_media::PlayerStatus {
+            player_state: Some(fidl_media::PlayerState::Paused),
+            duration: Some(123456789),
+            timeline_function: Some(fidl_fuchsia_media::TimelineFunction {
+                subject_time: 0,
+                reference_time: fasync::Time::now().into_nanos(),
+                subject_delta: 0,
+                reference_delta: 1,
+            }),
+            ..fidl_media::PlayerStatus::EMPTY
+        };
+
+        let info = fidl_media::SessionInfoDelta {
+            metadata: Some(create_metadata()),
+            player_status: Some(player_status),
+            ..fidl_media::SessionInfoDelta::EMPTY
+        };
+        media_state.update_session_info(info);
+
+        let expected_play_status =
+            ValidPlayStatus::new(Some(123), Some(0), Some(fidl_avrcp::PlaybackStatus::Paused));
+
+        assert_eq!(media_state.session_info().get_play_status(), expected_play_status);
+
+        // After a couple seocnds, it should still be paused.
+        exec.set_fake_time(fasync::Time::after(fasync::Duration::from_seconds(7)));
+
+        assert_eq!(media_state.session_info().get_play_status(), expected_play_status);
     }
 
     #[fuchsia::test]

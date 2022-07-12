@@ -98,7 +98,7 @@ pub(crate) struct ValidPlayStatus {
     song_length: Option<u32>,
     #[fidl_field_type(optional)]
     /// The current position of media in millis.
-    song_position: Option<u32>,
+    pub song_position: Option<u32>,
     #[fidl_field_type(optional)]
     /// The current playback status of media.
     playback_status: Option<fidl_avrcp::PlaybackStatus>,
@@ -134,12 +134,11 @@ impl ValidPlayStatus {
     pub(crate) fn update_play_status(
         &mut self,
         duration: Option<i64>,
-        timeline_fn: Option<TimelineFunction>,
+        rate: PlaybackRate,
         player_state: Option<fidl_media::PlayerState>,
     ) {
         self.song_length = duration.map(|d| time_nanos_to_millis(d));
-        self.song_position = timeline_fn
-            .and_then(|f| media_timeline_fn_to_position(f, fasync::Time::now().into_nanos()));
+        self.song_position = rate.current_position();
         self.playback_status =
             player_state.and_then(|state| media_player_state_to_playback_status(state));
     }
@@ -149,18 +148,24 @@ impl ValidPlayStatus {
 pub type NotificationTimeout = zx::Duration;
 
 /// The current playback rate of media.
-#[derive(Debug, Clone)]
-pub struct PlaybackRate(u32, u32);
+#[derive(Debug, Clone, Copy)]
+pub struct PlaybackRate(TimelineFunction);
 
 impl PlaybackRate {
-    pub(crate) fn update_playback_rate(&mut self, timeline_fn: TimelineFunction) {
-        self.0 = timeline_fn.subject_delta;
-        self.1 = timeline_fn.reference_delta;
-    }
-
     /// Returns the playback rate.
     fn rate(&self) -> f64 {
-        self.0 as f64 / self.1 as f64
+        if self.0.reference_delta == 0 {
+            // No reasonable rate here, return stopped.
+            return 0.0;
+        }
+        self.0.subject_delta as f64 / self.0.reference_delta as f64
+    }
+
+    /// Returns the current subject time based on the TimelineFunction, in milliseconds, if
+    /// positive.  If negative, returns None.
+    /// AVRCP does not support negative song positions.
+    pub fn current_position(&self) -> Option<u32> {
+        media_timeline_fn_to_position(self.0, fasync::Time::now().into_nanos())
     }
 
     /// Given a duration in playback time, returns the equal duration in reference time
@@ -183,10 +188,20 @@ impl PlaybackRate {
     }
 }
 
+fn stopped_timeline_function() -> TimelineFunction {
+    TimelineFunction { subject_time: 0, reference_time: 0, subject_delta: 0, reference_delta: 0 }
+}
+
 impl Default for PlaybackRate {
     /// The default playback rate is stopped (i.e 0).
     fn default() -> Self {
-        Self(0, 1)
+        Self(stopped_timeline_function())
+    }
+}
+
+impl From<TimelineFunction> for PlaybackRate {
+    fn from(timeline_fn: TimelineFunction) -> Self {
+        Self(timeline_fn)
     }
 }
 
@@ -541,7 +556,7 @@ mod tests {
             reference_delta: 5,
             ..TimelineFunction::new_empty()
         };
-        pbr.update_playback_rate(timeline_fn);
+        pbr = timeline_fn.into();
         assert_eq!(2.0, pbr.rate());
 
         let timeline_fn = TimelineFunction {
@@ -549,34 +564,51 @@ mod tests {
             reference_delta: 10,
             ..TimelineFunction::new_empty()
         };
-        pbr.update_playback_rate(timeline_fn);
+        pbr = timeline_fn.into();
         assert_eq!(0.4, pbr.rate());
     }
 
     #[fuchsia::test]
     /// Tests correctness of calculating the response deadline given a playback rate.
     fn test_playback_rate_reference_deadline() {
+        // Note: subject and reference time can be anything here, the ratio of subject to reference
+        // delta is the speed of playback.
         // Fast forward,
-        let pbr = PlaybackRate(10, 4);
-        let deadline = pbr.reference_deadline(zx::Duration::from_nanos(1000000000));
+        let ff_rate = PlaybackRate(TimelineFunction {
+            subject_time: 0,
+            reference_time: 0,
+            subject_delta: 10,
+            reference_delta: 4,
+        });
+        let deadline = ff_rate.reference_deadline(zx::Duration::from_nanos(1000000000));
         let expected = zx::Duration::from_nanos(400000000);
         assert_eq!(Some(expected), deadline);
 
         // Normal playback,
-        let pbr = PlaybackRate(1, 1);
-        let deadline = pbr.reference_deadline(zx::Duration::from_nanos(5000000000));
+        let play_rate = PlaybackRate(TimelineFunction {
+            subject_time: 0,
+            reference_time: 0,
+            subject_delta: 1,
+            reference_delta: 1,
+        });
+        let deadline = play_rate.reference_deadline(zx::Duration::from_nanos(5000000000));
         let expected = zx::Duration::from_nanos(5000000000);
         assert_eq!(Some(expected), deadline);
 
-        // Slowing down.
-        let pbr = PlaybackRate(3, 4);
-        let deadline = pbr.reference_deadline(zx::Duration::from_nanos(9000000));
+        // Slow motion.
+        let slow_rate = PlaybackRate(TimelineFunction {
+            subject_time: 0,
+            reference_time: 0,
+            subject_delta: 3,
+            reference_delta: 4,
+        });
+        let deadline = slow_rate.reference_deadline(zx::Duration::from_nanos(9000000));
         let expected = zx::Duration::from_nanos(12000000);
         assert_eq!(Some(expected), deadline);
 
         // Stopped playback - no deadline.
-        let pbr = PlaybackRate(0, 4);
-        let deadline = pbr.reference_deadline(zx::Duration::from_nanos(900000000));
+        let stop_rate = PlaybackRate(stopped_timeline_function());
+        let deadline = stop_rate.reference_deadline(zx::Duration::from_nanos(900000000));
         assert_eq!(None, deadline);
     }
 
@@ -720,7 +752,7 @@ mod tests {
         assert_eq!(play_status.get_playback_status(), fidl_avrcp::PlaybackStatus::Stopped);
 
         let player_state = Some(fidl_media::PlayerState::Buffering);
-        play_status.update_play_status(None, None, player_state);
+        play_status.update_play_status(None, PlaybackRate::default(), player_state);
 
         let expected_player_state = Some(fidl_avrcp::PlaybackStatus::Paused);
         assert_eq!(None, play_status.song_length);
@@ -736,7 +768,7 @@ mod tests {
         timeline_fn.reference_delta = 1;
         timeline_fn.reference_time = 800000000; // nanos
         let player_state = Some(fidl_media::PlayerState::Idle);
-        play_status.update_play_status(duration, Some(timeline_fn), player_state);
+        play_status.update_play_status(duration, timeline_fn.into(), player_state);
 
         let expected_song_length = Some(9876); // millis
         let expected_song_position = Some(100); // (100000000 + 1000) / 10^6

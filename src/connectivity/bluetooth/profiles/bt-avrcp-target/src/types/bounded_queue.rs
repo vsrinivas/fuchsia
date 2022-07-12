@@ -135,7 +135,7 @@ mod tests {
         // Normal case, insertions and deletions.
         let mut queue: BoundedQueue<Record> = BoundedQueue::new(3);
         assert!(!queue.max_size_reached());
-        assert_eq!(to_values(&mut queue), vec![]);
+        assert_eq!(to_values(&mut queue), Vec::new());
         assert_eq!(queue.len(), 0);
         assert_eq!(queue.get_monotonic_count(), 0);
         let res0 = queue.insert(0.into());
@@ -162,7 +162,7 @@ mod tests {
         // Create a queue with some size and test inserting elements into it.
         // Test removing elements as well.
         let mut queue: BoundedQueue<Record> = BoundedQueue::new(3);
-        assert_eq!(to_values(&mut queue), vec![]);
+        assert_eq!(to_values(&mut queue), Vec::new());
         let _ = queue.insert(0.into());
         let _ = queue.insert(1.into());
         let _ = queue.insert(2.into());
