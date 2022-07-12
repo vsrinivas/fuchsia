@@ -8,7 +8,6 @@
 #include "lib/fit/function.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
-#include "src/developer/debug/zxdb/client/filter_observer.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -18,7 +17,7 @@ class Err;
 
 // A Job represents the abstract idea of a job that can be debugged.
 // The job is attached if there's a corresponding job running and we have the koid and name for it.
-class Job : public ClientObject, public FilterObserver {
+class Job : public ClientObject {
  public:
   // Note that the callback will be issued in all cases which may be after the job is
   // destroyed. In this case the weak pointer will be null.
@@ -74,15 +73,6 @@ class Job : public ClientObject, public FilterObserver {
   // If the job is not running, this will do nothing.
   void ImplicitlyDetach();
 
-  // FilterObserver implementation
-  void DidCreateFilter(Filter* filter) override;
-  void DidChangeFilter(Filter* filter, std::optional<Job*> previous_job) override;
-  void WillDestroyFilter(Filter* filter) override;
-
-  // Same as the two-argument version below but forces an update if the last one failed.
-  // Made public because JobTest will use it.
-  void SendAndUpdateFilters(std::vector<std::string> filters);
-
  private:
   State state_ = State::kNone;
 
@@ -90,13 +80,9 @@ class Job : public ClientObject, public FilterObserver {
   uint64_t koid_ = 0;
   std::string name_;
 
-  std::vector<std::string> filters_;
   bool is_implicit_root_ = false;
-  bool last_filter_set_failed_ = false;
 
   fxl::WeakPtrFactory<Job> weak_factory_;
-
-  void RefreshFilters();
 
   void AttachInternal(debug_ipc::TaskType type, uint64_t koid, Callback callback);
 
@@ -106,10 +92,6 @@ class Job : public ClientObject, public FilterObserver {
   void OnAttachReply(Callback callback, const Err& err, uint64_t koid, const debug::Status& status,
                      const std::string& job_name);
   void OnDetachReply(const Err& err, const debug::Status& status, Callback callback);
-
-  // If job is running this will update |filters_| only after getting OK from agent else it will set
-  // |filters_| and return.
-  void SendAndUpdateFilters(std::vector<std::string> filters, bool force_send);
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Job);
 };

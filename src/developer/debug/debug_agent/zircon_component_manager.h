@@ -9,8 +9,10 @@
 #include <fuchsia/sys2/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <zircon/types.h>
 
 #include "src/developer/debug/debug_agent/component_manager.h"
+#include "src/developer/debug/debug_agent/system_interface.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace debug_agent {
@@ -20,7 +22,6 @@ class ZirconComponentManager : public ComponentManager, public fuchsia::sys2::Ev
   struct ComponentDescription {
     uint64_t component_id = 0;  // 0 is invalid.
     std::string url;
-    std::string process_name;
     std::string filter;
   };
 
@@ -28,10 +29,10 @@ class ZirconComponentManager : public ComponentManager, public fuchsia::sys2::Ev
   ~ZirconComponentManager() override = default;
 
   // ComponentManager implementation.
-  std::optional<ComponentInfo> FindComponentInfo(zx_koid_t job_koid) const override;
-  debug::Status LaunchComponent(DebuggedJob* root_job, const std::vector<std::string>& argv,
+  std::optional<debug_ipc::ComponentInfo> FindComponentInfo(zx_koid_t job_koid) const override;
+  debug::Status LaunchComponent(DebugAgent& debug_agent, const std::vector<std::string>& argv,
                                 uint64_t* component_id) override;
-  uint64_t OnProcessStart(const std::string& filter, StdioHandles& out_stdio) override;
+  uint64_t OnProcessStart(const Filter& filter, StdioHandles& out_stdio) override;
 
   // fuchsia::sys2::EventStream implementation.
   void OnEvent(fuchsia::sys2::Event event) override;
@@ -42,7 +43,7 @@ class ZirconComponentManager : public ComponentManager, public fuchsia::sys2::Ev
 
   std::shared_ptr<sys::ServiceDirectory> services_;
 
-  std::map<zx_koid_t, ComponentInfo> running_component_info_;
+  std::map<zx_koid_t, debug_ipc::ComponentInfo> running_component_info_;
   fidl::Binding<fuchsia::sys2::EventStream> event_stream_binding_;
 
   // Each component launch is assigned an unique filter and id. This is because new components are

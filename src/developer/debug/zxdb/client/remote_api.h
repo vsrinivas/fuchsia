@@ -70,8 +70,8 @@ class RemoteAPI {
                             fit::callback<void(const Err&, debug_ipc::ThreadStatusReply)> cb);
   virtual void AddressSpace(const debug_ipc::AddressSpaceRequest& request,
                             fit::callback<void(const Err&, debug_ipc::AddressSpaceReply)> cb);
-  virtual void JobFilter(const debug_ipc::JobFilterRequest& request,
-                         fit::callback<void(const Err&, debug_ipc::JobFilterReply)> cb);
+  virtual void UpdateFilter(const debug_ipc::UpdateFilterRequest& request,
+                            fit::callback<void(const Err&, debug_ipc::UpdateFilterReply)> cb);
   virtual void WriteMemory(const debug_ipc::WriteMemoryRequest& request,
                            fit::callback<void(const Err&, debug_ipc::WriteMemoryReply)> cb);
   virtual void LoadInfoHandleTable(

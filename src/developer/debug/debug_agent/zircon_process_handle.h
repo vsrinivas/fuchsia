@@ -21,6 +21,7 @@ class ZirconProcessHandle final : public ProcessHandle, public debug::ZirconExce
   zx_koid_t GetKoid() const override { return process_koid_; }
   std::string GetName() const override;
   std::vector<std::unique_ptr<ThreadHandle>> GetChildThreads() const override;
+  zx_koid_t GetJobKoid() const override;
   debug::Status Kill() override;
   int64_t GetReturnCode() const override;
   debug::Status Attach(ProcessHandleObserver* observer) override;
@@ -51,6 +52,7 @@ class ZirconProcessHandle final : public ProcessHandle, public debug::ZirconExce
 
   zx_koid_t process_koid_;
   zx::process process_;
+  mutable zx_koid_t job_koid_ = ZX_KOID_INVALID;  // Lazy initialized.
 
   ProcessHandleObserver* observer_ = nullptr;  // Null means no observer to notify.
 

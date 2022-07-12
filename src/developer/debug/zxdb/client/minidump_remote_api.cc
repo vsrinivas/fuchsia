@@ -761,8 +761,9 @@ void MinidumpRemoteAPI::AddressSpace(
   Succeed(std::move(cb), reply);
 }
 
-void MinidumpRemoteAPI::JobFilter(const debug_ipc::JobFilterRequest& request,
-                                  fit::callback<void(const Err&, debug_ipc::JobFilterReply)> cb) {
+void MinidumpRemoteAPI::UpdateFilter(
+    const debug_ipc::UpdateFilterRequest& request,
+    fit::callback<void(const Err&, debug_ipc::UpdateFilterReply)> cb) {
   ErrNoLive(std::move(cb));
 }
 

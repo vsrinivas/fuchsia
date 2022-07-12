@@ -24,8 +24,9 @@ debug_ipc::ProcessTreeReply GetCannedProcessTreeReply() {
   reply.root.children.emplace_back();
   reply.root.children[0].koid = 100;
   reply.root.children[0].name = "j1";
-  reply.root.children[0].component_moniker = "/some/moniker";
-  reply.root.children[0].component_url = "schema://url";
+  reply.root.children[0].component.emplace();
+  reply.root.children[0].component->moniker = "/some/moniker";
+  reply.root.children[0].component->url = "schema://url#meta/component.cm";
 
   reply.root.children[0].children.emplace_back();
   reply.root.children[0].children[0].koid = 101;
@@ -83,7 +84,7 @@ TEST_F(VerbPSTest, Filter) {
   // "ps" by itself should show everything.
   EXPECT_EQ(RunCommandAndGetOutput("ps"),
             " j: 1 root\n"
-            "   j: 100 j1 /some/moniker schema://url\n"
+            "   j: 100 j1 /some/moniker schema://url#meta/component.cm\n"
             "     j: 101 j2\n"
             "       p: 102 baz\n"
             "▶  p: 875123541 foo bar\n");
@@ -91,7 +92,7 @@ TEST_F(VerbPSTest, Filter) {
   // Both processes have a "b" in them, this should match everything.
   EXPECT_EQ(RunCommandAndGetOutput("ps b"),
             " j: 1 root\n"
-            "   j: 100 j1 /some/moniker schema://url\n"
+            "   j: 100 j1 /some/moniker schema://url#meta/component.cm\n"
             "     j: 101 j2\n"
             "       p: 102 baz\n"
             "▶  p: 875123541 foo bar\n");
@@ -99,14 +100,14 @@ TEST_F(VerbPSTest, Filter) {
   // Look for just a job name.
   EXPECT_EQ(RunCommandAndGetOutput("ps j2"),
             " j: 1 root\n"
-            "   j: 100 j1 /some/moniker schema://url\n"
+            "   j: 100 j1 /some/moniker schema://url#meta/component.cm\n"
             "     j: 101 j2\n"
             "       p: 102 baz\n");
 
   // Look for a component name.
-  EXPECT_EQ(RunCommandAndGetOutput("ps moniker"),
+  EXPECT_EQ(RunCommandAndGetOutput("ps component.cm"),
             " j: 1 root\n"
-            "   j: 100 j1 /some/moniker schema://url\n"
+            "   j: 100 j1 /some/moniker schema://url#meta/component.cm\n"
             "     j: 101 j2\n"
             "       p: 102 baz\n");
 

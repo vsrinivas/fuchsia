@@ -21,11 +21,11 @@ TEST(SettingValue, Boolean) {
 }
 
 TEST(SettingValue, Int) {
-  SettingValue setting(0);
+  SettingValue setting(static_cast<int64_t>(0));
   ASSERT_TRUE(setting.is_int());
   EXPECT_EQ(setting.get_int(), 0);
 
-  constexpr int kTestInt = 43;
+  constexpr int64_t kTestInt = 43;
   setting = SettingValue(kTestInt);
   EXPECT_EQ(setting.get_int(), kTestInt);
 

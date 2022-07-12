@@ -8,6 +8,7 @@
 #include <lib/fit/function.h>
 #include <lib/fitx/result.h>
 #include <lib/zx/process.h>
+#include <zircon/types.h>
 
 #include <memory>
 #include <vector>
@@ -74,6 +75,9 @@ class ProcessHandle {
   virtual std::string GetName() const = 0;
 
   virtual std::vector<std::unique_ptr<ThreadHandle>> GetChildThreads() const = 0;
+
+  // Get the Koid of the enclosing job.
+  virtual zx_koid_t GetJobKoid() const = 0;
 
   // Terminates the process. The actually termination will normally happen asynchronously.
   virtual debug::Status Kill() = 0;

@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_DEBUG_AGENT_SYSTEM_INTERFACE_H_
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_SYSTEM_INTERFACE_H_
 
+#include <map>
 #include <memory>
 #include <vector>
 
@@ -63,6 +64,16 @@ class SystemInterface {
   // found. This can also happen if the debug_agent doesn't have permission to see it.
   std::unique_ptr<JobHandle> GetJob(zx_koid_t job_koid) const;
   std::unique_ptr<ProcessHandle> GetProcess(zx_koid_t process_koid) const;
+
+  // Returns the koid of the parent job given the koid of a job, or ZX_KOID_INVALID for root job.
+  zx_koid_t GetParentJobKoid(zx_koid_t job);
+
+ private:
+  // Refresh the parent_jobs_ mapping.
+  void RefreshParentJobs();
+
+  // Cached mapping from child job koid to parent job koid.
+  std::map<zx_koid_t, zx_koid_t> parent_jobs_;
 };
 
 }  // namespace debug_agent

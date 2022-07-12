@@ -76,10 +76,10 @@ void OutputProcessTreeRecord(const debug_ipc::ProcessTreeRecord& rec, int indent
   output->Append(Syntax::kSpecial, std::to_string(rec.koid));
   if (!rec.name.empty())
     output->Append(syntax, " " + rec.name);
-  if (!rec.component_moniker.empty())
-    output->Append(" " + rec.component_moniker, TextForegroundColor::kCyan);
-  if (!rec.component_url.empty())
-    output->Append(" " + rec.component_url, TextForegroundColor::kGray);
+  if (rec.component) {
+    output->Append(" " + rec.component->moniker, TextForegroundColor::kCyan);
+    output->Append(" " + rec.component->url, TextForegroundColor::kGray);
+  }
   output->Append(syntax, "\n");
 
   for (const auto& child : rec.children)
@@ -93,12 +93,13 @@ std::optional<debug_ipc::ProcessTreeRecord> FilterProcessTree(
     const debug_ipc::ProcessTreeRecord& rec, const std::string& filter) {
   debug_ipc::ProcessTreeRecord result;
 
-  // A record matches if its name or component_moniker matches.
+  // A record matches if its (job) name or component name matches.
   bool matched = rec.name.find(filter) != std::string::npos;
-  if (!matched && !rec.component_moniker.empty()) {
-    // Use the last segment of the moniker as the "component name".
-    std::string_view moniker = rec.component_moniker;
-    std::string_view name = moniker.substr(moniker.find_last_of('/') + 1);
+  if (!matched && rec.component) {
+    // Use the base name of the URL as the "component name".
+    // e.g. "fuchsia-pkg://url#meta/foobar.cm" has a component name of "foobar.cm".
+    std::string_view url = rec.component->url;
+    std::string_view name = url.substr(url.find_last_of('/') + 1);
     matched = name.find(filter) != std::string_view::npos;
   }
 
@@ -117,8 +118,7 @@ std::optional<debug_ipc::ProcessTreeRecord> FilterProcessTree(
     result.type = rec.type;
     result.koid = rec.koid;
     result.name = rec.name;
-    result.component_url = rec.component_url;
-    result.component_moniker = rec.component_moniker;
+    result.component = rec.component;
     return result;
   }
 

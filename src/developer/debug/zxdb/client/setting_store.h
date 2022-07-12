@@ -33,14 +33,14 @@ class SettingStore {
   fxl::RefPtr<SettingSchema> schema() const { return schema_; }
 
   Err SetBool(const std::string& key, bool);
-  Err SetInt(const std::string& key, int);
+  Err SetInt(const std::string& key, int64_t);
   Err SetString(const std::string& key, std::string);
   Err SetExecutionScope(const std::string& key, const ExecutionScope&);
   Err SetInputLocations(const std::string& key, std::vector<InputLocation>);
   Err SetList(const std::string& key, std::vector<std::string> list);
 
   bool GetBool(const std::string& key) const;
-  int GetInt(const std::string& key) const;
+  int64_t GetInt(const std::string& key) const;
   std::string GetString(const std::string& key) const;
   const ExecutionScope& GetExecutionScope(const std::string& key) const;
   const std::vector<InputLocation>& GetInputLocations(const std::string& key) const;

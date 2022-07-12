@@ -260,7 +260,6 @@ source_set("tests") {
     "function_thread_controller_unittest.cc",
     "inline_thread_controller_test.cc",
     "inline_thread_controller_test.h",
-    "job_unittest.cc",
     "map_setting_store_unittest.cc",
     "memory_dump_unittest.cc",
     "minidump_memory_unittest.cc",

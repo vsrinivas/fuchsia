@@ -45,6 +45,7 @@ dap::ResponseOrError<dap::LaunchResponse> OnRequestLaunch(DebugAdapterContext* c
   }
 
   Filter* filter = context->session()->system().CreateNewFilter();
+  filter->SetType(debug_ipc::Filter::Type::kProcessNameSubstr);
   filter->SetPattern(req.process);
 
   dap::RunInTerminalRequest run_request;

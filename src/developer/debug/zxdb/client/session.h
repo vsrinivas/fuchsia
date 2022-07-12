@@ -139,7 +139,6 @@ class Session : public SettingStoreObserver {
   fxl::ObserverList<ProcessObserver>& process_observers() { return process_observers_; }
   fxl::ObserverList<ThreadObserver>& thread_observers() { return thread_observers_; }
   fxl::ObserverList<BreakpointObserver>& breakpoint_observers() { return breakpoint_observers_; }
-  fxl::ObserverList<FilterObserver>& filter_observers() { return filter_observers_; }
   fxl::ObserverList<DownloadObserver>& download_observers() { return download_observers_; }
 
   // When the client tells the agent to launch a component, it will return an unique id identifying
@@ -237,7 +236,6 @@ class Session : public SettingStoreObserver {
   fxl::ObserverList<ProcessObserver> process_observers_;
   fxl::ObserverList<ThreadObserver> thread_observers_;
   fxl::ObserverList<BreakpointObserver> breakpoint_observers_;
-  fxl::ObserverList<FilterObserver> filter_observers_;
   fxl::ObserverList<DownloadObserver> download_observers_;
 
   // Non-owning pointer to the connected stream. If this is non-null and connection_storage_ is

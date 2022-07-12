@@ -35,7 +35,7 @@ TEST(SettingSchema, Bool) {
 TEST(SettingSchema, Int) {
   auto schema = fxl::MakeRefCounted<SettingSchema>();
 
-  int value = 10;
+  int64_t value = 10;
   schema->AddSetting(kName, kDescription, SettingValue(value));
 
   Err err;

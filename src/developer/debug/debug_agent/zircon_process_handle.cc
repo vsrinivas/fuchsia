@@ -47,6 +47,16 @@ std::vector<std::unique_ptr<ThreadHandle>> ZirconProcessHandle::GetChildThreads(
   return result;
 }
 
+zx_koid_t ZirconProcessHandle::GetJobKoid() const {
+  if (job_koid_ == ZX_KOID_INVALID) {
+    zx_info_handle_basic_t info;
+    // The related_koid of a process is the koid of its parent job and is immutable.
+    if (process_.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) == ZX_OK)
+      job_koid_ = info.related_koid;
+  }
+  return job_koid_;
+}
+
 debug::Status ZirconProcessHandle::Kill() { return debug::ZxStatus(process_.kill()); }
 
 int64_t ZirconProcessHandle::GetReturnCode() const {

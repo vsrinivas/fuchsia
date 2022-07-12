@@ -6,7 +6,6 @@
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_DEBUG_AGENT_HARNESS_H_
 
 #include "src/developer/debug/debug_agent/debug_agent.h"
-#include "src/developer/debug/debug_agent/mock_job_tree.h"
 #include "src/developer/debug/debug_agent/mock_stream_backend.h"
 #include "src/developer/debug/debug_agent/mock_system_interface.h"
 #include "src/developer/debug/ipc/protocol.h"
@@ -30,10 +29,9 @@ class MockProcess;
 //   MockThread* thread = process->AddThread(kThreadKoid);
 class MockDebugAgentHarness {
  public:
-  MockDebugAgentHarness()
-      : MockDebugAgentHarness(std::make_unique<MockSystemInterface>(*GetMockJobTree())) {}
-
-  MockDebugAgentHarness(std::unique_ptr<MockSystemInterface> system_interface)
+  explicit MockDebugAgentHarness(
+      std::unique_ptr<MockSystemInterface> system_interface =
+          std::make_unique<MockSystemInterface>(MockSystemInterface::CreateWithData()))
       : system_interface_(system_interface.get()), agent_(std::move(system_interface)) {
     agent_.Connect(&stream_backend_.stream());
   }

@@ -6,8 +6,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/developer/debug/shared/zx_status.h"
-#include "src/developer/debug/zxdb/client/frame.h"
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
 #include "src/developer/debug/zxdb/client/process.h"
@@ -15,7 +14,6 @@
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
-#include "src/developer/debug/zxdb/client/system_observer.h"
 #include "src/developer/debug/zxdb/client/target_observer.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 
@@ -23,33 +21,15 @@ namespace zxdb {
 
 namespace {
 
-struct ProcessInfo {
-  uint64_t koid;
-  std::string name;
-};
-
 class APISink : public MockRemoteAPI {
  public:
   void Attach(const debug_ipc::AttachRequest& request,
               fit::callback<void(const Err&, debug_ipc::AttachReply)> cb) override {
     attach_requests_.push_back(request);
 
-    FX_DCHECK(info_count_ < next_infos_.size());
-    auto info = next_infos_[info_count_++];
-
-    debug_ipc::AttachReply reply;
-    reply.status = debug::Status();
-    reply.koid = info.koid;
-    reply.name = info.name;
+    debug_ipc::AttachReply reply = std::move(attach_replies_.front());
+    attach_replies_.pop_front();
     cb(Err(), std::move(reply));
-  }
-
-  const std::vector<debug_ipc::AttachRequest>& attach_requests() const { return attach_requests_; }
-
-  // Sets the list of replys the sink will return.
-  void SetNextInfos(std::vector<ProcessInfo> infos) {
-    next_infos_ = std::move(infos);
-    info_count_ = 0;
   }
 
   void UpdateGlobalSettings(
@@ -64,10 +44,8 @@ class APISink : public MockRemoteAPI {
     return global_setting_requests_;
   }
 
- private:
-  size_t info_count_ = 0;
-  std::vector<ProcessInfo> next_infos_;
   std::vector<debug_ipc::AttachRequest> attach_requests_;
+  std::deque<debug_ipc::AttachReply> attach_replies_;
   std::vector<debug_ipc::UpdateGlobalSettingsRequest> global_setting_requests_;
 };
 
@@ -166,7 +144,7 @@ TEST_F(SystemTest, FilterMatchesAndRematching) {
   constexpr uint64_t kJobKoid = 0x1234;
   Job job(&session(), false);
   job.AttachForTesting(kJobKoid, "job-name");
-  ASSERT_TRUE(sink()->attach_requests().empty());
+  ASSERT_TRUE(sink()->attach_requests_.empty());
 
   // There should be only one empty target.
   auto targets = system.GetTargets();
@@ -176,13 +154,13 @@ TEST_F(SystemTest, FilterMatchesAndRematching) {
   // We match on a new process.
   constexpr uint64_t kProcessKoid = 0x5678;
   std::string kProcessName = "some-process";
-  ProcessInfo info = {kProcessKoid, kProcessName};
-  sink()->SetNextInfos({info});
+  sink()->attach_replies_.push_back(
+      debug_ipc::AttachReply{.koid = kProcessKoid, .name = kProcessName});
 
-  session().system().OnFilterMatches(&job, {kProcessKoid});
+  session().system().OnFilterMatches({kProcessKoid});
 
   // There should be an attach request.
-  auto& requests = sink()->attach_requests();
+  auto& requests = sink()->attach_requests_;
   ASSERT_EQ(requests.size(), 1u);
   EXPECT_EQ(requests[0].type, debug_ipc::TaskType::kProcess);
   EXPECT_EQ(requests[0].koid, kProcessKoid);
@@ -200,9 +178,10 @@ TEST_F(SystemTest, FilterMatchesAndRematching) {
   EXPECT_EQ(process->GetName(), kProcessName);
 
   // Rematching should not create a new target.
-  sink()->SetNextInfos({info});
+  sink()->attach_replies_.push_back(
+      debug_ipc::AttachReply{.koid = kProcessKoid, .name = kProcessName});
 
-  session().system().OnFilterMatches(&job, {kProcessKoid});
+  session().system().OnFilterMatches({kProcessKoid});
 
   // The system should've reused the empty target.
   ASSERT_EQ(system_observer.target_create_count(), 0);
@@ -224,7 +203,7 @@ TEST_F(SystemTest, ExistenProcessShouldCreateTarget) {
   constexpr uint64_t kJobKoid = 0x1234;
   Job job(&session(), false);
   job.AttachForTesting(kJobKoid, "job-name");
-  ASSERT_TRUE(sink()->attach_requests().empty());
+  ASSERT_TRUE(sink()->attach_requests_.empty());
 
   // Before injecting the process there should not be an event, after it there should be one.
   ASSERT_EQ(system_observer.process_create_count(), 0);
@@ -242,13 +221,13 @@ TEST_F(SystemTest, ExistenProcessShouldCreateTarget) {
   // We match on a new process.
   constexpr uint64_t kProcessKoid2 = 0x2;
   std::string kProcessName = "some-process";
-  ProcessInfo info = {kProcessKoid2, kProcessName};
-  sink()->SetNextInfos({info});
+  sink()->attach_replies_.push_back(
+      debug_ipc::AttachReply{.koid = kProcessKoid2, .name = kProcessName});
 
-  session().system().OnFilterMatches(&job, {kProcessKoid2});
+  session().system().OnFilterMatches({kProcessKoid2});
 
   // There should be an attach request.
-  auto& requests = sink()->attach_requests();
+  auto& requests = sink()->attach_requests_;
   ASSERT_EQ(requests.size(), 1u);
   EXPECT_EQ(requests[0].type, debug_ipc::TaskType::kProcess);
   EXPECT_EQ(requests[0].koid, kProcessKoid2);

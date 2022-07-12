@@ -869,14 +869,6 @@ void Session::RemoveBreakpointObserver(BreakpointObserver* observer) {
   breakpoint_observers_.RemoveObserver(observer);
 }
 
-void Session::AddFilterObserver(FilterObserver* observer) {
-  filter_observers_.AddObserver(observer);
-}
-
-void Session::RemoveFilterObserver(FilterObserver* observer) {
-  filter_observers_.RemoveObserver(observer);
-}
-
 void Session::AddDownloadObserver(DownloadObserver* observer) {
   download_observers_.AddObserver(observer);
 }

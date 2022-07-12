@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMANDS_ATTACH_COMMAND_TEST_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMANDS_ATTACH_COMMAND_TEST_H_
 
+#include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/console/console_test.h"
 
 namespace zxdb {
@@ -18,31 +19,35 @@ class AttachTestRemoteAPI : public RemoteAPI {
     debug_ipc::AttachRequest request;
     fit::callback<void(const Err&, debug_ipc::AttachReply)> cb;
   };
-  struct JobFilterLog {
-    debug_ipc::JobFilterRequest request;
-    fit::callback<void(const Err&, debug_ipc::JobFilterReply)> cb;
-  };
 
   void Attach(const debug_ipc::AttachRequest& request,
               fit::callback<void(const Err&, debug_ipc::AttachReply)> cb) override {
     last_attach = AttachLog{request, std::move(cb)};
   }
 
-  void JobFilter(const debug_ipc::JobFilterRequest& request,
-                 fit::callback<void(const Err&, debug_ipc::JobFilterReply)> cb) override {
-    filters.push_back(JobFilterLog{request, std::move(cb)});
+  void UpdateFilter(const debug_ipc::UpdateFilterRequest& request,
+                    fit::callback<void(const Err&, debug_ipc::UpdateFilterReply)> cb) override {
+    update_filter_requests.push_back(request);
   }
 
   // Stores the last one.
   std::optional<AttachLog> last_attach;
 
   // Stores a log of all requests (since the tests needs all of them).
-  std::vector<JobFilterLog> filters;
+  std::vector<debug_ipc::UpdateFilterRequest> update_filter_requests;
 };
 
 class AttachCommandTest : public ConsoleTest {
  public:
   AttachTestRemoteAPI* attach_remote_api() { return attach_remote_api_; }
+
+  // Returns the last filter in the last UpdateFilter request.
+  const debug_ipc::Filter& GetLastFilter() {
+    loop().RunUntilNoTasks();  // Filter sync is asynchronous.
+    FX_CHECK(!attach_remote_api_->update_filter_requests.empty());
+    FX_CHECK(!attach_remote_api_->update_filter_requests.back().filters.empty());
+    return attach_remote_api_->update_filter_requests.back().filters.back();
+  }
 
  protected:
   // RemoteAPITest overrides.

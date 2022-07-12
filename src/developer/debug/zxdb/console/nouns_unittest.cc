@@ -109,7 +109,7 @@ TEST_F(NounsTest, FilterTest) {
       "Type \"filter\" to see the current filters.",
       event.output.AsString());
 
-  console.ProcessInputLine("job 1 attach boofar");
+  console.ProcessInputLine("attach --job 1 boofar");
   console.GetOutputEvent();  // Eat warning as above.
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
@@ -122,33 +122,10 @@ TEST_F(NounsTest, FilterTest) {
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ(
-      "  # pattern job\n"
-      "  1 foobar    *\n"
-      "▶ 2 boofar    1\n",
+      "  # Type                Pattern Job \n"
+      "  1 process name substr foobar      \n"
+      "▶ 2 process name substr boofar    1 \n",
       event.output.AsString());
-
-  // Delete the wildcard filters.
-  console.ProcessInputLine("filter 1 rm");
-  console.ProcessInputLine("filter 3 rm");
-  console.FlushOutputEvents();
-
-  // Job-specific filter listing.
-  console.ProcessInputLine("job 1 filter");
-  event = console.GetOutputEvent();
-  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ(
-      "Filters for job 1 only:\n"
-      "  # pattern job\n"
-      "▶ 2 boofar    1\n",
-      event.output.AsString());
-
-  // List current job's filters when there aren't any.
-  console.ProcessInputLine("job new");
-  console.FlushOutputEvents();
-  console.ProcessInputLine("job filter");
-  event = console.GetOutputEvent();
-  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ("No filters for job 2.\n", event.output.AsString());
 }
 
 }  // namespace zxdb

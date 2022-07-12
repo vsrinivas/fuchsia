@@ -44,6 +44,7 @@ class LimboProvider {
   // limbo provider, so callers should check for validity via Valid() before using it. If the limbo
   // is invalid, callers should either attempt to initialize again or create another limbo provider.
   LimboProvider() = default;
+  LimboProvider(LimboProvider&&) = default;
   virtual ~LimboProvider() = default;
 
   // Callback to be called whenever new processes enter the connected limbo.

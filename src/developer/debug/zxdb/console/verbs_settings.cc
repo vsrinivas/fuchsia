@@ -418,8 +418,8 @@ Err SetBool(SettingStore* store, const std::string& setting_name, const std::str
 }
 
 Err SetInt(SettingStore* store, const std::string& setting_name, const std::string& value) {
-  int out;
-  Err err = StringToInt(value, &out);
+  int64_t out;
+  Err err = StringToInt64(value, &out);
   if (err.has_error()) {
     return Err("%s expects a valid int: %s", setting_name.data(), err.msg().data());
   }

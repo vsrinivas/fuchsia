@@ -197,4 +197,26 @@ const char* ConfigAction::TypeToString(Type type) {
   return nullptr;
 }
 
+const char* Filter::TypeToString(Type type) {
+  switch (type) {
+    case Type::kUnset:
+      return "(unset)";
+    case Type::kProcessNameSubstr:
+      return "process name substr";
+    case Type::kProcessName:
+      return "process name";
+    case Type::kComponentName:
+      return "component name";
+    case Type::kComponentUrl:
+      return "component url";
+    case Type::kComponentMoniker:
+      return "component moniker";
+    case Type::kLast:
+      break;
+  }
+
+  FX_NOTREACHED();
+  return nullptr;
+}
+
 }  // namespace debug_ipc

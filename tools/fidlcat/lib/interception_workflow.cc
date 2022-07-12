@@ -371,8 +371,8 @@ void InterceptionWorkflow::AttachToJobs(const debug_ipc::ProcessTreeRecord& reco
           if (remote_name.empty()) {
             filters_.push_back(
                 ProcessFilter{.filter = session_->system().CreateNewFilter(), .main_filter = true});
-            filters_.back().filter->SetJob(job);
-            filters_.back().filter->SetPattern(zxdb::Filter::kAllProcessesPattern);
+            filters_.back().filter->SetType(debug_ipc::Filter::Type::kProcessNameSubstr);
+            filters_.back().filter->SetJobKoid(job->koid());
           } else {
             Filter(remote_name, /*main_filter=*/true, job);
             Filter(extra_name, /*main_filter=*/false, job);
@@ -434,8 +434,9 @@ void InterceptionWorkflow::Filter(const std::vector<std::string>& filter, bool m
     filters_.push_back(
         ProcessFilter{.filter = session_->system().CreateNewFilter(), .main_filter = main_filter});
     if (job != nullptr) {
-      filters_.back().filter->SetJob(job);
+      filters_.back().filter->SetJobKoid(job->koid());
     }
+    filters_.back().filter->SetType(debug_ipc::Filter::Type::kProcessNameSubstr);
     filters_.back().filter->SetPattern(pattern);
   }
 }

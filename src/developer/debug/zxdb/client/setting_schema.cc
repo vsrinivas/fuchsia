@@ -29,7 +29,7 @@ void SettingSchema::AddBool(std::string name, std::string description, bool v) {
   AddSetting(std::move(name), std::move(description), SettingValue(v));
 }
 
-void SettingSchema::AddInt(std::string name, std::string description, int v) {
+void SettingSchema::AddInt(std::string name, std::string description, int64_t v) {
   AddSetting(std::move(name), std::move(description), SettingValue(v));
 }
 

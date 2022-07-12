@@ -6,6 +6,8 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <cstdint>
+
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
@@ -134,11 +136,11 @@ SettingValue Breakpoint::Settings::GetStorageValue(const std::string& key) const
   } else if (key == ClientSettings::Breakpoint::kType) {
     return SettingValue(BreakpointSettings::TypeToString(settings.type));
   } else if (key == ClientSettings::Breakpoint::kSize) {
-    return SettingValue(static_cast<int>(settings.byte_size));
+    return SettingValue(static_cast<int64_t>(settings.byte_size));
   } else if (key == ClientSettings::Breakpoint::kHitCount) {
-    return SettingValue(static_cast<int>(bp_->GetStats().hit_count));
+    return SettingValue(static_cast<int64_t>(bp_->GetStats().hit_count));
   } else if (key == ClientSettings::Breakpoint::kHitMult) {
-    return SettingValue(settings.hit_mult);
+    return SettingValue(static_cast<int64_t>(settings.hit_mult));
   }
   FX_NOTREACHED();
   return SettingValue();
@@ -175,7 +177,7 @@ Err Breakpoint::Settings::SetStorageValue(const std::string& key, SettingValue v
 
     settings.byte_size = value.get_int();
   } else if (key == ClientSettings::Breakpoint::kHitMult) {
-    int hit_mult = value.get_int();
+    int64_t hit_mult = value.get_int();
     if (hit_mult <= 0)
       return Err("hit-mult must be positive.");
 

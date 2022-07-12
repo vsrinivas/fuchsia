@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/debug_adapter/handlers/request_attach.h"
 
+#include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/session.h"
 
@@ -20,6 +21,7 @@ dap::ResponseOrError<dap::AttachResponse> OnRequestAttach(DebugAdapterContext* c
                                                           const dap::AttachRequestZxdb& req) {
   dap::AttachResponse response;
   Filter* filter = context->session()->system().CreateNewFilter();
+  filter->SetType(debug_ipc::Filter::Type::kProcessNameSubstr);
   filter->SetPattern(req.process);
   return response;
 }

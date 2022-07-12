@@ -136,8 +136,8 @@ void RemoteAPIImpl::AddressSpace(const debug_ipc::AddressSpaceRequest& request,
   Send(request, std::move(cb));
 }
 
-void RemoteAPIImpl::JobFilter(const debug_ipc::JobFilterRequest& request,
-                              fit::callback<void(const Err&, debug_ipc::JobFilterReply)> cb) {
+void RemoteAPIImpl::UpdateFilter(const debug_ipc::UpdateFilterRequest& request,
+                                 fit::callback<void(const Err&, debug_ipc::UpdateFilterReply)> cb) {
   Send(request, std::move(cb));
 }
 

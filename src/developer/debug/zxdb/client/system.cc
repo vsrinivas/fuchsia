@@ -347,10 +347,6 @@ System::System(Session* session)
   settings_.AddObserver(ClientSettings::System::kIdsTxts, this);
   settings_.AddObserver(ClientSettings::System::kSymbolServers, this);
   settings_.AddObserver(ClientSettings::System::kSecondChanceExceptions, this);
-
-  // Observe the session for filter matches and attach to any process koid that the system is not
-  // already attached to.
-  session->AddFilterObserver(this);
 }
 
 System::~System() {
@@ -365,10 +361,6 @@ System::~System() {
   }
 
   targets_.clear();
-
-  // Filters list may be iterated as we clean them up. Move its contents here first then let it
-  // drop so the dying objects are out of the system.
-  auto filters = std::move(filters_);
 }
 
 fxl::RefPtr<SettingSchema> System::GetSchema() {
@@ -627,19 +619,6 @@ void System::DeleteJob(Job* job) {
   for (auto& observer : observers_)
     observer.WillDestroyJob(job);
 
-  // Delete all filters that reference this job. While it might be nice if the filter
-  // registered for a notification or used a weak pointer for the job, this would imply having a
-  // filter enabled/disabled state independent of the other settings which we don't have and don't
-  // currently need. Without a disabled state, clearing the job on the filter will make it apply to
-  // all jobs which the user does not want.
-  std::vector<Filter*> filters_to_remove;
-  for (auto& f : filters_) {
-    if (f->job() == job)
-      filters_to_remove.push_back(f.get());
-  }
-  for (auto& f : filters_to_remove)
-    DeleteFilter(f);
-
   jobs_.erase(found);
 }
 
@@ -710,11 +689,8 @@ void System::DeleteFilter(Filter* filter) {
   for (auto& observer : observers_)
     observer.WillDestroyFilter(filter);
 
-  // Move this aside while we modify the list, then let it drop at the end of the function. That way
-  // the destructor doesn't see itself in the list of active filters when it emits
-  // WillDestroyFilter.
-  auto filter_ptr = std::move(*found);
   filters_.erase(found);
+  SyncFilters();
 }
 
 void System::Pause(fit::callback<void()> on_paused) {
@@ -898,10 +874,7 @@ void System::OnSettingChanged(const SettingStore& store, const std::string& sett
       }
     }
   } else if (setting_name == ClientSettings::System::kDebugMode) {
-    bool debug_mode = store.GetBool(setting_name);
-    debug::SetDebugLogging(debug_mode);
-    syslog::SetLogSettings(
-        syslog::LogSettings{.min_log_level = debug_mode ? syslog::LOG_DEBUG : syslog::LOG_INFO});
+    debug::SetDebugLogging(store.GetBool(setting_name));
   } else if (setting_name == ClientSettings::System::kSecondChanceExceptions) {
     debug_ipc::UpdateGlobalSettingsRequest request;
     auto updates = ParseExceptionStrategyUpdates(store.GetList(setting_name));
@@ -926,20 +899,39 @@ void System::InjectSymbolServerForTesting(std::unique_ptr<SymbolServer> server) 
   AddSymbolServer(std::move(server));
 }
 
-void System::OnFilterMatches(Job* job, const std::vector<uint64_t>& matched_pids) {
-  // Go over the targets and see if we find a valid one for each pid.
-  for (uint64_t matched_pid : matched_pids) {
-    bool found = false;
-    for (auto& target : targets_) {
-      Process* process = target->GetProcess();
-      if (process && process->GetKoid() == matched_pid) {
-        found = true;
-        break;
+void System::SyncFilters() {
+  filter_sync_pending_ = true;
+  debug::MessageLoop::Current()->PostTask(FROM_HERE, [weak_this = weak_factory_.GetWeakPtr()]() {
+    if (!weak_this || !weak_this->filter_sync_pending_)
+      return;
+    weak_this->filter_sync_pending_ = false;
+
+    debug_ipc::UpdateFilterRequest request;
+    for (const auto& filter : weak_this->filters_) {
+      if (filter->is_valid()) {
+        request.filters.push_back(filter->filter());
       }
     }
+    weak_this->session()->remote_api()->UpdateFilter(
+        request, [weak_this](const Err& err, debug_ipc::UpdateFilterReply reply) {
+          if (weak_this && !reply.matched_processes.empty()) {
+            weak_this->OnFilterMatches(reply.matched_processes);
+          }
+        });
+  });
+}
 
+void System::OnFilterMatches(const std::vector<uint64_t>& matched_pids) {
+  // Check that we don't accidentally attach to too many processes.
+  if (matched_pids.size() > 50) {
+    LOGS(Error) << "Filter matches too many (" << matched_pids.size() << ") processes. "
+                << "No attach is performed.";
+    return;
+  }
+  // Go over the targets and see if we find a valid one for each pid.
+  for (uint64_t matched_pid : matched_pids) {
     // If we found an already attached process, we don't care about this match.
-    if (found)
+    if (Process* process = ProcessFromKoid(matched_pid); process)
       continue;
 
     AttachToProcess(matched_pid, [matched_pid](fxl::WeakPtr<Target> target, const Err& err,

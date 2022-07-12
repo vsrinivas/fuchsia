@@ -4,17 +4,13 @@
 
 #include "src/developer/debug/zxdb/console/commands/verb_attach_job.h"
 
-#include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
-#include "src/developer/debug/zxdb/console/console.h"
-#include "src/developer/debug/zxdb/console/format_filter.h"
-#include "src/developer/debug/zxdb/console/output_buffer.h"
+#include "src/developer/debug/zxdb/console/console_context.h"
 #include "src/developer/debug/zxdb/console/verbs.h"
-#include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
 
@@ -24,7 +20,7 @@ constexpr int kAttachSystemRootSwitch = 1;
 
 const char kAttachJobShortHelp[] = "attach-job / aj: Watch for process launches in a job.";
 const char kAttachJobHelp[] =
-    R"(attach-job <job-koid> [ <filter> ]*
+    R"(attach-job <job-koid>
 
   Alias: aj
 
@@ -41,20 +37,6 @@ const char kAttachJobHelp[] =
     • See the current job contexts with the "job" command.
     • Detach a context from a job using "job X detach" where X is the index of
       the job context from the "job" list.
-
-Watching processes in a job
-
-  Filters apply to the processes in attached jobs to determine which new
-  processes to attach to. A filter can apply to one specific job or to all
-  attached jobs. Without filters, attach-job will just attach to the job but
-  will not actually attach to any processes.
-
-    • See the currently filters with the "filter" command.
-    • Create a new filter either by adding it as a 2nd argument to "attach-job"
-      or later using "attach".
-    • Attach to all processes in a job with "attach-job <koid> *". Note that *
-      is a special string for filters, regular expressions are not supported.
-    • See "help attach" for more on creating filters.
 
 Arguments
 
@@ -85,10 +67,6 @@ Examples
   attach-job 12345
       Attaches to the job with koid 12345. Existing filters (if any) will apply.
 
-  attach-job 12345 myprocess
-      Attaches to job 12345 and filters for processes inside it with "myprocess"
-      in the name.
-
   attach job 12345
   job 2 attach myprocess    // Assuming the previous command made job context #2.
       Same as the above example but the attach is done with a separate command.
@@ -117,8 +95,9 @@ Err RunVerbAttachJob(ConsoleContext* context, const Command& cmd, CommandCallbac
   if (Err err = cmd.ValidateNouns({Noun::kJob}); err.has_error())
     return err;
 
-  // Index of the first argument that's a filter.
-  size_t first_filter_index = 0;
+  if (cmd.HasSwitch(kAttachSystemRootSwitch) + cmd.args().size() != 1) {
+    return Err("Invalid number of arguments.");
+  }
 
   // Which job to attach to.
   enum AttachToWhat { kAttachSystemRoot, kAttachKoid } attach_to_what;
@@ -131,7 +110,6 @@ Err RunVerbAttachJob(ConsoleContext* context, const Command& cmd, CommandCallbac
     if (Err err = ReadUint64Arg(cmd, 0, "job koid", &attach_koid); err.has_error())
       return err;
     attach_to_what = kAttachKoid;
-    first_filter_index = 1;  // Filters start after the job koid.
   }
 
   // Figure out which job to attach.
@@ -167,20 +145,6 @@ Err RunVerbAttachJob(ConsoleContext* context, const Command& cmd, CommandCallbac
       if (job->state() == Job::State::kNone)
         job->Attach(attach_koid, std::move(cb));
       break;
-  }
-
-  // Create filters attached to this job if requested.
-  for (size_t i = first_filter_index; i < cmd.args().size(); i++) {
-    Filter* filter = context->session()->system().CreateNewFilter();
-    filter->SetJob(job);
-    filter->SetPattern(cmd.args()[i]);
-
-    context->SetActiveFilter(filter);
-
-    // Output a record of the created filter.
-    OutputBuffer out("Created ");
-    out.Append(FormatFilter(context, filter));
-    Console::get()->Output(out);
   }
 
   return Err();

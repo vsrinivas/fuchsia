@@ -116,11 +116,14 @@ struct ClientSettings {
   };
 
   struct Filter {
+    static const char* kType;
+    static const char* kTypeDescription;
+
     static const char* kPattern;
     static const char* kPatternDescription;
 
-    // TODO(brettw) we should have "job" here to support commands like "filter 2 set job = 4"
-    // But the SettingSchema doesn't have a job type yet.
+    static const char* kJob;
+    static const char* kJobDescription;
   };
 };
 

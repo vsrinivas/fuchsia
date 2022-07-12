@@ -18,16 +18,47 @@ class MockSystemInterface final : public SystemInterface {
  public:
   explicit MockSystemInterface(MockJobHandle root_job) : root_job_(std::move(root_job)) {}
 
+  MockSystemInterface(MockSystemInterface&&) = default;
+
   MockLimboProvider& mock_limbo_provider() { return limbo_provider_; }
+  MockComponentManager& mock_component_manager() { return component_manager_; }
 
   // SystemInterface implementation:
   uint32_t GetNumCpus() const override { return 2; }
   uint64_t GetPhysicalMemory() const override { return 1073741824; }  // 1GB
   std::unique_ptr<JobHandle> GetRootJob() const override;
   std::unique_ptr<BinaryLauncher> GetLauncher() const override;
-  ComponentManager& GetComponentManager() override;
+  ComponentManager& GetComponentManager() override { return component_manager_; }
   LimboProvider& GetLimboProvider() override { return limbo_provider_; }
   std::string GetSystemVersion() override { return "Mock version"; }
+
+  // Creates a default process tree:
+  //
+  //  j: 1 root
+  //    p: 2 root-p1
+  //      t: 3 initial-thread
+  //    p: 4 root-p2
+  //      t: 5 initial-thread
+  //    p: 6 root-p3
+  //      t: 7 initial-thread
+  //    j: 8 job1  /moniker  fuchsia-pkg://devhost/package#meta/component.cm
+  //      p: 9 job1-p1
+  //        t: 10 initial-thread
+  //      p: 11 job1-p2
+  //        t: 12 initial-thread
+  //      j: 13 job11
+  //        p: 14 job11-p1
+  //          t: 15 initial-thread
+  //          t: 16 second-thread
+  //      j: 17 job12
+  //        j: 18 job121
+  //          p: 19 job121-p1
+  //            t: 20 initial-thread
+  //          p: 21 job121-p2
+  //            t: 22 initial-thread
+  //            t: 23 second-thread
+  //            t: 24 third-thread
+  static MockSystemInterface CreateWithData();
 
  private:
   MockJobHandle root_job_;

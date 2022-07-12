@@ -504,18 +504,19 @@ void DebugAgent::OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
     proc->OnAddressSpace(request, reply);
 }
 
-void DebugAgent::OnJobFilter(const debug_ipc::JobFilterRequest& request,
-                             debug_ipc::JobFilterReply* reply) {
-  DebuggedJob* job = GetDebuggedJob(request.job_koid);
-  if (!job) {
-    reply->status = debug::Status("Not attached to job " + std::to_string(request.job_koid) +
-                                  " while adding a filter.");
-    return;
+void DebugAgent::OnUpdateFilter(const debug_ipc::UpdateFilterRequest& request,
+                                debug_ipc::UpdateFilterReply* reply) {
+  DEBUG_LOG(Agent) << "Received UpdateFilter request size=" << request.filters.size();
+  filters_.clear();
+  filters_.reserve(request.filters.size());
+  for (const auto& filter : request.filters) {
+    filters_.emplace_back(filter);
+    for (const auto& [_, job] : jobs_) {
+      auto matched = filters_.back().ApplyToJob(job->job_handle(), *system_interface_);
+      reply->matched_processes.insert(reply->matched_processes.end(), matched.begin(),
+                                      matched.end());
+    }
   }
-
-  for (const auto& match : job->SetFilters(std::move(request.filters)))
-    reply->matched_processes.push_back(match->GetKoid());
-  reply->status = debug::Status();
 }
 
 void DebugAgent::OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
@@ -849,17 +850,30 @@ void DebugAgent::LaunchComponent(const debug_ipc::LaunchRequest& request,
   }
 
   reply->inferior_type = debug_ipc::InferiorType::kComponent;
-  reply->status = system_interface_->GetComponentManager().LaunchComponent(job, request.argv,
+  reply->status = system_interface_->GetComponentManager().LaunchComponent(*this, request.argv,
                                                                            &reply->component_id);
 }
 
-void DebugAgent::OnProcessStart(const std::string& filter,
-                                std::unique_ptr<ProcessHandle> process_handle) {
+void DebugAgent::AppendFilter(debug_ipc::Filter filter) { filters_.emplace_back(filter); }
+
+void DebugAgent::OnProcessStart(std::unique_ptr<ProcessHandle> process_handle) {
+  std::optional<Filter> matched_filter;
+  for (const auto& filter : filters_) {
+    if (filter.MatchesProcess(*process_handle, *system_interface_)) {
+      matched_filter = filter;
+      break;
+    }
+  }
+  if (!matched_filter) {
+    return;
+  }
+
   DEBUG_LOG(Process) << "Process starting, koid: " << process_handle->GetKoid();
 
   auto process_koid = process_handle->GetKoid();
   StdioHandles stdio;  // Will be filled in only for components.
-  uint64_t component_id = system_interface_->GetComponentManager().OnProcessStart(filter, stdio);
+  uint64_t component_id =
+      system_interface_->GetComponentManager().OnProcessStart(*matched_filter, stdio);
 
   // Send notification, then create debug process so that thread notification is sent after this.
   debug_ipc::NotifyProcessStarting notify;

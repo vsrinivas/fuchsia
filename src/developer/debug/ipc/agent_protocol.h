@@ -98,9 +98,9 @@ void WriteReply(const WriteRegistersReply& reply, uint32_t transaction_id, Messa
 bool ReadRequest(MessageReader* reader, AddressSpaceRequest* request, uint32_t* transaction_id);
 void WriteReply(const AddressSpaceReply& reply, uint32_t transaction_id, MessageWriter* writer);
 
-// JobFilter.
-bool ReadRequest(MessageReader* reader, JobFilterRequest* request, uint32_t* transaction_id);
-void WriteReply(const JobFilterReply& reply, uint32_t transaction_id, MessageWriter* writer);
+// UpdateFilter.
+bool ReadRequest(MessageReader* reader, UpdateFilterRequest* request, uint32_t* transaction_id);
+void WriteReply(const UpdateFilterReply& reply, uint32_t transaction_id, MessageWriter* writer);
 
 // WriteMemory.
 bool ReadRequest(MessageReader* reader, WriteMemoryRequest* request, uint32_t* transaction_id);

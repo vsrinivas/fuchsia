@@ -16,6 +16,7 @@
 #include "src/developer/debug/ipc/client_protocol.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/ipc/protocol.h"
+#include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/zx_status.h"
 
 // This test tests that the debug agent can effectively capture process being
@@ -237,12 +238,13 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   FX_VLOGS(1) << "Setting job filters.";
 
   // Sent the Job filter.
-  JobFilterRequest filter_request;
-  filter_request.job_koid = attach_reply->koid;
-  filter_request.filters = {"true", "false"};
-  JobFilterReply filter_reply;
-  remote_api->OnJobFilter(filter_request, &filter_reply);
-  ASSERT_TRUE(filter_reply.status.ok());
+  UpdateFilterRequest filter_request;
+  filter_request.filters = {
+      debug_ipc::Filter{.type = debug_ipc::Filter::Type::kProcessNameSubstr, .pattern = "true"},
+      debug_ipc::Filter{.type = debug_ipc::Filter::Type::kProcessNameSubstr, .pattern = "false"}};
+  UpdateFilterReply filter_reply;
+  remote_api->OnUpdateFilter(filter_request, &filter_reply);
+  ASSERT_TRUE(filter_reply.matched_processes.empty());
 
   FX_VLOGS(1) << "Launching jobs.";
 
@@ -308,9 +310,10 @@ TEST(DebuggedJobIntegrationTest, DISABLED_RepresentativeScenario) {
   FX_VLOGS(1) << "Changing filters.";
 
   // We change the filters. A partial match should work.
-  filter_request.filters = {"breakpoint"};
-  remote_api->OnJobFilter(filter_request, &filter_reply);
-  ASSERT_TRUE(filter_reply.status.ok());
+  filter_request.filters = {debug_ipc::Filter{.type = debug_ipc::Filter::Type::kProcessNameSubstr,
+                                              .pattern = "breakpoint"}};
+  remote_api->OnUpdateFilter(filter_request, &filter_reply);
+  ASSERT_TRUE(filter_reply.matched_processes.empty());
 
   FX_VLOGS(1) << "Launching new processes.";
 

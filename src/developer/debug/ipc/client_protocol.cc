@@ -22,9 +22,7 @@ bool Deserialize(MessageReader* reader, ProcessTreeRecord* record) {
   if (!reader->ReadString(&record->name))
     return false;
   if (record->type == ProcessTreeRecord::Type::kJob) {
-    if (!reader->ReadString(&record->component_url))
-      return false;
-    if (!reader->ReadString(&record->component_moniker))
+    if (!DeserializeOptional(reader, &record->component))
       return false;
     if (!Deserialize(reader, &record->children))
       return false;
@@ -65,10 +63,12 @@ bool Deserialize(MessageReader* reader, ThreadRecord* record) {
 }
 
 bool Deserialize(MessageReader* reader, ProcessRecord* record) {
-  if (!reader->ReadUint64(&record->process_koid) || !reader->ReadString(&record->process_name)) {
+  if (!reader->ReadUint64(&record->process_koid))
     return false;
-  }
-
+  if (!reader->ReadString(&record->process_name))
+    return false;
+  if (!DeserializeOptional(reader, &record->component))
+    return false;
   return Deserialize(reader, &record->threads);
 }
 
@@ -132,6 +132,14 @@ bool Deserialize(MessageReader* reader, AddressRegion* region) {
   return true;
 }
 
+bool Deserialize(MessageReader* reader, ComponentInfo* info) {
+  if (!reader->ReadString(&info->moniker))
+    return false;
+  if (!reader->ReadString(&info->url))
+    return false;
+  return true;
+}
+
 // Record serializers ------------------------------------------------------------------------------
 
 void Serialize(const ProcessBreakpointSettings& settings, MessageWriter* writer) {
@@ -177,6 +185,12 @@ void Serialize(const BreakpointSettings& settings, MessageWriter* writer) {
 void Serialize(const ConfigAction& action, MessageWriter* writer) {
   writer->WriteUint32(static_cast<uint32_t>(action.type));
   writer->WriteString(action.value);
+}
+
+void Serialize(const Filter& filter, MessageWriter* writer) {
+  writer->WriteUint32(static_cast<uint32_t>(filter.type));
+  writer->WriteString(filter.pattern);
+  writer->WriteUint64(filter.job_koid);
 }
 
 // Hello -------------------------------------------------------------------------------------------
@@ -306,7 +320,7 @@ bool ReadReply(MessageReader* reader, AttachReply* reply, uint32_t* transaction_
     return false;
   if (!reader->ReadString(&reply->name))
     return false;
-  return true;
+  return DeserializeOptional(reader, &reply->component);
 }
 
 // Detach ------------------------------------------------------------------------------------------
@@ -571,22 +585,20 @@ bool ReadReply(MessageReader* reader, AddressSpaceReply* reply, uint32_t* transa
   return Deserialize(reader, &reply->map);
 }
 
-// JobFilter --------------------------------------------------------------------------------------
+// UpdateFilter ------------------------------------------------------------------------------------
 
-void WriteRequest(const JobFilterRequest& request, uint32_t transaction_id, MessageWriter* writer) {
-  writer->WriteHeader(MsgHeader::Type::kJobFilter, transaction_id);
-  writer->WriteUint64(request.job_koid);
+void WriteRequest(const UpdateFilterRequest& request, uint32_t transaction_id,
+                  MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kUpdateFilter, transaction_id);
   return Serialize(request.filters, writer);
 }
 
-bool ReadReply(MessageReader* reader, JobFilterReply* reply, uint32_t* transaction_id) {
+bool ReadReply(MessageReader* reader, UpdateFilterReply* reply, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
   *transaction_id = header.transaction_id;
 
-  if (!Deserialize(reader, &reply->status))
-    return false;
   return Deserialize(reader, &reply->matched_processes);
 }
 

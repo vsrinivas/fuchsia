@@ -29,7 +29,7 @@ class SettingValue {
  public:
   SettingValue();  // Creates a kNull type.
   explicit SettingValue(bool);
-  explicit SettingValue(int);
+  explicit SettingValue(int64_t);
   explicit SettingValue(const char*);
   explicit SettingValue(std::string);
   explicit SettingValue(std::vector<std::string>);
@@ -47,14 +47,14 @@ class SettingValue {
   bool is_null() const { return type_ == SettingType::kNull; }
 
   const auto& get_bool() const { return std::get<bool>(value_); }
-  const auto& get_int() const { return std::get<int>(value_); }
+  const auto& get_int() const { return std::get<int64_t>(value_); }
   const auto& get_string() const { return std::get<std::string>(value_); }
   const auto& get_list() const { return std::get<std::vector<std::string>>(value_); }
   const auto& get_execution_scope() const { return std::get<ExecutionScope>(value_); }
   const auto& get_input_locations() const { return std::get<std::vector<InputLocation>>(value_); }
 
   void set_bool(bool v) { value_ = v; }
-  void set_int(int v) { value_ = v; }
+  void set_int(int64_t v) { value_ = v; }
   void set_string(std::string v) { value_ = std::move(v); }
   void set_list(std::vector<std::string> v) { value_ = std::move(v); }
   void set_execution_scope(const ExecutionScope& s) { value_ = s; }
@@ -62,7 +62,7 @@ class SettingValue {
 
   std::string ToDebugString() const;
 
-  using VariantValue = std::variant<bool, int, std::string, std::vector<std::string>,
+  using VariantValue = std::variant<bool, int64_t, std::string, std::vector<std::string>,
                                     ExecutionScope, std::vector<InputLocation>>;
 
  private:

@@ -183,9 +183,6 @@ Examples
   filter 1
       Selects filter 1 to be the active filter.
 
-  job 3 filter
-      List all filters on job 3.
-
   filter 3 set pattern = foo
       Update filter 3 to attach to processes named "foo".
 
@@ -199,18 +196,14 @@ bool HandleFilterNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   if (!cmd.HasNoun(Noun::kFilter))
     return false;
 
-  *err = cmd.ValidateNouns({Noun::kJob, Noun::kFilter});
+  *err = cmd.ValidateNouns({Noun::kFilter});
   if (err->has_error())
     return true;
 
   if (cmd.GetNounIndex(Noun::kFilter) == Command::kNoIndex) {
     // Just "filter", this lists available filters. If a job is given, it lists only filters
     // for that job. Otherwise it lists all filters.
-    if (cmd.HasNoun(Noun::kJob)) {
-      Console::get()->Output(FormatFilterList(context, cmd.job()));
-    } else {
-      Console::get()->Output(FormatFilterList(context));
-    }
+    Console::get()->Output(FormatFilterList(context));
     return true;
   }
 

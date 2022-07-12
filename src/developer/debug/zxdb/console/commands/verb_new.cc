@@ -20,13 +20,9 @@ namespace {
 
 const char kNewShortHelp[] = "new: Create a new debugger object.";
 const char kNewHelp[] =
-    R"(<object-type> [ <reference-object-id> ] new
+    R"(<object-type> new
 
   Creates a new object of type <object-type>.
-
-  The settings from the current object will be cloned. If an explicit object
-  index is specified ("process 2 new"), the new one will clone the given one.
-  The new object will be the active one of that type.
 
 filter new
 
@@ -35,7 +31,7 @@ filter new
   command. See "help filter" and "help attach" for more.
 
   [zxdb] filter new
-  Filter 2  FIXME
+  Filter 2 type=unset
 
 job new
 
@@ -73,11 +69,6 @@ Err RunVerbNew(ConsoleContext* context, const Command& cmd) {
   switch (cmd.nouns().begin()->first) {
     case Noun::kFilter: {
       Filter* new_filter = context->session()->system().CreateNewFilter();
-      if (cmd.filter()) {
-        // Clone existing filter's settings.
-        new_filter->SetJob(cmd.filter()->job());
-        new_filter->SetPattern(cmd.filter()->pattern());
-      }
       context->SetActiveFilter(new_filter);
       console->Output(FormatFilter(context, new_filter));
       break;

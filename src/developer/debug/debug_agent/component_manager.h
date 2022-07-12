@@ -10,11 +10,15 @@
 #include <vector>
 
 #include "src/developer/debug/debug_agent/stdio_handles.h"
+#include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/status.h"
 
 namespace debug_agent {
 
-class DebuggedJob;
+class DebugAgent;
+class Filter;
+class ProcessHandle;
+class SystemInterface;
 
 // This class manages launching and monitoring Fuchsia components. It is a singleton owned by the
 // DebugAgent.
@@ -26,19 +30,18 @@ class ComponentManager {
  public:
   virtual ~ComponentManager() = default;
 
-  struct ComponentInfo {
-    std::string url;
-    std::string moniker;
-  };
-
   // Find the component information if the job is the root job of an ELF component.
-  virtual std::optional<ComponentInfo> FindComponentInfo(zx_koid_t job_koid) const = 0;
+  virtual std::optional<debug_ipc::ComponentInfo> FindComponentInfo(zx_koid_t job_koid) const = 0;
+
+  // Find the component information if the process runs in the context of a component.
+  std::optional<debug_ipc::ComponentInfo> FindComponentInfo(
+      const ProcessHandle& process, SystemInterface& system_interface) const;
 
   // Launches the component with the given command line.
   //
-  // The root_job is the job for the attached component or system root job. The requirement is
-  // that this job must cover where components are launched.
-  virtual debug::Status LaunchComponent(DebuggedJob* root_job, const std::vector<std::string>& argv,
+  // DebugAgent is needed here to insert a filter to capture the new component.
+  virtual debug::Status LaunchComponent(DebugAgent& debug_agent,
+                                        const std::vector<std::string>& argv,
                                         uint64_t* component_id) = 0;
 
   // Notification that a process has started.
@@ -48,7 +51,7 @@ class ComponentManager {
   //
   // If it was not a component launch, returns false (the caller normally won't know if a launch is
   // a component without asking us, so it isn't necessarily an error).
-  virtual uint64_t OnProcessStart(const std::string& filter, StdioHandles& out_stdio) = 0;
+  virtual uint64_t OnProcessStart(const Filter& filter, StdioHandles& out_stdio) = 0;
 };
 
 }  // namespace debug_agent

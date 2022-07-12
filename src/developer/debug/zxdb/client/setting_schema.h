@@ -43,7 +43,7 @@ class SettingSchema : public fxl::RefCountedThreadSafe<SettingSchema> {
   // For the String variant, it can take a list of valid options which new values must match to
   // validate against. This is done as a case-sensitive comparison.
   void AddBool(std::string name, std::string description, bool value = false);
-  void AddInt(std::string name, std::string description, int value = 0);
+  void AddInt(std::string name, std::string description, int64_t value = 0);
   void AddExecutionScope(std::string name, std::string description,
                          const ExecutionScope value = ExecutionScope());
   void AddInputLocations(std::string name, std::string description,

@@ -15,7 +15,9 @@
 #include <optional>
 #include <string>
 
-#include "src/developer/debug/debug_agent/debugged_job.h"
+#include "src/developer/debug/debug_agent/debug_agent.h"
+#include "src/developer/debug/debug_agent/filter.h"
+#include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/component_utils.h"
 #include "src/developer/debug/shared/logging/logging.h"
 
@@ -128,8 +130,7 @@ zx_status_t V1ComponentLauncher::Prepare(std::vector<std::string> argv,
   *description = {};
   description->component_id = next_component_id++;
   description->url = pkg_url;
-  description->process_name = url_desc.component_name;
-  description->filter = url_desc.component_name;
+  description->filter = url_desc.component_name + ".cmx";
 
   *handles = {};
   handles->out = AddStdio(STDOUT_FILENO, &launch_info_);
@@ -213,7 +214,7 @@ ZirconComponentManager::ZirconComponentManager(std::shared_ptr<sys::ServiceDirec
           ReadElfJobId(std::move(instace_info_res.response().resolved->started->runtime_dir));
       if (job_id != ZX_KOID_INVALID) {
         // Remove the "." at the beginning of the moniker. It's safe because moniker is not empty.
-        running_component_info_[job_id] = {.url = info.url, .moniker = info.moniker.substr(1)};
+        running_component_info_[job_id] = {.moniker = info.moniker.substr(1), .url = info.url};
       }
     }
   }
@@ -231,8 +232,8 @@ void ZirconComponentManager::OnEvent(fuchsia::sys2::Event event) {
         zx_koid_t job_id = ReadElfJobId(std::move(
             *event.mutable_event_result()->payload().debug_started().mutable_runtime_dir()));
         if (job_id != ZX_KOID_INVALID) {
-          running_component_info_[job_id] = {.url = event.header().component_url(),
-                                             .moniker = event.header().moniker().substr(1)};
+          running_component_info_[job_id] = {.moniker = event.header().moniker().substr(1),
+                                             .url = event.header().component_url()};
           DEBUG_LOG(Process) << "Component started job_id=" << job_id
                              << " moniker=" << running_component_info_[job_id].moniker
                              << " url=" << running_component_info_[job_id].url;
@@ -256,14 +257,14 @@ void ZirconComponentManager::OnEvent(fuchsia::sys2::Event event) {
   }
 }
 
-std::optional<ZirconComponentManager::ComponentInfo> ZirconComponentManager::FindComponentInfo(
+std::optional<debug_ipc::ComponentInfo> ZirconComponentManager::FindComponentInfo(
     zx_koid_t job_koid) const {
   if (auto it = running_component_info_.find(job_koid); it != running_component_info_.end())
     return it->second;
   return std::nullopt;
 }
 
-debug::Status ZirconComponentManager::LaunchComponent(DebuggedJob* root_job,
+debug::Status ZirconComponentManager::LaunchComponent(DebugAgent& debug_agent,
                                                       const std::vector<std::string>& argv,
                                                       uint64_t* component_id) {
   *component_id = 0;
@@ -276,25 +277,12 @@ debug::Status ZirconComponentManager::LaunchComponent(DebuggedJob* root_job,
   }
   FX_DCHECK(expected_v1_components_.count(description.filter) == 0);
 
-  root_job->AppendFilter(description.filter);
+  debug_agent.AppendFilter(debug_ipc::Filter{.type = debug_ipc::Filter::Type::kProcessName,
+                                             .pattern = description.filter});
 
-  if (debug::IsDebugLoggingActive()) {
-    std::stringstream ss;
-
-    ss << "Launching component. " << std::endl
-       << "Url: " << description.url << std::endl
-       << ", name: " << description.process_name << std::endl
-       << ", filter: " << description.filter << std::endl
-       << ", component_id: " << description.component_id << std::endl;
-
-    auto& filters = root_job->filters();
-    ss << "Current component filters: " << filters.size();
-    for (auto& filter : filters) {
-      ss << std::endl << "* " << filter.filter;
-    }
-
-    DEBUG_LOG(Process) << ss.str();
-  }
+  DEBUG_LOG(Process) << "Launching component url=" << description.url
+                     << " filter=" << description.filter
+                     << " component_id=" << description.component_id;
 
   *component_id = description.component_id;
 
@@ -325,9 +313,9 @@ debug::Status ZirconComponentManager::LaunchComponent(DebuggedJob* root_job,
   return debug::Status();
 }
 
-uint64_t ZirconComponentManager::OnProcessStart(const std::string& filter,
-                                                StdioHandles& out_stdio) {
-  if (auto it = expected_v1_components_.find(filter); it != expected_v1_components_.end()) {
+uint64_t ZirconComponentManager::OnProcessStart(const Filter& filter, StdioHandles& out_stdio) {
+  if (auto it = expected_v1_components_.find(filter.filter().pattern);
+      it != expected_v1_components_.end()) {
     out_stdio = std::move(it->second.handles);
 
     uint64_t component_id = it->second.description.component_id;

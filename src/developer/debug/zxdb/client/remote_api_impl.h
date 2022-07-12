@@ -66,8 +66,8 @@ class RemoteAPIImpl : public RemoteAPI {
                     fit::callback<void(const Err&, debug_ipc::ThreadStatusReply)> cb) override;
   void AddressSpace(const debug_ipc::AddressSpaceRequest& request,
                     fit::callback<void(const Err&, debug_ipc::AddressSpaceReply)> cb) override;
-  void JobFilter(const debug_ipc::JobFilterRequest& request,
-                 fit::callback<void(const Err&, debug_ipc::JobFilterReply)> cb) override;
+  void UpdateFilter(const debug_ipc::UpdateFilterRequest& request,
+                    fit::callback<void(const Err&, debug_ipc::UpdateFilterReply)> cb) override;
   void WriteMemory(const debug_ipc::WriteMemoryRequest& request,
                    fit::callback<void(const Err&, debug_ipc::WriteMemoryReply)> cb) override;
   void LoadInfoHandleTable(

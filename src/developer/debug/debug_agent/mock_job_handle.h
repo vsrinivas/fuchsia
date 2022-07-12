@@ -12,12 +12,14 @@ namespace debug_agent {
 
 class MockJobHandle final : public JobHandle {
  public:
-  MockJobHandle(zx_koid_t koid, std::string name = std::string());
+  explicit MockJobHandle(zx_koid_t koid, std::string name = std::string());
 
   // Sets the child jobs and processes. These will be copied since we need to return a new
   // unique_ptr for each call to GetChildJobs() / GetChildProcesses().
   void set_child_jobs(std::vector<MockJobHandle> jobs) { child_jobs_ = std::move(jobs); }
   void set_child_processes(std::vector<MockProcessHandle> processes) {
+    for (auto& p : processes)
+      p.set_job_koid(job_koid_);
     child_processes_ = std::move(processes);
   }
 

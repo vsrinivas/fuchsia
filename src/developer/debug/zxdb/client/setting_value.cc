@@ -7,8 +7,9 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
-#include <vector>
+#include <cstdint>
 #include <sstream>
+#include <vector>
 
 #include "src/lib/fxl/macros.h"
 
@@ -37,7 +38,7 @@ SettingValue::SettingValue() = default;
 
 SettingValue::SettingValue(bool val) : type_(SettingType::kBoolean), value_(val) {}
 
-SettingValue::SettingValue(int val) : type_(SettingType::kInteger), value_(val) {}
+SettingValue::SettingValue(int64_t val) : type_(SettingType::kInteger), value_(val) {}
 
 SettingValue::SettingValue(const char* val)
     : type_(SettingType::kString), value_(std::string(val)) {}

@@ -51,21 +51,22 @@ TEST_F(VerbNewRmTest, FilterAndJob) {
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ(
-      "  # pattern job\n"
-      "▶ 1 foobar    *\n",
+      "  # Type                Pattern Job \n"
+      "▶ 1 process name substr foobar      \n",
       event.output.AsString());
 
-  // Create a new filter, it should be cloned from the original.
+  // Create a new filter, it should be unset.
   console.ProcessInputLine("filter new");
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  EXPECT_EQ("Filter 2 pattern=foobar job=* (all attached jobs)", event.output.AsString());
+  EXPECT_EQ("Filter 2 type=(unset) (invalid) ", event.output.AsString());
 
   // Delete the original filter.
   console.ProcessInputLine("filter 1 rm");
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  EXPECT_EQ("Removed Filter 1 pattern=foobar job=* (all attached jobs)", event.output.AsString());
+  EXPECT_EQ("Removed Filter 1 type=\"process name substr\" pattern=foobar ",
+            event.output.AsString());
 
   // Create a new job.
   console.ProcessInputLine("job new");
@@ -74,7 +75,7 @@ TEST_F(VerbNewRmTest, FilterAndJob) {
   EXPECT_EQ("Job 2 state=\"Not attached\" name=\"\"", event.output.AsString());
 
   // Create a new filter specifically for the new job.
-  console.ProcessInputLine("job 2 attach ninjas");
+  console.ProcessInputLine("attach --job 1234 ninjas");
   // This will issue a warning because the job isn't attached. This comes as a separate output
   // event. Ignore this.
   console.GetOutputEvent();
@@ -90,9 +91,9 @@ TEST_F(VerbNewRmTest, FilterAndJob) {
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   EXPECT_EQ(
-      "  # pattern job\n"
-      "  2 foobar    *\n"
-      "▶ 3 ninjas    2\n",
+      "  # Type                Pattern  Job          \n"
+      "  2 (unset)                          (invalid)\n"
+      "▶ 3 process name substr ninjas  1234          \n",
       event.output.AsString());
 
   // Delete the job.
@@ -106,15 +107,6 @@ TEST_F(VerbNewRmTest, FilterAndJob) {
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   EXPECT_EQ("No job to remove.", event.output.AsString());
-
-  // The associated filter should have been automatically deleted.
-  console.ProcessInputLine("filter");
-  event = console.GetOutputEvent();
-  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  EXPECT_EQ(
-      " # pattern job\n"
-      " 2 foobar    *\n",
-      event.output.AsString());
 }
 
 TEST_F(VerbNewRmTest, Process) {

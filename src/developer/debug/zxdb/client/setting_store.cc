@@ -19,7 +19,7 @@ bool SettingStore::GetBool(const std::string& key) const {
   return value.get_bool();
 }
 
-int SettingStore::GetInt(const std::string& key) const {
+int64_t SettingStore::GetInt(const std::string& key) const {
   auto value = GetValue(key);
   FX_DCHECK(value.is_int());
   return value.get_int();
@@ -66,7 +66,7 @@ Err SettingStore::SetBool(const std::string& key, bool val) {
   return SetValue(key, SettingValue(val));
 }
 
-Err SettingStore::SetInt(const std::string& key, int val) {
+Err SettingStore::SetInt(const std::string& key, int64_t val) {
   return SetValue(key, SettingValue(val));
 }
 

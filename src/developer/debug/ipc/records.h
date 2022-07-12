@@ -133,6 +133,11 @@ struct ExceptionRecord {
   ExceptionStrategy strategy = ExceptionStrategy::kNone;
 };
 
+struct ComponentInfo {
+  std::string moniker;
+  std::string url;
+};
+
 // Note: see "ps" source:
 // https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/sys/bin/psutils/ps.c
 struct ProcessTreeRecord {
@@ -145,8 +150,7 @@ struct ProcessTreeRecord {
   // The following fields are only valid on kJob and will be skipped if type is kProcess.
 
   // The component information if the current job is the root job of an ELF component.
-  std::string component_url;
-  std::string component_moniker;
+  std::optional<ComponentInfo> component;
 
   std::vector<ProcessTreeRecord> children;
 };
@@ -251,6 +255,9 @@ struct ThreadRecord {
 struct ProcessRecord {
   uint64_t process_koid = 0;
   std::string process_name;
+
+  // The component information if the process is running in a component. Not hooked up yet.
+  std::optional<ComponentInfo> component;
 
   std::vector<ThreadRecord> threads;
 };
@@ -425,6 +432,24 @@ struct InfoHandle {
     InfoHandleVmo vmo;  // Valid when type == ZX_OBJ_TYPE_VMO.
     // Other types go here.
   } ext;
+};
+
+// Filters -----------------------------------------------------------------------------------------
+struct Filter {
+  enum class Type : uint32_t {
+    kUnset,
+    kProcessNameSubstr,
+    kProcessName,
+    kComponentName,
+    kComponentUrl,
+    kComponentMoniker,
+
+    kLast,
+  } type = Type::kUnset;
+  static const char* TypeToString(Type);
+
+  std::string pattern;
+  uint64_t job_koid = 0;  // must be 0 when type is kComponent*.
 };
 
 #pragma pack(pop)

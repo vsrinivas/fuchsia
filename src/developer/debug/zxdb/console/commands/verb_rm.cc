@@ -35,7 +35,7 @@ job rm
 j rm
 j 1 rm
 
-  Removes the job. Any filters tied to this job will also be deleted.
+  Removes the job.
 
 process rm
 pr rm

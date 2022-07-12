@@ -26,7 +26,8 @@ class MockLimboProvider final : public LimboProvider {
     MockExceptionHandle exception;
   };
 
-  explicit MockLimboProvider() : LimboProvider() {}
+  MockLimboProvider() = default;
+  MockLimboProvider(MockLimboProvider&&) = default;
   virtual ~MockLimboProvider() = default;
 
   const std::vector<zx_koid_t>& release_calls() const { return release_calls_; }

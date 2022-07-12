@@ -5,8 +5,12 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_FILTER_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_FILTER_H_
 
-#include <optional>
+#include <zircon/types.h>
 
+#include <optional>
+#include <string_view>
+
+#include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
 #include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/setting_store.h"
@@ -18,34 +22,32 @@ class SettingSchema;
 
 class Filter : public ClientObject {
  public:
-  // This string "*" is used to indicate attaching to all processes.
-  static const char kAllProcessesPattern[];
-
   explicit Filter(Session* session);
-  virtual ~Filter();
 
-  bool is_valid() const { return !pattern_.empty(); }
+  bool is_valid() const {
+    return filter_.type != debug_ipc::Filter::Type::kUnset &&
+           (filter_.job_koid != 0 || !filter_.pattern.empty());
+  }
 
-  // The pattern is a substring to match against launched processes in attached jobs. It is not a
-  // glob or regular expression.
-  //
-  // When the pattern is empty, this filter is invalid. When it's |kAllProcessesPattern|, the
-  // filter will match all processes.
-  //
-  // Note that the empty string behavior is different than the filter messages sent to the backend.
+  void SetType(debug_ipc::Filter::Type type);
+  debug_ipc::Filter::Type type() const { return filter_.type; }
+
   void SetPattern(const std::string& pattern);
-  const std::string& pattern() const { return pattern_; }
+  const std::string& pattern() const { return filter_.pattern; }
 
-  // A null job matches all attached jobs. The System should automatically delete filters explicitly
-  // associated with a job when the job is deleted which should prevent this pointer from dangling.
-  void SetJob(Job* job);
-  Job* job() const { return job_ ? job_->get() : nullptr; }
+  void SetJobKoid(zx_koid_t job_koid);
+  zx_koid_t job_koid() const { return filter_.job_koid; }
 
+  // Accessing the underlying filter storage.
+  const debug_ipc::Filter& filter() const { return filter_; }
   SettingStore& settings() { return settings_; }
 
   static fxl::RefPtr<SettingSchema> GetSchema();
 
  private:
+  // Sync the filter to the debug_agent. Must be called when the filter changes.
+  void Sync();
+
   // Implements the SettingStore interface for the Filter (uses composition instead of inheritance
   // to keep the Filter API simpler).
   class Settings : public SettingStore {
@@ -59,11 +61,11 @@ class Filter : public ClientObject {
    private:
     Filter* filter_;  // Object that owns us.
   };
-  friend Settings;
 
   Settings settings_;
 
-  std::string pattern_;
+  // The real filter.
+  debug_ipc::Filter filter_;
 
   // This exists in one of 3 states:
   //   1) Optional contains non-null pointer. That points to the job this applies to.

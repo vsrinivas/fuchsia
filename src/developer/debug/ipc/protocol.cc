@@ -66,8 +66,8 @@ const char* MsgHeader::TypeToString(MsgHeader::Type type) {
       return "ThreadStatus";
     case MsgHeader::Type::kAddressSpace:
       return "AddressSpace";
-    case MsgHeader::Type::kJobFilter:
-      return "JobFilter";
+    case MsgHeader::Type::kUpdateFilter:
+      return "UpdateFilter";
     case MsgHeader::Type::kNotifyProcessExiting:
       return "NotifyProcessExiting";
     case MsgHeader::Type::kNotifyProcessStarting:

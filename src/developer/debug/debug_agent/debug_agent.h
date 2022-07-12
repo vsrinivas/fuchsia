@@ -15,8 +15,10 @@
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/debugged_job.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
+#include "src/developer/debug/debug_agent/filter.h"
 #include "src/developer/debug/debug_agent/limbo_provider.h"
 #include "src/developer/debug/debug_agent/remote_api.h"
+#include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/stream_buffer.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
@@ -58,8 +60,12 @@ class DebugAgent : public RemoteAPI,
   Breakpoint* GetBreakpoint(uint32_t breakpoint_id);
   void RemoveBreakpoint(uint32_t breakpoint_id);
 
+  // Manually add a filter. Only intended to be used by ComponentManager to launch v1 components.
+  // TODO(dangyi): Deprecate launching v1 components.
+  void AppendFilter(debug_ipc::Filter filter);
+
   // ProcessStartHandler implementation.
-  void OnProcessStart(const std::string& filter, std::unique_ptr<ProcessHandle> process) override;
+  void OnProcessStart(std::unique_ptr<ProcessHandle> process) override;
 
   void InjectProcessForTest(std::unique_ptr<DebuggedProcess> process);
 
@@ -116,8 +122,8 @@ class DebugAgent : public RemoteAPI,
                       debug_ipc::ThreadStatusReply* reply) override;
   void OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
                       debug_ipc::AddressSpaceReply* reply) override;
-  void OnJobFilter(const debug_ipc::JobFilterRequest& request,
-                   debug_ipc::JobFilterReply* reply) override;
+  void OnUpdateFilter(const debug_ipc::UpdateFilterRequest& request,
+                      debug_ipc::UpdateFilterReply* reply) override;
   void OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
                      debug_ipc::WriteMemoryReply* reply) override;
   void OnLoadInfoHandleTable(const debug_ipc::LoadInfoHandleTableRequest& request,
@@ -161,6 +167,8 @@ class DebugAgent : public RemoteAPI,
   void OnProcessEnteredLimbo(const LimboProvider::Record& record);
 
   // Members ---------------------------------------------------------------------------------------
+
+  std::vector<Filter> filters_;
 
   std::unique_ptr<SystemInterface> system_interface_;
 

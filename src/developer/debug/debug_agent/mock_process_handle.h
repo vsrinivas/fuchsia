@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_DEBUG_AGENT_MOCK_PROCESS_HANDLE_H_
 
 #include <zircon/status.h>
+#include <zircon/types.h>
 
 #include <string>
 
@@ -27,6 +28,7 @@ class MockProcessHandle final : public ProcessHandle {
   explicit MockProcessHandle(zx_koid_t process_koid, std::string name = std::string());
 
   void set_name(std::string n) { name_ = std::move(n); }
+  void set_job_koid(zx_koid_t koid) { job_koid_ = koid; }
 
   // Sets the threads. These will be copied since we need to return a new unique_ptr for each call
   // to GetChildThreads().
@@ -48,6 +50,7 @@ class MockProcessHandle final : public ProcessHandle {
   zx_koid_t GetKoid() const override { return process_koid_; }
   std::string GetName() const override { return name_; }
   std::vector<std::unique_ptr<ThreadHandle>> GetChildThreads() const override;
+  zx_koid_t GetJobKoid() const override { return job_koid_; }
   debug::Status Kill() override;
   int64_t GetReturnCode() const override;
   debug::Status Attach(ProcessHandleObserver* observer) override;
@@ -69,6 +72,7 @@ class MockProcessHandle final : public ProcessHandle {
   static zx::process null_handle_;
 
   zx_koid_t process_koid_;
+  zx_koid_t job_koid_ = ZX_KOID_INVALID;
   std::string name_;
 
   bool is_attached_ = false;

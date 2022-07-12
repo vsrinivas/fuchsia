@@ -11,7 +11,6 @@
 #include "lib/fit/function.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/client_object.h"
-#include "src/developer/debug/zxdb/client/filter_observer.h"
 #include "src/developer/debug/zxdb/client/map_setting_store.h"
 #include "src/developer/debug/zxdb/client/setting_store_observer.h"
 #include "src/developer/debug/zxdb/client/target.h"
@@ -36,7 +35,6 @@ class TargetImpl;
 // Represents the client's view of the system-wide state on the debugged
 // computer.
 class System : public ClientObject,
-               public FilterObserver,
                public SettingStoreObserver,
                public SystemSymbols::DownloadHandler {
  public:
@@ -163,8 +161,11 @@ class System : public ClientObject,
   // Add a symbol server for testing purposes.
   void InjectSymbolServerForTesting(std::unique_ptr<SymbolServer> server);
 
+  // Sync filters to debug_agent.
+  void SyncFilters();
+
   // Will attach to any process we are not already attached to.
-  void OnFilterMatches(Job* job, const std::vector<uint64_t>& matched_pids) override;
+  void OnFilterMatches(const std::vector<uint64_t>& matched_pids);
 
   // Searches through for an open slot (Target without an attached process) or creates another one
   // if none is found. Calls attach on that target, passing |callback| into it.
@@ -227,6 +228,7 @@ class System : public ClientObject,
   std::map<uint32_t, std::unique_ptr<BreakpointImpl>> breakpoints_;
 
   std::vector<std::unique_ptr<Filter>> filters_;
+  bool filter_sync_pending_ = false;  // Used to throttle consecutive OnFilterChanges.
 
   SystemSymbols symbols_;
 

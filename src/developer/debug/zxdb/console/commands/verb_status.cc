@@ -151,7 +151,7 @@ OutputBuffer GetFilterStatus(ConsoleContext* context) {
   if (context->session()->system().GetFilters().empty()) {
     result.Append("\n  There are no filters. Use \"attach <process-name>\" to create one.\n");
   } else {
-    result.Append(FormatFilterList(context, nullptr, 2));
+    result.Append(FormatFilterList(context, 2));
   }
 
   return result;

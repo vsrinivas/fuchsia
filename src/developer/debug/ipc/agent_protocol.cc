@@ -7,6 +7,7 @@
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/ipc/protocol_helpers.h"
+#include "src/developer/debug/ipc/records.h"
 
 namespace debug_ipc {
 
@@ -119,6 +120,19 @@ bool Deserialize(MessageReader* reader, ConfigAction* action) {
   return true;
 }
 
+bool Deserialize(MessageReader* reader, Filter* filter) {
+  uint32_t type = 0;
+  if (!reader->ReadUint32(&type) || type >= static_cast<uint32_t>(Filter::Type::kLast)) {
+    return false;
+  }
+  filter->type = static_cast<Filter::Type>(type);
+  if (!reader->ReadString(&filter->pattern))
+    return false;
+  if (!reader->ReadUint64(&filter->job_koid))
+    return false;
+  return true;
+}
+
 // Record serializers ------------------------------------------------------------------------------
 
 void Serialize(const ProcessTreeRecord& record, MessageWriter* writer) {
@@ -126,8 +140,7 @@ void Serialize(const ProcessTreeRecord& record, MessageWriter* writer) {
   writer->WriteUint64(record.koid);
   writer->WriteString(record.name);
   if (record.type == ProcessTreeRecord::Type::kJob) {
-    writer->WriteString(record.component_url);
-    writer->WriteString(record.component_moniker);
+    SerializeOptional(record.component, writer);
     Serialize(record.children, writer);
   }
 }
@@ -144,6 +157,7 @@ void Serialize(const ThreadRecord& record, MessageWriter* writer) {
 void Serialize(const ProcessRecord& record, MessageWriter* writer) {
   writer->WriteUint64(record.process_koid);
   writer->WriteString(record.process_name);
+  SerializeOptional(record.component, writer);
   Serialize(record.threads, writer);
 }
 
@@ -180,6 +194,11 @@ void Serialize(const BreakpointStats& stats, MessageWriter* writer) {
   writer->WriteUint32(stats.id);
   writer->WriteUint32(stats.hit_count);
   writer->WriteBool(stats.should_delete);
+}
+
+void Serialize(const ComponentInfo& info, MessageWriter* writer) {
+  writer->WriteString(info.moniker);
+  writer->WriteString(info.url);
 }
 
 // Hello -------------------------------------------------------------------------------------------
@@ -297,6 +316,7 @@ void WriteReply(const AttachReply& reply, uint32_t transaction_id, MessageWriter
   writer->WriteUint64(reply.koid);
   Serialize(reply.status, writer);
   writer->WriteString(reply.name);
+  SerializeOptional(reply.component, writer);
 }
 
 // Detach ------------------------------------------------------------------------------------------
@@ -507,21 +527,18 @@ void WriteReply(const ModulesReply& reply, uint32_t transaction_id, MessageWrite
   Serialize(reply.modules, writer);
 }
 
-// JobFilter --------------------------------------------------------------------------------------
+// UpdateFilter ------------------------------------------------------------------------------------
 
-bool ReadRequest(MessageReader* reader, JobFilterRequest* request, uint32_t* transaction_id) {
+bool ReadRequest(MessageReader* reader, UpdateFilterRequest* request, uint32_t* transaction_id) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
   *transaction_id = header.transaction_id;
-  if (!reader->ReadUint64(&request->job_koid))
-    return false;
   return Deserialize(reader, &request->filters);
 }
 
-void WriteReply(const JobFilterReply& reply, uint32_t transaction_id, MessageWriter* writer) {
-  writer->WriteHeader(MsgHeader::Type::kJobFilter, transaction_id);
-  Serialize(reply.status, writer);
+void WriteReply(const UpdateFilterReply& reply, uint32_t transaction_id, MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kUpdateFilter, transaction_id);
   Serialize(reply.matched_processes, writer);
 }
 

@@ -83,7 +83,7 @@ void RemoteAPIAdapter::OnStreamReadable() {
       DISPATCH(AddressSpace);
       DISPATCH(ConfigAgent);
       DISPATCH(Detach);
-      DISPATCH(JobFilter);
+      DISPATCH(UpdateFilter);
       DISPATCH(Hello);
       DISPATCH(Kill);
       DISPATCH(Launch);

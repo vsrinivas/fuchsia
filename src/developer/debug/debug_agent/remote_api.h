@@ -80,8 +80,8 @@ class RemoteAPI {
   virtual void OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
                               debug_ipc::AddressSpaceReply* reply) = 0;
 
-  virtual void OnJobFilter(const debug_ipc::JobFilterRequest& request,
-                           debug_ipc::JobFilterReply* reply) = 0;
+  virtual void OnUpdateFilter(const debug_ipc::UpdateFilterRequest& request,
+                              debug_ipc::UpdateFilterReply* reply) = 0;
 
   virtual void OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
                              debug_ipc::WriteMemoryReply* reply) = 0;

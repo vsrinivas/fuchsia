@@ -122,8 +122,8 @@ void RemoteAPI::AddressSpace(const debug_ipc::AddressSpaceRequest& request,
   FX_NOTREACHED();
 }
 
-void RemoteAPI::JobFilter(const debug_ipc::JobFilterRequest& request,
-                          fit::callback<void(const Err&, debug_ipc::JobFilterReply)> cb) {
+void RemoteAPI::UpdateFilter(const debug_ipc::UpdateFilterRequest& request,
+                             fit::callback<void(const Err&, debug_ipc::UpdateFilterReply)> cb) {
   FX_NOTREACHED();
 }
 

@@ -4,12 +4,11 @@
 
 #include "src/developer/debug/zxdb/client/session.h"
 
+#include <optional>
 #include <set>
 
 #include <gtest/gtest.h>
 
-#include "src/developer/debug/shared/logging/logging.h"
-#include "src/developer/debug/shared/stream_buffer.h"
 #include "src/developer/debug/zxdb/client/breakpoint.h"
 #include "src/developer/debug/zxdb/client/breakpoint_settings.h"
 #include "src/developer/debug/zxdb/client/filter.h"
@@ -107,8 +106,8 @@ class SessionSink : public RemoteAPI {
     cb(e, reply);
   }
 
-  void JobFilter(const debug_ipc::JobFilterRequest& request,
-                 fit::callback<void(const Err&, debug_ipc::JobFilterReply)> cb) override;
+  void UpdateFilter(const debug_ipc::UpdateFilterRequest& request,
+                    fit::callback<void(const Err&, debug_ipc::UpdateFilterReply)> cb) override;
 
   void Status(const debug_ipc::StatusRequest& request,
               fit::callback<void(const Err&, debug_ipc::StatusReply)> cb) override;
@@ -175,15 +174,15 @@ class SessionTest : public RemoteAPITest {
   std::vector<std::pair<std::string, uint64_t>> existing_processes_;
 };
 
-void SessionSink::JobFilter(const debug_ipc::JobFilterRequest& request,
-                            fit::callback<void(const Err&, debug_ipc::JobFilterReply)> cb) {
-  debug_ipc::JobFilterReply reply;
+void SessionSink::UpdateFilter(const debug_ipc::UpdateFilterRequest& request,
+                               fit::callback<void(const Err&, debug_ipc::UpdateFilterReply)> cb) {
+  debug_ipc::UpdateFilterReply reply;
   std::vector<zxdb::Target*> targets = session_test_->session().system().GetTargets();
   for (const auto& filter : request.filters) {
     for (const auto& process : session_test_->existing_processes()) {
-      // Basic simulation of filtering. We only expect to find the filter string within the
-      // process name.
-      if (process.first.find(filter) != std::string::npos) {
+      // Basic simulation of filtering with only support for kFuzzyProcessName.
+      if (filter.type == debug_ipc::Filter::Type::kProcessNameSubstr &&
+          process.first.find(filter.pattern) != std::string::npos) {
         reply.matched_processes.emplace_back(process.second);
       }
     }
@@ -398,8 +397,8 @@ TEST_F(SessionTest, FilterExistingProcesses) {
   ASSERT_EQ(session().system().GetTargets()[0]->GetState(), zxdb::Target::State::kNone);
 
   Filter* filter = session().system().CreateNewFilter();
+  filter->SetType(debug_ipc::Filter::Type::kProcessNameSubstr);
   filter->SetPattern("test");
-  filter->SetJob(session().system().GetJobs()[0]);
 
   loop().RunUntilNoTasks();
 
@@ -415,8 +414,8 @@ TEST_F(SessionTest, StatusRequest) {
   const std::string kProcessName1 = "process-1";
   const std::string kProcessName2 = "process-2";
 
-  sink()->AppendProcessRecord({kProcessKoid1, kProcessName1, {}});
-  sink()->AppendProcessRecord({kProcessKoid2, kProcessName2, {}});
+  sink()->AppendProcessRecord({kProcessKoid1, kProcessName1, std::nullopt, {}});
+  sink()->AppendProcessRecord({kProcessKoid2, kProcessName2, std::nullopt, {}});
 
   bool called = false;
   debug_ipc::StatusReply status = {};

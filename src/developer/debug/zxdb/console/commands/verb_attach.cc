@@ -4,9 +4,10 @@
 
 #include "src/developer/debug/zxdb/console/commands/verb_attach.h"
 
+#include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/filter.h"
-#include "src/developer/debug/zxdb/client/job.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
@@ -18,37 +19,75 @@ namespace zxdb {
 
 namespace {
 
-const char kAttachShortHelp[] = "attach: Attach to a running process/job.";
+constexpr int kSwitchJob = 1;
+constexpr int kSwitchExact = 2;
+
+const char kAttachShortHelp[] = "attach: Attach to processes.";
 const char kAttachHelp[] =
-    R"(attach <what>
+    R"(attach [ --job / -j <koid> ] [ --exact ] [ <what> ]
 
-  Attaches to a current or future process.
+  Attaches to current or future process.
 
-Atttaching to a specific process
+Arguments
 
-  To attach to a specific process, supply the process' koid (process ID).
-  For example:
+    --job <koid>
+    -j <koid>
+        Only attaching to processes under the job with an id of <koid>. The
+        argument can be omitted and all processes under the job will be
+        attached.
+
+    --exact
+        Attaching to processes with an exact name. The argument will be
+        interpreted as a filter that requires an exact match against the process
+        name. This bypasses any heuristics below and is useful if the process
+        name looks like a koid, a URL, or a moniker.
+
+Attaching to a process by a process id
+
+  Numeric arguments will be interpreted as a process id (koid) that can be used
+  to attach to a specific process. For example:
 
     attach 12345
 
-  Use the "ps" command to view the active processes, their names, and koids.
+  This can only attach to existing processes. Use the "ps" command to view all
+  active processes, their names, and koids.
 
-Attaching to processes by name
+Attaching to processes by a component moniker
 
-  Non-numeric arguments will be interpreted as a filter. A filter is a substring
-  that matches any part of the process name. The filter "t" will match any
-  process with the letter "t" in its name. Filters are not regular expressions.
+  Arguments starting with "/" will be interpreted as a component moniker.
+  This will create a filter that matches all processes in the component with
+  the given moniker.
 
-  Filters are applied to processes launched in jobs the debugger is attached to,
-  both current processes and future ones.
+Attaching to processes by a component URL
 
-  More on jobs:
+  Arguments that look like a URL, e.g., starting with "fuchsia-pkg://" or
+  "fuchsia-boot://", will be interpreted as a component URL. This will create a
+  filter that matches all processes in components with the given URL.
 
-    • See the currently attached jobs with the "job" command.
+  NOTE: a component URL could be partial (fxbug.dev/103293) so it's recommended
+  to use "attaching by a component name" below.
 
-    • Attach to a new job with the "attach-job" command.
+Attaching to processes by a component name
 
-  More on filters:
+  Arguments ending with ".cm" will be interpreted as a component name. The
+  component name is defined as the base name of the component manifest. So a
+  component with an URL "fuchsia-pkg://devhost/foobar#meta/foobar.cm" has a
+  name "foobar.cm". This will create a filter that matches all processes in
+  components with the given name.
+
+Attaching to processes by a process name
+
+  Other arguments will be interpreted as a general filter which is a substring
+  that will be used to matches any part of the process name. Matched processes
+  will be attached.
+
+How "attach" works
+
+  Except attaching by a process id, all other "attach" commands will create
+  filters. Filters are applied to all processes in the system, both current
+  processes and future ones.
+
+  You can:
 
     • See the current filters with the "filter" command.
 
@@ -57,20 +96,6 @@ Attaching to processes by name
       deleted.
 
     • Change a filter's pattern with "filter [X] set pattern = <newvalue>".
-
-    • Attach to all processes in a job with "job attach *". Note that * is a
-      special string for filters, regular expressions are not supported.
-
-  If a job prefix is specified, only processes launched in that job matching the
-  pattern will be attached to:
-
-    job attach foo      // Uses the current job context.
-    job 2 attach foo    // Specifies job context #2.
-
-  If you have a specific job koid (12345) and want to watch "foo" processes in
-  it, a faster way is:
-
-    attach-job 12345 foo
 
 Examples
 
@@ -81,12 +106,22 @@ Examples
       Attaches process context 4 to the process with koid 2371.
 
   attach foobar
-      Attaches to any process that spawns under any job the debugger is attached
-      to with "foobar" in the name.
+      Attaches to processes with "foobar" in their process names.
 
-  job 3 attach foobar
-      Attaches to any process that spawns under job 3 with "foobar" in the
-      name.
+  attach /core/foobar
+      Attaches to processes in the component /core/foobar.
+
+  attach fuchsia-pkg://devhost/foobar#meta/foobar.cm
+      Attaches to processes in components with the above component URL.
+
+  attach foobar.cm
+      Attaches to processes in components with the above name.
+
+  attach --exact /pkg/bin/foobar
+      Attaches to processes with a name "/pkg/bin/foobar".
+
+  attach --job 2037
+      Attaches to all processes under the job with koid 2037.
 )";
 
 bool HasAttachedJob(const System* system) {
@@ -97,13 +132,26 @@ bool HasAttachedJob(const System* system) {
   return false;
 }
 
+std::string TrimToZirconMaxNameLength(std::string pattern) {
+  if (pattern.size() > kZirconMaxNameLength) {
+    Console::get()->Output(OutputBuffer(
+        Syntax::kWarning,
+        "The filter is trimmed to " + std::to_string(kZirconMaxNameLength) +
+            " characters because it's the maximum length for a process name in Zircon."));
+    pattern.resize(kZirconMaxNameLength);
+  }
+  return pattern;
+}
+
 Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback callback) {
-  // Only a process can be attached.
-  if (Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kJob}); err.has_error())
+  // Only process can be specified.
+  if (Err err = cmd.ValidateNouns({Noun::kProcess}); err.has_error())
     return err;
 
+  // attach <koid> accepts no switch.
   uint64_t koid = 0;
-  if (ReadUint64Arg(cmd, 0, "process koid", &koid).ok()) {
+  if (!cmd.HasSwitch(kSwitchJob) && !cmd.HasSwitch(kSwitchExact) &&
+      ReadUint64Arg(cmd, 0, "process koid", &koid).ok()) {
     // Check for duplicate koids before doing anything else to avoid creating a container target
     // in this case. It's easy to hit enter twice which will cause a duplicate attach. The
     // duplicate target is the only reason to check here, the attach will fail later if there's
@@ -125,20 +173,23 @@ Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback c
     return Err();
   }
 
-  // Not a number, make a filter instead. This only supports only "job" nouns.
-  if (cmd.ValidateNouns({Noun::kJob}).has_error()) {
-    return Err(
-        "Attaching by process name (a non-numeric argument)\nonly supports the \"job\" noun.");
+  // For all other cases, "process" cannot be specified.
+  if (cmd.HasNoun(Noun::kProcess)) {
+    return Err("Attaching by filters doesn't support \"process\" noun.");
   }
-  if (cmd.args().size() != 1)
-    return Err("Wrong number of arguments to attach.");
 
-  Job* job = cmd.HasNoun(Noun::kJob) && cmd.job() ? cmd.job() : nullptr;
-  std::string pattern = cmd.args()[0];
-  if (!job && pattern == Filter::kAllProcessesPattern) {
-    // Bad things happen if we try to attach to all processes in the system, try to make this
-    // more difficult by preventing attaching to * with no specific job.
-    return Err("Use a specific job (\"job 3 attach *\") when attaching to all processes.");
+  // When --job switch is on and --exact is off, require 0 or 1 argument.
+  // Otherwise require 1 argument.
+  if ((!cmd.HasSwitch(kSwitchJob) || cmd.HasSwitch(kSwitchExact) || !cmd.args().empty()) &&
+      cmd.args().size() != 1) {
+    return Err("Wrong number of arguments to attach.");
+  }
+
+  // --job <koid> must be parsable as uint64.
+  uint64_t job_koid = 0;
+  if (cmd.HasSwitch(kSwitchJob) &&
+      StringToUint64(cmd.GetSwitchValue(kSwitchJob), &job_koid).has_error()) {
+    return Err("--job only accepts a koid");
   }
 
   // Display a warning if there are no attached jobs. The debugger tries to attach to the root job
@@ -156,17 +207,34 @@ Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback c
     Console::get()->Output(warning);
   }
 
-  if (pattern.size() > kZirconMaxNameLength) {
-    Console::get()->Output(OutputBuffer(
-        Syntax::kWarning,
-        "The filter is trimmed to " + std::to_string(kZirconMaxNameLength) +
-            " characters because it's the maximum length for a process name in Zircon."));
-    pattern.resize(kZirconMaxNameLength);
+  // Now all the checks are performed. Create a filter.
+  Filter* filter = context->session()->system().CreateNewFilter();
+
+  std::string pattern;
+  if (!cmd.args().empty())
+    pattern = cmd.args()[0];
+
+  if (job_koid) {
+    filter->SetJobKoid(job_koid);
   }
 
-  Filter* filter = context->session()->system().CreateNewFilter();
-  filter->SetJob(job);
-  filter->SetPattern(pattern);
+  if (cmd.HasSwitch(kSwitchExact)) {
+    filter->SetType(debug_ipc::Filter::Type::kProcessName);
+    filter->SetPattern(TrimToZirconMaxNameLength(pattern));
+  } else if (StringStartsWith(pattern, "fuchsia-pkg://") ||
+             StringStartsWith(pattern, "fuchsia-boot://")) {
+    filter->SetType(debug_ipc::Filter::Type::kComponentUrl);
+    filter->SetPattern(pattern);
+  } else if (StringStartsWith(pattern, "/")) {
+    filter->SetType(debug_ipc::Filter::Type::kComponentMoniker);
+    filter->SetPattern(pattern);
+  } else if (StringEndsWith(pattern, ".cm")) {
+    filter->SetType(debug_ipc::Filter::Type::kComponentName);
+    filter->SetPattern(pattern);
+  } else {
+    filter->SetType(debug_ipc::Filter::Type::kProcessNameSubstr);
+    filter->SetPattern(TrimToZirconMaxNameLength(pattern));
+  }
 
   context->SetActiveFilter(filter);
 
@@ -174,6 +242,9 @@ Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback c
   // that are less familiar with the debugger and might be unsure what's happening (this is normally
   // one of the first things people do in the debugger. The filter number is usually not relevant
   // anyway.
+  if (pattern.empty()) {
+    pattern = "job " + cmd.GetSwitchValue(kSwitchJob);
+  }
   Console::get()->Output("Waiting for process matching \"" + pattern +
                          "\".\n"
                          "Type \"filter\" to see the current filters.");
@@ -188,6 +259,8 @@ Err RunVerbAttach(ConsoleContext* context, const Command& cmd, CommandCallback c
 VerbRecord GetAttachVerbRecord() {
   VerbRecord attach(&RunVerbAttach, {"attach"}, kAttachShortHelp, kAttachHelp,
                     CommandGroup::kProcess);
+  attach.switches.emplace_back(kSwitchJob, true, "job", 'j');
+  attach.switches.emplace_back(kSwitchExact, false, "exact");
   return attach;
 }
 

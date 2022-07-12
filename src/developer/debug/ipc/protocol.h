@@ -12,7 +12,7 @@
 
 namespace debug_ipc {
 
-constexpr uint32_t kProtocolVersion = 39;
+constexpr uint32_t kProtocolVersion = 40;
 
 // This is so that it's obvious if the timestamp wasn't properly set (that number should be at
 // least 30,000 years) but it's not the max so that if things add to it then time keeps moving
@@ -40,7 +40,7 @@ struct MsgHeader {
     kConfigAgent,
     kAttach,
     kDetach,
-    kJobFilter,
+    kUpdateFilter,
     kKill,
     kLaunch,
     kModules,
@@ -183,6 +183,9 @@ struct AttachReply {
   uint64_t koid = 0;
   debug::Status status;  // Result of attaching.
   std::string name;
+
+  // The component information if the process is running in a component. Not hooked up yet.
+  std::optional<ComponentInfo> component;
 };
 
 struct DetachRequest {
@@ -319,16 +322,11 @@ struct ModulesReply {
 };
 
 // Request to set filter.
-struct JobFilterRequest {
-  uint64_t job_koid = 0;
-
-  // Empty strings will match all processes.
-  std::vector<std::string> filters;
+struct UpdateFilterRequest {
+  std::vector<Filter> filters;
 };
 
-struct JobFilterReply {
-  debug::Status status;
-
+struct UpdateFilterReply {
   // List of koids for currently running processes that match any of the filters.
   // Guaranteed that each koid is unique.
   std::vector<uint64_t> matched_processes;

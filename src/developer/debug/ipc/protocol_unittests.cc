@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <optional>
+#include <utility>
+
 #include <gtest/gtest.h>
 
 #include "src/developer/debug/ipc/agent_protocol.h"
@@ -9,6 +12,7 @@
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
 #include "src/developer/debug/ipc/protocol_helpers.h"
+#include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/register_test_support.h"
 #include "src/developer/debug/shared/zx_status.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -129,10 +133,12 @@ ThreadRecord CreateThreadRecord(uint32_t process_koid, uint32_t thread_koid) {
   return record;
 }
 
-ProcessRecord CreateProcessRecord(uint32_t process_koid, uint32_t thread_count) {
+ProcessRecord CreateProcessRecord(uint32_t process_koid, uint32_t thread_count,
+                                  std::optional<ComponentInfo> component_info) {
   ProcessRecord record;
   record.process_koid = process_koid;
   record.process_name = fxl::StringPrintf("process-%u", process_koid);
+  record.component = std::move(component_info);
 
   record.threads.reserve(thread_count);
   for (uint32_t i = 0; i < thread_count; i++) {
@@ -152,41 +158,44 @@ TEST(Protocol, StatusRequest) {
 
 TEST(Protocol, StatusReply) {
   StatusReply one;
-  one.processes.push_back(CreateProcessRecord(0x1, 1));
-  one.processes.push_back(CreateProcessRecord(0x2, 2));
+  one.processes.push_back(CreateProcessRecord(0x1, 1, ComponentInfo{.moniker = "/", .url = "url"}));
+  one.processes.push_back(CreateProcessRecord(0x2, 2, std::nullopt));
 
-  one.limbo.push_back(CreateProcessRecord(0x3, 3));
+  one.limbo.push_back(CreateProcessRecord(0x3, 3, std::nullopt));
 
   StatusReply two;
   ASSERT_TRUE(SerializeDeserializeReply(one, &two));
 
-  // clang-format off
   ASSERT_EQ(two.processes.size(), 2u);
-  EXPECT_EQ(two.processes[0].process_koid,    one.processes[0].process_koid);
-  EXPECT_EQ(two.processes[0].process_name,    one.processes[0].process_name);
+  EXPECT_EQ(two.processes[0].process_koid, one.processes[0].process_koid);
+  EXPECT_EQ(two.processes[0].process_name, one.processes[0].process_name);
+  ASSERT_TRUE(two.processes[0].component);
+  EXPECT_EQ(two.processes[0].component->moniker, one.processes[0].component->moniker);
+  EXPECT_EQ(two.processes[0].component->url, one.processes[0].component->url);
   ASSERT_EQ(two.processes[0].threads.size(), 1u);
-  ASSERT_EQ(two.processes[0].threads[0].id,   one.processes[0].threads[0].id);
+  ASSERT_EQ(two.processes[0].threads[0].id, one.processes[0].threads[0].id);
   ASSERT_EQ(two.processes[0].threads[0].name, one.processes[0].threads[0].name);
 
-  EXPECT_EQ(two.processes[1].process_koid,    one.processes[1].process_koid);
-  EXPECT_EQ(two.processes[1].process_name,    one.processes[1].process_name);
-  ASSERT_EQ(two.processes[1].threads.size(),  2u);
-  ASSERT_EQ(two.processes[1].threads[0].id,   one.processes[1].threads[0].id);
+  EXPECT_EQ(two.processes[1].process_koid, one.processes[1].process_koid);
+  EXPECT_EQ(two.processes[1].process_name, one.processes[1].process_name);
+  ASSERT_FALSE(two.processes[1].component);
+  ASSERT_EQ(two.processes[1].threads.size(), 2u);
+  ASSERT_EQ(two.processes[1].threads[0].id, one.processes[1].threads[0].id);
   ASSERT_EQ(two.processes[1].threads[0].name, one.processes[1].threads[0].name);
-  ASSERT_EQ(two.processes[1].threads[1].id,   one.processes[1].threads[1].id);
+  ASSERT_EQ(two.processes[1].threads[1].id, one.processes[1].threads[1].id);
   ASSERT_EQ(two.processes[1].threads[1].name, one.processes[1].threads[1].name);
 
   ASSERT_EQ(two.limbo.size(), 1u);
-  EXPECT_EQ(two.limbo[0].process_koid,    one.limbo[0].process_koid);
-  EXPECT_EQ(two.limbo[0].process_name,    one.limbo[0].process_name);
-  ASSERT_EQ(two.limbo[0].threads.size(),  3u);
-  ASSERT_EQ(two.limbo[0].threads[0].id,   one.limbo[0].threads[0].id);
+  EXPECT_EQ(two.limbo[0].process_koid, one.limbo[0].process_koid);
+  EXPECT_EQ(two.limbo[0].process_name, one.limbo[0].process_name);
+  ASSERT_FALSE(two.limbo[0].component);
+  ASSERT_EQ(two.limbo[0].threads.size(), 3u);
+  ASSERT_EQ(two.limbo[0].threads[0].id, one.limbo[0].threads[0].id);
   ASSERT_EQ(two.limbo[0].threads[0].name, one.limbo[0].threads[0].name);
-  ASSERT_EQ(two.limbo[0].threads[1].id,   one.limbo[0].threads[1].id);
+  ASSERT_EQ(two.limbo[0].threads[1].id, one.limbo[0].threads[1].id);
   ASSERT_EQ(two.limbo[0].threads[1].name, one.limbo[0].threads[1].name);
-  ASSERT_EQ(two.limbo[0].threads[2].id,   one.limbo[0].threads[2].id);
+  ASSERT_EQ(two.limbo[0].threads[2].id, one.limbo[0].threads[2].id);
   ASSERT_EQ(two.limbo[0].threads[2].name, one.limbo[0].threads[2].name);
-  // clang-format on
 }
 
 // ProcessStatus -----------------------------------------------------------------------------------
@@ -286,12 +295,16 @@ TEST(Protocol, AttachReply) {
   initial.timestamp = kTestTimestampDefault;
   initial.status = debug::Status();
   initial.name = "virtual console";
+  initial.component = ComponentInfo{.moniker = "/moniker", .url = "url"};
 
   AttachReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
   EXPECT_EQ(initial.timestamp, second.timestamp);
   EXPECT_EQ(initial.status, second.status);
   EXPECT_EQ(initial.name, second.name);
+  ASSERT_TRUE(second.component);
+  EXPECT_EQ(initial.component->moniker, second.component->moniker);
+  EXPECT_EQ(initial.component->url, second.component->url);
 }
 
 // Detach ------------------------------------------------------------------------------------------
@@ -377,8 +390,9 @@ TEST(Protocol, ProcessTreeReply) {
   initial.root.type = ProcessTreeRecord::Type::kJob;
   initial.root.koid = 1234;
   initial.root.name = "root";
-  initial.root.component_url = "fuchsia-pkg://package#meta/component.cm";
-  initial.root.component_moniker = "/moniker";
+  initial.root.component.emplace();
+  initial.root.component->url = "fuchsia-pkg://package#meta/component.cm";
+  initial.root.component->moniker = "/moniker";
 
   initial.root.children.resize(1);
   initial.root.children[0].type = ProcessTreeRecord::Type::kProcess;
@@ -391,8 +405,8 @@ TEST(Protocol, ProcessTreeReply) {
   EXPECT_EQ(initial.root.type, second.root.type);
   EXPECT_EQ(initial.root.koid, second.root.koid);
   EXPECT_EQ(initial.root.name, second.root.name);
-  EXPECT_EQ(initial.root.component_moniker, second.root.component_moniker);
-  EXPECT_EQ(initial.root.component_url, second.root.component_url);
+  EXPECT_EQ(initial.root.component->moniker, second.root.component->moniker);
+  EXPECT_EQ(initial.root.component->url, second.root.component->url);
   ASSERT_EQ(initial.root.children.size(), second.root.children.size());
   EXPECT_EQ(initial.root.children[0].type, second.root.children[0].type);
   EXPECT_EQ(initial.root.children[0].koid, second.root.children[0].koid);
@@ -758,29 +772,30 @@ TEST(Protocol, AspaceReply) {
   EXPECT_EQ(initial.map[3].depth, second.map[3].depth);
 }
 
-// JobFilter --------------------------------------------------------------------------------------
+// UpdateFilter ------------------------------------------------------------------------------------
 
-TEST(Protocol, JobFilterRequest) {
-  JobFilterRequest initial;
-  initial.job_koid = 5678;
-  initial.filters.push_back("Clock");
-  initial.filters.push_back("Time");
-  initial.filters.push_back("Network");
+TEST(Protocol, UpdateFilterRequest) {
+  UpdateFilterRequest initial;
+  initial.filters.push_back({Filter::Type::kProcessNameSubstr, "Clock"});
+  initial.filters.push_back({Filter::Type::kProcessName, "Time"});
+  initial.filters.push_back({Filter::Type::kComponentName, "Network"});
 
-  JobFilterRequest second;
+  UpdateFilterRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
-  EXPECT_EQ(initial.job_koid, second.job_koid);
-  EXPECT_EQ(initial.filters, second.filters);
+  EXPECT_EQ(initial.filters.size(), second.filters.size());
+  for (size_t i = 0; i < initial.filters.size(); i++) {
+    EXPECT_EQ(initial.filters[i].type, second.filters[i].type);
+    EXPECT_EQ(initial.filters[i].pattern, second.filters[i].pattern);
+    EXPECT_EQ(initial.filters[i].job_koid, second.filters[i].job_koid);
+  }
 }
 
-TEST(Protocol, JobFilterReply) {
-  JobFilterReply initial;
-  initial.status = debug::Status();
+TEST(Protocol, UpdateFilterReply) {
+  UpdateFilterReply initial;
   initial.matched_processes = {1234, 5678};
 
-  JobFilterReply second;
+  UpdateFilterReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
-  EXPECT_EQ(initial.status, second.status);
   ASSERT_EQ(second.matched_processes.size(), 2u);
   EXPECT_EQ(second.matched_processes[0], initial.matched_processes[0]);
   EXPECT_EQ(second.matched_processes[1], initial.matched_processes[1]);
