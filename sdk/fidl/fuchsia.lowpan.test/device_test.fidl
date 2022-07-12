@@ -105,13 +105,10 @@ protocol DeviceTest {
     });
 };
 
-/// LoWPAN MAC address
-alias MacAddress = bytes:8;
-
 /// An item in the MAC filter list.
 type MacAddressFilterItem = table {
     /// The MAC address of the item. This field is required.
-    1: mac_address MacAddress;
+    1: mac_address fuchsia.lowpan.MacAddress;
 
     /// Replacement RSSI value for packets received from this address.
     ///
@@ -172,7 +169,7 @@ type NeighborInfo = table {
     /// The MAC address of the neighbor.
     ///
     /// Note that this is the only field guaranteed to be present.
-    1: mac_address MacAddress;
+    1: mac_address fuchsia.lowpan.MacAddress;
 
     /// 802.15.4 short address of neighbor.
     ///

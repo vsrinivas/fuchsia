@@ -447,6 +447,13 @@ impl<T: Driver> ServeTo<DeviceExtraRequestStream> for T {
                         .await
                         .context("error in watch_identity request")?;
                 }
+                DeviceExtraRequest::GetCurrentMacAddress { responder, .. } => {
+                    self.get_current_mac_address()
+                        .err_into::<Error>()
+                        .and_then(|response| ready(responder.send(&response).map_err(Error::from)))
+                        .await
+                        .context("error in get_current_mac_address request")?;
+                }
             }
             Result::<(), anyhow::Error>::Ok(())
         };
@@ -1327,6 +1334,29 @@ mod tests {
                     channel_index: Some(_),
                     ..
                 })
+            )
+        };
+
+        futures::select! {
+            err = server_future.boxed_local().fuse() => panic!("Server task stopped: {:?}", err),
+            _ = client_future.boxed().fuse() => (),
+        }
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_device_extra_request() {
+        let device = DummyDevice::default();
+
+        let (client_ep, server_ep) = create_endpoints::<DeviceExtraMarker>().unwrap();
+
+        let server_future = device.serve_to(server_ep.into_stream().unwrap());
+
+        let proxy = client_ep.into_proxy().unwrap();
+
+        let client_future = async move {
+            assert_eq!(
+                proxy.get_current_mac_address().await.expect("proxy.get_current_mac_address"),
+                device.get_current_mac_address().await.expect("device.get_current_mac_address")
             )
         };
 

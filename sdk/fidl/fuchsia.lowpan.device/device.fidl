@@ -451,4 +451,15 @@ protocol DeviceExtra {
     WatchIdentity() -> (struct {
         identity Identity;
     });
+
+    /// Returns the current MAC address being used for this device,
+    /// which may differ from the static factory-assigned MAC address.
+    ///
+    /// This address is generally static, but may change when the
+    /// device is re-associated to a different network or a factory
+    /// reset is performed.
+    @available(added=9)
+    GetCurrentMacAddress() -> (struct {
+        address fuchsia.lowpan.MacAddress;
+    });
 };

@@ -18,6 +18,12 @@ alias ChannelIndex = uint16;
 /// specifying transmit power.
 alias PowerDbm = int8;
 
+/// LoWPAN MAC address.
+///
+/// On 802.15.4 networks, this is an EUI64.
+@available(added=9)
+alias MacAddress = bytes:8;
+
 /// Type describing the name of the network interface.
 ///
 /// Interface names must satisfy the following regular expression:

@@ -205,6 +205,11 @@
         "name": "fuchsia.lowpan.device/DeviceExtra.GetCredential"
     },
     {
+        "declaration": "() -> (vector<uint8>:8 address)",
+        "kind": "protocol/member",
+        "name": "fuchsia.lowpan.device/DeviceExtra.GetCurrentMacAddress"
+    },
+    {
         "declaration": "() -> (fuchsia.lowpan.device/Identity identity)",
         "kind": "protocol/member",
         "name": "fuchsia.lowpan.device/DeviceExtra.WatchIdentity"
