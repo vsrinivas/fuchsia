@@ -4,6 +4,9 @@
 
 use crate::types::uapi::*;
 
+pub const MEM_MAJOR: u32 = 1;
+pub const MISC_MAJOR: u32 = 10;
+
 #[derive(Copy, Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct DeviceType(dev_t);
 
@@ -14,7 +17,6 @@ impl DeviceType {
     pub const FULL: DeviceType = DeviceType::new(1, 7);
     pub const RANDOM: DeviceType = DeviceType::new(1, 8);
     pub const URANDOM: DeviceType = DeviceType::new(1, 9);
-    pub const KMSG: DeviceType = DeviceType::new(1, 11);
     pub const TTY: DeviceType = DeviceType::new(5, 0);
     pub const PTMX: DeviceType = DeviceType::new(5, 2);
 
@@ -38,12 +40,10 @@ impl DeviceType {
         self.0
     }
 
-    #[allow(dead_code)]
     pub const fn major(&self) -> u32 {
         ((self.0 >> 32 & 0xfffff000) | ((self.0 >> 8) & 0xfff)) as u32
     }
 
-    #[allow(dead_code)]
     pub const fn minor(&self) -> u32 {
         ((self.0 >> 12 & 0xffffff00) | (self.0 & 0xff)) as u32
     }

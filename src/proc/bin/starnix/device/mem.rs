@@ -5,33 +5,12 @@
 use fuchsia_zircon::cprng_draw;
 
 use crate::device::DeviceOps;
-use crate::device::WithStaticDeviceId;
 use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
 
-/// Implements the /dev/null driver.
-pub struct DevNull;
-
-impl WithStaticDeviceId for DevNull {
-    const ID: DeviceType = DeviceType::NULL;
-}
-
-impl DeviceOps for DevNull {
-    fn open(
-        &self,
-        _current_task: &CurrentTask,
-        _id: DeviceType,
-        _node: &FsNode,
-        _flags: OpenFlags,
-    ) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Box::new(DevNullFile))
-    }
-}
-
-struct DevNullFile;
-
-impl FileOps for DevNullFile {
+struct DevNull;
+impl FileOps for DevNull {
     fileops_impl_seekless!();
     fileops_impl_nonblocking!();
 
@@ -43,7 +22,7 @@ impl FileOps for DevNullFile {
         data: &[UserBuffer],
     ) -> Result<usize, Errno> {
         current_task.mm.read_each(data, |bytes| {
-            tracing::debug!(
+            tracing::info!(
                 "{:?} write to devnull: {:?}",
                 current_task,
                 String::from_utf8_lossy(bytes)
@@ -64,28 +43,8 @@ impl FileOps for DevNullFile {
     }
 }
 
-/// Implements the /dev/zero driver.
-pub struct DevZero;
-
-impl WithStaticDeviceId for DevZero {
-    const ID: DeviceType = DeviceType::ZERO;
-}
-
-impl DeviceOps for DevZero {
-    fn open(
-        &self,
-        _current_task: &CurrentTask,
-        _id: DeviceType,
-        _node: &FsNode,
-        _flags: OpenFlags,
-    ) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Box::new(DevZeroFile))
-    }
-}
-
-struct DevZeroFile;
-
-impl FileOps for DevZeroFile {
+struct DevZero;
+impl FileOps for DevZero {
     fileops_impl_seekless!();
     fileops_impl_nonblocking!();
 
@@ -115,28 +74,8 @@ impl FileOps for DevZeroFile {
     }
 }
 
-/// Implements the /dev/full driver.
-pub struct DevFull;
-
-impl WithStaticDeviceId for DevFull {
-    const ID: DeviceType = DeviceType::FULL;
-}
-
-impl DeviceOps for DevFull {
-    fn open(
-        &self,
-        _current_task: &CurrentTask,
-        _id: DeviceType,
-        _node: &FsNode,
-        _flags: OpenFlags,
-    ) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Box::new(DevFullFile))
-    }
-}
-
-struct DevFullFile;
-
-impl FileOps for DevFullFile {
+struct DevFull;
+impl FileOps for DevFull {
     fileops_impl_seekless!();
     fileops_impl_nonblocking!();
 
@@ -166,47 +105,8 @@ impl FileOps for DevFullFile {
     }
 }
 
-/// Implements the /dev/random driver.
-pub struct DevRandom;
-
-impl WithStaticDeviceId for DevRandom {
-    const ID: DeviceType = DeviceType::RANDOM;
-}
-
-impl DeviceOps for DevRandom {
-    fn open(
-        &self,
-        _current_task: &CurrentTask,
-        _id: DeviceType,
-        _node: &FsNode,
-        _flags: OpenFlags,
-    ) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Box::new(DevRandomFile))
-    }
-}
-
-/// Implements the /dev/urandom driver.
-pub struct DevURandom;
-
-impl WithStaticDeviceId for DevURandom {
-    const ID: DeviceType = DeviceType::URANDOM;
-}
-
-impl DeviceOps for DevURandom {
-    fn open(
-        &self,
-        _current_task: &CurrentTask,
-        _id: DeviceType,
-        _node: &FsNode,
-        _flags: OpenFlags,
-    ) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Box::new(DevRandomFile))
-    }
-}
-
-struct DevRandomFile;
-
-impl FileOps for DevRandomFile {
+struct DevRandom;
+impl FileOps for DevRandom {
     fileops_impl_seekless!();
     fileops_impl_nonblocking!();
 
@@ -237,28 +137,8 @@ impl FileOps for DevRandomFile {
     }
 }
 
-/// Implements the /dev/kmsg driver.
-pub struct DevKmsg;
-
-impl WithStaticDeviceId for DevKmsg {
-    const ID: DeviceType = DeviceType::KMSG;
-}
-
-impl DeviceOps for DevKmsg {
-    fn open(
-        &self,
-        _current_task: &CurrentTask,
-        _id: DeviceType,
-        _node: &FsNode,
-        _flags: OpenFlags,
-    ) -> Result<Box<dyn FileOps>, Errno> {
-        Ok(Box::new(DevKmsgFile))
-    }
-}
-
-struct DevKmsgFile;
-
-impl FileOps for DevKmsgFile {
+struct DevKmsg;
+impl FileOps for DevKmsg {
     fileops_impl_seekless!();
     fileops_impl_nonblocking!();
 
@@ -284,5 +164,25 @@ impl FileOps for DevKmsgFile {
         current_task.mm.read_all(data, &mut bytes)?;
         tracing::info!(target: "kmsg", "{}", String::from_utf8_lossy(&bytes).trim_end_matches('\n'));
         Ok(total)
+    }
+}
+
+pub struct MemDevice;
+impl DeviceOps for MemDevice {
+    fn open(
+        &self,
+        _current_task: &CurrentTask,
+        id: DeviceType,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(match id.minor() {
+            3 => Box::new(DevNull),
+            5 => Box::new(DevZero),
+            7 => Box::new(DevFull),
+            8 | 9 => Box::new(DevRandom),
+            11 => Box::new(DevKmsg),
+            _ => return error!(ENODEV),
+        })
     }
 }

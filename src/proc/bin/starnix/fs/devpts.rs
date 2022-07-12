@@ -39,7 +39,7 @@ fn init_devpts(kernel: &Kernel) -> FileSystemHandle {
         // Register /dev/pts/X device type
         for n in 0..DEVPTS_MAJOR_COUNT {
             registry
-                .register_default_chrdev(device.clone(), DEVPTS_FIRST_MAJOR + n)
+                .register_chrdev_major(device.clone(), DEVPTS_FIRST_MAJOR + n)
                 .expect("Registering pts device");
         }
         // Register tty device type
