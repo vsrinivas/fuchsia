@@ -55,7 +55,7 @@ fuchsia_component("vkext_unprotected_cmp") {
     ":vkext_bin",
     "//src/lib/vulkan/validation_layers",
   ]
-  manifest = "meta/vkext_unprotected.cmx"
+  manifest = "meta/vkext_unprotected.cml"
 }
 
 fuchsia_test_package("vkext-unprotected-pkg") {
@@ -122,7 +122,7 @@ fuchsia_component("vkext_protected_cmp") {
     ":vkext_bin",
     "//src/lib/vulkan/validation_layers",
   ]
-  manifest = "meta/vkext_protected.cmx"
+  manifest = "meta/vkext_protected.cml"
 }
 
 fuchsia_test_package("vkext-protected-pkg") {
