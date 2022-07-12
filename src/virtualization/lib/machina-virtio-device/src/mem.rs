@@ -44,17 +44,15 @@ impl GuestMem {
 
     /// Initialize a [`GuestMem`] with a [`zx::Vmo`]
     ///
-    /// This takes a [`zx::Vmo`] provided in the `StartInfo` message to devices. The [`zx::Vmo`] is
-    /// consumed by this method, however the handle is not retained, as devices are not supposed to
-    /// retain the handle to the guest [`zx::Vmo`] after mapping in the memory.
-    pub fn give_vmo(&mut self, vmo: zx::Vmo) -> Result<(), zx::Status> {
+    /// This takes a reference to the [`zx::Vmo`] provided in the `StartInfo` message to devices.
+    pub fn set_vmo(&mut self, vmo: &zx::Vmo) -> Result<(), zx::Status> {
         if self.mapping.is_some() {
             return Err(zx::Status::BAD_STATE);
         }
         let vmo_size = vmo.get_size()? as usize;
         let addr = fuchsia_runtime::vmar_root_self().map(
             0,
-            &vmo,
+            vmo,
             0,
             vmo_size,
             zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE,
@@ -83,9 +81,9 @@ impl DriverMem for GuestMem {
 /// Construct a new [`GuestMem`] containing the given [`zx::Vmo`]
 ///
 /// See [`GuestMem::give_vmo`] for details on how the [`zx::Vmo`] handle is used.
-pub fn guest_mem_from_vmo(vmo: zx::Vmo) -> Result<GuestMem, zx::Status> {
+pub fn guest_mem_from_vmo(vmo: &zx::Vmo) -> Result<GuestMem, zx::Status> {
     let mut mem = GuestMem::new();
-    mem.give_vmo(vmo)?;
+    mem.set_vmo(vmo)?;
     Ok(mem)
 }
 
@@ -136,7 +134,7 @@ mod tests {
         };
 
         {
-            let mem = guest_mem_from_vmo(vmo)?;
+            let mem = guest_mem_from_vmo(&vmo)?;
             // Translate an address so we can get the base.
             base = mem.translate(DriverRange(0..1)).unwrap().get().start;
             // Validate that there is a mapping of the right size.

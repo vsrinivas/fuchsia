@@ -72,6 +72,7 @@ pub struct DeviceBuilder<N> {
     notify: N,
     trap: Option<GuestBellTrap>,
     queues: HashMap<u16, QueueConfig>,
+    vmo: Option<zx::Vmo>,
 }
 
 impl DeviceBuilder<()> {
@@ -84,8 +85,8 @@ impl DeviceBuilder<()> {
     /// If a [`GuestBellTrap`] exists it can optionally be provided here. If not provided then the
     /// final [`Device`] will not have the trap, although users can always process the stream of
     /// trap notifications themselves.
-    pub fn new(trap: Option<GuestBellTrap>) -> DeviceBuilder<()> {
-        DeviceBuilder { notify: (), trap, queues: HashMap::new() }
+    pub fn new(trap: Option<GuestBellTrap>, vmo: Option<zx::Vmo>) -> DeviceBuilder<()> {
+        DeviceBuilder { notify: (), trap, queues: HashMap::new(), vmo }
     }
 }
 
@@ -115,9 +116,9 @@ impl<N> DeviceBuilder<N> {
         self,
         map: impl FnOnce(N) -> Result<N2, DeviceError>,
     ) -> Result<DeviceBuilder<N2>, DeviceError> {
-        let DeviceBuilder { notify, trap, queues } = self;
+        let DeviceBuilder { notify, trap, queues, vmo } = self;
         let notify = map(notify)?;
-        Ok(DeviceBuilder { notify, trap, queues })
+        Ok(DeviceBuilder { notify, trap, queues, vmo })
     }
 
     /// Add the specified [`QueueConfig`] to the list of queues.
@@ -139,6 +140,14 @@ impl<N> DeviceBuilder<N> {
     pub fn configured_queues(&self) -> impl Iterator<Item = u16> + '_ {
         self.queues.keys().cloned()
     }
+
+    /// Allow virtio devices to take the guest [`zx::Vmo`]. If the [`zx::Vmo`] is not taken it will
+    ///  be dropped as part of the DeviceBuilder::build call
+    ///
+    /// Returns an option to guest vmo
+    pub fn take_vmo(&mut self) -> Option<zx::Vmo> {
+        self.vmo.take()
+    }
 }
 
 impl<N: Clone> DeviceBuilder<N> {
@@ -151,7 +160,10 @@ impl<N: Clone> DeviceBuilder<N> {
         negotiated_features: u32,
         mem: &'a M,
     ) -> Result<Device<'a, N>, DeviceError> {
-        let DeviceBuilder { notify, trap, queues } = self;
+        let DeviceBuilder { notify, trap, queues, vmo } = self;
+        // Dropping of the VMO handle here is an explicit design decision and devices that need to
+        // retain it must call take_vmo before building the device.
+        drop(vmo);
         // Note: Queue does not currently support any features so they're not passed in, but
         // eventually it will.
         let queues = queues
@@ -196,13 +208,14 @@ pub fn builder_from_start_info(
     mem: &mut GuestMem,
 ) -> Result<DeviceBuilder<NotifyEvent>, DeviceError> {
     let StartInfo { trap, guest, event, vmo } = info;
-    mem.give_vmo(vmo)?;
+    mem.set_vmo(&vmo)?;
     DeviceBuilder::new(
         guest
             .map(|guest| {
                 GuestBellTrap::new(&guest, zx::GPAddr(trap.addr as usize), trap.size as usize)
             })
             .transpose()?,
+        Some(vmo),
     )
     .map_notify(|_| Ok(NotifyEvent::new(event)))
 }
@@ -537,7 +550,7 @@ mod tests {
 
     fn guest_mem(size: u64) -> GuestMem {
         let vmo = zx::Vmo::create(size).unwrap();
-        guest_mem_from_vmo(vmo).unwrap()
+        guest_mem_from_vmo(&vmo).unwrap()
     }
 
     #[test]
@@ -565,7 +578,7 @@ mod tests {
         let (queue1, queue2_offset) = make_queue_config(0, 4, 64);
         let (queue2, _) = make_queue_config(0, 8, queue2_offset);
         assert_matches!(
-            DeviceBuilder::new(None).add_queue(queue1).unwrap().add_queue(queue2),
+            DeviceBuilder::new(None, None).add_queue(queue1).unwrap().add_queue(queue2),
             Err(DeviceError::InvalidQueue(0))
         );
     }
@@ -577,7 +590,7 @@ mod tests {
             + (zx::system_get_page_size() as u64
                 - (queue1_end % zx::system_get_page_size() as u64));
         let (queue2, _) = make_queue_config(1, 6, mem_size);
-        let builder = DeviceBuilder::new(None)
+        let builder = DeviceBuilder::new(None, None)
             .add_queue(queue1)
             .unwrap()
             .add_queue(queue2)
@@ -597,7 +610,9 @@ mod tests {
         let mem = guest_mem(queue2_end);
 
         let builder =
-            DeviceBuilder::new(None).map_notify(|_| Ok(NotificationCounter::new())).unwrap();
+            DeviceBuilder::new(None, None).map_notify(|_| Ok(NotificationCounter::new())).unwrap();
+
+        assert_eq!(builder.vmo, None);
 
         let (vmm_side, device_side) = fidl::endpoints::create_endpoints::<VirtioDeviceMarker>()?;
         let vmm_side = vmm_side.into_proxy()?;
@@ -622,7 +637,7 @@ mod tests {
         // Now build again with a ready that should succeed.
 
         let builder =
-            DeviceBuilder::new(None).map_notify(|_| Ok(NotificationCounter::new())).unwrap();
+            DeviceBuilder::new(None, None).map_notify(|_| Ok(NotificationCounter::new())).unwrap();
 
         let (vmm_side, device_side) = fidl::endpoints::create_endpoints::<VirtioDeviceMarker>()?;
         let vmm_side = vmm_side.into_proxy()?;
@@ -654,5 +669,15 @@ mod tests {
         assert!(device.take_stream(1).is_ok());
 
         Ok(())
+    }
+
+    #[test]
+    fn builder_take_vmo() {
+        let vmo = zx::Vmo::create(4096).unwrap();
+
+        let mut builder = DeviceBuilder::new(None, Some(vmo))
+            .map_notify(|_| Ok(NotificationCounter::new()))
+            .unwrap();
+        assert_eq!(builder.take_vmo().unwrap().get_size().unwrap(), 4096);
     }
 }
