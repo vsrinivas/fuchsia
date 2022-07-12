@@ -370,3 +370,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0176_disallow_new_dart_programs.md
   - title: "RFC-0177: Focus Observer for Parent Views"
     path: /docs/contribute/governance/rfcs/0177_focus_observer_parent_views.md
+  - title: "RFC-0178: Multiple debug exception channels per job"
+    path: /docs/contribute/governance/rfcs/0178_multiple_debug_job_exception_channel.md

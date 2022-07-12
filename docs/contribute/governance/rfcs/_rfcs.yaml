@@ -2312,3 +2312,17 @@
   consulted: ['shiveshganju@google.com', 'fmil@google.com', 'emircan@google.com', 'jsankey@google.com']
   submitted: '2022-06-06'
   reviewed: '2022-07-07'
+
+- name: 'RFC-0178'
+  title: 'Multiple debug exception channels per job'
+  short_description: 'Zircon allows multiple debug exception channels on a job.'
+  authors: ['dangyi@google.com']
+  file: '0178_multiple_debug_job_exception_channel.md'
+  area: ['Kernel']
+  issue: ['97848']
+  gerrit_change_id: ['688614']
+  status: 'Accepted'
+  reviewers: ['cpu@google.com', 'maniscalco@google.com', 'brettw@google.com']
+  consulted: ['johngro@google.com']
+  submitted: '2022-06-08'
+  reviewed: '2022-07-12'
