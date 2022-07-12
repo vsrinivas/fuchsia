@@ -4,6 +4,7 @@
 
 #include <lib/lazy_init/lazy_init.h>
 #include <lib/standalone-test/standalone.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
@@ -11,6 +12,7 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
+#include <zircon/types.h>
 
 #include <map>
 #include <string>
@@ -27,16 +29,26 @@ constexpr std::string_view kMissingRootResource =
 constexpr std::string_view kStartupMessage =
     "*** Running standalone test directly from userboot ***\n";
 
-lazy_init::LazyInit<std::map<std::string, zx::vmo>> gVmos;
+lazy_init::LazyInit<std::map<std::string, zx::vmo, std::less<>>> gVmos;
+lazy_init::LazyInit<std::map<std::string, zx::channel, std::less<>>> gNsDir;
 
 }  // namespace
 
-zx::unowned_vmo GetVmo(const std::string& name) {
+zx::unowned_vmo GetVmo(std::string_view name) {
   auto it = gVmos->find(name);
   if (it == gVmos->end()) {
     return {};
   }
-  return zx::unowned_vmo{it->second};
+  return it->second.borrow();
+}
+
+zx::unowned_channel GetNsDir(std::string_view name) {
+  auto it = gNsDir->find(name);
+  if (it == gNsDir->end()) {
+    return {};
+  }
+
+  return it->second.borrow();
 }
 
 zx::unowned_resource GetRootResource() {
@@ -59,28 +71,40 @@ zx::unowned_resource GetSystemRootResource() {
 // doesn't decide it can elide this definition and let libc use its weak one.
 extern "C" [[gnu::retain]] __EXPORT void __libc_extensions_init(uint32_t count,
                                                                 zx_handle_t handle[],
-                                                                uint32_t info[]) {
+                                                                uint32_t info[],
+                                                                uint32_t name_count, char** names) {
   gVmos.Initialize();
+  gNsDir.Initialize();
+
+  auto take_handle = [&handle, &info](size_t index) {
+    info[index] = 0;
+    return std::exchange(handle[index], ZX_HANDLE_INVALID);
+  };
 
   for (unsigned n = 0; n < count; n++) {
     switch (PA_HND_TYPE(info[n])) {
       case PA_RESOURCE:
-        root_resource.reset(handle[n]);
-        handle[n] = ZX_HANDLE_INVALID;
-        info[n] = 0;
+        if (PA_HND_ARG(info[n]) == 0) {
+          root_resource.reset(take_handle(n));
+        }
         break;
 
       case PA_MMIO_RESOURCE:
-        mmio_root_resource.reset(handle[n]);
-        handle[n] = ZX_HANDLE_INVALID;
-        info[n] = 0;
+        mmio_root_resource.reset(take_handle(n));
         break;
 
       case PA_SYSTEM_RESOURCE:
-        system_root_resource.reset(handle[n]);
-        handle[n] = ZX_HANDLE_INVALID;
-        info[n] = 0;
+        system_root_resource.reset(take_handle(n));
         break;
+
+      case PA_NS_DIR: {
+        uint32_t name_index = PA_HND_ARG(info[n]);
+        if (name_index >= name_count) {
+          continue;
+        }
+        gNsDir->try_emplace(std::string(names[name_index]), take_handle(n));
+        break;
+      }
 
       case PA_VMO_BOOTDATA:
       case PA_VMO_BOOTFS:
@@ -90,10 +114,7 @@ extern "C" [[gnu::retain]] __EXPORT void __libc_extensions_init(uint32_t count,
         zx_status_t status =
             zx_object_get_property(handle[n], ZX_PROP_NAME, vmo_name, sizeof(vmo_name));
         if (status == ZX_OK) {
-          zx::vmo vmo{handle[n]};
-          handle[n] = ZX_HANDLE_INVALID;
-          info[n] = 0;
-
+          zx::vmo vmo{take_handle(n)};
           std::string_view prop(vmo_name, sizeof(vmo_name));
           std::string name(prop.substr(0, prop.find_first_of('\0')));
           gVmos->try_emplace(std::move(name), std::move(vmo));

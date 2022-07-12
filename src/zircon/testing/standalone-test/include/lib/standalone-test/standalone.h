@@ -5,11 +5,10 @@
 #ifndef SRC_ZIRCON_TESTING_STANDALONE_TEST_INCLUDE_LIB_STANDALONE_TEST_STANDALONE_H_
 #define SRC_ZIRCON_TESTING_STANDALONE_TEST_INCLUDE_LIB_STANDALONE_TEST_STANDALONE_H_
 
+#include <lib/zx/channel.h>
 #include <lib/zx/resource.h>
 #include <lib/zx/vmo.h>
 
-#include <functional>
-#include <initializer_list>
 #include <string>
 #include <string_view>
 
@@ -29,7 +28,8 @@ zx::unowned_resource GetRootResource();
 zx::unowned_resource GetMmioRootResource();
 zx::unowned_resource GetSystemRootResource();
 
-zx::unowned_vmo GetVmo(const std::string& name);
+zx::unowned_vmo GetVmo(std::string_view name);
+zx::unowned_channel GetNsDir(std::string_view name);
 
 const BootOptions& GetBootOptions();
 
