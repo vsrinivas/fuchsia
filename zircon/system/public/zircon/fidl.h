@@ -645,6 +645,13 @@ enum {
   kFidlOrdinalEpitaph = 0xFFFFFFFFFFFFFFFF,
 };
 
+// FIDL internal transport error type, used for RFC-0138 unknown interaction
+// handling.
+typedef int32_t fidl_transport_err_t;
+
+// Indicates that the method which was called is not known to the server.
+#define FIDL_TRANSPORT_ERR_UNKNOWN_METHOD INT32_C(-2)
+
 // Assumptions.
 
 // Ensure that FIDL_ALIGNMENT is sufficient.

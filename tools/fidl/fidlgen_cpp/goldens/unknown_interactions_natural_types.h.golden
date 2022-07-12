@@ -622,7 +622,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayResult {
  private:
   using Storage_ =
       std::variant<
-          std::monostate, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResponse, int32_t>;
+          std::monostate, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResponse, ::fidl::internal::TransportErr>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -671,7 +671,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayResult {
   ::fidl::internal::UnionMemberView<1, Storage_> response() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
-  static UnknownInteractionsProtocolFlexibleTwoWayResult WithTransportErr(int32_t val) {
+  static UnknownInteractionsProtocolFlexibleTwoWayResult WithTransportErr(::fidl::internal::TransportErr val) {
     return UnknownInteractionsProtocolFlexibleTwoWayResult(std::make_shared<Storage_>(
         std::in_place_index_t<2>{},
         std::move(val)));
@@ -846,7 +846,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayErrResult {
  private:
   using Storage_ =
       std::variant<
-          std::monostate, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResponse, int32_t, int32_t>;
+          std::monostate, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResponse, int32_t, ::fidl::internal::TransportErr>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -908,7 +908,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayErrResult {
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
-  static UnknownInteractionsProtocolFlexibleTwoWayErrResult WithTransportErr(int32_t val) {
+  static UnknownInteractionsProtocolFlexibleTwoWayErrResult WithTransportErr(::fidl::internal::TransportErr val) {
     return UnknownInteractionsProtocolFlexibleTwoWayErrResult(std::make_shared<Storage_>(
         std::in_place_index_t<3>{},
         std::move(val)));
@@ -1535,7 +1535,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayResult {
  private:
   using Storage_ =
       std::variant<
-          std::monostate, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResponse, int32_t>;
+          std::monostate, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResponse, ::fidl::internal::TransportErr>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -1584,7 +1584,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayResult {
   ::fidl::internal::UnionMemberView<1, Storage_> response() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
-  static UnknownInteractionsDriverProtocolFlexibleTwoWayResult WithTransportErr(int32_t val) {
+  static UnknownInteractionsDriverProtocolFlexibleTwoWayResult WithTransportErr(::fidl::internal::TransportErr val) {
     return UnknownInteractionsDriverProtocolFlexibleTwoWayResult(std::make_shared<Storage_>(
         std::in_place_index_t<2>{},
         std::move(val)));
@@ -1759,7 +1759,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult {
  private:
   using Storage_ =
       std::variant<
-          std::monostate, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse, int32_t, int32_t>;
+          std::monostate, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponse, int32_t, ::fidl::internal::TransportErr>;
 
  public:
   // TODO: share union tag types between wire & natural.
@@ -1821,7 +1821,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult {
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
-  static UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult WithTransportErr(int32_t val) {
+  static UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult WithTransportErr(::fidl::internal::TransportErr val) {
     return UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult(std::make_shared<Storage_>(
         std::in_place_index_t<3>{},
         std::move(val)));

@@ -771,10 +771,10 @@ open protocol Example {
   ASSERT_STREQ("transport_err", std::string(transport_error.maybe_used->name.data()).c_str());
 
   ASSERT_NOT_NULL(transport_error.maybe_used->type_ctor->type);
-  ASSERT_EQ(transport_error.maybe_used->type_ctor->type->kind, fidl::flat::Type::Kind::kPrimitive);
-  auto primitive_type =
-      static_cast<const fidl::flat::PrimitiveType*>(transport_error.maybe_used->type_ctor->type);
-  ASSERT_EQ(primitive_type->subtype, fidl::types::PrimitiveSubtype::kInt32);
+  ASSERT_EQ(transport_error.maybe_used->type_ctor->type->kind, fidl::flat::Type::Kind::kInternal);
+  auto transport_err_internal_type =
+      static_cast<const fidl::flat::InternalType*>(transport_error.maybe_used->type_ctor->type);
+  ASSERT_EQ(transport_err_internal_type->subtype, fidl::types::InternalSubtype::kTransportErr);
 }
 
 TEST(MethodTests, GoodFlexibleErrorResponseUnion) {
@@ -831,9 +831,9 @@ open protocol Example {
   ASSERT_STREQ("transport_err", std::string(transport_error.maybe_used->name.data()).c_str());
 
   ASSERT_NOT_NULL(transport_error.maybe_used->type_ctor->type);
-  ASSERT_EQ(transport_error.maybe_used->type_ctor->type->kind, fidl::flat::Type::Kind::kPrimitive);
-  auto transport_err_primitive_type =
-      static_cast<const fidl::flat::PrimitiveType*>(transport_error.maybe_used->type_ctor->type);
-  ASSERT_EQ(transport_err_primitive_type->subtype, fidl::types::PrimitiveSubtype::kInt32);
+  ASSERT_EQ(transport_error.maybe_used->type_ctor->type->kind, fidl::flat::Type::Kind::kInternal);
+  auto transport_err_internal_type =
+      static_cast<const fidl::flat::InternalType*>(transport_error.maybe_used->type_ctor->type);
+  ASSERT_EQ(transport_err_internal_type->subtype, fidl::types::InternalSubtype::kTransportErr);
 }
 }  // namespace

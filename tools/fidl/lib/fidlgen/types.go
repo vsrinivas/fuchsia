@@ -230,6 +230,12 @@ func (typ PrimitiveSubtype) IsUnsigned() bool {
 	return ok
 }
 
+type InternalSubtype string
+
+const (
+	TransportErr InternalSubtype = "transport_error"
+)
+
 type HandleSubtype string
 
 const (
@@ -444,6 +450,7 @@ const (
 	RequestType    TypeKind = "request"
 	PrimitiveType  TypeKind = "primitive"
 	IdentifierType TypeKind = "identifier"
+	InternalType   TypeKind = "internal"
 )
 
 type Type struct {
@@ -455,6 +462,7 @@ type Type struct {
 	RequestSubtype     EncodedCompoundIdentifier
 	PrimitiveSubtype   PrimitiveSubtype
 	Identifier         EncodedCompoundIdentifier
+	InternalSubtype    InternalSubtype
 	Nullable           bool
 	ProtocolTransport  string
 	ObjType            uint32
@@ -575,6 +583,11 @@ func (t *Type) UnmarshalJSON(b []byte) error {
 			if err != nil {
 				return err
 			}
+		}
+	case InternalType:
+		err = json.Unmarshal(*obj["subtype"], &t.InternalSubtype)
+		if err != nil {
+			return err
 		}
 	default:
 		return fmt.Errorf("Unknown type kind: %s", t.Kind)

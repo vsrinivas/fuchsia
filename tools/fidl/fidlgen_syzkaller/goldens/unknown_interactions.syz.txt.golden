@@ -212,7 +212,7 @@ test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayErr_Resul
 test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResultInLine [
     responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResponseInLine]
     err fidl_union_member[2, int32]
-    transport_err fidl_union_member[3, int32]
+     fidl_union_member[3, ]
 ]
 test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResultOutOfLine [
     responseOutOfLine test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResponseOutOfLine
@@ -222,7 +222,7 @@ test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Res
 ][varlen]
 test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWay_ResultInLine [
     responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWay_ResponseInLine]
-    transport_err fidl_union_member[3, int32]
+     fidl_union_member[3, ]
 ]
 test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWay_ResultOutOfLine [
     responseOutOfLine test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWay_ResponseOutOfLine
@@ -253,7 +253,7 @@ test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventErr_ResultHand
 test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResultInLine [
     responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResponseInLine]
     err fidl_union_member[2, int32]
-    transport_err fidl_union_member[3, int32]
+     fidl_union_member[3, ]
 ]
 test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResultOutOfLine [
     responseOutOfLine test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResponseOutOfLine
@@ -263,7 +263,7 @@ test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResultHan
 ][varlen]
 test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWay_ResultInLine [
     responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWay_ResponseInLine]
-    transport_err fidl_union_member[3, int32]
+     fidl_union_member[3, ]
 ]
 test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWay_ResultOutOfLine [
     responseOutOfLine test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWay_ResponseOutOfLine

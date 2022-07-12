@@ -690,4 +690,28 @@ type Foo = resource struct {
                                       fidl::ErrUnexpectedConstraint);
 }
 
+TEST(InternalTypes, CannotReferToUnqualifiedInternalType) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = struct {
+    foo TransportErr;
+};
+)FIDL");
+
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
+}
+
+TEST(InternalTypes, CannotReferToQualifiedInternalType) {
+  TestLibrary library(R"FIDL(
+library example;
+
+type Foo = struct {
+    foo fidl.TransportErr;
+};
+)FIDL");
+
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrNameNotFound);
+}
+
 }  // namespace fidl::flat

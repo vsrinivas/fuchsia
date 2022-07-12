@@ -110,6 +110,7 @@ struct Type {
 
   enum struct Kind : uint8_t {
     kPrimitive,
+    kInternal,
     kEnum,
     kBits,
     kHandle,
@@ -152,6 +153,16 @@ struct PrimitiveType : public Type {
         subtype(subtype) {}
 
   const types::PrimitiveSubtype subtype;
+};
+
+// Internal types are types which are used internally by the bindings but not
+// exposed for FIDL libraries to use.
+struct InternalType : public Type {
+  InternalType(std::string name, types::InternalSubtype subtype, uint32_t size,
+               CodingContext context)
+      : Type(Kind::kInternal, std::move(name), size, true, true), subtype(subtype) {}
+
+  const types::InternalSubtype subtype;
 };
 
 struct EnumType : public Type {

@@ -227,6 +227,19 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
       coded_types_.push_back(std::move(coded_primitive_type));
       return coded_types_.back().get();
     }
+    case flat::Type::Kind::kInternal: {
+      auto internal_type = static_cast<const flat::InternalType*>(type);
+      auto iter = internal_type_map_.find(internal_type);
+      if (iter != internal_type_map_.end())
+        return iter->second;
+      auto name = NameFlatName(internal_type->name);
+      auto coded_internal_type = std::make_unique<coded::InternalType>(
+          std::move(name), internal_type->subtype,
+          internal_type->typeshape(WireFormat::kV1NoEe).inline_size, context);
+      internal_type_map_[internal_type] = coded_internal_type.get();
+      coded_types_.push_back(std::move(coded_internal_type));
+      return coded_types_.back().get();
+    }
     case flat::Type::Kind::kIdentifier: {
       auto identifier_type = static_cast<const flat::IdentifierType*>(type);
       auto iter = named_coded_types_.find(identifier_type->name);
@@ -279,6 +292,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type,
         case coded::Type::Kind::kBits:
           return coded_type;
         case coded::Type::Kind::kPrimitive:
+        case coded::Type::Kind::kInternal:
         case coded::Type::Kind::kProtocolHandle:
         case coded::Type::Kind::kStructPointer:
         case coded::Type::Kind::kRequestHandle:

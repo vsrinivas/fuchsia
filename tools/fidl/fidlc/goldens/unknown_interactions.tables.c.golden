@@ -120,13 +120,13 @@ const struct FidlCodedStruct test_unknowninteractions_UnknownInteractionsProtoco
 static const struct FidlXUnionField Fields74test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWay_Result[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWay_ResponseTable)},
     /*FidlXUnionField*/{.type=NULL},
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kTransportErrTable)}
 };
 const struct FidlCodedXUnion test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWay_ResultTable = {.tag=kFidlTypeXUnion, .field_count=3u, .fields=Fields74test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWay_Result, .nullable=kFidlNullability_Nonnullable, .name="test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWay_Result", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlXUnionField Fields85test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWay_ResultNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWay_ResponseTable)},
     /*FidlXUnionField*/{.type=NULL},
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kTransportErrTable)}
 };
 const struct FidlCodedXUnion test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWay_ResultNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=3u, .fields=Fields85test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWay_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWay_Result", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlStructElement Fields77test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTopResponse[] = {
@@ -139,13 +139,13 @@ const struct FidlCodedStruct test_unknowninteractions_UnknownInteractionsProtoco
 static const struct FidlXUnionField Fields77test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_Result[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResponseTable)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)},
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kTransportErrTable)}
 };
 const struct FidlCodedXUnion test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResultTable = {.tag=kFidlTypeXUnion, .field_count=3u, .fields=Fields77test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_Result, .nullable=kFidlNullability_Nonnullable, .name="test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWayErr_Result", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlXUnionField Fields88test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResultNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResponseTable)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)},
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kTransportErrTable)}
 };
 const struct FidlCodedXUnion test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResultNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=3u, .fields=Fields88test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWayErr_Result", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlStructElement Fields80test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse[] = {
@@ -217,13 +217,13 @@ const struct FidlCodedStruct test_unknowninteractions_UnknownInteractionsDriverP
 static const struct FidlXUnionField Fields80test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWay_ResponseTable)},
     /*FidlXUnionField*/{.type=NULL},
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kTransportErrTable)}
 };
 const struct FidlCodedXUnion test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWay_ResultTable = {.tag=kFidlTypeXUnion, .field_count=3u, .fields=Fields80test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result, .nullable=kFidlNullability_Nonnullable, .name="test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlXUnionField Fields91test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWay_ResultNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWay_ResponseTable)},
     /*FidlXUnionField*/{.type=NULL},
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kTransportErrTable)}
 };
 const struct FidlCodedXUnion test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWay_ResultNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=3u, .fields=Fields91test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWay_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlStructElement Fields83test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse[] = {
@@ -236,13 +236,13 @@ const struct FidlCodedStruct test_unknowninteractions_UnknownInteractionsDriverP
 static const struct FidlXUnionField Fields83test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResponseTable)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)},
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kTransportErrTable)}
 };
 const struct FidlCodedXUnion test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResultTable = {.tag=kFidlTypeXUnion, .field_count=3u, .fields=Fields83test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result, .nullable=kFidlNullability_Nonnullable, .name="test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlXUnionField Fields94test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResultNullableRef[] = {
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResponseTable)},
     /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)},
-    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kInt32Table)}
+    /*FidlXUnionField*/{.type=(fidl_type_t*)(&fidl_internal_kTransportErrTable)}
 };
 const struct FidlCodedXUnion test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResultNullableRefTable = {.tag=kFidlTypeXUnion, .field_count=3u, .fields=Fields94test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResultNullableRef, .nullable=kFidlNullability_Nullable, .name="test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result", .strictness=kFidlStrictness_Strict, .is_resource=kFidlIsResource_NotResource};
 static const struct FidlStructElement Fields86test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse[] = {

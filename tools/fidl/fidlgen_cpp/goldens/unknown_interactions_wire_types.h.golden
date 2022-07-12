@@ -4,6 +4,7 @@
 
   #include <cinttypes>
 
+  #include <lib/fidl/cpp/wire/internal/transport_err.h>
   #include <lib/fidl/llcpp/array.h>
   #include <lib/fidl/llcpp/envelope.h>
   #include <lib/fidl/llcpp/message_storage.h>
@@ -467,21 +468,21 @@ class UnknownInteractionsProtocolFlexibleTwoWayResult {
 
   bool is_transport_err() const { return ordinal_ == ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult::Ordinal::kTransportErr; }
   
-  static UnknownInteractionsProtocolFlexibleTwoWayResult WithTransportErr(int32_t val) {
+  static UnknownInteractionsProtocolFlexibleTwoWayResult WithTransportErr(::fidl::internal::TransportErr val) {
     UnknownInteractionsProtocolFlexibleTwoWayResult result;
     result.ordinal_ = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult::Ordinal::kTransportErr;
-    result.envelope_.As<int32_t>().set_data(std::move(val));
+    result.envelope_.As<::fidl::internal::TransportErr>().set_data(std::move(val));
     return result;
   }
 
 
-  int32_t& transport_err() {
+  ::fidl::internal::TransportErr& transport_err() {
     ZX_ASSERT(ordinal_ == ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult::Ordinal::kTransportErr);
-    return envelope_.As<int32_t>().get_data();
+    return envelope_.As<::fidl::internal::TransportErr>().get_data();
   }
-  const int32_t& transport_err() const {
+  const ::fidl::internal::TransportErr& transport_err() const {
     ZX_ASSERT(ordinal_ == ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult::Ordinal::kTransportErr);
-    return envelope_.As<int32_t>().get_data();
+    return envelope_.As<::fidl::internal::TransportErr>().get_data();
   }
   ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -563,21 +564,21 @@ class UnknownInteractionsProtocolFlexibleTwoWayErrResult {
 
   bool is_transport_err() const { return ordinal_ == ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult::Ordinal::kTransportErr; }
   
-  static UnknownInteractionsProtocolFlexibleTwoWayErrResult WithTransportErr(int32_t val) {
+  static UnknownInteractionsProtocolFlexibleTwoWayErrResult WithTransportErr(::fidl::internal::TransportErr val) {
     UnknownInteractionsProtocolFlexibleTwoWayErrResult result;
     result.ordinal_ = ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult::Ordinal::kTransportErr;
-    result.envelope_.As<int32_t>().set_data(std::move(val));
+    result.envelope_.As<::fidl::internal::TransportErr>().set_data(std::move(val));
     return result;
   }
 
 
-  int32_t& transport_err() {
+  ::fidl::internal::TransportErr& transport_err() {
     ZX_ASSERT(ordinal_ == ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult::Ordinal::kTransportErr);
-    return envelope_.As<int32_t>().get_data();
+    return envelope_.As<::fidl::internal::TransportErr>().get_data();
   }
-  const int32_t& transport_err() const {
+  const ::fidl::internal::TransportErr& transport_err() const {
     ZX_ASSERT(ordinal_ == ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult::Ordinal::kTransportErr);
-    return envelope_.As<int32_t>().get_data();
+    return envelope_.As<::fidl::internal::TransportErr>().get_data();
   }
   ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -792,21 +793,21 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayResult {
 
   bool is_transport_err() const { return ordinal_ == ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::Ordinal::kTransportErr; }
   
-  static UnknownInteractionsDriverProtocolFlexibleTwoWayResult WithTransportErr(int32_t val) {
+  static UnknownInteractionsDriverProtocolFlexibleTwoWayResult WithTransportErr(::fidl::internal::TransportErr val) {
     UnknownInteractionsDriverProtocolFlexibleTwoWayResult result;
     result.ordinal_ = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::Ordinal::kTransportErr;
-    result.envelope_.As<int32_t>().set_data(std::move(val));
+    result.envelope_.As<::fidl::internal::TransportErr>().set_data(std::move(val));
     return result;
   }
 
 
-  int32_t& transport_err() {
+  ::fidl::internal::TransportErr& transport_err() {
     ZX_ASSERT(ordinal_ == ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::Ordinal::kTransportErr);
-    return envelope_.As<int32_t>().get_data();
+    return envelope_.As<::fidl::internal::TransportErr>().get_data();
   }
-  const int32_t& transport_err() const {
+  const ::fidl::internal::TransportErr& transport_err() const {
     ZX_ASSERT(ordinal_ == ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::Ordinal::kTransportErr);
-    return envelope_.As<int32_t>().get_data();
+    return envelope_.As<::fidl::internal::TransportErr>().get_data();
   }
   ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -888,21 +889,21 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult {
 
   bool is_transport_err() const { return ordinal_ == ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::Ordinal::kTransportErr; }
   
-  static UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult WithTransportErr(int32_t val) {
+  static UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult WithTransportErr(::fidl::internal::TransportErr val) {
     UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult result;
     result.ordinal_ = ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::Ordinal::kTransportErr;
-    result.envelope_.As<int32_t>().set_data(std::move(val));
+    result.envelope_.As<::fidl::internal::TransportErr>().set_data(std::move(val));
     return result;
   }
 
 
-  int32_t& transport_err() {
+  ::fidl::internal::TransportErr& transport_err() {
     ZX_ASSERT(ordinal_ == ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::Ordinal::kTransportErr);
-    return envelope_.As<int32_t>().get_data();
+    return envelope_.As<::fidl::internal::TransportErr>().get_data();
   }
-  const int32_t& transport_err() const {
+  const ::fidl::internal::TransportErr& transport_err() const {
     ZX_ASSERT(ordinal_ == ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::Ordinal::kTransportErr);
-    return envelope_.As<int32_t>().get_data();
+    return envelope_.As<::fidl::internal::TransportErr>().get_data();
   }
   ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::Tag Which() const {
     ZX_ASSERT(!has_invalid_tag());
@@ -3568,7 +3569,7 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
         inline_size = ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResponse, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       case 3: // ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult::Tag::kTransportErr
-        inline_size = ::fidl::internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::internal::TransportErr, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -3580,7 +3581,7 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
         encode_fn = ::fidl::internal::MakeEncodeFn<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResponse, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       case 3: // ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult::Tag::kTransportErr
-        encode_fn = ::fidl::internal::MakeEncodeFn<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::internal::TransportErr, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         encode_fn = nullptr;
@@ -3615,7 +3616,7 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
         inline_size = ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResponse, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       case ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult::Tag::kTransportErr:
-        inline_size = ::fidl::internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::internal::TransportErr, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -3627,7 +3628,7 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
         decode_fn = ::fidl::internal::MakeDecodeFn<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResponse, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       case ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult::Tag::kTransportErr:
-        decode_fn = ::fidl::internal::MakeDecodeFn<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::internal::TransportErr, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         decode_fn = nullptr;
@@ -3696,7 +3697,7 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
         inline_size = ::fidl::internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       case 3: // ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult::Tag::kTransportErr
-        inline_size = ::fidl::internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::internal::TransportErr, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -3711,7 +3712,7 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
         encode_fn = ::fidl::internal::MakeEncodeFn<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       case 3: // ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult::Tag::kTransportErr
-        encode_fn = ::fidl::internal::MakeEncodeFn<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::internal::TransportErr, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         encode_fn = nullptr;
@@ -3749,7 +3750,7 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
         inline_size = ::fidl::internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       case ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult::Tag::kTransportErr:
-        inline_size = ::fidl::internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::internal::TransportErr, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -3764,7 +3765,7 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
         decode_fn = ::fidl::internal::MakeDecodeFn<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       case ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult::Tag::kTransportErr:
-        decode_fn = ::fidl::internal::MakeDecodeFn<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::internal::TransportErr, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         decode_fn = nullptr;
@@ -4080,7 +4081,7 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
         inline_size = ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResponse, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       case 3: // ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::Tag::kTransportErr
-        inline_size = ::fidl::internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::internal::TransportErr, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -4092,7 +4093,7 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
         encode_fn = ::fidl::internal::MakeEncodeFn<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResponse, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       case 3: // ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::Tag::kTransportErr
-        encode_fn = ::fidl::internal::MakeEncodeFn<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::internal::TransportErr, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         encode_fn = nullptr;
@@ -4127,7 +4128,7 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
         inline_size = ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResponse, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       case ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::Tag::kTransportErr:
-        inline_size = ::fidl::internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::internal::TransportErr, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -4139,7 +4140,7 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
         decode_fn = ::fidl::internal::MakeDecodeFn<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResponse, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       case ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::Tag::kTransportErr:
-        decode_fn = ::fidl::internal::MakeDecodeFn<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::internal::TransportErr, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         decode_fn = nullptr;
@@ -4208,7 +4209,7 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
         inline_size = ::fidl::internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       case 3: // ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::Tag::kTransportErr
-        inline_size = ::fidl::internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::internal::TransportErr, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -4223,7 +4224,7 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
         encode_fn = ::fidl::internal::MakeEncodeFn<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       case 3: // ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::Tag::kTransportErr
-        encode_fn = ::fidl::internal::MakeEncodeFn<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        encode_fn = ::fidl::internal::MakeEncodeFn<::fidl::internal::TransportErr, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         encode_fn = nullptr;
@@ -4261,7 +4262,7 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
         inline_size = ::fidl::internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       case ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::Tag::kTransportErr:
-        inline_size = ::fidl::internal::WireCodingTraits<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
+        inline_size = ::fidl::internal::WireCodingTraits<::fidl::internal::TransportErr, fidl::internal::WireCodingConstraintEmpty, IsRecursive>::inline_size;
         break;
       default:
         inline_size = 0;
@@ -4276,7 +4277,7 @@ struct ::fidl::internal::WireCodingTraits<::test_unknowninteractions::wire::Unkn
         decode_fn = ::fidl::internal::MakeDecodeFn<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       case ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::Tag::kTransportErr:
-        decode_fn = ::fidl::internal::MakeDecodeFn<int32_t, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
+        decode_fn = ::fidl::internal::MakeDecodeFn<::fidl::internal::TransportErr, fidl::internal::WireCodingConstraintEmpty, IsRecursive>();
         break;
       default:
         decode_fn = nullptr;

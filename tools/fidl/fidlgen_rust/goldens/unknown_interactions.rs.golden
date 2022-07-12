@@ -2308,7 +2308,7 @@ impl futures::Stream for UnknownInteractionsProtocolRequestStream {
                         inner: this.inner.clone(),
                     };
 
-                    let mut response = fidl::encoding::OpenResult::<(), ()>::TransportErr(zx_status::Status::NOT_SUPPORTED);
+                    let mut response = fidl::encoding::OpenResult::<(), ()>::TransportErr(fidl::encoding::TransportErr::UnknownMethod);
 
                     let mut msg = fidl::encoding::TransactionMessage {
                         header: fidl::encoding::TransactionHeader::new(

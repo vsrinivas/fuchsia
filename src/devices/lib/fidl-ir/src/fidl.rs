@@ -228,6 +228,12 @@ pub enum PrimitiveSubtype {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+pub enum InternalSubtype {
+    #[serde(rename = "transport_error")]
+    TransportErr,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", rename_all = "lowercase")]
 pub enum Type {
     Array {
@@ -255,6 +261,9 @@ pub enum Type {
     },
     Primitive {
         subtype: PrimitiveSubtype,
+    },
+    Internal {
+        subtype: InternalSubtype,
     },
     Identifier {
         identifier: CompoundIdentifier,

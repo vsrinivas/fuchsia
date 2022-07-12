@@ -4831,8 +4831,8 @@
           "reserved": false,
           "name": "transport_err",
           "type": {
-            "kind": "primitive",
-            "subtype": "int32",
+            "kind": "internal",
+            "subtype": "transport_error",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -4957,8 +4957,8 @@
           "reserved": false,
           "name": "transport_err",
           "type": {
-            "kind": "primitive",
-            "subtype": "int32",
+            "kind": "internal",
+            "subtype": "transport_error",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -5340,8 +5340,8 @@
           "reserved": false,
           "name": "transport_err",
           "type": {
-            "kind": "primitive",
-            "subtype": "int32",
+            "kind": "internal",
+            "subtype": "transport_error",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,
@@ -5466,8 +5466,8 @@
           "reserved": false,
           "name": "transport_err",
           "type": {
-            "kind": "primitive",
-            "subtype": "int32",
+            "kind": "internal",
+            "subtype": "transport_error",
             "type_shape_v1": {
               "inline_size": 4,
               "alignment": 4,

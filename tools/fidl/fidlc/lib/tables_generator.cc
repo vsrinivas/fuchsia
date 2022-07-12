@@ -41,6 +41,14 @@ std::string PrimitiveSubtypeToString(fidl::types::PrimitiveSubtype subtype) {
   }
 }
 
+std::string InternalSubtypeToString(fidl::types::InternalSubtype subtype) {
+  using fidl::types::InternalSubtype;
+  switch (subtype) {
+    case InternalSubtype::kTransportErr:
+      return "TransportErr";
+  }
+}
+
 // When generating coding tables for containers employing envelopes (xunions & tables),
 // we need to reference coding tables for primitives, in addition to types that need coding.
 // This function handles naming coding tables for both cases.
@@ -54,6 +62,12 @@ std::string CodedNameForEnvelope(const fidl::coded::Type* type) {
           PrimitiveSubtypeToString(static_cast<const coded::PrimitiveType*>(type)->subtype);
       return "fidl_internal_k" + suffix;
     }
+    case coded::Type::Kind::kInternal: {
+      using fidl::types::InternalSubtype;
+      std::string suffix =
+          InternalSubtypeToString(static_cast<const coded::InternalType*>(type)->subtype);
+      return "fidl_internal_k" + suffix;
+    }
     default:
       return type->coded_name;
   }
@@ -64,6 +78,12 @@ std::string TableTypeName([[maybe_unused]] const Type& type) {
   using T = std::decay_t<Type>;
   if constexpr (std::is_same_v<T, fidl::coded::PrimitiveType>)
     return "FidlCodedPrimitive";
+  if constexpr (std::is_same_v<T, fidl::coded::InternalType>) {
+    switch (static_cast<const fidl::coded::InternalType*>(&type)->subtype) {
+      case types::InternalSubtype::kTransportErr:
+        return "FidlCodedEnum";
+    }
+  }
   if constexpr (std::is_same_v<T, fidl::coded::BitsType>)
     return "FidlCodedBits";
   if constexpr (std::is_same_v<T, fidl::coded::EnumType>)
@@ -284,7 +304,7 @@ void TablesGenerator::Generate(const coded::XUnionType& xunion_type) {
 
   if (!xunion_type.fields.empty()) {
     Emit(&tables_file_, "static const struct FidlXUnionField ");
-    Emit(&tables_file_, NameFields(xunion_type.coded_name));
+    Emit(&tables_file_, fields_array_name);
     Emit(&tables_file_, "[] = ");
     GenerateArray(xunion_type.fields);
     Emit(&tables_file_, ";\n");
@@ -625,8 +645,10 @@ void TablesGenerator::Produce(CodedTypesGenerator* coded_types_generator) {
         Generate(*static_cast<const coded::VectorType*>(coded_type.get()));
         break;
       case coded::Type::Kind::kPrimitive:
-        // Nothing to generate for primitives. We intern all primitive
-        // coding tables, and therefore directly reference them.
+      case coded::Type::Kind::kInternal:
+        // Nothing to generate for primitives and internals. We intern all
+        // primitive and internal coding tables, and therefore directly
+        // reference them.
         break;
     }
   }

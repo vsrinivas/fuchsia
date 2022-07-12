@@ -35,6 +35,7 @@
 namespace fidl {
 
 class Reporter;
+class VirtualSourceFile;
 
 }  // namespace fidl
 
@@ -201,6 +202,8 @@ struct Builtin : public Decl {
     // Layouts (aliases)
     kByte,
     kBytes,
+    // Layouts (internal)
+    kTransportErr,
     // Constraints
     kOptional,
     kMax,
@@ -212,6 +215,9 @@ struct Builtin : public Decl {
       : Decl(Decl::Kind::kBuiltin, std::make_unique<AttributeList>(), std::move(name)), id(id) {}
 
   const Identity id;
+
+  // Return true if this decl is for an internal fidl type.
+  bool IsInternal() const;
 
  private:
   std::unique_ptr<Decl> SplitImpl(VersionRange range) const override;

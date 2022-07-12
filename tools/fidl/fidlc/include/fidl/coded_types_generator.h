@@ -99,6 +99,7 @@ class CodedTypesGenerator {
   // All flat::Types here are owned by all_libraries passed in the constructor,
   // and all coded::Types are owned by by named_coded_types_ or coded_types_.
   TypeMap<flat::PrimitiveType, coded::PrimitiveType> primitive_type_map_;
+  TypeMap<flat::InternalType, coded::InternalType> internal_type_map_;
   TypeMap<flat::HandleType, coded::HandleType> handle_type_map_;
   TypeMap<flat::TransportSideType, coded::Type> channel_end_map_;
   TypeMap<flat::IdentifierType, coded::ProtocolHandleType> protocol_type_map_;

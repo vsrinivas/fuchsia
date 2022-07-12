@@ -91,6 +91,10 @@ enum struct PrimitiveSubtype {
   kFloat64,
 };
 
+enum struct InternalSubtype {
+  kTransportErr,
+};
+
 enum struct MessageKind {
   kRequest,
   kResponse,

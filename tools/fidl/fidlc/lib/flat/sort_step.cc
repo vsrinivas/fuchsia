@@ -100,6 +100,7 @@ void CalcDependencies::VisitTypeConstructor(const TypeConstructor* type_ctor) {
       break;
     }
     case Type::Kind::kPrimitive:
+    case Type::Kind::kInternal:
     case Type::Kind::kString:
     case Type::Kind::kTransportSide:
     case Type::Kind::kBox:

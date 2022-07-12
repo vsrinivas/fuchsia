@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_INTERNAL_NATURAL_TYPES_H_
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_INTERNAL_NATURAL_TYPES_H_
 
+#include <lib/fidl/cpp/internal/transport_err.h>
 #include <lib/fidl/cpp/natural_coding_traits.h>
 #include <lib/fidl/cpp/natural_encoder.h>
 #include <lib/fidl/llcpp/message.h>

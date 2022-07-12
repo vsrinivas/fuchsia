@@ -101,20 +101,11 @@ pub enum Error {
         "Server for the FIDL protocol {protocol_name} did not recognize method {method_name}."
     )]
     UnsupportedMethod {
-        /// The status sent by the server. Currently this will always be
-        /// `Status::NOT_SUPPORTED`.
-        #[source]
-        status: zx_status::Status,
         /// Name of the method that was called.
         method_name: &'static str,
         /// Name of the service for which the message was intended.
         protocol_name: &'static str,
     },
-
-    /// The server sent the `transport_err` variant of the result enum, but
-    /// specified a value other than `Status::NOT_SUPPORTED`.
-    #[error("Recieved a transport_err value that is not recognized: {0}")]
-    UnrecognizedTransportErr(#[source] zx_status::Status),
 
     /// Invalid bits value for a strict bits type.
     #[error("Invalid bits value for a strict bits type.")]

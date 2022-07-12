@@ -73,17 +73,14 @@ auto DecodeResponseAndFoldError(::fidl::IncomingMessage&& incoming,
     }
     if constexpr (HasTransportError) {
       if (domain_object.result().transport_err().has_value()) {
-        zx_status_t transport_err = domain_object.result().transport_err().value();
-        if (transport_err == ZX_ERR_NOT_SUPPORTED) {
-          ResultType value = ::fitx::error(::fidl::Error::UnknownInteraction());
-          return value;
+        ::fidl::internal::TransportErr transport_err =
+            domain_object.result().transport_err().value();
+        switch (transport_err) {
+          case ::fidl::internal::TransportErr::kUnknownMethod: {
+            ResultType value = ::fitx::error(::fidl::Error::UnknownInteraction());
+            return value;
+          }
         }
-        Status decode_error = ::fidl::Error::BadPeerTransportErr();
-        if (out_maybe_unbind) {
-          out_maybe_unbind->emplace(decode_error);
-        }
-        ResultType value = ::fitx::error(decode_error);
-        return value;
       }
     }
     if constexpr (HasApplicationError || HasTransportError) {

@@ -758,7 +758,7 @@
 <td><h3 id="UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result.transport_err" class="add-link hide-from-toc">3</h3></td>
             <td><code>transport_err</code></td>
             <td>
-                <code>int32</code>
+                <code>internal</code>
             </td>
             <td></td>
         </tr>
@@ -788,7 +788,7 @@
 <td><h3 id="UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result.transport_err" class="add-link hide-from-toc">3</h3></td>
             <td><code>transport_err</code></td>
             <td>
-                <code>int32</code>
+                <code>internal</code>
             </td>
             <td></td>
         </tr>
@@ -862,7 +862,7 @@
 <td><h3 id="UnknownInteractionsProtocol_FlexibleTwoWayErr_Result.transport_err" class="add-link hide-from-toc">3</h3></td>
             <td><code>transport_err</code></td>
             <td>
-                <code>int32</code>
+                <code>internal</code>
             </td>
             <td></td>
         </tr>
@@ -892,7 +892,7 @@
 <td><h3 id="UnknownInteractionsProtocol_FlexibleTwoWay_Result.transport_err" class="add-link hide-from-toc">3</h3></td>
             <td><code>transport_err</code></td>
             <td>
-                <code>int32</code>
+                <code>internal</code>
             </td>
             <td></td>
         </tr>

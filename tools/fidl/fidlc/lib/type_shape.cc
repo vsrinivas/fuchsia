@@ -138,6 +138,13 @@ class UnalignedSizeVisitor final : public TypeShapeVisitor<DataSize> {
     }
   }
 
+  std::any Visit(const flat::InternalType& object) override {
+    switch (object.subtype) {
+      case fidl::types::InternalSubtype::kTransportErr:
+        return DataSize(4);
+    }
+  }
+
   std::any Visit(const flat::IdentifierType& object) override {
     switch (object.nullability) {
       case types::Nullability::kNullable:
@@ -259,6 +266,13 @@ class AlignmentVisitor final : public TypeShapeVisitor<DataSize> {
     return UnalignedSize(object, wire_format());
   }
 
+  std::any Visit(const flat::InternalType& object) override {
+    switch (object.subtype) {
+      case fidl::types::InternalSubtype::kTransportErr:
+        return DataSize(4);
+    }
+  }
+
   std::any Visit(const flat::IdentifierType& object) override {
     switch (object.nullability) {
       case types::Nullability::kNullable:
@@ -367,6 +381,13 @@ class DepthVisitor : public TypeShapeVisitor<DataSize> {
   std::any Visit(const flat::HandleType& object) override { return DataSize(0); }
 
   std::any Visit(const flat::PrimitiveType& object) override { return DataSize(0); }
+
+  std::any Visit(const flat::InternalType& object) override {
+    switch (object.subtype) {
+      case fidl::types::InternalSubtype::kTransportErr:
+        return DataSize(0);
+    }
+  }
 
   std::any Visit(const flat::IdentifierType& object) override {
     thread_local RecursionDetector recursion_detector;
@@ -547,6 +568,13 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
 
   std::any Visit(const flat::PrimitiveType& object) override { return DataSize(0); }
 
+  std::any Visit(const flat::InternalType& object) override {
+    switch (object.subtype) {
+      case fidl::types::InternalSubtype::kTransportErr:
+        return DataSize(0);
+    }
+  }
+
   std::any Visit(const flat::IdentifierType& object) override {
     thread_local RecursionDetector recursion_detector;
 
@@ -589,6 +617,7 @@ class MaxHandlesVisitor final : public flat::Object::Visitor<DataSize> {
           case flat::Type::Kind::kVector:
           case flat::Type::Kind::kString:
           case flat::Type::Kind::kPrimitive:
+          case flat::Type::Kind::kInternal:
           case flat::Type::Kind::kIdentifier:
           case flat::Type::Kind::kBox:
             continue;
@@ -678,6 +707,13 @@ class MaxOutOfLineVisitor final : public TypeShapeVisitor<DataSize> {
   std::any Visit(const flat::HandleType& object) override { return DataSize(0); }
 
   std::any Visit(const flat::PrimitiveType& object) override { return DataSize(0); }
+
+  std::any Visit(const flat::InternalType& object) override {
+    switch (object.subtype) {
+      case fidl::types::InternalSubtype::kTransportErr:
+        return DataSize(0);
+    }
+  }
 
   std::any Visit(const flat::IdentifierType& object) override {
     if (object.type_decl->recursive) {
@@ -848,6 +884,13 @@ class HasPaddingVisitor final : public TypeShapeVisitor<bool> {
 
   std::any Visit(const flat::PrimitiveType& object) override { return false; }
 
+  std::any Visit(const flat::InternalType& object) override {
+    switch (object.subtype) {
+      case fidl::types::InternalSubtype::kTransportErr:
+        return false;
+    }
+  }
+
   std::any Visit(const flat::IdentifierType& object) override {
     thread_local RecursionDetector recursion_detector;
 
@@ -976,6 +1019,13 @@ class HasEnvelopeVisitor final : public TypeShapeVisitor<bool> {
 
   std::any Visit(const flat::PrimitiveType& object) override { return false; }
 
+  std::any Visit(const flat::InternalType& object) override {
+    switch (object.subtype) {
+      case fidl::types::InternalSubtype::kTransportErr:
+        return false;
+    }
+  }
+
   std::any Visit(const flat::IdentifierType& object) override {
     thread_local RecursionDetector recursion_detector;
 
@@ -1049,6 +1099,13 @@ class HasFlexibleEnvelopeVisitor final : public TypeShapeVisitor<bool> {
   std::any Visit(const flat::HandleType& object) override { return false; }
 
   std::any Visit(const flat::PrimitiveType& object) override { return false; }
+
+  std::any Visit(const flat::InternalType& object) override {
+    switch (object.subtype) {
+      case fidl::types::InternalSubtype::kTransportErr:
+        return false;
+    }
+  }
 
   std::any Visit(const flat::IdentifierType& object) override {
     thread_local RecursionDetector recursion_detector;

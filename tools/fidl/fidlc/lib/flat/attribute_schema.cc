@@ -356,6 +356,7 @@ void AttributeSchema::ResolveArgsWithoutSchema(CompileStep* step, Attribute* att
           break;
         }
         [[fallthrough]];
+      case Type::Kind::kInternal:
       case Type::Kind::kIdentifier:
       case Type::Kind::kArray:
       case Type::Kind::kBox:
@@ -395,6 +396,8 @@ static bool IsSimple(const Type* type, Reporter* reporter) {
           return false;
         case Type::Kind::kUntypedNumeric:
           ZX_PANIC("should not have untyped numeric here");
+        case Type::Kind::kInternal:
+          ZX_PANIC("attributes should not have internal types");
       }
     }
     case Type::Kind::kString: {
@@ -433,6 +436,8 @@ static bool IsSimple(const Type* type, Reporter* reporter) {
       return depth <= 1u;
     case Type::Kind::kUntypedNumeric:
       ZX_PANIC("should not have untyped numeric here");
+    case Type::Kind::kInternal:
+      ZX_PANIC("attributes should not have internal types");
   }
 }
 

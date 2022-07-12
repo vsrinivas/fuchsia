@@ -40,11 +40,23 @@ static std::optional<types::PrimitiveSubtype> BuiltinToPrimitiveSubtype(Builtin:
   }
 }
 
+static std::optional<types::InternalSubtype> BuiltinToInternalSubtype(Builtin::Identity id) {
+  switch (id) {
+    case Builtin::Identity::kTransportErr:
+      return types::InternalSubtype::kTransportErr;
+    default:
+      return std::nullopt;
+  }
+}
+
 Typespace::Typespace(const Library* root_library, Reporter* reporter) : ReporterMixin(reporter) {
   for (auto& builtin : root_library->declarations.builtins) {
     if (auto subtype = BuiltinToPrimitiveSubtype(builtin->id)) {
       primitive_types_.emplace(subtype.value(),
                                std::make_unique<PrimitiveType>(builtin->name, subtype.value()));
+    } else if (auto subtype = BuiltinToInternalSubtype(builtin->id)) {
+      internal_types_.emplace(subtype.value(),
+                              std::make_unique<InternalType>(builtin->name, subtype.value()));
     } else if (builtin->id == Builtin::Identity::kString) {
       unbounded_string_type_ =
           std::make_unique<StringType>(builtin->name, &kMaxSize, types::Nullability::kNonnullable);
@@ -58,6 +70,10 @@ Typespace::Typespace(const Library* root_library, Reporter* reporter) : Reporter
 
 const PrimitiveType* Typespace::GetPrimitiveType(types::PrimitiveSubtype subtype) {
   return primitive_types_.at(subtype).get();
+}
+
+const InternalType* Typespace::GetInternalType(types::InternalSubtype subtype) {
+  return internal_types_.at(subtype).get();
 }
 
 const Type* Typespace::GetUnboundedStringType() { return unbounded_string_type_.get(); }
@@ -96,10 +112,12 @@ class Typespace::Creator : private ReporterMixin {
   bool EnsureNumberOfLayoutParams(size_t expected_params);
 
   const Type* CreatePrimitiveType(types::PrimitiveSubtype subtype);
+  const Type* CreateInternalType(types::InternalSubtype subtype);
   const Type* CreateStringType();
   const Type* CreateArrayType();
   const Type* CreateVectorType();
   const Type* CreateBytesType();
+  const Type* CreateTransportErrType();
   const Type* CreateBoxType();
   const Type* CreateHandleType(Resource* resource);
   const Type* CreateTransportSideType(TransportSide end);
@@ -176,6 +194,8 @@ const Type* Typespace::Creator::Create() {
       return CreatePrimitiveType(types::PrimitiveSubtype::kUint8);
     case Builtin::Identity::kBytes:
       return CreateBytesType();
+    case Builtin::Identity::kTransportErr:
+      return CreateInternalType(BuiltinToInternalSubtype(builtin->id).value());
     case Builtin::Identity::kOptional:
     case Builtin::Identity::kMax:
     case Builtin::Identity::kHead:
@@ -201,6 +221,16 @@ const Type* Typespace::Creator::CreatePrimitiveType(types::PrimitiveSubtype subt
   std::unique_ptr<Type> constrained_type;
   typespace_->GetPrimitiveType(subtype)->ApplyConstraints(resolver_, constraints_, layout_,
                                                           &constrained_type, out_params_);
+  return typespace_->Intern(std::move(constrained_type));
+}
+
+const Type* Typespace::Creator::CreateInternalType(types::InternalSubtype subtype) {
+  if (!EnsureNumberOfLayoutParams(0)) {
+    return nullptr;
+  }
+  std::unique_ptr<Type> constrained_type;
+  typespace_->GetInternalType(subtype)->ApplyConstraints(resolver_, constraints_, layout_,
+                                                         &constrained_type, out_params_);
   return typespace_->Intern(std::move(constrained_type));
 }
 

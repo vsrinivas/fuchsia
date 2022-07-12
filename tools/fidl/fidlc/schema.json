@@ -882,6 +882,48 @@
             ],
             "type": "object"
         },
+        "internal-subtype": {
+            "description": "Definition of internal sub-type",
+            "enum": [
+                "transport_error"
+            ],
+            "type": "string"
+        },
+        "internal-type": {
+            "additionalProperties": false,
+            "description": "Definition of internal type",
+            "patternProperties": {
+                "^experimental_": {}
+            },
+            "properties": {
+                "kind": {
+                    "description": "Selection of type as internal type",
+                    "enum": [
+                        "internal"
+                    ],
+                    "type": "string"
+                },
+                "subtype": {
+                    "$ref": "#/definitions/internal-subtype",
+                    "description": "Sub-type of the internal type"
+                },
+                "type_shape_v1": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
+                },
+                "type_shape_v2": {
+                    "$ref": "#/definitions/typeshape",
+                    "description": "Type shape of this declaration"
+                }
+            },
+            "required": [
+                "kind",
+                "subtype",
+                "type_shape_v1",
+                "type_shape_v2"
+            ],
+            "type": "object"
+        },
         "library": {
             "additionalProperties": false,
             "description": "Definition of library",
@@ -1588,6 +1630,10 @@
                 {
                     "$ref": "#/definitions/identifier-type",
                     "description": "Selection of identifier type"
+                },
+                {
+                    "$ref": "#/definitions/internal-type",
+                    "description": "Selection of internal type"
                 }
             ]
         },

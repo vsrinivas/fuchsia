@@ -208,12 +208,6 @@ class [[nodiscard]] Status {
                   ::fidl::internal::kUnknownInteraction);
   }
 
-  // Constructs a status for a peer sending a transport_err result enum variant
-  // with a status which is not supported.
-  constexpr static Status BadPeerTransportErr() {
-    return DecodeError(ZX_ERR_INTERNAL, ::fidl::internal::kUnsupportedTransportError);
-  }
-
   constexpr static Status EncodeError(zx_status_t status, const char* error_message = nullptr) {
     return Status(status, ::fidl::Reason::kEncodeError, error_message);
   }

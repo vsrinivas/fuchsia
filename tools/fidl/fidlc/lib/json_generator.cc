@@ -204,6 +204,15 @@ void JSONGenerator::Generate(const flat::Type* value) {
         GenerateObjectMember("subtype", type->name);
         break;
       }
+      case flat::Type::Kind::kInternal: {
+        const auto* type = static_cast<const flat::InternalType*>(value);
+        switch (type->subtype) {
+          case types::InternalSubtype::kTransportErr:
+            GenerateObjectMember("subtype", std::string_view("transport_error"));
+            break;
+        }
+        break;
+      }
       case flat::Type::Kind::kIdentifier: {
         const auto* type = static_cast<const flat::IdentifierType*>(value);
         GenerateObjectMember("identifier", type->name);
@@ -538,6 +547,12 @@ void JSONGenerator::GenerateParameterizedType(TypeKind parent_type_kind, const f
       case flat::Type::Kind::kHandle:
       case flat::Type::Kind::kUntypedNumeric:
         ZX_PANIC("unexpected kind");
+      case flat::Type::Kind::kInternal: {
+        switch (static_cast<const flat::InternalType*>(type)->subtype) {
+          case types::InternalSubtype::kTransportErr:
+            ZX_PANIC("unexpected kind");
+        }
+      }
     }
     GenerateTypeShapes(*type);
   });

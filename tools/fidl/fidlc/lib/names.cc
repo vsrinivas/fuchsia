@@ -197,6 +197,8 @@ std::string NameFlatTypeKind(const flat::Type* type) {
     }
     case flat::Type::Kind::kPrimitive:
       return "primitive";
+    case flat::Type::Kind::kInternal:
+      return "internal";
     // TODO(fxbug.dev/70186): transition the JSON and other backends to using box
     case flat::Type::Kind::kBox:
     case flat::Type::Kind::kIdentifier:
@@ -356,6 +358,7 @@ void NameFlatTypeHelper(std::ostringstream& buf, const flat::Type* type) {
       break;
     }
     case flat::Type::Kind::kPrimitive:
+    case flat::Type::Kind::kInternal:
     case flat::Type::Kind::kIdentifier:
     case flat::Type::Kind::kUntypedNumeric:
       // Like Stars, they are known by name.
@@ -389,6 +392,8 @@ std::string NameFlatCType(const flat::Type* type) {
         auto primitive_type = static_cast<const flat::PrimitiveType*>(type);
         return NamePrimitiveCType(primitive_type->subtype);
       }
+      case flat::Type::Kind::kInternal:
+        ZX_PANIC("C bindings should not be using unknown interactinos");
 
       case flat::Type::Kind::kArray: {
         type = static_cast<const flat::ArrayType*>(type)->element_type;

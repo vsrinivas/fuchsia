@@ -8,6 +8,7 @@
 
 #include "fidl/flat/visitor.h"
 #include "fidl/reporter.h"
+#include "fidl/virtual_source_file.h"
 
 namespace fidl::flat {
 
@@ -59,6 +60,36 @@ bool Element::IsAnonymousLayout() const {
 }
 
 std::string Decl::GetName() const { return std::string(name.decl_name()); }
+
+bool Builtin::IsInternal() const {
+  switch (id) {
+    case Identity::kBool:
+    case Identity::kInt8:
+    case Identity::kInt16:
+    case Identity::kInt32:
+    case Identity::kInt64:
+    case Identity::kUint8:
+    case Identity::kUint16:
+    case Identity::kUint32:
+    case Identity::kUint64:
+    case Identity::kFloat32:
+    case Identity::kFloat64:
+    case Identity::kString:
+    case Identity::kBox:
+    case Identity::kArray:
+    case Identity::kVector:
+    case Identity::kClientEnd:
+    case Identity::kServerEnd:
+    case Identity::kByte:
+    case Identity::kBytes:
+    case Identity::kOptional:
+    case Identity::kMax:
+    case Identity::kHead:
+      return false;
+    case Identity::kTransportErr:
+      return true;
+  }
+}
 
 FieldShape Struct::Member::fieldshape(WireFormat wire_format) const {
   return FieldShape(*this, wire_format);
@@ -195,9 +226,11 @@ std::unique_ptr<Library> Library::CreateRootLibrary() {
   insert("server_end", Builtin::Identity::kServerEnd);
   insert("byte", Builtin::Identity::kByte);
   insert("bytes", Builtin::Identity::kBytes);
+  insert("TransportErr", Builtin::Identity::kTransportErr);
   insert("optional", Builtin::Identity::kOptional);
   insert("MAX", Builtin::Identity::kMax);
   insert("HEAD", Builtin::Identity::kHead);
+
   return library;
 }
 

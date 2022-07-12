@@ -303,6 +303,19 @@ class ResolveStep::Lookup final : ReporterMixin {
     if (begin == end) {
       return std::nullopt;
     }
+    // TryDecl is only used from within ParseSourcedReference, which should not
+    // resolve Internal declarations names; only synthetic references can
+    // resolve internal names.
+    // Internal declarations should only exist in the root library, and should
+    // never have conflicting names, so any match should have only one element.
+    // We therefore return nullopt if any of the declarations found is an
+    // internal one.
+    for (auto it = begin; it != end; ++it) {
+      if (it->second->kind == Decl::Kind::kBuiltin &&
+          static_cast<Builtin*>(it->second)->IsInternal()) {
+        return std::nullopt;
+      }
+    }
     return Reference::Key(library, name);
   }
 

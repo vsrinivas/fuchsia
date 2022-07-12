@@ -604,7 +604,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleAsyncSendOtherTransportError) {
   auto result = response_completer.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
   EXPECT_TRUE(result.value().is_error());
-  EXPECT_EQ(ZX_ERR_INTERNAL, result.value().error_value().status());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.value().error_value().status());
   EXPECT_EQ(fidl::Reason::kDecodeError, result.value().error_value().reason());
 }
 
@@ -632,7 +632,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleAsyncSendOkTransportErr) {
   auto result = response_completer.WaitForResponse();
   ASSERT_TRUE(result.is_ok());
   EXPECT_TRUE(result.value().is_error());
-  EXPECT_EQ(ZX_ERR_INTERNAL, result.value().error_value().status());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.value().error_value().status());
   EXPECT_EQ(fidl::Reason::kDecodeError, result.value().error_value().reason());
 }
 
@@ -749,7 +749,7 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSendOtherTransportError) {
   ASSERT_TRUE(result.is_ok());
   ASSERT_TRUE(result.value().is_error());
   ASSERT_TRUE(result.value().error_value().is_transport_error());
-  EXPECT_EQ(ZX_ERR_INTERNAL, result.value().error_value().transport_error().status());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, result.value().error_value().transport_error().status());
   EXPECT_EQ(fidl::Reason::kDecodeError, result.value().error_value().transport_error().reason());
 }
 

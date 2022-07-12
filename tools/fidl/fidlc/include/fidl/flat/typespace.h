@@ -38,6 +38,7 @@ class Typespace final : private ReporterMixin {
                      LayoutInvocation* out_params);
 
   const PrimitiveType* GetPrimitiveType(types::PrimitiveSubtype subtype);
+  const InternalType* GetInternalType(types::InternalSubtype subtype);
   const Type* GetUnboundedStringType();
   const Type* GetStringType(size_t max_size);
   const Type* GetUntypedNumericType();
@@ -49,6 +50,7 @@ class Typespace final : private ReporterMixin {
 
   std::vector<std::unique_ptr<Type>> types_;
   std::map<types::PrimitiveSubtype, std::unique_ptr<PrimitiveType>> primitive_types_;
+  std::map<types::InternalSubtype, std::unique_ptr<InternalType>> internal_types_;
   std::unique_ptr<StringType> unbounded_string_type_;
   std::unique_ptr<UntypedNumericType> untyped_numeric_type_;
   std::vector<std::unique_ptr<Size>> sizes_;

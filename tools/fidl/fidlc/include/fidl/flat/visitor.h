@@ -18,6 +18,7 @@ struct Object::VisitorAny {
   virtual std::any Visit(const StringType&) = 0;
   virtual std::any Visit(const HandleType&) = 0;
   virtual std::any Visit(const PrimitiveType&) = 0;
+  virtual std::any Visit(const InternalType&) = 0;
   virtual std::any Visit(const IdentifierType&) = 0;
   virtual std::any Visit(const TransportSideType&) = 0;
   virtual std::any Visit(const BoxType&) = 0;

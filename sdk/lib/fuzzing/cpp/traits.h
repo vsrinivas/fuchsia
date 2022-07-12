@@ -7,6 +7,7 @@
 
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/fidl/cpp/transport_err.h>
 #include <lib/fuzzing/cpp/fuzz_input.h>
 #include <lib/zx/object.h>
 #include <zircon/assert.h>
@@ -106,6 +107,7 @@ FUZZING_STATIC(int32_t);
 FUZZING_STATIC(int64_t);
 FUZZING_STATIC(float);
 FUZZING_STATIC(double);
+FUZZING_STATIC(::fidl::internal::TransportErr);
 
 #undef FUZZING_STATIC
 

@@ -354,7 +354,7 @@ std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEve
           WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResponse, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResponse>::ToNatural(std::move(src.response())));
     case ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult::Tag::kTransportErr:
       return ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResult::WithTransportErr(
-          WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.transport_err())));
+          WireNaturalConversionTraits<::fidl::internal::TransportErr, ::fidl::internal::TransportErr>::ToNatural(std::move(src.transport_err())));
     default:
       ZX_PANIC("unknown union tag in strict union");
   }
@@ -366,7 +366,7 @@ std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolStrictEve
           WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResponse, ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResponse>::ToWire(arena, std::move(src.response().value())));
     case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayResult::Tag::kTransportErr:
       return ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayResult::WithTransportErr(
-          WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.transport_err().value())));
+          WireNaturalConversionTraits<::fidl::internal::TransportErr, ::fidl::internal::TransportErr>::ToWire(arena, std::move(src.transport_err().value())));
   }
 }
 
@@ -393,7 +393,7 @@ std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleT
           WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.err())));
     case ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult::Tag::kTransportErr:
       return ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResult::WithTransportErr(
-          WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.transport_err())));
+          WireNaturalConversionTraits<::fidl::internal::TransportErr, ::fidl::internal::TransportErr>::ToNatural(std::move(src.transport_err())));
     default:
       ZX_PANIC("unknown union tag in strict union");
   }
@@ -408,7 +408,7 @@ std::unique_ptr<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleT
           WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.err().value())));
     case ::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayErrResult::Tag::kTransportErr:
       return ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayErrResult::WithTransportErr(
-          WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.transport_err().value())));
+          WireNaturalConversionTraits<::fidl::internal::TransportErr, ::fidl::internal::TransportErr>::ToWire(arena, std::move(src.transport_err().value())));
   }
 }
 
@@ -504,7 +504,7 @@ std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStr
           WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResponse, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResponse>::ToNatural(std::move(src.response())));
     case ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::Tag::kTransportErr:
       return ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::WithTransportErr(
-          WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.transport_err())));
+          WireNaturalConversionTraits<::fidl::internal::TransportErr, ::fidl::internal::TransportErr>::ToNatural(std::move(src.transport_err())));
     default:
       ZX_PANIC("unknown union tag in strict union");
   }
@@ -516,7 +516,7 @@ std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolStr
           WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResponse, ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResponse>::ToWire(arena, std::move(src.response().value())));
     case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::Tag::kTransportErr:
       return ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayResult::WithTransportErr(
-          WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.transport_err().value())));
+          WireNaturalConversionTraits<::fidl::internal::TransportErr, ::fidl::internal::TransportErr>::ToWire(arena, std::move(src.transport_err().value())));
   }
 }
 
@@ -543,7 +543,7 @@ std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFle
           WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.err())));
     case ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::Tag::kTransportErr:
       return ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::WithTransportErr(
-          WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.transport_err())));
+          WireNaturalConversionTraits<::fidl::internal::TransportErr, ::fidl::internal::TransportErr>::ToNatural(std::move(src.transport_err())));
     default:
       ZX_PANIC("unknown union tag in strict union");
   }
@@ -558,7 +558,7 @@ std::unique_ptr<::test_unknowninteractions::UnknownInteractionsDriverProtocolFle
           WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.err().value())));
     case ::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::Tag::kTransportErr:
       return ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult::WithTransportErr(
-          WireNaturalConversionTraits<int32_t, int32_t>::ToWire(arena, std::move(src.transport_err().value())));
+          WireNaturalConversionTraits<::fidl::internal::TransportErr, ::fidl::internal::TransportErr>::ToWire(arena, std::move(src.transport_err().value())));
   }
 }
 

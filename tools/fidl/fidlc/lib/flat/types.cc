@@ -512,9 +512,29 @@ bool PrimitiveType::ApplyConstraints(TypeResolver* resolver, const TypeConstrain
   return true;
 }
 
+bool InternalType::ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
+                                    const Reference& layout, std::unique_ptr<Type>* out_type,
+                                    LayoutInvocation* out_params) const {
+  size_t num_constraints = constraints.items.size();
+  // assume that a lone constraint was an attempt at specifying `optional` and provide a more
+  // specific error
+  // TODO(fxbug.dev/75112): actually try to compile the optional constraint
+  if (num_constraints == 1) {
+    return resolver->Fail(ErrCannotBeOptional, constraints.items[0]->span,
+                          layout.resolved().name());
+  }
+  if (num_constraints > 1) {
+    return resolver->Fail(ErrTooManyConstraints, constraints.span.value(), layout.resolved().name(),
+                          0, num_constraints);
+  }
+  *out_type = std::make_unique<InternalType>(name, subtype);
+  return true;
+}
+
 types::Resourceness Type::Resourceness() const {
   switch (this->kind) {
     case Type::Kind::kPrimitive:
+    case Type::Kind::kInternal:
     case Type::Kind::kString:
       return types::Resourceness::kValue;
     case Type::Kind::kHandle:
@@ -568,6 +588,7 @@ std::any BoxType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*
 std::any HandleType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
 std::any IdentifierType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
 std::any PrimitiveType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
+std::any InternalType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
 std::any StringType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
 std::any TransportSideType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }
 std::any VectorType::AcceptAny(VisitorAny* visitor) const { return visitor->Visit(*this); }

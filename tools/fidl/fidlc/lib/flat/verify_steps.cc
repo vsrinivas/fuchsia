@@ -72,6 +72,12 @@ types::Resourceness VerifyResourcenessStep::EffectiveResourceness(const Type* ty
     case Type::Kind::kPrimitive:
     case Type::Kind::kString:
       return types::Resourceness::kValue;
+    case Type::Kind::kInternal: {
+      switch (static_cast<const InternalType*>(type)->subtype) {
+        case fidl::types::InternalSubtype::kTransportErr:
+          return types::Resourceness::kValue;
+      }
+    }
     case Type::Kind::kHandle:
     case Type::Kind::kTransportSide:
       return types::Resourceness::kResource;
@@ -213,6 +219,12 @@ void VerifyHandleTransportCompatibilityStep::CheckHandleTransportUsages(
     case Type::Kind::kPrimitive:
     case Type::Kind::kString:
       return;
+    case Type::Kind::kInternal: {
+      switch (static_cast<const InternalType*>(type)->subtype) {
+        case fidl::types::InternalSubtype::kTransportErr:
+          return;
+      }
+    }
     case Type::Kind::kArray:
       return CheckHandleTransportUsages(static_cast<const ArrayType*>(type)->element_type,
                                         transport, protocol, source_span, seen);

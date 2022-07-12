@@ -218,7 +218,7 @@ struct Allocate<UnknownInteractionsProtocol_FlexibleTwoWay_Response> {
 template <>
 struct MinSize<UnknownInteractionsProtocol_FlexibleTwoWay_Result> {
   operator size_t() {
-    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWay_Response>(), MinSize<int32_t>()};
+    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWay_Response>(), MinSize<::fidl::internal::TransportErr>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -240,7 +240,7 @@ struct Allocate<UnknownInteractionsProtocol_FlexibleTwoWay_Result> {
         break;
       }
       case 1: {
-        out.set_transport_err(Allocate<int32_t>{}(src, size));
+        out.set_transport_err(Allocate<::fidl::internal::TransportErr>{}(src, size));
         break;
       }
     }
@@ -287,7 +287,7 @@ struct Allocate<UnknownInteractionsProtocol_FlexibleTwoWayErr_Response> {
 template <>
 struct MinSize<UnknownInteractionsProtocol_FlexibleTwoWayErr_Result> {
   operator size_t() {
-    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayErr_Response>(), MinSize<int32_t>(), MinSize<int32_t>()};
+    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayErr_Response>(), MinSize<int32_t>(), MinSize<::fidl::internal::TransportErr>()};
     return 1 + *std::max_element(sizes, sizes + 3 + 1);
   }
 };
@@ -313,7 +313,7 @@ struct Allocate<UnknownInteractionsProtocol_FlexibleTwoWayErr_Result> {
         break;
       }
       case 2: {
-        out.set_transport_err(Allocate<int32_t>{}(src, size));
+        out.set_transport_err(Allocate<::fidl::internal::TransportErr>{}(src, size));
         break;
       }
     }
@@ -498,7 +498,7 @@ struct Allocate<UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response> {
 template <>
 struct MinSize<UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result> {
   operator size_t() {
-    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response>(), MinSize<int32_t>()};
+    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response>(), MinSize<::fidl::internal::TransportErr>()};
     return 1 + *std::max_element(sizes, sizes + 2 + 1);
   }
 };
@@ -520,7 +520,7 @@ struct Allocate<UnknownInteractionsDriverProtocol_FlexibleTwoWay_Result> {
         break;
       }
       case 1: {
-        out.set_transport_err(Allocate<int32_t>{}(src, size));
+        out.set_transport_err(Allocate<::fidl::internal::TransportErr>{}(src, size));
         break;
       }
     }
@@ -567,7 +567,7 @@ struct Allocate<UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response> {
 template <>
 struct MinSize<UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result> {
   operator size_t() {
-    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response>(), MinSize<int32_t>(), MinSize<int32_t>()};
+    size_t sizes[] = {0, MinSize<::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response>(), MinSize<int32_t>(), MinSize<::fidl::internal::TransportErr>()};
     return 1 + *std::max_element(sizes, sizes + 3 + 1);
   }
 };
@@ -593,7 +593,7 @@ struct Allocate<UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Result> {
         break;
       }
       case 2: {
-        out.set_transport_err(Allocate<int32_t>{}(src, size));
+        out.set_transport_err(Allocate<::fidl::internal::TransportErr>{}(src, size));
         break;
       }
     }

@@ -142,6 +142,7 @@ class Libraries : private ReporterMixin {
   std::map<std::vector<std::string_view>, Library*> libraries_by_name_;
   Typespace typespace_;
   AttributeSchemaMap attribute_schemas_;
+
   // TODO(fxbug.dev/8027): Remove this field.
   VirtualSourceFile generated_source_file_{"generated"};
 };

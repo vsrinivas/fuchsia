@@ -37,6 +37,7 @@ struct Type : public Object {
     kHandle,
     kTransportSide,
     kPrimitive,
+    kInternal,
     kUntypedNumeric,
     kIdentifier,
   };
@@ -248,6 +249,29 @@ struct PrimitiveType final : public Type {
 
  private:
   static uint32_t SubtypeSize(types::PrimitiveSubtype subtype);
+};
+
+// Internal types are types which are used internally by the bindings but not
+// exposed for FIDL libraries to use.
+struct InternalType final : public Type {
+  explicit InternalType(const Name& name, types::InternalSubtype subtype)
+      : Type(name, Kind::kInternal, types::Nullability::kNonnullable), subtype(subtype) {}
+
+  types::InternalSubtype subtype;
+
+  std::any AcceptAny(VisitorAny* visitor) const override;
+
+  Comparison Compare(const Type& other) const override {
+    const auto& o = static_cast<const InternalType&>(other);
+    return Type::Compare(o).Compare(subtype, o.subtype);
+  }
+
+  bool ApplyConstraints(TypeResolver* resolver, const TypeConstraints& constraints,
+                        const Reference& layout, std::unique_ptr<Type>* out_type,
+                        LayoutInvocation* out_params) const override;
+
+ private:
+  static uint32_t SubtypeSize(types::InternalSubtype subtype);
 };
 
 struct IdentifierType final : public Type {

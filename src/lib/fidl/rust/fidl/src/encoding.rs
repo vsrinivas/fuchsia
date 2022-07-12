@@ -3399,6 +3399,39 @@ where
     }
 }
 
+/// Internal FIDL transport error type used to identify unknown methods.
+#[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[repr(i32)]
+pub enum TransportErr {
+    /// Method was not recognized.
+    UnknownMethod = -2,
+}
+
+impl TransportErr {
+    /// Create a `TransportErr` from the enum ordinal, if the ordinal is in
+    /// range.
+    #[inline]
+    pub fn from_primitive(prim: i32) -> Option<Self> {
+        match prim {
+            -2 => Some(Self::UnknownMethod),
+            _ => None,
+        }
+    }
+
+    /// Convert to the enum ordinal.
+    #[inline]
+    pub const fn into_primitive(self) -> i32 {
+        self as i32
+    }
+}
+
+fidl_enum! {
+    name: TransportErr,
+    prim_ty: i32,
+    strict: true,
+    min_member: UnknownMethod,
+}
+
 /// Helper type for encoding and decoding the results of flexible interactions.
 /// This type is not exposed in the generated APIs but is used in forming
 /// responses.
@@ -3411,7 +3444,7 @@ pub enum OpenResult<O, E> {
     /// Contains the error value
     Err(E),
     /// Contains the transport error value
-    TransportErr(zx_status::Status),
+    TransportErr(TransportErr),
 }
 
 impl<O> OpenResult<O, ()> {
@@ -3427,10 +3460,9 @@ impl<O> OpenResult<O, ()> {
         match self {
             OpenResult::Ok(ok) => Ok(ok),
             OpenResult::Err(()) => Err(Error::UnknownUnionTag),
-            OpenResult::TransportErr(status @ zx_status::Status::NOT_SUPPORTED) => {
-                Err(Error::UnsupportedMethod { status, method_name, protocol_name: P::DEBUG_NAME })
+            OpenResult::TransportErr(TransportErr::UnknownMethod) => {
+                Err(Error::UnsupportedMethod { method_name, protocol_name: P::DEBUG_NAME })
             }
-            OpenResult::TransportErr(status) => Err(Error::UnrecognizedTransportErr(status)),
         }
     }
 }
@@ -3450,10 +3482,9 @@ impl<O, E> OpenResult<O, E> {
         match self {
             OpenResult::Ok(ok) => Ok(Ok(ok)),
             OpenResult::Err(err) => Ok(Err(err)),
-            OpenResult::TransportErr(status @ zx_status::Status::NOT_SUPPORTED) => {
-                Err(Error::UnsupportedMethod { status, method_name, protocol_name: P::DEBUG_NAME })
+            OpenResult::TransportErr(TransportErr::UnknownMethod) => {
+                Err(Error::UnsupportedMethod { method_name, protocol_name: P::DEBUG_NAME })
             }
-            OpenResult::TransportErr(status) => Err(Error::UnrecognizedTransportErr(status)),
         }
     }
 }
@@ -3563,7 +3594,7 @@ where
                 0 => return Err(Error::UnknownUnionTag),
                 size => size,
             },
-            3 => decoder.inline_size_of::<zx_status::Status>(),
+            3 => decoder.inline_size_of::<TransportErr>(),
             _ => return Err(Error::UnknownUnionTag),
         };
         let next_out_of_line = decoder.next_out_of_line();
@@ -3609,7 +3640,7 @@ where
                         // Do nothing, read the value into the object
                     } else {
                         // Initialize `self` to the right variant
-                        *self = Self::TransportErr(zx_status::Status::new_empty());
+                        *self = Self::TransportErr(TransportErr::new_empty());
                     }
                     if let Self::TransportErr(val) = self {
                         val.decode(decoder, offset)

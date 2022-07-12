@@ -317,20 +317,16 @@ func (m Method) AsyncResponseCompleter() string {
 		fmt.Fprintf(&out, "} else if ($response.$tag == %s.err) {", m.Response.ResultTypeTagName)
 		out.WriteString(`
 			$completer.completeError($fidl.MethodException($response.err));
-		} else if ($response.transportErr == $zircon.ZX.ERR_NOT_SUPPORTED) {
-			$completer.completeError(const $fidl.UnknownMethodException());
 		} else {
-			$completer.completeError($fidl.FidlUnrecognizedTransportErrorError($response.transportErr!));
+			$completer.completeError($fidl.FidlError.fromTransportErr($response.transportErr!));
 		}`)
 	} else if m.Response.HasError {
 		out.WriteString(`} else {
 			$completer.completeError($fidl.MethodException($response.err));
 		}`)
 	} else { // m.Response.HasTransportError
-		out.WriteString(`} else if ($response.transportErr == $zircon.ZX.ERR_NOT_SUPPORTED) {
-			$completer.completeError(const $fidl.UnknownMethodException());
-		} else {
-			$completer.completeError($fidl.FidlUnrecognizedTransportErrorError($response.transportErr!));
+		out.WriteString(`} else {
+			$completer.completeError($fidl.FidlError.fromTransportErr($response.transportErr!));
 		}`)
 	}
 	return out.String()
@@ -540,6 +536,14 @@ var typeForPrimitiveSubtype = map[fidlgen.PrimitiveSubtype]string{
 	fidlgen.Float64: "Float64Type",
 }
 
+var declForInternalType = map[fidlgen.InternalSubtype]string{
+	fidlgen.TransportErr: "$fidl.TransportErr",
+}
+
+var typeForInternalSubtype = map[fidlgen.InternalSubtype]string{
+	fidlgen.TransportErr: "TransportErrType",
+}
+
 func docStringLink(nameWithBars string) string {
 	return fmt.Sprintf("[%s]", nameWithBars[1:len(nameWithBars)-1])
 }
@@ -640,6 +644,14 @@ func typeExprForPrimitiveSubtype(val fidlgen.PrimitiveSubtype) string {
 	t, ok := typeForPrimitiveSubtype[val]
 	if !ok {
 		log.Fatal("Unknown primitive subtype: ", val)
+	}
+	return fmt.Sprintf("$fidl.%s()", t)
+}
+
+func typeExprForInternalSubtype(val fidlgen.InternalSubtype) string {
+	t, ok := typeForInternalSubtype[val]
+	if !ok {
+		log.Fatal("Unknown internal subtype: ", val)
 	}
 	return fmt.Sprintf("$fidl.%s()", t)
 }
@@ -841,6 +853,14 @@ func (c *compiler) compilePrimitiveSubtype(val fidlgen.PrimitiveSubtype) string 
 	return ""
 }
 
+func (c *compiler) compileInternalSubtype(val fidlgen.InternalSubtype) string {
+	if t, ok := declForInternalType[val]; ok {
+		return t
+	}
+	log.Fatal("Unknown internal type: ", val)
+	return ""
+}
+
 func (c *compiler) compileType(val fidlgen.Type) Type {
 	nullablePrefix := ""
 	if val.Nullable {
@@ -929,6 +949,11 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		r.AsyncDecl = r.Decl
 		r.typedDataDecl = typedDataDecl[val.PrimitiveSubtype]
 		r.typeExpr = typeExprForPrimitiveSubtype(val.PrimitiveSubtype)
+	case fidlgen.InternalType:
+		r.Decl = c.compileInternalSubtype(val.InternalSubtype)
+		r.SyncDecl = r.Decl
+		r.AsyncDecl = r.Decl
+		r.typeExpr = typeExprForInternalSubtype(val.InternalSubtype)
 	case fidlgen.IdentifierType:
 		compound := val.Identifier.Parse()
 		t := c.compileUpperCamelCompoundIdentifier(compound, "", declarationContext)

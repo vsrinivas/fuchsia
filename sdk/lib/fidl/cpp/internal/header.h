@@ -52,6 +52,7 @@
 
 #include "lib/fidl/cpp/internal/logging.h"
 #include "lib/fidl/cpp/internal/natural_types_header.h"
+#include "lib/fidl/cpp/internal/transport_err_hlcpp.h"
 
 #ifdef __Fuchsia__
 #include "lib/fidl/cpp/interface_ptr.h"

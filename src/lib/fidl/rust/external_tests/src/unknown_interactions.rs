@@ -22,7 +22,6 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_zircon::{AsHandleRef, DurationNum, MessageBuf, Signals, Time},
-    fuchsia_zircon_status as zx_status,
     futures::stream::StreamExt,
     std::future::Future,
 };
@@ -223,7 +222,6 @@ fn two_way_flexible_sync_send_unknown_response() {
     assert_matches!(
         err,
         Error::UnsupportedMethod {
-            status: zx_status::Status::NOT_SUPPORTED,
             method_name: "flexible_two_way",
             protocol_name: "(anonymous) UnknownInteractionsProtocol",
         }
@@ -249,7 +247,7 @@ fn two_way_flexible_sync_send_other_transport_error() {
         ],
     )
     .expect_err("client call unexpectedly succeeded");
-    assert_matches!(err, Error::UnrecognizedTransportErr(zx_status::Status::INTERNAL));
+    assert_matches!(err, Error::InvalidEnumValue);
 }
 
 #[test]
@@ -318,7 +316,6 @@ fn two_way_flexible_err_sync_send_unknown_response() {
     assert_matches!(
         err,
         Error::UnsupportedMethod {
-            status: zx_status::Status::NOT_SUPPORTED,
             method_name: "flexible_two_way_err",
             protocol_name: "(anonymous) UnknownInteractionsProtocol",
         }
@@ -344,7 +341,7 @@ fn two_way_flexible_err_sync_send_other_transport_error() {
         ],
     )
     .expect_err("client call unexpectedly succeeded");
-    assert_matches!(err, Error::UnrecognizedTransportErr(zx_status::Status::INTERNAL));
+    assert_matches!(err, Error::InvalidEnumValue);
 }
 
 #[test]
@@ -716,7 +713,6 @@ async fn two_way_flexible_async_send_unknown_response() {
     assert_matches!(
         err,
         Error::UnsupportedMethod {
-            status: zx_status::Status::NOT_SUPPORTED,
             method_name: "flexible_two_way",
             protocol_name: "(anonymous) UnknownInteractionsProtocol",
         }
@@ -743,7 +739,7 @@ async fn two_way_flexible_async_send_other_transport_error() {
     )
     .await
     .expect_err("client call unexpectedly succeeded");
-    assert_matches!(err, Error::UnrecognizedTransportErr(zx_status::Status::INTERNAL));
+    assert_matches!(err, Error::InvalidEnumValue);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -815,7 +811,6 @@ async fn two_way_flexible_err_async_send_unknown_response() {
     assert_matches!(
         err,
         Error::UnsupportedMethod {
-            status: zx_status::Status::NOT_SUPPORTED,
             method_name: "flexible_two_way_err",
             protocol_name: "(anonymous) UnknownInteractionsProtocol",
         }
@@ -842,7 +837,7 @@ async fn two_way_flexible_err_async_send_other_transport_error() {
     )
     .await
     .expect_err("client call unexpectedly succeeded");
-    assert_matches!(err, Error::UnrecognizedTransportErr(zx_status::Status::INTERNAL));
+    assert_matches!(err, Error::InvalidEnumValue);
 }
 
 #[fasync::run_singlethreaded(test)]

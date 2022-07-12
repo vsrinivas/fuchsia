@@ -38,6 +38,7 @@ sdk_source_set("cpp") {
     "internal/stub.h",
     "internal/stub_controller.cc",
     "internal/stub_controller.h",
+    "internal/transport_err_hlcpp.h",
     "internal/weak_stub_controller.cc",
     "internal/weak_stub_controller.h",
     "member_connector.h",

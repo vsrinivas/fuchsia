@@ -18,8 +18,8 @@ ConsumeStep::ConsumeStep(Compiler* compiler, std::unique_ptr<raw::File> file)
       file_(std::move(file)),
       default_underlying_type_(
           all_libraries()->root_library()->declarations.LookupBuiltin(Builtin::Identity::kUint32)),
-      transport_err_type_(
-          all_libraries()->root_library()->declarations.LookupBuiltin(Builtin::Identity::kInt32)) {}
+      transport_err_type_(all_libraries()->root_library()->declarations.LookupBuiltin(
+          Builtin::Identity::kTransportErr)) {}
 
 void ConsumeStep::RunImpl() {
   // All fidl files in a library should agree on the library name.

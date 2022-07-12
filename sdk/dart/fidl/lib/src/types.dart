@@ -1615,3 +1615,34 @@ class ArrayType<T, I extends Iterable<T>> extends SimpleFidlType<I> {
   I decode(Decoder decoder, int offset, int depth) =>
       element.decodeArray(decoder, elementCount, offset, depth);
 }
+
+/// FIDL internal transport error type, used for unknown interactions.
+enum TransportErr {
+  unknownMethod,
+}
+
+class TransportErrType extends SimpleFidlType<TransportErr> {
+  const TransportErrType() : super(inlineSize: 4);
+
+  @override
+  void encode(Encoder encoder, TransportErr value, int offset, int depth) {
+    int ordinal;
+    switch (value) {
+      case TransportErr.unknownMethod:
+        ordinal = -2;
+    }
+    Int32Type().encode(encoder, ordinal, offset, depth);
+  }
+
+  @override
+  TransportErr decode(Decoder decoder, int offset, int depth) {
+    int ordinal = Int32Type().decode(decoder, offset, depth);
+    switch (ordinal) {
+      case -2:
+        return TransportErr.unknownMethod;
+      default:
+        throw FidlError('Invalid TransportErr value $ordinal',
+            FidlErrorCode.fidlInvalidEnumValue);
+    }
+  }
+}

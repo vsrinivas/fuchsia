@@ -762,7 +762,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult
         _data = value;
 
   const UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult.withTransportErr(
-      int value)
+      $fidl.TransportErr value)
       : _ordinal = 3,
         _data = value;
 
@@ -792,7 +792,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult
     return _data;
   }
 
-  int? get transportErr {
+  $fidl.TransportErr? get transportErr {
     if (_ordinal != 3) {
       return null;
     }
@@ -831,7 +831,7 @@ const $fidl.UnionType<UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult>
   members: <int, $fidl.FidlType>{
     1: kUnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response_Type,
     2: $fidl.Int32Type(),
-    3: $fidl.Int32Type(),
+    3: $fidl.TransportErrType(),
   },
   ctor: UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult._ctor,
   flexible: false,
@@ -847,7 +847,7 @@ const $fidl.NullableUnionType<
   members: <int, $fidl.FidlType>{
     1: kUnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response_Type,
     2: $fidl.Int32Type(),
-    3: $fidl.Int32Type(),
+    3: $fidl.TransportErrType(),
   },
   ctor: UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult._ctor,
   flexible: false,
@@ -873,7 +873,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayResult
         _data = value;
 
   const UnknownInteractionsDriverProtocolFlexibleTwoWayResult.withTransportErr(
-      int value)
+      $fidl.TransportErr value)
       : _ordinal = 3,
         _data = value;
 
@@ -895,7 +895,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayResult
     return _data;
   }
 
-  int? get transportErr {
+  $fidl.TransportErr? get transportErr {
     if (_ordinal != 3) {
       return null;
     }
@@ -932,7 +932,7 @@ const $fidl.UnionType<UnknownInteractionsDriverProtocolFlexibleTwoWayResult>
     $fidl.UnionType<UnknownInteractionsDriverProtocolFlexibleTwoWayResult>(
   members: <int, $fidl.FidlType>{
     1: kUnknownInteractionsDriverProtocol_FlexibleTwoWay_Response_Type,
-    3: $fidl.Int32Type(),
+    3: $fidl.TransportErrType(),
   },
   ctor: UnknownInteractionsDriverProtocolFlexibleTwoWayResult._ctor,
   flexible: false,
@@ -947,7 +947,7 @@ const $fidl.NullableUnionType<
         UnknownInteractionsDriverProtocolFlexibleTwoWayResult>(
   members: <int, $fidl.FidlType>{
     1: kUnknownInteractionsDriverProtocol_FlexibleTwoWay_Response_Type,
-    3: $fidl.Int32Type(),
+    3: $fidl.TransportErrType(),
   },
   ctor: UnknownInteractionsDriverProtocolFlexibleTwoWayResult._ctor,
   flexible: false,
@@ -1172,7 +1172,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayErrResult extends $fidl.Union {
         _data = value;
 
   const UnknownInteractionsProtocolFlexibleTwoWayErrResult.withTransportErr(
-      int value)
+      $fidl.TransportErr value)
       : _ordinal = 3,
         _data = value;
 
@@ -1200,7 +1200,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayErrResult extends $fidl.Union {
     return _data;
   }
 
-  int? get transportErr {
+  $fidl.TransportErr? get transportErr {
     if (_ordinal != 3) {
       return null;
     }
@@ -1238,7 +1238,7 @@ const $fidl.UnionType<UnknownInteractionsProtocolFlexibleTwoWayErrResult>
   members: <int, $fidl.FidlType>{
     1: kUnknownInteractionsProtocol_FlexibleTwoWayErr_Response_Type,
     2: $fidl.Int32Type(),
-    3: $fidl.Int32Type(),
+    3: $fidl.TransportErrType(),
   },
   ctor: UnknownInteractionsProtocolFlexibleTwoWayErrResult._ctor,
   flexible: false,
@@ -1253,7 +1253,7 @@ const $fidl
   members: <int, $fidl.FidlType>{
     1: kUnknownInteractionsProtocol_FlexibleTwoWayErr_Response_Type,
     2: $fidl.Int32Type(),
-    3: $fidl.Int32Type(),
+    3: $fidl.TransportErrType(),
   },
   ctor: UnknownInteractionsProtocolFlexibleTwoWayErrResult._ctor,
   flexible: false,
@@ -1278,7 +1278,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayResult extends $fidl.Union {
         _data = value;
 
   const UnknownInteractionsProtocolFlexibleTwoWayResult.withTransportErr(
-      int value)
+      $fidl.TransportErr value)
       : _ordinal = 3,
         _data = value;
 
@@ -1299,7 +1299,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayResult extends $fidl.Union {
     return _data;
   }
 
-  int? get transportErr {
+  $fidl.TransportErr? get transportErr {
     if (_ordinal != 3) {
       return null;
     }
@@ -1335,7 +1335,7 @@ const $fidl.UnionType<UnknownInteractionsProtocolFlexibleTwoWayResult>
     $fidl.UnionType<UnknownInteractionsProtocolFlexibleTwoWayResult>(
   members: <int, $fidl.FidlType>{
     1: kUnknownInteractionsProtocol_FlexibleTwoWay_Response_Type,
-    3: $fidl.Int32Type(),
+    3: $fidl.TransportErrType(),
   },
   ctor: UnknownInteractionsProtocolFlexibleTwoWayResult._ctor,
   flexible: false,
@@ -1348,7 +1348,7 @@ const $fidl.NullableUnionType<UnknownInteractionsProtocolFlexibleTwoWayResult>
     $fidl.NullableUnionType<UnknownInteractionsProtocolFlexibleTwoWayResult>(
   members: <int, $fidl.FidlType>{
     1: kUnknownInteractionsProtocol_FlexibleTwoWay_Response_Type,
-    3: $fidl.Int32Type(),
+    3: $fidl.TransportErrType(),
   },
   ctor: UnknownInteractionsProtocolFlexibleTwoWayResult._ctor,
   flexible: false,
@@ -3977,11 +3977,9 @@ class UnknownInteractionsProtocolProxy
           if ($response.$tag ==
               UnknownInteractionsProtocolFlexibleTwoWayResultTag.response) {
             $completer.complete(null);
-          } else if ($response.transportErr == $zircon.ZX.ERR_NOT_SUPPORTED) {
-            $completer.completeError(const $fidl.UnknownMethodException());
           } else {
-            $completer.completeError($fidl.FidlUnrecognizedTransportErrorError(
-                $response.transportErr!));
+            $completer.completeError(
+                $fidl.FidlError.fromTransportErr($response.transportErr!));
           }
         });
         break;
@@ -4006,11 +4004,9 @@ class UnknownInteractionsProtocolProxy
           } else if ($response.$tag ==
               UnknownInteractionsProtocolFlexibleTwoWayErrResultTag.err) {
             $completer.completeError($fidl.MethodException($response.err));
-          } else if ($response.transportErr == $zircon.ZX.ERR_NOT_SUPPORTED) {
-            $completer.completeError(const $fidl.UnknownMethodException());
           } else {
-            $completer.completeError($fidl.FidlUnrecognizedTransportErrorError(
-                $response.transportErr!));
+            $completer.completeError(
+                $fidl.FidlError.fromTransportErr($response.transportErr!));
           }
         });
         break;

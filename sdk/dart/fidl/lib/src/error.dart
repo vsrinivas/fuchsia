@@ -4,6 +4,8 @@
 
 // ignore_for_file: public_member_api_docs
 
+import 'types.dart';
+
 // TODO(fxbug.dev/8076) Generate these values.
 enum FidlErrorCode {
   unknown,
@@ -32,12 +34,19 @@ enum FidlErrorCode {
   fidlInvalidInlineBitInEnvelope,
   fidlCountExceedsLimit,
   fidlInvalidPaddingByte,
-  fidlUnrecognizedTransportErr,
+  fidlUnknownMethod,
 }
 
 class FidlError implements Exception {
   // TODO(fxbug.dev/7865) Make code a required parameter.
   const FidlError(this.message, [this.code = FidlErrorCode.unknown]);
+
+  factory FidlError.fromTransportErr(TransportErr transportErr) {
+    switch (transportErr) {
+      case TransportErr.unknownMethod:
+        return const UnknownMethodException();
+    }
+  }
 
   final String message;
   final FidlErrorCode code;
@@ -58,17 +67,6 @@ class FidlRangeCheckError implements FidlError {
   FidlErrorCode get code => FidlErrorCode.fidlIntOutOfRange;
 }
 
-class FidlUnrecognizedTransportErrorError implements FidlError {
-  FidlUnrecognizedTransportErrorError(this.transportErr);
-
-  final int transportErr;
-
-  @override
-  String get message => 'FidlUnrecognizedTransportErrorError: $transportErr';
-  @override
-  FidlErrorCode get code => FidlErrorCode.fidlUnrecognizedTransportErr;
-}
-
 /// If a FIDL method defines an application-level error, this exception will be
 /// thrown with the error as its value.
 class MethodException<T> implements Exception {
@@ -80,9 +78,7 @@ class MethodException<T> implements Exception {
   String toString() => 'MethodException: $value';
 }
 
-class UnknownMethodException implements Exception {
-  const UnknownMethodException();
-
-  @override
-  String toString() => 'UnknownMethodException';
+class UnknownMethodException extends FidlError {
+  const UnknownMethodException()
+      : super('UnknownMethodException', FidlErrorCode.fidlUnknownMethod);
 }

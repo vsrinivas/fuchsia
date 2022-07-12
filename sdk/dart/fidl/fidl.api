@@ -1555,6 +1555,26 @@
               },
               "name": "FidlError",
               "type": "ConstructorDeclarationImpl"
+            },
+            "FidlError.fromTransportErr": {
+              "SimpleFormalParameterImpl": {
+                "transportErr": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "transportErr",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "TransportErr"
+                }
+              },
+              "name": "FidlError.fromTransportErr",
+              "type": "ConstructorDeclarationImpl"
             }
           },
           "ImplementsClause": {
@@ -1674,60 +1694,6 @@
           "name": "FidlRangeCheckError",
           "type": "ClassDeclarationImpl"
         },
-        "FidlUnrecognizedTransportErrorError": {
-          "ConstructorDeclarationImpl": {
-            "FidlUnrecognizedTransportErrorError": {
-              "FieldFormalParameterImpl": {
-                "this.transportErr": {
-                  "name": "this.transportErr",
-                  "type": "FieldFormalParameterImpl"
-                }
-              },
-              "name": "FidlUnrecognizedTransportErrorError",
-              "type": "ConstructorDeclarationImpl"
-            }
-          },
-          "ImplementsClause": {
-            "FidlError": {
-              "name": "FidlError",
-              "type": "interface"
-            }
-          },
-          "MethodDeclarationImpl": {
-            "code": {
-              "isAbstract": false,
-              "isGetter": true,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "code",
-              "returnType": "FidlErrorCode",
-              "type": "MethodDeclarationImpl"
-            },
-            "message": {
-              "isAbstract": false,
-              "isGetter": true,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "message",
-              "returnType": "String",
-              "type": "MethodDeclarationImpl"
-            }
-          },
-          "VariableDeclarationImpl": {
-            "transportErr": {
-              "isConst": false,
-              "isFinal": true,
-              "isLate": false,
-              "name": "transportErr",
-              "type": "VariableDeclarationImpl",
-              "varType": "int"
-            }
-          },
-          "name": "FidlUnrecognizedTransportErrorError",
-          "type": "ClassDeclarationImpl"
-        },
         "MethodException": {
           "ConstructorDeclarationImpl": {
             "MethodException": {
@@ -1791,23 +1757,9 @@
               "type": "ConstructorDeclarationImpl"
             }
           },
-          "ImplementsClause": {
-            "Exception": {
-              "name": "Exception",
-              "type": "interface"
-            }
-          },
-          "MethodDeclarationImpl": {
-            "toString": {
-              "isAbstract": false,
-              "isGetter": false,
-              "isOperator": false,
-              "isSetter": false,
-              "isStatic": false,
-              "name": "toString",
-              "returnType": "String",
-              "type": "MethodDeclarationImpl"
-            }
+          "ExtendsClause": {
+            "name": "FidlError",
+            "type": "extends"
           },
           "name": "UnknownMethodException",
           "type": "ClassDeclarationImpl"
@@ -1916,8 +1868,8 @@
               "name": "fidlUnknownMagic",
               "type": "EnumConstantDeclarationImpl"
             },
-            "fidlUnrecognizedTransportErr": {
-              "name": "fidlUnrecognizedTransportErr",
+            "fidlUnknownMethod": {
+              "name": "fidlUnknownMethod",
               "type": "EnumConstantDeclarationImpl"
             },
             "unknown": {
@@ -10200,6 +10152,144 @@
           "name": "TableType",
           "type": "ClassDeclarationImpl"
         },
+        "TransportErrType": {
+          "ConstructorDeclarationImpl": {
+            "TransportErrType": {
+              "name": "TransportErrType",
+              "type": "ConstructorDeclarationImpl"
+            }
+          },
+          "ExtendsClause": {
+            "name": "SimpleFidlType",
+            "type": "extends"
+          },
+          "MethodDeclarationImpl": {
+            "decode": {
+              "SimpleFormalParameterImpl": {
+                "decoder": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "decoder",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Decoder"
+                },
+                "depth": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "depth",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "offset": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "offset",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "decode",
+              "returnType": "TransportErr",
+              "type": "MethodDeclarationImpl"
+            },
+            "encode": {
+              "SimpleFormalParameterImpl": {
+                "depth": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "depth",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "encoder": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "encoder",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "Encoder"
+                },
+                "offset": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "offset",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "value": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": true,
+                  "isRequired": true,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": true,
+                  "name": "value",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "TransportErr"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "encode",
+              "returnType": "void",
+              "type": "MethodDeclarationImpl"
+            }
+          },
+          "name": "TransportErrType",
+          "type": "ClassDeclarationImpl"
+        },
         "Uint16Type": {
           "ConstructorDeclarationImpl": {
             "Uint16Type": {
@@ -12000,6 +12090,16 @@
             }
           },
           "name": "EnvelopePresence",
+          "type": "EnumDeclarationImpl"
+        },
+        "TransportErr": {
+          "EnumConstantDeclarationImpl": {
+            "unknownMethod": {
+              "name": "unknownMethod",
+              "type": "EnumConstantDeclarationImpl"
+            }
+          },
+          "name": "TransportErr",
           "type": "EnumDeclarationImpl"
         }
       },

@@ -348,8 +348,8 @@ void main() {
           ]));
           expect(
               clientCall,
-              throwsA(isA<FidlUnrecognizedTransportErrorError>()
-                  .having((e) => e.transportErr, 'transportErr', equals(-1))));
+              throwsA(isA<FidlError>().having((e) => e.code, 'code',
+                  equals(FidlErrorCode.fidlInvalidEnumValue))));
         });
         test('flexible err-variant', () async {
           final clientCall = proxy.flexibleTwoWay();
@@ -454,8 +454,8 @@ void main() {
           ]));
           expect(
               clientCall,
-              throwsA(isA<FidlUnrecognizedTransportErrorError>()
-                  .having((e) => e.transportErr, 'transportErr', equals(-1))));
+              throwsA(isA<FidlError>().having((e) => e.code, 'code',
+                  equals(FidlErrorCode.fidlInvalidEnumValue))));
         });
         test('flexible-err error-variant', () async {
           final clientCall = proxy.flexibleTwoWayErr();

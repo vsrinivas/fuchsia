@@ -580,6 +580,15 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		r.Kind = TypeKinds.Primitive
 		r.NaturalFieldConstraint = "fidl::internal::NaturalCodingConstraintEmpty"
 		r.WireFieldConstraint = "fidl::internal::WireCodingConstraintEmpty"
+	case fidlgen.InternalType:
+		switch val.InternalSubtype {
+		case fidlgen.TransportErr:
+			r.nameVariants = commonNameVariants(makeName("fidl::internal::TransportErr"))
+			r.Kind = TypeKinds.Enum
+			r.WireFamily = FamilyKinds.TrivialCopy
+			r.NaturalFieldConstraint = "fidl::internal::NaturalCodingConstraintEmpty"
+			r.WireFieldConstraint = "fidl::internal::WireCodingConstraintEmpty"
+		}
 	case fidlgen.IdentifierType:
 		name := c.compileNameVariants(val.Identifier)
 		declInfo, ok := c.decls[val.Identifier]

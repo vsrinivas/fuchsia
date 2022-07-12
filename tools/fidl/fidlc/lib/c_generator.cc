@@ -243,6 +243,8 @@ void EmitMethodInParamDecl(std::ostream* file, const CGenerator::Member& member)
     case flat::Type::Kind::kPrimitive:
       *file << member.type << " " << member.name;
       break;
+    case flat::Type::Kind::kInternal:
+      ZX_PANIC("C code generator does not support Unknown Interactions");
     case flat::Type::Kind::kIdentifier:
       switch (member.decl_kind.value()) {
         case flat::Decl::Kind::kBuiltin:
@@ -302,6 +304,8 @@ void EmitMethodOutParamDecl(std::ostream* file, const CGenerator::Member& member
     case flat::Type::Kind::kPrimitive:
       *file << member.type << "* out_" << member.name;
       break;
+    case flat::Type::Kind::kInternal:
+      ZX_PANIC("C code generator does not support Unknown Interactions");
     case flat::Type::Kind::kIdentifier:
       switch (member.decl_kind.value()) {
         case flat::Decl::Kind::kBuiltin:
@@ -526,6 +530,8 @@ void EmitLinearizeMessage(std::ostream* file, std::string_view receiver, std::st
       case flat::Type::Kind::kPrimitive:
         *file << kIndent << receiver << "->" << name << " = " << name << ";\n";
         break;
+      case flat::Type::Kind::kInternal:
+        ZX_PANIC("C code generator does not support Unknown Interactions");
       case flat::Type::Kind::kIdentifier:
         switch (member.decl_kind.value()) {
           case flat::Decl::Kind::kBuiltin:
@@ -738,6 +744,8 @@ CGenerator::Member CreateMember(const T& decl, bool* out_allowed = nullptr) {
     case flat::Type::Kind::kTransportSide:
     case flat::Type::Kind::kPrimitive:
       break;
+    case flat::Type::Kind::kInternal:
+      ZX_PANIC("C code generator does not support Unknown Interactions");
     case flat::Type::Kind::kUntypedNumeric:
       ZX_PANIC("should not have untyped numeric here");
   }
@@ -1439,6 +1447,8 @@ void CGenerator::ProduceProtocolClientImplementation(const NamedProtocol& named_
           case flat::Type::Kind::kPrimitive:
             file_ << kIndent << "*out_" << name << " = _response->" << name << ";\n";
             break;
+          case flat::Type::Kind::kInternal:
+            ZX_PANIC("C code generator does not support Unknown Interactions");
           case flat::Type::Kind::kIdentifier:
             switch (member.decl_kind.value()) {
               case flat::Decl::Kind::kBuiltin:
@@ -1567,6 +1577,8 @@ void CGenerator::ProduceProtocolServerImplementation(const NamedProtocol& named_
         case flat::Type::Kind::kPrimitive:
           file_ << ", request->" << member.name;
           break;
+        case flat::Type::Kind::kInternal:
+          ZX_PANIC("C code generator does not support Unknown Interactions");
         case flat::Type::Kind::kVector:
           file_ << ", (" << member.element_type << "*)request->" << member.name << ".data"
                 << ", request->" << member.name << ".count";

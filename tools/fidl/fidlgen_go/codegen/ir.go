@@ -693,6 +693,10 @@ var primitiveTypes = map[fidlgen.PrimitiveSubtype]string{
 	fidlgen.Float64: "float64",
 }
 
+var internalTypes = map[fidlgen.InternalSubtype]string{
+	fidlgen.TransportErr: "_bindings.TransportErr",
+}
+
 var handleTypes = map[fidlgen.HandleSubtype]string{
 	// TODO(mknyszek): Add support here for process, thread, job, resource,
 	// interrupt, eventpair, fifo, guest, and time once these are actually
@@ -840,6 +844,14 @@ func (c *compiler) compilePrimitiveSubtype(val fidlgen.PrimitiveSubtype) Type {
 	return Type(t)
 }
 
+func (c *compiler) compileInternalSubtype(val fidlgen.InternalSubtype) Type {
+	t, ok := internalTypes[val]
+	if !ok {
+		panic(fmt.Sprintf("unknown internal type: %v", val))
+	}
+	return Type(t)
+}
+
 func (c *compiler) compileType(val fidlgen.Type) (r Type, t StackOfBoundsTag) {
 	switch val.Kind {
 	case fidlgen.ArrayType:
@@ -895,6 +907,8 @@ func (c *compiler) compileType(val fidlgen.Type) (r Type, t StackOfBoundsTag) {
 		t = et
 	case fidlgen.PrimitiveType:
 		r = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
+	case fidlgen.InternalType:
+		r = c.compileInternalSubtype(val.InternalSubtype)
 	case fidlgen.IdentifierType:
 		e := c.compileCompoundIdentifier(val.Identifier, true, "")
 		declInfo, ok := c.decls[val.Identifier]
