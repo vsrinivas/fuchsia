@@ -15,7 +15,9 @@
     use: [
         {
             protocol: [
+                "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.scenic.Scenic",
             ],

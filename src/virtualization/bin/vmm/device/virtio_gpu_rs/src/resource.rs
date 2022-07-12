@@ -5,9 +5,19 @@
 use {
     crate::wire,
     anyhow::{anyhow, Error},
-    fuchsia_zircon::{self as zx},
+    fidl_fuchsia_ui_composition::BufferCollectionImportToken,
     mapped_vmo,
     virtio_device::mem::DeviceRange,
+};
+
+#[cfg(not(test))]
+use {
+    anyhow::Context,
+    fidl_fuchsia_ui_composition::{AllocatorMarker, RegisterBufferCollectionArgs},
+    fuchsia_component::client::connect_to_protocol,
+    fuchsia_framebuffer::{sysmem::BufferCollectionAllocator, FrameUsage},
+    fuchsia_scenic::BufferCollectionTokenPair,
+    fuchsia_zircon as zx,
 };
 
 /// Returns the size of a pixel (in bytes).
@@ -16,17 +26,92 @@ pub const fn bytes_per_pixel() -> usize {
     4
 }
 
+#[cfg(not(test))]
+pub const fn sysmem_pixel_format(
+    virtio_pixel_format: u32,
+) -> Option<fidl_fuchsia_sysmem::PixelFormatType> {
+    match virtio_pixel_format {
+        wire::VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM | wire::VIRTIO_GPU_FORMAT_B8G8R8X8_UNORM => {
+            Some(fidl_fuchsia_sysmem::PixelFormatType::Bgra32)
+        }
+        wire::VIRTIO_GPU_FORMAT_R8G8B8A8_UNORM | wire::VIRTIO_GPU_FORMAT_R8G8B8X8_UNORM => {
+            Some(fidl_fuchsia_sysmem::PixelFormatType::R8G8B8A8)
+        }
+        _ => None,
+    }
+}
+
 pub struct Resource2D<'a> {
     width: u32,
     height: u32,
     mapping: mapped_vmo::Mapping,
     backing: Option<Vec<&'a [u8]>>,
+    _import_token: Option<BufferCollectionImportToken>,
 }
 
 impl<'a> Resource2D<'a> {
-    pub fn allocate_from_request(
-        cmd: &wire::VirtioGpuResourceCreate2d,
-    ) -> Result<(Self, zx::Vmo), Error> {
+    #[cfg(not(test))]
+    pub async fn allocate(cmd: &wire::VirtioGpuResourceCreate2d) -> Result<Resource2D<'a>, Error> {
+        let pixel_format = if let Some(pixel_format) = sysmem_pixel_format(cmd.format.get()) {
+            pixel_format
+        } else {
+            return Err(anyhow!("Unsupported pixel format {}", cmd.format.get()));
+        };
+        let mut buffer_allocator = BufferCollectionAllocator::new(
+            cmd.width.get(),
+            cmd.height.get(),
+            pixel_format,
+            FrameUsage::Cpu,
+            1,
+        )
+        .context("failed to create BufferCollectionAllocator")?;
+        buffer_allocator
+            .set_name(100, format!("Virtio GPU Resource {}", cmd.resource_id.get()).as_ref())
+            .context("FIDL error setting buffer debug name")?;
+
+        // Register the buffer collection with the Flatland Allocator.
+        let buffer_collection_token_for_flatland =
+            buffer_allocator.duplicate_token().await.context("error duplicating token")?;
+        let buffer_tokens = BufferCollectionTokenPair::new();
+        let flatland_registration_args = RegisterBufferCollectionArgs {
+            export_token: Some(buffer_tokens.export_token),
+            buffer_collection_token: Some(buffer_collection_token_for_flatland),
+            ..RegisterBufferCollectionArgs::EMPTY
+        };
+        let allocator =
+            connect_to_protocol::<AllocatorMarker>().expect("error connecting to Scenic allocator");
+        allocator
+            .register_buffer_collection(flatland_registration_args)
+            .await
+            .context("FIDL error registering buffer collection")?
+            .map_err(|e| anyhow!("error registering buffer collection: {:?}", e))?;
+
+        // Now allocate the buffers with sysmem so that we can get the VMO backing the allocation.
+        let mut allocation =
+            buffer_allocator.allocate_buffers(true).await.context("buffer allocation failed")?;
+        let vmo = &allocation.buffers[0].vmo.take();
+        let mapping_flags = zx::VmarFlags::PERM_READ
+            | zx::VmarFlags::PERM_WRITE
+            | zx::VmarFlags::MAP_RANGE
+            | zx::VmarFlags::REQUIRE_NON_RESIZABLE;
+        let mapping_size = allocation.settings.buffer_settings.size_bytes as usize;
+        let mapping = mapped_vmo::Mapping::create_from_vmo(
+            vmo.as_ref().unwrap(),
+            mapping_size,
+            mapping_flags,
+        )?;
+        Ok(Self {
+            width: cmd.width.get(),
+            height: cmd.height.get(),
+            mapping,
+            backing: None,
+            _import_token: Some(buffer_tokens.import_token),
+        })
+    }
+
+    /// A simple constructor that does not depend on sysmem or flatland for testing purposes only.
+    #[cfg(test)]
+    pub async fn allocate(cmd: &wire::VirtioGpuResourceCreate2d) -> Result<Resource2D<'a>, Error> {
         // Eventually we will want to use sysmem to allocate the buffers.
         let width: usize = cmd.width.get().try_into()?;
         let height: usize = cmd.height.get().try_into()?;
@@ -37,8 +122,14 @@ impl<'a> Resource2D<'a> {
             .ok_or_else(|| {
                 anyhow!("Overflow computing buffer size for resource {}x{}", width, height)
             })?;
-        let (mapping, vmo) = mapped_vmo::Mapping::allocate(size)?;
-        Ok((Self { width: cmd.width.get(), height: cmd.height.get(), mapping, backing: None }, vmo))
+        let (mapping, _vmo) = mapped_vmo::Mapping::allocate(size)?;
+        Ok(Self {
+            width: cmd.width.get(),
+            height: cmd.height.get(),
+            mapping,
+            backing: None,
+            _import_token: None,
+        })
     }
 
     // Expose the mapping so that tests can inspect the contents of the resource.
@@ -207,7 +298,7 @@ mod tests {
     use {super::*, crate::wire, virtio_device::fake_queue::IdentityDriverMem};
 
     #[fuchsia::test]
-    fn test_attach_backing() {
+    async fn test_attach_backing() {
         const RESOURCE_ID: u32 = 1;
         const RESOURCE_WIDTH: u32 = 1024;
         const RESOURCE_HEIGHT: u32 = 768;
@@ -219,8 +310,8 @@ mod tests {
             height: RESOURCE_HEIGHT.into(),
             format: wire::VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM.into(),
         };
-        let (mut resource, _) = Resource2D::allocate_from_request(&resource_create)
-            .expect("Failed to allocate resource");
+        let mut resource =
+            Resource2D::allocate(&resource_create).await.expect("Failed to allocate resource");
 
         // Attach backing memory.
         let mem = IdentityDriverMem::new();

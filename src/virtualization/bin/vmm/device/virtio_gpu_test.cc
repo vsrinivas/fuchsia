@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/sysmem/cpp/fidl.h>
 #include <fuchsia/tracing/provider/cpp/fidl.h>
+#include <fuchsia/ui/composition/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
@@ -92,7 +94,9 @@ class VirtioGpuTest : public TestWithDevice,
         .AddRoute(Route{.capabilities =
                             {
                                 Protocol{fuchsia::logger::LogSink::Name_},
+                                Protocol{fuchsia::sysmem::Allocator::Name_},
                                 Protocol{fuchsia::tracing::provider::Registry::Name_},
+                                Protocol{fuchsia::ui::composition::Allocator::Name_},
                             },
                         .source = ParentRef(),
                         .targets = {ChildRef{kComponentName}}})

@@ -96,6 +96,11 @@
             to: "#realm_builder",
         },
         {
+            protocol: [ "fuchsia.ui.composition.Allocator" ],
+            from: "#scenic",
+            to: "#realm_builder",
+        },
+        {
             directory: "dev-gpu",
             from: "parent",
             to: "#realm_builder",
