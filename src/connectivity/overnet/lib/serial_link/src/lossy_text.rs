@@ -6,11 +6,22 @@ use anyhow::{format_err, Error};
 use byteorder::WriteBytesExt;
 use crc::crc32;
 use std::convert::TryInto;
+use std::time::Duration;
 use stream_framer::{Deframed, Format};
 
 /// Framing format that assumes a lossy byte stream that doesn't support more than 7-bit text and is
 /// hostile towards control characters.
-pub struct LossyText;
+pub struct LossyText {
+    duration_per_byte: Duration,
+}
+
+impl LossyText {
+    /// Create a new LossyBinary format instance with some timeout waiting for bytes (if this is
+    /// exceeded a byte will be skipped in the input).
+    pub fn new(duration_per_byte: Duration) -> Self {
+        Self { duration_per_byte }
+    }
+}
 
 impl Format for LossyText {
     fn frame(&self, bytes: &[u8], outgoing: &mut Vec<u8>) -> Result<(), Error> {
@@ -144,13 +155,21 @@ impl Format for LossyText {
             });
         }
     }
+
+    fn deframe_timeout(&self, have_pending_bytes: bool) -> Option<Duration> {
+        if have_pending_bytes {
+            Some(self.duration_per_byte)
+        } else {
+            None
+        }
+    }
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
     use futures::prelude::*;
-    use stream_framer::{Deframer, Framer, ReadBytes};
+    use stream_framer::{new_deframer, new_framer, ReadBytes};
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn simple_frame_lossy_text() {
@@ -159,24 +178,22 @@ mod test {
         // be worried about.
         futures::stream::iter(1..280)
             .for_each_concurrent(None, |n| async move {
-                let framer = Framer::new(LossyText);
-                let mut deframer = Deframer::new(LossyText);
-
                 let test: Vec<_> = std::iter::repeat(b'a').take(n).collect();
-                let msg = framer.write_frame(&test).unwrap();
-
-                assert_eq!(
-                    deframer.parse_frames(&msg).map(|frame| frame.unwrap()).collect::<Vec<_>>(),
-                    vec![ReadBytes::Framed(test)]
-                );
-
+                let (mut framer_writer, mut framer_reader) =
+                    new_framer(LossyText::new(Duration::from_millis(100)), 1024);
+                framer_writer.write(&test).await.unwrap();
+                let (mut deframer_writer, mut deframer_reader) =
+                    new_deframer(LossyText::new(Duration::from_millis(100)));
+                let encoded = framer_reader.read().await.unwrap();
+                println!("encoded = {:?}", std::str::from_utf8(&encoded).unwrap());
+                deframer_writer.write(&encoded).await.unwrap();
+                assert_eq!(deframer_reader.read().await.unwrap(), ReadBytes::Framed(test));
                 let test: Vec<_> = std::iter::repeat(b'b').take(n).collect();
-                let msg = framer.write_frame(&test).unwrap();
-
-                assert_eq!(
-                    deframer.parse_frames(&msg).map(|frame| frame.unwrap()).collect::<Vec<_>>(),
-                    vec![ReadBytes::Framed(test)]
-                );
+                framer_writer.write(&test).await.unwrap();
+                let encoded = framer_reader.read().await.unwrap();
+                println!("encoded = {:?}", std::str::from_utf8(&encoded).unwrap());
+                deframer_writer.write(&encoded).await.unwrap();
+                assert_eq!(deframer_reader.read().await.unwrap(), ReadBytes::Framed(test));
             })
             .await
     }

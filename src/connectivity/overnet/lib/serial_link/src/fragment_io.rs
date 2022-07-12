@@ -13,16 +13,15 @@ use futures::lock::Mutex;
 use futures::prelude::*;
 use std::collections::HashMap;
 use std::time::Duration;
-use stream_framer::{Framer, ReadBytes};
+use stream_framer::{DeframerReader, FramerWriter, ReadBytes};
 
 // Flag bits for fragment id's
 pub const END_OF_MSG: u8 = 0x80;
 const ACK: u8 = 0x40;
 
 pub fn new_fragment_io(
-    framer: Framer<LossyText>,
-    framer_writer: mpsc::Sender<Vec<u8>>,
-    deframer_reader: mpsc::Receiver<ReadBytes>,
+    framer_writer: FramerWriter<LossyText>,
+    deframer_reader: DeframerReader<LossyText>,
 ) -> (FragmentWriter, FragmentReader, impl Future<Output = Result<(), Error>>) {
     let (tx_write, rx_write) = mpsc::channel(0);
     let (tx_read, rx_read) = mpsc::channel(0);
@@ -30,17 +29,17 @@ pub fn new_fragment_io(
     (
         FragmentWriter { frame_sender: tx_write },
         FragmentReader { frame_receiver: rx_read },
-        run_fragment_io(rx_write, tx_read, framer, framer_writer, deframer_reader),
+        run_fragment_io(rx_write, tx_read, framer_writer, deframer_reader),
     )
 }
 
 async fn run_fragment_io(
     rx_write: mpsc::Receiver<Vec<u8>>,
     tx_read: mpsc::Sender<ReadBytes>,
-    framer: Framer<LossyText>,
-    framer_writer: mpsc::Sender<Vec<u8>>,
-    deframer_reader: mpsc::Receiver<ReadBytes>,
+    framer_writer: FramerWriter<LossyText>,
+    deframer_reader: DeframerReader<LossyText>,
 ) -> Result<(), Error> {
+    let framer_writer = &Mutex::new(framer_writer);
     let (tx_frag, rx_frag) = mpsc::channel(0);
     let ack_set = &Mutex::new(HashMap::new());
     let (mut tx_bat1, rx_bat1) = mpsc::channel(0);
@@ -48,14 +47,14 @@ async fn run_fragment_io(
     let (tx_bat3, rx_bat3) = mpsc::channel(0);
 
     futures::future::try_join5(
-        read_fragments(tx_read, &framer, framer_writer.clone(), deframer_reader, ack_set),
+        read_fragments(tx_read, framer_writer, deframer_reader, ack_set),
         split_fragments(rx_write, tx_frag),
-        fragment_sender(rx_bat1, tx_bat2, &framer, framer_writer.clone(), ack_set),
-        fragment_sender(rx_bat2, tx_bat3, &framer, framer_writer.clone(), ack_set),
-        async {
+        fragment_sender(rx_bat1, tx_bat2, framer_writer, ack_set),
+        fragment_sender(rx_bat2, tx_bat3, framer_writer, ack_set),
+        async move {
             // kick off the baton send and then run the third sender
             tx_bat1.send(rx_frag).await?;
-            fragment_sender(rx_bat3, tx_bat1, &framer, framer_writer, ack_set).await
+            fragment_sender(rx_bat3, tx_bat1, framer_writer, ack_set).await
         },
     )
     .map_ok(drop)
@@ -64,15 +63,13 @@ async fn run_fragment_io(
 
 async fn read_fragments(
     mut tx_read: mpsc::Sender<ReadBytes>,
-    framer: &Framer<LossyText>,
-    mut framer_writer: mpsc::Sender<Vec<u8>>,
-    mut deframer_reader: mpsc::Receiver<ReadBytes>,
+    framer_writer: &Mutex<FramerWriter<LossyText>>,
+    mut deframer_reader: DeframerReader<LossyText>,
     ack_set: &Mutex<HashMap<(u8, u8), oneshot::Sender<()>>>,
 ) -> Result<(), Error> {
     let mut reassembler = Reassembler::new();
-
-    while let Some(frame) = deframer_reader.next().await {
-        match frame {
+    loop {
+        match deframer_reader.read().await? {
             ReadBytes::Unframed(bytes) => tx_read.send(ReadBytes::Unframed(bytes)).await?,
             ReadBytes::Framed(mut frame) => {
                 let fragment_id =
@@ -94,16 +91,13 @@ async fn read_fragments(
                     fragment_id,
                     frame
                 );
-                let msg = framer.write_frame(&[msg_id, fragment_id | ACK])?;
-                framer_writer.send(msg).await?;
+                framer_writer.lock().await.write(&[msg_id, fragment_id | ACK]).await?;
                 if let Some(frame) = reassembler.recv(msg_id, fragment_id, frame) {
                     tx_read.send(ReadBytes::Framed(frame)).await?;
                 }
             }
         }
     }
-
-    Ok(())
 }
 
 async fn split_fragments(
@@ -132,8 +126,7 @@ async fn split_fragments(
 async fn fragment_sender(
     mut rx_baton: mpsc::Receiver<mpsc::Receiver<(u8, u8, Vec<u8>)>>,
     mut tx_baton: mpsc::Sender<mpsc::Receiver<(u8, u8, Vec<u8>)>>,
-    framer: &Framer<LossyText>,
-    mut framer_writer: mpsc::Sender<Vec<u8>>,
+    framer_writer: &Mutex<FramerWriter<LossyText>>,
     ack_set: &Mutex<HashMap<(u8, u8), oneshot::Sender<()>>>,
 ) -> Result<(), Error> {
     'next_fragment: loop {
@@ -163,8 +156,7 @@ async fn fragment_sender(
         }
 
         'retry_fragment: for _ in 0..10 {
-            let msg = framer.write_frame(&fragment)?;
-            framer_writer.send(msg).await?;
+            framer_writer.lock().await.write(&fragment).await?;
             match (&mut rx_ack)
                 .map_err(|_| RxError::Canceled)
                 .on_timeout(Duration::from_millis(100), || Err(RxError::Timeout))
@@ -207,43 +199,37 @@ impl FragmentReader {
 
 #[cfg(test)]
 mod test {
+
     use super::{new_fragment_io, FragmentReader, FragmentWriter};
     use crate::lossy_text::LossyText;
     use anyhow::{format_err, Error};
     use fuchsia_async::TimeoutExt;
-    use futures::channel::mpsc;
     use futures::future::{try_join, try_join4};
     use futures::prelude::*;
     use onet_test_util::DodgyPipe;
     use std::collections::HashSet;
     use std::time::Duration;
-    use stream_framer::{Deframer, Framer, ReadBytes};
+    use stream_framer::{new_deframer, new_framer, DeframerWriter, FramerReader, ReadBytes};
 
     async fn framer_write(
-        mut framer_reader: mpsc::Receiver<Vec<u8>>,
+        mut framer_reader: FramerReader<LossyText>,
         mut pipe: impl AsyncWrite + Unpin,
     ) -> Result<(), Error> {
-        while let Some(frame) = framer_reader.next().await {
+        loop {
+            let frame = framer_reader.read().await?;
             pipe.write_all(&frame).await?;
         }
-        Ok(())
     }
 
     async fn deframer_read(
         mut pipe: impl AsyncRead + Unpin,
-        mut deframer: Deframer<LossyText>,
-        mut deframer_writer: mpsc::Sender<ReadBytes>,
+        mut deframer_writer: DeframerWriter<LossyText>,
     ) -> Result<(), Error> {
         loop {
             let mut buf = [0u8; 1];
             match pipe.read(&mut buf).await? {
                 0 => return Ok(()),
-                1 => {
-                    for frame in deframer.parse_frames(&buf) {
-                        deframer_writer.feed(frame?).await?;
-                    }
-                    deframer_writer.flush().await?;
-                }
+                1 => deframer_writer.write(&buf).await?,
                 _ => unreachable!(),
             }
         }
@@ -265,37 +251,23 @@ mod test {
         messages: &'static [&[u8]],
     ) -> Result<(), Error> {
         let _ = tracing_subscriber::fmt::try_init();
-
+        const INCOMING_BYTE_TIMEOUT: std::time::Duration = std::time::Duration::from_millis(100);
         let (c2s_rx, c2s_tx) = DodgyPipe::new(failures_per_64kib).split();
         let (s2c_rx, s2c_tx) = DodgyPipe::new(failures_per_64kib).split();
-
-        let c_frm = Framer::new(LossyText);
-        let (c_frm_tx, c_frm_rx) = mpsc::channel(0);
-
-        let s_frm = Framer::new(LossyText);
-        let (s_frm_tx, s_frm_rx) = mpsc::channel(0);
-
-        let c_dfrm = Deframer::new(LossyText);
-        let (c_dfrm_tx, c_dfrm_rx) = mpsc::channel(0);
-
-        let s_dfrm = Deframer::new(LossyText);
-        let (s_dfrm_tx, s_dfrm_rx) = mpsc::channel(0);
-
-        let (mut c_tx, c_rx, c_run) = new_fragment_io(c_frm, c_frm_tx, c_dfrm_rx);
-        let (_s_tx, mut s_rx, s_run) = new_fragment_io(s_frm, s_frm_tx, s_dfrm_rx);
-
+        let (c_frm_tx, c_frm_rx) = new_framer(LossyText::new(INCOMING_BYTE_TIMEOUT), 256);
+        let (s_frm_tx, s_frm_rx) = new_framer(LossyText::new(INCOMING_BYTE_TIMEOUT), 256);
+        let (c_dfrm_tx, c_dfrm_rx) = new_deframer(LossyText::new(INCOMING_BYTE_TIMEOUT));
+        let (s_dfrm_tx, s_dfrm_rx) = new_deframer(LossyText::new(INCOMING_BYTE_TIMEOUT));
+        let (mut c_tx, c_rx, c_run) = new_fragment_io(c_frm_tx, c_dfrm_rx);
+        let (_s_tx, mut s_rx, s_run) = new_fragment_io(s_frm_tx, s_dfrm_rx);
         let (support_fut, support_handle) = try_join4(
             try_join(c_run, s_run),
             try_join(framer_write(c_frm_rx, c2s_tx), framer_write(s_frm_rx, s2c_tx)),
-            try_join(
-                deframer_read(c2s_rx, c_dfrm, s_dfrm_tx),
-                deframer_read(s2c_rx, s_dfrm, c_dfrm_tx),
-            ),
+            try_join(deframer_read(c2s_rx, s_dfrm_tx), deframer_read(s2c_rx, c_dfrm_tx)),
             must_not_become_readable(c_rx),
         )
         .map_ok(drop)
         .remote_handle();
-
         try_join(
             async move {
                 support_fut.await;
