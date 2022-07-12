@@ -1,0 +1,41 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "sys/testing/system-test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/goldfish_test",
+    },
+    use: [
+        {
+            protocol: [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+        {
+            directory: "dev-goldfish-address-space",
+            rights: [ "rw*" ],
+            path: "/dev/class/goldfish-address-space",
+        },
+        {
+            directory: "dev-goldfish-control",
+            rights: [ "rw*" ],
+            path: "/dev/class/goldfish-control",
+        },
+        {
+            directory: "dev-goldfish-pipe",
+            rights: [ "rw*" ],
+            path: "/dev/class/goldfish-pipe",
+        },
+        {
+            directory: "dev-goldfish-sync",
+            rights: [ "rw*" ],
+            path: "/dev/class/goldfish-sync",
+        },
+    ],
+}

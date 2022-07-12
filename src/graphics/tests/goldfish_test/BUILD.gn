@@ -16,7 +16,7 @@ executable("goldfish_test_bin") {
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
     "//src/lib/fsl",
-    "//third_party/googletest:gtest",
+    "//src/lib/fxl/test:gtest_main",
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
@@ -36,12 +36,21 @@ fuchsia_component("goldfish_test_cmp") {
   testonly = true
   deps = [ ":goldfish_test_bin" ]
   component_name = "goldfish_test"
-  manifest = "meta/goldfish_test.cmx"
+  manifest = "meta/goldfish_test.cml"
 }
 
 fuchsia_test_package("goldfish-test-pkg") {
   test_components = [ ":goldfish_test_cmp" ]
   package_name = "goldfish_test"
+  test_specs = {
+    environments = [
+      {
+        dimensions = {
+          device_type = "AEMU"
+        }
+      },
+    ]
+  }
 }
 
 group("goldfish_test") {
