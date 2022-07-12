@@ -193,7 +193,7 @@ pub fn connect_to_protocol_at_dir_root<P: DiscoverableProtocolMarker>(
 }
 
 /// Connect to an instance of a FIDL protocol hosted in `directory` using the given `filename`.
-pub fn connect_to_named_protocol_at_dir_root<P: DiscoverableProtocolMarker>(
+pub fn connect_to_named_protocol_at_dir_root<P: ProtocolMarker>(
     directory: &fio::DirectoryProxy,
     filename: &str,
 ) -> Result<P::Proxy, Error> {
