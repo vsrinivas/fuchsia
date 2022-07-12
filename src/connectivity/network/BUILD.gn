@@ -106,10 +106,19 @@ core_shard("virtualization-core-shard") {
   shard_file = "meta/virtualization.core_shard.cml"
 }
 
-# TODO(https://fxbug.dev/85821): Remove once out-of-tree users no longer
-# reference v1 components.
+# TODO(https://fxbug.dev/104268): Remove from all base package sets
+# and replace with a testing package included in the universe package
+# set.
 fuchsia_package("network-legacy-deprecated") {
+  testonly = true
   deps = [
+    "dns:component",
+    "netstack:component",
+    "netstack:component-with-fast-udp",
+    "netstack3:component",
+
+    # TODO(https://fxbug.dev/85821): Remove once out-of-tree users no longer
+    # reference v1 components.
     "dns:component-legacy",
     "netstack:component-legacy",
     "netstack:component-with-fast-udp-legacy",
