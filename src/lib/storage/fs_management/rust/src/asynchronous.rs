@@ -9,17 +9,16 @@ use {
         error::{BindError, CommandError, KillError, QueryError, ServeError, ShutdownError},
         launch_process, FSConfig,
     },
-    anyhow::Error,
+    anyhow::{anyhow, Error},
     cstr::cstr,
     fdio::SpawnAction,
     fidl::encoding::Decodable,
     fidl::endpoints::{ClientEnd, ServerEnd},
+    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_fs_startup::{CheckOptions, FormatOptions, StartOptions, StartupMarker},
     fidl_fuchsia_io as fio,
     fuchsia_async::OnSignals,
-    fuchsia_component::client::{
-        connect_to_childs_protocol, connect_to_protocol_at_dir_root, open_childs_exposed_directory,
-    },
+    fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_dir_root},
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{Channel, Handle, Process, Signals, Status, Task},
     log::warn,
@@ -61,10 +60,8 @@ impl<FSC: FSConfig> Filesystem<FSC> {
     ///
     /// Returns [`Err`] if the filesystem process failed to launch or returned a non-zero exit code.
     pub async fn format(&self) -> Result<(), Error> {
-        if let Some(component_name) = self.config.component_name() {
-            let proxy =
-                connect_to_childs_protocol::<StartupMarker>(component_name.to_string(), None)
-                    .await?;
+        if self.config.component_name().is_some() {
+            let proxy = connect_to_protocol::<StartupMarker>()?;
             let mut options = FormatOptions::new_empty();
             options.crypt = self.config.crypt_client().map(|c| c.into());
             proxy
@@ -102,10 +99,8 @@ impl<FSC: FSConfig> Filesystem<FSC> {
     ///
     /// Returns [`Err`] if the filesystem process failed to launch or returned a non-zero exit code.
     pub async fn fsck(&self) -> Result<(), Error> {
-        if let Some(component_name) = self.config.component_name() {
-            let proxy =
-                connect_to_childs_protocol::<StartupMarker>(component_name.to_string(), None)
-                    .await?;
+        if self.config.component_name().is_some() {
+            let proxy = connect_to_protocol::<StartupMarker>()?;
             let mut options = CheckOptions::new_empty();
             options.crypt = self.config.crypt_client().map(|c| c.into());
             proxy
@@ -141,9 +136,7 @@ impl<FSC: FSConfig> Filesystem<FSC> {
         // If the filesystem is a component, the startup service must be routed to this component.
         // For now, only one filesystem instance is supported.
         if let Some(component_name) = self.config.component_name() {
-            let proxy =
-                connect_to_childs_protocol::<StartupMarker>(component_name.to_string(), None)
-                    .await?;
+            let proxy = connect_to_protocol::<StartupMarker>()?;
             let mut options = StartOptions::new_empty();
             options.crypt = self.config.crypt_client().map(|c| c.into());
             proxy
@@ -151,7 +144,16 @@ impl<FSC: FSConfig> Filesystem<FSC> {
                 .await?
                 .map_err(Status::from_raw)?;
 
-            let exposed_dir = open_childs_exposed_directory(component_name, None).await?;
+            let realm = connect_to_protocol::<fcomponent::RealmMarker>()?;
+            let (exposed_dir, server_end) =
+                fidl::endpoints::create_proxy::<fio::DirectoryMarker>()?;
+            realm
+                .open_exposed_dir(
+                    &mut fdecl::ChildRef { name: component_name.to_string(), collection: None },
+                    server_end,
+                )
+                .await?
+                .map_err(|e| anyhow!("OpenExposedDir error: {:?}", e))?;
             let (root_dir, server_end) = fidl::endpoints::create_endpoints::<fio::NodeMarker>()?;
             exposed_dir.open(
                 fio::OpenFlags::RIGHT_READABLE
