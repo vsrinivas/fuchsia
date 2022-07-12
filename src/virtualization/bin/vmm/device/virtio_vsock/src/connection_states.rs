@@ -922,11 +922,20 @@ impl VsockConnectionState {
     ) -> Result<(), Error> {
         match self {
             VsockConnectionState::Invalid => panic!("Connection entered an impossible state"),
-            VsockConnectionState::ReadWrite(state) => state.handle_rx_chain(chain),
-            _ => {
+            VsockConnectionState::ClientInitiated(_) | VsockConnectionState::GuestInitiated(_) => {
                 // This is a fatal logic error. The device should only offer states writable chains
                 // when they request one.
                 panic!("Device gave an invalid state a writable chain")
+            }
+            VsockConnectionState::ReadWrite(state) => state.handle_rx_chain(chain),
+            VsockConnectionState::GuestInitiatedShutdown(_)
+            | VsockConnectionState::ClientInitiatedShutdown(_)
+            | VsockConnectionState::ShutdownClean(_)
+            | VsockConnectionState::ShutdownForced(_) => {
+                // There was a state transition between when the connection requested a writable
+                // chain, and when it actually received one. This should be rare, so we can just
+                // drop this chain.
+                Ok(())
             }
         }
     }

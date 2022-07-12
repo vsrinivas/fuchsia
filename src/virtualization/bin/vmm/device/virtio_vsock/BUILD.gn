@@ -45,7 +45,10 @@ rustc_binary("virtio_vsock_bin") {
     "//third_party/rust_crates:pin-utils",
   ]
 
-  test_deps = [ "//third_party/rust_crates:rand" ]
+  test_deps = [
+    "//src/lib/async-utils",
+    "//third_party/rust_crates:rand",
+  ]
 }
 
 fuchsia_package("virtio_vsock") {

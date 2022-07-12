@@ -17,10 +17,14 @@ use {
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{
         channel::mpsc::UnboundedSender,
-        future::{AbortHandle, Abortable},
+        future::{AbortHandle, Abortable, Aborted},
     },
-    std::{cell::Cell, convert::TryFrom, mem},
-    virtio_device::{chain::ReadableChain, mem::DriverMem, queue::DriverNotify},
+    std::{cell::Cell, convert::TryFrom, mem, rc::Rc},
+    virtio_device::{
+        chain::{ReadableChain, WritableChain},
+        mem::DriverMem,
+        queue::DriverNotify,
+    },
 };
 
 #[derive(Clone, Copy, Default, Debug)]
@@ -132,6 +136,15 @@ pub struct VsockConnection {
     state_action_abort: Cell<Option<AbortHandle>>,
 }
 
+pub enum WantRxChainResult {
+    // This connection wants the next available RX chain. The connection is returned so that
+    // the device can reschedule polling this connection after it is serviced.
+    ReadyForChain(Rc<VsockConnection>),
+
+    // This connection will never want another RX chain.
+    StopAwaiting,
+}
+
 impl VsockConnection {
     // Creates a new guest initiated connection. Requires a listening client, and for the client
     // to respond with a valid zx::socket.
@@ -235,6 +248,43 @@ impl VsockConnection {
             VsockConnectionState::ShutdownForced(ShutdownForced::new(self.key, control_packets));
     }
 
+    // Returns ReadyForChain if this connection wants an RX chain immediately, and StopAwaiting if
+    // the device should stop polling this connection for whether it wants an RX chain.
+    pub async fn want_rx_chain(self: Rc<Self>) -> WantRxChainResult {
+        loop {
+            let (abort_handle, abort_registration) = AbortHandle::new_pair();
+            self.rx_abort.set(Some(abort_handle));
+
+            let result = {
+                let state = self.state.read().await;
+                Abortable::new(state.wants_rx_chain(), abort_registration).await
+            };
+
+            match result {
+                Ok(true) => {
+                    return WantRxChainResult::ReadyForChain(self);
+                }
+                Ok(false) => {
+                    return WantRxChainResult::StopAwaiting;
+                }
+                Err(Aborted) => {
+                    // Wait on this state again.
+                    continue;
+                }
+            };
+        }
+    }
+
+    // Handles an RX chain by delegating the chain to the current state. A connection should only
+    // receive a writable chain after returning ReadyForChain in response to want_rx_chain.
+    pub async fn handle_guest_rx_chain<'a, 'b, N: DriverNotify, M: DriverMem>(
+        &self,
+        chain: WritableChain<'a, 'b, N, M>,
+    ) -> Result<(), Error> {
+        let state = self.state.read().await;
+        state.handle_rx_chain(chain)
+    }
+
     pub async fn handle_state_action(&self) -> StateAction {
         loop {
             let (abort_handle, abort_registration) = AbortHandle::new_pair();
@@ -261,8 +311,8 @@ impl VsockConnection {
                         }
                     }
                 }
-                Err(_) => {
-                    // Aborted, wait on this state again.
+                Err(Aborted) => {
+                    // Wait on this state again.
                     continue;
                 }
             };

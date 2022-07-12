@@ -6,7 +6,7 @@
 #![allow(dead_code)]
 
 use {
-    crate::connection::{VsockConnection, VsockConnectionKey},
+    crate::connection::{VsockConnection, VsockConnectionKey, WantRxChainResult},
     crate::connection_states::{StateAction, VsockConnectionState},
     crate::port_manager::PortManager,
     crate::wire::{OpType, VirtioVsockConfig, VirtioVsockHeader, VsockType, LE64},
@@ -19,7 +19,10 @@ use {
     fuchsia_syslog as syslog, fuchsia_zircon as zx,
     futures::{
         channel::mpsc::{self, UnboundedReceiver, UnboundedSender},
-        select, StreamExt,
+        future::{self, LocalBoxFuture},
+        select,
+        stream::FuturesUnordered,
+        StreamExt,
     },
     machina_virtio_device::{GuestMem, WrappedDescChainStream},
     std::{
@@ -64,14 +67,14 @@ pub struct VsockDevice {
 
     // Multi-producer single-consumer queue for notifying the RX loop that there is a new
     // connection available to await on.
-    new_connection_tx: UnboundedSender<VsockConnectionKey>,
-    new_connection_rx: Cell<Option<UnboundedReceiver<VsockConnectionKey>>>,
+    new_connection_tx: UnboundedSender<Rc<VsockConnection>>,
+    new_connection_rx: Cell<Option<UnboundedReceiver<Rc<VsockConnection>>>>,
 }
 
 impl VsockDevice {
     pub fn new() -> Rc<Self> {
         let (control_tx, control_rx) = mpsc::unbounded::<VirtioVsockHeader>();
-        let (connect_tx, connect_rx) = mpsc::unbounded::<VsockConnectionKey>();
+        let (connect_tx, connect_rx) = mpsc::unbounded::<Rc<VsockConnection>>();
 
         Rc::new(Self {
             config: RefCell::new(VirtioVsockConfig::new_with_default_cid()),
@@ -179,6 +182,12 @@ impl VsockDevice {
             .take()
             .expect("No new connection rx channel; handle_rx_queue was called multiple times");
 
+        let mut rx_waiters: FuturesUnordered<LocalBoxFuture<'_, WantRxChainResult>> =
+            FuturesUnordered::new();
+
+        // One future which will never return, preventing this from resolving to Poll::Ready(None).
+        rx_waiters.push(Box::pin(future::pending::<WantRxChainResult>()));
+
         while let Some(chain) = rx_stream.next().await {
             let writable_chain = match WritableChain::new(chain, guest_mem) {
                 Ok(chain) => chain,
@@ -189,8 +198,13 @@ impl VsockDevice {
                 }
             };
 
-            self.handle_rx_chain(writable_chain, &mut control_packets, &mut new_connections)
-                .await?;
+            self.handle_rx_chain(
+                writable_chain,
+                &mut control_packets,
+                &mut new_connections,
+                &mut rx_waiters,
+            )
+            .await?;
         }
 
         Ok(())
@@ -205,7 +219,8 @@ impl VsockDevice {
         &self,
         chain: WritableChain<'a, 'b, N, M>,
         control_packets: &mut UnboundedReceiver<VirtioVsockHeader>,
-        new_connections: &mut UnboundedReceiver<VsockConnectionKey>,
+        new_connections: &mut UnboundedReceiver<Rc<VsockConnection>>,
+        rx_waiters: &mut FuturesUnordered<LocalBoxFuture<'_, WantRxChainResult>>,
     ) -> Result<(), Error> {
         let result = match chain.remaining() {
             Ok(bytes) => {
@@ -251,11 +266,27 @@ impl VsockDevice {
                 select! {
                     header = control_packets.next() => {
                         break VsockDevice::write_header_only_packet(
-                            header.ok_or(
-                                anyhow!("Unexpected end of control packet stream"))?, chain);
+                            header.expect("Unexpected end of control packet stream"), chain);
                     },
-                    _connection = new_connections.next() => {
-                        // TODO(fxb/97355): Add to futures ordered queue.
+                    conn = new_connections.next() => {
+                        let conn = conn.expect("Unexpected end of new connection stream");
+                        rx_waiters.push(Box::pin(conn.want_rx_chain()));
+                    },
+                    fut = rx_waiters.next() => {
+                        let fut = fut.expect("Should never resolve to Poll::Ready(None)");
+                        // If the future returns with ReadyForChain, this connection wants this
+                        // chain and wants to be rescheduled for future polling. Otherwise, this
+                        // connection is dropped and the reference count is decremented.
+                        if let WantRxChainResult::ReadyForChain(conn) = fut {
+                            let result = conn.handle_guest_rx_chain(chain).await;
+                            if result.is_ok() {
+                                rx_waiters.push(Box::pin(conn.want_rx_chain()));
+                            } else {
+                                self.force_close_connection(conn.key()).await;
+                            }
+
+                            break result
+                        }
                     }
                 }
             }
@@ -338,7 +369,7 @@ impl VsockDevice {
 
             self.new_connection_tx
                 .clone()
-                .unbounded_send(key)
+                .unbounded_send(connection.clone())
                 .expect("New connection tx end should never be closed");
 
             connection
@@ -376,7 +407,7 @@ impl VsockDevice {
 
             self.new_connection_tx
                 .clone()
-                .unbounded_send(key)
+                .unbounded_send(connection.clone())
                 .expect("New connection tx end should never be closed");
 
             connection
@@ -518,6 +549,7 @@ mod tests {
     use {
         super::*,
         crate::wire::{LE16, LE32},
+        async_utils::PollExt,
         fidl::endpoints::{create_proxy_and_stream, create_request_stream},
         fidl_fuchsia_virtualization::{
             HostVsockAcceptorMarker, HostVsockEndpointMarker, HostVsockEndpointProxy,
@@ -686,7 +718,12 @@ mod tests {
             .unwrap();
         let chain = WritableChain::new(state.queue.next_chain().unwrap(), &mem).unwrap();
         device
-            .handle_rx_chain(chain, &mut control_packets, &mut new_connections)
+            .handle_rx_chain(
+                chain,
+                &mut control_packets,
+                &mut new_connections,
+                &mut FuturesUnordered::new(),
+            )
             .now_or_never()
             .expect("future should have completed")
             .expect("failed to handle rx queue");
@@ -699,7 +736,12 @@ mod tests {
         state.fake_queue.publish(ChainBuilder::new().writable(header_size, &mem).build()).unwrap();
         let chain = WritableChain::new(state.queue.next_chain().unwrap(), &mem).unwrap();
         device
-            .handle_rx_chain(chain, &mut control_packets, &mut new_connections)
+            .handle_rx_chain(
+                chain,
+                &mut control_packets,
+                &mut new_connections,
+                &mut FuturesUnordered::new(),
+            )
             .now_or_never()
             .expect("future should have completed")
             .expect("failed to handle rx queue");
@@ -745,7 +787,12 @@ mod tests {
         state.fake_queue.publish(ChainBuilder::new().writable(header_size, &mem).build()).unwrap();
         let chain = WritableChain::new(state.queue.next_chain().unwrap(), &mem).unwrap();
         device
-            .handle_rx_chain(chain, &mut control_packets, &mut new_connections)
+            .handle_rx_chain(
+                chain,
+                &mut control_packets,
+                &mut new_connections,
+                &mut FuturesUnordered::new(),
+            )
             .await
             .expect("failed to handle rx queue");
 
@@ -762,6 +809,148 @@ mod tests {
         assert_eq!(header.dst_port.get(), guest_port);
         assert_eq!(VsockType::try_from(header.vsock_type.get()).unwrap(), VsockType::Stream);
         assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::Reset);
+    }
+
+    #[test]
+    fn guest_rx_from_two_client_initiated_connections() {
+        let guest_port = 12345;
+        let header_size = mem::size_of::<VirtioVsockHeader>() as u32;
+        let mut executor = fasync::TestExecutor::new().expect("failed to create test executor");
+        let (proxy, mut stream) = create_proxy_and_stream::<HostVsockEndpointMarker>()
+            .expect("failed to create HostVsockEndpoint proxy/stream");
+
+        let device = VsockDevice::new();
+
+        let mut control_packets =
+            device.control_packet_rx.take().expect("No control packet rx channel");
+        let mut new_connections =
+            device.new_connection_rx.take().expect("No new connection rx channel");
+        let mut rx_waiters: FuturesUnordered<LocalBoxFuture<'_, WantRxChainResult>> =
+            FuturesUnordered::new();
+        rx_waiters.push(Box::pin(future::pending::<WantRxChainResult>()));
+
+        let mut get_client_initiated_connection = |guest_port: u32| -> zx::Socket {
+            let mut request_fut = proxy.connect2(guest_port);
+            assert!(executor.run_until_stalled(&mut request_fut).is_pending());
+
+            // Resolve the server side of each FIDL call, acquiring the responder.
+            let (port, responder) = executor
+                .run_until_stalled(&mut stream.try_next())
+                .expect("future should be ready")
+                .unwrap()
+                .unwrap()
+                .into_connect2()
+                .expect("received unexpected request on stream");
+            assert_eq!(port, guest_port);
+
+            // Do a client initiated connection. This future may advance when polled but will
+            // ultimately return pending until the connection is actually closed.
+            let connect_fut = device.client_initiated_connect(port, responder);
+            futures::pin_mut!(connect_fut);
+            assert!(executor.run_until_stalled(&mut connect_fut).is_pending());
+
+            let mem = IdentityDriverMem::new();
+            let mut state = TestQueue::new(32, &mem);
+
+            // A client initiated connection will result in an OpType::Request packet sent to the
+            // guest, so fetch that request with a writable chain.
+            state
+                .fake_queue
+                .publish(ChainBuilder::new().writable(header_size, &mem).build())
+                .expect("failed to publish writable chain");
+
+            let chain = WritableChain::new(state.queue.next_chain().unwrap(), &mem)
+                .expect("failed to get next chain");
+
+            device
+                .handle_rx_chain(chain, &mut control_packets, &mut new_connections, &mut rx_waiters)
+                .now_or_never()
+                .expect("future should have completed")
+                .expect("failed to handle rx queue");
+
+            let used_chain = state.fake_queue.next_used().expect("no next used chain");
+            assert_eq!(used_chain.written(), header_size);
+            let (data, len) = used_chain.data_iter().next().expect("nothing on chain");
+            let slice = unsafe { std::slice::from_raw_parts(data as *const u8, len as usize) };
+
+            let header =
+                VirtioVsockHeader::read_from(slice).expect("failed to read header from slice");
+            assert_eq!(OpType::try_from(header.op.get()).unwrap(), OpType::Request);
+
+            // Respond to the request, which requires the automatically chosen host port.
+            let response_header = simple_guest_to_host_header(
+                header.dst_port.get(),
+                header.src_port.get(),
+                0,
+                OpType::Response,
+            );
+            let header_bytes = response_header.as_bytes();
+            state
+                .fake_queue
+                .publish(ChainBuilder::new().readable(header_bytes, &mem).build())
+                .unwrap();
+            let chain = ReadableChain::new(state.queue.next_chain().unwrap(), &mem);
+
+            let handle_tx_fut = device.handle_tx_queue(chain);
+            futures::pin_mut!(handle_tx_fut);
+            assert!(executor.run_until_stalled(&mut handle_tx_fut).is_pending());
+            assert!(executor.run_until_stalled(&mut connect_fut).is_pending());
+            assert!(!executor.run_until_stalled(&mut handle_tx_fut).is_pending());
+
+            executor
+                .run_until_stalled(&mut request_fut)
+                .expect("future should be ready")
+                .expect("expected response")
+                .expect("expected socket in response")
+        };
+
+        let socket1 = get_client_initiated_connection(guest_port);
+        let socket2 = get_client_initiated_connection(guest_port);
+
+        // Helper function that writes the given bytes to a socket, creates an appropriately
+        // sized writable chain to read them from the device, and then compares the values.
+        let mut send_then_read_bytes = |bytes: &[u8], socket: &zx::Socket| {
+            let mem = IdentityDriverMem::new();
+            let mut state = TestQueue::new(32, &mem);
+            state
+                .fake_queue
+                .publish(
+                    ChainBuilder::new().writable(header_size + bytes.len() as u32, &mem).build(),
+                )
+                .expect("failed to publish writable chain");
+
+            let chain = WritableChain::new(state.queue.next_chain().unwrap(), &mem)
+                .expect("failed to get next chain");
+            let rx_fut = device.handle_rx_chain(
+                chain,
+                &mut control_packets,
+                &mut new_connections,
+                &mut rx_waiters,
+            );
+
+            // Nothing to actually send yet, so the chain waits to be used.
+            futures::pin_mut!(rx_fut);
+            assert!(executor.run_until_stalled(&mut rx_fut).is_pending());
+
+            assert_eq!(socket.write(bytes).expect("failed to write bytes"), bytes.len());
+
+            // A connection has data to send, so this future now completes.
+            assert!(!executor.run_until_stalled(&mut rx_fut).is_pending());
+
+            let used_chain = state.fake_queue.next_used().expect("no next used chain");
+
+            assert_eq!(used_chain.written(), (header_size + bytes.len() as u32));
+            let (data, len) =
+                used_chain.data_iter().next().expect("there should be one filled descriptor");
+            let slice = unsafe { std::slice::from_raw_parts(data as *const u8, len as usize) };
+            assert_eq!(&slice[header_size as usize..], bytes);
+        };
+
+        send_then_read_bytes(&[1u8, 2, 3, 4, 5], &socket1);
+        send_then_read_bytes(&[1u8, 3, 5, 7], &socket2);
+        send_then_read_bytes(&[6u8, 7, 8], &socket1);
+        send_then_read_bytes(&[4u8, 3, 2, 1], &socket1);
+        send_then_read_bytes(&[7u8, 5, 3, 1], &socket2);
     }
 
     #[test]
@@ -832,7 +1021,7 @@ mod tests {
 
         // Device reported this new connection.
         let reported_key =
-            new_connections.try_next().unwrap().expect("expected a new connection key");
+            new_connections.try_next().unwrap().expect("expected a new connection key").key();
         assert_eq!(
             reported_key,
             VsockConnectionKey::new(HOST_CID, host_port, DEFAULT_GUEST_CID, guest_port)
@@ -871,7 +1060,12 @@ mod tests {
             .expect("failed to get next chain");
 
         device
-            .handle_rx_chain(chain, &mut control_packets, &mut new_connections)
+            .handle_rx_chain(
+                chain,
+                &mut control_packets,
+                &mut new_connections,
+                &mut FuturesUnordered::new(),
+            )
             .now_or_never()
             .expect("future should have completed")
             .expect("failed to handle rx queue");
