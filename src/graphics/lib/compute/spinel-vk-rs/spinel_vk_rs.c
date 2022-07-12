@@ -591,7 +591,6 @@ spinel_vk_rs_create(spinel_vk_rs_create_info_t const * create_info)
   char const * platform_ext_names[] = {
     "VK_FUCHSIA_external_memory",
     "VK_FUCHSIA_buffer_collection",
-    "VK_FUCHSIA_buffer_collection_x",
   };
 
   uint32_t const platform_ext_count = ARRAY_LENGTH_MACRO(platform_ext_names);
