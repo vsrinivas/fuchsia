@@ -19,8 +19,10 @@ assert(libc == get_path_info(get_path_info(".", "abspath"), "dir"),
 libc_components = [
   "ctype",
   "fenv",
-  "scudo",
+  "inttypes",
   "pthread",
+  "scudo",
+  "stdlib",
 ]
 
 group("components") {
