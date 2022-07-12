@@ -696,7 +696,9 @@ TEST(StreamTestCase, ExtendFillsWithZeros) {
 }
 
 TEST(StreamTestCase, ReadShrinkRace) {
-  constexpr size_t kNumIterations = 50;
+  // This test is slow because of the `WaitForPageRead`. Be careful about the number of iterations.
+  constexpr size_t kNumIterations = 10;
+
   constexpr size_t kInitialVmoSize = 80u;
   constexpr size_t kInitialVmoNumPages =
       fbl::round_up(kInitialVmoSize, ZX_PAGE_SIZE) / ZX_PAGE_SIZE;
@@ -732,7 +734,7 @@ TEST(StreamTestCase, ReadShrinkRace) {
 
     // Wait for and supply page read, in case |read_thread| wins. This is inherently a race we want
     // to test, so waiting is the best we can do.
-    if (pager.WaitForPageRead(vmo, 0u, 1u, zx::deadline_after(zx::sec(8)).get())) {
+    if (pager.WaitForPageRead(vmo, 0u, 1u, zx::deadline_after(zx::sec(5)).get())) {
       pager.SupplyPages(vmo, 0u, 1u);
     }
 
