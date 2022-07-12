@@ -1,8 +1,8 @@
 # Fuchsia Format Style
 # last reviewed: Jan 29, 2019
 
-# Fuchsia uses 2018 edition only
-edition = "2018"
+# Fuchsia uses mostly 2021 edition
+edition = "2021"
 
 # The "Default" setting has a heuristic which splits lines too aggresively.
 # We are willing to revisit this setting in future versions of rustfmt.
