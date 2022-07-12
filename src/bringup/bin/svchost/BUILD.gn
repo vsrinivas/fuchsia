@@ -72,8 +72,8 @@ executable("svchost") {
     ":crashsvc",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_llcpp",
-    "//sdk/fidl/fuchsia.mem:fuchsia.mem_c",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_llcpp",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/storage/vfs/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
@@ -94,10 +94,6 @@ executable("svchost") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("crashsvc-test") {

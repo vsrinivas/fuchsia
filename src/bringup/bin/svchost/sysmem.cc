@@ -4,7 +4,7 @@
 
 #include "sysmem.h"
 
-#include <fuchsia/sysmem/c/fidl.h>
+#include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <lib/sysmem-connector/sysmem-connector.h>
 #include <lib/zx/channel.h>
 
@@ -23,7 +23,7 @@ static zx_status_t sysmem2_connect(void* ctx, async_dispatcher_t* dispatcher,
                                    const char* service_name, zx_handle_t allocator_request_param) {
   zx::channel allocator_request(allocator_request_param);
   sysmem_connector_t* connector = static_cast<sysmem_connector_t*>(ctx);
-  if (!strcmp(service_name, fuchsia_sysmem_Allocator_Name)) {
+  if (!strcmp(service_name, fidl::DiscoverableProtocolName<fuchsia_sysmem::Allocator>)) {
     sysmem_connector_queue_connection_request(connector, allocator_request.release());
   }
   return ZX_ERR_NOT_SUPPORTED;
@@ -33,7 +33,7 @@ static void sysmem2_release(void* ctx) {
 }
 
 static constexpr const char* sysmem2_services[] = {
-    fuchsia_sysmem_Allocator_Name,
+    fidl::DiscoverableProtocolName<fuchsia_sysmem::Allocator>,
     nullptr,
 };
 
