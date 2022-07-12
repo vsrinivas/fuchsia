@@ -144,7 +144,7 @@ where
 fn check_config_files(level: &ConfigLevel, build_dir: Option<&Path>) -> Result<()> {
     let e = env_file().ok_or(anyhow!("Could not find environment file"))?;
     let mut environment = Environment::load(&e)?;
-    environment.check(&e, level, build_dir)
+    environment.check(level, build_dir)
 }
 
 fn save_config(config: &mut Config, build_dir: Option<&Path>) -> Result<()> {

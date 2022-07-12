@@ -17,7 +17,6 @@ use {
     serde_json::Value,
     std::fs::{File, OpenOptions},
     std::io::Write,
-    std::path::PathBuf,
 };
 
 #[ffx_plugin()]
@@ -96,8 +95,9 @@ fn exec_env_set<W: Write + Sync>(
     mut writer: W,
     env: &mut Environment,
     s: &EnvSetCommand,
-    env_file: PathBuf,
 ) -> Result<()> {
+    let env_file = env.get_path().context("Trying to set on environment not backed by a file")?;
+
     if !env_file.exists() {
         writeln!(writer, "\"{}\" does not exist, creating empty json file", env_file.display())?;
         let mut file = File::create(&env_file).context("opening write buffer")?;
@@ -116,7 +116,7 @@ fn exec_env_set<W: Write + Sync>(
         ConfigLevel::Global => env.set_global(Some(&s.file)),
         _ => ffx_bail!("This configuration is not stored in the environment."),
     }
-    env.save(&env_file)
+    env.save()
 }
 
 fn exec_env<W: Write + Sync>(env_command: &EnvCommand, mut writer: W) -> Result<()> {
@@ -124,7 +124,7 @@ fn exec_env<W: Write + Sync>(env_command: &EnvCommand, mut writer: W) -> Result<
     let mut env = Environment::load(&file)?;
     match &env_command.access {
         Some(a) => match a {
-            EnvAccessCommand::Set(s) => exec_env_set(writer, &mut env, s, file),
+            EnvAccessCommand::Set(s) => exec_env_set(writer, &mut env, s),
             EnvAccessCommand::Get(g) => {
                 writeln!(writer, "{}", env.display(&g.level))?;
                 Ok(())
@@ -158,11 +158,11 @@ mod test {
     #[test]
     fn test_exec_env_set_set_values() -> Result<()> {
         let writer = Vec::<u8>::new();
-        let mut env = Environment::default();
+        let tmp_file = NamedTempFile::new().expect("tmp access failed");
+        let mut env = Environment::new_empty(Some(tmp_file.path()));
         let cmd =
             EnvSetCommand { file: "test.json".into(), level: ConfigLevel::User, build_dir: None };
-        let tmp_file = NamedTempFile::new().expect("tmp access failed");
-        exec_env_set(writer, &mut env, &cmd, tmp_file.path().to_path_buf())?;
+        exec_env_set(writer, &mut env, &cmd)?;
         let result = Environment::load(&tmp_file)?;
         assert_eq!(cmd.file, result.get_user().unwrap());
         Ok(())

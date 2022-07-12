@@ -20,10 +20,16 @@ use {
 };
 
 #[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
-pub struct Environment {
+struct EnvironmentFiles {
     user: Option<PathBuf>,
     build: Option<HashMap<PathBuf, PathBuf>>,
     global: Option<PathBuf>,
+}
+
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Environment {
+    path: Option<PathBuf>,
+    files: EnvironmentFiles,
 }
 
 // This lock protects from concurrent [Environment]s from modifying the same underlying file.
@@ -41,71 +47,89 @@ lazy_static::lazy_static! {
 }
 
 impl Environment {
+    /// Creates a new empty env that will be saved to a specific path, but is initialized
+    /// with no settings.
+    pub fn new_empty(path: Option<&Path>) -> Self {
+        let path = path.map(Path::to_owned);
+        Self { path, ..Self::default() }
+    }
+
     pub fn load<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let path = path.as_ref();
+        let path = path.as_ref().to_owned();
 
         // Grab the lock because we're reading from the environment file.
         let _e = ENV_MUTEX.lock().unwrap();
-        let file = File::open(path).context("opening file for read")?;
+        let file = File::open(&path).context("opening file for read")?;
 
-        serde_json::from_reader(BufReader::new(file)).context("reading environment from disk")
+        let files = serde_json::from_reader(BufReader::new(file))
+            .context("reading environment from disk")?;
+        Ok(Self { path: Some(path), files })
     }
 
-    pub fn save<P: AsRef<Path>>(&self, path: P) -> Result<()> {
-        let path = path.as_ref();
+    pub fn save(&self) -> Result<()> {
+        match &self.path {
+            Some(path) => {
+                // First save the config to a temp file in the same location as the file, then atomically
+                // rename the file to the final location to avoid partially written files.
+                let parent = path.parent().unwrap_or_else(|| Path::new("."));
+                let mut tmp = tempfile::NamedTempFile::new_in(parent)?;
 
-        // First save the config to a temp file in the same location as the file, then atomically
-        // rename the file to the final location to avoid partially written files.
-        let parent = path.parent().unwrap_or_else(|| Path::new("."));
-        let mut tmp = tempfile::NamedTempFile::new_in(parent)?;
+                // Grab the lock because we're writing to the environment file.
+                let _e = ENV_MUTEX.lock().unwrap();
+                serde_json::to_writer_pretty(&mut tmp, &self.files)
+                    .context("writing environment to disk")?;
 
-        // Grab the lock because we're writing to the environment file.
-        let _e = ENV_MUTEX.lock().unwrap();
-        serde_json::to_writer_pretty(&mut tmp, &self).context("writing environment to disk")?;
+                tmp.flush().context("flushing environment")?;
 
-        tmp.flush().context("flushing environment")?;
+                let _ = tmp.persist(path)?;
 
-        let _ = tmp.persist(path)?;
+                Ok(())
+            }
+            None => Err(anyhow::anyhow!("Tried to save environment with no path set")),
+        }
+    }
 
-        Ok(())
+    pub fn get_path(&self) -> Option<&Path> {
+        self.path.as_deref()
     }
 
     pub fn get_user(&self) -> Option<&Path> {
-        self.user.as_deref()
+        self.files.user.as_deref()
     }
     pub fn set_user(&mut self, to: Option<&Path>) {
-        self.user = to.map(Path::to_owned);
+        self.files.user = to.map(Path::to_owned);
     }
 
     pub fn get_global(&self) -> Option<&Path> {
-        self.global.as_deref()
+        self.files.global.as_deref()
     }
     pub fn set_global(&mut self, to: Option<&Path>) {
-        self.global = to.map(Path::to_owned);
+        self.files.global = to.map(Path::to_owned);
     }
 
     pub fn get_build(&self, for_dir: Option<&Path>) -> Option<&Path> {
         for_dir
-            .and_then(|dir| self.build.as_ref().and_then(|dirs| dirs.get(dir)))
+            .and_then(|dir| self.files.build.as_ref().and_then(|dirs| dirs.get(dir)))
             .map(PathBuf::as_ref)
     }
     pub fn set_build(&mut self, for_dir: &Path, to: &Path) {
-        let build_dirs = match &mut self.build {
+        let build_dirs = match &mut self.files.build {
             Some(build_dirs) => build_dirs,
-            None => self.build.get_or_insert_with(Default::default),
+            None => self.files.build.get_or_insert_with(Default::default),
         };
         build_dirs.insert(for_dir.to_owned(), to.to_owned());
     }
 
     fn display_user(&self) -> String {
-        self.user
+        self.files
+            .user
             .as_ref()
             .map_or_else(|| format!(" User: none\n"), |u| format!(" User: {}\n", u.display()))
     }
 
     fn display_build(&self) -> String {
         let mut res = format!(" Build:");
-        match self.build.as_ref() {
+        match self.files.build.as_ref() {
             Some(m) => {
                 if m.is_empty() {
                     res.push_str(&format!("  none\n"));
@@ -123,7 +147,8 @@ impl Environment {
     }
 
     fn display_global(&self) -> String {
-        self.global
+        self.files
+            .global
             .as_ref()
             .map_or_else(|| format!(" Global: none\n"), |g| format!(" Global: {}\n", g.display()))
     }
@@ -168,15 +193,10 @@ impl Environment {
 
     /// Checks the config files at the requested level to make sure they exist and are configured
     /// properly.
-    pub fn check(
-        &mut self,
-        path: &Path,
-        level: &ConfigLevel,
-        build_dir: Option<&Path>,
-    ) -> Result<()> {
+    pub fn check(&mut self, level: &ConfigLevel, build_dir: Option<&Path>) -> Result<()> {
         match level {
             ConfigLevel::User => {
-                if let None = self.user {
+                if let None = self.files.user {
                     let default_path = get_default_user_file_path();
                     // This will override the config file if it exists.  This would happen anyway
                     // because of the cache.
@@ -184,12 +204,12 @@ impl Environment {
                     file.write_all(b"{}").context("writing default user configuration file")?;
                     file.sync_all()
                         .context("syncing default user configuration file to filesystem")?;
-                    self.user = Some(default_path);
-                    self.save(path)?;
+                    self.files.user = Some(default_path);
+                    self.save()?;
                 }
             }
             ConfigLevel::Global => {
-                if let None = self.global {
+                if let None = self.files.global {
                     bail!(
                         "Global configuration not set. Use 'ffx config env set' command \
                          to setup the environment."
@@ -198,9 +218,9 @@ impl Environment {
             }
             ConfigLevel::Build => match build_dir {
                 Some(b_dir) => {
-                    let build_dirs = match &mut self.build {
+                    let build_dirs = match &mut self.files.build {
                         Some(build_dirs) => build_dirs,
-                        None => self.build.get_or_insert_with(Default::default),
+                        None => self.files.build.get_or_insert_with(Default::default),
                     };
                     if !build_dirs.contains_key(b_dir) {
                         let config = b_dir.with_extension("json");
@@ -208,7 +228,7 @@ impl Environment {
                             info!("Build configuration file for '{b_dir}' does not exist yet, will create it by default at '{config}' if a value is set", b_dir=b_dir.display(), config=config.display());
                         }
                         build_dirs.insert(b_dir.to_owned(), config);
-                        self.save(path)?;
+                        self.save()?;
                     }
                 }
                 None => bail!("Cannot set a build configuration without a build directory."),
@@ -243,24 +263,27 @@ mod test {
 
     #[test]
     fn test_loading_and_saving_environment() {
-        let env: Environment = serde_json::from_str(ENVIRONMENT).unwrap();
+        let env: EnvironmentFiles = serde_json::from_str(ENVIRONMENT).unwrap();
 
         // Write out the initial test environment.
-        let mut tmp_load = NamedTempFile::new().unwrap();
-        serde_json::to_writer(&mut tmp_load, &env).unwrap();
-        tmp_load.flush().unwrap();
+        let mut tmp_path = NamedTempFile::new().unwrap();
+        serde_json::to_writer(&mut tmp_path, &env).unwrap();
+        tmp_path.flush().unwrap();
 
         // Load the environment back in, and make sure it's correct.
-        let env_load = Environment::load(tmp_load.path()).unwrap();
-        assert_eq!(env, env_load);
+        let env_load = Environment::load(tmp_path.path()).unwrap();
+        assert_eq!(env, env_load.files);
+
+        // Remove the file to prevent a spurious success
+        std::fs::remove_file(tmp_path.path())
+            .expect("Temporary env file wasn't available to remove");
 
         // Save the environment, then read the saved file and make sure it's correct.
-        let mut tmp_save = NamedTempFile::new().unwrap();
-        env.save(tmp_save.path()).unwrap();
-        tmp_save.flush().unwrap();
+        env_load.save().unwrap();
+        tmp_path.flush().unwrap();
 
-        let env_file = fs::read(tmp_save.path()).unwrap();
-        let env_save: Environment = serde_json::from_slice(&env_file).unwrap();
+        let env_file = fs::read(tmp_path.path()).unwrap();
+        let env_save: EnvironmentFiles = serde_json::from_slice(&env_file).unwrap();
 
         assert_eq!(env, env_save);
     }
@@ -278,11 +301,12 @@ mod test {
             .expect("Should be able to initialize the environment file");
         let mut env = Environment::load(&env_path).expect("Should be able to load the environment");
 
-        env.check(&env_path, &ConfigLevel::Build, Some(&build_dir_path))
+        env.check(&ConfigLevel::Build, Some(&build_dir_path))
             .expect("Setting build level environment to automatic path should work");
 
         if let Some(build_configs) = Environment::load(&env_path)
             .expect("should be able to load the test-configured env-file.")
+            .files
             .build
         {
             match build_configs.get(&build_dir_path) {
@@ -304,17 +328,18 @@ mod test {
         let env_path = temp_dir.join("env.json");
 
         assert!(!env_path.is_file(), "Environment file shouldn't exist yet");
-        let mut env = Environment::default();
+        let mut env = Environment::new_empty(Some(&env_path));
         let mut config_map = std::collections::HashMap::new();
         config_map.insert(build_dir_path.clone(), build_dir_config.clone());
-        env.build = Some(config_map);
-        env.save(&env_path).expect("Should be able to save the configured environment");
+        env.files.build = Some(config_map);
+        env.save().expect("Should be able to save the configured environment");
 
-        env.check(&env_path, &ConfigLevel::Build, Some(&build_dir_path))
+        env.check(&ConfigLevel::Build, Some(&build_dir_path))
             .expect("Setting build level environment to automatic path should work");
 
         if let Some(build_configs) = Environment::load(&env_path)
             .expect("should be able to load the manually configured env-file.")
+            .files
             .build
         {
             match build_configs.get(&build_dir_path) {
