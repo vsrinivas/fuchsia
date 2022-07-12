@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"cloud.google.com/go/storage"
 
@@ -63,6 +64,11 @@ type cachedPkgRepo struct {
 	repoPath         string
 	repoURL          *url.URL
 	blobURL          *url.URL
+
+	totalBytesServed  int
+	serveTimeSec      float64
+	totalBytesFetched int
+	gcsFetchTimeSec   float64
 }
 
 func newCachedPkgRepo(ctx context.Context, repoPath, repoURL, blobURL string) (*cachedPkgRepo, error) {
@@ -92,6 +98,7 @@ func (c *cachedPkgRepo) logf(msg string, args ...interface{}) {
 }
 
 func (c *cachedPkgRepo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	startTime := time.Now()
 	localPath := path.Join(c.repoPath, r.URL.Path)
 	if _, err := os.Stat(localPath); err != nil {
 		// If the requested path does not exist locally, fetch it from GCS.
@@ -119,9 +126,14 @@ func (c *cachedPkgRepo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Length", strconv.Itoa(len(contents)))
 	w.WriteHeader(http.StatusOK)
 	w.Write(contents)
+
+	// Update the serving metrics.
+	c.totalBytesServed += len(contents)
+	c.serveTimeSec += time.Since(startTime).Seconds()
 }
 
 func (c *cachedPkgRepo) fetchFromGCS(ctx context.Context, resource *url.URL, localPath string) (int, error) {
+	startTime := time.Now()
 	var bucket string
 	if strings.HasPrefix(resource.Path, "/repository") {
 		bucket = c.repoURL.Host
@@ -151,11 +163,15 @@ func (c *cachedPkgRepo) fetchFromGCS(ctx context.Context, resource *url.URL, loc
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
+
+	// Update metrics and download records.
 	dr := downloadRecord{
 		Path: resourcePath,
 		Size: int(size),
 	}
 	c.downloadManifest = append(c.downloadManifest, dr)
+	c.gcsFetchTimeSec += time.Since(startTime).Seconds()
+	c.totalBytesFetched += int(size)
 	return http.StatusOK, nil
 }
 
@@ -188,6 +204,14 @@ func (p *PackageServer) Close() error {
 	if p.downloadManifestPath != "" {
 		p.c.writeDownloadManifest(p.downloadManifestPath)
 	}
+	logger.Debugf(p.loggerCtx, "----------------------------------------------------")
+	logger.Debugf(p.loggerCtx, "Package server data")
+	logger.Debugf(p.loggerCtx, "----------------------------------------------------")
+	logger.Debugf(p.loggerCtx, "Total data served (bytes): %d", p.c.totalBytesServed)
+	logger.Debugf(p.loggerCtx, "Total time spent serving (seconds): %f", p.c.serveTimeSec)
+	logger.Debugf(p.loggerCtx, "Total data fetched from GCS (bytes): %d", p.c.totalBytesFetched)
+	logger.Debugf(p.loggerCtx, "Total time spent downloading from GCS (seconds): %f", p.c.gcsFetchTimeSec)
+	logger.Debugf(p.loggerCtx, "----------------------------------------------------")
 	return p.srv.Close()
 }
 
