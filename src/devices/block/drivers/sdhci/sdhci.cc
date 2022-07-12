@@ -137,6 +137,32 @@ zx_status_t Sdhci::WaitForReset(const SoftwareReset mask) {
   return ZX_ERR_TIMED_OUT;
 }
 
+void Sdhci::EnableInterrupts() {
+  InterruptSignalEnable::Get()
+      .FromValue(0)
+      .EnableErrorInterrupts()
+      .EnableNormalInterrupts()
+      .set_card_interrupt(interrupt_cb_.is_valid() ? 1 : 0)
+      .WriteTo(&regs_mmio_buffer_);
+  InterruptStatusEnable::Get()
+      .FromValue(0)
+      .EnableErrorInterrupts()
+      .EnableNormalInterrupts()
+      .set_card_interrupt(interrupt_cb_.is_valid() ? 1 : 0)
+      .WriteTo(&regs_mmio_buffer_);
+}
+
+void Sdhci::DisableInterrupts() {
+  InterruptSignalEnable::Get()
+      .FromValue(0)
+      .set_card_interrupt(interrupt_cb_.is_valid() ? 1 : 0)
+      .WriteTo(&regs_mmio_buffer_);
+  InterruptStatusEnable::Get()
+      .FromValue(0)
+      .set_card_interrupt(interrupt_cb_.is_valid() ? 1 : 0)
+      .WriteTo(&regs_mmio_buffer_);
+}
+
 zx_status_t Sdhci::WaitForInhibit(const PresentState mask) const {
   const zx::time deadline = zx::clock::get_monotonic() + kInhibitWaitTime;
   do {
@@ -167,7 +193,7 @@ void Sdhci::CompleteRequestLocked(sdmmc_req_t* req, zx_status_t status) {
   zxlogf(DEBUG, "sdhci: complete cmd 0x%08x status %d", req->cmd_idx, status);
 
   // Disable irqs when no pending transfer
-  InterruptSignalEnable::Get().FromValue(0).WriteTo(&regs_mmio_buffer_);
+  DisableInterrupts();
 
   cmd_req_ = nullptr;
   data_req_ = nullptr;
@@ -556,13 +582,7 @@ zx_status_t Sdhci::StartRequestLocked(sdmmc_req_t* req) {
   InterruptStatus::Get().FromValue(irq_mask.reg_value()).WriteTo(&regs_mmio_buffer_);
 
   // Unmask and enable interrupts
-  irq_mask.set_reg_value(0).EnableErrorInterrupts().EnableNormalInterrupts().WriteTo(
-      &regs_mmio_buffer_);
-  InterruptStatusEnable::Get()
-      .FromValue(0)
-      .EnableErrorInterrupts()
-      .EnableNormalInterrupts()
-      .WriteTo(&regs_mmio_buffer_);
+  EnableInterrupts();
 
   // Start command
   transfer_mode.WriteTo(&regs_mmio_buffer_);
@@ -863,11 +883,13 @@ zx_status_t Sdhci::SdmmcPerformTuning(uint32_t cmd_idx) {
 
 zx_status_t Sdhci::SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb) {
   interrupt_cb_ = ddk::InBandInterruptProtocolClient(interrupt_cb);
-  // Enable reporting of the card interrupt now that the client is going to use it.
-  InterruptStatusEnable::Get()
-      .ReadFrom(&regs_mmio_buffer_)
-      .set_card_interrupt(1)
-      .WriteTo(&regs_mmio_buffer_);
+
+  fbl::AutoLock lock(&mtx_);
+
+  // Enable reporting of the card interrupt now that the client is going to use it. With the lock
+  // held we know there is no command in progress, so DisableInterrupts() is a no-op other than
+  // enabling the card interrupt.
+  DisableInterrupts();
   return ZX_OK;
 }
 
@@ -1030,8 +1052,7 @@ zx_status_t Sdhci::Init() {
   clock.ReadFrom(&regs_mmio_buffer_).set_sd_clock_enable(1).WriteTo(&regs_mmio_buffer_);
 
   // Disable all interrupts
-  InterruptStatus::Get().FromValue(0).ClearAll().WriteTo(&regs_mmio_buffer_);
-  InterruptSignalEnable::Get().FromValue(0).MaskAll().WriteTo(&regs_mmio_buffer_);
+  DisableInterrupts();
 
   if (thrd_create_with_name(
           &irq_thread_, [](void* arg) -> int { return reinterpret_cast<Sdhci*>(arg)->IrqThread(); },

@@ -69,7 +69,8 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
   void SdmmcHwReset() TA_EXCL(mtx_);
   zx_status_t SdmmcPerformTuning(uint32_t cmd_idx) TA_EXCL(mtx_);
   zx_status_t SdmmcRequest(sdmmc_req_t* req) TA_EXCL(mtx_);
-  zx_status_t SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb);
+  zx_status_t SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb)
+      TA_EXCL(mtx_);
   zx_status_t SdmmcRegisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo vmo, uint64_t offset,
                                uint64_t size, uint32_t vmo_rights);
   zx_status_t SdmmcUnregisterVmo(uint32_t vmo_id, uint8_t client_id, zx::vmo* out_vmo);
@@ -131,6 +132,9 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
   bool SupportsAdma2() const {
     return (info_.caps & SDMMC_HOST_CAP_DMA) && !(quirks_ & SDHCI_QUIRK_NO_DMA);
   }
+
+  void EnableInterrupts();
+  void DisableInterrupts();
 
   zx_status_t WaitForInhibit(const PresentState mask) const;
   zx_status_t WaitForInternalClockStable() const;

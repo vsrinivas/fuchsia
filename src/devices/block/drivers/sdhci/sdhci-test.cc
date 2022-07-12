@@ -793,6 +793,30 @@ TEST_F(SdhciTest, SdioInBandInterrupt) {
 
   dut_->TriggerCardInterrupt();
   sync_completion_wait(&callback_called, ZX_TIME_INFINITE);
+  sync_completion_reset(&callback_called);
+
+  sdmmc_req_t request = {
+      .cmd_idx = SDMMC_SEND_CSD,
+      .cmd_flags = SDMMC_SEND_CSD_FLAGS,
+      .arg = 0x9c1dc1ed,
+      .blockcount = 0,
+      .blocksize = 0,
+      .use_dma = false,
+      .dma_vmo = ZX_HANDLE_INVALID,
+      .virt_buffer = nullptr,
+      .virt_size = 0,
+      .buf_offset = 0,
+      .pmt = ZX_HANDLE_INVALID,
+      .suppress_error_messages = 0,
+      .response = {},
+      .status = ZX_ERR_BAD_STATE,
+  };
+  EXPECT_OK(dut_->SdmmcRequest(&request));
+
+  // Verify that the card interrupt remains enabled after other interrupts have been disabled, such
+  // as after a commend.
+  dut_->TriggerCardInterrupt();
+  sync_completion_wait(&callback_called, ZX_TIME_INFINITE);
 
   dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 }
