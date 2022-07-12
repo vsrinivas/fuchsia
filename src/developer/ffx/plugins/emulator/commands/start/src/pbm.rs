@@ -18,7 +18,7 @@ use ffx_emulator_start_args::StartCommand;
 use fms;
 use futures::executor::block_on;
 use port_picker::{is_free_tcp_port, pick_unused_port};
-use std::{collections::hash_map::DefaultHasher, hash::Hasher, path::PathBuf, time::Duration};
+use std::{collections::hash_map::DefaultHasher, env, hash::Hasher, path::PathBuf, time::Duration};
 
 /// Create a RuntimeConfiguration based on the command line args.
 pub(crate) async fn make_configs(
@@ -78,7 +78,10 @@ async fn apply_command_line_options(
 
     // Process any values that are Options, have Auto values, or need any transformation.
     if let Some(log) = &cmd.log {
-        emu_config.host.log = PathBuf::from(log);
+        // It'd be nice to canonicalize this path, to clean up relative bits like "..", but the
+        // canonicalize method also checks for existence and symlinks, and we don't generally
+        // expect the log file to exist ahead of time.
+        emu_config.host.log = PathBuf::from(env::current_dir()?).join(log);
     } else {
         let instance = get_instance_dir(&ffx_config, &cmd.name, false).await?;
         emu_config.host.log = instance.join("emulator.log");
@@ -319,7 +322,7 @@ mod tests {
         assert_eq!(emu_config.runtime.upscript, None);
 
         // Apply the test data, which should change everything in the config.
-        let opts = apply_command_line_options(emu_config, &cmd, &ffx_config).await?;
+        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await?;
         assert_eq!(opts.host.acceleration, AccelerationMode::Hyper);
         assert_eq!(opts.host.gpu, GpuType::Host);
         assert_eq!(opts.host.log, PathBuf::from("/path/to/log"));
@@ -337,6 +340,41 @@ mod tests {
         cmd.monitor = true;
         let opts = apply_command_line_options(opts, &cmd, &ffx_config).await?;
         assert_eq!(opts.runtime.console, ConsoleType::Monitor);
+
+        // Test relative log file paths
+        let temp_path = PathBuf::from(tempdir().unwrap().path());
+        let log_path = temp_path.join("longer/path/to/logs");
+        create_dir_all(&log_path)?;
+        // Set the CWD to the temp directory
+        let cwd = env::current_dir().context("Error getting cwd in test")?;
+        env::set_current_dir(&temp_path).context("Error setting cwd in test")?;
+
+        cmd.log = Some(PathBuf::from("tmp.log")); // /<temp>/tmp.log
+        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await;
+        assert!(opts.is_ok(), "{:?}", opts.err());
+        assert_eq!(opts.unwrap().host.log, temp_path.join("tmp.log"));
+
+        cmd.log = Some(PathBuf::from("relative/path/to/emulator.file"));
+        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await;
+        assert!(opts.is_ok(), "{:?}", opts.err());
+        assert_eq!(opts.unwrap().host.log, temp_path.join("relative/path/to/emulator.file"));
+
+        // Set the CWD to the longer directory, so we can test ".."
+        env::set_current_dir(&log_path).context("Error setting cwd in test")?;
+        cmd.log = Some(PathBuf::from("../other/file.log"));
+        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await;
+        assert!(opts.is_ok(), "{:?}", opts.err());
+        // As mentioned in the code, it'd be nice to canonicalize this, but since the file doesn't
+        // already exist that would lead to failures.
+        assert_eq!(opts.unwrap().host.log, temp_path.join("longer/path/to/logs/../other/file.log"));
+
+        // Test absolute path
+        cmd.log = Some(log_path.join("absolute.file"));
+        let opts = apply_command_line_options(emu_config.clone(), &cmd, &ffx_config).await;
+        assert!(opts.is_ok(), "{:?}", opts.err());
+        assert_eq!(opts.unwrap().host.log, log_path.join("absolute.file"));
+
+        env::set_current_dir(cwd).context("Revert to previous CWD")?;
 
         Ok(())
     }
