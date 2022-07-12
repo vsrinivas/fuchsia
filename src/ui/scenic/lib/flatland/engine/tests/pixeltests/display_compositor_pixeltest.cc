@@ -67,6 +67,10 @@ class DisplayCompositorPixelTest : public DisplayCompositorTestBase {
         }));
 
     RunLoopUntil([this] { return display_manager_->default_display() != nullptr; });
+
+    // Enable Vsync so that vsync events will be given to this client.
+    auto display_controller = display_manager_->default_display_controller();
+    (*display_controller.get())->EnableVsync(true);
   }
 
   void TearDown() override {
@@ -99,6 +103,39 @@ class DisplayCompositorPixelTest : public DisplayCompositorTestBase {
 
   static std::shared_ptr<flatland::NullRenderer> NewNullRenderer() {
     return std::make_shared<flatland::NullRenderer>();
+  }
+
+  // To avoid flakes, tests call this function to ensure that config stamps applied by
+  // the display compositor are fully applied to the display controller before engaging
+  // in any operations (e.g. reading back pixels from the display) that first require
+  // these processes to have been completed.
+  void WaitOnVSync() {
+    auto display = display_manager_->default_display();
+    auto display_controller = display_manager_->default_display_controller();
+
+    // Get the latest applied config stamp. This will be used to compare against the config
+    // stamp in the OnSync callback function used by the display. If the two stamps match,
+    // then we know that the vsync has completed and it is safe to do readbacks.
+    fuchsia::hardware::display::ConfigStamp pending_config_stamp;
+    auto status = (*display_controller.get())->GetLatestAppliedConfigStamp(&pending_config_stamp);
+    FX_CHECK(status == ZX_OK)
+        << "DisplayCompositorPixelTest: failed on GetLatestAppliedConfigStamp: " << status;
+
+    // The callback will switch this bool to |true| if the two configs match. It is initialized
+    // to |false| and blocks the main thread below.
+    bool configs_are_equal = false;
+    display->SetVsyncCallback([&pending_config_stamp, &configs_are_equal](
+                                  zx::time timestamp,
+                                  fuchsia::hardware::display::ConfigStamp applied_config_stamp) {
+      if (pending_config_stamp.value == applied_config_stamp.value &&
+          applied_config_stamp.value != fuchsia::hardware::display::INVALID_CONFIG_STAMP_VALUE) {
+        configs_are_equal = true;
+      }
+    });
+
+    // Run loop until the configs match.
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&configs_are_equal] { return configs_are_equal; },
+                                          /*timeout*/ zx::sec(10)));
   }
 
   // Set up the buffer collections and images to be used for capturing the diplay controller's
@@ -228,6 +265,10 @@ class DisplayCompositorPixelTest : public DisplayCompositorTestBase {
   // Captures the pixel values on the display and reads them into |read_values|.
   void CaptureDisplayOutput(const fuchsia::sysmem::BufferCollectionInfo_2& collection_info,
                             uint64_t capture_image_id, std::vector<uint8_t>* read_values) {
+    // Make sure the config from the DisplayCompositor has been completely applied first before
+    // attempting to capture pixels from the display.
+    WaitOnVSync();
+
     // This ID would only be zero if we were running in an environment without capture support.
     EXPECT_NE(capture_image_id, 0U);
 
