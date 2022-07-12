@@ -16,7 +16,11 @@ use crate::storage::Config;
 use analytics::{is_opted_in, set_opt_in_status};
 use anyhow::{anyhow, Context, Result};
 use futures::future::{BoxFuture, FutureExt};
-use std::{convert::From, io::Write, path::PathBuf};
+use std::{
+    convert::From,
+    io::Write,
+    path::{Path, PathBuf},
+};
 
 pub use config_macros::FfxConfigBacked;
 
@@ -137,20 +141,20 @@ where
     query(with).get().await
 }
 
-fn check_config_files(level: &ConfigLevel, build_dir: &Option<String>) -> Result<()> {
+fn check_config_files(level: &ConfigLevel, build_dir: Option<&Path>) -> Result<()> {
     let e = env_file().ok_or(anyhow!("Could not find environment file"))?;
     let mut environment = Environment::load(&e)?;
     environment.check(&e, level, build_dir)
 }
 
-fn save_config(config: &mut Config, build_dir: &Option<String>) -> Result<()> {
+fn save_config(config: &mut Config, build_dir: Option<&Path>) -> Result<()> {
     let e = env_file().ok_or(anyhow!("Could not find environment file"))?;
     let env = Environment::load(&e)?;
-    let build = build_dir.as_ref().and_then(|b| env.build.as_ref().and_then(|c| c.get(b)));
-    config.save(env.global.as_ref(), build, env.user.as_ref())
+    let build = build_dir.and_then(|b| env.build.as_ref().and_then(|c| c.get(b))).cloned();
+    config.save(env.global.as_deref(), build.as_deref(), env.user.as_deref())
 }
 
-pub async fn print_config<W: Write>(mut writer: W, build_dir: &Option<String>) -> Result<()> {
+pub async fn print_config<W: Write>(mut writer: W, build_dir: Option<&Path>) -> Result<()> {
     let config = load_config(build_dir).await?;
     let read_guard = config.read().await;
     writeln!(writer, "{}", *read_guard).context("displaying config")
@@ -158,12 +162,10 @@ pub async fn print_config<W: Write>(mut writer: W, build_dir: &Option<String>) -
 
 /// Finds the currently active default build directory based on the known sdk path,
 /// using that as the build root if it's an InTree sdk.
-pub(crate) fn default_build_dir() -> BoxFuture<'static, Option<String>> {
+pub(crate) fn default_build_dir() -> BoxFuture<'static, Option<PathBuf>> {
     async move {
         match get_sdk_root().await {
-            (Ok(sdk_path), sdk_type) if sdk_type == SDK_TYPE_IN_TREE => {
-                Some(sdk_path.to_str()?.to_owned())
-            }
+            (Ok(sdk_path), sdk_type) if sdk_type == SDK_TYPE_IN_TREE => Some(sdk_path.clone()),
             _ => None,
         }
     }
@@ -276,9 +278,8 @@ mod test {
             ConfigLevel::Global,
             ConfigLevel::Build,
         ];
-        let build_dir = None;
         for level in levels {
-            let result = check_config_files(&level, &build_dir);
+            let result = check_config_files(&level, None);
             assert!(result.is_err());
         }
     }

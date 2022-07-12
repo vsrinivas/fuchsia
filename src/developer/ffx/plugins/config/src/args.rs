@@ -6,6 +6,7 @@ use {
     argh::FromArgs,
     ffx_config::{api::query::SelectMode, ConfigLevel, ConfigQuery},
     ffx_core::ffx_command,
+    std::path::PathBuf,
 };
 
 #[ffx_command]
@@ -49,7 +50,7 @@ pub struct SetCommand {
     #[argh(option, short = 'b')]
     /// an optional build directory to associate the build config provided - used for "build"
     /// configs. If not provided, it may attempt to autodiscover your active build directory.
-    pub build_dir: Option<String>,
+    pub build_dir: Option<PathBuf>,
 }
 
 impl SetCommand {
@@ -102,7 +103,7 @@ pub struct GetCommand {
     #[argh(option, short = 'b')]
     /// an optional build directory to associate the build config provided - used for "build"
     /// configs. If not provided, it may attempt to autodiscover your active build directory.
-    pub build_dir: Option<String>,
+    pub build_dir: Option<PathBuf>,
 }
 
 impl GetCommand {
@@ -138,7 +139,7 @@ pub struct RemoveCommand {
     #[argh(option, short = 'b')]
     /// an optional build directory to associate the build config provided - used for "build"
     /// configs. If not provided, it may attempt to autodiscover your active build directory.
-    pub build_dir: Option<String>,
+    pub build_dir: Option<PathBuf>,
 }
 
 impl RemoveCommand {
@@ -179,7 +180,7 @@ pub struct AddCommand {
     #[argh(option, short = 'b')]
     /// an optional build directory to associate the build config provided - used for "build"
     /// configs. If not provided, it may attempt to autodiscover your active build directory.
-    pub build_dir: Option<String>,
+    pub build_dir: Option<PathBuf>,
 }
 
 impl AddCommand {
@@ -211,8 +212,8 @@ pub enum EnvAccessCommand {
 #[argh(subcommand, name = "set", description = "set environment settings")]
 pub struct EnvSetCommand {
     #[argh(positional)]
-    /// path to the config file for the configruation level provided
-    pub file: String,
+    /// path to the config file for the configuration level provided
+    pub file: PathBuf,
 
     #[argh(option, default = "ConfigLevel::User", short = 'l')]
     /// config level. Possible values are "user", "build", "global". Defaults to "user".
@@ -221,7 +222,7 @@ pub struct EnvSetCommand {
     #[argh(option, short = 'b')]
     /// an optional build directory to associate the build config provided - used for "build"
     /// configs. If not provided, it may attempt to autodiscover your active build directory.
-    pub build_dir: Option<String>,
+    pub build_dir: Option<PathBuf>,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -324,8 +325,8 @@ mod tests {
                     sub: SubCommand::Env(EnvCommand {
                         access: Some(EnvAccessCommand::Set(EnvSetCommand {
                             level: expected_level,
-                            file: "/test/config.json".to_string(),
-                            build_dir: Some("/test/".to_string()),
+                            file: "/test/config.json".into(),
+                            build_dir: Some("/test/".into()),
                         })),
                     })
                 })
@@ -356,7 +357,7 @@ mod tests {
 
     #[test]
     fn test_get() {
-        fn check(args: &[&str], expected_key: &str, expected_build_dir: Option<String>) {
+        fn check(args: &[&str], expected_key: &str, expected_build_dir: Option<PathBuf>) {
             assert_eq!(
                 ConfigCommand::from_args(CMD_NAME, args),
                 Ok(ConfigCommand {
@@ -373,7 +374,7 @@ mod tests {
         let key = "test-key";
         let build_dir = "/test/";
         check(&["get", key], key, None);
-        check(&["get", key, "--build-dir", build_dir], key, Some(build_dir.to_string()));
+        check(&["get", key, "--build-dir", build_dir], key, Some(build_dir.into()));
     }
 
     #[test]
@@ -383,7 +384,7 @@ mod tests {
             expected_level: ConfigLevel,
             expected_key: &str,
             expected_value: &serde_json::Value,
-            expected_build_dir: Option<String>,
+            expected_build_dir: Option<PathBuf>,
         ) {
             assert_eq!(
                 ConfigCommand::from_args(CMD_NAME, args),
@@ -421,7 +422,7 @@ mod tests {
                 level_opt.1,
                 key,
                 &value_json,
-                Some(build_dir.to_string()),
+                Some(build_dir.into()),
             );
         }
     }
@@ -433,7 +434,7 @@ mod tests {
             expected_level: ConfigLevel,
             expected_key: &str,
             expected_value: &serde_json::Value,
-            expected_build_dir: Option<String>,
+            expected_build_dir: Option<PathBuf>,
         ) {
             assert_eq!(
                 ConfigCommand::from_args(CMD_NAME, args),
@@ -471,7 +472,7 @@ mod tests {
                 level_opt.1,
                 key,
                 &value_json,
-                Some(build_dir.to_string()),
+                Some(build_dir.into()),
             );
         }
     }
@@ -482,7 +483,7 @@ mod tests {
             args: &[&str],
             expected_level: ConfigLevel,
             expected_key: &str,
-            expected_build_dir: Option<String>,
+            expected_build_dir: Option<PathBuf>,
         ) {
             assert_eq!(
                 ConfigCommand::from_args(CMD_NAME, args),
@@ -510,7 +511,7 @@ mod tests {
                 &["remove", key, "--level", level_opt.0, "--build-dir", build_dir],
                 level_opt.1,
                 key,
-                Some(build_dir.to_string()),
+                Some(build_dir.into()),
             );
         }
     }

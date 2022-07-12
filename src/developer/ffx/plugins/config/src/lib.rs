@@ -77,7 +77,7 @@ async fn exec_get<W: Write + Sync>(get_cmd: &GetCommand, writer: W) -> Result<()
                 output(writer, value)
             }
         },
-        None => print_config(writer, &get_cmd.query().get_build_dir().await).await,
+        None => print_config(writer, get_cmd.query().get_build_dir().await.as_deref()).await,
     }
 }
 
@@ -111,28 +111,28 @@ fn exec_env_set<W: Write + Sync>(
 
     match &s.level {
         ConfigLevel::User => match env.user.as_mut() {
-            Some(v) => *v = s.file.to_string(),
-            None => env.user = Some(s.file.to_string()),
+            Some(v) => *v = s.file.clone(),
+            None => env.user = Some(s.file.clone()),
         },
         ConfigLevel::Build => match &s.build_dir {
             Some(build_dir) => match env.build.as_mut() {
                 Some(b) => match b.get_mut(&s.file) {
-                    Some(e) => *e = build_dir.to_string(),
+                    Some(e) => *e = build_dir.clone(),
                     None => {
-                        b.insert(build_dir.to_string(), s.file.to_string());
+                        b.insert(build_dir.clone(), s.file.clone());
                     }
                 },
                 None => {
                     let mut build = HashMap::new();
-                    build.insert(build_dir.to_string(), s.file.to_string());
+                    build.insert(build_dir.clone(), s.file.clone());
                     env.build = Some(build);
                 }
             },
             None => ffx_bail!("Missing --build-dir flag"),
         },
         ConfigLevel::Global => match env.global.as_mut() {
-            Some(v) => *v = s.file.to_string(),
-            None => env.global = Some(s.file.to_string()),
+            Some(v) => *v = s.file.clone(),
+            None => env.global = Some(s.file.clone()),
         },
         _ => ffx_bail!("This configuration is not stored in the environment."),
     }
@@ -179,11 +179,8 @@ mod test {
     fn test_exec_env_set_set_values() -> Result<()> {
         let writer = Vec::<u8>::new();
         let mut env = Environment::default();
-        let cmd = EnvSetCommand {
-            file: "test.json".to_string(),
-            level: ConfigLevel::User,
-            build_dir: None,
-        };
+        let cmd =
+            EnvSetCommand { file: "test.json".into(), level: ConfigLevel::User, build_dir: None };
         let tmp_file = NamedTempFile::new().expect("tmp access failed");
         exec_env_set(writer, &mut env, &cmd, tmp_file.path().to_path_buf())?;
         let result = Environment::load(&tmp_file)?;

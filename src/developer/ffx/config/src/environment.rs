@@ -14,16 +14,16 @@ use {
         fmt,
         fs::{File, OpenOptions},
         io::{BufReader, Write},
-        path::Path,
+        path::{Path, PathBuf},
         sync::Mutex,
     },
 };
 
 #[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
 pub struct Environment {
-    pub user: Option<String>,
-    pub build: Option<HashMap<String, String>>,
-    pub global: Option<String>,
+    pub user: Option<PathBuf>,
+    pub build: Option<HashMap<PathBuf, PathBuf>>,
+    pub global: Option<PathBuf>,
 }
 
 // This lock protects from concurrent [Environment]s from modifying the same underlying file.
@@ -71,7 +71,9 @@ impl Environment {
     }
 
     fn display_user(&self) -> String {
-        self.user.as_ref().map_or_else(|| format!(" User: none\n"), |u| format!(" User: {}\n", u))
+        self.user
+            .as_ref()
+            .map_or_else(|| format!(" User: none\n"), |u| format!(" User: {}\n", u.display()))
     }
 
     fn display_build(&self) -> String {
@@ -83,7 +85,7 @@ impl Environment {
                 }
                 res.push_str(&format!("\n"));
                 for (key, val) in m.iter() {
-                    res.push_str(&format!("  {} => {}\n", key, val));
+                    res.push_str(&format!("  {} => {}\n", key.display(), val.display()));
                 }
             }
             None => {
@@ -96,7 +98,7 @@ impl Environment {
     fn display_global(&self) -> String {
         self.global
             .as_ref()
-            .map_or_else(|| format!(" Global: none\n"), |g| format!(" Global: {}\n", g))
+            .map_or_else(|| format!(" Global: none\n"), |g| format!(" Global: {}\n", g.display()))
     }
 
     pub fn display(&self, level: &Option<ConfigLevel>) -> String {
@@ -143,7 +145,7 @@ impl Environment {
         &mut self,
         path: &Path,
         level: &ConfigLevel,
-        build_dir: &Option<String>,
+        build_dir: Option<&Path>,
     ) -> Result<()> {
         match level {
             ConfigLevel::User => {
@@ -155,12 +157,7 @@ impl Environment {
                     file.write_all(b"{}").context("writing default user configuration file")?;
                     file.sync_all()
                         .context("syncing default user configuration file to filesystem")?;
-                    self.user = Some(
-                        default_path
-                            .to_str()
-                            .map(|s| s.to_string())
-                            .context("home path is not proper unicode")?,
-                    );
+                    self.user = Some(default_path);
                     self.save(path)?;
                 }
             }
@@ -179,11 +176,11 @@ impl Environment {
                         None => self.build.get_or_insert_with(Default::default),
                     };
                     if !build_dirs.contains_key(b_dir) {
-                        let config = format!("{b_dir}.json");
-                        if !std::path::PathBuf::from(&config).is_file() {
-                            info!("Build configuration file for '{b_dir}' does not exist yet, will create it by default at '{config}' if a value is set");
+                        let config = b_dir.with_extension("json");
+                        if !config.is_file() {
+                            info!("Build configuration file for '{b_dir}' does not exist yet, will create it by default at '{config}' if a value is set", b_dir=b_dir.display(), config=config.display());
                         }
-                        build_dirs.insert(b_dir.clone(), config);
+                        build_dirs.insert(b_dir.to_owned(), config);
                         self.save(path)?;
                     }
                 }
@@ -254,20 +251,16 @@ mod test {
             .expect("Should be able to initialize the environment file");
         let mut env = Environment::load(&env_path).expect("Should be able to load the environment");
 
-        env.check(
-            &env_path,
-            &ConfigLevel::Build,
-            &Some(build_dir_path.to_string_lossy().to_string()),
-        )
-        .expect("Setting build level environment to automatic path should work");
+        env.check(&env_path, &ConfigLevel::Build, Some(&build_dir_path))
+            .expect("Setting build level environment to automatic path should work");
 
         if let Some(build_configs) = Environment::load(&env_path)
             .expect("should be able to load the test-configured env-file.")
             .build
         {
-            match build_configs.get(build_dir_path.to_string_lossy().as_ref()) {
-                Some(config) if &config == &build_dir_config.to_string_lossy().as_ref() => (),
-                Some(config) => panic!("Build directory config file was wrong. Expected: {build_dir_config}, got: {config})", build_dir_config=build_dir_config.display()),
+            match build_configs.get(&build_dir_path) {
+                Some(config) if config == &build_dir_config => (),
+                Some(config) => panic!("Build directory config file was wrong. Expected: {build_dir_config}, got: {config})", build_dir_config=build_dir_config.display(), config=config.display()),
                 None => panic!("No build directory config was set"),
             }
         } else {
@@ -286,27 +279,20 @@ mod test {
         assert!(!env_path.is_file(), "Environment file shouldn't exist yet");
         let mut env = Environment::default();
         let mut config_map = std::collections::HashMap::new();
-        config_map.insert(
-            build_dir_path.to_string_lossy().to_string(),
-            build_dir_config.to_string_lossy().to_string(),
-        );
+        config_map.insert(build_dir_path.clone(), build_dir_config.clone());
         env.build = Some(config_map);
         env.save(&env_path).expect("Should be able to save the configured environment");
 
-        env.check(
-            &env_path,
-            &ConfigLevel::Build,
-            &Some(build_dir_path.to_string_lossy().to_string()),
-        )
-        .expect("Setting build level environment to automatic path should work");
+        env.check(&env_path, &ConfigLevel::Build, Some(&build_dir_path))
+            .expect("Setting build level environment to automatic path should work");
 
         if let Some(build_configs) = Environment::load(&env_path)
             .expect("should be able to load the manually configured env-file.")
             .build
         {
-            match build_configs.get(build_dir_path.to_string_lossy().as_ref()) {
-                Some(config) if &config == &build_dir_config.to_string_lossy().as_ref() => (),
-                Some(config) => panic!("Build directory config file was wrong. Expected: {build_dir_config}, got: {config})", build_dir_config=build_dir_config.display()),
+            match build_configs.get(&build_dir_path) {
+                Some(config) if config == &build_dir_config => (),
+                Some(config) => panic!("Build directory config file was wrong. Expected: {build_dir_config}, got: {config})", build_dir_config=build_dir_config.display(), config=config.display()),
                 None => panic!("No build directory config was set"),
             }
         } else {

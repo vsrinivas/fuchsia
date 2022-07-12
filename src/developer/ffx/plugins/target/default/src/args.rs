@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_config::ConfigLevel, ffx_core::ffx_command};
+use argh::FromArgs;
+use ffx_config::ConfigLevel;
+use ffx_core::ffx_command;
+use std::path::PathBuf;
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq)]
@@ -62,7 +65,7 @@ pub struct TargetDefaultUnsetCommand {
 
     #[argh(option, short = 'b')]
     /// optional directory to associate the provided build config
-    pub build_dir: Option<String>,
+    pub build_dir: Option<PathBuf>,
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -110,5 +113,5 @@ pub struct TargetDefaultSetCommand {
 
     #[argh(option, short = 'b')]
     /// optional directory to associate the provided build config
-    pub build_dir: Option<String>,
+    pub build_dir: Option<PathBuf>,
 }

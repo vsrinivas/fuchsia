@@ -89,13 +89,12 @@ fn write_json<W: Write>(file: Option<W>, value: Option<&Value>) -> Result<()> {
 
 /// Atomically write to the file by creating a temporary file and passing it
 /// to the closure, and atomically rename it to the destination file.
-/// TODO(102542): This isn't really atomic unless same fs. Also, should be RAII.
-fn with_writer<F>(path: Option<&str>, f: F) -> Result<()>
+fn with_writer<F>(path: Option<&Path>, f: F) -> Result<()>
 where
     F: FnOnce(Option<BufWriter<&mut tempfile::NamedTempFile>>) -> Result<()>,
 {
     if let Some(path) = path {
-        let parent = Path::new(path).parent().unwrap_or_else(|| Path::new("."));
+        let parent = path.parent().unwrap_or_else(|| Path::new("."));
         let mut tmp = tempfile::NamedTempFile::new_in(parent)?;
 
         f(Some(BufWriter::new(&mut tmp)))?;
@@ -120,7 +119,7 @@ impl Config {
 
     pub(crate) fn from_env(
         env: &Environment,
-        build_dir: Option<&String>,
+        build_dir: Option<&Path>,
         runtime: Option<Value>,
     ) -> Result<Self> {
         let build_dir = build_dir.and_then(|b| env.build.as_ref().and_then(|c| c.get(b)));
@@ -141,17 +140,15 @@ impl Config {
 
     pub(crate) fn save(
         &self,
-        global: Option<&String>,
-        build: Option<&String>,
-        user: Option<&String>,
+        global: Option<&Path>,
+        build: Option<&Path>,
+        user: Option<&Path>,
     ) -> Result<()> {
         // First save the config to a temp file in the same location as the file, then atomically
         // rename the file to the final location to avoid partially written files.
 
-        with_writer(global.map(|s| s.as_str()), |global| {
-            with_writer(build.map(|s| s.as_str()), |build| {
-                with_writer(user.map(|s| s.as_str()), |user| self.write(global, build, user))
-            })
+        with_writer(global, |global| {
+            with_writer(build, |build| with_writer(user, |user| self.write(global, build, user)))
         })
     }
 

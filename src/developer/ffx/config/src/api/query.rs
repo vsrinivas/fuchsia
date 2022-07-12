@@ -8,7 +8,11 @@ use crate::{
 };
 use anyhow::{bail, Result};
 use serde_json::Value;
-use std::{convert::From, default::Default};
+use std::{
+    convert::From,
+    default::Default,
+    path::{Path, PathBuf},
+};
 
 #[derive(Debug, PartialEq, Copy, Clone)]
 pub enum SelectMode {
@@ -28,7 +32,7 @@ pub enum BuildOverride<'a> {
     /// Do not search a build directory, even if a 'default' one is known.
     NoBuild,
     /// Use a specific path to look up the build directory, ignoring the default.
-    Path(&'a str),
+    Path(&'a Path),
 }
 
 #[derive(Debug, Default, Clone)]
@@ -131,8 +135,8 @@ impl<'a> ConfigQuery<'a> {
             bail!("level of configuration is required to set a value");
         };
         let build_dir = self.get_build_dir().await;
-        check_config_files(&level, &build_dir)?;
-        let config = load_config(&build_dir).await?;
+        check_config_files(&level, build_dir.as_deref())?;
+        let config = load_config(build_dir.as_deref()).await?;
         let mut write_guard = config.write().await;
         let config_changed = (*write_guard).set(&self, value)?;
 
@@ -141,7 +145,7 @@ impl<'a> ConfigQuery<'a> {
         // config at the same time. We can reduce the rate of races by only writing
         // to the config if the value actually changed.
         if config_changed {
-            save_config(&mut *write_guard, &build_dir)
+            save_config(&mut *write_guard, build_dir.as_deref())
         } else {
             Ok(())
         }
@@ -150,10 +154,10 @@ impl<'a> ConfigQuery<'a> {
     /// Remove the value at the queried location.
     pub async fn remove(&self) -> Result<()> {
         let build_dir = self.get_build_dir().await;
-        let config = load_config(&build_dir).await?;
+        let config = load_config(build_dir.as_deref()).await?;
         let mut write_guard = config.write().await;
         (*write_guard).remove(&self)?;
-        save_config(&mut *write_guard, &build_dir)
+        save_config(&mut *write_guard, build_dir.as_deref())
     }
 
     /// Add this value at the queried location as an array item, converting the location to an array
@@ -165,8 +169,8 @@ impl<'a> ConfigQuery<'a> {
             bail!("level of configuration is required to add a value");
         };
         let build_dir = self.get_build_dir().await;
-        check_config_files(&level, &build_dir)?;
-        let config = load_config(&build_dir).await?;
+        check_config_files(&level, build_dir.as_deref())?;
+        let config = load_config(build_dir.as_deref()).await?;
         let mut write_guard = config.write().await;
         let config_changed = if let Some(mut current) = (*write_guard).get(&self) {
             if current.is_object() {
@@ -189,7 +193,7 @@ impl<'a> ConfigQuery<'a> {
         // config at the same time. We can reduce the rate of races by only writing
         // to the config if the value actually changed.
         if config_changed {
-            save_config(&mut *write_guard, &build_dir)
+            save_config(&mut *write_guard, build_dir.as_deref())
         } else {
             Ok(())
         }
@@ -197,7 +201,7 @@ impl<'a> ConfigQuery<'a> {
     /// Returns the build directory if this query is for a level that might include the build directory,
     /// and a build directory is configured or given (even if it's configured to default).
     /// Searches for the default build dir if necessary, using [`crate::default_build_dir`].
-    pub async fn get_build_dir(&self) -> Option<String> {
+    pub async fn get_build_dir(&self) -> Option<PathBuf> {
         match (self.level, self.build) {
             (_, Some(BuildOverride::NoBuild)) => None,
             (None | Some(ConfigLevel::Build), Some(BuildOverride::Path(path))) => {
@@ -209,14 +213,24 @@ impl<'a> ConfigQuery<'a> {
     }
 }
 
+impl<'a> From<&'a Path> for BuildOverride<'a> {
+    fn from(s: &'a Path) -> Self {
+        BuildOverride::Path(s)
+    }
+}
+impl<'a> From<&'a PathBuf> for BuildOverride<'a> {
+    fn from(s: &'a PathBuf) -> Self {
+        BuildOverride::Path(&s)
+    }
+}
 impl<'a> From<&'a str> for BuildOverride<'a> {
     fn from(s: &'a str) -> Self {
-        BuildOverride::Path(s)
+        BuildOverride::Path(&Path::new(s))
     }
 }
 impl<'a> From<&'a String> for BuildOverride<'a> {
     fn from(s: &'a String) -> Self {
-        BuildOverride::Path(s.as_str())
+        BuildOverride::Path(&Path::new(s))
     }
 }
 

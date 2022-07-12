@@ -385,7 +385,7 @@ fn get_abi_revision(v: VersionInfo) -> String {
 
 async fn get_user_config() -> Result<String> {
     let mut writer = BufWriter::new(Vec::new());
-    print_config(&mut writer, &None).await?;
+    print_config(&mut writer, None).await?;
     let config_str = String::from_utf8(writer.into_inner()?)?;
     Ok(config_str)
 }

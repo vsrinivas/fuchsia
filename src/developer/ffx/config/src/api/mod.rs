@@ -27,7 +27,7 @@ impl ConfigError {
     }
 }
 pub(crate) async fn get_config<'a>(query: &'a ConfigQuery<'a>) -> ConfigResult {
-    let config = load_config(&query.get_build_dir().await).await?;
+    let config = load_config(query.get_build_dir().await.as_deref()).await?;
     let read_guard = config.read().await;
     Ok((*read_guard).get(&query).into())
 }

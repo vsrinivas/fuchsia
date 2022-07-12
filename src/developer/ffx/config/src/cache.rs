@@ -12,7 +12,7 @@ use {
     std::sync::Arc,
     std::{
         collections::HashMap,
-        path::PathBuf,
+        path::{Path, PathBuf},
         sync::{Mutex, Once},
         time::{Duration, Instant},
     },
@@ -27,7 +27,7 @@ struct CacheItem {
     config: Arc<RwLock<Config>>,
 }
 
-type Cache = RwLock<HashMap<Option<String>, CacheItem>>;
+type Cache = RwLock<HashMap<Option<PathBuf>, CacheItem>>;
 
 static INIT: Once = Once::new();
 
@@ -59,7 +59,7 @@ impl TestEnv {
 
         // Point the user config at a temporary file.
         let mut env = Environment::load(env_file.path()).context("opening env file")?;
-        env.user = Some(user_file.path().to_str().context("path to be UTF-8")?.to_string());
+        env.user = Some(user_file.path().to_owned());
         env.save(env_file.path()).context("saving env file")?;
 
         Ok(TestEnv { env_file, _user_file: user_file, _guard })
@@ -158,23 +158,23 @@ fn is_cache_item_expired(item: &CacheItem, now: Instant) -> bool {
 }
 
 async fn read_cache(
-    build_dir: &Option<String>,
+    build_dir: Option<&Path>,
     now: Instant,
     cache: &Cache,
 ) -> Option<Arc<RwLock<Config>>> {
     let read_guard = cache.read().await;
     (*read_guard)
-        .get(build_dir)
+        .get(&build_dir.map(Path::to_owned)) // TODO(mgnb): get rid of this allocation when we can
         .filter(|item| !is_cache_item_expired(item, now))
         .map(|item| item.config.clone())
 }
 
-pub(crate) async fn load_config(build_dir: &Option<String>) -> Result<Arc<RwLock<Config>>> {
+pub(crate) async fn load_config(build_dir: Option<&Path>) -> Result<Arc<RwLock<Config>>> {
     load_config_with_instant(build_dir, Instant::now(), &CACHE).await
 }
 
 async fn load_config_with_instant(
-    build_dir: &Option<String>,
+    build_dir: Option<&Path>,
     now: Instant,
     cache: &Cache,
 ) -> Result<Arc<RwLock<Config>>> {
@@ -186,7 +186,7 @@ async fn load_config_with_instant(
                 let mut write_guard = cache.write().await;
                 // Check again if in the time it took to get the lock this config was written
                 let write = (*write_guard)
-                    .get(build_dir)
+                    .get(&build_dir.map(Path::to_owned)) // TODO(mgnb): get rid of this allocation when we can
                     .map_or(true, |item| is_cache_item_expired(item, now));
                 if write {
                     let runtime = RUNTIME.lock().unwrap().as_ref().map(|v| v.clone());
@@ -206,13 +206,11 @@ async fn load_config_with_instant(
                     };
 
                     (*write_guard).insert(
-                        build_dir.as_ref().cloned(),
+                        build_dir.map(Path::to_owned), // TODO(mgnb): get rid of this allocation when we can,
                         CacheItem {
                             created: now,
                             config: Arc::new(RwLock::new(Config::from_env(
-                                &env,
-                                build_dir.as_ref(),
-                                runtime,
+                                &env, build_dir, runtime,
                             )?)),
                         },
                     );
@@ -231,7 +229,7 @@ async fn load_config_with_instant(
 mod test {
     use {super::*, futures::future::join_all, std::time::Duration};
 
-    async fn load(now: Instant, key: &Option<String>, cache: &Cache) {
+    async fn load(now: Instant, key: Option<&Path>, cache: &Cache) {
         let tests = 25;
         let mut futures = Vec::new();
         for _x in 0..tests {
@@ -248,7 +246,7 @@ mod test {
         now: Instant,
         expected_len_before: usize,
         expected_len_after: usize,
-        key: &Option<String>,
+        key: Option<&Path>,
         cache: &Cache,
     ) {
         {
@@ -262,16 +260,16 @@ mod test {
         }
     }
 
-    fn setup_build_dirs(tests: usize) -> Vec<Option<String>> {
+    fn setup_build_dirs(tests: usize) -> Vec<Option<PathBuf>> {
         let mut build_dirs = Vec::new();
         build_dirs.push(None);
         for x in 0..tests - 1 {
-            build_dirs.push(Some(format!("test {}", x)));
+            build_dirs.push(Some(PathBuf::from(format!("test {}", x))));
         }
         build_dirs
     }
 
-    fn setup(tests: usize) -> (Instant, Vec<Option<String>>, Cache) {
+    fn setup(tests: usize) -> (Instant, Vec<Option<PathBuf>>, Cache) {
         (Instant::now(), setup_build_dirs(tests), RwLock::new(HashMap::new()))
     }
 
@@ -281,7 +279,7 @@ mod test {
         let tests = 10;
         let (now, build_dirs, cache) = setup(tests);
         for x in 0..tests {
-            load_and_test(now, x, x + 1, &build_dirs[x], &cache).await;
+            load_and_test(now, x, x + 1, build_dirs[x].as_deref(), &cache).await;
         }
     }
 
@@ -290,7 +288,7 @@ mod test {
         let _env = test_init().await.unwrap();
         let tests = 25;
         let (now, build_dirs, cache) = setup(tests);
-        let futures = build_dirs.iter().map(|x| load(now, &x, &cache));
+        let futures = build_dirs.iter().map(|x| load(now, x.as_deref(), &cache));
         let result = join_all(futures).await;
         assert_eq!(tests, result.len());
         let read_guard = cache.read().await;
@@ -302,13 +300,13 @@ mod test {
         let _env = test_init().await.unwrap();
         let tests = 1;
         let (now, build_dirs, cache) = setup(tests);
-        load_and_test(now, 0, 1, &build_dirs[0], &cache).await;
+        load_and_test(now, 0, 1, build_dirs[0].as_deref(), &cache).await;
         let timeout = now.checked_add(CONFIG_CACHE_TIMEOUT).expect("timeout should not overflow");
         let after_timeout = timeout
             .checked_add(Duration::from_millis(1))
             .expect("after timeout should not overflow");
-        load_and_test(timeout, 1, 1, &build_dirs[0], &cache).await;
-        load_and_test(after_timeout, 1, 1, &build_dirs[0], &cache).await;
+        load_and_test(timeout, 1, 1, build_dirs[0].as_deref(), &cache).await;
+        load_and_test(after_timeout, 1, 1, build_dirs[0].as_deref(), &cache).await;
     }
 
     #[test]
@@ -320,7 +318,7 @@ mod test {
             created: later,
             config: Arc::new(RwLock::new(Config::from_env(
                 &Environment::default(),
-                build_dirs[0].as_ref(),
+                build_dirs[0].as_deref(),
                 None,
             )?)),
         };
