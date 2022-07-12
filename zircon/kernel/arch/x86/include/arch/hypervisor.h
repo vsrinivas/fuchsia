@@ -73,7 +73,7 @@ class Guest {
   Guest() = default;
 };
 
-// Stores the local APIC state across VM exits.
+// Stores the local APIC state for a virtual CPU.
 struct LocalApicState {
   // Timer for APIC timer.
   Timer timer;
@@ -85,8 +85,10 @@ struct LocalApicState {
   uint32_t lvt_divide_config;
 };
 
-// System time is time since boot time and boot time is some fixed point in the past. This
-// structure keeps track of the state required to update system time in guest.
+// Stores the para-virtualized clock for a virtual CPU.
+//
+// System time is time since boot time, and boot time is some fixed point in the
+// past.
 struct pv_clock_system_time;
 struct PvClockState {
   bool is_stable = false;
@@ -136,8 +138,8 @@ class Vcpu {
   Vcpu(Guest* guest, hypervisor::Id<uint16_t>& vpid, Thread* thread);
 
   void MigrateCpu(Thread* thread, Thread::MigrateStage stage) TA_REQ(ThreadLock::Get());
-  void SaveGuestExtendedRegisters(Thread* thread, AutoVmcs& vmcs);
-  void RestoreGuestExtendedRegisters(Thread* thread, AutoVmcs& vmcs);
+  void LoadExtendedRegisters(Thread* thread, AutoVmcs& vmcs);
+  void SaveExtendedRegisters(Thread* thread, AutoVmcs& vmcs);
 };
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_HYPERVISOR_H_

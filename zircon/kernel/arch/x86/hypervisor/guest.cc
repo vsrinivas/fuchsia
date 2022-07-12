@@ -66,19 +66,21 @@ zx_status_t Guest::Create(ktl::unique_ptr<Guest>* out) {
     return status;
   }
 
+  // These are saved/restored by VMCS controls.
+  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_SYSENTER_CS);
+  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_SYSENTER_ESP);
+  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_SYSENTER_EIP);
   IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_PAT);
   IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_EFER);
   IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_FS_BASE);
   IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_GS_BASE);
-  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_KERNEL_GS_BASE);
+
+  // These are handled by MSR-load / MSR-store areas.
   IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_STAR);
   IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_LSTAR);
   IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_FMASK);
-  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_TSC_ADJUST);
+  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_KERNEL_GS_BASE);
   IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_TSC_AUX);
-  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_SYSENTER_CS);
-  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_SYSENTER_ESP);
-  IgnoreMsr(guest->msr_bitmaps_page_, X86_MSR_IA32_SYSENTER_EIP);
 
   *out = ktl::move(guest);
   return ZX_OK;

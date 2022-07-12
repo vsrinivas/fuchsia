@@ -166,16 +166,15 @@ void edit_msr_list(VmxPage* msr_list_page, size_t index, uint32_t msr, uint64_t 
 }
 
 void swap_extended_registers(uint8_t* save_extended_registers, uint64_t& save_xcr0, bool save,
-                             uint8_t* restore_extended_registers, uint64_t& restore_xcr0,
-                             bool restore) {
+                             uint8_t* load_extended_registers, uint64_t& load_xcr0, bool load) {
   x86_extended_register_save_state(save_extended_registers);
   if (save) {
     save_xcr0 = x86_xgetbv(0);
   }
-  if (restore) {
-    x86_xsetbv(0, restore_xcr0);
+  if (load) {
+    x86_xsetbv(0, load_xcr0);
   }
-  x86_extended_register_restore_state(restore_extended_registers);
+  x86_extended_register_restore_state(load_extended_registers);
 }
 
 template <typename Out, typename In>
@@ -415,6 +414,9 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, uint
   // NOTE: We are pinned to a thread when executing this function, therefore
   // it is acceptable to use per-CPU state.
   x86_percpu* percpu = x86_get_percpu();
+  vmcs.Write(VmcsField32::HOST_IA32_SYSENTER_CS, 0);
+  vmcs.Write(VmcsFieldXX::HOST_IA32_SYSENTER_ESP, 0);
+  vmcs.Write(VmcsFieldXX::HOST_IA32_SYSENTER_EIP, 0);
   vmcs.Write(VmcsField64::HOST_IA32_PAT, read_msr(X86_MSR_IA32_PAT));
   vmcs.Write(VmcsField64::HOST_IA32_EFER, read_msr(X86_MSR_IA32_EFER));
   vmcs.Write(VmcsFieldXX::HOST_CR0, x86_get_cr0());
@@ -432,9 +434,6 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, uint
   vmcs.Write(VmcsFieldXX::HOST_TR_BASE, reinterpret_cast<uint64_t>(&percpu->default_tss));
   vmcs.Write(VmcsFieldXX::HOST_GDTR_BASE, reinterpret_cast<uint64_t>(gdt_get()));
   vmcs.Write(VmcsFieldXX::HOST_IDTR_BASE, reinterpret_cast<uint64_t>(idt_get_readonly()));
-  vmcs.Write(VmcsFieldXX::HOST_IA32_SYSENTER_ESP, 0);
-  vmcs.Write(VmcsFieldXX::HOST_IA32_SYSENTER_EIP, 0);
-  vmcs.Write(VmcsField32::HOST_IA32_SYSENTER_CS, 0);
   vmcs.Write(VmcsFieldXX::HOST_RSP, reinterpret_cast<uint64_t>(vmx_state));
   vmcs.Write(VmcsFieldXX::HOST_RIP, reinterpret_cast<uint64_t>(vmx_guest_exit));
 
@@ -582,28 +581,32 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, uint
 
 // Injects an interrupt into the guest, if there is one pending.
 zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_apic_state) {
-  // Since hardware generated exceptions are delivered to the guest directly, the only exceptions
-  // we see here are those we generate in the VMM, e.g. GP faults in vmexit handlers. Therefore
-  // we simplify interrupt priority to 1) NMIs, 2) interrupts, and 3) generated exceptions. See
-  // Volume 3, Section 6.9, Table 6-2.
+  // Since hardware generated exceptions are delivered to the guest directly,
+  // the only exceptions we see here are those we generate in the VMM, e.g. GP
+  // faults in vmexit handlers. Therefore we simplify interrupt priority to 1)
+  // NMIs, 2) interrupts, and 3) generated exceptions. See Volume 3, Section
+  // 6.9, Table 6-2.
   uint32_t vector = X86_INT_COUNT;
   hypervisor::InterruptType type = local_apic_state->interrupt_tracker.TryPop(X86_INT_NMI);
   if (type != hypervisor::InterruptType::INACTIVE) {
     vector = X86_INT_NMI;
   } else {
-    // Pop scans vectors from highest to lowest, which will correctly pop interrupts before
-    // exceptions. All vectors <= X86_INT_VIRT except the NMI vector are exceptions.
+    // Pop scans vectors from highest to lowest, which will correctly pop
+    // interrupts before exceptions. All vectors <= X86_INT_VIRT except the NMI
+    // vector are exceptions.
     type = local_apic_state->interrupt_tracker.Pop(&vector);
     if (type == hypervisor::InterruptType::INACTIVE) {
       return ZX_OK;
     }
-    // If type isn't inactive, then Pop should have initialized vector to a valid value.
+    // If type isn't inactive, then Pop should have initialized vector to a
+    // valid value.
     DEBUG_ASSERT(vector != X86_INT_COUNT);
   }
 
-  // NMI injection is blocked if an NMI is already being serviced (Volume 3, Section 24.4.2,
-  // Table 24-3), and mov ss blocks *all* interrupts (Volume 2 Section 4.3 MOV-Move instruction).
-  // Note that the IF flag does not affect NMIs (Volume 3, Section 6.8.1).
+  // NMI injection is blocked if an NMI is already being serviced (Volume 3,
+  // Section 24.4.2, Table 24-3), and mov ss blocks *all* interrupts (Volume 2
+  // Section 4.3 MOV-Move instruction). Note that the IF flag does not affect
+  // NMIs (Volume 3, Section 6.8.1).
   auto can_inject_nmi = [vmcs] {
     return (vmcs->Read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE) &
             (kInterruptibilityNmiBlocking | kInterruptibilityMovSsBlocking)) == 0;
@@ -626,13 +629,13 @@ zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* local_api
     return ZX_OK;
   }
 
-  // If the vector is non-maskable or interrupts are enabled, we inject an interrupt.
+  // If the vector is non-maskable or interrupts are enabled, inject interrupt.
   vmcs->IssueInterrupt(vector);
 
-  // Volume 3, Section 6.9: Lower priority exceptions are discarded; lower priority interrupts are
-  // held pending. Discarded exceptions are re-generated when the interrupt handler returns
-  // execution to the point in the program or task where the exceptions and/or interrupts
-  // occurred.
+  // Volume 3, Section 6.9: Lower priority exceptions are discarded; lower
+  // priority interrupts are held pending. Discarded exceptions are re-generated
+  // when the interrupt handler returns execution to the point in the program or
+  // task where the exceptions and/or interrupts occurred.
   local_apic_state->interrupt_tracker.Clear(0, X86_INT_NMI);
   local_apic_state->interrupt_tracker.Clear(X86_INT_NMI + 1, X86_INT_VIRT + 1);
 
@@ -970,20 +973,20 @@ void Vcpu::MigrateCpu(Thread* thread, Thread::MigrateStage stage) {
   }
 }
 
-void Vcpu::RestoreGuestExtendedRegisters(Thread* thread, AutoVmcs& vmcs) {
+void Vcpu::LoadExtendedRegisters(Thread* thread, AutoVmcs& vmcs) {
   bool save_host = x86_xsave_supported();
-  bool restore_guest = vmcs.Read(VmcsFieldXX::GUEST_CR4) & X86_CR4_OSXSAVE;
+  bool load_guest = vmcs.Read(VmcsFieldXX::GUEST_CR4) & X86_CR4_OSXSAVE;
   swap_extended_registers(thread->arch().extended_register_buffer, vmx_state_.host_state.xcr0,
                           save_host, extended_register_state_, vmx_state_.guest_state.xcr0,
-                          restore_guest);
+                          load_guest);
 }
 
-void Vcpu::SaveGuestExtendedRegisters(Thread* thread, AutoVmcs& vmcs) {
+void Vcpu::SaveExtendedRegisters(Thread* thread, AutoVmcs& vmcs) {
   bool save_guest = vmcs.Read(VmcsFieldXX::GUEST_CR4) & X86_CR4_OSXSAVE;
-  bool restore_host = x86_xsave_supported();
+  bool load_host = x86_xsave_supported();
   swap_extended_registers(extended_register_state_, vmx_state_.guest_state.xcr0, save_guest,
                           thread->arch().extended_register_buffer, vmx_state_.host_state.xcr0,
-                          restore_host);
+                          load_host);
 }
 
 zx_status_t vmx_enter(VmxState* vmx_state) {
@@ -1008,11 +1011,11 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
     return ZX_ERR_BAD_STATE;
   }
 
-  bool extended_registers_restored = false;
-  auto defer = fit::defer([this, current_thread, &extended_registers_restored] {
-    if (extended_registers_restored) {
+  bool extended_registers_loaded = false;
+  auto defer = fit::defer([this, current_thread, &extended_registers_loaded] {
+    if (extended_registers_loaded) {
       AutoVmcs vmcs(vmcs_page_.PhysicalAddress());
-      SaveGuestExtendedRegisters(current_thread, vmcs);
+      SaveExtendedRegisters(current_thread, vmcs);
     }
     // Spectre V2: Ensure that code executed in the VM guest cannot influence
     // indirect branch prediction in the host.
@@ -1060,9 +1063,9 @@ zx_status_t Vcpu::Enter(zx_port_packet_t* packet) {
     // Updates guest system time if the guest subscribed to updates.
     pv_clock_update_system_time(&pv_clock_state_, &guest_->AddressSpace());
 
-    if (!extended_registers_restored) {
-      RestoreGuestExtendedRegisters(current_thread, vmcs);
-      extended_registers_restored = true;
+    if (!extended_registers_loaded) {
+      LoadExtendedRegisters(current_thread, vmcs);
+      extended_registers_loaded = true;
     }
 
     if (x86_cpu_should_l1d_flush_on_vmentry()) {
