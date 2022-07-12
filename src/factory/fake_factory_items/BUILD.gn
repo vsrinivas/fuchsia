@@ -69,16 +69,22 @@ resource("testdata") {
   outputs = [ "data/{{source_file_part}}" ]
 }
 
+fuchsia_component("fake_factory_items_comp_V2") {
+  component_name = "fake_factory_items"
+  manifest = "meta/fake_factory_items.cml"
+  deps = [ ":fake_factory_items_comp" ]
+}
+
 fuchsia_test_component("fake_factory_items_test_comp") {
   component_name = "fake_factory_items_test"
-  manifest = "meta/fake_factory_items_test.cmx"
+  manifest = "meta/fake_factory_items_test.cml"
   deps = [ ":fake_factory_items_test" ]
 }
 
 fuchsia_test_package("fake_factory_items_tests") {
   test_components = [ ":fake_factory_items_test_comp" ]
   deps = [
-    ":fake_factory_items_comp",
+    ":fake_factory_items_comp_V2",
     ":testdata",
   ]
 }

@@ -1,0 +1,33 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        // Select the appropriate test runner shard here:
+        // rust, gtest, go, etc.
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "sys/testing/hermetic-tier-2-test.shard.cml",
+
+        // Enable system logging
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/fake_factory_items_test",
+    },
+
+    // Add capability providers
+    children: [
+        {
+            name: "factory_items",
+            url: "#meta/fake_factory_items.cm",
+        },
+    ],
+
+    // Route capabilities to the test
+    use: [
+        {
+            protocol: [ "fuchsia.boot.FactoryItems" ],
+            from: "#factory_items",
+        },
+    ],
+}
