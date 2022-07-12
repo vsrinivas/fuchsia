@@ -234,12 +234,12 @@ bool ScreenCaptureBufferCollectionImporter::ImportBufferImage(
   const std::optional<uint32_t> buffer_count =
       GetBufferCollectionBufferCount(metadata.collection_id);
 
-  if (!buffer_count.value()) {
+  if (buffer_count == std::nullopt) {
     FX_LOGS(WARNING) << __func__ << " failed, buffer_count invalid";
     return false;
   }
 
-  if (metadata.vmo_index >= buffer_count) {
+  if (metadata.vmo_index >= buffer_count.value()) {
     FX_LOGS(WARNING) << __func__ << " failed, vmo_index " << metadata.vmo_index << " is invalid";
     return false;
   }

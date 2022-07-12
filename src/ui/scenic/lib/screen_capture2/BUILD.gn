@@ -12,9 +12,11 @@ source_set("screen_capture2") {
   deps = [
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl:fsl",
+    "//src/lib/fxl",
     "//src/ui/scenic/lib/allocation",
     "//src/ui/scenic/lib/flatland/engine",
     "//src/ui/scenic/lib/screen_capture",
     "//src/ui/scenic/lib/utils",
+    "//zircon/system/ulib/fbl",
   ]
 }
