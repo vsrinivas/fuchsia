@@ -106,15 +106,9 @@ struct radix_sort_vk
   {
     struct
     {
-      VkDeviceSize offset;
-      VkDeviceSize range;
-    } histograms;
-
-    struct
-    {
-      VkDeviceSize offset;
-    } partitions;
-
+      VkDeviceSize histograms;
+      VkDeviceSize partitions;
+    } offset;
   } internal;
 };
 
@@ -169,8 +163,8 @@ radix_sort_vk_get_memory_requirements(radix_sort_vk_t const *               rs,
       // How many scatter blocks?
       //
       uint32_t const scatter_block_kvs = scatter_wg_size * rs->config.scatter.block_rows;
-      uint32_t const scatter_blocks    = (count + scatter_block_kvs - 1) / scatter_block_kvs;
-      uint32_t const count_ru_scatter  = scatter_blocks * scatter_block_kvs;
+      uint32_t const scatter_blocks_ru = (count + scatter_block_kvs - 1) / scatter_block_kvs;
+      uint32_t const count_ru_scatter  = scatter_blocks_ru * scatter_block_kvs;
 
       //
       // How many histogram blocks?
@@ -179,8 +173,8 @@ radix_sort_vk_get_memory_requirements(radix_sort_vk_t const *               rs,
       // than sorted by the scatters because the sort is stable.
       //
       uint32_t const histo_block_kvs = histo_wg_size * rs->config.histogram.block_rows;
-      uint32_t const histo_blocks    = (count_ru_scatter + histo_block_kvs - 1) / histo_block_kvs;
-      uint32_t const count_ru_histo  = histo_blocks * histo_block_kvs;
+      uint32_t const histo_blocks_ru = (count_ru_scatter + histo_block_kvs - 1) / histo_block_kvs;
+      uint32_t const count_ru_histo  = histo_blocks_ru * histo_block_kvs;
 
       mr->keyvals_size      = mr->keyval_size * count_ru_histo;
       mr->keyvals_alignment = mr->keyval_size * histo_sg_size;
@@ -190,14 +184,42 @@ radix_sort_vk_get_memory_requirements(radix_sort_vk_t const *               rs,
       //
       // NOTE: Assumes .histograms are before .partitions.
       //
-      // Last scatter workgroup skips writing to a partition.
+      // Each RS_RADIX_LOG2 (8) bit pass has a zero-initialized histogram. This
+      // is one RS_RADIX_SIZE histogram per keyval byte.
       //
-      // One histogram per (keyval byte + partitions)
+      // The last scatter workgroup skips writing to a partition so it doesn't
+      // need to be allocated.
       //
-      uint32_t const partitions = scatter_blocks - 1;
+      // If the device doesn't support "sequential dispatch" of workgroups, then
+      // we need a zero-initialized dword counter per radix pass in the keyval
+      // to atomically acquire a virtual workgroup id.  On sequentially
+      // dispatched devices, this is simply `gl_WorkGroupID.x`.
+      //
+      // The "internal" memory map looks like this:
+      //
+      //   +---------------------------------+ <-- 0
+      //   | histograms[keyval_size]         |
+      //   +---------------------------------+ <-- keyval_size                           * histo_size
+      //   | partitions[scatter_blocks_ru-1] |
+      //   +---------------------------------+ <-- (keyval_size + scatter_blocks_ru - 1) * histo_size
+      //   | workgroup_ids[keyval_size]      |
+      //   +---------------------------------+ <-- (keyval_size + scatter_blocks_ru - 1) * histo_size + workgroup_ids_size
+      //
+      // The `.workgroup_ids[]` are located after the last partition.
+      //
+      VkDeviceSize const histo_size = RS_RADIX_SIZE * sizeof(uint32_t);
 
-      mr->internal_size      = (mr->keyval_size + partitions) * (RS_RADIX_SIZE * sizeof(uint32_t));
+      mr->internal_size      = (mr->keyval_size + scatter_blocks_ru - 1) * histo_size;
       mr->internal_alignment = internal_sg_size * sizeof(uint32_t);
+
+      //
+      // Support for nonsequential dispatch can be disabled.
+      //
+#ifndef RADIX_SORT_VK_DISABLE_NONSEQUENTIAL_DISPATCH
+      VkDeviceSize const workgroup_ids_size = mr->keyval_size * sizeof(uint32_t);
+
+      mr->internal_size += workgroup_ids_size;
+#endif
 
       //
       // Indirect
@@ -533,20 +555,22 @@ radix_sort_vk_create(VkDevice                       device,
 #endif
 
   //
-  // Calculate "internal" buffer offsets.
+  // Initialize `.internal` buffer offsets.
   //
-  size_t const keyval_bytes = rs->config.keyval_dwords * sizeof(uint32_t);
-
-  // The .range calculation assumes an 8-bit radix.
-  rs->internal.histograms.offset = 0;
-  rs->internal.histograms.range  = keyval_bytes * (RS_RADIX_SIZE * sizeof(uint32_t));
-
+  // See the internal memory map diagram.
   //
   // NOTE(allanmac): The partitions.offset must be aligned differently if
   // RS_RADIX_LOG2 is less than the target's subgroup size log2.  At this time,
   // no GPU that meets this criteria.
   //
-  rs->internal.partitions.offset = rs->internal.histograms.offset + rs->internal.histograms.range;
+  // The `internal.workgroup_ids[keyval_size]` offset is implicitly located
+  // after the last partition and determined at runtime.
+  //
+  VkDeviceSize const keyval_size = rs->config.keyval_dwords * sizeof(uint32_t);
+  VkDeviceSize const histo_size  = keyval_size * RS_RADIX_SIZE * sizeof(uint32_t);
+
+  rs->internal.offset.histograms = 0;
+  rs->internal.offset.partitions = histo_size;
 
   return rs;
 }
@@ -787,8 +811,8 @@ radix_sort_vk_sort_devaddr(radix_sort_vk_t const *                   rs,
   //
   uint32_t const scatter_wg_size   = 1 << rs->config.scatter.workgroup_size_log2;
   uint32_t const scatter_block_kvs = scatter_wg_size * rs->config.scatter.block_rows;
-  uint32_t const scatter_blocks    = (info->count + scatter_block_kvs - 1) / scatter_block_kvs;
-  uint32_t const count_ru_scatter  = scatter_blocks * scatter_block_kvs;
+  uint32_t const scatter_blocks_ru = (info->count + scatter_block_kvs - 1) / scatter_block_kvs;
+  uint32_t const count_ru_scatter  = scatter_blocks_ru * scatter_block_kvs;
 
   //
   // How many histogram blocks?
@@ -798,8 +822,8 @@ radix_sort_vk_sort_devaddr(radix_sort_vk_t const *                   rs,
   //
   uint32_t const histo_wg_size   = 1 << rs->config.histogram.workgroup_size_log2;
   uint32_t const histo_block_kvs = histo_wg_size * rs->config.histogram.block_rows;
-  uint32_t const histo_blocks    = (count_ru_scatter + histo_block_kvs - 1) / histo_block_kvs;
-  uint32_t const count_ru_histo  = histo_blocks * histo_block_kvs;
+  uint32_t const histo_blocks_ru = (count_ru_scatter + histo_block_kvs - 1) / histo_block_kvs;
+  uint32_t const count_ru_histo  = histo_blocks_ru * histo_block_kvs;
 
   //
   // Fill with max values
@@ -814,7 +838,13 @@ radix_sort_vk_sort_devaddr(radix_sort_vk_t const *                   rs,
     }
 
   //
-  // Zero histograms and invalidate partitions.
+  // Zero histograms, partitions and (optionally) workgroup_ids.
+  //
+  // Note that the actively used histograms are "right justified" to the end of
+  // the `.histograms[keyval_size]` region.  That is, if the sort uses only 8
+  // bits of key in the keyval then the starting histogram index points to the
+  // last histogram.  This creates a contiguous region of histograms and
+  // partitions that can be zeroed with one dispatch.
   //
   // Note that the partition invalidation only needs to be performed once
   // because the even/odd scatter dispatches rely on the the previous pass to
@@ -823,15 +853,26 @@ radix_sort_vk_sort_devaddr(radix_sort_vk_t const *                   rs,
   // Note that the last workgroup doesn't read/write a partition so it doesn't
   // need to be initialized.
   //
-  uint32_t const histo_partition_count = passes + scatter_blocks - 1;
+  // The additional `workgroup_ids_size` bytes is to support devices that do not
+  // support nonsequential dispatch.
+  //
+  uint32_t const histo_partition_count = passes + scatter_blocks_ru - 1;
   uint32_t       pass_idx              = (keyval_bytes - passes);
 
-  VkDeviceSize const fill_base = pass_idx * (RS_RADIX_SIZE * sizeof(uint32_t));
+  VkDeviceSize const histo_size  = RS_RADIX_SIZE * sizeof(uint32_t);
+  VkDeviceSize const zero_offset = pass_idx * histo_size;
+  VkDeviceSize       zero_size   = histo_partition_count * histo_size;
+
+#ifndef RADIX_SORT_VK_DISABLE_NONSEQUENTIAL_DISPATCH
+  VkDeviceSize const workgroup_ids_size = keyval_bytes * sizeof(uint32_t);
+
+  zero_size += workgroup_ids_size;
+#endif
 
   info->fill_buffer_pfn(cb,
                         &info->internal,
-                        rs->internal.histograms.offset + fill_base,
-                        histo_partition_count * (RS_RADIX_SIZE * sizeof(uint32_t)),
+                        rs->internal.offset.histograms + zero_offset,
+                        zero_size,
                         0);
 
   ////////////////////////////////////////////////////////////////////////
@@ -849,7 +890,7 @@ radix_sort_vk_sort_devaddr(radix_sort_vk_t const *                   rs,
   vk_barrier_transfer_w_to_compute_r(cb);
 
   // clang-format off
-  VkDeviceAddress const devaddr_histograms   = info->internal.devaddr + rs->internal.histograms.offset;
+  VkDeviceAddress const devaddr_histograms   = info->internal.devaddr + rs->internal.offset.histograms;
   VkDeviceAddress const devaddr_keyvals_even = info->keyvals_even.devaddr;
   // clang-format on
 
@@ -872,7 +913,7 @@ radix_sort_vk_sort_devaddr(radix_sort_vk_t const *                   rs,
 
   vkCmdBindPipeline(cb, VK_PIPELINE_BIND_POINT_COMPUTE, rs->pipelines.named.histogram);
 
-  vkCmdDispatch(cb, histo_blocks, 1, 1);
+  vkCmdDispatch(cb, histo_blocks_ru, 1, 1);
 
   ////////////////////////////////////////////////////////////////////////
   //
@@ -915,7 +956,7 @@ radix_sort_vk_sort_devaddr(radix_sort_vk_t const *                   rs,
   // clang-format off
   uint32_t        const histogram_offset    = pass_idx * (RS_RADIX_SIZE * sizeof(uint32_t));
   VkDeviceAddress const devaddr_keyvals_odd = info->keyvals_odd;
-  VkDeviceAddress const devaddr_partitions  = info->internal.devaddr + rs->internal.partitions.offset;
+  VkDeviceAddress const devaddr_partitions  = info->internal.devaddr + rs->internal.offset.partitions;
   // clang-format on
 
   struct rs_push_scatter push_scatter = {
@@ -946,17 +987,20 @@ radix_sort_vk_sort_devaddr(radix_sort_vk_t const *                   rs,
 
   while (true)
     {
-      vkCmdDispatch(cb, scatter_blocks, 1, 1);
+      vkCmdDispatch(cb, scatter_blocks_ru, 1, 1);
 
       //
       // Continue?
       //
       if (++pass_idx >= keyval_bytes)
-        break;
+        {
+          break;
+        }
 
 #ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
       rs_ext_cmd_write_timestamp(ext_timestamps, cb, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
 #endif
+
       vk_barrier_compute_w_to_compute_r(cb);
 
       // clang-format off
@@ -1104,7 +1148,7 @@ radix_sort_vk_sort_indirect_devaddr(radix_sort_vk_t const *                     
   // clang-format off
   VkDeviceAddress const devaddr_info         = info->indirect.devaddr;
   VkDeviceAddress const devaddr_count        = info->count;
-  VkDeviceAddress const devaddr_histograms   = info->internal + rs->internal.histograms.offset;
+  VkDeviceAddress const devaddr_histograms   = info->internal + rs->internal.offset.histograms;
   VkDeviceAddress const devaddr_keyvals_even = info->keyvals_even;
   // clang-format on
 
@@ -1266,7 +1310,7 @@ radix_sort_vk_sort_indirect_devaddr(radix_sort_vk_t const *                     
     // clang-format off
     uint32_t        const histogram_offset    = pass_idx * (RS_RADIX_SIZE * sizeof(uint32_t));
     VkDeviceAddress const devaddr_keyvals_odd = info->keyvals_odd;
-    VkDeviceAddress const devaddr_partitions  = info->internal + rs->internal.partitions.offset;
+    VkDeviceAddress const devaddr_partitions  = info->internal + rs->internal.offset.partitions;
     // clang-format on
 
     struct rs_push_scatter push_scatter = {
@@ -1304,7 +1348,9 @@ radix_sort_vk_sort_indirect_devaddr(radix_sort_vk_t const *                     
         // Continue?
         //
         if (++pass_idx >= keyval_bytes)
-          break;
+          {
+            break;
+          }
 
 #ifdef RADIX_SORT_VK_ENABLE_EXTENSIONS
         rs_ext_cmd_write_timestamp(ext_timestamps, cb, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
@@ -1326,13 +1372,14 @@ radix_sort_vk_sort_indirect_devaddr(radix_sort_vk_t const *                     
         VkPipelineLayout const pl = is_even
                                       ? rs->pipeline_layouts.named.scatter[pass_dword].even  //
                                       : rs->pipeline_layouts.named.scatter[pass_dword].odd;
-        vkCmdPushConstants(
-          cb,
-          pl,
-          VK_SHADER_STAGE_COMPUTE_BIT,
-          OFFSETOF_MACRO(struct rs_push_scatter, devaddr_histograms),
-          sizeof(push_scatter.devaddr_histograms) + sizeof(push_scatter.pass_offset),
-          &push_scatter.devaddr_histograms);
+        // clang-format off
+        vkCmdPushConstants(cb,
+                           pl,
+                           VK_SHADER_STAGE_COMPUTE_BIT,
+                           OFFSETOF_MACRO(struct rs_push_scatter, devaddr_histograms),
+                           sizeof(push_scatter.devaddr_histograms) + sizeof(push_scatter.pass_offset),
+                           &push_scatter.devaddr_histograms);
+        // clang-format on
 
         //
         // Bind new pipeline

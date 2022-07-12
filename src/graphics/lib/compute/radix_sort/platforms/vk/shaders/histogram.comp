@@ -201,18 +201,18 @@ rs_histogram_zero()
   const uint32_t smem_offset = gl_SubgroupInvocationID;
 
   [[unroll]] for (RS_SUBGROUP_UNIFORM uint32_t ii = 0; ii < RS_RADIX_SIZE; ii += RS_SUBGROUP_SIZE)
-  {
-    smem.histogram[smem_offset + ii] = 0;
-  }
+    {
+      smem.histogram[smem_offset + ii] = 0;
+    }
 
 #elif (RS_WORKGROUP_SIZE < RS_RADIX_SIZE)
 
   const uint32_t smem_offset = gl_LocalInvocationID.x;
 
   [[unroll]] for (uint32_t ii = 0; ii < RS_RADIX_SIZE; ii += RS_WORKGROUP_SIZE)
-  {
-    smem.histogram[smem_offset + ii] = 0;
-  }
+    {
+      smem.histogram[smem_offset + ii] = 0;
+    }
 
   const uint32_t smem_idx = smem_offset + ((RS_RADIX_SIZE / RS_WORKGROUP_SIZE) * RS_WORKGROUP_SIZE);
 
@@ -247,22 +247,22 @@ rs_histogram_global_store(restrict buffer_rs_histograms rs_histograms)
   const uint32_t smem_offset = gl_SubgroupInvocationID;
 
   [[unroll]] for (RS_SUBGROUP_UNIFORM uint32_t ii = 0; ii < RS_RADIX_SIZE; ii += RS_SUBGROUP_SIZE)
-  {
-    const uint32_t count = smem.histogram[smem_offset + ii];
+    {
+      const uint32_t count = smem.histogram[smem_offset + ii];
 
-    atomicAdd(rs_histograms.extent[ii], count);
-  }
+      atomicAdd(rs_histograms.extent[ii], count);
+    }
 
 #elif (RS_WORKGROUP_SIZE < RS_RADIX_SIZE)
 
   const uint32_t smem_offset = gl_LocalInvocationID.x;
 
   [[unroll]] for (uint32_t ii = 0; ii < RS_RADIX_SIZE; ii += RS_WORKGROUP_SIZE)
-  {
-    const uint32_t count = smem.histogram[smem_offset + ii];
+    {
+      const uint32_t count = smem.histogram[smem_offset + ii];
 
-    atomicAdd(rs_histograms.extent[ii], count);
-  }
+      atomicAdd(rs_histograms.extent[ii], count);
+    }
 
   const uint32_t smem_idx = smem_offset + ((RS_RADIX_SIZE / RS_WORKGROUP_SIZE) * RS_WORKGROUP_SIZE);
 
@@ -350,9 +350,9 @@ main()
   // Load keyvals
   //
   [[unroll]] for (RS_SUBGROUP_UNIFORM uint32_t ii = 0; ii < RS_HISTOGRAM_BLOCK_ROWS; ii++)
-  {
-    kv[ii] = rs_kv_in.extent[ii * RS_WORKGROUP_SIZE];
-  }
+    {
+      kv[ii] = rs_kv_in.extent[ii * RS_WORKGROUP_SIZE];
+    }
 
   ////////////////////////////////////////////////////////////////////////////
   //
@@ -375,11 +375,11 @@ main()
   rs_histogram_atomic_after_write();                                                               \
                                                                                                    \
   [[unroll]] for (RS_SUBGROUP_UNIFORM uint32_t jj = 0; jj < RS_HISTOGRAM_BLOCK_ROWS; jj++)         \
-  {                                                                                                \
-    const uint32_t digit = RS_KV_EXTRACT_DIGIT(kv[jj], pass_);                                     \
+    {                                                                                              \
+      const uint32_t digit = RS_KV_EXTRACT_DIGIT(kv[jj], pass_);                                   \
                                                                                                    \
-    atomicAdd(smem.histogram[digit], 1);                                                           \
-  }                                                                                                \
+      atomicAdd(smem.histogram[digit], 1);                                                         \
+    }                                                                                              \
                                                                                                    \
   rs_histogram_read_after_atomic();                                                                \
                                                                                                    \
@@ -395,7 +395,9 @@ main()
   }                                                                                                \
                                                                                                    \
   if (push.passes == (RS_KEYVAL_SIZE - pass_))                                                     \
-    return;
+    {                                                                                              \
+      return;                                                                                      \
+    }
 
 #else  // NO SHARED MEMORY
 
@@ -409,15 +411,17 @@ main()
                                       rs_histogram_base);                                          \
                                                                                                    \
     [[unroll]] for (RS_SUBGROUP_UNIFORM uint32_t jj = 0; jj < RS_HISTOGRAM_BLOCK_ROWS; jj++)       \
-    {                                                                                              \
-      const uint32_t digit = RS_KV_EXTRACT_DIGIT(kv[jj], pass_);                                   \
+      {                                                                                            \
+        const uint32_t digit = RS_KV_EXTRACT_DIGIT(kv[jj], pass_);                                 \
                                                                                                    \
-      atomicAdd(rs_histograms.extent[digit], 1);                                                   \
-    }                                                                                              \
+        atomicAdd(rs_histograms.extent[digit], 1);                                                 \
+      }                                                                                            \
   }                                                                                                \
                                                                                                    \
   if (push.passes == (RS_KEYVAL_SIZE - pass_))                                                     \
-    return;
+    {                                                                                              \
+      return;                                                                                      \
+    }
 
 #endif
 

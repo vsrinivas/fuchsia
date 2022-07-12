@@ -151,7 +151,7 @@
 //     uint64_t devaddr_keyvals_in;    // address of input keyvals
 //     uint64_t devaddr_keyvals_out;   // address of output keyvals
 //     uint64_t devaddr_partitions     // address of partitions
-//     uint64_t devaddr_histogram;     // address of pass histogram
+//     uint64_t devaddr_histograms;    // address of pass histogram
 //     uint32_t pass_offset;           // keyval pass offset
 //   };
 //

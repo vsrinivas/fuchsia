@@ -63,7 +63,7 @@ RS_STRUCT_INDIRECT_INFO();
 // clang-format on
 
 //
-//
+// This workgroup only has one invocation!
 //
 layout(local_size_x = 1) in;
 
@@ -86,7 +86,7 @@ layout(buffer_reference, std430) buffer buffer_rs_indirect_info
 // RU = Round Up
 // RD = Round Down
 //
-#define RS_COUNT_RU_BLOCKS(count_, block_size_) ((count_ + block_size_ - 1) / (block_size_))
+#define RS_COUNT_RU_BLOCKS(count_, block_size_) ((count_ + (block_size_)-1) / (block_size_))
 #define RS_COUNT_RD_BLOCKS(count_, block_size_) ((count_) / (block_size_))
 
 //
@@ -110,57 +110,82 @@ main()
   //
   // Size and set scatter dispatch
   //
-  const uint32_t scatter_ru_blocks = RS_COUNT_RU_BLOCKS(count, RS_SCATTER_BLOCK_KEYVALS);
-  const uint32_t count_ru_scatter  = scatter_ru_blocks * RS_SCATTER_BLOCK_KEYVALS;
+  const uint32_t scatter_blocks_ru = RS_COUNT_RU_BLOCKS(count, RS_SCATTER_BLOCK_KEYVALS);
+  const uint32_t scatter_count_ru  = scatter_blocks_ru * RS_SCATTER_BLOCK_KEYVALS;
 
-  rs_indirect_info.info.dispatch.scatter = u32vec4(scatter_ru_blocks, 1, 1, 0);
+  rs_indirect_info.info.dispatch.scatter = u32vec4(scatter_blocks_ru, 1, 1, 0);
 
   //
   // Size and set histogram dispatch
   //
-  const uint32_t histo_ru_blocks = RS_COUNT_RU_BLOCKS(count_ru_scatter, RS_HISTOGRAM_BLOCK_KEYVALS);
-  const uint32_t count_ru_histo  = histo_ru_blocks * RS_HISTOGRAM_BLOCK_KEYVALS;
+  const uint32_t histo_blocks_ru = RS_COUNT_RU_BLOCKS(scatter_count_ru, RS_HISTOGRAM_BLOCK_KEYVALS);
+  const uint32_t histo_count_ru  = histo_blocks_ru * RS_HISTOGRAM_BLOCK_KEYVALS;
 
-  rs_indirect_info.info.dispatch.histogram = u32vec4(histo_ru_blocks, 1, 1, 0);
+  rs_indirect_info.info.dispatch.histogram = u32vec4(histo_blocks_ru, 1, 1, 0);
 
   //
   // Size and set pad fill and dispatch
   //
   const uint32_t count_dwords          = count * RS_KEYVAL_DWORDS;
-  const uint32_t pad_rd_blocks         = RS_COUNT_RD_BLOCKS(count_dwords, RS_FILL_BLOCK_DWORDS);
-  const uint32_t count_rd_pad          = pad_rd_blocks * RS_FILL_BLOCK_DWORDS;
-  const uint32_t count_ru_histo_dwords = count_ru_histo * RS_KEYVAL_DWORDS;
-  const uint32_t pad_dwords            = count_ru_histo_dwords - count_rd_pad;
-  const uint32_t pad_ru_blocks         = RS_COUNT_RU_BLOCKS(pad_dwords, RS_FILL_BLOCK_DWORDS);
+  const uint32_t pad_blocks_rd         = RS_COUNT_RD_BLOCKS(count_dwords, RS_FILL_BLOCK_DWORDS);
+  const uint32_t pad_count_rd          = pad_blocks_rd * RS_FILL_BLOCK_DWORDS;
+  const uint32_t histo_count_ru_dwords = histo_count_ru * RS_KEYVAL_DWORDS;
+  const uint32_t pad_dwords            = histo_count_ru_dwords - pad_count_rd;
+  const uint32_t pad_blocks_ru         = RS_COUNT_RU_BLOCKS(pad_dwords, RS_FILL_BLOCK_DWORDS);
 
   rs_indirect_info_fill pad;
 
-  pad.block_offset               = pad_rd_blocks;
+  pad.block_offset               = pad_blocks_rd;
   pad.dword_offset_min           = count_dwords;
-  pad.dword_offset_max_minus_min = count_ru_histo_dwords - count_dwords;
+  pad.dword_offset_max_minus_min = histo_count_ru_dwords - count_dwords;
 
   rs_indirect_info.info.pad          = pad;
-  rs_indirect_info.info.dispatch.pad = u32vec4(pad_ru_blocks, 1, 1, 0);
+  rs_indirect_info.info.dispatch.pad = u32vec4(pad_blocks_ru, 1, 1, 0);
 
   //
   // Size and set zero fill and dispatch
   //
   // NOTE(allanmac): We could zero the histogram passes on the host
   // since the number of passes is known ahead of time but since the
-  // 256-dword partitions directly follow the 256-dword histograms, we
+  // 256-dword partitions directly follow the 256-dword histograms we
   // can dispatch just one FILL.
+  //
+  // The "internal" memory map looks like this:
+  //
+  //   +---------------------------------+ <-- 0
+  //   | histograms[keyval_size]         |
+  //   +---------------------------------+ <-- keyval_size                           * histo_dwords
+  //   | partitions[scatter_blocks_ru-1] |
+  //   +---------------------------------+ <-- (keyval_size + scatter_blocks_ru - 1) * histo_dwords
+  //   | workgroup_ids[keyval_size]      |
+  //   +---------------------------------+ <-- (keyval_size + scatter_blocks_ru - 1) * histo_dwords + keyval_size
+  //
+  // NOTE(allanmac): The `.block_offset` and `.dword_offset_min`
+  // parameters are zeroes because the host can offset the buffer
+  // device address since the number of passes is known by the host.
+  // If we ever wanted to supported an indirect number of "key" bits
+  // in the sort, then this would need to change.
+  //
+  // NOTE(allanmac): The `.workgroup_ids[]` are only used if
+  // nonsequential dispatch isn't supported by the device.
   //
   rs_indirect_info_fill zero;
 
+  // clang-format off
   zero.block_offset               = 0;
   zero.dword_offset_min           = 0;
-  zero.dword_offset_max_minus_min = (push.passes + scatter_ru_blocks - 1) * RS_RADIX_SIZE;
+  zero.dword_offset_max_minus_min = (push.passes + scatter_blocks_ru - 1) * RS_RADIX_SIZE;
+  // clang-format on
 
-  const uint32_t zero_ru_blocks =
-    RS_COUNT_RU_BLOCKS(zero.dword_offset_max_minus_min, RS_FILL_BLOCK_DWORDS);
+#ifdef RS_SCATTER_NONSEQUENTIAL_DISPATCH
+  zero.dword_offset_max_minus_min += (RS_KEYVAL_DWORDS * 4);  // one pass per byte
+#endif
+
+  const uint32_t zero_blocks_ru = RS_COUNT_RU_BLOCKS(zero.dword_offset_max_minus_min,  //
+                                                     RS_FILL_BLOCK_DWORDS);
 
   rs_indirect_info.info.zero          = zero;
-  rs_indirect_info.info.dispatch.zero = u32vec4(zero_ru_blocks, 1, 1, 0);
+  rs_indirect_info.info.dispatch.zero = u32vec4(zero_blocks_ru, 1, 1, 0);
 }
 
 //

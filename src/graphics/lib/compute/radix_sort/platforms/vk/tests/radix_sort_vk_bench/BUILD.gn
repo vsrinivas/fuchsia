@@ -12,17 +12,16 @@ _vendors_dir = "${graphics_compute_dir}/radix_sort/platforms/vk/targets/vendors"
 #
 # Mapping between Fuchsia boards and GPU targets:
 #
-#   astro_env      arm      bifrost4
-#   nelson_env     arm      bifrost4
-#   sherlock_env   arm      bifrost8
-#   vim3_env       arm      bifrost8
-#   default/x86    intel    gen8
+#   astro_env      arm           bifrost4
+#   nelson_env     arm           bifrost4
+#   sherlock_env   arm           bifrost8
+#   vim3_env       arm           bifrost8
+#   x64            intel         gen8
+#   default        all vendors   all devices
 #
 # A host or aemu/qemu target must support multiple targets:
 #
-#   host/*emu      amd      gcn3
-#   host/*emu      intel    gen8
-#   host/*emu      nvidia   sm35
+#   host/*emu      all vendors   all devices
 #
 #
 # Fuchsia / ARM / Bifrost4
@@ -65,6 +64,8 @@ group("radix_sort_vk_target_fuchsia_default") {
     "${_vendors_dir}/arm/bifrost4/u64:radix_sort_vk_arm_bifrost4_u64_resource",
     "${_vendors_dir}/arm/bifrost8/u32:radix_sort_vk_arm_bifrost8_u32_resource",
     "${_vendors_dir}/arm/bifrost8/u64:radix_sort_vk_arm_bifrost8_u64_resource",
+    "${_vendors_dir}/google/swiftshader/u32:radix_sort_vk_google_swiftshader_u32_resource",
+    "${_vendors_dir}/google/swiftshader/u64:radix_sort_vk_google_swiftshader_u64_resource",
     "${_vendors_dir}/intel/gen8/u32:radix_sort_vk_intel_gen8_u32_resource",
     "${_vendors_dir}/intel/gen8/u64:radix_sort_vk_intel_gen8_u64_resource",
     "${_vendors_dir}/nvidia/sm35/u32:radix_sort_vk_nvidia_sm35_u32_resource",
@@ -83,6 +84,8 @@ group("radix_sort_vk_target_host_default") {
     "${_vendors_dir}/arm/bifrost4/u64:radix_sort_vk_arm_bifrost4_u64_linkable",
     "${_vendors_dir}/arm/bifrost8/u32:radix_sort_vk_arm_bifrost8_u32_linkable",
     "${_vendors_dir}/arm/bifrost8/u64:radix_sort_vk_arm_bifrost8_u64_linkable",
+    "${_vendors_dir}/google/swiftshader/u32:radix_sort_vk_google_swiftshader_u32_linkable",
+    "${_vendors_dir}/google/swiftshader/u64:radix_sort_vk_google_swiftshader_u64_linkable",
     "${_vendors_dir}/intel/gen8/u32:radix_sort_vk_intel_gen8_u32_linkable",
     "${_vendors_dir}/intel/gen8/u64:radix_sort_vk_intel_gen8_u64_linkable",
     "${_vendors_dir}/nvidia/sm35/u32:radix_sort_vk_nvidia_sm35_u32_linkable",

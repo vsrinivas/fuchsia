@@ -211,22 +211,26 @@ struct rs_name_target
 #include "radix_sort_vk_arm_bifrost4_u64_linkable.h"
 #include "radix_sort_vk_arm_bifrost8_u32_linkable.h"
 #include "radix_sort_vk_arm_bifrost8_u64_linkable.h"
+#include "radix_sort_vk_google_swiftshader_u32_linkable.h"
+#include "radix_sort_vk_google_swiftshader_u64_linkable.h"
 #include "radix_sort_vk_intel_gen8_u32_linkable.h"
 #include "radix_sort_vk_intel_gen8_u64_linkable.h"
 #include "radix_sort_vk_nvidia_sm35_u32_linkable.h"
 #include "radix_sort_vk_nvidia_sm35_u64_linkable.h"
 
 static struct rs_name_target const rs_named_targets[] = {
-  { .name = "amd_gcn3_u32",     .header = radix_sort_vk_amd_gcn3_u32_linkable     },
-  { .name = "amd_gcn3_u64",     .header = radix_sort_vk_amd_gcn3_u64_linkable     },
-  { .name = "arm_bifrost4_u32", .header = radix_sort_vk_arm_bifrost4_u32_linkable },
-  { .name = "arm_bifrost4_u64", .header = radix_sort_vk_arm_bifrost4_u64_linkable },
-  { .name = "arm_bifrost8_u32", .header = radix_sort_vk_arm_bifrost8_u32_linkable },
-  { .name = "arm_bifrost8_u64", .header = radix_sort_vk_arm_bifrost8_u64_linkable },
-  { .name = "intel_gen8_u32",   .header = radix_sort_vk_intel_gen8_u32_linkable   },
-  { .name = "intel_gen8_u64",   .header = radix_sort_vk_intel_gen8_u64_linkable   },
-  { .name = "nvidia_sm35_u32",  .header = radix_sort_vk_nvidia_sm35_u32_linkable  },
-  { .name = "nvidia_sm35_u64",  .header = radix_sort_vk_nvidia_sm35_u64_linkable  },
+  { .name = "amd_gcn3_u32",           .header = radix_sort_vk_amd_gcn3_u32_linkable           },
+  { .name = "amd_gcn3_u64",           .header = radix_sort_vk_amd_gcn3_u64_linkable           },
+  { .name = "arm_bifrost4_u32",       .header = radix_sort_vk_arm_bifrost4_u32_linkable       },
+  { .name = "arm_bifrost4_u64",       .header = radix_sort_vk_arm_bifrost4_u64_linkable       },
+  { .name = "arm_bifrost8_u32",       .header = radix_sort_vk_arm_bifrost8_u32_linkable       },
+  { .name = "arm_bifrost8_u64",       .header = radix_sort_vk_arm_bifrost8_u64_linkable       },
+  { .name = "google_swiftshader_u32", .header = radix_sort_vk_google_swiftshader_u32_linkable },
+  { .name = "google_swiftshader_u64", .header = radix_sort_vk_google_swiftshader_u64_linkable },
+  { .name = "intel_gen8_u32",         .header = radix_sort_vk_intel_gen8_u32_linkable         },
+  { .name = "intel_gen8_u64",         .header = radix_sort_vk_intel_gen8_u64_linkable         },
+  { .name = "nvidia_sm35_u32",        .header = radix_sort_vk_nvidia_sm35_u32_linkable        },
+  { .name = "nvidia_sm35_u64",        .header = radix_sort_vk_nvidia_sm35_u64_linkable        },
 };
 // clang-format on
 
