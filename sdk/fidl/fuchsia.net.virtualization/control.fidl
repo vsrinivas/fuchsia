@@ -5,6 +5,7 @@
 library fuchsia.net.virtualization;
 
 using fuchsia.hardware.network;
+using fuchsia.net;
 
 /// Provides control over virtualization network configuration.
 @discoverable
@@ -16,7 +17,9 @@ protocol Control {
     /// any time.
     ///
     /// + request `config` network configuration.
-    /// + request `network` provides control over the created network.
+    /// + request `network` provides control over the created network. The
+    ///     protocol will be terminated after emitting a terminal event if the
+    ///     network cannot be added.
     CreateNetwork(resource struct {
         config flexible union {
             // TODO(https://fxbug.dev/86068): Currently bridged networks are not
@@ -30,6 +33,52 @@ protocol Control {
             /// iff the interface attached to the bridge with Internet
             /// connectivity is removed.
             1: bridged table {};
+            /// Create a network that interacts with the host OS at the network
+            /// layer.
+            2: networked table {
+                /// IPv4 configuration.
+                ///
+                /// Invalid if `connectivity` is `Ipv4Connectivity.routed`,
+                /// but `addr_config` is not present.
+                ///
+                /// If not present, interpreted as the empty table.
+                1: ipv4 @generated_name("Ipv4Config") table {
+                    /// IPv4 address configuration options.
+                    ///
+                    /// If not present, no addresses will be assigned.
+                    1: addr_config @generated_name("Ipv4AddressConfig") flexible union {
+                        /// Static address configuration.
+                        ///
+                        /// The address and a subnet route will be configured.
+                        1: static fuchsia.net.Ipv4AddressWithPrefix;
+                        // TODO(https://fxbug.dev/103567): Support running a DHCPv4 server.
+                    };
+                    /// IPv4 connectivity type.
+                    ///
+                    /// If present, IPv4 unicast packet forwarding will be enabled for this
+                    /// network; otherwise, guests on the network will only be able to
+                    /// communicate with each other and the host OS.
+                    2: connectivity @generated_name("Ipv4Connectivity") flexible union {
+                        /// IPv4 routing configuration.
+                        ///
+                        /// If present, a route to the subnet configured through
+                        /// `Ipv4Config.addr_config` will be added.
+                        1: routed @generated_name("Ipv4RoutedConfig") table {
+                            /// NAT configuration.
+                            ///
+                            /// If present, perform IPv4 masquerading for packets originating
+                            /// from the subnet configured through [`Ipv4Config.addr_config`]
+                            /// going out all upstream-providing interfaces.
+                            1: nat @generated_name("IPv4NatConfig") table {};
+                        };
+                        // TODO(https://fxbug.dev/103561): Support Proxy ARP.
+                    };
+                    // TODO(https://fxbug.dev/103478): Support multicast routing.
+                };
+                // TODO(https://fxbug.dev/103562): Support IPv6 connectivity with Proxy NDP.
+                // TODO(https://fxbug.dev/103569): Support running a DHCPv6 server.
+                // TODO(https://fxbug.dev/104062): Support running a router advertising service.
+            };
         };
         network server_end:Network;
     });
@@ -48,17 +97,34 @@ protocol Network {
     /// Adds a port to the network.
     ///
     /// + request `port` port to be added.
-    /// + request `interface` provides control over the interface. The protocol
-    ///     will be terminated with the epitaph `ZX_ERR_WRONG_TYPE` if the
-    ///     port could not be added to the network due to incompatibility,
-    ///     e.g. if the network is bridged and the port does not support
-    ///     the same L2 protocol as other ports on the bridge.
+    /// + request `interface` provides control over the interface.
     AddPort(resource struct {
         port client_end:fuchsia.hardware.network.Port;
         interface server_end:Interface;
     });
+
+    /// Terminal event. Immediately precedes the closure of the server end of
+    /// this protocol.
+    ///
+    /// - response `reason` the removal reason.
+    -> OnRemoved(table {
+        1: reason @generated_name("NetworkRemovalReason") flexible enum {
+            /// Failed to create the network due to invalid configuration.
+            INVALID_CONFIG = 1;
+
+            // TODO(https://fxbug.dev/103705): Remove this variant once
+            // multiple ports in networked mode is supported.
+            /// Failed to create the network because the network supports only
+            /// a single port.
+            ONLY_ONE_PORT_SUPPORTED = 2;
+        };
+    });
 };
 
+// TODO(https://fxbug.dev/87111): Add a terminal event and emit it to signal
+// inability to add the interface due to incompatibility, e.g. if the network
+// is bridged and the port added does not support the same L2 protocol as other
+// ports on the bridge.
 /// Provides control over an interface.
 ///
 /// This protocol encodes the lifetime of the underlying interface in both

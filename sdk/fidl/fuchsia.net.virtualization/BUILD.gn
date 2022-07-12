@@ -9,5 +9,8 @@ fidl("fuchsia.net.virtualization") {
 
   sources = [ "control.fidl" ]
 
-  public_deps = [ "//sdk/fidl/fuchsia.hardware.network" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.hardware.network",
+    "//sdk/fidl/fuchsia.net",
+  ]
 }
