@@ -464,7 +464,10 @@ func (c *Client) RegisterPackageRepository(ctx context.Context, repo *packages.S
 			return err
 		}
 		logger.Infof(ctx, "establishing rewriting rule for: %s", repo.URL)
-		ruleTemplate := `'{"version":"1","content":[{"host_match":"fuchsia.com","host_replacement":"%v","path_prefix_match":"/","path_prefix_replacement":"/"}]}'`
+		ruleTemplate := `'{"version":"1","content":[
+			{"host_match":"fuchsia.com","host_replacement":"%[1]v","path_prefix_match":"/","path_prefix_replacement":"/"},
+			{"host_match":"chromium.org","host_replacement":"%[1]v","path_prefix_match":"/","path_prefix_replacement":"/"}
+		]}'`
 		cmd = []string{"pkgctl", "rule", "replace", "json", fmt.Sprintf(ruleTemplate, name)}
 		return c.Run(ctx, cmd, os.Stdout, os.Stderr)
 	} else {
