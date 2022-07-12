@@ -25,11 +25,22 @@ pub async fn stop(cmd: StopCommand, proxy: TargetCollectionProxy) -> Result<()> 
     }
     for mut some_name in names {
         let engine = get_engine_by_name(&ffx_config, &mut some_name).await;
+        if engine.is_err() && some_name.is_none() {
+            // This happens when the program doesn't know which instance to use. The
+            // get_engine_by_name returns a good error message, and the loop should terminate
+            // early.
+            eprintln!("{:?}", engine.err().unwrap());
+            break;
+        }
         let name = some_name.unwrap_or("<unspecified>".to_string());
         if engine.is_err() {
             eprintln!(
-                "Couldn't deserialize engine from disk. Continuing stop, \
-                but you may need to terminate the emulator process manually."
+                "{:?}",
+                engine.err().unwrap().context(format!(
+                    "Couldn't deserialize engine '{}' from disk. Continuing stop, \
+                    but you may need to terminate the emulator process manually.",
+                    name
+                ))
             );
         } else {
             // Unwrap is safe because get_engine_by_name sets the some_name parameter if needed.
