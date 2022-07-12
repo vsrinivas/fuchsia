@@ -20,11 +20,11 @@
     children: [
         {
             name: "dart_aot_runner",
-            url: "fuchsia-pkg://fuchsia.com/dart_aot_runner#meta/dart_aot_runner.cm",
+            url: "fuchsia-pkg://fuchsia.com/dart-aot-wrapper-runner#meta/dart-aot-wrapper-runner.cm",
         },
         {
             name: "dart_jit_runner",
-            url: "fuchsia-pkg://fuchsia.com/dart_jit_runner#meta/dart_jit_runner.cm",
+            url: "fuchsia-pkg://fuchsia.com/dart-jit-wrapper-runner#meta/dart-jit-wrapper-runner.cm",
         },
         {
             name: "elf_test_runner",
@@ -223,7 +223,7 @@
         {
             protocol: [ "fuchsia.sys2.EventSource" ],
             from: "parent",
-            to: "#debug_data",
+            to: [ "#debug_data" ],
         },
 
         // These capabilities are offered for use by certain non-hermetic tests.

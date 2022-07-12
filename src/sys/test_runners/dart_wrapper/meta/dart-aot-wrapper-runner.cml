@@ -1,0 +1,73 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "sys/component/realm_builder.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/dart_wrapper_runner",
+        args: [ "fuchsia-pkg://fuchsia.com/dart_aot_runner#meta/dart_aot_runner.cm" ],
+        use_next_vdso: "true",
+    },
+    collections: [
+        {
+            name: "runners",
+            environment: "#runner-env",
+            durability: "transient",
+        },
+    ],
+    capabilities: [
+        {
+            runner: "dart_aot_runner",
+            path: "/svc/fuchsia.component.runner.ComponentRunner",
+        },
+    ],
+    use: [
+        {
+            directory: "hub",
+            from: "framework",
+            rights: [ "rw*" ],
+            path: "/hub",
+        },
+        {
+            protocol: "fuchsia.sys2.LifecycleController",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#runners",
+            rights: [ "r*" ],
+        },
+        {
+            protocol: [
+                "fuchsia.device.NameProvider", // For fdio uname()
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.intl.PropertyProvider", // For dartVM timezone support
+                "fuchsia.logger.LogSink", // For syslog
+                "fuchsia.net.name.Lookup", // For fdio sockets
+                "fuchsia.posix.socket.Provider", // For fdio sockets
+                "fuchsia.tracing.provider.Registry", // For trace-provider
+            ],
+            from: "parent",
+            to: "#runners",
+        },
+    ],
+    expose: [
+        {
+            runner: "dart_aot_runner",
+            from: "self",
+        },
+    ],
+    environments: [
+        {
+            name: "runner-env",
+            extends: "realm",
+        },
+    ],
+}

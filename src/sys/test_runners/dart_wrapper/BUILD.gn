@@ -1,0 +1,68 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  testonly = true
+  name = "dart_wrapper_runner"
+  with_unit_tests = true
+  edition = "2021"
+
+  deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
+    "//sdk/fidl/fuchsia.component.runner:fuchsia.component.runner-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/fuchsia-fs",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/runner",
+    "//src/sys/test_runners:lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("dart_aot_wrapper_runner") {
+  testonly = true
+  manifest = "meta/dart-aot-wrapper-runner.cml"
+  component_name = "dart-aot-wrapper-runner"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("dart-aot-wrapper-runner") {
+  testonly = true
+  deps = [ ":dart_aot_wrapper_runner" ]
+}
+
+fuchsia_component("dart_jit_wrapper_runner") {
+  testonly = true
+  manifest = "meta/dart-jit-wrapper-runner.cml"
+  component_name = "dart-jit-wrapper-runner"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("dart-jit-wrapper-runner") {
+  testonly = true
+  deps = [ ":dart_jit_wrapper_runner" ]
+}
+
+group("dart_wrapper") {
+  testonly = true
+  deps = [
+    ":dart-aot-wrapper-runner",
+    ":dart-jit-wrapper-runner",
+  ]
+}

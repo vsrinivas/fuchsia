@@ -144,6 +144,7 @@ expect_includes("tmp_storage") {
 group("test_runners") {
   testonly = true
   deps = [
+    "dart_wrapper",
     "elf",
     "gotests",
     "gtest",
