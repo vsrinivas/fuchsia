@@ -150,8 +150,8 @@ fn check_config_files(level: &ConfigLevel, build_dir: Option<&Path>) -> Result<(
 fn save_config(config: &mut Config, build_dir: Option<&Path>) -> Result<()> {
     let e = env_file().ok_or(anyhow!("Could not find environment file"))?;
     let env = Environment::load(&e)?;
-    let build = build_dir.and_then(|b| env.build.as_ref().and_then(|c| c.get(b))).cloned();
-    config.save(env.global.as_deref(), build.as_deref(), env.user.as_deref())
+    let build = env.get_build(build_dir);
+    config.save(env.get_global(), build, env.get_user())
 }
 
 pub async fn print_config<W: Write>(mut writer: W, build_dir: Option<&Path>) -> Result<()> {

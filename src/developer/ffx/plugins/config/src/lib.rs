@@ -15,7 +15,6 @@ use {
     },
     ffx_core::ffx_plugin,
     serde_json::Value,
-    std::collections::HashMap,
     std::fs::{File, OpenOptions},
     std::io::Write,
     std::path::PathBuf,
@@ -110,30 +109,11 @@ fn exec_env_set<W: Write + Sync>(
     let _ = OpenOptions::new().read(true).write(true).create(true).open(&s.file)?;
 
     match &s.level {
-        ConfigLevel::User => match env.user.as_mut() {
-            Some(v) => *v = s.file.clone(),
-            None => env.user = Some(s.file.clone()),
-        },
-        ConfigLevel::Build => match &s.build_dir {
-            Some(build_dir) => match env.build.as_mut() {
-                Some(b) => match b.get_mut(&s.file) {
-                    Some(e) => *e = build_dir.clone(),
-                    None => {
-                        b.insert(build_dir.clone(), s.file.clone());
-                    }
-                },
-                None => {
-                    let mut build = HashMap::new();
-                    build.insert(build_dir.clone(), s.file.clone());
-                    env.build = Some(build);
-                }
-            },
-            None => ffx_bail!("Missing --build-dir flag"),
-        },
-        ConfigLevel::Global => match env.global.as_mut() {
-            Some(v) => *v = s.file.clone(),
-            None => env.global = Some(s.file.clone()),
-        },
+        ConfigLevel::User => env.set_user(Some(&s.file)),
+        ConfigLevel::Build => {
+            env.set_build(s.build_dir.as_deref().context("Missing --build-dir flag")?, &s.file)
+        }
+        ConfigLevel::Global => env.set_global(Some(&s.file)),
         _ => ffx_bail!("This configuration is not stored in the environment."),
     }
     env.save(&env_file)
@@ -184,7 +164,7 @@ mod test {
         let tmp_file = NamedTempFile::new().expect("tmp access failed");
         exec_env_set(writer, &mut env, &cmd, tmp_file.path().to_path_buf())?;
         let result = Environment::load(&tmp_file)?;
-        assert_eq!(cmd.file, result.user.unwrap());
+        assert_eq!(cmd.file, result.get_user().unwrap());
         Ok(())
     }
 }

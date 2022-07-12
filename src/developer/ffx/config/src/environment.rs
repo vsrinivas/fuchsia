@@ -21,9 +21,9 @@ use {
 
 #[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]
 pub struct Environment {
-    pub user: Option<PathBuf>,
-    pub build: Option<HashMap<PathBuf, PathBuf>>,
-    pub global: Option<PathBuf>,
+    user: Option<PathBuf>,
+    build: Option<HashMap<PathBuf, PathBuf>>,
+    global: Option<PathBuf>,
 }
 
 // This lock protects from concurrent [Environment]s from modifying the same underlying file.
@@ -68,6 +68,33 @@ impl Environment {
         let _ = tmp.persist(path)?;
 
         Ok(())
+    }
+
+    pub fn get_user(&self) -> Option<&Path> {
+        self.user.as_deref()
+    }
+    pub fn set_user(&mut self, to: Option<&Path>) {
+        self.user = to.map(Path::to_owned);
+    }
+
+    pub fn get_global(&self) -> Option<&Path> {
+        self.global.as_deref()
+    }
+    pub fn set_global(&mut self, to: Option<&Path>) {
+        self.global = to.map(Path::to_owned);
+    }
+
+    pub fn get_build(&self, for_dir: Option<&Path>) -> Option<&Path> {
+        for_dir
+            .and_then(|dir| self.build.as_ref().and_then(|dirs| dirs.get(dir)))
+            .map(PathBuf::as_ref)
+    }
+    pub fn set_build(&mut self, for_dir: &Path, to: &Path) {
+        let build_dirs = match &mut self.build {
+            Some(build_dirs) => build_dirs,
+            None => self.build.get_or_insert_with(Default::default),
+        };
+        build_dirs.insert(for_dir.to_owned(), to.to_owned());
     }
 
     fn display_user(&self) -> String {

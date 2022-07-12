@@ -122,11 +122,11 @@ impl Config {
         build_dir: Option<&Path>,
         runtime: Option<Value>,
     ) -> Result<Self> {
-        let build_dir = build_dir.and_then(|b| env.build.as_ref().and_then(|c| c.get(b)));
+        let build_conf = env.get_build(build_dir);
 
-        let user = reader(env.user.as_ref())?.and_then(read_json);
-        let build = reader(build_dir.as_ref())?.and_then(read_json);
-        let global = reader(env.global.as_ref())?.and_then(read_json);
+        let user = reader(env.get_user())?.and_then(read_json);
+        let build = reader(build_conf)?.and_then(read_json);
+        let global = reader(env.get_global())?.and_then(read_json);
 
         Ok(Self::new(global, build, user, runtime))
     }

@@ -59,7 +59,7 @@ impl TestEnv {
 
         // Point the user config at a temporary file.
         let mut env = Environment::load(env_file.path()).context("opening env file")?;
-        env.user = Some(user_file.path().to_owned());
+        env.set_user(Some(user_file.path()));
         env.save(env_file.path()).context("saving env file")?;
 
         Ok(TestEnv { env_file, _user_file: user_file, _guard })
