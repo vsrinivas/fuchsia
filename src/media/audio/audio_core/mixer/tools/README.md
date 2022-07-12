@@ -14,7 +14,7 @@ one of the perfcompare bots. This will run the audio performance
 tests and output a comparison of performance before and after the CL, accessed
 by clicking on the completed tryjob.
 
-Performance results can be observed over time in [Catapult][catapult].
+Performance results can be observed over time in [Chromeperf][chromeperf].
 
 ## Running Locally
 
@@ -65,4 +65,4 @@ In the profiler output, results are preceded by a legend describing the result f
 <!-- Reference links -->
 
 [perfcompare]: /src/testing/perfcompare/README.md
-[catapult]: /docs/development/benchmarking/catapult_user_guide.md
+[chromeperf]: /docs/development/benchmarking/chromeperf_user_guide.md

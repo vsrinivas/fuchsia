@@ -1,13 +1,18 @@
-# Viewing microbenchmarks with Catapult
+# Viewing microbenchmarks with Chromeperf
 
 [TOC]
 
 ## Overview
 
-The Catapult dashboard is the UI for monitoring and
-visualizing benchmark results. The dashboard is maintained by the Chrome team.
-This a short guide on how to find and use the results of your benchmarks
-in the dashboard.
+Chromeperf is a system for monitoring and visualizing benchmark results.
+It is maintained by the Chrome team.  This guide describes how to find and
+use the results of your benchmarks in Chromeperf.
+
+Chromeperf is sometimes referred to as the "Catapult performance dashboard"
+in the Fuchsia codebase, or just "Catapult" for short, because its code
+lives in the [Catapult project Git repo][catapult-repo].
+
+[catapult-repo]: <https://chromium.googlesource.com/catapult/>
 
 
 ## Accessing the dashboard
@@ -58,7 +63,7 @@ generated it.
 
 ## Saving the view
 
-The Catapult dashboard UI does not have a built in mechanism for saving a collection
+Chromeperf's Web UI does not have a built in mechanism for saving a collection
 of Graphs.  If you want to save a list of graphs so that you can share with others or
 re-open the list later, you can copy the URL from the Chrome Address Bar.
 

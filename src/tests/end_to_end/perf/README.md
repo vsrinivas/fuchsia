@@ -47,12 +47,11 @@ This directory contains the following performance tests:
 *   `touch_input_latency_benchmarks_test` - Measures the latency of
     handling touch input events.
 
-You can view the test results from CI builds on the [Catapult][catapult]
-performance dashboard.
+You can view the test results from CI builds in [Chromeperf][chromeperf].
 
 <!-- Reference links -->
 
 [SL4F]: /docs/concepts/testing/sl4f.md
 [Inspect]: /docs/development/inspect/README.md
 [fuchsia_microbenchmarks]: /src/tests/microbenchmarks
-[catapult]: /docs/development/benchmarking/catapult_user_guide.md
+[chromeperf]: /docs/development/benchmarking/chromeperf_user_guide.md
