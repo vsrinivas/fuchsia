@@ -34,7 +34,11 @@ zx_status_t VirtioGpu::Start(
     fuchsia::component::RealmSyncPtr& realm, async_dispatcher_t* dispatcher) {
   constexpr auto kComponentName = "virtio_gpu";
   constexpr auto kComponentCollectionName = "virtio_gpu_devices";
+#ifdef USE_RUST_VIRTIO_GPU_INPUT
+  constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu_rs#meta/virtio_gpu_rs.cm";
+#else
   constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cm";
+#endif
 
   zx_status_t status =
       CreateDynamicComponent(realm, kComponentCollectionName, kComponentName, kComponentUrl,

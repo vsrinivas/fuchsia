@@ -7,6 +7,13 @@ import("//build/fuzzing/fuzzer.gni")
 
 declare_args() {
   virtio_vsock_inprocess = true
+
+  # Enable to use the rust virtio GPU and input devices by default in the VMM.
+  rust_virtio_gpu_input_devices = false
+}
+
+config("rust_gpu_input") {
+  defines = [ "USE_RUST_VIRTIO_GPU_INPUT" ]
 }
 
 group("vmm") {
@@ -123,6 +130,9 @@ source_set("lib") {
   }
 
   configs += [ "//build/config:all_source" ]
+  if (rust_virtio_gpu_input_devices) {
+    configs += [ ":rust_gpu_input" ]
+  }
 
   deps = [
     "//sdk/fidl/fuchsia.component",
