@@ -11,9 +11,8 @@
 #include <vector>
 
 #include "device_path.h"
-#include "utils.h"
-
 #include "src/lib/utf_conversion/utf_conversion.h"
+#include "utils.h"
 
 namespace gigaboot {
 namespace {
@@ -98,6 +97,13 @@ efi_status EfiGptBlockDevice::Read(void *buffer, size_t offset, size_t length) {
                                      offset, length, buffer);
 }
 
+efi_status EfiGptBlockDevice::Write(const void *data, size_t offset, size_t length) {
+  // According to UEFI specification chapter 13.7, disk-io protocol allows unaligned access.
+  // Thus we don't check block alignment.
+  return disk_io_protocol_->WriteDisk(disk_io_protocol_.get(), block_io_protocol_->Media->MediaId,
+                                      offset, length, data);
+}
+
 const gpt_entry_t *EfiGptBlockDevice::FindPartition(const char *name) {
   for (const GptEntryInfo &ele : GetGptEntries()) {
     const gpt_entry_t &entry = ele.entry;
@@ -111,6 +117,56 @@ const gpt_entry_t *EfiGptBlockDevice::FindPartition(const char *name) {
   }
 
   return nullptr;
+}
+
+fitx::result<efi_status, size_t> EfiGptBlockDevice::CheckAndGetPartitionAccessRangeInStorage(
+    const char *name, size_t offset, size_t length) {
+  const gpt_entry_t *entry = FindPartition(name);
+  if (!entry) {
+    return fitx::error(EFI_NOT_FOUND);
+  }
+
+  size_t block_size = BlockSize();
+  size_t abs_offset = entry->first * block_size + offset;
+  if (abs_offset + length > (entry->last + 1) * block_size) {
+    return fitx::error(EFI_INVALID_PARAMETER);
+  }
+
+  return fitx::ok(abs_offset);
+}
+
+fitx::result<efi_status> EfiGptBlockDevice::ReadPartition(const char *name, size_t offset,
+                                                          size_t length, void *out) {
+  auto res = CheckAndGetPartitionAccessRangeInStorage(name, offset, length);
+  if (res.is_error()) {
+    printf("ReadPartition: failed while checking and getting read range %s\n",
+           EfiStatusToString(res.error_value()));
+    return fitx::error(res.error_value());
+  }
+
+  efi_status status = Read(out, res.value(), length);
+  if (status != EFI_SUCCESS) {
+    return fitx::error(status);
+  }
+
+  return fitx::ok();
+}
+
+fitx::result<efi_status> EfiGptBlockDevice::WritePartition(const char *name, const void *data,
+                                                           size_t offset, size_t length) {
+  auto res = CheckAndGetPartitionAccessRangeInStorage(name, offset, length);
+  if (res.is_error()) {
+    printf("WritePartition: failed while checking and getting write range %s\n",
+           EfiStatusToString(res.error_value()));
+    return fitx::error(res.error_value());
+  }
+
+  efi_status status = Write(data, res.value(), length);
+  if (status != EFI_SUCCESS) {
+    return fitx::error(status);
+  }
+
+  return fitx::ok();
 }
 
 // TODO(https://fxbug.dev/79197): The function currently only finds the storage devie that hosts

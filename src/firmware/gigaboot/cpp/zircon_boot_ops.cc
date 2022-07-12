@@ -9,28 +9,59 @@
 namespace gigaboot {
 namespace {
 
+// TODO(b/235489025): NUC GPT partitions still uses legacy zircon partition names. Thus we use the
+// following mapping as a workaround so that zircon_boot library works correctly. Remove this after
+// we update the GPT partition table to use new partition names.
+const char* MapPartitionName(const char* name) {
+  static const struct PartitionMap {
+    const char* part_name;
+    const char* mapped_name;
+  } kPartitionNameMap[] = {
+      {GPT_DURABLE_BOOT_NAME, "misc"},
+      {GPT_ZIRCON_A_NAME, "zircon-a"},
+      {GPT_ZIRCON_B_NAME, "zircon-b"},
+      {GPT_ZIRCON_R_NAME, "zircon-r"},
+  };
+
+  for (auto ele : kPartitionNameMap) {
+    if (strcmp(ele.part_name, name) == 0) {
+      return ele.mapped_name;
+    }
+  }
+
+  return name;
+}
+
 bool ReadFromPartition(ZirconBootOps* ops, const char* part, size_t offset, size_t size, void* dst,
                        size_t* read_size) {
-  // TODO(b/235489025): To implement. Read data from the GPT partition. Refer to logic in
-  // `src/firmware/gigaboot/src/diskio.c`
   auto gpt_device = FindEfiGptDevice();
   if (gpt_device.is_error()) {
     return false;
   }
 
-  return false;
+  auto load_res = gpt_device.value().Load();
+  if (load_res.is_error()) {
+    return false;
+  }
+
+  *read_size = size;
+  return gpt_device.value().ReadPartition(MapPartitionName(part), offset, size, dst).is_ok();
 }
 
 bool WriteToPartition(ZirconBootOps* ops, const char* part, size_t offset, size_t size,
                       const void* src, size_t* write_size) {
-  // TODO(b/235489025): To implement. Write data to the GPT partition. Refer to logic in
-  // `src/firmware/gigaboot/src/diskio.c`
   auto gpt_device = FindEfiGptDevice();
   if (gpt_device.is_error()) {
     return false;
   }
 
-  return false;
+  auto load_res = gpt_device.value().Load();
+  if (load_res.is_error()) {
+    return false;
+  }
+
+  *write_size = size;
+  return gpt_device.value().WritePartition(MapPartitionName(part), src, offset, size).is_ok();
 }
 
 void Boot(ZirconBootOps* ops, zbi_header_t* image, size_t capacity, AbrSlotIndex slot) {
