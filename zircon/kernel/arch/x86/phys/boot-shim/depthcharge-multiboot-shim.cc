@@ -10,13 +10,17 @@
 #include <lib/fit/defer.h>
 #include <lib/memalloc/pool.h>
 #include <lib/uart/all.h>
+#include <lib/uart/ns8250.h>
+#include <lib/zbitl/error-stdio.h>
 #include <lib/zbitl/image.h>
 #include <stdlib.h>
 #include <zircon/boot/driver-config.h>
 #include <zircon/boot/image.h>
 #include <zircon/pixelformat.h>
 
+#include <ktl/iterator.h>
 #include <ktl/type_traits.h>
+#include <ktl/variant.h>
 #include <phys/main.h>
 #include <phys/page-table.h>
 #include <phys/stdio.h>
@@ -98,41 +102,9 @@ bool AppendDepthChargeItems(LegacyBootShim& shim, TrampolineBoot::Zbi& zbi,
   for (auto it = input_zbi.begin(); it != kernel_item && it != input_zbi.end(); ++it) {
     auto [header, payload] = *it;
     switch (header->type) {
-      case kLegacyBootdataDebugUart: {
-        if (payload.size() >= sizeof(LegacyBootdataUart)) {
-          LegacyBootdataUart uart;
-          memcpy(&uart, payload.data(), sizeof(uart));
-          switch (uart.type) {
-            case LegacyBootdataUart::Type::kPio: {
-              const dcfg_simple_pio_t pio = {
-                  .base = static_cast<uint16_t>(uart.base),
-              };
-              if (!append(
-                      {
-                          .type = ZBI_TYPE_KERNEL_DRIVER,
-                          .extra = KDRV_I8250_PIO_UART,
-                      },
-                      zbitl::AsBytes(pio))) {
-                return false;
-              }
-              break;
-            }
-            case LegacyBootdataUart::Type::kMmio: {
-              const dcfg_simple_t mmio = {.mmio_phys = uart.base};
-              if (!append(
-                      {
-                          .type = ZBI_TYPE_KERNEL_DRIVER,
-                          .extra = KDRV_I8250_MMIO_UART,
-                      },
-                      zbitl::AsBytes(mmio))) {
-                return false;
-              }
-              break;
-            }
-          }
-        }
+      // Legacy
+      case kLegacyBootdataDebugUart:
         break;
-      }
       case ZBI_TYPE_FRAMEBUFFER: {
         ZX_ASSERT(payload.size() >= sizeof(zbi_swfb_t));
         zbi_swfb_t framebuffer = *reinterpret_cast<const zbi_swfb_t*>(payload.data());
@@ -172,6 +144,24 @@ bool LoadDepthchargeZbi(LegacyBootShim& shim, TrampolineBoot& boot) {
          AppendDepthChargeItems(shim, boot.DataZbi(), kernel_item);
 }
 
+ktl::optional<uart::all::Driver> GetUartFromLegacyUart(LegacyBootShim::InputZbi::iterator it) {
+  auto& [header, payload] = *it;
+  if (header->type == kLegacyBootdataDebugUart && payload.size() >= sizeof(LegacyBootdataUart)) {
+    LegacyBootdataUart uart;
+    memcpy(&uart, payload.data(), sizeof(uart));
+    switch (uart.type) {
+      case LegacyBootdataUart::Type::kPio:
+        return uart::ns8250::PioDriver(dcfg_simple_pio_t{
+            .base = static_cast<uint16_t>(uart.base),
+        });
+
+      case LegacyBootdataUart::Type::kMmio:
+        return uart::ns8250::MmioDriver(dcfg_simple_t{.mmio_phys = uart.base});
+    }
+  }
+  return std::nullopt;
+}
+
 }  // namespace
 
 void LegacyBootQuirks() { FixRamdiskSize(); }
@@ -184,4 +174,57 @@ void LegacyBootSetUartConsole(const uart::all::Driver& uart) {
 
 bool LegacyBootShim::BootQuirksLoad(TrampolineBoot& boot) {
   return !IsProperZbi() && LoadDepthchargeZbi(*this, boot);
+}
+
+void UartFromZbi(LegacyBootShim::InputZbi zbi, uart::all::Driver& uart) {
+  auto check_and_print_error = [&zbi]() {
+    if (auto maybe_error = zbi.take_error(); maybe_error.is_error()) {
+      zbitl::PrintViewError(maybe_error.error_value());
+      return true;
+    }
+    return false;
+  };
+
+  auto first = zbi.begin();
+  auto last = zbi.end();
+
+  UartDriver driver;
+  auto kernel_it = zbi.find(arch::kZbiBootKernelType);
+  if (check_and_print_error()) {
+    return;
+  }
+
+  if (kernel_it == last) {
+    printf("No kernel item in ZBI.\n");
+    return;
+  }
+
+  uart = GetUartFromRange(ktl::next(kernel_it), last).value_or(uart);
+  if (check_and_print_error()) {
+    return;
+  }
+
+  // If we are not in a proper zbi, the bootloader prepended items,
+  // So we need to look for them.
+  if (kernel_it != first) {
+    auto bootloader_uart = GetUartFromRange(first, kernel_it);
+
+    if (check_and_print_error()) {
+      return;
+    }
+
+    // If we have a valid uart at this point
+    if (bootloader_uart) {
+      uart = *bootloader_uart;
+      return;
+    }
+
+    // Look for legacy uart items, if non current version items where found.
+    for (auto it = zbi.begin(); it != kernel_it && it != zbi.end(); ++it) {
+      if (auto maybe_legacy_uart_dcfg = GetUartFromLegacyUart(it)) {
+        uart = *maybe_legacy_uart_dcfg;
+      }
+    }
+    check_and_print_error();
+  }
 }

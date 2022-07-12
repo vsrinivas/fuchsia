@@ -13,7 +13,10 @@
 #include <lib/boot-shim/pool-mem-config.h>
 #include <lib/boot-shim/test-serial-number.h>
 #include <lib/boot-shim/uart.h>
+#include <lib/uart/all.h>
 #include <stdio.h>
+
+#include <optional>
 
 #include "../legacy-boot.h"
 
@@ -61,5 +64,11 @@ class LegacyBootShim : public LegacyBootShimBase {
 
   InputZbi input_zbi_;
 };
+
+// If |zbi| contains a uart driver, |uart| is overwritten with such configuration.
+void UartFromZbi(LegacyBootShim::InputZbi zbi, uart::all::Driver& uart);
+
+std::optional<uart::all::Driver> GetUartFromRange(LegacyBootShim::InputZbi::iterator start,
+                                                  LegacyBootShim::InputZbi::iterator end);
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_PHYS_BOOT_SHIM_LEGACY_BOOT_SHIM_H_

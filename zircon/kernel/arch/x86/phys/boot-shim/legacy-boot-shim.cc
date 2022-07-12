@@ -9,8 +9,12 @@
 #include <lib/acpi_lite.h>
 #include <lib/boot-shim/boot-shim.h>
 #include <lib/memalloc/pool.h>
+#include <lib/stdcompat/span.h>
+#include <lib/uart/all.h>
 #include <stdlib.h>
+#include <zircon/boot/image.h>
 
+#include <ktl/optional.h>
 #include <phys/allocation.h>
 #include <phys/main.h>
 #include <phys/page-table.h>
@@ -20,6 +24,8 @@
 #include <phys/uart.h>
 
 #include "stdout.h"
+
+#include <ktl/enforce.h>
 
 void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
   InitStdout();
@@ -31,11 +37,13 @@ void PhysMain(void* ptr, arch::EarlyTicks boot_ticks) {
   // This also fills in gLegacyBoot.
   InitMemory(ptr);
 
-  // Enable uart.
+  UartFromZbi(LegacyBootShim::InputZbi(ktl::as_bytes(gLegacyBoot.ramdisk)), gLegacyBoot.uart);
   UartFromCmdLine(gLegacyBoot.cmdline, gLegacyBoot.uart);
   LegacyBootSetUartConsole(gLegacyBoot.uart);
+
   LegacyBootShim shim(symbolize.name(), gLegacyBoot);
   shim.set_build_id(symbolize.BuildIdString());
+  shim.Get<boot_shim::UartItem>().Init(GetUartDriver().uart());
 
   // The pool knows all the memory details, so populate the ZBI item that way.
   memalloc::Pool& memory = Allocation::GetPool();
@@ -74,4 +82,28 @@ bool LegacyBootShim::IsProperZbi() const {
   }
   zbi.ignore_error();
   return result;
+}
+
+// The default implementation assumes a conforming ZBI image, that is the first item is the kernel
+// item, and items are appended. The symbols is weak, such that bug compatible shims can override
+// this. Examples of bugs are bootloaders prepending items to the zbi image.
+[[gnu::weak]] void UartFromZbi(LegacyBootShim::InputZbi zbi, uart::all::Driver& uart) {
+  uart = GetUartFromRange(zbi.begin(), zbi.end()).value_or(uart);
+  zbi.ignore_error();
+}
+
+ktl::optional<uart::all::Driver> GetUartFromRange(LegacyBootShim::InputZbi::iterator start,
+                                                  LegacyBootShim::InputZbi::iterator end) {
+  ktl::optional<uart::all::Driver> uart;
+  UartDriver driver;
+  while (start != end && start != start.view().end()) {
+    if (auto& [header, payload] = *start; header->type == ZBI_TYPE_KERNEL_DRIVER) {
+      if (driver.Match(*header, payload.data())) {
+        uart = driver.uart();
+      }
+    }
+    start++;
+  }
+
+  return uart;
 }

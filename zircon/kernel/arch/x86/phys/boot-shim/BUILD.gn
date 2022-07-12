@@ -164,6 +164,8 @@ if (toolchain_environment == "kernel.phys32") {
       "//zircon/kernel/lib/acpi_lite",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/boot-options",
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
       "//zircon/kernel/phys:acpi",
       "//zircon/kernel/phys:main",
       "//zircon/kernel/phys:page-table",
