@@ -11,6 +11,7 @@ zx_library("vm") {
     "anonymous_page_requester.cc",
     "bootalloc.cc",
     "bootreserve.cc",
+    "content_size_manager.cc",
     "evictor.cc",
     "kstack.cc",
     "loan_sweeper.cc",
