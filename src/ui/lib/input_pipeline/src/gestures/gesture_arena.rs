@@ -72,6 +72,7 @@ pub(super) enum RecognizedGesture {
     /// claims the gesture.
     _Unrecognized,
     Click,
+    PrimaryTap,
 }
 
 #[derive(Debug)]

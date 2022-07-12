@@ -85,6 +85,7 @@ rustc_library("input_pipeline") {
     "src/gestures/click.rs",
     "src/gestures/gesture_arena.rs",
     "src/gestures/mod.rs",
+    "src/gestures/primary_tap.rs",
     "src/ime_handler.rs",
     "src/immersive_mode_shortcut_handler.rs",
     "src/input_device.rs",

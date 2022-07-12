@@ -4,3 +4,4 @@
 
 mod click;
 mod gesture_arena;
+mod primary_tap;
