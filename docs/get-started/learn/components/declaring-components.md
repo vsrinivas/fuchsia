@@ -300,10 +300,11 @@ on the length of the list.
 <aside class="key-point">
   <b>Logging and standard streams</b>
   <p>Fuchsia has two main logging buffers; the system log (<code>syslog</code>)
-  and kernel's debug log (<code>klog</code>). By default, components do not have
-  stream handles for stdout and stderr available to record log messages from your
-  code. Instead, you must use one of Fuchsia's logging libraries or redirect these
-  streams to a Fuchsia log buffer.</p>
+  and the kernel's debug log (<code>klog</code>). By default, components only
+  have stream handles for stdout and stderr available to record log messages
+  from your code if they have access to the system log. Fuchsia also has logging
+  libraries available for greater control over metadata and format of
+  messages.</p>
 
   <p>For more details on logging from your code, see
   <a href="/docs/development/diagnostics/logs/recording.md">Recording Logs</a>.</p>

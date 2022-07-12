@@ -38,7 +38,7 @@ async fn check_logsink_requested() {
     let mut event_source = EventSource::from_proxy(proxy);
 
     let expected = EventSequence::new()
-        .all_of(
+        .has_subset(
             vec![
                 EventMatcher::ok()
                     .r#type(events::CapabilityRouted::TYPE)

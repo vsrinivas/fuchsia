@@ -6,6 +6,8 @@
     program: {
         runner: "elf",
         binary: "bin/log_and_crash",
+        forward_stdout_to: "none",
+        forward_stderr_to: "none",
     },
     expose: [
         {

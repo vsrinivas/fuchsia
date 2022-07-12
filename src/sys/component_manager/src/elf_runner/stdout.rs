@@ -13,6 +13,7 @@ use {
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon as zx,
     futures::AsyncReadExt,
+    once_cell::unsync::OnceCell,
     runner::component::ComponentNamespace,
     std::{boxed::Box, num::NonZeroUsize, sync::Arc},
     tracing::{info, warn, Subscriber},
@@ -39,65 +40,59 @@ const MAX_MESSAGE_SIZE: usize = 30720;
 // the appropriate file descriptor and forward the message to syslog. This
 // function returns both the task for each file descriptor and its
 // corresponding HandleInfo.
-pub async fn bind_streams_to_syslog(
+pub fn bind_streams_to_syslog(
     ns: &ComponentNamespace,
     stdout_sink: StreamSink,
     stderr_sink: StreamSink,
 ) -> Result<(Vec<fasync::Task<()>>, Vec<fproc::HandleInfo>), Error> {
     let mut tasks: Vec<fasync::Task<()>> = Vec::new();
     let mut handles: Vec<fproc::HandleInfo> = Vec::new();
-    let mut logger: Option<Arc<ScopedLogger>> = None;
 
-    for (fd, level, sink) in
-        [(STDOUT_FD, OutputLevel::Info, stdout_sink), (STDERR_FD, OutputLevel::Warn, stderr_sink)]
-    {
-        match sink {
-            StreamSink::Log => {
-                let logger_clone = match logger.as_ref() {
-                    Some(logger) => logger.clone(),
-                    None => {
-                        let new_logger = Arc::new(create_namespace_logger(ns).await?);
-                        logger = Some(new_logger.clone());
-                        new_logger
-                    }
-                };
+    // connect to the namespace's logger if we'll need it, wrap in OnceCell so we only do it once
+    // (can't use Lazy here because we need to capture `ns`)
+    let logger = OnceCell::new();
+    let mut forward_stream = |sink, fd, level| -> Result<(), Error> {
+        if matches!(sink, StreamSink::Log) {
+            // create the handle before dealing with the logger so components still receive an inert
+            // handle if connecting to LogSink fails
+            let (socket, handle_info) = new_socket_bound_to_fd(fd)?;
+            handles.push(handle_info);
 
-                let (task, handle) = forward_fd_to_syslog(logger_clone, fd, level)?;
-
-                tasks.push(task);
-                handles.push(handle);
+            if let Some(l) = logger.get_or_init(|| create_namespace_logger(ns).map(Arc::new)) {
+                tasks.push(forward_socket_to_syslog(l.clone(), socket, level));
+            } else {
+                warn!("Tried forwarding file descriptor {fd} but didn't have a LogSink available.");
             }
-            StreamSink::None => {}
         }
-    }
+        Ok(())
+    };
+
+    forward_stream(stdout_sink, STDOUT_FD, OutputLevel::Info)?;
+    forward_stream(stderr_sink, STDERR_FD, OutputLevel::Warn)?;
 
     Ok((tasks, handles))
 }
 
-async fn create_namespace_logger(ns: &ComponentNamespace) -> Result<ScopedLogger, Error> {
-    let (_, dir) = ns
-        .items()
+fn create_namespace_logger(ns: &ComponentNamespace) -> Option<ScopedLogger> {
+    ns.items()
         .iter()
         .find(|(path, _)| path == SVC_DIRECTORY_NAME)
-        .ok_or(anyhow!("Didn't find {} directory in component's namespace!", SVC_DIRECTORY_NAME))?;
-
-    ScopedLogger::from_directory(&dir, SYSLOG_PROTOCOL_NAME)
+        .and_then(|(_, dir)| ScopedLogger::from_directory(&dir, SYSLOG_PROTOCOL_NAME).ok())
 }
 
-fn forward_fd_to_syslog(
+fn forward_socket_to_syslog(
     logger: Arc<ScopedLogger>,
-    fd: i32,
+    socket: zx::Socket,
     level: OutputLevel,
-) -> Result<(fasync::Task<()>, fproc::HandleInfo), Error> {
-    let (rx, hnd) = new_socket_bound_to_fd(fd)?;
+) -> fasync::Task<()> {
     let mut writer = SyslogWriter::new(logger, level);
     let task = fasync::Task::spawn(async move {
-        if let Err(error) = drain_lines(rx, &mut writer).await {
-            warn!(%fd, %error, "Draining output stream failed");
+        if let Err(error) = drain_lines(socket, &mut writer).await {
+            warn!(%error, "Draining output stream failed");
         }
     });
 
-    Ok((task, hnd))
+    task
 }
 
 fn new_socket_bound_to_fd(fd: i32) -> Result<(zx::Socket, fproc::HandleInfo), Error> {
@@ -368,7 +363,7 @@ mod tests {
     ) -> Result<(), Error> {
         let ns = ComponentNamespace::try_from(ns_entries)
             .context("Failed to create ComponentNamespace")?;
-        let logger = create_namespace_logger(&ns).await.context("Failed to create ScopedLogger")?;
+        let logger = create_namespace_logger(&ns).context("Failed to create ScopedLogger")?;
         let mut writer = SyslogWriter::new(Arc::new(logger), OutputLevel::Info);
         writer.write(message).await.context("Failed to write message")?;
 

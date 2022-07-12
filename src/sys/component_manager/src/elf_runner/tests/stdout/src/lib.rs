@@ -37,12 +37,15 @@ impl Expected {
 }
 
 #[test_case("#meta/logs-stdout-and-stderr-cpp.cm", "logs_stdout_and_stderr_cpp", Expected::Both; "cpp logs to both")]
+#[test_case("#meta/logs-default-cpp.cm", "logs_default_cpp", Expected::Both; "cpp logs to both implicitly by default")]
 #[test_case("#meta/logs-stdout-cpp.cm", "logs_stdout_cpp", Expected::Stdout; "cpp logs to stdout")]
 #[test_case("#meta/logs-stderr-cpp.cm", "logs_stderr_cpp", Expected::Stderr; "cpp logs to stderr")]
 #[test_case("#meta/logs-stdout-and-stderr-go.cm", "logs_stdout_and_stderr_go", Expected::Both; "go logs to both")]
+#[test_case("#meta/logs-default-go.cm", "logs_default_go", Expected::Both; "go logs to both implicitly by default")]
 #[test_case("#meta/logs-stdout-go.cm", "logs_stdout_go", Expected::Stdout; "go logs to stdout")]
 #[test_case("#meta/logs-stderr-go.cm", "logs_stderr_go", Expected::Stderr; "go logs to stderr")]
 #[test_case("#meta/logs-stdout-and-stderr-rust.cm", "logs_stdout_and_stderr_rust", Expected::Both; "rust logs to both")]
+#[test_case("#meta/logs-default-rust.cm", "logs_default_rust", Expected::Both; "rust logs to both implicitly by default")]
 #[test_case("#meta/logs-stdout-rust.cm", "logs_stdout_rust", Expected::Stdout; "rust logs to stdout")]
 #[test_case("#meta/logs-stderr-rust.cm", "logs_stderr_rust", Expected::Stderr; "rust logs to stderr")]
 #[fuchsia::test(add_test_attr = false)]

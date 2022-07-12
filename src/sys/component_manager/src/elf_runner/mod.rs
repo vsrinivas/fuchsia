@@ -162,7 +162,6 @@ impl ElfRunner {
 
         let (stdout_and_stderr_tasks, stdout_and_stderr_handles) =
             bind_streams_to_syslog(&ns, stdout_sink, stderr_sink)
-                .await
                 .map_err(|s| RunnerError::component_launch_error(resolved_url.clone(), s))?;
 
         let mut handle_infos = vec![];

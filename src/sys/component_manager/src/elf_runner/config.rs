@@ -20,7 +20,9 @@ const USE_NEXT_VDSO_KEY: &str = "use_next_vdso";
 /// Target sink for stdout and stderr output streams.
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum StreamSink {
+    /// The component omitted configuration or explicitly requested forwarding to the log.
     Log,
+    /// The component requested to not forward to the log.
     None,
 }
 
@@ -39,7 +41,7 @@ pub struct ElfProgramConfig {
 
 impl Default for StreamSink {
     fn default() -> Self {
-        StreamSink::None
+        StreamSink::Log
     }
 }
 
@@ -142,13 +144,10 @@ fn get_stream_sink(
     url: &str,
 ) -> Result<StreamSink, ElfRunnerError> {
     match runner::get_enum(dict, key, &["log", "none"]) {
-        Ok(maybe_value) => match maybe_value {
-            Some("log") => Ok(StreamSink::Log),
-            _ => Ok(StreamSink::None),
-        },
-        // TODO: Add more informative error types. Users should know why a value
-        // for a given key is invalid, if possible.
-        Err(_err) => Err(ElfRunnerError::program_dictionary_error(key, url)),
+        Ok(Some("log")) => Ok(StreamSink::Log),
+        Ok(Some("none")) => Ok(StreamSink::None),
+        Ok(None) => Ok(StreamSink::Log),
+        _ => Err(ElfRunnerError::program_dictionary_error(key, url)),
     }
 }
 

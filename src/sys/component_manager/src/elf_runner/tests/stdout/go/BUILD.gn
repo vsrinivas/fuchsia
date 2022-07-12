@@ -8,6 +8,7 @@ import("//build/go/go_library.gni")
 
 group("go") {
   deps = [
+    ":logs-default-go",
     ":logs-stderr-go",
     ":logs-stdout-and-stderr-go",
     ":logs-stdout-go",
@@ -53,6 +54,11 @@ test_case_binary("stderr_bin") {
 fuchsia_component("logs-stdout-and-stderr-go") {
   deps = [ ":stdout_and_stderr_bin" ]
   manifest = "meta/logs_stdout_and_stderr_go.cml"
+}
+
+fuchsia_component("logs-default-go") {
+  deps = [ ":stdout_and_stderr_bin" ]
+  manifest = "meta/logs_default_go.cml"
 }
 
 fuchsia_component("logs-stdout-go") {

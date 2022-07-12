@@ -72,10 +72,9 @@ appmgr's own `stdout` and `stderr`. appmgr populates its own stdio with debuglog
 
 ### Components
 
-[Components] don't have their `stdout` and `stderr` streams captured by default.
-For [ELF] components, there are flags used to tell the ELF runner to redirect
-the output of these stream to the `LogSink` service. For more information, see
-the ELF runner section on [forwarding stdout and stderr streams].
+By default, [components] only have their `stdout` and `stderr` streams captured
+if they have access to a `LogSink` service for forwarding. For more information,
+see the ELF runner section on [forwarding stdout and stderr streams].
 
 ## Forwarding klog to syslog
 
@@ -110,6 +109,6 @@ lack a way to express the severity of a message.
 [`fuchsia.boot.WriteOnlyLog`]: https://fuchsia.dev/reference/fidl/fuchsia.boot#WriteOnlyLog
 [appmgr]: /src/sys/appmgr/README.md
 [`ddk/debug.h`]: /src/lib/ddk/include/ddk/debug.h
-[Components]: /docs/concepts/components/v2/introduction.md
+[components]: /docs/concepts/components/v2/introduction.md
 [ELF]: /docs/concepts/components/v2/elf_runner.md
 [forwarding stdout and stderr streams]: /docs/concepts/components/v2/elf_runner.md#forwarding_stdout_and_stderr_streams

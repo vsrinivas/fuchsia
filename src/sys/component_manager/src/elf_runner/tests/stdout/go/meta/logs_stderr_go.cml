@@ -6,6 +6,7 @@
     program: {
         runner: "elf",
         binary: "bin/prints_to_stderr_go",
+        forward_stdout_to: "none",
         forward_stderr_to: "log",
     },
     expose: [

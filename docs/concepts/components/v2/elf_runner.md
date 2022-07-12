@@ -49,9 +49,8 @@ The arguments set will be passed in the same order as declared in the manifest.
 ### Forwarding stdout and stderr streams
 
 The stdout and stderr streams of ELF components can be routed to the
-[LogSink service][logsink]. By default, the ELF runner doesn't route these
-streams to any output sink. Therefore, any write to these streams, such as
-`printf`, is lost and can be considered a no-op. If your component prints
+[LogSink service][logsink]. By default, the ELF runner only forwards these
+streams if LogSink is available to the component. If your component prints
 diagnostics messages to either of these streams, you should forward the streams
 to the [LogSink service][logsink].
 
@@ -59,7 +58,7 @@ To enable this feature, add the following to your manifest file:
 
 ```json5
 {
-    include: [ "syslog/elf_stdio.shard.cml" ],
+    include: [ "syslog/client.shard.cml" ],
 }
 ```
 
@@ -68,12 +67,21 @@ and all writes to stderr are logged as `WARN` messages. Messages are split
 by newlines and decoded as UTF-8 strings. Invalid byte sequences are converted
 to the U+FFFD replacement character, which usually looks like `�`.
 
+Whether or not the syslog shard is included, this feature can be disabled with
+explicit flags:
+
+```json5
+    program: {
+        runner: "elf",
+        binary: "bin/foo",
+        forward_stdout_to: "none",
+        forward_stderr_to: "none",
+    }
+```
+
 Note: There are known issues where messages from `ZX_ASSERT_...` in C/C++
-components and `Error` objects returned in `main` in Rust components are lost.
-To prevent issues where messages are lost from `ZX_ASSERT_...` in C/C++
-components and `Error` objects returned from `main` in Rust components it is
-recommended that component authors include the aforementioned shard in their
-manifest.
+components and `Error` objects returned in `main` in Rust components are lost
+when stdout/stderr forwarding is disabled.
 
 ### Lifecycle
 

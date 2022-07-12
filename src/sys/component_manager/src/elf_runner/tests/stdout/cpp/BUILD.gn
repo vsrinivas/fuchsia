@@ -6,6 +6,7 @@ import("//build/components.gni")
 
 group("cpp") {
   deps = [
+    ":logs-default-cpp",
     ":logs-stderr-cpp",
     ":logs-stdout-and-stderr-cpp",
     ":logs-stdout-cpp",
@@ -22,6 +23,11 @@ fuchsia_component("logs-stdout-and-stderr-cpp") {
   deps = [ ":bin" ]
   component_name = "logs-stdout-and-stderr-cpp"
   manifest = "meta/logs_stdout_and_stderr_cpp.cml"
+}
+
+fuchsia_component("logs-default-cpp") {
+  deps = [ ":bin" ]
+  manifest = "meta/logs_default_cpp.cml"
 }
 
 fuchsia_component("logs-stdout-cpp") {

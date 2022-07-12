@@ -45,7 +45,7 @@ async fn verify_routing_failure_messages() {
     let mut event_source = EventSource::from_proxy(proxy);
 
     let expected = EventSequence::new()
-        .all_of(
+        .has_subset(
             vec![
                 EventMatcher::ok()
                     .r#type(events::Stopped::TYPE)
