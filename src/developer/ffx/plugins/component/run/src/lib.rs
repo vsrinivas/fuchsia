@@ -63,7 +63,7 @@ pub async fn run(
         log_impl(
             diagnostics_proxy,
             Some(rcs_proxy),
-            None,
+            &None,
             log_cmd,
             &mut std::io::stdout(),
             LogOpts::default(),

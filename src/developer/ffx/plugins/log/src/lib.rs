@@ -485,7 +485,7 @@ pub async fn log(
     log_impl(
         diagnostics_proxy,
         rcs_proxy,
-        log_settings,
+        &log_settings,
         cmd,
         &mut std::io::stdout(),
         LogOpts { is_machine: writer.is_machine() },
@@ -496,7 +496,7 @@ pub async fn log(
 pub async fn log_impl<W: std::io::Write>(
     diagnostics_proxy: DiagnosticsProxy,
     rcs_proxy: Option<RemoteControlProxy>,
-    log_settings: Option<LogSettingsProxy>,
+    log_settings: &Option<LogSettingsProxy>,
     cmd: LogCommand,
     writer: &mut W,
     opts: LogOpts,
@@ -538,13 +538,16 @@ pub async fn log_impl<W: std::io::Write>(
         };
     }
 
-    log_cmd(diagnostics_proxy, rcs_proxy, log_settings, &mut formatter, cmd, writer).await
+    log_cmd(diagnostics_proxy, rcs_proxy, &log_settings, &mut formatter, cmd, writer).await
 }
 
-pub async fn log_cmd<W: std::io::Write>(
+async fn log_cmd<W: std::io::Write>(
     diagnostics_proxy: DiagnosticsProxy,
     rcs_opt: Option<RemoteControlProxy>,
-    log_settings: Option<LogSettingsProxy>,
+    // NOTE: The fact that this is a reference is load-bearing.
+    // It needs to be kept alive to prevent the connection from being dropped
+    // and reverting to the previous log settings.
+    log_settings: &Option<LogSettingsProxy>,
     log_formatter: &mut impl LogFormatter,
     cmd: LogCommand,
     writer: &mut W,
@@ -857,7 +860,7 @@ mod test {
         log_cmd(
             setup_fake_daemon_server(params, Arc::new(expected_responses)),
             setup_fake_rcs(),
-            setup_fake_log_settings_proxy(vec![]),
+            &setup_fake_log_settings_proxy(vec![]),
             &mut formatter,
             cmd,
             &mut writer,
@@ -896,7 +899,7 @@ mod test {
         log_cmd(
             setup_fake_daemon_server(params, Arc::new(expected_responses)),
             setup_fake_rcs(),
-            setup_fake_log_settings_proxy(vec![]),
+            &setup_fake_log_settings_proxy(vec![]),
             &mut formatter,
             cmd,
             &mut writer,
@@ -936,7 +939,7 @@ mod test {
         log_cmd(
             setup_fake_daemon_server(params, Arc::new(expected_responses)),
             setup_fake_rcs(),
-            setup_fake_log_settings_proxy(vec![]),
+            &setup_fake_log_settings_proxy(vec![]),
             &mut formatter,
             cmd,
             &mut writer,
@@ -1012,7 +1015,7 @@ mod test {
             log_cmd(
                 setup_fake_daemon_server(params, Arc::new(expected_responses)),
                 setup_fake_rcs(),
-                setup_fake_log_settings_proxy(vec![]),
+                &setup_fake_log_settings_proxy(vec![]),
                 &mut formatter,
                 cmd,
                 &mut writer,
@@ -1056,7 +1059,7 @@ mod test {
         log_cmd(
             setup_fake_daemon_server(params, Arc::new(expected_responses)),
             setup_fake_rcs(),
-            setup_fake_log_settings_proxy(selectors),
+            &setup_fake_log_settings_proxy(selectors),
             &mut formatter,
             cmd,
             &mut writer,
@@ -1086,7 +1089,7 @@ mod test {
         assert!(log_cmd(
             setup_fake_daemon_server(params, Arc::new(vec![])),
             setup_fake_rcs(),
-            None,
+            &None,
             &mut formatter,
             cmd,
             &mut writer,
@@ -1550,7 +1553,7 @@ mod test {
         log_cmd(
             setup_fake_daemon_server(params, Arc::new(vec![])),
             setup_fake_rcs(),
-            setup_fake_log_settings_proxy(vec![]),
+            &setup_fake_log_settings_proxy(vec![]),
             &mut formatter,
             cmd,
             &mut writer,
@@ -1583,7 +1586,7 @@ mod test {
         log_cmd(
             setup_fake_daemon_server(params, Arc::new(vec![])),
             setup_fake_rcs(),
-            setup_fake_log_settings_proxy(vec![]),
+            &setup_fake_log_settings_proxy(vec![]),
             &mut formatter,
             cmd,
             &mut writer,
@@ -1610,7 +1613,7 @@ mod test {
         assert!(log_cmd(
             setup_fake_daemon_server(DaemonDiagnosticsStreamParameters::EMPTY, Arc::new(vec![])),
             setup_fake_rcs(),
-            setup_fake_log_settings_proxy(vec![]),
+            &setup_fake_log_settings_proxy(vec![]),
             &mut formatter,
             cmd,
             &mut writer,
@@ -1639,7 +1642,7 @@ mod test {
         assert!(log_cmd(
             setup_fake_daemon_server(DaemonDiagnosticsStreamParameters::EMPTY, Arc::new(vec![])),
             setup_fake_rcs(),
-            setup_fake_log_settings_proxy(vec![]),
+            &setup_fake_log_settings_proxy(vec![]),
             &mut formatter,
             cmd,
             &mut writer,
