@@ -5,6 +5,8 @@
     program: {
         runner: "elf",
         binary: "bin/ptysvc",
+        forward_stdout_to: "none",
+        forward_stderr_to: "none",
     },
     capabilities: [
         { protocol: "fuchsia.hardware.pty.Device" },

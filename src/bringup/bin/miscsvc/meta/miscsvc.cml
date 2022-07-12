@@ -5,6 +5,8 @@
     program: {
         runner: "elf",
         binary: "bin/miscsvc",
+        forward_stdout_to: "none",
+        forward_stderr_to: "none",
     },
     capabilities: [
         {

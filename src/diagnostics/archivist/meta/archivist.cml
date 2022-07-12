@@ -7,6 +7,8 @@
         binary: "bin/archivist",
         lifecycle: { stop_event: "notify" },
         main_process_critical: "true",
+        forward_stdout_to: "none",
+        forward_stderr_to: "none",
     },
     capabilities: [
         {
