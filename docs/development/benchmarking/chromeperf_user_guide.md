@@ -17,11 +17,13 @@ lives in the [Catapult project Git repo][catapult-repo].
 
 ## Accessing the dashboard
 
-**Be sure to sign into your google.com account or else Fuchsia data will be hidden.**
+The dashboard can be found at
+[https://chromeperf.appspot.com/report](https://chromeperf.appspot.com/report).
 
-The login button is in the top right corner of the screen.
-
-The dashboard can be found at [https://chromeperf.appspot.com/report](https://chromeperf.appspot.com/report).
+**Note that Fuchsia data is currently only available to Googlers.**  You
+will need to sign in with a google.com account for the Fuchsia performance
+results to be visible in Chromeperf.  Click **Sign in** in the top right
+corner to do that.
 
 
 ## Searching and adding graphs
@@ -42,11 +44,11 @@ displayed with autocomplete if you type "zircon".
 
 Select a builder and a subtest.  Note that if your subtest is named "foo", there will be
 multiple "foo_<metric_name>" subtests to choose from.  Each of these represents a metric
-computed from the sample(s) of that subtest.   For example: if "foo" generates N sample
+computed from the sample(s) of that subtest.  For example: if "foo" generates N sample
 points each time the benchmark is run, then the subtest "foo_avg" is a plot of the
 averages of these N samples.
 
-When you're finished filling out each field, click "Add" to add your graph to the UI.
+When you're finished filling out each field, click **Add** to add your graph to the UI.
 You should see something like this:
 
 ![graph_example](/docs/images/benchmarking/graph_example.png "graph_example")
@@ -63,8 +65,8 @@ generated it.
 
 ## Saving the view
 
-Chromeperf's Web UI does not have a built in mechanism for saving a collection
-of Graphs.  If you want to save a list of graphs so that you can share with others or
+Chromeperf's web UI does not have a built-in mechanism for saving a collection
+of graphs.  If you want to save a list of graphs so that you can share with others or
 re-open the list later, you can copy the URL from the Chrome Address Bar.
 
 Beware, you will have to re-copy the URL each time you add, modify or remove a graph. This
