@@ -333,11 +333,15 @@ impl<'a> ThermalPolicyTest<'a> {
         policy_params: ThermalPolicyParams,
         futures: &FuturesUnordered<LocalBoxFuture<'a, ()>>,
     ) -> Rc<ThermalPolicy> {
-        let temperature_node = temperature_handler::tests::setup_test_node(
-            Simulator::make_temperature_fetcher(&sim),
-            fuchsia_zircon::Duration::from_millis(50),
-        )
-        .await;
+        let temperature_node = temperature_handler::TemperatureHandlerBuilder::new()
+            .driver_proxy(temperature_handler::tests::fake_temperature_driver(
+                Simulator::make_temperature_fetcher(&sim),
+            ))
+            .cache_duration(fuchsia_zircon::Duration::from_millis(50))
+            .build()
+            .await
+            .unwrap();
+
         let cpu_stats_node =
             cpu_stats_handler::tests::setup_test_node(Simulator::make_idle_times_fetcher(&sim))
                 .await;

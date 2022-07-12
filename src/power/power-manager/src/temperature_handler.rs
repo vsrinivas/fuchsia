@@ -6,6 +6,7 @@ use crate::error::PowerManagerError;
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
+use crate::ok_or_default_err;
 use crate::types::{Celsius, Nanoseconds, Seconds};
 use crate::utils::connect_to_driver;
 use anyhow::{format_err, Error};
@@ -40,25 +41,39 @@ use std::rc::Rc;
 
 /// A builder for constructing the TemperatureHandler node
 pub struct TemperatureHandlerBuilder<'a> {
-    driver_path: String,
+    driver_path: Option<String>,
     driver_proxy: Option<fthermal::DeviceProxy>,
-    cache_duration: zx::Duration,
+    cache_duration: Option<zx::Duration>,
     inspect_root: Option<&'a inspect::Node>,
 }
 
 impl<'a> TemperatureHandlerBuilder<'a> {
-    pub fn new(driver_path: String, cache_duration: zx::Duration) -> Self {
-        Self { driver_path, driver_proxy: None, cache_duration, inspect_root: None }
+    #[cfg(test)]
+    pub fn new() -> Self {
+        Self {
+            driver_path: Some("/test/driver/path".to_string()),
+            driver_proxy: None,
+            cache_duration: None,
+            inspect_root: None,
+        }
     }
 
     #[cfg(test)]
-    pub fn new_with_proxy(driver_path: String, proxy: fthermal::DeviceProxy) -> Self {
-        Self {
-            driver_path,
-            driver_proxy: Some(proxy),
-            cache_duration: zx::Duration::from_millis(0),
-            inspect_root: None,
-        }
+    pub fn driver_proxy(mut self, proxy: fthermal::DeviceProxy) -> Self {
+        self.driver_proxy = Some(proxy);
+        self
+    }
+
+    #[cfg(test)]
+    pub fn cache_duration(mut self, duration: zx::Duration) -> Self {
+        self.cache_duration = Some(duration);
+        self
+    }
+
+    #[cfg(test)]
+    fn inspect_root(mut self, inspect_root: &'a inspect::Node) -> Self {
+        self.inspect_root = Some(inspect_root);
+        self
     }
 
     pub fn new_from_json(json_data: json::Value, _nodes: &HashMap<String, Rc<dyn Node>>) -> Self {
@@ -74,28 +89,23 @@ impl<'a> TemperatureHandlerBuilder<'a> {
         }
 
         let data: JsonData = json::from_value(json_data).unwrap();
-        Self::new(
-            data.config.driver_path,
-            zx::Duration::from_millis(data.config.cache_duration_ms as i64),
-        )
-    }
-
-    #[cfg(test)]
-    pub fn with_cache_duration(mut self, duration: zx::Duration) -> Self {
-        self.cache_duration = duration;
-        self
-    }
-
-    #[cfg(test)]
-    pub fn with_inspect_root(mut self, root: &'a inspect::Node) -> Self {
-        self.inspect_root = Some(root);
-        self
+        Self {
+            driver_path: Some(data.config.driver_path),
+            driver_proxy: None,
+            cache_duration: Some(zx::Duration::from_millis(data.config.cache_duration_ms as i64)),
+            inspect_root: None,
+        }
     }
 
     pub async fn build(self) -> Result<Rc<TemperatureHandler>, Error> {
+        let driver_path = ok_or_default_err!(self.driver_path)?;
+
+        // Default `cache_duration`: 0
+        let cache_duration = self.cache_duration.unwrap_or(zx::Duration::from_millis(0));
+
         // Optionally use the default proxy
-        let proxy = if self.driver_proxy.is_none() {
-            connect_to_driver::<fthermal::DeviceMarker>(&self.driver_path).await?
+        let driver_proxy = if self.driver_proxy.is_none() {
+            connect_to_driver::<fthermal::DeviceMarker>(&driver_path).await?
         } else {
             self.driver_proxy.unwrap()
         };
@@ -104,14 +114,14 @@ impl<'a> TemperatureHandlerBuilder<'a> {
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
 
         Ok(Rc::new(TemperatureHandler {
-            driver_path: self.driver_path.clone(),
-            driver_proxy: proxy,
+            driver_path: driver_path.clone(),
+            driver_proxy,
             last_temperature: RefCell::new(Celsius(std::f64::NAN)),
             last_poll_time: RefCell::new(fasync::Time::INFINITE_PAST),
-            cache_duration: self.cache_duration,
+            cache_duration,
             inspect: InspectData::new(
                 inspect_root,
-                format!("TemperatureHandler ({})", self.driver_path),
+                format!("TemperatureHandler ({})", driver_path),
             ),
         }))
     }
@@ -259,7 +269,7 @@ pub mod tests {
     /// handles requests for GetTemperatureCelsius - trying to send any other requests to it is a
     /// bug. Each GetTemperatureCelsius responds with a value provided by the supplied
     /// `get_temperature` closure.
-    fn setup_fake_driver(
+    pub fn fake_temperature_driver(
         mut get_temperature: impl FnMut() -> Celsius + 'static,
     ) -> fthermal::DeviceProxy {
         let (proxy, mut stream) =
@@ -278,22 +288,6 @@ pub mod tests {
         .detach();
 
         proxy
-    }
-
-    /// Sets up a test TemperatureHandler node that receives temperature readings from the
-    /// provided closure.
-    pub async fn setup_test_node(
-        get_temperature: impl FnMut() -> Celsius + 'static,
-        cache_duration: zx::Duration,
-    ) -> Rc<TemperatureHandler> {
-        TemperatureHandlerBuilder::new_with_proxy(
-            "Fake".to_string(),
-            setup_fake_driver(get_temperature),
-        )
-        .with_cache_duration(cache_duration)
-        .build()
-        .await
-        .unwrap()
     }
 
     /// Tests that the node can handle the 'ReadTemperature' message as expected. The test
@@ -315,7 +309,11 @@ pub mod tests {
             index = (index + 1) % temperature_readings.len();
             Celsius(value)
         };
-        let node = setup_test_node(get_temperature, zx::Duration::from_millis(0)).await;
+        let node = TemperatureHandlerBuilder::new()
+            .driver_proxy(fake_temperature_driver(get_temperature))
+            .build()
+            .await
+            .unwrap();
 
         // Send ReadTemperature message and check for expected value.
         for expected_reading in expected_readings {
@@ -339,10 +337,13 @@ pub mod tests {
         let sensor_temperature_clone = sensor_temperature.clone();
         let get_temperature = move || sensor_temperature_clone.get();
         let node = executor
-            .run_until_stalled(&mut Box::pin(setup_test_node(
-                get_temperature,
-                zx::Duration::from_millis(500),
-            )))
+            .run_until_stalled(&mut Box::pin(
+                TemperatureHandlerBuilder::new()
+                    .driver_proxy(fake_temperature_driver(get_temperature))
+                    .cache_duration(zx::Duration::from_millis(500))
+                    .build(),
+            ))
+            .unwrap()
             .unwrap();
 
         let run = move |executor: &mut fasync::TestExecutor, duration_ms: i64| {
@@ -375,7 +376,11 @@ pub mod tests {
     /// Tests that an unsupported message is handled gracefully and an error is returned.
     #[fasync::run_singlethreaded(test)]
     async fn test_unsupported_msg() {
-        let node = setup_test_node(|| Celsius(0.0), zx::Duration::from_millis(0)).await;
+        let node = TemperatureHandlerBuilder::new()
+            .driver_proxy(fake_temperature_driver(|| Celsius(0.0)))
+            .build()
+            .await
+            .unwrap();
         match node.handle_message(&Message::GetCpuLoads).await {
             Err(PowerManagerError::Unsupported) => {}
             e => panic!("Unexpected return value: {:?}", e),
@@ -385,16 +390,14 @@ pub mod tests {
     /// Tests for the presence and correctness of dynamically-added inspect data
     #[fasync::run_singlethreaded(test)]
     async fn test_inspect_data() {
-        let temperature = Celsius(30.0);
         let inspector = inspect::Inspector::new();
-        let node = TemperatureHandlerBuilder::new_with_proxy(
-            "Fake".to_string(),
-            setup_fake_driver(move || temperature),
-        )
-        .with_inspect_root(inspector.root())
-        .build()
-        .await
-        .unwrap();
+
+        let node = TemperatureHandlerBuilder::new()
+            .driver_proxy(fake_temperature_driver(|| Celsius(30.0)))
+            .inspect_root(inspector.root())
+            .build()
+            .await
+            .unwrap();
 
         // The node will read the current temperature and log the sample into Inspect. Read enough
         // samples to test that the correct number of samples are logged and older ones are dropped.
@@ -402,7 +405,7 @@ pub mod tests {
             node.handle_message(&Message::ReadTemperature).await.unwrap();
         }
 
-        let mut root = TreeAssertion::new("TemperatureHandler (Fake)", false);
+        let mut root = TreeAssertion::new("TemperatureHandler (/test/driver/path)", false);
         let mut temperature_readings = TreeAssertion::new("temperature_readings", true);
 
         // Since we read 10 more samples than our limit allows, the first 10 should be dropped. So
@@ -410,7 +413,7 @@ pub mod tests {
         // samples.
         for i in 10..InspectData::NUM_INSPECT_TEMPERATURE_SAMPLES + 10 {
             let mut sample_child = TreeAssertion::new(&i.to_string(), true);
-            sample_child.add_property_assertion("temperature", Box::new(temperature.0));
+            sample_child.add_property_assertion("temperature", Box::new(30.0));
             sample_child.add_property_assertion("@time", Box::new(inspect::testing::AnyProperty));
             temperature_readings.add_child_assertion(sample_child);
         }
@@ -436,14 +439,20 @@ pub mod tests {
     /// Tests that the node correctly reports its driver path.
     #[fasync::run_singlethreaded(test)]
     async fn test_get_driver_path() {
-        let node = setup_test_node(|| Celsius(0.0), zx::Duration::from_millis(0)).await;
+        let node = TemperatureHandlerBuilder::new()
+            .driver_proxy(fake_temperature_driver(|| Celsius(0.0)))
+            .build()
+            .await
+            .unwrap();
+
         let driver_path = match node.handle_message(&Message::GetDriverPath).await.unwrap() {
             MessageReturn::GetDriverPath(driver_path) => driver_path,
             e => panic!("Unexpected message response: {:?}", e),
         };
 
-        // "Fake" is the driver path assigned in `setup_test_node`
-        assert_eq!(driver_path, "Fake".to_string());
+        // "TestTemperatureHandler" is the driver path assigned in
+        // `TemperatureHandlerBuilder::new()`
+        assert_eq!(driver_path, "/test/driver/path".to_string());
     }
 }
 
