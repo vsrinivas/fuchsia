@@ -5,7 +5,15 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/components.gni")
+import("//build/components/fuchsia_test_package.gni")
+import("//build/components/fuchsia_unittest_component.gni")
 import("//build/test.gni")
+
+source_set("user-copy-asm") {
+  visibility = [ ":*" ]
+  public = [ "user-copy-asm.h" ]
+  public_deps = [ "//zircon/kernel/lib/arch" ]
+}
 
 if (is_kernel) {
   source_set("user-copy") {
@@ -22,27 +30,49 @@ if (is_kernel) {
 }
 
 if (is_fuchsia) {
-  fuchsia_unittest_package("tests") {
-    component_name = "arm64-user-copy-tests"
-    package_name = component_name
-    deps = [ ":arm64-user-copy-tests" ]
+  template("arm64_user_copy_test") {
+    test_target_name = "${target_name}-test"
+    main_target_name = target_name
+
+    test(test_target_name) {
+      visibility = [ ":*" ]
+      sources = [ "user-copy-tests.cc" ] + invoker.sources
+      defines = [ "ARM64_USERCOPY_FN=${main_target_name}" ]
+      deps = [
+        ":user-copy-asm",
+        "//sdk/lib/stdcompat",
+        "//src/lib/fxl/test:gtest_main",
+        "//third_party/googletest:gtest",
+        "//zircon/kernel/lib/arch",
+
+        # unsanitized memcpy symbol.
+        "//zircon/kernel/lib/libc/string/arch/arm64",
+      ]
+    }
+
+    fuchsia_unittest_component(main_target_name) {
+      deps = [ ":$test_target_name" ]
+    }
   }
 
-  test("arm64-user-copy-tests") {
-    testonly = true
-    visibility = [ ":*" ]
-    sources = [
-      "user-copy-tests.cc",
-      "user-copy.S",
-    ]
-    deps = [
-      "//sdk/lib/stdcompat",
-      "//src/lib/fxl/test:gtest_main",
-      "//third_party/googletest:gtest",
-      "//zircon/kernel/lib/arch",
+  arm64_user_copy_test("_arm64_user_copy") {
+    sources = [ "user-copy.S" ]
+  }
 
-      # unsanitized memcpy symbol.
-      "//zircon/kernel/lib/libc/string/arch/arm64",
+  arm64_user_copy_test("_arm64_user_copy_from_user") {
+    sources = [ "user-copy-from-user.S" ]
+  }
+
+  arm64_user_copy_test("_arm64_user_copy_to_user") {
+    sources = [ "user-copy-to-user.S" ]
+  }
+
+  fuchsia_test_package("tests") {
+    package_name = "arm64-user-copy-tests"
+    test_components = [
+      ":_arm64_user_copy",
+      ":_arm64_user_copy_to_user",
+      ":_arm64_user_copy_from_user",
     ]
   }
 }

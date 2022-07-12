@@ -69,8 +69,8 @@ void DoAndVerifyCopy(size_t copy_size, size_t src_offset, size_t dst_offset,
 
   uint64_t fault_return = 0;
   auto [status, fault_flags, fault_addr] =
-      _arm64_user_copy(dst.data() + kCanary.size() + dst_offset,
-                       src.data() + kCanary.size() + src_offset, copy_size, &fault_return, 0);
+      ARM64_USERCOPY_FN(dst.data() + kCanary.size() + dst_offset,
+                        src.data() + kCanary.size() + src_offset, copy_size, &fault_return, 0);
 
   ASSERT_EQ(status, ZX_OK);
   ASSERT_EQ(fault_return, 0u);
