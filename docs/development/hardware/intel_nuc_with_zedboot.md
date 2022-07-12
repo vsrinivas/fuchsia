@@ -30,8 +30,10 @@ complete the [Get started with Fuchsia][get-started-with-fuchsia] guide.
 
 ### Get parts {#get-parts}
 
-Note: Fuchsia only supports the specific system configurations listed in
-[Supported system configurations][supported-sys-config].
+Note: Fuchsia only supports the NUC configurations listed in
+[Supported system configurations][supported-sys-config]. However,
+unsupported NUC configurations may also work with Fuchsia. For more information
+on experimental setups, see [Experimental hardware][experimental-hardware].
 
 The following parts are required for this guide:
 
@@ -316,7 +318,7 @@ generation.
 The list below shows some example models:
 
  * [Intel® NUC Kit NUC7i5DNKE][NUC7i5DNKE]{:.external}
- * [Intel® NUC Kit NUC7i5DNHE][NUC7i5DNHE]{:.external}
+ * [Intel® NUC Kit NUC7i5DNHE][NUC7i5DNHE]{:.external} (Best choice)
  * [Intel® NUC Kit NUC7i3DNKE][NUC7i3DNKE]{:.external}
  * [Intel® NUC Kit NUC7i3DNHE][NUC7i3DNHE]{:.external}
  * [Intel® NUC Kit NUC8i5BEK][NUC8i5BEK]{:.external}
@@ -476,3 +478,4 @@ Do the following:
 [amtterm]: https://git.kraxel.org/cgit/amtterm/
 [amt]: https://www.intel.com/content/www/us/en/architecture-and-technology/intel-active-management-technology.html
 [wsman]: https://github.com/Openwsman/wsmancli
+[experimental-hardware]: /docs/contribute/governance/rfcs/0111_fuchsia_hardware_specifications.md#experimental-hardware
