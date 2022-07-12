@@ -22,7 +22,13 @@ constexpr uint16_t kQueueSize = 16;
 
 constexpr uint32_t kPixelFormat = VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM;
 constexpr size_t kPixelSizeInBytes = 4;
-constexpr uint32_t kResourceId = 0;
+
+// Resource IDs are client allocated, so any value here is fine except for 0. Some GPU commands (ex
+// SET_SCANOUT) use resource_id == 0 to mean no resource so some implementations may fail to create
+// a resource with resource_id == 0.
+//
+// Section 5.7.6.8: controlq: ...The driver can use resource_id = 0 to disable a scanout.
+constexpr uint32_t kResourceId = 1;
 constexpr uint32_t kScanoutId = 0;
 
 constexpr auto kCppComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cm";
@@ -251,15 +257,11 @@ TEST_P(VirtioGpuTest, SetScanoutWithInvalidResourceId) {
 }
 
 TEST_P(VirtioGpuTest, CreateLargeResource) {
-  // TODO(fxbug.dev/102870): Enable this test for the rust device.
-  if (IsRustComponent()) {
-    GTEST_SKIP();
-  }
-
   virtio_gpu_ctrl_hdr_t* response;
   ASSERT_EQ(SendRequest(
                 virtio_gpu_resource_create_2d_t{
                     .hdr = {.type = VIRTIO_GPU_CMD_RESOURCE_CREATE_2D},
+                    .resource_id = kResourceId,
                     .width = UINT32_MAX,
                     .height = UINT32_MAX,
                 },
