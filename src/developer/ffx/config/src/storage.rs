@@ -7,24 +7,37 @@ use {
     crate::environment::Environment,
     crate::nested::{nested_get, nested_remove, nested_set},
     crate::ConfigLevel,
-    anyhow::{Context, Result},
+    anyhow::{bail, Context, Result},
     config_macros::include_default,
+    serde::de::DeserializeOwned,
     serde_json::{Map, Value},
     std::{
         fmt,
-        fs::{File, OpenOptions},
+        fs::OpenOptions,
         io::{BufReader, BufWriter, Read, Write},
-        path::Path,
+        path::{Path, PathBuf},
     },
 };
 
+/// The type of a configuration level's mapping.
+pub type ConfigMap = Map<String, Value>;
+
+/// An individually loaded configuration file, including the path it came from
+/// if it was loaded from disk.
+#[derive(Debug, Clone)]
+pub struct ConfigFile {
+    path: Option<PathBuf>,
+    contents: ConfigMap,
+    dirty: bool,
+}
+
 #[derive(Debug, Clone)]
 pub struct Config {
-    default: Option<Value>,
-    global: Option<Value>,
-    user: Option<Value>,
-    build: Option<Value>,
-    runtime: Option<Value>,
+    default: ConfigMap,
+    global: Option<ConfigFile>,
+    user: Option<ConfigFile>,
+    build: Option<ConfigFile>,
+    runtime: ConfigMap,
 }
 
 struct PriorityIterator<'a> {
@@ -33,17 +46,17 @@ struct PriorityIterator<'a> {
 }
 
 impl<'a> Iterator for PriorityIterator<'a> {
-    type Item = &'a Option<Value>;
+    type Item = Option<&'a ConfigMap>;
 
     fn next(&mut self) -> Option<Self::Item> {
         use ConfigLevel::*;
         self.curr = ConfigLevel::next(self.curr);
         match self.curr {
-            Some(Runtime) => Some(&self.config.runtime),
-            Some(Build) => Some(&self.config.build),
-            Some(User) => Some(&self.config.user),
-            Some(Global) => Some(&self.config.global),
-            Some(Default) => Some(&self.config.default),
+            Some(Runtime) => Some(Some(&self.config.runtime)),
+            Some(Build) => Some(self.config.build.as_ref().map(|file| &file.contents)),
+            Some(User) => Some(self.config.user.as_ref().map(|file| &file.contents)),
+            Some(Global) => Some(self.config.global.as_ref().map(|file| &file.contents)),
+            Some(Default) => Some(Some(&self.config.default)),
             None => None,
         }
     }
@@ -54,23 +67,8 @@ impl<'a> Iterator for PriorityIterator<'a> {
 ///
 /// If the JSON is malformed, it will just get overwritten if set is ever used.
 /// (TODO: Validate above assumptions)
-fn read_json(file: impl Read) -> Option<Value> {
+fn read_json<T: DeserializeOwned>(file: impl Read) -> Option<T> {
     serde_json::from_reader(file).ok()
-}
-
-/// Takes an optional path-like object and maps it to a buffer reader of that
-/// file.
-fn reader(path: Option<impl AsRef<Path>>) -> Result<Option<BufReader<File>>> {
-    match path {
-        Some(p) => OpenOptions::new()
-            .read(true)
-            .write(true)
-            .create(true)
-            .open(&p)
-            .map(|f| Some(BufReader::new(f)))
-            .context("opening read buffer"),
-        None => Ok(None),
-    }
 }
 
 fn write_json<W: Write>(file: Option<W>, value: Option<&Value>) -> Result<()> {
@@ -107,58 +105,132 @@ where
     }
 }
 
+impl ConfigFile {
+    fn from_map(path: Option<PathBuf>, contents: ConfigMap) -> Self {
+        Self { path, contents, dirty: false }
+    }
+
+    fn from_buf(path: Option<PathBuf>, buffer: impl Read) -> Self {
+        let contents = read_json(buffer)
+            .as_ref()
+            .and_then(Value::as_object)
+            .cloned()
+            .unwrap_or_else(Map::default);
+        Self { path, contents, dirty: false }
+    }
+
+    fn from_file(path: &Path) -> Result<Self> {
+        let buffer = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(true)
+            .open(&path)
+            .map(BufReader::new)?;
+
+        Ok(Self::from_buf(Some(path.to_owned()), buffer))
+    }
+
+    fn is_dirty(&self) -> bool {
+        self.dirty
+    }
+
+    fn set(&mut self, key: &str, value: Value) -> Result<bool> {
+        let key_vec: Vec<&str> = key.split('.').collect();
+        let key = *key_vec.get(0).context("Can't set empty key")?;
+        let changed = nested_set(&mut self.contents, key, &key_vec[1..], value);
+        self.dirty = self.dirty || changed;
+        Ok(changed)
+    }
+
+    pub fn remove(&mut self, key: &str) -> Result<()> {
+        let key_vec: Vec<&str> = key.split('.').collect();
+        let key = *key_vec.get(0).context("Can't remove empty key")?;
+        self.dirty = true;
+        nested_remove(&mut self.contents, key, &key_vec[1..])
+    }
+
+    fn save(&mut self) -> Result<()> {
+        // FIXME(81502): There is a race between the ffx CLI and the daemon service
+        // in updating the config. We can lose changes if both try to change the
+        // config at the same time. We can reduce the rate of races by only writing
+        // to the config if the value actually changed.
+        if self.is_dirty() {
+            self.dirty = false;
+            with_writer(self.path.as_deref(), |writer| {
+                write_json(writer, Some(&Value::Object(self.contents.clone())))
+            })
+        } else {
+            Ok(())
+        }
+    }
+}
+
+impl Default for ConfigFile {
+    fn default() -> Self {
+        Self::from_map(None, Map::default())
+    }
+}
+
 impl Config {
     fn new(
-        global: Option<Value>,
-        build: Option<Value>,
-        user: Option<Value>,
-        runtime: Option<Value>,
+        global: Option<ConfigFile>,
+        build: Option<ConfigFile>,
+        user: Option<ConfigFile>,
+        runtime: ConfigMap,
     ) -> Self {
-        Self { user, build, global, runtime, default: include_default!() }
+        let default = match include_default!() {
+            Value::Object(obj) => obj,
+            _ => panic!("Statically build default configuration was not an object"),
+        };
+        Self { user, build, global, runtime, default }
     }
 
     pub(crate) fn from_env(
         env: &Environment,
         build_dir: Option<&Path>,
-        runtime: Option<Value>,
+        runtime: ConfigMap,
     ) -> Result<Self> {
         let build_conf = env.get_build(build_dir);
 
-        let user = reader(env.get_user())?.and_then(read_json);
-        let build = reader(build_conf)?.and_then(read_json);
-        let global = reader(env.get_global())?.and_then(read_json);
+        let user = env.get_user().map(ConfigFile::from_file).transpose()?;
+        let build = build_conf.map(ConfigFile::from_file).transpose()?;
+        let global = env.get_global().map(ConfigFile::from_file).transpose()?;
 
         Ok(Self::new(global, build, user, runtime))
     }
 
+    #[cfg(test)]
     fn write<W: Write>(&self, global: Option<W>, build: Option<W>, user: Option<W>) -> Result<()> {
-        write_json(user, self.user.as_ref())?;
-        write_json(build, self.build.as_ref())?;
-        write_json(global, self.global.as_ref())?;
+        write_json(
+            user,
+            self.user.as_ref().map(|file| Value::Object(file.contents.clone())).as_ref(),
+        )?;
+        write_json(
+            build,
+            self.build.as_ref().map(|file| Value::Object(file.contents.clone())).as_ref(),
+        )?;
+        write_json(
+            global,
+            self.global.as_ref().map(|file| Value::Object(file.contents.clone())).as_ref(),
+        )?;
         Ok(())
     }
 
-    pub(crate) fn save(
-        &self,
-        global: Option<&Path>,
-        build: Option<&Path>,
-        user: Option<&Path>,
-    ) -> Result<()> {
-        // First save the config to a temp file in the same location as the file, then atomically
-        // rename the file to the final location to avoid partially written files.
-
-        with_writer(global, |global| {
-            with_writer(build, |build| with_writer(user, |user| self.write(global, build, user)))
-        })
+    pub(crate) fn save(&mut self) -> Result<()> {
+        let files = [&mut self.global, &mut self.build, &mut self.user];
+        // Try to save all files and only fail out if any of them fail afterwards (with the first error). This hopefully mitigates
+        // any weird partial-save issues, though there's no way to eliminate them altogether (short of filesystem
+        // transactions)
+        files.into_iter().filter_map(|file| file.as_mut()).map(ConfigFile::save).collect()
     }
 
-    pub fn get_level(&self, level: ConfigLevel) -> Option<&Value> {
+    pub fn get_level(&self, level: ConfigLevel) -> Option<&ConfigMap> {
         match level {
-            ConfigLevel::Runtime => self.runtime.as_ref(),
-            ConfigLevel::User => self.user.as_ref(),
-            ConfigLevel::Build => self.build.as_ref(),
-            ConfigLevel::Global => self.global.as_ref(),
-            ConfigLevel::Default => self.default.as_ref(),
+            ConfigLevel::Runtime => Some(&self.runtime),
+            ConfigLevel::User => self.user.as_ref().map(|file| &file.contents),
+            ConfigLevel::Build => self.build.as_ref().map(|file| &file.contents),
+            ConfigLevel::Global => self.global.as_ref().map(|file| &file.contents),
+            ConfigLevel::Default => Some(&self.default),
         }
     }
 
@@ -170,14 +242,13 @@ impl Config {
     pub fn get(&self, key: &str, select: SelectMode) -> Option<Value> {
         let key_vec: Vec<&str> = key.split('.').collect();
         match select {
-            SelectMode::First => self
-                .iter()
-                .find_map(|c| nested_get(c.as_ref(), key_vec.get(0)?, &key_vec[1..]))
-                .cloned(),
+            SelectMode::First => {
+                self.iter().find_map(|c| nested_get(c, *key_vec.get(0)?, &key_vec[1..])).cloned()
+            }
             SelectMode::All => {
                 let result: Vec<Value> = self
                     .iter()
-                    .filter_map(|c| nested_get(c.as_ref(), key_vec.get(0)?, &key_vec[1..]))
+                    .filter_map(|c| nested_get(c, *key_vec.get(0)?, &key_vec[1..]))
                     .cloned()
                     .collect();
                 if result.len() > 0 {
@@ -190,47 +261,36 @@ impl Config {
     }
 
     pub fn set(&mut self, key: &str, level: ConfigLevel, value: Value) -> Result<bool> {
-        anyhow::ensure!(level != ConfigLevel::Default, "Can't set values at Default level");
-        let key_vec: Vec<&str> = key.split('.').collect();
-        let config_changed =
-            nested_set(&mut self.get_level_map(level), key_vec[0], &key_vec[1..], value);
-        Ok(config_changed)
+        let file = self.get_level_mut(level)?;
+        file.set(key, value)
     }
 
     pub fn remove(&mut self, key: &str, level: ConfigLevel) -> Result<()> {
-        anyhow::ensure!(level != ConfigLevel::Default, "Can't remove values at Default level");
-        let key_vec: Vec<&str> = key.split('.').collect();
-        nested_remove(&mut self.get_level_map(level), key_vec[0], &key_vec[1..])
+        let file = self.get_level_mut(level)?;
+        file.remove(key)
     }
 
     fn iter(&self) -> PriorityIterator<'_> {
         PriorityIterator { curr: None, config: self }
     }
 
-    fn get_level_map(&mut self, level: ConfigLevel) -> &mut Map<String, Value> {
-        let config = match level {
-            ConfigLevel::Runtime => &mut self.runtime,
-            ConfigLevel::User => &mut self.user,
-            ConfigLevel::Build => &mut self.build,
-            ConfigLevel::Global => &mut self.global,
-            ConfigLevel::Default => &mut self.default,
-        };
-        // Ensure current value is always a map.
-        match config {
-            Some(v) => {
-                if !v.is_object() {
-                    // This must be a map.  Will override any literals or arrays.
-                    *config = Some(Value::Object(Map::new()));
-                }
-            }
-            None => *config = Some(Value::Object(Map::new())),
+    fn get_level_mut(&mut self, level: ConfigLevel) -> Result<&mut ConfigFile> {
+        match level {
+            ConfigLevel::Runtime => bail!("No mutable access to runtime level configuration"),
+            ConfigLevel::User => self
+                .user
+                .as_mut()
+                .context("Tried to write to unconfigured user level configuration"),
+            ConfigLevel::Build => self
+                .build
+                .as_mut()
+                .context("Tried to write to unconfigured build level configuration"),
+            ConfigLevel::Global => self
+                .global
+                .as_mut()
+                .context("Tried to write to unconfigured global level configuration"),
+            ConfigLevel::Default => bail!("No mutable access to default level configuration"),
         }
-        // Ok to expect as this is ensured above.
-        config
-            .as_mut()
-            .expect("uninitialzed configuration")
-            .as_object_mut()
-            .expect("unable to initialize configuration map")
     }
 }
 
@@ -287,46 +347,46 @@ mod test {
     use serde_json::json;
     use std::io::{BufReader, BufWriter};
 
-    const ERROR: &'static str = "0";
+    const ERROR: &'static [u8] = b"0";
 
-    const USER: &'static str = r#"
+    const USER: &'static [u8] = br#"
         {
             "name": "User"
         }"#;
 
-    const BUILD: &'static str = r#"
+    const BUILD: &'static [u8] = br#"
         {
             "name": "Build"
         }"#;
 
-    const GLOBAL: &'static str = r#"
+    const GLOBAL: &'static [u8] = br#"
         {
             "name": "Global"
         }"#;
 
-    const DEFAULT: &'static str = r#"
+    const DEFAULT: &'static [u8] = br#"
         {
             "name": "Default"
         }"#;
 
-    const RUNTIME: &'static str = r#"
+    const RUNTIME: &'static [u8] = br#"
         {
             "name": "Runtime"
         }"#;
 
-    const MAPPED: &'static str = r#"
+    const MAPPED: &'static [u8] = br#"
         {
             "name": "TEST_MAP"
         }"#;
 
-    const NESTED: &'static str = r#"
+    const NESTED: &'static [u8] = br#"
         {
             "name": {
                "nested": "Nested"
             }
         }"#;
 
-    const DEEP: &'static str = r#"
+    const DEEP: &'static [u8] = br#"
         {
             "name": {
                "nested": {
@@ -337,17 +397,15 @@ mod test {
             }
         }"#;
 
+    const LITERAL: &'static [u8] = b"[]";
+
     #[test]
     fn test_persistent_build() -> Result<()> {
-        let mut user_file = String::from(USER);
-        let mut build_file = String::from(BUILD);
-        let mut global_file = String::from(GLOBAL);
-
         let persistent_config = Config::new(
-            read_json(BufReader::new(global_file.as_bytes())),
-            read_json(BufReader::new(build_file.as_bytes())),
-            read_json(BufReader::new(user_file.as_bytes())),
-            None,
+            Some(ConfigFile::from_buf(None, BufReader::new(GLOBAL))),
+            Some(ConfigFile::from_buf(None, BufReader::new(BUILD))),
+            Some(ConfigFile::from_buf(None, BufReader::new(USER))),
+            Map::default(),
         );
 
         let value = persistent_config.get("name", SelectMode::First);
@@ -367,6 +425,9 @@ mod test {
         }
 
         // Remove whitespace
+        let mut user_file = String::from_utf8_lossy(USER).to_string();
+        let mut build_file = String::from_utf8_lossy(BUILD).to_string();
+        let mut global_file = String::from_utf8_lossy(GLOBAL).to_string();
         user_file.retain(|c| !c.is_whitespace());
         build_file.retain(|c| !c.is_whitespace());
         global_file.retain(|c| !c.is_whitespace());
@@ -384,49 +445,51 @@ mod test {
     #[test]
     fn test_priority_iterator() -> Result<()> {
         let test = Config {
-            user: Some(serde_json::from_str(USER)?),
-            build: Some(serde_json::from_str(BUILD)?),
-            global: Some(serde_json::from_str(GLOBAL)?),
-            default: Some(serde_json::from_str(DEFAULT)?),
-            runtime: Some(serde_json::from_str(RUNTIME)?),
+            user: Some(ConfigFile::from_buf(None, BufReader::new(USER))),
+            build: Some(ConfigFile::from_buf(None, BufReader::new(BUILD))),
+            global: Some(ConfigFile::from_buf(None, BufReader::new(GLOBAL))),
+            default: serde_json::from_slice(DEFAULT)?,
+            runtime: serde_json::from_slice(RUNTIME)?,
         };
 
         let mut test_iter = test.iter();
-        assert_eq!(test_iter.next(), Some(&test.runtime));
-        assert_eq!(test_iter.next(), Some(&test.build));
-        assert_eq!(test_iter.next(), Some(&test.user));
-        assert_eq!(test_iter.next(), Some(&test.global));
-        assert_eq!(test_iter.next(), Some(&test.default));
+        assert_eq!(test_iter.next(), Some(Some(&test.runtime)));
+        assert_eq!(test_iter.next(), Some(test.build.as_ref().map(|file| &file.contents)));
+        assert_eq!(test_iter.next(), Some(test.user.as_ref().map(|file| &file.contents)));
+        assert_eq!(test_iter.next(), Some(test.global.as_ref().map(|file| &file.contents)));
+        assert_eq!(test_iter.next(), Some(Some(&test.default)));
+        assert_eq!(test_iter.next(), None);
         Ok(())
     }
 
     #[test]
     fn test_priority_iterator_with_nones() -> Result<()> {
         let test = Config {
-            user: Some(serde_json::from_str(USER)?),
+            user: Some(ConfigFile::from_buf(None, BufReader::new(USER))),
             build: None,
             global: None,
-            default: Some(serde_json::from_str(DEFAULT)?),
-            runtime: None,
+            default: serde_json::from_slice(DEFAULT)?,
+            runtime: ConfigMap::default(),
         };
 
         let mut test_iter = test.iter();
-        assert_eq!(test_iter.next(), Some(&test.runtime));
-        assert_eq!(test_iter.next(), Some(&test.build));
-        assert_eq!(test_iter.next(), Some(&test.user));
-        assert_eq!(test_iter.next(), Some(&test.global));
-        assert_eq!(test_iter.next(), Some(&test.default));
+        assert_eq!(test_iter.next(), Some(Some(&test.runtime)));
+        assert_eq!(test_iter.next(), Some(test.build.as_ref().map(|file| &file.contents)));
+        assert_eq!(test_iter.next(), Some(test.user.as_ref().map(|file| &file.contents)));
+        assert_eq!(test_iter.next(), Some(test.global.as_ref().map(|file| &file.contents)));
+        assert_eq!(test_iter.next(), Some(Some(&test.default)));
+        assert_eq!(test_iter.next(), None);
         Ok(())
     }
 
     #[test]
     fn test_get() -> Result<()> {
         let test = Config {
-            user: Some(serde_json::from_str(USER)?),
-            build: Some(serde_json::from_str(BUILD)?),
-            global: Some(serde_json::from_str(GLOBAL)?),
-            default: Some(serde_json::from_str(DEFAULT)?),
-            runtime: None,
+            user: Some(ConfigFile::from_buf(None, BufReader::new(USER))),
+            build: Some(ConfigFile::from_buf(None, BufReader::new(BUILD))),
+            global: Some(ConfigFile::from_buf(None, BufReader::new(GLOBAL))),
+            default: serde_json::from_slice(DEFAULT)?,
+            runtime: ConfigMap::default(),
         };
 
         let value = test.get("name", SelectMode::First);
@@ -434,11 +497,11 @@ mod test {
         assert_eq!(value.unwrap(), Value::String(String::from("Build")));
 
         let test_build = Config {
-            user: Some(serde_json::from_str(USER)?),
+            user: Some(ConfigFile::from_buf(None, BufReader::new(USER))),
             build: None,
-            global: Some(serde_json::from_str(GLOBAL)?),
-            default: Some(serde_json::from_str(DEFAULT)?),
-            runtime: None,
+            global: Some(ConfigFile::from_buf(None, BufReader::new(GLOBAL))),
+            default: serde_json::from_slice(DEFAULT)?,
+            runtime: ConfigMap::default(),
         };
 
         let value_build = test_build.get("name", SelectMode::First);
@@ -448,9 +511,9 @@ mod test {
         let test_global = Config {
             user: None,
             build: None,
-            global: Some(serde_json::from_str(GLOBAL)?),
-            default: Some(serde_json::from_str(DEFAULT)?),
-            runtime: None,
+            global: Some(ConfigFile::from_buf(None, BufReader::new(GLOBAL))),
+            default: serde_json::from_slice(DEFAULT)?,
+            runtime: ConfigMap::default(),
         };
 
         let value_global = test_global.get("name", SelectMode::First);
@@ -461,16 +524,21 @@ mod test {
             user: None,
             build: None,
             global: None,
-            default: Some(serde_json::from_str(DEFAULT)?),
-            runtime: None,
+            default: serde_json::from_slice(DEFAULT)?,
+            runtime: ConfigMap::default(),
         };
 
         let value_default = test_default.get("name", SelectMode::First);
         assert!(value_default.is_some());
         assert_eq!(value_default.unwrap(), Value::String(String::from("Default")));
 
-        let test_none =
-            Config { user: None, build: None, global: None, default: None, runtime: None };
+        let test_none = Config {
+            user: None,
+            build: None,
+            global: None,
+            default: ConfigMap::default(),
+            runtime: ConfigMap::default(),
+        };
 
         let value_none = test_none.get("name", SelectMode::First);
         assert!(value_none.is_none());
@@ -480,11 +548,11 @@ mod test {
     #[test]
     fn test_set_non_map_value() -> Result<()> {
         let mut test = Config {
-            user: Some(serde_json::from_str(ERROR)?),
+            user: Some(ConfigFile::from_buf(None, BufReader::new(ERROR))),
             build: None,
             global: None,
-            default: None,
-            runtime: None,
+            default: ConfigMap::default(),
+            runtime: ConfigMap::default(),
         };
         test.set("name", ConfigLevel::User, Value::String(String::from("whatever")))?;
         let value = test.get("name", SelectMode::First);
@@ -495,11 +563,11 @@ mod test {
     #[test]
     fn test_get_nonexistent_config() -> Result<()> {
         let test = Config {
-            user: Some(serde_json::from_str(USER)?),
-            build: Some(serde_json::from_str(BUILD)?),
-            global: Some(serde_json::from_str(GLOBAL)?),
-            default: Some(serde_json::from_str(DEFAULT)?),
-            runtime: None,
+            user: Some(ConfigFile::from_buf(None, BufReader::new(USER))),
+            build: Some(ConfigFile::from_buf(None, BufReader::new(BUILD))),
+            global: Some(ConfigFile::from_buf(None, BufReader::new(GLOBAL))),
+            default: serde_json::from_slice(DEFAULT)?,
+            runtime: ConfigMap::default(),
         };
         let value = test.get("field that does not exist", SelectMode::First);
         assert!(value.is_none());
@@ -509,11 +577,11 @@ mod test {
     #[test]
     fn test_set() -> Result<()> {
         let mut test = Config {
-            user: Some(serde_json::from_str(USER)?),
-            build: Some(serde_json::from_str(BUILD)?),
-            global: Some(serde_json::from_str(GLOBAL)?),
-            default: Some(serde_json::from_str(DEFAULT)?),
-            runtime: None,
+            user: Some(ConfigFile::from_buf(None, BufReader::new(USER))),
+            build: Some(ConfigFile::from_buf(None, BufReader::new(BUILD))),
+            global: Some(ConfigFile::from_buf(None, BufReader::new(GLOBAL))),
+            default: serde_json::from_slice(DEFAULT)?,
+            runtime: ConfigMap::default(),
         };
         test.set("name", ConfigLevel::Build, Value::String(String::from("build-test")))?;
         let value = test.get("name", SelectMode::First);
@@ -525,11 +593,11 @@ mod test {
     #[test]
     fn test_set_twice_does_not_change_config() -> Result<()> {
         let mut test = Config {
-            user: Some(serde_json::from_str(USER)?),
-            build: Some(serde_json::from_str(BUILD)?),
-            global: Some(serde_json::from_str(GLOBAL)?),
-            default: Some(serde_json::from_str(DEFAULT)?),
-            runtime: None,
+            user: Some(ConfigFile::from_buf(None, BufReader::new(USER))),
+            build: Some(ConfigFile::from_buf(None, BufReader::new(BUILD))),
+            global: Some(ConfigFile::from_buf(None, BufReader::new(GLOBAL))),
+            default: serde_json::from_slice(DEFAULT)?,
+            runtime: ConfigMap::default(),
         };
         assert!(test.set(
             "name",
@@ -566,8 +634,13 @@ mod test {
 
     #[test]
     fn test_set_build_from_none() -> Result<()> {
-        let mut test =
-            Config { user: None, build: None, global: None, default: None, runtime: None };
+        let mut test = Config {
+            user: Some(ConfigFile::default()),
+            build: Some(ConfigFile::default()),
+            global: Some(ConfigFile::default()),
+            default: ConfigMap::default(),
+            runtime: ConfigMap::default(),
+        };
         let value_none = test.get("name", SelectMode::First);
         assert!(value_none.is_none());
         let error_set =
@@ -596,11 +669,11 @@ mod test {
     #[test]
     fn test_remove() -> Result<()> {
         let mut test = Config {
-            user: Some(serde_json::from_str(USER)?),
-            build: Some(serde_json::from_str(BUILD)?),
-            global: Some(serde_json::from_str(GLOBAL)?),
-            default: Some(serde_json::from_str(DEFAULT)?),
-            runtime: None,
+            user: Some(ConfigFile::from_buf(None, BufReader::new(USER))),
+            build: Some(ConfigFile::from_buf(None, BufReader::new(BUILD))),
+            global: Some(ConfigFile::from_buf(None, BufReader::new(GLOBAL))),
+            default: serde_json::from_slice(DEFAULT)?,
+            runtime: ConfigMap::default(),
         };
         test.remove("name", ConfigLevel::User)?;
         let user_value = test.get("name", SelectMode::First);
@@ -628,7 +701,7 @@ mod test {
 
     #[test]
     fn test_default() {
-        let test = Config::new(None, None, None, None);
+        let test = Config::new(None, None, None, Map::default());
         let default_value = test.get("log.enabled", SelectMode::First);
         assert_eq!(
             default_value.unwrap(),
@@ -639,11 +712,11 @@ mod test {
     #[test]
     fn test_display() -> Result<()> {
         let test = Config {
-            user: Some(serde_json::from_str(USER)?),
-            build: Some(serde_json::from_str(BUILD)?),
-            global: Some(serde_json::from_str(GLOBAL)?),
-            default: Some(serde_json::from_str(DEFAULT)?),
-            runtime: None,
+            user: Some(ConfigFile::from_buf(None, BufReader::new(USER))),
+            build: Some(ConfigFile::from_buf(None, BufReader::new(BUILD))),
+            global: Some(ConfigFile::from_buf(None, BufReader::new(GLOBAL))),
+            default: serde_json::from_slice(DEFAULT)?,
+            runtime: ConfigMap::default(),
         };
         let output = format!("{}", test);
         assert!(output.len() > 0);
@@ -671,11 +744,11 @@ mod test {
     #[test]
     fn test_mapping() -> Result<()> {
         let test = Config {
-            user: Some(serde_json::from_str(MAPPED)?),
+            user: Some(ConfigFile::from_buf(None, BufReader::new(MAPPED))),
             build: None,
             global: None,
-            default: None,
-            runtime: None,
+            default: ConfigMap::default(),
+            runtime: ConfigMap::default(),
         };
         let test_mapping = "TEST_MAP".to_string();
         let test_passed = "passed".to_string();
@@ -692,8 +765,8 @@ mod test {
             user: None,
             build: None,
             global: None,
-            default: None,
-            runtime: Some(serde_json::from_str(NESTED)?),
+            default: ConfigMap::default(),
+            runtime: serde_json::from_slice(NESTED)?,
         };
         let value = test.get("name.nested", SelectMode::First);
         assert_eq!(value, Some(Value::String("Nested".to_string())));
@@ -706,8 +779,8 @@ mod test {
             user: None,
             build: None,
             global: None,
-            default: Some(serde_json::from_str(DEFAULT)?),
-            runtime: Some(serde_json::from_str(NESTED)?),
+            default: serde_json::from_slice(DEFAULT)?,
+            runtime: serde_json::from_slice(NESTED)?,
         };
         let value = test.get("name", SelectMode::First);
         assert_eq!(value, Some(serde_json::from_str("{\"nested\": \"Nested\"}")?));
@@ -720,8 +793,8 @@ mod test {
             user: None,
             build: None,
             global: None,
-            default: Some(serde_json::from_str(NESTED)?),
-            runtime: Some(serde_json::from_str(RUNTIME)?),
+            default: serde_json::from_slice(NESTED)?,
+            runtime: serde_json::from_slice(RUNTIME)?,
         };
         let value = test.get("name.nested", SelectMode::First);
         assert_eq!(value, Some(Value::String("Nested".to_string())));
@@ -734,8 +807,8 @@ mod test {
             user: None,
             build: None,
             global: None,
-            default: Some(serde_json::from_str(NESTED)?),
-            runtime: Some(serde_json::from_str(DEEP)?),
+            default: serde_json::from_slice(NESTED)?,
+            runtime: serde_json::from_slice(DEEP)?,
         };
         let value = test.get("name.nested", SelectMode::First).as_ref().recursive_map(&test_map);
         assert_eq!(value, Some(serde_json::from_str("{\"deep\": {\"name\": \"passed\"}}")?));
@@ -744,8 +817,13 @@ mod test {
 
     #[test]
     fn test_nested_set_from_none() -> Result<()> {
-        let mut test =
-            Config { user: None, build: None, global: None, default: None, runtime: None };
+        let mut test = Config {
+            user: Some(ConfigFile::default()),
+            build: None,
+            global: None,
+            default: ConfigMap::default(),
+            runtime: ConfigMap::default(),
+        };
         test.set("name.nested", ConfigLevel::User, Value::Bool(false))?;
         let nested_value = test.get("name", SelectMode::First);
         assert_eq!(nested_value, Some(serde_json::from_str("{\"nested\": false}")?));
@@ -755,11 +833,11 @@ mod test {
     #[test]
     fn test_nested_set_from_already_populated_tree() -> Result<()> {
         let mut test = Config {
-            user: Some(serde_json::from_str(NESTED)?),
+            user: Some(ConfigFile::from_buf(None, BufReader::new(NESTED))),
             build: None,
             global: None,
-            default: None,
-            runtime: None,
+            default: ConfigMap::default(),
+            runtime: ConfigMap::default(),
         };
         test.set("name.updated", ConfigLevel::User, Value::Bool(true))?;
         let expected = json!({
@@ -774,11 +852,11 @@ mod test {
     #[test]
     fn test_nested_set_override_literals() -> Result<()> {
         let mut test = Config {
-            user: Some(json!([])),
+            user: Some(ConfigFile::from_buf(None, BufReader::new(LITERAL))),
             build: None,
             global: None,
-            default: None,
-            runtime: None,
+            default: ConfigMap::default(),
+            runtime: ConfigMap::default(),
         };
         test.set("name.updated", ConfigLevel::User, Value::Bool(true))?;
         let expected = json!({
@@ -786,7 +864,7 @@ mod test {
         });
         let nested_value = test.get("name", SelectMode::First);
         assert_eq!(nested_value, Some(expected));
-        test.set("name.updated", ConfigLevel::User, serde_json::from_str(NESTED)?)?;
+        test.set("name.updated", ConfigLevel::User, serde_json::from_slice(NESTED)?)?;
         let nested_value = test.get("name.updated.name.nested", SelectMode::First);
         assert_eq!(nested_value, Some(Value::String(String::from("Nested"))));
         Ok(())
@@ -794,8 +872,13 @@ mod test {
 
     #[test]
     fn test_nested_remove_from_none() -> Result<()> {
-        let mut test =
-            Config { user: None, build: None, global: None, default: None, runtime: None };
+        let mut test = Config {
+            user: None,
+            build: None,
+            global: None,
+            default: ConfigMap::default(),
+            runtime: ConfigMap::default(),
+        };
         let result = test.remove("name.nested", ConfigLevel::User);
         assert!(result.is_err());
         Ok(())
@@ -804,11 +887,11 @@ mod test {
     #[test]
     fn test_nested_remove_throws_error_if_key_not_found() -> Result<()> {
         let mut test = Config {
-            user: Some(serde_json::from_str(NESTED)?),
+            user: Some(ConfigFile::from_buf(None, BufReader::new(NESTED))),
             build: None,
             global: None,
-            default: None,
-            runtime: None,
+            default: ConfigMap::default(),
+            runtime: ConfigMap::default(),
         };
         let result = test.remove("name.unknown", ConfigLevel::User);
         assert!(result.is_err());
@@ -818,11 +901,11 @@ mod test {
     #[test]
     fn test_nested_remove_deletes_literals() -> Result<()> {
         let mut test = Config {
-            user: Some(serde_json::from_str(DEEP)?),
+            user: Some(ConfigFile::from_buf(None, BufReader::new(DEEP))),
             build: None,
             global: None,
-            default: None,
-            runtime: None,
+            default: ConfigMap::default(),
+            runtime: ConfigMap::default(),
         };
         test.remove("name.nested.deep.name", ConfigLevel::User)?;
         let value = test.get("name", SelectMode::First);
@@ -833,11 +916,11 @@ mod test {
     #[test]
     fn test_nested_remove_deletes_subtrees() -> Result<()> {
         let mut test = Config {
-            user: Some(serde_json::from_str(DEEP)?),
+            user: Some(ConfigFile::from_buf(None, BufReader::new(DEEP))),
             build: None,
             global: None,
-            default: None,
-            runtime: None,
+            default: ConfigMap::default(),
+            runtime: ConfigMap::default(),
         };
         test.remove("name.nested", ConfigLevel::User)?;
         let value = test.get("name", SelectMode::First);
@@ -848,11 +931,11 @@ mod test {
     #[test]
     fn test_additive_mode() -> Result<()> {
         let test = Config {
-            user: Some(serde_json::from_str(USER)?),
-            build: Some(serde_json::from_str(BUILD)?),
-            global: Some(serde_json::from_str(GLOBAL)?),
-            default: Some(serde_json::from_str(DEFAULT)?),
-            runtime: Some(serde_json::from_str(RUNTIME)?),
+            user: Some(ConfigFile::from_buf(None, BufReader::new(USER))),
+            build: Some(ConfigFile::from_buf(None, BufReader::new(BUILD))),
+            global: Some(ConfigFile::from_buf(None, BufReader::new(GLOBAL))),
+            default: serde_json::from_slice(DEFAULT)?,
+            runtime: serde_json::from_slice(RUNTIME)?,
         };
         let value = test.get("name", SelectMode::All);
         match value {

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::{
-    api::ConfigResult, cache::load_config, check_config_files, nested::RecursiveMap, save_config,
-    validate_type, ConfigError, ConfigLevel, ConfigValue, ValueStrategy,
+    api::ConfigResult, cache::load_config, check_config_files, nested::RecursiveMap, validate_type,
+    ConfigError, ConfigLevel, ConfigValue, ValueStrategy,
 };
 use anyhow::{bail, Result};
 use serde_json::Value;
@@ -78,7 +78,9 @@ impl<'a> ConfigQuery<'a> {
             Self { name: Some(name), level: Some(level), .. } => {
                 read_guard.get_in_level(*name, *level)
             }
-            Self { name: None, level: Some(level), .. } => read_guard.get_level(*level).cloned(),
+            Self { name: None, level: Some(level), .. } => {
+                read_guard.get_level(*level).cloned().map(Value::Object)
+            }
             _ => bail!("Invalid query: {self:?}"),
         };
         Ok(result.into())
@@ -163,17 +165,8 @@ impl<'a> ConfigQuery<'a> {
         check_config_files(&level, build_dir.as_deref())?;
         let config = load_config(build_dir.as_deref()).await?;
         let mut write_guard = config.write().await;
-        let config_changed = (*write_guard).set(key, level, value)?;
-
-        // FIXME(81502): There is a race between the ffx CLI and the daemon service
-        // in updating the config. We can lose changes if both try to change the
-        // config at the same time. We can reduce the rate of races by only writing
-        // to the config if the value actually changed.
-        if config_changed {
-            save_config(&mut *write_guard, build_dir.as_deref())
-        } else {
-            Ok(())
-        }
+        write_guard.set(key, level, value)?;
+        write_guard.save()
     }
 
     /// Remove the value at the queried location.
@@ -182,8 +175,8 @@ impl<'a> ConfigQuery<'a> {
         let build_dir = self.get_build_dir().await;
         let config = load_config(build_dir.as_deref()).await?;
         let mut write_guard = config.write().await;
-        (*write_guard).remove(key, level)?;
-        save_config(&mut *write_guard, build_dir.as_deref())
+        write_guard.remove(key, level)?;
+        write_guard.save()
     }
 
     /// Add this value at the queried location as an array item, converting the location to an array
@@ -194,31 +187,23 @@ impl<'a> ConfigQuery<'a> {
         check_config_files(&level, build_dir.as_deref())?;
         let config = load_config(build_dir.as_deref()).await?;
         let mut write_guard = config.write().await;
-        let config_changed = if let Some(mut current) = (*write_guard).get_in_level(key, level) {
+        if let Some(mut current) = write_guard.get_in_level(key, level) {
             if current.is_object() {
                 bail!("cannot add a value to a subtree");
             } else {
                 match current.as_array_mut() {
                     Some(v) => {
                         v.push(value);
-                        (*write_guard).set(key, level, Value::Array(v.to_vec()))?
+                        write_guard.set(key, level, Value::Array(v.to_vec()))?
                     }
-                    None => (*write_guard).set(key, level, Value::Array(vec![current, value]))?,
+                    None => write_guard.set(key, level, Value::Array(vec![current, value]))?,
                 }
             }
         } else {
-            (*write_guard).set(key, level, value)?
+            write_guard.set(key, level, value)?
         };
 
-        // FIXME(81502): There is a race between the ffx CLI and the daemon service
-        // in updating the config. We can lose changes if both try to change the
-        // config at the same time. We can reduce the rate of races by only writing
-        // to the config if the value actually changed.
-        if config_changed {
-            save_config(&mut *write_guard, build_dir.as_deref())
-        } else {
-            Ok(())
-        }
+        write_guard.save()
     }
     /// Returns the build directory if this query is for a level that might include the build directory,
     /// and a build directory is configured or given (even if it's configured to default).

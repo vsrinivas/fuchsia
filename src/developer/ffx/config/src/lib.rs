@@ -12,7 +12,6 @@ use crate::api::{
 };
 use crate::cache::load_config;
 use crate::environment::Environment;
-use crate::storage::Config;
 use analytics::{is_opted_in, set_opt_in_status};
 use anyhow::{anyhow, Context, Result};
 use futures::future::{BoxFuture, FutureExt};
@@ -145,13 +144,6 @@ fn check_config_files(level: &ConfigLevel, build_dir: Option<&Path>) -> Result<(
     let e = env_file().ok_or(anyhow!("Could not find environment file"))?;
     let mut environment = Environment::load(&e)?;
     environment.check(level, build_dir)
-}
-
-fn save_config(config: &mut Config, build_dir: Option<&Path>) -> Result<()> {
-    let e = env_file().ok_or(anyhow!("Could not find environment file"))?;
-    let env = Environment::load(&e)?;
-    let build = env.get_build(build_dir);
-    config.save(env.get_global(), build, env.get_user())
 }
 
 pub async fn print_config<W: Write>(mut writer: W, build_dir: Option<&Path>) -> Result<()> {
