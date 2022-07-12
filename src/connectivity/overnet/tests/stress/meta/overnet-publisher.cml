@@ -1,0 +1,32 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/elf_stdio.shard.cml" ],
+    program: {
+        binary: "bin/overnet_publisher",
+    },
+    children: [
+        {
+            name: "proxy-stressor",
+            url: "#meta/proxy_stressor.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.overnet.ServicePublisher",
+            from: "parent",
+        },
+        {
+            protocol: "test.proxy.stress.Stressor",
+            from: "#proxy-stressor",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#proxy-stressor",
+        },
+    ],
+}

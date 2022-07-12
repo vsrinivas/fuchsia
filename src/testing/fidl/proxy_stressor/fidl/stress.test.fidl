@@ -1,0 +1,25 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library test.proxy.stress;
+
+using zx;
+
+@discoverable
+protocol Stressor {
+    /// Writes 0xFF repeatedly to the given socket until the buffer is full,
+    /// then returns the number of bytes written. The client should not read
+    /// from the other end of the socket until this returns.
+    StuffSocket(resource struct {
+        socket zx.handle:SOCKET;
+    }) -> (struct {
+        bytes_written uint32;
+    });
+
+    Echo(struct {
+        content string:1024;
+    }) -> (struct {
+        content string:1024;
+    });
+};
