@@ -7,7 +7,7 @@ import("//build/go/toolchain.gni")
 import("//build/rust/rustc_binary.gni")
 
 executable("bin") {
-  output_name = "hlcpp-server"
+  output_name = "hlcpp-impl"
   output_dir = target_out_dir
 
   sources = [ "main.cc" ]
@@ -24,7 +24,7 @@ executable("bin") {
   ]
 }
 
-fuchsia_component("hlcpp-server") {
-  manifest = "meta/hlcpp-server.cmx"
+fuchsia_component("hlcpp-impl") {
+  manifest = "meta/hlcpp-impl.cmx"
   deps = [ ":bin" ]
 }

@@ -7,9 +7,9 @@
 namespace fidl_test_compatibility_helpers {
 
 // Helper text for how to invoke the proper compatibility test combination.
-constexpr char kUsage[] = ("Usage:\n  fidl_compatibility_test foo_server bar_server\n");
+constexpr char kUsage[] = ("Usage:\n  fidl_compatibility_test foo_impl bar_impl\n");
 
-AllowServerPair Exclude(std::initializer_list<const char*> substrings) {
+AllowImplPair Exclude(std::initializer_list<const char*> substrings) {
   return [substrings](const std::string& proxy_url, const std::string& server_url) {
     for (auto substring : substrings) {
       if (proxy_url.find(substring) != std::string::npos) {
@@ -30,14 +30,14 @@ std::string ExtractShortName(const std::string& pkg_url) {
   return short_name;
 }
 
-void ForAllServers(Servers servers, TestBody body) {
-  ForSomeServers(
-      servers, [](const std::string& _p, const std::string& _s) { return true; }, body);
+void ForAllImpls(Impls impls, TestBody body) {
+  ForSomeImpls(
+      impls, [](const std::string& _p, const std::string& _s) { return true; }, body);
 }
 
-void ForSomeServers(Servers servers, AllowServerPair allow, TestBody body) {
-  for (auto const& proxy_url : servers) {
-    for (auto const& server_url : servers) {
+void ForSomeImpls(Impls impls, AllowImplPair allow, TestBody body) {
+  for (auto const& proxy_url : impls) {
+    for (auto const& server_url : impls) {
       if (!allow(proxy_url, server_url)) {
         continue;
       }
@@ -59,23 +59,23 @@ void ForSomeServers(Servers servers, AllowServerPair allow, TestBody body) {
   }
 }
 
-bool GetServersUnderTest(int argc, char** argv, Servers* out_servers) {
+bool GetImplsUnderTest(int argc, char** argv, Impls* out_impls) {
   for (int i = 1; i < argc; i++) {
-    std::string server(argv[i]);
+    std::string impl(argv[i]);
     std::string package_url;
-    if (server.rfind("fuchsia-pkg://", 0) == 0) {
-      package_url = server;
+    if (impl.rfind("fuchsia-pkg://", 0) == 0) {
+      package_url = impl;
     } else {
       package_url = "fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/" +
-                    std::string(argv[i]) + "-server.cmx";
+                    std::string(argv[i]) + "-impl.cmx";
     }
-    out_servers->push_back(package_url);
+    out_impls->push_back(package_url);
   }
 
-  if (!out_servers->empty()) {
+  if (!out_impls->empty()) {
     return true;
   }
-  FX_CHECK(!out_servers->empty()) << kUsage;
+  FX_CHECK(!out_impls->empty()) << kUsage;
   return false;
 }
 

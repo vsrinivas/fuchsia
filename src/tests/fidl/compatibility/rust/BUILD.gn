@@ -7,7 +7,7 @@ import("//build/go/toolchain.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
-  output_name = "rust-server"
+  output_name = "rust-impl"
   output_dir = target_out_dir
   edition = "2021"
   source_root = "main.rs"
@@ -27,7 +27,7 @@ rustc_binary("bin") {
   sources = [ "main.rs" ]
 }
 
-fuchsia_component("rust-server") {
-  manifest = "meta/rust-server.cmx"
+fuchsia_component("rust-impl") {
+  manifest = "meta/rust-impl.cmx"
   deps = [ ":bin" ]
 }

@@ -1,9 +1,6 @@
 {
-    "include": [
-        "syslog/client.shard.cmx"
-    ],
     "program": {
-        "binary": "bin/rust-server"
+        "binary": "bin/go-impl"
     },
     "sandbox": {
         "services": [

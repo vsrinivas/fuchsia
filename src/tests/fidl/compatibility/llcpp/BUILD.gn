@@ -7,7 +7,7 @@ import("//build/go/toolchain.gni")
 import("//build/rust/rustc_binary.gni")
 
 executable("bin") {
-  output_name = "llcpp-server"
+  output_name = "llcpp-impl"
   output_dir = target_out_dir
   testonly = true
 
@@ -24,8 +24,8 @@ executable("bin") {
   ]
 }
 
-fuchsia_component("llcpp-server") {
-  manifest = "meta/llcpp-server.cmx"
+fuchsia_component("llcpp-impl") {
+  manifest = "meta/llcpp-impl.cmx"
   deps = [ ":bin" ]
   testonly = true
 }

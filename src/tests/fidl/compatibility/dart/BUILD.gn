@@ -8,7 +8,7 @@ import("//build/dart/dart_library.gni")
 import("//build/go/toolchain.gni")
 
 dart_library("bin") {
-  package_name = "dart-server"
+  package_name = "dart-impl"
   sources = [ "main.dart" ]
   deps = [
     "//sdk/dart/fidl",
@@ -19,8 +19,8 @@ dart_library("bin") {
   ]
 }
 
-dart_component("dart-server") {
-  manifest = "meta/dart-server.cmx"
-  main_package = "dart-server"
+dart_component("dart-impl") {
+  manifest = "meta/dart-impl.cmx"
+  main_package = "dart-impl"
   deps = [ ":bin" ]
 }

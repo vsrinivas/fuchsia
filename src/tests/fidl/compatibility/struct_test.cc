@@ -18,15 +18,15 @@ using fidl::test::compatibility::Struct;
 using fidl::test::compatibility::this_is_a_union;
 
 using fidl_test_compatibility_helpers::ExtractShortName;
-using fidl_test_compatibility_helpers::ForAllServers;
-using fidl_test_compatibility_helpers::GetServersUnderTest;
+using fidl_test_compatibility_helpers::ForAllImpls;
+using fidl_test_compatibility_helpers::GetImplsUnderTest;
 using fidl_test_compatibility_helpers::Handle;
 using fidl_test_compatibility_helpers::HandlesEq;
+using fidl_test_compatibility_helpers::Impls;
 using fidl_test_compatibility_helpers::kArbitraryConstant;
 using fidl_test_compatibility_helpers::kArbitraryVectorSize;
 using fidl_test_compatibility_helpers::PrintSummary;
 using fidl_test_compatibility_helpers::RandomUTF8;
-using fidl_test_compatibility_helpers::Servers;
 using fidl_test_compatibility_helpers::Summary;
 
 namespace {
@@ -409,7 +409,7 @@ class CompatibilityTest : public ::testing::TestWithParam<std::tuple<std::string
   std::unique_ptr<async::Loop> loop_;
 };
 
-Servers servers;
+Impls impls;
 Summary summary;
 
 void ExpectEq(const Struct& a, const Struct& b) {
@@ -718,8 +718,8 @@ void ExpectEq(const Struct& a, const Struct& b) {
 }
 
 TEST(Struct, EchoStruct) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (struct)"] =
         false;
     Struct sent;
@@ -744,8 +744,8 @@ TEST(Struct, EchoStruct) {
 }
 
 TEST(Struct, EchoStructWithErrorSuccessCase) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (struct result success)"] = false;
     Struct sent;
@@ -775,8 +775,8 @@ TEST(Struct, EchoStructWithErrorSuccessCase) {
 }
 
 TEST(Struct, EchoStructWithErrorErrorCase) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (struct result error)"] = false;
     Struct sent;
@@ -800,8 +800,8 @@ TEST(Struct, EchoStructWithErrorErrorCase) {
 }
 
 TEST(Struct, EchoStructNoRetval) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (struct_no_ret)"] = false;
     Struct sent;
@@ -826,8 +826,8 @@ TEST(Struct, EchoStructNoRetval) {
 }
 
 TEST(Struct, EchoNamedStruct) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (struct)"] =
         false;
     fidl::test::imported::SimpleStruct sent;
@@ -856,8 +856,8 @@ TEST(Struct, EchoNamedStruct) {
 }
 
 TEST(Struct, EchoNamedStructWithErrorSuccessCase) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (struct result success)"] = false;
     fidl::test::imported::SimpleStruct sent;
@@ -890,8 +890,8 @@ TEST(Struct, EchoNamedStructWithErrorSuccessCase) {
 }
 
 TEST(Struct, EchoNamedStructWithErrorErrorCase) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (struct result error)"] = false;
     fidl::test::imported::SimpleStruct sent;
@@ -918,8 +918,8 @@ TEST(Struct, EchoNamedStructWithErrorErrorCase) {
 }
 
 TEST(Struct, EchoNamedStructNoRetval) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (struct_no_ret)"] = false;
     fidl::test::imported::SimpleStruct sent;
@@ -954,7 +954,7 @@ int main(int argc, char** argv) {
   }
 
   testing::InitGoogleTest(&argc, argv);
-  GetServersUnderTest(argc, argv, &servers);
+  GetImplsUnderTest(argc, argv, &impls);
 
   int r = RUN_ALL_TESTS();
   PrintSummary(summary);

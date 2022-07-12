@@ -7,7 +7,7 @@ import("//build/go/toolchain.gni")
 import("//build/rust/rustc_binary.gni")
 
 executable("bin") {
-  output_name = "cpp-server"
+  output_name = "cpp-impl"
   output_dir = target_out_dir
 
   sources = [ "main.cc" ]
@@ -24,7 +24,7 @@ executable("bin") {
   ]
 }
 
-fuchsia_component("cpp-server") {
-  manifest = "meta/cpp-server.cmx"
+fuchsia_component("cpp-impl") {
+  manifest = "meta/cpp-impl.cmx"
   deps = [ ":bin" ]
 }

@@ -20,13 +20,13 @@ using fidl::test::compatibility::this_is_a_xunion;
 
 using fidl_test_compatibility_helpers::DataGenerator;
 using fidl_test_compatibility_helpers::ExtractShortName;
-using fidl_test_compatibility_helpers::ForAllServers;
-using fidl_test_compatibility_helpers::ForSomeServers;
-using fidl_test_compatibility_helpers::GetServersUnderTest;
+using fidl_test_compatibility_helpers::ForAllImpls;
+using fidl_test_compatibility_helpers::ForSomeImpls;
+using fidl_test_compatibility_helpers::GetImplsUnderTest;
 using fidl_test_compatibility_helpers::HandlesEq;
+using fidl_test_compatibility_helpers::Impls;
 using fidl_test_compatibility_helpers::kArbitraryVectorSize;
 using fidl_test_compatibility_helpers::PrintSummary;
-using fidl_test_compatibility_helpers::Servers;
 using fidl_test_compatibility_helpers::Summary;
 
 namespace {
@@ -106,12 +106,12 @@ class CompatibilityTest : public ::testing::TestWithParam<std::tuple<std::string
   std::unique_ptr<async::Loop> loop_;
 };
 
-Servers servers;
+Impls impls;
 Summary summary;
 
 TEST(Table, EchoTable) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (table)"] =
         false;
     // Using randomness to avoid having to come up with varied values by
@@ -142,8 +142,8 @@ TEST(Table, EchoTable) {
 }
 
 TEST(Table, EchoTableWithErrorSuccessCase) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (table result success)"] = false;
     // Using randomness to avoid having to come up with varied values by
@@ -177,41 +177,41 @@ TEST(Table, EchoTableWithErrorSuccessCase) {
 }
 
 TEST(Table, EchoTableWithErrorErrorCase) {
-  ForAllServers(servers,
-                // See: fxbug.dev/7966
-                [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                   const std::string& server_url, const std::string& proxy_url) {
-                  summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
-                          " (table result error)"] = false;
-                  // Using randomness to avoid having to come up with varied values by
-                  // hand. Seed deterministically so that this function's outputs are
-                  // predictable.
-                  DataGenerator generator(0xF1D7);
+  ForAllImpls(impls,
+              // See: fxbug.dev/7966
+              [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                 const std::string& server_url, const std::string& proxy_url) {
+                summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+                        " (table result error)"] = false;
+                // Using randomness to avoid having to come up with varied values by
+                // hand. Seed deterministically so that this function's outputs are
+                // predictable.
+                DataGenerator generator(0xF1D7);
 
-                  AllTypesTable sent;
-                  InitializeAllTypesTable(&sent, generator);
-                  auto err = fidl::test::compatibility::default_enum::kOne;
+                AllTypesTable sent;
+                InitializeAllTypesTable(&sent, generator);
+                auto err = fidl::test::compatibility::default_enum::kOne;
 
-                  bool called_back = false;
-                  proxy->EchoTableWithError(
-                      std::move(sent), err, server_url, RespondWith::ERR,
-                      [&loop, &err, &called_back](Echo_EchoTableWithError_Result resp) {
-                        ASSERT_TRUE(resp.is_err());
-                        ASSERT_EQ(err, resp.err());
-                        called_back = true;
-                        loop.Quit();
-                      });
+                bool called_back = false;
+                proxy->EchoTableWithError(
+                    std::move(sent), err, server_url, RespondWith::ERR,
+                    [&loop, &err, &called_back](Echo_EchoTableWithError_Result resp) {
+                      ASSERT_TRUE(resp.is_err());
+                      ASSERT_EQ(err, resp.err());
+                      called_back = true;
+                      loop.Quit();
+                    });
 
-                  loop.Run();
-                  ASSERT_TRUE(called_back);
-                  summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
-                          " (table result error)"] = true;
-                });
+                loop.Run();
+                ASSERT_TRUE(called_back);
+                summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+                        " (table result error)"] = true;
+              });
 }
 
 TEST(Table, EchoTablePayload) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (table)"] =
         false;
     fidl::test::compatibility::RequestTable sent;
@@ -241,8 +241,8 @@ TEST(Table, EchoTablePayload) {
 }
 
 TEST(Table, EchoTablePayloadWithErrorSuccessCase) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (table result success)"] = false;
     fidl::test::compatibility::EchoEchoTablePayloadWithErrorRequest sent;
@@ -276,8 +276,8 @@ TEST(Table, EchoTablePayloadWithErrorSuccessCase) {
 }
 
 TEST(Table, EchoTablePayloadWithErrorErrorCase) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (table result success)"] = false;
     fidl::test::compatibility::EchoEchoTablePayloadWithErrorRequest sent;
@@ -310,8 +310,8 @@ TEST(Table, EchoTablePayloadWithErrorErrorCase) {
 }
 
 TEST(Table, EchoTablePayloadNoRetval) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (table)"] =
         false;
     fidl::test::compatibility::RequestTable sent;
@@ -348,8 +348,8 @@ TEST(Table, EchoTableRequestComposed) {
     return proxy_url == server_url;
   };
 
-  ForSomeServers(
-      servers, filter,
+  ForSomeImpls(
+      impls, filter,
       [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
          const std::string& server_url, const std::string& proxy_url) {
         summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (table)"] =
@@ -393,7 +393,7 @@ int main(int argc, char** argv) {
   }
 
   testing::InitGoogleTest(&argc, argv);
-  assert(GetServersUnderTest(argc, argv, &servers));
+  assert(GetImplsUnderTest(argc, argv, &impls));
 
   int r = RUN_ALL_TESTS();
   PrintSummary(summary);

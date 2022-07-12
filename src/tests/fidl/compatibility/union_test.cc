@@ -20,13 +20,13 @@ using fidl::test::compatibility::this_is_a_xunion;
 
 using fidl_test_compatibility_helpers::DataGenerator;
 using fidl_test_compatibility_helpers::ExtractShortName;
-using fidl_test_compatibility_helpers::ForAllServers;
-using fidl_test_compatibility_helpers::ForSomeServers;
-using fidl_test_compatibility_helpers::GetServersUnderTest;
+using fidl_test_compatibility_helpers::ForAllImpls;
+using fidl_test_compatibility_helpers::ForSomeImpls;
+using fidl_test_compatibility_helpers::GetImplsUnderTest;
 using fidl_test_compatibility_helpers::HandlesEq;
+using fidl_test_compatibility_helpers::Impls;
 using fidl_test_compatibility_helpers::kArbitraryVectorSize;
 using fidl_test_compatibility_helpers::PrintSummary;
-using fidl_test_compatibility_helpers::Servers;
 using fidl_test_compatibility_helpers::Summary;
 
 namespace {
@@ -123,12 +123,12 @@ class CompatibilityTest : public ::testing::TestWithParam<std::tuple<std::string
   std::unique_ptr<async::Loop> loop_;
 };
 
-Servers servers;
+Impls impls;
 Summary summary;
 
 TEST(Union, EchoUnions) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (xunion)"] =
         false;
     // Using randomness to avoid having to come up with varied values by
@@ -159,8 +159,8 @@ TEST(Union, EchoUnions) {
 }
 
 TEST(Union, EchoUnionsWithErrorSuccessCase) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (xunion result success)"] = false;
     // Using randomness to avoid having to come up with varied values by
@@ -194,8 +194,8 @@ TEST(Union, EchoUnionsWithErrorSuccessCase) {
 }
 
 TEST(Union, EchoUnionsWithErrorErrorCase) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (xunion result error)"] = false;
     // Using randomness to avoid having to come up with varied values by
@@ -224,8 +224,8 @@ TEST(Union, EchoUnionsWithErrorErrorCase) {
 }
 
 TEST(Union, EchoUnionPayload) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (union)"] =
         false;
     fidl::test::compatibility::RequestUnion sent;
@@ -254,8 +254,8 @@ TEST(Union, EchoUnionPayload) {
 }
 
 TEST(Union, EchoUnionPayloadWithErrorSuccessCase) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (union result success)"] = false;
     fidl::test::compatibility::UnsignedErrorable unsigned_errorable;
@@ -292,8 +292,8 @@ TEST(Union, EchoUnionPayloadWithErrorSuccessCase) {
 }
 
 TEST(Union, EchoUnionPayloadWithErrorErrorCase) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (union result success)"] = false;
     fidl::test::compatibility::SignedErrorable signed_errorable;
@@ -329,8 +329,8 @@ TEST(Union, EchoUnionPayloadWithErrorErrorCase) {
 }
 
 TEST(Union, EchoUnionPayloadNoRetval) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (union)"] =
         false;
     fidl::test::compatibility::RequestUnion sent;
@@ -366,8 +366,8 @@ TEST(Union, EchoUnionResponseWithErrorComposedSuccessCase) {
     return proxy_url == server_url;
   };
 
-  ForSomeServers(
-      servers, filter,
+  ForSomeImpls(
+      impls, filter,
       [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
          const std::string& server_url, const std::string& proxy_url) {
         summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (union)"] =
@@ -407,8 +407,8 @@ TEST(Union, EchoUnionResponseWithErrorComposedErrorCase) {
     return proxy_url == server_url;
   };
 
-  ForSomeServers(
-      servers, filter,
+  ForSomeImpls(
+      impls, filter,
       [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
          const std::string& server_url, const std::string& proxy_url) {
         summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (union)"] =
@@ -443,7 +443,7 @@ int main(int argc, char** argv) {
   }
 
   testing::InitGoogleTest(&argc, argv);
-  assert(GetServersUnderTest(argc, argv, &servers));
+  assert(GetImplsUnderTest(argc, argv, &impls));
 
   int r = RUN_ALL_TESTS();
   PrintSummary(summary);

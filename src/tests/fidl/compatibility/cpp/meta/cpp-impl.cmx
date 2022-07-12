@@ -3,7 +3,7 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/hlcpp-server"
+        "binary": "bin/cpp-impl"
     },
     "sandbox": {
         "services": [

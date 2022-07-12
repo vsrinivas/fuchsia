@@ -33,7 +33,7 @@ fidl_compatibility_tests_categories = [
 ]
 
 # Binding implementations under test.
-fidl_compatibilty_test_servers = [
+fidl_compatibilty_test_impls = [
   "cpp",
   "hlcpp",
   "go",
@@ -91,7 +91,7 @@ foreach(test, fidl_compatibility_tests_categories) {
       test_component_manifest_cmx = [
         {
           program = {
-            args = fidl_compatibilty_test_servers
+            args = fidl_compatibilty_test_impls
           }
           sandbox = {
             services = [ "fuchsia.sys.Launcher" ]
@@ -118,12 +118,12 @@ foreach(test, fidl_compatibility_tests_categories) {
 fuchsia_test_package("fidl_compatibility_test_package") {
   package_name = "fidl-compatibility-test"
   deps = [
-    "cpp:cpp-server",
-    "dart:dart-server",
-    "go:go-server",
-    "hlcpp:hlcpp-server",
-    "llcpp:llcpp-server",
-    "rust:rust-server",
+    "cpp:cpp-impl",
+    "dart:dart-impl",
+    "go:go-impl",
+    "hlcpp:hlcpp-impl",
+    "llcpp:llcpp-impl",
+    "rust:rust-impl",
   ]
   test_components = test_component_labels
 }

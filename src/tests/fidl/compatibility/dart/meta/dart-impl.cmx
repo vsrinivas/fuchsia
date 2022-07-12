@@ -1,6 +1,6 @@
 {
     "program": {
-        "data": "data/dart-server"
+        "data": "data/dart-impl"
     },
     "sandbox": {
         "services": [

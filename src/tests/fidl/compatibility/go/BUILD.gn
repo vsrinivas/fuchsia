@@ -20,13 +20,13 @@ go_library("lib") {
 }
 go_binary("bin") {
   gopackage = "compatibility_test"
-  output_name = "go-server"
+  output_name = "go-impl"
   output_dir = target_out_dir
 
   deps = [ ":lib" ]
 }
 
-fuchsia_component("go-server") {
-  manifest = "meta/go-server.cmx"
+fuchsia_component("go-impl") {
+  manifest = "meta/go-impl.cmx"
   deps = [ ":bin" ]
 }

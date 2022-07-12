@@ -1,6 +1,9 @@
 {
+    "include": [
+        "syslog/client.shard.cmx"
+    ],
     "program": {
-        "binary": "bin/go-server"
+        "binary": "bin/llcpp-impl"
     },
     "sandbox": {
         "services": [

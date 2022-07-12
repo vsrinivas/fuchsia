@@ -14,10 +14,10 @@ using fidl::test::compatibility::Echo_EchoMinimalWithError_Result;
 using fidl::test::compatibility::RespondWith;
 
 using fidl_test_compatibility_helpers::ExtractShortName;
-using fidl_test_compatibility_helpers::ForAllServers;
-using fidl_test_compatibility_helpers::GetServersUnderTest;
+using fidl_test_compatibility_helpers::ForAllImpls;
+using fidl_test_compatibility_helpers::GetImplsUnderTest;
+using fidl_test_compatibility_helpers::Impls;
 using fidl_test_compatibility_helpers::PrintSummary;
-using fidl_test_compatibility_helpers::Servers;
 using fidl_test_compatibility_helpers::Summary;
 
 namespace {
@@ -36,12 +36,12 @@ class CompatibilityTest : public ::testing::TestWithParam<std::tuple<std::string
   std::unique_ptr<async::Loop> loop_;
 };
 
-Servers servers;
+Impls impls;
 Summary summary;
 
 TEST(Minimal, EchoMinimal) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (minimal)"] =
         false;
 
@@ -59,8 +59,8 @@ TEST(Minimal, EchoMinimal) {
 }
 
 TEST(Minimal, EchoMinimalWithErrorSuccessCase) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (minimal result success)"] = false;
 
@@ -80,8 +80,8 @@ TEST(Minimal, EchoMinimalWithErrorSuccessCase) {
 }
 
 TEST(Minimal, EchoMinimalWithErrorErrorCase) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string& proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string& proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (minimal result error)"] = false;
 
@@ -102,8 +102,8 @@ TEST(Minimal, EchoMinimalWithErrorErrorCase) {
 }
 
 TEST(Minimal, EchoMinimalNoRetval) {
-  ForAllServers(servers, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-                            const std::string& server_url, const std::string proxy_url) {
+  ForAllImpls(impls, [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                        const std::string& server_url, const std::string proxy_url) {
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
             " (minimal_no_ret)"] = false;
 
@@ -128,7 +128,7 @@ int main(int argc, char** argv) {
   }
 
   testing::InitGoogleTest(&argc, argv);
-  assert(GetServersUnderTest(argc, argv, &servers));
+  assert(GetImplsUnderTest(argc, argv, &impls));
 
   int r = RUN_ALL_TESTS();
   PrintSummary(summary);

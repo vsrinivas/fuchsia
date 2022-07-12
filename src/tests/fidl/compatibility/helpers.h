@@ -37,11 +37,11 @@ constexpr uint8_t kArbitraryConstant = 2;
 
 // A predicate function that returns true if the specified proxy + server pair should be tested for
 // a given test run.
-using AllowServerPair =
+using AllowImplPair =
     std::function<bool(const std::string& proxy_url, const std::string& server_url)>;
 
-// A simple list of server implementations to be tested.
-using Servers = std::vector<std::string>;
+// A simple list of implementations to be tested.
+using Impls = std::vector<std::string>;
 
 // A summary of findings to be printed as human-readable output.
 using Summary = std::map<std::string, bool>;
@@ -50,23 +50,23 @@ using Summary = std::map<std::string, bool>;
 using TestBody = std::function<void(async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
                                     const std::string& server_url, const std::string& proxy_url)>;
 
-// Returns an |AllowServerPair| predicate that returns false if ANY of the provided list of
-// substrings is found in the server list.
-AllowServerPair Exclude(std::initializer_list<const char*> substrings);
+// Returns an |AllowImplPair| predicate that returns false if ANY of the provided list of
+// substrings is found in the implementation list.
+AllowImplPair Exclude(std::initializer_list<const char*> substrings);
 
 // Get the short name of the language binding being tested, like "rust" or "cpp".
 std::string ExtractShortName(const std::string& pkg_url);
 
 // Run a test for all possible proxy + server combinations.
-void ForAllServers(Servers servers, TestBody body);
+void ForAllImpls(Impls impls, TestBody body);
 
-// Only test some server combinations, using an |AllowServerPair| predicate function to determine
-// whether or not the particular proxy + server combination should be executed.
-void ForSomeServers(Servers servers, AllowServerPair allow, TestBody body);
+// Only test some proxy + server combinations, using an |AllowImplPair| predicate function to
+// determine whether or not the particular proxy + server combination should be executed.
+void ForSomeImpls(Impls impls, AllowImplPair allow, TestBody body);
 
 // Parse the input args to build a list of binding implementations being tested. Returns false if no
 // viable implementation names are found in the passed in command line arguments.
-bool GetServersUnderTest(int argc, char** argv, Servers* out_servers);
+bool GetImplsUnderTest(int argc, char** argv, Impls* out_impls);
 
 // Mint a simple handle for test-case building purposes.
 zx::handle Handle();

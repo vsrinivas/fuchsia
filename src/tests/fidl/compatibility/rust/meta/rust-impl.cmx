@@ -3,7 +3,7 @@
         "syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "bin/cpp-server"
+        "binary": "bin/rust-impl"
     },
     "sandbox": {
         "services": [
