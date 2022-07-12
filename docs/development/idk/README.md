@@ -102,7 +102,7 @@ allows for this kind of processing.
 
 ## IDK and IDK add-ons {#core-idk-and-idk-add-ons}
 
-The Core IDK is represented by the `//sdk:core` target.
+The Core IDK is represented by the `//sdk:core_idk` target.
 That IDK is complemented by multiple IDK add-ons:
 
 - `//sdk:e2e_testing`: an end-to-end testing framework for Fuchsia;
@@ -116,7 +116,7 @@ Internally these targets are all instances of the `sdk` GN template.
 
 ### Generating an IDK archive {#generating-an-idk-archive}
 
-The various targets representing SDKs are always included in the build graph.
+The Core IDK is always included in the build graph.
 In order to build the contents of an SDK, [build][fx-build-target] one of the
 targets above.
 
