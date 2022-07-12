@@ -141,12 +141,11 @@ zx_status_t Interrupts::SetInterruptCallback(const intel_gpu_core_interrupt_t* c
 
 zx_status_t Interrupts::Init(PipeVsyncCallback pipe_vsync_callback,
                              HotplugCallback hotplug_callback, zx_device_t* dev,
-                             const pci_protocol_t* pci_proto, fdf::MmioBuffer* mmio_space,
+                             const ddk::Pci& pci, fdf::MmioBuffer* mmio_space,
                              cpp20::span<const registers::Ddi> ddis) {
   ZX_DEBUG_ASSERT(pipe_vsync_callback);
   ZX_DEBUG_ASSERT(hotplug_callback);
   ZX_DEBUG_ASSERT(dev);
-  ZX_DEBUG_ASSERT(pci_proto);
   ZX_DEBUG_ASSERT(mmio_space);
 
   // TODO(fxbug.dev/86038): Looks like calling Init multiple times is allowed for unit tests but it
@@ -164,8 +163,6 @@ zx_status_t Interrupts::Init(PipeVsyncCallback pipe_vsync_callback,
   auto interrupt_ctrl = registers::MasterInterruptControl::Get().ReadFrom(mmio_space);
   interrupt_ctrl.set_enable_mask(0);
   interrupt_ctrl.WriteTo(mmio_space);
-
-  ddk::Pci pci(*pci_proto);
 
   // Assume that PCI will enable bus mastering as required for MSI interrupts.
   zx_status_t status = pci.ConfigureInterruptMode(1, &irq_mode_);

@@ -24,4 +24,17 @@ TEST(PciTest, MapMmio) {
   EXPECT_OK(pci.MapMmio(bar_id, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio));
 }
 
+TEST(PciTest, MapMmioWithRawBuffer) {
+  pci::FakePciProtocol fake_pci;
+  uint32_t bar_id = 0u;
+  fake_pci.CreateBar(bar_id, zx_system_get_page_size(), /*is_mmio=*/true);
+
+  ddk::Pci pci(fake_pci.get_protocol());
+  mmio_buffer_t mmio;
+  EXPECT_OK(pci.MapMmio(bar_id, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio));
+
+  // Make sure the VMO is valid.
+  EXPECT_OK(zx_object_get_info(mmio.vmo, ZX_INFO_HANDLE_VALID, nullptr, 0, 0u, nullptr));
+}
+
 }  // namespace

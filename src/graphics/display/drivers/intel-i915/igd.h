@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <inttypes.h>
+#include <lib/device-protocol/pci.h>
 #include <lib/zx/vmo.h>
 #include <stddef.h>
 #include <string.h>
@@ -228,7 +229,7 @@ class IgdOpRegion {
  public:
   IgdOpRegion() = default;
   ~IgdOpRegion();
-  zx_status_t Init(pci_protocol_t* pci);
+  zx_status_t Init(const ddk::Pci& pci);
 
   bool HasDdi(registers::Ddi ddi) const { return ddi_features_.find(ddi) != ddi_features_.end(); }
   bool SupportsHdmi(registers::Ddi ddi) const {
@@ -270,9 +271,9 @@ class IgdOpRegion {
   T* GetSection(uint16_t* size);
   uint8_t* GetSection(uint8_t tag, uint16_t* size);
   bool ProcessDdiConfigs();
-  bool CheckForLowVoltageEdp(pci_protocol_t* pci);
-  bool GetPanelType(pci_protocol_t* pci, uint8_t* type);
-  bool Swsci(pci_protocol_t* pci, uint16_t function, uint16_t subfunction,
+  bool CheckForLowVoltageEdp(const ddk::Pci& pci);
+  bool GetPanelType(const ddk::Pci& pci, uint8_t* type);
+  bool Swsci(const ddk::Pci& pci, uint16_t function, uint16_t subfunction,
              uint32_t additional_param, uint16_t* exit_param, uint32_t* additional_res);
   void ProcessBacklightData();
 

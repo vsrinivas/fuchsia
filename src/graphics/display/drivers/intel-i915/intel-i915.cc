@@ -1743,7 +1743,7 @@ zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
 // Intel GPU core methods
 
 zx_status_t Controller::IntelGpuCoreReadPciConfig16(uint16_t addr, uint16_t* value_out) {
-  return pci_read_config16(&pci_, addr, value_out);
+  return pci_.ReadConfig16(addr, value_out);
 }
 
 zx_status_t Controller::IntelGpuCoreMapPciMmio(uint32_t pci_bar, uint8_t** addr_out,
@@ -1753,8 +1753,8 @@ zx_status_t Controller::IntelGpuCoreMapPciMmio(uint32_t pci_bar, uint8_t** addr_
   }
   fbl::AutoLock lock(&bar_lock_);
   if (mapped_bars_[pci_bar].count == 0) {
-    zx_status_t status = pci_map_bar_buffer(&pci_, pci_bar, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                            &mapped_bars_[pci_bar].mmio);
+    zx_status_t status =
+        pci_.MapMmio(pci_bar, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mapped_bars_[pci_bar].mmio);
     if (status != ZX_OK) {
       return status;
     }
@@ -1782,7 +1782,7 @@ zx_status_t Controller::IntelGpuCoreUnmapPciMmio(uint32_t pci_bar) {
 }
 
 zx_status_t Controller::IntelGpuCoreGetPciBti(uint32_t index, zx::bti* bti_out) {
-  return pci_get_bti(&pci_, index, bti_out->reset_and_get_address());
+  return pci_.GetBti(index, bti_out);
 }
 
 zx_status_t Controller::IntelGpuCoreRegisterInterruptCallback(
@@ -1982,7 +1982,7 @@ void Controller::DdkSuspend(ddk::SuspendTxn txn) {
     // mexec by mapping gfx stolen memory to gaddr 0.
 
     auto bdsm_reg = registers::BaseDsm::Get().FromValue(0);
-    zx_status_t status = pci_read_config32(&pci_, bdsm_reg.kAddr, bdsm_reg.reg_value_ptr());
+    zx_status_t status = pci_.ReadConfig32(bdsm_reg.kAddr, bdsm_reg.reg_value_ptr());
     if (status != ZX_OK) {
       zxlogf(TRACE, "Failed to read dsm base");
       txn.Reply(ZX_OK, txn.requested_state());
@@ -2000,7 +2000,7 @@ void Controller::DdkSuspend(ddk::SuspendTxn txn) {
 
     // Try to map the framebuffer and clear it. If not, oh well.
     mmio_buffer_t mmio;
-    if (pci_map_bar_buffer(&pci_, 2, ZX_CACHE_POLICY_WRITE_COMBINING, &mmio) == ZX_OK) {
+    if (pci_.MapMmio(2, ZX_CACHE_POLICY_WRITE_COMBINING, &mmio) == ZX_OK) {
       // TODO(fxbug.dev/56253): Add MMIO_PTR to cast.
       memset((void*)mmio.vaddr, 0, fb_info.size);
       mmio_buffer_release(&mmio);
@@ -2075,13 +2075,13 @@ zx_status_t Controller::Init() {
     return status;
   }
 
-  pci_read_config16(&pci_, PCI_CONFIG_DEVICE_ID, &device_id_);
+  pci_.ReadConfig16(PCI_CONFIG_DEVICE_ID, &device_id_);
   zxlogf(TRACE, "Device id %x", device_id_);
 
   zxlogf(TRACE, "Initializing DDIs");
   ddis_ = GetDdis(device_id_);
 
-  status = igd_opregion_.Init(&pci_);
+  status = igd_opregion_.Init(pci_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to init VBT (%d)", status);
     return status;
@@ -2125,7 +2125,7 @@ zx_status_t Controller::Init() {
 
   zxlogf(TRACE, "Initializing interrupts");
   status = interrupts_.Init(fit::bind_member<&Controller::HandlePipeVsync>(this),
-                            fit::bind_member<&Controller::HandleHotplug>(this), parent(), &pci_,
+                            fit::bind_member<&Controller::HandleHotplug>(this), parent(), pci_,
                             mmio_space(), ddis_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to initialize interrupts");
@@ -2151,7 +2151,7 @@ zx_status_t Controller::Init() {
     }
 
     fbl::AutoLock lock(&gtt_lock_);
-    status = gtt_.Init(&pci_, mmio_space()->View(GTT_BASE_OFFSET), offset);
+    status = gtt_.Init(pci_, mmio_space()->View(GTT_BASE_OFFSET), offset);
     if (status != ZX_OK) {
       zxlogf(ERROR, "Failed to init gtt (%s)", zx_status_get_string(status));
       return status;

@@ -24,7 +24,7 @@ void NopIrqCb(void*, uint32_t, uint64_t) {}
 
 zx_status_t InitInterrupts(i915::Interrupts* i, zx_device_t* dev, pci::FakePciProtocol* pci,
                            fdf::MmioBuffer* mmio) {
-  return i->Init(NopPipeVsyncCb, NopHotplugCb, dev, &pci->get_protocol(), mmio,
+  return i->Init(NopPipeVsyncCb, NopHotplugCb, dev, pci->get_pci(), mmio,
                  i915::GetDdis(i915::kTestDeviceDid));
 }
 

@@ -10,6 +10,7 @@
 #include <fuchsia/hardware/intelgpucore/cpp/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
+#include <lib/device-protocol/pci.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/mmio/mmio.h>
 #include <lib/stdcompat/span.h>
@@ -239,7 +240,7 @@ class Controller : public DeviceType,
   IgdOpRegion igd_opregion_;  // Read only, no locking
   Interrupts interrupts_;     // Internal locking
 
-  pci_protocol_t pci_;
+  ddk::Pci pci_;
   struct {
     mmio_buffer_t mmio;
     int32_t count = 0;

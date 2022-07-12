@@ -39,7 +39,7 @@ TEST(GttTest, InitWithZeroSizeGtt) {
   fdf::MmioBuffer mmio = MakeMmioBuffer(&buffer, 0);
 
   i915::Gtt gtt;
-  EXPECT_EQ(ZX_ERR_INTERNAL, gtt.Init(&pci.get_protocol(), std::move(mmio), 0));
+  EXPECT_EQ(ZX_ERR_INTERNAL, gtt.Init(pci.get_pci(), std::move(mmio), 0));
 
   // No MMIO writes should have occurred.
   EXPECT_EQ(0, buffer);
@@ -54,7 +54,7 @@ TEST(GttTest, InitGtt) {
   fdf::MmioBuffer mmio = MakeMmioBuffer(buffer.get(), kTableSize);
 
   i915::Gtt gtt;
-  EXPECT_EQ(ZX_OK, gtt.Init(&pci.get_protocol(), std::move(mmio), 0));
+  EXPECT_EQ(ZX_OK, gtt.Init(pci.get_pci(), std::move(mmio), 0));
 
   // The table should contain 2MB / sizeof(uint64_t) 64-bit entries that map to the fake scratch
   // buffer. The "+ 1" marks bit 0 as 1 which denotes that's the page is present.
@@ -85,7 +85,7 @@ TEST(GttTest, InitGttWithFramebufferOffset) {
   fdf::MmioBuffer mmio = MakeMmioBuffer(buffer.get(), kTableSize);
 
   i915::Gtt gtt;
-  EXPECT_EQ(ZX_OK, gtt.Init(&pci.get_protocol(), std::move(mmio), kFbOffset));
+  EXPECT_EQ(ZX_OK, gtt.Init(pci.get_pci(), std::move(mmio), kFbOffset));
 
   // The first page-aligned region of addresses should remain unmodified.
   for (unsigned i = 0; i < kFbPages; i++) {
@@ -115,7 +115,7 @@ TEST(GttTest, SetupForMexec) {
   fdf::MmioBuffer mmio = MakeMmioBuffer(buffer.get(), kTableSize);
 
   i915::Gtt gtt;
-  EXPECT_EQ(ZX_OK, gtt.Init(&pci.get_protocol(), std::move(mmio), 0));
+  EXPECT_EQ(ZX_OK, gtt.Init(pci.get_pci(), std::move(mmio), 0));
 
   // Assign an arbitrary page-aligned number as the stolen framebuffer address.
   constexpr uintptr_t kStolenFbMemory = kPageSize * 2;

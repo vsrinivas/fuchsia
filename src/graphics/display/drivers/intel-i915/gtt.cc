@@ -48,11 +48,11 @@ Gtt::~Gtt() {
   }
 }
 
-zx_status_t Gtt::Init(const pci_protocol_t* pci, fdf::MmioBuffer buffer, uint32_t fb_offset) {
-  ZX_DEBUG_ASSERT(pci);
+zx_status_t Gtt::Init(const ddk::Pci& pci, fdf::MmioBuffer buffer, uint32_t fb_offset) {
+  ZX_DEBUG_ASSERT(pci.is_valid());
   buffer_ = std::move(buffer);
 
-  zx_status_t status = pci_get_bti(pci, 0, bti_.reset_and_get_address());
+  zx_status_t status = pci.GetBti(0, &bti_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to get bti (%d)", status);
     return status;
@@ -68,7 +68,7 @@ zx_status_t Gtt::Init(const pci_protocol_t* pci, fdf::MmioBuffer buffer, uint32_
 
   // Calculate the size of the gtt.
   auto gmch_gfx_ctrl = registers::GmchGfxControl::Get().FromValue(0);
-  status = pci_read_config16(pci, gmch_gfx_ctrl.kAddr, gmch_gfx_ctrl.reg_value_ptr());
+  status = pci.ReadConfig16(gmch_gfx_ctrl.kAddr, gmch_gfx_ctrl.reg_value_ptr());
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to read GfxControl");
     return status;

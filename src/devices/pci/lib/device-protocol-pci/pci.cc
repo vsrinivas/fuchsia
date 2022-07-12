@@ -135,6 +135,38 @@ zx_status_t Pci::GetBti(uint32_t index, zx::bti* out_bti) const {
 
 zx_status_t Pci::MapMmio(uint32_t index, uint32_t cache_policy,
                          std::optional<fdf::MmioBuffer>* mmio) const {
+  zx::vmo vmo;
+  zx_status_t status = MapMmioInternal(index, cache_policy, &vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  size_t vmo_size;
+  status = vmo.get_size(&vmo_size);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  return fdf::MmioBuffer::Create(0, vmo_size, std::move(vmo), cache_policy, mmio);
+}
+
+zx_status_t Pci::MapMmio(uint32_t index, uint32_t cache_policy, mmio_buffer_t* mmio) const {
+  zx::vmo vmo;
+  zx_status_t status = MapMmioInternal(index, cache_policy, &vmo);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  size_t vmo_size;
+  status = vmo.get_size(&vmo_size);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  return mmio_buffer_init(mmio, 0, vmo_size, vmo.release(), cache_policy);
+}
+
+zx_status_t Pci::MapMmioInternal(uint32_t index, uint32_t cache_policy, zx::vmo* out_vmo) const {
   pci_bar_t bar;
   zx_status_t status = client_.GetBar(index, &bar);
   if (status != ZX_OK) {
@@ -148,13 +180,8 @@ zx_status_t Pci::MapMmio(uint32_t index, uint32_t cache_policy,
 
   zx::vmo vmo(bar.result.vmo);
 
-  size_t vmo_size;
-  status = vmo.get_size(&vmo_size);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  return fdf::MmioBuffer::Create(0, vmo_size, std::move(vmo), cache_policy, mmio);
+  *out_vmo = std::move(vmo);
+  return ZX_OK;
 }
 
 zx_status_t Pci::ConfigureInterruptMode(uint32_t requested_irq_count,

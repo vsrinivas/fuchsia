@@ -223,10 +223,10 @@ bool IgdOpRegion::ProcessDdiConfigs() {
   return true;
 }
 
-bool IgdOpRegion::Swsci(pci_protocol_t* pci, uint16_t function, uint16_t subfunction,
+bool IgdOpRegion::Swsci(const ddk::Pci& pci, uint16_t function, uint16_t subfunction,
                         uint32_t additional_param, uint16_t* exit_param, uint32_t* additional_res) {
   uint16_t val;
-  if (pci_read_config16(pci, kIgdSwSciReg, &val) != ZX_OK) {
+  if (pci.ReadConfig16(kIgdSwSciReg, &val) != ZX_OK) {
     zxlogf(WARNING, "Failed to read SWSCI register");
     return false;
   }
@@ -246,8 +246,8 @@ bool IgdOpRegion::Swsci(pci_protocol_t* pci, uint16_t function, uint16_t subfunc
   sci_interface->entry_and_exit_params = sci_entry_param.reg_value();
   sci_interface->additional_params = additional_param;
 
-  if (pci_write_config16(pci, kIgdSwSciReg,
-                         gmch_swsci_reg.set_gmch_sw_sci_trigger(1).reg_value()) != ZX_OK) {
+  if (pci.WriteConfig16(kIgdSwSciReg, gmch_swsci_reg.set_gmch_sw_sci_trigger(1).reg_value()) !=
+      ZX_OK) {
     zxlogf(WARNING, "Failed to write SWSCI register");
     return false;
   }
@@ -273,7 +273,7 @@ bool IgdOpRegion::Swsci(pci_protocol_t* pci, uint16_t function, uint16_t subfunc
   return false;
 }
 
-bool IgdOpRegion::GetPanelType(pci_protocol_t* pci, uint8_t* type) {
+bool IgdOpRegion::GetPanelType(const ddk::Pci& pci, uint8_t* type) {
   uint16_t exit_param;
   uint32_t additional_res;
   // TODO(stevensd): cache the supported calls when we need to use Swsci more than once
@@ -305,7 +305,7 @@ bool IgdOpRegion::GetPanelType(pci_protocol_t* pci, uint8_t* type) {
   return true;
 }
 
-bool IgdOpRegion::CheckForLowVoltageEdp(pci_protocol_t* pci) {
+bool IgdOpRegion::CheckForLowVoltageEdp(const ddk::Pci& pci) {
   bool has_edp = true;
   for (const auto& kv : ddi_features_) {
     has_edp |= kv.second.is_edp;
@@ -344,9 +344,9 @@ void IgdOpRegion::ProcessBacklightData() {
   }
 }
 
-zx_status_t IgdOpRegion::Init(pci_protocol_t* pci) {
+zx_status_t IgdOpRegion::Init(const ddk::Pci& pci) {
   uint32_t igd_addr;
-  zx_status_t status = pci_read_config32(pci, kIgdOpRegionAddrReg, &igd_addr);
+  zx_status_t status = pci.ReadConfig32(kIgdOpRegionAddrReg, &igd_addr);
   if (status != ZX_OK || !igd_addr) {
     zxlogf(ERROR, "Failed to locate IGD OpRegion (%d)", status);
     return status;

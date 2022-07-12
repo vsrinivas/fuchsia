@@ -86,9 +86,16 @@ class Pci {
   zx_status_t MapMmio(uint32_t bar_id, uint32_t cache_policy,
                       std::optional<fdf::MmioBuffer>* mmio) const;
 
+  // This overload is provided for backwards-compatibility; raw mmio_buffer_t
+  // objects should not be used in new C++ code. Instead, use the
+  // fdf::MmioBuffer wrapper class.
+  zx_status_t MapMmio(uint32_t bar_id, uint32_t cache_policy, mmio_buffer_t* mmio) const;
+
   bool is_valid() const { return client_.is_valid(); }
 
  private:
+  zx_status_t MapMmioInternal(uint32_t bar_Id, uint32_t cache_policy, zx::vmo* out_vmo) const;
+
   ddk::PciProtocolClient client_;
 };
 
