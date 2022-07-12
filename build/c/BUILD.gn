@@ -25,7 +25,6 @@ config("fidl-deprecated-c-bindings") {
   # and replace the contents of `visibility` with the script output.
   visibility = [
     "//examples/drivers/dotmatrix_display:bin",
-    "//src/bringup/bin/dlog",
     "//src/bringup/bin/svchost",
     "//src/bringup/bin/waitfor",
     "//src/camera/drivers/controller:source",
