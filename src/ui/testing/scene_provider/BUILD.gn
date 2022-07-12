@@ -41,18 +41,17 @@ source_set("lib") {
   ]
 }
 
-fuchsia_component("scene-provider") {
-  testonly = true
-  component_name = "scene-provider"
-  manifest = "meta/scene_provider.cml"
-  deps = [ ":bin" ]
-}
-
 # Required for structured config.
 fuchsia_component_manifest("scene_provider_manifest") {
   testonly = true
   component_name = "scene-provider"
   manifest = "meta/scene_provider.cml"
+}
+
+fuchsia_component("scene-provider") {
+  testonly = true
+  cm_label = ":scene_provider_manifest"
+  deps = [ ":bin" ]
 }
 
 fuchsia_structured_config_cpp_elf_lib("scene_provider_config_lib") {
