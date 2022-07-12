@@ -11,7 +11,7 @@ use {
         },
         repo_info::RepoInfo,
     },
-    ::gcs::client::{ProgressResponse, ProgressResult, ProgressState},
+    ::gcs::client::{ProgressResponse, ProgressResult, DirectoryProgress, FileProgress, Throttle},
     anyhow::{bail, Context, Result},
     chrono::{DateTime, NaiveDateTime, Utc},
     ffx_config::sdk::SdkVersion,
@@ -38,7 +38,7 @@ pub(crate) const GS_SCHEME: &str = "gs";
 /// pass in repo URIs with expandable tags.
 pub(crate) async fn fetch_product_metadata<F>(repos: &Vec<url::Url>, progress: &mut F) -> Result<()>
 where
-    F: FnMut(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
+    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
     log::info!("Getting product metadata.");
     let storage_path: PathBuf =
@@ -222,17 +222,12 @@ where
         .context("finding product bundle")?;
 
     let start = std::time::Instant::now();
-    log::debug!("Getting product data for {:?}", product_bundle.name);
+    log::info!("Getting product data for {:?}", product_bundle.name);
     let local_dir = local_repo_dir.join(&product_bundle.name).join("images");
     async_fs::create_dir_all(&local_dir).await.context("creating directory")?;
 
     for image in &product_bundle.images {
-        if verbose {
-            writeln!(writer, "    image: {:?}", image)?;
-        } else {
-            write!(writer, ".")?;
-            writer.flush()?;
-        }
+        log::debug!("    image: {:?}", image);
         let base_url = url::Url::parse(&image.base_uri)
             .with_context(|| format!("parsing image.base_uri {:?}", image.base_uri))?;
         fetch_by_format(&image.format, &base_url, &local_dir, &mut |_d, _f| {
@@ -246,16 +241,20 @@ where
     log::debug!("Total fetch images runtime {} seconds.", start.elapsed().as_secs_f32());
 
     let start = std::time::Instant::now();
-    writeln!(writer, "Getting package data for {:?}", product_bundle.name)?;
+    writeln!(writer, "\nGetting package data for {:?}", product_bundle.name)?;
     let local_dir = local_repo_dir.join(&product_bundle.name).join("packages");
     async_fs::create_dir_all(&local_dir).await.context("creating directory")?;
 
-    fetch_package_repository_from_mirrors(&local_dir, &product_bundle.packages, verbose, writer)
-        .await?;
+    fetch_package_repository_from_mirrors(&local_dir, &product_bundle.packages, &mut |_d, _f| {
+        write!(writer, ".")?;
+        writer.flush()?;
+        Ok(ProgressResponse::Continue)
+    })
+    .await?;
 
     log::debug!("Total fetch packages runtime {} seconds.", start.elapsed().as_secs_f32());
 
-    writeln!(writer, "Download of product data for {:?} is complete.", product_bundle.name)?;
+    writeln!(writer, "\nDownload of product data for {:?} is complete.", product_bundle.name)?;
     if verbose {
         if let Some(parent) = local_dir.parent() {
             writeln!(writer, "Data written to \"{}\".", parent.display())?;
@@ -280,32 +279,25 @@ fn pb_dir_name(gcs_url: &url::Url) -> String {
 ///
 /// This will try to download a package repository from each mirror in the list, stopping on the
 /// first success. Otherwise it will return the last error encountered.
-async fn fetch_package_repository_from_mirrors<W>(
+async fn fetch_package_repository_from_mirrors<F>(
     local_dir: &Path,
     packages: &[PackageBundle],
-    verbose: bool,
-    writer: &mut W,
+    progress: &mut F,
 ) -> Result<()>
 where
-    W: Write + Sync,
+    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
     // The packages list is a set of mirrors. Try downloading the packages from each one. Only error
     // out if we can't download the packages from any mirror.
     for (i, package) in packages.iter().enumerate() {
-        let res = fetch_package_repository(&local_dir, package, verbose, writer).await;
-        if !verbose {
-            // If we're not in verbose mode, then we output a '.' after every package we try to
-            // download. Make sure we add a trailing newline once we've done fetching all the
-            // packages or error out.
-            writeln!(writer, "")?;
-        }
+        let res = fetch_package_repository(&local_dir, package, progress).await;
 
         match res {
             Ok(()) => {
                 break;
             }
             Err(err) => {
-                writeln!(writer, "WARNING: Unable to fetch {:?}: {:?}", package, err)?;
+                log::warn!("Unable to fetch {:?}: {:?}", package, err);
                 if i + 1 == packages.len() {
                     return Err(err);
                 }
@@ -317,24 +309,18 @@ where
 }
 
 /// Fetch packages from this package bundle and write them to `local_dir`.
-async fn fetch_package_repository<W>(
+async fn fetch_package_repository<F>(
     local_dir: &Path,
     package: &PackageBundle,
-    verbose: bool,
-    writer: &mut W,
+    progress: &mut F,
 ) -> Result<()>
 where
-    W: Write + Sync,
+    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
-    if verbose {
-        if let Some(blob_uri) = &package.blob_uri {
-            writeln!(writer, "    package repository: {} {}", package.repo_uri, blob_uri)?;
-        } else {
-            writeln!(writer, "    package repository: {}", package.repo_uri)?;
-        }
+    if let Some(blob_uri) = &package.blob_uri {
+        log::debug!("    package repository: {} {}", package.repo_uri, blob_uri);
     } else {
-        write!(writer, ".")?;
-        writer.flush()?;
+        log::debug!("    package repository: {}", package.repo_uri);
     }
 
     let mut metadata_repo_uri = url::Url::parse(&package.repo_uri)
@@ -364,8 +350,7 @@ where
                 local_dir,
                 metadata_repo_uri,
                 blob_repo_uri,
-                verbose,
-                writer,
+                progress,
             )
             .await
         }
@@ -375,7 +360,7 @@ where
                 unimplemented!();
             }
 
-            fetch_package_repository_from_tgz(local_dir, metadata_repo_uri, verbose, writer).await
+            fetch_package_repository_from_tgz(local_dir, metadata_repo_uri, progress).await
         }
         _ =>
         // The schema currently defines only "files" or "tgz" (see RFC-100).
@@ -399,15 +384,14 @@ where
 /// * `http://`
 /// * `https://`
 /// * `gs://`
-async fn fetch_package_repository_from_files<W>(
+async fn fetch_package_repository_from_files<F>(
     local_dir: &Path,
     metadata_repo_uri: Url,
     blob_repo_uri: Url,
-    verbose: bool,
-    writer: &mut W,
+    progress: &mut F,
 ) -> Result<()>
 where
-    W: Write + Sync,
+    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
     match (metadata_repo_uri.scheme(), blob_repo_uri.scheme()) {
         (GS_SCHEME, GS_SCHEME) => {
@@ -424,8 +408,7 @@ where
                 metadata_repo_uri.clone(),
                 blob_repo_uri.clone(),
                 backend,
-                verbose,
-                writer,
+                progress,
             )
             .await
             .is_ok()
@@ -447,8 +430,7 @@ where
                 metadata_repo_uri.clone(),
                 blob_repo_uri.clone(),
                 backend,
-                verbose,
-                writer,
+                progress,
             )
             .await
         }
@@ -465,8 +447,7 @@ where
                 metadata_repo_uri,
                 blob_repo_uri,
                 backend,
-                verbose,
-                writer,
+                progress,
             )
             .await
         }
@@ -480,16 +461,15 @@ where
     }
 }
 
-async fn fetch_package_repository_from_backend<W>(
+async fn fetch_package_repository_from_backend<F>(
     local_dir: &Path,
     metadata_repo_uri: Url,
     blob_repo_uri: Url,
     backend: Box<dyn RepositoryBackend + Send + Sync + 'static>,
-    verbose: bool,
-    writer: &mut W,
+    progress: &mut F,
 ) -> Result<()>
 where
-    W: Write + Sync,
+    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
     let repo = Repository::new("repo", backend).await.with_context(|| {
         format!("creating package repository {} {}", metadata_repo_uri, blob_repo_uri)
@@ -510,6 +490,7 @@ where
     .await
     .with_context(|| format!("downloading repository {} {}", metadata_repo_uri, blob_repo_uri))?;
 
+    let mut count = 0;
     // Exit early if there are no targets.
     if let Some(trusted_targets) = trusted_targets {
         // Download all the packages.
@@ -517,6 +498,7 @@ where
 
         let mut futures = FuturesUnordered::new();
 
+        let mut throttle = Throttle::from_duration(std::time::Duration::from_millis(500));
         for (package_name, desc) in trusted_targets.targets().iter() {
             let merkle = desc.custom().get("merkle").context("missing merkle")?;
             let merkle = if let Value::String(hash) = merkle {
@@ -525,17 +507,29 @@ where
                 bail!("Merkle field is not a String. {:#?}", desc)
             };
 
-            if verbose {
-                writeln!(writer, "    package: {}", package_name.as_str())?;
-            } else {
-                write!(writer, ".")?;
-                writer.flush()?;
+            count += 1;
+            if throttle.is_ready() {
+                match progress(
+                    DirectoryProgress { url: blob_repo_uri.as_ref(), at: 0, of: 1 },
+                    FileProgress { url: "Packages", at: 0, of: count },
+                )
+                .context("rendering progress")?
+                {
+                    ProgressResponse::Cancel => break,
+                    _ => (),
+                }
             }
+            log::debug!("    package: {}", package_name.as_str());
 
             futures.push(fetcher.fetch_package(merkle));
         }
 
         while let Some(()) = futures.try_next().await? {}
+        progress(
+            DirectoryProgress { url: blob_repo_uri.as_ref(), at: 1, of: 1 },
+            FileProgress { url: "Packages", at: count, of: count },
+        )
+        .context("rendering progress")?;
     };
 
     Ok(())
@@ -543,22 +537,17 @@ where
 
 /// Fetch a package repository using the `tgz` package bundle format, and automatically expand the
 /// tarball into the `local_dir` directory.
-async fn fetch_package_repository_from_tgz<W>(
+async fn fetch_package_repository_from_tgz<F>(
     local_dir: &Path,
     repo_uri: Url,
-    _verbose: bool,
-    writer: &mut W,
+    progress: &mut F,
 ) -> Result<()>
 where
-    W: Write + Sync,
+    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
-    fetch_bundle_uri(&repo_uri, &local_dir, &mut |_d, _f| {
-        write!(writer, ".")?;
-        writer.flush()?;
-        Ok(ProgressResponse::Continue)
-    })
-    .await
-    .with_context(|| format!("downloading repo URI {}", repo_uri))?;
+    fetch_bundle_uri(&repo_uri, &local_dir, progress)
+        .await
+        .with_context(|| format!("downloading repo URI {}", repo_uri))?;
 
     Ok(())
 }
@@ -574,7 +563,7 @@ async fn fetch_by_format<F>(
     progress: &mut F,
 ) -> Result<()>
 where
-    F: FnMut(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
+    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
     match format {
         "files" | "tgz" => fetch_bundle_uri(uri, &local_dir, progress).await,
@@ -603,7 +592,7 @@ async fn fetch_bundle_uri<F>(
     progress: &mut F,
 ) -> Result<()>
 where
-    F: FnMut(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
+    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
     if product_url.scheme() == GS_SCHEME {
         fetch_from_gcs(product_url.as_str(), local_dir, progress)
@@ -625,7 +614,7 @@ async fn fetch_from_web<F>(
     _progress: &mut F,
 ) -> Result<()>
 where
-    F: FnMut(ProgressState<'_>, ProgressState<'_>) -> ProgressResult,
+    F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
     // TODO(fxbug.dev/93850): implement pbms.
     unimplemented!();

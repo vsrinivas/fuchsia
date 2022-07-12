@@ -69,6 +69,10 @@ pub struct ProgressState<'a> {
     /// The total steps.
     pub of: u64,
 }
+/// This types promote self-documenting code.
+pub type OverallProgress<'a> = ProgressState<'a>;
+pub type DirectoryProgress<'a> = ProgressState<'a>;
+pub type FileProgress<'a> = ProgressState<'a>;
 
 /// Allow the user an opportunity to cancel an operation.
 #[derive(Debug, PartialEq)]
@@ -84,7 +88,7 @@ pub enum ProgressResponse {
 pub type ProgressResult<E = anyhow::Error> = std::result::Result<ProgressResponse, E>;
 
 /// Throttle an action to N times per second.
-struct Throttle {
+pub struct Throttle {
     prior_update: std::time::Instant,
     interval: std::time::Duration,
 }
