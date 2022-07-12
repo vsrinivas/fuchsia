@@ -64,12 +64,10 @@ func initWatcher(t *testing.T, si *interfaceStateImpl) watcherHelper {
 }
 
 func (w *watcherHelper) expectIdleEvent(t *testing.T) {
-	w.expectEvent(t, interfaces.EventWithIdle(interfaces.Empty{}))
-}
+	t.Helper()
 
-func (w *watcherHelper) expectEvent(t *testing.T, want interfaces.Event) {
 	event, err := w.Watch(context.Background())
-	if err := assertWatchResult(event, err, want); err != nil {
+	if err := assertWatchResult(event, err, interfaces.EventWithIdle(interfaces.Empty{})); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -136,7 +134,10 @@ func TestInterfacesWatcherExisting(t *testing.T) {
 		}
 	}()
 
-	watcher.expectEvent(t, interfaces.EventWithExisting(initialProperties(ifs, ns.name(ifs.nicid))))
+	event, err := watcher.Watch(context.Background())
+	if err := assertWatchResult(event, err, interfaces.EventWithExisting(initialProperties(ifs, ns.name(ifs.nicid)))); err != nil {
+		t.Fatal(err)
+	}
 	watcher.expectIdleEvent(t)
 }
 
@@ -170,17 +171,21 @@ func TestInterfacesWatcher(t *testing.T) {
 	// Add an interface.
 	ifs := addNoopEndpoint(t, ns, "")
 
-	verifyWatchResults := func(t *testing.T, wantEvent interfaces.Event) {
-		t.Helper()
-
-		nonBlockingWatcher.expectEvent(t, wantEvent)
+	verifyWatchResults := func(wantEvent interfaces.Event) error {
+		event, err := nonBlockingWatcher.Watch(context.Background())
+		if err := assertWatchResult(event, err, wantEvent); err != nil {
+			return fmt.Errorf("non-blocking watcher error: %w", err)
+		}
 
 		got := <-ch
 		if err := assertWatchResult(got.event, got.err, wantEvent); err != nil {
-			t.Fatalf("blocked watch failed: %s", err)
+			return fmt.Errorf("blocking watcher error: %w", err)
 		}
+		return nil
 	}
-	verifyWatchResults(t, interfaces.EventWithAdded(initialProperties(ifs, ns.name(ifs.nicid))))
+	if err := verifyWatchResults(interfaces.EventWithAdded(initialProperties(ifs, ns.name(ifs.nicid)))); err != nil {
+		t.Fatal(err)
+	}
 
 	// Set interface up.
 	blockingWatcher.blockingWatch(t, ch)
@@ -191,7 +196,9 @@ func TestInterfacesWatcher(t *testing.T) {
 	id.SetId(uint64(ifs.nicid))
 	online := id
 	online.SetOnline(true)
-	verifyWatchResults(t, interfaces.EventWithChanged(online))
+	if err := verifyWatchResults(interfaces.EventWithChanged(online)); err != nil {
+		t.Fatal(err)
+	}
 
 	// Add an address.
 	blockingWatcher.blockingWatch(t, ch)
@@ -211,7 +218,9 @@ func TestInterfacesWatcher(t *testing.T) {
 		address.SetAddr(fidlconv.ToNetSubnet(protocolAddr.AddressWithPrefix))
 		address.SetValidUntil(int64(zx.TimensecInfinite))
 		addressAdded.SetAddresses([]interfaces.Address{address})
-		verifyWatchResults(t, interfaces.EventWithChanged(addressAdded))
+		if err := verifyWatchResults(interfaces.EventWithChanged(addressAdded)); err != nil {
+			t.Fatal(err)
+		}
 	}
 
 	// Add a default route.
@@ -222,14 +231,18 @@ func TestInterfacesWatcher(t *testing.T) {
 	}
 	defaultIpv4RouteAdded := id
 	defaultIpv4RouteAdded.SetHasDefaultIpv4Route(true)
-	verifyWatchResults(t, interfaces.EventWithChanged(defaultIpv4RouteAdded))
+	if err := verifyWatchResults(interfaces.EventWithChanged(defaultIpv4RouteAdded)); err != nil {
+		t.Fatal(err)
+	}
 
 	// Remove the default route.
 	blockingWatcher.blockingWatch(t, ch)
 	_ = ns.DelRoute(r)
 	defaultIpv4RouteRemoved := id
 	defaultIpv4RouteRemoved.SetHasDefaultIpv4Route(false)
-	verifyWatchResults(t, interfaces.EventWithChanged(defaultIpv4RouteRemoved))
+	if err := verifyWatchResults(interfaces.EventWithChanged(defaultIpv4RouteRemoved)); err != nil {
+		t.Fatal(err)
+	}
 
 	// Remove an address.
 	blockingWatcher.blockingWatch(t, ch)
@@ -238,7 +251,9 @@ func TestInterfacesWatcher(t *testing.T) {
 	}
 	addressRemoved := id
 	addressRemoved.SetAddresses([]interfaces.Address{})
-	verifyWatchResults(t, interfaces.EventWithChanged(addressRemoved))
+	if err := verifyWatchResults(interfaces.EventWithChanged(addressRemoved)); err != nil {
+		t.Fatal(err)
+	}
 
 	// DHCP Acquired on the interface.
 	blockingWatcher.blockingWatch(t, ch)
@@ -255,13 +270,21 @@ func TestInterfacesWatcher(t *testing.T) {
 	})
 	address.SetValidUntil(int64(zx.TimensecInfinite))
 	dhcpAddressAdded.SetAddresses([]interfaces.Address{address})
-	verifyWatchResults(t, interfaces.EventWithChanged(dhcpAddressAdded))
+	if err := verifyWatchResults(interfaces.EventWithChanged(dhcpAddressAdded)); err != nil {
+		t.Fatal(err)
+	}
 
 	address.SetValidUntil(initUpdatedAt.Add(leaseLength.Duration()).MonotonicNano())
 	dhcpValidUntil := id
 	dhcpValidUntil.SetAddresses([]interfaces.Address{address})
-	blockingWatcher.expectEvent(t, interfaces.EventWithChanged(dhcpValidUntil))
-	nonBlockingWatcher.expectEvent(t, interfaces.EventWithChanged(dhcpValidUntil))
+	event, err := blockingWatcher.Watch(context.Background())
+	if err := assertWatchResult(event, err, interfaces.EventWithChanged(dhcpValidUntil)); err != nil {
+		t.Fatal(err)
+	}
+	event, err = nonBlockingWatcher.Watch(context.Background())
+	if err := assertWatchResult(event, err, interfaces.EventWithChanged(dhcpValidUntil)); err != nil {
+		t.Fatal(err)
+	}
 
 	// DHCP Acquired with same valid_until does not produce event.
 	ifs.dhcpAcquired(context.Background(), acquiredAddr, acquiredAddr, dhcp.Config{UpdatedAt: initUpdatedAt, LeaseLength: leaseLength})
@@ -273,14 +296,18 @@ func TestInterfacesWatcher(t *testing.T) {
 	dhcpAddressRenewed := id
 	address.SetValidUntil(updatedAt.Add(leaseLength.Duration()).MonotonicNano())
 	dhcpAddressRenewed.SetAddresses([]interfaces.Address{address})
-	verifyWatchResults(t, interfaces.EventWithChanged(dhcpAddressRenewed))
+	if err := verifyWatchResults(interfaces.EventWithChanged(dhcpAddressRenewed)); err != nil {
+		t.Fatal(err)
+	}
 
 	// DHCP Acquired on empty address signaling end of lease.
 	blockingWatcher.blockingWatch(t, ch)
 	ifs.dhcpAcquired(context.Background(), acquiredAddr, tcpip.AddressWithPrefix{}, dhcp.Config{})
 	dhcpExpired := id
 	dhcpExpired.SetAddresses([]interfaces.Address{})
-	verifyWatchResults(t, interfaces.EventWithChanged(dhcpExpired))
+	if err := verifyWatchResults(interfaces.EventWithChanged(dhcpExpired)); err != nil {
+		t.Fatal(err)
+	}
 
 	// Set interface down.
 	blockingWatcher.blockingWatch(t, ch)
@@ -289,12 +316,16 @@ func TestInterfacesWatcher(t *testing.T) {
 	}
 	offline := id
 	offline.SetOnline(false)
-	verifyWatchResults(t, interfaces.EventWithChanged(offline))
+	if err := verifyWatchResults(interfaces.EventWithChanged(offline)); err != nil {
+		t.Fatal(err)
+	}
 
 	// Remove the interface.
 	blockingWatcher.blockingWatch(t, ch)
 	ifs.RemoveByUser()
-	verifyWatchResults(t, interfaces.EventWithRemoved(uint64(ifs.nicid)))
+	if err := verifyWatchResults(interfaces.EventWithRemoved(uint64(ifs.nicid))); err != nil {
+		t.Fatal(err)
+	}
 
 	blockingWatcher.blockingWatch(t, ch)
 	if err := blockingWatcher.Close(); err != nil {
@@ -349,7 +380,10 @@ func TestInterfacesWatcherDuplicateAddress(t *testing.T) {
 		}
 	}()
 
-	watcher.expectEvent(t, interfaces.EventWithExisting(initialProperties(ifs, ns.name(ifs.nicid))))
+	event, err := watcher.Watch(context.Background())
+	if err := assertWatchResult(event, err, interfaces.EventWithExisting(initialProperties(ifs, ns.name(ifs.nicid)))); err != nil {
+		t.Fatal(err)
+	}
 	watcher.expectIdleEvent(t)
 
 	// Add an IPv6 address, should not observe the address until DAD success.
@@ -439,7 +473,10 @@ func TestInterfacesWatcherDeepCopyAddresses(t *testing.T) {
 	wantAddr.SetValidUntil(int64(zx.TimensecInfinite))
 	wantProperties := initialProperties(ifs, ns.name(ifs.nicid))
 	wantProperties.SetAddresses([]interfaces.Address{wantAddr})
-	watcher.expectEvent(t, interfaces.EventWithExisting(wantProperties))
+	event, err := watcher.Watch(context.Background())
+	if err := assertWatchResult(event, err, interfaces.EventWithExisting(wantProperties)); err != nil {
+		t.Fatal(err)
+	}
 
 	watcher.expectIdleEvent(t)
 
@@ -447,9 +484,15 @@ func TestInterfacesWatcherDeepCopyAddresses(t *testing.T) {
 	wantChange.SetId(uint64(ifs.nicid))
 	wantAddr.SetValidUntil(validUntil1)
 	wantChange.SetAddresses([]interfaces.Address{wantAddr})
-	watcher.expectEvent(t, interfaces.EventWithChanged(wantChange))
+	event, err = watcher.Watch(context.Background())
+	if err := assertWatchResult(event, err, interfaces.EventWithChanged(wantChange)); err != nil {
+		t.Fatal(err)
+	}
 
 	wantAddr.SetValidUntil(validUntil2)
 	wantChange.SetAddresses([]interfaces.Address{wantAddr})
-	watcher.expectEvent(t, interfaces.EventWithChanged(wantChange))
+	event, err = watcher.Watch(context.Background())
+	if err := assertWatchResult(event, err, interfaces.EventWithChanged(wantChange)); err != nil {
+		t.Fatal(err)
+	}
 }
