@@ -17,7 +17,7 @@ use crate::{
 use {at_commands as at, num_traits::FromPrimitive, std::convert::TryFrom};
 
 /// A singular state within the SLC Initialization Procedure.
-pub trait SlcProcedureState {
+pub trait SlcProcedureState: core::fmt::Debug {
     /// Returns the next state in the procedure based on the current state and the given
     /// AG `update`.
     /// By default, the state transition will return an error. Implementors should only
@@ -61,7 +61,7 @@ pub trait SlcProcedureState {
 ///   8) AgIndicatorStatusEnable
 ///   9) (optional) 3-way support
 ///   10) (optional) HfSupportedIndicators
-///   11) (optional) ListSupportedGenericIndicators
+///   11) (optional) ListEnabledHfIndicators
 pub struct SlcInitProcedure {
     state: Box<dyn SlcProcedureState>,
 }
@@ -87,7 +87,6 @@ impl Procedure for SlcInitProcedure {
         if self.is_terminated() {
             return ProcedureRequest::Error(Error::AlreadyTerminated);
         }
-
         self.state = self.state.hf_update(update, state);
         self.state.request()
     }
@@ -300,17 +299,28 @@ impl SlcProcedureState for AgIndicatorStatusEnableReceived {
         // Otherwise, both parties must be supporting HF Indicators (or else self.is_terminal()
         // would be true).
         match update {
-            at::Command::CindRead {} => Box::new(HfSupportedIndicatorsReceived),
+            at::Command::Bind { indicators } => {
+                let indicators = indicators
+                    .into_iter()
+                    .filter_map(at_commands::BluetoothHFIndicator::from_i64)
+                    .collect();
+                state.hf_indicators.enable_indicators(indicators);
+                Box::new(HfSupportedIndicatorsReceived)
+            }
             m => SlcErrorState::unexpected_hf(m),
         }
     }
 
     fn is_terminal(&self) -> bool {
-        // We don't continue if neither three way calling nor HF indicators are supported.
+        // HFP Spec v1.8 Sec 4.2.1.5 (AG condition 3)
+        // The AG shall consider the SLC fully initialized if the AG has responded with OK to the
+        // AT+CMER command (the request from this state), and neither three way calling nor HF indicators are
+        // supported.
         !self.state.three_way_calling() && !self.state.hf_indicators()
     }
 }
 
+#[derive(Debug)]
 struct ThreeWaySupportReceived {
     state: SlcState,
 }
@@ -339,50 +349,65 @@ impl SlcProcedureState for ThreeWaySupportReceived {
     }
 
     fn is_terminal(&self) -> bool {
-        // This is the final state if one or both parties don't support the HF Indicators.
+        // HFP Spec v1.8 Sec 4.2.1.5 (AG condition 2)
+        // The AG shall consider the SLC fully initialized if the AG has responded with information
+        // about call hold and multiparty support (+CHLD) and OK (the request from this state),
+        // if either of the peers don't support HF indicators.
         !self.state.hf_indicators()
     }
 }
 
+#[derive(Debug)]
 struct HfSupportedIndicatorsReceived;
 
 impl SlcProcedureState for HfSupportedIndicatorsReceived {
     fn request(&self) -> ProcedureRequest {
+        // After the indicators are received, the AG shall respond with Ok.
         AgUpdate::Ok.into()
     }
 
     fn hf_update(&self, update: at::Command, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         match update {
-            at::Command::BindTest {} => Box::new(AgSupportedIndicatorsReceived),
+            // After having provided the AG with the HF indicators it supports, the HF shall send
+            // AT+BIND=?..
+            at::Command::BindTest {} => Box::new(HfSupportedIndicatorsRequested),
             m => SlcErrorState::unexpected_hf(m),
         }
     }
 }
 
-struct AgSupportedIndicatorsReceived;
+#[derive(Debug)]
+struct HfSupportedIndicatorsRequested;
 
-impl SlcProcedureState for AgSupportedIndicatorsReceived {
+impl SlcProcedureState for HfSupportedIndicatorsRequested {
     fn request(&self) -> ProcedureRequest {
+        // The AG shall respond with the +BIND response listing all HF indicators it supports
+        // followed by an OK.
         // By default, we support both indicators defined in the spec.
         AgUpdate::SupportedHfIndicators { safety: true, battery: true }.into()
     }
 
     fn hf_update(&self, update: at::Command, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         match update {
+            // Once the HF receives the supported indicators list from the AG, the HF shall send
+            // the AT+BIND? to determine which ones are enabled.
             at::Command::BindRead {} => {
-                Box::new(ListSupportedGenericIndicatorsReceived { state: state.clone() })
+                Box::new(HfIndicatorStatusRequestReceived { state: state.clone() })
             }
             m => SlcErrorState::unexpected_hf(m),
         }
     }
 }
 
-struct ListSupportedGenericIndicatorsReceived {
+#[derive(Debug)]
+struct HfIndicatorStatusRequestReceived {
     state: SlcState,
 }
 
-impl SlcProcedureState for ListSupportedGenericIndicatorsReceived {
+impl SlcProcedureState for HfIndicatorStatusRequestReceived {
     fn request(&self) -> ProcedureRequest {
+        // The AG shall respond with one or more +BIND responses, the AG shall terminate the list
+        // with OK.
         AgUpdate::SupportedHfIndicatorStatus(self.state.hf_indicators).into()
     }
 
@@ -395,6 +420,9 @@ impl SlcProcedureState for ListSupportedGenericIndicatorsReceived {
     }
 
     fn is_terminal(&self) -> bool {
+        // HFP Spec v1.8 Sec 4.2.1.5 (AG condition 1)
+        // The AG shall consider the SLC fully initialized after the AG has responded with information
+        // about which HF indicators are enabled using +BIND as well as OK (this state's request)
         // This is the last conditional state.
         true
     }
@@ -402,6 +430,7 @@ impl SlcProcedureState for ListSupportedGenericIndicatorsReceived {
 
 /// Represents the error state for this procedure. Any errors in the SLC
 /// Initialization procedure will be considered fatal.
+#[derive(Debug)]
 struct SlcErrorState {
     error: Error,
 }
@@ -648,9 +677,90 @@ mod tests {
         let update7 = at::Command::Cmer { mode: 3, keyp: 0, disp: 0, ind: 1 };
         assert_matches!(slc_proc.hf_update(update7, &mut state), ProcedureRequest::SendMessages(_));
 
-        // Optional
+        // Optional - retrieve support for three-way-calling.
         let update8 = at::Command::ChldTest {};
         assert_matches!(slc_proc.hf_update(update8, &mut state), ProcedureRequest::SendMessages(_));
+        // Optional - HF sends its supported HF indicators.
+        let inds =
+            vec![at::BluetoothHFIndicator::EnhancedSafety, at::BluetoothHFIndicator::BatteryLevel];
+        let update9 = at::Command::Bind { indicators: inds.iter().map(|i| *i as i64).collect() };
+        let expected_messages9 = vec![at::Response::Ok];
+        assert_matches!(slc_proc.hf_update(update9, &mut state),
+            ProcedureRequest::SendMessages(m) if m == expected_messages9
+        );
+        // Optional - HF asks for AG's supported HF indicators.
+        let update10 = at::Command::BindTest {};
+        let expected_messages10 =
+            vec![at::success(at::Success::BindList { indicators: inds.clone() }), at::Response::Ok];
+        assert_matches!(
+            slc_proc.hf_update(update10, &mut state),
+            ProcedureRequest::SendMessages(m) if m == expected_messages10
+        );
+        // Optional - HF asks for AG's status of supported HF indicators.
+        let update11 = at::Command::BindRead {};
+        let expected_messages11 = vec![
+            at::success(at::Success::BindStatus {
+                anum: at::BluetoothHFIndicator::EnhancedSafety,
+                state: true,
+            }),
+            at::success(at::Success::BindStatus {
+                anum: at::BluetoothHFIndicator::BatteryLevel,
+                state: true,
+            }),
+            at::Response::Ok,
+        ];
+        assert_matches!(
+            slc_proc.hf_update(update11, &mut state),
+            ProcedureRequest::SendMessages(m) if m == expected_messages11
+        );
+
+        assert!(slc_proc.is_terminated());
+    }
+
+    /// Validates the entire state machine, including optional states, for the SLCI Procedure.
+    /// See HFP v1.8 Section 4.2.1.6 for the complete state diagram.
+    #[test]
+    fn validate_optional_procedure_state_machine_no_threeway() {
+        let mut slc_proc = SlcInitProcedure::new();
+        let mut state = SlcState::default();
+        let mut hf_features = HfFeatures::all();
+        let ag_features = AgFeatures::all();
+
+        // Remove three-way-calling.
+        hf_features.remove(HfFeatures::THREE_WAY_CALLING);
+
+        // First update should be an HF Feature request.
+        let update1 = at::Command::Brsf { features: hf_features.bits() as i64 };
+        assert_matches!(
+            slc_proc.hf_update(update1, &mut state),
+            ProcedureRequest::Request(SlcRequest::GetAgFeatures { .. })
+        );
+
+        // Next update should be an AG Feature response.
+        let update2 = AgUpdate::Features(ag_features);
+        assert_matches!(slc_proc.ag_update(update2, &mut state), ProcedureRequest::SendMessages(_));
+
+        let update3 = at::Command::Bac { codecs: vec![] };
+        assert_matches!(slc_proc.hf_update(update3, &mut state), ProcedureRequest::SendMessages(_));
+
+        let update4 = at::Command::CindTest {};
+        assert_matches!(slc_proc.hf_update(update4, &mut state), ProcedureRequest::SendMessages(_));
+
+        let update5 = at::Command::CindRead {};
+        assert_matches!(
+            slc_proc.hf_update(update5, &mut state),
+            ProcedureRequest::Request(SlcRequest::GetAgIndicatorStatus { .. })
+        );
+
+        // Indicator status should be updated.
+        let update6 = AgUpdate::IndicatorStatus(AgIndicators::default());
+        assert_matches!(slc_proc.ag_update(update6, &mut state), ProcedureRequest::SendMessages(_));
+
+        let update7 = at::Command::Cmer { mode: 3, keyp: 0, disp: 0, ind: 1 };
+        assert_matches!(slc_proc.hf_update(update7, &mut state), ProcedureRequest::SendMessages(_));
+
+        // Note: skipping three-way calling check, as hf doesn't support three-way calling.
+
         // Optional - HF sends its supported HF indicators.
         let inds =
             vec![at::BluetoothHFIndicator::EnhancedSafety, at::BluetoothHFIndicator::BatteryLevel];
