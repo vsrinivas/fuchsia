@@ -24,7 +24,7 @@ to try it out:
 1.  Ensure your branch is synced to tip-of-tree with `jiri update`.
 1.  Add the `dash-launcher` component to your build:
 
-    ```
+    ```none
     > fx set <product>.<arch> --with //src/sys/tools/dash-launcher
     > fx build
     ```
@@ -39,7 +39,7 @@ to try it out:
 
 1.  Choose a component moniker and start exploring:
 
-    ```
+    ```none
     > ffx component explore /bootstrap/archivist
     $ ls
     bin
@@ -63,7 +63,7 @@ should be replaced with the moniker of your component.
 The `/ns` directory contains the component's namespace, exactly as your
 component would see it.
 
-```
+```none
 > ffx component explore /bootstrap/archivist
 $ cd ns
 $ ls
@@ -82,7 +82,7 @@ $ mkdir captures
 The `/exposed` directory contains the capabilities exposed from your component
 to its parent.
 
-```
+```none
 > ffx component explore /bootstrap/archivist
 $ cd exposed
 $ ls
@@ -94,7 +94,7 @@ fuchsia.foo.bar.MyProtocol
 If a component is running, the `/out` directory contains all the capabilities
 currently served by it.
 
-```
+```none
 > ffx component explore /bootstrap/archivist
 $ cd out
 $ ls
@@ -110,7 +110,7 @@ fuchsia.foo.bar.MyProtocol
 If your component is running, the `/runtime` directory contains debug
 information provided by the component runner.
 
-```
+```none
 > ffx component explore /bootstrap/archivist
 $ cd runtime/elf
 $ ls
