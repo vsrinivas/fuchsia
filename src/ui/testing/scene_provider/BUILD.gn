@@ -1,0 +1,79 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("bin") {
+  testonly = true
+  output_name = "scene_provider"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":lib",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+source_set("lib") {
+  testonly = true
+  sources = [
+    "scene_provider.cc",
+    "scene_provider.h",
+  ]
+
+  public_deps = [
+    ":scene_provider_config_lib",
+    "//sdk/fidl/fuchsia.session.scene",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.observation.test",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.test.scene",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/ui/scenic/cpp",
+    "//src/lib/fsl",
+  ]
+}
+
+fuchsia_component("scene-provider") {
+  testonly = true
+  component_name = "scene-provider"
+  manifest = "meta/scene_provider.cml"
+  deps = [ ":bin" ]
+}
+
+# Required for structured config.
+fuchsia_component_manifest("scene_provider_manifest") {
+  testonly = true
+  component_name = "scene-provider"
+  manifest = "meta/scene_provider.cml"
+}
+
+fuchsia_structured_config_cpp_elf_lib("scene_provider_config_lib") {
+  testonly = true
+  cm_label = ":scene_provider_manifest"
+}
+
+fuchsia_structured_config_values("scene_provider_default_config") {
+  testonly = true
+  cm_label = ":scene_provider_manifest"
+  values = {
+    use_flatland = false
+    use_scene_manager = false
+  }
+}
+
+group("scene-provider-deps") {
+  testonly = true
+
+  deps = [
+    ":scene-provider",
+    ":scene_provider_default_config",
+  ]
+}

@@ -9,6 +9,7 @@
 #include <fuchsia/ui/focus/cpp/fidl.h>
 #include <fuchsia/ui/observation/test/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
+#include <fuchsia/ui/test/scene/cpp/fidl.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -253,7 +254,14 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
   // fuchsia.ui.app.ViewProvider.
   //
   // MUST be called AFTER BuildRealm().
-  void InitializeScene();
+  //
+  // `use_scene_provider` indicates whether UITestManager should use
+  // `fuchsia.ui.test.scene.Provider` to initialize the scene, or use the raw
+  // root presenter / scene manager APIs.
+  //
+  // TODO(fxbug.dev/103985): Remove the raw API option once web-semantics-test
+  // can use `fuchsia.ui.test.scene.Provider` without flaking.
+  void InitializeScene(bool use_scene_provider = true);
 
   // Returns the view ref koid of the client view if it's available, and false
   // otherwise.
@@ -291,6 +299,7 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
   // Helper methods to configure the test realm.
   void ConfigureClientSubrealm();
   void ConfigureAccessibility();
+  void ConfigureSceneProvider();
   void RouteConfigData();
 
   // Helper method to route a set of services from the specified source to the
@@ -316,13 +325,14 @@ class UITestManager : public fuchsia::ui::focus::FocusChainListener {
   fuchsia::ui::observation::test::RegistrySyncPtr observer_registry_;
   fuchsia::ui::observation::geometry::ProviderPtr geometry_provider_;
   fidl::Binding<fuchsia::ui::focus::FocusChainListener> focus_chain_listener_binding_;
+  fuchsia::ui::test::scene::ProviderPtr scene_provider_;
 
   // Connection to scene owner service. At most one will be active for a given
   // UITestManager instance.
   fuchsia::session::scene::ManagerPtr scene_manager_;
   fuchsia::ui::policy::PresenterPtr root_presenter_;
 
-  std::optional<fuchsia::ui::views::ViewRef> client_view_ref_ = std::nullopt;
+  std::optional<zx_koid_t> client_view_ref_koid_ = std::nullopt;
 
   // Holds the most recent view tree snapshot received from the geometry
   // observer.

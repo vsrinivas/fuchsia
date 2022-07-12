@@ -136,7 +136,7 @@ void SemanticsIntegrationTestV2::BuildRealm() {
 }
 
 void SemanticsIntegrationTestV2::SetupScene() {
-  ui_test_manager_->InitializeScene();
+  ui_test_manager_->InitializeScene(/* use_scene_provider = */ false);
   RunLoopUntil([this]() { return ui_test_manager_->ClientViewIsRendering(); });
 
   auto view_ref_koid = ui_test_manager_->ClientViewRefKoid();

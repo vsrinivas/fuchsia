@@ -1,0 +1,29 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "scene-provider",
+            url: "#meta/scene-provider.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: "#scene-provider",
+        },
+        {
+            protocol: [ "fuchsia.ui.observation.test.Registry" ],
+            from: "#scenic",
+            to: "#scene-provider",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.ui.test.scene.Provider" ],
+            from: "#scene-provider",
+        },
+    ],
+}

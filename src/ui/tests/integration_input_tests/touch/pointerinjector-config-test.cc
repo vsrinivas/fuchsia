@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/input/injection/cpp/fidl.h>
+#include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>

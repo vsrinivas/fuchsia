@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [ "//src/ui/testing/ui_test_manager/meta/scene_provider.shard.cml" ],
     children: [
         {
             name: "scene-manager",
@@ -41,6 +42,11 @@
             ],
             from: "#scenic",
             to: [ "#scene-manager" ],
+        },
+        {
+            protocol: [ "fuchsia.session.scene.Manager" ],
+            from: "#scene-manager",
+            to: [ "#scene-provider" ],
         },
     ],
     expose: [

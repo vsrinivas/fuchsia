@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [ "//src/ui/testing/ui_test_manager/meta/scene_provider.shard.cml" ],
     children: [
         {
             name: "root-presenter",
@@ -25,6 +26,11 @@
             ],
             from: "#scenic",
             to: "#root-presenter",
+        },
+        {
+            protocol: [ "fuchsia.ui.policy.Presenter" ],
+            from: "#root-presenter",
+            to: [ "#scene-provider" ],
         },
     ],
     expose: [

@@ -1,0 +1,39 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/scene_provider",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.ui.test.scene.Provider" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.session.scene.Manager",
+                "fuchsia.ui.app.ViewProvider",
+                "fuchsia.ui.observation.test.Registry",
+                "fuchsia.ui.policy.Presenter",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.ui.test.scene.Provider" ],
+            from: "self",
+        },
+    ],
+    config: {
+        use_flatland: { type: "bool" },
+        use_scene_manager: { type: "bool" },
+    },
+}

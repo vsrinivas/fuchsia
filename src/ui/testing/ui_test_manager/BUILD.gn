@@ -36,6 +36,7 @@ source_set("ui_test_manager") {
     "//sdk/fidl/fuchsia.ui.pointerinjector.configuration",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.test.scene",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/fidl/fuchsia.vulkan.loader",
     "//sdk/lib/sys/component/cpp/testing:cpp",
@@ -93,6 +94,7 @@ fuchsia_component("root_presenter_scene") {
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
     "//src/ui/bin/root_presenter:component_v2",
     "//src/ui/scenic:component_v2_with_supplied_display_provider",
+    "//src/ui/testing/scene_provider:scene-provider-deps",
   ]
 }
 
@@ -108,6 +110,7 @@ fuchsia_component("root_presenter_scene_with_input") {
     "//src/ui/bin/root_presenter:component_v2",
     "//src/ui/bin/text:text_manager_comp_v2",
     "//src/ui/scenic:component_v2_with_supplied_display_provider",
+    "//src/ui/testing/scene_provider:scene-provider-deps",
   ]
 }
 
@@ -122,6 +125,7 @@ fuchsia_component("scene_manager_scene") {
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
     "//src/ui/bin/scene_manager:scene_manager_component",
     "//src/ui/scenic:component_v2_with_supplied_display_provider",
+    "//src/ui/testing/scene_provider:scene-provider-deps",
   ]
 }
 
@@ -140,5 +144,6 @@ fuchsia_component("scene_manager_scene_with_input") {
     "//src/ui/bin/shortcut:shortcut_manager",
     "//src/ui/bin/text:text_manager_comp_v2",
     "//src/ui/scenic:component_v2_with_supplied_display_provider",
+    "//src/ui/testing/scene_provider:scene-provider-deps",
   ]
 }
