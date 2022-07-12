@@ -71,7 +71,7 @@ if (magma_openvx_package != "") {
     component_name = "vxcopy"
     deps = [ ":vxcopy_bin" ] + vxcopy_resource_deps
 
-    manifest = "meta/vxcopy.cmx"
+    manifest = "meta/vxcopy.cml"
   }
 
   fuchsia_test_package("vxcopy-pkg") {

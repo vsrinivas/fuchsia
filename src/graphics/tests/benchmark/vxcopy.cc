@@ -89,9 +89,9 @@ void VxCopyTest::Initialize(uint32_t width, uint32_t height) {
         << "vxMapImagePatch failed";
 
     for (vx_size i = 0; i < addr.dim_x * addr.dim_y; i++) {
-      void *pixel = vxFormatImagePatchAddress1d(ptr, i, &addr);
+      void *pixel = vxFormatImagePatchAddress1d(ptr, static_cast<vx_uint32>(i), &addr);
       static_assert(kPixelWidth == 2, "Format doesn't match pixel width");
-      *reinterpret_cast<uint16_t *>(pixel) = i;
+      *reinterpret_cast<uint16_t *>(pixel) = static_cast<uint16_t>(i);
     }
 
     EXPECT_EQ(VX_SUCCESS, vxUnmapImagePatch(src_, map_id)) << "vxUnmapImagePatch failed";
