@@ -128,9 +128,23 @@ func (m *multicastIpv4RoutingTableControllerImpl) DelRoute(_ fidl.Context, addre
 	}
 }
 
-func (m *multicastIpv4RoutingTableControllerImpl) GetRouteStats(fidl.Context, admin.Ipv4UnicastSourceAndMulticastDestination) (admin.Ipv4RoutingTableControllerGetRouteStatsResult, error) {
-	// TODO(https://fxbug.dev/102565): Implement GetRouteStats.
-	return admin.Ipv4RoutingTableControllerGetRouteStatsResult{}, errors.New("Ipv4RoutingTableController.GetRouteStats unimplemented. See fxbug.dev/102565.")
+func (m *multicastIpv4RoutingTableControllerImpl) GetRouteStats(_ fidl.Context, addresses admin.Ipv4UnicastSourceAndMulticastDestination) (admin.Ipv4RoutingTableControllerGetRouteStatsResult, error) {
+	stackAddresses := toStackUnicastSourceAndMulticastDestination(addresses)
+	switch timestamp, err := m.stack.MulticastRouteLastUsedTime(ipv4.ProtocolNumber, stackAddresses); err.(type) {
+	case nil:
+		var routeStats admin.RouteStats
+		// The timestamp comes from the tcpip.Clock, which is backed by the
+		// Fuchsia monotonic clock. As a result, the returned timestamp
+		// corresponds to a value that all components can understand.
+		routeStats.SetLastUsed(timestamp.Sub(tcpip.MonotonicTime{}).Nanoseconds())
+		return admin.Ipv4RoutingTableControllerGetRouteStatsResultWithResponse(admin.Ipv4RoutingTableControllerGetRouteStatsResponse{Stats: routeStats}), nil
+	case *tcpip.ErrBadAddress:
+		return admin.Ipv4RoutingTableControllerGetRouteStatsResultWithErr(admin.Ipv4RoutingTableControllerGetRouteStatsErrorInvalidAddress), nil
+	case *tcpip.ErrNoRoute:
+		return admin.Ipv4RoutingTableControllerGetRouteStatsResultWithErr(admin.Ipv4RoutingTableControllerGetRouteStatsErrorNotFound), nil
+	default:
+		panic(fmt.Sprintf("m.stack.MulticastRouteLastUsedTime(ipv4.ProtocolNumber, %#v): %s", stackAddresses, err))
+	}
 }
 
 func (m *multicastIpv4RoutingTableControllerImpl) WatchRoutingEvents(ctx fidl.Context) (uint64, admin.Ipv4UnicastSourceAndMulticastDestination, uint64, admin.RoutingEvent, error) {
