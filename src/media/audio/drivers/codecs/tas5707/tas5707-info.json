@@ -1,0 +1,12 @@
+{
+    "short_description": "Texas Instruments 5707 audio hardware codec driver",
+    "manufacturer": "Texas Instruments",
+    "families": [],
+    "models": [
+        "Tas5707"
+    ],
+    "areas": [
+        "Media",
+        "Audio"
+    ]
+}

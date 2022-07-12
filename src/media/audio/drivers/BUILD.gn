@@ -13,6 +13,7 @@ group("drivers") {
     "codecs/max98373",
     "codecs/max98927",
     "codecs/tas27xx",
+    "codecs/tas5707",
     "codecs/tas5720",
     "codecs/tas58xx",
     "dai-test",

@@ -1,0 +1,41 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+
+driver_bind_rules("ti_tas5707-bind") {
+  rules = "ti_tas5707.bind"
+  header_output = "ti_tas5707-bind.h"
+  bind_output = "tas5707.bindbc"
+  tests = "tests.json"
+  deps = [ "//src/devices/bind/fuchsia.ti.platform" ]
+}
+
+fuchsia_driver("tas5707-driver") {
+  output_name = "tas5707"
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  sources = [ "tas5707.cc" ]
+  deps = [
+    ":ti_tas5707-bind",
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
+    "//src/devices/i2c/lib/device-protocol-i2c-channel",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/ti",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//src/media/audio/lib/simple-codec",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zircon-internal",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+fuchsia_driver_component("tas5707") {
+  component_name = "tas5707"
+  deps = [ ":tas5707-driver" ]
+  info = "tas5707-info.json"
+  colocate = true
+}

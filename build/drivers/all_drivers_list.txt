@@ -312,6 +312,7 @@
 //src/media/audio/drivers/codecs/max98373:max98373-driver
 //src/media/audio/drivers/codecs/max98927:max98927-driver
 //src/media/audio/drivers/codecs/tas27xx:tas27xx-driver
+//src/media/audio/drivers/codecs/tas5707:tas5707-driver
 //src/media/audio/drivers/codecs/tas5720:tas5720-driver
 //src/media/audio/drivers/codecs/tas58xx:tas58xx-driver
 //src/media/audio/drivers/dai-test:dai-test-driver
