@@ -2,24 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-group("telephony") {
-  testonly = true
-  deps = [
-    ":tests",
-    "//src/connectivity/telephony/ril-at",
-    "//src/connectivity/telephony/ril-qmi",
-    "//src/connectivity/telephony/telephony",
-    "//src/connectivity/telephony/tools",
-  ]
-}
-
 group("drivers") {
   testonly = true
   deps = [
     "drivers/qmi-fake-transport:fake_qmi_driver",
     "drivers/qmi-usb-transport:qmi_driver",
-    "tests/fake-drivers/at-fake-transport:fake_at_driver",
-    "tests/fake-drivers/usb-qmi-function:qmi_function",
   ]
 }
 
@@ -27,12 +14,6 @@ group("tests") {
   testonly = true
   deps = [
     "//src/connectivity/telephony/drivers:tests",
-    "//src/connectivity/telephony/lib/qmi-protocol:tests",
-    "//src/connectivity/telephony/ril-at:tests",
-    "//src/connectivity/telephony/ril-qmi:tests",
-    "//src/connectivity/telephony/telephony:tests",
-    "//src/connectivity/telephony/telephony-snooper",
-    "//src/connectivity/telephony/tests",
     "//src/connectivity/telephony/tests/fake-drivers/at-fake-transport:tests",
     "//src/connectivity/telephony/tests/fake-drivers/usb-qmi-function:tests",
   ]

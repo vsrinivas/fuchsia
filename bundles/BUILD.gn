@@ -116,7 +116,6 @@ group("kitchen_sink") {
     "packages:all",
     "//bundles:tools",
     "//examples",
-    "//src/connectivity/telephony",
     "//src/graphics/examples",
     "//src/lib/ui/carnelian:examples",
     "//src/media/audio/bundles:virtual_audio_driver",

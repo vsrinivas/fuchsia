@@ -40,8 +40,6 @@
 //src/connectivity/openthread/tests/fake-drivers/fake-ot-radio:fake-ot-radio-driver-driver
 //src/connectivity/telephony/drivers/qmi-fake-transport:fake_qmi_driver-driver
 //src/connectivity/telephony/drivers/qmi-usb-transport:qmi_driver-driver
-//src/connectivity/telephony/tests/fake-drivers/at-fake-transport:fake_at_driver-driver
-//src/connectivity/telephony/tests/fake-drivers/usb-qmi-function:qmi_function-driver
 //src/connectivity/wlan/drivers/testing:wlanphy-testdev-driver
 //src/connectivity/wlan/drivers/third_party/atheros/ath10k:ath10k_driver-driver
 //src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:fuchsia_driver-driver

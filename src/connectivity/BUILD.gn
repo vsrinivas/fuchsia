@@ -21,7 +21,6 @@ group("connectivity_no_e2e") {
     "lowpan",
     "overnet",
     "ppp",
-    "telephony",
     "weave",
     "wlan",
   ]
