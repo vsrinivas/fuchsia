@@ -30,7 +30,7 @@ mod profile;
 mod sco_connector;
 mod service_definitions;
 
-#[fuchsia::main]
+#[fuchsia::main(logging_tags = ["hfp-ag"])]
 async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
 
