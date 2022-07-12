@@ -33,13 +33,6 @@ type NodeProtocols = strict bits : uint64 {
     /// The connection will speak the [`File`] protocol.
     FILE = 0x4;
 
-    /// The memory representation of a node. A memory object is a file whose
-    /// contents are explicitly backed by some VMO.
-    /// The connection will speak the [`Memory`] protocol, and
-    /// [`Representation`] would contain a [`fuchsia.mem/Range`] object
-    /// representing the contents of the file.
-    MEMORY = 0x8;
-
     /// The device representation of a node.
     ///
     /// The connection will speak [`fuchsia.hardware.block.BlockAndNode`] OR

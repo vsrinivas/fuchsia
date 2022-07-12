@@ -59,7 +59,7 @@ static zx_status_t zxio_vmo_attr_get(zxio_t* io, zxio_node_attributes_t* out_att
     return status;
   }
   *out_attr = {};
-  ZXIO_NODE_ATTR_SET(*out_attr, protocols, ZXIO_NODE_PROTOCOL_FILE | ZXIO_NODE_PROTOCOL_MEMORY);
+  ZXIO_NODE_ATTR_SET(*out_attr, protocols, ZXIO_NODE_PROTOCOL_FILE);
   ZXIO_NODE_ATTR_SET(*out_attr, abilities,
                      ZXIO_OPERATION_READ_BYTES | ZXIO_OPERATION_GET_ATTRIBUTES);
   ZXIO_NODE_ATTR_SET(*out_attr, content_size, content_size);

@@ -156,7 +156,6 @@ typedef uint64_t zxio_node_protocols_t;
 #define ZXIO_NODE_PROTOCOL_CONNECTOR ((zxio_node_protocols_t)1ul << 0)
 #define ZXIO_NODE_PROTOCOL_DIRECTORY ((zxio_node_protocols_t)1ul << 1)
 #define ZXIO_NODE_PROTOCOL_FILE ((zxio_node_protocols_t)1ul << 2)
-#define ZXIO_NODE_PROTOCOL_MEMORY ((zxio_node_protocols_t)1ul << 3)
 #define ZXIO_NODE_PROTOCOL_DEVICE ((zxio_node_protocols_t)0x10000000ul)
 #define ZXIO_NODE_PROTOCOL_TTY ((zxio_node_protocols_t)0x20000000ul)
 

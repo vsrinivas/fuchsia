@@ -1488,16 +1488,6 @@
         "value": "192"
     },
     {
-        "declaration": "fuchsia.mem/Range",
-        "kind": "table/member",
-        "name": "fuchsia.io/MemoryInfo.buffer"
-    },
-    {
-        "kind": "table",
-        "name": "fuchsia.io/MemoryInfo",
-        "resourceness": "resource"
-    },
-    {
         "declaration": "uint64",
         "kind": "table/member",
         "name": "fuchsia.io/MutableNodeAttributes.creation_time"
@@ -1946,9 +1936,9 @@
         "name": "fuchsia.io/NodeInfo.tty"
     },
     {
-        "declaration": "fuchsia.io/Vmofile",
+        "declaration": "fuchsia.io/VmofileDeprecated",
         "kind": "union/member",
-        "name": "fuchsia.io/NodeInfo.vmofile"
+        "name": "fuchsia.io/NodeInfo.vmofile_deprecated"
     },
     {
         "kind": "union",
@@ -1975,11 +1965,6 @@
         "kind": "bits/member",
         "name": "fuchsia.io/NodeProtocols.FILE",
         "value": "4"
-    },
-    {
-        "kind": "bits/member",
-        "name": "fuchsia.io/NodeProtocols.MEMORY",
-        "value": "8"
     },
     {
         "kind": "bits/member",
@@ -2241,11 +2226,6 @@
         "name": "fuchsia.io/Representation.file"
     },
     {
-        "declaration": "fuchsia.io/MemoryInfo",
-        "kind": "union/member",
-        "name": "fuchsia.io/Representation.memory"
-    },
-    {
         "declaration": "fuchsia.io/PacketSocketInfo",
         "kind": "union/member",
         "name": "fuchsia.io/Representation.packet_socket"
@@ -2450,21 +2430,21 @@
     {
         "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.io/Vmofile.length"
+        "name": "fuchsia.io/VmofileDeprecated.length"
     },
     {
         "declaration": "uint64",
         "kind": "struct/member",
-        "name": "fuchsia.io/Vmofile.offset"
+        "name": "fuchsia.io/VmofileDeprecated.offset"
     },
     {
         "declaration": "zx/handle:VMO",
         "kind": "struct/member",
-        "name": "fuchsia.io/Vmofile.vmo"
+        "name": "fuchsia.io/VmofileDeprecated.vmo"
     },
     {
         "kind": "struct",
-        "name": "fuchsia.io/Vmofile",
+        "name": "fuchsia.io/VmofileDeprecated",
         "resourceness": "resource"
     },
     {

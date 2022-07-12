@@ -16,14 +16,12 @@ TEST(NodeProtocolsToPosixType, Basic) {
   EXPECT_EQ(S_IFREG, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_CONNECTOR));
   EXPECT_EQ(S_IFDIR, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_DIRECTORY));
   EXPECT_EQ(S_IFREG, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_FILE));
-  EXPECT_EQ(S_IFREG, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_MEMORY));
   EXPECT_EQ(S_IFBLK, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_DEVICE));
   EXPECT_EQ(S_IFCHR, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_TTY));
 }
 
 TEST(NodeProtocolsToPosixType, MultiProtocol) {
-  EXPECT_EQ(S_IFREG,
-            zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_FILE | ZXIO_NODE_PROTOCOL_MEMORY));
+  EXPECT_EQ(S_IFREG, zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_FILE));
   // If the node supports both directory and file protocol, we only assert that
   // the conversion result is either |S_IFDIR| (directory) or |S_IFREG| (file).
   EXPECT_TRUE(zxio_node_protocols_to_posix_type(ZXIO_NODE_PROTOCOL_DIRECTORY |

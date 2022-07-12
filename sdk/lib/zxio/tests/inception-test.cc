@@ -381,12 +381,12 @@ TEST(CreateWithInfo, Vmofile) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(vmo_size, 0u, &vmo));
 
-  fuchsia_io::wire::Vmofile vmofile = {
+  fuchsia_io::wire::VmofileDeprecated vmofile = {
       .vmo = std::move(vmo),
       .offset = file_start_offset,
       .length = file_length,
   };
-  auto node_info = fuchsia_io::wire::NodeInfo::WithVmofile(
+  auto node_info = fuchsia_io::wire::NodeInfo::WithVmofileDeprecated(
       fidl::ObjectView<decltype(vmofile)>::FromExternal(&vmofile));
 
   auto allocator = [](zxio_object_type_t type, zxio_storage_t** out_storage, void** out_context) {
@@ -412,7 +412,7 @@ TEST(CreateWithInfo, Vmofile) {
   ASSERT_NE(context, nullptr);
 
   // The vmo in node_info should be consumed by zxio.
-  EXPECT_FALSE(node_info.vmofile().vmo.is_valid());
+  EXPECT_FALSE(node_info.vmofile_deprecated().vmo.is_valid());
 
   std::unique_ptr<zxio_storage_t> storage(static_cast<zxio_storage_t*>(context));
   zxio_t* zxio = &(storage->io);

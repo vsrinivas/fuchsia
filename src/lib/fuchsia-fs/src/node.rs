@@ -93,7 +93,7 @@ pub enum Kind {
     Service,
     File,
     Directory,
-    Vmofile,
+    VmofileDeprecated,
     Device,
     Tty,
     SynchronousDatagramSocket,
@@ -110,7 +110,7 @@ impl Kind {
             fio::NodeInfo::Service(_) => Kind::Service,
             fio::NodeInfo::File(_) => Kind::File,
             fio::NodeInfo::Directory(_) => Kind::Directory,
-            fio::NodeInfo::Vmofile(_) => Kind::Vmofile,
+            fio::NodeInfo::VmofileDeprecated(_) => Kind::VmofileDeprecated,
             fio::NodeInfo::Device(_) => Kind::Device,
             fio::NodeInfo::Tty(_) => Kind::Tty,
             fio::NodeInfo::SynchronousDatagramSocket(_) => Kind::SynchronousDatagramSocket,
@@ -124,7 +124,7 @@ impl Kind {
     fn expect_file(info: fio::NodeInfo) -> Result<(), Kind> {
         match info {
             fio::NodeInfo::File(fio::FileObject { event: _, stream: None })
-            | fio::NodeInfo::Vmofile(fio::Vmofile { .. }) => Ok(()),
+            | fio::NodeInfo::VmofileDeprecated(fio::VmofileDeprecated { .. }) => Ok(()),
             other => Err(Kind::kind_of(&other)),
         }
     }
@@ -141,7 +141,6 @@ impl Kind {
             fio::Representation::Connector(_) => Kind::Service,
             fio::Representation::Directory(_) => Kind::Directory,
             fio::Representation::File(_) => Kind::File,
-            fio::Representation::Memory(_) => Kind::Vmofile,
             fio::Representation::Device(_) => Kind::Device,
             fio::Representation::Tty(_) => Kind::Tty,
             fio::Representation::SynchronousDatagramSocket(_) => Kind::SynchronousDatagramSocket,
@@ -155,8 +154,7 @@ impl Kind {
 
     fn expect_file2(representation: &fio::Representation) -> Result<(), Kind> {
         match representation {
-            fio::Representation::File(fio::FileInfo { stream: None, .. })
-            | fio::Representation::Memory(_) => Ok(()),
+            fio::Representation::File(fio::FileInfo { stream: None, .. }) => Ok(()),
             other => Err(Kind::kind_of2(other)),
         }
     }

@@ -44,7 +44,7 @@ impl NodeType {
     ///
     /// This method is non-blocking.
     ///
-    /// NOTE: Only NodeInfo::File and Vmofile are considered files.
+    /// NOTE: Only NodeInfo::File is considered a file.
     /// NOTE: Only NodeInfo::Directory is considered a directory.
     /// NOTE: Any other NodeInfo types are considered NodeType unknown.
     pub async fn from_path(path: impl AsRef<Path>) -> Result<Self, Error> {
@@ -60,7 +60,7 @@ impl NodeType {
         let dir_proxy = open_node_in_namespace(path_as_str, OpenFlags::RIGHT_READABLE)?;
         Ok(match dir_proxy.describe().await {
             Ok(fio::NodeInfo::Directory(_)) => NodeType::Directory,
-            Ok(fio::NodeInfo::File(_)) | Ok(fio::NodeInfo::Vmofile(_)) => NodeType::File,
+            Ok(fio::NodeInfo::File(_)) | Ok(fio::NodeInfo::VmofileDeprecated(_)) => NodeType::File,
             _ => NodeType::Unknown,
         })
     }

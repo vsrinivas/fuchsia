@@ -211,10 +211,10 @@ TEST(FileDescriptorTest, TransferVMOFile) {
     }
 
     void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) override {
-      fuchsia_io::wire::Vmofile vmofile;
+      fuchsia_io::wire::VmofileDeprecated vmofile;
       EXPECT_OK(vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmofile.vmo));
-      completer.Reply(fuchsia_io::wire::NodeInfo::WithVmofile(
-          fidl::ObjectView<fuchsia_io::wire::Vmofile>::FromExternal(&vmofile)));
+      completer.Reply(fuchsia_io::wire::NodeInfo::WithVmofileDeprecated(
+          fidl::ObjectView<fuchsia_io::wire::VmofileDeprecated>::FromExternal(&vmofile)));
     }
 
     void Seek(SeekRequestView request, SeekCompleter::Sync& completer) override {

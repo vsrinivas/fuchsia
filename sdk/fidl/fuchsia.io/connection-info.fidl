@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 library fuchsia.io;
 
-using fuchsia.mem;
 using zx;
 
 /// Returns run-time information about a node that is specific to the
@@ -77,33 +76,12 @@ type ConnectionInfo = resource table {
             3: stream zx.handle:STREAM;
         };
 
-        /// Auxiliary data for the memory object representation of a node.
-        /// The node is a file which is represented as a VMO.
-        /// The selection of this variant in [`Representation`] implies that the
-        /// connection speaks the [`Memory`] protocol.
-        ///
-        /// See [`NodeProtocols.MEMORY`].
-        4: memory @generated_name("MemoryInfo") resource table {
-            /// Although a VMO is returned as a part of this structure, that VMO may
-            /// back multiple files. To identify the logical portion of the VMO that
-            /// represents the single file, offset and size are also supplied.
-            ///
-            /// If the range covers the entire VMO (i.e. the offset is zero and the
-            /// length matches the size of the VMO), then all clients must receive a
-            /// VMO with the same koid. This can be a duplicate of the same underlying
-            /// page-aligned VMO.
-            ///
-            /// The rights on this VMO should correspond to the rights on the
-            /// node connection.
-            1: buffer fuchsia.mem.Range;
-        };
-
         /// The connection composes [`fuchsia.hardware.block.BlockAndNode`] OR
         /// [`fuchsia.hardware.block.volume.VolumeAndNode`].
         ///
         /// TODO(https://fxbug.dev/103827): Document why this is needed or
         /// remove it.
-        5: device @generated_name("DeviceInfo") resource table {
+        4: device @generated_name("DeviceInfo") resource table {
             /// An optional event which transmits information about a device's state.
             ///
             /// The [`DeviceSignal`] values may be observed on this event.
@@ -112,7 +90,7 @@ type ConnectionInfo = resource table {
 
         /// The object may be cast to a Tty interface.
         @deprecated("tty functionalities may be covered by a tty service")
-        6: tty @generated_name("TtyInfo") resource table {
+        5: tty @generated_name("TtyInfo") resource table {
             /// An optional event which transmits information about a device's state.
             ///
             /// The [`DeviceSignal`] values may be observed on this event.
@@ -122,7 +100,7 @@ type ConnectionInfo = resource table {
         /// The connection composes [`fuchsia.posix.socket/SynchronousDatagramSocket`].
         ///
         /// See [`NodeProtocols.SYNCHRONOUS_DATAGRAM_SOCKET`].
-        7: synchronous_datagram_socket
+        6: synchronous_datagram_socket
                 @generated_name("SynchronousDatagramSocketInfo")
                 resource table {
             1: event zx.handle:EVENTPAIR;
@@ -131,7 +109,7 @@ type ConnectionInfo = resource table {
         /// The connection composes [`fuchsia.posix.socket/DatagramSocket`].
         ///
         /// See [`NodeProtocols.DATAGRAM_SOCKET`].
-        8: datagram_socket @generated_name("DatagramSocketInfo") resource table {
+        7: datagram_socket @generated_name("DatagramSocketInfo") resource table {
             /// See [`fuchsia.posix.socket.DatagramSocket`] for details.
             1: socket zx.handle:SOCKET;
             /// Size of the buffer used to receive Tx metadata.
@@ -143,21 +121,21 @@ type ConnectionInfo = resource table {
         /// The connection composes [`fuchsia.posix.socket/StreamSocket`].
         ///
         /// See [`NodeProtocols.STREAM_SOCKET`].
-        9: stream_socket @generated_name("StreamSocketInfo") resource table {
+        8: stream_socket @generated_name("StreamSocketInfo") resource table {
             1: socket zx.handle:SOCKET;
         };
 
         /// The connection composes [`fuchsia.posix.socket.raw/Socket`].
         ///
         /// See [`NodeProtocols.RAW_SOCKET`].
-       10: raw_socket @generated_name("RawSocketInfo") resource table {
+        9: raw_socket @generated_name("RawSocketInfo") resource table {
             1: event zx.handle:EVENTPAIR;
         };
 
         /// The connection composes [`fuchsia.posix.socket.packet/Socket`].
         ///
         /// See [`NodeProtocols.PACKET_SOCKET`].
-       11: packet_socket @generated_name("PacketSocketInfo") resource table {
+       10: packet_socket @generated_name("PacketSocketInfo") resource table {
             /// See [`fuchsia.posix.socket.packet.Socket`] for details.
             1: event zx.handle:EVENTPAIR;
         };

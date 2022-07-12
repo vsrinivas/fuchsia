@@ -24,8 +24,5 @@ fidl("fuchsia.io") {
     "rights-abilities.fidl",
   ]
 
-  public_deps = [
-    "//sdk/fidl/fuchsia.mem",
-    "//zircon/vdso/zx",
-  ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

@@ -20,9 +20,6 @@ zxio_node_protocols_t ToZxioNodeProtocols(NodeProtocols protocols) {
   if (protocols & NodeProtocols::kFile) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_FILE;
   }
-  if (protocols & NodeProtocols::kMemory) {
-    zxio_protocols |= ZXIO_NODE_PROTOCOL_MEMORY;
-  }
 
   if (protocols & NodeProtocols::kDevice) {
     zxio_protocols |= ZXIO_NODE_PROTOCOL_DEVICE;
@@ -43,9 +40,6 @@ NodeProtocols ToIo2NodeProtocols(zxio_node_protocols_t zxio_protocols) {
   }
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_FILE) {
     protocols |= NodeProtocols::kFile;
-  }
-  if (zxio_protocols & ZXIO_NODE_PROTOCOL_MEMORY) {
-    protocols |= NodeProtocols::kMemory;
   }
 
   if (zxio_protocols & ZXIO_NODE_PROTOCOL_DEVICE) {

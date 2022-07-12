@@ -239,9 +239,6 @@ uint32_t ToIo1ModeFileType(zxio_node_protocols_t protocols) {
   if (protocols & ZXIO_NODE_PROTOCOL_FILE) {
     return S_IFREG;
   }
-  if (protocols & ZXIO_NODE_PROTOCOL_MEMORY) {
-    return S_IFREG;
-  }
   if (protocols & ZXIO_NODE_PROTOCOL_DEVICE) {
     return S_IFBLK;
   }

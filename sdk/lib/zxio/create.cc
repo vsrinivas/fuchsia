@@ -193,8 +193,8 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node, fio::wire
       zx::eventpair event = std::move(tty.event);
       return zxio_remote_init(storage, node.TakeChannel().release(), event.release());
     }
-    case fio::wire::NodeInfo::Tag::kVmofile: {
-      fio::wire::Vmofile& file = info.vmofile();
+    case fio::wire::NodeInfo::Tag::kVmofileDeprecated: {
+      fio::wire::VmofileDeprecated& file = info.vmofile_deprecated();
       fidl::ClientEnd<fio::File> control(node.TakeChannel());
       const fidl::WireResult result =
           fidl::WireCall(control.borrow())->Seek(fio::wire::SeekOrigin::kStart, 0);

@@ -90,7 +90,7 @@ static zx_status_t zxio_vmofile_reopen(zxio_t* io, zxio_reopen_flags_t zxio_flag
 static zx_status_t zxio_vmofile_attr_get(zxio_t* io, zxio_node_attributes_t* out_attr) {
   zxio_vmofile_t& file = *reinterpret_cast<zxio_vmofile_t*>(io);
   *out_attr = {};
-  ZXIO_NODE_ATTR_SET(*out_attr, protocols, ZXIO_NODE_PROTOCOL_FILE | ZXIO_NODE_PROTOCOL_MEMORY);
+  ZXIO_NODE_ATTR_SET(*out_attr, protocols, ZXIO_NODE_PROTOCOL_FILE);
   ZXIO_NODE_ATTR_SET(*out_attr, abilities,
                      ZXIO_OPERATION_READ_BYTES | ZXIO_OPERATION_GET_ATTRIBUTES);
   ZXIO_NODE_ATTR_SET(*out_attr, content_size, file.size);

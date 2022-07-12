@@ -499,16 +499,16 @@ TEST_F(CreateWithOnOpenTest, Tty) {
 
 class TestVmofileServerWithDescribe : public zxio_tests::TestVmofileServer {
  public:
-  void set_vmofile(fuchsia_io::wire::Vmofile vmofile) { vmofile_ = std::move(vmofile); }
+  void set_vmofile(fuchsia_io::wire::VmofileDeprecated vmofile) { vmofile_ = std::move(vmofile); }
 
  protected:
   void Describe(DescribeRequestView request, DescribeCompleter::Sync& completer) final {
-    completer.Reply(fuchsia_io::wire::NodeInfo::WithVmofile(
+    completer.Reply(fuchsia_io::wire::NodeInfo::WithVmofileDeprecated(
         fidl::ObjectView<decltype(vmofile_)>::FromExternal(&vmofile_)));
   }
 
  private:
-  fuchsia_io::wire::Vmofile vmofile_;
+  fuchsia_io::wire::VmofileDeprecated vmofile_;
 };
 
 using CreateVmofileTest = CreateTestBase<TestVmofileServerWithDescribe>;
@@ -602,12 +602,12 @@ TEST_F(CreateVmofileWithOnOpenTest, File) {
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(vmo_size, 0u, &vmo));
 
-  fuchsia_io::wire::Vmofile vmofile = {
+  fuchsia_io::wire::VmofileDeprecated vmofile = {
       .vmo = std::move(vmo),
       .offset = file_start_offset,
       .length = file_length,
   };
-  SendOnOpenEvent(fuchsia_io::wire::NodeInfo::WithVmofile(
+  SendOnOpenEvent(fuchsia_io::wire::NodeInfo::WithVmofileDeprecated(
       fidl::ObjectView<decltype(vmofile)>::FromExternal(&vmofile)));
 
   node_server().set_seek_offset(offset_within_file);
