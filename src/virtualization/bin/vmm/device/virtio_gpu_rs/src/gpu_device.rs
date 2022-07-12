@@ -128,6 +128,7 @@ impl<'a, M: DriverMem> GpuDevice<'a, M> {
         match header.ty.get() {
             wire::VIRTIO_GPU_CMD_GET_DISPLAY_INFO => self.get_display_info(chain)?,
             wire::VIRTIO_GPU_CMD_RESOURCE_CREATE_2D => self.resource_create_2d(chain).await?,
+            wire::VIRTIO_GPU_CMD_RESOURCE_UNREF => self.resource_unref(chain)?,
             wire::VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING => self.resource_attach_backing(chain)?,
             wire::VIRTIO_GPU_CMD_RESOURCE_DETACH_BACKING => self.resource_detach_backing(chain)?,
             wire::VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D => self.transfer_to_host_2d(chain)?,
@@ -251,6 +252,33 @@ impl<'a, M: DriverMem> GpuDevice<'a, M> {
         }
 
         // Send success response.
+        write_to_chain(
+            WritableChain::from_readable(chain)?,
+            wire::VirtioGpuCtrlHeader {
+                ty: wire::VIRTIO_GPU_RESP_OK_NODATA.into(),
+                ..Default::default()
+            },
+        )
+    }
+
+    fn resource_unref<'b, N: DriverNotify>(
+        &mut self,
+        mut chain: ReadableChain<'a, 'b, N, M>,
+    ) -> Result<(), Error> {
+        let cmd: wire::VirtioGpuResourceUnref = match read_from_chain(&mut chain) {
+            Ok(cmd) => cmd,
+            Err(e) => {
+                tracing::warn!("Failed to read VirtioGpuResourceAttachBacking from queue: {}", e);
+                return write_error_to_chain(chain, wire::VirtioGpuError::Unspecified);
+            }
+        };
+
+        // Remove the resource from the map if it exists.
+        if self.resources.remove(&cmd.resource_id.get()).is_none() {
+            tracing::warn!("Failed to unref unknown resource: {}", cmd.resource_id.get());
+            return write_error_to_chain(chain, wire::VirtioGpuError::InvalidResourceId);
+        }
+
         write_to_chain(
             WritableChain::from_readable(chain)?,
             wire::VirtioGpuCtrlHeader {
@@ -597,6 +625,51 @@ mod tests {
             };
             let response = self.resource_create_2d(request.clone()).await;
             (request, response)
+        }
+
+        async fn resource_unref(&mut self, resource_id: u32) -> wire::VirtioGpuCtrlHeader {
+            self.state
+                .fake_queue
+                .publish(
+                    ChainBuilder::new()
+                        // Header
+                        .readable(
+                            std::slice::from_ref(&wire::VirtioGpuCtrlHeader {
+                                ty: wire::VIRTIO_GPU_CMD_RESOURCE_UNREF.into(),
+                                ..Default::default()
+                            }),
+                            self.mem,
+                        )
+                        // Command
+                        .readable(
+                            std::slice::from_ref(&wire::VirtioGpuResourceUnref {
+                                resource_id: resource_id.into(),
+                                ..Default::default()
+                            }),
+                            self.mem,
+                        )
+                        .writable(std::mem::size_of::<wire::VirtioGpuCtrlHeader>() as u32, self.mem)
+                        .build(),
+                )
+                .unwrap();
+
+            self.device
+                .process_control_chain(ReadableChain::new(
+                    self.state.queue.next_chain().unwrap(),
+                    self.mem,
+                ))
+                .await
+                .expect("Failed to process control chain");
+
+            let returned = self.state.fake_queue.next_used().unwrap();
+            assert_eq!(
+                std::mem::size_of::<wire::VirtioGpuCtrlHeader>(),
+                returned.written() as usize
+            );
+
+            // Read and return the header.
+            let mut iter = returned.data_iter();
+            read_returned::<wire::VirtioGpuCtrlHeader>(iter.next().unwrap())
         }
 
         /// Sends a VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING and returns the response.
@@ -1233,6 +1306,37 @@ mod tests {
             format: VALID_RESOURCE_FORMAT.into(),
         };
         let response = test.resource_detach_backing(create_request.resource_id.get()).await;
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID);
+    }
+
+    #[fuchsia::test]
+    async fn test_resource_unref() {
+        let mem = IdentityDriverMem::new();
+        let mut test = TestFixture::new(&mem);
+
+        // Create a resource
+        let (create_request, response) = test.default_resource_create_2d().await;
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
+
+        // Unref that resource.
+        let response = test.resource_unref(create_request.resource_id.get()).await;
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
+
+        // Unref again; this should fail.
+        let response = test.resource_unref(create_request.resource_id.get()).await;
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID);
+
+        // Attach backing; this should fail.
+        let (_alloc, response) = test.default_resource_attach_backing(&create_request).await;
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID);
+    }
+
+    #[fuchsia::test]
+    async fn test_resource_unref_invalid_resource_id() {
+        let mem = IdentityDriverMem::new();
+        let mut test = TestFixture::new(&mem);
+
+        let response = test.resource_unref(1).await;
         assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID);
     }
 }
