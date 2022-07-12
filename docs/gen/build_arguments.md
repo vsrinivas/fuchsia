@@ -4012,6 +4012,13 @@ TODO(fxbug.dev/57302): Enable v0 mangling by default.
 
 From //build/config/rust/BUILD.gn:28
 
+### rust_virtio_gpu_input_devices
+Enable to use the rust virtio GPU and input devices by default in the VMM.
+
+**Current value (from the default):** `false`
+
+From //src/virtualization/bin/vmm/BUILD.gn:12
+
 ### rustc_prefix
 Sets a custom base directory for `rustc` and `cargo`.
 This can be used to test custom Rust toolchains.
@@ -4038,7 +4045,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"A50R_Eygxh_CzIvtkolpZQ73kvAJrBiCrAZAxvxQtT4C"`
+**Current value (from the default):** `"-DgeS3VYlU9CVVOHNygZJWGLVeQl9ALL7jfKBqrgmzkC"`
 
 From //build/rust/config.gni:32
 
