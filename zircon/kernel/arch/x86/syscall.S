@@ -25,7 +25,22 @@
     add_to_sp ((\n + (\n % 2)) * 8)
 .endm
 
+#define ZERO_COMMON_UNUSED_REGISTERS \
+    xorl %eax, %eax;  \
+    xorl %ebx, %ebx;  \
+    xorl %ebp, %ebp;  \
+    xorq %r10, %r10;  \
+    xorq %r11, %r11;  \
+    xorq %r12, %r12;  \
+    xorq %r13, %r13;  \
+    xorq %r14, %r14;  \
+    xorq %r15, %r15
+
 // Macros for preparing ABI conformant calls for syscall wrappers.
+// Shuffles syscall arguments into x86-64 ABI locations before
+// calling C++ syscall handlers.
+// Zeros unused registers to constrain speculative execution in syscall
+// handlers with user-passed register values.
 .macro pre_args n
 .if \n > 5
     // We use the stack for arguments 6, 7, and 8.
@@ -37,12 +52,23 @@
     //
     // rip   from rcx to rdi
     mov %rcx, %rdi
+    xorl %ecx, %ecx
+    xorl %edx, %edx
+    xorl %esi, %esi
+    xorq %r8, %r8
+    xorq %r9, %r9
+    ZERO_COMMON_UNUSED_REGISTERS
 .elseif \n == 1
     // syscall_1(arg_1, rip)
     //
     // arg_1 from rdi to rdi
     // rip   from rcx to rsi
     mov %rcx, %rsi
+    xorl %ecx, %ecx
+    xorl %edx, %edx
+    xorq %r8, %r8
+    xorq %r9, %r9
+    ZERO_COMMON_UNUSED_REGISTERS
 .elseif \n == 2
     // syscall_2(arg_1, arg_2, rip)
     //
@@ -50,6 +76,10 @@
     // arg_2 from rsi to rsi
     // rip   from rcx to rdx
     mov %rcx, %rdx
+    xorl %ecx, %ecx
+    xorq %r8, %r8
+    xorq %r9, %r9
+    ZERO_COMMON_UNUSED_REGISTERS
 .elseif \n == 3
     // syscall_3(arg_1, arg_2, arg_3, rip)
     //
@@ -57,6 +87,9 @@
     // arg_2 from rsi to rsi
     // arg_3 from rdx to rdx
     // rip   from rcx to rcx
+    xorq %r8, %r8
+    xorq %r9, %r9
+    ZERO_COMMON_UNUSED_REGISTERS
 .elseif \n == 4
     // syscall_4(arg_1, arg_2, arg_3, arg_4, rip)
     //
@@ -67,6 +100,8 @@
     // rip   from rcx to r8
     mov %rcx, %r8
     mov %r10, %rcx
+    xorq %r9, %r9
+    ZERO_COMMON_UNUSED_REGISTERS
 .elseif \n == 5
     // syscall_5(arg_1, arg_2, arg_3, arg_4, arg_5, rip)
     //
@@ -78,6 +113,7 @@
     // rip   from rcx to r9
     mov %rcx, %r9
     mov %r10, %rcx
+    ZERO_COMMON_UNUSED_REGISTERS
 .elseif \n == 6
     // syscall_6(arg_1, arg_2, arg_3, arg_4, arg_5, arg_6, rip)
     //
@@ -90,6 +126,7 @@
     // rip   from rcx to (rsp)
     push_value %rcx
     mov  %r10, %rcx
+    ZERO_COMMON_UNUSED_REGISTERS
 .elseif \n == 7
     // syscall_7(arg_1, arg_2, arg_3, arg_4, arg_5, arg_6, arg_7, rip)
     //
@@ -104,6 +141,7 @@
     push_value %rcx
     push_value %r12
     mov  %r10, %rcx
+    ZERO_COMMON_UNUSED_REGISTERS
 .elseif \n == 8
     // syscall_8(arg_1, arg_2, arg_3, arg_4, arg_5, arg_6, arg_7, arg_8, rip)
     //
@@ -120,6 +158,7 @@
     push_value %r13
     push_value %r12
     mov %r10, %rcx
+    ZERO_COMMON_UNUSED_REGISTERS
 .endif
 .endm
 
