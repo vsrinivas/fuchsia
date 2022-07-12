@@ -5,6 +5,7 @@
 use crate::types::uapi::*;
 
 pub const MEM_MAJOR: u32 = 1;
+pub const TTY_ALT_MAJOR: u32 = 5;
 pub const MISC_MAJOR: u32 = 10;
 
 #[derive(Copy, Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]

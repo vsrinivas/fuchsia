@@ -4,11 +4,13 @@
 
 use crate::device::mem::*;
 use crate::fs::{FileOps, FsNode};
+use crate::lock::RwLock;
 use crate::task::*;
 use crate::types::*;
 
-use std::collections::{btree_map::Entry, BTreeMap};
+use std::collections::btree_map::{BTreeMap, Entry};
 use std::marker::{Send, Sync};
+use std::sync::Arc;
 
 /// The mode or category of the device driver.
 #[derive(Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Debug)]
@@ -27,70 +29,21 @@ pub trait DeviceOps: Send + Sync {
     ) -> Result<Box<dyn FileOps>, Errno>;
 }
 
-struct DeviceFamilyRegistry {
-    devices: BTreeMap<u32, Box<dyn DeviceOps>>,
-    default_device: Option<Box<dyn DeviceOps>>,
-}
-
-impl DeviceFamilyRegistry {
-    pub fn new() -> Self {
-        Self { devices: BTreeMap::new(), default_device: None }
-    }
-
-    pub fn register_device<D>(&mut self, device: D, minor: u32) -> Result<(), Errno>
-    where
-        D: DeviceOps + 'static,
-    {
-        match self.devices.entry(minor) {
-            Entry::Vacant(e) => {
-                e.insert(Box::new(device));
-                Ok(())
-            }
-            Entry::Occupied(_) => {
-                tracing::error!("dev type {:?} is already registered", minor);
-                error!(EINVAL)
-            }
-        }
-    }
-
-    pub fn register_default_device<D>(&mut self, device: D) -> Result<(), Errno>
-    where
-        D: DeviceOps + 'static,
-    {
-        if self.default_device.is_some() {
-            tracing::error!("default device is already registered");
-            return error!(EINVAL);
-        }
-        self.default_device = Some(Box::new(device));
-        Ok(())
-    }
-
-    /// Opens a device file corresponding to the device identifier `dev`.
-    pub fn open(
-        &self,
-        current_task: &CurrentTask,
-        dev: DeviceType,
-        node: &FsNode,
-        flags: OpenFlags,
-    ) -> Result<Box<dyn FileOps>, Errno> {
-        self.devices
-            .get(&dev.minor())
-            .or(self.default_device.as_ref())
-            .ok_or_else(|| errno!(ENODEV))?
-            .open(current_task, dev, node, flags)
-    }
-}
-
 /// The kernel's registry of drivers.
 pub struct DeviceRegistry {
     /// Maps device identifier to character device implementation.
-    char_devices: BTreeMap<u32, DeviceFamilyRegistry>,
-    next_dynamic_minor: u32,
+    char_devices: BTreeMap<u32, Box<dyn DeviceOps>>,
+    misc_devices: Arc<RwLock<MiscRegistry>>,
 }
 
 impl DeviceRegistry {
     pub fn new() -> Self {
-        Self { char_devices: BTreeMap::new(), next_dynamic_minor: 0 }
+        let mut registry = Self {
+            char_devices: BTreeMap::new(),
+            misc_devices: Arc::new(RwLock::new(MiscRegistry::new())),
+        };
+        registry.char_devices.insert(MISC_MAJOR, Box::new(Arc::clone(&registry.misc_devices)));
+        registry
     }
 
     /// Creates a `DeviceRegistry` and populates it with common drivers such as /dev/null.
@@ -100,40 +53,27 @@ impl DeviceRegistry {
         registry
     }
 
-    pub fn register_chrdev<D>(&mut self, device: D, id: DeviceType) -> Result<(), Errno>
-    where
-        D: DeviceOps + 'static,
-    {
-        self.char_devices
-            .entry(id.major())
-            .or_insert_with(|| DeviceFamilyRegistry::new())
-            .register_device(device, id.minor())?;
-        Ok(())
-    }
-
     pub fn register_chrdev_major<D>(&mut self, device: D, major: u32) -> Result<(), Errno>
     where
         D: DeviceOps + 'static,
     {
-        self.char_devices
-            .entry(major)
-            .or_insert_with(|| DeviceFamilyRegistry::new())
-            .register_default_device(device)?;
-        Ok(())
+        match self.char_devices.entry(major) {
+            Entry::Vacant(e) => {
+                e.insert(Box::new(device));
+                Ok(())
+            }
+            Entry::Occupied(_) => {
+                tracing::error!("dev major {:?} is already registered", major);
+                error!(EINVAL)
+            }
+        }
     }
 
     pub fn register_misc_chrdev<D>(&mut self, device: D) -> Result<DeviceType, Errno>
     where
         D: DeviceOps + 'static,
     {
-        let minor = self.next_dynamic_minor;
-        if minor > 255 {
-            return error!(ENOMEM);
-        }
-        self.next_dynamic_minor += 1;
-        let dev = DeviceType::new(MISC_MAJOR, minor);
-        self.register_chrdev(device, dev)?;
-        Ok(dev)
+        self.misc_devices.write().register(device)
     }
 
     /// Opens a device file corresponding to the device identifier `dev`.
@@ -153,6 +93,41 @@ impl DeviceRegistry {
                 .open(current_task, dev, node, flags),
             DeviceMode::Block => error!(ENODEV),
         }
+    }
+}
+
+struct MiscRegistry {
+    misc_devices: BTreeMap<u32, Box<dyn DeviceOps>>,
+    next_dynamic_minor: u32,
+}
+
+impl MiscRegistry {
+    fn new() -> Self {
+        Self { misc_devices: BTreeMap::new(), next_dynamic_minor: 0 }
+    }
+
+    fn register(&mut self, device: impl DeviceOps + 'static) -> Result<DeviceType, Errno> {
+        let minor = self.next_dynamic_minor;
+        if minor > 255 {
+            return error!(ENOMEM);
+        }
+        self.next_dynamic_minor += 1;
+        self.misc_devices.insert(minor, Box::new(device));
+        Ok(DeviceType::new(MISC_MAJOR, minor))
+    }
+}
+
+impl DeviceOps for Arc<RwLock<MiscRegistry>> {
+    fn open(
+        &self,
+        current_task: &CurrentTask,
+        id: DeviceType,
+        node: &FsNode,
+        flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
+        let state = self.read();
+        let device = state.misc_devices.get(&id.minor()).ok_or(errno!(ENODEV))?;
+        device.open(current_task, id, node, flags)
     }
 }
 

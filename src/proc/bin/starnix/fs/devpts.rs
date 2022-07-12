@@ -42,12 +42,8 @@ fn init_devpts(kernel: &Kernel) -> FileSystemHandle {
                 .register_chrdev_major(device.clone(), DEVPTS_FIRST_MAJOR + n)
                 .expect("Registering pts device");
         }
-        // Register tty device type
-        registry.register_chrdev(device.clone(), DeviceType::TTY).expect("Registering tty device");
-        // Register ptmx device type
-        registry
-            .register_chrdev(device.clone(), DeviceType::PTMX)
-            .expect("Resgistering ptmx device");
+        // Register tty/ptmx device major
+        registry.register_chrdev_major(device.clone(), TTY_ALT_MAJOR).unwrap();
     }
     let root_directory = root_dynamic_directory(DevPtsDirectoryDelegate::new(state));
     assert!(root_directory.inode_num == ROOT_INODE);
@@ -185,6 +181,11 @@ impl DeviceOps for Arc<DevPtsDevice> {
                 } else {
                     error!(ENXIO)
                 }
+            }
+            _ if id.major() < DEVPTS_FIRST_MAJOR
+                || id.major() >= DEVPTS_FIRST_MAJOR + DEVPTS_MAJOR_COUNT =>
+            {
+                return error!(ENODEV);
             }
             // /dev/pts/??
             _ => {
