@@ -23,6 +23,8 @@ toc:
     path: /docs/development/sdk/ffx/view-device-logs.md
 - title: Components
   section:
+  - title: Explore components
+    path: /docs/development/sdk/ffx/explore-components.md
   - title: View component information
     path: /docs/development/sdk/ffx/view-component-information.md
   - title: Start a component during development
