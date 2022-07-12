@@ -52,7 +52,20 @@ def convert_budget_format(component, all_manifests):
     dictionary, new configuration with a name, a maximum size and the list of
     packages manifest to fit in the budget.
   """
-    prefixes = tuple(os.path.join("obj", src) for src in component["src"])
+    # These are locations where packages can be based from
+    prefixes_for_prefixes = [
+        "obj",
+        "obj/build/images/fuchsia/fuchsia/legacy",
+        "obj/build/images/fuchsia/fuchsia/repackaged",
+    ]
+    # And these are the assembly bundle locations that packages can be from
+    for bundle_name in ["common_minimal"]:
+        prefixes_for_prefixes.append("obj/bundles/assembly/" + bundle_name)
+
+    prefixes = tuple(
+        os.path.join(prefix, src)
+        for prefix in prefixes_for_prefixes
+        for src in component["src"])
     # Finds all package manifest files located bellow the directories
     # listed by the component `src` field.
     packages = sorted(m for m in all_manifests if m.startswith(prefixes))

@@ -39,23 +39,23 @@ size_checker_input = {
     {
       component = "/system (drivers and early boot)"
       src = [
-        "build/images/fuchsia/fuchsia/legacy/packages/system/bt-host",
-        "build/images/fuchsia/fuchsia/legacy/packages/system/emulator",
-        "build/images/fuchsia/fuchsia/legacy/packages/system/passthrough",
-        "build/images/fuchsia/fuchsia/legacy/packages/system/atheros",
-        "build/images/fuchsia/fuchsia/legacy/packages/system/intel",
-        "build/images/fuchsia/fuchsia/legacy/packages/system/qmi-usb-transport",
-        "build/images/fuchsia/fuchsia/legacy/packages/system/acpi-battery",
-        "build/images/fuchsia/fuchsia/legacy/packages/system/acpi-pwrsrc",
-        "build/images/fuchsia/fuchsia/legacy/packages/system/intel-thermal",
-        "build/images/fuchsia/fuchsia/legacy/packages/system/msd-arm-mali-test",
-        "build/images/fuchsia/fuchsia/legacy/packages/system/msd-intel-gen-test",
-        "build/images/fuchsia/fuchsia/legacy/packages/system/msd-intel-gen",
-        "build/images/fuchsia/fuchsia/legacy/packages/system/msd-vsi-vip-test",
-        "build/images/fuchsia/fuchsia/legacy/packages/system/testing_firmware_file",
-        "build/images/fuchsia/fuchsia/legacy/packages/system/virtual_audio",
-        "build/images/fuchsia/fuchsia/legacy/packages/system/pkgfs_non_static_pkgs_allowlist_eng",
-        "build/images/fuchsia/fuchsia/legacy/packages/system/disable-executability-restrictions",
+        "packages/system/bt-host",
+        "packages/system/emulator",
+        "packages/system/passthrough",
+        "packages/system/atheros",
+        "packages/system/intel",
+        "packages/system/qmi-usb-transport",
+        "packages/system/acpi-battery",
+        "packages/system/acpi-pwrsrc",
+        "packages/system/intel-thermal",
+        "packages/system/msd-arm-mali-test",
+        "packages/system/msd-intel-gen-test",
+        "packages/system/msd-intel-gen",
+        "packages/system/msd-vsi-vip-test",
+        "packages/system/testing_firmware_file",
+        "packages/system/virtual_audio",
+        "packages/system/pkgfs_non_static_pkgs_allowlist_eng",
+        "packages/system/disable-executability-restrictions",
       ]
       limit = 8976731  # 8.561 MiB
       creep_limit = 40960  # 40.0 KiB
@@ -63,8 +63,8 @@ size_checker_input = {
     {
       component = "Cobalt"
       src = [
-        "build/images/fuchsia/fuchsia/legacy/packages/base/cobalt",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/cobalt_system_metrics",
+        "packages/base/cobalt",
+        "packages/base/cobalt_system_metrics",
       ]
       limit = 1624776  # 1.550 MiB
       creep_limit = 40960  # 40.0 KiB
@@ -72,12 +72,12 @@ size_checker_input = {
     {
       component = "Component Framework"
       src = [
-        "build/images/fuchsia/fuchsia/legacy/packages/base/appmgr",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/component_index",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/device_settings_manager",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/stash",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/sysmgr",
-        "build/images/fuchsia/fuchsia/repackaged/session_manager",
+        "packages/base/appmgr",
+        "packages/base/component_index",
+        "packages/base/device_settings_manager",
+        "packages/base/stash",
+        "packages/base/sysmgr",
+        "session_manager",
       ]
       limit = 2046836  # 1.952 MiB
       creep_limit = 204800  # 200.0 KiB
@@ -85,19 +85,17 @@ size_checker_input = {
     {
       component = "Connectivity/Bluetooth"
       src = [
-        "build/images/fuchsia/fuchsia/legacy/packages/base/bt-gap",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/bt-init",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/bt-rfcomm",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/bt-snoop",
+        "packages/base/bt-gap",
+        "packages/base/bt-init",
+        "packages/base/bt-rfcomm",
+        "packages/base/bt-snoop",
       ]
       limit = 2314207  # 2.207 MiB
       creep_limit = 81920  # 80.0 KiB
     },
     {
       component = "Connectivity/Location"
-      src = [
-        "build/images/fuchsia/fuchsia/legacy/packages/base/regulatory_region",
-      ]
+      src = [ "packages/base/regulatory_region" ]
       limit = 253755  # 0.242 MiB
       creep_limit = 24576  # 24.0 KiB
     },
@@ -110,27 +108,26 @@ size_checker_input = {
     {
       component = "Connectivity/Network"
       src = [
-        "build/images/fuchsia/fuchsia/legacy/packages/base/mdns",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/netstack",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/network-legacy-deprecated",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/network",
+        "packages/base/mdns",
+        "packages/base/netstack",
+        "packages/base/network-legacy-deprecated",
+        "packages/base/network",
       ]
       limit = 8965179  # 8.550 MiB
       creep_limit = 81920  # 80.0 KiB
     },
     {
       component = "Connectivity/Overnet"
-      src =
-          [ "build/images/fuchsia/fuchsia/legacy/packages/cache/overnetstack" ]
+      src = [ "packages/cache/overnetstack" ]
       limit = 1236271  # 1.179 MiB
       creep_limit = 81920  # 80.0 KiB
     },
     {
       component = "Connectivity/Wlan"
       src = [
-        "build/images/fuchsia/fuchsia/legacy/packages/base/wlancfg",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/wlandevicemonitor",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/wlanstack",
+        "packages/base/wlancfg",
+        "packages/base/wlandevicemonitor",
+        "packages/base/wlanstack",
       ]
       limit = 2615148  # 2.494 MiB
       creep_limit = 81920  # 80.0 KiB
@@ -138,13 +135,13 @@ size_checker_input = {
     {
       component = "Diagnostics"
       src = [
-        "build/images/fuchsia/fuchsia/legacy/packages/base/triage-detect",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/diagnostics-kcounter",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/log-stats",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/log_listener",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/log_listener_shell",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/diagnostics-persistence",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/sampler",
+        "packages/base/triage-detect",
+        "packages/base/diagnostics-kcounter",
+        "packages/base/log-stats",
+        "packages/base/log_listener",
+        "packages/base/log_listener_shell",
+        "packages/base/diagnostics-persistence",
+        "packages/base/sampler",
       ]
       limit = 2608116  # 2.487 MiB
       creep_limit = 49152  # 48.0 KiB
@@ -152,45 +149,42 @@ size_checker_input = {
     {
       component = "Graphics"
       src = [
-        "build/images/fuchsia/fuchsia/legacy/packages/base/vulkan_loader",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/libvulkan_intel_gen",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/libvulkan_goldfish",
+        "packages/base/vulkan_loader",
+        "packages/base/libvulkan_intel_gen",
+        "packages/base/libvulkan_goldfish",
       ]
       limit = 3708346  # 3.537 MiB
       creep_limit = 49152  # 48.0 KiB
     },
     {
       component = "I18N"
-      src = [
-        "build/images/fuchsia/fuchsia/legacy/packages/base/intl-services-small",
-      ]
+      src = [ "packages/base/intl-services-small" ]
       limit = 2505009  # 2.389 MiB
       creep_limit = 32768  # 32.0 KiB
     },
     {
       component = "Media"
-      src = [ "build/images/fuchsia/fuchsia/legacy/packages/base/codec_runner_intel_gen" ]
+      src = [ "packages/base/codec_runner_intel_gen" ]
       limit = 10485760  # 10 MiB
       creep_limit = 428032  # 418.0 KiB
     },
     {
       component = "SetUI"
-      src =
-          [ "build/images/fuchsia/fuchsia/legacy/packages/base/setui_service" ]
+      src = [ "packages/base/setui_service" ]
       limit = 2875492  # 2.742 MiB
       creep_limit = 65536  # 64.0 KiB
     },
     {
       component = "Software Delivery"
       src = [
-        "build/images/fuchsia/fuchsia/legacy/packages/base/pkg-cache",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/pkg-resolver",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/pkgctl",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/pkgfs",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/system-update-checker",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/system-update-committer",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/system-updater",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/update-bin",
+        "packages/base/pkg-cache",
+        "packages/base/pkg-resolver",
+        "packages/base/pkgctl",
+        "packages/base/pkgfs",
+        "packages/base/system-update-checker",
+        "packages/base/system-update-committer",
+        "packages/base/system-updater",
+        "packages/base/update-bin",
       ]
       limit = 8316106  # 7.931 MiB
       creep_limit = 81920  # 80.0 KiB
@@ -198,8 +192,8 @@ size_checker_input = {
     {
       component = "Time"
       src = [
-        "build/images/fuchsia/fuchsia/legacy/packages/base/httpsdate-time-source",
-        "build/images/fuchsia/fuchsia/legacy/packages/base/timekeeper",
+        "packages/base/httpsdate-time-source",
+        "packages/base/timekeeper",
       ]
       limit = 2049840  # 1.955 MiB
       creep_limit = 24576  # 24.0 KiB
