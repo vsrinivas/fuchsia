@@ -89,8 +89,6 @@ impl RewriteService {
     }
 
     pub(self) async fn serve_edit_transaction(&mut self, mut stream: EditTransactionRequestStream) {
-        fx_log_info!("opening rewrite transaction");
-
         let state = self.state.clone();
         let mut transaction = state.read().await.transaction();
 
@@ -120,9 +118,10 @@ impl RewriteService {
                             responder.send(&mut response)?;
                         }
                         EditTransactionRequest::Commit { responder } => {
+                            let stringified = format!("{:?}", transaction);
                             let mut response = match state.write().await.apply(transaction).await {
                                 Ok(()) => {
-                                    fx_log_info!("rewrite transaction committed");
+                                    fx_log_info!("rewrite transaction committed: {}", stringified);
                                     Ok(())
                                 }
                                 Err(CommitError::TooLate) => {
@@ -130,7 +129,10 @@ impl RewriteService {
                                     Err(Status::UNAVAILABLE.into_raw())
                                 }
                                 Err(CommitError::DynamicConfigurationDisabled) => {
-                                    fx_log_err!("rewrite transaction failed, dynamic configuration is disabled");
+                                    fx_log_err!(
+                                        "rewrite transaction failed, dynamic configuration is \
+                                         disabled"
+                                    );
                                     Err(Status::ACCESS_DENIED.into_raw())
                                 }
                             };
@@ -147,7 +149,8 @@ impl RewriteService {
             .unwrap_or_else(|e: Error| {
                 fx_log_err!("while serving rewrite rule edit transaction: {:#}", anyhow!(e))
             }),
-        ).detach()
+        )
+        .detach()
     }
 
     fn serve_rule_iterator(rules: Vec<Rule>, mut stream: RuleIteratorRequestStream) {
