@@ -50,34 +50,6 @@ zx_status_t VmoFile::GetBackingMemory(fuchsia::io::VmoFlags flags, zx::vmo* out_
   }
 }
 
-void VmoFile::Describe(fuchsia::io::NodeInfo* out_info) {
-  zx::vmo client_vmo;
-  zx_status_t status = GetBackingMemory(fuchsia::io::VmoFlags::READ, &client_vmo);
-  if (status == ZX_OK) {
-    out_info->vmofile() = fuchsia::io::Vmofile{
-        .vmo = std::move(client_vmo),
-        .length = length_,
-    };
-  } else {
-    out_info->set_file(fuchsia::io::FileObject());
-  }
-}
-
-void VmoFile::Describe2(fuchsia::io::ConnectionInfo* out_info) {
-  zx::vmo client_vmo;
-  zx_status_t status = GetBackingMemory(fuchsia::io::VmoFlags::READ, &client_vmo);
-  if (status == ZX_OK) {
-    fuchsia::io::MemoryInfo mem_info;
-    mem_info.set_buffer(fuchsia::mem::Range{
-        .vmo = std::move(client_vmo),
-        .size = length_,
-    });
-    out_info->set_representation(fuchsia::io::Representation::WithMemory(std::move(mem_info)));
-  } else {
-    out_info->set_representation(fuchsia::io::Representation::WithFile(fuchsia::io::FileInfo()));
-  }
-}
-
 zx_status_t VmoFile::ReadAt(uint64_t count, uint64_t offset, std::vector<uint8_t>* out_data) {
   if (count == 0u || offset >= length_) {
     return ZX_OK;

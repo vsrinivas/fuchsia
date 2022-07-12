@@ -139,11 +139,7 @@ TEST(VmofileTests, test_vmofile_basic) {
     auto describe_result = fidl::WireCall(file)->Describe();
     ASSERT_OK(describe_result.status());
     fio::wire::NodeInfo* info = &describe_result->info;
-    ASSERT_TRUE(info->is_vmofile());
-    ASSERT_EQ(info->vmofile().offset, 0u);
-    ASSERT_EQ(info->vmofile().length, 13u);
-    ASSERT_TRUE(info->vmofile().vmo.is_valid());
-    ASSERT_EQ(get_rights(info->vmofile().vmo), kCommonExpectedRights);
+    ASSERT_TRUE(info->is_file());
   }
 
   {
@@ -180,7 +176,7 @@ TEST(VmofileTests, test_vmofile_exec) {
   ASSERT_TRUE(result.ok(), "%s", result.FormatDescription().c_str());
   auto& response = result.value();
 
-  ASSERT_OK(read_exec_vmo.replace_as_executable(std::move(response.resource), &read_exec_vmo));
+  ASSERT_OK(read_exec_vmo.replace_as_executable(response.resource, &read_exec_vmo));
   ASSERT_OK(vfs->CreateFromVmo(root.get(), "read_exec", read_exec_vmo.get(), 0, 13));
   ASSERT_OK(vfs->ServeDirectory(std::move(root), std::move(directory_endpoints->server)));
 
@@ -224,15 +220,10 @@ TEST(VmofileTests, test_vmofile_exec) {
   }
 
   {
-    // Describe should also return a VMO with ZX_RIGHT_EXECUTE.
     auto describe_result = fidl::WireCall(file)->Describe();
     ASSERT_OK(describe_result.status());
     fio::wire::NodeInfo* info = &describe_result->info;
-    ASSERT_TRUE(info->is_vmofile());
-    ASSERT_EQ(info->vmofile().offset, 0u);
-    ASSERT_EQ(info->vmofile().length, 13u);
-    ASSERT_TRUE(info->vmofile().vmo.is_valid());
-    ASSERT_EQ(get_rights(info->vmofile().vmo), kCommonExpectedRights | ZX_RIGHT_EXECUTE);
+    ASSERT_TRUE(info->is_file());
   }
 
   shutdown_vfs(std::move(vfs));

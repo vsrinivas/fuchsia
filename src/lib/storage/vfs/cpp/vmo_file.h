@@ -87,8 +87,6 @@ class VmoFile : public Vnode {
   ~VmoFile() override;
 
  private:
-  zx_status_t AcquireVmo(zx_rights_t rights, zx::vmo* out_vmo);
-
   zx::vmo vmo_;
   size_t const length_;
   bool const writable_;

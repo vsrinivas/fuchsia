@@ -50,14 +50,7 @@ void main() {
   }
 
   Future<void> _assertDescribeVmo(FileProxy proxy, String expectedStr) async {
-    var response = await proxy.describe();
-    Vmofile? vmoFile = response.vmofile;
-    if (vmoFile != null) {
-      expect(vmoFile.vmo.isValid, isTrue);
-      final Uint8List vmoData = vmoFile.vmo.map();
-      expect(String.fromCharCodes(vmoData.sublist(0, expectedStr.length)),
-          expectedStr);
-    }
+    await _assertDescribeFile(proxy);
 
     final vmo = await proxy.getBackingMemory(VmoFlags.$none);
     expect(vmo.isValid, isTrue);
@@ -87,7 +80,7 @@ void main() {
         expect(response.s, ZX.OK);
         NodeInfo? nodeInfo = response.info;
         if (nodeInfo != null) {
-          expect(nodeInfo.vmofile, isNotNull);
+          expect(nodeInfo.file, isNotNull);
         }
       }).catchError((err) async {
         fail(err.toString());

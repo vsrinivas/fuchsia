@@ -421,12 +421,8 @@ macro_rules! open_get_vmo_file_proxy_assert_ok {
                 assert_eq!(Status::from_raw(s), Status::OK);
                 let info = *info.expect("Empty fio::NodeInfo");
                 assert!(
-                    matches!(
-                        info,
-                        fio::NodeInfo::Vmofile(fio::Vmofile { .. })
-                            | fio::NodeInfo::File(fio::FileObject { .. })
-                    ),
-                    "Expected fio::Vmofile but got {:?}",
+                    matches!(info, fio::NodeInfo::File(fio::FileObject { .. })),
+                    "Expected fio::File but got {:?}",
                     info
                 );
             }
@@ -545,12 +541,8 @@ macro_rules! clone_get_vmo_file_proxy_assert_ok {
                 assert_eq!(Status::from_raw(s), Status::OK);
                 let info = *info.expect("Empty fio::NodeInfo");
                 assert!(
-                    matches!(
-                        info,
-                        fio::NodeInfo::Vmofile(fio::Vmofile { .. })
-                            | fio::NodeInfo::File(fio::FileObject { .. })
-                    ),
-                    "Expected fio::Vmofile but got {:?}",
+                    matches!(info, fio::NodeInfo::File(fio::FileObject { .. }),),
+                    "Expected fio::File but got {:?}",
                     info
                 );
             }

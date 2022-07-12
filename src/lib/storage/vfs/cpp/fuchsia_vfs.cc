@@ -377,10 +377,7 @@ zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel server_end,
     switch (protocol) {
       case VnodeProtocol::kFile:
       case VnodeProtocol::kDevice:
-      case VnodeProtocol::kTty:
-      // In memfs and bootfs, memory objects (vmo-files) appear to support |fuchsia.io/File.Read|.
-      // Therefore choosing a file connection here is the closest approximation.
-      case VnodeProtocol::kMemory: {
+      case VnodeProtocol::kTty: {
         zx::stream stream;
         zx_status_t status = vnode->CreateStream(ToStreamOptions(*options), &stream);
         if (status == ZX_OK) {

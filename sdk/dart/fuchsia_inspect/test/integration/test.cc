@@ -42,7 +42,7 @@ class InspectTest : public gtest::TestWithEnvironmentFixture {
       printf("The output directory is not ready\n");
     }
   }
-  ~InspectTest() { CheckShutdown(); }
+  ~InspectTest() override { CheckShutdown(); }
 
   void CheckShutdown() {
     controller_->Kill();
@@ -57,7 +57,7 @@ class InspectTest : public gtest::TestWithEnvironmentFixture {
 
   // Open the root object connection on the given sync pointer.
   // Returns ZX_OK on success.
-  fpromise::result<fuchsia::io::FileSyncPtr, zx_status_t> OpenInspectVmoFile(
+  static fpromise::result<fuchsia::io::FileSyncPtr, zx_status_t> OpenInspectVmoFile(
       const std::string& file_name) {
     files::Glob glob(Substitute("/hub/r/test/*/c/*/*/c/$0/*/out/diagnostics/$1.inspect",
                                 kTestProcessName, file_name));
@@ -80,21 +80,24 @@ class InspectTest : public gtest::TestWithEnvironmentFixture {
     return fpromise::ok(std::move(file));
   }
 
-  fpromise::result<zx::vmo, zx_status_t> DescribeInspectVmoFile(
+  static fpromise::result<zx::vmo, zx_status_t> GetInspectVmo(
       const fuchsia::io::FileSyncPtr& file) {
-    fuchsia::io::NodeInfo info;
-    auto status = file->Describe(&info);
-    if (status != ZX_OK) {
+    fuchsia::io::File2_GetBackingMemory_Result result;
+    if (zx_status_t status = file->GetBackingMemory({}, &result); status != ZX_OK) {
       printf("get failed\n");
       return fpromise::error(status);
     }
-
-    if (!info.is_vmofile()) {
-      printf("not a vmofile");
-      return fpromise::error(ZX_ERR_NOT_FOUND);
+    switch (result.Which()) {
+      case fuchsia::io::File2_GetBackingMemory_Result::Tag::Invalid:
+        printf("invalid get result\n");
+        return fpromise::error(ZX_ERR_BAD_STATE);
+      case fuchsia::io::File2_GetBackingMemory_Result::Tag::kErr:
+        return fpromise::error(result.err());
+      case fuchsia::io::File2_GetBackingMemory_Result::Tag::kResponse: {
+        fuchsia::io::File2_GetBackingMemory_Response& response = result.response();
+        return fpromise::ok(std::move(response.vmo));
+      }
     }
-
-    return fpromise::ok(std::move(info.vmofile().vmo));
   }
 
  private:
@@ -106,10 +109,10 @@ TEST_F(InspectTest, ReadHierarchy) {
   auto open_file_result(InspectTest::OpenInspectVmoFile("root"));
   ASSERT_TRUE(open_file_result.is_ok());
   fuchsia::io::FileSyncPtr file(open_file_result.take_value());
-  auto describe_file_result = InspectTest::DescribeInspectVmoFile(file);
+  auto describe_file_result = GetInspectVmo(file);
   ASSERT_TRUE(describe_file_result.is_ok());
   zx::vmo vmo(describe_file_result.take_value());
-  auto read_file_result = inspect::ReadFromVmo(std::move(vmo));
+  auto read_file_result = inspect::ReadFromVmo(vmo);
   ASSERT_TRUE(read_file_result.is_ok());
   inspect::Hierarchy hierarchy = read_file_result.take_value();
 
@@ -159,10 +162,10 @@ TEST_F(InspectTest, DynamicGeneratesNewHierarchy) {
   std::vector<std::string> increments_value;
   std::vector<std::string> doubles_value;
   auto expectInspectOnDemandVmoFile = [&]() {
-    auto describe_file_result(DescribeInspectVmoFile(file));
+    auto describe_file_result(GetInspectVmo(file));
     ASSERT_TRUE(describe_file_result.is_ok());
     zx::vmo vmo(describe_file_result.take_value());
-    auto read_file_result = inspect::ReadFromVmo(std::move(vmo));
+    auto read_file_result = inspect::ReadFromVmo(vmo);
     ASSERT_TRUE(read_file_result.is_ok());
     inspect::Hierarchy hierarchy = read_file_result.take_value();
 

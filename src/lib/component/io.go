@@ -24,7 +24,6 @@ import (
 	"unsafe"
 
 	"fidl/fuchsia/io"
-	"fidl/fuchsia/mem"
 )
 
 func respond(ctx fidl.Context, flags io.OpenFlags, req io.NodeWithCtxInterfaceRequest, err error, node io.NodeWithCtx) error {
@@ -541,19 +540,7 @@ func (fState *fileState) Close(fidl.Context) (io.Node2CloseResult, error) {
 
 func (fState *fileState) Describe(fidl.Context) (io.NodeInfo, error) {
 	var nodeInfo io.NodeInfo
-	if vmo := fState.File.GetVMO(); vmo.Handle().IsValid() {
-		h, err := vmo.Handle().Duplicate(zx.RightSameRights)
-		if err != nil {
-			return nodeInfo, err
-		}
-		nodeInfo.SetVmofile(io.Vmofile{
-			Vmo:    zx.VMO(h),
-			Offset: 0,
-			Length: fState.size,
-		})
-	} else {
-		nodeInfo.SetFile(io.FileObject{})
-	}
+	nodeInfo.SetFile(io.FileObject{})
 	return nodeInfo, nil
 }
 
@@ -561,23 +548,7 @@ func (fState *fileState) Describe2(_ fidl.Context, query io.ConnectionInfoQuery)
 	var connectionInfo io.ConnectionInfo
 	if query&io.ConnectionInfoQueryRepresentation != 0 {
 		var representation io.Representation
-		if vmo := fState.File.GetVMO(); vmo.Handle().IsValid() {
-			// TODO(https://fxbug.dev/77623): The rights on this VMO should be capped at the connection's.
-			h, err := vmo.Handle().Duplicate(zx.RightSameRights)
-			if err != nil {
-				return connectionInfo, err
-			}
-			var memory io.MemoryInfo
-			memory.SetBuffer(mem.Range{
-				Vmo:    zx.VMO(h),
-				Offset: 0,
-				Size:   fState.size,
-			})
-			representation.SetMemory(memory)
-		} else {
-			representation.SetFile(io.FileInfo{})
-		}
-
+		representation.SetFile(io.FileInfo{})
 		connectionInfo.SetRepresentation(representation)
 	}
 	// TODO(https://fxbug.dev/77623): Populate the rights requested by the client at connection.

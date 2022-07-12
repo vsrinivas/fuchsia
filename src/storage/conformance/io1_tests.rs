@@ -1382,8 +1382,7 @@ async fn file_describe() {
 
     let node_info = file.describe().await.expect("describe failed");
 
-    // The node_info can be either File or Vmofile type.
-    assert!(matches!(node_info, fio::NodeInfo::File { .. } | fio::NodeInfo::Vmofile { .. }));
+    assert!(matches!(node_info, fio::NodeInfo::File { .. }));
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -1406,18 +1405,7 @@ async fn vmo_file_describe() {
 
     let node_info = file.describe().await.expect("describe failed");
 
-    if let fio::NodeInfo::Vmofile { 0: vmo_file_obj } = node_info {
-        assert_eq!(vmo_file_obj.offset, 0);
-        assert_eq!(vmo_file_obj.length as usize, TEST_FILE_CONTENTS.len());
-        // Ensure the permissions we get from describe do not exceed those of the connection.
-        let vmo_rights: zx::Rights =
-            vmo_file_obj.vmo.basic_info().expect("failed to get VMO info").rights;
-        assert!(vmo_rights.contains(zx::Rights::READ));
-        assert!(!vmo_rights.contains(zx::Rights::WRITE));
-        assert!(!vmo_rights.contains(zx::Rights::EXECUTE));
-    } else {
-        panic!("Expected VmoFile, got {:?} instead!", node_info);
-    }
+    assert!(matches!(node_info, fio::NodeInfo::File { .. }));
 }
 
 #[fasync::run_singlethreaded(test)]

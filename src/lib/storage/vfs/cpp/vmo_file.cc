@@ -19,21 +19,6 @@
 namespace fio = fuchsia_io;
 
 namespace fs {
-namespace {
-
-zx_rights_t GetVmoRightsForAccessMode(fs::Rights fs_rights) {
-  zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP;
-  if (fs_rights.read) {
-    rights |= ZX_RIGHT_READ;
-  }
-  if (fs_rights.write) {
-    rights |= ZX_RIGHT_WRITE;
-  }
-  // TODO(mdempsky): Add ZX_RIGHT_EXECUTE?
-  return rights;
-}
-
-}  // namespace
 
 VmoFile::VmoFile(zx::vmo vmo, size_t length, bool writable, VmoSharing vmo_sharing)
     : vmo_(std::move(vmo)), length_(length), writable_(writable), vmo_sharing_(vmo_sharing) {
@@ -42,7 +27,7 @@ VmoFile::VmoFile(zx::vmo vmo, size_t length, bool writable, VmoSharing vmo_shari
 
 VmoFile::~VmoFile() = default;
 
-VnodeProtocolSet VmoFile::GetProtocols() const { return VnodeProtocol::kMemory; }
+VnodeProtocolSet VmoFile::GetProtocols() const { return VnodeProtocol::kFile; }
 
 bool VmoFile::ValidateRights(Rights rights) const {
   // Executable rights/VMOs are currently not supported, but may be added in the future.
@@ -107,16 +92,7 @@ zx_status_t VmoFile::Write(const void* data, size_t length, size_t offset, size_
 
 zx_status_t VmoFile::GetNodeInfoForProtocol([[maybe_unused]] VnodeProtocol protocol, Rights rights,
                                             VnodeRepresentation* info) {
-  zx::vmo vmo;
-  zx_status_t status = AcquireVmo(GetVmoRightsForAccessMode(rights), &vmo);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  *info = fs::VnodeRepresentation::Memory{
-      .vmo = std::move(vmo),
-      .length = length_,
-  };
+  *info = fs::VnodeRepresentation::File{};
   return ZX_OK;
 }
 
@@ -140,10 +116,6 @@ zx_status_t VmoFile::GetVmo(fio::wire::VmoFlags flags, zx::vmo* out_vmo) {
   if (flags & fio::wire::VmoFlags::kSharedBuffer) {
     return vmo_.duplicate(rights, out_vmo);
   }
-  return AcquireVmo(rights, out_vmo);
-}
-
-zx_status_t VmoFile::AcquireVmo(zx_rights_t rights, zx::vmo* out_vmo) {
   switch (vmo_sharing_) {
     case VmoSharing::NONE:
       return ZX_ERR_NOT_SUPPORTED;

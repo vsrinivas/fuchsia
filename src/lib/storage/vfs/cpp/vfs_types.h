@@ -112,8 +112,7 @@ union Rights {
 constexpr Rights operator&(Rights lhs, Rights rhs) { return Rights(lhs.raw_value & rhs.raw_value); }
 
 // Identifies the different operational contracts used to interact with a vnode. For example, the
-// |kFile| protocol allows reading and writing byte contents through a buffer, and the |kMemory|
-// protocol requests a VMO object to be returned during |GetNodeInfo|, etc.
+// |kFile| protocol allows reading and writing byte contents through a buffer.
 //
 // The members in this class have one-to-one correspondence with the variants in
 // |VnodeRepresentation|.
@@ -127,7 +126,6 @@ enum class VnodeProtocol : uint32_t {
   kConnector = 1,
   kFile,
   kDirectory,
-  kMemory,
   kDevice,
   kTty,
   kSynchronousDatagramSocket,
@@ -400,12 +398,6 @@ class VnodeRepresentation {
 
   struct Directory {};
 
-  struct Memory {
-    zx::vmo vmo = {};
-    uint64_t offset = {};
-    uint64_t length = {};
-  };
-
   struct Device {};
 
   struct Tty {
@@ -456,10 +448,6 @@ class VnodeRepresentation {
 
   bool is_directory() const { return std::holds_alternative<Directory>(variants_); }
 
-  Memory& memory() { return std::get<Memory>(variants_); }
-
-  bool is_memory() const { return std::holds_alternative<Memory>(variants_); }
-
   Device& device() { return std::get<Device>(variants_); }
 
   bool is_device() const { return std::holds_alternative<Device>(variants_); }
@@ -485,7 +473,7 @@ class VnodeRepresentation {
   bool is_stream_socket() const { return std::holds_alternative<StreamSocket>(variants_); }
 
  private:
-  using Variants = std::variant<std::monostate, Connector, File, Directory, Memory, Device, Tty,
+  using Variants = std::variant<std::monostate, Connector, File, Directory, Device, Tty,
                                 SynchronousDatagramSocket, StreamSocket, DatagramSocket>;
 
   Variants variants_ = {};

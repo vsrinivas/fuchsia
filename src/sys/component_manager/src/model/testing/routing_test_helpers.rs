@@ -1538,13 +1538,13 @@ pub mod capability_util {
                 assert_eq!(s, zx::sys::ZX_OK);
                 assert!(matches!(
                     *info.expect("failed to receive node info"),
-                    fio::NodeInfo::Vmofile(fio::Vmofile { .. })
+                    fio::NodeInfo::File(fio::FileObject { .. })
                 ));
             }
             fio::FileEvent::OnConnectionInfo { payload } => {
                 assert!(matches!(
                     payload.representation.expect("failed to receive node info"),
-                    fio::Representation::Memory(fio::MemoryInfo { .. })
+                    fio::Representation::File(fio::FileInfo { .. })
                 ));
             }
         }

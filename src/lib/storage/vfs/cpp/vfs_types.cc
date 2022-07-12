@@ -156,11 +156,6 @@ void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
           fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file)));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Directory>) {
       callback(fio::wire::NodeInfo::WithDirectory({}));
-    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Memory>) {
-      fio::wire::Vmofile vmofile = {
-          .vmo = std::move(repr.vmo), .offset = repr.offset, .length = repr.length};
-      callback(fio::wire::NodeInfo::WithVmofile(
-          fidl::ObjectView<fio::wire::Vmofile>::FromExternal(&vmofile)));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Device>) {
       callback(fio::wire::NodeInfo::WithDevice({}));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Tty>) {
@@ -196,14 +191,6 @@ ConnectionInfoConverter::ConnectionInfoConverter(VnodeRepresentation representat
       info.set_representation(arena, fio::wire::Representation::WithFile(arena, std::move(file)));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Directory>) {
       info.set_representation(arena, fio::wire::Representation::WithDirectory(arena));
-    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Memory>) {
-      fio::wire::MemoryInfo memory(arena);
-      memory.set_buffer(arena, fuchsia_mem::wire::Range{
-                                   .vmo = std::move(repr.vmo),
-                                   .offset = repr.offset,
-                                   .size = repr.length,
-                               });
-      info.set_representation(arena, fio::wire::Representation::WithMemory(arena, memory));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Device>) {
       fio::wire::DeviceInfo device(arena);
       info.set_representation(arena,

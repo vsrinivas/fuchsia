@@ -16,7 +16,6 @@
 namespace {
 
 using VnodeOptions = fs::VnodeConnectionOptions;
-using VnodeInfo = fs::VnodeRepresentation;
 
 const size_t VMO_SIZE = zx_system_get_page_size() * 3u;
 const size_t PAGE_0 = 0u;
@@ -396,7 +395,8 @@ TEST(VmoFile, GetNodeInfo) {
     fs::VnodeRepresentation info;
     auto file =
         fbl::MakeRefCounted<fs::VmoFile>(std::move(abc), 23u, false, fs::VmoFile::VmoSharing::NONE);
-    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, file->GetNodeInfo(fs::Rights::ReadOnly(), &info));
+    EXPECT_EQ(ZX_OK, file->GetNodeInfo(fs::Rights::ReadOnly(), &info));
+    EXPECT_TRUE(info.is_file());
   }
 
   {
@@ -407,18 +407,18 @@ TEST(VmoFile, GetNodeInfo) {
     zx::vmo dup;
     ASSERT_EQ(ZX_OK, abc.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
 
-    fs::VnodeRepresentation info;
     auto file = fbl::MakeRefCounted<fs::VmoFile>(std::move(dup), 23u, false,
                                                  fs::VmoFile::VmoSharing::DUPLICATE);
-    EXPECT_EQ(ZX_OK, file->GetNodeInfo(fs::Rights::ReadOnly(), &info));
-    ASSERT_TRUE(info.is_memory());
-    VnodeInfo::Memory& memory = info.memory();
-    zx::vmo vmo = std::move(memory.vmo);
+    zx::vmo vmo;
+    EXPECT_EQ(ZX_OK, file->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo));
+
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
-    EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ, GetRights(vmo.get()));
-    EXPECT_EQ(0, memory.offset);
-    EXPECT_EQ(23u, memory.length);
+    EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_READ,
+              GetRights(vmo.get()));
+    uint64_t size;
+    EXPECT_EQ(ZX_OK, vmo.get_prop_content_size(&size));
+    EXPECT_EQ(VMO_SIZE, size);
 
     CheckVmo(vmo, PAGE_0, 23u, 'A');
   }
@@ -431,21 +431,21 @@ TEST(VmoFile, GetNodeInfo) {
     zx::vmo dup;
     ASSERT_EQ(ZX_OK, abc.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
 
-    fs::VnodeRepresentation info;
     auto file = fbl::MakeRefCounted<fs::VmoFile>(std::move(dup), 23u, true,
                                                  fs::VmoFile::VmoSharing::DUPLICATE);
-    EXPECT_EQ(ZX_OK, file->GetNodeInfo(fs::Rights::ReadWrite(), &info));
-    ASSERT_TRUE(info.is_memory());
-    VnodeInfo::Memory& memory = info.memory();
-    zx::vmo vmo = std::move(memory.vmo);
+    zx::vmo vmo;
+    EXPECT_EQ(ZX_OK, file->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo));
+
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
 
     // As the VmoFile implementation does not currently track size changes, we ensure that the
     // handle provided in DUPLICATE sharing mode is not writable.
-    EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ, GetRights(vmo.get()));
-    EXPECT_EQ(0, memory.offset);
-    EXPECT_EQ(23u, memory.length);
+    EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_READ,
+              GetRights(vmo.get()));
+    uint64_t size;
+    EXPECT_EQ(ZX_OK, vmo.get_prop_content_size(&size));
+    EXPECT_EQ(VMO_SIZE, size);
 
     CheckVmo(vmo, PAGE_0, 23u, 'A');
   }
@@ -458,20 +458,19 @@ TEST(VmoFile, GetNodeInfo) {
     zx::vmo dup;
     ASSERT_EQ(ZX_OK, abc.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
 
-    fs::VnodeRepresentation info;
     auto file = fbl::MakeRefCounted<fs::VmoFile>(std::move(dup), 23u, true,
                                                  fs::VmoFile::VmoSharing::DUPLICATE);
-    EXPECT_EQ(ZX_OK, file->GetNodeInfo(fs::Rights::WriteOnly(), &info));
-    ASSERT_TRUE(info.is_memory());
-    VnodeInfo::Memory& memory = info.memory();
-    zx::vmo vmo = std::move(memory.vmo);
+    zx::vmo vmo;
+    EXPECT_EQ(ZX_OK, file->GetVmo({}, &vmo));
+
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
     // As the VmoFile implementation does not currently track size changes, we ensure that the
     // handle provided in DUPLICATE sharing mode is not writable.
-    EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP, GetRights(vmo.get()));
-    EXPECT_EQ(0, memory.offset);
-    EXPECT_EQ(23u, memory.length);
+    EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY, GetRights(vmo.get()));
+    uint64_t size;
+    EXPECT_EQ(ZX_OK, vmo.get_prop_content_size(&size));
+    EXPECT_EQ(VMO_SIZE, size);
   }
 
   {
@@ -482,22 +481,22 @@ TEST(VmoFile, GetNodeInfo) {
     zx::vmo dup;
     ASSERT_EQ(ZX_OK, abc.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
 
-    fs::VnodeRepresentation info;
     auto file = fbl::MakeRefCounted<fs::VmoFile>(std::move(dup), 23u, false,
                                                  fs::VmoFile::VmoSharing::CLONE_COW);
+    zx::vmo vmo;
     // There is non-trivial lazy initialization happening here - repeat it
     // to make sure it's nice and deterministic.
     for (int i = 0; i < 2; i++) {
-      EXPECT_EQ(ZX_OK, file->GetNodeInfo(fs::Rights::ReadOnly(), &info));
+      EXPECT_EQ(ZX_OK, file->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vmo));
     }
-    ASSERT_TRUE(info.is_memory());
-    VnodeInfo::Memory& memory = info.memory();
-    zx::vmo vmo = std::move(memory.vmo);
+
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
-    EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ, GetRights(vmo.get()));
-    EXPECT_EQ(0, memory.offset);
-    EXPECT_EQ(23u, memory.length);
+    EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_READ,
+              GetRights(vmo.get()));
+    uint64_t size;
+    EXPECT_EQ(ZX_OK, vmo.get_prop_content_size(&size));
+    EXPECT_EQ(23u, size);
 
     CheckVmo(vmo, PAGE_0, 23u, 'A');
   }
@@ -510,19 +509,21 @@ TEST(VmoFile, GetNodeInfo) {
     zx::vmo dup;
     ASSERT_EQ(ZX_OK, abc.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
 
-    fs::VnodeRepresentation info;
     auto file = fbl::MakeRefCounted<fs::VmoFile>(std::move(dup), 23u, true,
                                                  fs::VmoFile::VmoSharing::CLONE_COW);
-    EXPECT_EQ(ZX_OK, file->GetNodeInfo(fs::Rights::ReadWrite(), &info));
-    ASSERT_TRUE(info.is_memory());
-    VnodeInfo::Memory& memory = info.memory();
-    zx::vmo vmo = std::move(memory.vmo);
+    zx::vmo vmo;
+    EXPECT_EQ(
+        ZX_OK,
+        file->GetVmo(fuchsia_io::wire::VmoFlags::kRead | fuchsia_io::wire::VmoFlags::kWrite, &vmo));
+
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
-    EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_WRITE,
+    EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_READ |
+                  ZX_RIGHT_WRITE | ZX_RIGHT_SET_PROPERTY,
               GetRights(vmo.get()));
-    EXPECT_EQ(0, memory.offset);
-    EXPECT_EQ(23u, memory.length);
+    uint64_t size;
+    EXPECT_EQ(ZX_OK, vmo.get_prop_content_size(&size));
+    EXPECT_EQ(23u, size);
 
     FillVmo(vmo, 0, 23u, '!');
 
@@ -539,18 +540,19 @@ TEST(VmoFile, GetNodeInfo) {
     zx::vmo dup;
     ASSERT_EQ(ZX_OK, abc.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
 
-    fs::VnodeRepresentation info;
     auto file = fbl::MakeRefCounted<fs::VmoFile>(std::move(dup), 23u, true,
                                                  fs::VmoFile::VmoSharing::CLONE_COW);
-    EXPECT_EQ(ZX_OK, file->GetNodeInfo(fs::Rights::WriteOnly(), &info));
-    ASSERT_TRUE(info.is_memory());
-    VnodeInfo::Memory& memory = info.memory();
-    zx::vmo vmo = std::move(memory.vmo);
+    zx::vmo vmo;
+    EXPECT_EQ(ZX_OK, file->GetVmo(fuchsia_io::wire::VmoFlags::kWrite, &vmo));
+
     EXPECT_NE(abc.get(), vmo.get());
     EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
-    EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_WRITE, GetRights(vmo.get()));
-    EXPECT_EQ(0, memory.offset);
-    EXPECT_EQ(23u, memory.length);
+    EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_GET_PROPERTY | ZX_RIGHT_WRITE |
+                  ZX_RIGHT_SET_PROPERTY,
+              GetRights(vmo.get()));
+    uint64_t size;
+    EXPECT_EQ(ZX_OK, vmo.get_prop_content_size(&size));
+    EXPECT_EQ(23u, size);
 
     FillVmo(vmo, 0, 23u, '!');
 

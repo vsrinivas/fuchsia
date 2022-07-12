@@ -4,7 +4,6 @@
 
 import 'package:fidl/fidl.dart' as fidl;
 import 'package:fidl_fuchsia_io/fidl_async.dart';
-import 'package:fidl_fuchsia_mem/fidl_async.dart';
 import 'package:zircon/zircon.dart';
 
 import 'pseudo_file.dart';
@@ -42,43 +41,24 @@ class VmoFile extends PseudoFile {
 
   // TODO(crjohns): Support writable vmo files.
 
-  Vmo? _getVmo() {
+  @override
+  Vmo getBackingMemory(VmoFlags flags) {
     if (_sharingMode == VmoSharingMode.shareDuplicate) {
       return _vmo.duplicate(ZX.RIGHTS_BASIC |
           ZX.RIGHT_READ |
           ZX.RIGHT_MAP |
           ZX.RIGHT_GET_PROPERTY);
     }
-    return null;
-  }
-
-  @override
-  Vmo getBackingMemory(VmoFlags flags) {
-    final vmo = _getVmo();
-    if (vmo != null) {
-      return vmo;
-    }
     throw fidl.MethodException(ZX.ERR_NOT_SUPPORTED);
   }
 
   @override
   NodeInfo describe() {
-    final vmo = _getVmo();
-    if (vmo != null) {
-      return NodeInfo.withVmofile(
-          Vmofile(vmo: vmo, offset: 0, length: vmo.getSize().size));
-    }
     return NodeInfo.withFile(FileObject(event: null));
   }
 
   @override
   ConnectionInfo describe2(ConnectionInfoQuery query) {
-    final vmo = _getVmo();
-    if (vmo != null) {
-      return ConnectionInfo(
-          representation: Representation.withMemory(MemoryInfo(
-              buffer: Range(vmo: vmo, offset: 0, size: vmo.getSize().size))));
-    }
     return ConnectionInfo(representation: Representation.withFile(FileInfo()));
   }
 }

@@ -5,7 +5,6 @@
 import 'dart:typed_data';
 
 import 'package:fidl_fuchsia_io/fidl_async.dart';
-import 'package:fidl_fuchsia_mem/fidl_async.dart';
 import 'package:zircon/zircon.dart';
 
 import 'pseudo_file.dart';
@@ -30,28 +29,19 @@ class PseudoVmoFile extends PseudoFile {
   /// Resulting PseudoVmoFile returns nothing when read as a regular file.
   PseudoVmoFile.readOnly(this._vmoFn) : super.readOnly(() => Uint8List(0));
 
-  Vmo _getVmo() {
+  @override
+  Vmo getBackingMemory(VmoFlags flags) {
     return _vmoFn().duplicate(
         ZX.RIGHTS_BASIC | ZX.RIGHT_READ | ZX.RIGHT_MAP | ZX.RIGHT_GET_PROPERTY);
   }
 
   @override
-  Vmo getBackingMemory(VmoFlags flags) {
-    return _getVmo();
-  }
-
-  @override
   NodeInfo describe() {
-    final vmo = _getVmo();
-    return NodeInfo.withVmofile(
-        Vmofile(vmo: vmo, offset: 0, length: vmo.getSize().size));
+    return NodeInfo.withFile(FileObject());
   }
 
   @override
   ConnectionInfo describe2(ConnectionInfoQuery query) {
-    final vmo = _getVmo();
-    return ConnectionInfo(
-        representation: Representation.withMemory(MemoryInfo(
-            buffer: Range(vmo: vmo, offset: 0, size: vmo.getSize().size))));
+    return ConnectionInfo(representation: Representation.withFile(FileInfo()));
   }
 }

@@ -46,7 +46,7 @@ VnodeVmo::~VnodeVmo() {
   }
 }
 
-fs::VnodeProtocolSet VnodeVmo::GetProtocols() const { return fs::VnodeProtocol::kMemory; }
+fs::VnodeProtocolSet VnodeVmo::GetProtocols() const { return fs::VnodeProtocol::kFile; }
 
 bool VnodeVmo::ValidateRights(fs::Rights rights) const {
   return !rights.write && (!rights.execute || executable_);
@@ -54,27 +54,7 @@ bool VnodeVmo::ValidateRights(fs::Rights rights) const {
 
 zx_status_t VnodeVmo::GetNodeInfoForProtocol([[maybe_unused]] fs::VnodeProtocol protocol,
                                              fs::Rights rights, fs::VnodeRepresentation* info) {
-  if (!have_local_clone_ && !WindowMatchesVMO(vmo_, offset_, length_)) {
-    zx_status_t status = MakeLocalClone();
-    if (status != ZX_OK) {
-      return status;
-    }
-  }
-
-  // Ensure that we return predictable rights to the client side, e.g. no SET_PROPERTY.
-  zx_handle_t vmo;
-  zx_rights_t handle_rights =
-      ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_GET_PROPERTY;
-  if (rights.execute) {
-    handle_rights |= ZX_RIGHT_EXECUTE;
-  }
-  zx_status_t status = zx_handle_duplicate(vmo_, handle_rights, &vmo);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  *info =
-      fs::VnodeRepresentation::Memory{.vmo = zx::vmo(vmo), .offset = offset_, .length = length_};
+  *info = fs::VnodeRepresentation::File{};
   return ZX_OK;
 }
 

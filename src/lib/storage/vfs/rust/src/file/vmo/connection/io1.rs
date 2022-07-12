@@ -339,34 +339,7 @@ impl VmoFileConnection {
 
     /// Returns `NodeInfo` for the VMO file.
     async fn get_node_info(&mut self) -> Result<fio::NodeInfo, zx::Status> {
-        // The current fuchsia.io specification for Vmofile node types specify that the node is
-        // immutable, thus if the file is writable, we report it as a regular file instead.
-        // If this changes in the future, we need to handle size changes in the backing VMO.
-        if self.flags.intersects(fio::OpenFlags::NODE_REFERENCE)
-            || self.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE)
-        {
-            Ok(fio::NodeInfo::File(fio::FileObject { event: None, stream: None }))
-        } else {
-            let vmofile = update_initialized_state! {
-                match &*self.file.state().await;
-                error: "get_node_info" => Err(zx::Status::INTERNAL);
-                { vmo, size, .. } => {
-                    // Since the VMO rights may exceed those of the connection, we need to ensure
-                    // the duplicated handle's rights are not greater than those of the connection.
-                    let mut new_rights = vmo.basic_info().unwrap().rights;
-                    // We already checked above that the connection is not writable. We also remove
-                    // SET_PROPERTY as this would also allow size changes.
-                    new_rights.remove(zx::Rights::WRITE | zx::Rights::SET_PROPERTY);
-                    if !self.flags.intersects(fio::OpenFlags::RIGHT_EXECUTABLE) {
-                        new_rights.remove(zx::Rights::EXECUTE);
-                    }
-                    let vmo = vmo.duplicate_handle(new_rights).unwrap();
-
-                    Ok(fio::Vmofile {vmo, offset: 0, length: *size})
-                }
-            }?;
-            Ok(fio::NodeInfo::Vmofile(vmofile))
-        }
+        Ok(fio::NodeInfo::File(fio::FileObject { event: None, stream: None }))
     }
 
     /// Handle a [`FileRequest`]. This function is responsible for handing all the file operations

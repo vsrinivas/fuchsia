@@ -89,10 +89,6 @@ class VmoFile final : public vfs::internal::File {
   // Resize the file to the given |length|.
   zx_status_t Truncate(uint64_t length) override;
 
-  // Override that describes this object as a vmofile.
-  void Describe(fuchsia::io::NodeInfo* out_info) override;
-  void Describe2(fuchsia::io::ConnectionInfo* out_info) override;
-
   // Returns current file length.
   //
   // All implementations should implement this.

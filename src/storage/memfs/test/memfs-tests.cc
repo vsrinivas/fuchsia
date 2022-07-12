@@ -93,9 +93,8 @@ TEST(MemfsTest, SubPageContentSize) {
   // Lookup the VMO and request its representation.
   fbl::RefPtr<fs::Vnode> vmo_vnode;
   ASSERT_OK(root->Lookup("vmo", &vmo_vnode));
-  fs::VnodeRepresentation vnode_info;
-  ASSERT_OK(vmo_vnode->GetNodeInfo(fs::Rights::ReadOnly(), &vnode_info));
-  EXPECT_TRUE(vnode_info.is_memory());
+  zx::vmo vnode_vmo;
+  ASSERT_EQ(ZX_OK, vmo_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vnode_vmo));
 
   // We expect no cloning to have happened, this means we should have a handle to our original VMO.
   // We can verify this by comparing koids.
@@ -103,8 +102,8 @@ TEST(MemfsTest, SubPageContentSize) {
   ASSERT_OK(vmo.get_info(ZX_INFO_HANDLE_BASIC, &original_vmo_info, sizeof(original_vmo_info),
                          nullptr, nullptr));
   zx_info_handle_basic_t vnode_vmo_info;
-  ASSERT_OK(vnode_info.memory().vmo.get_info(ZX_INFO_HANDLE_BASIC, &vnode_vmo_info,
-                                             sizeof(vnode_vmo_info), nullptr, nullptr));
+  ASSERT_OK(vnode_vmo.get_info(ZX_INFO_HANDLE_BASIC, &vnode_vmo_info, sizeof(vnode_vmo_info),
+                               nullptr, nullptr));
   EXPECT_EQ(original_vmo_info.koid, vnode_vmo_info.koid);
 }
 
@@ -132,24 +131,24 @@ TEST(MemfsTest, LocalClone) {
   // Create a file from a VMO using a non-zero offset after which we should NOT get an exact copy.
   zx::vmo vmo_dup;
   fbl::RefPtr<fs::Vnode> vmo_vnode;
-  fs::VnodeRepresentation vnode_info;
   zx_info_handle_basic_t vnode_vmo_info;
 
   ASSERT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup));
   ASSERT_OK(root->CreateFromVmo("vmo1", vmo_dup.release(), vmo_offset, vmo_size - vmo_offset));
   ASSERT_OK(root->Lookup("vmo1", &vmo_vnode));
-  ASSERT_OK(vmo_vnode->GetNodeInfo(fs::Rights::ReadOnly(), &vnode_info));
-  ASSERT_OK(vnode_info.memory().vmo.get_info(ZX_INFO_HANDLE_BASIC, &vnode_vmo_info,
-                                             sizeof(vnode_vmo_info), nullptr, nullptr));
+  zx::vmo vnode_vmo;
+  ASSERT_EQ(ZX_OK, vmo_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vnode_vmo));
+  ASSERT_OK(vnode_vmo.get_info(ZX_INFO_HANDLE_BASIC, &vnode_vmo_info, sizeof(vnode_vmo_info),
+                               nullptr, nullptr));
   EXPECT_NE(original_vmo_info.koid, vnode_vmo_info.koid);
 
   // Create a file from a VMO using a smaller size, after which we should NOT get an exact copy.
   ASSERT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup));
   ASSERT_OK(root->CreateFromVmo("vmo2", vmo_dup.release(), 0, vmo_size - 1));
   ASSERT_OK(root->Lookup("vmo2", &vmo_vnode));
-  ASSERT_OK(vmo_vnode->GetNodeInfo(fs::Rights::ReadOnly(), &vnode_info));
-  ASSERT_OK(vnode_info.memory().vmo.get_info(ZX_INFO_HANDLE_BASIC, &vnode_vmo_info,
-                                             sizeof(vnode_vmo_info), nullptr, nullptr));
+  ASSERT_EQ(ZX_OK, vmo_vnode->GetVmo(fuchsia_io::wire::VmoFlags::kRead, &vnode_vmo));
+  ASSERT_OK(vnode_vmo.get_info(ZX_INFO_HANDLE_BASIC, &vnode_vmo_info, sizeof(vnode_vmo_info),
+                               nullptr, nullptr));
   EXPECT_NE(original_vmo_info.koid, vnode_vmo_info.koid);
 }
 

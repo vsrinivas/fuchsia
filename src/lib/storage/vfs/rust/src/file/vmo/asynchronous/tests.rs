@@ -150,7 +150,7 @@ fn read_only_read_with_describe() {
             let info = *info.expect("Empty fio::NodeInfo");
             assert!(matches!(
                 info,
-                fio::NodeInfo::Vmofile(fio::Vmofile { vmo: _, offset: 0, length: 14 })
+                fio::NodeInfo::File(fio::FileObject { event: None, stream: None }),
             ));
         });
     });
@@ -251,7 +251,7 @@ fn read_error() {
                 let info = *info.expect("Empty fio::NodeInfo");
                 assert!(matches!(
                     info,
-                    fio::NodeInfo::Vmofile(fio::Vmofile { vmo: _, offset: 0, length: 10 })
+                    fio::NodeInfo::File(fio::FileObject { event: None, stream: None }),
                 ));
             });
 

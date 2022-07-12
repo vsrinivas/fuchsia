@@ -256,16 +256,16 @@ TEST(VmoFile, ReadOnlyDuplicate) {
     EXPECT_EQ(vmo_result, result.response().data);
   }
 
-  // Describing the VMO duplicates the handle, and we can access the entire VMO.
-  fuchsia::io::NodeInfo info;
-  EXPECT_EQ(ZX_OK, file_ptr->Describe(&info));
-  ASSERT_TRUE(info.is_vmofile());
-  ASSERT_EQ(1000u, info.vmofile().length);
-  ASSERT_EQ(0u, info.vmofile().offset);
-  EXPECT_EQ(ReadVmo(test_vmo, 0, 4096), ReadVmo(info.vmofile().vmo, 0, 4096));
+  // GetBackingMemory duplicates the handle, and we can access the entire VMO.
+  fuchsia::io::File2_GetBackingMemory_Result result;
+  EXPECT_EQ(ZX_OK, file_ptr->GetBackingMemory(fuchsia::io::VmoFlags::READ, &result));
+  ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+  const fuchsia::io::File2_GetBackingMemory_Response& response = result.response();
+  const zx::vmo& vmo = response.vmo;
+  EXPECT_EQ(ReadVmo(test_vmo, 0, 4096), ReadVmo(vmo, 0, 4096));
 
   // Writing should fail on the new VMO.
-  EXPECT_NE(ZX_OK, info.vmofile().vmo.write("test", 0, 4));
+  EXPECT_NE(ZX_OK, vmo.write("test", 0, 4));
 }
 
 TEST(VmoFile, WritableDuplicate) {
@@ -300,19 +300,13 @@ TEST(VmoFile, WritableDuplicate) {
     EXPECT_EQ('a', result.response().data[0]);
   }
 
-  // Describing the VMO duplicates the handle, and we can access the entire VMO.
-  fuchsia::io::NodeInfo info;
-  EXPECT_EQ(ZX_OK, file_ptr->Describe(&info));
-  ASSERT_TRUE(info.is_vmofile());
-  ASSERT_EQ(1000u, info.vmofile().length);
-  ASSERT_EQ(0u, info.vmofile().offset);
-  EXPECT_EQ(ReadVmo(test_vmo, 0, 4096), ReadVmo(info.vmofile().vmo, 0, 4096));
-
-  // TODO(fxbug.dev/45287): As part of fxbug.dev/85334 it was discovered that Describe leaks
-  // writable handles even if the connection lacks OPEN_RIGHT_WRITABLE. In the long term, if handles
-  // to the underlying VMO require specific rights, they should either be obtained via
-  // GetBackingMemory(), or we need to allow the VmoFile node itself query the connection rights
-  // (since these are currently not available when handling the Describe call).
+  // GetBackingMemory duplicates the handle, and we can access the entire VMO.
+  fuchsia::io::File2_GetBackingMemory_Result result;
+  EXPECT_EQ(ZX_OK, file_ptr->GetBackingMemory(fuchsia::io::VmoFlags::READ, &result));
+  ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+  const fuchsia::io::File2_GetBackingMemory_Response& response = result.response();
+  const zx::vmo& vmo = response.vmo;
+  EXPECT_EQ(ReadVmo(test_vmo, 0, 4096), ReadVmo(vmo, 0, 4096));
 }
 
 TEST(VmoFile, ReadOnlyCopyOnWrite) {
@@ -347,17 +341,17 @@ TEST(VmoFile, ReadOnlyCopyOnWrite) {
     EXPECT_EQ(vmo_result, result.response().data);
   }
 
-  // Describing the VMO clones the handle, and we can access the entire VMO.
-  fuchsia::io::NodeInfo info;
-  EXPECT_EQ(ZX_OK, file_ptr->Describe(&info));
-  ASSERT_TRUE(info.is_vmofile());
-  ASSERT_EQ(4096u, info.vmofile().length);
-  ASSERT_EQ(0u, info.vmofile().offset);
-  EXPECT_EQ(ReadVmo(test_vmo, 0, 4096), ReadVmo(info.vmofile().vmo, 0, 4096));
+  // GetBackingMemory duplicates the handle, and we can access the entire VMO.
+  fuchsia::io::File2_GetBackingMemory_Result result;
+  EXPECT_EQ(ZX_OK, file_ptr->GetBackingMemory({}, &result));
+  ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+  const fuchsia::io::File2_GetBackingMemory_Response& response = result.response();
+  const zx::vmo& vmo = response.vmo;
+  EXPECT_EQ(ReadVmo(test_vmo, 0, 4096), ReadVmo(vmo, 0, 4096));
 
   // Writing should succeed on the new VMO, due to copy on write.
-  EXPECT_EQ(ZX_OK, info.vmofile().vmo.write("test", 0, 4));
-  EXPECT_NE(ReadVmo(test_vmo, 0, 4096), ReadVmo(info.vmofile().vmo, 0, 4096));
+  EXPECT_EQ(ZX_OK, vmo.write("test", 0, 4));
+  EXPECT_NE(ReadVmo(test_vmo, 0, 4096), ReadVmo(vmo, 0, 4096));
 }
 
 TEST(VmoFile, WritableCopyOnWrite) {
@@ -393,17 +387,17 @@ TEST(VmoFile, WritableCopyOnWrite) {
     EXPECT_EQ('a', result.response().data[0]);
   }
 
-  // Describing the VMO duplicates the handle, and we can access the entire VMO.
-  fuchsia::io::NodeInfo info;
-  EXPECT_EQ(ZX_OK, file_ptr->Describe(&info));
-  ASSERT_TRUE(info.is_vmofile());
-  ASSERT_EQ(4096u, info.vmofile().length);
-  ASSERT_EQ(0u, info.vmofile().offset);
-  EXPECT_EQ(ReadVmo(test_vmo, 0, 4096), ReadVmo(info.vmofile().vmo, 0, 4096));
+  // GetBackingMemory duplicates the handle, and we can access the entire VMO.
+  fuchsia::io::File2_GetBackingMemory_Result result;
+  EXPECT_EQ(ZX_OK, file_ptr->GetBackingMemory({}, &result));
+  ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
+  const fuchsia::io::File2_GetBackingMemory_Response& response = result.response();
+  const zx::vmo& vmo = response.vmo;
+  EXPECT_EQ(ReadVmo(test_vmo, 0, 4096), ReadVmo(vmo, 0, 4096));
 
   // Writing should succeed on the new VMO, due to copy on write.
-  EXPECT_EQ(ZX_OK, info.vmofile().vmo.write("test", 0, 4));
-  EXPECT_NE(ReadVmo(test_vmo, 0, 4096), ReadVmo(info.vmofile().vmo, 0, 4096));
+  EXPECT_EQ(ZX_OK, vmo.write("test", 0, 4));
+  EXPECT_NE(ReadVmo(test_vmo, 0, 4096), ReadVmo(vmo, 0, 4096));
 }
 
 TEST(VmoFile, VmoWithNoRights) {
