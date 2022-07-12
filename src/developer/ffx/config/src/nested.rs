@@ -87,7 +87,7 @@ impl RecursiveMap for Option<Value> {
 /// Search the given nested json value for the given `key`, and then recurse through
 /// the rest of the tree for the `remaining_keys`. Returns the value at that position if found.
 pub(crate) fn nested_get<'a>(
-    cur: Option<&'a Map<String, Value>>,
+    cur: Option<&'a Value>,
     key: &str,
     remaining_keys: &[&str],
 ) -> Option<&'a Value> {
@@ -95,11 +95,7 @@ pub(crate) fn nested_get<'a>(
         if remaining_keys.len() == 0 {
             cur.get(key)
         } else {
-            nested_get(
-                cur.get(key).and_then(Value::as_object),
-                remaining_keys[0],
-                &remaining_keys[1..],
-            )
+            nested_get(cur.get(key), remaining_keys[0], &remaining_keys[1..])
         }
     })
 }

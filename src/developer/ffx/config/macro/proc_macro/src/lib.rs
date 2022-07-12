@@ -26,7 +26,7 @@ pub fn include_default(_input: TokenStream) -> TokenStream {
     let _res: Option<Value> =
         serde_json::from_str(default).expect("default configuration is malformed");
 
-    std::format!("serde_json::json!({})", default).parse().unwrap()
+    std::format!("Some(serde_json::json!({}))", default).parse().unwrap()
 }
 
 fn type_ident<'a>(ty: &'a syn::Type) -> Option<&'a syn::Ident> {
