@@ -53,6 +53,9 @@ template("_pm") {
 #
 #   package (required)
 #     [label] A pm_build() target defined earlier in the same file.
+#
+#   archive_name (optional)
+#     [string] The name of the far file to output.
 template("pm_archive") {
   assert(defined(invoker.manifest), "manifest is required")
   assert(defined(invoker.package), "package is required")
@@ -72,6 +75,10 @@ template("pm_archive") {
                              "no_output_dir_leaks",
                            ])
 
+    archive_name = package_name
+    if (defined(invoker.archive_name)) {
+      archive_name = invoker.archive_name
+    }
     deps = [
       invoker.manifest,
       invoker.package,
@@ -85,7 +92,7 @@ template("pm_archive") {
       # since that would modify package_manifest.json.
       "$pkg_out_dir/package_manifest.json",
     ]
-    outputs = [ "$target_out_dir/$package_name.far" ]
+    outputs = [ "$target_out_dir/$archive_name.far" ]
     args = [
       "-o",
       rebase_path(pkg_out_dir, root_build_dir),
@@ -93,7 +100,7 @@ template("pm_archive") {
       rebase_path(pkg_manifest_file, root_build_dir),
       "archive",
       "-output",
-      rebase_path("$target_out_dir/$package_name", root_build_dir),
+      rebase_path("$target_out_dir/$archive_name", root_build_dir),
     ]
   }
 }
