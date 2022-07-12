@@ -54,6 +54,9 @@ class EngineCommandStreamer : public HardwareStatusPage::Owner {
   // Initialize backing store for the given context on this engine command streamer.
   bool InitContext(MsdIntelContext* context) const;
 
+  // Sets the given context's "indirect context" batch.
+  void InitIndirectContext(MsdIntelContext* context, std::shared_ptr<IndirectContextBatch> batch);
+
   bool InitContextWorkarounds(MsdIntelContext* context);
   bool InitContextCacheConfig(MsdIntelContext* context);
 

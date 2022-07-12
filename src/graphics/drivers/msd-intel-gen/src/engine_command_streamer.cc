@@ -147,13 +147,25 @@ void EngineCommandStreamer::InvalidateTlbs() {
 
 // Register definitions from BSpec BXML Reference.
 // Register State Context definition from public BSpec.
-// Render command streamer:
+// Render command streamer pp.25:
 // https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-kbl-vol07-3d_media_gpgpu.pdf
-// pp.25 Video command streamer:
+// Video command streamer pp.15:
 // https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-kbl-vol03-gpu_overview.pdf
-// pp.15
 class RegisterStateHelper {
  public:
+  // From INDIRECT_CTX_OFFSET register, p.1070:
+  // https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-kbl-vol02c-commandreference-registers-part1.pdf
+  static constexpr uint64_t kIndirectContextOffsetGen9 = 0x26;
+
+  static void* register_context_base(void* context_buffer) {
+    return static_cast<uint8_t*>(context_buffer) + magma::page_size();
+  }
+
+  RegisterStateHelper(EngineCommandStreamer* engine, MsdIntelContext* context)
+      : RegisterStateHelper(engine->id(), engine->mmio_base(),
+                            static_cast<uint32_t*>(register_context_base(
+                                context->GetCachedContextBufferCpuAddr(engine->id())))) {}
+
   RegisterStateHelper(EngineCommandStreamerId id, uint32_t mmio_base, uint32_t* state)
       : id_(id), mmio_base_(mmio_base), state_(state) {}
 
@@ -259,15 +271,19 @@ class RegisterStateHelper {
   }
 
   // INDIRECT_CTX - Indirect Context Pointer
-  void write_indirect_context_pointer() {
+  void write_indirect_context_pointer(uint32_t gpu_addr, uint32_t size) {
+    DASSERT((gpu_addr & 0x3F) == 0);
+    uint32_t size_in_cache_lines = size / DeviceId::cache_line_size();
+    DASSERT(size_in_cache_lines < 64);
     state_[0x1A] = mmio_base_ + 0x1C4;
-    state_[0x1B] = 0;
+    state_[0x1B] = gpu_addr | size_in_cache_lines;
   }
 
-  // INDIRECT_CTX_OFFSET - Indirect Context Offset Pointer
-  void write_indirect_context_offset_pointer() {
+  // INDIRECT_CTX_OFFSET - Indirect Context Offset
+  void write_indirect_context_offset(uint32_t context_offset) {
+    DASSERT((context_offset & ~0x3FF) == 0);
     state_[0x1C] = mmio_base_ + 0x1C8;
-    state_[0x1D] = 0;
+    state_[0x1D] = context_offset << 6;
   }
 
   // CS_CTX_TIMESTAMP - CS Context Timestamp Count
@@ -331,13 +347,12 @@ class RegisterStateHelper {
 
 bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, Ringbuffer* ringbuffer,
                                               AddressSpace* address_space) const {
-  auto platform_buf = buffer->platform_buffer();
   void* addr;
-  if (!platform_buf->MapCpu(&addr))
+  if (!buffer->platform_buffer()->MapCpu(&addr))
     return DRETF(false, "Couldn't map context buffer");
 
-  uint32_t* state = reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(addr) + PAGE_SIZE);
-  RegisterStateHelper helper(id(), mmio_base_, state);
+  RegisterStateHelper helper(
+      id(), mmio_base_, static_cast<uint32_t*>(RegisterStateHelper::register_context_base(addr)));
 
   helper.write_load_register_immediate_headers();
   helper.write_context_save_restore_control();
@@ -353,8 +368,8 @@ bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, Ringbuffer
   helper.write_second_level_batch_buffer_head_pointer();
   helper.write_second_level_batch_buffer_state();
   helper.write_batch_buffer_per_context_pointer();
-  helper.write_indirect_context_pointer();
-  helper.write_indirect_context_offset_pointer();
+  helper.write_indirect_context_pointer(0, 0);
+  helper.write_indirect_context_offset(0);
   helper.write_context_timestamp();
   helper.write_pdp3_upper(0);
   helper.write_pdp3_lower(0);
@@ -375,10 +390,22 @@ bool EngineCommandStreamer::InitContextBuffer(MsdIntelBuffer* buffer, Ringbuffer
     helper.write_render_power_clock_state();
   }
 
-  if (!platform_buf->UnmapCpu())
+  if (!buffer->platform_buffer()->UnmapCpu())
     return DRETF(false, "Couldn't unmap context buffer");
 
   return true;
+}
+
+void EngineCommandStreamer::InitIndirectContext(MsdIntelContext* context,
+                                                std::shared_ptr<IndirectContextBatch> batch) {
+  RegisterStateHelper helper(this, context);
+
+  gpu_addr_t gpu_addr = batch->GetBatchMapping()->gpu_addr();
+
+  helper.write_indirect_context_pointer(magma::to_uint32(gpu_addr), batch->length());
+  helper.write_indirect_context_offset(RegisterStateHelper::kIndirectContextOffsetGen9);
+
+  context->SetIndirectContextBatch(std::move(batch));
 }
 
 bool EngineCommandStreamer::SubmitContext(MsdIntelContext* context, uint32_t tail) {
@@ -395,11 +422,7 @@ bool EngineCommandStreamer::UpdateContext(MsdIntelContext* context, uint32_t tai
   if (!context->GetRingbufferGpuAddress(id(), &gpu_addr))
     return DRETF(false, "failed to get ringbuffer gpu address");
 
-  uint8_t* cpu_addr = reinterpret_cast<uint8_t*>(context->GetCachedContextBufferCpuAddr(id()));
-  if (!cpu_addr)
-    return DRETF(false, "failed to get cached context buffer cpu address");
-
-  RegisterStateHelper helper(id(), mmio_base_, reinterpret_cast<uint32_t*>(cpu_addr + PAGE_SIZE));
+  RegisterStateHelper helper(this, context);
 
   DLOG("UpdateContext ringbuffer gpu_addr 0x%lx tail 0x%x", gpu_addr, tail);
 

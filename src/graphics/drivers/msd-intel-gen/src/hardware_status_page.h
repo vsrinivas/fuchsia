@@ -55,6 +55,7 @@ class GlobalHardwareStatusPage : public HardwareStatusPage {
   static constexpr uint32_t kGeneralPurposeEndOffset = 1023 * sizeof(uint32_t);
 
   static constexpr uint32_t kSequenceNumberOffset = kGeneralPurposeStartOffset;
+  static constexpr uint32_t kScratchOffset = kSequenceNumberOffset + sizeof(uint64_t);
 
  private:
   void write_general_purpose_offset(uint32_t val, uint32_t offset) {

@@ -29,6 +29,8 @@ class DeviceId {
     }
     return false;
   }
+
+  static constexpr unsigned int cache_line_size() { return 64; }
 };
 
 #endif  // DEVICE_ID_H

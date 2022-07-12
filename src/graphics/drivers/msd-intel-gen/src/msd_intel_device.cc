@@ -237,6 +237,8 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
 
   global_context_ = std::shared_ptr<MsdIntelContext>(new MsdIntelContext(gtt_));
 
+  indirect_context_batch_ = render_engine_cs_->CreateIndirectContextBatch(gtt_);
+
   // Creates the context backing store.
   // Global context used to execute the render init batch.
   if (!InitContextForEngine(global_context_.get(), render_engine_cs_.get()))
@@ -685,6 +687,8 @@ bool MsdIntelDevice::InitContextForEngine(MsdIntelContext* context,
 
     if (!command_streamer->InitContextCacheConfig(context))
       return DRETF(false, "failed to init cache config");
+
+    command_streamer->InitIndirectContext(context, indirect_context_batch_);
   }
 
   return true;

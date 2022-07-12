@@ -19,6 +19,11 @@ class RenderEngineCommandStreamer : public EngineCommandStreamer {
                   std::unique_ptr<RenderInitBatch> init_batch,
                   std::shared_ptr<AddressSpace> address_space);
 
+  // Creates an indirect context batch to be used by all contexst,
+  // mapped into the given |address_space| which should be the global GTT.
+  std::unique_ptr<IndirectContextBatch> CreateIndirectContextBatch(
+      std::shared_ptr<AddressSpace> address_space);
+
  private:
   uint32_t GetContextSize() const override { return PAGE_SIZE * 20; }
 

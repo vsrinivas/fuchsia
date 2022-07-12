@@ -5,6 +5,7 @@
 #ifndef MAPPED_BATCH_H
 #define MAPPED_BATCH_H
 
+#include "device_id.h"
 #include "gpu_mapping.h"
 #include "msd_intel_buffer.h"
 #include "platform_bus_mapper.h"
@@ -21,6 +22,7 @@ class MappedBatch {
     COMMAND_BUFFER,
     MAPPING_RELEASE_BATCH,
     PIPELINE_FENCE_BATCH,
+    INDIRECT_CONTEXT_BATCH,
   };
 
   explicit MappedBatch(BatchType type = UNKNOWN) : type_(type) {}
@@ -120,6 +122,35 @@ class PipelineFenceBatch : public NullBatch {
  private:
   std::shared_ptr<MsdIntelContext> context_;
   std::shared_ptr<magma::PlatformSemaphore> event_;
+};
+
+// The "indirect context" batch is intended to execute on all context switches.
+class IndirectContextBatch : public MappedBatch {
+ public:
+  IndirectContextBatch(std::unique_ptr<GpuMapping> batch_buffer_mapping, uint32_t length)
+      : MappedBatch(INDIRECT_CONTEXT_BATCH),
+        batch_buffer_mapping_(std::move(batch_buffer_mapping)),
+        length_(length) {
+    // Length must be cache line aligned.
+    DASSERT(length % DeviceId::cache_line_size() == 0);
+  }
+
+  uint32_t length() const { return length_; }
+
+  std::weak_ptr<MsdIntelContext> GetContext() override { return {}; }
+
+  bool GetGpuAddress(gpu_addr_t* gpu_addr_out) override {
+    *gpu_addr_out = batch_buffer_mapping_->gpu_addr();
+    return true;
+  }
+
+  void SetSequenceNumber(uint32_t sequence_number) override { DASSERT(false); }
+
+  const GpuMappingView* GetBatchMapping() override { return batch_buffer_mapping_.get(); }
+
+ private:
+  std::unique_ptr<GpuMapping> batch_buffer_mapping_;
+  uint32_t length_;
 };
 
 #endif  // MAPPED_BATCH_H

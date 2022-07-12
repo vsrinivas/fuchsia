@@ -44,6 +44,68 @@ bool RenderEngineCommandStreamer::RenderInit(std::shared_ptr<MsdIntelContext> co
   return ExecBatch(std::move(mapped_batch));
 }
 
+std::unique_ptr<IndirectContextBatch> RenderEngineCommandStreamer::CreateIndirectContextBatch(
+    std::shared_ptr<AddressSpace> address_space) {
+  auto buffer = std::shared_ptr<MsdIntelBuffer>(
+      MsdIntelBuffer::Create(magma::page_size(), "indirect-context-batch"));
+  if (!buffer)
+    return DRETP(nullptr, "failed to create buffer");
+
+  gpu_addr_t gpu_addr =
+      hardware_status_page_mapping()->gpu_addr() + GlobalHardwareStatusPage::kScratchOffset;
+
+  constexpr uint32_t kFlags =
+      MiPipeControl::kAddressSpaceGen9ClearEuBit | MiPipeControl::kCommandStreamerStallEnableBit;
+
+  uint32_t length = 0;
+  {
+    void* ptr;
+    if (!buffer->platform_buffer()->MapCpu(&ptr))
+      return DRETP(nullptr, "failed to map");
+
+    class Writer : public magma::InstructionWriter {
+     public:
+      Writer(uint32_t* ptr) : ptr_(ptr) {}
+
+      void Write32(uint32_t dword) override {
+        *ptr_++ = dword;
+        length_ += sizeof(uint32_t);
+      }
+
+      uint32_t length() { return length_; }
+
+     private:
+      uint32_t* ptr_;
+      uint32_t length_ = 0;
+    };
+
+    Writer writer(reinterpret_cast<uint32_t*>(ptr));
+
+    MiPipeControl::write(&writer, Sequencer::kInvalidSequenceNumber, gpu_addr, kFlags);
+
+    length = magma::round_up(writer.length(), DeviceId::cache_line_size());
+
+    // Memory should already be zero, but to be sure we pad with no-ops
+    static_assert(MiNoop::kDwordCount == 1);
+    DASSERT((length - writer.length()) % sizeof(uint32_t) == 0);
+
+    uint32_t noop_count = (length - writer.length()) / sizeof(uint32_t);
+
+    for (uint32_t i = 0; i < noop_count; i++) {
+      MiNoop::write(&writer);
+    }
+    DASSERT(writer.length() % DeviceId::cache_line_size() == 0);
+
+    buffer->platform_buffer()->UnmapCpu();
+  }
+
+  auto mapping = AddressSpace::MapBufferGpu(address_space, buffer);
+  if (!mapping)
+    return DRETP(nullptr, "batch init failed");
+
+  return std::make_unique<IndirectContextBatch>(std::move(mapping), length);
+}
+
 bool RenderEngineCommandStreamer::WriteBatchToRingBuffer(MappedBatch* mapped_batch,
                                                          uint32_t* sequence_number_out) {
   auto context = mapped_batch->GetContext().lock();

@@ -204,6 +204,7 @@ class MsdIntelDevice : public msd_device_t,
   std::unique_ptr<RenderEngineCommandStreamer> render_engine_cs_;
   std::unique_ptr<VideoCommandStreamer> video_command_streamer_;
   std::shared_ptr<MsdIntelContext> global_context_;
+  std::shared_ptr<IndirectContextBatch> indirect_context_batch_;
   std::unique_ptr<Sequencer> sequencer_;
   std::shared_ptr<magma::PlatformBuffer> scratch_buffer_;
   std::unique_ptr<InterruptManager> interrupt_manager_;

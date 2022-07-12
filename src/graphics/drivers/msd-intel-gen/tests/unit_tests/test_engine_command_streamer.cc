@@ -35,7 +35,6 @@ class TestRingbuffer {
 
 class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
                                   public Gtt::Owner,
-                                  // public HardwareStatusPage::Owner,
                                   public testing::TestWithParam<EngineCommandStreamerId> {
  public:
   static constexpr uint32_t kFirstSequenceNumber = 5;
@@ -264,6 +263,40 @@ class TestEngineCommandStreamer : public EngineCommandStreamer::Owner,
     EXPECT_TRUE(context_->Unmap(engine_cs_->id()));
   }
 
+  void InitIndirectContext() {
+    ASSERT_EQ(engine_cs_->id(), RENDER_COMMAND_STREAMER);
+
+    InitContext();
+
+    EXPECT_TRUE(context_->Map(address_space_, engine_cs_->id()));
+
+    auto render_cs = reinterpret_cast<RenderEngineCommandStreamer*>(engine_cs_.get());
+
+    std::shared_ptr<IndirectContextBatch> indirect_context_batch =
+        render_cs->CreateIndirectContextBatch(address_space_);
+    ASSERT_TRUE(indirect_context_batch);
+
+    render_cs->InitIndirectContext(context_.get(), indirect_context_batch);
+
+    void* addr;
+    EXPECT_TRUE(TestContext::get_context_buffer(context_.get(), engine_cs_->id())
+                    ->platform_buffer()
+                    ->MapCpu(&addr));
+
+    uint32_t* state =
+        reinterpret_cast<uint32_t*>(reinterpret_cast<uint8_t*>(addr) + magma::page_size());
+
+    EXPECT_EQ(state[0x1A], EngineCommandStreamer::kRenderEngineMmioBase + 0x1C4);
+    EXPECT_EQ(state[0x1B] & ~0x3F, indirect_context_batch->GetBatchMapping()->gpu_addr());
+    EXPECT_EQ(state[0x1B] & 0x3F, indirect_context_batch->length() / DeviceId::cache_line_size());
+    EXPECT_EQ(state[0x1C], EngineCommandStreamer::kRenderEngineMmioBase + 0x1C8);
+    EXPECT_EQ(state[0x1D], 0x26u << 6);
+
+    EXPECT_TRUE(TestContext::get_context_buffer(context_.get(), engine_cs_->id())
+                    ->platform_buffer()
+                    ->UnmapCpu());
+  }
+
   void MoveBatchToInflight() {
     EXPECT_TRUE(engine_cs_->InitContext(context_.get()));
     EXPECT_TRUE(context_->Map(address_space_, engine_cs_->id()));
@@ -471,6 +504,13 @@ TEST_P(TestEngineCommandStreamer, RenderInitGen9) {
     GTEST_SKIP();
   }
   TestEngineCommandStreamer::RenderInit();
+}
+
+TEST_P(TestEngineCommandStreamer, IndirectContextGen9) {
+  if (id() != RENDER_COMMAND_STREAMER) {
+    GTEST_SKIP();
+  }
+  TestEngineCommandStreamer::InitIndirectContext();
 }
 
 TEST_P(TestEngineCommandStreamer, Reset) { TestEngineCommandStreamer::Reset(); }

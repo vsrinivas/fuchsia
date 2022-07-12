@@ -119,11 +119,13 @@ class MiPipeControl {
   static constexpr uint32_t kGenericMediaStateClearBit = 1 << 16;
   static constexpr uint32_t kCommandStreamerStallEnableBit = 1 << 20;
   static constexpr uint32_t kAddressSpaceGlobalGttBit = 1 << 24;
+  static constexpr uint32_t kAddressSpaceGen9ClearEuBit = 1 << 27;
 
   static void write(magma::InstructionWriter* writer, uint32_t sequence_number, uint64_t gpu_addr,
                     uint32_t flags) {
-    DASSERT((flags & ~(kCommandStreamerStallEnableBit | kIndirectStatePointersDisableBit |
-                       kGenericMediaStateClearBit | kDcFlushEnableBit)) == 0);
+    DASSERT((flags &
+             ~(kCommandStreamerStallEnableBit | kIndirectStatePointersDisableBit |
+               kGenericMediaStateClearBit | kDcFlushEnableBit | kAddressSpaceGen9ClearEuBit)) == 0);
     writer->Write32(kCommandType | kCommandSubType | k3dCommandOpcode | k3dCommandSubOpcode |
                     (kDwordCount - 2));
     writer->Write32(flags | kPostSyncWriteImmediateBit | kAddressSpaceGlobalGttBit);

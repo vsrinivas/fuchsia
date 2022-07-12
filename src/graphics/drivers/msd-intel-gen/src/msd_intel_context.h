@@ -69,6 +69,12 @@ class MsdIntelContext {
   bool Map(std::shared_ptr<AddressSpace> address_space, EngineCommandStreamerId id);
   bool Unmap(EngineCommandStreamerId id);
 
+  // The HW context state refers to the indirect context batch, so keep a reference to the batch
+  // and its underlying GPU mapping.
+  void SetIndirectContextBatch(std::shared_ptr<IndirectContextBatch> batch) {
+    indirect_context_batch_ = std::move(batch);
+  }
+
   std::weak_ptr<MsdIntelConnection> connection() { return connection_; }
 
   bool killed() const { return killed_; }
@@ -148,6 +154,7 @@ class MsdIntelContext {
     void* context_buffer_cpu_addr = nullptr;
   };
 
+  std::shared_ptr<IndirectContextBatch> indirect_context_batch_;
   std::set<EngineCommandStreamerId> target_command_streamers_;
   std::map<EngineCommandStreamerId, PerEngineState> state_map_;
   std::shared_ptr<AddressSpace> address_space_;
