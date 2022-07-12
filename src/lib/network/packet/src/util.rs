@@ -73,21 +73,21 @@ impl<T> MaybeParsed<T, T> {
 
 impl<C, I> MaybeParsed<C, I> {
     /// Creates a `MaybeParsed` instance taking `n` bytes from the front of
-    /// `buff` and mapping with `map`.
+    /// `buf` and mapping with `map`.
     ///
-    /// If `buff` contains at least `n` bytes, then `n` bytes are consumed from
-    /// the beginning of `buff`, those `n` bytes are passed to `map`, and the
+    /// If `buf` contains at least `n` bytes, then `n` bytes are consumed from
+    /// the beginning of `buf`, those `n` bytes are passed to `map`, and the
     /// result is returned as [`MaybeParsed::Complete`]. Otherwise, all bytes
-    /// are consumed from `buff` and returned as [`MaybeParsed::Incomplete`].
-    pub fn take_from_buffer_with<BV: BufferView<I>, F>(buff: &mut BV, n: usize, map: F) -> Self
+    /// are consumed from `buf` and returned as [`MaybeParsed::Incomplete`].
+    pub fn take_from_buffer_with<BV: BufferView<I>, F>(buf: &mut BV, n: usize, map: F) -> Self
     where
         F: FnOnce(I) -> C,
         I: ByteSlice,
     {
-        if let Some(v) = buff.take_front(n) {
+        if let Some(v) = buf.take_front(n) {
             MaybeParsed::Complete(map(v))
         } else {
-            MaybeParsed::Incomplete(buff.take_rest_front())
+            MaybeParsed::Incomplete(buf.take_rest_front())
         }
     }
 
@@ -117,7 +117,7 @@ impl<C, I> MaybeParsed<C, I> {
         }
     }
 
-    /// Converts from `&MaybeParsed<C,I>` to `MaybeParsed<&C,&I>`.
+    /// Converts from `&MaybeParsed<C, I>` to `MaybeParsed<&C, &I>`.
     pub fn as_ref(&self) -> MaybeParsed<&C, &I> {
         match self {
             MaybeParsed::Incomplete(v) => MaybeParsed::Incomplete(v),
@@ -149,9 +149,14 @@ impl<C, I> MaybeParsed<C, I> {
         }
     }
 
-    /// Transforms this `MaybeIncomplete` into a `Result` where the `Complete`
-    /// variant becomes `Ok` and the `Incomplete` variant is passed through `f`
-    /// and mapped to `Err`.
+    /// Transforms this `MaybeIncomplete` into a [`Result`] where the
+    /// [`Complete`] variant becomes [`Ok`] and the [`Incomplete`] variant is
+    /// passed through `f` and mapped to [`Err`].
+    ///
+    /// [`Complete`]: Self::Complete
+    /// [`Incomplete`]: Self::Incomplete
+    /// [`Ok`]: Result::Ok
+    /// [`Err`]: Result::Err
     pub fn ok_or_else<F, E>(self, f: F) -> Result<C, E>
     where
         F: FnOnce(I) -> E,
