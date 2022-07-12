@@ -129,6 +129,7 @@ impl<'a, M: DriverMem> GpuDevice<'a, M> {
             wire::VIRTIO_GPU_CMD_GET_DISPLAY_INFO => self.get_display_info(chain)?,
             wire::VIRTIO_GPU_CMD_RESOURCE_CREATE_2D => self.resource_create_2d(chain)?,
             wire::VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING => self.resource_attach_backing(chain)?,
+            wire::VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D => self.transfer_to_host_2d(chain)?,
             cmd => self.unsupported_command(chain, cmd)?,
         }
         Ok(())
@@ -158,6 +159,20 @@ impl<'a, M: DriverMem> GpuDevice<'a, M> {
     ) -> Result<(), Error> {
         tracing::info!("Command {:#06x} is not implemented", cmd);
         write_error_to_chain(chain, wire::VirtioGpuError::Unspecified)
+    }
+
+    fn get_resource_mut<'b>(&'b mut self, id: u32) -> Option<&'b mut Resource2D<'a>> {
+        if id == 0 {
+            return None;
+        }
+        self.resources.get_mut(&id)
+    }
+
+    fn get_resource<'b>(&'b self, id: u32) -> Option<&'b Resource2D<'a>> {
+        if id == 0 {
+            return None;
+        }
+        self.resources.get(&id)
     }
 
     fn get_display_info<'b, N: DriverNotify>(
@@ -256,15 +271,6 @@ impl<'a, M: DriverMem> GpuDevice<'a, M> {
             }
         };
 
-        // Validate resource_id
-        let resource = match self.resources.get_mut(&cmd.resource_id.get()) {
-            None => {
-                tracing::warn!("AttachBacking to unknown resource_id {}", cmd.resource_id.get());
-                return write_error_to_chain(chain, wire::VirtioGpuError::InvalidResourceId);
-            }
-            Some(resource) => resource,
-        };
-
         // Enforce an upper bound to the number of entries we attempt to read.
         if cmd.nr_entries.get() > ATTACH_BACKING_MAX_ENTRIES {
             tracing::warn!(
@@ -301,9 +307,55 @@ impl<'a, M: DriverMem> GpuDevice<'a, M> {
             }
         }
 
+        // Validate resource_id
+        let resource = match self.get_resource_mut(cmd.resource_id.get()) {
+            None => {
+                tracing::warn!("AttachBacking to unknown resource_id {}", cmd.resource_id.get());
+                return write_error_to_chain(chain, wire::VirtioGpuError::InvalidResourceId);
+            }
+            Some(resource) => resource,
+        };
+
         // Insert the backing pages into the resource.
         resource.attach_backing(device_ranges);
 
+        write_to_chain(
+            WritableChain::from_readable(chain)?,
+            wire::VirtioGpuCtrlHeader {
+                ty: wire::VIRTIO_GPU_RESP_OK_NODATA.into(),
+                ..Default::default()
+            },
+        )
+    }
+
+    fn transfer_to_host_2d<'b, N: DriverNotify>(
+        &self,
+        mut chain: ReadableChain<'a, 'b, N, M>,
+    ) -> Result<(), Error> {
+        let cmd: wire::VirtioGpuTransferToHost2d = match read_from_chain(&mut chain) {
+            Ok(cmd) => cmd,
+            Err(e) => {
+                tracing::warn!("Failed to read VirtioGpuTransferToHost2d from queue: {}", e);
+                return write_error_to_chain(chain, wire::VirtioGpuError::Unspecified);
+            }
+        };
+
+        // Validate resource_id
+        let resource = match self.get_resource(cmd.resource_id.get()) {
+            None => {
+                tracing::warn!("AttachBacking to unknown resource_id {}", cmd.resource_id.get());
+                return write_error_to_chain(chain, wire::VirtioGpuError::InvalidResourceId);
+            }
+            Some(resource) => resource,
+        };
+
+        // Do the transfer.
+        if let Err(e) = resource.transfer_to_host_2d(cmd.offset.get(), &cmd.r) {
+            tracing::warn!("Failed to transfer_to_host_2d: {}", e);
+            return write_error_to_chain(chain, e);
+        }
+
+        // Send success response.
         write_to_chain(
             WritableChain::from_readable(chain)?,
             wire::VirtioGpuCtrlHeader {
@@ -318,9 +370,13 @@ impl<'a, M: DriverMem> GpuDevice<'a, M> {
 mod tests {
     use {
         super::*,
+        crate::resource::bytes_per_pixel,
         crate::wire,
-        virtio_device::chain::ReadableChain,
-        virtio_device::fake_queue::{ChainBuilder, IdentityDriverMem, TestQueue},
+        virtio_device::{
+            chain::ReadableChain,
+            fake_queue::{ChainBuilder, IdentityDriverMem, TestQueue},
+            mem::DeviceRange,
+        },
     };
 
     fn read_returned<T: FromBytes>(range: (u64, u32)) -> T {
@@ -493,6 +549,19 @@ mod tests {
             read_returned::<wire::VirtioGpuCtrlHeader>(iter.next().unwrap())
         }
 
+        fn default_resource_create_2d(
+            &mut self,
+        ) -> (wire::VirtioGpuResourceCreate2d, wire::VirtioGpuCtrlHeader) {
+            let request = wire::VirtioGpuResourceCreate2d {
+                resource_id: VALID_RESOURCE_ID.into(),
+                width: VALID_RESOURCE_WIDTH.into(),
+                height: VALID_RESOURCE_HEIGHT.into(),
+                format: VALID_RESOURCE_FORMAT.into(),
+            };
+            let response = self.resource_create_2d(request.clone());
+            (request, response)
+        }
+
         /// Sends a VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING and returns the response.
         fn resource_attach_backing(
             &mut self,
@@ -543,18 +612,139 @@ mod tests {
             let mut iter = returned.data_iter();
             read_returned::<wire::VirtioGpuCtrlHeader>(iter.next().unwrap())
         }
+
+        /// Performs a RESOURCE_ATTACH_BACKING with a default request that will succeed for simple
+        /// tests. Returns a `DeviceRange` to cover the backing memory and the response for the
+        /// RESOURCE_ATTACH_BACKING command.
+        fn default_resource_attach_backing(
+            &mut self,
+            resource: &wire::VirtioGpuResourceCreate2d,
+        ) -> (DeviceRange<'a>, wire::VirtioGpuCtrlHeader) {
+            let backing_size: usize =
+                (resource.width.get() * resource.height.get()).try_into().unwrap();
+            let backing_size = backing_size * bytes_per_pixel();
+            let alloc = self
+                .mem
+                .new_range(backing_size as usize)
+                .expect("Failed to allocate backing memory");
+            let response = self.resource_attach_backing(
+                resource.resource_id.get(),
+                vec![wire::VirtioGpuMemEntry {
+                    addr: (alloc.get().start as u64).into(),
+                    length: (alloc.len() as u32).into(),
+                    ..Default::default()
+                }],
+            );
+            (alloc, response)
+        }
+
+        fn transfer_to_host_2d(
+            &mut self,
+            resource_id: u32,
+            rect: wire::VirtioGpuRect,
+        ) -> wire::VirtioGpuCtrlHeader {
+            let resource_width = self
+                .device
+                .get_resource(resource_id)
+                .map(|resource| u64::from(resource.width()))
+                .unwrap();
+            let offset = {
+                let pixel_offset =
+                    u64::from(rect.y.get()) * resource_width + u64::from(rect.x.get());
+                let bytes_per_pixel = u64::try_from(bytes_per_pixel()).unwrap();
+                pixel_offset * bytes_per_pixel
+            };
+            self.state
+                .fake_queue
+                .publish(
+                    ChainBuilder::new()
+                        // Header
+                        .readable(
+                            std::slice::from_ref(&wire::VirtioGpuCtrlHeader {
+                                ty: wire::VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D.into(),
+                                ..Default::default()
+                            }),
+                            self.mem,
+                        )
+                        // Command
+                        .readable(
+                            std::slice::from_ref(&wire::VirtioGpuTransferToHost2d {
+                                resource_id: resource_id.into(),
+                                r: rect,
+                                offset: offset.into(),
+                                ..Default::default()
+                            }),
+                            self.mem,
+                        )
+                        .writable(std::mem::size_of::<wire::VirtioGpuCtrlHeader>() as u32, self.mem)
+                        .build(),
+                )
+                .unwrap();
+
+            self.device
+                .process_control_chain(ReadableChain::new(
+                    self.state.queue.next_chain().unwrap(),
+                    self.mem,
+                ))
+                .expect("Failed to process control chain");
+
+            let returned = self.state.fake_queue.next_used().unwrap();
+            assert_eq!(
+                std::mem::size_of::<wire::VirtioGpuCtrlHeader>(),
+                returned.written() as usize
+            );
+
+            // Read and return the header.
+            let mut iter = returned.data_iter();
+            read_returned::<wire::VirtioGpuCtrlHeader>(iter.next().unwrap())
+        }
+
+        /// Like `check_resource_rect` except the entire resource is checked.
+        fn check_resource(&self, resource_id: u32, value: u8) {
+            let (width, height) = {
+                let resource = self.device.get_resource(resource_id).unwrap();
+                (resource.width(), resource.height())
+            };
+            self.check_resource_rect(
+                resource_id,
+                value,
+                wire::VirtioGpuRect {
+                    x: 0.into(),
+                    y: 0.into(),
+                    width: width.into(),
+                    height: height.into(),
+                },
+            );
+        }
+
+        /// Checks that a rectangular region within a given host resource contains only the byte
+        /// `value`.
+        ///
+        /// Will panic if there is a non-matching byte, or any other error is encountered.
+        fn check_resource_rect(&self, resource_id: u32, value: u8, rect: wire::VirtioGpuRect) {
+            let rect_x: usize = rect.x.get().try_into().unwrap();
+            let rect_y: usize = rect.y.get().try_into().unwrap();
+            let rect_width: usize = rect.width.get().try_into().unwrap();
+            let rect_height: usize = rect.height.get().try_into().unwrap();
+
+            let resource = self.device.get_resource(resource_id).unwrap();
+            let res_width: usize = resource.width().try_into().unwrap();
+
+            let mut offset = (rect_y * res_width + rect_x) * bytes_per_pixel();
+            let mut row_data = vec![0u8; rect_width * bytes_per_pixel()];
+            for _ in 0..rect_height {
+                resource.mapping().read_at(offset, row_data.as_mut());
+                assert_eq!(None, row_data.iter().find(|x| **x != value));
+                offset += res_width * bytes_per_pixel();
+            }
+        }
     }
 
     #[fuchsia::test]
     fn test_resource_create_2d() {
         let mem = IdentityDriverMem::new();
         let mut test = TestFixture::new(&mem);
-        let response = test.resource_create_2d(wire::VirtioGpuResourceCreate2d {
-            resource_id: VALID_RESOURCE_ID.into(),
-            width: VALID_RESOURCE_WIDTH.into(),
-            height: VALID_RESOURCE_HEIGHT.into(),
-            format: wire::VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM.into(),
-        });
+        let (_, response) = test.default_resource_create_2d();
         assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
     }
 
@@ -577,20 +767,13 @@ mod tests {
         let mem = IdentityDriverMem::new();
         let mut test = TestFixture::new(&mem);
 
-        let request = wire::VirtioGpuResourceCreate2d {
-            resource_id: VALID_RESOURCE_ID.into(),
-            width: VALID_RESOURCE_WIDTH.into(),
-            height: VALID_RESOURCE_HEIGHT.into(),
-            format: wire::VIRTIO_GPU_FORMAT_B8G8R8A8_UNORM.into(),
-        };
-
-        // Create a resource, this should succeed.
-        let response = test.resource_create_2d(request.clone());
+        // Create one resource, this should succeed.
+        let (request, response) = test.default_resource_create_2d();
         assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
 
         // Create another resource with the same request. This will fail because the id is already
         // in use.
-        let response = test.resource_create_2d(request.clone());
+        let response = test.resource_create_2d(request);
         assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID);
     }
 
@@ -621,31 +804,13 @@ mod tests {
         let mem = IdentityDriverMem::new();
         let mut test = TestFixture::new(&mem);
 
-        let create_request = wire::VirtioGpuResourceCreate2d {
-            resource_id: VALID_RESOURCE_ID.into(),
-            width: VALID_RESOURCE_WIDTH.into(),
-            height: VALID_RESOURCE_HEIGHT.into(),
-            format: VALID_RESOURCE_FORMAT.into(),
-        };
-        let response = test.resource_create_2d(create_request);
+        let (create_request, response) = test.default_resource_create_2d();
         assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
 
         // Allocate a backing buffer in guest memory. We need to allocate this through our
         // IdentityDriverMem because these addresses will need to be translated by the device to
         // obtain a DeviceRange.
-        let backing_size = create_request.width.get() * create_request.height.get() * 4;
-        let alloc =
-            mem.new_range(backing_size as usize).expect("Failed to allocate backing memory");
-
-        // Try to attach the backing memory.
-        let response = test.resource_attach_backing(
-            create_request.resource_id.get(),
-            vec![wire::VirtioGpuMemEntry {
-                addr: (alloc.get().start as u64).into(),
-                length: (alloc.len() as u32).into(),
-                ..Default::default()
-            }],
-        );
+        let (_, response) = test.default_resource_attach_backing(&create_request);
         assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
     }
 
@@ -654,13 +819,7 @@ mod tests {
         let mem = IdentityDriverMem::new();
         let mut test = TestFixture::new(&mem);
 
-        let create_request = wire::VirtioGpuResourceCreate2d {
-            resource_id: VALID_RESOURCE_ID.into(),
-            width: VALID_RESOURCE_WIDTH.into(),
-            height: VALID_RESOURCE_HEIGHT.into(),
-            format: VALID_RESOURCE_FORMAT.into(),
-        };
-        let response = test.resource_create_2d(create_request);
+        let (create_request, response) = test.default_resource_create_2d();
         assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
 
         // Allocate some memory on the heap. Since this is not allocated through our DriverMem, the
@@ -689,23 +848,230 @@ mod tests {
         let mem = IdentityDriverMem::new();
         let mut test = TestFixture::new(&mem);
 
-        // Allocate a backing buffer in guest memory. We need to allocate this through our
-        // IdentityDriverMem because these addresses will need to be translated by the device to
-        // obtain a DeviceRange.
-        let backing_size = VALID_RESOURCE_WIDTH * VALID_RESOURCE_HEIGHT * 4;
-        let alloc =
-            mem.new_range(backing_size as usize).expect("Failed to allocate backing memory");
+        let create_request = wire::VirtioGpuResourceCreate2d {
+            resource_id: VALID_RESOURCE_ID.into(),
+            width: VALID_RESOURCE_WIDTH.into(),
+            height: VALID_RESOURCE_HEIGHT.into(),
+            format: VALID_RESOURCE_FORMAT.into(),
+        };
 
-        // Try to attach the backing memory. We didn't create a resource so we expect this to fail.
-        let response = test.resource_attach_backing(
-            VALID_RESOURCE_ID,
-            vec![wire::VirtioGpuMemEntry {
-                addr: (alloc.get().start as u64).into(),
-                length: (alloc.len() as u32).into(),
-                ..Default::default()
-            }],
+        // ATTACH_BACKING without creating a resource. This will fail because the resource will not
+        // yet exist.
+        let (_, response) = test.default_resource_attach_backing(&create_request);
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID);
+    }
+
+    #[fuchsia::test]
+    fn test_transfer_to_host_2d_full_resource() {
+        // Test TRANSFER_TO_HOST_2D where the transfer copies the entire resource.
+        let mem = IdentityDriverMem::new();
+        let mut test = TestFixture::new(&mem);
+
+        let (create_request, response) = test.default_resource_create_2d();
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
+
+        let (alloc, response) = test.default_resource_attach_backing(&create_request);
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
+
+        // Fill backing memory with some data.
+        const BACKING_MEMORY_BYTE_PATTERN: u8 = 0xde;
+        let slice = unsafe {
+            std::slice::from_raw_parts_mut(alloc.try_mut_ptr::<u8>().unwrap(), alloc.len())
+        };
+        slice.fill(BACKING_MEMORY_BYTE_PATTERN);
+
+        // Read the host resource data. This should be all zeros since we haven't written anything
+        // to it yet.
+        test.check_resource(create_request.resource_id.get(), 0);
+
+        // Do the TRANSFER_TO_HOST_2D
+        let response = test.transfer_to_host_2d(
+            create_request.resource_id.get(),
+            wire::VirtioGpuRect {
+                x: 0.into(),
+                y: 0.into(),
+                width: create_request.width,
+                height: create_request.height,
+            },
+        );
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
+
+        // Now we expect that host resource has the data from the backing memory.
+        test.check_resource(create_request.resource_id.get(), BACKING_MEMORY_BYTE_PATTERN);
+    }
+
+    #[fuchsia::test]
+    fn test_transfer_to_host_2d_subrect() {
+        // Test TRANSFER_TO_HOST_2D where the transfer only copies a portion of the resource.
+        let mem = IdentityDriverMem::new();
+        let mut test = TestFixture::new(&mem);
+
+        let (create_request, response) = test.default_resource_create_2d();
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
+
+        let (alloc, response) = test.default_resource_attach_backing(&create_request);
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
+
+        // Fill backing memory with some data.
+        const BACKING_MEMORY_BYTE_PATTERN: u8 = 0xde;
+        let slice = unsafe {
+            std::slice::from_raw_parts_mut(alloc.try_mut_ptr::<u8>().unwrap(), alloc.len())
+        };
+        slice.fill(BACKING_MEMORY_BYTE_PATTERN);
+
+        // Read the host resource data. This should be all zeros since we haven't written anything
+        // to it yet.
+        test.check_resource(create_request.resource_id.get(), 0);
+
+        // Do the TRANSFER_TO_HOST_2D of a small rectangle.
+        let rect =
+            wire::VirtioGpuRect { x: 10.into(), y: 10.into(), width: 10.into(), height: 10.into() };
+        let response = test.transfer_to_host_2d(create_request.resource_id.get(), rect.clone());
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
+
+        // The transferred region should have the byte pattern from the backing memory.
+        test.check_resource_rect(
+            create_request.resource_id.get(),
+            BACKING_MEMORY_BYTE_PATTERN,
+            rect.clone(),
         );
 
-        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_ERR_INVALID_RESOURCE_ID);
+        // And the other regions should be zero still.
+        // Top
+        test.check_resource_rect(
+            create_request.resource_id.get(),
+            0,
+            wire::VirtioGpuRect {
+                x: 0.into(),
+                y: 0.into(),
+                width: create_request.width,
+                height: rect.y,
+            },
+        );
+        // Bottom
+        test.check_resource_rect(
+            create_request.resource_id.get(),
+            0,
+            wire::VirtioGpuRect {
+                x: 0.into(),
+                y: (rect.y.get() + rect.height.get()).into(),
+                width: create_request.width,
+                height: (create_request.height.get() - (rect.y.get() + rect.height.get())).into(),
+            },
+        );
+        // Left
+        test.check_resource_rect(
+            create_request.resource_id.get(),
+            0,
+            wire::VirtioGpuRect {
+                x: 0.into(),
+                y: 0.into(),
+                width: rect.x,
+                height: create_request.height,
+            },
+        );
+        // Right
+        test.check_resource_rect(
+            create_request.resource_id.get(),
+            0,
+            wire::VirtioGpuRect {
+                x: (rect.x.get() + rect.width.get()).into(),
+                y: 0.into(),
+                width: (create_request.width.get() - (rect.x.get() + rect.width.get())).into(),
+                height: create_request.height,
+            },
+        );
+    }
+
+    /// A simple test helper that will setup a gpu device and run a TRANSFER_TO_HOST_2D command
+    /// with the provided rect and verify the given result is returned.
+    ///
+    /// This is primarily interesting for simple or negative cases where we don't actually want or
+    /// need to do any validation of the transferred data into the host resource.
+    fn test_transfer_to_host_rect(rect: wire::VirtioGpuRect, result: u32) {
+        let mem = IdentityDriverMem::new();
+        let mut test = TestFixture::new(&mem);
+
+        let (create_request, response) = test.default_resource_create_2d();
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
+
+        let (alloc, response) = test.default_resource_attach_backing(&create_request);
+        assert_eq!(response.ty.get(), wire::VIRTIO_GPU_RESP_OK_NODATA);
+
+        // Fill backing memory with some data.
+        const BACKING_MEMORY_BYTE_PATTERN: u8 = 0xde;
+        let slice = unsafe {
+            std::slice::from_raw_parts_mut(alloc.try_mut_ptr::<u8>().unwrap(), alloc.len())
+        };
+        slice.fill(BACKING_MEMORY_BYTE_PATTERN);
+
+        let response = test.transfer_to_host_2d(create_request.resource_id.get(), rect);
+        assert_eq!(response.ty.get(), result);
+    }
+
+    #[fuchsia::test]
+    fn test_transfer_to_host_2d_zero_width() {
+        test_transfer_to_host_rect(
+            wire::VirtioGpuRect { x: 0.into(), y: 0.into(), width: 0.into(), height: 10.into() },
+            wire::VIRTIO_GPU_RESP_OK_NODATA,
+        );
+    }
+
+    #[fuchsia::test]
+    fn test_transfer_to_host_2d_zero_height() {
+        test_transfer_to_host_rect(
+            wire::VirtioGpuRect { x: 0.into(), y: 0.into(), width: 10.into(), height: 0.into() },
+            wire::VIRTIO_GPU_RESP_OK_NODATA,
+        );
+    }
+
+    #[fuchsia::test]
+    fn test_transfer_to_host_2d_overflow_width() {
+        // width overflow
+        test_transfer_to_host_rect(
+            wire::VirtioGpuRect {
+                x: 0.into(),
+                y: 0.into(),
+                width: (VALID_RESOURCE_WIDTH + 1).into(),
+                height: VALID_RESOURCE_HEIGHT.into(),
+            },
+            wire::VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER,
+        );
+
+        // x + width is overflow.
+        test_transfer_to_host_rect(
+            wire::VirtioGpuRect {
+                x: VALID_RESOURCE_WIDTH.into(),
+                y: 0.into(),
+                width: 1.into(),
+                height: VALID_RESOURCE_HEIGHT.into(),
+            },
+            wire::VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER,
+        );
+    }
+
+    #[fuchsia::test]
+    fn test_transfer_to_host_2d_overflow_height() {
+        // height overflow
+        test_transfer_to_host_rect(
+            wire::VirtioGpuRect {
+                x: 0.into(),
+                y: 0.into(),
+                width: VALID_RESOURCE_WIDTH.into(),
+                height: (VALID_RESOURCE_HEIGHT + 1).into(),
+            },
+            wire::VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER,
+        );
+
+        // y + height is overflow.
+        test_transfer_to_host_rect(
+            wire::VirtioGpuRect {
+                x: 0.into(),
+                y: VALID_RESOURCE_HEIGHT.into(),
+                width: VALID_RESOURCE_WIDTH.into(),
+                height: 1.into(),
+            },
+            wire::VIRTIO_GPU_RESP_ERR_INVALID_PARAMETER,
+        );
     }
 }

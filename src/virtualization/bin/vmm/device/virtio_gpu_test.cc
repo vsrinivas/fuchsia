@@ -271,12 +271,8 @@ TEST_P(VirtioGpuTest, CreateLargeResource) {
 }
 
 TEST_P(VirtioGpuTest, InvalidTransferToHostParams) {
-  // TODO(fxbug.dev/102870): Enable this test for the rust device.
-  if (IsRustComponent()) {
-    GTEST_SKIP();
-  }
-
   ResourceCreate2d();
+  ResourceAttachBacking();
 
   // Select a x/y/width/height values that overflow in a way that (x+width)
   // and (y+height) are within the buffer, but other calculations will not be.
