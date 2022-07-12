@@ -151,11 +151,6 @@ config("allow_unknown_lints") {
   rustflags = [ "-Aunknown-lints" ]
 }
 
-# TODO(fxbug.dev/67118) remove this allowance
-config("allow_redundant_semicolons") {
-  rustflags = [ "-Aredundant-semicolons" ]
-}
-
 # TODO(fxbug.dev/69442) remove this allowance
 config("allow_legacy_derive_helpers") {
   rustflags = [ "-Alegacy-derive-helpers" ]
