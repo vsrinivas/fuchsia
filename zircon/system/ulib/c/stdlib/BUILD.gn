@@ -4,56 +4,20 @@
 
 import("../libc.gni")
 
-libc_source_set("stdlib") {
-  dir = "$llvm_libc/src/stdlib"
-  public = [
-    "abs.h",
-    "atoi.h",
-    "atol.h",
-    "atoll.h",
-    "div.h",
-    "labs.h",
-    "ldiv.h",
-    "llabs.h",
-    "lldiv.h",
-    "strtol.h",
-    "strtoll.h",
-    "strtoul.h",
-    "strtoull.h",
-  ]
-  sources = [
-    "abs.cpp",
-    "atoi.cpp",
-    "atol.cpp",
-    "atoll.cpp",
-    "div.cpp",
-    "labs.cpp",
-    "ldiv.cpp",
-    "llabs.cpp",
-    "lldiv.cpp",
-    "strtol.cpp",
-    "strtoll.cpp",
-    "strtoul.cpp",
-    "strtoull.cpp",
-  ]
-}
-
-libc_test("unittests") {
-  dir = "$llvm_libc/test/src/stdlib"
-  deps = [ ":stdlib.testonly" ]
-  sources = [
-    "abs_test.cpp",
-    "atoi_test.cpp",
-    "atol_test.cpp",
-    "atoll_test.cpp",
-    "div_test.cpp",
-    "labs_test.cpp",
-    "ldiv_test.cpp",
-    "llabs_test.cpp",
-    "lldiv_test.cpp",
-    "strtol_test.cpp",
-    "strtoll_test.cpp",
-    "strtoul_test.cpp",
-    "strtoull_test.cpp",
+llvm_libc_source_set("stdlib") {
+  functions = [
+    "abs",
+    "atoi",
+    "atol",
+    "atoll",
+    "div",
+    "labs",
+    "ldiv",
+    "llabs",
+    "lldiv",
+    "strtol",
+    "strtoll",
+    "strtoul",
+    "strtoull",
   ]
 }

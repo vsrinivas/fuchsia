@@ -4,29 +4,11 @@
 
 import("../libc.gni")
 
-libc_source_set("inttypes") {
-  dir = "$llvm_libc/src/inttypes"
-  public = [
-    "imaxabs.h",
-    "imaxdiv.h",
-    "strtoimax.h",
-    "strtoumax.h",
-  ]
-  sources = [
-    "imaxabs.cpp",
-    "imaxdiv.cpp",
-    "strtoimax.cpp",
-    "strtoumax.cpp",
-  ]
-}
-
-libc_test("unittests") {
-  dir = "$llvm_libc/test/src/inttypes"
-  deps = [ ":inttypes.testonly" ]
-  sources = [
-    "imaxabs_test.cpp",
-    "imaxdiv_test.cpp",
-    "strtoimax_test.cpp",
-    "strtoumax_test.cpp",
+llvm_libc_source_set("inttypes") {
+  functions = [
+    "imaxabs",
+    "imaxdiv",
+    "strtoimax",
+    "strtoumax",
   ]
 }
