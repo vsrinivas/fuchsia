@@ -1,0 +1,22 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/zbi_test.gni")
+
+# Composes a bootable kernel zbi test. That is, a zircon kernel that will launch
+# a custom user space process instead of component manager.
+#
+# TODO(fxbug.dev/101831): This template longer term goal is to facilitate the construction
+# of Cuckoo Testing.
+#
+# At this moment `kernel_zbi_test` has no additional parameters from a `zbi_test`.
+template("kernel_zbi_test") {
+  zbi_test(target_name) {
+    assert(current_cpu != "")
+
+    deps = []
+    forward_variables_from(invoker, "*")
+    deps += [ "//zircon/kernel" ]
+  }
+}

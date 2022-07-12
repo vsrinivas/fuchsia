@@ -5,6 +5,7 @@
 import("//build/components/fuchsia_unittest_package.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
+import("//build/testing/kernel_zbi_test.gni")
 import("//build/testing/zbi_test.gni")
 import("//build/testing/zbi_test_executable.gni")
 
@@ -165,6 +166,33 @@ group("tests") {
   deps = core_test_packages
 }
 
+template("core_tests") {
+  kernel_zbi_test(target_name) {
+    args = [
+      "kernel.vdso.always_use_next=true",
+      "kernel.enable-debugging-syscalls=true",
+      "kernel.test.ram.reserve=0x8000",
+      "kernel.pmm.alloc-random-should-wait=true",
+    ]
+
+    if (defined(invoker.args)) {
+      args += invoker.args
+    }
+
+    assert_no_deps = [
+      "//zircon/system/core/*",
+      "//zircon/system/dev/*",
+    ]
+
+    deps = [ ":core-tests-standalone" ]
+    forward_variables_from(invoker,
+                           [
+                             "device_types",
+                             "timeout",
+                           ])
+  }
+}
+
 if (is_fuchsia) {
   # Now build all of those (and more) together into the core-tests
   # binary.  This can and must be run directly from userboot because
@@ -181,37 +209,7 @@ if (is_fuchsia) {
   }
 }
 
-# Make that into a bootable ZBI with just the kernel.
-template("core_tests") {
-  zbi_test(target_name) {
-    assert(current_cpu != "")
-
-    args = [
-             "kernel.vdso.always_use_next=true",
-             "kernel.enable-debugging-syscalls=true",
-             "kernel.test.ram.reserve=0x8000",
-             "kernel.pmm.alloc-random-should-wait=true",
-           ] + invoker.args
-
-    deps = [
-      ":core-tests-standalone",
-      "//zircon/kernel",
-    ]
-    assert_no_deps = [
-      "//zircon/system/core/*",
-      "//zircon/system/dev/*",
-    ]
-
-    forward_variables_from(invoker,
-                           [
-                             "device_types",
-                             "timeout",
-                           ])
-  }
-}
-
 core_tests("core-tests") {
-  args = []
   device_types = [
     "AEMU",
     "Astro",
