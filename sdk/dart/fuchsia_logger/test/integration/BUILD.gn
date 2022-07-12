@@ -7,7 +7,7 @@ import("//build/dart/dart_test_component.gni")
 
 dart_test_component("integration-test-component") {
   component_name = "fuchsia-logger-integration-tests"
-  manifest = "meta/fuchsia-logger-integration-tests.cmx"
+  manifest = "meta/fuchsia-logger-integration-tests.cml"
   sources = [ "log_integration.dart" ]
 
   deps = [

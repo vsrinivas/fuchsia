@@ -50,3 +50,11 @@ dart_test("fuchsia_logger_package_unittests") {
     "//third_party/dart-pkg/pub/test",
   ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fuchsia_logger_package_unittests($host_toolchain)",
+    "test/integration:fuchsia-logger-integration-tests",
+  ]
+}
