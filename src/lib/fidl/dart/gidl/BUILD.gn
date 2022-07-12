@@ -20,7 +20,7 @@ dart_library("gidl") {
 }
 
 dart_test_component("gidl-library-test") {
-  manifest = "meta/gidl-library-test.cmx"
+  manifest = "meta/gidl-library-test.cml"
   sources = [ "handles_test.dart" ]
   deps = [
     ":gidl",
