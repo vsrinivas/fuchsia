@@ -21,7 +21,7 @@ use crate::{
     },
     error::ExistsError,
     ip::IpDeviceId,
-    socket::address::{ConnAddr, ListenerAddr},
+    socket::address::{ConnAddr, ListenerAddr, ListenerIpAddr},
 };
 
 /// A bidirectional map between connection sockets and addresses.
@@ -198,6 +198,48 @@ where
             (Bound::Conn(_), AddrVec::Listen(_)) => {
                 unreachable!("found conn state for listen addr")
             }
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+pub(crate) enum SocketAddrType {
+    AnyListener,
+    SpecificListener,
+    Connected,
+}
+
+#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
+pub(crate) struct SocketAddrTypeTag<S> {
+    pub(crate) has_device: bool,
+    pub(crate) addr_type: SocketAddrType,
+    pub(crate) sharing: S,
+}
+
+impl<'a, A: IpAddress, D, LI, S> From<(&'a ListenerAddr<A, D, LI>, S)> for SocketAddrTypeTag<S> {
+    fn from((addr, sharing): (&'a ListenerAddr<A, D, LI>, S)) -> Self {
+        let ListenerAddr { ip: ListenerIpAddr { addr, identifier: _ }, device } = addr;
+        SocketAddrTypeTag {
+            has_device: device.is_some(),
+            addr_type: if addr.is_some() {
+                SocketAddrType::SpecificListener
+            } else {
+                SocketAddrType::AnyListener
+            },
+            sharing,
+        }
+    }
+}
+
+impl<'a, A: IpAddress, D, LI, RI, S> From<(&'a ConnAddr<A, D, LI, RI>, S)>
+    for SocketAddrTypeTag<S>
+{
+    fn from((addr, sharing): (&'a ConnAddr<A, D, LI, RI>, S)) -> Self {
+        let ConnAddr { ip: _, device } = addr;
+        SocketAddrTypeTag {
+            has_device: device.is_some(),
+            addr_type: SocketAddrType::Connected,
+            sharing,
         }
     }
 }

@@ -9,15 +9,14 @@
 use alloc::{vec, vec::Vec};
 use core::{fmt::Debug, hash::Hash};
 
-use derivative::Derivative;
-use net_types::{ip::IpAddress, SpecifiedAddr};
+use net_types::ip::IpAddress;
 
 use crate::{
     data_structures::socketmap::{IterShadows, SocketMap, Tagged},
     socket::{
-        address::{ConnAddr, ConnIpAddr, ListenerAddr, ListenerIpAddr},
-        AddrVec, Bound, IncompatibleError, InsertError, RemoveResult, SocketMapAddrSpec,
-        SocketMapAddrStateSpec, SocketMapStateSpec,
+        address::{AddrVecIter, ConnAddr, ConnIpAddr, IpAddrVec, ListenerAddr, ListenerIpAddr},
+        AddrVec, Bound, IncompatibleError, InsertError, RemoveResult, SocketAddrType,
+        SocketMapAddrSpec, SocketMapAddrStateSpec, SocketMapStateSpec,
     },
 };
 
@@ -48,19 +47,17 @@ pub(crate) trait PosixConflictPolicy<A: SocketMapAddrSpec>: PosixSocketStateSpec
     ) -> Result<(), InsertError>;
 }
 
-impl<A: SocketMapAddrSpec> From<ListenerIpAddr<A::IpAddr, A::LocalIdentifier>>
-    for PosixIpAddrVec<A>
-{
+impl<A: SocketMapAddrSpec> From<ListenerIpAddr<A::IpAddr, A::LocalIdentifier>> for IpAddrVec<A> {
     fn from(listener: ListenerIpAddr<A::IpAddr, A::LocalIdentifier>) -> Self {
-        PosixIpAddrVec::Listener(listener)
+        IpAddrVec::Listener(listener)
     }
 }
 
 impl<A: SocketMapAddrSpec> From<ConnIpAddr<A::IpAddr, A::LocalIdentifier, A::RemoteIdentifier>>
-    for PosixIpAddrVec<A>
+    for IpAddrVec<A>
 {
     fn from(conn: ConnIpAddr<A::IpAddr, A::LocalIdentifier, A::RemoteIdentifier>) -> Self {
-        PosixIpAddrVec::Connected(conn)
+        IpAddrVec::Connected(conn)
     }
 }
 
@@ -81,78 +78,6 @@ impl<A: SocketMapAddrSpec>
         AddrVec::Conn(conn)
     }
 }
-
-/// An address vector containing the portions of a socket address that are
-/// visible in an IP packet.
-#[derive(Derivative)]
-#[derivative(
-    Debug(bound = ""),
-    Clone(bound = ""),
-    Eq(bound = ""),
-    PartialEq(bound = ""),
-    Hash(bound = "")
-)]
-pub(crate) enum PosixIpAddrVec<A: SocketMapAddrSpec> {
-    Listener(ListenerIpAddr<A::IpAddr, A::LocalIdentifier>),
-    Connected(ConnIpAddr<A::IpAddr, A::LocalIdentifier, A::RemoteIdentifier>),
-}
-
-impl<A: SocketMapAddrSpec> PosixIpAddrVec<A> {
-    fn with_device(self, device: Option<A::DeviceId>) -> AddrVec<A> {
-        match self {
-            PosixIpAddrVec::Listener(ip) => AddrVec::Listen(ListenerAddr { ip, device }),
-            PosixIpAddrVec::Connected(ip) => AddrVec::Conn(ConnAddr { ip, device }),
-        }
-    }
-}
-
-impl<A: SocketMapAddrSpec> PosixIpAddrVec<A> {
-    /// Returns the next smallest address vector that would receive all the same
-    /// packets as this one.
-    ///
-    /// Address vectors are ordered by their shadowing relationship, such that
-    /// a "smaller" vector shadows a "larger" one. This function returns the
-    /// smallest of the set of shadows of `self`.
-    fn widen(self) -> Option<Self> {
-        match self {
-            PosixIpAddrVec::Listener(ListenerIpAddr { addr: None, identifier }) => {
-                let _: A::LocalIdentifier = identifier;
-                None
-            }
-            PosixIpAddrVec::Connected(ConnIpAddr {
-                local: (local_ip, local_identifier),
-                remote,
-            }) => {
-                let _: (SpecifiedAddr<A::IpAddr>, A::RemoteIdentifier) = remote;
-                Some(ListenerIpAddr { addr: Some(local_ip), identifier: local_identifier })
-            }
-            PosixIpAddrVec::Listener(ListenerIpAddr { addr: Some(addr), identifier }) => {
-                let _: SpecifiedAddr<A::IpAddr> = addr;
-                Some(ListenerIpAddr { addr: None, identifier })
-            }
-        }
-        .map(PosixIpAddrVec::Listener)
-    }
-}
-
-/// An iterator over socket addresses.
-///
-/// The generated address vectors are ordered according to the following
-/// rules (ordered by precedence):
-///   - a connected address is preferred over a listening address,
-///   - a listening address for a specific IP address is preferred over one
-///     for all addresses,
-///   - an address with a specific device is preferred over one for all
-///     devices.
-///
-/// The first yielded address is always the one provided via
-/// [`AddrVecIter::with_device`] or [`AddrVecIter::without_device`].
-enum AddrVecIter<A: SocketMapAddrSpec> {
-    WithDevice { device: A::DeviceId, emitted_device: bool, addr: PosixIpAddrVec<A> },
-    NoDevice { addr: PosixIpAddrVec<A> },
-    Done,
-}
-
 pub(crate) struct PosixAddrVecIter<A: SocketMapAddrSpec>(AddrVecIter<A>);
 
 impl<A: SocketMapAddrSpec> Iterator for PosixAddrVecIter<A> {
@@ -164,53 +89,9 @@ impl<A: SocketMapAddrSpec> Iterator for PosixAddrVecIter<A> {
     }
 }
 
-impl<A: SocketMapAddrSpec> AddrVecIter<A> {
-    fn with_device(addr: PosixIpAddrVec<A>, device: A::DeviceId) -> Self {
-        AddrVecIter::WithDevice { device, emitted_device: false, addr }
-    }
-
-    fn without_device(addr: PosixIpAddrVec<A>) -> Self {
-        AddrVecIter::NoDevice { addr }
-    }
-}
-
 impl<A: SocketMapAddrSpec> PosixAddrVecIter<A> {
-    pub(crate) fn with_device(addr: impl Into<PosixIpAddrVec<A>>, device: A::DeviceId) -> Self {
+    pub(crate) fn with_device(addr: impl Into<IpAddrVec<A>>, device: A::DeviceId) -> Self {
         Self(AddrVecIter::with_device(addr.into(), device))
-    }
-}
-
-impl<A: SocketMapAddrSpec> Iterator for AddrVecIter<A> {
-    type Item = AddrVec<A>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        match self {
-            AddrVecIter::Done => None,
-            AddrVecIter::WithDevice { device, emitted_device, addr } => {
-                if !*emitted_device {
-                    *emitted_device = true;
-                    Some(addr.clone().with_device(Some(device.clone())))
-                } else {
-                    let r = addr.clone().with_device(None);
-                    if let Some(next) = addr.clone().widen() {
-                        *addr = next;
-                        *emitted_device = false;
-                    } else {
-                        *self = AddrVecIter::Done;
-                    }
-                    Some(r)
-                }
-            }
-            AddrVecIter::NoDevice { addr } => {
-                let r = addr.clone().with_device(None);
-                if let Some(next) = addr.clone().widen() {
-                    *addr = next;
-                } else {
-                    *self = AddrVecIter::Done
-                }
-                Some(r)
-            }
-        }
     }
 }
 
@@ -240,25 +121,18 @@ pub(crate) enum PosixAddrState<T> {
     ReusePort(Vec<T>),
 }
 
-#[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
-pub(crate) enum PosixAddrType {
-    AnyListener,
-    SpecificListener,
-    Connected,
-}
-
-impl<'a, A: IpAddress, LI> From<&'a ListenerIpAddr<A, LI>> for PosixAddrType {
+impl<'a, A: IpAddress, LI> From<&'a ListenerIpAddr<A, LI>> for SocketAddrType {
     fn from(ListenerIpAddr { addr, identifier: _ }: &'a ListenerIpAddr<A, LI>) -> Self {
         match addr {
-            Some(_) => PosixAddrType::SpecificListener,
-            None => PosixAddrType::AnyListener,
+            Some(_) => SocketAddrType::SpecificListener,
+            None => SocketAddrType::AnyListener,
         }
     }
 }
 
-impl<'a, A: IpAddress, LI, RI> From<&'a ConnIpAddr<A, LI, RI>> for PosixAddrType {
+impl<'a, A: IpAddress, LI, RI> From<&'a ConnIpAddr<A, LI, RI>> for SocketAddrType {
     fn from(_: &'a ConnIpAddr<A, LI, RI>) -> Self {
-        PosixAddrType::Connected
+        SocketAddrType::Connected
     }
 }
 
@@ -289,7 +163,7 @@ impl PosixSharingOptions {
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub(crate) struct PosixAddrVecTag {
     pub(crate) has_device: bool,
-    pub(crate) addr_type: PosixAddrType,
+    pub(crate) addr_type: SocketAddrType,
     pub(crate) sharing: PosixSharingOptions,
 }
 
@@ -422,7 +296,10 @@ mod tests {
     use assert_matches::assert_matches;
     use itertools::Itertools as _;
     use net_declare::net_ip_v4 as ip_v4;
-    use net_types::ip::{Ip, IpVersionMarker, Ipv4};
+    use net_types::{
+        ip::{Ip, IpVersionMarker, Ipv4},
+        SpecifiedAddr,
+    };
     use test_case::test_case;
 
     use super::*;

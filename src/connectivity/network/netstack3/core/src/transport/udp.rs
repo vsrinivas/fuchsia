@@ -54,11 +54,11 @@ use crate::{
     socket::{
         address::{ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr, ListenerIpAddr},
         posix::{
-            PosixAddrState, PosixAddrType, PosixAddrVecIter, PosixAddrVecTag, PosixConflictPolicy,
+            PosixAddrState, PosixAddrVecIter, PosixAddrVecTag, PosixConflictPolicy,
             PosixSharingOptions, PosixSocketStateSpec, ToPosixSharingOptions,
         },
-        AddrVec, Bound, BoundSocketMap, InsertError, SocketMapAddrSpec, SocketTypeState as _,
-        SocketTypeStateMut as _,
+        AddrVec, Bound, BoundSocketMap, InsertError, SocketAddrType, SocketMapAddrSpec,
+        SocketTypeState as _, SocketTypeStateMut as _,
     },
     NonSyncContext, SyncCtx,
 };
@@ -270,8 +270,8 @@ pub(crate) fn check_posix_sharing<A: SocketMapAddrSpec, P: PosixSocketStateSpec>
                 |PosixAddrVecTag { has_device, addr_type, sharing: _ }| {
                     !*has_device
                         && match addr_type {
-                            PosixAddrType::SpecificListener | PosixAddrType::Connected => true,
-                            PosixAddrType::AnyListener => false,
+                            SocketAddrType::SpecificListener | SocketAddrType::Connected => true,
+                            SocketAddrType::AnyListener => false,
                         }
                 },
             )
@@ -292,8 +292,8 @@ pub(crate) fn check_posix_sharing<A: SocketMapAddrSpec, P: PosixSocketStateSpec>
                 |PosixAddrVecTag { has_device, addr_type, sharing: _ }| {
                     !*has_device
                         && match addr_type {
-                            PosixAddrType::Connected => true,
-                            PosixAddrType::AnyListener | PosixAddrType::SpecificListener => false,
+                            SocketAddrType::Connected => true,
+                            SocketAddrType::AnyListener | SocketAddrType::SpecificListener => false,
                         }
                 },
             )
@@ -315,8 +315,8 @@ pub(crate) fn check_posix_sharing<A: SocketMapAddrSpec, P: PosixSocketStateSpec>
                 |PosixAddrVecTag { has_device, addr_type, sharing: _ }| {
                     *has_device
                         && match addr_type {
-                            PosixAddrType::AnyListener => true,
-                            PosixAddrType::SpecificListener | PosixAddrType::Connected => false,
+                            SocketAddrType::AnyListener => true,
+                            SocketAddrType::SpecificListener | SocketAddrType::Connected => false,
                         }
                 },
             )
@@ -345,8 +345,8 @@ pub(crate) fn check_posix_sharing<A: SocketMapAddrSpec, P: PosixSocketStateSpec>
                 |PosixAddrVecTag { has_device, addr_type, sharing: _ }| {
                     *has_device
                         && match addr_type {
-                            PosixAddrType::SpecificListener => true,
-                            PosixAddrType::AnyListener | PosixAddrType::Connected => false,
+                            SocketAddrType::SpecificListener => true,
+                            SocketAddrType::AnyListener | SocketAddrType::Connected => false,
                         }
                 },
             ) ||
@@ -372,8 +372,8 @@ pub(crate) fn check_posix_sharing<A: SocketMapAddrSpec, P: PosixSocketStateSpec>
                 |PosixAddrVecTag { has_device, addr_type, sharing: _ }| {
                     *has_device
                         && match addr_type {
-                            PosixAddrType::AnyListener => true,
-                            PosixAddrType::SpecificListener | PosixAddrType::Connected => false,
+                            SocketAddrType::AnyListener => true,
+                            SocketAddrType::SpecificListener | SocketAddrType::Connected => false,
                         }
                 },
             )
