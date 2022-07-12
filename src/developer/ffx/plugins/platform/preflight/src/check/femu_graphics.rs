@@ -39,9 +39,9 @@ static NVIDIA_REQ_DRIVER_VERSION: (u32, u32) = (440, 100);
 macro_rules! NO_GRAPHICS_WARNING {
     () => {
         "Did not find tested and supported graphics acceleration hardware. Usage of \
-the graphical Fuchsia emulator (`fx vdl start`) may fall back to a slow \
+the graphical Fuchsia emulator (`ffx emu start`) may fall back to a slow \
 software renderer. Unsupported GPUs may require explicitly specifying \
-the --software-gpu flag. The terminal emulator (`fx qemu`) is unaffected.\n\n\
+the `--gpu guest` flag. The terminal emulator (`fx qemu`) is unaffected.\n\n\
 Found the following chipsets: {chipsets}\n\n\
 Only a small set of chipsets are officially supported: \
 https://fuchsia.dev/fuchsia-src/development/build/emulator#supported-hardware"
