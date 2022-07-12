@@ -98,7 +98,7 @@ config("lto_thin") {
 # Best practices for Rust binaries that go into size-constrained bootfs.
 config("bootfs") {
   # Optimize for size.
-  # TODO(fxbug.dev/63313): use "z" when resolved.
+  # TODO(fxbug.dev/84386): use "z" when resolved.
   rustflags = [ "-Copt-level=s" ]
 
   if (is_debug &&  # Debug builds produce large Rust binaries
