@@ -18,9 +18,9 @@
 ## the same name as the .far file will be created.
 ##
 ## Note: although a Fuchsia package archive is in FAR format, not all .far files
-## are valid Fuchsia packages! To interact with any .far files, use `fx far`.
-## Also, This tool only works with fuchsia package archives, although it could be
-## extended in the future to work with plain fuchsia packages.
+## are valid Fuchsia packages! Also, This tool only works with fuchsia package
+## archives, although it could be extended in the future to work with plain
+## fuchsia packages.
 ##
 ## Example:
 ##   $ fx unarchive-package foo.far
