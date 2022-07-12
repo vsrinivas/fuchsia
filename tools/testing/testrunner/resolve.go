@@ -32,17 +32,21 @@ func ResolveTestPackages(ctx context.Context, tests []testsharder.Test, addr net
 	defer l.Close()
 
 	urls := make(map[string]struct{})
+	var orderedURLs []string
 	for _, test := range tests {
 		// Removes the resource path from the package URL, as pkgctl does not
 		// support resource paths.
 		pkgURL := strings.Split(test.PackageURL, "#")[0]
-		urls[pkgURL] = struct{}{}
+		if _, exists := urls[pkgURL]; !exists {
+			urls[pkgURL] = struct{}{}
+			orderedURLs = append(orderedURLs, pkgURL)
+		}
 	}
 
 	// Resolve each of the packages serially.
 	// Note that this package resolution is best effort, as run-test-suite
 	// invocations will force a resolution even if this fails.
-	for url := range urls {
+	for _, url := range orderedURLs {
 		// Exit early if the context is closed.
 		if ctx.Err() != nil {
 			return nil
