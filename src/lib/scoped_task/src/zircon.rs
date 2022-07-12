@@ -27,7 +27,7 @@ fn initialize() -> Scoped<zx::Job> {
     Scoped::new(job)
 }
 
-#[cfg(rust_panic = "abort")]
+#[cfg(panic = "abort")]
 fn install_panic_hook() {
     let old_hook = panic::take_hook();
     let new_hook = Box::new(move |panic_info: &panic::PanicInfo<'_>| {
@@ -37,7 +37,7 @@ fn install_panic_hook() {
     panic::set_hook(new_hook);
 }
 
-#[cfg(not(rust_panic = "abort"))]
+#[cfg(panic = "unwind")]
 fn install_panic_hook() {
     // When panic=unwind we can rely on the destructor of the individual
     // processes.

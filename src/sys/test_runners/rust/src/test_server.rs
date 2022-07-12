@@ -305,7 +305,7 @@ impl TestServer {
         Ok(disabled_tests.contains(test_name))
     }
 
-    #[cfg(rust_panic = "unwind")]
+    #[cfg(panic = "unwind")]
     async fn run_test(
         &self,
         _test: &str,
@@ -322,7 +322,7 @@ impl TestServer {
     /// The mechanism by which Rust tests are launched in individual processes ignores whether a
     /// particular test was marked `#[ignore]`, so this method preemptively checks whether a
     /// the given test is disabled and returns early if the test should be skipped.
-    #[cfg(rust_panic = "abort")]
+    #[cfg(panic = "abort")]
     async fn run_test<'a>(
         &'a self,
         test: &str,

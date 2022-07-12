@@ -96,7 +96,6 @@ config("compiler") {
   configs = [
     ":color_diagnostics",
     ":crash-diagnostics-dir",
-    "rust:panic_cfg",
     ":time-trace",
     ":toolchain_version_stamp",
   ]

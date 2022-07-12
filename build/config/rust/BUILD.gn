@@ -32,12 +32,6 @@ declare_args() {
   rust_incremental = ""
 }
 
-# Defines a Rust cfg flag with the value of the rust_panic build arg.
-# Useful for changing behavior of code based on panic behavior.
-config("panic_cfg") {
-  rustflags = [ "--cfg=rust_panic=\"${rust_panic}\"" ]
-}
-
 # Turns on the rust compilation analysis generator. This will produce a
 # directory $OUT/save-analysis-temp, which will dump all the source analysis
 # that the compiler collected while analyzing the source.  This config is
