@@ -243,7 +243,7 @@ fn run_exception_loop(
                     match exit_status {
                         Exit(value) if value == 0 => {}
                         _ => {
-                            tracing::warn!(
+                            tracing::debug!(
                                 "{:?} last failing syscall before exit: {:?}, failed with {:?}",
                                 current_task,
                                 error_context.syscall,
