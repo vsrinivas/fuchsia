@@ -4,11 +4,14 @@
 
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
 #include <lib/fpromise/single_threaded_executor.h>
 #include <lib/syslog/cpp/macros.h>
 #include <sys/socket.h>
 
 #include <future>
+#include <optional>
 
 #include <fbl/unique_fd.h>
 #include <gmock/gmock.h>
@@ -40,17 +43,54 @@ static constexpr char kDefaultMacString[] = "02:1a:11:00:01:00";
 static constexpr char kSecondNicMacString[] = "02:1a:11:00:01:01";
 __UNUSED static constexpr char kHostMacString[] = "02:1a:11:00:00:00";
 
+// Run the two promises, returning the result of the first that completes.
+//
+// TODO(fxbug.dev/60922): When a library version becomes available, use that
+// instead.
+template <typename V, typename E>
+fpromise::promise<V, E> SelectPromise(fpromise::promise<V, E>& a, fpromise::promise<V, E>& b) {
+  return fpromise::make_promise(
+      [&a, &b](fpromise::context& context) mutable -> fpromise::result<V, E> {
+        fpromise::result<V, E> a_result = a(context);
+        if (!a_result.is_pending()) {
+          return std::move(a_result);
+        }
+        fpromise::result<V, E> b_result = b(context);
+        if (!b_result.is_pending()) {
+          return std::move(b_result);
+        }
+        return fpromise::pending();
+      });
+}
 static void TestThread(fuchsia::hardware::ethernet::MacAddress mac_addr, FakeNetstack* netstack,
-                       uint8_t receive_byte, uint8_t send_byte, bool use_raw_packets) {
+                       uint8_t receive_byte, uint8_t send_byte, bool use_raw_packets,
+                       fpromise::consumer<void, void> consumer) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   // This thread will loop indefinitely until it receives the correct packet.
   // The test will time out via RunUtil in the test fixture if we fail to
   // receive the correct packet.
+
+  using Promise = fpromise::promise<std::optional<std::vector<uint8_t>>, zx_status_t>;
+  using PromiseResult = fpromise::result<std::optional<std::vector<uint8_t>>, zx_status_t>;
+  Promise consumer_promise =
+      consumer.promise().then([](fpromise::result<void, void>&) -> PromiseResult {
+        return fpromise::ok(std::optional<std::vector<uint8_t>>());
+      });
+
   while (true) {
-    auto result = fpromise::run_single_threaded(netstack->ReceivePacket(mac_addr));
+    Promise netstack_promise =
+        netstack->ReceivePacket(mac_addr).and_then([](std::vector<uint8_t>& v) {
+          return fpromise::ok(std::optional<std::vector<uint8_t>>(std::move(v)));
+        });
+    auto result = fpromise::run_single_threaded(SelectPromise(netstack_promise, consumer_promise));
     ASSERT_TRUE(result.is_ok());
-    std::vector<uint8_t> packet = result.take_value();
+    std::optional opt_value = result.take_value();
+    if (!opt_value.has_value()) {
+      // The consumer promise has completed, so we can break from the while loop here.
+      break;
+    }
+    std::vector<uint8_t> packet = std::move(opt_value.value());
 
     bool match_test_packet = false;
     size_t headers_size = use_raw_packets ? 0 : kHeadersSize;
@@ -63,21 +103,21 @@ static void TestThread(fuchsia::hardware::ethernet::MacAddress mac_addr, FakeNet
         }
       }
     }
-    if (match_test_packet) {
-      break;
+    if (!match_test_packet) {
+      // The packet is incorrect, don't echo it back to the target
+      continue;
     }
+    std::vector<uint8_t> send_packet(kTestPacketSize);
+    memset(send_packet.data(), send_byte, kTestPacketSize);
+    fpromise::promise<void, zx_status_t> promise;
+    if (use_raw_packets) {
+      promise = netstack->SendPacket(mac_addr, std::move(send_packet));
+    } else {
+      promise = netstack->SendUdpPacket(mac_addr, std::move(send_packet));
+    }
+    auto send_result = fpromise::run_single_threaded(std::move(promise));
+    ASSERT_TRUE(send_result.is_ok());
   }
-
-  std::vector<uint8_t> send_packet(kTestPacketSize);
-  memset(send_packet.data(), send_byte, kTestPacketSize);
-  fpromise::promise<void, zx_status_t> promise;
-  if (use_raw_packets) {
-    promise = netstack->SendPacket(mac_addr, std::move(send_packet));
-  } else {
-    promise = netstack->SendUdpPacket(mac_addr, std::move(send_packet));
-  }
-  auto result = fpromise::run_single_threaded(std::move(promise));
-  ASSERT_TRUE(result.is_ok());
 }
 
 class VirtioNetMultipleInterfacesZirconGuest : public ZirconEnclosedGuest {
@@ -99,10 +139,15 @@ using VirtioNetMultipleInterfacesZirconGuestTest =
     GuestTest<VirtioNetMultipleInterfacesZirconGuest>;
 
 TEST_F(VirtioNetMultipleInterfacesZirconGuestTest, ReceiveAndSend) {
+  // Both the value and error are void here, as we're only using the bridge as a signal.
+  fpromise::bridge<void, void> bridge;
+
   // Loop back some data over the default network interface to verify that it is functional.
-  auto handle = std::async(std::launch::async, [this] {
+  auto handle = std::async(std::launch::async, [this, &bridge] {
     FakeNetstack* netstack = this->GetEnclosedGuest().GetNetstack();
-    TestThread(kDefaultMacAddress, netstack, 0xab, 0xba, true /* use_raw_packets */);
+    // Pass the consumer into the test thread here.
+    TestThread(kDefaultMacAddress, netstack, 0xab, 0xba, true /* use_raw_packets */,
+               std::move(bridge.consumer));
   });
 
   std::string result;
@@ -112,13 +157,16 @@ TEST_F(VirtioNetMultipleInterfacesZirconGuestTest, ReceiveAndSend) {
                           &result),
             ZX_OK);
   EXPECT_THAT(result, HasSubstr("PASS"));
+  bridge.completer.complete_ok();
 
   handle.wait();
 
+  bridge = fpromise::bridge<void, void>();
   // Ensure that the guest's second NIC works as well.
-  handle = std::async(std::launch::async, [this] {
+  handle = std::async(std::launch::async, [this, &bridge] {
     FakeNetstack* netstack = this->GetEnclosedGuest().GetNetstack();
-    TestThread(kSecondNicMacAddress, netstack, 0xcd, 0xdc, true /* use_raw_packets */);
+    TestThread(kSecondNicMacAddress, netstack, 0xcd, 0xdc, true /* use_raw_packets */,
+               std::move(bridge.consumer));
   });
 
   EXPECT_EQ(this->RunUtil(kVirtioNetUtil,
@@ -127,6 +175,7 @@ TEST_F(VirtioNetMultipleInterfacesZirconGuestTest, ReceiveAndSend) {
                           &result),
             ZX_OK);
   EXPECT_THAT(result, HasSubstr("PASS"));
+  bridge.completer.complete_ok();
 
   handle.wait();
 }
@@ -151,9 +200,11 @@ using VirtioNetMultipleInterfacesDebianGuestTest =
     GuestTest<VirtioNetMultipleInterfacesDebianGuest>;
 
 TEST_F(VirtioNetMultipleInterfacesDebianGuestTest, ReceiveAndSend) {
-  auto handle = std::async(std::launch::async, [this] {
+  fpromise::bridge<void, void> bridge;
+  auto handle = std::async(std::launch::async, [this, &bridge] {
     FakeNetstack* netstack = this->GetEnclosedGuest().GetNetstack();
-    TestThread(kDefaultMacAddress, netstack, 0xab, 0xba, false /* use_raw_packets */);
+    TestThread(kDefaultMacAddress, netstack, 0xab, 0xba, false /* use_raw_packets */,
+               std::move(bridge.consumer));
   });
 
   // Find the network interface corresponding to the guest's first ethernet device MAC address.
@@ -185,9 +236,11 @@ TEST_F(VirtioNetMultipleInterfacesDebianGuestTest, ReceiveAndSend) {
                           &result),
             ZX_OK);
   EXPECT_THAT(result, HasSubstr("PASS"));
+  bridge.completer.complete_ok();
 
   handle.wait();
 
+  bridge = fpromise::bridge<void, void>();
   // Bring down the first interface
   EXPECT_EQ(this->Execute({"ifconfig", network_interface, "down"}), ZX_OK);
 
@@ -207,9 +260,10 @@ TEST_F(VirtioNetMultipleInterfacesDebianGuestTest, ReceiveAndSend) {
   EXPECT_EQ(this->Execute({"arp", "-s", "192.168.0.1", kHostMacString}), ZX_OK);
 
   // Start a new handler thread to validate the data sent over the second NIC.
-  handle = std::async(std::launch::async, [this] {
+  handle = std::async(std::launch::async, [this, &bridge] {
     FakeNetstack* netstack = this->GetEnclosedGuest().GetNetstack();
-    TestThread(kSecondNicMacAddress, netstack, 0xcd, 0xdc, false /* use_raw_packets */);
+    TestThread(kSecondNicMacAddress, netstack, 0xcd, 0xdc, false /* use_raw_packets */,
+               std::move(bridge.consumer));
   });
 
   // Run the net util to generate and validate the data
@@ -223,7 +277,7 @@ TEST_F(VirtioNetMultipleInterfacesDebianGuestTest, ReceiveAndSend) {
                           &result),
             ZX_OK);
   EXPECT_THAT(result, HasSubstr("PASS"));
-
+  bridge.completer.complete_ok();
   handle.wait();
 }
 #endif  // __x86_64__
