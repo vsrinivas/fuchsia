@@ -106,5 +106,6 @@ group("tests") {
   deps = [
     ":dart-archive-reader-test",
     ":fuchsia_inspect_package_unittests($host_toolchain)",
+    "test/integration:tests",
   ]
 }

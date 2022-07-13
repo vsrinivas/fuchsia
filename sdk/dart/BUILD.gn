@@ -121,8 +121,6 @@ group("tests") {
                   "//bundles/packages/tests:scenic",
                   "//sdk/dart/fuchsia_component_test:tests",
                   "//sdk/dart/fuchsia_inspect:tests",
-                  "//sdk/dart/fuchsia_inspect/test/integration:dart_inspect_vmo_test",
-                  "//sdk/dart/fuchsia_inspect/test/integration:dart_inspect_vmo_test_writer",
                   "//sdk/dart/fuchsia_inspect/test/validator_puppet:tests",
                   "//sdk/dart/fuchsia_logger:tests",
                   "//sdk/dart/fuchsia_modular:fuchsia-modular-integration-tests",

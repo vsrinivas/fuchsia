@@ -1,0 +1,26 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    children: [
+        {
+            name: "writer",
+            url: "#meta/dart_inspect_vmo_test_writer.cm",
+        },
+    ],
+    use: [
+        { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#writer",
+        },
+    ],
+}

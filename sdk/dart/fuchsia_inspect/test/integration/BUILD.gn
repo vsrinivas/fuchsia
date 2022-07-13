@@ -3,55 +3,49 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/dart/dart_app.gni")
-import("//build/test.gni")
-import("//build/testing/environments.gni")
+import("//build/dart/dart_component.gni")
+import("//build/dart/dart_library.gni")
+import("//build/dart/dart_test_component.gni")
 
-test("test") {
-  output_name = "dart_inspect_vmo_test"
-
-  sources = [ "test.cc" ]
+dart_library("lib") {
+  package_name = "dart_inspect_vmo_test"
+  sources = [ "main.dart" ]
+  source_dir = "lib"
 
   deps = [
-    "//sdk/lib/inspect/testing/cpp",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//zircon/system/ulib/inspect",
+    "//sdk/dart/fuchsia_inspect",
+    "//sdk/dart/fuchsia_services",
   ]
 }
 
-dart_app("dart_inspect_vmo_test_writer") {
-  components = [
-    {
-      component_name = "dart_inspect_vmo_test_writer"
-      component_type = "dart"
-      package_root = "."
-      main_dart = "lib/writer.dart"
-      sources = [ "writer.dart" ]
-      deps = [
-        "//sdk/dart/fidl",
-        "//sdk/dart/fuchsia_inspect",
-        "//sdk/dart/fuchsia_services",
-        "//sdk/fidl/fuchsia.sys",
-      ]
-    },
-  ]
+dart_component("dart_inspect_vmo_test_writer") {
+  main_dart = "main.dart"
+  main_package = "dart_inspect_vmo_test"
+  manifest = "meta/writer.cml"
+  deps = [ ":lib" ]
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/dart_inspect_vmo_test_writer.cmx")
-      dest = "dart_inspect_vmo_test_writer.cmx"
-    },
+dart_test_component("dart_inspect_vmo_test_component") {
+  component_name = "dart_inspect_vmo_test"
+  manifest = "meta/test.cml"
+  sources = [ "integration_test.dart" ]
+  deps = [
+    "//sdk/dart/fuchsia_inspect",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.component.decl",
+    "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/fidl/fuchsia.io",
+    "//third_party/dart-pkg/pub/test",
   ]
 }
 
-fuchsia_unittest_package("dart_inspect_vmo_test") {
-  deps = [
-    ":dart_inspect_vmo_test_writer",
-    ":test",
-  ]
-  manifest = "meta/dart_inspect_vmo_test.cmx"
+fuchsia_test_package("dart_inspect_integration_tests") {
+  test_components = [ ":dart_inspect_vmo_test_component" ]
+  deps = [ ":dart_inspect_vmo_test_writer" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":dart_inspect_integration_tests" ]
 }

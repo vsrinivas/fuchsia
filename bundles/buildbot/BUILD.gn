@@ -101,7 +101,6 @@ group("core_base_packages") {
     "//examples/fidl/dart/request_pipelining/server:echo-launcher-dart-server",
     "//examples/fidl/dart/server:echo-dart-server",
     "//examples/tests:example-tests",
-    "//sdk/dart/fuchsia_inspect/test/integration:dart-inspect-vmo-test-writer",
     "//sdk/dart/fuchsia_inspect/test/validator_puppet:dart-inspect-validator-puppet",
     "//sdk/dart/fuchsia_services/test_support:fuchsia-services-foo-test-server",
     "//sdk/lib/driver_test_realm:package",
