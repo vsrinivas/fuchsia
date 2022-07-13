@@ -15,10 +15,13 @@ source_set("testing") {
   sources = [
     "defaults.cc",
     "defaults.h",
+    "test_fence.h",
   ]
 
   public_deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/media/audio/lib/clock",
     "//src/media/audio/services/mixer/mix",
+    "//zircon/system/ulib/zx",
   ]
 }

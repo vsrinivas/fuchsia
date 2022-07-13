@@ -25,7 +25,10 @@ using ::fuchsia_mediastreams::wire::AudioSampleFormat;
 const auto kFormat = Format::CreateOrDie({AudioSampleFormat::kSigned16, 1, 48000});
 
 std::shared_ptr<PacketQueueProducerStage> MakePacketQueueProducerStage(Format format) {
-  return std::make_shared<PacketQueueProducerStage>(format, DefaultClockKoid());
+  return std::make_shared<PacketQueueProducerStage>(PacketQueueProducerStage::Args{
+      .format = format,
+      .reference_clock_koid = DefaultClockKoid(),
+  });
 }
 
 void ExpectNullPacket(const std::optional<PipelineStage::Packet>& packet) {

@@ -15,6 +15,7 @@
 
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"
+#include "src/media/audio/services/mixer/common/thread_safe_queue.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
 #include "src/media/audio/services/mixer/mix/packet_view.h"
 #include "src/media/audio/services/mixer/mix/producer_stage.h"
@@ -24,8 +25,34 @@ namespace media_audio {
 
 class PacketQueueProducerStage : public ProducerStage {
  public:
-  PacketQueueProducerStage(Format format, zx_koid_t reference_clock_koid)
-      : ProducerStage("PacketQueueProducerStage", format, reference_clock_koid) {}
+  struct PushPacketCommand {
+    PacketView packet;
+    zx::eventpair fence;
+  };
+  struct ClearCommand {
+    zx::eventpair fence;
+  };
+  using Command = std::variant<PushPacketCommand, ClearCommand>;
+  using CommandQueue = ThreadSafeQueue<Command>;
+
+  struct Args {
+    // Name of this stage.
+    std::string_view name;
+
+    // Format of this stage's output stream.
+    Format format;
+
+    // Reference clock of this stage's output stream.
+    zx_koid_t reference_clock_koid;
+
+    // Message queue for pending commands.
+    // Optional: may be nullptr.
+    std::shared_ptr<CommandQueue> command_queue;
+  };
+
+  explicit PacketQueueProducerStage(Args args)
+      : ProducerStage(args.name, args.format, args.reference_clock_koid),
+        pending_command_queue_(std::move(args.command_queue)) {}
 
   // Registers a callback to invoke when a packet underflows.
   // The duration estimates how late the packet was relative to the system monotonic clock.
@@ -39,10 +66,9 @@ class PacketQueueProducerStage : public ProducerStage {
   // Returns whether the queue is empty or not.
   bool empty() const { return pending_packet_queue_.empty(); }
 
-  // Pushes a new `packet` into the queue with an `on_destroy_callback` to be called once the packet
-  // is fully consumed.
-  void push(PacketView packet, fit::callback<void()> on_destroy_callback = {}) {
-    pending_packet_queue_.emplace_back(packet, std::move(on_destroy_callback));
+  // Pushes a `packet` into the queue. `fence` will be closed after the packet is fully consumed.
+  void push(PacketView packet, zx::eventpair fence = zx::eventpair()) {
+    pending_packet_queue_.emplace_back(packet, std::move(fence));
   }
 
  protected:
@@ -53,14 +79,8 @@ class PacketQueueProducerStage : public ProducerStage {
  private:
   class PendingPacket : public PacketView {
    public:
-    PendingPacket(PacketView view, fit::callback<void()> destructor)
-        : PacketView(view), destructor_(std::move(destructor)) {}
-
-    ~PendingPacket() {
-      if (destructor_) {
-        destructor_();
-      }
-    }
+    PendingPacket(PacketView view, zx::eventpair fence)
+        : PacketView(view), fence_(std::move(fence)) {}
 
     PendingPacket(PendingPacket&& rhs) = default;
     PendingPacket& operator=(PendingPacket&& rhs) = default;
@@ -71,13 +91,14 @@ class PacketQueueProducerStage : public ProducerStage {
    private:
     friend class PacketQueueProducerStage;
 
-    fit::callback<void()> destructor_;
+    zx::eventpair fence_;
     bool seen_in_read_ = false;
   };
 
-  // Reports underflow of `underlow_frame_count`.
+  void ApplyPendingCommands();
   void ReportUnderflow(Fixed underlow_frame_count);
 
+  std::shared_ptr<CommandQueue> pending_command_queue_;
   std::deque<PendingPacket> pending_packet_queue_;
 
   size_t underflow_count_;

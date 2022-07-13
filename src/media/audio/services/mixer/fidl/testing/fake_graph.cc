@@ -15,7 +15,10 @@ namespace {
 PipelineStagePtr CreatePipelineStage() {
   const Format format =
       Format::CreateOrDie({fuchsia_mediastreams::wire::AudioSampleFormat::kFloat, 2, 48000});
-  return std::make_shared<PacketQueueProducerStage>(format, DefaultClockKoid());
+  return std::make_shared<PacketQueueProducerStage>(PacketQueueProducerStage::Args{
+      .format = format,
+      .reference_clock_koid = DefaultClockKoid(),
+  });
 }
 }  // namespace
 

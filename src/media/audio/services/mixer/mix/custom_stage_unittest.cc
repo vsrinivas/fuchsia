@@ -201,7 +201,10 @@ PipelineStagePtr MakeCustomStage(ProcessorConfiguration config, PipelineStagePtr
 }
 
 std::shared_ptr<PacketQueueProducerStage> MakePacketQueueProducerStage(Format format) {
-  return std::make_shared<PacketQueueProducerStage>(format, DefaultClockKoid());
+  return std::make_shared<PacketQueueProducerStage>(PacketQueueProducerStage::Args{
+      .format = format,
+      .reference_clock_koid = DefaultClockKoid(),
+  });
 }
 
 std::vector<float> ToVector(void* payload, size_t sample_start_idx, size_t sample_end_idx) {

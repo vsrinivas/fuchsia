@@ -16,6 +16,8 @@
 namespace media_audio {
 
 void PacketQueueProducerStage::AdvanceImpl(Fixed frame) {
+  ApplyPendingCommands();
+
   while (!pending_packet_queue_.empty()) {
     const auto& pending_packet = pending_packet_queue_.front();
     if (pending_packet.end() > frame) {
@@ -28,6 +30,8 @@ void PacketQueueProducerStage::AdvanceImpl(Fixed frame) {
 std::optional<PipelineStage::Packet> PacketQueueProducerStage::ReadImpl(MixJobContext& ctx,
                                                                         Fixed start_frame,
                                                                         int64_t frame_count) {
+  ApplyPendingCommands();
+
   // Clean up pending packets before `start_frame`.
   while (!pending_packet_queue_.empty()) {
     auto& pending_packet = pending_packet_queue_.front();
@@ -54,6 +58,27 @@ std::optional<PipelineStage::Packet> PacketQueueProducerStage::ReadImpl(MixJobCo
     return MakeUncachedPacket(intersect->start(), intersect->length(), intersect->payload());
   }
   return std::nullopt;
+}
+
+void PacketQueueProducerStage::ApplyPendingCommands() {
+  if (!pending_command_queue_) {
+    return;
+  }
+
+  for (;;) {
+    auto cmd_or_null = pending_command_queue_->pop();
+    if (!cmd_or_null) {
+      return;
+    }
+    if (auto* cmd = std::get_if<PushPacketCommand>(&*cmd_or_null); cmd) {
+      push(cmd->packet, std::move(cmd->fence));
+    } else if (std::holds_alternative<ClearCommand>(*cmd_or_null)) {
+      // The fence is cleared when `cmd_or_null` is destructed.
+      clear();
+    } else {
+      FX_CHECK(false) << "unhandled Command variant";
+    }
+  }
 }
 
 void PacketQueueProducerStage::ReportUnderflow(Fixed underlow_frame_count) {

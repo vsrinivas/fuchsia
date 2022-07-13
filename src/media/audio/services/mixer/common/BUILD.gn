@@ -21,6 +21,7 @@ source_set("common") {
     "basic_types.h",
     "global_task_queue.cc",
     "global_task_queue.h",
+    "thread_safe_queue.h",
   ]
 
   public_deps = [
@@ -39,7 +40,10 @@ executable("common_unittests") {
   output_name = "audio_services_mixer_common_unittests"
   testonly = true
 
-  sources = [ "global_task_queue_unittest.cc" ]
+  sources = [
+    "global_task_queue_unittest.cc",
+    "thread_safe_queue_unittest.cc",
+  ]
 
   deps = [
     ":common",
