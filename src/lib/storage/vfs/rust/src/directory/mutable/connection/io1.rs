@@ -265,12 +265,7 @@ impl MutableConnection {
             Some(entry) => entry,
         };
 
-        self.base
-            .directory
-            .clone()
-            .get_filesystem()
-            .rename(self.base.directory.clone().into_any(), src, dst_parent.into_any(), dst)
-            .await
+        dst_parent.clone().rename(self.base.directory.clone(), src, dst).await
     }
 
     fn prepare_connection(
@@ -282,8 +277,8 @@ impl MutableConnection {
         // Ensure we close the directory if we fail to prepare the connection.
         let directory = OpenDirectory::new(directory);
 
-        // TODO(fxbug.dev/82054): These flags should be validated before prepare_connection is called
-        // since at this point the directory resource has already been opened/created.
+        // TODO(fxbug.dev/82054): These flags should be validated before prepare_connection is
+        // called since at this point the directory resource has already been opened/created.
         let flags = match new_connection_validate_flags(flags) {
             Ok(updated) => updated,
             Err(status) => {
@@ -324,7 +319,6 @@ mod tests {
                 entry_container::{Directory, DirectoryWatcher},
                 traversal_position::TraversalPosition,
             },
-            filesystem::{Filesystem, FilesystemRename},
             path::Path,
             registry::token_registry,
         },
@@ -340,7 +334,7 @@ mod tests {
     enum MutableDirectoryAction {
         Link { id: u32, path: String },
         Unlink { id: u32, name: String },
-        Rename { id: u32, src_name: String, dst_dir: Arc<MockDirectory>, dst_name: String },
+        Rename { id: u32, src_name: String, dst_dir: u32, dst_name: String },
         SetAttr { id: u32, flags: fio::NodeAttributeFlags, attrs: fio::NodeAttributes },
         Sync,
         Close,
@@ -443,12 +437,23 @@ mod tests {
             self.fs.handle_event(MutableDirectoryAction::SetAttr { id: self.id, flags, attrs })
         }
 
-        fn get_filesystem(&self) -> &dyn Filesystem {
-            &*self.fs
-        }
-
         async fn sync(&self) -> Result<(), zx::Status> {
             self.fs.handle_event(MutableDirectoryAction::Sync)
+        }
+
+        async fn rename(
+            self: Arc<Self>,
+            src_dir: Arc<dyn MutableDirectory>,
+            src_name: Path,
+            dst_name: Path,
+        ) -> Result<(), zx::Status> {
+            let src_dir = src_dir.into_any().downcast::<MockDirectory>().unwrap();
+            self.fs.handle_event(MutableDirectoryAction::Rename {
+                id: src_dir.id,
+                src_name: src_name.into_string(),
+                dst_dir: self.id,
+                dst_name: dst_name.into_string(),
+            })
         }
     }
 
@@ -497,32 +502,6 @@ mod tests {
         }
     }
 
-    #[async_trait]
-    impl FilesystemRename for MockFilesystem {
-        async fn rename(
-            &self,
-            src_dir: Arc<dyn Any + Sync + Send + 'static>,
-            src_name: Path,
-            dst_dir: Arc<dyn Any + Sync + Send + 'static>,
-            dst_name: Path,
-        ) -> Result<(), zx::Status> {
-            let src_dir = src_dir.downcast::<MockDirectory>().unwrap();
-            let dst_dir = dst_dir.downcast::<MockDirectory>().unwrap();
-            self.handle_event(MutableDirectoryAction::Rename {
-                id: src_dir.id,
-                src_name: src_name.into_string(),
-                dst_dir,
-                dst_name: dst_name.into_string(),
-            })
-        }
-    }
-
-    impl Filesystem for MockFilesystem {
-        fn block_size(&self) -> u32 {
-            512
-        }
-    }
-
     impl std::fmt::Debug for MockFilesystem {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             f.debug_struct("MockFilesystem").field("cur_id", &self.cur_id).finish()
@@ -555,7 +534,7 @@ mod tests {
             vec![MutableDirectoryAction::Rename {
                 id: 0,
                 src_name: "src".to_owned(),
-                dst_dir: dir2,
+                dst_dir: dir2.id,
                 dst_name: "dest".to_owned(),
             },]
         );

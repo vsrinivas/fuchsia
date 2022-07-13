@@ -281,7 +281,6 @@ mod tests {
                 traversal_position::TraversalPosition,
             },
             execution_scope::ExecutionScope,
-            filesystem::Filesystem,
             path::Path,
         };
 
@@ -364,11 +363,16 @@ mod tests {
                 panic!("Not implemented!")
             }
 
-            fn get_filesystem(&self) -> &dyn Filesystem {
-                panic!("Not implemented!")
+            async fn sync(&self) -> Result<(), Status> {
+                panic!("Not implemented!");
             }
 
-            async fn sync(&self) -> Result<(), Status> {
+            async fn rename(
+                self: Arc<Self>,
+                _src_dir: Arc<dyn MutableDirectory>,
+                _src_name: Path,
+                _dst_name: Path,
+            ) -> Result<(), Status> {
                 panic!("Not implemented!");
             }
         }

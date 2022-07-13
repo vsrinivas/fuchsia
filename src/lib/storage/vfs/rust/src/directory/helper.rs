@@ -8,7 +8,7 @@ use {
             entry::DirectoryEntry,
             entry_container::{Directory, MutableDirectory},
         },
-        filesystem::Filesystem,
+        path::Path,
     },
     async_trait::async_trait,
     fidl_fuchsia_io as fio,
@@ -96,8 +96,8 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     ///
     /// # Safety
     ///
-    /// This should only be called by the [`crate::filesystem::FilesystemRename::rename()`], which
-    /// will establish the global order and will call proper method.
+    /// This should only be called by the rename implementation below, which will establish the
+    /// global order and will call proper method.
     ///
     /// See fxbug.dev/99061: unsafe is not for visibility reduction.
     fn rename_from(
@@ -117,8 +117,8 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     ///
     /// # Safety
     ///
-    /// This should only be called by the [`crate::filesystem::FilesystemRename::rename()`], which
-    /// will establish the global order and will call proper method.
+    /// This should only be called by the rename implementation below, which will establish the
+    /// global order and will call proper method.
     ///
     /// See fxbug.dev/99061: unsafe is not for visibility reduction.
     fn rename_to(
@@ -128,15 +128,12 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     ) -> Result<(), Status>;
 
     /// In case an entry is renamed within the same directory only one lock needs to be obtained.
-    /// This is a companion method to the [`Self::rename_from`]/[`Self::rename_to`] pair.
-    /// [`crate::filesystem::FilesystemRename::rename()`] will use this method to avoid locking the
-    /// same directory mutex twice.
+    /// This is a companion method to the [`Self::rename_from`]/[`Self::rename_to`] pair.  The
+    /// rename implementation below will use this method to avoid locking the same directory mutex
+    /// twice.
     ///
-    /// It should only be used by the [`crate::filesystem::FilesystemRename::rename()`].
+    /// It should only be used by the rename implementation below.
     fn rename_within(&self, src: String, dst: String) -> Result<(), Status>;
-
-    /// Get the filesystem this directory belongs to.
-    fn get_filesystem(&self) -> &dyn Filesystem;
 }
 
 #[async_trait]
@@ -157,11 +154,49 @@ impl<T: DirectlyMutable> MutableDirectory for T {
         Err(Status::NOT_SUPPORTED)
     }
 
-    fn get_filesystem(&self) -> &dyn Filesystem {
-        (self as &dyn DirectlyMutable).get_filesystem()
-    }
-
     async fn sync(&self) -> Result<(), Status> {
         Err(Status::NOT_SUPPORTED)
+    }
+
+    async fn rename(
+        self: Arc<Self>,
+        src_dir: Arc<dyn MutableDirectory>,
+        src_name: Path,
+        dst_name: Path,
+    ) -> Result<(), Status> {
+        let src_parent = src_dir.into_any().downcast::<T>().map_err(|_| Status::INVALID_ARGS)?;
+
+        // We need to lock directories using the same global order, otherwise we risk a deadlock. We
+        // will use directory objects memory location to establish global order for the locks.  It
+        // introduces additional complexity, but, hopefully, avoids this subtle deadlocking issue.
+        //
+        // We will lock first object with the smaller memory address.
+        let src_order = src_parent.as_ref() as *const dyn DirectlyMutable as *const usize as usize;
+        let dst_order = self.as_ref() as *const dyn DirectlyMutable as *const usize as usize;
+
+        if src_order < dst_order {
+            // We must ensure that we have checked the global order for the locks for
+            // `src_parent` and `self` and we are calling `rename_from` as `src_parent` has a
+            // smaller memory address than the `self`.
+            src_parent.clone().rename_from(
+                src_name.into_string(),
+                Box::new(move |entry| self.add_entry_impl(dst_name.into_string(), entry, true)),
+            )
+        } else if src_order == dst_order {
+            src_parent.rename_within(src_name.into_string(), dst_name.into_string())
+        } else {
+            // We must ensure that we have checked the global order for the locks for
+            // `src_parent` and `self` and we are calling `rename_to` as `self` has a
+            // smaller memory address than the `src_parent`.
+            self.rename_to(
+                dst_name.into_string(),
+                Box::new(move || {
+                    match src_parent.remove_entry_impl(src_name.into_string(), false)? {
+                        None => Err(Status::NOT_FOUND),
+                        Some(entry) => Ok(entry),
+                    }
+                }),
+            )
+        }
     }
 }

@@ -8,13 +8,12 @@ use {
         filesystem::{self, SyncOptions},
         log::*,
         object_store::{
-            directory::{self, Directory, ObjectDescriptor, ReplacedChild},
-            transaction::{LockKey, Options},
+            directory::{Directory, ObjectDescriptor},
+            transaction::Options,
             HandleOptions, HandleOwner, ObjectStore,
         },
         platform::fuchsia::{
             directory::FxDirectory,
-            errors::map_to_status,
             file::FxFile,
             node::{FxNode, GetResult, NodeCache},
             pager::Pager,
@@ -27,20 +26,13 @@ use {
     fidl_fuchsia_io as fio,
     fs_inspect::{FsInspect, InfoData, UsageData, VolumeData},
     fuchsia_async as fasync,
-    fuchsia_zircon::Status,
     futures::{self, channel::oneshot, FutureExt},
     std::{
-        any::Any,
         convert::TryInto,
         sync::{Arc, Mutex},
         time::Duration,
     },
-    vfs::{
-        execution_scope::ExecutionScope,
-        filesystem::{Filesystem, FilesystemRename},
-        path::Path,
-        registry::token_registry,
-    },
+    vfs::{execution_scope::ExecutionScope, registry::token_registry},
 };
 
 pub const DEFAULT_FLUSH_PERIOD: Duration = Duration::from_secs(20);
@@ -259,145 +251,6 @@ impl AsRef<ObjectStore> for FxVolume {
 }
 
 #[async_trait]
-impl FilesystemRename for FxVolume {
-    async fn rename(
-        &self,
-        src_dir: Arc<dyn Any + Sync + Send + 'static>,
-        src_name: Path,
-        dst_dir: Arc<dyn Any + Sync + Send + 'static>,
-        dst_name: Path,
-    ) -> Result<(), Status> {
-        if !src_name.is_single_component() || !dst_name.is_single_component() {
-            return Err(Status::INVALID_ARGS);
-        }
-        let (src, dst) = (src_name.peek().unwrap(), dst_name.peek().unwrap());
-        let src_dir = src_dir.downcast::<FxDirectory>().map_err(|_| Err(Status::NOT_DIR))?;
-        let dst_dir = dst_dir.downcast::<FxDirectory>().map_err(|_| Err(Status::NOT_DIR))?;
-
-        // Acquire a transaction that locks |src_dir|, |dst_dir|, and |dst_name| if it exists.
-        let fs = self.store.filesystem();
-        let (mut transaction, dst_id_and_descriptor) = match dst_dir
-            .acquire_transaction_for_unlink(
-                &[LockKey::object(self.store.store_object_id(), src_dir.object_id())],
-                dst,
-                false,
-            )
-            .await
-        {
-            Ok((transaction, id, descriptor)) => (transaction, Some((id, descriptor))),
-            Err(e) if FxfsError::NotFound.matches(&e) => {
-                let transaction = fs
-                    .new_transaction(
-                        &[
-                            LockKey::object(self.store.store_object_id(), src_dir.object_id()),
-                            LockKey::object(self.store.store_object_id(), dst_dir.object_id()),
-                        ],
-                        // It's ok to borrow metadata space here since after compaction, it should
-                        // be a wash.
-                        Options { borrow_metadata_space: true, ..Default::default() },
-                    )
-                    .await
-                    .map_err(map_to_status)?;
-                (transaction, None)
-            }
-            Err(e) => return Err(map_to_status(e)),
-        };
-
-        if dst_dir.is_deleted() {
-            return Err(Status::NOT_FOUND);
-        }
-
-        let (moved_id, moved_descriptor) = src_dir
-            .directory()
-            .lookup(src)
-            .await
-            .map_err(map_to_status)?
-            .ok_or(Status::NOT_FOUND)?;
-        // Make sure the dst path is compatible with the moved node.
-        if let ObjectDescriptor::File = moved_descriptor {
-            if src_name.is_dir() || dst_name.is_dir() {
-                return Err(Status::NOT_DIR);
-            }
-        }
-
-        // Now that we've ensured that the dst path is compatible with the moved node, we can check
-        // for the trivial case.
-        if src_dir.object_id() == dst_dir.object_id() && src == dst {
-            return Ok(());
-        }
-
-        if let Some((_, dst_descriptor)) = dst_id_and_descriptor.as_ref() {
-            // dst is being overwritten; make sure it's a file iff src is.
-            if dst_descriptor != &moved_descriptor {
-                match dst_descriptor {
-                    ObjectDescriptor::File => return Err(Status::NOT_DIR),
-                    ObjectDescriptor::Directory => return Err(Status::NOT_FILE),
-                    _ => return Err(Status::IO_DATA_INTEGRITY),
-                };
-            }
-        }
-
-        let moved_node = src_dir
-            .volume()
-            .get_or_load_node(moved_id, moved_descriptor.clone(), Some(src_dir.clone()))
-            .await
-            .map_err(map_to_status)?;
-
-        if let ObjectDescriptor::Directory = moved_descriptor {
-            // Lastly, ensure that dst_dir isn't a (transitive) child of the moved node.
-            let mut node_opt = Some(dst_dir.clone());
-            while let Some(node) = node_opt {
-                if node.object_id() == moved_node.object_id() {
-                    return Err(Status::INVALID_ARGS);
-                }
-                node_opt = node.parent();
-            }
-        }
-
-        let replace_result = directory::replace_child(
-            &mut transaction,
-            Some((src_dir.directory(), src)),
-            (dst_dir.directory(), dst),
-        )
-        .await
-        .map_err(map_to_status)?;
-
-        transaction
-            .commit_with_callback(|_| {
-                moved_node.set_parent(dst_dir.clone());
-                src_dir.did_remove(src);
-
-                match replace_result {
-                    ReplacedChild::None => dst_dir.did_add(dst),
-                    ReplacedChild::FileWithRemainingLinks(..) | ReplacedChild::File(_) => {
-                        dst_dir.did_remove(dst);
-                        dst_dir.did_add(dst);
-                    }
-                    ReplacedChild::Directory(id) => {
-                        dst_dir.did_remove(dst);
-                        dst_dir.did_add(dst);
-                        self.mark_directory_deleted(id, dst);
-                    }
-                }
-            })
-            .await
-            .map_err(map_to_status)?;
-
-        if let ReplacedChild::File(id) = replace_result {
-            self.maybe_purge_file(id).await.map_err(map_to_status)?;
-        }
-
-        Ok(())
-    }
-}
-
-impl Filesystem for FxVolume {
-    fn block_size(&self) -> u32 {
-        self.store.block_size().try_into().unwrap()
-    }
-}
-
-#[async_trait]
 impl FsInspect for FxVolume {
     fn get_info_data(&self) -> InfoData {
         InfoData {
@@ -406,7 +259,7 @@ impl FsInspect for FxVolume {
             name: FXFS_INFO_NAME.into(),
             version_major: LATEST_VERSION.major.into(),
             version_minor: LATEST_VERSION.minor.into(),
-            block_size: self.block_size().into(),
+            block_size: self.store.block_size(),
             max_filename_length: fio::MAX_FILENAME,
             // TODO(fxbug.dev/93770): Determine how to report oldest on-disk version if required.
             oldest_version: None,

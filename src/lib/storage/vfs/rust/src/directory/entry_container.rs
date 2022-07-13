@@ -8,7 +8,7 @@
 use crate::{
     directory::{dirents_sink, entry::DirectoryEntry, traversal_position::TraversalPosition},
     execution_scope::ExecutionScope,
-    filesystem::Filesystem,
+    path::Path,
 };
 
 use {
@@ -114,9 +114,14 @@ pub trait MutableDirectory: Directory + Send + Sync {
     /// Removes an entry from this directory.
     async fn unlink(self: Arc<Self>, name: &str, must_be_directory: bool) -> Result<(), Status>;
 
-    /// Gets the filesystem this directory belongs to.
-    fn get_filesystem(&self) -> &dyn Filesystem;
-
     /// Syncs the directory.
     async fn sync(&self) -> Result<(), Status>;
+
+    /// Renames into this directory.
+    async fn rename(
+        self: Arc<Self>,
+        src_dir: Arc<dyn MutableDirectory>,
+        src_name: Path,
+        dst_name: Path,
+    ) -> Result<(), Status>;
 }

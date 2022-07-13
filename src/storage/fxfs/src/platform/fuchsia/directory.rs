@@ -42,7 +42,6 @@ use {
             watchers::{event_producers::SingleNameEventProducer, Watchers},
         },
         execution_scope::ExecutionScope,
-        filesystem::Filesystem,
         path::Path,
     },
 };
@@ -417,12 +416,137 @@ impl MutableDirectory for FxDirectory {
         Ok(())
     }
 
-    fn get_filesystem(&self) -> &dyn Filesystem {
-        self.volume().as_ref()
-    }
-
     async fn sync(&self) -> Result<(), Status> {
         // TODO(fxbug.dev/96085): Support sync on root of fxfs volume.
+        Ok(())
+    }
+
+    async fn rename(
+        self: Arc<Self>,
+        src_dir: Arc<dyn MutableDirectory>,
+        src_name: Path,
+        dst_name: Path,
+    ) -> Result<(), Status> {
+        if !src_name.is_single_component() || !dst_name.is_single_component() {
+            return Err(Status::INVALID_ARGS);
+        }
+        let (src, dst) = (src_name.peek().unwrap(), dst_name.peek().unwrap());
+        let src_dir =
+            src_dir.into_any().downcast::<FxDirectory>().map_err(|_| Err(Status::NOT_DIR))?;
+
+        // Acquire a transaction that locks |src_dir|, |self|, and |dst_name| if it exists.
+        let store = self.store();
+        let fs = store.filesystem();
+        let (mut transaction, dst_id_and_descriptor) = match self
+            .acquire_transaction_for_unlink(
+                &[LockKey::object(store.store_object_id(), src_dir.object_id())],
+                dst,
+                false,
+            )
+            .await
+        {
+            Ok((transaction, id, descriptor)) => (transaction, Some((id, descriptor))),
+            Err(e) if FxfsError::NotFound.matches(&e) => {
+                let transaction = fs
+                    .new_transaction(
+                        &[
+                            LockKey::object(store.store_object_id(), src_dir.object_id()),
+                            LockKey::object(store.store_object_id(), self.object_id()),
+                        ],
+                        // It's ok to borrow metadata space here since after compaction, it should
+                        // be a wash.
+                        Options { borrow_metadata_space: true, ..Default::default() },
+                    )
+                    .await
+                    .map_err(map_to_status)?;
+                (transaction, None)
+            }
+            Err(e) => return Err(map_to_status(e)),
+        };
+
+        if self.is_deleted() {
+            return Err(Status::NOT_FOUND);
+        }
+
+        let (moved_id, moved_descriptor) = src_dir
+            .directory()
+            .lookup(src)
+            .await
+            .map_err(map_to_status)?
+            .ok_or(Status::NOT_FOUND)?;
+        // Make sure the dst path is compatible with the moved node.
+        if let ObjectDescriptor::File = moved_descriptor {
+            if src_name.is_dir() || dst_name.is_dir() {
+                return Err(Status::NOT_DIR);
+            }
+        }
+
+        // Now that we've ensured that the dst path is compatible with the moved node, we can check
+        // for the trivial case.
+        if src_dir.object_id() == self.object_id() && src == dst {
+            return Ok(());
+        }
+
+        if let Some((_, dst_descriptor)) = dst_id_and_descriptor.as_ref() {
+            // dst is being overwritten; make sure it's a file iff src is.
+            if dst_descriptor != &moved_descriptor {
+                match dst_descriptor {
+                    ObjectDescriptor::File => return Err(Status::NOT_DIR),
+                    ObjectDescriptor::Directory => return Err(Status::NOT_FILE),
+                    _ => return Err(Status::IO_DATA_INTEGRITY),
+                };
+            }
+        }
+
+        let moved_node = src_dir
+            .volume()
+            .get_or_load_node(moved_id, moved_descriptor.clone(), Some(src_dir.clone()))
+            .await
+            .map_err(map_to_status)?;
+
+        if let ObjectDescriptor::Directory = moved_descriptor {
+            // Lastly, ensure that self isn't a (transitive) child of the moved node.
+            let mut node_opt = Some(self.clone());
+            while let Some(node) = node_opt {
+                if node.object_id() == moved_node.object_id() {
+                    return Err(Status::INVALID_ARGS);
+                }
+                node_opt = node.parent();
+            }
+        }
+
+        let replace_result = directory::replace_child(
+            &mut transaction,
+            Some((src_dir.directory(), src)),
+            (self.directory(), dst),
+        )
+        .await
+        .map_err(map_to_status)?;
+
+        transaction
+            .commit_with_callback(|_| {
+                moved_node.set_parent(self.clone());
+                src_dir.did_remove(src);
+
+                match replace_result {
+                    ReplacedChild::None => self.did_add(dst),
+                    ReplacedChild::FileWithRemainingLinks(..) | ReplacedChild::File(_) => {
+                        self.did_remove(dst);
+                        self.did_add(dst);
+                    }
+                    ReplacedChild::Directory(id) => {
+                        self.did_remove(dst);
+                        self.did_add(dst);
+                        self.volume().mark_directory_deleted(id, dst);
+                    }
+                }
+            })
+            .await
+            .map_err(map_to_status)?;
+
+        if let ReplacedChild::File(id) = replace_result {
+            self.volume().maybe_purge_file(id).await.map_err(map_to_status)?;
+        }
         Ok(())
     }
 }

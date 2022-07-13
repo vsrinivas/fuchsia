@@ -23,7 +23,6 @@ use crate::{
         },
     },
     execution_scope::ExecutionScope,
-    filesystem::{simple::SimpleFilesystem, Filesystem},
     path::Path,
     MAX_NAME_LENGTH,
 };
@@ -66,8 +65,6 @@ where
 
     _connection: PhantomData<Connection>,
 
-    fs: SimpleFilesystem<Self>,
-
     not_found_handler: Mutex<Option<Box<dyn FnMut(&str) + Send + Sync + 'static>>>,
 }
 
@@ -86,7 +83,6 @@ where
             inner: Mutex::new(Inner { entries: BTreeMap::new(), watchers: Watchers::new() }),
             _connection: PhantomData,
             inode,
-            fs: SimpleFilesystem::new(),
             not_found_handler: Mutex::new(None),
         })
     }
@@ -492,10 +488,6 @@ where
 
         let _ = this.entries.insert(dst, entry);
         Ok(())
-    }
-
-    fn get_filesystem(&self) -> &dyn Filesystem {
-        &self.fs
     }
 }
 
