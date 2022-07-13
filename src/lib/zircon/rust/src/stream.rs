@@ -163,3 +163,47 @@ impl Stream {
         Ok(actual)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate as zx;
+
+    #[test]
+    fn create() {
+        let vmo = zx::Vmo::create_with_opts(zx::VmoOptions::RESIZABLE, 0).unwrap();
+
+        let stream =
+            Stream::create(StreamOptions::MODE_READ | StreamOptions::MODE_WRITE, &vmo, 0).unwrap();
+
+        let basic_info = stream.basic_info().unwrap();
+        assert_eq!(basic_info.object_type, zx::ObjectType::STREAM);
+        assert!(basic_info.rights.contains(zx::Rights::READ));
+        assert!(basic_info.rights.contains(zx::Rights::WRITE));
+    }
+
+    #[test]
+    fn create_readonly() {
+        let vmo = zx::Vmo::create_with_opts(zx::VmoOptions::RESIZABLE, 0).unwrap();
+
+        let stream = Stream::create(StreamOptions::MODE_READ, &vmo, 0).unwrap();
+
+        let basic_info = stream.basic_info().unwrap();
+        assert!(basic_info.rights.contains(zx::Rights::READ));
+        assert!(!basic_info.rights.contains(zx::Rights::WRITE));
+    }
+
+    #[test]
+    fn create_offset() {
+        let vmo = zx::Vmo::create_with_opts(zx::VmoOptions::RESIZABLE, 0).unwrap();
+        let stream = Stream::create(StreamOptions::MODE_READ, &vmo, 24).unwrap();
+        assert_eq!(stream.seek(SeekFrom::Current(0)).unwrap(), 24);
+    }
+
+    #[test]
+    fn create_invalid() {
+        let result =
+            Stream::create(StreamOptions::MODE_READ, &zx::Vmo::from(zx::Handle::invalid()), 0);
+        assert_eq!(result, Err(zx::Status::BAD_HANDLE));
+    }
+}
