@@ -86,7 +86,7 @@ mod tests {
     fn successful_deserialization_of_configuration_file() {
         let config = AudioGatewayFeatureSupport::load().expect("Parse config file correctly");
         assert!(!config.reject_incoming_voice_call);
-        assert!(config.three_way_calling);
+        assert!(!config.three_way_calling);
         assert!(!config.in_band_ringtone);
         assert!(config.echo_canceling_and_noise_reduction);
         assert!(!config.voice_recognition);

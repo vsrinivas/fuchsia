@@ -446,7 +446,7 @@ async fn test_hfp_full_slc_init_procedure(tf: HfpAgIntegrationTest) {
     send_command_and_expect_response(
         &mut remote,
         hf_features_cmd,
-        vec![at::success(at::Success::Brsf { features: 3907i64 }), at::Response::Ok],
+        vec![at::success(at::Success::Brsf { features: 3906i64 }), at::Response::Ok],
     )
     .await;
 
@@ -494,22 +494,17 @@ async fn test_hfp_full_slc_init_procedure(tf: HfpAgIntegrationTest) {
     )
     .await;
 
-    let call_hold_info_cmd = at::Command::ChldTest {};
-    let expected6 = at::success(at::Success::Chld {
-        commands: vec![
-            "0".to_string(),
-            "1".to_string(),
-            "1X".to_string(),
-            "2".to_string(),
-            "2X".to_string(),
-        ],
-    });
-    send_command_and_expect_response(
-        &mut remote,
-        call_hold_info_cmd,
-        vec![expected6, at::Response::Ok],
-    )
-    .await;
+    // Three-way calling is disabled on the default config, so ChldTest is skipped.
+    // let call_hold_info_cmd = at::Command::ChldTest {};
+    //let expected6 = at::success(at::Success::Chld {
+    //    commands: vec!["0".to_string(), "1".to_string(), "2".to_string()],
+    //});
+    //send_command_and_expect_response(
+    //    &mut remote,
+    //    call_hold_info_cmd,
+    //    vec![expected6, at::Response::Ok],
+    //)
+    //.await;
 
     let peer_supported_indicators_cmd =
         at::Command::Bind { indicators: vec![at::BluetoothHFIndicator::BatteryLevel as i64] };
