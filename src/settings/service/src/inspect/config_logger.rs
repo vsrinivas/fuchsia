@@ -4,10 +4,9 @@
 
 use crate::clock;
 use crate::config;
-use crate::inspect::utils::inspect_writable_map::InspectWritableMap;
-
+use crate::inspect::utils::managed_inspect_map::ManagedInspectMap;
 use fuchsia_inspect::{self as inspect, component, NumericProperty, Property};
-use fuchsia_inspect_derive::{Inspect, WithInspect};
+use fuchsia_inspect_derive::Inspect;
 use futures::lock::Mutex;
 use lazy_static::lazy_static;
 use std::sync::Arc;
@@ -18,11 +17,8 @@ pub struct InspectConfigLogger {
     /// The inspector, stored for access in tests.
     pub inspector: &'static inspect::Inspector,
 
-    /// The saved inspect node for the config loads.
-    inspect_node: inspect::Node,
-
     /// The saved information about each load.
-    config_load_values: InspectWritableMap<ConfigInspectInfo>,
+    config_load_values: ManagedInspectMap<ConfigInspectInfo>,
 }
 
 /// Information about a config file load to be written to inspect.
@@ -44,30 +40,22 @@ struct ConfigInspectInfo {
     value: inspect::StringProperty,
 }
 
-impl ConfigInspectInfo {
-    fn new(timestamp: String, value: String, node: &inspect::Node, key: &str) -> Self {
-        let info = Self::default()
-            .with_inspect(node, key)
-            .expect("Failed to create ConfigInspectInfo node");
-        info.timestamp.set(&timestamp);
-        info.count.set(1);
-        info.value.set(&value);
-        info
-    }
-}
-
 lazy_static! {
     pub(crate) static ref INSPECT_CONFIG_LOGGER: Arc<Mutex<InspectConfigLogger>> =
         Arc::new(Mutex::new(InspectConfigLogger::new()));
 }
 
 impl InspectConfigLogger {
+    /// Creates a new [InspectConfigLogger] that writes to the default
+    /// [fuchsia_inspect::component::inspector()].
     fn new() -> Self {
         let inspector = component::inspector();
+        let config_inspect_node = inspector.root().create_child(CONFIG_INSPECT_NODE_NAME);
         Self {
             inspector,
-            inspect_node: inspector.root().create_child(CONFIG_INSPECT_NODE_NAME),
-            config_load_values: InspectWritableMap::new(),
+            config_load_values: ManagedInspectMap::<ConfigInspectInfo>::with_node(
+                config_inspect_node,
+            ),
         }
     }
 
@@ -79,24 +67,14 @@ impl InspectConfigLogger {
         let timestamp = clock::inspect_format_now();
         let config::base::ConfigLoadInfo { status, contents } = config_load_info;
 
-        match self.config_load_values.get_mut(&path) {
-            Some(config_inspect_info) => {
-                config_inspect_info.timestamp.set(&timestamp);
-                config_inspect_info
-                    .value
-                    .set(&format!("{:#?}", config::base::ConfigLoadInfo { status, contents }));
-                config_inspect_info.count.add(1u64);
-            }
-            None => {
-                let config_inspect_info = ConfigInspectInfo::new(
-                    timestamp,
-                    format!("{:#?}", config::base::ConfigLoadInfo { status, contents }),
-                    &self.inspect_node,
-                    &path,
-                );
-                let _ = self.config_load_values.set(path, config_inspect_info);
-            }
-        }
+        let config_inspect_info =
+            self.config_load_values.get_or_insert_with(path, ConfigInspectInfo::default);
+
+        config_inspect_info.timestamp.set(&timestamp);
+        config_inspect_info
+            .value
+            .set(&format!("{:#?}", config::base::ConfigLoadInfo { status, contents }));
+        config_inspect_info.count.add(1u64);
     }
 }
 
@@ -113,5 +91,39 @@ impl InspectConfigLoggerHandle {
 impl Default for InspectConfigLoggerHandle {
     fn default() -> Self {
         InspectConfigLoggerHandle::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::base::ConfigLoadStatus;
+    use fuchsia_inspect::assert_data_tree;
+    use fuchsia_zircon::Time;
+
+    #[test]
+    fn test_listener_logger() {
+        // Set clock for consistent timestamps.
+        clock::mock::set(Time::from_nanos(0));
+
+        let mut logger = InspectConfigLogger::new();
+
+        logger.write_config_load_to_inspect(
+            "test_path".to_string(),
+            config::base::ConfigLoadInfo {
+                status: ConfigLoadStatus::Success,
+                contents: Some("test".to_string()),
+            },
+        );
+
+        assert_data_tree!(logger.inspector, root: {
+            config_loads: {
+                "test_path": {
+                    "count": 1u64,
+                    "timestamp": "0.000000000",
+                    "value": "ConfigLoadInfo {\n    status: Success,\n    contents: Some(\n        \"test\",\n    ),\n}"
+                }
+            }
+        });
     }
 }
