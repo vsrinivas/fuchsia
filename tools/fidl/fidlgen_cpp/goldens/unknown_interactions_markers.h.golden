@@ -38,8 +38,56 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
+  class StrictTwoWayFields final {
+    StrictTwoWayFields() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayUnion final {
+    StrictTwoWayUnion() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayTable final {
+    StrictTwoWayTable() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
   class StrictTwoWayErr final {
     StrictTwoWayErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayFieldsErr final {
+    StrictTwoWayFieldsErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayUnionErr final {
+    StrictTwoWayUnionErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayTableErr final {
+    StrictTwoWayTableErr() = delete;
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
@@ -54,8 +102,56 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
+  class FlexibleTwoWayFields final {
+    FlexibleTwoWayFields() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleTwoWayUnion final {
+    FlexibleTwoWayUnion() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleTwoWayTable final {
+    FlexibleTwoWayTable() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
   class FlexibleTwoWayErr final {
     FlexibleTwoWayErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleTwoWayFieldsErr final {
+    FlexibleTwoWayFieldsErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleTwoWayUnionErr final {
+    FlexibleTwoWayUnionErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleTwoWayTableErr final {
+    FlexibleTwoWayTableErr() = delete;
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
@@ -70,8 +166,56 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasRequest = false;
     static constexpr bool kHasResponse = true;
   };
+  class StrictEventFields final {
+    StrictEventFields() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictEventUnion final {
+    StrictEventUnion() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictEventTable final {
+    StrictEventTable() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
   class StrictEventErr final {
     StrictEventErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictEventFieldsErr final {
+    StrictEventFieldsErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictEventUnionErr final {
+    StrictEventUnionErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictEventTableErr final {
+    StrictEventTableErr() = delete;
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
@@ -86,8 +230,56 @@ class UnknownInteractionsProtocol final {
     static constexpr bool kHasRequest = false;
     static constexpr bool kHasResponse = true;
   };
+  class FlexibleEventFields final {
+    FlexibleEventFields() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleEventUnion final {
+    FlexibleEventUnion() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleEventTable final {
+    FlexibleEventTable() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
   class FlexibleEventErr final {
     FlexibleEventErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleEventFieldsErr final {
+    FlexibleEventFieldsErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleEventUnionErr final {
+    FlexibleEventUnionErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleEventTableErr final {
+    FlexibleEventTableErr() = delete;
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsProtocol;
@@ -127,8 +319,56 @@ class UnknownInteractionsDriverProtocol final {
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
+  class StrictTwoWayFields final {
+    StrictTwoWayFields() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayUnion final {
+    StrictTwoWayUnion() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayTable final {
+    StrictTwoWayTable() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
   class StrictTwoWayErr final {
     StrictTwoWayErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayFieldsErr final {
+    StrictTwoWayFieldsErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayUnionErr final {
+    StrictTwoWayUnionErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayTableErr final {
+    StrictTwoWayTableErr() = delete;
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
@@ -143,8 +383,56 @@ class UnknownInteractionsDriverProtocol final {
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
+  class FlexibleTwoWayFields final {
+    FlexibleTwoWayFields() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleTwoWayUnion final {
+    FlexibleTwoWayUnion() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleTwoWayTable final {
+    FlexibleTwoWayTable() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
   class FlexibleTwoWayErr final {
     FlexibleTwoWayErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleTwoWayFieldsErr final {
+    FlexibleTwoWayFieldsErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleTwoWayUnionErr final {
+    FlexibleTwoWayUnionErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleTwoWayTableErr final {
+    FlexibleTwoWayTableErr() = delete;
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsDriverProtocol;
@@ -176,8 +464,56 @@ class UnknownInteractionsClosedProtocol final {
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
+  class StrictTwoWayFields final {
+    StrictTwoWayFields() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayUnion final {
+    StrictTwoWayUnion() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayTable final {
+    StrictTwoWayTable() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
   class StrictTwoWayErr final {
     StrictTwoWayErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayFieldsErr final {
+    StrictTwoWayFieldsErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayUnionErr final {
+    StrictTwoWayUnionErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayTableErr final {
+    StrictTwoWayTableErr() = delete;
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
@@ -192,8 +528,56 @@ class UnknownInteractionsClosedProtocol final {
     static constexpr bool kHasRequest = false;
     static constexpr bool kHasResponse = true;
   };
+  class StrictEventFields final {
+    StrictEventFields() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictEventUnion final {
+    StrictEventUnion() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictEventTable final {
+    StrictEventTable() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
   class StrictEventErr final {
     StrictEventErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictEventFieldsErr final {
+    StrictEventFieldsErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictEventUnionErr final {
+    StrictEventUnionErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictEventTableErr final {
+    StrictEventTableErr() = delete;
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedProtocol;
@@ -225,8 +609,56 @@ class UnknownInteractionsClosedDriverProtocol final {
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
+  class StrictTwoWayFields final {
+    StrictTwoWayFields() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayUnion final {
+    StrictTwoWayUnion() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayTable final {
+    StrictTwoWayTable() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
   class StrictTwoWayErr final {
     StrictTwoWayErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayFieldsErr final {
+    StrictTwoWayFieldsErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayUnionErr final {
+    StrictTwoWayUnionErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayTableErr final {
+    StrictTwoWayTableErr() = delete;
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol;
@@ -266,8 +698,56 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
+  class StrictTwoWayFields final {
+    StrictTwoWayFields() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayUnion final {
+    StrictTwoWayUnion() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayTable final {
+    StrictTwoWayTable() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
   class StrictTwoWayErr final {
     StrictTwoWayErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayFieldsErr final {
+    StrictTwoWayFieldsErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayUnionErr final {
+    StrictTwoWayUnionErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayTableErr final {
+    StrictTwoWayTableErr() = delete;
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
@@ -282,8 +762,56 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasRequest = false;
     static constexpr bool kHasResponse = true;
   };
+  class StrictEventFields final {
+    StrictEventFields() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictEventUnion final {
+    StrictEventUnion() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictEventTable final {
+    StrictEventTable() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
   class StrictEventErr final {
     StrictEventErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictEventFieldsErr final {
+    StrictEventFieldsErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictEventUnionErr final {
+    StrictEventUnionErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictEventTableErr final {
+    StrictEventTableErr() = delete;
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
@@ -298,8 +826,56 @@ class UnknownInteractionsAjarProtocol final {
     static constexpr bool kHasRequest = false;
     static constexpr bool kHasResponse = true;
   };
+  class FlexibleEventFields final {
+    FlexibleEventFields() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleEventUnion final {
+    FlexibleEventUnion() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleEventTable final {
+    FlexibleEventTable() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
   class FlexibleEventErr final {
     FlexibleEventErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleEventFieldsErr final {
+    FlexibleEventFieldsErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleEventUnionErr final {
+    FlexibleEventUnionErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
+    static constexpr bool kHasRequest = false;
+    static constexpr bool kHasResponse = true;
+  };
+  class FlexibleEventTableErr final {
+    FlexibleEventTableErr() = delete;
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarProtocol;
@@ -339,8 +915,56 @@ class UnknownInteractionsAjarDriverProtocol final {
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
   };
+  class StrictTwoWayFields final {
+    StrictTwoWayFields() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayUnion final {
+    StrictTwoWayUnion() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayTable final {
+    StrictTwoWayTable() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
   class StrictTwoWayErr final {
     StrictTwoWayErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayFieldsErr final {
+    StrictTwoWayFieldsErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayUnionErr final {
+    StrictTwoWayUnionErr() = delete;
+
+   public:
+    using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;
+    static constexpr bool kHasRequest = true;
+    static constexpr bool kHasResponse = true;
+  };
+  class StrictTwoWayTableErr final {
+    StrictTwoWayTableErr() = delete;
 
    public:
     using Protocol = ::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol;

@@ -19,14 +19,50 @@ class UnknownInteractionsProtocol_TestBase : public ::test::unknowninteractions:
   void StrictTwoWay(StrictTwoWayCallback callback) override {
     NotImplemented_("StrictTwoWay");
   }
+  void StrictTwoWayFields(StrictTwoWayFieldsCallback callback) override {
+    NotImplemented_("StrictTwoWayFields");
+  }
+  void StrictTwoWayUnion(StrictTwoWayUnionCallback callback) override {
+    NotImplemented_("StrictTwoWayUnion");
+  }
+  void StrictTwoWayTable(StrictTwoWayTableCallback callback) override {
+    NotImplemented_("StrictTwoWayTable");
+  }
   void StrictTwoWayErr(StrictTwoWayErrCallback callback) override {
     NotImplemented_("StrictTwoWayErr");
+  }
+  void StrictTwoWayFieldsErr(StrictTwoWayFieldsErrCallback callback) override {
+    NotImplemented_("StrictTwoWayFieldsErr");
+  }
+  void StrictTwoWayUnionErr(StrictTwoWayUnionErrCallback callback) override {
+    NotImplemented_("StrictTwoWayUnionErr");
+  }
+  void StrictTwoWayTableErr(StrictTwoWayTableErrCallback callback) override {
+    NotImplemented_("StrictTwoWayTableErr");
   }
   void FlexibleTwoWay(FlexibleTwoWayCallback callback) override {
     NotImplemented_("FlexibleTwoWay");
   }
+  void FlexibleTwoWayFields(FlexibleTwoWayFieldsCallback callback) override {
+    NotImplemented_("FlexibleTwoWayFields");
+  }
+  void FlexibleTwoWayUnion(FlexibleTwoWayUnionCallback callback) override {
+    NotImplemented_("FlexibleTwoWayUnion");
+  }
+  void FlexibleTwoWayTable(FlexibleTwoWayTableCallback callback) override {
+    NotImplemented_("FlexibleTwoWayTable");
+  }
   void FlexibleTwoWayErr(FlexibleTwoWayErrCallback callback) override {
     NotImplemented_("FlexibleTwoWayErr");
+  }
+  void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrCallback callback) override {
+    NotImplemented_("FlexibleTwoWayFieldsErr");
+  }
+  void FlexibleTwoWayUnionErr(FlexibleTwoWayUnionErrCallback callback) override {
+    NotImplemented_("FlexibleTwoWayUnionErr");
+  }
+  void FlexibleTwoWayTableErr(FlexibleTwoWayTableErrCallback callback) override {
+    NotImplemented_("FlexibleTwoWayTableErr");
   }
 };
 
@@ -40,8 +76,26 @@ class UnknownInteractionsClosedProtocol_TestBase : public ::test::unknowninterac
   void StrictTwoWay(StrictTwoWayCallback callback) override {
     NotImplemented_("StrictTwoWay");
   }
+  void StrictTwoWayFields(StrictTwoWayFieldsCallback callback) override {
+    NotImplemented_("StrictTwoWayFields");
+  }
+  void StrictTwoWayUnion(StrictTwoWayUnionCallback callback) override {
+    NotImplemented_("StrictTwoWayUnion");
+  }
+  void StrictTwoWayTable(StrictTwoWayTableCallback callback) override {
+    NotImplemented_("StrictTwoWayTable");
+  }
   void StrictTwoWayErr(StrictTwoWayErrCallback callback) override {
     NotImplemented_("StrictTwoWayErr");
+  }
+  void StrictTwoWayFieldsErr(StrictTwoWayFieldsErrCallback callback) override {
+    NotImplemented_("StrictTwoWayFieldsErr");
+  }
+  void StrictTwoWayUnionErr(StrictTwoWayUnionErrCallback callback) override {
+    NotImplemented_("StrictTwoWayUnionErr");
+  }
+  void StrictTwoWayTableErr(StrictTwoWayTableErrCallback callback) override {
+    NotImplemented_("StrictTwoWayTableErr");
   }
 };
 
@@ -58,8 +112,26 @@ class UnknownInteractionsAjarProtocol_TestBase : public ::test::unknowninteracti
   void StrictTwoWay(StrictTwoWayCallback callback) override {
     NotImplemented_("StrictTwoWay");
   }
+  void StrictTwoWayFields(StrictTwoWayFieldsCallback callback) override {
+    NotImplemented_("StrictTwoWayFields");
+  }
+  void StrictTwoWayUnion(StrictTwoWayUnionCallback callback) override {
+    NotImplemented_("StrictTwoWayUnion");
+  }
+  void StrictTwoWayTable(StrictTwoWayTableCallback callback) override {
+    NotImplemented_("StrictTwoWayTable");
+  }
   void StrictTwoWayErr(StrictTwoWayErrCallback callback) override {
     NotImplemented_("StrictTwoWayErr");
+  }
+  void StrictTwoWayFieldsErr(StrictTwoWayFieldsErrCallback callback) override {
+    NotImplemented_("StrictTwoWayFieldsErr");
+  }
+  void StrictTwoWayUnionErr(StrictTwoWayUnionErrCallback callback) override {
+    NotImplemented_("StrictTwoWayUnionErr");
+  }
+  void StrictTwoWayTableErr(StrictTwoWayTableErrCallback callback) override {
+    NotImplemented_("StrictTwoWayTableErr");
   }
 };
 }  // namespace testing

@@ -716,6 +716,12 @@ func (m Method) HasApplicationError() bool {
 	return m.Result != nil && m.Result.HasError
 }
 
+// Returns true if the method has a result payload and the payload has the
+// `transport_err` variant used for transport errors.
+func (m Method) HasTransportError() bool {
+	return m.Result != nil && m.Result.HasTransportError
+}
+
 // Returns true if the method has a response that requires the server to provide
 // arguments to the response completer in order to reply.
 //

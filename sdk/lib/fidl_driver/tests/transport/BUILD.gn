@@ -8,7 +8,7 @@ import("//build/test.gni")
 
 group("transport") {
   testonly = true
-  deps = [ ":fidl_drivers_transport_tests" ]
+  deps = [ ":fidl_driver_transport_tests" ]
 }
 
 fidl("test.transport") {
@@ -82,7 +82,7 @@ foreach(test_name, test_names) {
   }
 }
 
-fuchsia_test_package("fidl_drivers_transport_tests") {
+fuchsia_test_package("fidl_driver_transport_tests") {
   test_components = []
   foreach(test_name, test_names) {
     test_components += [ ":fidl_driver_" + test_name ]

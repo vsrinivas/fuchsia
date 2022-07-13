@@ -74,11 +74,13 @@ class TestProtocol extends UnknownInteractionsProtocol$TestBase {
         _flexibleTwoWayErr = flexibleTwoWayErr,
         _$unknownOneWay = unknownOneWay,
         _$unknownTwoWay = unknownTwoWay,
-        _strictEvent = strictEvent ?? StreamController.broadcast().stream,
-        _strictEventErr = strictEventErr ?? StreamController.broadcast().stream,
-        _flexibleEvent = flexibleEvent ?? StreamController.broadcast().stream,
+        _strictEvent = strictEvent ?? StreamController<void>.broadcast().stream,
+        _strictEventErr =
+            strictEventErr ?? StreamController<void>.broadcast().stream,
+        _flexibleEvent =
+            flexibleEvent ?? StreamController<void>.broadcast().stream,
         _flexibleEventErr =
-            flexibleEventErr ?? StreamController.broadcast().stream;
+            flexibleEventErr ?? StreamController<void>.broadcast().stream;
 
   final Future<void> Function() _strictOneWay;
   final Future<void> Function() _flexibleOneWay;
@@ -89,9 +91,17 @@ class TestProtocol extends UnknownInteractionsProtocol$TestBase {
   final Future<void> Function(int) _$unknownOneWay;
   final Future<void> Function(int) _$unknownTwoWay;
   final Stream<void> _strictEvent;
+  final Stream<int> _strictEventFields =
+      StreamController<int>.broadcast().stream;
   final Stream<void> _strictEventErr;
+  final Stream<int> _strictEventFieldsErr =
+      StreamController<int>.broadcast().stream;
   final Stream<void> _flexibleEvent;
+  final Stream<int> _flexibleEventFields =
+      StreamController<int>.broadcast().stream;
   final Stream<void> _flexibleEventErr;
+  final Stream<int> _flexibleEventFieldsErr =
+      StreamController<int>.broadcast().stream;
 
   @override
   Future<void> strictOneWay() => (_strictOneWay ?? super.strictOneWay)();
@@ -116,11 +126,19 @@ class TestProtocol extends UnknownInteractionsProtocol$TestBase {
   @override
   Stream<void> get strictEvent => _strictEvent;
   @override
+  Stream<int> get strictEventFields => _strictEventFields;
+  @override
   Stream<void> get strictEventErr => _strictEventErr;
+  @override
+  Stream<int> get strictEventFieldsErr => _strictEventFieldsErr;
   @override
   Stream<void> get flexibleEvent => _flexibleEvent;
   @override
+  Stream<int> get flexibleEventFields => _flexibleEventFields;
+  @override
   Stream<void> get flexibleEventErr => _flexibleEventErr;
+  @override
+  Stream<int> get flexibleEventFieldsErr => _flexibleEventFieldsErr;
 }
 
 class TestAjarProtocol extends UnknownInteractionsAjarProtocol$TestBase {

@@ -35,20 +35,42 @@ class UnknownInteractionsEventHandlerBase
       override {
     ADD_FAILURE() << "StrictEvent called unexpectedly";
   }
+  void StrictEventFields(
+      ::fidl::Event<::test_unknown_interactions::UnknownInteractionsProtocol::StrictEventFields>&)
+      override {
+    ADD_FAILURE() << "StrictEventFields called unexpectedly";
+  }
   void StrictEventErr(
       ::fidl::Event<::test_unknown_interactions::UnknownInteractionsProtocol::StrictEventErr>&)
       override {
     ADD_FAILURE() << "StrictEventErr called unexpectedly";
+  }
+  void StrictEventFieldsErr(
+      ::fidl::Event<
+          ::test_unknown_interactions::UnknownInteractionsProtocol::StrictEventFieldsErr>&)
+      override {
+    ADD_FAILURE() << "StrictEventFieldsErr called unexpectedly";
   }
   void FlexibleEvent(
       ::fidl::Event<::test_unknown_interactions::UnknownInteractionsProtocol::FlexibleEvent>&)
       override {
     ADD_FAILURE() << "FlexibleEvent called unexpectedly";
   }
+  void FlexibleEventFields(
+      ::fidl::Event<::test_unknown_interactions::UnknownInteractionsProtocol::FlexibleEventFields>&)
+      override {
+    ADD_FAILURE() << "FlexibleEventFields called unexpectedly";
+  }
   void FlexibleEventErr(
       ::fidl::Event<::test_unknown_interactions::UnknownInteractionsProtocol::FlexibleEventErr>&)
       override {
     ADD_FAILURE() << "FlexibleEventErr called unexpectedly";
+  }
+  void FlexibleEventFieldsErr(
+      ::fidl::Event<
+          ::test_unknown_interactions::UnknownInteractionsProtocol::FlexibleEventFieldsErr>&)
+      override {
+    ADD_FAILURE() << "FlexibleEventFieldsErr called unexpectedly";
   }
 
   void handle_unknown_event(
@@ -71,9 +93,19 @@ class UnknownInteractionsServerBase : public ::fidl::Server<::test::UnknownInter
     ADD_FAILURE() << "StrictTwoWay called unexpectedly";
   }
 
+  void StrictTwoWayFields(StrictTwoWayFieldsRequest& request,
+                          StrictTwoWayFieldsCompleter::Sync& completer) override {
+    ADD_FAILURE() << "StrictTwoWayFields called unexpectedly";
+  }
+
   void FlexibleTwoWay(FlexibleTwoWayRequest& request,
                       FlexibleTwoWayCompleter::Sync& completer) override {
     ADD_FAILURE() << "FlexibleTwoWay called unexpectedly";
+  }
+
+  void FlexibleTwoWayFields(FlexibleTwoWayFieldsRequest& request,
+                            FlexibleTwoWayFieldsCompleter::Sync& completer) override {
+    ADD_FAILURE() << "FlexibleTwoWayFields called unexpectedly";
   }
 
   void StrictTwoWayErr(StrictTwoWayErrRequest& request,
@@ -81,9 +113,19 @@ class UnknownInteractionsServerBase : public ::fidl::Server<::test::UnknownInter
     ADD_FAILURE() << "StrictTwoWayErr called unexpectedly";
   }
 
+  void StrictTwoWayFieldsErr(StrictTwoWayFieldsErrRequest& request,
+                             StrictTwoWayFieldsErrCompleter::Sync& completer) override {
+    ADD_FAILURE() << "StrictTwoWayFieldsErr called unexpectedly";
+  }
+
   void FlexibleTwoWayErr(FlexibleTwoWayErrRequest& request,
                          FlexibleTwoWayErrCompleter::Sync& completer) override {
     ADD_FAILURE() << "FlexibleTwoWayErr called unexpectedly";
+  }
+
+  void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequest& request,
+                               FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
+    ADD_FAILURE() << "FlexibleTwoWayFieldsErr called unexpectedly";
   }
 
   void handle_unknown_method(
@@ -493,6 +535,54 @@ TEST_F(UnknownInteractions, TwoWayFlexibleAsyncSendErrorVariant) {
   loop().RunUntilIdle();
 }
 
+TEST_F(UnknownInteractions, TwoWayFlexibleFieldsAsyncSend) {
+  auto client = AsyncClient();
+  auto server = TakeServerChannel();
+
+  client->FlexibleTwoWayFields().Then([](auto& response) {
+    ASSERT_TRUE(response.is_ok());
+    EXPECT_EQ(32, response.value().some_field());
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
+  EXPECT_EQ(ZX_OK, received.status);
+  auto expected = ExcludeTxid(MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayFields>(
+      fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_THAT(received.buf_excluding_txid(), ::testing::ContainerEq(expected));
+  EXPECT_NE(0u, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayFields>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kSuccess, 32);
+  received.reply(server, server_reply);
+
+  loop().RunUntilIdle();
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleFieldsAsyncSendUnknownResponse) {
+  auto client = AsyncClient();
+  auto server = TakeServerChannel();
+
+  client->FlexibleTwoWayFields().Then([](auto& response) {
+    ASSERT_TRUE(response.is_error());
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.error_value().status());
+    EXPECT_EQ(fidl::Reason::kUnknownInteraction, response.error_value().reason());
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
+  EXPECT_EQ(ZX_OK, received.status);
+  auto expected = ExcludeTxid(MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayFields>(
+      fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_THAT(received.buf_excluding_txid(), ::testing::ContainerEq(expected));
+  EXPECT_NE(0u, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayFields>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kTransportError,
+      ZX_ERR_NOT_SUPPORTED);
+  received.reply(server, server_reply);
+
+  loop().RunUntilIdle();
+}
+
 TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSend) {
   auto client = AsyncClient();
   auto server = TakeServerChannel();
@@ -583,6 +673,82 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrAsyncSendErrorVariant) {
   EXPECT_NE(0u, received.txid());
 
   auto server_reply = MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayErr>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kApplicationError, 0x100);
+  received.reply(server, server_reply);
+
+  loop().RunUntilIdle();
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrAsyncSend) {
+  auto client = AsyncClient();
+  auto server = TakeServerChannel();
+
+  client->FlexibleTwoWayFieldsErr().Then([](auto& response) {
+    ASSERT_TRUE(response.is_ok());
+    EXPECT_EQ(32, response.value().some_field());
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
+  EXPECT_EQ(ZX_OK, received.status);
+  auto expected =
+      ExcludeTxid(MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(
+          fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_THAT(received.buf_excluding_txid(), ::testing::ContainerEq(expected));
+  EXPECT_NE(0u, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kSuccess, 32);
+  received.reply(server, server_reply);
+
+  loop().RunUntilIdle();
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrAsyncSendUnknownResponse) {
+  auto client = AsyncClient();
+  auto server = TakeServerChannel();
+
+  client->FlexibleTwoWayFieldsErr().Then([](auto& response) {
+    ASSERT_TRUE(response.is_error());
+    ASSERT_TRUE(response.error_value().is_transport_error());
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.error_value().transport_error().status());
+    EXPECT_EQ(fidl::Reason::kUnknownInteraction, response.error_value().transport_error().reason());
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
+  EXPECT_EQ(ZX_OK, received.status);
+  auto expected =
+      ExcludeTxid(MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(
+          fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_THAT(received.buf_excluding_txid(), ::testing::ContainerEq(expected));
+  EXPECT_NE(0u, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kTransportError,
+      ZX_ERR_NOT_SUPPORTED);
+  received.reply(server, server_reply);
+
+  loop().RunUntilIdle();
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrAsyncSendErrorVariant) {
+  auto client = AsyncClient();
+  auto server = TakeServerChannel();
+
+  client->FlexibleTwoWayFieldsErr().Then([](auto& response) {
+    ASSERT_TRUE(response.is_error());
+    ASSERT_TRUE(response.error_value().is_application_error());
+    EXPECT_EQ(0x100, response.error_value().application_error());
+  });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
+  EXPECT_EQ(ZX_OK, received.status);
+  auto expected =
+      ExcludeTxid(MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(
+          fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_THAT(received.buf_excluding_txid(), ::testing::ContainerEq(expected));
+  EXPECT_NE(0u, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(
       fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kApplicationError, 0x100);
   received.reply(server, server_reply);
 
@@ -1032,6 +1198,52 @@ TEST_F(UnknownInteractions, TwoWayFlexibleSyncSendErrorVariant) {
   EXPECT_EQ(fidl::Reason::kDecodeError, response.error_value().reason());
 }
 
+TEST_F(UnknownInteractions, TwoWayFlexibleFieldsSyncSend) {
+  auto client = SyncClient();
+  auto server = TakeServerChannel();
+
+  auto response_fut = std::async([&client]() { return client->FlexibleTwoWayFields(); });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
+  EXPECT_EQ(ZX_OK, received.status);
+  auto expected = ExcludeTxid(MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayFields>(
+      fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_THAT(received.buf_excluding_txid(), ::testing::ContainerEq(expected));
+  EXPECT_NE(0u, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayFields>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kSuccess, 32);
+  received.reply(server, server_reply);
+
+  auto response = response_fut.get();
+  ASSERT_TRUE(response.is_ok());
+  EXPECT_EQ(32, response.value().some_field());
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleFieldsSyncSendUnknownResponse) {
+  auto client = SyncClient();
+  auto server = TakeServerChannel();
+
+  auto response_fut = std::async([&client]() { return client->FlexibleTwoWayFields(); });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
+  EXPECT_EQ(ZX_OK, received.status);
+  auto expected = ExcludeTxid(MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayFields>(
+      fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_THAT(received.buf_excluding_txid(), ::testing::ContainerEq(expected));
+  EXPECT_NE(0u, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayFields>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kTransportError,
+      ZX_ERR_NOT_SUPPORTED);
+  received.reply(server, server_reply);
+
+  auto response = response_fut.get();
+  ASSERT_TRUE(response.is_error());
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.error_value().status());
+  EXPECT_EQ(fidl::Reason::kUnknownInteraction, response.error_value().reason());
+}
+
 TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSend) {
   auto client = SyncClient();
   auto server = TakeServerChannel();
@@ -1117,6 +1329,79 @@ TEST_F(UnknownInteractions, TwoWayFlexibleErrSyncSendErrorVariant) {
   EXPECT_NE(0u, received.txid());
 
   auto server_reply = MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayErr>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kApplicationError, 0x100);
+  received.reply(server, server_reply);
+
+  auto response = response_fut.get();
+  ASSERT_TRUE(response.is_error());
+  ASSERT_TRUE(response.error_value().is_application_error());
+  EXPECT_EQ(0x100, response.error_value().application_error());
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrSyncSend) {
+  auto client = SyncClient();
+  auto server = TakeServerChannel();
+
+  auto response_fut = std::async([&client]() { return client->FlexibleTwoWayFieldsErr(); });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
+  EXPECT_EQ(ZX_OK, received.status);
+  auto expected =
+      ExcludeTxid(MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(
+          fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_THAT(received.buf_excluding_txid(), ::testing::ContainerEq(expected));
+  EXPECT_NE(0u, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kSuccess, 32);
+  received.reply(server, server_reply);
+
+  auto response = response_fut.get();
+  ASSERT_TRUE(response.is_ok());
+  EXPECT_EQ(32, response.value().some_field());
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrSyncSendUnknownResponse) {
+  auto client = SyncClient();
+  auto server = TakeServerChannel();
+
+  auto response_fut = std::async([&client]() { return client->FlexibleTwoWayFieldsErr(); });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
+  EXPECT_EQ(ZX_OK, received.status);
+  auto expected =
+      ExcludeTxid(MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(
+          fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_THAT(received.buf_excluding_txid(), ::testing::ContainerEq(expected));
+  EXPECT_NE(0u, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(
+      fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kTransportError,
+      ZX_ERR_NOT_SUPPORTED);
+  received.reply(server, server_reply);
+
+  auto response = response_fut.get();
+  ASSERT_TRUE(response.is_error());
+  ASSERT_TRUE(response.error_value().is_transport_error());
+  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, response.error_value().transport_error().status());
+  EXPECT_EQ(fidl::Reason::kUnknownInteraction, response.error_value().transport_error().reason());
+}
+
+TEST_F(UnknownInteractions, TwoWayFlexibleFieldsErrSyncSendErrorVariant) {
+  auto client = SyncClient();
+  auto server = TakeServerChannel();
+
+  auto response_fut = std::async([&client]() { return client->FlexibleTwoWayFieldsErr(); });
+
+  auto received = TwoWayServerRequest<16>::ReadFromChannel(server);
+  EXPECT_EQ(ZX_OK, received.status);
+  auto expected =
+      ExcludeTxid(MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(
+          fidl::MessageDynamicFlags::kFlexibleMethod));
+  EXPECT_THAT(received.buf_excluding_txid(), ::testing::ContainerEq(expected));
+  EXPECT_NE(0u, received.txid());
+
+  auto server_reply = MakeMessage<test::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(
       fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kApplicationError, 0x100);
   received.reply(server, server_reply);
 
@@ -1532,6 +1817,30 @@ TEST_F(UnknownInteractions, FlexibleTwoWayResponseMismatchedStrictness) {
   EXPECT_THAT(received.buf, ::testing::ContainerEq(expected));
 }
 
+TEST_F(UnknownInteractions, FlexibleTwoWayFieldsResponse) {
+  auto client = TakeClientChannel();
+  class Server : public UnknownInteractionsServerBase {
+    void FlexibleTwoWayFields(FlexibleTwoWayFieldsRequest& request,
+                              FlexibleTwoWayFieldsCompleter::Sync& completer) override {
+      completer.Reply({{.some_field = 42}});
+    }
+  };
+  Server server;
+  auto server_binding = BindServer(&server);
+
+  auto client_request = MakeMessage<::test::UnknownInteractionsProtocol::FlexibleTwoWayFields>(
+      0xABCD, ::fidl::MessageDynamicFlags::kFlexibleMethod);
+  ASSERT_EQ(ZX_OK, client.write(0, &client_request, client_request.size(), nullptr, 0));
+
+  loop().RunUntilIdle();
+
+  auto received = ReadResult<32>::ReadFromChannel(client);
+  EXPECT_EQ(ZX_OK, received.status);
+  auto expected = MakeMessage<::test::UnknownInteractionsProtocol::FlexibleTwoWayFields>(
+      0xABCD, ::fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kSuccess, 42);
+  EXPECT_THAT(received.buf, ::testing::ContainerEq(expected));
+}
+
 TEST_F(UnknownInteractions, FlexibleTwoWayErrResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
@@ -1576,6 +1885,56 @@ TEST_F(UnknownInteractions, FlexibleTwoWayErrResponseError) {
   auto received = ReadResult<32>::ReadFromChannel(client);
   EXPECT_EQ(ZX_OK, received.status);
   auto expected = MakeMessage<::test::UnknownInteractionsProtocol::FlexibleTwoWayErr>(
+      0xABCD, ::fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kApplicationError,
+      3203);
+  EXPECT_THAT(received.buf, ::testing::ContainerEq(expected));
+}
+
+TEST_F(UnknownInteractions, FlexibleTwoWayFieldsErrResponse) {
+  auto client = TakeClientChannel();
+  class Server : public UnknownInteractionsServerBase {
+    void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequest& request,
+                                 FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
+      completer.Reply(::fitx::ok(
+          ::test::UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse({.some_field = 42})));
+    }
+  };
+  Server server;
+  auto server_binding = BindServer(&server);
+
+  auto client_request = MakeMessage<::test::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(
+      0xABCD, ::fidl::MessageDynamicFlags::kFlexibleMethod);
+  ASSERT_EQ(ZX_OK, client.write(0, &client_request, client_request.size(), nullptr, 0));
+
+  loop().RunUntilIdle();
+
+  auto received = ReadResult<32>::ReadFromChannel(client);
+  EXPECT_EQ(ZX_OK, received.status);
+  auto expected = MakeMessage<::test::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(
+      0xABCD, ::fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kSuccess, 42);
+  EXPECT_THAT(received.buf, ::testing::ContainerEq(expected));
+}
+
+TEST_F(UnknownInteractions, FlexibleTwoWayFieldsErrResponseError) {
+  auto client = TakeClientChannel();
+  class Server : public UnknownInteractionsServerBase {
+    void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequest& request,
+                                 FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
+      completer.Reply(fitx::error(3203));
+    }
+  };
+  Server server;
+  auto server_binding = BindServer(&server);
+
+  auto client_request = MakeMessage<::test::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(
+      0xABCD, ::fidl::MessageDynamicFlags::kFlexibleMethod);
+  ASSERT_EQ(ZX_OK, client.write(0, &client_request, client_request.size(), nullptr, 0));
+
+  loop().RunUntilIdle();
+
+  auto received = ReadResult<32>::ReadFromChannel(client);
+  EXPECT_EQ(ZX_OK, received.status);
+  auto expected = MakeMessage<::test::UnknownInteractionsProtocol::FlexibleTwoWayFieldsErr>(
       0xABCD, ::fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kApplicationError,
       3203);
   EXPECT_THAT(received.buf, ::testing::ContainerEq(expected));

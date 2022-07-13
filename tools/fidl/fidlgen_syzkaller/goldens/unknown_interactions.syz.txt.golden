@@ -13,6 +13,15 @@ test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_R
 test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_ResponseHandles {
     void void
 } [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_ResponseInLine {
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_ResponseOutOfLine {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_ResponseHandles {
+    void void
+} [packed]
 test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventErr_ResponseInLine {
     padding int8
 } [packed]
@@ -20,6 +29,15 @@ test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventErr_Respon
     void void
 } [packed]
 test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventErr_ResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_ResponseInLine {
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_ResponseOutOfLine {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_ResponseHandles {
     void void
 } [packed]
 test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventErr_ResponseInLine {
@@ -31,6 +49,15 @@ test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventErr_Response
 test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventErr_ResponseHandles {
     void void
 } [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventFieldsErr_ResponseInLine {
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventFieldsErr_ResponseOutOfLine {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventFieldsErr_ResponseHandles {
+    void void
+} [packed]
 test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayErr_ResponseInLine {
     padding int8
 } [packed]
@@ -38,6 +65,15 @@ test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayErr_Respons
     void void
 } [packed]
 test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayErr_ResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_ResponseInLine {
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_ResponseOutOfLine {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_ResponseHandles {
     void void
 } [packed]
 test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_ResponseInLine {
@@ -49,6 +85,15 @@ test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr
 test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_ResponseHandles {
     void void
 } [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_ResponseInLine {
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_ResponseOutOfLine {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_ResponseHandles {
+    void void
+} [packed]
 test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventErr_ResponseInLine {
     padding int8
 } [packed]
@@ -56,6 +101,15 @@ test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventErr_Respon
     void void
 } [packed]
 test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventErr_ResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventFieldsErr_ResponseInLine {
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventFieldsErr_ResponseOutOfLine {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventFieldsErr_ResponseHandles {
     void void
 } [packed]
 test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayErr_ResponseInLine {
@@ -67,6 +121,15 @@ test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayErr_Respo
 test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayErr_ResponseHandles {
     void void
 } [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_ResponseInLine {
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_ResponseOutOfLine {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_ResponseHandles {
+    void void
+} [packed]
 test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResponseInLine {
     padding int8
 } [packed]
@@ -74,6 +137,24 @@ test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Res
     void void
 } [packed]
 test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_ResponseInLine {
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_ResponseOutOfLine {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_ResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_ResponseInLine {
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_ResponseOutOfLine {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_ResponseHandles {
     void void
 } [packed]
 test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWay_ResponseInLine {
@@ -94,6 +175,15 @@ test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayErr_Respo
 test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayErr_ResponseHandles {
     void void
 } [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_ResponseInLine {
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_ResponseOutOfLine {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_ResponseHandles {
+    void void
+} [packed]
 test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventErr_ResponseInLine {
     padding int8
 } [packed]
@@ -103,6 +193,15 @@ test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventErr_ResponseOu
 test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventErr_ResponseHandles {
     void void
 } [packed]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventFieldsErr_ResponseInLine {
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventFieldsErr_ResponseOutOfLine {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventFieldsErr_ResponseHandles {
+    void void
+} [packed]
 test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResponseInLine {
     padding int8
 } [packed]
@@ -110,6 +209,24 @@ test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResponseO
     void void
 } [packed]
 test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_ResponseInLine {
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_ResponseOutOfLine {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_ResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFields_ResponseInLine {
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFields_ResponseOutOfLine {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFields_ResponseHandles {
     void void
 } [packed]
 test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWay_ResponseInLine {
@@ -130,6 +247,15 @@ test_unknowninteractions_UnknownInteractionsProtocol_StrictEventErr_ResponseOutO
 test_unknowninteractions_UnknownInteractionsProtocol_StrictEventErr_ResponseHandles {
     void void
 } [packed]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictEventFieldsErr_ResponseInLine {
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictEventFieldsErr_ResponseOutOfLine {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictEventFieldsErr_ResponseHandles {
+    void void
+} [packed]
 test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayErr_ResponseInLine {
     padding int8
 } [packed]
@@ -139,6 +265,24 @@ test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayErr_ResponseOut
 test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayErr_ResponseHandles {
     void void
 } [packed]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayFieldsErr_ResponseInLine {
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayFieldsErr_ResponseOutOfLine {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayFieldsErr_ResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponseHandles [
+    void void
+][varlen]
 test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_ResultInLine [
     responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_ResponseInLine]
     err fidl_union_member[2, int32]
@@ -148,6 +292,72 @@ test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_R
 ][varlen]
 test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_ResultHandles [
     response test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_ResultOutOfLine [
+    responseOutOfLine test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_ResponseOutOfLine
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_ResultHandles [
+    response test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_ResultInLine [
+     fidl_union_member[1, ]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_ResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_ResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_ResponseHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionRequestInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionRequestOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionRequestHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionRequestInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionRequestOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionRequestHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionResponseHandles [
+    void void
 ][varlen]
 test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventErr_ResultInLine [
     responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventErr_ResponseInLine]
@@ -159,6 +369,45 @@ test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventErr_Result
 test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventErr_ResultHandles [
     response test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventErr_ResponseHandles
 ][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_ResultOutOfLine [
+    responseOutOfLine test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_ResponseOutOfLine
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_ResultHandles [
+    response test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventTableErr_ResultInLine [
+     fidl_union_member[1, ]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventTableErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventTableErr_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventUnionErr_ResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventUnionErr_ResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventUnionErr_ResponseHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventUnionErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventUnionErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventUnionErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventUnionErr_ResultHandles [
+    void void
+][varlen]
 test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventErr_ResultInLine [
     responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventErr_ResponseInLine]
     err fidl_union_member[2, int32]
@@ -168,6 +417,45 @@ test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventErr_ResultOu
 ][varlen]
 test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventErr_ResultHandles [
     response test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventFieldsErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventFieldsErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventFieldsErr_ResultOutOfLine [
+    responseOutOfLine test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventFieldsErr_ResponseOutOfLine
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventFieldsErr_ResultHandles [
+    response test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventFieldsErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventTableErr_ResultInLine [
+     fidl_union_member[1, ]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventTableErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventTableErr_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventUnionErr_ResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventUnionErr_ResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventUnionErr_ResponseHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventUnionErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventUnionErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventUnionErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventUnionErr_ResultHandles [
+    void void
 ][varlen]
 test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayErr_ResultInLine [
     responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayErr_ResponseInLine]
@@ -179,6 +467,54 @@ test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayErr_ResultO
 test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayErr_ResultHandles [
     response test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayErr_ResponseHandles
 ][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_ResultOutOfLine [
+    responseOutOfLine test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_ResponseOutOfLine
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_ResultHandles [
+    response test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayTableErr_ResultInLine [
+     fidl_union_member[1, ]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayTableErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayTableErr_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_ResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_ResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_ResponseHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponseHandles [
+    void void
+][varlen]
 test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_ResultInLine [
     responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_ResponseInLine]
     err fidl_union_member[2, int32]
@@ -188,6 +524,63 @@ test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr
 ][varlen]
 test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_ResultHandles [
     response test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_ResultOutOfLine [
+    responseOutOfLine test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_ResponseOutOfLine
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_ResultHandles [
+    response test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayTableErr_ResultInLine [
+     fidl_union_member[1, ]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayTableErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayTableErr_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_ResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_ResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_ResponseHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionRequestInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionRequestOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionRequestHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionResponseHandles [
+    void void
 ][varlen]
 test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventErr_ResultInLine [
     responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventErr_ResponseInLine]
@@ -199,6 +592,45 @@ test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventErr_Result
 test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventErr_ResultHandles [
     response test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventErr_ResponseHandles
 ][varlen]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventFieldsErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventFieldsErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventFieldsErr_ResultOutOfLine [
+    responseOutOfLine test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventFieldsErr_ResponseOutOfLine
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventFieldsErr_ResultHandles [
+    response test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventFieldsErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventTableErr_ResultInLine [
+     fidl_union_member[1, ]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventTableErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventTableErr_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventUnionErr_ResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventUnionErr_ResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventUnionErr_ResponseHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventUnionErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventUnionErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventUnionErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventUnionErr_ResultHandles [
+    void void
+][varlen]
 test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayErr_ResultInLine [
     responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayErr_ResponseInLine]
     err fidl_union_member[2, int32]
@@ -208,6 +640,54 @@ test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayErr_Resul
 ][varlen]
 test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayErr_ResultHandles [
     response test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_ResultOutOfLine [
+    responseOutOfLine test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_ResponseOutOfLine
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_ResultHandles [
+    response test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayTableErr_ResultInLine [
+     fidl_union_member[1, ]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayTableErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayTableErr_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_ResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_ResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_ResponseHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionResponseHandles [
+    void void
 ][varlen]
 test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResultInLine [
     responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResponseInLine]
@@ -219,6 +699,87 @@ test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Res
 ][varlen]
 test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResultHandles [
     response test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+     fidl_union_member[3, ]
+]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_ResultOutOfLine [
+    responseOutOfLine test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_ResponseOutOfLine
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_ResultHandles [
+    response test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_ResponseInLine]
+     fidl_union_member[3, ]
+]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_ResultOutOfLine [
+    responseOutOfLine test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_ResponseOutOfLine
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_ResultHandles [
+    response test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_ResultInLine [
+     fidl_union_member[1, ]
+    err fidl_union_member[2, int32]
+     fidl_union_member[3, ]
+]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_ResultInLine [
+     fidl_union_member[1, ]
+     fidl_union_member[3, ]
+]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_ResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_ResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_ResponseHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+     fidl_union_member[3, ]
+]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_ResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_ResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_ResponseHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_ResponseInLine]
+     fidl_union_member[3, ]
+]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_ResultHandles [
+    void void
 ][varlen]
 test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWay_ResultInLine [
     responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWay_ResponseInLine]
@@ -240,6 +801,72 @@ test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayErr_Resul
 test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayErr_ResultHandles [
     response test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayErr_ResponseHandles
 ][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_ResultOutOfLine [
+    responseOutOfLine test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_ResponseOutOfLine
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_ResultHandles [
+    response test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayTableErr_ResultInLine [
+     fidl_union_member[1, ]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayTableErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayTableErr_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_ResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_ResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_ResponseHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionRequestInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionRequestOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionRequestHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionRequestInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionRequestOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionRequestHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionResponseHandles [
+    void void
+][varlen]
 test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventErr_ResultInLine [
     responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventErr_ResponseInLine]
     err fidl_union_member[2, int32]
@@ -249,6 +876,45 @@ test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventErr_ResultOutO
 ][varlen]
 test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventErr_ResultHandles [
     response test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventFieldsErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventFieldsErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventFieldsErr_ResultOutOfLine [
+    responseOutOfLine test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventFieldsErr_ResponseOutOfLine
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventFieldsErr_ResultHandles [
+    response test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventFieldsErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventTableErr_ResultInLine [
+     fidl_union_member[1, ]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventTableErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventTableErr_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventUnionErr_ResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventUnionErr_ResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventUnionErr_ResponseHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventUnionErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventUnionErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventUnionErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventUnionErr_ResultHandles [
+    void void
 ][varlen]
 test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResultInLine [
     responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResponseInLine]
@@ -260,6 +926,87 @@ test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResultOut
 ][varlen]
 test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResultHandles [
     response test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+     fidl_union_member[3, ]
+]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_ResultOutOfLine [
+    responseOutOfLine test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_ResponseOutOfLine
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_ResultHandles [
+    response test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFields_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFields_ResponseInLine]
+     fidl_union_member[3, ]
+]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFields_ResultOutOfLine [
+    responseOutOfLine test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFields_ResponseOutOfLine
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFields_ResultHandles [
+    response test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFields_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayTableErr_ResultInLine [
+     fidl_union_member[1, ]
+    err fidl_union_member[2, int32]
+     fidl_union_member[3, ]
+]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayTableErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayTableErr_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayTable_ResultInLine [
+     fidl_union_member[1, ]
+     fidl_union_member[3, ]
+]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayTable_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayTable_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_ResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_ResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_ResponseHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+     fidl_union_member[3, ]
+]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnion_ResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnion_ResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnion_ResponseHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnion_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnion_ResponseInLine]
+     fidl_union_member[3, ]
+]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnion_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnion_ResultHandles [
+    void void
 ][varlen]
 test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWay_ResultInLine [
     responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWay_ResponseInLine]
@@ -281,6 +1028,45 @@ test_unknowninteractions_UnknownInteractionsProtocol_StrictEventErr_ResultOutOfL
 test_unknowninteractions_UnknownInteractionsProtocol_StrictEventErr_ResultHandles [
     response test_unknowninteractions_UnknownInteractionsProtocol_StrictEventErr_ResponseHandles
 ][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictEventFieldsErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsProtocol_StrictEventFieldsErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictEventFieldsErr_ResultOutOfLine [
+    responseOutOfLine test_unknowninteractions_UnknownInteractionsProtocol_StrictEventFieldsErr_ResponseOutOfLine
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictEventFieldsErr_ResultHandles [
+    response test_unknowninteractions_UnknownInteractionsProtocol_StrictEventFieldsErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictEventTableErr_ResultInLine [
+     fidl_union_member[1, ]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictEventTableErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictEventTableErr_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictEventUnionErr_ResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictEventUnionErr_ResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictEventUnionErr_ResponseHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictEventUnionErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsProtocol_StrictEventUnionErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictEventUnionErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictEventUnionErr_ResultHandles [
+    void void
+][varlen]
 test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayErr_ResultInLine [
     responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayErr_ResponseInLine]
     err fidl_union_member[2, int32]
@@ -290,6 +1076,45 @@ test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayErr_ResultOutOf
 ][varlen]
 test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayErr_ResultHandles [
     response test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayFieldsErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayFieldsErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayFieldsErr_ResultOutOfLine [
+    responseOutOfLine test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayFieldsErr_ResponseOutOfLine
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayFieldsErr_ResultHandles [
+    response test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayFieldsErr_ResponseHandles
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayTableErr_ResultInLine [
+     fidl_union_member[1, ]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayTableErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayTableErr_ResultHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayUnionErr_ResponseInLine [
+    some_field fidl_union_member[1, int32]
+]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayUnionErr_ResponseOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayUnionErr_ResponseHandles [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayUnionErr_ResultInLine [
+    responseInLine fidl_union_member[1, test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayUnionErr_ResponseInLine]
+    err fidl_union_member[2, int32]
+]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayUnionErr_ResultOutOfLine [
+    void void
+][varlen]
+test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayUnionErr_ResultHandles [
+    void void
 ][varlen]
 
 
@@ -317,6 +1142,43 @@ test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayRespon
 test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayResponseHandles {
     void void
 } [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsRequest {
+    hdr fidl_message_header[902155904889801604]
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponse {
+    hdr fidl_message_header[902155904889801604]
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionRequest {
+    hdr fidl_message_header[8952307689721713673]
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponse {
+    hdr fidl_message_header[8952307689721713673]
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayTableRequest {
+    hdr fidl_message_header[3114064683372134045]
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayTableRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse {
+    hdr fidl_message_header[3114064683372134045]
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponseHandles {
+    void void
+} [packed]
 test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayErrRequest {
     hdr fidl_message_header[7057260423103547829]
 } [packed]
@@ -331,6 +1193,46 @@ test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayErrRes
 test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponseHandles {
     result test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_ResultHandles
 } [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrRequest {
+    hdr fidl_message_header[6490530264582540031]
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponse {
+    hdr fidl_message_header[6490530264582540031]
+    resultInLine test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_ResultInLine
+    resultOutOfLine test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_ResultOutOfLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponseHandles {
+    result test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_ResultHandles
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrRequest {
+    hdr fidl_message_header[2319476129312263555]
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse {
+    hdr fidl_message_header[2319476129312263555]
+    resultInLine test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrRequest {
+    hdr fidl_message_header[6883106306697493305]
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse {
+    hdr fidl_message_header[6883106306697493305]
+    resultInLine test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_StrictTwoWayTableErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponseHandles {
+    void void
+} [packed]
 
 resource zx_chan_test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_client[zx_chan]
 resource zx_chan_test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_server[zx_chan]
@@ -340,7 +1242,13 @@ fdio_service_connect$test_unknowninteractions_UnknownInteractionsAjarDriverProto
 zx_channel_write$test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictOneWay(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_client, options const[0], bytes ptr[in, test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictOneWayRequest], num_bytes bytesize[bytes], handles ptr[in, test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictOneWayRequestHandles], num_handles bytesize[handles])
 zx_channel_write$test_unknowninteractions_UnknownInteractionsAjarDriverProtocolFlexibleOneWay(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_client, options const[0], bytes ptr[in, test_unknowninteractions_UnknownInteractionsAjarDriverProtocolFlexibleOneWayRequest], num_bytes bytesize[bytes], handles ptr[in, test_unknowninteractions_UnknownInteractionsAjarDriverProtocolFlexibleOneWayRequestHandles], num_handles bytesize[handles])
 zx_channel_call$test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWay(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayRequest, test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFields(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsRequest, test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnion(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionRequest, test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayTable(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayTableRequest, test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayTableRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_call$test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayErrRequest, test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrRequest, test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrRequest, test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrRequest, test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 
 
 test_unknowninteractions_UnknownInteractionsAjarProtocolStrictOneWayRequest {
@@ -367,6 +1275,43 @@ test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayResponse {
 test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayResponseHandles {
     void void
 } [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsRequest {
+    hdr fidl_message_header[1821674633227946298]
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponse {
+    hdr fidl_message_header[1821674633227946298]
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionRequest {
+    hdr fidl_message_header[5870221221557233361]
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse {
+    hdr fidl_message_header[5870221221557233361]
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableRequest {
+    hdr fidl_message_header[8038805778859962068]
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableResponse {
+    hdr fidl_message_header[8038805778859962068]
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableResponseHandles {
+    void void
+} [packed]
 test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayErrRequest {
     hdr fidl_message_header[6577335136969723910]
 } [packed]
@@ -381,10 +1326,69 @@ test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayErrResponse 
 test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayErrResponseHandles {
     result test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayErr_ResultHandles
 } [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrRequest {
+    hdr fidl_message_header[595881957484758745]
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponse {
+    hdr fidl_message_header[595881957484758745]
+    resultInLine test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_ResultInLine
+    resultOutOfLine test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_ResultOutOfLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponseHandles {
+    result test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_ResultHandles
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionErrRequest {
+    hdr fidl_message_header[3224530777258896533]
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse {
+    hdr fidl_message_header[3224530777258896533]
+    resultInLine test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableErrRequest {
+    hdr fidl_message_header[3515589146717969463]
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse {
+    hdr fidl_message_header[3515589146717969463]
+    resultInLine test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictTwoWayTableErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponseHandles {
+    void void
+} [packed]
 test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventEvent {
     hdr fidl_message_header[6927291151663612592]
 } [packed]
 test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventEventHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsEvent {
+    hdr fidl_message_header[5838220329633564521]
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsEventHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionEvent {
+    hdr fidl_message_header[6303151946645602671]
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionEventHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableEvent {
+    hdr fidl_message_header[659277224687564957]
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableEventHandles {
     void void
 } [packed]
 test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventErrEvent {
@@ -395,10 +1399,51 @@ test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventErrEvent {
 test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventErrEventHandles {
     result test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventErr_ResultHandles
 } [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsErrEvent {
+    hdr fidl_message_header[4242995963205975993]
+    resultInLine test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventFieldsErr_ResultInLine
+    resultOutOfLine test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventFieldsErr_ResultOutOfLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsErrEventHandles {
+    result test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventFieldsErr_ResultHandles
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionErrEvent {
+    hdr fidl_message_header[48232470144455723]
+    resultInLine test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventUnionErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionErrEventHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableErrEvent {
+    hdr fidl_message_header[7812263497101509638]
+    resultInLine test_unknowninteractions_UnknownInteractionsAjarProtocol_StrictEventTableErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableErrEventHandles {
+    void void
+} [packed]
 test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventEvent {
     hdr fidl_message_header[1281760452005010931]
 } [packed]
 test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventEventHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsEvent {
+    hdr fidl_message_header[4298964238728681570]
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsEventHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionEvent {
+    hdr fidl_message_header[8950943792372972717]
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionEventHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableEvent {
+    hdr fidl_message_header[705539350563403440]
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableEventHandles {
     void void
 } [packed]
 test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventErrEvent {
@@ -409,6 +1454,28 @@ test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventErrEvent {
 test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventErrEventHandles {
     result test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventErr_ResultHandles
 } [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsErrEvent {
+    hdr fidl_message_header[2496089713358680516]
+    resultInLine test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_ResultInLine
+    resultOutOfLine test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_ResultOutOfLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsErrEventHandles {
+    result test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_ResultHandles
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionErrEvent {
+    hdr fidl_message_header[870945044986422912]
+    resultInLine test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventUnionErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionErrEventHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableErrEvent {
+    hdr fidl_message_header[7956124159916849703]
+    resultInLine test_unknowninteractions_UnknownInteractionsAjarProtocol_FlexibleEventTableErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableErrEventHandles {
+    void void
+} [packed]
 
 resource zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client[zx_chan]
 resource zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_server[zx_chan]
@@ -418,11 +1485,29 @@ fdio_service_connect$test_unknowninteractions_UnknownInteractionsAjarProtocol(pa
 zx_channel_write$test_unknowninteractions_UnknownInteractionsAjarProtocolStrictOneWay(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], bytes ptr[in, test_unknowninteractions_UnknownInteractionsAjarProtocolStrictOneWayRequest], num_bytes bytesize[bytes], handles ptr[in, test_unknowninteractions_UnknownInteractionsAjarProtocolStrictOneWayRequestHandles], num_handles bytesize[handles])
 zx_channel_write$test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleOneWay(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], bytes ptr[in, test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleOneWayRequest], num_bytes bytesize[bytes], handles ptr[in, test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleOneWayRequestHandles], num_handles bytesize[handles])
 zx_channel_call$test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWay(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayRequest, test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFields(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsRequest, test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnion(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionRequest, test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTable(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableRequest, test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_call$test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayErrRequest, test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrRequest, test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionErrRequest, test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableErrRequest, test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_read$test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEvent(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFields(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnion(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTable(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_read$test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventErrEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventFieldsErrEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventUnionErrEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsAjarProtocolStrictEventTableErrEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_read$test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEvent(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFields(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnion(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTable(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_read$test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventErrEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventFieldsErrEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventUnionErrEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsAjarProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsAjarProtocolFlexibleEventTableErrEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 
 
 test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictOneWayRequest {
@@ -443,6 +1528,43 @@ test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayResp
 test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayResponseHandles {
     void void
 } [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsRequest {
+    hdr fidl_message_header[5761316743698652038]
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponse {
+    hdr fidl_message_header[5761316743698652038]
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionRequest {
+    hdr fidl_message_header[7235351480214368636]
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponse {
+    hdr fidl_message_header[7235351480214368636]
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayTableRequest {
+    hdr fidl_message_header[1839495150551777151]
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayTableRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse {
+    hdr fidl_message_header[1839495150551777151]
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponseHandles {
+    void void
+} [packed]
 test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayErrRequest {
     hdr fidl_message_header[4350840352076287137]
 } [packed]
@@ -457,6 +1579,46 @@ test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayErrR
 test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponseHandles {
     result test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_ResultHandles
 } [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrRequest {
+    hdr fidl_message_header[3933117456632607830]
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponse {
+    hdr fidl_message_header[3933117456632607830]
+    resultInLine test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_ResultInLine
+    resultOutOfLine test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_ResultOutOfLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponseHandles {
+    result test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_ResultHandles
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrRequest {
+    hdr fidl_message_header[4598950031783776653]
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse {
+    hdr fidl_message_header[4598950031783776653]
+    resultInLine test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrRequest {
+    hdr fidl_message_header[1456858375973362525]
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse {
+    hdr fidl_message_header[1456858375973362525]
+    resultInLine test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_StrictTwoWayTableErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponseHandles {
+    void void
+} [packed]
 
 resource zx_chan_test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_client[zx_chan]
 resource zx_chan_test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_server[zx_chan]
@@ -465,7 +1627,13 @@ zx_channel_create$test_unknowninteractions_UnknownInteractionsClosedDriverProtoc
 fdio_service_connect$test_unknowninteractions_UnknownInteractionsClosedDriverProtocol(path ptr[in, string["/svc/"]], handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_server)
 zx_channel_write$test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictOneWay(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_client, options const[0], bytes ptr[in, test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictOneWayRequest], num_bytes bytesize[bytes], handles ptr[in, test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictOneWayRequestHandles], num_handles bytesize[handles])
 zx_channel_call$test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWay(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayRequest, test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFields(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsRequest, test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnion(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionRequest, test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayTable(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayTableRequest, test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayTableRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_call$test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayErrRequest, test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrRequest, test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrRequest, test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrRequest, test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 
 
 test_unknowninteractions_UnknownInteractionsClosedProtocolStrictOneWayRequest {
@@ -486,6 +1654,43 @@ test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayResponse {
 test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayResponseHandles {
     void void
 } [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsRequest {
+    hdr fidl_message_header[1379139029283639891]
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponse {
+    hdr fidl_message_header[1379139029283639891]
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionRequest {
+    hdr fidl_message_header[7544414847426850727]
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse {
+    hdr fidl_message_header[7544414847426850727]
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableRequest {
+    hdr fidl_message_header[7947328131967870853]
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableResponse {
+    hdr fidl_message_header[7947328131967870853]
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableResponseHandles {
+    void void
+} [packed]
 test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayErrRequest {
     hdr fidl_message_header[5738532966428790074]
 } [packed]
@@ -500,10 +1705,69 @@ test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayErrRespons
 test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayErrResponseHandles {
     result test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayErr_ResultHandles
 } [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrRequest {
+    hdr fidl_message_header[802395819586836733]
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponse {
+    hdr fidl_message_header[802395819586836733]
+    resultInLine test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_ResultInLine
+    resultOutOfLine test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_ResultOutOfLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponseHandles {
+    result test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_ResultHandles
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionErrRequest {
+    hdr fidl_message_header[925029359463709824]
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse {
+    hdr fidl_message_header[925029359463709824]
+    resultInLine test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableErrRequest {
+    hdr fidl_message_header[1260407702860823440]
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse {
+    hdr fidl_message_header[1260407702860823440]
+    resultInLine test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictTwoWayTableErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponseHandles {
+    void void
+} [packed]
 test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventEvent {
     hdr fidl_message_header[760799297757210939]
 } [packed]
 test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventEventHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsEvent {
+    hdr fidl_message_header[6736355582617074292]
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsEventHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionEvent {
+    hdr fidl_message_header[4288682345454280036]
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionEventHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableEvent {
+    hdr fidl_message_header[2871682464255309246]
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableEventHandles {
     void void
 } [packed]
 test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventErrEvent {
@@ -514,6 +1778,28 @@ test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventErrEvent {
 test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventErrEventHandles {
     result test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventErr_ResultHandles
 } [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsErrEvent {
+    hdr fidl_message_header[3248847528447859862]
+    resultInLine test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventFieldsErr_ResultInLine
+    resultOutOfLine test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventFieldsErr_ResultOutOfLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsErrEventHandles {
+    result test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventFieldsErr_ResultHandles
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionErrEvent {
+    hdr fidl_message_header[7912657362107850804]
+    resultInLine test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventUnionErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionErrEventHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableErrEvent {
+    hdr fidl_message_header[5661281118329630458]
+    resultInLine test_unknowninteractions_UnknownInteractionsClosedProtocol_StrictEventTableErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableErrEventHandles {
+    void void
+} [packed]
 
 resource zx_chan_test_unknowninteractions_UnknownInteractionsClosedProtocol_client[zx_chan]
 resource zx_chan_test_unknowninteractions_UnknownInteractionsClosedProtocol_server[zx_chan]
@@ -522,9 +1808,21 @@ zx_channel_create$test_unknowninteractions_UnknownInteractionsClosedProtocol(opt
 fdio_service_connect$test_unknowninteractions_UnknownInteractionsClosedProtocol(path ptr[in, string["/svc/"]], handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedProtocol_server)
 zx_channel_write$test_unknowninteractions_UnknownInteractionsClosedProtocolStrictOneWay(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedProtocol_client, options const[0], bytes ptr[in, test_unknowninteractions_UnknownInteractionsClosedProtocolStrictOneWayRequest], num_bytes bytesize[bytes], handles ptr[in, test_unknowninteractions_UnknownInteractionsClosedProtocolStrictOneWayRequestHandles], num_handles bytesize[handles])
 zx_channel_call$test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWay(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayRequest, test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFields(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsRequest, test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnion(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionRequest, test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTable(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableRequest, test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_call$test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayErrRequest, test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrRequest, test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionErrRequest, test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableErrRequest, test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_read$test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEvent(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFields(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnion(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTable(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_read$test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventErrEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventFieldsErrEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventUnionErrEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsClosedProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsClosedProtocolStrictEventTableErrEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 
 
 test_unknowninteractions_UnknownInteractionsDriverProtocolStrictOneWayRequest {
@@ -551,6 +1849,43 @@ test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayResponse {
 test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayResponseHandles {
     void void
 } [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsRequest {
+    hdr fidl_message_header[6841797014773573215]
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponse {
+    hdr fidl_message_header[6841797014773573215]
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionRequest {
+    hdr fidl_message_header[1451514501977162287]
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionResponse {
+    hdr fidl_message_header[1451514501977162287]
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayTableRequest {
+    hdr fidl_message_header[3330693085881435529]
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayTableRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayTableResponse {
+    hdr fidl_message_header[3330693085881435529]
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayTableResponseHandles {
+    void void
+} [packed]
 test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayErrRequest {
     hdr fidl_message_header[8222960355260037542]
 } [packed]
@@ -564,6 +1899,46 @@ test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayErrRespons
 } [packed]
 test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayErrResponseHandles {
     result test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayErr_ResultHandles
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrRequest {
+    hdr fidl_message_header[225387363174180470]
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponse {
+    hdr fidl_message_header[225387363174180470]
+    resultInLine test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_ResultInLine
+    resultOutOfLine test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_ResultOutOfLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponseHandles {
+    result test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_ResultHandles
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionErrRequest {
+    hdr fidl_message_header[3066880266580913088]
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse {
+    hdr fidl_message_header[3066880266580913088]
+    resultInLine test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayTableErrRequest {
+    hdr fidl_message_header[708169949929096689]
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayTableErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse {
+    hdr fidl_message_header[708169949929096689]
+    resultInLine test_unknowninteractions_UnknownInteractionsDriverProtocol_StrictTwoWayTableErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponseHandles {
+    void void
 } [packed]
 test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayRequest {
     hdr fidl_message_header[2929398860738426482]
@@ -579,6 +1954,46 @@ test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayResponse
 test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayResponseHandles {
     result test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWay_ResultHandles
 } [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsRequest {
+    hdr fidl_message_header[8423663794424433896]
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResponse {
+    hdr fidl_message_header[8423663794424433896]
+    resultInLine test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_ResultInLine
+    resultOutOfLine test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_ResultOutOfLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResponseHandles {
+    result test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_ResultHandles
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayUnionRequest {
+    hdr fidl_message_header[8216450897182897849]
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayUnionRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponse {
+    hdr fidl_message_header[8216450897182897849]
+    resultInLine test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTableRequest {
+    hdr fidl_message_header[1049265954148894210]
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTableRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse {
+    hdr fidl_message_header[1049265954148894210]
+    resultInLine test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayTable_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponseHandles {
+    void void
+} [packed]
 test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayErrRequest {
     hdr fidl_message_header[5583489590753947170]
 } [packed]
@@ -593,6 +2008,46 @@ test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayErrRespo
 test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponseHandles {
     result test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_ResultHandles
 } [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrRequest {
+    hdr fidl_message_header[6033174601748665003]
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse {
+    hdr fidl_message_header[6033174601748665003]
+    resultInLine test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_ResultInLine
+    resultOutOfLine test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_ResultOutOfLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponseHandles {
+    result test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_ResultHandles
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrRequest {
+    hdr fidl_message_header[6235121653537390575]
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponse {
+    hdr fidl_message_header[6235121653537390575]
+    resultInLine test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrRequest {
+    hdr fidl_message_header[940887795361350656]
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse {
+    hdr fidl_message_header[940887795361350656]
+    resultInLine test_unknowninteractions_UnknownInteractionsDriverProtocol_FlexibleTwoWayTableErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponseHandles {
+    void void
+} [packed]
 
 resource zx_chan_test_unknowninteractions_UnknownInteractionsDriverProtocol_client[zx_chan]
 resource zx_chan_test_unknowninteractions_UnknownInteractionsDriverProtocol_server[zx_chan]
@@ -602,9 +2057,21 @@ fdio_service_connect$test_unknowninteractions_UnknownInteractionsDriverProtocol(
 zx_channel_write$test_unknowninteractions_UnknownInteractionsDriverProtocolStrictOneWay(handle zx_chan_test_unknowninteractions_UnknownInteractionsDriverProtocol_client, options const[0], bytes ptr[in, test_unknowninteractions_UnknownInteractionsDriverProtocolStrictOneWayRequest], num_bytes bytesize[bytes], handles ptr[in, test_unknowninteractions_UnknownInteractionsDriverProtocolStrictOneWayRequestHandles], num_handles bytesize[handles])
 zx_channel_write$test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleOneWay(handle zx_chan_test_unknowninteractions_UnknownInteractionsDriverProtocol_client, options const[0], bytes ptr[in, test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleOneWayRequest], num_bytes bytesize[bytes], handles ptr[in, test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleOneWayRequestHandles], num_handles bytesize[handles])
 zx_channel_call$test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWay(handle zx_chan_test_unknowninteractions_UnknownInteractionsDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayRequest, test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFields(handle zx_chan_test_unknowninteractions_UnknownInteractionsDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsRequest, test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnion(handle zx_chan_test_unknowninteractions_UnknownInteractionsDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionRequest, test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayTable(handle zx_chan_test_unknowninteractions_UnknownInteractionsDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayTableRequest, test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayTableRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayTableResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_call$test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayErrRequest, test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrRequest, test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionErrRequest, test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayTableErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayTableErrRequest, test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayTableErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_call$test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWay(handle zx_chan_test_unknowninteractions_UnknownInteractionsDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayRequest, test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayFields(handle zx_chan_test_unknowninteractions_UnknownInteractionsDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsRequest, test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayUnion(handle zx_chan_test_unknowninteractions_UnknownInteractionsDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayUnionRequest, test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayUnionRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTable(handle zx_chan_test_unknowninteractions_UnknownInteractionsDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTableRequest, test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTableRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_call$test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayErrRequest, test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrRequest, test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrRequest, test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTableErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsDriverProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrRequest, test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 
 
 test_unknowninteractions_UnknownInteractionsProtocolStrictOneWayRequest {
@@ -631,6 +2098,43 @@ test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayResponse {
 test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayResponseHandles {
     void void
 } [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsRequest {
+    hdr fidl_message_header[3697260130745060067]
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsResponse {
+    hdr fidl_message_header[3697260130745060067]
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionRequest {
+    hdr fidl_message_header[2455165891480464557]
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionResponse {
+    hdr fidl_message_header[2455165891480464557]
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableRequest {
+    hdr fidl_message_header[8389853739594228663]
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableResponse {
+    hdr fidl_message_header[8389853739594228663]
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableResponseHandles {
+    void void
+} [packed]
 test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayErrRequest {
     hdr fidl_message_header[7862264614495172967]
 } [packed]
@@ -644,6 +2148,46 @@ test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayErrResponse {
 } [packed]
 test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayErrResponseHandles {
     result test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayErr_ResultHandles
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsErrRequest {
+    hdr fidl_message_header[2414673307948662059]
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsErrResponse {
+    hdr fidl_message_header[2414673307948662059]
+    resultInLine test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayFieldsErr_ResultInLine
+    resultOutOfLine test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayFieldsErr_ResultOutOfLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsErrResponseHandles {
+    result test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayFieldsErr_ResultHandles
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionErrRequest {
+    hdr fidl_message_header[4988571416540160202]
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionErrResponse {
+    hdr fidl_message_header[4988571416540160202]
+    resultInLine test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayUnionErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionErrResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableErrRequest {
+    hdr fidl_message_header[5487292735562672344]
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableErrResponse {
+    hdr fidl_message_header[5487292735562672344]
+    resultInLine test_unknowninteractions_UnknownInteractionsProtocol_StrictTwoWayTableErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableErrResponseHandles {
+    void void
 } [packed]
 test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayRequest {
     hdr fidl_message_header[334879577560091516]
@@ -659,6 +2203,46 @@ test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayResponse {
 test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayResponseHandles {
     result test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWay_ResultHandles
 } [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsRequest {
+    hdr fidl_message_header[4257018954691721778]
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsResponse {
+    hdr fidl_message_header[4257018954691721778]
+    resultInLine test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFields_ResultInLine
+    resultOutOfLine test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFields_ResultOutOfLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsResponseHandles {
+    result test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFields_ResultHandles
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionRequest {
+    hdr fidl_message_header[4913460516188409782]
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionResponse {
+    hdr fidl_message_header[4913460516188409782]
+    resultInLine test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnion_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableRequest {
+    hdr fidl_message_header[9171907422498283911]
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableResponse {
+    hdr fidl_message_header[9171907422498283911]
+    resultInLine test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayTable_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableResponseHandles {
+    void void
+} [packed]
 test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayErrRequest {
     hdr fidl_message_header[6999736795697216519]
 } [packed]
@@ -673,10 +2257,69 @@ test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayErrResponse {
 test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayErrResponseHandles {
     result test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayErr_ResultHandles
 } [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsErrRequest {
+    hdr fidl_message_header[1093132337162001157]
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponse {
+    hdr fidl_message_header[1093132337162001157]
+    resultInLine test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_ResultInLine
+    resultOutOfLine test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_ResultOutOfLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponseHandles {
+    result test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_ResultHandles
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionErrRequest {
+    hdr fidl_message_header[2410151523245950935]
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse {
+    hdr fidl_message_header[2410151523245950935]
+    resultInLine test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponseHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableErrRequest {
+    hdr fidl_message_header[7893309626427980786]
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableErrRequestHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse {
+    hdr fidl_message_header[7893309626427980786]
+    resultInLine test_unknowninteractions_UnknownInteractionsProtocol_FlexibleTwoWayTableErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableErrResponseHandles {
+    void void
+} [packed]
 test_unknowninteractions_UnknownInteractionsProtocolStrictEventEvent {
     hdr fidl_message_header[685715276307386305]
 } [packed]
 test_unknowninteractions_UnknownInteractionsProtocolStrictEventEventHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsEvent {
+    hdr fidl_message_header[8896208255987935026]
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsEventHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionEvent {
+    hdr fidl_message_header[3919175221694221274]
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionEventHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableEvent {
+    hdr fidl_message_header[2711448698318579984]
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableEventHandles {
     void void
 } [packed]
 test_unknowninteractions_UnknownInteractionsProtocolStrictEventErrEvent {
@@ -687,10 +2330,51 @@ test_unknowninteractions_UnknownInteractionsProtocolStrictEventErrEvent {
 test_unknowninteractions_UnknownInteractionsProtocolStrictEventErrEventHandles {
     result test_unknowninteractions_UnknownInteractionsProtocol_StrictEventErr_ResultHandles
 } [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsErrEvent {
+    hdr fidl_message_header[8268703922238340235]
+    resultInLine test_unknowninteractions_UnknownInteractionsProtocol_StrictEventFieldsErr_ResultInLine
+    resultOutOfLine test_unknowninteractions_UnknownInteractionsProtocol_StrictEventFieldsErr_ResultOutOfLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsErrEventHandles {
+    result test_unknowninteractions_UnknownInteractionsProtocol_StrictEventFieldsErr_ResultHandles
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionErrEvent {
+    hdr fidl_message_header[4681887988605004475]
+    resultInLine test_unknowninteractions_UnknownInteractionsProtocol_StrictEventUnionErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionErrEventHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableErrEvent {
+    hdr fidl_message_header[7827903484869638218]
+    resultInLine test_unknowninteractions_UnknownInteractionsProtocol_StrictEventTableErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableErrEventHandles {
+    void void
+} [packed]
 test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventEvent {
     hdr fidl_message_header[7042257263728687206]
 } [packed]
 test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventEventHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsEvent {
+    hdr fidl_message_header[3613822014516746241]
+    some_field int32
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsEventHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionEvent {
+    hdr fidl_message_header[2499446536152409191]
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionEventHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableEvent {
+    hdr fidl_message_header[5724881371349617120]
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableEventHandles {
     void void
 } [packed]
 test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventErrEvent {
@@ -701,6 +2385,28 @@ test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventErrEvent {
 test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventErrEventHandles {
     result test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventErr_ResultHandles
 } [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsErrEvent {
+    hdr fidl_message_header[1096356983683709514]
+    resultInLine test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventFieldsErr_ResultInLine
+    resultOutOfLine test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventFieldsErr_ResultOutOfLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsErrEventHandles {
+    result test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventFieldsErr_ResultHandles
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionErrEvent {
+    hdr fidl_message_header[906517230981154796]
+    resultInLine test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventUnionErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionErrEventHandles {
+    void void
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableErrEvent {
+    hdr fidl_message_header[5605294921124359491]
+    resultInLine test_unknowninteractions_UnknownInteractionsProtocol_FlexibleEventTableErr_ResultInLine
+} [packed]
+test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableErrEventHandles {
+    void void
+} [packed]
 
 resource zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client[zx_chan]
 resource zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_server[zx_chan]
@@ -710,11 +2416,35 @@ fdio_service_connect$test_unknowninteractions_UnknownInteractionsProtocol(path p
 zx_channel_write$test_unknowninteractions_UnknownInteractionsProtocolStrictOneWay(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], bytes ptr[in, test_unknowninteractions_UnknownInteractionsProtocolStrictOneWayRequest], num_bytes bytesize[bytes], handles ptr[in, test_unknowninteractions_UnknownInteractionsProtocolStrictOneWayRequestHandles], num_handles bytesize[handles])
 zx_channel_write$test_unknowninteractions_UnknownInteractionsProtocolFlexibleOneWay(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], bytes ptr[in, test_unknowninteractions_UnknownInteractionsProtocolFlexibleOneWayRequest], num_bytes bytesize[bytes], handles ptr[in, test_unknowninteractions_UnknownInteractionsProtocolFlexibleOneWayRequestHandles], num_handles bytesize[handles])
 zx_channel_call$test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWay(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayRequest, test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFields(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsRequest, test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnion(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionRequest, test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTable(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableRequest, test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_call$test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayErrRequest, test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsErrRequest, test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayFieldsErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionErrRequest, test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayUnionErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableErrRequest, test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsProtocolStrictTwoWayTableErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_call$test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWay(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayRequest, test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFields(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsRequest, test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnion(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionRequest, test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTable(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableRequest, test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_call$test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayErrRequest, test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsErrRequest, test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayFieldsErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionErrRequest, test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_call$test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], deadline zx_time, args ptr[in, fidl_call_args[test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableErrRequest, test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableErrRequestHandles, array[int8, ZX_CHANNEL_MAX_MSG_BYTES], test_unknowninteractions_UnknownInteractionsProtocolFlexibleTwoWayTableErrResponseHandles]], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_read$test_unknowninteractions_UnknownInteractionsProtocolStrictEvent(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsProtocolStrictEventEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsProtocolStrictEventFields(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnion(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsProtocolStrictEventTable(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_read$test_unknowninteractions_UnknownInteractionsProtocolStrictEventErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsProtocolStrictEventErrEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsProtocolStrictEventFieldsErrEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsProtocolStrictEventUnionErrEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsProtocolStrictEventTableErrEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_read$test_unknowninteractions_UnknownInteractionsProtocolFlexibleEvent(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFields(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnion(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTable(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 zx_channel_read$test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventErrEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventFieldsErrEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventUnionErrEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
+zx_channel_read$test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableErr(handle zx_chan_test_unknowninteractions_UnknownInteractionsProtocol_client, options const[0], bytes ptr[out, array[int8, ZX_CHANNEL_MAX_MSG_BYTES]], num_bytes bytesize[bytes], handles ptr[out, test_unknowninteractions_UnknownInteractionsProtocolFlexibleEventTableErrEventHandles], num_handles bytesize[handles], actual_bytes ptr[out, int32], actual_handles ptr[out, int32])
 

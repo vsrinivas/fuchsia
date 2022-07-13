@@ -49,10 +49,62 @@ class UnknownInteractionsAjarProtocol$TestBase
   }
 
   @override
+  $async.Future<int> strictTwoWayFields() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWayFields not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<UnknownInteractionsAjarProtocolStrictTwoWayUnionResponse>
+      strictTwoWayUnion() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWayUnion not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<UnknownInteractionsAjarProtocolStrictTwoWayTableResponse>
+      strictTwoWayTable() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWayTable not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
   $async.Future<void> strictTwoWayErr() {
     return $async.Future.error(
         UnimplementedError(
             r'strictTwoWayErr not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<int> strictTwoWayFieldsErr() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWayFieldsErr not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse>
+      strictTwoWayUnionErr() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWayUnionErr not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse>
+      strictTwoWayTableErr() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWayTableErr not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
         StackTrace.current);
   }
 
@@ -65,10 +117,62 @@ class UnknownInteractionsAjarProtocol$TestBase
   }
 
   @override
+  $async.Stream<int> get strictEventFields {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventFields not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<UnknownInteractionsAjarProtocolStrictEventUnionRequest>
+      get strictEventUnion {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventUnion not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<UnknownInteractionsAjarProtocolStrictEventTableRequest>
+      get strictEventTable {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventTable not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
   $async.Stream<void> get strictEventErr {
     return $async.Stream.fromFuture($async.Future.error(
         UnimplementedError(
             r'strictEventErr not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<int> get strictEventFieldsErr {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventFieldsErr not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<UnknownInteractionsAjarProtocolStrictEventUnionErrResponse>
+      get strictEventUnionErr {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventUnionErr not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<UnknownInteractionsAjarProtocolStrictEventTableErrResponse>
+      get strictEventTableErr {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventTableErr not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
         StackTrace.current));
   }
 
@@ -81,10 +185,62 @@ class UnknownInteractionsAjarProtocol$TestBase
   }
 
   @override
+  $async.Stream<int> get flexibleEventFields {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'flexibleEventFields not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<UnknownInteractionsAjarProtocolFlexibleEventUnionRequest>
+      get flexibleEventUnion {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'flexibleEventUnion not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<UnknownInteractionsAjarProtocolFlexibleEventTableRequest>
+      get flexibleEventTable {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'flexibleEventTable not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
   $async.Stream<void> get flexibleEventErr {
     return $async.Stream.fromFuture($async.Future.error(
         UnimplementedError(
             r'flexibleEventErr not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<int> get flexibleEventFieldsErr {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'flexibleEventFieldsErr not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<UnknownInteractionsAjarProtocolFlexibleEventUnionErrResponse>
+      get flexibleEventUnionErr {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'flexibleEventUnionErr not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse>
+      get flexibleEventTableErr {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'flexibleEventTableErr not implemented on UnknownInteractionsAjarProtocol test base. Please implement.'),
         StackTrace.current));
   }
 
@@ -115,10 +271,62 @@ class UnknownInteractionsClosedProtocol$TestBase
   }
 
   @override
+  $async.Future<int> strictTwoWayFields() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWayFields not implemented on UnknownInteractionsClosedProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<UnknownInteractionsClosedProtocolStrictTwoWayUnionResponse>
+      strictTwoWayUnion() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWayUnion not implemented on UnknownInteractionsClosedProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<UnknownInteractionsClosedProtocolStrictTwoWayTableResponse>
+      strictTwoWayTable() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWayTable not implemented on UnknownInteractionsClosedProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
   $async.Future<void> strictTwoWayErr() {
     return $async.Future.error(
         UnimplementedError(
             r'strictTwoWayErr not implemented on UnknownInteractionsClosedProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<int> strictTwoWayFieldsErr() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWayFieldsErr not implemented on UnknownInteractionsClosedProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse>
+      strictTwoWayUnionErr() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWayUnionErr not implemented on UnknownInteractionsClosedProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse>
+      strictTwoWayTableErr() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWayTableErr not implemented on UnknownInteractionsClosedProtocol test base. Please implement.'),
         StackTrace.current);
   }
 
@@ -131,10 +339,62 @@ class UnknownInteractionsClosedProtocol$TestBase
   }
 
   @override
+  $async.Stream<int> get strictEventFields {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventFields not implemented on UnknownInteractionsClosedProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<UnknownInteractionsClosedProtocolStrictEventUnionRequest>
+      get strictEventUnion {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventUnion not implemented on UnknownInteractionsClosedProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<UnknownInteractionsClosedProtocolStrictEventTableRequest>
+      get strictEventTable {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventTable not implemented on UnknownInteractionsClosedProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
   $async.Stream<void> get strictEventErr {
     return $async.Stream.fromFuture($async.Future.error(
         UnimplementedError(
             r'strictEventErr not implemented on UnknownInteractionsClosedProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<int> get strictEventFieldsErr {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventFieldsErr not implemented on UnknownInteractionsClosedProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<UnknownInteractionsClosedProtocolStrictEventUnionErrResponse>
+      get strictEventUnionErr {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventUnionErr not implemented on UnknownInteractionsClosedProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<UnknownInteractionsClosedProtocolStrictEventTableErrResponse>
+      get strictEventTableErr {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventTableErr not implemented on UnknownInteractionsClosedProtocol test base. Please implement.'),
         StackTrace.current));
   }
 }
@@ -166,10 +426,62 @@ class UnknownInteractionsProtocol$TestBase
   }
 
   @override
+  $async.Future<int> strictTwoWayFields() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWayFields not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<UnknownInteractionsProtocolStrictTwoWayUnionResponse>
+      strictTwoWayUnion() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWayUnion not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<UnknownInteractionsProtocolStrictTwoWayTableResponse>
+      strictTwoWayTable() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWayTable not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
   $async.Future<void> strictTwoWayErr() {
     return $async.Future.error(
         UnimplementedError(
             r'strictTwoWayErr not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<int> strictTwoWayFieldsErr() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWayFieldsErr not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<UnknownInteractionsProtocolStrictTwoWayUnionErrResponse>
+      strictTwoWayUnionErr() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWayUnionErr not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<UnknownInteractionsProtocolStrictTwoWayTableErrResponse>
+      strictTwoWayTableErr() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'strictTwoWayTableErr not implemented on UnknownInteractionsProtocol test base. Please implement.'),
         StackTrace.current);
   }
 
@@ -182,10 +494,62 @@ class UnknownInteractionsProtocol$TestBase
   }
 
   @override
+  $async.Future<int> flexibleTwoWayFields() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'flexibleTwoWayFields not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<UnknownInteractionsProtocolFlexibleTwoWayUnionResponse>
+      flexibleTwoWayUnion() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'flexibleTwoWayUnion not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<UnknownInteractionsProtocolFlexibleTwoWayTableResponse>
+      flexibleTwoWayTable() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'flexibleTwoWayTable not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
   $async.Future<void> flexibleTwoWayErr() {
     return $async.Future.error(
         UnimplementedError(
             r'flexibleTwoWayErr not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<int> flexibleTwoWayFieldsErr() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'flexibleTwoWayFieldsErr not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<UnknownInteractionsProtocolFlexibleTwoWayUnionErrResponse>
+      flexibleTwoWayUnionErr() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'flexibleTwoWayUnionErr not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current);
+  }
+
+  @override
+  $async.Future<UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse>
+      flexibleTwoWayTableErr() {
+    return $async.Future.error(
+        UnimplementedError(
+            r'flexibleTwoWayTableErr not implemented on UnknownInteractionsProtocol test base. Please implement.'),
         StackTrace.current);
   }
 
@@ -198,10 +562,62 @@ class UnknownInteractionsProtocol$TestBase
   }
 
   @override
+  $async.Stream<int> get strictEventFields {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventFields not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<UnknownInteractionsProtocolStrictEventUnionRequest>
+      get strictEventUnion {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventUnion not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<UnknownInteractionsProtocolStrictEventTableRequest>
+      get strictEventTable {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventTable not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
   $async.Stream<void> get strictEventErr {
     return $async.Stream.fromFuture($async.Future.error(
         UnimplementedError(
             r'strictEventErr not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<int> get strictEventFieldsErr {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventFieldsErr not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<UnknownInteractionsProtocolStrictEventUnionErrResponse>
+      get strictEventUnionErr {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventUnionErr not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<UnknownInteractionsProtocolStrictEventTableErrResponse>
+      get strictEventTableErr {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'strictEventTableErr not implemented on UnknownInteractionsProtocol test base. Please implement.'),
         StackTrace.current));
   }
 
@@ -214,10 +630,62 @@ class UnknownInteractionsProtocol$TestBase
   }
 
   @override
+  $async.Stream<int> get flexibleEventFields {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'flexibleEventFields not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<UnknownInteractionsProtocolFlexibleEventUnionRequest>
+      get flexibleEventUnion {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'flexibleEventUnion not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<UnknownInteractionsProtocolFlexibleEventTableRequest>
+      get flexibleEventTable {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'flexibleEventTable not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
   $async.Stream<void> get flexibleEventErr {
     return $async.Stream.fromFuture($async.Future.error(
         UnimplementedError(
             r'flexibleEventErr not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<int> get flexibleEventFieldsErr {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'flexibleEventFieldsErr not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<UnknownInteractionsProtocolFlexibleEventUnionErrResponse>
+      get flexibleEventUnionErr {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'flexibleEventUnionErr not implemented on UnknownInteractionsProtocol test base. Please implement.'),
+        StackTrace.current));
+  }
+
+  @override
+  $async.Stream<UnknownInteractionsProtocolFlexibleEventTableErrResponse>
+      get flexibleEventTableErr {
+    return $async.Stream.fromFuture($async.Future.error(
+        UnimplementedError(
+            r'flexibleEventTableErr not implemented on UnknownInteractionsProtocol test base. Please implement.'),
         StackTrace.current));
   }
 

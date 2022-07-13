@@ -136,8 +136,8 @@ class {{ .NaturalResponse }} final
       {{ .NaturalResponse.Self }}({{ .ResponseMessageBase }} v) : result(std::move(v)) {}
       {{ .NaturalResponse.Self }}() = delete;
       {{- else if .Result.ValueParameters }}
-      using {{ .ResponsePayload }}::{{ .ResponsePayload.Self }};
-      {{ .NaturalResponse.Self }}({{ .ResponseMessageBase }} v) : {{ .ResponsePayload.Self }}(std::move(v)) {}
+      using {{ .Result.ValueTypeDecl }}::{{ .Result.ValueTypeDecl.Self }};
+      {{ .NaturalResponse.Self }}({{ .ResponseMessageBase }} v) : {{ .Result.ValueTypeDecl.Self }}(std::move(v)) {}
       {{- end }}
     {{- else }}
       using {{ .ResponsePayload }}::{{ .ResponsePayload.Self }};
@@ -191,7 +191,7 @@ class {{ .NaturalResponseConverter }} {
     }
     {{- else -}}
     {{- if .Result.ValueParameters }}
-      return DomainObject{ { .result = {{ .Result.ResultDecl }}::WithResponse(std::move(m.value())) } };
+      return DomainObject{ { .result = {{ .Result.ResultDecl }}::WithResponse(std::move(m)) } };
     {{- else }}
       return DomainObject{ { .result = {{ .Result.ResultDecl }}::WithResponse({}) } };
     {{- end }}
@@ -211,6 +211,7 @@ class {{ .NaturalResponseConverter }} {
 {{- end }}
 
 {{- define "Method:Response:Traits:TypeConversionsHeader" }}
+{{- if not .HasTransportError }}
 template <>
 struct WireNaturalConversionTraits<{{ .WireResponse }}, {{ .NaturalResponse }}> {
   static {{ .NaturalResponse }} ToNatural({{ .WireResponse }} src);
@@ -226,8 +227,10 @@ struct WireTypeForNaturalType<{{ .NaturalResponse }}> {
     using type = {{ .WireResponse }};
 };
 {{- end }}
+{{- end }}
 
 {{- define "Method:Response:Traits:TypeConversionsSource" }}
+{{- if not .HasTransportError }}
 {{ .NaturalResponse }}  WireNaturalConversionTraits<{{ .WireResponse }}, {{ .NaturalResponse }}>::ToNatural({{ .WireResponse }} src) {
   {{- if and .HasResponsePayload .ResponseMessageBase }}
   return {{ .NaturalResponse }}(
@@ -244,4 +247,5 @@ struct WireTypeForNaturalType<{{ .NaturalResponse }}> {
   return {{ .WireResponse }}();
   {{- end }}
 }
+{{- end }}
 {{- end }}

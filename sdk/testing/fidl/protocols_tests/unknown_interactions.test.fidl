@@ -8,14 +8,38 @@ open protocol UnknownInteractionsProtocol {
     flexible FlexibleOneWay();
 
     strict StrictTwoWay() -> ();
+    strict StrictTwoWayFields() -> (struct {
+        some_field int32;
+    });
     strict StrictTwoWayErr() -> (struct {}) error int32;
+    strict StrictTwoWayFieldsErr() -> (struct {
+        some_field int32;
+    }) error int32;
     flexible FlexibleTwoWay() -> (struct {});
+    flexible FlexibleTwoWayFields() -> (struct {
+        some_field int32;
+    });
     flexible FlexibleTwoWayErr() -> (struct {}) error int32;
+    flexible FlexibleTwoWayFieldsErr() -> (struct {
+        some_field int32;
+    }) error int32;
 
     strict -> StrictEvent();
+    strict -> StrictEventFields(struct {
+        some_field int32;
+    });
     strict -> StrictEventErr(struct {}) error int32;
+    strict -> StrictEventFieldsErr(struct {
+        some_field int32;
+    }) error int32;
     flexible -> FlexibleEvent();
+    flexible -> FlexibleEventFields(struct {
+        some_field int32;
+    });
     flexible -> FlexibleEventErr(struct {}) error int32;
+    flexible -> FlexibleEventFieldsErr(struct {
+        some_field int32;
+    }) error int32;
 };
 
 ajar protocol UnknownInteractionsAjarProtocol {};
@@ -28,9 +52,21 @@ open protocol UnknownInteractionsDriverProtocol {
     flexible FlexibleOneWay();
 
     strict StrictTwoWay() -> ();
+    strict StrictTwoWayFields() -> (struct {
+        some_field int32;
+    });
     strict StrictTwoWayErr() -> (struct {}) error int32;
+    strict StrictTwoWayFieldsErr() -> (struct {
+        some_field int32;
+    }) error int32;
     flexible FlexibleTwoWay() -> (struct {});
+    flexible FlexibleTwoWayFields() -> (struct {
+        some_field int32;
+    });
     flexible FlexibleTwoWayErr() -> (struct {}) error int32;
+    flexible FlexibleTwoWayFieldsErr() -> (struct {
+        some_field int32;
+    }) error int32;
 };
 
 @transport("Driver")

@@ -5,67 +5,333 @@
 library test.unknowninteractions;
 
 open protocol UnknownInteractionsProtocol {
+    // One-Way Methods
     strict StrictOneWay();
     flexible FlexibleOneWay();
 
+    // Two-Way Methods
     strict StrictTwoWay() -> ();
-    strict StrictTwoWayErr() -> (struct {}) error int32;
-    flexible FlexibleTwoWay() -> (struct {});
-    flexible FlexibleTwoWayErr() -> (struct {}) error int32;
+    strict StrictTwoWayFields() -> (struct {
+        some_field int32;
+    });
+    strict StrictTwoWayUnion() -> (union {
+        1: some_field int32;
+    });
+    strict StrictTwoWayTable() -> (table {
+        1: some_field int32;
+    });
 
+    strict StrictTwoWayErr() -> (struct {}) error int32;
+    strict StrictTwoWayFieldsErr() -> (struct {
+        some_field int32;
+    }) error int32;
+    strict StrictTwoWayUnionErr() -> (union {
+        1: some_field int32;
+    }) error int32;
+    strict StrictTwoWayTableErr() -> (table {
+        1: some_field int32;
+    }) error int32;
+
+    flexible FlexibleTwoWay() -> (struct {});
+    flexible FlexibleTwoWayFields() -> (struct {
+        some_field int32;
+    });
+    flexible FlexibleTwoWayUnion() -> (union {
+        1: some_field int32;
+    });
+    flexible FlexibleTwoWayTable() -> (table {
+        1: some_field int32;
+    });
+
+    flexible FlexibleTwoWayErr() -> (struct {}) error int32;
+    flexible FlexibleTwoWayFieldsErr() -> (struct {
+        some_field int32;
+    }) error int32;
+    flexible FlexibleTwoWayUnionErr() -> (union {
+        1: some_field int32;
+    }) error int32;
+    flexible FlexibleTwoWayTableErr() -> (table {
+        1: some_field int32;
+    }) error int32;
+
+    // Events
     strict -> StrictEvent();
+    strict -> StrictEventFields(struct {
+        some_field int32;
+    });
+    strict -> StrictEventUnion(union {
+        1: some_field int32;
+    });
+    strict -> StrictEventTable(table {
+        1: some_field int32;
+    });
+
     strict -> StrictEventErr(struct {}) error int32;
+    strict -> StrictEventFieldsErr(struct {
+        some_field int32;
+    }) error int32;
+    strict -> StrictEventUnionErr(union {
+        1: some_field int32;
+    }) error int32;
+    strict -> StrictEventTableErr(table {
+        1: some_field int32;
+    }) error int32;
+
     flexible -> FlexibleEvent();
+    flexible -> FlexibleEventFields(struct {
+        some_field int32;
+    });
+    flexible -> FlexibleEventUnion(union {
+        1: some_field int32;
+    });
+    flexible -> FlexibleEventTable(table {
+        1: some_field int32;
+    });
+
     flexible -> FlexibleEventErr(struct {}) error int32;
+    flexible -> FlexibleEventFieldsErr(struct {
+        some_field int32;
+    }) error int32;
+    flexible -> FlexibleEventUnionErr(union {
+        1: some_field int32;
+    }) error int32;
+    flexible -> FlexibleEventTableErr(table {
+        1: some_field int32;
+    }) error int32;
 };
 
 ajar protocol UnknownInteractionsAjarProtocol {
+    // One-Way Methods
     strict StrictOneWay();
     flexible FlexibleOneWay();
 
+    // Two-Way Methods
     strict StrictTwoWay() -> ();
-    strict StrictTwoWayErr() -> (struct {}) error int32;
+    strict StrictTwoWayFields() -> (struct {
+        some_field int32;
+    });
+    strict StrictTwoWayUnion() -> (union {
+        1: some_field int32;
+    });
+    strict StrictTwoWayTable() -> (table {
+        1: some_field int32;
+    });
 
+    strict StrictTwoWayErr() -> (struct {}) error int32;
+    strict StrictTwoWayFieldsErr() -> (struct {
+        some_field int32;
+    }) error int32;
+    strict StrictTwoWayUnionErr() -> (union {
+        1: some_field int32;
+    }) error int32;
+    strict StrictTwoWayTableErr() -> (table {
+        1: some_field int32;
+    }) error int32;
+
+    // Events
     strict -> StrictEvent();
+    strict -> StrictEventFields(struct {
+        some_field int32;
+    });
+    strict -> StrictEventUnion(union {
+        1: some_field int32;
+    });
+    strict -> StrictEventTable(table {
+        1: some_field int32;
+    });
+
     strict -> StrictEventErr(struct {}) error int32;
+    strict -> StrictEventFieldsErr(struct {
+        some_field int32;
+    }) error int32;
+    strict -> StrictEventUnionErr(union {
+        1: some_field int32;
+    }) error int32;
+    strict -> StrictEventTableErr(table {
+        1: some_field int32;
+    }) error int32;
+
     flexible -> FlexibleEvent();
+    flexible -> FlexibleEventFields(struct {
+        some_field int32;
+    });
+    flexible -> FlexibleEventUnion(union {
+        1: some_field int32;
+    });
+    flexible -> FlexibleEventTable(table {
+        1: some_field int32;
+    });
+
     flexible -> FlexibleEventErr(struct {}) error int32;
+    flexible -> FlexibleEventFieldsErr(struct {
+        some_field int32;
+    }) error int32;
+    flexible -> FlexibleEventUnionErr(union {
+        1: some_field int32;
+    }) error int32;
+    flexible -> FlexibleEventTableErr(table {
+        1: some_field int32;
+    }) error int32;
 };
 
 closed protocol UnknownInteractionsClosedProtocol {
+    // One-Way Methods
     strict StrictOneWay();
 
+    // Two-Way Methods
     strict StrictTwoWay() -> ();
-    strict StrictTwoWayErr() -> (struct {}) error int32;
+    strict StrictTwoWayFields() -> (struct {
+        some_field int32;
+    });
+    strict StrictTwoWayUnion() -> (union {
+        1: some_field int32;
+    });
+    strict StrictTwoWayTable() -> (table {
+        1: some_field int32;
+    });
 
+    strict StrictTwoWayErr() -> (struct {}) error int32;
+    strict StrictTwoWayFieldsErr() -> (struct {
+        some_field int32;
+    }) error int32;
+    strict StrictTwoWayUnionErr() -> (union {
+        1: some_field int32;
+    }) error int32;
+    strict StrictTwoWayTableErr() -> (table {
+        1: some_field int32;
+    }) error int32;
+
+    // Events
     strict -> StrictEvent();
+    strict -> StrictEventFields(struct {
+        some_field int32;
+    });
+    strict -> StrictEventUnion(union {
+        1: some_field int32;
+    });
+    strict -> StrictEventTable(table {
+        1: some_field int32;
+    });
+
     strict -> StrictEventErr(struct {}) error int32;
+    strict -> StrictEventFieldsErr(struct {
+        some_field int32;
+    }) error int32;
+    strict -> StrictEventUnionErr(union {
+        1: some_field int32;
+    }) error int32;
+    strict -> StrictEventTableErr(table {
+        1: some_field int32;
+    }) error int32;
 };
 
 @transport("Driver")
 open protocol UnknownInteractionsDriverProtocol {
+    // One-Way Methods
     strict StrictOneWay();
     flexible FlexibleOneWay();
 
+    // Two-Way Methods
     strict StrictTwoWay() -> ();
+    strict StrictTwoWayFields() -> (struct {
+        some_field int32;
+    });
+    strict StrictTwoWayUnion() -> (union {
+        1: some_field int32;
+    });
+    strict StrictTwoWayTable() -> (table {
+        1: some_field int32;
+    });
+
     strict StrictTwoWayErr() -> (struct {}) error int32;
+    strict StrictTwoWayFieldsErr() -> (struct {
+        some_field int32;
+    }) error int32;
+    strict StrictTwoWayUnionErr() -> (union {
+        1: some_field int32;
+    }) error int32;
+    strict StrictTwoWayTableErr() -> (table {
+        1: some_field int32;
+    }) error int32;
+
     flexible FlexibleTwoWay() -> (struct {});
+    flexible FlexibleTwoWayFields() -> (struct {
+        some_field int32;
+    });
+    flexible FlexibleTwoWayUnion() -> (union {
+        1: some_field int32;
+    });
+    flexible FlexibleTwoWayTable() -> (table {
+        1: some_field int32;
+    });
+
     flexible FlexibleTwoWayErr() -> (struct {}) error int32;
+    flexible FlexibleTwoWayFieldsErr() -> (struct {
+        some_field int32;
+    }) error int32;
+    flexible FlexibleTwoWayUnionErr() -> (union {
+        1: some_field int32;
+    }) error int32;
+    flexible FlexibleTwoWayTableErr() -> (table {
+        1: some_field int32;
+    }) error int32;
 };
 
 @transport("Driver")
 ajar protocol UnknownInteractionsAjarDriverProtocol {
+    // One-Way Methods
     strict StrictOneWay();
     flexible FlexibleOneWay();
 
+    // Two-Way Methods
     strict StrictTwoWay() -> ();
+    strict StrictTwoWayFields() -> (struct {
+        some_field int32;
+    });
+    strict StrictTwoWayUnion() -> (union {
+        1: some_field int32;
+    });
+    strict StrictTwoWayTable() -> (table {
+        1: some_field int32;
+    });
+
     strict StrictTwoWayErr() -> (struct {}) error int32;
+    strict StrictTwoWayFieldsErr() -> (struct {
+        some_field int32;
+    }) error int32;
+    strict StrictTwoWayUnionErr() -> (union {
+        1: some_field int32;
+    }) error int32;
+    strict StrictTwoWayTableErr() -> (table {
+        1: some_field int32;
+    }) error int32;
 };
 
 @transport("Driver")
 closed protocol UnknownInteractionsClosedDriverProtocol {
+    // One-Way Methods
     strict StrictOneWay();
 
+    // Two-Way Methods
     strict StrictTwoWay() -> ();
+    strict StrictTwoWayFields() -> (struct {
+        some_field int32;
+    });
+    strict StrictTwoWayUnion() -> (union {
+        1: some_field int32;
+    });
+    strict StrictTwoWayTable() -> (table {
+        1: some_field int32;
+    });
+
     strict StrictTwoWayErr() -> (struct {}) error int32;
+    strict StrictTwoWayFieldsErr() -> (struct {
+        some_field int32;
+    }) error int32;
+    strict StrictTwoWayUnionErr() -> (union {
+        1: some_field int32;
+    }) error int32;
+    strict StrictTwoWayTableErr() -> (table {
+        1: some_field int32;
+    }) error int32;
 };

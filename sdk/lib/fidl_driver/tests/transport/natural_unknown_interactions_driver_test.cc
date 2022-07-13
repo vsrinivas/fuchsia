@@ -75,9 +75,19 @@ class UnknownInteractionsServerBase
     add_server_assertion([]() { ADD_FAILURE("StrictTwoWay called unexpectedly"); });
   }
 
+  void StrictTwoWayFields(StrictTwoWayFieldsRequest& request,
+                          StrictTwoWayFieldsCompleter::Sync& completer) override {
+    add_server_assertion([]() { ADD_FAILURE("StrictTwoWayFields called unexpectedly"); });
+  }
+
   void FlexibleTwoWay(FlexibleTwoWayRequest& request,
                       FlexibleTwoWayCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("FlexibleTwoWay called unexpectedly"); });
+  }
+
+  void FlexibleTwoWayFields(FlexibleTwoWayFieldsRequest& request,
+                            FlexibleTwoWayFieldsCompleter::Sync& completer) override {
+    add_server_assertion([]() { ADD_FAILURE("FlexibleTwoWayFields called unexpectedly"); });
   }
 
   void StrictTwoWayErr(StrictTwoWayErrRequest& request,
@@ -85,9 +95,19 @@ class UnknownInteractionsServerBase
     add_server_assertion([]() { ADD_FAILURE("StrictTwoWayErr called unexpectedly"); });
   }
 
+  void StrictTwoWayFieldsErr(StrictTwoWayFieldsErrRequest& request,
+                             StrictTwoWayFieldsErrCompleter::Sync& completer) override {
+    add_server_assertion([]() { ADD_FAILURE("StrictTwoWayFieldsErr called unexpectedly"); });
+  }
+
   void FlexibleTwoWayErr(FlexibleTwoWayErrRequest& request,
                          FlexibleTwoWayErrCompleter::Sync& completer) override {
     add_server_assertion([]() { ADD_FAILURE("FlexibleTwoWayErr called unexpectedly"); });
+  }
+
+  void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequest& request,
+                               FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
+    add_server_assertion([]() { ADD_FAILURE("FlexibleTwoWayFieldsErr called unexpectedly"); });
   }
 
   void handle_unknown_method(
@@ -889,6 +909,28 @@ TEST_F(UnknownInteractions, FlexibleTwoWayResponseMismatchedStrictness) {
   EXPECT_EQ(expected, received.buf);
 }
 
+TEST_F(UnknownInteractions, FlexibleTwoWayFieldsResponse) {
+  auto client = TakeClientChannel();
+  class Server : public UnknownInteractionsServerBase {
+    void FlexibleTwoWayFields(FlexibleTwoWayFieldsRequest& request,
+                              FlexibleTwoWayFieldsCompleter::Sync& completer) override {
+      completer.Reply({{.some_field = 42}});
+    }
+  };
+  BindServer(std::make_unique<Server>());
+
+  auto client_request =
+      MakeMessage<::test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>(
+          0xABCD, ::fidl::MessageDynamicFlags::kFlexibleMethod);
+  ChannelWrite(client, client_request);
+
+  auto received = ReadResult<32>::ReadFromChannel(client, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected = MakeMessage<::test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>(
+      0xABCD, ::fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kSuccess, 42);
+  EXPECT_EQ(expected, received.buf);
+}
+
 TEST_F(UnknownInteractions, FlexibleTwoWayErrResponse) {
   auto client = TakeClientChannel();
   class Server : public UnknownInteractionsServerBase {
@@ -927,6 +969,53 @@ TEST_F(UnknownInteractions, FlexibleTwoWayErrResponseError) {
   auto received = ReadResult<32>::ReadFromChannel(client, Dispatcher());
   ASSERT_OK(received.status);
   auto expected = MakeMessage<::test::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>(
+      0xABCD, ::fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kApplicationError,
+      3203);
+  EXPECT_EQ(expected, received.buf);
+}
+
+TEST_F(UnknownInteractions, FlexibleTwoWayFieldsErrResponse) {
+  auto client = TakeClientChannel();
+  class Server : public UnknownInteractionsServerBase {
+    void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequest& request,
+                                 FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
+      completer.Reply(
+          fitx::ok(::test::UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrResponse(
+              {.some_field = 42})));
+    }
+  };
+  BindServer(std::make_unique<Server>());
+
+  auto client_request =
+      MakeMessage<::test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>(
+          0xABCD, ::fidl::MessageDynamicFlags::kFlexibleMethod);
+  ChannelWrite(client, client_request);
+
+  auto received = ReadResult<32>::ReadFromChannel(client, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected = MakeMessage<::test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>(
+      0xABCD, ::fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kSuccess, 42);
+  EXPECT_EQ(expected, received.buf);
+}
+
+TEST_F(UnknownInteractions, FlexibleTwoWayFieldsErrResponseError) {
+  auto client = TakeClientChannel();
+  class Server : public UnknownInteractionsServerBase {
+    void FlexibleTwoWayFieldsErr(FlexibleTwoWayFieldsErrRequest& request,
+                                 FlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
+      completer.Reply(fitx::error(3203));
+    }
+  };
+  BindServer(std::make_unique<Server>());
+
+  auto client_request =
+      MakeMessage<::test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>(
+          0xABCD, ::fidl::MessageDynamicFlags::kFlexibleMethod);
+  ChannelWrite(client, client_request);
+
+  auto received = ReadResult<32>::ReadFromChannel(client, Dispatcher());
+  ASSERT_OK(received.status);
+  auto expected = MakeMessage<::test::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>(
       0xABCD, ::fidl::MessageDynamicFlags::kFlexibleMethod, ResultUnionTag::kApplicationError,
       3203);
   EXPECT_EQ(expected, received.buf);
