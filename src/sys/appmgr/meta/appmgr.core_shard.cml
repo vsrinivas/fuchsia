@@ -52,6 +52,7 @@
                 "fuchsia.ui.policy.Presenter",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.ui.views.ViewRefInstalled",
+                "fuchsia.update.channelcontrol.ChannelControl",
                 "fuchsia.weave.FactoryDataManager",
                 "fuchsia.weave.Signer",
             ],
@@ -406,6 +407,7 @@
             protocol: [
                 "fuchsia.intl.PropertyProvider",
                 "fuchsia.ui.scenic.Scenic",
+                "fuchsia.update.channelcontrol.ChannelControl",
             ],
             from: "self",
             to: "#feedback",

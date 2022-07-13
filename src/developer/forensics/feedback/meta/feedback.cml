@@ -41,12 +41,12 @@
                 "fuchsia.process.Launcher",
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.ui.scenic.Scenic",
+                "fuchsia.update.channelcontrol.ChannelControl",
             ],
         },
         {
             protocol: [
                 "fuchsia.settings.Privacy",
-                "fuchsia.update.channelcontrol.ChannelControl",
             ],
             availability: "optional",
         },

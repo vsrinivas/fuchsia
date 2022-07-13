@@ -48,11 +48,15 @@
     ],
     expose: [
         {
-            protocol: [
-                "fuchsia.update.channel.Provider",
-                "fuchsia.update.channelcontrol.ChannelControl",
-                "fuchsia.update.Manager",
-            ],
+            protocol: "fuchsia.update.channel.Provider",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.update.channelcontrol.ChannelControl",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.update.Manager",
             from: "self",
         },
     ],

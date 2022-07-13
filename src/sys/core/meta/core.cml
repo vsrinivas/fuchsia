@@ -938,12 +938,6 @@
             to: "#feedback",
         },
         {
-            protocol: "fuchsia.update.channelcontrol.ChannelControl",
-            from: "#system-update-checker",
-            to: "#feedback",
-            source_availability: "unknown",
-        },
-        {
             storage: [
                 "cache",
                 "data",
