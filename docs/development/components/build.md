@@ -1159,8 +1159,8 @@ To address the issue, add the missing `include` in your component manifest. For 
         {{ '<strong>' }}// Add this required include {{ '</strong>' }}
         {{ '<strong>' }}"inspect/client.shard.cml", {{ '</strong>' }}
 
-        // Enable logging on stdout
-        "syslog/elf_stdio.shard.cml",
+        // Enable logging
+        "syslog/client.shard.cml",
     ],
 
     // ...

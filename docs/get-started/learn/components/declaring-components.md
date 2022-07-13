@@ -184,7 +184,7 @@ to supply the list of names to greet:
   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/cpp/meta/echo.cml" region_tag="manifest" adjust_indentation="auto" highlight="15,16,17,18,19,21,22" %}
   ```
 
-Update the manifest includes to provide logging support on stdout:
+Update the manifest includes to provide logging support, including on stdout:
 
 * {Rust}
 
@@ -194,8 +194,8 @@ Update the manifest includes to provide logging support on stdout:
   {
     include: [
         "inspect/client.shard.cml",
-        // Enable logging on stdout
-        "syslog/elf_stdio.shard.cml",
+        // Enable logging
+        "syslog/client.shard.cml",
     ],
 
     // ...
@@ -210,8 +210,8 @@ Update the manifest includes to provide logging support on stdout:
   {
     include: [
         "inspect/client.shard.cml",
-        // Enable logging on stdout
-        "syslog/elf_stdio.shard.cml",
+        // Enable logging
+        "syslog/client.shard.cml",
     ],
 
     // ...

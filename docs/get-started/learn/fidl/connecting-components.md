@@ -362,7 +362,7 @@ to the server. Add the following program arguments to `echo_client.cml`:
   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/cpp/echo_client/meta/echo_client.cml" region_tag="program_args" adjust_indentation="auto" highlight="9,10" %}
   ```
 
-Update the manifest includes to provide logging support on stdout:
+Update the manifest includes to provide logging support, including on stdout:
 
 * {Rust}
 
@@ -372,8 +372,8 @@ Update the manifest includes to provide logging support on stdout:
   {
     include: [
         "inspect/client.shard.cml",
-        // Enable logging on stdout
-        "syslog/elf_stdio.shard.cml",
+        // Enable logging
+        "syslog/client.shard.cml",
     ],
 
     // ...
@@ -388,8 +388,8 @@ Update the manifest includes to provide logging support on stdout:
   {
     include: [
         "inspect/client.shard.cml",
-        // Enable logging on stdout
-        "syslog/elf_stdio.shard.cml",
+        // Enable logging
+        "syslog/client.shard.cml",
     ],
 
     // ...
@@ -428,7 +428,7 @@ a request:
 
   The `EchoMarker` provides a wrapper to connect to the exposed capability by
   name and returns a handle to the open `EchoProxy` interface. This proxy contains
-  the `echo_string()` FIDL protocol method. 
+  the `echo_string()` FIDL protocol method.
 
 * {C++}
 
