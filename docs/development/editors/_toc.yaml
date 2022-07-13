@@ -10,9 +10,6 @@ toc:
   path: /docs/development/editors
 - title: "YouCompleteMe integration"
   path: /docs/development/editors/youcompleteme.md
-- title: "VS Code"
-  section:
-  - include: /docs/development/editors/vscode/_toc.yaml
 - title: "VIM"
   path: /docs/development/editors/vim.md
 - title: "Sublime Text"

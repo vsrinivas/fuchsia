@@ -1,0 +1,20 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+toc:
+- title: "Editors for developing Fuchsia"
+  path: /docs/reference/tools/editors/README.md
+- title: "Visual Studio Code"
+  section:
+  - heading: "Extensions"
+  - title: "Installing the Fuchsia developer extension"
+    path: /docs/reference/tools/editors/vscode/fuchsia-ext-install.md
+  - title: "Using the Fuchsia developer extension"
+    path: /docs/reference/tools/editors/vscode/fuchsia-ext-using.md
+  - title: "Additional VS Code extensions for Fuchsia"
+    path: /docs/reference/tools/editors/vscode/extensions.md
+  - heading: "Additional Vs Code configuration"
+  - title: "Configuring remote workspaces"
+    path: /docs/reference/tools/editors/vscode/remote-workspaces.md
+  - title: "Configuring file reloading"
+    path: /docs/reference/tools/editors/vscode/file-reloading.md

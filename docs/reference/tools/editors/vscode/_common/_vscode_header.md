@@ -9,6 +9,9 @@
     .vscode-image-small{
         width: 15rem;
     }
+    .vscode-image-logo{
+        width: 10rem;
+    }
     @media (min-width: 768px){
         .vscode-image{
             width: 35rem;

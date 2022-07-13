@@ -3,5 +3,7 @@
 # found in the LICENSE file.
 
 toc:
+- heading: "Editors"
+- include: /docs/reference/tools/editors/_toc.yaml
 - heading: "SDK"
 - include: /docs/reference/tools/sdk/_toc.yaml

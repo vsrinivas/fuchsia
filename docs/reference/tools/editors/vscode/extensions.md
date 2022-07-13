@@ -1,8 +1,9 @@
-{% include "docs/development/editors/vscode/_common/_vscode_header.md" %}
+{% include "docs/reference/tools/editors/vscode/_common/_vscode_header.md" %}
 
-# VS Code extensions
+# Additional VS Code extensions for Fuchsia
 
-The following VS Code extensions may provide a productive development environment for Fuchsia:
+The following VS Code extensions may provide a productive development environment
+for Fuchsia:
 
 ## Official Fuchsia-specific extensions
 
@@ -16,27 +17,15 @@ Fuchsia devices, logging, and syntax highlighting. This extension is Fuchsia’s
 and can be used with the source tree and the SDK. For more information see the 
 [Fuchsia developer extension page][extension-install].
 
-<img class="vscode-image vscode-image-center"
+<img class="vscode-image-logo vscode-image-center"
      alt="This figure shows the image of the fuchsia extension logo "
-     src="images/extensions/extension-logo.png"
-     width = "10%"/>
+     src="images/extensions/extension-logo.png">
 
 ## Community contributed extensions
 
 These extensions are developed by Fuchsia contributors. Extensions listed are unsupported 
 and could conflict with the official Fuchsia developer extension. It is recommended to use 
 the [Fuchsia developer extension.][extension-link]{: .external} 
-
-### FIDL Language Support
-
-[FIDL Language Support](https://marketplace.visualstudio.com/items?itemName=fuchsia-authors.language-fidl){: .external}
-provides syntax support and LSP-based language features in [FIDL][fidl].
-
-Note: You need to configure Fuchsia environment variables to run this extension. For more information, see [Set up environment variables][set-up-env].
-
-<img class="vscode-image vscode-image-center"
-     alt="This figure shows syntax highlighting for FIDL files in VS Code."
-     src="images/extensions/fidl-pack.png"/>
 
 ### Fuchsia.git Helper
 
@@ -60,21 +49,10 @@ assists with browsing Fuchsia artifacts, such as by linking from component URLs 
 <img class="vscode-image vscode-image-center"
      alt="This figure shows hyperlinks to fuchsia-pkg urls in VS Code."
      src="images/extensions/fuchsiaware.png"/>
-     
-## General workflow extensions
 
-General workflow extensions provide an overall productive workflow when working with Fuchsia.
+### Build system extensions
 
-### GitLens
-
-[GitLens](https://marketplace.visualstudio.com/items?itemName=eamodio.gitlens){: .external}
-provides highly customizable insights of git history, which allows you to see code evolution.
-
-<img class="vscode-image vscode-image-center"
-     alt="This figure shows an overlay of git commit history in VS Code."
-     src="images/extensions/gitlens.png"/>
-
-### GN
+#### GN
 
 [GN](https://marketplace.visualstudio.com/items?itemName=npclaudiu.vscode-gn){: .external}
 adds syntax highlighting for GN files.
@@ -83,7 +61,7 @@ adds syntax highlighting for GN files.
      alt="This figure shows syntax highlighting for GN files in VS Code."
      src="images/extensions/gn.png"/>
 
-### GNFormat
+#### GNFormat
 
 [GNFormat](https://marketplace.visualstudio.com/items?itemName=persidskiy.vscode-gnformat){: .external}
 provides GN file formatting.
@@ -101,8 +79,36 @@ Do the following:
 "gnformat.path.buildtools": "{{ '<var>' }}BUILD_TOOLS_PATH{{ '</var>' }}"
 ```
 
-### JSON5
+### General workflow extensions
 
+General workflow extensions provide an overall productive workflow when working with Fuchsia.
+
+#### GitLens
+
+[GitLens](https://marketplace.visualstudio.com/items?itemName=eamodio.gitlens){: .external}
+provides highly customizable insights of git history, which allows you to see code evolution.
+
+<img class="vscode-image vscode-image-center"
+     alt="This figure shows an overlay of git commit history in VS Code."
+     src="images/extensions/gitlens.png"/>
+
+### Language specific extensions
+
+#### FIDL language support
+
+[FIDL Language Support](https://marketplace.visualstudio.com/items?itemName=fuchsia-authors.language-fidl){: .external}
+provides syntax support and LSP-based language features in [FIDL][fidl].
+
+Note: You need to configure Fuchsia environment variables to run this extension. For more information, see [Set up environment variables][set-up-env].
+
+<img class="vscode-image vscode-image-center"
+     alt="This figure shows syntax highlighting for FIDL files in VS Code."
+     src="images/extensions/fidl-pack.png"/>
+
+#### JSON5
+
+In some cases, you may work on Fuchsia components using a
+[structure configuration][structured-config-json5] written in JSON5.
 [JSON5](https://marketplace.visualstudio.com/items?itemName=mrmlnc.vscode-json5){: .external}
 adds syntax highlighting for JSON5 files.
 
@@ -110,7 +116,7 @@ adds syntax highlighting for JSON5 files.
      alt="This figure shows syntax highlighting for JSON5 files in VS Code."
      src="images/extensions/json5.png"/>
 
-### Rust-analyzer {#rust-analyzer}
+#### Rust-analyzer {#rust-analyzer}
 
 [Rust-analyzer](https://marketplace.visualstudio.com/items?itemName=matklad.rust-analyzer){: .external}
 is a [Language Server Protocol][lsp-definition]{: .external} (LSP)
@@ -125,7 +131,7 @@ To use `rust-analyzer` with VS Code, Fuchsia recommends:
 * [Updating to the latest stable VS Code][vscode-update]{: .external}.
 * [Disabling telemetry reporting][vscode-disable-telemetry]{: .external} for confidential code.
 
-#### Configure workflow {#rust-configure-workflow}
+##### Configure workflow {#rust-configure-workflow}
 
 After installing `rust-analyzer`, modify your
 VS Code's `settings.json` file:
@@ -158,7 +164,7 @@ workspace:
 
 ```
 
-#### Enable rustfmt
+##### Enable rustfmt
 
 The `rust-analyzer` extension relies on the `rustup` installer to invoke `rustfmt`,
 a tool for formatting Rust code according to style guidelines.
@@ -192,7 +198,7 @@ from [Configuring workflow](#rust-configure-workflow):
 [set-up-env]: /docs/get-started/get_fuchsia_source.md#set-up-environment-variables
 [fidl]: /docs/development/languages/fidl/README.md
 [rust-analyzer-latest]: https://github.com/rust-analyzer/rust-analyzer/releases
-[vscode-extension-guide]: /docs/development/editors/extensions.md#rust-analyzer
+[vscode-extension-guide]: /docs/reference/tools/editors/vscode/extensions.md#rust-analyzer
 [vscode-download]: https://code.visualstudio.com/Download
 [vscode-update]:  https://vscode-docs.readthedocs.io/en/stable/supporting/howtoupdate/
 [vscode-disable-telemetry]: https://code.visualstudio.com/docs/getstarted/telemetry#_disable-telemetry-reporting
@@ -200,6 +206,7 @@ from [Configuring workflow](#rust-configure-workflow):
 [vscode-downgrade]: https://code.visualstudio.com/updates/v1_30#_install-previous-versions
 [supported-rust-analyzer-version]: /docs/development/languages/rust/editors.md#supported-rust-analyzer-version
 [lsp-definition]: https://microsoft.github.io/language-server-protocol/
-[vscode-remote-workspaces]: /docs/development/editors/vscode/remote-workspaces.md
-[extension-install]: /docs/development/editors/vscode/fuchsia-ext-install.md
+[vscode-remote-workspaces]: /docs/reference/tools/editors/vscode/remote-workspaces.md
+[extension-install]: /docs/reference/tools/editors/vscode/fuchsia-ext-install.md
 [extension-link]: https://code.visualstudio.com/
+[structured-config-json5]: /docs/development/components/structured_config.md
