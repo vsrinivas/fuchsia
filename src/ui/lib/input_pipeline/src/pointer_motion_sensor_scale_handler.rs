@@ -33,8 +33,8 @@ impl UnhandledInputHandler for PointerMotionSensorScaleHandler {
                     input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
                         location:
                             mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
-                                counts: raw_motion,
-                                millimeters: _,
+                                millimeters: raw_motion,
+                                counts: _,
                             }),
                         wheel_delta_v,
                         wheel_delta_h,
@@ -43,7 +43,16 @@ impl UnhandledInputHandler for PointerMotionSensorScaleHandler {
                         affected_buttons,
                         pressed_buttons,
                     }),
-                device_descriptor: device_descriptor @ input_device::InputDeviceDescriptor::Mouse(_),
+                device_descriptor:
+                    input_device::InputDeviceDescriptor::Mouse(mouse_binding::MouseDeviceDescriptor {
+                        absolute_x_range,
+                        absolute_y_range,
+                        buttons,
+                        counts_per_mm,
+                        device_id,
+                        wheel_h_range,
+                        wheel_v_range,
+                    }),
                 event_time,
                 trace_id: _,
             } => {
@@ -53,9 +62,8 @@ impl UnhandledInputHandler for PointerMotionSensorScaleHandler {
                         mouse_binding::MouseEvent {
                             location: mouse_binding::MouseLocation::Relative(
                                 mouse_binding::RelativeLocation {
-                                    counts: scaled_motion,
-                                    // TODO(https://fxbug.dev/102568): Implement millimeters.
-                                    millimeters: Position::zero(),
+                                    counts: scaled_motion * counts_per_mm,
+                                    millimeters: scaled_motion,
                                 },
                             ),
                             wheel_delta_v,
@@ -65,7 +73,17 @@ impl UnhandledInputHandler for PointerMotionSensorScaleHandler {
                             pressed_buttons,
                         },
                     ),
-                    device_descriptor,
+                    device_descriptor: input_device::InputDeviceDescriptor::Mouse(
+                        mouse_binding::MouseDeviceDescriptor {
+                            absolute_x_range,
+                            absolute_y_range,
+                            buttons,
+                            counts_per_mm,
+                            device_id,
+                            wheel_h_range,
+                            wheel_v_range,
+                        },
+                    ),
                     event_time,
                     handled: input_device::Handled::No,
                     trace_id: None,
@@ -76,16 +94,6 @@ impl UnhandledInputHandler for PointerMotionSensorScaleHandler {
         }
     }
 }
-
-// The absolute value of the movement reported by the mouse when the mouse
-// moves one millimeter.
-// * This value was measured on an Atlas touchpad operating in mouse mode,
-//   and is ~300 counts-per-inch.
-// * This value _should_ be read from the mouse's input descriptor, once
-//   the value is added to said descriptor.
-//
-// TODO(https://fxbug.dev/98919): Use device-specific values.
-const COUNTS_PER_MM: f32 = 12.0;
 
 // The minimum reasonable delay between intentional mouse movements.
 // This value
@@ -199,8 +207,8 @@ impl PointerMotionSensorScaleHandler {
         }
     }
 
-    /// Scales `movement_counts`.
-    fn scale_motion(&self, movement_counts: Position, event_time: zx::Time) -> Position {
+    /// Scales `movement_mm`.
+    fn scale_motion(&self, movement_mm: Position, event_time: zx::Time) -> Position {
         // Determine the duration of this `movement`.
         let elapsed_time_secs =
             match self.mutable_state.borrow_mut().last_move_timestamp.replace(event_time) {
@@ -212,14 +220,14 @@ impl PointerMotionSensorScaleHandler {
                 / 1E9;
 
         // Compute the velocity in each dimension.
-        let x_mm_per_sec = movement_counts.x / COUNTS_PER_MM / elapsed_time_secs;
-        let y_mm_per_sec = movement_counts.y / COUNTS_PER_MM / elapsed_time_secs;
+        let x_mm_per_sec = movement_mm.x / elapsed_time_secs;
+        let y_mm_per_sec = movement_mm.y / elapsed_time_secs;
 
         let euclidean_velocity =
             f32::sqrt(x_mm_per_sec * x_mm_per_sec + y_mm_per_sec * y_mm_per_sec);
         if euclidean_velocity < MIN_MEASURABLE_VELOCITY_MM_PER_SEC {
             // Avoid division by zero that would come from computing `scale_factor` below.
-            return movement_counts;
+            return movement_mm;
         }
 
         // Compute the scaling factor to be applied to each dimension.
@@ -232,9 +240,9 @@ impl PointerMotionSensorScaleHandler {
         let scale_factor = Self::scale_euclidean_velocity(euclidean_velocity) / euclidean_velocity;
 
         // Apply the scale factor and return the result.
-        let scaled_movement_counts = scale_factor * movement_counts;
+        let scaled_movement_mm = scale_factor * movement_mm;
 
-        match (scaled_movement_counts.x.classify(), scaled_movement_counts.y.classify()) {
+        match (scaled_movement_mm.x.classify(), scaled_movement_mm.y.classify()) {
             (FpCategory::Infinite | FpCategory::Nan, _)
             | (_, FpCategory::Infinite | FpCategory::Nan) => {
                 // Backstop, in case the code above missed some cases of bad arithmetic.
@@ -247,13 +255,13 @@ impl PointerMotionSensorScaleHandler {
                 // implications of this message.
                 fx_log_err!(
                     "skipped motion; scaled movement of {:?} is infinite or NaN; x is {:?}, and y is {:?}",
-                    scaled_movement_counts,
-                    scaled_movement_counts.x.classify(),
-                    scaled_movement_counts.y.classify(),
+                    scaled_movement_mm,
+                    scaled_movement_mm.x.classify(),
+                    scaled_movement_mm.y.classify(),
                 );
                 Position { x: 0.0, y: 0.0 }
             }
-            _ => scaled_movement_counts,
+            _ => scaled_movement_mm,
         }
     }
 }
@@ -269,6 +277,7 @@ mod tests {
         test_util::{assert_gt, assert_lt, assert_near},
     };
 
+    const COUNTS_PER_MM: f32 = 12.0;
     const DEVICE_DESCRIPTOR: input_device::InputDeviceDescriptor =
         input_device::InputDeviceDescriptor::Mouse(mouse_binding::MouseDeviceDescriptor {
             device_id: 0,
@@ -277,8 +286,7 @@ mod tests {
             wheel_v_range: None,
             wheel_h_range: None,
             buttons: None,
-            // TODO(https://fxbug.dev/102568) Use millimeters field.
-            counts_per_mm: 1,
+            counts_per_mm: COUNTS_PER_MM as i64,
         });
 
     // Maximum tolerable difference between "equal" scale factors. This is
@@ -371,6 +379,7 @@ mod tests {
         }
 
         async fn get_scaled_motion(movement_counts: Position, duration: zx::Duration) -> Position {
+            let movement_mm = movement_counts / COUNTS_PER_MM;
             let handler = PointerMotionSensorScaleHandler::new();
 
             // Send a don't-care value through to seed the last timestamp.
@@ -394,8 +403,8 @@ mod tests {
                 device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
                     location: mouse_binding::MouseLocation::Relative(
                         mouse_binding::RelativeLocation {
-                            counts: movement_counts,
-                            millimeters: Position::zero(),
+                            counts: Position::zero(),
+                            millimeters: movement_mm,
                         },
                     ),
                     wheel_delta_v: None,
@@ -557,6 +566,213 @@ mod tests {
         }
     }
 
+    mod motion_scaling_mm {
+        use super::*;
+
+        #[ignore]
+        #[fuchsia::test(allow_stalls = false)]
+        async fn plot_example_curve() {
+            let duration = zx::Duration::from_millis(8);
+            for count in 1..1000 {
+                let scaled_count = get_scaled_motion_mm(
+                    Position { x: count as f32 / COUNTS_PER_MM, y: 0.0 },
+                    duration,
+                )
+                .await;
+                fx_log_err!("{}, {}", count, scaled_count.x);
+            }
+        }
+
+        async fn get_scaled_motion_mm(movement_mm: Position, duration: zx::Duration) -> Position {
+            let handler = PointerMotionSensorScaleHandler::new();
+
+            // Send a don't-care value through to seed the last timestamp.
+            let input_event = input_device::UnhandledInputEvent {
+                device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
+                    location: mouse_binding::MouseLocation::Relative(Default::default()),
+                    wheel_delta_v: None,
+                    wheel_delta_h: None,
+                    phase: mouse_binding::MousePhase::Move,
+                    affected_buttons: hashset! {},
+                    pressed_buttons: hashset! {},
+                }),
+                device_descriptor: DEVICE_DESCRIPTOR.clone(),
+                event_time: zx::Time::from_nanos(0),
+                trace_id: None,
+            };
+            handler.clone().handle_unhandled_input_event(input_event).await;
+
+            // Send in the requested motion.
+            let input_event = input_device::UnhandledInputEvent {
+                device_event: input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
+                    location: mouse_binding::MouseLocation::Relative(
+                        mouse_binding::RelativeLocation {
+                            counts: Position::zero(),
+                            millimeters: movement_mm,
+                        },
+                    ),
+                    wheel_delta_v: None,
+                    wheel_delta_h: None,
+                    phase: mouse_binding::MousePhase::Move,
+                    affected_buttons: hashset! {},
+                    pressed_buttons: hashset! {},
+                }),
+                device_descriptor: DEVICE_DESCRIPTOR.clone(),
+                event_time: zx::Time::from_nanos(duration.into_nanos()),
+                trace_id: None,
+            };
+            let transformed_events =
+                handler.clone().handle_unhandled_input_event(input_event).await;
+
+            // Provide a useful debug message if the transformed event doesn't have the expected
+            // overall structure.
+            assert_matches!(
+                transformed_events.as_slice(),
+                [input_device::InputEvent {
+                    device_event: input_device::InputDeviceEvent::Mouse(
+                        mouse_binding::MouseEvent {
+                            location: mouse_binding::MouseLocation::Relative(
+                                mouse_binding::RelativeLocation { .. }
+                            ),
+                            ..
+                        }
+                    ),
+                    ..
+                }]
+            );
+
+            // Return the transformed motion.
+            if let input_device::InputEvent {
+                device_event:
+                    input_device::InputDeviceEvent::Mouse(mouse_binding::MouseEvent {
+                        location:
+                            mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
+                                counts: _,
+                                millimeters: movement_mm,
+                            }),
+                        ..
+                    }),
+                ..
+            } = transformed_events[0]
+            {
+                movement_mm
+            } else {
+                unreachable!()
+            }
+        }
+
+        fn velocity_to_mm(velocity_mm_per_sec: f32, duration: zx::Duration) -> f32 {
+            velocity_mm_per_sec * (duration.into_nanos() as f32 / 1E9)
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn low_speed_horizontal_motion_scales_linearly() {
+            const TICK_DURATION: zx::Duration = zx::Duration::from_millis(8);
+            const MOTION_A_MM: f32 = 1.0 / COUNTS_PER_MM;
+            const MOTION_B_MM: f32 = 2.0 / COUNTS_PER_MM;
+            assert_lt!(
+                MOTION_B_MM,
+                velocity_to_mm(MEDIUM_SPEED_RANGE_BEGIN_MM_PER_SEC, TICK_DURATION)
+            );
+
+            let scaled_a =
+                get_scaled_motion_mm(Position { x: MOTION_A_MM, y: 0.0 }, TICK_DURATION).await;
+            let scaled_b =
+                get_scaled_motion_mm(Position { x: MOTION_B_MM, y: 0.0 }, TICK_DURATION).await;
+            assert_near!(scaled_b.x / scaled_a.x, 2.0, SCALE_EPSILON);
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn low_speed_vertical_motion_scales_linearly() {
+            const TICK_DURATION: zx::Duration = zx::Duration::from_millis(8);
+            const MOTION_A_MM: f32 = 1.0 / COUNTS_PER_MM;
+            const MOTION_B_MM: f32 = 2.0 / COUNTS_PER_MM;
+            assert_lt!(
+                MOTION_B_MM,
+                velocity_to_mm(MEDIUM_SPEED_RANGE_BEGIN_MM_PER_SEC, TICK_DURATION)
+            );
+
+            let scaled_a =
+                get_scaled_motion_mm(Position { x: 0.0, y: MOTION_A_MM }, TICK_DURATION).await;
+            let scaled_b =
+                get_scaled_motion_mm(Position { x: 0.0, y: MOTION_B_MM }, TICK_DURATION).await;
+            assert_near!(scaled_b.y / scaled_a.y, 2.0, SCALE_EPSILON);
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn low_speed_45degree_motion_scales_dimensions_equally() {
+            const TICK_DURATION: zx::Duration = zx::Duration::from_millis(8);
+            const MOTION_MM: f32 = 1.0 / COUNTS_PER_MM;
+            assert_lt!(
+                MOTION_MM,
+                velocity_to_mm(MEDIUM_SPEED_RANGE_BEGIN_MM_PER_SEC, TICK_DURATION)
+            );
+
+            let scaled =
+                get_scaled_motion_mm(Position { x: MOTION_MM, y: MOTION_MM }, TICK_DURATION).await;
+            assert_near!(scaled.x, scaled.y, SCALE_EPSILON);
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn medium_speed_motion_scales_quadratically() {
+            const TICK_DURATION: zx::Duration = zx::Duration::from_millis(8);
+            const MOTION_A_MM: f32 = 7.0 / COUNTS_PER_MM;
+            const MOTION_B_MM: f32 = 14.0 / COUNTS_PER_MM;
+            assert_gt!(
+                MOTION_A_MM,
+                velocity_to_mm(MEDIUM_SPEED_RANGE_BEGIN_MM_PER_SEC, TICK_DURATION)
+            );
+            assert_lt!(
+                MOTION_B_MM,
+                velocity_to_mm(MEDIUM_SPEED_RANGE_END_MM_PER_SEC, TICK_DURATION)
+            );
+
+            let scaled_a =
+                get_scaled_motion_mm(Position { x: MOTION_A_MM, y: 0.0 }, TICK_DURATION).await;
+            let scaled_b =
+                get_scaled_motion_mm(Position { x: MOTION_B_MM, y: 0.0 }, TICK_DURATION).await;
+            assert_near!(scaled_b.x / scaled_a.x, 4.0, SCALE_EPSILON);
+        }
+
+        // Given the handling of `OFFSET` for high-speed motion, (see comment
+        // in `scale_motion()`), high speed motion scaling is _not_ linear for
+        // the range of values of practical interest.
+        //
+        // Thus, this tests verifies a weaker property.
+        #[fuchsia::test(allow_stalls = false)]
+        async fn high_speed_motion_scaling_is_increasing() {
+            const TICK_DURATION: zx::Duration = zx::Duration::from_millis(8);
+            const MOTION_A_MM: f32 = 16.0 / COUNTS_PER_MM;
+            const MOTION_B_MM: f32 = 20.0 / COUNTS_PER_MM;
+            assert_gt!(
+                MOTION_A_MM,
+                velocity_to_mm(MEDIUM_SPEED_RANGE_END_MM_PER_SEC, TICK_DURATION)
+            );
+
+            let scaled_a =
+                get_scaled_motion_mm(Position { x: MOTION_A_MM, y: 0.0 }, TICK_DURATION).await;
+            let scaled_b =
+                get_scaled_motion_mm(Position { x: MOTION_B_MM, y: 0.0 }, TICK_DURATION).await;
+            assert_gt!(scaled_b.x, scaled_a.x)
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn zero_motion_maps_to_zero_motion() {
+            const TICK_DURATION: zx::Duration = zx::Duration::from_millis(8);
+            let scaled = get_scaled_motion_mm(Position { x: 0.0, y: 0.0 }, TICK_DURATION).await;
+            assert_eq!(scaled, Position::zero())
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn zero_duration_does_not_crash() {
+            get_scaled_motion_mm(
+                Position { x: 1.0 / COUNTS_PER_MM, y: 0.0 },
+                zx::Duration::from_millis(0),
+            )
+            .await;
+        }
+    }
+
     mod metadata_preservation {
         use super::*;
 
@@ -566,7 +782,7 @@ mod tests {
             let input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
                     counts: Position { x: 1.5, y: 4.5 },
-                    millimeters: Position::zero(),
+                    millimeters: Position { x: 1.5 / COUNTS_PER_MM, y: 4.5 / COUNTS_PER_MM },
                 }),
                 wheel_delta_v: None,
                 wheel_delta_h: None,
@@ -588,7 +804,7 @@ mod tests {
             let mut input_event = make_unhandled_input_event(mouse_binding::MouseEvent {
                 location: mouse_binding::MouseLocation::Relative(mouse_binding::RelativeLocation {
                     counts: Position { x: 1.5, y: 4.5 },
-                    millimeters: Position::zero(),
+                    millimeters: Position { x: 1.5 / COUNTS_PER_MM, y: 4.5 / COUNTS_PER_MM },
                 }),
                 wheel_delta_v: None,
                 wheel_delta_h: None,
