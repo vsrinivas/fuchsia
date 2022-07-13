@@ -1,0 +1,74 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/component_manager/tests/capability_provider_vfs_compliance/vfs-compliance-test.shard.cml",
+
+        // Run as a non-hermetic system-ish test because we can't nest fuchsia.boot/fuchsia.kernel capabilities.
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/capability_provider_vfs_compliance_test",
+    },
+    children: [
+        {
+            name: "memfs",
+            url: "#meta/memfs.cm",
+        },
+    ],
+    capabilities: [
+        {
+            storage: "data",
+            from: "#memfs",
+            backing_dir: "memfs",
+            storage_id: "static_instance_id_or_moniker",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.FactoryItems",
+                "fuchsia.boot.Items",
+                "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.boot.RootResource",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.kernel.CpuResource",
+                "fuchsia.kernel.DebugResource",
+                "fuchsia.kernel.HypervisorResource",
+                "fuchsia.kernel.InfoResource",
+                "fuchsia.kernel.IoportResource",
+                "fuchsia.kernel.IrqResource",
+                "fuchsia.kernel.MmioResource",
+                "fuchsia.kernel.PowerResource",
+                "fuchsia.kernel.RootJob",
+                "fuchsia.kernel.RootJobForInspect",
+                "fuchsia.kernel.SmcResource",
+                "fuchsia.kernel.Stats",
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys2.CrashIntrospect",
+                "fuchsia.sys2.EventSource",
+                "fuchsia.sys2.SystemController",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.component.Binder",
+                "fuchsia.component.Realm",
+                "fuchsia.sys2.LifecycleController",
+                "fuchsia.sys2.RealmExplorer",
+                "fuchsia.sys2.RealmQuery",
+                "fuchsia.sys2.RouteValidator",
+            ],
+            from: "framework",
+        },
+        {
+            protocol: "fuchsia.sys2.StorageAdmin",
+            from: "#data",
+        },
+    ],
+}

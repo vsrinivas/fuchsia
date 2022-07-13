@@ -1,0 +1,47 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":package" ]
+}
+
+rustc_test("integration_test_bin") {
+  output_name = "capability_provider_vfs_compliance_test"
+  edition = "2018"
+  source_root = "src/integration_test.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-fs",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:futures-util",
+  ]
+
+  sources = [ "src/integration_test.rs" ]
+}
+
+fuchsia_component("integration-test") {
+  testonly = true
+  deps = [ ":integration_test_bin" ]
+  manifest = "meta/integration_test.cml"
+}
+
+fuchsia_component("memfs") {
+  testonly = true
+  deps = [ "//src/sys/component_manager/tests/memfs" ]
+  manifest = "meta/memfs.cml"
+}
+
+fuchsia_test_package("package") {
+  package_name = "capability-provider-vfs-compliance-integration-test"
+  test_components = [ ":integration-test" ]
+  deps = [ ":memfs" ]
+}

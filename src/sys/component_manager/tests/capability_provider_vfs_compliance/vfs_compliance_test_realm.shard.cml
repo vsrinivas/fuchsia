@@ -1,0 +1,53 @@
+{
+    collections: [
+        {
+            name: "vfs-compliance-tests",
+            environment: "#test-env",
+            durability: "transient",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.FactoryItems",
+                "fuchsia.boot.Items",
+                "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.boot.RootResource",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.kernel.CpuResource",
+                "fuchsia.kernel.DebugResource",
+                "fuchsia.kernel.HypervisorResource",
+                "fuchsia.kernel.InfoResource",
+                "fuchsia.kernel.IoportResource",
+                "fuchsia.kernel.IrqResource",
+                "fuchsia.kernel.MmioResource",
+                "fuchsia.kernel.PowerResource",
+                "fuchsia.kernel.RootJob",
+                "fuchsia.kernel.RootJobForInspect",
+                "fuchsia.kernel.SmcResource",
+                "fuchsia.kernel.Stats",
+                "fuchsia.kernel.VmexResource",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys2.CrashIntrospect",
+                "fuchsia.sys2.EventSource",
+                "fuchsia.sys2.SystemController",
+            ],
+            from: "parent",
+            to: [ "#vfs-compliance-tests" ],
+        },
+        {
+            protocol: [
+                "fuchsia.component.Binder",
+                "fuchsia.component.Realm",
+                "fuchsia.sys2.LifecycleController",
+                "fuchsia.sys2.RealmExplorer",
+                "fuchsia.sys2.RealmQuery",
+                "fuchsia.sys2.RouteValidator",
+            ],
+            from: "framework",
+            to: [ "#vfs-compliance-tests" ],
+        },
+    ],
+}

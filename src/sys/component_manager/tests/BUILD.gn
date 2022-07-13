@@ -12,6 +12,7 @@ group("tests") {
     "base_resolver_test",
     "binder:tests",
     "bootfs:tests",
+    "capability_provider_vfs_compliance:tests",
     "collections:collections_integration_test",
     "component-time:tests",
     "crash_introspect:tests",

@@ -113,6 +113,18 @@
             from: "parent",
             to: "#test_manager",
         },
+
+        // Needed for IO compliance tests for CM capabiltiies.
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.Items",
+                "fuchsia.sys2.CrashIntrospect",
+                "fuchsia.sys2.SystemController",
+            ],
+            from: "parent",
+            to: "#test_manager",
+        },
         {
             protocol: [ "fuchsia.fonts.Provider" ],
             from: "#font_provider",
