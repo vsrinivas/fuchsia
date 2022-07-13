@@ -34,6 +34,7 @@ enum {
   BTI_VIDEO,
   BTI_SPI1,
   BTI_AUDIO_OUT,
+  BTI_AUDIO_IN,
 };
 
 // Av400 SPI bus arbiters (should match spi_channels[] in av400-spi.cc  ).

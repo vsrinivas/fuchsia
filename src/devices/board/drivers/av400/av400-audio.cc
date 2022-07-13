@@ -40,6 +40,32 @@ static constexpr pbus_irq_t frddr_b_irqs[] = {
     },
 };
 
+static constexpr pbus_mmio_t pdm_mmios[] = {{
+                                                .base = A5_EE_PDM_BASE,
+                                                .length = A5_EE_PDM_LENGTH,
+                                            },
+                                            {
+                                                .base = A5_EE_AUDIO_BASE,
+                                                .length = A5_EE_AUDIO_LENGTH,
+                                            },
+                                            {
+                                                .base = A5_EE_AUDIO2_BASE,
+                                                .length = A5_EE_AUDIO2_LENGTH,
+                                            }};
+static constexpr pbus_bti_t pdm_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = BTI_AUDIO_IN,
+    },
+};
+
+static constexpr pbus_irq_t toddr_b_irqs[] = {
+    {
+        .irq = A5_AUDIO_TODDR_B,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+
 static zx_status_t InitAudioTop(void) {
   // For some amlogic chips, they has Audio Top Clock Gating Control.
   // This part will affect audio registers access, to avoid bus hang,
@@ -265,6 +291,56 @@ zx_status_t Av400::AudioInit() {
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: I2S CompositeDeviceAdd failed: %d", __FILE__, status);
     return status;
+  }
+
+  {
+    // Av400 - d604_mic board has 6+1 mic (can record 4 channels pdm data)
+    // DIN_1 connect 2x mic (AMIC3,4)
+    // DIN_0 connect 2x mic (AMIC1,2)
+    // DIN_3 connect 1x mic (AMIC7)
+    // DIN_2 connect 2x mic (AMIC5,6)
+    // For test, we use 2 channels here.
+    gpio_impl_.SetAltFunction(A5_GPIOH(0), A5_GPIOH_0_PDMA_DIN_1_FN);
+    gpio_impl_.SetAltFunction(A5_GPIOH(1), A5_GPIOH_1_PDMA_DIN_0_FN);
+    gpio_impl_.SetAltFunction(A5_GPIOH(2), A5_GPIOH_2_PDMA_DCLK_FN);
+
+    metadata::AmlPdmConfig metadata = {};
+    snprintf(metadata.manufacturer, sizeof(metadata.manufacturer), "Amlogic");
+    snprintf(metadata.product_name, sizeof(metadata.product_name), "av400");
+    metadata.number_of_channels = 2;
+    metadata.version = metadata::AmlVersion::kA5;
+    metadata.sysClockDivFactor = 6;  // 770Mhz / 6   = 125Mhz
+    metadata.dClockDivFactor = 250;  // 770Mhz / 250 = 3.072Mhz
+    pbus_metadata_t pdm_metadata[] = {
+        {
+            .type = DEVICE_METADATA_PRIVATE,
+            .data_buffer = reinterpret_cast<uint8_t*>(&metadata),
+            .data_size = sizeof(metadata),
+        },
+    };
+
+    pbus_dev_t pdm_dev = {};
+    char pdm_name[32];
+    snprintf(pdm_name, sizeof(pdm_name), "av400-pdm-audio-in");
+    pdm_dev.name = pdm_name;
+    pdm_dev.vid = PDEV_VID_AMLOGIC;
+    pdm_dev.pid = PDEV_PID_AMLOGIC_A5;
+    pdm_dev.did = PDEV_DID_AMLOGIC_PDM;
+    pdm_dev.mmio_list = pdm_mmios;
+    pdm_dev.mmio_count = std::size(pdm_mmios);
+    pdm_dev.bti_list = pdm_btis;
+    pdm_dev.bti_count = std::size(pdm_btis);
+    // pdm use toddr_b by default; (src/media/audio/drivers/aml-g12-pdm/audio-stream-in.cc)
+    pdm_dev.irq_list = toddr_b_irqs;
+    pdm_dev.irq_count = std::size(toddr_b_irqs);
+    pdm_dev.metadata_list = pdm_metadata;
+    pdm_dev.metadata_count = std::size(pdm_metadata);
+
+    status = pbus_.DeviceAdd(&pdm_dev);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s adding audio input device failed %d", __FILE__, status);
+      return status;
+    }
   }
 
   return ZX_OK;

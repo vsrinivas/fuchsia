@@ -57,18 +57,33 @@ constexpr uint32_t kLpf2osr64Len = static_cast<uint32_t>(std::size(lpf2osr64));
 
 // static
 std::unique_ptr<AmlPdmDevice> AmlPdmDevice::Create(
-    fdf::MmioBuffer pdm_mmio, fdf::MmioBuffer audio_mmio, ee_audio_mclk_src_t pdm_clk_src,
-    uint32_t sysclk_div, uint32_t dclk_div, aml_toddr_t toddr_dev, metadata::AmlVersion version) {
+    fdf::MmioBuffer pdm_mmio, fdf::MmioBuffer audio_mmio, fdf::MmioBuffer audio2_mmio,
+    ee_audio_mclk_src_t pdm_clk_src, uint32_t sysclk_div, uint32_t dclk_div, aml_toddr_t toddr_dev,
+    metadata::AmlVersion version) {
   // TODDR A has 256 64-bit lines in the FIFO, B and C have 128.
   uint32_t fifo_depth = 128 * 8;  // in bytes.
-  if (toddr_dev == TODDR_A) {
-    fifo_depth = 256 * 8;
+  switch (version) {
+    case metadata::AmlVersion::kS905D2G:
+      if (toddr_dev == TODDR_A)
+        fifo_depth = 256 * 8;  // TODDR_A has 256 x 64-bit
+      else
+        fifo_depth = 128 * 8;  // TODDR_B/C has 128 x 64-bit
+      break;
+    case metadata::AmlVersion::kS905D3G:
+      if (toddr_dev == TODDR_A)
+        fifo_depth = 4096 * 8;  // TODDR_A has 4096 x 64-bit
+      else
+        fifo_depth = 128 * 8;  // TODDR_B/C/D has 128 x 64-bit
+      break;
+    case metadata::AmlVersion::kA5:
+      fifo_depth = 64 * 8;  // TODDR_A/B has 64 x 64-bit
+      break;
   }
 
   fbl::AllocChecker ac;
   auto pdm = std::unique_ptr<AmlPdmDevice>(
-      new (&ac) AmlPdmDevice(std::move(pdm_mmio), std::move(audio_mmio), pdm_clk_src, sysclk_div,
-                             dclk_div, toddr_dev, fifo_depth, version));
+      new (&ac) AmlPdmDevice(std::move(pdm_mmio), std::move(audio_mmio), std::move(audio2_mmio),
+                             pdm_clk_src, sysclk_div, dclk_div, toddr_dev, fifo_depth, version));
   if (!ac.check()) {
     zxlogf(ERROR, "%s: Could not create AmlPdmDevice", __func__);
     return nullptr;
@@ -82,7 +97,16 @@ std::unique_ptr<AmlPdmDevice> AmlPdmDevice::Create(
 }
 
 void AmlPdmDevice::InitRegs() {
-  // Setup toddr block
+  // 1. Setup toddr block
+  // 2. PDM dclk & sysclk
+  //*To keep things simple, we are using the same clock source for both the
+  // pdm sysclk and dclk.  Sysclk needs to be ~100-200MHz per AmLogic recommendations.
+  // dclk is osr*fs
+  //*Sysclk must be configured, enabled, and PDM audio clock gated prior to
+  // accessing any of the registers mapped via pdm_mmio.  Writing without sysclk
+  // operating properly (and in range) will result in unknown results, reads
+  // will wedge the system.
+  // 3. PDM ARB (A5 don't need it)
   switch (version_) {
     case metadata::AmlVersion::kS905D2G:
       audio_mmio_.Write32((0x30 << 16) |      // Enable interrupts for FIFO errors.
@@ -94,6 +118,11 @@ void AmlPdmDevice::InitRegs() {
       audio_mmio_.Write32(((fifo_depth_ / 8 / 2) << 16) |  // trigger ddr when fifo half full
                               (0x02 << 8),                 // STATUS2 source is ddr position
                           GetToddrOffset(TODDR_CTRL1_OFFS));
+      // dclk & sysclk
+      audio_mmio_.Write32((clk_src_ << 24) | dclk_div_, EE_AUDIO_CLK_PDMIN_CTRL0);
+      audio_mmio_.Write32((1 << 31) | (clk_src_ << 24) | sysclk_div_, EE_AUDIO_CLK_PDMIN_CTRL1);
+      // arb
+      audio_mmio_.SetBits32((1 << 31) | (1 << toddr_ch_), EE_AUDIO_ARB_CTRL);
       break;
     case metadata::AmlVersion::kS905D3G:
       audio_mmio_.Write32((0x02 << 13) |   // Right justified 16-bit
@@ -104,23 +133,27 @@ void AmlPdmDevice::InitRegs() {
                               ((fifo_depth_ / 8 / 2) << 12) |  // trigger ddr when fifo half full
                               (0x02 << 8),                     // STATUS2 source is ddr position
                           GetToddrOffset(TODDR_CTRL1_OFFS));
+      // dclk & sysclk
+      audio_mmio_.Write32((clk_src_ << 24) | dclk_div_, EE_AUDIO_CLK_PDMIN_CTRL0);
+      audio_mmio_.Write32((1 << 31) | (clk_src_ << 24) | sysclk_div_, EE_AUDIO_CLK_PDMIN_CTRL1);
+      // arb
+      audio_mmio_.SetBits32((1 << 31) | (1 << toddr_ch_), EE_AUDIO_ARB_CTRL);
       break;
     case metadata::AmlVersion::kA5:
-      ZX_ASSERT_MSG(0, "Unsupport yet");
+      audio_mmio_.Write32(
+          (0x02 << 13) |   // Right justified 16-bit
+              (31 << 8) |  // msb position of data out of pdm
+              (16 << 3),   // lsb position of data out of pdm - (S/U32 - 0; S/U16 - 16)
+          GetToddrOffset(TODDR_CTRL0_OFFS));
+      audio_mmio_.Write32((0x1F << 26) |                       // select vad_pdmin as data source
+                              ((fifo_depth_ / 8 / 2) << 12) |  // trigger ddr when fifo half full
+                              (0x02 << 8),                     // STATUS2 source is ddr position
+                          GetToddrOffset(TODDR_CTRL1_OFFS));
+      // dclk & sysclk
+      audio2_mmio_.Write32((clk_src_ << 24) | dclk_div_, EE_AUDIO2_CLK_PDMIN_CTRL0);
+      audio2_mmio_.Write32((1 << 31) | (clk_src_ << 24) | sysclk_div_, EE_AUDIO2_CLK_PDMIN_CTRL1);
       break;
   }
-
-  //*To keep things simple, we are using the same clock source for both the
-  // pdm sysclk and dclk.  Sysclk needs to be ~100-200MHz per AmLogic recommendations.
-  // dclk is osr*fs
-  //*Sysclk must be configured, enabled, and PDM audio clock gated prior to
-  // accessing any of the registers mapped via pdm_mmio.  Writing without sysclk
-  // operating properly (and in range) will result in unknown results, reads
-  // will wedge the system.
-  audio_mmio_.Write32((clk_src_ << 24) | dclk_div_, EE_AUDIO_CLK_PDMIN_CTRL0);
-  audio_mmio_.Write32((1 << 31) | (clk_src_ << 24) | sysclk_div_, EE_AUDIO_CLK_PDMIN_CTRL1);
-
-  audio_mmio_.SetBits32((1 << 31) | (1 << toddr_ch_), EE_AUDIO_ARB_CTRL);
 
   // Enable the audio domain clocks used by this instance.
   AudioClkEna(EE_AUDIO_CLK_GATE_PDM | (EE_AUDIO_CLK_GATE_TODDRA << toddr_ch_) |
@@ -145,6 +178,7 @@ void AmlPdmDevice::InitRegs() {
   // This sets the number of sysclk cycles between edge of dclk and when
   // data is sampled.  AmLogic material suggests this should be 3/4 of a
   // dclk half-cycle.  Go ahead and set all eight channels.
+
   uint32_t samp_delay = 3 * (dclk_div_ + 1) / (4 * 2 * (sysclk_div_ + 1));
   pdm_mmio_.Write32((samp_delay << 0) | (samp_delay << 8) | (samp_delay << 16) | (samp_delay << 24),
                     PDM_CHAN_CTRL);
@@ -155,6 +189,12 @@ void AmlPdmDevice::InitRegs() {
 void AmlPdmDevice::ConfigFilters(uint32_t frames_per_second) {
   ZX_ASSERT(frames_per_second == 96000 || frames_per_second == 48000);
 
+  // PDM Dclk 3.072m, support 8k/16k/32k/48k/64k/96k
+  //  sample_rate   osr       hcic_gain_0db   hcic_dn_rate
+  //  96k           32        0x0e(0x80)      0x4
+  //  48k           64        0x15(0x80)      0x8
+  //  ...
+  //
   uint32_t gain_shift = (frames_per_second == 96000) ? 0xe : 0x15;
   uint32_t downsample_rate = (frames_per_second == 96000) ? 0x4 : 0x8;
 
@@ -207,6 +247,13 @@ void AmlPdmDevice::ConfigFilters(uint32_t frames_per_second) {
 
   // set coefficient index pointer back to 0
   pdm_mmio_.Write32(0x0000, PDM_COEFF_ADDR);
+
+  // init truncate data
+  if (version_ == metadata::AmlVersion::kA5) {
+    // mask_val = ((freq / 1000) * 1050 * 8) / 1000 - 1;
+    uint32_t mask_val = (frames_per_second == 96000) ? 805 : 402;
+    pdm_mmio_.Write32(mask_val, PDM_MASK_NUM);
+  }
 }
 
 void AmlPdmDevice::SetMute(uint8_t mute_mask) {
@@ -255,14 +302,30 @@ zx_status_t AmlPdmDevice::SetBuffer(zx_paddr_t buf, size_t len) {
 
 // Stops the pdm from clocking
 void AmlPdmDevice::PdmInDisable() {
-  audio_mmio_.ClearBits32(1 << 31, EE_AUDIO_CLK_PDMIN_CTRL0);
+  switch (version_) {
+    case metadata::AmlVersion::kS905D2G:
+    case metadata::AmlVersion::kS905D3G:
+      audio_mmio_.ClearBits32(1 << 31, EE_AUDIO_CLK_PDMIN_CTRL0);
+      break;
+    case metadata::AmlVersion::kA5:
+      audio2_mmio_.ClearBits32(1 << 31, EE_AUDIO2_CLK_PDMIN_CTRL0);
+      break;
+  }
   pdm_mmio_.ClearBits32((1 << 31) | (1 << 16), PDM_CTRL);
 }
 
 // Enables the pdm to clock data
 void AmlPdmDevice::PdmInEnable() {
   // Start pdm_dclk
-  audio_mmio_.SetBits32(1 << 31, EE_AUDIO_CLK_PDMIN_CTRL0);
+  switch (version_) {
+    case metadata::AmlVersion::kS905D2G:
+    case metadata::AmlVersion::kS905D3G:
+      audio_mmio_.SetBits32(1 << 31, EE_AUDIO_CLK_PDMIN_CTRL0);
+      break;
+    case metadata::AmlVersion::kA5:
+      audio2_mmio_.SetBits32(1 << 31, EE_AUDIO2_CLK_PDMIN_CTRL0);
+      break;
+  }
   pdm_mmio_.SetBits32((1 << 31) | (1 << 16), PDM_CTRL);
 }
 

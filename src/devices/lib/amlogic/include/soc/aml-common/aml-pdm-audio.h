@@ -24,8 +24,8 @@ class AmlPdmDevice {
   DISALLOW_COPY_ASSIGN_AND_MOVE(AmlPdmDevice);
 
   static std::unique_ptr<AmlPdmDevice> Create(
-      fdf::MmioBuffer pdm_mmio, fdf::MmioBuffer audio_mmio, ee_audio_mclk_src_t pdm_clk_src,
-      uint32_t sclk_div, uint32_t dclk_div, aml_toddr_t toddr_dev,
+      fdf::MmioBuffer pdm_mmio, fdf::MmioBuffer audio_mmio, fdf::MmioBuffer audio2_mmio,
+      ee_audio_mclk_src_t pdm_clk_src, uint32_t sclk_div, uint32_t dclk_div, aml_toddr_t toddr_dev,
       metadata::AmlVersion version = metadata::AmlVersion::kS905D2G);
 
   // Sets the buffer/length pointers for dma engine
@@ -81,9 +81,9 @@ class AmlPdmDevice {
   void SetRate(uint32_t frames_per_second);
 
  protected:
-  AmlPdmDevice(fdf::MmioBuffer pdm_mmio, fdf::MmioBuffer audio_mmio, ee_audio_mclk_src_t clk_src,
-               uint32_t sysclk_div, uint32_t dclk_div, aml_toddr_t toddr, uint32_t fifo_depth,
-               metadata::AmlVersion version)
+  AmlPdmDevice(fdf::MmioBuffer pdm_mmio, fdf::MmioBuffer audio_mmio, fdf::MmioBuffer audio2_mmio,
+               ee_audio_mclk_src_t clk_src, uint32_t sysclk_div, uint32_t dclk_div,
+               aml_toddr_t toddr, uint32_t fifo_depth, metadata::AmlVersion version)
       : fifo_depth_(fifo_depth),
         toddr_ch_(toddr),
         clk_src_(clk_src),
@@ -92,6 +92,7 @@ class AmlPdmDevice {
         toddr_base_(GetToddrBase(toddr)),
         pdm_mmio_(std::move(pdm_mmio)),
         audio_mmio_(std::move(audio_mmio)),
+        audio2_mmio_(std::move(audio2_mmio)),
         version_(version) {}
 
   virtual ~AmlPdmDevice() = default;
@@ -133,6 +134,7 @@ class AmlPdmDevice {
   const zx_off_t toddr_base_;  // base offset of frddr ch used by this instance
   const fdf::MmioBuffer pdm_mmio_;
   const fdf::MmioBuffer audio_mmio_;
+  const fdf::MmioBuffer audio2_mmio_;  // Some chips (A5) have 'TOP_VAD' reg
   const metadata::AmlVersion version_;
 };
 

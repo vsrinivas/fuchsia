@@ -23,6 +23,7 @@ __BEGIN_CDECLS
 #define PDM_COEFF_DATA              (0x0a << 2)
 #define PDM_CLKG_CTRL               (0x0b << 2)
 #define PDM_STS                     (0x0c << 2)
+#define PDM_MASK_NUM                (0x0e << 2)
 
 
 //Clock control registers
@@ -189,6 +190,8 @@ __BEGIN_CDECLS
 
 //Audio TOP control reg offsets
 #define EE_AUDIO2_CLK_GATE_EN0_A5     (0x0003  << 2)
+#define EE_AUDIO2_CLK_PDMIN_CTRL0     (0x0016  << 2)
+#define EE_AUDIO2_CLK_PDMIN_CTRL1     (0x0017  << 2)
 
 typedef enum {
     MP0_PLL = 0,

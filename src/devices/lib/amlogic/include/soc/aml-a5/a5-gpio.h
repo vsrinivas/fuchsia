@@ -163,6 +163,11 @@
 #define A5_GPIOC_4_MCLK_1_FN 1
 #define A5_GPIOC_5_TDMB_D4_FN 1
 
+// GPIOH pin alternate functions
+#define A5_GPIOH_0_PDMA_DIN_1_FN 1
+#define A5_GPIOH_1_PDMA_DIN_0_FN 1
+#define A5_GPIOH_2_PDMA_DCLK_FN 1
+
 // GPIOT pin alternate functions
 #define A5_GPIOT_10_SPI_B_SS0_FN 0
 #define A5_GPIOT_11_SPI_B_SCLK_FN 3

@@ -123,7 +123,7 @@ zx_status_t AudioStreamIn::InitPDev() {
     return status;
   }
 
-  std::optional<fdf::MmioBuffer> mmio0, mmio1;
+  std::optional<fdf::MmioBuffer> mmio0, mmio1, mmio2;
   status = pdev2.MapMmio(0, &mmio0);
   if (status != ZX_OK) {
     zxlogf(ERROR, "could not map mmio0 %d", status);
@@ -133,6 +133,13 @@ zx_status_t AudioStreamIn::InitPDev() {
   if (status != ZX_OK) {
     zxlogf(ERROR, "could not map mmio1 %d", status);
     return status;
+  }
+  if (metadata_.version == metadata::AmlVersion::kA5) {
+    status = pdev2.MapMmio(2, &mmio2);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "could not map mmio2 %d", status);
+      return status;
+    }
   }
   status = pdev2.GetInterrupt(0, 0, &irq_);
   if (status != ZX_ERR_OUT_OF_RANGE) {  // Not specified in the board file.
@@ -153,7 +160,7 @@ zx_status_t AudioStreamIn::InitPDev() {
     }
   }
 
-  lib_ = AmlPdmDevice::Create(*std::move(mmio0), *std::move(mmio1), HIFI_PLL,
+  lib_ = AmlPdmDevice::Create(*std::move(mmio0), *std::move(mmio1), *std::move(mmio2), HIFI_PLL,
                               metadata_.sysClockDivFactor - 1, metadata_.dClockDivFactor - 1,
                               TODDR_B, metadata_.version);
   if (lib_ == nullptr) {
