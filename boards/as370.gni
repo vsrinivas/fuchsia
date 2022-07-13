@@ -68,6 +68,9 @@ custom_signing_script_tools = [
 
 zircon_a_partition = "boot"
 pre_erase_flash = true
+build_uefi_disk = false
+use_vbmeta = false
+use_gigaboot = false
 
 # Supports only physical devices.
 board_is_emu = false
