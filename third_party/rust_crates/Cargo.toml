@@ -82,7 +82,7 @@ derivative = { version = "2.2.0", features = ["use_core"] }
 derive_builder = "0.11.1"
 derp = "0.0.14"
 difference = "2.0.0"
-ecdsa = "0.13.4"
+ecdsa = { version = "0.13.4", features = ["pkcs8"] }
 elliptic-curve = { version = "0.11.12", features = [ "ecdh" ] }
 either = "1.5.0"
 eui48 = { version = "1.1.0", default-features = false, features = ["serde", "disp_hexstring"] }
@@ -139,6 +139,7 @@ num-traits = "0.2"
 numtoa = "0.1.0"
 once_cell = { version = "1.2.0", features = ["parking_lot"] }
 p256 = { version = "0.10.1", features = ["pem", "serde"] }
+pkcs8 = "0.8.0"
 parking_lot = "0.9"
 paste = "1.0"
 pathdiff = { version = "0.2.1", features = ["camino"] }

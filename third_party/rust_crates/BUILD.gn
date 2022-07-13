@@ -573,6 +573,10 @@ group("pin-utils") {
   public_deps = [ ":pin-utils-v0_1_0" ]
 }
 
+group("pkcs8") {
+  public_deps = [ ":pkcs8-v0_8_0" ]
+}
+
 group("png") {
   public_deps = [ ":png-v0_14_0" ]
 }
