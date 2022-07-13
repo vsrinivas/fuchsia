@@ -10,8 +10,8 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
-#include "src/ui/scenic/lib/input/input_system.h"
 #include "src/ui/scenic/lib/input/mouse_source.h"
+#include "src/ui/scenic/lib/input/mouse_system.h"
 
 // These tests exercise the full mouse delivery flow of InputSystem for
 // clients of the fuchsia.ui.pointer.MouseSource protocol.
@@ -88,18 +88,22 @@ std::shared_ptr<view_tree::Snapshot> NewSnapshot(std::vector<zx_koid_t> hits,
 class MouseTest : public gtest::TestLoopFixture {
  public:
   MouseTest()
-      : input_system_(
-            scenic_impl::SystemContext(context_provider_.context(), inspect::Node(), [] {}),
-            fxl::WeakPtr<scenic_impl::gfx::SceneGraph>(), /*request_focus*/ [](auto...) {}) {}
+      : hit_tester_(view_tree_snapshot_, inspect_node_),
+        mouse_system_(context_provider_.context(), view_tree_snapshot_, hit_tester_,
+                      /*request_focus*/ [](auto...) {}) {}
 
   void SetUp() override {
     client1_ptr_.set_error_handler([](auto) { FAIL() << "Client1's channel closed"; });
     client2_ptr_.set_error_handler([](auto) { FAIL() << "Client2's channel closed"; });
 
-    input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+    OnNewViewTreeSnapshot(NewSnapshot(
         /*hits*/ {}, /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
-    input_system_.RegisterMouseSource(client1_ptr_.NewRequest(), kClient1Koid);
-    input_system_.RegisterMouseSource(client2_ptr_.NewRequest(), kClient2Koid);
+    mouse_system_.RegisterMouseSource(client1_ptr_.NewRequest(), kClient1Koid);
+    mouse_system_.RegisterMouseSource(client2_ptr_.NewRequest(), kClient2Koid);
+  }
+
+  void OnNewViewTreeSnapshot(std::shared_ptr<const view_tree::Snapshot> snapshot) {
+    view_tree_snapshot_ = snapshot;
   }
 
   // Starts a recursive MouseSource::Watch() loop that collects all received events into
@@ -118,11 +122,14 @@ class MouseTest : public gtest::TestLoopFixture {
   }
 
  private:
-  // Must be initialized before |input_system_|.
+  // Must be initialized before |mouse_system_|.
   sys::testing::ComponentContextProvider context_provider_;
+  std::shared_ptr<const view_tree::Snapshot> view_tree_snapshot_;
+  inspect::Node inspect_node_;
+  scenic_impl::input::HitTester hit_tester_;
 
  protected:
-  scenic_impl::input::InputSystem input_system_;
+  scenic_impl::input::MouseSystem mouse_system_;
   fuchsia::ui::pointer::MouseSourcePtr client1_ptr_;
   fuchsia::ui::pointer::MouseSourcePtr client2_ptr_;
 
@@ -164,13 +171,13 @@ TEST_F(MouseTest, ExclusiveInjection_ShouldBeDeliveredOnlyToTarget) {
   EXPECT_TRUE(received_events1.empty());
   EXPECT_TRUE(received_events2.empty());
 
-  input_system_.InjectMouseEventExclusive(MouseEventTemplate(kClient1Koid), kStream1Id);
+  mouse_system_.InjectMouseEventExclusive(MouseEventTemplate(kClient1Koid), kStream1Id);
   RunLoopUntilIdle();
   EXPECT_EQ(received_events1.size(), 1u);
   EXPECT_TRUE(received_events2.empty());
 
   received_events1.clear();
-  input_system_.InjectMouseEventExclusive(MouseEventTemplate(kClient2Koid), kStream2Id);
+  mouse_system_.InjectMouseEventExclusive(MouseEventTemplate(kClient2Koid), kStream2Id);
   RunLoopUntilIdle();
   EXPECT_EQ(received_events2.size(), 1u);
   EXPECT_TRUE(received_events1.empty());
@@ -187,10 +194,10 @@ TEST_F(MouseTest, HitTestedInjection_WithButtonUp_ShouldBeDeliveredOnlyToTopHit)
   EXPECT_TRUE(received_events2.empty());
 
   // Client 1 is top hit.
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {kClient1Koid, kClient2Koid},
       /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
   RunLoopUntilIdle();
   ASSERT_EQ(received_events1.size(), 1u);
   ASSERT_TRUE(received_events1[0].has_stream_info());
@@ -198,11 +205,10 @@ TEST_F(MouseTest, HitTestedInjection_WithButtonUp_ShouldBeDeliveredOnlyToTopHit)
   EXPECT_TRUE(received_events2.empty());
 
   // Client 2 is top hit.
-  input_system_.OnNewViewTreeSnapshot(
-      NewSnapshot(/*hits*/ {kClient2Koid, kClient1Koid},
-                  /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
+  OnNewViewTreeSnapshot(NewSnapshot(/*hits*/ {kClient2Koid, kClient1Koid},
+                                    /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
 
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient2Koid), kStream1Id);
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient2Koid), kStream1Id);
   RunLoopUntilIdle();
   {  // Client 1 gets an exit event, but no pointer sample.
     ASSERT_EQ(received_events1.size(), 2u);
@@ -231,30 +237,30 @@ TEST_F(MouseTest, HitTestedInjection_WithButtonDown_ShouldLatchToTopHit_AndOnlyD
   EXPECT_TRUE(received_events2.empty());
 
   // Client 1 is top hit.
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {kClient1Koid, kClient2Koid},
       /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
 
   // Mouse button down.
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
                                           kStream1Id);
   RunLoopUntilIdle();
   EXPECT_EQ(received_events1.size(), 1u);
   EXPECT_TRUE(received_events2.empty());
 
   // Remove client 1 from the hit test.
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {kClient2Koid}, /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
 
   // Button still down. Still delivered to client 1.
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
                                           kStream1Id);
   RunLoopUntilIdle();
   EXPECT_EQ(received_events1.size(), 2u);
   EXPECT_TRUE(received_events2.empty());
 
   // Button up again. Client 1 gets a "View exited" event and client 2 gets its first hover event.
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/false),
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/false),
                                           kStream1Id);
   RunLoopUntilIdle();
   {  // Client 1 gets an exit event, but not a pointer sample.
@@ -284,25 +290,25 @@ TEST_F(MouseTest, LatchedClient_WhenNotInViewTree_ShouldReceiveViewExit) {
   EXPECT_TRUE(received_events2.empty());
 
   // Client 2 is top hit.
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {kClient2Koid},
       /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
 
   // Mouse button down. Latch on client 2.
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
                                           kStream1Id);
   RunLoopUntilIdle();
   EXPECT_TRUE(received_events1.empty());
   EXPECT_EQ(received_events2.size(), 1u);
 
   // Remove client 2 from the hit test and the ViewTree
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {kClient1Koid}, /*hierarchy*/ {kContextKoid, kClient1Koid}));
 
   // Button still down, but client 2 gets a ViewExit event and no more pointer samples.
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
                                           kStream1Id);
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
                                           kStream1Id);
   RunLoopUntilIdle();
   EXPECT_TRUE(received_events1.empty());
@@ -315,19 +321,19 @@ TEST_F(MouseTest, LatchedClient_WhenNotInViewTree_ShouldReceiveViewExit) {
   }
 
   // Button up. Client 1 gets its first hover event.
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/false),
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/false),
                                           kStream1Id);
   RunLoopUntilIdle();
   EXPECT_EQ(received_events1.size(), 1u);
   EXPECT_EQ(received_events2.size(), 2u);
 
   // Client 2 returns.
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {kClient2Koid},
       /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
 
   // And correctly gets another hover event.
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/false),
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/false),
                                           kStream1Id);
   RunLoopUntilIdle();
   EXPECT_EQ(received_events2.size(), 3u);
@@ -344,37 +350,37 @@ TEST_F(MouseTest, Streams_ShouldLatchIndependently) {
   EXPECT_TRUE(received_events2.empty());
 
   // Client 1 is top hit.
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {kClient1Koid, kClient2Koid},
       /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
 
   // Mouse button down Stream 1. Should latch to client 1.
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
                                           kStream1Id);
   RunLoopUntilIdle();
   EXPECT_EQ(received_events1.size(), 1u);
   EXPECT_TRUE(received_events2.empty());
 
   // Client 2 is top hit.
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {kClient2Koid}, /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
 
   // Mouse button down Stream 2. Should latch to client 2.
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
                                           kStream2Id);
   RunLoopUntilIdle();
   EXPECT_EQ(received_events1.size(), 1u);
   EXPECT_EQ(received_events2.size(), 1u);
 
   // Stream 1 should continue going to client 1.
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
                                           kStream1Id);
   RunLoopUntilIdle();
   EXPECT_EQ(received_events1.size(), 2u);
   EXPECT_EQ(received_events2.size(), 1u);
 
   // Stream 2 should continue going to client 2.
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
                                           kStream2Id);
   RunLoopUntilIdle();
   EXPECT_EQ(received_events1.size(), 2u);
@@ -386,10 +392,10 @@ TEST_F(MouseTest, EmptyHitTest_ShouldDeliverToNoOne) {
   StartWatchLoop(client1_ptr_, received_events);
 
   // Client 1 is top hit.
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {kClient1Koid},
       /*hierarchy*/ {kContextKoid, kClient1Koid}));
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
   RunLoopUntilIdle();
   // Client 1 receives events.
   ASSERT_EQ(received_events.size(), 1u);
@@ -397,10 +403,9 @@ TEST_F(MouseTest, EmptyHitTest_ShouldDeliverToNoOne) {
   EXPECT_EQ(received_events[0].stream_info().status, MouseViewStatus::ENTERED);
 
   // Hit test returns empty.
-  input_system_.OnNewViewTreeSnapshot(
-      NewSnapshot(/*hits*/ {}, /*hierarchy*/ {kContextKoid, kClient1Koid}));
+  OnNewViewTreeSnapshot(NewSnapshot(/*hits*/ {}, /*hierarchy*/ {kContextKoid, kClient1Koid}));
 
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
   RunLoopUntilIdle();
   {  // Client 1 gets an exit event, but no pointer sample.
     ASSERT_EQ(received_events.size(), 2u);
@@ -412,23 +417,23 @@ TEST_F(MouseTest, EmptyHitTest_ShouldDeliverToNoOne) {
   received_events.clear();
 
   // Next injections returns nothing.
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
   RunLoopUntilIdle();
   EXPECT_TRUE(received_events.empty());
 
   // Button down returns nothing.
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
                                           kStream1Id);
   RunLoopUntilIdle();
   EXPECT_TRUE(received_events.empty());
 
   // Client 1 is top hit.
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {kClient1Koid},
       /*hierarchy*/ {kContextKoid, kClient1Koid}));
 
   // Button up. Client 1 should now receive a hover event.
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/false),
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/false),
                                           kStream1Id);
   RunLoopUntilIdle();
   EXPECT_EQ(received_events.size(), 1u);
@@ -445,30 +450,30 @@ TEST_F(MouseTest, CancelMouseStream_ShouldSendEvent_OnlyWhenThereIsOngoingStream
   EXPECT_TRUE(received_events2.empty());
 
   // Client 1 is top hit.
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {kClient1Koid, kClient2Koid},
       /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
 
   // Mouse button down Stream 1. Should latch to client 1.
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
                                           kStream1Id);
   RunLoopUntilIdle();
   EXPECT_EQ(received_events1.size(), 1u);
   EXPECT_TRUE(received_events2.empty());
 
   // Client 2 is top hit.
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {kClient2Koid}, /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
 
   // Hover on stream 2. Should send to client 2
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/true),
                                           kStream2Id);
   RunLoopUntilIdle();
   EXPECT_EQ(received_events1.size(), 1u);
   EXPECT_EQ(received_events2.size(), 1u);
 
   // Cancelling stream 1 should deliver view exited event to client 1.
-  input_system_.CancelMouseStream(kStream1Id);
+  mouse_system_.CancelMouseStream(kStream1Id);
   RunLoopUntilIdle();
   {
     ASSERT_EQ(received_events1.size(), 2u);
@@ -480,7 +485,7 @@ TEST_F(MouseTest, CancelMouseStream_ShouldSendEvent_OnlyWhenThereIsOngoingStream
   EXPECT_EQ(received_events2.size(), 1u);
 
   // Cancelling stream 2 should deliver view exited event to client 2.
-  input_system_.CancelMouseStream(kStream2Id);
+  mouse_system_.CancelMouseStream(kStream2Id);
   RunLoopUntilIdle();
   EXPECT_EQ(received_events1.size(), 2u);
   {
@@ -495,27 +500,27 @@ TEST_F(MouseTest, CancelMouseStream_ShouldSendEvent_OnlyWhenThereIsOngoingStream
   received_events2.clear();
 
   // More cancel events should be no-ops.
-  input_system_.CancelMouseStream(kStream1Id);
-  input_system_.CancelMouseStream(kStream2Id);
+  mouse_system_.CancelMouseStream(kStream1Id);
+  mouse_system_.CancelMouseStream(kStream2Id);
   RunLoopUntilIdle();
   EXPECT_TRUE(received_events1.empty());
   EXPECT_TRUE(received_events2.empty());
 
   // Hover on stream 2. Should send to client 2
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/false),
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/false),
                                           kStream2Id);
   // No top hit.
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {}, /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
   // Client 2 gets a view exited event on the next one.
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/false),
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid, /*button_down=*/false),
                                           kStream2Id);
   RunLoopUntilIdle();
   EXPECT_EQ(received_events2.size(), 2u);
   received_events2.clear();
 
   // Cancelling stream now should be a no-op.
-  input_system_.CancelMouseStream(kStream2Id);
+  mouse_system_.CancelMouseStream(kStream2Id);
   RunLoopUntilIdle();
   EXPECT_TRUE(received_events2.empty());
 }
@@ -525,7 +530,7 @@ TEST_F(MouseTest, CancelMouseStream_ShouldSendEvent_OnlyWhenThereIsOngoingStream
 TEST_F(MouseTest, MouseSourceWithGlobalMouse_DoesNotGetEventsWhenNotHit) {
   // Set up a MouseSourceWithGlobalMouse for client 1.
   fuchsia::ui::pointer::augment::MouseSourceWithGlobalMousePtr global_client_ptr;
-  input_system_.Upgrade(std::move(client1_ptr_), [&global_client_ptr](auto new_handle, auto _) {
+  mouse_system_.Upgrade(std::move(client1_ptr_), [&global_client_ptr](auto new_handle, auto _) {
     global_client_ptr.Bind(std::move(new_handle));
   });
   RunLoopUntilIdle();
@@ -534,10 +539,10 @@ TEST_F(MouseTest, MouseSourceWithGlobalMouse_DoesNotGetEventsWhenNotHit) {
   StartWatchLoop(global_client_ptr, received_events);
 
   // Inject with client 1 as the target, but nothing is hit.
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {},
       /*hierarchy*/ {kContextKoid, kClient1Koid}));
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
   RunLoopUntilIdle();
 
   EXPECT_TRUE(received_events.empty()) << "Should get no events when not hit.";
@@ -546,7 +551,7 @@ TEST_F(MouseTest, MouseSourceWithGlobalMouse_DoesNotGetEventsWhenNotHit) {
 TEST_F(MouseTest, MouseSourceWithGlobalMouse_GetsEventsOriginatingFromAbove) {
   // Set up a MouseSourceWithGlobalMouse for client 2.
   fuchsia::ui::pointer::augment::MouseSourceWithGlobalMousePtr global_client_ptr;
-  input_system_.Upgrade(std::move(client2_ptr_), [&global_client_ptr](auto new_handle, auto _) {
+  mouse_system_.Upgrade(std::move(client2_ptr_), [&global_client_ptr](auto new_handle, auto _) {
     global_client_ptr.Bind(std::move(new_handle));
   });
   RunLoopUntilIdle();
@@ -555,11 +560,11 @@ TEST_F(MouseTest, MouseSourceWithGlobalMouse_GetsEventsOriginatingFromAbove) {
   StartWatchLoop(global_client_ptr, received_events);
 
   // Client 1 is above client 2 in the view hierarchy, and client 2 is hit.
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {kClient2Koid},
       /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
   // Inject with client 1 as the target.
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
   RunLoopUntilIdle();
 
   // Client 2 should only get both local and global event.
@@ -574,7 +579,7 @@ TEST_F(MouseTest, MouseSourceWithGlobalMouse_GetsEventsOriginatingFromAbove) {
 TEST_F(MouseTest, MouseSourceWithGlobalMouse_GetsEventsWithSelfAsTarget) {
   // Set up a MouseSourceWithGlobalMouse for client 1.
   fuchsia::ui::pointer::augment::MouseSourceWithGlobalMousePtr global_client_ptr;
-  input_system_.Upgrade(std::move(client1_ptr_), [&global_client_ptr](auto new_handle, auto _) {
+  mouse_system_.Upgrade(std::move(client1_ptr_), [&global_client_ptr](auto new_handle, auto _) {
     global_client_ptr.Bind(std::move(new_handle));
   });
   RunLoopUntilIdle();
@@ -583,10 +588,10 @@ TEST_F(MouseTest, MouseSourceWithGlobalMouse_GetsEventsWithSelfAsTarget) {
   StartWatchLoop(global_client_ptr, received_events);
 
   // Inject with client 1 as the target, and client 2 is top hit.
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {kClient2Koid, kClient1Koid},
       /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
   RunLoopUntilIdle();
 
   // Client 1 should only get global events.
@@ -601,7 +606,7 @@ TEST_F(MouseTest, MouseSourceWithGlobalMouse_GetsEventsWithSelfAsTarget) {
 TEST_F(MouseTest, MouseSourceWithGlobalMouse_GetsEventsForExclusiveInjection) {
   // Set up a MouseSourceWithGlobalMouse for client 1.
   fuchsia::ui::pointer::augment::MouseSourceWithGlobalMousePtr global_client_ptr;
-  input_system_.Upgrade(std::move(client1_ptr_), [&global_client_ptr](auto new_handle, auto _) {
+  mouse_system_.Upgrade(std::move(client1_ptr_), [&global_client_ptr](auto new_handle, auto _) {
     global_client_ptr.Bind(std::move(new_handle));
   });
   RunLoopUntilIdle();
@@ -610,11 +615,11 @@ TEST_F(MouseTest, MouseSourceWithGlobalMouse_GetsEventsForExclusiveInjection) {
   StartWatchLoop(global_client_ptr, received_events);
 
   // Nothing is hit.
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {},
       /*hierarchy*/ {kContextKoid, kClient1Koid}));
   // Inject with client 1 as the target.
-  input_system_.InjectMouseEventExclusive(MouseEventTemplate(kClient1Koid), kStream1Id);
+  mouse_system_.InjectMouseEventExclusive(MouseEventTemplate(kClient1Koid), kStream1Id);
   RunLoopUntilIdle();
 
   {  // Client should get only normal event, since the injection was outside the view.
@@ -627,11 +632,11 @@ TEST_F(MouseTest, MouseSourceWithGlobalMouse_GetsEventsForExclusiveInjection) {
   received_events.clear();
 
   // Client 1 is hit.
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {kClient1Koid},
       /*hierarchy*/ {kContextKoid, kClient1Koid}));
   // Inject with client 1 as the target.
-  input_system_.InjectMouseEventExclusive(MouseEventTemplate(kClient1Koid), kStream1Id);
+  mouse_system_.InjectMouseEventExclusive(MouseEventTemplate(kClient1Koid), kStream1Id);
   RunLoopUntilIdle();
 
   {  // Client should get both normal and global events, since we're now hovering over the view.
@@ -646,11 +651,11 @@ TEST_F(MouseTest, MouseSourceWithGlobalMouse_GetsEventsForExclusiveInjection) {
 
 TEST_F(MouseTest, MouseSourceWithGlobalMouseTest) {
   fuchsia::ui::pointer::augment::MouseSourceWithGlobalMousePtr global_client1_ptr;
-  input_system_.Upgrade(std::move(client1_ptr_), [&global_client1_ptr](auto new_handle, auto _) {
+  mouse_system_.Upgrade(std::move(client1_ptr_), [&global_client1_ptr](auto new_handle, auto _) {
     global_client1_ptr.Bind(std::move(new_handle));
   });
   fuchsia::ui::pointer::augment::MouseSourceWithGlobalMousePtr global_client2_ptr;
-  input_system_.Upgrade(std::move(client2_ptr_), [&global_client2_ptr](auto new_handle, auto _) {
+  mouse_system_.Upgrade(std::move(client2_ptr_), [&global_client2_ptr](auto new_handle, auto _) {
     global_client2_ptr.Bind(std::move(new_handle));
   });
   RunLoopUntilIdle();
@@ -665,10 +670,10 @@ TEST_F(MouseTest, MouseSourceWithGlobalMouseTest) {
   EXPECT_TRUE(received_events2.empty());
 
   // Client 1 is top and only hit
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {kClient1Koid},
       /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
   RunLoopUntilIdle();
 
   {  // Client 1 should get global data and normal data.
@@ -684,11 +689,10 @@ TEST_F(MouseTest, MouseSourceWithGlobalMouseTest) {
   received_events1.clear();
 
   // Client 2 is top hit, but client 1 is still in the hit list.
-  input_system_.OnNewViewTreeSnapshot(
-      NewSnapshot(/*hits*/ {kClient2Koid, kClient1Koid},
-                  /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
+  OnNewViewTreeSnapshot(NewSnapshot(/*hits*/ {kClient2Koid, kClient1Koid},
+                                    /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
 
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
   RunLoopUntilIdle();
   {  // Client 1 gets global data and a view exited event on the normal path.
     ASSERT_EQ(received_events1.size(), 1u);
@@ -711,11 +715,10 @@ TEST_F(MouseTest, MouseSourceWithGlobalMouseTest) {
   received_events2.clear();
 
   // No hits.
-  input_system_.OnNewViewTreeSnapshot(
-      NewSnapshot(/*hits*/ {},
-                  /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
+  OnNewViewTreeSnapshot(NewSnapshot(/*hits*/ {},
+                                    /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
 
-  input_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
+  mouse_system_.InjectMouseEventHitTested(MouseEventTemplate(kClient1Koid), kStream1Id);
   RunLoopUntilIdle();
   {  // Client 1 gets only global data and a global view exited event.
     ASSERT_EQ(received_events1.size(), 1u);

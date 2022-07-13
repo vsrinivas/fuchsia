@@ -22,8 +22,7 @@
 #include "src/ui/scenic/lib/input/hit_tester.h"
 #include "src/ui/scenic/lib/input/injector.h"
 #include "src/ui/scenic/lib/input/input_command_dispatcher.h"
-#include "src/ui/scenic/lib/input/mouse_source_base.h"
-#include "src/ui/scenic/lib/input/mouse_source_with_global_mouse.h"
+#include "src/ui/scenic/lib/input/mouse_system.h"
 #include "src/ui/scenic/lib/input/pointerinjector_registry.h"
 #include "src/ui/scenic/lib/input/touch_source.h"
 #include "src/ui/scenic/lib/scenic/system.h"
@@ -32,16 +31,8 @@
 
 namespace scenic_impl::input {
 
-// RequestFocusFunc should attempt to move focus to the passed in zx_koid_t.
-// If the passed in koid is ZX_KOID_INVALID, then focus should be moved to
-// the current root of the focus chain. If there is no root, then the call should
-// silently fail.
-using RequestFocusFunc = fit::function<void(zx_koid_t)>;
-
 // Tracks input APIs.
-class InputSystem : public System,
-                    public fuchsia::ui::pointer::augment::GlobalMouse,
-                    public fuchsia::ui::input::PointerCaptureListenerRegistry {
+class InputSystem : public System, public fuchsia::ui::input::PointerCaptureListenerRegistry {
  public:
   struct PointerCaptureListener {
     fuchsia::ui::input::PointerCaptureListenerPtr listener_ptr;
@@ -75,7 +66,9 @@ class InputSystem : public System,
 
   void RegisterMouseSource(
       fidl::InterfaceRequest<fuchsia::ui::pointer::MouseSource> mouse_source_request,
-      zx_koid_t client_view_ref_koid);
+      zx_koid_t client_view_ref_koid) {
+    mouse_system_.RegisterMouseSource(std::move(mouse_source_request), client_view_ref_koid);
+  }
 
   // |fuchsia.ui.pointercapture.ListenerRegistry|
   void RegisterListener(
@@ -84,10 +77,6 @@ class InputSystem : public System,
 
   void DispatchPointerCommand(const fuchsia::ui::input::SendPointerInputCmd& command,
                               scheduling::SessionId session_id);
-
-  // |fuchsia::ui::pointer::augment::GlobalMouse|
-  void Upgrade(fidl::InterfaceHandle<fuchsia::ui::pointer::MouseSource> original,
-               UpgradeCallback callback) override;
 
   // For tests.
   // TODO(fxbug.dev/72919): Remove when integration tests are properly separated out.
@@ -113,14 +102,6 @@ class InputSystem : public System,
   // Injects a touch event by hit testing for appropriate targets.
   void InjectTouchEventHitTested(const InternalTouchEvent& event, StreamId stream_id);
 
-  // Injects a mouse event directly to the View with koid |event.target|.
-  void InjectMouseEventExclusive(const InternalMouseEvent& event, StreamId stream_id);
-  // Injects a mouse event by hit testing for appropriate targets.
-  void InjectMouseEventHitTested(const InternalMouseEvent& event, StreamId stream_id);
-  // Sends a "View exit" event to the current receiver of |stream_id|, if there is one, and resets
-  // the tracking state for the mouse stream.
-  void CancelMouseStream(StreamId stream_id);
-
   // Injects a mouse event using the GFX legacy API. Deprecated.
   void LegacyInjectMouseEventHitTested(const InternalTouchEvent& event);
 
@@ -137,13 +118,6 @@ class InputSystem : public System,
   // Enqueue the pointer event into the EventReporter of a View.
   void ReportPointerEventToGfxLegacyView(const InternalTouchEvent& event, zx_koid_t view_ref_koid,
                                          fuchsia::ui::input::PointerEventType type);
-
-  // Locates and sends an event to the MouseSource identified by |receiver|, if one exists.
-  void SendEventToMouse(zx_koid_t receiver, const InternalMouseEvent& event, StreamId stream_id,
-                        bool view_exit);
-
-  // Updates all MouseSourceWithGlobalMouse, causing them to send any pending events.
-  void UpdateGlobalMouse(const InternalMouseEvent& event);
 
   // Takes a ViewRef koid and creates a GfxLegacyContender that delivers events to the corresponding
   // SessionListener on contest victory.
@@ -172,6 +146,7 @@ class InputSystem : public System,
 
   // Helper class for doing hit testing and tracking inspect state.
   HitTester hit_tester_;
+  MouseSystem mouse_system_;
 
   // TODO(fxbug.dev/64206): Remove when we no longer have any legacy clients.
   fxl::WeakPtr<gfx::SceneGraph> scene_graph_;
@@ -247,24 +222,6 @@ class InputSystem : public System,
 
   const ContenderId a11y_contender_id_ = 1;
   ContenderId next_contender_id_ = 2;
-
-  //// Mouse state
-  // Struct for tracking the mouse state of a particular event stream.
-  struct MouseReceiver {
-    zx_koid_t view_koid = ZX_KOID_INVALID;
-    bool latched = false;
-  };
-  // Currently hovered/latched view for each mouse stream.
-  std::unordered_map<StreamId, MouseReceiver> current_mouse_receivers_;
-  // Currently targeted mouse receiver for exclusive streams.
-  std::unordered_map<StreamId, zx_koid_t> current_exclusive_mouse_receivers_;
-  // All MouseSource instances. Each instance can be the receiver of any number of mouse streams,
-  // and each stream is captured in either |current_mouse_receivers_| or
-  // |current_exclusive_mouse_receivers_|.
-  std::unordered_map<zx_koid_t, std::unique_ptr<MouseSourceBase>> mouse_sources_;
-  // Map of pointers to all MouseSourceWithGlobalMouse instances.
-  // Must be cleaned up when the owning pointer in |mouse_sources_| is cleaned up.
-  std::unordered_map<zx_koid_t, MouseSourceWithGlobalMouse*> global_mouse_sources_;
 };
 
 }  // namespace scenic_impl::input

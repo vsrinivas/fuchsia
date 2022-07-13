@@ -144,11 +144,15 @@ source_set("mouse") {
     "mouse_source_base.h",
     "mouse_source_with_global_mouse.cc",
     "mouse_source_with_global_mouse.h",
+    "mouse_system.cc",
+    "mouse_system.h",
   ]
 
   deps = [
+    ":constants",
     ":gesture_contender_interface",
     ":utils",
+    "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace",
   ]
