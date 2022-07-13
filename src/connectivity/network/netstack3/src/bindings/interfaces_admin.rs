@@ -396,8 +396,8 @@ pub(crate) async fn run_interface_control(
                 .take_until(cancel_request_streams.wait_or_dropped())
                 // Convert the request stream into a future, dispatching each incoming
                 // `ControlRequest` and retaining the `ReqStreamState` along the way.
-                .fold(initial_state, |state, request| async move {
-                    let ReqStreamState { ctx, id, owns_interface: _, control_handle: _ } = &state;
+                .fold(initial_state, |mut state, request| async move {
+                    let ReqStreamState { ctx, id, owns_interface, control_handle: _ } = &mut state;
                     match request {
                         Err(e) => log::error!(
                             "error operating {} stream for interface {}: {:?}",
@@ -405,16 +405,18 @@ pub(crate) async fn run_interface_control(
                             id,
                             e,
                         ),
-                        Ok(req) => match dispatch_control_request(req, ctx, *id).await {
-                            Err(e) => {
-                                log::error!(
-                                    "failed to handle request for interface {}: {:?}",
-                                    id,
-                                    e
-                                )
+                        Ok(req) => {
+                            match dispatch_control_request(req, ctx, *id, owns_interface).await {
+                                Err(e) => {
+                                    log::error!(
+                                        "failed to handle request for interface {}: {:?}",
+                                        id,
+                                        e
+                                    )
+                                }
+                                Ok(()) => {}
                             }
-                            Ok(()) => {}
-                        },
+                        }
                     }
                     // Return `state` to be used when handling the next `ControlRequest`.
                     state
@@ -467,6 +469,7 @@ async fn dispatch_control_request(
     req: fnet_interfaces_admin::ControlRequest,
     ctx: &NetstackContext,
     id: BindingId,
+    owns_interface: &mut bool,
 ) -> Result<(), fidl::Error> {
     log::debug!("serving {:?}", req);
     match req {
@@ -493,7 +496,8 @@ async fn dispatch_control_request(
             responder.send(&mut Ok(set_interface_enabled(ctx, false, id).await))
         }
         fnet_interfaces_admin::ControlRequest::Detach { control_handle: _ } => {
-            todo!("https://fxbug.dev/100867 support detach");
+            *owns_interface = false;
+            Ok(())
         }
     }
 }

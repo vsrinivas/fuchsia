@@ -1343,12 +1343,6 @@ async fn control_enable_disable<N: Netstack>(name: &str) {
 #[test_case(false; "no_detach")]
 #[test_case(true; "detach")]
 async fn control_owns_interface_lifetime<N: Netstack>(name: &str, detach: bool) {
-    if detach && N::VERSION == NetstackVersion::Netstack3 {
-        // TODO(https://fxbug.dev/100867): Enable in Netstack3 once detaching is
-        // supported.
-        return;
-    }
-
     let detach_str = if detach { "detach" } else { "no_detach" };
     let name = format!("{}_{}", name, detach_str);
 
