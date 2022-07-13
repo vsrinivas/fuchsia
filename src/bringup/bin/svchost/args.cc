@@ -6,8 +6,8 @@
 
 namespace svchost {
 
-zx_status_t ParseArgs(fidl::WireSyncClient<fuchsia_boot::Arguments>& client, Arguments* out) {
-  auto result = client->GetBool(fidl::StringView{"devmgr.require-system"}, false);
+zx_status_t ParseArgs(fidl::ClientEnd<fuchsia_boot::Arguments>& client, Arguments* out) {
+  auto result = fidl::WireCall(client)->GetBool(fidl::StringView{"devmgr.require-system"}, false);
   if (!result.ok()) {
     return result.status();
   }

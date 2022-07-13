@@ -169,7 +169,8 @@ constexpr auto kExceptionHandlerTimeout = zx::sec(3);
 // We use this fake in order to verify that behaviour.
 class StubExceptionHandler final : public fidl::WireServer<fuchsia_exception::Handler> {
  public:
-  zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
+  zx_status_t Connect(async_dispatcher_t* dispatcher,
+                      fidl::ServerEnd<fuchsia_exception::Handler> request) {
     binding_ = fidl::BindServer(dispatcher, std::move(request), this);
     return ZX_OK;
   }
@@ -243,26 +244,27 @@ class StubExceptionHandler final : public fidl::WireServer<fuchsia_exception::Ha
 // service.
 class FakeService {
  public:
-  FakeService(async_dispatcher_t* dispatcher) : vfs_(dispatcher) {
+  explicit FakeService(async_dispatcher_t* dispatcher) : vfs_(dispatcher) {
     auto root_dir = fbl::MakeRefCounted<fs::PseudoDir>();
     root_dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_exception::Handler>,
-                       fbl::MakeRefCounted<fs::Service>([this, dispatcher](zx::channel request) {
-                         return exception_handler_.Connect(dispatcher, std::move(request));
-                       }));
+                       fbl::MakeRefCounted<fs::Service>(
+                           [this, dispatcher](fidl::ServerEnd<fuchsia_exception::Handler> request) {
+                             return exception_handler_.Connect(dispatcher, std::move(request));
+                           }));
 
     // We serve this directory.
-    zx::channel svc_remote;
-    ASSERT_OK(zx::channel::create(0, &svc_local_, &svc_remote));
-    vfs_.ServeDirectory(root_dir, std::move(svc_remote));
+    zx::status remote = fidl::CreateEndpoints(&svc_local_);
+    ASSERT_OK(remote.status_value());
+    vfs_.ServeDirectory(root_dir, std::move(remote.value()));
   }
 
   StubExceptionHandler& exception_handler() { return exception_handler_; }
-  const zx::channel& service_channel() const { return svc_local_; }
+  const zx::channel& service_channel() const { return svc_local_.channel(); }
 
  private:
   fs::SynchronousVfs vfs_;
   StubExceptionHandler exception_handler_;
-  zx::channel svc_local_;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_local_;
 };
 
 // Creates a sub-job under the current one to be used as a realm for the processes that will be

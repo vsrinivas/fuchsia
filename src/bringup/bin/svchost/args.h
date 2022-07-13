@@ -13,7 +13,7 @@ struct Arguments {
   bool require_system = false;
 };
 
-zx_status_t ParseArgs(fidl::WireSyncClient<fuchsia_boot::Arguments>& client, Arguments* out);
+zx_status_t ParseArgs(fidl::ClientEnd<fuchsia_boot::Arguments>& client, Arguments* out);
 
 }  // namespace svchost
 

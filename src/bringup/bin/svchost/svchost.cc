@@ -10,12 +10,10 @@
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
 #include <lib/kernel-debug/kernel-debug.h>
 #include <lib/ktrace/ktrace.h>
 #include <lib/profile/profile.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zx/job.h>
 #include <lib/zx/status.h>
@@ -38,58 +36,39 @@
 #include "sysmem.h"
 
 namespace {
-zx::status<zx::job> GetRootJob(const zx::channel& svc_root) {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    fprintf(stderr, "svchost: error: Failed to create channel pair: %d (%s).\n", status,
-            zx_status_get_string(status));
-    return zx::error(status);
-  }
-  status = fdio_service_connect_at(
-      svc_root.get(), fidl::DiscoverableProtocolName<fuchsia_kernel::RootJob>, remote.release());
-  if (status != ZX_OK) {
+zx::status<zx::job> GetRootJob(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root) {
+  zx::status client = service::ConnectAt<fuchsia_kernel::RootJob>(svc_root);
+  if (client.is_error()) {
     fprintf(stderr, "svchost: unable to connect to fuchsia.kernel.RootJob\n");
-    return zx::error(status);
+    return client.take_error();
   }
-
-  fidl::WireSyncClient<fuchsia_kernel::RootJob> job_client(std::move(local));
-  auto job_result = job_client->Get();
-  if (!job_result.ok()) {
+  fidl::WireResult result = fidl::WireCall(client.value())->Get();
+  if (!result.ok()) {
     fprintf(stderr, "svchost: unable to get root job\n");
-    return zx::error(job_result.status());
+    return zx::error(result.status());
   }
-  return zx::ok(std::move(job_result->job));
+  return zx::ok(std::move(result.value().job));
 }
-zx::status<zx::resource> GetRootResource(const zx::channel& svc_root) {
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
-  if (status != ZX_OK) {
-    fprintf(stderr, "svchost: error: Failed to create channel pair: %d (%s).\n", status,
-            zx_status_get_string(status));
-    return zx::error(status);
-  }
-  status = fdio_service_connect_at(
-      svc_root.get(), fidl::DiscoverableProtocolName<fuchsia_boot::RootResource>, remote.release());
-  if (status != ZX_OK) {
+zx::status<zx::resource> GetRootResource(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root) {
+  zx::status client = service::ConnectAt<fuchsia_boot::RootResource>(svc_root);
+  if (client.is_error()) {
     fprintf(stderr, "svchost: unable to connect to fuchsia.boot.RootResource\n");
-    return zx::error(status);
+    return client.take_error();
   }
 
-  fidl::WireSyncClient<fuchsia_boot::RootResource> client(std::move(local));
-  auto result = client->Get();
+  fidl::WireResult result = fidl::WireCall(client.value())->Get();
   if (!result.ok()) {
     fprintf(stderr, "svchost: unable to get root resource\n");
     return zx::error(result.status());
   }
-  return zx::ok(std::move(result->resource));
+  return zx::ok(std::move(result.value().resource));
 }
 }  // namespace
 
 // An instance of a zx_service_provider_t.
 //
 // Includes the |ctx| pointer for the zx_service_provider_t.
-typedef struct zx_service_provider_instance {
+using zx_service_provider_instance_t = struct zx_service_provider_instance {
   // The service provider for which this structure is an instance.
   const zx_service_provider_t* provider;
 
@@ -101,7 +80,7 @@ typedef struct zx_service_provider_instance {
 
   // The |ctx| pointer returned by the provider's |init| function, if any.
   void* ctx;
-} zx_service_provider_instance_t;
+};
 
 static zx_status_t provider_init(zx_service_provider_instance_t* instance) {
   zx_status_t status = async_loop_create(&kAsyncLoopConfigNeverAttachToThread, &instance->loop);
@@ -189,21 +168,6 @@ static zx_status_t provider_load(zx_service_provider_instance_t* instance,
   return ZX_OK;
 }
 
-void publish_service(const fbl::RefPtr<fs::PseudoDir>& dir, const char* name,
-                     zx::unowned_channel svc) {
-  dir->AddEntry(name,
-                fbl::MakeRefCounted<fs::Service>([name, svc = std::move(svc)](zx::channel request) {
-                  return fdio_service_connect_at(svc->get(), name, request.release());
-                }));
-}
-
-void publish_services(const fbl::RefPtr<fs::PseudoDir>& dir, const char* const* names,
-                      zx::unowned_channel svc) {
-  for (size_t i = 0; names[i] != nullptr; ++i) {
-    publish_service(dir, names[i], zx::unowned_channel(svc->get()));
-  }
-}
-
 int main(int argc, char** argv) {
   StdoutToDebuglog::Init();
 
@@ -215,26 +179,14 @@ int main(int argc, char** argv) {
   svc::Outgoing outgoing(dispatcher);
 
   // Parse boot arguments.
-  fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
-  {
-    zx::channel local, remote;
-    zx_status_t status = zx::channel::create(0, &local, &remote);
-    if (status != ZX_OK) {
-      fprintf(stderr, "svchost: error: Failed to create channel pair: %d (%s).\n", status,
-              zx_status_get_string(status));
-      return 1;
-    }
-    status = fdio_service_connect_at(caller.channel()->get(),
-                                     fidl::DiscoverableProtocolName<fuchsia_boot::Arguments>,
-                                     remote.release());
-    if (status != ZX_OK) {
-      fprintf(stderr, "svchost: unable to connect to fuchsia.boot.Arguments");
-      return 1;
-    }
-    boot_args = fidl::WireSyncClient<fuchsia_boot::Arguments>(std::move(local));
+  zx::status boot_args = service::ConnectAt<fuchsia_boot::Arguments>(caller.directory());
+  if (boot_args.is_error()) {
+    fprintf(stderr, "svchost: unable to connect to fuchsia.boot.Arguments: %s\n",
+            boot_args.status_string());
+    return 1;
   }
   svchost::Arguments args;
-  zx_status_t status = svchost::ParseArgs(boot_args, &args);
+  zx_status_t status = svchost::ParseArgs(boot_args.value(), &args);
   if (status != ZX_OK) {
     fprintf(stderr, "svchost: unable to read args: %s", zx_status_get_string(status));
     return 1;
@@ -243,7 +195,7 @@ int main(int argc, char** argv) {
   // Get the root job.
   zx::job root_job;
   {
-    auto res = GetRootJob(*caller.channel());
+    auto res = GetRootJob(caller.directory());
     if (!res.is_ok()) {
       fprintf(stderr, "svchost: error: Failed to get root job: %s\n", zx_status_get_string(status));
       return 1;
@@ -254,7 +206,7 @@ int main(int argc, char** argv) {
   // Get the root resource.
   zx::resource root_resource;
   {
-    auto res = GetRootResource(*caller.channel());
+    auto res = GetRootResource(caller.directory());
     if (!res.is_ok()) {
       fprintf(stderr, "svchost: error: Failed to get root resource: %s\n",
               zx_status_get_string(status));
@@ -280,12 +232,18 @@ int main(int argc, char** argv) {
 
   zx_service_provider_instance_t service_providers[] = {
       {.provider = sysmem2_get_service_provider(), .ctx = nullptr},
-      {.provider = kernel_debug_get_service_provider(),
-       .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(root_resource.get()))},
-      {.provider = profile_get_service_provider(),
-       .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(profile_root_job_copy))},
-      {.provider = ktrace_get_service_provider(),
-       .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(root_resource.release()))},
+      {
+          .provider = kernel_debug_get_service_provider(),
+          .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(root_resource.get())),
+      },
+      {
+          .provider = profile_get_service_provider(),
+          .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(profile_root_job_copy)),
+      },
+      {
+          .provider = ktrace_get_service_provider(),
+          .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(root_resource.release())),
+      },
   };
 
   for (size_t i = 0; i < std::size(service_providers); ++i) {
@@ -312,8 +270,8 @@ int main(int argc, char** argv) {
 
   status = loop.Run();
 
-  for (size_t i = 0; i < std::size(service_providers); ++i) {
-    provider_release(&service_providers[i]);
+  for (auto& service_provider : service_providers) {
+    provider_release(&service_provider);
   }
 
   return status;
