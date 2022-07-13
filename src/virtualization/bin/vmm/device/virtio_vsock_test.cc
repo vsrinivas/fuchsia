@@ -942,11 +942,7 @@ TEST_F(VirtioVsockTest, NoResponseToSpuriousReset) {
   ASSERT_EQ(buffer->header->op, VIRTIO_VSOCK_OP_REQUEST);
 }
 
-#if ENABLE_UNSUPPORTED_TESTS
-
-// Endpoints should not be sent OnShutdown events when virtio-vsock is
-// merely responding to spurious packets.
-TEST_F(VirtioVsockTest, SpuriousPacketsDoNotNotifyEndpoints) {
+TEST_F(VirtioVsockTest, NonResetSpuriousPacketsGetResetResponse) {
   for (uint16_t packet_op : std::vector<uint16_t>{
            VIRTIO_VSOCK_OP_SHUTDOWN,
            VIRTIO_VSOCK_OP_RESPONSE,
@@ -955,21 +951,18 @@ TEST_F(VirtioVsockTest, SpuriousPacketsDoNotNotifyEndpoints) {
            VIRTIO_VSOCK_OP_INVALID,
            VIRTIO_VSOCK_OP_RW,
        }) {
-    SCOPED_TRACE(testing::Message() << "Testing packet operation #" << packet_op);
+    SendHeaderOnlyPacket(kVirtioVsockHostPort, kVirtioVsockGuestPort, packet_op);
 
-    // Guest sends a spurious shutdown event.
-    DoSend(kVirtioVsockHostPort, kVirtioVsockGuestCid, kVirtioVsockGuestPort,
-           VIRTIO_VSOCK_TYPE_STREAM, packet_op);
-    RunLoopUntilIdle();
+    virtio_vsock_hdr_t* header;
+    ASSERT_NO_FATAL_FAILURE(GetHeaderOnlyPacketFromRxQueue(&header));
 
-    // We expect a reset from the host.
-    ExpectHostResetOnPort(kVirtioVsockHostPort);
-    RunLoopUntilIdle();
-
-    // Ensure that no shutdown events were sent to the endpoints.
-    EXPECT_TRUE(received_shutdown_events().empty());
+    EXPECT_EQ(header->op, VIRTIO_VSOCK_OP_RST);
+    EXPECT_EQ(header->src_port, kVirtioVsockHostPort);
+    EXPECT_EQ(header->dst_port, kVirtioVsockGuestPort);
   }
 }
+
+#if ENABLE_UNSUPPORTED_TESTS
 
 struct SingleBytePacket {
   virtio_vsock_hdr_t header;
