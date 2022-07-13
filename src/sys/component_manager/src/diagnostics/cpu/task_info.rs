@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::diagnostics::{
+    crate::diagnostics::cpu::{
         constants::{COMPONENT_CPU_MAX_SAMPLES, CPU_SAMPLE_PERIOD},
         measurement::{Measurement, MeasurementsQueue},
         runtime_stats_source::RuntimeStatsSource,
@@ -274,7 +274,7 @@ mod tests {
 
     use {
         super::*,
-        crate::diagnostics::testing::FakeTask,
+        crate::diagnostics::cpu::testing::FakeTask,
         assert_matches::assert_matches,
         diagnostics_hierarchy::ArrayContent,
         fuchsia_inspect::testing::{assert_data_tree, AnyProperty},

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::diagnostics::constants::{
+    crate::diagnostics::cpu::constants::{
         COMPONENT_CPU_MAX_SAMPLES, CPU_SAMPLE_PERIOD, MEASUREMENT_EPSILON,
     },
     core::cmp::Reverse,
@@ -283,7 +283,7 @@ impl MeasurementsQueue {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::diagnostics::constants::COMPONENT_CPU_MAX_SAMPLES;
+    use crate::diagnostics::cpu::constants::COMPONENT_CPU_MAX_SAMPLES;
     use fuchsia_zircon::{Duration as ZxDuration, Time};
     use injectable_time::{FakeTime, TimeSource};
     use std::time::Duration;

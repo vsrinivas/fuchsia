@@ -42,7 +42,7 @@ use {
             vmex_resource::VmexResource,
         },
         collection::CollectionCapabilityHost,
-        diagnostics::ComponentTreeStats,
+        diagnostics::cpu::ComponentTreeStats,
         directory_ready_notifier::DirectoryReadyNotifier,
         elf_runner::ElfRunner,
         framework::RealmCapabilityHost,
