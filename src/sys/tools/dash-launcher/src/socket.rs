@@ -63,7 +63,7 @@ pub async fn spawn_pty_forwarder(
 ) -> Result<ClientEnd<pty::DeviceMarker>, LauncherError> {
     let server = connect_to_protocol::<pty::DeviceMarker>().map_err(|_| LauncherError::Pty)?;
 
-    // Open a new controlling client and make it active
+    // Open a new controlling client and make it active.
     let (stdio, to_pty_stdio) =
         fidl::endpoints::create_endpoints::<pty::DeviceMarker>().map_err(|_| LauncherError::Pty)?;
     let status_client =
@@ -71,7 +71,7 @@ pub async fn spawn_pty_forwarder(
     zx::Status::ok(status_client).map_err(|_| LauncherError::Pty)?;
 
     // Assume that the terminal is 1024 x 768. When using a socket, we cannot find out the
-    // terminal dimensions
+    // terminal dimensions.
     let status_window_size = server
         .set_window_size(&mut pty::WindowSize { width: 1024, height: 768 })
         .await
@@ -98,7 +98,7 @@ pub async fn spawn_pty_forwarder(
         async move {
             let _ = dash_to_client_loop(server_for_dash_output, epair, write_to_client).await;
 
-            // Abort the other future
+            // Abort the other future.
             client_to_dash_abort_handle.abort();
         },
         dash_to_client_abort_reg,
@@ -108,7 +108,7 @@ pub async fn spawn_pty_forwarder(
         async move {
             let _ = client_to_dash_loop(server, read_from_client).await;
 
-            // Abort the other future
+            // Abort the other future.
             dash_to_client_abort_handle.abort();
         },
         client_to_dash_abort_reg,

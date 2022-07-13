@@ -45,7 +45,7 @@ pub async fn launch_with_handles(
     stdout: zx::Handle,
     stderr: zx::Handle,
 ) -> Result<zx::Process, LauncherError> {
-    // Process moniker
+    // Process moniker.
     let moniker = RelativeMoniker::parse(&moniker).map_err(|_| LauncherError::BadMoniker)?;
     if !moniker.up_path().is_empty() {
         return Err(LauncherError::BadMoniker);
@@ -73,12 +73,12 @@ pub async fn launch_with_handles(
     // -i: force interactive
     let args = vec!["-i".as_bytes(), "-s".as_bytes()];
 
-    // Set PATH to generic command-line tools and package-specific command-line tools
+    // Set PATH to generic command-line tools and package-specific command-line tools.
     let env = vec!["PATH=/bin:/ns/pkg/bin".as_bytes()];
 
     let mut info = create_launch_info(&moniker, &job).await?;
 
-    // Spawn the dash process
+    // Spawn the dash process.
     launcher.add_names(&mut ns.iter_mut()).map_err(|_| LauncherError::ProcessLauncher)?;
     launcher.add_handles(&mut handles.iter_mut()).map_err(|_| LauncherError::ProcessLauncher)?;
     launcher.add_args(&mut args.into_iter()).map_err(|_| LauncherError::ProcessLauncher)?;
@@ -88,7 +88,7 @@ pub async fn launch_with_handles(
     zx::Status::ok(status).map_err(|_| LauncherError::ProcessLauncher)?;
     let process = process.ok_or(LauncherError::ProcessLauncher)?;
 
-    // The job should be terminated when the dash process dies
+    // The job should be terminated when the dash process dies.
     job.set_critical(zx::JobCriticalOptions::empty(), &process)
         .map_err(|_| LauncherError::Internal)?;
 
@@ -108,7 +108,7 @@ fn get_bin_from_launcher_namespace() -> Result<ClientEnd<fio::DirectoryMarker>, 
 }
 
 async fn create_launch_info(moniker: &str, job: &zx::Job) -> Result<LaunchInfo, LauncherError> {
-    // Load `/pkg/bin/sh` as an executable VMO and pass it to the Launcher
+    // Load `/pkg/bin/sh` as an executable VMO and pass it to the Launcher.
     let dash_file = fuchsia_fs::file::open_in_namespace(
         "/pkg/bin/sh",
         fio::OpenFlags::RIGHT_EXECUTABLE | fio::OpenFlags::RIGHT_READABLE,
@@ -126,8 +126,8 @@ async fn create_launch_info(moniker: &str, job: &zx::Job) -> Result<LaunchInfo, 
     let job_dup =
         job.duplicate_handle(zx::Rights::SAME_RIGHTS).map_err(|_| LauncherError::Internal)?;
 
-    // Set a name that's easy to find
-    // if moniker is `./core/foo`, process name is `sh-core-foo`
+    // Set a name that's easy to find.
+    // if moniker is `./core/foo`, process name is `sh-core-foo`.
     let mut process_name = moniker.replace('/', "-");
     process_name.remove(0);
     let process_name = format!("sh{}", process_name);
@@ -136,7 +136,7 @@ async fn create_launch_info(moniker: &str, job: &zx::Job) -> Result<LaunchInfo, 
 }
 
 fn serve_dash_svc_dir() -> Result<ClientEnd<fio::DirectoryMarker>, LauncherError> {
-    // Serve a directory that only provides fuchsia.process.Launcher to dash
+    // Serve a directory that only provides fuchsia.process.Launcher to dash.
     let (svc_dir, server_end) =
         fidl::endpoints::create_endpoints().map_err(|_| LauncherError::Internal)?;
 
@@ -155,11 +155,11 @@ fn serve_dash_svc_dir() -> Result<ClientEnd<fio::DirectoryMarker>, LauncherError
 fn create_dash_namespace(instance_ns: Vec<NameInfo>) -> Result<Vec<NameInfo>, LauncherError> {
     let mut ns = instance_ns;
 
-    // Add the dash-launcher `/pkg/bin` to dash as `/bin`
+    // Add the dash-launcher `/pkg/bin` to dash as `/bin`.
     let bin_dir = get_bin_from_launcher_namespace()?;
     ns.push(NameInfo { path: "/bin".to_string(), directory: bin_dir });
 
-    // Add a custom `/svc` directory to dash
+    // Add a custom `/svc` directory to dash.
     let svc_dir = serve_dash_svc_dir()?;
     ns.push(NameInfo { path: "/svc".to_string(), directory: svc_dir });
 
@@ -171,7 +171,7 @@ fn split_pty_into_handles(
 ) -> Result<(zx::Handle, zx::Handle, zx::Handle), LauncherError> {
     let pty = pty.into_proxy().map_err(|_| LauncherError::Pty)?;
 
-    // Split the PTY into 3 channels (stdin, stdout, stderr)
+    // Split the PTY into 3 channels (stdin, stdout, stderr).
     let (stdout, to_pty_stdout) =
         fidl::endpoints::create_endpoints::<pty::DeviceMarker>().map_err(|_| LauncherError::Pty)?;
     let (stderr, to_pty_stderr) =
@@ -179,7 +179,7 @@ fn split_pty_into_handles(
     let to_pty_stdout = to_pty_stdout.into_channel().into();
     let to_pty_stderr = to_pty_stderr.into_channel().into();
 
-    // Clone the PTY to also be used for stdout and stderr
+    // Clone the PTY to also be used for stdout and stderr.
     pty.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, to_pty_stdout).map_err(|_| LauncherError::Pty)?;
     pty.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, to_pty_stderr).map_err(|_| LauncherError::Pty)?;
 
@@ -299,7 +299,7 @@ impl InstanceScope {
         ns.push(NameInfo { path: "/ns".to_string(), directory: resolved.ns_dir });
         ns.push(NameInfo { path: "/exposed".to_string(), directory: resolved.exposed_dir });
 
-        // If available, use the component's /pkg/lib dir to load libraries
+        // If available, use the component's /pkg/lib dir to load libraries.
         if let Some(pkg_dir) = resolved.pkg_dir {
             let pkg_dir = pkg_dir.into_proxy().map_err(|_| LauncherError::Internal)?;
             if let Ok(dir) = fuchsia_fs::directory::open_directory(

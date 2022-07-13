@@ -23,7 +23,7 @@ enum IncomingRequest {
 async fn main() -> Result<(), anyhow::Error> {
     let mut service_fs = ServiceFs::new_local();
 
-    // Initialize inspect
+    // Initialize inspect.
     inspect_runtime::serve(component::inspector(), &mut service_fs)?;
     component::health().set_starting_up();
 
