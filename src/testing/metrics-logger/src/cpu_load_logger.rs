@@ -5,6 +5,7 @@
 use {
     anyhow::{format_err, Result},
     fidl_fuchsia_kernel as fkernel, fuchsia_async as fasync,
+    fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zbi_abi::{ZbiTopologyEntityType, ZbiTopologyNode},
     fuchsia_zircon as zx,
@@ -104,11 +105,19 @@ fn calculate_cpu_usage(
 pub struct CpuLoadLogger {
     cpu_topology: Option<Vec<Cluster>>,
     interval: zx::Duration,
-    end_time: fasync::Time,
     last_sample: Option<CpuLoadSample>,
     stats_proxy: Rc<fkernel::StatsProxy>,
     client_id: String,
+    inspect: InspectData,
     output_samples_to_syslog: bool,
+
+    /// Start time for the logger; used to calculate elapsed time.
+    /// This is an exclusive start.
+    start_time: fasync::Time,
+
+    /// Time at which the logger will stop.
+    /// This is an exclusive end.
+    end_time: fasync::Time,
 }
 
 impl CpuLoadLogger {
@@ -116,24 +125,32 @@ impl CpuLoadLogger {
         cpu_topology: Option<Vec<Cluster>>,
         interval: zx::Duration,
         duration: Option<zx::Duration>,
+        client_inspect: &inspect::Node,
         stats_proxy: Rc<fkernel::StatsProxy>,
         client_id: String,
         output_samples_to_syslog: bool,
     ) -> Self {
+        let start_time = fasync::Time::now();
         let end_time = duration.map_or(fasync::Time::INFINITE, |d| fasync::Time::now() + d);
+        let inspect = InspectData::new(client_inspect, cpu_topology.clone());
+
         CpuLoadLogger {
             cpu_topology,
             interval,
-            end_time,
             last_sample: None,
             stats_proxy,
             client_id,
+            inspect,
             output_samples_to_syslog,
+            start_time,
+            end_time,
         }
     }
 
     pub async fn log_cpu_usages(mut self) {
         let mut interval = fasync::Interval::new(self.interval);
+        // Start polling stats proxy. Logging will start at the next interval.
+        self.log_cpu_usage(fasync::Time::now()).await;
 
         while let Some(()) = interval.next().await {
             let now = fasync::Time::now();
@@ -144,7 +161,6 @@ impl CpuLoadLogger {
         }
     }
 
-    // TODO (fxbug.dev/92320): Populate CPU Usage info into Inspect.
     async fn log_cpu_usage(&mut self, now: fasync::Time) {
         let mut hasher = DefaultHasher::new();
         self.client_id.hash(&mut hasher);
@@ -157,12 +173,19 @@ impl CpuLoadLogger {
 
                 if let Some(last_sample) = self.last_sample.take() {
                     if let Some(cpu_topology) = self.cpu_topology.as_ref() {
-                        for cluster in cpu_topology {
+                        for (index, cluster) in cpu_topology.iter().enumerate() {
                             let cpu_usage = calculate_cpu_usage(
                                 cluster.cpu_indexes.clone(),
                                 &last_sample,
                                 &current_sample,
                             );
+
+                            self.inspect.log_cpu_load_by_cluster(
+                                index,
+                                cpu_usage,
+                                (current_sample.time_stamp - self.start_time).into_millis(),
+                            );
+
                             if self.output_samples_to_syslog {
                                 fx_log_info!(
                                     "Max perf scale: {:?} CpuUsage: {:?}",
@@ -170,6 +193,7 @@ impl CpuLoadLogger {
                                     cpu_usage
                                 );
                             }
+
                             fuchsia_trace::counter!(
                                 "metrics_logger",
                                 "cpu_usage",
@@ -195,6 +219,11 @@ impl CpuLoadLogger {
                             &current_sample,
                         );
 
+                        self.inspect.log_total_cpu_load(
+                            cpu_usage,
+                            (current_sample.time_stamp - self.start_time).into_millis(),
+                        );
+
                         if self.output_samples_to_syslog {
                             fx_log_info!("CpuUsage: {:?}", cpu_usage);
                         }
@@ -213,6 +242,70 @@ impl CpuLoadLogger {
             }
             Err(e) => fx_log_err!("get_cpu_stats IPC failed: {}", e),
         }
+    }
+}
+
+struct InspectData {
+    logger_root: inspect::Node,
+    cpu_topology: Option<Vec<Cluster>>,
+    elapsed_millis: Option<inspect::IntProperty>,
+
+    // List of nodes for tracking CPU load by cluster if topology exists.
+    cluster_nodes: Vec<inspect::Node>,
+    cluster_loads: Vec<inspect::DoubleProperty>,
+
+    // Node for tracking total CPU load if topology doesn't exist.
+    total_load: Option<inspect::DoubleProperty>,
+}
+
+impl InspectData {
+    fn new(parent: &inspect::Node, cpu_topology: Option<Vec<Cluster>>) -> Self {
+        Self {
+            logger_root: parent.create_child("CpuLoadLogger"),
+            cpu_topology,
+            elapsed_millis: None,
+            cluster_nodes: Vec::new(),
+            cluster_loads: Vec::new(),
+            total_load: None,
+        }
+    }
+
+    fn init_elapsed_time(&mut self) {
+        self.elapsed_millis = Some(self.logger_root.create_int("elapsed time (ms)", std::i64::MIN));
+    }
+
+    fn init_total_load(&mut self) {
+        self.total_load = Some(self.logger_root.create_double("CPU usage (%)", f64::MIN));
+    }
+
+    fn init_cluster_nodes(&mut self) {
+        if let Some(cpu_topology) = self.cpu_topology.as_ref() {
+            for (index, cluster) in cpu_topology.iter().enumerate() {
+                let cluster_node = self.logger_root.create_child(format!("Cluster {}", index));
+                cluster_node.record_double("Max perf scale", cluster.max_perf_scale);
+                self.cluster_loads.push(cluster_node.create_double("CPU usage (%)", f64::MIN));
+
+                self.cluster_nodes.push(cluster_node);
+            }
+        }
+    }
+
+    fn log_total_cpu_load(&mut self, value: f64, elapsed_millis: i64) {
+        if self.total_load.is_none() {
+            self.init_total_load();
+            self.init_elapsed_time();
+        }
+        self.elapsed_millis.as_ref().map(|e| e.set(elapsed_millis));
+        self.total_load.as_ref().map(|l| l.set(value));
+    }
+
+    fn log_cpu_load_by_cluster(&mut self, index: usize, value: f64, elapsed_millis: i64) {
+        if self.cluster_nodes.is_empty() {
+            self.init_cluster_nodes();
+            self.init_elapsed_time();
+        }
+        self.elapsed_millis.as_ref().map(|e| e.set(elapsed_millis));
+        self.cluster_loads[index].set(value);
     }
 }
 

@@ -533,6 +533,7 @@ impl MetricsLoggerServer {
                             cpu_topology.clone(),
                             zx::Duration::from_millis(interval_ms as i64),
                             duration_ms.map(|ms| zx::Duration::from_millis(ms as i64)),
+                            &client_inspect,
                             cpu_stats_proxy.clone(),
                             String::from(&client_id),
                             output_samples_to_syslog,
@@ -639,7 +640,7 @@ mod tests {
         fmetrics::{CpuLoad, Metric, Power, StatisticsArgs, Temperature},
         futures::{task::Poll, FutureExt, TryStreamExt},
         inspect::assert_data_tree,
-        std::cell::{Cell, RefCell},
+        std::cell::Cell,
     };
 
     fn setup_fake_stats_service(
@@ -709,6 +710,8 @@ mod tests {
         power_1: Rc<Cell<f32>>,
         power_2: Rc<Cell<f32>>,
 
+        cpu_idle_time: Rc<Cell<[i64; 5]>>,
+
         inspector: inspect::Inspector,
 
         _tasks: Vec<fasync::Task<()>>,
@@ -775,17 +778,43 @@ mod tests {
                 },
             ];
 
-            let cpu_stats = Rc::new(RefCell::new(CpuStats {
-                actual_num_cpus: 1,
-                per_cpu_stats: Some(vec![PerCpuStats { idle_time: Some(0), ..PerCpuStats::EMPTY }]),
-            }));
-            let (cpu_stats_proxy, task) =
-                setup_fake_stats_service(move || cpu_stats.borrow().clone());
+            let cpu_idle_time = Rc::new(Cell::new([0, 0, 0, 0, 0]));
+            let cpu_idle_time_clone = cpu_idle_time.clone();
+            let (cpu_stats_proxy, task) = setup_fake_stats_service(move || CpuStats {
+                actual_num_cpus: 5,
+                per_cpu_stats: Some(vec![
+                    PerCpuStats {
+                        idle_time: Some(cpu_idle_time_clone.get()[0]),
+                        ..PerCpuStats::EMPTY
+                    },
+                    PerCpuStats {
+                        idle_time: Some(cpu_idle_time_clone.get()[1]),
+                        ..PerCpuStats::EMPTY
+                    },
+                    PerCpuStats {
+                        idle_time: Some(cpu_idle_time_clone.get()[2]),
+                        ..PerCpuStats::EMPTY
+                    },
+                    PerCpuStats {
+                        idle_time: Some(cpu_idle_time_clone.get()[3]),
+                        ..PerCpuStats::EMPTY
+                    },
+                    PerCpuStats {
+                        idle_time: Some(cpu_idle_time_clone.get()[4]),
+                        ..PerCpuStats::EMPTY
+                    },
+                ]),
+            });
             tasks.push(task);
 
             let (vmo, size) = create_vmo_from_topology_nodes(vec![
                 generate_cluster_node(/*performance_class*/ 0),
                 generate_processor_node(/*parent_index*/ 0, /*logical_id*/ 0),
+                generate_processor_node(/*parent_index*/ 0, /*logical_id*/ 1),
+                generate_cluster_node(/*performance_class*/ 1),
+                generate_processor_node(/*parent_index*/ 3, /*logical_id*/ 2),
+                generate_processor_node(/*parent_index*/ 3, /*logical_id*/ 3),
+                generate_processor_node(/*parent_index*/ 3, /*logical_id*/ 4),
             ])
             .unwrap();
             let cpu_topology = vmo_to_topology(vmo, size as u32).unwrap();
@@ -818,6 +847,7 @@ mod tests {
                 inspector,
                 power_1,
                 power_2,
+                cpu_idle_time,
                 _tasks: tasks,
             }
         }
@@ -883,16 +913,17 @@ mod tests {
             }
         );
 
-        // Run  `server_task`  until stalled to create futures for logging
-        // temperatures and CpuLoads.
+        // Run `server_task` until stalled to create futures for logging temperatures and CpuLoads.
         runner.run_server_task_until_stalled();
 
-        // Check the Inspect node for TemperatureLogger is created.
+        // Check the Inspect nodes for the loggers are created.
         assert_data_tree!(
             runner.inspector,
             root: {
                 MetricsLogger: {
                     test: {
+                        CpuLoadLogger: {
+                        },
                         TemperatureLogger: {
                         }
                     }
@@ -908,12 +939,23 @@ mod tests {
             assert_eq!(runner.iterate_logging_task(), true);
         }
 
-        // Check data is logged to TemperatureLogger Inspect node.
+        // Check data is logged to Inspect.
         assert_data_tree!(
             runner.inspector,
             root: {
                 MetricsLogger: {
                     test: {
+                        CpuLoadLogger: {
+                            "elapsed time (ms)": 100i64,
+                            "Cluster 0": {
+                                "Max perf scale": 0.5,
+                                "CPU usage (%)": 100.0,
+                            },
+                            "Cluster 1": {
+                                "Max perf scale": 1.0,
+                                "CPU usage (%)": 100.0,
+                            }
+                        },
                         TemperatureLogger: {
                             "elapsed time (ms)": 100i64,
                             "cpu": {
@@ -933,12 +975,23 @@ mod tests {
             assert_eq!(runner.iterate_logging_task(), true);
         }
 
-        // Check data is logged to TemperatureLogger Inspect node.
+        // Check data is logged to Inspect.
         assert_data_tree!(
             runner.inspector,
             root: {
                 MetricsLogger: {
                     test: {
+                        CpuLoadLogger: {
+                            "elapsed time (ms)": 900i64,
+                            "Cluster 0": {
+                                "Max perf scale": 0.5,
+                                "CPU usage (%)": 100.0,
+                            },
+                            "Cluster 1": {
+                                "Max perf scale": 1.0,
+                                "CPU usage (%)": 100.0,
+                            }
+                        },
                         TemperatureLogger: {
                             "elapsed time (ms)": 900i64,
                             "cpu": {
@@ -1101,57 +1154,6 @@ mod tests {
     }
 
     #[test]
-    fn test_concurrent_logging() {
-        let mut runner = Runner::new();
-
-        let _query = runner.proxy.start_logging(
-            "test",
-            &mut vec![
-                &mut Metric::CpuLoad(CpuLoad { interval_ms: 100 }),
-                &mut Metric::Temperature(Temperature {
-                    sampling_interval_ms: 200,
-                    statistics_args: None,
-                }),
-            ]
-            .into_iter(),
-            600,
-            false,
-            false,
-        );
-        runner.run_server_task_until_stalled();
-
-        // Check logger added to client before first temperature poll.
-        assert_data_tree!(
-            runner.inspector,
-            root: {
-                MetricsLogger: {
-                    test: {
-                        TemperatureLogger: {
-                        }
-                    }
-                }
-            }
-        );
-
-        runner.cpu_temperature.set(35.0);
-        runner.gpu_temperature.set(45.0);
-
-        // Run existing tasks to completion (6 CpuLoad tasks + 3 Temperature tasks).
-        for _ in 0..9 {
-            assert_eq!(runner.iterate_logging_task(), true);
-        }
-        assert_eq!(runner.iterate_logging_task(), false);
-
-        // Check temperature logger removed in Inspect.
-        assert_data_tree!(
-            runner.inspector,
-            root: {
-                MetricsLogger: {}
-            }
-        );
-    }
-
-    #[test]
     fn test_stop_logging() {
         let mut runner = Runner::new();
 
@@ -1263,6 +1265,8 @@ mod tests {
             root: {
                 MetricsLogger: {
                     test1: {
+                        CpuLoadLogger: {
+                        },
                         TemperatureLogger: {
                         }
                     },
@@ -1286,6 +1290,8 @@ mod tests {
             root: {
                 MetricsLogger: {
                     test1: {
+                        CpuLoadLogger: {
+                        },
                         TemperatureLogger: {
                             "elapsed time (ms)": 200i64,
                             "cpu": {
@@ -1308,9 +1314,7 @@ mod tests {
         runner.cpu_temperature.set(36.0);
         runner.gpu_temperature.set(46.0);
 
-        for _ in 0..2 {
-            assert_eq!(runner.iterate_logging_task(), true);
-        }
+        assert_eq!(runner.iterate_logging_task(), true);
 
         // Check `test1` data remaining the same, `test2` data updated.
         assert_data_tree!(
@@ -1318,6 +1322,52 @@ mod tests {
             root: {
                 MetricsLogger: {
                     test1: {
+                        CpuLoadLogger: {
+                        },
+                        TemperatureLogger: {
+                            "elapsed time (ms)": 200i64,
+                            "cpu": {
+                                "data (°C)": 35.0,
+                            },
+                            "/dev/fake/gpu_temperature": {
+                                "data (°C)": 45.0,
+                            }
+                        }
+                    },
+                    test2: {
+                        TemperatureLogger: {
+                            "elapsed time (ms)": 200i64,
+                            "cpu": {
+                                "data (°C)": 36.0,
+                            },
+                            "/dev/fake/gpu_temperature": {
+                                "data (°C)": 46.0,
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+        assert_eq!(runner.iterate_logging_task(), true);
+
+        // Check `test2` data remaining the same, `test1` data updated.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test1: {
+                        CpuLoadLogger: {
+                            "elapsed time (ms)": 300i64,
+                            "Cluster 0": {
+                                "Max perf scale": 0.5,
+                                "CPU usage (%)": 100.0,
+                            },
+                            "Cluster 1": {
+                                "Max perf scale": 1.0,
+                                "CPU usage (%)": 100.0,
+                            }
+                        },
                         TemperatureLogger: {
                             "elapsed time (ms)": 200i64,
                             "cpu": {
@@ -1351,6 +1401,17 @@ mod tests {
             root: {
                 MetricsLogger: {
                     test1: {
+                        CpuLoadLogger: {
+                            "elapsed time (ms)": 300i64,
+                            "Cluster 0": {
+                                "Max perf scale": 0.5,
+                                "CPU usage (%)": 100.0,
+                            },
+                            "Cluster 1": {
+                                "Max perf scale": 1.0,
+                                "CPU usage (%)": 100.0,
+                            }
+                        },
                         TemperatureLogger: {
                             "elapsed time (ms)": 400i64,
                             "cpu": {
@@ -1822,6 +1883,116 @@ mod tests {
         // With one more time step, the end time has been reached, the client is removed from
         // Inspect.
         runner.iterate_logging_task();
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {}
+            }
+        );
+    }
+
+    #[test]
+    fn test_logging_cpu_stats() {
+        let mut runner = Runner::new();
+
+        runner.cpu_idle_time.set([0, 0, 0, 0, 0]);
+
+        let _query = runner.proxy.start_logging(
+            "test",
+            &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: 100 })].into_iter(),
+            350,
+            false,
+            false,
+        );
+        runner.run_server_task_until_stalled();
+
+        // Check CpuLoadLogger added before first query.
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        CpuLoadLogger: {
+                        }
+                    }
+                }
+            }
+        );
+
+        runner.cpu_idle_time.set([50_000_000, 0, 0, 0, 0]);
+        // Run the first logging task.
+        runner.iterate_logging_task();
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        CpuLoadLogger: {
+                            "elapsed time (ms)": 100i64,
+                            "Cluster 0": {
+                                "Max perf scale": 0.5,
+                                "CPU usage (%)": 75.0,
+                            },
+                            "Cluster 1": {
+                                "Max perf scale": 1.0,
+                                "CPU usage (%)": 100.0,
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+        // Run the second logging task.
+        runner.iterate_logging_task();
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        CpuLoadLogger: {
+                            "elapsed time (ms)": 200i64,
+                            "Cluster 0": {
+                                "Max perf scale": 0.5,
+                                "CPU usage (%)": 100.0,
+                            },
+                            "Cluster 1": {
+                                "Max perf scale": 1.0,
+                                "CPU usage (%)": 100.0,
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+        runner.cpu_idle_time.set([50_000_000, 0, 30_000_000, 0, 0]);
+        // Run the third logging task.
+        runner.iterate_logging_task();
+        assert_data_tree!(
+            runner.inspector,
+            root: {
+                MetricsLogger: {
+                    test: {
+                        CpuLoadLogger: {
+                            "elapsed time (ms)": 300i64,
+                            "Cluster 0": {
+                                "Max perf scale": 0.5,
+                                "CPU usage (%)": 100.0,
+                            },
+                            "Cluster 1": {
+                                "Max perf scale": 1.0,
+                                "CPU usage (%)": 90.0,
+                            }
+                        }
+                    }
+                }
+            }
+        );
+
+        // Finish the remaining task.
+        runner.iterate_logging_task();
+
         assert_data_tree!(
             runner.inspector,
             root: {
