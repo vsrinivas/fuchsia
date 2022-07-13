@@ -1,0 +1,44 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/kernel_zbi_test.gni")
+import("//build/testing/zbi_test.gni")
+import("//build/testing/zbi_test_executable.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":early-boot-single-process-test" ]
+}
+
+if (is_fuchsia) {
+  # Verify that the '/svc' and svc stash handle work correctly.
+  zbi_test_executable("early-boot-single-process-test-bin") {
+    configs += [ "//build/c:fidl-deprecated-c-bindings" ]
+    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+    if (configs + fdio_config - fdio_config != configs) {
+      configs -= fdio_config
+    }
+    disable_syslog_backend = true
+    sources = [ "svc-test.cc" ]
+    deps = [
+      "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+      "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_c",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_c",
+      "//src/zircon/testing/standalone-test",
+      "//zircon/system/ulib/zx",
+      "//zircon/system/ulib/zxtest",
+    ]
+  }
+}
+
+kernel_zbi_test("early-boot-single-process-test") {
+  deps = [ ":early-boot-single-process-test-bin" ]
+  device_types = [
+    "AEMU",
+    "Astro",
+    "QEMU",
+    "Intel NUC Kit NUC7i5DNHE",
+    "Sherlock",
+  ]
+}

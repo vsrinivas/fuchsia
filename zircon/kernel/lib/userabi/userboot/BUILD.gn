@@ -94,8 +94,10 @@ if (toolchain_environment == "userboot") {
     defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
     ldflags = [ "-Wl,-e,_start" ]
     libs = [ vdso_syms_ld ]
+    configs += [ "//build/c:fidl-deprecated-c-bindings" ]
     deps = [
       ":gen-vdso-syms-ld",
+      "//sdk/fidl/fuchsia.boot:fuchsia.boot_c_header",
       "//sdk/lib/fidl",
       "//src/lib/elfldltl",
       "//src/lib/zbitl",

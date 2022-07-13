@@ -270,6 +270,7 @@ config("fidl-deprecated-c-bindings") {
     "//src/zircon/testing/mutex_pi_exerciser",
     "//src/zircon/tests/profile",
     "//vendor/*",
+    "//zircon/kernel/lib/userabi/userboot/*",
     "//zircon/system/ulib/c/sanitizers",
     "//zircon/system/ulib/devmgr-integration-test",
     "//zircon/system/ulib/devmgr-integration-test/test:devmgr-integration",

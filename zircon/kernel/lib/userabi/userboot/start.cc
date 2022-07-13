@@ -4,12 +4,16 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <fuchsia/boot/c/fidl.h>
 #include <lib/elfldltl/machine.h>
 #include <lib/processargs/processargs.h>
+#include <lib/stdcompat/array.h>
 #include <lib/stdcompat/source_location.h>
+#include <lib/stdcompat/span.h>
 #include <lib/userabi/userboot.h>
 #include <lib/zircon-internal/default_stack_size.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/debuglog.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/resource.h>
@@ -18,6 +22,8 @@
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <sys/param.h>
+#include <zircon/fidl.h>
+#include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 #include <zircon/syscalls/resource.h>
@@ -29,6 +35,7 @@
 #include <cstddef>
 #include <cstring>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <utility>
 
@@ -107,13 +114,23 @@ std::string_view GetUserbootNextFilename(const Options& opts) {
 constexpr uint32_t kThreadSelf = kHandleCount;
 constexpr uint32_t kBootfsVmo = kHandleCount + 1;
 constexpr uint32_t kDebugLog = kHandleCount + 2;
-constexpr uint32_t kChildHandleCount = kHandleCount + 3;
+
+// Hand a svc channel to the child process to be launched.
+// Fuchsia C runtime will pull this handle and automatically create the endpoint on process startup.
+constexpr uint32_t kSvcStub = kHandleCount + 3;
+constexpr uint32_t kSvcNameIndex = 0;
+
+// A channel containing all 'svc' stubs server ends.
+constexpr uint32_t kSvcStash = kHandleCount + 4;
+
+constexpr uint32_t kChildHandleCount = kHandleCount + 5;
 
 // This is the processargs message the child will receive.
 struct ChildMessageLayout {
   zx_proc_args_t header{};
   std::array<char, kProcessArgsMaxBytes> args;
   std::array<uint32_t, kChildHandleCount> info;
+  std::array<char, 5> names = cpp20::to_array("/svc");
 };
 
 static_assert(alignof(std::array<uint32_t, kChildHandleCount>) ==
@@ -145,6 +162,8 @@ constexpr std::array<uint32_t, kChildHandleCount> HandleInfoTable() {
     info[i] = PA_HND(PA_VMO_KERNEL_FILE, i - kFirstKernelFile);
   }
   info[kDebugLog] = PA_HND(PA_FD, kFdioFlagUseForStdio);
+  info[kSvcStub] = PA_HND(PA_NS_DIR, kSvcNameIndex);
+  info[kSvcStash] = PA_HND(PA_USER0, 0);
   return info;
 }
 
@@ -156,6 +175,9 @@ constexpr ChildMessageLayout CreateChildMessage() {
               .version = ZX_PROCARGS_VERSION,
               .handle_info_off = offsetof(ChildMessageLayout, info),
               .args_off = offsetof(ChildMessageLayout, args),
+              .names_off = offsetof(ChildMessageLayout, names),
+              .names_num = kSvcNameIndex + 1,
+
           },
       .info = HandleInfoTable(),
   };
@@ -199,6 +221,9 @@ struct ChildContext {
   zx::vmar vmar;
   zx::vmar reserved_vmar;
   zx::thread thread;
+
+  zx::channel svc_client;
+  zx::channel svc_server;
 };
 
 ChildContext CreateChildContext(const zx::debuglog& log, std::string_view name,
@@ -219,19 +244,26 @@ ChildContext CreateChildContext(const zx::debuglog& log, std::string_view name,
   check(log, status, "Failed to create main thread for child process(%.*s).",
         static_cast<int>(name.length()), name.data());
 
+  status = zx::channel::create(0, &child.svc_client, &child.svc_server);
+  check(log, status, "Failed to create svc channels.");
   return child;
 }
 
-void SetChildHandles(const zx::debuglog& log, const ChildContext& child, const zx::vmo& bootfs_vmo,
+void SetChildHandles(const zx::debuglog& log, const zx::vmo& bootfs_vmo, ChildContext& child,
                      cpp20::span<zx_handle_t, kChildHandleCount> child_handles) {
   child_handles[kBootfsVmo] = DuplicateOrDie(log, bootfs_vmo).release();
   child_handles[kDebugLog] = DuplicateOrDie(log).release();
   child_handles[kProcSelf] = DuplicateOrDie(log, child.process).release();
   child_handles[kVmarRootSelf] = DuplicateOrDie(log, child.vmar).release();
   child_handles[kThreadSelf] = DuplicateOrDie(log, child.thread).release();
+  child_handles[kSvcStub] = child.svc_client.release();
 
   // Verify all child handles.
   for (size_t i = 0; i < child_handles.size(); ++i) {
+    // The stash handle is only passed to the last process launched by userboot.
+    if (i == kSvcStash) {
+      continue;
+    }
     auto handle = child_handles[i];
     zx_info_handle_basic_t info;
     auto status =
@@ -239,6 +271,32 @@ void SetChildHandles(const zx::debuglog& log, const ChildContext& child, const z
     check(log, status, "Failed to obtain handle information. Bad handle at %zu with value %x", i,
           handle);
   }
+}
+
+void StashSvc(const zx::debuglog& log, const zx::channel& stash, std::string_view name,
+              zx::channel svc_end) {
+  zx_handle_t h = svc_end.release();
+  fuchsia_boot_SvcStashStoreRequestMessage request = {};
+  request.hdr.magic_number = kFidlWireFormatMagicNumberInitial;
+  request.hdr.ordinal = fuchsia_boot_SvcStashStoreOrdinal;
+  request.svc_endpoint = FIDL_HANDLE_PRESENT;
+
+  auto status = stash.write(0, &request, sizeof(request), &h, 1);
+  check(log, status, "Failed to stash svc handle from (%.*s)", static_cast<int>(name.length()),
+        name.data());
+}
+
+void SetStashHandle(const zx::debuglog& log, zx::channel stash,
+                    cpp20::span<zx_handle_t, kChildHandleCount> handles) {
+  handles[kSvcStash] = stash.release();
+
+  // Check that the handle is valid/alive.
+  zx_info_handle_basic_t info;
+  auto& handle = handles[kSvcStash];
+  auto status =
+      zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+  check(log, status, "Failed to obtain handle information. Bad handle at %d with value %x",
+        static_cast<int>(kSvcStash), handle);
 }
 
 // Set of resources created in userboot.
@@ -382,6 +440,9 @@ zx::channel StartChildProcess(const zx::debuglog& log, const Options& options,
   handles[kProcSelf] = ZX_HANDLE_INVALID;
 
   auto [power, vmex] = CreateResources(log, handles);
+  zx::channel svc_stash_server, svc_stash_client;
+  status = zx::channel::create(0, &svc_stash_server, &svc_stash_client);
+  check(log, status, "Failed to create svc stash channel.");
 
   // Locate the ZBI_TYPE_STORAGE_BOOTFS item and decompress it. This will be used to load
   // the binary referenced by userboot.next, as well as libc. Bootfs will be fully parsed
@@ -397,7 +458,10 @@ zx::channel StartChildProcess(const zx::debuglog& log, const Options& options,
 
   ChildMessageLayout child_message = CreateChildMessage();
   ChildContext child = CreateChildContext(log, filename, handles);
-  SetChildHandles(log, child, bootfs_vmo, handles);
+
+  StashSvc(log, svc_stash_client, filename, std::move(child.svc_server));
+  SetChildHandles(log, bootfs_vmo, child, handles);
+  SetStashHandle(log, std::move(svc_stash_server), handles);
 
   // Fill in any '+' separated arguments provided by `userboot.next`. If arguments are longer than
   // kProcessArgsMaxBytes, this function will fail process creation.

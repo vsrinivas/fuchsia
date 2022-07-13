@@ -16,6 +16,7 @@ group("zbi_tests") {
 
   deps = [
     "//src/bringup/lib/mexec/tests",
+    "//zircon/kernel/lib/userabi/userboot/tests",
     "//zircon/kernel/phys:tests",
     "//zircon/system/utest/core:core-tests",
   ]
