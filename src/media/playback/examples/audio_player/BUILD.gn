@@ -29,6 +29,5 @@ executable("bin") {
 }
 
 fuchsia_shell_package("audio_player") {
-  manifest = "meta/audio_player.cmx"
   deps = [ ":bin" ]
 }
