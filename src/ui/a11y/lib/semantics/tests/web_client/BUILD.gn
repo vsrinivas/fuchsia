@@ -46,8 +46,7 @@ fuchsia_structured_config_values("web_client_default_config") {
 
 fuchsia_component("component") {
   testonly = true
-  component_name = "semantics-test-web-client"
-  manifest = rebase_path("meta/web_client.cml")
+  cm_label = ":web_client_manifest"
   deps = [ ":bin" ]
 }
 
