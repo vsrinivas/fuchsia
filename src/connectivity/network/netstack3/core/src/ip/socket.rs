@@ -184,14 +184,6 @@ pub trait BufferIpSocketHandler<I: IpExt, C, B: BufferMut>: IpSocketHandler<I, C
 /// An error encountered when creating an IP socket.
 #[derive(Error, Copy, Clone, Debug, Eq, PartialEq)]
 pub enum IpSockCreationError {
-    /// The specified local IP address is not a unicast address in its subnet.
-    ///
-    /// For IPv4, this means that the address is a member of a subnet to which
-    /// we are attached, but in that subnet, it is not a unicast address. For
-    /// IPv6, whether or not an address is unicast is a property of the address
-    /// and does not depend on what subnets we're attached to.
-    #[error("the specified local IP address is not a unicast address in its subnet")]
-    LocalAddrNotUnicast,
     /// An error occurred while looking up a route.
     #[error("a route cannot be determined: {}", _0)]
     Route(#[from] IpSockRouteError),

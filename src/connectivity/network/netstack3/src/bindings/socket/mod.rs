@@ -359,7 +359,6 @@ impl IntoErrno for IpSockUnroutableError {
 impl IntoErrno for IpSockCreationError {
     fn into_errno(self) -> Errno {
         match self {
-            IpSockCreationError::LocalAddrNotUnicast => Errno::Einval,
             IpSockCreationError::Route(e) => e.into_errno(),
         }
     }
