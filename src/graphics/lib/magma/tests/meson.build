@@ -14,12 +14,12 @@ foreach test : ['virtmagma_unit_tests', 'virtmagma_image_tests']
   files_unit_test = files(
     '../tests_linux/unit_tests/@0@.cc'.format(test)
   )
+  files_unit_test += virtio_magma_h
 
   test_exe = executable(
     test,
     sources: files_unit_test,
-    include_directories : [inc_configuration, inc_magma, inc_virtio,
-                        inc_platform],
+    include_directories : [inc_configuration, inc_top, inc_magma, inc_platform],
     cpp_args: cpp_args,
     link_with : [libmagma_linux],
     dependencies : [gtest_dep, dl_dep, drm_dep],
@@ -40,8 +40,8 @@ files_test = files(
 test_magma = executable(
   test,
   sources: files_test,
-  include_directories : [inc_configuration, inc_top, inc_magma, inc_msd_intel_gen, inc_virtio,
-                         inc_platform],
+  include_directories : [inc_configuration, inc_top, inc_magma, inc_msd_intel_gen,
+    inc_platform],
   cpp_args: cpp_args + ['-DVIRTMAGMA=1'],
   link_with : [libmagma_linux],
   dependencies : [gtest_dep],

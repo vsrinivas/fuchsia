@@ -10,7 +10,6 @@ magma_json = files('include/magma/magma.json')
 
 inc_configuration = include_directories(['.', 'src'])
 inc_magma = include_directories('include/magma')
-inc_virtio = include_directories('include/virtio')
 inc_platform = include_directories('src/magma_util/platform')
 inc_magma_util = include_directories('src/magma_util')
 inc_msd_intel_gen = include_directories('../../drivers/msd-intel-gen/include')
@@ -39,7 +38,7 @@ libmagma_linux = static_library(
   sources: [files_libmagma_linux, magma_generic_cc, virtio_magma_h],
   cpp_args: cpp_args,
   c_args: c_args,
-  include_directories : [inc_top, inc_configuration, inc_magma, inc_virtio,
+  include_directories : [inc_top, inc_configuration, inc_magma,
                          inc_platform, inc_magma_util],
   dependencies: thread_dep
 )
