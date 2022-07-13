@@ -4,7 +4,7 @@
 
 import("//build/components/fuchsia_test_package.gni")
 import("//build/test.gni")
-import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/lib/vulkan/vulkan.gni")
 
 group("tests") {
   testonly = true
@@ -50,7 +50,7 @@ fuchsia_unittest_package("image-pipe-swapchain-tests") {
     "//src/lib/vulkan/validation_layers",
   ]
   test_specs = {
-    environments = [ aemu_env ] + magma_libvulkan_hardware_envs
+    environments = vulkan_envs
   }
 }
 
@@ -99,6 +99,6 @@ fuchsia_unittest_package("image-pipe-swapchain-hermetic-tests") {
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
   ]
   test_specs = {
-    environments = [ aemu_env ] + magma_libvulkan_hardware_envs
+    environments = vulkan_envs
   }
 }

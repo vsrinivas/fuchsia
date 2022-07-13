@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 import("//build/components.gni")
-import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/lib/vulkan/vulkan.gni")
 
 source_set("common") {
   testonly = true
@@ -51,8 +51,7 @@ fuchsia_test_package("vkcontext-pkg") {
   package_name = "vkcontext"
   test_components = [ ":vkcontext_cmp" ]
   test_specs = {
-    environments = magma_libvulkan_hardware_envs
-    environments += [ aemu_env ]
+    environments = vulkan_envs
   }
 }
 

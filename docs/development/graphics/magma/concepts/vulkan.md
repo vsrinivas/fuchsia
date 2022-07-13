@@ -125,6 +125,9 @@ Test components can receive these capabilities by being placed into a
 * For `vulkan-test` include the `//src/lib/vulkan/vulkan-test.shard.cml` shard
 * For `system-test` include the `//src/sys/test_manager/system-test.shard.cml` shard
 
+Test components can use the [vulkan_envs][vulkan_envs]
+[environment][environment] to ensure they're run on all buildbots with Vulkan
+support.
 ## Buildtime dependencies
 
 In order for your project to access the Vulkan headers, and to link against the Vulkan loader libvulkan.so, add the following GN dependency:
@@ -198,3 +201,5 @@ Again, may be an application error or driver bug. If you believe your app is inn
 
 [cml]: /docs/concepts/components/v2/component_manifests.md
 [cmx]: /docs/concepts/components/v1/component_manifests.md
+[environment]: /docs/contribute/testing/environments.md
+[vulkan_envs]: /src/lib/vulkan/vulkan.gni

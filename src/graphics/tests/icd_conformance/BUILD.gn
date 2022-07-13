@@ -4,7 +4,7 @@
 
 import("//build/components.gni")
 import("//build/dist/resource.gni")
-import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/lib/vulkan/vulkan.gni")
 
 source_set("src") {
   testonly = true
@@ -54,7 +54,7 @@ fuchsia_test_package("icd-conformance") {
   package_name = "icd_conformance"
   test_components = [ ":icd_conformance_cmp" ]
   test_specs = {
-    environments = [ aemu_env ] + magma_libvulkan_hardware_envs
+    environments = vulkan_envs
   }
 }
 

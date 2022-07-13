@@ -5,7 +5,7 @@
 import("//build/components.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
-import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/lib/vulkan/vulkan.gni")
 
 rustc_library("fuchsia-vulkan") {
   name = "fuchsia_vulkan"
@@ -36,7 +36,7 @@ fuchsia_unittest_package("fuchsia_vulkan_tests") {
   manifest = "meta/fuchsia_vulkan_tests.cml"
   deps = [ ":fuchsia-vulkan_test" ]
   test_specs = {
-    environments = [ aemu_env ] + magma_libvulkan_hardware_envs
+    environments = vulkan_envs
   }
 }
 

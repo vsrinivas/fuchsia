@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/testing/environments.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 import("//src/lib/vulkan/layers.gni")
+import("//src/lib/vulkan/vulkan.gni")
 import("//src/ui/lib/escher/build_args.gni")
 import("//src/ui/scenic/build_args.gni")
 import("//src/ui/scenic/lib/gfx/build_args.gni")
@@ -197,7 +198,7 @@ fuchsia_unittest_package("gfx_swapchain_tests") {
            "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
          ] + scenic_test_deps
   test_specs = {
-    environments = [ aemu_env ] + magma_libvulkan_hardware_envs
+    environments = vulkan_envs
   }
 }
 

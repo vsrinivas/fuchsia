@@ -6,6 +6,7 @@ import("//build/components.gni")
 import("//build/test.gni")
 import("//build/testing/environments.gni")
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
+import("//src/lib/vulkan/vulkan.gni")
 
 # Used by other Vulkan tests.
 source_set("helper") {
@@ -58,8 +59,7 @@ fuchsia_test_package("vkreadback_test_package") {
   test_components = [ ":vkreadback_test_component" ]
   test_specs = {
     # TODO(fxbug.dev/47373): Restore astro_env when fxbug.dev/44570 is fixed.
-    environments = [ aemu_env ] + magma_libvulkan_hardware_envs +
-                   [ astro_env ] - [ astro_env ]
+    environments = vulkan_envs + [ astro_env ] - [ astro_env ]
   }
 }
 
