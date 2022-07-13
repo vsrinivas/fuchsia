@@ -45,8 +45,6 @@ class ExampleXUnion {
     kVariant = 1,  // 0x1
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-  // Create an unknown value of this union.
-  ExampleXUnion() : storage_(std::make_shared<Storage_>()) {}
 
   ExampleXUnion(ExampleXUnion&& other) noexcept
       : ExampleXUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
@@ -89,7 +87,8 @@ class ExampleXUnion {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  ExampleXUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  ExampleXUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -178,7 +177,8 @@ class ExampleUnion {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  ExampleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  ExampleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;

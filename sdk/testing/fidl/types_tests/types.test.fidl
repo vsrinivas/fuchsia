@@ -63,6 +63,14 @@ type TestNonResourceXUnion = flexible union {
     1: primitive int32;
 };
 
+type TestFlexibleUnionInStruct = struct {
+    xu TestNonResourceXUnion;
+};
+
+type TestFlexibleUnionInArrayInStruct = struct {
+    arr array<TestNonResourceXUnion, 10>;
+};
+
 /// Verifies that user code can manipulate these bits.
 ///
 /// We use a uint8 since most bitwise operations will cast their operands to

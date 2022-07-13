@@ -83,7 +83,8 @@ class UnionSmallArray {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  UnionSmallArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  UnionSmallArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -170,7 +171,8 @@ class UnionLargeArray {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  UnionLargeArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  UnionLargeArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;

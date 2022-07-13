@@ -39,11 +39,6 @@ class {{ .Name }} {
   {{- end }}
   };
 
-  {{- if .IsFlexible }}
-  // Create an unknown value of this union.
-  {{ .Name }}() : storage_(std::make_shared<Storage_>()) {}
-  {{- end }}
-
   {{ .Name }}({{ .Name }}&& other) noexcept
       : {{ .Name }}(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
     *storage_ = std::move(*other.storage_);
@@ -90,7 +85,8 @@ class {{ .Name }} {
     }
   {{- end }}
 
-  {{ .Name }}(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  {{ .Name }}(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -249,7 +245,7 @@ struct WireTypeForNaturalType<std::unique_ptr<{{ $naturalType }}>> {
     {{- end }}
     {{- if .IsFlexible }}
     default:
-      return {{ $naturalType }}();
+      return {{ $naturalType }}(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
     {{- else }}
     default:
       ZX_PANIC("unknown union tag in strict union");

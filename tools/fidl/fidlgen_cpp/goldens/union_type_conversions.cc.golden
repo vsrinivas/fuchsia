@@ -89,7 +89,7 @@ namespace internal {
       return ::test_union::UnionWithAttributes::WithX(
           WireNaturalConversionTraits<int64_t, int64_t>::ToNatural(std::move(src.x())));
     default:
-      return ::test_union::UnionWithAttributes();
+      return ::test_union::UnionWithAttributes(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test_union::wire::UnionWithAttributes WireNaturalConversionTraits<::test_union::wire::UnionWithAttributes, ::test_union::UnionWithAttributes>::ToWire(fidl::AnyArena& arena, ::test_union::UnionWithAttributes src) {
@@ -424,7 +424,7 @@ std::unique_ptr<::test_union::PizzaOrPasta> WireNaturalConversionTraits<::test_u
       return ::test_union::FlexiblePizzaOrPasta::WithPasta(
           WireNaturalConversionTraits<::test_union::wire::Pasta, ::test_union::Pasta>::ToNatural(std::move(src.pasta())));
     default:
-      return ::test_union::FlexiblePizzaOrPasta();
+      return ::test_union::FlexiblePizzaOrPasta(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test_union::wire::FlexiblePizzaOrPasta WireNaturalConversionTraits<::test_union::wire::FlexiblePizzaOrPasta, ::test_union::FlexiblePizzaOrPasta>::ToWire(fidl::AnyArena& arena, ::test_union::FlexiblePizzaOrPasta src) {
@@ -498,7 +498,7 @@ std::unique_ptr<::test_union::ExplicitPizzaOrPasta> WireNaturalConversionTraits<
       return ::test_union::OlderSimpleUnion::WithF(
           WireNaturalConversionTraits<float, float>::ToNatural(std::move(src.f())));
     default:
-      return ::test_union::OlderSimpleUnion();
+      return ::test_union::OlderSimpleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test_union::wire::OlderSimpleUnion WireNaturalConversionTraits<::test_union::wire::OlderSimpleUnion, ::test_union::OlderSimpleUnion>::ToWire(fidl::AnyArena& arena, ::test_union::OlderSimpleUnion src) {
@@ -539,7 +539,7 @@ std::unique_ptr<::test_union::OlderSimpleUnion> WireNaturalConversionTraits<::te
       return ::test_union::NewerSimpleUnion::WithV(
           WireNaturalConversionTraits<::fidl::VectorView<::fidl::StringView>, ::std::vector<::std::string>>::ToNatural(std::move(src.v())));
     default:
-      return ::test_union::NewerSimpleUnion();
+      return ::test_union::NewerSimpleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test_union::wire::NewerSimpleUnion WireNaturalConversionTraits<::test_union::wire::NewerSimpleUnion, ::test_union::NewerSimpleUnion>::ToWire(fidl::AnyArena& arena, ::test_union::NewerSimpleUnion src) {
@@ -583,7 +583,7 @@ std::unique_ptr<::test_union::NewerSimpleUnion> WireNaturalConversionTraits<::te
       return ::test_union::FlexibleUnion::WithVectorStringAlsoNeedsConstructor(
           WireNaturalConversionTraits<::fidl::VectorView<::fidl::StringView>, ::std::vector<::std::string>>::ToNatural(std::move(src.vector_string_also_needs_constructor())));
     default:
-      return ::test_union::FlexibleUnion();
+      return ::test_union::FlexibleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test_union::wire::FlexibleUnion WireNaturalConversionTraits<::test_union::wire::FlexibleUnion, ::test_union::FlexibleUnion>::ToWire(fidl::AnyArena& arena, ::test_union::FlexibleUnion src) {
@@ -624,7 +624,7 @@ std::unique_ptr<::test_union::FlexibleUnion> WireNaturalConversionTraits<::test_
       return ::test_union::FlexibleFoo::WithI(
           WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.i())));
     default:
-      return ::test_union::FlexibleFoo();
+      return ::test_union::FlexibleFoo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test_union::wire::FlexibleFoo WireNaturalConversionTraits<::test_union::wire::FlexibleFoo, ::test_union::FlexibleFoo>::ToWire(fidl::AnyArena& arena, ::test_union::FlexibleFoo src) {
@@ -692,7 +692,7 @@ std::unique_ptr<::test_union::FieldCollision> WireNaturalConversionTraits<::test
       return ::test_union::ExplicitXUnion::WithF(
           WireNaturalConversionTraits<float, float>::ToNatural(std::move(src.f())));
     default:
-      return ::test_union::ExplicitXUnion();
+      return ::test_union::ExplicitXUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test_union::wire::ExplicitXUnion WireNaturalConversionTraits<::test_union::wire::ExplicitXUnion, ::test_union::ExplicitXUnion>::ToWire(fidl::AnyArena& arena, ::test_union::ExplicitXUnion src) {
@@ -802,7 +802,7 @@ std::unique_ptr<::test_union::ExplicitStrictFoo> WireNaturalConversionTraits<::t
       return ::test_union::ExplicitFoo::WithI(
           WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.i())));
     default:
-      return ::test_union::ExplicitFoo();
+      return ::test_union::ExplicitFoo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test_union::wire::ExplicitFoo WireNaturalConversionTraits<::test_union::wire::ExplicitFoo, ::test_union::ExplicitFoo>::ToWire(fidl::AnyArena& arena, ::test_union::ExplicitFoo src) {
@@ -837,7 +837,7 @@ std::unique_ptr<::test_union::ExplicitFoo> WireNaturalConversionTraits<::test_un
       return ::test_union::XUnionContainingEmptyStruct::WithEmpty(
           WireNaturalConversionTraits<::test_union::wire::Empty, ::test_union::Empty>::ToNatural(std::move(src.empty())));
     default:
-      return ::test_union::XUnionContainingEmptyStruct();
+      return ::test_union::XUnionContainingEmptyStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test_union::wire::XUnionContainingEmptyStruct WireNaturalConversionTraits<::test_union::wire::XUnionContainingEmptyStruct, ::test_union::XUnionContainingEmptyStruct>::ToWire(fidl::AnyArena& arena, ::test_union::XUnionContainingEmptyStruct src) {

@@ -219,7 +219,8 @@ class StrictUnion {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  StrictUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  StrictUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -268,8 +269,6 @@ class FlexibleUnion {
     kField = 1,  // 0x1
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-  // Create an unknown value of this union.
-  FlexibleUnion() : storage_(std::make_shared<Storage_>()) {}
 
   FlexibleUnion(FlexibleUnion&& other) noexcept
       : FlexibleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
@@ -312,7 +311,8 @@ class FlexibleUnion {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  FlexibleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  FlexibleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;

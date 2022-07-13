@@ -191,7 +191,7 @@ std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult>
       return ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse::WithB(
           WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.b())));
     default:
-      return ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse();
+      return ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse>::ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse src) {
@@ -331,7 +331,7 @@ std::unique_ptr<::test_protocollayouts::MainProtocolOnAnonWithErrorResult> WireN
       return ::test_protocollayouts::MainProtocolTwoWayAnonRequest::WithB(
           WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.b())));
     default:
-      return ::test_protocollayouts::MainProtocolTwoWayAnonRequest();
+      return ::test_protocollayouts::MainProtocolTwoWayAnonRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolTwoWayAnonRequest, ::test_protocollayouts::MainProtocolTwoWayAnonRequest>::ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolTwoWayAnonRequest src) {
@@ -363,7 +363,7 @@ std::unique_ptr<::test_protocollayouts::MainProtocolTwoWayAnonRequest> WireNatur
       return ::test_protocollayouts::MainProtocolOnAnonRequest::WithB(
           WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.b())));
     default:
-      return ::test_protocollayouts::MainProtocolOnAnonRequest();
+      return ::test_protocollayouts::MainProtocolOnAnonRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test_protocollayouts::wire::MainProtocolOnAnonRequest WireNaturalConversionTraits<::test_protocollayouts::wire::MainProtocolOnAnonRequest, ::test_protocollayouts::MainProtocolOnAnonRequest>::ToWire(fidl::AnyArena& arena, ::test_protocollayouts::MainProtocolOnAnonRequest src) {
@@ -395,7 +395,7 @@ std::unique_ptr<::test_protocollayouts::MainProtocolOnAnonRequest> WireNaturalCo
       return ::test_protocollayouts::LocalUnionPayload::WithB(
           WireNaturalConversionTraits<bool, bool>::ToNatural(std::move(src.b())));
     default:
-      return ::test_protocollayouts::LocalUnionPayload();
+      return ::test_protocollayouts::LocalUnionPayload(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test_protocollayouts::wire::LocalUnionPayload WireNaturalConversionTraits<::test_protocollayouts::wire::LocalUnionPayload, ::test_protocollayouts::LocalUnionPayload>::ToWire(fidl::AnyArena& arena, ::test_protocollayouts::LocalUnionPayload src) {

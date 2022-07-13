@@ -40,8 +40,6 @@ class UnionWithHandle {
     kH = 1,  // 0x1
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-  // Create an unknown value of this union.
-  UnionWithHandle() : storage_(std::make_shared<Storage_>()) {}
 
   UnionWithHandle(UnionWithHandle&& other) noexcept
       : UnionWithHandle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
@@ -70,7 +68,8 @@ class UnionWithHandle {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  UnionWithHandle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  UnionWithHandle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;

@@ -60,7 +60,7 @@ namespace internal {
       return ::test_handlesintypes::UnionWithHandle::WithH(
           WireNaturalConversionTraits<::zx::vmo, ::zx::vmo>::ToNatural(std::move(src.h())));
     default:
-      return ::test_handlesintypes::UnionWithHandle();
+      return ::test_handlesintypes::UnionWithHandle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test_handlesintypes::wire::UnionWithHandle WireNaturalConversionTraits<::test_handlesintypes::wire::UnionWithHandle, ::test_handlesintypes::UnionWithHandle>::ToWire(fidl::AnyArena& arena, ::test_handlesintypes::UnionWithHandle src) {

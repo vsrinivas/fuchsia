@@ -68,7 +68,7 @@ std::unique_ptr<::test_doccomments::StrictUnion> WireNaturalConversionTraits<::t
       return ::test_doccomments::FlexibleUnion::WithField(
           WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.field())));
     default:
-      return ::test_doccomments::FlexibleUnion();
+      return ::test_doccomments::FlexibleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test_doccomments::wire::FlexibleUnion WireNaturalConversionTraits<::test_doccomments::wire::FlexibleUnion, ::test_doccomments::FlexibleUnion>::ToWire(fidl::AnyArena& arena, ::test_doccomments::FlexibleUnion src) {
