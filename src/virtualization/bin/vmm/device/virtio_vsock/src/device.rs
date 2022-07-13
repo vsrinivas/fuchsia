@@ -145,7 +145,12 @@ impl VsockDevice {
                     if let Some(connection) = self.connections.borrow().get(&key) {
                         connection.handle_guest_tx(op, header, chain).await
                     } else {
-                        Err(anyhow!("Received packet for non-existent connection: {:?}", key))
+                        if op == OpType::Reset {
+                            // Ignore spurious Reset packets for non-existent connections.
+                            Ok(())
+                        } else {
+                            Err(anyhow!("Received packet for non-existent connection: {:?}", key))
+                        }
                     }
                 }
             }

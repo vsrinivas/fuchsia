@@ -928,19 +928,21 @@ TEST_F(VirtioVsockTest, Write) {
   ASSERT_NO_FATAL_FAILURE(GuestWriteClientRead(data, conn));
 }
 
-#if ENABLE_UNSUPPORTED_TESTS
-
-// The device should not send any response to a spurious reset packet.
 TEST_F(VirtioVsockTest, NoResponseToSpuriousReset) {
-  // Send a reset from the guest.
-  DoSend(kVirtioVsockHostPort, kVirtioVsockGuestCid, kVirtioVsockGuestPort,
-         VIRTIO_VSOCK_TYPE_STREAM, VIRTIO_VSOCK_OP_RST);
-  RunLoopUntilIdle();
+  // Spurious reset for a non-existent connection.
+  SendHeaderOnlyPacket(kVirtioVsockHostPort, kVirtioVsockGuestPort, VIRTIO_VSOCK_OP_RST);
 
-  // Expect no response from the host.
-  RxBuffer* buffer = DoReceive();
-  EXPECT_EQ(nullptr, buffer);
+  TestConnection connection;
+  host_endpoint_->Connect2(kVirtioVsockGuestPort, connection.callback());
+
+  // The spurious reset packet didn't result in the device sending a reset back to the guest, so
+  // after creating a connection the first packet on the RX queue is a connection request.
+  RxBuffer* buffer;
+  ASSERT_NO_FATAL_FAILURE(DoReceive(&buffer));
+  ASSERT_EQ(buffer->header->op, VIRTIO_VSOCK_OP_REQUEST);
 }
+
+#if ENABLE_UNSUPPORTED_TESTS
 
 // Endpoints should not be sent OnShutdown events when virtio-vsock is
 // merely responding to spurious packets.
