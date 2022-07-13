@@ -27,14 +27,12 @@ rustc_binary("echo_proxy_server_bin") {
 
 fuchsia_test_component("echo_test") {
   manifest = "meta/echo_test.cml"
-  deps =
-      [ "//src/sys/test_runners/legacy_test/test_data/echo_test:echo_test_bin" ]
+  deps = [ "//src/sys/test_manager/tests/tier_2_tests:echo_test_bin" ]
 }
 
 fuchsia_test_component("echo_proxy_test") {
   manifest = "meta/echo_proxy_test.cml"
-  deps =
-      [ "//src/sys/test_runners/legacy_test/test_data/echo_test:echo_test_bin" ]
+  deps = [ "//src/sys/test_manager/tests/tier_2_tests:echo_test_bin" ]
 }
 
 fuchsia_component("echo_legacy_server") {

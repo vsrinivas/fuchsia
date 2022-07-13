@@ -4,10 +4,25 @@
 
 import("//build/components.gni")
 
+rustc_test("echo_test_bin") {
+  edition = "2021"
+  output_name = "echo_test"
+  testonly = true
+  source_root = "echo_test.rs"
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  sources = [ "echo_test.rs" ]
+}
+
 fuchsia_test_component("echo_test") {
   component_name = "echo_test"
-  deps =
-      [ "//src/sys/test_runners/legacy_test/test_data/echo_test:echo_test_bin" ]
+  deps = [ ":echo_test_bin" ]
   manifest = "meta/echo_test.cml"
 }
 

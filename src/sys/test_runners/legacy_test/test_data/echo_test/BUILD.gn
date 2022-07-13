@@ -3,28 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/rust/rustc_test.gni")
-
-rustc_test("echo_test_bin") {
-  edition = "2021"
-  output_name = "echo_test"
-  testonly = true
-  source_root = "echo_test.rs"
-  deps = [
-    "//examples/components/routing/fidl:echo-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia",
-    "//src/lib/fuchsia-component",
-    "//third_party/rust_crates:anyhow",
-  ]
-
-  sources = [ "echo_test.rs" ]
-}
 
 fuchsia_test_component("echo_test_legacy") {
   component_name = "echo_test"
   manifest = "meta/echo_test.cmx"
-  deps = [ ":echo_test_bin" ]
+  deps = [ "//src/sys/test_manager/tests/tier_2_tests:echo_test_bin" ]
 }
 
 fuchsia_test_component("echo_test_modern") {
