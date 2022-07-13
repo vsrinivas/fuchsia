@@ -277,7 +277,7 @@ clear the listed Fuchsia logs to see the incoming logging events for your Fuchsi
 device.
 
 To clear the Fuchsia logs, click the <span class="material-icons">
-check_box_outline_blank</span> in the top right corner of the **Fuchsia logs**
+delete</span> in the top right corner of the **Fuchsia logs**
 tab.
 
 ## Debug code
@@ -401,3 +401,4 @@ Once you have started the debugger:
 [diagnostics-schema]: /docs/reference/platform-spec/diagnostics/schema.md#payload
 [docs-schema-logs]: /docs/reference/platform-spec/diagnostics/schema.md#logs_2
 [docs-debuggging-vscode]: https://code.visualstudio.com/docs/editor/debugging
+[component-moniker]: /docs/reference/components/moniker.md
