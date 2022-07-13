@@ -33,11 +33,9 @@ legacy_base_package_labels += [
   "//src/media/audio/drivers/configurator:package",
   "//src/power:battery",
   "//src/sys/activity",
-  "//src/ui:runtime_with_scene_manager",
+  "//src/ui:ui_packages",
   "//src/ui/bin/brightness_manager",
   "//src/ui/bin/screensaver",
-  "//src/ui/bin/text:text_manager",
-  "//src/ui/bin/shortcut",
   "//third_party/openssh-portable:openssh-tools",
 ]
 legacy_base_package_labels -= [
@@ -92,7 +90,6 @@ legacy_base_package_labels += [
   "//src/media/playback/bundles:audio_consumer_config",
   "//src/session",
   "//src/ui/bin/terminal",
-  "//src/ui/scenic",
   "//examples/fortune:fortune_teller",
 
   # Starnix
@@ -143,6 +140,9 @@ use_modern_input_injection = true
 # Create an additional (initially empty) account partition in FVM to enable
 # user data protection.
 include_account_in_fvm = true
+
+# Use scene_manager as the default scene owner for UI.
+use_scene_manager_as_scene_owner = true
 
 # Use Flatland as the default graphics protocol in Scenic.
 use_flatland_by_default = true

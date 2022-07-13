@@ -1,0 +1,9 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # If true, use scene_manager as the scene owner component (via ui.cml).
+  # Otherwise use root_presenter (via ui_with_root_presenter.cml).
+  use_scene_manager_as_scene_owner = false
+}

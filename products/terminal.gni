@@ -16,9 +16,6 @@ legacy_base_package_labels -= [
   "//src/intl/intl_services/config:sysmgr_small",
 ]
 
-# Add UI core shard on terminal.
-core_realm_shards += [ "//src/ui:ui_with_root_presenter_core_shard" ]
-
 # Remove intl_services default shards that were added in core.gni.
 core_realm_shards += [ "//src/intl/intl_services:intl_services_shard" ]
 core_realm_shards -= [ "//src/intl/intl_services:intl_services_small_shard" ]
@@ -29,11 +26,16 @@ legacy_base_package_labels += [
   "//src/fonts:build_type_eng",
 ]
 
+# Add UI core shard and packages on terminal.
+core_realm_shards += [ "//src/ui:ui_core_shard" ]
 legacy_cache_package_labels += [
   "//src/fonts/collections:small-open-fonts-collection",
-  "//src/ui:runtime_with_root_presenter",
+  "//src/ui:ui_packages",
   "//src/ui/bin/terminal",
   "//src/ui/tools/tiles",
+
+  # Used to mock out display hardware in UI integration tests.
+  "//src/ui/bin/hardware_display_controller_provider",
 ]
 
 # End to end (E2E) product test runtime dependencies. Must be added to cache,
@@ -45,9 +47,6 @@ legacy_cache_package_labels += [
   # Used for Chromium tests for example:
   #    //src/chromium/web_runner_tests:tests
   "//src/testing/fidl/intl_property_manager",
-
-  # Used to mock out display hardware.
-  "//src/ui/bin/hardware_display_controller_provider",
 
   # General end to end dependencies.
   "//src/tests/end_to_end/bundles:end_to_end_deps",

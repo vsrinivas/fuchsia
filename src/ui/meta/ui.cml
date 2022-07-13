@@ -24,6 +24,7 @@
         },
         {
             // Centralized management of keyboard shortcuts.
+            // TODO(fxbug.dev/104239): Configure presence via build flag.
             name: "shortcut_manager",
             url: "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cm",
             startup: "eager",
