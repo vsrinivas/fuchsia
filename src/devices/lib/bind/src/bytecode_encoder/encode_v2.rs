@@ -22,6 +22,11 @@ pub fn encode_to_bytecode_v2(bind_rules: BindRules) -> Result<Vec<u8>, BindRules
     // Encode the header.
     bytecode.extend_from_slice(&BIND_MAGIC_NUM.to_be_bytes());
     bytecode.extend_from_slice(&BYTECODE_VERSION.to_le_bytes());
+    if bind_rules.enable_debug {
+        bytecode.push(BYTECODE_ENABLE_DEBUG);
+    } else {
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
+    }
 
     // Encode the symbol table.
     bytecode.extend_from_slice(&SYMB_MAGIC_NUM.to_be_bytes());
@@ -102,6 +107,11 @@ pub fn encode_composite_to_bytecode(
     // Encode the header.
     bytecode.extend_from_slice(&BIND_MAGIC_NUM.to_be_bytes());
     bytecode.extend_from_slice(&BYTECODE_VERSION.to_le_bytes());
+    if bind_rules.enable_debug {
+        bytecode.push(BYTECODE_ENABLE_DEBUG);
+    } else {
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
+    }
 
     // Encode the symbol table.
     bytecode.extend_from_slice(&SYMB_MAGIC_NUM.to_be_bytes());
@@ -157,6 +167,15 @@ mod test {
             assert_eq!(expected, self.iter.next().unwrap());
         }
 
+        fn verify_enable_flag(&mut self, expected_debug_flag: bool) {
+            let debug_flag_byte = self.iter.next().unwrap();
+            if expected_debug_flag {
+                assert_eq!(BYTECODE_ENABLE_DEBUG, debug_flag_byte);
+            } else {
+                assert_eq!(BYTECODE_DISABLE_DEBUG, debug_flag_byte);
+            }
+        }
+
         // Verify the expected value as little-endian and advance the iterator to the next four
         // bytes. This function shouldn't be used for magic numbers, which is in big-endian.
         fn verify_next_u32(&mut self, expected: u32) {
@@ -196,9 +215,10 @@ mod test {
             self.verify_next_u32(val.value);
         }
 
-        pub fn verify_bind_rules_header(&mut self) {
+        pub fn verify_bind_rules_header(&mut self, expected_debug_flag: bool) {
             self.verify_magic_num(BIND_MAGIC_NUM);
             self.verify_next_u32(BYTECODE_VERSION);
+            self.verify_enable_flag(expected_debug_flag);
         }
 
         pub fn verify_sym_table_header(&mut self, num_of_bytes: u32) {
@@ -337,7 +357,7 @@ mod test {
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
-        checker.verify_bind_rules_header();
+        checker.verify_bind_rules_header(false);
         checker.verify_sym_table_header(67);
 
         checker.verify_symbol_table(&[
@@ -389,7 +409,43 @@ mod test {
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
 
-        checker.verify_bind_rules_header();
+        checker.verify_bind_rules_header(false);
+        checker.verify_sym_table_header(0);
+        checker.verify_instructions_header(UNCOND_ABORT_BYTES);
+        checker.verify_unconditional_abort();
+        checker.verify_end();
+    }
+
+    #[test]
+    fn test_enable_debug_flag_true() {
+        let bind_rules = BindRules {
+            instructions: to_symbolic_inst_info(vec![SymbolicInstruction::UnconditionalAbort]),
+            symbol_table: HashMap::new(),
+            use_new_bytecode: true,
+            enable_debug: true,
+        };
+
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
+
+        checker.verify_bind_rules_header(true);
+        checker.verify_sym_table_header(0);
+        checker.verify_instructions_header(UNCOND_ABORT_BYTES);
+        checker.verify_unconditional_abort();
+        checker.verify_end();
+    }
+
+    #[test]
+    fn test_enable_debug_flag_false() {
+        let bind_rules = BindRules {
+            instructions: to_symbolic_inst_info(vec![SymbolicInstruction::UnconditionalAbort]),
+            symbol_table: HashMap::new(),
+            use_new_bytecode: true,
+            enable_debug: false,
+        };
+
+        let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
+
+        checker.verify_bind_rules_header(false);
         checker.verify_sym_table_header(0);
         checker.verify_instructions_header(UNCOND_ABORT_BYTES);
         checker.verify_unconditional_abort();
@@ -433,7 +489,7 @@ mod test {
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
-        checker.verify_bind_rules_header();
+        checker.verify_bind_rules_header(false);
         checker.verify_sym_table_header(41);
 
         checker.verify_symbol_table(&["puffleg", "sunangel", "mountaingem"]);
@@ -517,7 +573,7 @@ mod test {
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
-        checker.verify_bind_rules_header();
+        checker.verify_bind_rules_header(false);
         checker.verify_sym_table_header(0);
 
         checker.verify_instructions_header(COND_ABORT_BYTES + COND_ABORT_BYTES);
@@ -548,7 +604,7 @@ mod test {
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
-        checker.verify_bind_rules_header();
+        checker.verify_bind_rules_header(false);
         checker.verify_sym_table_header(0);
 
         checker.verify_instructions_header(UNCOND_JMP_BYTES + UNCOND_ABORT_BYTES + JMP_PAD_BYTES);
@@ -582,7 +638,7 @@ mod test {
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
-        checker.verify_bind_rules_header();
+        checker.verify_bind_rules_header(false);
         checker.verify_sym_table_header(0);
 
         // Verify the instructions.
@@ -633,7 +689,7 @@ mod test {
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
-        checker.verify_bind_rules_header();
+        checker.verify_bind_rules_header(false);
         checker.verify_sym_table_header(0);
 
         let expected_bytes =
@@ -693,7 +749,7 @@ mod test {
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
 
-        checker.verify_bind_rules_header();
+        checker.verify_bind_rules_header(false);
         checker.verify_sym_table_header(0);
 
         // Verify the instructions.
@@ -756,7 +812,7 @@ mod test {
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
-        checker.verify_bind_rules_header();
+        checker.verify_bind_rules_header(false);
         checker.verify_sym_table_header(0);
 
         let instructions_bytes = COND_JMP_BYTES
@@ -815,7 +871,7 @@ mod test {
         };
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
-        checker.verify_bind_rules_header();
+        checker.verify_bind_rules_header(false);
         checker.verify_sym_table_header(0);
 
         let instructions_bytes = UNCOND_JMP_BYTES
@@ -880,7 +936,7 @@ mod test {
 
         let mut checker = BytecodeChecker::new(encode_to_bytecode_v2(bind_rules).unwrap());
 
-        checker.verify_bind_rules_header();
+        checker.verify_bind_rules_header(false);
         checker.verify_sym_table_header(0);
 
         checker.verify_instructions_header(UNCOND_ABORT_BYTES + JMP_PAD_BYTES + UNCOND_ABORT_BYTES);
@@ -1045,10 +1101,11 @@ mod test {
             device_name: "wader".to_string(),
             primary_node: composite_node("stilt".to_string(), primary_node),
             additional_nodes: vec![composite_node("avocet".to_string(), additional_nodes)],
+            enable_debug: false,
         };
 
         let mut checker = BytecodeChecker::new(encode_composite_to_bytecode(bind_rules).unwrap());
-        checker.verify_bind_rules_header();
+        checker.verify_bind_rules_header(false);
         checker.verify_sym_table_header(51);
 
         checker.verify_symbol_table(&["wader", "stilt", "avocet", "ruff", "plover"]);
@@ -1110,10 +1167,11 @@ mod test {
             symbol_table: HashMap::new(),
             primary_node: composite_node("catbird".to_string(), primary_node_inst),
             additional_nodes: vec![composite_node("mockingbird".to_string(), additional_node_inst)],
+            enable_debug: false,
         };
 
         let mut checker = BytecodeChecker::new(encode_composite_to_bytecode(bind_rules).unwrap());
-        checker.verify_bind_rules_header();
+        checker.verify_bind_rules_header(false);
 
         checker.verify_sym_table_header(64);
         checker.verify_symbol_table(&["mimid", "catbird", "trembler", "thrasher", "mockingbird"]);
@@ -1172,10 +1230,11 @@ mod test {
             symbol_table: HashMap::new(),
             primary_node: composite_node("butcherbird".to_string(), primary_node_inst),
             additional_nodes: vec![composite_node("bushshrike".to_string(), additional_node_inst)],
+            enable_debug: false,
         };
 
         let mut checker = BytecodeChecker::new(encode_composite_to_bytecode(bind_rules).unwrap());
-        checker.verify_bind_rules_header();
+        checker.verify_bind_rules_header(false);
 
         checker.verify_sym_table_header(45);
         checker.verify_symbol_table(&["currawong", "butcherbird", "bushshrike"]);
@@ -1237,6 +1296,7 @@ mod test {
             symbol_table: HashMap::new(),
             primary_node: composite_node("butcherbird".to_string(), primary_node_inst),
             additional_nodes: vec![composite_node("bushshrike".to_string(), additional_node_inst)],
+            enable_debug: false,
         };
 
         assert_eq!(
@@ -1254,10 +1314,11 @@ mod test {
             symbol_table: HashMap::new(),
             additional_nodes: vec![],
             primary_node: composite_node("bananaquit".to_string(), primary_node_inst),
+            enable_debug: false,
         };
 
         let mut checker = BytecodeChecker::new(encode_composite_to_bytecode(bind_rules).unwrap());
-        checker.verify_bind_rules_header();
+        checker.verify_bind_rules_header(false);
 
         checker.verify_sym_table_header(30);
         checker.verify_symbol_table(&["treehunter", "bananaquit"]);
@@ -1280,10 +1341,11 @@ mod test {
             symbol_table: HashMap::new(),
             primary_node: composite_node("sunbird".to_string(), vec![]),
             additional_nodes: vec![],
+            enable_debug: false,
         };
 
         let mut checker = BytecodeChecker::new(encode_composite_to_bytecode(bind_rules).unwrap());
-        checker.verify_bind_rules_header();
+        checker.verify_bind_rules_header(false);
 
         checker.verify_sym_table_header(29);
         checker.verify_symbol_table(&["spiderhunter", "sunbird"]);
@@ -1301,6 +1363,7 @@ mod test {
             symbol_table: HashMap::new(),
             primary_node: composite_node("pewee".to_string(), vec![]),
             additional_nodes: vec![],
+            enable_debug: false,
         };
 
         assert_eq!(
@@ -1316,6 +1379,7 @@ mod test {
             symbol_table: HashMap::new(),
             primary_node: composite_node("".to_string(), vec![]),
             additional_nodes: vec![],
+            enable_debug: false,
         };
 
         assert_eq!(
@@ -1331,6 +1395,7 @@ mod test {
             symbol_table: HashMap::new(),
             primary_node: composite_node("pewee".to_string(), vec![]),
             additional_nodes: vec![composite_node("pewee".to_string(), vec![])],
+            enable_debug: false,
         };
 
         assert_eq!(
@@ -1347,6 +1412,7 @@ mod test {
                 composite_node("kingbird".to_string(), vec![]),
                 composite_node("phoebe".to_string(), vec![]),
             ],
+            enable_debug: false,
         };
 
         assert_eq!(

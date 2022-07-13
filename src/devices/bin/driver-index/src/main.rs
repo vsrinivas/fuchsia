@@ -2011,6 +2011,7 @@ mod tests {
                 name: "mockingbird".to_string(),
                 instructions: additional_node_inst,
             }],
+            enable_debug: false,
         };
 
         let bytecode = CompiledBindRules::CompositeBind(bind_rules).encode_to_bytecode().unwrap();

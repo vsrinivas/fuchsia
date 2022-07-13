@@ -192,6 +192,7 @@ pub struct CompositeBindRules<'a> {
     pub symbol_table: SymbolTable,
     pub primary_node: CompositeNode<'a>,
     pub additional_nodes: Vec<CompositeNode<'a>>,
+    pub enable_debug: bool,
 }
 
 pub fn compile<'a>(
@@ -208,6 +209,7 @@ pub fn compile<'a>(
             libraries,
             lint,
             use_new_bytecode,
+            enable_debug,
         )?));
     }
 
@@ -250,6 +252,7 @@ pub fn compile_bind_composite<'a>(
     libraries: &[String],
     lint: bool,
     use_new_bytecode: bool,
+    enable_debug: bool,
 ) -> Result<CompositeBindRules<'a>, CompilerError> {
     let ast = bind_composite::Ast::try_from(rules_str).map_err(CompilerError::BindParserError)?;
     let symbol_table = get_symbol_table_from_libraries(&ast.using, libraries, lint)?;
@@ -276,6 +279,7 @@ pub fn compile_bind_composite<'a>(
         symbol_table: symbol_table,
         primary_node: primary_node,
         additional_nodes: additional_nodes,
+        enable_debug: enable_debug,
     })
 }
 

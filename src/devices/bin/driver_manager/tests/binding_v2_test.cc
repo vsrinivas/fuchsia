@@ -42,6 +42,7 @@ bool match_bind_rules(const uint8_t* bytecode, const zx_device_prop_t* props,
 TEST(BindingV2Test, SingleAbortInstruction) {
   const uint8_t kBytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0, 0x0,  // Bind header
+      0x0,                                          // Debug flag
       0x53, 0x59, 0x4E, 0x42, 0x0,  0x0, 0x0, 0x0,  // Symbol table header
       0x49, 0x4E, 0x53, 0x54, 0x01, 0x0, 0x0, 0x0,  // Instruction header
       0x30                                          // Abort instruction
@@ -55,6 +56,7 @@ TEST(BindingV2Test, SingleAbortInstruction) {
 TEST(BindingV2Test, NoBindRules) {
   const uint8_t kBytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0, 0x0,  // Bind header
+      0x0,                                          // Debug flag
       0x53, 0x59, 0x4E, 0x42, 0x0,  0x0, 0x0, 0x0,  // Symbol table header
       0x49, 0x4E, 0x53, 0x54, 0x0,  0x0, 0x0, 0x0   // Instruction header
   };
@@ -67,6 +69,7 @@ TEST(BindingV2Test, NoBindRules) {
 TEST(BindingV2Test, MatchDeviceProperty) {
   const uint8_t kBytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
+      0x0,                                                           // Debug flag
       0x53, 0x59, 0x4E, 0x42, 0x0,  0x0, 0x0,  0x0,                  // Symbol table header
       0x49, 0x4E, 0x53, 0x54, 0x0B, 0x0, 0x0,  0x0,                  // Instruction header
       0x01, 0x01, 0x05, 0x0,  0x0,  0x0, 0x01, 0x02, 0x0, 0x0, 0x0,  // Equal instruction
@@ -80,6 +83,7 @@ TEST(BindingV2Test, MatchDeviceProperty) {
 TEST(BindingV2Test, MismatchDeviceProperty) {
   const uint8_t kBytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
+      0x0,                                                           // Debug flag
       0x53, 0x59, 0x4E, 0x42, 0x0,  0x0, 0x0,  0x0,                  // Symbol table header
       0x49, 0x4E, 0x53, 0x54, 0x0B, 0x0, 0x0,  0x0,                  // Instruction header
       0x01, 0x01, 0x05, 0x0,  0x0,  0x0, 0x01, 0x02, 0x0, 0x0, 0x0,  // Equal instruction
@@ -93,6 +97,7 @@ TEST(BindingV2Test, MismatchDeviceProperty) {
 TEST(BindingV2Test, NoDevicePropertiesWithMismatchProtocolId) {
   const uint8_t kBytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
+      0x0,                                                           // Debug flag
       0x53, 0x59, 0x4E, 0x42, 0x0,  0x0, 0x0,  0x0,                  // Symbol table header
       0x49, 0x4E, 0x53, 0x54, 0x0B, 0x0, 0x0,  0x0,                  // Instruction header
       0x01, 0x01, 0x01, 0x0,  0x0,  0x0, 0x01, 0x02, 0x0, 0x0, 0x0,  // Equal instruction
@@ -106,6 +111,7 @@ TEST(BindingV2Test, NoDevicePropertiesWithMismatchProtocolId) {
 TEST(BindingV2Test, NoDevicePropertiesWithMatchingProtocolId) {
   const uint8_t kBytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
+      0x0,                                                           // Debug flag
       0x53, 0x59, 0x4E, 0x42, 0x0,  0x0, 0x0,  0x0,                  // Symbol table header
       0x49, 0x4E, 0x53, 0x54, 0x0B, 0x0, 0x0,  0x0,                  // Instruction header
       0x01, 0x01, 0x01, 0x0,  0x0,  0x0, 0x01, 0x05, 0x0, 0x0, 0x0,  // Equal instruction
@@ -119,6 +125,7 @@ TEST(BindingV2Test, NoDevicePropertiesWithMatchingProtocolId) {
 TEST(BindingV2Test, NoDevicePropertiesWithMismatchAutobind) {
   const uint8_t kBytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
+      0x0,                                                           // Debug flag
       0x53, 0x59, 0x4E, 0x42, 0x0,  0x0, 0x0,  0x0,                  // Symbol table header
       0x49, 0x4E, 0x53, 0x54, 0x0B, 0x0, 0x0,  0x0,                  // Instruction header
       0x01, 0x01, 0x02, 0x0,  0x0,  0x0, 0x01, 0x01, 0x0, 0x0, 0x0,  //  Equal instruction
@@ -132,6 +139,7 @@ TEST(BindingV2Test, NoDevicePropertiesWithMismatchAutobind) {
 TEST(BindingV2Test, NoDevicePropertiesWithMatchingAutobind) {
   const uint8_t kBytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
+      0x0,                                                           // Debug flag
       0x53, 0x59, 0x4E, 0x42, 0x0,  0x0, 0x0,  0x0,                  // Symbol table header
       0x49, 0x4E, 0x53, 0x54, 0x0B, 0x0, 0x0,  0x0,                  // Instruction header
       0x01, 0x01, 0x02, 0x0,  0x0,  0x0, 0x01, 0x01, 0x0, 0x0, 0x0,  //  Equal instruction
@@ -145,6 +153,7 @@ TEST(BindingV2Test, NoDevicePropertiesWithMatchingAutobind) {
 TEST(BindingV2Test, MatchDeviceStringProperty) {
   const uint8_t kBytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
+      0x0,                                                           // Debug flag
       0x53, 0x59, 0x4E, 0x42, 0x36, 0x0, 0x0,  0x0,                  // Symbol table header
       0x01, 0x0,  0x0,  0x0,                                         // "rail" symbol key (1)
       0x72, 0x61, 0x69, 0x6c, 0x0,                                   // "rail" string literal
@@ -185,6 +194,7 @@ TEST(BindingV2Test, MatchDeviceStringProperty) {
 TEST(BindingV2Test, MismatchDeviceStringPropertyWStringValue) {
   const uint8_t kBytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
+      0x0,                                                           // Debug flag
       0x53, 0x59, 0x4E, 0x42, 0x12, 0x0, 0x0,  0x0,                  // Symbol table header
       0x01, 0x0,  0x0,  0x0,                                         // "rail" symbol key (1)
       0x72, 0x61, 0x69, 0x6c, 0x0,                                   // "rail" string literal
@@ -206,6 +216,7 @@ TEST(BindingV2Test, MismatchDeviceStringPropertyWStringValue) {
 TEST(BindingV2Test, MismatchDeviceStringPropertyWIntValue) {
   const uint8_t kBytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
+      0x0,                                                           // Debug flag
       0x53, 0x59, 0x4E, 0x42, 0x12, 0x0, 0x0,  0x0,                  // Symbol table header
       0x01, 0x0,  0x0,  0x0,                                         // "rail" symbol key (1)
       0x72, 0x61, 0x69, 0x6c, 0x0,                                   // "rail" string literal
@@ -226,6 +237,7 @@ TEST(BindingV2Test, MismatchDeviceStringPropertyWIntValue) {
 TEST(BindingV2Test, MismatchDeviceStringPropertyWBoolValue) {
   const uint8_t kBytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
+      0x0,                                                           // Debug flag
       0x53, 0x59, 0x4E, 0x42, 0x12, 0x0, 0x0,  0x0,                  // Symbol table header
       0x01, 0x0,  0x0,  0x0,                                         // "rail" symbol key (1)
       0x72, 0x61, 0x69, 0x6c, 0x0,                                   // "rail" string literal
@@ -245,6 +257,7 @@ TEST(BindingV2Test, MismatchDeviceStringPropertyWBoolValue) {
 TEST(BindingV2Test, MismatchDeviceStringPropertyWEnumValue) {
   const uint8_t kBytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
+      0x0,                                                           // Debug flag
       0x53, 0x59, 0x4E, 0x42, 0x12, 0x0, 0x0,  0x0,                  // Symbol table header
       0x01, 0x0,  0x0,  0x0,                                         // "rail" symbol key (1)
       0x72, 0x61, 0x69, 0x6c, 0x0,                                   // "rail" string literal
@@ -266,6 +279,7 @@ TEST(BindingV2Test, MismatchDeviceStringPropertyWEnumValue) {
 TEST(BindingV2Test, MatchDevicePropertyAndStringProperty) {
   const uint8_t kBytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
+      0x0,                                                           // Debug flag
       0x53, 0x59, 0x4E, 0x42, 0x36, 0x0, 0x0,  0x0,                  // Symbol table header
       0x01, 0x0,  0x0,  0x0,                                         // "rail" symbol key (1)
       0x72, 0x61, 0x69, 0x6c, 0x0,                                   // "rail" string literal
@@ -306,6 +320,7 @@ TEST(BindingV2Test, MatchDevicePropertyAndStringProperty) {
 TEST(BindingV2Test, MatchDevicePropertyMismatchStringProperty) {
   const uint8_t kBytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
+      0x0,                                                           // Debug flag
       0x53, 0x59, 0x4E, 0x42, 0x12, 0x0, 0x0,  0x0,                  // Symbol table header
       0x01, 0x0,  0x0,  0x0,                                         // "rail" symbol key (1)
       0x72, 0x61, 0x69, 0x6c, 0x0,                                   // "rail" string literal
@@ -328,6 +343,7 @@ TEST(BindingV2Test, MatchDevicePropertyMismatchStringProperty) {
 TEST(BindingV2Test, MismatchDevicePropertyMatchStringProperty) {
   const uint8_t kBytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
+      0x0,                                                           // Debug flag
       0x53, 0x59, 0x4E, 0x42, 0x12, 0x0, 0x0,  0x0,                  // Symbol table header
       0x01, 0x0,  0x0,  0x0,                                         // "rail" symbol key (1)
       0x72, 0x61, 0x69, 0x6c, 0x0,                                   // "rail" string literal
@@ -350,6 +366,7 @@ TEST(BindingV2Test, MismatchDevicePropertyMatchStringProperty) {
 TEST(BindingV2Test, StringPropertyNotInUnicode) {
   const uint8_t kBytecode[] = {
       0x42, 0x49, 0x4E, 0x44, 0x02, 0x0, 0x0,  0x0,                  // Bind header
+      0x0,                                                           // Debug flag
       0x53, 0x59, 0x4E, 0x42, 0x0,  0x0, 0x0,  0x0,                  // Symbol table header
       0x49, 0x4E, 0x53, 0x54, 0x0B, 0x0, 0x0,  0x0,                  // Instruction header
       0x01, 0x01, 0x05, 0x0,  0x0,  0x0, 0x01, 0x02, 0x0, 0x0, 0x0,  // 5 == 2

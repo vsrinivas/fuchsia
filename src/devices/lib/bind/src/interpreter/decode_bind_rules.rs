@@ -20,6 +20,9 @@ const NODE_TYPE_HEADER_SZ: usize = 9;
 // header and instruction header.
 const MINIMUM_BYTECODE_SZ: usize = HEADER_SZ * 3;
 
+// Each debug flag byte contains 1 byte
+const DEBUG_FLAG_SZ: usize = 1;
+
 // Parse through the bytecode and separate out the symbol table and the
 // following instructions. Verify the bytecode header and the symbol table
 // header.
@@ -35,6 +38,9 @@ fn get_symbol_table_and_instruction_bytecode(
     if version != BYTECODE_VERSION {
         return Err(BytecodeError::InvalidVersion(version));
     }
+
+    // Remove the enable_debug flag byte from the bytecode
+    let bytecode = read_and_remove_debug_flag(bytecode)?;
 
     // Remove the symbol table header and verify that the size is less than
     // the remaining bytecode.
@@ -240,6 +246,15 @@ fn read_and_remove_header(
     Ok((val, bytecode.split_off(HEADER_SZ)))
 }
 
+// Verify the enable_debug flag byte.
+fn read_and_remove_debug_flag(mut bytecode: Vec<u8>) -> Result<Vec<u8>, BytecodeError> {
+    let debug_flag_byte = bytecode[0];
+    if debug_flag_byte != BYTECODE_DISABLE_DEBUG && debug_flag_byte != BYTECODE_ENABLE_DEBUG {
+        return Err(BytecodeError::InvalidDebugFlag(debug_flag_byte));
+    }
+    Ok(bytecode.split_off(DEBUG_FLAG_SZ))
+}
+
 // Verify the node type and return the node ID and the number of bytes in the node instructions.
 fn verify_and_read_node_header(
     bytecode: &Vec<u8>,
@@ -434,6 +449,7 @@ mod test {
     fn test_invalid_header() {
         // Test invalid magic number.
         let mut bytecode: Vec<u8> = vec![0x41, 0x49, 0x4E, 0x44, 0x02, 0, 0, 0];
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, 0);
         assert_eq!(
@@ -443,12 +459,14 @@ mod test {
 
         // Test invalid version.
         let mut bytecode: Vec<u8> = vec![0x42, 0x49, 0x4E, 0x44, 0x03, 0, 0, 0];
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, 0);
         assert_eq!(Err(BytecodeError::InvalidVersion(3)), DecodedRules::new(bytecode));
 
         // Test invalid symbol table header.
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, 0xAAAAAAAA, 0);
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, 0);
         assert_eq!(
@@ -458,6 +476,7 @@ mod test {
 
         // Test invalid instruction header.
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
         append_section_header(&mut bytecode, 0xAAAAAAAA, 0);
         assert_eq!(
@@ -469,6 +488,7 @@ mod test {
     #[test]
     fn test_long_string() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
 
         let mut long_str: [u8; 275] = [0x41; 275];
         long_str[274] = 0;
@@ -486,6 +506,7 @@ mod test {
     #[test]
     fn test_unexpected_end() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         bytecode.extend_from_slice(&SYMB_MAGIC_NUM.to_be_bytes());
         assert_eq!(Err(BytecodeError::UnexpectedEnd), DecodedRules::new(bytecode));
     }
@@ -493,6 +514,7 @@ mod test {
     #[test]
     fn test_string_with_no_zero_terminator() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 14);
 
         let invalid_str: [u8; 10] = [0x41; 10];
@@ -507,6 +529,7 @@ mod test {
     #[test]
     fn test_duplicate_key() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 14);
 
         let str_1: [u8; 3] = [0x41, 0x42, 0];
@@ -524,6 +547,7 @@ mod test {
     #[test]
     fn test_invalid_key() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 15);
 
         let str_1: [u8; 4] = [0x41, 0x45, 0x60, 0];
@@ -541,6 +565,7 @@ mod test {
     #[test]
     fn test_cutoff_symbol_table_key() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 9);
 
         let str_1: [u8; 3] = [0x41, 0x42, 0];
@@ -556,6 +581,7 @@ mod test {
     #[test]
     fn test_incorrect_inst_size() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, 0);
         bytecode.push(0x30);
@@ -565,6 +591,7 @@ mod test {
     #[test]
     fn test_minimum_size_bytecode() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, 0);
         assert_eq!(
@@ -580,6 +607,7 @@ mod test {
     #[test]
     fn test_incorrect_size_symbol_table() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, u32::MAX);
         append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, 0);
         assert_eq!(Err(BytecodeError::IncorrectSectionSize), DecodedRules::new(bytecode));
@@ -588,6 +616,7 @@ mod test {
     #[test]
     fn test_instructions() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
 
         let instructions = [0x30, 0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0, 0x10];
@@ -601,6 +630,7 @@ mod test {
     #[test]
     fn test_invalid_value_type() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
 
         let instructions = [0x01, 0x01, 0, 0, 0, 0x05, 0x10, 0, 0, 0, 0];
@@ -611,8 +641,34 @@ mod test {
     }
 
     #[test]
+    fn test_missing_debug_flag() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
+
+        let instructions = [0x01, 0x01, 0x05, 0, 0, 0, 0x01, 0x16, 0, 0, 0];
+        append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, instructions.len() as u32);
+        bytecode.extend_from_slice(&instructions);
+
+        assert_eq!(Err(BytecodeError::InvalidDebugFlag(0x53)), DecodedRules::new(bytecode));
+    }
+
+    #[test]
+    fn test_invalid_debug_flag() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(0x03);
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
+
+        let instructions = [0x01, 0x01, 0x05, 0, 0, 0, 0x01, 0x16, 0, 0, 0];
+        append_section_header(&mut bytecode, INSTRUCTION_MAGIC_NUM, instructions.len() as u32);
+        bytecode.extend_from_slice(&instructions);
+
+        assert_eq!(Err(BytecodeError::InvalidDebugFlag(0x03)), DecodedRules::new(bytecode));
+    }
+
+    #[test]
     fn test_value_key_missing_in_symbols() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
 
         let instructions = [0x01, 0x00, 0, 0, 0, 0x05, 0x10, 0, 0, 0, 0];
@@ -628,6 +684,7 @@ mod test {
     #[test]
     fn test_value_string_missing_in_symbols() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
 
         let instructions = [0x01, 0x02, 0, 0, 0, 0x05, 0x10, 0, 0, 0, 0];
@@ -643,6 +700,7 @@ mod test {
     #[test]
     fn test_value_enum_missing_in_symbols() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
 
         let instructions = [0x01, 0x04, 0, 0, 0, 0x05, 0x10, 0, 0, 0, 0];
@@ -658,6 +716,7 @@ mod test {
     #[test]
     fn test_value_invalid_bool() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
 
         let instructions = [0x01, 0x01, 0, 0, 0, 0x05, 0x03, 0, 0, 0, 0x01];
@@ -670,6 +729,7 @@ mod test {
     #[test]
     fn test_invalid_outofbounds_jump_offset() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
 
         let instructions = [
@@ -690,6 +750,7 @@ mod test {
     #[test]
     fn test_valid_bytecode() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 18);
 
         let str_1: [u8; 5] = [0x57, 0x52, 0x45, 0x4E, 0]; // "WREN"
@@ -754,6 +815,7 @@ mod test {
     #[test]
     fn test_valid_composite_bind() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 38);
 
         let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
@@ -825,6 +887,7 @@ mod test {
     #[test]
     fn test_primary_node_only() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 18);
 
         let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
@@ -866,6 +929,7 @@ mod test {
     #[test]
     fn test_missing_device_name() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 9);
 
         let primary_node_name: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "RAIL"
@@ -887,6 +951,7 @@ mod test {
     #[test]
     fn test_missing_node_name() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 9);
 
         let primary_node_name: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "RAIL"
@@ -908,6 +973,7 @@ mod test {
     #[test]
     fn test_missing_primary_node() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 29);
 
         let device_name: [u8; 5] = [0x4C, 0x4F, 0x4F, 0x4E, 0]; // "LOON"
@@ -956,6 +1022,7 @@ mod test {
     #[test]
     fn test_primary_node_incorrect_order() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 29);
 
         let device_name: [u8; 5] = [0x4C, 0x4F, 0x4F, 0x4E, 0]; // "LOON"
@@ -998,6 +1065,7 @@ mod test {
     #[test]
     fn test_multiple_primary_nodes() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 29);
 
         let device_name: [u8; 5] = [0x4C, 0x4F, 0x4F, 0x4E, 0]; // "LOON"
@@ -1040,6 +1108,7 @@ mod test {
     #[test]
     fn test_invalid_node_type() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 18);
 
         let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
@@ -1071,6 +1140,7 @@ mod test {
     #[test]
     fn test_incorrect_node_section_sz_overlap() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
 
         let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
@@ -1119,6 +1189,7 @@ mod test {
     #[test]
     fn test_incorrect_node_section_sz_undersize() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
 
         let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
@@ -1158,6 +1229,7 @@ mod test {
     #[test]
     fn test_incorrect_node_section_sz_oversize() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 18);
 
         let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
@@ -1187,6 +1259,7 @@ mod test {
     #[test]
     fn test_invalid_value_type_composite_primary() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
 
         let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
@@ -1232,6 +1305,7 @@ mod test {
     #[test]
     fn test_invalid_value_type_composite_additional() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
 
         let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
@@ -1277,6 +1351,7 @@ mod test {
     #[test]
     fn test_value_key_missing_in_symbols_composite_primary() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
 
         let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
@@ -1325,6 +1400,7 @@ mod test {
     #[test]
     fn test_value_key_missing_in_symbols_composite_additional() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
 
         let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
@@ -1373,6 +1449,7 @@ mod test {
     #[test]
     fn test_value_string_missing_in_symbols_composite_primary() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
 
         let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
@@ -1421,6 +1498,7 @@ mod test {
     #[test]
     fn test_value_string_missing_in_symbols_composite_additional() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
 
         let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
@@ -1469,6 +1547,7 @@ mod test {
     #[test]
     fn test_value_enum_missing_in_symbols_composite_primary() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
 
         let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
@@ -1517,6 +1596,7 @@ mod test {
     #[test]
     fn test_value_enum_missing_in_symbols_composite_additional() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
 
         let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
@@ -1565,6 +1645,7 @@ mod test {
     #[test]
     fn test_value_invalid_bool_composite_primary() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
 
         let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
@@ -1610,6 +1691,7 @@ mod test {
     #[test]
     fn test_value_invalid_bool_composite_additional() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
 
         let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
@@ -1655,6 +1737,7 @@ mod test {
     #[test]
     fn test_invalid_outofbounds_jump_offset_composite_primary() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
 
         let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
@@ -1701,6 +1784,7 @@ mod test {
     #[test]
     fn test_invalid_outofbounds_jump_offset_composite_additional() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 27);
 
         let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
@@ -1747,6 +1831,7 @@ mod test {
     #[test]
     fn test_composite_header_in_noncomposite_bytecode() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 18);
 
         let str_1: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
@@ -1779,6 +1864,7 @@ mod test {
     #[test]
     fn test_inst_header_in_composite_bytecode() {
         let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
         append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 0);
 
         let instructions = [0x30, 0x01, 0x01, 0, 0, 0, 0x05, 0x10, 0, 0, 0x10];
@@ -1832,6 +1918,7 @@ mod test {
                 name: "cowbird".to_string(),
                 instructions: additional_node_inst,
             }],
+            enable_debug: false,
         })
         .encode_to_bytecode()
         .unwrap();

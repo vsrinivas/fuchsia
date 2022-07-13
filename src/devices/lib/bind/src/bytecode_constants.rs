@@ -20,6 +20,10 @@ pub const BYTECODE_VERSION: u32 = 2;
 
 pub const MAX_STRING_LENGTH: usize = 255;
 
+// Bytecode values for enable_debug flag
+pub const BYTECODE_ENABLE_DEBUG: u8 = 1;
+pub const BYTECODE_DISABLE_DEBUG: u8 = 0;
+
 // The first key in the symbol table. The key increments by 1 with each entry.
 pub const SYMB_TBL_START_KEY: u32 = 1;
 

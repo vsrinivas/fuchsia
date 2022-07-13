@@ -562,6 +562,12 @@ impl From<BytecodeError> for UserError {
             BytecodeError::MissingNodeIdInSymbolTable => {
                 UserError::new("E821", "Missing node name ID in the symbol table", None, false)
             }
+            BytecodeError::InvalidDebugFlag(val) => UserError::new(
+                "E822",
+                &format!("Invalid boolean value for debug flag: {}", val),
+                None,
+                false,
+            ),
         }
     }
 }

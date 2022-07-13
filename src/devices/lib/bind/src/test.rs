@@ -156,7 +156,7 @@ fn run_composite_bind_test_specs(
     rules: &str,
     libraries: &[String],
 ) -> Result<bool, TestError> {
-    let composite_bind = compiler::compile_bind_composite(rules, libraries, false, false)
+    let composite_bind = compiler::compile_bind_composite(rules, libraries, false, false, false)
         .map_err(TestError::CompilerError)?;
 
     // Map composite bind rules by node name.

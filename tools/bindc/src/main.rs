@@ -571,7 +571,8 @@ mod tests {
         assert_eq!(
             bind_rules.encode_to_bytecode().unwrap(),
             vec![
-                66, 73, 78, 68, 2, 0, 0, 0, 83, 89, 78, 66, 0, 0, 0, 0, 73, 78, 83, 84, 0, 0, 0, 0
+                66, 73, 78, 68, 2, 0, 0, 0, 0, 83, 89, 78, 66, 0, 0, 0, 0, 73, 78, 83, 84, 0, 0, 0,
+                0
             ]
         );
 
@@ -583,10 +584,10 @@ mod tests {
         };
         let template = write_bind_template(bind_rules).unwrap();
         assert!(
-            template.contains("ZIRCON_DRIVER_BEGIN_PRIV_V2(Driver, Ops, VendorName, Version, 24)")
+            template.contains("ZIRCON_DRIVER_BEGIN_PRIV_V2(Driver, Ops, VendorName, Version, 25)")
         );
         assert!(template.contains(
-            "0x42,0x49,0x4e,0x44,0x2,0x0,0x0,0x0,0x53,0x59,0x4e,0x42,0x0,\
+            "0x42,0x49,0x4e,0x44,0x2,0x0,0x0,0x0,0x0,0x53,0x59,0x4e,0x42,0x0,\
              0x0,0x0,0x0,0x49,0x4e,0x53,0x54,0x0,0x0,0x0,0x0"
         ));
     }
@@ -605,8 +606,8 @@ mod tests {
         assert_eq!(
             bind_rules.encode_to_bytecode().unwrap(),
             vec![
-                66, 73, 78, 68, 2, 0, 0, 0, 83, 89, 78, 66, 0, 0, 0, 0, 73, 78, 83, 84, 1, 0, 0, 0,
-                48
+                66, 73, 78, 68, 2, 0, 0, 0, 0, 83, 89, 78, 66, 0, 0, 0, 0, 73, 78, 83, 84, 1, 0, 0,
+                0, 48
             ]
         );
 
@@ -621,10 +622,10 @@ mod tests {
         };
         let template = write_bind_template(bind_rules).unwrap();
         assert!(
-            template.contains("ZIRCON_DRIVER_BEGIN_PRIV_V2(Driver, Ops, VendorName, Version, 25)")
+            template.contains("ZIRCON_DRIVER_BEGIN_PRIV_V2(Driver, Ops, VendorName, Version, 26)")
         );
         assert!(template.contains(
-            "0x42,0x49,0x4e,0x44,0x2,0x0,0x0,0x0,0x53,0x59,0x4e,0x42,0x0,0x0,\
+            "0x42,0x49,0x4e,0x44,0x2,0x0,0x0,0x0,0x0,0x53,0x59,0x4e,0x42,0x0,0x0,\
              0x0,0x0,0x49,0x4e,0x53,0x54,0x1,0x0,0x0,0x0,0x30"
         ));
     }
@@ -715,6 +716,7 @@ mod tests {
             compiled_bind_rules.encode_to_bytecode().unwrap(),
             vec![
                 0x42, 0x49, 0x4e, 0x44, 0x02, 0x00, 0x00, 0x00, // BIND header
+                0x00, // debug_flag byte
                 0x53, 0x59, 0x4e, 0x42, 0x28, 0x00, 0x00, 0x00, // SYMB header
                 0x01, 0x00, 0x00, 0x00, // "wallcreeper" ID
                 0x77, 0x61, 0x6c, 0x6c, 0x63, 0x72, 0x65, 0x65, // "wallcree"
