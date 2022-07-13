@@ -838,9 +838,7 @@ impl MemoryManager {
                     Arc::new(vmo),
                     0,
                     length,
-                    zx::VmarFlags::PERM_READ
-                        | zx::VmarFlags::PERM_WRITE
-                        | zx::VmarFlags::REQUIRE_NON_RESIZABLE,
+                    zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE,
                     MappingOptions::empty(),
                     None,
                 )?;
@@ -885,10 +883,7 @@ impl MemoryManager {
                 &mapping.vmo,
                 vmo_offset as u64,
                 delta,
-                zx::VmarFlags::PERM_READ
-                    | zx::VmarFlags::PERM_WRITE
-                    | zx::VmarFlags::REQUIRE_NON_RESIZABLE
-                    | zx::VmarFlags::SPECIFIC,
+                zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE | zx::VmarFlags::SPECIFIC,
             ) {
                 Ok(_) => {
                     state.mappings.insert(brk.base..new_end, mapping);
