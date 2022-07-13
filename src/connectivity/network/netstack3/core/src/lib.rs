@@ -63,7 +63,7 @@ pub use crate::{
             IpAddressState, IpDeviceEvent,
         },
         forwarding::AddRouteError,
-        icmp,
+        get_all_routes, icmp,
         socket::{IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError},
         AddableEntry, AddableEntryEither, EntryEither, IpDeviceIdContext, IpExt, IpLayerEvent,
         Ipv4StateBuilder, Ipv6StateBuilder, TransportIpContext,
@@ -537,15 +537,6 @@ pub fn del_route<NonSyncCtx: NonSyncContext>(
         crate::ip::del_route::<Ipv6, _, _>(sync_ctx, ctx, subnet)
     )
     .map_err(From::from)
-}
-
-/// Get all the routes.
-pub fn get_all_routes<'a, NonSyncCtx: NonSyncContext>(
-    ctx: &'a SyncCtx<NonSyncCtx>,
-) -> impl 'a + Iterator<Item = EntryEither<DeviceId>> {
-    let v4_routes = ip::iter_all_routes::<_, Ipv4Addr>(ctx);
-    let v6_routes = ip::iter_all_routes::<_, Ipv6Addr>(ctx);
-    v4_routes.cloned().map(From::from).chain(v6_routes.cloned().map(From::from))
 }
 
 #[cfg(test)]

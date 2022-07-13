@@ -27,7 +27,6 @@ use core::{
     fmt::{self, Debug, Display, Formatter},
     hash::Hash,
     num::NonZeroU8,
-    slice::Iter,
 };
 
 use log::{debug, trace};
@@ -75,7 +74,7 @@ use crate::{
             IpSocketContext, IpSocketHandler,
         },
     },
-    BufferNonSyncContext, Instant, NonSyncContext, StackState, SyncCtx,
+    BufferNonSyncContext, Instant, NonSyncContext, SyncCtx,
 };
 
 /// Default IPv4 TTL.
@@ -975,42 +974,6 @@ pub(crate) struct IpStateInner<I: Ip, Instant: crate::Instant, DeviceId> {
     table: ForwardingTable<I, DeviceId>,
     fragment_cache: IpPacketFragmentCache<I, Instant>,
     pmtu_cache: PmtuCache<I, Instant>,
-}
-
-pub(crate) trait GetStateIpExt: Ip {
-    fn get_state_inner<C: NonSyncContext>(
-        state: &StackState<C>,
-    ) -> &IpStateInner<Self, C::Instant, DeviceId>;
-
-    fn get_state_inner_mut<C: NonSyncContext>(
-        state: &mut StackState<C>,
-    ) -> &mut IpStateInner<Self, C::Instant, DeviceId>;
-}
-
-impl GetStateIpExt for Ipv4 {
-    fn get_state_inner<C: NonSyncContext>(
-        state: &StackState<C>,
-    ) -> &IpStateInner<Self, C::Instant, DeviceId> {
-        return &state.ipv4.inner;
-    }
-    fn get_state_inner_mut<C: NonSyncContext>(
-        state: &mut StackState<C>,
-    ) -> &mut IpStateInner<Self, C::Instant, DeviceId> {
-        return &mut state.ipv4.inner;
-    }
-}
-
-impl GetStateIpExt for Ipv6 {
-    fn get_state_inner<C: NonSyncContext>(
-        state: &StackState<C>,
-    ) -> &IpStateInner<Self, C::Instant, DeviceId> {
-        return &state.ipv6.inner;
-    }
-    fn get_state_inner_mut<C: NonSyncContext>(
-        state: &mut StackState<C>,
-    ) -> &mut IpStateInner<Self, C::Instant, DeviceId> {
-        return &mut state.ipv6.inner;
-    }
 }
 
 /// The identifier for timer events in the IP layer.
@@ -2193,14 +2156,19 @@ pub(crate) fn del_device_routes<
         .retain(|Entry { subnet: _, device, gateway: _ }| device != to_delete)
 }
 
-/// Returns all the routes for the provided `IpAddress` type.
-pub(crate) fn iter_all_routes<NonSyncCtx: NonSyncContext, A: IpAddress>(
+/// Get all the routes.
+pub fn get_all_routes<NonSyncCtx: NonSyncContext>(
     ctx: &SyncCtx<NonSyncCtx>,
-) -> Iter<'_, Entry<A, DeviceId>>
-where
-    A::Version: GetStateIpExt,
-{
-    A::Version::get_state_inner(&ctx.state).table.iter_table()
+) -> Vec<EntryEither<DeviceId>> {
+    ctx.state
+        .ipv4
+        .inner
+        .table
+        .iter_table()
+        .cloned()
+        .map(From::from)
+        .chain(ctx.state.ipv6.inner.table.iter_table().cloned().map(From::from))
+        .collect()
 }
 
 /// The metadata associated with an outgoing IP packet.
@@ -2495,7 +2463,7 @@ mod tests {
             DummyEventDispatcherBuilder, DummyNonSyncCtx, TestIpExt, DUMMY_CONFIG_V4,
             DUMMY_CONFIG_V6,
         },
-        Ctx, DeviceId,
+        Ctx, DeviceId, StackState,
     };
 
     // Some helper functions
@@ -3230,6 +3198,42 @@ mod tests {
                 .unwrap(),
         }
         .into_inner()
+    }
+
+    trait GetStateIpExt: Ip {
+        fn get_state_inner<C: NonSyncContext>(
+            state: &StackState<C>,
+        ) -> &IpStateInner<Self, C::Instant, DeviceId>;
+
+        fn get_state_inner_mut<C: NonSyncContext>(
+            state: &mut StackState<C>,
+        ) -> &mut IpStateInner<Self, C::Instant, DeviceId>;
+    }
+
+    impl GetStateIpExt for Ipv4 {
+        fn get_state_inner<C: NonSyncContext>(
+            state: &StackState<C>,
+        ) -> &IpStateInner<Self, C::Instant, DeviceId> {
+            return &state.ipv4.inner;
+        }
+        fn get_state_inner_mut<C: NonSyncContext>(
+            state: &mut StackState<C>,
+        ) -> &mut IpStateInner<Self, C::Instant, DeviceId> {
+            return &mut state.ipv4.inner;
+        }
+    }
+
+    impl GetStateIpExt for Ipv6 {
+        fn get_state_inner<C: NonSyncContext>(
+            state: &StackState<C>,
+        ) -> &IpStateInner<Self, C::Instant, DeviceId> {
+            return &state.ipv6.inner;
+        }
+        fn get_state_inner_mut<C: NonSyncContext>(
+            state: &mut StackState<C>,
+        ) -> &mut IpStateInner<Self, C::Instant, DeviceId> {
+            return &mut state.ipv6.inner;
+        }
     }
 
     #[ip_test]

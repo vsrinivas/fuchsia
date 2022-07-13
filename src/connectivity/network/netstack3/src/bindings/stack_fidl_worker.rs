@@ -334,6 +334,7 @@ where
         let Ctx { sync_ctx, non_sync_ctx } = self.ctx.deref();
 
         get_all_routes(sync_ctx)
+            .into_iter()
             .filter_map(|entry| match entry.try_into_fidl_with_ctx(&non_sync_ctx) {
                 Ok(entry) => Some(entry),
                 Err(e) => {
