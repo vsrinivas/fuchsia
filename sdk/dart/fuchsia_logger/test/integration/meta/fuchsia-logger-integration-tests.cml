@@ -3,9 +3,6 @@
 // found in the LICENSE file.
 {
     include: [ "syslog/client.shard.cml" ],
-    program: {
-        data: "data/fuchsia-logger-integration-tests",
-    },
     use: [
         { protocol: "fuchsia.logger.Log" },
     ],

@@ -6,9 +6,6 @@
         "sys/component/realm_builder.shard.cml",
         "syslog/client.shard.cml",
     ],
-    program: {
-        data: "data/dart-archive-reader-test",
-    },
     use: [
         { protocol: "fuchsia.diagnostics.ArchiveAccessor" },
     ],
