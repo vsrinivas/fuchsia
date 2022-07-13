@@ -1,0 +1,70 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("bin") {
+  testonly = true
+  output_name = "test-ui-stack"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    ":test_ui_stack_config_lib",
+    "//sdk/fidl/fuchsia.accessibility.semantics",
+    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.input3",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/fidl/fuchsia.ui.shortcut",
+    "//sdk/fidl/fuchsia.ui.test.scene",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/ui/testing/ui_test_manager:ui_test_manager",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_component("test-ui-stack-component") {
+  testonly = true
+  component_name = "test-ui-stack"
+  manifest = "meta/test-ui-stack.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("test-ui-stack-realm") {
+  testonly = true
+  component_name = "test-ui-stack-realm"
+  manifest = "meta/test-ui-stack-realm.cml"
+  deps = [ ":test-ui-stack-component" ]
+}
+
+# Required for structured config.
+fuchsia_component_manifest("test_ui_stack_manifest") {
+  testonly = true
+  component_name = "test-ui-stack"
+  manifest = "meta/test-ui-stack.cml"
+}
+
+fuchsia_structured_config_cpp_elf_lib("test_ui_stack_config_lib") {
+  testonly = true
+  cm_label = ":test_ui_stack_manifest"
+}
+
+fuchsia_structured_config_values("test_ui_stack_default_config") {
+  testonly = true
+  cm_label = ":test_ui_stack_manifest"
+  values = {
+    use_modern_ui_stack = false
+  }
+}
+
+fuchsia_package("test-ui-stack") {
+  testonly = true
+  deps = [
+    ":test-ui-stack-component",
+    ":test_ui_stack_default_config",
+  ]
+}
