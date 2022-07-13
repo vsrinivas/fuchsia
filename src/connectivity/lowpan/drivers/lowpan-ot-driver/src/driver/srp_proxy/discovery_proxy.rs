@@ -50,7 +50,7 @@ fn process_addresses_from_host_addresses<T: IntoIterator<Item = HostAddress>>(
         .flat_map(|x| {
             if let fidl_fuchsia_net::IpAddress::Ipv6(addr) = x.address {
                 let addr = ot::Ip6Address::from(addr.addr);
-                if !ipv6addr_is_unicast_link_local(&addr) {
+                if should_proxy_address(&addr) {
                     return Some(addr);
                 }
             }
@@ -87,7 +87,7 @@ fn process_addresses_from_socket_addresses<
                             port
                         );
                     }
-                    if !ipv6addr_is_unicast_link_local(&addr) {
+                    if should_proxy_address(&addr) {
                         return Some(addr);
                     }
                 }
@@ -117,6 +117,11 @@ pub struct DiscoveryProxy {
 /// however that method is [still experimental](https://github.com/rust-lang/rust/issues/27709).
 fn ipv6addr_is_unicast_link_local(addr: &std::net::Ipv6Addr) -> bool {
     (addr.segments()[0] & 0xffc0) == 0xfe80
+}
+
+/// Returns `true` if the address should be proxied to the thread network.
+fn should_proxy_address(addr: &std::net::Ipv6Addr) -> bool {
+    !ipv6addr_is_unicast_link_local(addr) && !addr.is_loopback()
 }
 
 impl DiscoveryProxy {
@@ -619,22 +624,10 @@ mod test {
     use std::net::Ipv6Addr;
 
     #[test]
-    fn test_ipv6addr_is_unicast_link_local() {
-        assert_eq!(
-            ipv6addr_is_unicast_link_local(&Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1)),
-            false
-        );
-        assert_eq!(
-            ipv6addr_is_unicast_link_local(&Ipv6Addr::new(0xfe80, 0xdb8, 0, 0, 0, 0, 0, 1)),
-            true
-        );
-        assert_eq!(
-            ipv6addr_is_unicast_link_local(&Ipv6Addr::new(0xfe81, 0xdb8, 0, 0, 0, 0, 0, 1)),
-            true
-        );
-        assert_eq!(
-            ipv6addr_is_unicast_link_local(&Ipv6Addr::new(0xff02, 0xdb8, 0, 0, 0, 0, 0, 1)),
-            false
-        );
+    fn test_should_proxy_address() {
+        assert!(should_proxy_address(&Ipv6Addr::new(0x2001, 0xdb8, 0, 0, 0, 0, 0, 1)));
+        assert!(!should_proxy_address(&Ipv6Addr::new(0xfe80, 0xdb8, 0, 0, 0, 0, 0, 1)));
+        assert!(!should_proxy_address(&Ipv6Addr::new(0xfe81, 0xdb8, 0, 0, 0, 0, 0, 1)));
+        assert!(!should_proxy_address(&Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1)));
     }
 }
