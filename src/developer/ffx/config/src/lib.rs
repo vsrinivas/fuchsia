@@ -12,7 +12,6 @@ use crate::api::{
 };
 use crate::cache::load_config;
 use crate::environment::Environment;
-use crate::storage::Config;
 use analytics::{is_opted_in, set_opt_in_status};
 use anyhow::{anyhow, Context, Result};
 use futures::future::{BoxFuture, FutureExt};
@@ -141,17 +140,10 @@ where
     query(with).get().await
 }
 
-fn check_config_files(level: &ConfigLevel, build_dir: Option<&Path>) -> Result<()> {
+async fn check_config_files(level: &ConfigLevel, build_dir: Option<&Path>) -> Result<()> {
     let e = env_file().ok_or(anyhow!("Could not find environment file"))?;
     let mut environment = Environment::load(&e)?;
-    environment.check(level, build_dir)
-}
-
-fn save_config(config: &mut Config, build_dir: Option<&Path>) -> Result<()> {
-    let e = env_file().ok_or(anyhow!("Could not find environment file"))?;
-    let env = Environment::load(&e)?;
-    let build = env.get_build(build_dir);
-    config.save(env.get_global(), build, env.get_user())
+    environment.check(level, build_dir).await
 }
 
 pub async fn print_config<W: Write>(mut writer: W, build_dir: Option<&Path>) -> Result<()> {
@@ -270,8 +262,8 @@ mod test {
     use std::path::PathBuf;
     use tempfile::tempdir;
 
-    #[test]
-    fn test_check_config_files_fails() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_check_config_files_fails() {
         let levels = vec![
             ConfigLevel::Runtime,
             ConfigLevel::Default,
@@ -279,7 +271,7 @@ mod test {
             ConfigLevel::Build,
         ];
         for level in levels {
-            let result = check_config_files(&level, None);
+            let result = check_config_files(&level, None).await;
             assert!(result.is_err());
         }
     }

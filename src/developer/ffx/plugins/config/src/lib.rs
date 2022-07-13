@@ -23,7 +23,7 @@ use {
 pub async fn exec_config(config: ConfigCommand) -> Result<()> {
     let writer = Box::new(std::io::stdout());
     match &config.sub {
-        SubCommand::Env(env) => exec_env(env, writer),
+        SubCommand::Env(env) => exec_env(env, writer).await,
         SubCommand::Get(get_cmd) => exec_get(get_cmd, writer).await,
         SubCommand::Set(set_cmd) => exec_set(set_cmd).await,
         SubCommand::Remove(remove_cmd) => exec_remove(remove_cmd).await,
@@ -91,7 +91,7 @@ async fn exec_add(add_cmd: &AddCommand) -> Result<()> {
     add_cmd.query().add(Value::String(format!("{}", add_cmd.value))).await
 }
 
-fn exec_env_set<W: Write + Sync>(
+async fn exec_env_set<W: Write + Sync>(
     mut writer: W,
     env: &mut Environment,
     s: &EnvSetCommand,
@@ -116,15 +116,15 @@ fn exec_env_set<W: Write + Sync>(
         ConfigLevel::Global => env.set_global(Some(&s.file)),
         _ => ffx_bail!("This configuration is not stored in the environment."),
     }
-    env.save()
+    env.save().await
 }
 
-fn exec_env<W: Write + Sync>(env_command: &EnvCommand, mut writer: W) -> Result<()> {
+async fn exec_env<W: Write + Sync>(env_command: &EnvCommand, mut writer: W) -> Result<()> {
     let file = env_file().ok_or(anyhow!("Could not find environment file"))?;
     let mut env = Environment::load(&file)?;
     match &env_command.access {
         Some(a) => match a {
-            EnvAccessCommand::Set(s) => exec_env_set(writer, &mut env, s),
+            EnvAccessCommand::Set(s) => exec_env_set(writer, &mut env, s).await,
             EnvAccessCommand::Get(g) => {
                 writeln!(writer, "{}", env.display(&g.level))?;
                 Ok(())
@@ -155,14 +155,14 @@ mod test {
     use super::*;
     use tempfile::NamedTempFile;
 
-    #[test]
-    fn test_exec_env_set_set_values() -> Result<()> {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_exec_env_set_set_values() -> Result<()> {
         let writer = Vec::<u8>::new();
         let tmp_file = NamedTempFile::new().expect("tmp access failed");
         let mut env = Environment::new_empty(Some(tmp_file.path()));
         let cmd =
             EnvSetCommand { file: "test.json".into(), level: ConfigLevel::User, build_dir: None };
-        exec_env_set(writer, &mut env, &cmd)?;
+        exec_env_set(writer, &mut env, &cmd).await?;
         let result = Environment::load(&tmp_file)?;
         assert_eq!(cmd.file, result.get_user().unwrap());
         Ok(())

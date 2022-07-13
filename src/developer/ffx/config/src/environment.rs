@@ -66,7 +66,7 @@ impl Environment {
         Ok(Self { path: Some(path), files })
     }
 
-    pub fn save(&self) -> Result<()> {
+    pub async fn save(&self) -> Result<()> {
         match &self.path {
             Some(path) => {
                 // First save the config to a temp file in the same location as the file, then atomically
@@ -82,6 +82,8 @@ impl Environment {
                 tmp.flush().context("flushing environment")?;
 
                 let _ = tmp.persist(path)?;
+
+                crate::cache::invalidate().await;
 
                 Ok(())
             }
@@ -193,7 +195,7 @@ impl Environment {
 
     /// Checks the config files at the requested level to make sure they exist and are configured
     /// properly.
-    pub fn check(&mut self, level: &ConfigLevel, build_dir: Option<&Path>) -> Result<()> {
+    pub async fn check(&mut self, level: &ConfigLevel, build_dir: Option<&Path>) -> Result<()> {
         match level {
             ConfigLevel::User => {
                 if let None = self.files.user {
@@ -204,8 +206,9 @@ impl Environment {
                     file.write_all(b"{}").context("writing default user configuration file")?;
                     file.sync_all()
                         .context("syncing default user configuration file to filesystem")?;
+
                     self.files.user = Some(default_path);
-                    self.save()?;
+                    self.save().await?;
                 }
             }
             ConfigLevel::Global => {
@@ -228,7 +231,7 @@ impl Environment {
                             info!("Build configuration file for '{b_dir}' does not exist yet, will create it by default at '{config}' if a value is set", b_dir=b_dir.display(), config=config.display());
                         }
                         build_dirs.insert(b_dir.to_owned(), config);
-                        self.save()?;
+                        self.save().await?;
                     }
                 }
                 None => bail!("Cannot set a build configuration without a build directory."),
@@ -261,8 +264,8 @@ mod test {
             "global": "/tmp/global.json"
         }"#;
 
-    #[test]
-    fn test_loading_and_saving_environment() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_loading_and_saving_environment() {
         let env: EnvironmentFiles = serde_json::from_str(ENVIRONMENT).unwrap();
 
         // Write out the initial test environment.
@@ -279,7 +282,7 @@ mod test {
             .expect("Temporary env file wasn't available to remove");
 
         // Save the environment, then read the saved file and make sure it's correct.
-        env_load.save().unwrap();
+        env_load.save().await.unwrap();
         tmp_path.flush().unwrap();
 
         let env_file = fs::read(tmp_path.path()).unwrap();
@@ -302,6 +305,7 @@ mod test {
         let mut env = Environment::load(&env_path).expect("Should be able to load the environment");
 
         env.check(&ConfigLevel::Build, Some(&build_dir_path))
+            .await
             .expect("Setting build level environment to automatic path should work");
 
         if let Some(build_configs) = Environment::load(&env_path)
@@ -332,9 +336,10 @@ mod test {
         let mut config_map = std::collections::HashMap::new();
         config_map.insert(build_dir_path.clone(), build_dir_config.clone());
         env.files.build = Some(config_map);
-        env.save().expect("Should be able to save the configured environment");
+        env.save().await.expect("Should be able to save the configured environment");
 
         env.check(&ConfigLevel::Build, Some(&build_dir_path))
+            .await
             .expect("Setting build level environment to automatic path should work");
 
         if let Some(build_configs) = Environment::load(&env_path)
