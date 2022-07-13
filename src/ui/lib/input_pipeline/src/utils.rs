@@ -297,3 +297,9 @@ macro_rules! scale_size_impl {
 }
 
 scale_size_impl! { usize u8 u16 u32 u64 u128 isize i8 i16 i32 i64 i128 f32 f64 }
+
+/// Calculate Euclidean distance of 2 position.
+/// sqrt((x1-x2)^2 + (y1-y2)^2)
+pub fn euclidean_distance(p1: Position, p2: Position) -> f32 {
+    ((p1.x - p2.x) * (p1.x - p2.x) + (p1.y - p2.y) * (p1.y - p2.y)).sqrt()
+}

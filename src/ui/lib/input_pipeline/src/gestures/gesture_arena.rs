@@ -23,8 +23,8 @@ pub(super) struct TouchpadEvent {
 
 #[derive(Debug, PartialEq)]
 pub(super) struct MouseEvent {
-    pub(super) _timestamp: zx::Time,
-    pub(super) _mouse_data: mouse_binding::MouseEvent,
+    pub(super) timestamp: zx::Time,
+    pub(super) mouse_data: mouse_binding::MouseEvent,
 }
 
 #[derive(Debug)]
@@ -73,6 +73,7 @@ pub(super) enum RecognizedGesture {
     _Unrecognized,
     Click,
     PrimaryTap,
+    Motion,
 }
 
 #[derive(Debug)]
@@ -123,7 +124,8 @@ pub(super) trait MatchedContender: std::fmt::Debug + AsAny {
     ) -> ProcessBufferedEventsResult;
 }
 
-pub(super) enum _ProcessNewEventResult {
+#[derive(Debug)]
+pub(super) enum ProcessNewEventResult {
     ContinueGesture(Option<MouseEvent>, Box<dyn Winner>),
     EndGesture(Option<TouchpadEvent>),
 }
@@ -144,7 +146,7 @@ pub(super) trait Winner: std::fmt::Debug {
     /// * `EndGesture(None)` if `event` matches a normal end
     ///   of the gesture; might be used, e.g., if the user lifts
     ///   their finger off the touchpad after a motion gesture
-    fn process_new_event(self: Box<Self>, event: TouchpadEvent) -> _ProcessNewEventResult;
+    fn process_new_event(self: Box<Self>, event: TouchpadEvent) -> ProcessNewEventResult;
 }
 
 struct _GestureArena {}

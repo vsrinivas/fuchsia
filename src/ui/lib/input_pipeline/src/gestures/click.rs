@@ -187,8 +187,8 @@ impl gesture_arena::MatchedContender for MatchedContender {
         ProcessBufferedEventsResult {
             generated_events: vec![
                 gesture_arena::MouseEvent {
-                    _timestamp: self.pressed_event.timestamp,
-                    _mouse_data: MouseEvent {
+                    timestamp: self.pressed_event.timestamp,
+                    mouse_data: MouseEvent {
                         location: MouseLocation::Relative(RelativeLocation {
                             counts: Position::zero(),
                             millimeters: Position::zero(),
@@ -205,8 +205,8 @@ impl gesture_arena::MatchedContender for MatchedContender {
                     },
                 },
                 gesture_arena::MouseEvent {
-                    _timestamp: self.released_event.timestamp,
-                    _mouse_data: MouseEvent {
+                    timestamp: self.released_event.timestamp,
+                    mouse_data: MouseEvent {
                         location: MouseLocation::Relative(RelativeLocation {
                             counts: Position::zero(),
                             millimeters: Position::zero(),
@@ -798,8 +798,8 @@ mod tests {
             generated_events,
             [
                 gesture_arena::MouseEvent {
-                    _timestamp: timestamp,
-                    _mouse_data: MouseEvent {
+                    timestamp: timestamp,
+                    mouse_data: MouseEvent {
                         location: MouseLocation::Relative(RelativeLocation {
                             counts: Position { x: 0.0, y: 0.0 },
                             millimeters: Position { x: 0.0, y: 0.0 }
@@ -812,8 +812,8 @@ mod tests {
                     },
                 },
                 gesture_arena::MouseEvent {
-                    _timestamp: timestamp,
-                    _mouse_data: MouseEvent {
+                    timestamp: timestamp,
+                    mouse_data: MouseEvent {
                         location: MouseLocation::Relative(RelativeLocation {
                             counts: Position { x: 0.0, y: 0.0 },
                             millimeters: Position { x: 0.0, y: 0.0 }
@@ -858,8 +858,8 @@ mod tests {
             generated_events,
             [
                 gesture_arena::MouseEvent {
-                    _timestamp: timestamp,
-                    _mouse_data: MouseEvent {
+                    timestamp: timestamp,
+                    mouse_data: MouseEvent {
                         location: MouseLocation::Relative(RelativeLocation {
                             counts: Position { x: 0.0, y: 0.0 },
                             millimeters: Position { x: 0.0, y: 0.0 }
@@ -872,8 +872,8 @@ mod tests {
                     },
                 },
                 gesture_arena::MouseEvent {
-                    _timestamp: timestamp,
-                    _mouse_data: MouseEvent {
+                    timestamp: timestamp,
+                    mouse_data: MouseEvent {
                         location: MouseLocation::Relative(RelativeLocation {
                             counts: Position { x: 0.0, y: 0.0 },
                             millimeters: Position { x: 0.0, y: 0.0 }
