@@ -175,6 +175,7 @@ rustc_library("lib") {
     "src/inspect/utils/enums.rs",
     "src/inspect/utils/inspect_queue.rs",
     "src/inspect/utils/inspect_writable_map.rs",
+    "src/inspect/utils/joinable_inspect_vecdeque.rs",
     "src/inspect/utils/managed_inspect_map.rs",
     "src/intl.rs",
     "src/intl/intl_controller.rs",
