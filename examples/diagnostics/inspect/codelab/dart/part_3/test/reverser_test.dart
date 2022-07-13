@@ -5,11 +5,17 @@
 // TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
 // @dart=2.9
 
-import 'package:inspect_dart_codelab_part_3_lib/reverser.dart';
+import 'package:inspect_dart_codelab/reverser.dart';
+import 'package:fuchsia_logger/logger.dart';
 import 'package:test/test.dart';
 // CODELAB: Include the inspect test module.
 
 void main() {
+  setupLogger(
+    name: 'inspect_dart_codelab',
+    globalTags: ['part_3', 'unit_test'],
+  );
+
   ReverserImpl openReverser() {
     // [START open_reverser]
     return ReverserImpl(ReverserStats.noop());

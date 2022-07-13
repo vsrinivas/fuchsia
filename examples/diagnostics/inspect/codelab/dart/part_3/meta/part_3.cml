@@ -1,0 +1,24 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        data: "data/part_3",
+    },
+    capabilities: [
+        { protocol: "fuchsia.examples.inspect.Reverser" },
+    ],
+    use: [
+        { protocol: "fuchsia.examples.inspect.FizzBuzz" },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.examples.inspect.Reverser",
+            from: "self",
+        },
+    ],
+}

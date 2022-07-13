@@ -2,22 +2,14 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dart/dart_app.gni")
+import("//build/dart/dart_component.gni")
+import("//build/dart/dart_library.gni")
 
-dart_app("bin") {
-  main_dart = "lib/main.dart"
-
-  fuchsia_package_name = "inspect_dart_codelab_fizzbuzz"
-  package_name = "inspect_dart_codelab_fizzbuzz"
-
-  meta = [
-    {
-      path = rebase_path("meta/inspect_dart_codelab_fizzbuzz.cmx")
-      dest = "inspect_dart_codelab_fizzbuzz.cmx"
-    },
-  ]
-
+dart_library("lib") {
+  package_name = "inspect_dart_codelab"
   sources = [ "main.dart" ]
+  source_dir = "lib"
+
   deps = [
     "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect",
     "//sdk/dart/fidl",
@@ -25,4 +17,12 @@ dart_app("bin") {
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_services",
   ]
+}
+
+dart_component("fizzbuzz") {
+  component_name = "fizzbuzz"
+  main_dart = "main.dart"
+  main_package = "inspect_dart_codelab"
+  manifest = "meta/fizzbuzz.cml"
+  deps = [ ":lib" ]
 }

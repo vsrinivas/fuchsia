@@ -1,0 +1,33 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    children: [
+        {
+            name: "fizzbuzz",
+            url: "fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/fizzbuzz.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.examples.inspect.FizzBuzz",
+            from: "#fizzbuzz",
+            to: "#reverser",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#fizzbuzz",
+                "#reverser",
+            ],
+        },
+    ],
+}

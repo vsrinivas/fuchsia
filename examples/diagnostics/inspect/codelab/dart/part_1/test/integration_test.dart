@@ -5,50 +5,31 @@
 // TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
 // @dart=2.9
 
-import 'dart:async';
-
-import 'package:fidl_fuchsia_examples_inspect/fidl_async.dart' as fidl_codelab;
-import 'package:inspect_codelab_shared/codelab_environment.dart';
 import 'package:test/test.dart';
+import 'package:inspect_codelab_testing/integration_test.dart';
+import 'package:fuchsia_logger/logger.dart';
 
 void main() {
-  CodelabEnvironment env;
+  setupLogger(
+      name: 'inspect_dart_codelab', globalTags: ['part_1', 'integration_test']);
 
-  Future<fidl_codelab.ReverserProxy> startComponentAndConnect({
-    bool includeFizzbuzz = false,
-  }) async {
-    if (includeFizzbuzz) {
-      await env.startFizzBuzz();
-    }
-
-    const serverName = 'inspect-dart-codelab-part-1';
-    const reverserUrl =
-        'fuchsia-pkg://fuchsia.com/$serverName#meta/$serverName.cmx';
-    return await env.startReverser(reverserUrl);
-  }
-
-  setUp(() async {
-    env = CodelabEnvironment();
-    await env.create();
-  });
-
-  tearDown(() async {
-    env.dispose();
-  });
-
-  test('start with fizzbuzz', () async {
+  test('start with fizzbuzz', () {
     // CODELAB: uncomment when it works.
-    // final reverser =
-    await startComponentAndConnect(includeFizzbuzz: true);
-    // final result = await reverser.reverse('hello');
+    // final env = await IntegrationTest.create(1);
+    // final reverser = env.connectToReverser();
+    // final result = await reverser.reverse("hello");
     // expect(result, equals('olleh'));
+    // reverser.ctrl.close();
+    // env.dispose();
   });
 
-  test('start without fizzbuzz', () async {
+  test('start without fizzbuzz', () {
     // CODELAB: uncomment when it works.
-    // final reverser =
-    await startComponentAndConnect();
-    // final result = await reverser.reverse('hello');
+    // final env = await IntegrationTest.create(1, includeFizzBuzz: false);
+    // final reverser = env.connectToReverser();
+    // final result = await reverser.reverse("hello");
     // expect(result, equals('olleh'));
+    // reverser.ctrl.close();
+    // env.dispose();
   });
 }

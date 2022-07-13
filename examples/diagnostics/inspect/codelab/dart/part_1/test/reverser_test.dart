@@ -5,13 +5,19 @@
 // TODO(https://fxbug.dev/84961): Fix null safety and remove this language version.
 // @dart=2.9
 
-import 'package:test/test.dart';
 // CODELAB: uncomment.
-//import 'package:inspect_dart_codelab_part_1_lib/reverser.dart';
+// import 'package:inspect_dart_codelab/reverser.dart';
+import 'package:fuchsia_logger/logger.dart';
+import 'package:test/test.dart';
 
 void main() {
+  setupLogger(
+    name: 'inspect_dart_codelab',
+    globalTags: ['part_1', 'unit_test'],
+  );
+
   test('reverser', () async {
-    // CODELAB: Test the response from the reverser.
+    // CODELAB: test the response from the reverser.
     // final reverser = ReverserImpl();
     // final result = await reverser.reverse('hello');
     // expect(result, equals('olleh'));

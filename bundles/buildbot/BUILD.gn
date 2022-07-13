@@ -81,11 +81,11 @@ group("core") {
 group("core_base_packages") {
   testonly = true
   deps = [
-    "///examples/diagnostics/inspect/codelab/dart/part_1:bin",
-    "///examples/diagnostics/inspect/codelab/dart/part_2:bin",
-    "///examples/diagnostics/inspect/codelab/dart/part_3:bin",
-    "///examples/diagnostics/inspect/codelab/dart/part_4:bin",
-    "///examples/diagnostics/inspect/codelab/dart/part_5:bin",
+    "///examples/diagnostics/inspect/codelab/dart/part_1:lib",
+    "///examples/diagnostics/inspect/codelab/dart/part_2:lib",
+    "///examples/diagnostics/inspect/codelab/dart/part_3:lib",
+    "///examples/diagnostics/inspect/codelab/dart/part_4:lib",
+    "///examples/diagnostics/inspect/codelab/dart/part_5:lib",
     "///examples/diagnostics/inspect/codelab/rust:inspect_rust_codelab",
     "///src/hwinfo:hwinfo_retail_tests_config",
     "///src/hwinfo:hwinfo_retail_tests_factory_config",
@@ -95,7 +95,7 @@ group("core_base_packages") {
     "///src/tests/coverage:clang_coverage_test_package($target_toolchain)",
     "///src/tests/coverage:rust_coverage_test_package($target_toolchain)",
     "///src/ui/wayland/bin/bridge:bridge",
-    "//examples/diagnostics/inspect/codelab/dart/fizzbuzz:bin",
+    "//examples/diagnostics/inspect/codelab/dart/fizzbuzz:lib",
     "//examples/fidl/dart/client:echo-dart-client",
     "//examples/fidl/dart/request_pipelining/client:echo-launcher-dart-client",
     "//examples/fidl/dart/request_pipelining/server:echo-launcher-dart-server",

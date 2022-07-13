@@ -4,22 +4,43 @@
 
 import("//build/dart/dart_app.gni")
 
-dart_app("bin") {
-  main_dart = "lib/main.dart"
-
-  fuchsia_package_name = "inspect_dart_codelab_client"
-  package_name = "inspect_dart_codelab_client"
-
-  meta = [
-    {
-      path = rebase_path("meta/inspect_dart_codelab_client.cmx")
-      dest = "inspect_dart_codelab_client.cmx"
-    },
-  ]
-
+dart_library("lib") {
+  package_name = "inspect_dart_codelab"
   sources = [ "main.dart" ]
+  source_dir = "lib"
   deps = [
-    "//examples/diagnostics/inspect/codelab/dart/shared",
+    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect",
     "//sdk/dart/fuchsia",
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/fidl/fuchsia.component",
+    "//sdk/fidl/fuchsia.component.decl",
+    "//sdk/fidl/fuchsia.io",
   ]
+}
+
+part_ids = [
+  1,
+  2,
+  3,
+  4,
+  5,
+]
+client_components = []
+foreach(part_id, part_ids) {
+  client_name = "client_part_" + part_id
+  target_name = "inspect_dart_codelab_" + client_name
+
+  client_components += [ ":" + target_name ]
+
+  dart_component(target_name) {
+    main_package = "inspect_dart_codelab"
+    component_name = client_name
+    manifest = "meta/" + client_name + ".cml"
+    deps = [ ":lib" ]
+  }
+}
+
+group("client") {
+  deps = client_components
 }

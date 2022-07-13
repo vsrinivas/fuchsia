@@ -3,66 +3,39 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/dart/dart_app.gni")
+import("//build/dart/dart_component.gni")
+import("//build/dart/dart_library.gni")
 import("//build/dart/dart_test_component.gni")
 import("//build/dart/test.gni")
 
-dart_app("bin") {
-  main_dart = "lib/main.dart"
-
-  fuchsia_package_name = "inspect_dart_codelab_part_2"
-  package_name = "inspect_dart_codelab_part_2_lib"
-
+dart_library("lib") {
+  package_name = "inspect_dart_codelab"
   sources = [
     "main.dart",
     "reverser.dart",
   ]
-
-  meta = [
-    {
-      path = rebase_path("meta/inspect_dart_codelab_part_2.cmx")
-      dest = "inspect_dart_codelab_part_2.cmx"
-    },
-  ]
+  source_dir = "lib"
 
   deps = [
     "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect",
     "//sdk/dart/fidl",
-    "//sdk/fidl/fuchsia.sys",
 
     # [START part_1_solution_build_dep]
     "//sdk/dart/fuchsia_inspect",
 
     # [END part_1_solution_build_dep]
+
     "//sdk/dart/fuchsia_logger",
     "//sdk/dart/fuchsia_services",
+    "//sdk/fidl/fuchsia.sys",
     "//third_party/dart-pkg/pub/meta",
   ]
 }
 
-dart_test("inspect_dart_codelab_part_2_unittests") {
-  sources = [ "reverser_test.dart" ]
-
-  deps = [
-    ":bin_dart_library",
-    "//sdk/dart/fuchsia_inspect",
-    "//third_party/dart-pkg/pub/test",
-  ]
-}
-
-dart_test_component("integration-tests-component") {
-  component_name = "inspect-dart-codelab-part-2-integration-tests"
-  manifest = "meta/inspect_dart_codelab_part_2_integration_tests.cmx"
-  sources = [ "integration_test.dart" ]
-
-  deps = [
-    ":bin_dart_library",
-    "//examples/diagnostics/inspect/codelab/dart/shared",
-    "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect",
-    "//third_party/dart-pkg/pub/test",
-  ]
-}
-
-fuchsia_test_package("inspect-dart-codelab-part-2-integration-tests") {
-  test_components = [ ":integration-tests-component" ]
+dart_component("part_2") {
+  component_name = "part_2"
+  main_dart = "main.dart"
+  main_package = "inspect_dart_codelab"
+  manifest = "meta/part_2.cml"
+  deps = [ ":lib" ]
 }

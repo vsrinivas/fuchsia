@@ -9,7 +9,7 @@ import 'package:fidl_fuchsia_examples_inspect/fidl_async.dart' as fidl_codelab;
 import 'package:fuchsia_inspect/inspect.dart' as inspect;
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
-import 'package:inspect_dart_codelab_part_5_lib/reverser.dart';
+import 'package:inspect_dart_codelab/reverser.dart';
 
 void main(List<String> args) {
   final context = ComponentContext.create();

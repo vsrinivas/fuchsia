@@ -1,0 +1,15 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//examples/diagnostics/inspect/codelab/dart/client/meta/common.shard.cml" ],
+    program: {
+        data: "data/client_part_3",
+    },
+    children: [
+        {
+            name: "reverser",
+            url: "fuchsia-pkg://fuchsia.com/inspect_dart_codelab#meta/part_3.cm",
+        },
+    ],
+}

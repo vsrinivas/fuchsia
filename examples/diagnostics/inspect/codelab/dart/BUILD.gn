@@ -2,56 +2,86 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+import("//build/dart/dart_component.gni")
+import("//build/dart/dart_library.gni")
+import("//build/dart/dart_test_component.gni")
+
 group("dart") {
-  deps = [ ":bin" ]
+  deps = [ ":inspect_dart_codelab" ]
 }
 
-group("bin") {
-  deps = [
-    ":parts_bin",
-    "client:bin",
-    "fizzbuzz:bin",
-  ]
+part_ids = [
+  1,
+  2,
+  3,
+  4,
+  5,
+]
+integration_test_components = []
+part_components = []
+unit_test_components = []
+
+foreach(part_id, part_ids) {
+  part = "part_" + part_id
+  unit_test_target = part + "_unit_tests_component"
+  unit_test_components += [ ":" + unit_test_target ]
+
+  dart_test_component(unit_test_target) {
+    component_name = part + "_unit_tests"
+    package_root = part
+    manifest = part + "/meta/unit_tests.cml"
+    sources = [ "reverser_test.dart" ]
+
+    deps = [
+      part + ":lib",
+      "//sdk/dart/fuchsia_inspect",
+      "//sdk/dart/fuchsia_logger",
+      "//third_party/dart-pkg/pub/test",
+    ]
+  }
+
+  part_components += [ "//examples/diagnostics/inspect/codelab/dart/" + part ]
+  integration_test_target = part + "_integration_tests_component"
+  integration_test_components += [ ":" + integration_test_target ]
+
+  dart_test_component(integration_test_target) {
+    component_name = part + "_integration_tests"
+    package_root = part
+    manifest = part + "/meta/integration_tests.cml"
+    sources = [ "integration_test.dart" ]
+
+    deps = [
+      "//examples/diagnostics/inspect/codelab/dart/testing",
+      "//sdk/dart/fuchsia_logger",
+      "//third_party/dart-pkg/pub/test",
+    ]
+  }
 }
 
-group("parts_bin") {
+fuchsia_package("inspect_dart_codelab") {
   deps = [
-    "part_1:bin",
-    "part_2:bin",
-    "part_3:bin",
-    "part_4:bin",
-    "part_5:bin",
-  ]
+           "//examples/diagnostics/inspect/codelab/dart/client",
+           "//examples/diagnostics/inspect/codelab/dart/fizzbuzz",
+         ] + part_components
+}
+
+fuchsia_test_package("inspect_dart_codelab_unit_tests") {
+  test_components = unit_test_components
+}
+
+fuchsia_test_package("inspect_dart_codelab_integration_tests") {
+  test_components = integration_test_components
+  deps = [ "//examples/diagnostics/inspect/codelab/dart/fizzbuzz" ] +
+         part_components
 }
 
 group("tests") {
   testonly = true
 
   deps = [
-    ":integration_tests",
-    ":unittests",
-  ]
-}
-
-group("unittests") {
-  testonly = true
-  deps = [
-    ":parts_bin",
-    "part_1:inspect_dart_codelab_part_1_unittests($host_toolchain)",
-    "part_2:inspect_dart_codelab_part_2_unittests($host_toolchain)",
-    "part_3:inspect_dart_codelab_part_3_unittests($host_toolchain)",
-    "part_4:inspect_dart_codelab_part_4_unittests($host_toolchain)",
-    "part_5:inspect_dart_codelab_part_5_unittests($host_toolchain)",
-  ]
-}
-
-group("integration_tests") {
-  testonly = true
-  deps = [
-    "part_1:inspect-dart-codelab-part-1-integration-tests",
-    "part_2:inspect-dart-codelab-part-2-integration-tests",
-    "part_3:inspect-dart-codelab-part-3-integration-tests",
-    "part_4:inspect-dart-codelab-part-4-integration-tests",
-    "part_5:inspect-dart-codelab-part-5-integration-tests",
+    # TODO(fxbug.dev/103146): bring all components inside the test packages.
+    ":inspect_dart_codelab_integration_tests",
+    ":inspect_dart_codelab_unit_tests",
   ]
 }

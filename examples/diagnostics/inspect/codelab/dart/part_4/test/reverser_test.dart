@@ -7,11 +7,15 @@
 
 import 'package:fuchsia_inspect/inspect.dart' as inspect;
 import 'package:fuchsia_inspect/testing.dart';
-import 'package:fuchsia_services/services.dart';
-import 'package:inspect_dart_codelab_part_4_lib/reverser.dart';
+import 'package:inspect_dart_codelab/reverser.dart';
+import 'package:fuchsia_logger/logger.dart';
 import 'package:test/test.dart';
 
 void main() {
+  setupLogger(
+    name: 'inspect_dart_codelab',
+    globalTags: ['part_4', 'unit_test'],
+  );
   FakeVmoHolder vmo;
   inspect.Inspect inspector;
 
@@ -23,9 +27,8 @@ void main() {
   }
 
   setUpAll(() {
-    final context = ComponentContext.createAndServe();
     vmo = FakeVmoHolder(256 * 1024);
-    inspector = inspect.Inspect.forTesting(vmo)..serve(context.outgoing);
+    inspector = inspect.Inspect.forTesting(vmo);
   });
 
   // [START reverser_test]
@@ -34,22 +37,22 @@ void main() {
     final node = inspector.root.child('reverser_service');
     final globalRequestCount = node.intProperty('total_requests')..setValue(0);
 
-    final reverser1 =
+    final reverser0 =
         openReverser(node.child('connection0'), globalRequestCount);
-    final reverser2 =
+    final reverser1 =
         openReverser(node.child('connection1'), globalRequestCount);
 
-    final result1 = await reverser1.reverse('hello');
+    final result1 = await reverser0.reverse('hello');
     expect(result1, equals('olleh'));
 
-    final result2 = await reverser1.reverse('world');
+    final result2 = await reverser0.reverse('world');
     expect(result2, equals('dlrow'));
 
-    final result3 = await reverser2.reverse('another');
+    final result3 = await reverser1.reverse('another');
     expect(result3, equals('rehtona'));
-    // [END EXCLUDE]
 
     final matcher = VmoMatcher(vmo);
+    // [END EXCLUDE]
 
     var reverserServiceNode = matcher.node().at(['reverser_service']);
     expect(
@@ -66,7 +69,7 @@ void main() {
           ..propertyEquals('response_count', 1),
         hasNoErrors);
 
-    reverser1.dispose();
+    reverser0.dispose();
 
     reverserServiceNode = matcher.node().at(['reverser_service']);
     expect(

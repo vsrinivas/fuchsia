@@ -8,7 +8,7 @@
 import 'package:fidl_fuchsia_examples_inspect/fidl_async.dart' as fidl_codelab;
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart';
-import 'package:inspect_dart_codelab_part_1_lib/reverser.dart';
+import 'package:inspect_dart_codelab/reverser.dart';
 // CODELAB: use inspect.
 
 void main(List<String> args) async {
@@ -17,8 +17,6 @@ void main(List<String> args) async {
   // [END init_logger]
 
   log.info('Starting up...');
-
-  // CODELAB: Initialize Inspect here.
 
   // [START serve_service]
   final context = ComponentContext.create();
@@ -29,6 +27,8 @@ void main(List<String> args) async {
     )
     ..serveFromStartupInfo();
   // [END serve_service]
+
+  // CODELAB: Initialize Inspect here.
 
   try {
     // [START connect_fizzbuzz]

@@ -6,33 +6,44 @@
 // @dart=2.9
 
 import 'dart:io';
+import 'package:fidl_fuchsia_component/fidl_async.dart';
+import 'package:fidl_fuchsia_component_decl/fidl_async.dart';
+import 'package:fidl_fuchsia_examples_inspect/fidl_async.dart';
+import 'package:fidl_fuchsia_io/fidl_async.dart';
+import 'package:fuchsia_logger/logger.dart';
+import 'package:fuchsia_services/src/incoming.dart';
 import 'package:fuchsia/fuchsia.dart' as fuchsia;
-import 'package:inspect_codelab_shared/codelab_environment.dart';
 
-Future<void> main(List<String> args) async {
-  if (args.length < 2 || int.tryParse(args[0]) == null) {
-    print('Usage: <program> <example-number> <string> <string> ....');
-    fuchsia.exit(1);
-  }
+Future<void> main() async {
+  setupLogger(name: 'inspect_dart_codelab', globalTags: ['client']);
 
-  final serverName = 'inspect-dart-codelab-part-${int.parse(args[0])}';
-  final reverserUrl =
-      'fuchsia-pkg://fuchsia.com/$serverName#meta/$serverName.cmx';
+  // TODO(fxbug.dev/88383): dart doesn't support `program.args` at the moment.
+  const args = ["Hello", "world"];
 
-  final env = CodelabEnvironment();
-  await env.create();
-  await env.startFizzBuzz();
-  final reverser = await env.startReverser(reverserUrl);
+  final realm = RealmProxy();
+  Incoming.fromSvcPath().connectToService(realm);
+
+  final reverserExposedDir = DirectoryProxy();
+  await realm.openExposedDir(
+      ChildRef(name: "reverser"), reverserExposedDir.ctrl.request());
+  final reverser = ReverserProxy();
+  Incoming.withDirectory(reverserExposedDir).connectToService(reverser);
+
+  final fizzbuzzExposedDir = DirectoryProxy();
+  await realm.openExposedDir(
+      ChildRef(name: "fizzbuzz"), fizzbuzzExposedDir.ctrl.request());
+  final fizzbuzzBinder = BinderProxy();
+  Incoming.withDirectory(fizzbuzzExposedDir).connectToService(fizzbuzzBinder);
 
   // [START reverse_loop]
-  for (int i = 1; i < args.length; i++) {
-    print('Input: ${args[i]}');
+  for (int i = 0; i < args.length; i++) {
+    log.info('Input: ${args[i]}');
     final response = await reverser.reverse(args[i]);
-    print('Output: $response');
+    log.info('Output: $response');
   }
   // [END reverse_loop]
 
-  print('Done. Press Ctrl+C to exit');
+  log.info('Done. Press Ctrl+C to exit');
 
   // ignore: literal_only_boolean_expressions
   while (true) {

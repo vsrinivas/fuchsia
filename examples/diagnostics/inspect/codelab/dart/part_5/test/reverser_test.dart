@@ -7,11 +7,15 @@
 
 import 'package:fuchsia_inspect/inspect.dart' as inspect;
 import 'package:fuchsia_inspect/testing.dart';
-import 'package:fuchsia_services/services.dart';
-import 'package:inspect_dart_codelab_part_5_lib/reverser.dart';
+import 'package:inspect_dart_codelab/reverser.dart';
+import 'package:fuchsia_logger/logger.dart';
 import 'package:test/test.dart';
 
 void main() {
+  setupLogger(
+    name: 'inspect_dart_codelab',
+    globalTags: ['part_5', 'unit_test'],
+  );
   FakeVmoHolder vmo;
   inspect.Inspect inspector;
 
@@ -23,9 +27,8 @@ void main() {
   }
 
   setUpAll(() {
-    final context = ComponentContext.createAndServe();
     vmo = FakeVmoHolder(256 * 1024);
-    inspector = inspect.Inspect.forTesting(vmo)..serve(context.outgoing);
+    inspector = inspect.Inspect.forTesting(vmo);
   });
 
   test('reverser', () async {

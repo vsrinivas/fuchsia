@@ -6,47 +6,31 @@
 // @dart=2.9
 
 import 'dart:async';
-
-import 'package:fidl_fuchsia_examples_inspect/fidl_async.dart' as fidl_codelab;
-import 'package:inspect_codelab_shared/codelab_environment.dart';
 import 'package:test/test.dart';
+import 'package:inspect_codelab_testing/integration_test.dart';
+import 'package:fuchsia_logger/logger.dart';
 
 void main() {
-  CodelabEnvironment env;
+  setupLogger(
+      name: 'inspect_dart_codelab', globalTags: ['part_2', 'integration_test']);
 
-  Future<fidl_codelab.ReverserProxy> startComponentAndConnect({
-    bool includeFizzbuzz = false,
-  }) async {
-    if (includeFizzbuzz) {
-      await env.startFizzBuzz();
-    }
-
-    const serverName = 'inspect-dart-codelab-part-2';
-    const reverserUrl =
-        'fuchsia-pkg://fuchsia.com/$serverName#meta/$serverName.cmx';
-    return await env.startReverser(reverserUrl);
-  }
-
-  setUp(() async {
-    env = CodelabEnvironment();
-    await env.create();
-  });
-
-  tearDown(() async {
+  test('start with fizzbuzz', () async {
+    final env = await IntegrationTest.create(2);
+    final reverser = env.connectToReverser();
+    final result = await reverser.reverse("hello");
+    expect(result, equals('olleh'));
+    // CODELAB: Check that the component was connected to FizzBuzz.
+    reverser.ctrl.close();
     env.dispose();
   });
 
-  test('start with fizzbuzz', () async {
-    final reverser = await startComponentAndConnect(includeFizzbuzz: true);
-    final result = await reverser.reverse('hello');
-    expect(result, equals('olleh'));
-    // CODELAB: Check that the component was connected to FizzBuzz.
-  });
-
   test('start without fizzbuzz', () async {
-    final reverser = await startComponentAndConnect();
-    final result = await reverser.reverse('hello');
+    final env = await IntegrationTest.create(2, includeFizzBuzz: false);
+    final reverser = env.connectToReverser();
+    final result = await reverser.reverse("hello");
     expect(result, equals('olleh'));
     // CODELAB: Check that the component failed to connect to FizzBuzz.
+    reverser.ctrl.close();
+    env.dispose();
   });
 }
