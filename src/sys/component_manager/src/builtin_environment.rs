@@ -43,7 +43,7 @@ use {
             vmex_resource::VmexResource,
         },
         collection::CollectionCapabilityHost,
-        diagnostics::cpu::ComponentTreeStats,
+        diagnostics::{cpu::ComponentTreeStats, startup::ComponentStartupTimeStats},
         directory_ready_notifier::DirectoryReadyNotifier,
         elf_runner::ElfRunner,
         framework::RealmCapabilityHost,
@@ -427,6 +427,7 @@ pub struct BuiltinEnvironment {
     pub event_stream_provider: Arc<EventStreamProvider>,
     pub event_logger: Option<Arc<EventLogger>>,
     pub component_tree_stats: Arc<ComponentTreeStats<DiagnosticsTask>>,
+    pub component_startup_time_stats: Arc<ComponentStartupTimeStats>,
     pub execution_mode: ExecutionMode,
     pub num_threads: usize,
     pub out_dir_contents: OutDirContents,
@@ -858,6 +859,10 @@ impl BuiltinEnvironment {
         component_tree_stats.start_measuring().await;
         model.root().hooks.install(component_tree_stats.hooks()).await;
 
+        let component_startup_time_stats =
+            Arc::new(ComponentStartupTimeStats::new(inspector.root().create_child("start_times")));
+        model.root().hooks.install(component_startup_time_stats.hooks()).await;
+
         // Serve stats about inspect in a lazy node.
         let node = inspect::stats::Node::new(&inspector, inspector.root());
         inspector.root().record(node.take());
@@ -941,6 +946,7 @@ impl BuiltinEnvironment {
             event_stream_provider,
             event_logger,
             component_tree_stats,
+            component_startup_time_stats,
             execution_mode,
             num_threads,
             out_dir_contents,

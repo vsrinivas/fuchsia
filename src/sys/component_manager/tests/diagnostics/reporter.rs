@@ -45,6 +45,24 @@ async fn main() {
             start_timestamp_nanos: AnyProperty,
             status: "OK"
         },
+        start_times: {
+            "0": {
+                moniker: "/",
+                time: AnyProperty,
+            },
+            "1": {
+                moniker: "/root",
+                time: AnyProperty,
+            },
+            "2": {
+                moniker: "/root/reporter",
+                time: AnyProperty,
+            },
+            "3": {
+                moniker: "/root/archivist",
+                time: AnyProperty,
+            },
+        },
         cpu_stats: contains {
             measurements: {
                 component_count: 3u64,

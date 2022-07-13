@@ -126,6 +126,7 @@ template("component_manager") {
     "src/diagnostics/cpu/task_info.rs",
     "src/diagnostics/cpu/testing.rs",
     "src/diagnostics/mod.rs",
+    "src/diagnostics/startup.rs",
     "src/directory_ready_notifier.rs",
     "src/elf_runner/component.rs",
     "src/elf_runner/config.rs",

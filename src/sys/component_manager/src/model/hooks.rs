@@ -334,6 +334,7 @@ pub struct RuntimeInfo {
     pub runtime_dir: Option<fio::DirectoryProxy>,
     pub diagnostics_receiver:
         Arc<Mutex<Option<oneshot::Receiver<fdiagnostics::ComponentDiagnostics>>>>,
+    pub start_time: zx::Time,
 }
 
 impl RuntimeInfo {
@@ -351,6 +352,7 @@ impl RuntimeInfo {
             outgoing_dir: clone_dir(runtime.outgoing_dir.as_ref()),
             runtime_dir: clone_dir(runtime.runtime_dir.as_ref()),
             diagnostics_receiver,
+            start_time: runtime.timestamp,
         }
     }
 }
