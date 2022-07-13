@@ -47,8 +47,6 @@ lazy_static! {
     static ref VMEX_RESOURCE_ALLOWED_URL: String = policy_url!("vmex_resource_allowed.cmx");
     static ref PKGFS_VERSIONS_DENIED_URL: String = policy_url!("pkgfs_versions_denied.cmx");
     static ref PKGFS_VERSIONS_ALLOWED_URL: String = policy_url!("pkgfs_versions_allowed.cmx");
-    static ref DEPRECATED_SHELL_DENIED_URL: String = policy_url!("deprecated_shell_denied.cmx");
-    static ref DEPRECATED_SHELL_ALLOWED_URL: String = policy_url!("deprecated_shell_allowed.cmx");
     static ref DEPRECATED_EXEC_DENIED_URL: String =
         policy_url!("deprecated_ambient_replace_as_exec_denied.cmx");
     static ref DEPRECATED_EXEC_ALLOWED_URL: String =
@@ -253,18 +251,6 @@ async fn pkgfs_versions_allowed() -> Result<(), Error> {
 #[fasync::run_singlethreaded(test)]
 async fn pkgfs_versions_denied() -> Result<(), Error> {
     assert_launch_denied(&PKGFS_VERSIONS_DENIED_URL).await;
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn deprecated_shell_allowed() -> Result<(), Error> {
-    assert_launch_allowed(&DEPRECATED_SHELL_ALLOWED_URL).await;
-    Ok(())
-}
-
-#[fasync::run_singlethreaded(test)]
-async fn deprecated_shell_denied() -> Result<(), Error> {
-    assert_launch_denied(&DEPRECATED_SHELL_DENIED_URL).await;
     Ok(())
 }
 

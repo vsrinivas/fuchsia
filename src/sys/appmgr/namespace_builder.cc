@@ -132,22 +132,6 @@ zx_status_t NamespaceBuilder::AddSandbox(
   for (const auto& feature : sandbox.features()) {
     if (feature == "root-ssl-certificates") {
       PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data", "/config/ssl");
-    } else if (feature == "deprecated-shell") {
-      PushDirectoryFromPathAs("/pkgfs/packages/root_ssl_certificates/0/data", "/config/ssl");
-      PushDirectoryFromPathAs("/pkgfs/packages/shell-commands/0/bin", "/bin");
-      PushDirectoryFromPath("/blob");
-      PushDirectoryFromPath("/boot");
-      // Note that if the 'isolated-persistent-storage' feature is present,
-      // this is a no-op since it has handled first above.
-      // PushDirectoryFromPath does not override existing directories.
-      PushDirectoryFromPath("/data");
-      PushDirectoryFromPath("/dev");
-      AddHub(hub_directory_factory);
-      PushDirectoryFromPath("/mnt");
-      PushDirectoryFromPath("/pkgfs");
-      PushDirectoryFromPath("/system");
-      PushDirectoryFromPath("/tmp");
-      PushDirectoryFromPath("/hub-v2");
     } else if (feature == "deprecated-global-data") {
       FuchsiaPkgUrl pkg_url;
       if (pkg_url.Parse(ns_id) &&

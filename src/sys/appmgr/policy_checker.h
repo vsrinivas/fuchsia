@@ -39,7 +39,6 @@ class PolicyChecker final {
  private:
   fbl::unique_fd config_;
 
-  bool CheckDeprecatedShell(const FuchsiaPkgUrl& pkg_url);
   bool CheckDeprecatedAmbientReplaceAsExecutable(const FuchsiaPkgUrl& pkg_url);
   bool CheckDurableData(const FuchsiaPkgUrl& pkg_url);
   bool CheckFactoryData(const FuchsiaPkgUrl& pkg_url);

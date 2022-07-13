@@ -9,7 +9,6 @@ group("features") {
     "build-info",
     "hub",
     "isolated-temp",
-    "shell",
     "shell-commands",
     "storage",
   ]

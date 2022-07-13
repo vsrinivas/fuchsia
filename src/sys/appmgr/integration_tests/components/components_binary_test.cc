@@ -127,14 +127,6 @@ TEST_F(ComponentsBinaryTest, GetEnvMismatch) {
   ASSERT_EQ(output, "FOO=bar BAR=NULL\n");
 }
 
-TEST_F(ComponentsBinaryTest, UnallowedDeprecatedShellFailsToLaunch) {
-  int64_t return_code = -1;
-  TerminationReason termination_reason;
-  RunComponent(ComponentsBinaryTest::UrlFromCmx("echo_deprecated_shell.cmx"), &return_code,
-               &termination_reason);
-  EXPECT_NE(TerminationReason::EXITED, termination_reason);
-}
-
 TEST_F(ComponentsBinaryTest, EchoStdin) {
   int64_t return_code = -1;
   TerminationReason termination_reason;

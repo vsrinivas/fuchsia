@@ -16,7 +16,6 @@ group("appmgr_policy_eng") {
     ":appmgr_deprecated_ambient_replace_as_executable_allowlist_eng",
     ":appmgr_deprecated_global_dev_allowlist_eng",
     ":appmgr_deprecated_misc_storage_allowlist_eng",
-    ":appmgr_deprecated_shell_allowlist_eng",
     ":appmgr_hub_allowlist_eng",
     ":appmgr_hypervisor_resource_allowlist_eng",
     ":appmgr_info_resource_allowlist_eng",
@@ -73,12 +72,6 @@ config_data("appmgr_deprecated_misc_storage_allowlist_eng") {
   for_pkg = "appmgr"
   sources = [ "deprecated_misc_storage_allowlist_eng.txt" ]
   outputs = [ "allowlist/deprecated_misc_storage.txt" ]
-}
-
-config_data("appmgr_deprecated_shell_allowlist_eng") {
-  for_pkg = "appmgr"
-  sources = [ "deprecated_shell_allowlist_eng.txt" ]
-  outputs = [ "allowlist/deprecated_shell.txt" ]
 }
 
 config_data("appmgr_hub_allowlist_eng") {

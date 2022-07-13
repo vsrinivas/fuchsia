@@ -84,11 +84,6 @@ fuchsia_component("echo2") {
   manifest = "meta/echo2.cmx"
 }
 
-fuchsia_component("echo_deprecated_shell") {
-  deps = [ ":echo1_bin" ]
-  manifest = "meta/echo_deprecated_shell.cmx"
-}
-
 fuchsia_component("echo_hub") {
   deps = [ ":echo1_bin" ]
   manifest = "meta/echo_hub.cmx"
@@ -121,7 +116,6 @@ fuchsia_unittest_package("components_binary_tests") {
     ":components_binary_test_bin",
     ":echo1",
     ":echo2",
-    ":echo_deprecated_shell",
     ":echo_hub",
     ":echo_stdin",
     ":getenv1",

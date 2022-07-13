@@ -11,7 +11,6 @@
 namespace component {
 namespace {
 
-constexpr char kDeprecatedShellAllowList[] = "allowlist/deprecated_shell.txt";
 constexpr char kDeprecatedAmbientReplaceAsExecAllowList[] =
     "allowlist/deprecated_ambient_replace_as_executable.txt";
 constexpr char kAccountManagerAllowList[] = "allowlist/account_manager.txt";
@@ -58,11 +57,6 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
       return std::nullopt;
     }
     policy.enable_ambient_executable = true;
-  }
-  if (sandbox.HasFeature("deprecated-shell") && !CheckDeprecatedShell(pkg_url)) {
-    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
-                   << "deprecated-shell. go/fx-hermetic-sandboxes";
-    return std::nullopt;
   }
   if (sandbox.HasFeature("hub") && !CheckHub(pkg_url)) {
     FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
@@ -200,11 +194,6 @@ bool PolicyChecker::CheckAccountManager(const FuchsiaPkgUrl& pkg_url) {
 bool PolicyChecker::CheckComponentEventProvider(const FuchsiaPkgUrl& pkg_url) {
   AllowList component_event_provider_allowlist(config_, kComponentEventProviderAllowList);
   return component_event_provider_allowlist.IsAllowed(pkg_url);
-}
-
-bool PolicyChecker::CheckDeprecatedShell(const FuchsiaPkgUrl& pkg_url) {
-  AllowList deprecated_shell_allowlist(config_, kDeprecatedShellAllowList);
-  return deprecated_shell_allowlist.IsAllowed(pkg_url);
 }
 
 bool PolicyChecker::CheckHub(const FuchsiaPkgUrl& pkg_url) {
