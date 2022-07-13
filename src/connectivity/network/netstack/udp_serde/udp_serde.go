@@ -85,6 +85,8 @@ func DeserializeSendMsgAddress(buf []byte) (*tcpip.FullAddress, error) {
 
 func convertSerializeRecvMsgMetaErr(err C.SerializeRecvMsgMetaError) error {
 	switch err {
+	case C.SerializeRecvMsgMetaErrorNone:
+		return nil
 	case C.SerializeRecvMsgMetaErrorOutputBufferNull:
 		return InputBufferNullErr{}
 	case C.SerializeRecvMsgMetaErrorOutputBufferTooSmall:
@@ -158,8 +160,5 @@ func SerializeRecvMsgMeta(protocol tcpip.NetworkProtocolNumber, res tcpip.ReadRe
 		copy(*(*[]byte)(unsafe.Pointer(&header)), res.ControlMessages.IPv6PacketInfo.Addr)
 	}
 
-	if err := C.serialize_recv_msg_meta(&recv_meta, addrBuf, bufOut); err != C.SerializeRecvMsgMetaErrorNone {
-		return convertSerializeRecvMsgMetaErr(err)
-	}
-	return nil
+	return convertSerializeRecvMsgMetaErr(C.serialize_recv_msg_meta(&recv_meta, addrBuf, bufOut))
 }

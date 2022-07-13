@@ -11,31 +11,31 @@ import "fmt"
 
 type InputBufferNullErr struct{}
 
-func (e InputBufferNullErr) Error() string {
+func (InputBufferNullErr) Error() string {
 	return "null input buffer"
 }
 
 type InputBufferTooSmallErr struct{}
 
-func (e InputBufferTooSmallErr) Error() string {
+func (InputBufferTooSmallErr) Error() string {
 	return "input buffer too small"
 }
 
 type NonZeroPreludeErr struct{}
 
-func (e NonZeroPreludeErr) Error() string {
+func (NonZeroPreludeErr) Error() string {
 	return "non zero prelude"
 }
 
 type FailedToDecodeErr struct{}
 
-func (e FailedToDecodeErr) Error() string {
+func (FailedToDecodeErr) Error() string {
 	return "failed to decode"
 }
 
 type FailedToEncodeErr struct{}
 
-func (e FailedToEncodeErr) Error() string {
+func (FailedToEncodeErr) Error() string {
 	return "failed to encode"
 }
 
