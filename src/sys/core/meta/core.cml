@@ -728,7 +728,10 @@
             to: "#temperature-logger",
         },
         {
-            protocol: [ "fuchsia.kernel.Stats" ],
+            protocol: [
+                "fuchsia.boot.Items",
+                "fuchsia.kernel.Stats",
+            ],
             from: "parent",
             to: "#metrics-logger",
         },

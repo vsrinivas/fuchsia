@@ -92,7 +92,8 @@ impl Sensor<fpower::DeviceProxy> for fpower::DeviceProxy {
 macro_rules! log_trace {
     ( $sensor_type:expr, $trace_args:expr) => {
         match $sensor_type {
-            // TODO (didis): Remove temperature_logger category after the e2e test is transitioned.
+            // TODO (fxbug.dev/100797): Remove temperature_logger category after the e2e test is
+            // transitioned.
             SensorType::Temperature => {
                 fuchsia_trace::counter(
                     fuchsia_trace::cstr!("temperature_logger"),

@@ -34,6 +34,7 @@ rustc_binary("bin") {
 
   deps = [
     "fuchsia.metricslogger.test:fuchsia.metricslogger.test-rustc",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.hardware.power.sensor:fuchsia.hardware.power.sensor-rustc",
     "//sdk/fidl/fuchsia.hardware.temperature:fuchsia.hardware.temperature-rustc",
@@ -48,11 +49,15 @@ rustc_binary("bin") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/trace/rust:trace",
     "//src/lib/trace/rust:trace-provider",
+    "//src/lib/zerocopy",
     "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/lib/fuchsia-zbi/abi",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
+    "//third_party/rust_crates:num-derive",
+    "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",

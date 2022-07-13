@@ -6,12 +6,13 @@ mod cpu_load_logger;
 mod sensor_logger;
 
 use {
-    crate::cpu_load_logger::CpuLoadLogger,
+    crate::cpu_load_logger::{vmo_to_topology, Cluster, CpuLoadLogger, ZBI_TOPOLOGY_NODE_SIZE},
     crate::sensor_logger::{
         PowerDriver, PowerLogger, SensorDriver, TemperatureDriver, TemperatureLogger,
     },
     anyhow::{format_err, Error, Result},
-    fidl_fuchsia_device as fdevice, fidl_fuchsia_hardware_power_sensor as fpower,
+    fidl_fuchsia_boot as fboot, fidl_fuchsia_device as fdevice,
+    fidl_fuchsia_hardware_power_sensor as fpower,
     fidl_fuchsia_hardware_temperature as ftemperature, fidl_fuchsia_kernel as fkernel,
     fidl_fuchsia_metricslogger_test::{self as fmetrics, MetricsLoggerRequest},
     fuchsia_async as fasync,
@@ -19,6 +20,7 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect,
     fuchsia_syslog::{fx_log_err, fx_log_info},
+    fuchsia_zbi_abi::ZbiType,
     fuchsia_zircon as zx,
     futures::{
         future::join_all,
@@ -144,6 +146,9 @@ pub struct ServerBuilder<'a> {
     // Optional proxy for test usage.
     cpu_stats_proxy: Option<fkernel::StatsProxy>,
 
+    // Optional cpu topology for test usage.
+    cpu_topology: Option<Vec<Cluster>>,
+
     /// Optional inspect root for test usage.
     inspect_root: Option<&'a inspect::Node>,
 }
@@ -185,6 +190,7 @@ impl<'a> ServerBuilder<'a> {
             power_driver_aliases,
             power_drivers: None,
             cpu_stats_proxy: None,
+            cpu_topology: None,
             inspect_root: None,
         }
     }
@@ -205,6 +211,12 @@ impl<'a> ServerBuilder<'a> {
     #[cfg(test)]
     fn with_cpu_stats_proxy(mut self, cpu_stats_proxy: fkernel::StatsProxy) -> Self {
         self.cpu_stats_proxy = Some(cpu_stats_proxy);
+        self
+    }
+
+    #[cfg(test)]
+    fn with_cpu_topology(mut self, cpu_topology: Vec<Cluster>) -> Self {
+        self.cpu_topology = Some(cpu_topology);
         self
     }
 
@@ -247,6 +259,34 @@ impl<'a> ServerBuilder<'a> {
             None => connect_to_protocol::<fkernel::StatsMarker>()?,
         };
 
+        let cpu_topology = match self.cpu_topology {
+            None => {
+                let items_proxy = connect_to_protocol::<fboot::ItemsMarker>()?;
+
+                match items_proxy
+                    .get(ZbiType::CpuTopology as u32, ZBI_TOPOLOGY_NODE_SIZE as u32)
+                    .await
+                {
+                    Ok((Some(vmo), length)) => match vmo_to_topology(vmo, length) {
+                        Ok(topology) => Some(topology),
+                        Err(e) => {
+                            fx_log_err!("Parsing VMO failed with error: {:?}", e);
+                            None
+                        }
+                    },
+                    Ok((None, _)) => {
+                        fx_log_info!("Query Zbi with ZbiType::CpuTopology returned None");
+                        None
+                    }
+                    Err(e) => {
+                        fx_log_err!("ItemsProxy IPC failed with error: {:?}", e);
+                        None
+                    }
+                }
+            }
+            Some(cpu_topology) => Some(cpu_topology),
+        };
+
         // Optionally use the default inspect root node
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
 
@@ -254,6 +294,7 @@ impl<'a> ServerBuilder<'a> {
             Rc::new(temperature_drivers),
             Rc::new(power_drivers),
             Rc::new(cpu_stats_proxy),
+            cpu_topology,
             inspect_root.create_child("MetricsLogger"),
         ))
     }
@@ -265,6 +306,9 @@ struct MetricsLoggerServer {
 
     /// List of power sensor drivers for polling powers.
     power_drivers: Rc<Vec<PowerDriver>>,
+
+    /// CPU topology represented by a list of Cluster. None if it's not available.
+    cpu_topology: Option<Vec<Cluster>>,
 
     /// Proxy for polling CPU stats.
     cpu_stats_proxy: Rc<fkernel::StatsProxy>,
@@ -282,11 +326,13 @@ impl MetricsLoggerServer {
         temperature_drivers: Rc<Vec<TemperatureDriver>>,
         power_drivers: Rc<Vec<PowerDriver>>,
         cpu_stats_proxy: Rc<fkernel::StatsProxy>,
+        cpu_topology: Option<Vec<Cluster>>,
         inspect_root: inspect::Node,
     ) -> Rc<Self> {
         Rc::new(Self {
             temperature_drivers,
             power_drivers,
+            cpu_topology,
             cpu_stats_proxy,
             inspect_root,
             client_tasks: RefCell::new(HashMap::new()),
@@ -475,6 +521,7 @@ impl MetricsLoggerServer {
         let temperature_drivers = self.temperature_drivers.clone();
         let power_drivers = self.power_drivers.clone();
         let client_inspect = self.inspect_root.create_child(&client_id);
+        let cpu_topology = self.cpu_topology.clone();
 
         fasync::Task::local(async move {
             let mut futures: Vec<Box<dyn futures::Future<Output = ()>>> = Vec::new();
@@ -483,6 +530,7 @@ impl MetricsLoggerServer {
                 match metric {
                     fmetrics::Metric::CpuLoad(fmetrics::CpuLoad { interval_ms }) => {
                         let cpu_load_logger = CpuLoadLogger::new(
+                            cpu_topology.clone(),
                             zx::Duration::from_millis(interval_ms as i64),
                             duration_ms.map(|ms| zx::Duration::from_millis(ms as i64)),
                             cpu_stats_proxy.clone(),
@@ -583,6 +631,9 @@ async fn inner_main() -> Result<()> {
 mod tests {
     use {
         super::*,
+        crate::cpu_load_logger::tests::{
+            create_vmo_from_topology_nodes, generate_cluster_node, generate_processor_node,
+        },
         assert_matches::assert_matches,
         fidl_fuchsia_kernel::{CpuStats, PerCpuStats},
         fmetrics::{CpuLoad, Metric, Power, StatisticsArgs, Temperature},
@@ -732,11 +783,19 @@ mod tests {
                 setup_fake_stats_service(move || cpu_stats.borrow().clone());
             tasks.push(task);
 
+            let (vmo, size) = create_vmo_from_topology_nodes(vec![
+                generate_cluster_node(/*performance_class*/ 0),
+                generate_processor_node(/*parent_index*/ 0, /*logical_id*/ 0),
+            ])
+            .unwrap();
+            let cpu_topology = vmo_to_topology(vmo, size as u32).unwrap();
+
             // Build the server.
             let builder = ServerBuilder::new_from_json(None)
                 .with_temperature_drivers(temperature_drivers)
                 .with_power_drivers(power_drivers)
                 .with_cpu_stats_proxy(cpu_stats_proxy)
+                .with_cpu_topology(cpu_topology)
                 .with_inspect_root(inspector.root());
             let poll = executor.run_until_stalled(&mut builder.build().boxed_local());
             let server = match poll {

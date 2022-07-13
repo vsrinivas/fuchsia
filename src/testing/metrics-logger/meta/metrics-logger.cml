@@ -36,6 +36,7 @@
         },
         {
             protocol: [
+                "fuchsia.boot.Items",
                 "fuchsia.kernel.Stats",
                 "fuchsia.tracing.provider.Registry",
             ],
