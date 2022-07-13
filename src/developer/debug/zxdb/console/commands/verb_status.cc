@@ -90,11 +90,15 @@ OutputBuffer FormatProcessRecords(std::vector<debug_ipc::ProcessRecord> records,
 
     row.push_back(std::to_string(record.process_koid));
     row.push_back(record.process_name);
+    if (record.component) {
+      row.push_back(record.component->url.substr(record.component->url.find_last_of('/') + 1));
+    }
   }
 
   OutputBuffer out;
-  FormatTable({ColSpec(Align::kRight, 0, "Koid", indent), ColSpec(Align::kLeft, 0, "Name")}, rows,
-              &out);
+  FormatTable({ColSpec(Align::kRight, 0, "Koid", indent), ColSpec(Align::kLeft, 0, "Name"),
+               ColSpec(Align::kLeft, 0, "Component")},
+              rows, &out);
 
   return out;
 }

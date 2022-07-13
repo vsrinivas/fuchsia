@@ -261,6 +261,7 @@ source_set("tests") {
     "format_settings_unittest.cc",
     "format_symbol_unittest.cc",
     "format_table_unittest.cc",
+    "format_target_unittest.cc",
     "input_location_parser_unittest.cc",
     "mock_console.cc",
     "nouns_unittest.cc",

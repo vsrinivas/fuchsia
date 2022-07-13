@@ -1132,6 +1132,7 @@ TEST(Protocol, NotifyProcessStarting) {
   initial.component_id = 2;
   initial.name = "some_process";
   initial.timestamp = kTestTimestampDefault;
+  initial.component = ComponentInfo{.moniker = "moniker", .url = "url"};
 
   NotifyProcessStarting second;
   ASSERT_TRUE(SerializeDeserializeNotification(initial, &second, &WriteNotifyProcessStarting,
@@ -1142,6 +1143,9 @@ TEST(Protocol, NotifyProcessStarting) {
   EXPECT_EQ(initial.component_id, second.component_id);
   EXPECT_EQ(initial.name, second.name);
   EXPECT_EQ(initial.timestamp, second.timestamp);
+  ASSERT_TRUE(second.component);
+  EXPECT_EQ(initial.component->moniker, second.component->moniker);
+  EXPECT_EQ(initial.component->url, second.component->url);
 }
 
 TEST(Protocol, NotifyProcessExiting) {

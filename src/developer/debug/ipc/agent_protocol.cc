@@ -680,6 +680,7 @@ void WriteNotifyProcessStarting(const NotifyProcessStarting& notify, MessageWrit
   writer->WriteUint64(notify.koid);
   writer->WriteUint32(notify.component_id);
   writer->WriteString(notify.name);
+  SerializeOptional(notify.component, writer);
 }
 
 void WriteNotifyThread(MsgHeader::Type type, const NotifyThread& notify, MessageWriter* writer) {

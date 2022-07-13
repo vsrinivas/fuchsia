@@ -33,7 +33,8 @@ class TargetImpl : public Target {
 
   // Notification that a new process was created from a job filter. The process will not have
   // started running yet.
-  void ProcessCreatedInJob(uint64_t koid, const std::string& process_name, uint64_t timestamp);
+  void ProcessCreatedInJob(uint64_t koid, const std::string& process_name, uint64_t timestamp,
+                           std::optional<debug_ipc::ComponentInfo> component_info);
 
   // Notification that a new process was created as a new component. We need the distinction because
   // they look identical as a process caught by a job filter.
@@ -70,9 +71,11 @@ class TargetImpl : public Target {
   static void OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target,
                                          CallbackWithTimestamp callback, const Err& err,
                                          uint64_t koid, const debug::Status& status,
-                                         const std::string& process_name, uint64_t timestamp);
+                                         const std::string& process_name, uint64_t timestamp,
+                                         std::optional<debug_ipc::ComponentInfo> component_info);
   void OnLaunchOrAttachReply(CallbackWithTimestamp callback, const Err& err, uint64_t koid,
-                             const std::string& process_name, uint64_t timestamp);
+                             const std::string& process_name, uint64_t timestamp,
+                             std::optional<debug_ipc::ComponentInfo> component_info);
 
   // Handles "already exists" error from attaching which get special logic.
   void HandleAttachAlreadyExists(CallbackWithTimestamp callback, uint64_t koid,
@@ -82,8 +85,9 @@ class TargetImpl : public Target {
                            const debug::Status& status, Callback callback, uint64_t timestamp);
 
   // Actual creation that unified common behaviour.
-  std::unique_ptr<ProcessImpl> CreateProcessImpl(uint64_t koid, const std::string& name,
-                                                 Process::StartType);
+  std::unique_ptr<ProcessImpl> CreateProcessImpl(
+      uint64_t koid, const std::string& name, Process::StartType,
+      std::optional<debug_ipc::ComponentInfo> component_info);
 
   System* system_;  // Owns |this|.
 

@@ -5,6 +5,10 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_MOCK_PROCESS_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_MOCK_PROCESS_H_
 
+#include <optional>
+#include <string>
+
+#include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/process.h"
 
 namespace zxdb {
@@ -13,8 +17,8 @@ namespace zxdb {
 // override this to implement the subset of functionality they need.
 class MockProcess : public Process {
  public:
-  explicit MockProcess(Session* session);
-  ~MockProcess() override;
+  explicit MockProcess(Session* session) : Process(session, Process::StartType::kLaunch) {}
+  ~MockProcess() override = default;
 
   // Sets the value returned by GetSymbols(). Does not take ownership.
   void set_symbols(ProcessSymbols* s) { symbols_ = s; }
@@ -23,10 +27,13 @@ class MockProcess : public Process {
   void set_tls_helpers(TLSHelpers h) { tls_helpers_ = h; }
 
   // Process implementation:
-  Target* GetTarget() const override;
-  uint64_t GetKoid() const override;
-  const std::string& GetName() const override;
-  ProcessSymbols* GetSymbols() override;
+  Target* GetTarget() const override { return nullptr; }
+  uint64_t GetKoid() const override { return 0; }
+  const std::string& GetName() const override { return kMockProcessName; }
+  const std::optional<debug_ipc::ComponentInfo>& GetComponentInfo() const override {
+    return kComponentInfo;
+  }
+  ProcessSymbols* GetSymbols() override { return symbols_; }
   void GetModules(fit::callback<void(const Err&, std::vector<debug_ipc::Module>)>) override;
   void GetAspace(
       uint64_t address,
@@ -49,6 +56,9 @@ class MockProcess : public Process {
       fit::callback<void(ErrOr<std::vector<debug_ipc::InfoHandle>> handles)> callback) override;
 
  private:
+  inline static std::string kMockProcessName = "Mock process";
+  inline static std::optional<debug_ipc::ComponentInfo> kComponentInfo =
+      debug_ipc::ComponentInfo{.moniker = "/moniker", .url = "schema://url#meta/component.cm"};
   ProcessSymbols* symbols_ = nullptr;
   std::optional<TLSHelpers> tls_helpers_ = std::nullopt;
 

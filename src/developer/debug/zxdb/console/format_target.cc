@@ -4,6 +4,9 @@
 
 #include "src/developer/debug/zxdb/console/format_target.h"
 
+#include <optional>
+
+#include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
@@ -16,21 +19,10 @@ namespace zxdb {
 
 namespace {
 
-// Returns the process name of the given target, depending on the running
-// process or the current app name, as applicable.
-std::string GetTargetName(const Target* target) {
-  // When running, use the object name if any.
-  std::string name;
-  if (target->GetState() == Target::State::kRunning)
-    name = target->GetProcess()->GetName();
-
-  // Otherwise fall back to the program name which is the first arg.
-  if (name.empty()) {
-    const std::vector<std::string>& args = target->GetArgs();
-    if (!args.empty())
-      name += args[0];
-  }
-  return name;
+std::string GetComponentName(const std::optional<debug_ipc::ComponentInfo>& component_info) {
+  if (!component_info)
+    return "";
+  return component_info->url.substr(component_info->url.find_last_of('/') + 1);
 }
 
 }  // namespace
@@ -40,15 +32,23 @@ OutputBuffer FormatTarget(ConsoleContext* context, const Target* target) {
   out.Append(Syntax::kSpecial, std::to_string(context->IdForTarget(target)));
 
   out.Append(Syntax::kVariable, " state");
-  out.Append("=" + FormatConsoleString(TargetStateToString(target->GetState())) + " ");
+  out.Append("=" + FormatConsoleString(TargetStateToString(target->GetState())));
 
   if (target->GetState() == Target::State::kRunning) {
-    out.Append(Syntax::kVariable, "koid");
-    out.Append("=" + std::to_string(target->GetProcess()->GetKoid()) + " ");
+    out.Append(Syntax::kVariable, " koid");
+    out.Append("=" + std::to_string(target->GetProcess()->GetKoid()));
   }
 
-  out.Append(Syntax::kVariable, "name");
-  out.Append("=" + FormatConsoleString(GetTargetName(target)));
+  if (auto process = target->GetProcess()) {
+    out.Append(Syntax::kVariable, " name");
+    out.Append("=" + FormatConsoleString(process->GetName()));
+    if (auto component = process->GetComponentInfo()) {
+      out.Append(Syntax::kVariable, " moniker");
+      out.Append("=" + FormatConsoleString(component->moniker));
+      out.Append(Syntax::kVariable, " component_url");
+      out.Append("=" + FormatConsoleString(component->url));
+    }
+  }
 
   return out;
 }
@@ -67,34 +67,34 @@ OutputBuffer FormatTargetList(ConsoleContext* context, int indent) {
   std::string indent_str(indent, ' ');
 
   std::vector<std::vector<std::string>> rows;
-  for (const auto& pair : id_targets) {
+  for (const auto& [id, target] : id_targets) {
     rows.emplace_back();
     std::vector<std::string>& row = rows.back();
 
     // "Current process" marker (or nothing).
-    if (pair.first == active_target_id)
+    if (id == active_target_id)
       row.push_back(indent_str + GetCurrentRowMarker());
     else
       row.push_back(indent_str);
 
     // ID.
-    row.push_back(std::to_string(pair.first));
+    row.push_back(std::to_string(id));
 
     // State and koid (if running).
-    row.push_back(TargetStateToString(pair.second->GetState()));
-    if (pair.second->GetState() == Target::State::kRunning) {
-      row.push_back(std::to_string(pair.second->GetProcess()->GetKoid()));
+    row.push_back(TargetStateToString(target->GetState()));
+    if (auto process = target->GetProcess()) {
+      row.push_back(std::to_string(process->GetKoid()));
+      row.push_back(process->GetName());
+      row.push_back(GetComponentName(process->GetComponentInfo()));
     } else {
       row.emplace_back();
     }
-
-    row.push_back(GetTargetName(pair.second));
   }
 
   OutputBuffer out;
   FormatTable({ColSpec(Align::kLeft), ColSpec(Align::kRight, 0, "#", 0, Syntax::kSpecial),
                ColSpec(Align::kLeft, 0, "State"), ColSpec(Align::kRight, 0, "Koid"),
-               ColSpec(Align::kLeft, 0, "Name")},
+               ColSpec(Align::kLeft, 0, "Name"), ColSpec(Align::kLeft, 0, "Component")},
               rows, &out);
   return out;
 }

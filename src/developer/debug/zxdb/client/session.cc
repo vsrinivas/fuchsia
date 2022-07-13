@@ -664,7 +664,7 @@ void Session::DispatchProcessStarting(const debug_ipc::NotifyProcessStarting& no
     found_target = system_.CreateNewTargetImpl(nullptr);
 
   if (notify.component_id == 0) {
-    found_target->ProcessCreatedInJob(notify.koid, notify.name, notify.timestamp);
+    found_target->ProcessCreatedInJob(notify.koid, notify.name, notify.timestamp, notify.component);
     return;
   }
 

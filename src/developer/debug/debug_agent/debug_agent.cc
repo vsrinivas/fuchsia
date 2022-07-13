@@ -15,6 +15,7 @@
 #include "src/developer/debug/debug_agent/arch.h"
 #include "src/developer/debug/debug_agent/binary_launcher.h"
 #include "src/developer/debug/debug_agent/component_manager.h"
+#include "src/developer/debug/debug_agent/debugged_process.h"
 #include "src/developer/debug/debug_agent/debugged_thread.h"
 #include "src/developer/debug/debug_agent/exception_handle.h"
 #include "src/developer/debug/debug_agent/process_breakpoint.h"
@@ -146,6 +147,8 @@ void DebugAgent::OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::St
     debug_ipc::ProcessRecord process_record = {};
     process_record.process_koid = process_koid;
     process_record.process_name = proc->process_handle().GetName();
+    process_record.component = system_interface_->GetComponentManager().FindComponentInfo(
+        proc->process_handle(), *system_interface_);
 
     auto threads = proc->GetThreads();
     process_record.threads.reserve(threads.size());
@@ -164,6 +167,8 @@ void DebugAgent::OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::St
       debug_ipc::ProcessRecord process_record = {};
       process_record.process_koid = process_koid;
       process_record.process_name = record.process->GetName();
+      process_record.component = system_interface_->GetComponentManager().FindComponentInfo(
+          *record.process, *system_interface_);
 
       // For now, only fill the thread blocked on exception.
       process_record.threads.push_back(record.thread->GetThreadRecord(process_koid));
@@ -630,13 +635,16 @@ debug_ipc::ExceptionStrategy DebugAgent::GetExceptionStrategy(debug_ipc::Excepti
 namespace {
 
 void SendAttachReply(DebugAgent* debug_agent, uint32_t transaction_id, const debug::Status& status,
-                     zx_koid_t process_koid = ZX_HANDLE_INVALID,
-                     const std::string& process_name = "") {
+                     const ProcessHandle* process = nullptr) {
   debug_ipc::AttachReply reply;
   reply.status = status;
-  reply.koid = process_koid;
-  reply.name = process_name;
   reply.timestamp = GetNowTimestamp();
+  if (process) {
+    reply.koid = process->GetKoid();
+    reply.name = process->GetName();
+    reply.component = debug_agent->system_interface().GetComponentManager().FindComponentInfo(
+        *process, debug_agent->system_interface());
+  }
 
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteReply(reply, transaction_id, &writer);
@@ -757,8 +765,7 @@ debug::Status DebugAgent::AttachToLimboProcess(zx_koid_t process_koid, uint32_t 
   //
   // DO NOT RETURN FAILURE AFTER THIS POINT or the attach reply will be duplicated (the caller will
   // fall back on non-limbo processes if this function fails and will send another reply).
-  SendAttachReply(this, transaction_id, debug::Status(), process_koid,
-                  debugged_process->process_handle().GetName());
+  SendAttachReply(this, transaction_id, debug::Status(), &debugged_process->process_handle());
 
   debugged_process->PopulateCurrentThreads();
   debugged_process->SuspendAndSendModulesIfKnown();
@@ -792,8 +799,7 @@ debug::Status DebugAgent::AttachToExistingProcess(zx_koid_t process_koid, uint32
     return status;
 
   // Send the response, then the notifications about the process and threads.
-  SendAttachReply(this, transaction_id, debug::Status(), process_koid,
-                  process->process_handle().GetName());
+  SendAttachReply(this, transaction_id, debug::Status(), &process->process_handle());
 
   process->PopulateCurrentThreads();
   process->SuspendAndSendModulesIfKnown();

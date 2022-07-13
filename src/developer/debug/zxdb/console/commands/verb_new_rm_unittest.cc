@@ -115,18 +115,18 @@ TEST_F(VerbNewRmTest, Process) {
   // Create process 2. It will become the current one.
   console.ProcessInputLine("pr new");
   auto event = console.GetOutputEvent();
-  EXPECT_EQ("Process 2 state=\"Not running\" name=\"\"", event.output.AsString());
+  EXPECT_EQ("Process 2 state=\"Not running\"", event.output.AsString());
 
   console.ProcessInputLine("process rm");
   event = console.GetOutputEvent();
-  EXPECT_EQ("Removed Process 2 state=\"Not running\" name=\"\"", event.output.AsString());
+  EXPECT_EQ("Removed Process 2 state=\"Not running\"", event.output.AsString());
 
   // The removal should have reassigned the current process to #1.
   console.ProcessInputLine("pr");
   event = console.GetOutputEvent();
   EXPECT_EQ(
-      "  # State       Koid Name\n"
-      "▶ 1 Not running      \n",
+      "  # State       Koid Name Component\n"
+      "▶ 1 Not running \n",
       event.output.AsString());
 
   // Trying to delete the last one should fail.

@@ -12,7 +12,7 @@
 
 namespace debug_ipc {
 
-constexpr uint32_t kProtocolVersion = 40;
+constexpr uint32_t kProtocolVersion = 41;
 
 // This is so that it's obvious if the timestamp wasn't properly set (that number should be at
 // least 30,000 years) but it's not the max so that if things add to it then time keeps moving
@@ -184,7 +184,7 @@ struct AttachReply {
   debug::Status status;  // Result of attaching.
   std::string name;
 
-  // The component information if the process is running in a component. Not hooked up yet.
+  // The component information if the task is a process and the process is running in a component.
   std::optional<ComponentInfo> component;
 };
 
@@ -409,7 +409,7 @@ struct ConfigAgentReply {
 
 // Notifications ---------------------------------------------------------------
 
-// Notify that a new process was created in debugged job.
+// Notify that a new process of interest was created and attached.
 
 struct NotifyProcessStarting {
   uint64_t timestamp = kTimestampDefault;
@@ -430,7 +430,10 @@ struct NotifyProcessStarting {
   //
   // 0 means non set.
   uint32_t component_id = 0;
-  std::string name = "";
+  std::string name;
+
+  // The component information if the process is running in a component.
+  std::optional<ComponentInfo> component;
 };
 
 // Data for process destroyed messages (process created messages are in

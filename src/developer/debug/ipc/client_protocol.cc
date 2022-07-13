@@ -709,7 +709,7 @@ bool ReadNotifyProcessStarting(MessageReader* reader, NotifyProcessStarting* pro
     return false;
   if (!reader->ReadString(&process->name))
     return false;
-  return true;
+  return DeserializeOptional(reader, &process->component);
 }
 
 bool ReadNotifyThread(MessageReader* reader, NotifyThread* notify) {

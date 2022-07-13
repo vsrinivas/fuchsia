@@ -14,20 +14,6 @@ namespace zxdb {
 
 using debug::MessageLoop;
 
-MockProcess::MockProcess(Session* session) : Process(session, Process::StartType::kLaunch) {}
-MockProcess::~MockProcess() = default;
-
-Target* MockProcess::GetTarget() const { return nullptr; }
-
-uint64_t MockProcess::GetKoid() const { return 0; }
-
-const std::string& MockProcess::GetName() const {
-  static std::string name("Mock process");
-  return name;
-}
-
-ProcessSymbols* MockProcess::GetSymbols() { return symbols_; }
-
 void MockProcess::GetModules(fit::callback<void(const Err&, std::vector<debug_ipc::Module>)> cb) {
   MessageLoop::Current()->PostTask(
       FROM_HERE, [cb = std::move(cb)]() mutable { cb(Err(), std::vector<debug_ipc::Module>()); });

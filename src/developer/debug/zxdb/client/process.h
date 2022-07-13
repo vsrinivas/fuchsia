@@ -72,6 +72,9 @@ class Process : public ClientObject {
   // the file name, but isn't the same as the file name.
   virtual const std::string& GetName() const = 0;
 
+  // Returns the component information.
+  virtual const std::optional<debug_ipc::ComponentInfo>& GetComponentInfo() const = 0;
+
   // Returns the interface for querying symbols for this process.
   virtual ProcessSymbols* GetSymbols() = 0;
 

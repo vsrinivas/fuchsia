@@ -122,37 +122,6 @@ class ConsoleContext : public ProcessObserver,
   // the client layer manage this object.
   const fxl::RefPtr<PrettyStackManager>& pretty_stack_manager() { return pretty_stack_manager_; }
 
- private:
-  struct ThreadRecord {
-    Thread* thread = nullptr;
-
-    // This isn't necessarily valid since the frames could have been changed
-    // out from under us. Be sure to range check before use.
-    int active_frame_id = 0;
-
-    // Default to showing source code for thread stops.
-    SourceAffinity source_affinity = SourceAffinity::kSource;
-  };
-
-  struct TargetRecord {
-    int target_id = 0;
-    Target* target = nullptr;
-
-    int next_thread_id = 1;
-
-    // The active ID will be 0 when there is no active thread (the case when
-    // the process is not running).
-    int active_thread_id = 0;
-
-    std::map<int, ThreadRecord> id_to_thread;
-    std::map<const Thread*, int> thread_to_id;
-  };
-
-  struct JobRecord {
-    int job_id = 0;
-    Job* job = nullptr;
-  };
-
   // SessionObserver implementation:
   void HandleNotification(NotificationType, const std::string&) override;
   void HandlePreviousConnectedProcesses(const std::vector<debug_ipc::ProcessRecord>&) override;
@@ -191,6 +160,37 @@ class ConsoleContext : public ProcessObserver,
   // BreakpointObserver implementation.
   void OnBreakpointMatched(Breakpoint* breakpoint, bool user_requested) override;
   void OnBreakpointUpdateFailure(Breakpoint* breakpoint, const Err& err) override;
+
+ private:
+  struct ThreadRecord {
+    Thread* thread = nullptr;
+
+    // This isn't necessarily valid since the frames could have been changed
+    // out from under us. Be sure to range check before use.
+    int active_frame_id = 0;
+
+    // Default to showing source code for thread stops.
+    SourceAffinity source_affinity = SourceAffinity::kSource;
+  };
+
+  struct TargetRecord {
+    int target_id = 0;
+    Target* target = nullptr;
+
+    int next_thread_id = 1;
+
+    // The active ID will be 0 when there is no active thread (the case when
+    // the process is not running).
+    int active_thread_id = 0;
+
+    std::map<int, ThreadRecord> id_to_thread;
+    std::map<const Thread*, int> thread_to_id;
+  };
+
+  struct JobRecord {
+    int job_id = 0;
+    Job* job = nullptr;
+  };
 
   // Returns the record for the given target, or null (+ assertion) if not
   // found. These pointers are not stable across target list changes.

@@ -28,11 +28,13 @@
 namespace zxdb {
 
 ProcessImpl::ProcessImpl(TargetImpl* target, uint64_t koid, const std::string& name,
-                         Process::StartType start_type)
+                         Process::StartType start_type,
+                         std::optional<debug_ipc::ComponentInfo> component_info)
     : Process(target->session(), start_type),
       target_(target),
       koid_(koid),
       name_(name),
+      component_info_(std::move(component_info)),
       symbols_(this, target->symbols()),
       weak_factory_(this) {}
 
@@ -50,14 +52,6 @@ ThreadImpl* ProcessImpl::GetThreadImplFromKoid(uint64_t koid) {
     return nullptr;
   return found->second.get();
 }
-
-Target* ProcessImpl::GetTarget() const { return target_; }
-
-uint64_t ProcessImpl::GetKoid() const { return koid_; }
-
-const std::string& ProcessImpl::GetName() const { return name_; }
-
-ProcessSymbols* ProcessImpl::GetSymbols() { return &symbols_; }
 
 void ProcessImpl::GetModules(
     fit::callback<void(const Err&, std::vector<debug_ipc::Module>)> callback) {
