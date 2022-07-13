@@ -396,24 +396,6 @@ mod test {
           "deps": [],
           "files": [
             {
-              "destination": "tools/symbol-index",
-              "source": "host_x64/symbol-index"
-            },
-            {
-              "destination": "tools/symbol-index-meta.json",
-              "source": "host_x64/gen/tools/symbol-index/symbol_index_sdk_legacy.meta.json"
-            }
-          ],
-          "gn-label": "//tools/symbol-index:symbol_index_sdk_legacy(//build/toolchain:host_x64)",
-          "id": "sdk://tools/symbol-index",
-          "meta": "tools/symbol-index-meta.json",
-          "type": "host_tool"
-        },
-        {
-          "category": "partner",
-          "deps": [],
-          "files": [
-            {
               "destination": "tools/x64/symbol-index",
               "source": "host_x64/symbol-index"
             },
@@ -562,7 +544,7 @@ mod test {
         assert!(atoms.ids.is_empty());
 
         let atoms = atoms.atoms;
-        assert_eq!(5, atoms.len());
+        assert_eq!(4, atoms.len());
         assert_eq!("partner", atoms[0].category);
         assert!(atoms[0].deps.is_empty());
         assert_eq!("//sdk/devices:generic-arm64(//build/toolchain/fuchsia:x64)", atoms[0].gn_label);
@@ -590,7 +572,7 @@ mod test {
             Sdk::from_sdk_atoms(manifest_path, atoms, get_core_manifest_meta, SdkVersion::Unknown)
                 .unwrap();
 
-        assert_eq!(5, sdk.metas.len());
+        assert_eq!(4, sdk.metas.len());
         assert_eq!(
             "A generic arm64 device",
             sdk.metas[0].get("description").unwrap().as_str().unwrap()

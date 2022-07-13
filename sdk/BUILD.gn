@@ -293,9 +293,6 @@ sdk_molecule("host_tools") {
   foreach(toolchain, toolchains) {
     foreach(dep, cross_compiled) {
       deps += [ "$dep($toolchain)" ]
-      if (toolchain == host_toolchain) {
-        deps += [ "${dep}_legacy($toolchain)" ]
-      }
     }
   }
 }
@@ -533,7 +530,7 @@ sdk("fuchsia_dart") {
     "//sdk/dart/fuchsia_vfs:fuchsia_vfs_sdk($dart_toolchain)",
     "//sdk/fidl/fuchsia.element:fuchsia.element_sdk",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_sdk",
-    "//tools/fidl/fidlgen_dart:fidlgen_dart_sdk_legacy($host_toolchain)",
+    "//tools/fidl/fidlgen_dart:fidlgen_dart_sdk($host_toolchain)",
   ]
 
   toolchains = []
@@ -576,9 +573,6 @@ sdk_molecule("ddk_host_tools") {
   foreach(toolchain, toolchains) {
     foreach(dep, cross_compiled) {
       deps += [ "$dep($toolchain)" ]
-      if (toolchain == host_toolchain) {
-        deps += [ "${dep}_legacy($toolchain)" ]
-      }
     }
   }
 }

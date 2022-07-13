@@ -59,33 +59,6 @@ template("zx_host_tool") {
       testonly = false
     }
 
-    # TODO(fxbug.dev/42999): remove extra atom
-    if (current_cpu == host_cpu && !testonly) {
-      sdk_atom("${target_name}_sdk_legacy") {
-        id = "sdk://$file_base"
-        category = "partner"
-
-        meta = {
-          dest = "$file_base-meta.json"
-          schema = "host_tool"
-          value = {
-            type = "host_tool"
-            name = tool_name
-            root = "tools"
-            files = [ file_base ]
-          }
-        }
-
-        files = [
-          {
-            source = tool_src
-            dest = file_base
-          },
-        ]
-        non_sdk_deps = [ ":${tool_name}" ]
-      }
-    }
-
     if (host_os == "linux" || host_os == "mac") {
       file_base = "tools/$current_cpu/$tool_name"
     }

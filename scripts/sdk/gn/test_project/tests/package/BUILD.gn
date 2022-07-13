@@ -212,7 +212,7 @@ foreach(pkg, _packages) {
     ]
     template_data = {
       script_path = rebase_path("${target_gen_dir}/far.sh")
-      far_bin_path = rebase_path("${tools_out_dir}/far")
+      far_bin_path = rebase_path("${tools_out_dir}/${host_cpu}/far")
       package_name = rebase_path("${target_gen_dir}/$pkg/$pkg")
     }
     data_deps = [
@@ -234,7 +234,7 @@ shellscript_test("manifest_check_test") {
   ]
   template_data = {
     script_path = rebase_path("${target_gen_dir}/manifest_check.sh")
-    far_bin_path = rebase_path("${tools_out_dir}/far")
+    far_bin_path = rebase_path("${tools_out_dir}/${host_cpu}/far")
     package_name = rebase_path("${target_gen_dir}/package/package")
     if (do_rename_test) {
       manifest_name = "overridden_name.cmx"
@@ -259,7 +259,7 @@ shellscript_test("resource_check_test") {
   ]
   template_data = {
     script_path = rebase_path("${target_gen_dir}/manifest_check.sh")
-    far_bin_path = rebase_path("${tools_out_dir}/far")
+    far_bin_path = rebase_path("${tools_out_dir}/${host_cpu}/far")
     package_name = rebase_path("${target_gen_dir}/resource_pkg/resource_pkg")
     manifest_name = "data/resources.txt"
   }
@@ -280,7 +280,7 @@ shellscript_test("vk_check_test") {
   ]
   template_data = {
     script_path = rebase_path("${target_gen_dir}/manifest_check.sh")
-    far_bin_path = rebase_path("${tools_out_dir}/far")
+    far_bin_path = rebase_path("${tools_out_dir}/${host_cpu}/far")
     package_name =
         rebase_path("${target_gen_dir}/package_with_vk/package_with_vk")
     manifest_name = "lib/VkLayer_khronos_validation.so data/vulkan/explicit_layer.d/VkLayer_khronos_validation.json"

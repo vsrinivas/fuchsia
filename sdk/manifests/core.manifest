@@ -212,19 +212,6 @@ sdk://tools/arm64/symbol-index
 sdk://tools/arm64/symbolizer
 sdk://tools/arm64/zbi
 sdk://tools/arm64/zxdb
-sdk://tools/bootserver
-sdk://tools/cmc
-sdk://tools/device-finder
-sdk://tools/far
-sdk://tools/fidl-format
-sdk://tools/fidlc
-sdk://tools/fidlcat
-sdk://tools/fidlgen
-sdk://tools/fvm
-sdk://tools/merkleroot
-sdk://tools/minfs
-sdk://tools/pm
-sdk://tools/symbol-index
 sdk://tools/x64/aemu_internal
 sdk://tools/x64/blobfs-compression
 sdk://tools/x64/blobfs_do_not_depend
@@ -252,6 +239,4 @@ sdk://tools/x64/symbol-index
 sdk://tools/x64/symbolizer
 sdk://tools/x64/zbi
 sdk://tools/x64/zxdb
-sdk://tools/zbi
-sdk://tools/zxdb
 sdk://version_history

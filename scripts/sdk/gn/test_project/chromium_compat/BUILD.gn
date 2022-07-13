@@ -49,7 +49,7 @@ shellscript_test("package_analysis_test_web_engine") {
   ]
   template_data = {
     script_path = rebase_path("${root_out_dir}/gen/tests/package/far.sh")
-    far_bin_path = rebase_path("${tools_out_dir}/far")
+    far_bin_path = rebase_path("${tools_out_dir}/${host_cpu}/far")
     package_name = rebase_path("${target_gen_dir}/web_engine/web_engine")
   }
   data_deps = [
@@ -71,7 +71,7 @@ shellscript_test("manifest_check_test_web_engine") {
   template_data = {
     script_path =
         rebase_path("${root_out_dir}/gen/tests/package/manifest_check.sh")
-    far_bin_path = rebase_path("${tools_out_dir}/far")
+    far_bin_path = rebase_path("${tools_out_dir}/${host_cpu}/far")
     package_name = rebase_path("${target_gen_dir}/web_engine/web_engine")
     manifest_name = "context_provider.cmx"
   }

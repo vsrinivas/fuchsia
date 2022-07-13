@@ -35,54 +35,6 @@ template("sdk_prebuilt_executable") {
   tool_name = get_path_info(invoker.prebuilt, "file")
   file_base = "tools/$tool_name"
 
-  _legacy_tool_diff = sdk_legacy_tool_allowlist
-  _legacy_tool_diff += [ tool_name ]
-  _legacy_tool_diff -= [ tool_name ]
-  is_legacy_tool = _legacy_tool_diff != sdk_legacy_tool_allowlist
-
-  # TODO(fxbug.dev/42999): remove extra atom
-  if (is_legacy_tool && current_cpu == host_cpu) {
-    sdk_atom("${target_name}_sdk_legacy") {
-      id = "sdk://$file_base"
-
-      category = invoker.category
-
-      meta = {
-        dest = "$file_base-meta.json"
-        schema = "host_tool"
-        value = {
-          type = "host_tool"
-          name = tool_name
-          root = "tools"
-          files = [ file_base ]
-        }
-      }
-
-      files = [
-        {
-          source = invoker.prebuilt
-          dest = file_base
-        },
-      ]
-
-      if (defined(invoker.sdk_deps)) {
-        deps = invoker.sdk_deps
-      }
-
-      non_sdk_deps = [ ":$main_target_name" ]
-      if (defined(invoker.non_sdk_deps)) {
-        non_sdk_deps += invoker.non_sdk_deps
-      }
-    }
-  } else {
-    # TODO(fxbug.dev/42999): dummy target to soften transition.
-    # Remove once all petal dependents are removed.
-    _non_legacy_name = ":" + target_name + "_sdk"
-    sdk_atom_alias("${target_name}_sdk_legacy") {
-      atom = _non_legacy_name
-    }
-  }
-
   if (host_os == "linux" || host_os == "mac") {
     file_base = "tools/$current_cpu/$tool_name"
   }

@@ -47,6 +47,5 @@ sdk://fidl/fuchsia.url
 sdk://fidl/zx
 sdk://tools/arm64/fidlgen_dart
 sdk://tools/dart_kernel_compiler
-sdk://tools/fidlgen_dart
 sdk://tools/gen_snapshot
 sdk://tools/x64/fidlgen_dart

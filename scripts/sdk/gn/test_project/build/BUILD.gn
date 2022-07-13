@@ -12,8 +12,8 @@ config("executable_ldconfig") {
 }
 
 copy("sdk_tools") {
-  sources = [ "//third_party/fuchsia-sdk/tools/far" ]
-  outputs = [ "${tools_out_dir}/{{source_file_part}}" ]
+  sources = [ "//third_party/fuchsia-sdk/tools/${host_cpu}/far" ]
+  outputs = [ "${tools_out_dir}/${host_cpu}/{{source_file_part}}" ]
 }
 
 # This matches the target from Chromium
