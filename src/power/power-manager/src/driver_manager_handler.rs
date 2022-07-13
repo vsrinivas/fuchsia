@@ -63,20 +63,45 @@ use std::rc::Rc;
 pub struct DriverManagerHandlerBuilder<'a, 'b> {
     registration_timeout: Option<Seconds>,
     driver_manager_registration: Option<DriverManagerRegistration>,
-    termination_channel_closed_handler: Box<dyn FnOnce() + 'static>,
+    termination_channel_closed_handler: Option<Box<dyn FnOnce()>>,
     service_fs: Option<&'a mut ServiceFs<ServiceObjLocal<'b, ()>>>,
     inspect_root: Option<&'a inspect::Node>,
 }
 
 impl<'a, 'b> DriverManagerHandlerBuilder<'a, 'b> {
-    pub fn new() -> Self {
+    #[cfg(test)]
+    fn new() -> Self {
         Self {
             registration_timeout: None,
             driver_manager_registration: None,
-            termination_channel_closed_handler: Box::new(termination_channel_closed_handler),
+            termination_channel_closed_handler: None,
             service_fs: None,
             inspect_root: None,
         }
+    }
+
+    #[cfg(test)]
+    fn registration_timeout(mut self, timeout: Seconds) -> Self {
+        self.registration_timeout = Some(timeout);
+        self
+    }
+
+    #[cfg(test)]
+    fn termination_channel_closed_handler(mut self, handler: Box<impl FnOnce() + 'static>) -> Self {
+        self.termination_channel_closed_handler = Some(handler);
+        self
+    }
+
+    #[cfg(test)]
+    fn driver_manager_registration(mut self, registration: DriverManagerRegistration) -> Self {
+        self.driver_manager_registration = Some(registration);
+        self
+    }
+
+    #[cfg(test)]
+    fn inspect_root(mut self, inspect_root: &'a inspect::Node) -> Self {
+        self.inspect_root = Some(inspect_root);
+        self
     }
 
     pub fn new_from_json(
@@ -95,50 +120,14 @@ impl<'a, 'b> DriverManagerHandlerBuilder<'a, 'b> {
         }
 
         let data: JsonData = json::from_value(json_data).unwrap();
-        let mut builder = Self::new().with_service_fs(service_fs);
 
-        if let Some(timeout) = data.config.registration_timeout_s {
-            builder = builder.with_registration_timeout(Seconds(timeout));
+        Self {
+            registration_timeout: data.config.registration_timeout_s.map(Seconds),
+            driver_manager_registration: None,
+            termination_channel_closed_handler: None,
+            service_fs: Some(service_fs),
+            inspect_root: None,
         }
-
-        builder
-    }
-
-    pub fn with_service_fs(
-        mut self,
-        service_fs: &'a mut ServiceFs<ServiceObjLocal<'b, ()>>,
-    ) -> Self {
-        self.service_fs = Some(service_fs);
-        self
-    }
-
-    pub fn with_registration_timeout(mut self, timeout: Seconds) -> Self {
-        self.registration_timeout = Some(timeout);
-        self
-    }
-
-    #[cfg(test)]
-    pub fn with_termination_channel_closed_handler(
-        mut self,
-        handler: Box<impl FnOnce() + 'static>,
-    ) -> Self {
-        self.termination_channel_closed_handler = handler;
-        self
-    }
-
-    #[cfg(test)]
-    pub fn with_driver_manager_registration(
-        mut self,
-        registration: DriverManagerRegistration,
-    ) -> Self {
-        self.driver_manager_registration = Some(registration);
-        self
-    }
-
-    #[cfg(test)]
-    pub fn with_inspect_root(mut self, root: &'a inspect::Node) -> Self {
-        self.inspect_root = Some(root);
-        self
     }
 
     /// Constructs the DriverManagerHandler node. In order to construct a fully initialized node
@@ -147,6 +136,12 @@ impl<'a, 'b> DriverManagerHandlerBuilder<'a, 'b> {
     /// Manager. The function returns an error if the DriverManagerHandlerBuilder was provided with
     /// a timeout value and that timeout expires before receiving the registration.
     pub async fn build(self) -> Result<Rc<DriverManagerHandler>, Error> {
+        // Default `termination_channel_closed_handler` calls
+        // `system_shutdown_handler::force_shutdown()` to force a system reboot
+        let termination_channel_closed_handler = self
+            .termination_channel_closed_handler
+            .unwrap_or(Box::new(default_termination_channel_closed_handler));
+
         // Optionally use the default inspect root node
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
 
@@ -174,7 +169,7 @@ impl<'a, 'b> DriverManagerHandlerBuilder<'a, 'b> {
         // default, if the channel is closed then the system will be forcefully shutdown.
         enable_proxy_close_handler(
             registration.termination_state_proxy.clone(),
-            self.termination_channel_closed_handler,
+            termination_channel_closed_handler,
         );
 
         // Bind the received Directory channel to the namespace. This lets the received drivers be
@@ -192,7 +187,7 @@ impl<'a, 'b> DriverManagerHandlerBuilder<'a, 'b> {
 
 /// Default handler function that will be called if the fuchsia.device.manager.SystemStateTransition
 /// protocol instance that was provided during registration is ever closed.
-fn termination_channel_closed_handler() {
+fn default_termination_channel_closed_handler() {
     error!("SystemStateTransition channel closed. Forcing system shutdown");
     fuchsia_trace::instant!(
         "power_manager",
@@ -604,9 +599,9 @@ pub mod tests {
         });
 
         let node = DriverManagerHandlerBuilder::new()
-            .with_inspect_root(inspector.root())
-            .with_registration_timeout(Seconds(60.0))
-            .with_driver_manager_registration(DriverManagerRegistration {
+            .inspect_root(inspector.root())
+            .registration_timeout(Seconds(60.0))
+            .driver_manager_registration(DriverManagerRegistration {
                 termination_state_proxy,
                 dir: fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap().0,
             })
@@ -744,8 +739,8 @@ pub mod tests {
         let _node = exec
             .run_singlethreaded(
                 DriverManagerHandlerBuilder::new()
-                    .with_driver_manager_registration(registration)
-                    .with_termination_channel_closed_handler(Box::new(move || {
+                    .driver_manager_registration(registration)
+                    .termination_channel_closed_handler(Box::new(move || {
                         channel_closed_clone.set(true)
                     }))
                     .build(),
@@ -810,7 +805,7 @@ pub mod tests {
         };
 
         let _node = DriverManagerHandlerBuilder::new()
-            .with_driver_manager_registration(registration)
+            .driver_manager_registration(registration)
             .build()
             .await
             .unwrap();
@@ -843,7 +838,7 @@ pub mod tests {
         };
 
         let node = DriverManagerHandlerBuilder::new()
-            .with_driver_manager_registration(registration)
+            .driver_manager_registration(registration)
             .build()
             .await
             .unwrap();
