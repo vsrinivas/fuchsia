@@ -6,6 +6,7 @@ use crate::error::PowerManagerError;
 use crate::log_if_err;
 use crate::message::{Message, MessageReturn};
 use crate::node::Node;
+use crate::ok_or_default_err;
 use crate::types::{Celsius, Seconds, ThermalLoad, Watts};
 use crate::utils::{get_current_timestamp, CobaltIntHistogram, CobaltIntHistogramConfig};
 use anyhow::{format_err, Result};
@@ -88,11 +89,8 @@ impl<'a> PlatformMetricsBuilder<'a> {
         self,
         futures_out: &FuturesUnordered<LocalBoxFuture<'b, ()>>,
     ) -> Result<Rc<PlatformMetrics>> {
-        let cpu_temperature_handler = self
-            .cpu_temperature_handler
-            .ok_or(format_err!("Must provide CPU TemperatureHandler"))?;
-        let crash_report_handler =
-            self.crash_report_handler.ok_or(format_err!("Must provide CrashReportHandler"))?;
+        let cpu_temperature_handler = ok_or_default_err!(self.cpu_temperature_handler)?;
+        let crash_report_handler = ok_or_default_err!(self.crash_report_handler)?;
 
         let cobalt_sender = self.cobalt_sender.unwrap_or_else(|| {
             let (cobalt_sender, sender_future) = CobaltConnector::default()

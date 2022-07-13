@@ -4,6 +4,7 @@
 
 use crate::log_if_err;
 use crate::node::Node;
+use crate::ok_or_default_err;
 use anyhow::{format_err, Error};
 use async_utils::hanging_get::server as hanging_get;
 use fidl_fuchsia_power_clientlevel as fpowerclient;
@@ -116,9 +117,7 @@ impl<'a, 'b> SystemPowerModeHandlerBuilder<'a, 'b> {
             inspect: SystemPowerModeHandlerInspect::new(inspect_root),
         });
 
-        node.clone().publish_services(
-            self.outgoing_svc_dir.ok_or(format_err!("Missing outgoing_svc_dir"))?,
-        );
+        node.clone().publish_services(ok_or_default_err!(self.outgoing_svc_dir)?);
 
         Ok(node)
     }
