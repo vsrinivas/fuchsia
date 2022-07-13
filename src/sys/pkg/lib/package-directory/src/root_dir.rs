@@ -143,6 +143,12 @@ impl<S: crate::NonMetaStorage> RootDir<S> {
         self.non_meta_files.values()
     }
 
+    /// Returns the path of the package as indicated by the "meta/package" file.
+    pub async fn path(&self) -> Result<fuchsia_pkg::PackagePath, PathError> {
+        Ok(fuchsia_pkg::MetaPackage::deserialize(&self.read_file("meta/package").await?[..])?
+            .into_path())
+    }
+
     pub(crate) async fn meta_far_vmo(&self) -> Result<&zx::Vmo, anyhow::Error> {
         self.meta_far_vmo
             .get_or_try_init(async {
@@ -172,6 +178,15 @@ pub enum ReadFileError {
 
     #[error("no file exists at path: {path:?}")]
     NoFileAtPath { path: String },
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum PathError {
+    #[error("reading meta/package")]
+    Read(#[from] ReadFileError),
+
+    #[error("parsing meta/package")]
+    Parse(#[from] fuchsia_pkg::MetaPackageError),
 }
 
 impl<S: crate::NonMetaStorage> vfs::directory::entry::DirectoryEntry for RootDir<S> {
@@ -521,6 +536,16 @@ mod tests {
                 "5f615dd575994fcbcc174974311d59de258d93cd523d5cb51f0e139b53c33201".parse().unwrap(),
                 "bd905f783ceae4c5ba8319703d7505ab363733c2db04c52c8405603a02922b15".parse().unwrap()
             ]
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn path() {
+        let (_env, root_dir) = TestEnv::new().await;
+
+        assert_eq!(
+            root_dir.path().await.unwrap(),
+            "base-package-0/0".parse::<fuchsia_pkg::PackagePath>().unwrap()
         );
     }
 
