@@ -9,7 +9,7 @@
         "inspect/client.shard.cml",
 
         // Enable logging on stdout
-        "syslog/elf_stdio.shard.cml",
+        "syslog/client.shard.cml",
     ],
 
     // Information about the program to run.

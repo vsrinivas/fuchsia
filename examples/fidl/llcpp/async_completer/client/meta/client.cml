@@ -4,10 +4,7 @@
 
 // [START example_snippet]
 {
-    include: [
-        "syslog/client.shard.cml",
-        "syslog/elf_stdio.shard.cml",
-    ],
+    include: [ "syslog/client.shard.cml" ],
 
     // Information about the program to run.
     program: {

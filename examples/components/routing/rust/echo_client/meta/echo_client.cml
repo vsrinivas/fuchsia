@@ -7,7 +7,7 @@
     // [START_EXCLUDE]
     include: [
         // Enable logging on stdout
-        "syslog/elf_stdio.shard.cml",
+        "syslog/client.shard.cml",
     ],
 
     // [START program_args]
