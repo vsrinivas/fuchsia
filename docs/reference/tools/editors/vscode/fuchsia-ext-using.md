@@ -396,7 +396,7 @@ Once you have started the debugger:
 [ffx-run-ref]: https://fuchsia.dev/reference/tools/sdk/ffx#run
 [zxdb-commands-docs]: /docs/development/debugger/commands.md
 [vscode-debug-actions]: https://code.visualstudio.com/docs/editor/debugging#_debug-actions
-[fidl-docs]: /docs/concepts/fidl/overview?hl=en
+[fidl-docs]: /docs/concepts/fidl/overview.md
 [vscode-errors]: https://code.visualstudio.com/Docs/editor/editingevolved#_errors-warnings
 [diagnostics-schema]: /docs/reference/platform-spec/diagnostics/schema.md#payload
 [docs-schema-logs]: /docs/reference/platform-spec/diagnostics/schema.md#logs_2
