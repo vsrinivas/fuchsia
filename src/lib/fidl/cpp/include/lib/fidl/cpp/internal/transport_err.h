@@ -10,7 +10,8 @@
 
 #include "lib/fidl/cpp/natural_coding_traits.h"
 
-namespace fidl::internal {
+namespace fidl {
+namespace internal {
 
 template <>
 struct NaturalCodingTraits<::fidl::internal::TransportErr,
@@ -42,6 +43,7 @@ struct NaturalCodingTraits<::fidl::internal::TransportErr,
   }
 };
 
-}  // namespace fidl::internal
+}  // namespace internal
+}  // namespace fidl
 
 #endif  // SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_INTERNAL_TRANSPORT_ERR_H_
