@@ -7,7 +7,7 @@
     // if you get build errors using this manifest.
     include: [
         "//src/lib/fuchsia-hyper/hyper.shard.cml",
-        "syslog/elf_stdio.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         runner: "elf",

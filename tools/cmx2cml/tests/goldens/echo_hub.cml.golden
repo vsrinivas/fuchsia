@@ -5,7 +5,7 @@
 // WARNING: Event streams replace the hub for testing in v2. For more information:
 // https://fuchsia.dev/fuchsia-src/development/components/v2/migration/features#events
 {
-    include: [ "syslog/elf_stdio.shard.cml" ],
+    include: [ "syslog/client.shard.cml" ],
     program: {
         runner: "elf",
         binary: "bin/echo1",

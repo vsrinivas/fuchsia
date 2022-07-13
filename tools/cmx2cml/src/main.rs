@@ -267,7 +267,6 @@ const PROTOCOLS_FOR_SYSTEM_TESTS: &[&str] = &[
 
 const KNOWN_INCLUDES: &[&str] = &[
     SYSLOG_SHARD,
-    ELF_STDIO_SHARD,
     ELF_TEST_RUNNER_SHARD,
     GTEST_RUNNER_SHARD,
     GUNIT_RUNNER_SHARD,
@@ -277,7 +276,6 @@ const KNOWN_INCLUDES: &[&str] = &[
 ];
 
 const SYSLOG_SHARD: &str = "syslog/client.shard.cml";
-const ELF_STDIO_SHARD: &str = "syslog/elf_stdio.shard.cml";
 const ELF_TEST_RUNNER_SHARD: &str = "//sdk/lib/sys/testing/elf_test_runner.shard.cml";
 const GTEST_RUNNER_SHARD: &str = "//src/sys/test_runners/gtest/default.shard.cml";
 const GUNIT_RUNNER_SHARD: &str = "//src/sys/test_runners/gunit/default.shard.cml";

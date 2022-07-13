@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::{
-    warnings::Warning, ELF_STDIO_SHARD, ELF_TEST_RUNNER_SHARD, GTEST_RUNNER_SHARD,
-    GUNIT_RUNNER_SHARD, RUST_TEST_RUNNER_SHARD, SYSLOG_SHARD,
+    warnings::Warning, ELF_TEST_RUNNER_SHARD, GTEST_RUNNER_SHARD, GUNIT_RUNNER_SHARD,
+    RUST_TEST_RUNNER_SHARD,
 };
 use anyhow::{bail, Error};
 use std::{collections::BTreeSet, str::FromStr};
@@ -61,12 +61,7 @@ impl RunnerSelection {
 
     pub fn fix_includes(&self, include: &mut BTreeSet<String>) {
         match self {
-            Self::Elf => {
-                // we need the stdio shard to make sure that stdout/stderr still go somewhere
-                // after migrating, and the stdio shard already includes the syslog shard
-                include.remove(SYSLOG_SHARD);
-                include.insert(ELF_STDIO_SHARD.to_owned());
-            }
+            Self::Elf => (), // ELF components ~always have a v1 syslog shard
             Self::ElfTest => {
                 include.insert(ELF_TEST_RUNNER_SHARD.to_owned());
             }

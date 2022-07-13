@@ -4,7 +4,7 @@
 {
     include: [
         "sys/testing/system-test.shard.cml",
-        "syslog/elf_stdio.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
         runner: "elf",
