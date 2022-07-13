@@ -87,12 +87,12 @@ The test runner and all of the test server components are in a single package,
 Because individual tests have timeouts the test is split across 6 different
 components in the same package:
 
-- `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_minimal.cmx`
-- `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_struct.cmx`
-- `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_array.cmx`
-- `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_vector.cmx`
-- `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_table.cmx`
-- `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_union.cmx`
+- `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_minimal.cm`
+- `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_struct.cm`
+- `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_array.cm`
+- `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_vector.cm`
+- `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_table.cm`
+- `fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_union.cm`
 
 To run all of the tests:
 
@@ -103,13 +103,13 @@ fx test fidl_compatibility_test
 Or to run a specific test:
 
 ```sh
-fx test "fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_struct.cmx"
+fx test "fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_struct.cm"
 ```
 
 And if you want to run a specific test case:
 
 ```sh
-fx test "fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_struct.cmx" \
+fx test "fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/fidl_compatibility_test_struct.cm" \
   -- --gtest_filter=Struct.EchoStructNoRetval
 ```
 

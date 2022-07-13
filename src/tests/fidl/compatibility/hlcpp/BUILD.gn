@@ -25,6 +25,6 @@ executable("bin") {
 }
 
 fuchsia_component("hlcpp-impl") {
-  manifest = "meta/hlcpp-impl.cmx"
+  manifest = "meta/hlcpp-impl.cml"
   deps = [ ":bin" ]
 }

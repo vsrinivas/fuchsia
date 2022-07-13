@@ -27,6 +27,6 @@ go_binary("bin") {
 }
 
 fuchsia_component("go-impl") {
-  manifest = "meta/go-impl.cmx"
+  manifest = "meta/go-impl.cml"
   deps = [ ":bin" ]
 }

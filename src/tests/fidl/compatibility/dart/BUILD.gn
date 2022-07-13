@@ -20,7 +20,7 @@ dart_library("bin") {
 }
 
 dart_component("dart-impl") {
-  manifest = "meta/dart-impl.cmx"
+  manifest = "meta/dart-impl.cml"
   main_package = "dart-impl"
   deps = [ ":bin" ]
 }

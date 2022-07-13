@@ -25,7 +25,7 @@ executable("bin") {
 }
 
 fuchsia_component("llcpp-impl") {
-  manifest = "meta/llcpp-impl.cmx"
+  manifest = "meta/llcpp-impl.cml"
   deps = [ ":bin" ]
   testonly = true
 }

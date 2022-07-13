@@ -51,10 +51,10 @@ void ForSomeImpls(Impls impls, AllowImplPair allow, TestBody body) {
       std::cerr << "Executing test for: " << proxy_short << " <-> " << server_short << std::endl;
 
       auto builder = RealmBuilder::Create();
-      builder.AddLegacyChild(proxy_component, proxy_url,
-                             ChildOptions{.startup_mode = StartupMode::EAGER});
-      builder.AddLegacyChild(server_component, server_url,
-                             ChildOptions{.startup_mode = StartupMode::EAGER});
+      builder.AddChild(proxy_component, proxy_url,
+                       ChildOptions{.startup_mode = StartupMode::EAGER});
+      builder.AddChild(server_component, server_url,
+                       ChildOptions{.startup_mode = StartupMode::EAGER});
       builder.AddRoute(Route{.capabilities = {Protocol{"fidl.test.compatibility.Echo"}},
                              .source = ChildRef{server_component},
                              .targets = {ChildRef{proxy_component}}});
@@ -89,7 +89,7 @@ bool GetImplsUnderTest(int argc, char** argv, Impls* out_impls) {
       package_url = impl;
     } else {
       package_url = "fuchsia-pkg://fuchsia.com/fidl-compatibility-test#meta/" +
-                    std::string(argv[i]) + "-impl.cmx";
+                    std::string(argv[i]) + "-impl.cm";
     }
     out_impls->push_back(package_url);
   }

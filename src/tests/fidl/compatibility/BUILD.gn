@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/dart/dart_test_component.gni")
 
 # Shared between the hlcpp test server and the test harness.
 source_set("hlcpp_client_app") {
@@ -35,10 +36,8 @@ fidl_compatibility_tests_categories = [
 # Binding implementations under test.
 fidl_compatibilty_test_impls = [
   "cpp",
+  "dart",
   "hlcpp",
-
-  # TODO(fxbug.dev/91343): re-enable Dart tests once they are converted to CML.
-  # "dart",
   "go",
   "llcpp",
   "rust",
@@ -52,11 +51,11 @@ foreach(impl, fidl_compatibilty_test_impls) {
   test_component_cml_children += [
     {
       name = "${impl}_proxy"
-      url = "#meta/${impl}-impl.cm"
+      url = "#meta/${impl}-impl.cml"
     },
     {
       name = "${impl}_server"
-      url = "#meta/${impl}-impl.cm"
+      url = "#meta/${impl}-impl.cml"
     },
   ]
 
@@ -168,4 +167,10 @@ fuchsia_test_package("fidl_compatibility_test_package") {
 group("compatibility") {
   testonly = true
   deps = [ ":fidl_compatibility_test_package" ]
+
+  if (dart_default_build_cfg.is_aot) {
+    deps += [ "//src/dart:dart_aot_runner" ]
+  } else {
+    deps += [ "//src/dart:dart_jit_runner" ]
+  }
 }
