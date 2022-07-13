@@ -54,13 +54,13 @@ constexpr scenic::Color kCenterColor = {0, 255, 0, 255};
 // These are rough integration tests to supplement the |ScenicPixelTest| clip-space transform tests.
 class MagnificationPixelTest
     : public gtest::RealLoopFixture,
-      public ::testing::WithParamInterface<ui_testing::UITestManager::SceneOwnerType> {
+      public ::testing::WithParamInterface<ui_testing::UITestRealm::SceneOwnerType> {
  protected:
   // |testing::Test|
   void SetUp() override {
-    ui_testing::UITestManager::Config config;
+    ui_testing::UITestRealm::Config config;
     config.scene_owner = GetParam();
-    config.accessibility_owner = ui_testing::UITestManager::AccessibilityOwnerType::FAKE;
+    config.accessibility_owner = ui_testing::UITestRealm::AccessibilityOwnerType::FAKE;
     config.use_input = true;
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
     ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
@@ -81,7 +81,7 @@ class MagnificationPixelTest
                            .targets = {ChildRef{kViewProvider}}});
 
     ui_test_manager_->BuildRealm();
-    realm_exposed_services_ = ui_test_manager_->TakeExposedServicesDirectory();
+    realm_exposed_services_ = ui_test_manager_->CloneExposedServicesDirectory();
 
     // Attach view, and wait for it to render.
     ui_test_manager_->InitializeScene();
@@ -121,10 +121,9 @@ class MagnificationPixelTest
   test::accessibility::MagnifierPtr fake_magnifier_;
 };
 
-INSTANTIATE_TEST_SUITE_P(
-    MagnificationPixelTestWithParams, MagnificationPixelTest,
-    ::testing::Values(ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER,
-                      ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER));
+INSTANTIATE_TEST_SUITE_P(MagnificationPixelTestWithParams, MagnificationPixelTest,
+                         ::testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
+                                           ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER));
 
 TEST_P(MagnificationPixelTest, Identity) {
   SetClipSpaceTransform(/* scale = */ 1, /* translation_x = */ 0, /* translation_y = */ 0);

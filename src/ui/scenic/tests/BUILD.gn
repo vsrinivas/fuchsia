@@ -65,7 +65,7 @@ source_set("scenic_realm_builder") {
     "//sdk/fidl/fuchsia.vulkan.loader",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/ui/testing/ui_test_manager:test_realms",
+    "//src/ui/testing/ui_test_realm:test_realms",
   ]
 }
 

@@ -70,31 +70,30 @@ void SemanticsManagerProxy::RegisterViewForSemantics(
                                                std::move(semantic_tree_request));
 }
 
-std::vector<ui_testing::UITestManager::Config>
-SemanticsIntegrationTestV2::UIConfigurationsToTest() {
-  std::vector<ui_testing::UITestManager::Config> configs;
+std::vector<ui_testing::UITestRealm::Config> SemanticsIntegrationTestV2::UIConfigurationsToTest() {
+  std::vector<ui_testing::UITestRealm::Config> configs;
 
   // GFX x root presenter
   {
-    ui_testing::UITestManager::Config config;
+    ui_testing::UITestRealm::Config config;
 
     // This value was chosen arbitrarily, and fed through root presenter's
     // display model logic to compute the corresponding pixel scale.
     config.display_pixel_density = 4.1668f;
 
-    config.scene_owner = ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
     configs.push_back(config);
   }
 
   // Gfx x scene manager
   {
-    ui_testing::UITestManager::Config config;
+    ui_testing::UITestRealm::Config config;
 
     // TODO(fxbug.dev/98691): Add a non-trivial display pixel density once scene
     // manager supports scaling.
 
-    config.scene_owner = ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
     configs.push_back(config);
   }
@@ -132,7 +131,7 @@ void SemanticsIntegrationTestV2::BuildRealm() {
 
   ui_test_manager_->BuildRealm();
 
-  realm_exposed_services_ = ui_test_manager_->TakeExposedServicesDirectory();
+  realm_exposed_services_ = ui_test_manager_->CloneExposedServicesDirectory();
 }
 
 void SemanticsIntegrationTestV2::SetupScene() {

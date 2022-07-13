@@ -55,8 +55,8 @@ class FocusInputTest : public gtest::RealLoopFixture {
 
   void SetUp() override {
     FX_LOGS(INFO) << "Setting up test case";
-    ui_testing::UITestManager::Config config;
-    config.scene_owner = ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER;
+    ui_testing::UITestRealm::Config config;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
     ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
 
@@ -76,7 +76,7 @@ class FocusInputTest : public gtest::RealLoopFixture {
                            .targets = {ChildRef{kViewProvider}}});
 
     ui_test_manager_->BuildRealm();
-    realm_exposed_services_ = ui_test_manager_->TakeExposedServicesDirectory();
+    realm_exposed_services_ = ui_test_manager_->CloneExposedServicesDirectory();
 
     FX_LOGS(INFO) << "Finished setup";
   }

@@ -94,7 +94,7 @@ fuchsia_test_package("virtual-keyboard-test") {
     "//src/ui/a11y/testing:fake-a11y-manager",
     "//src/ui/bin/root_presenter:component_v2_for_test",
     "//src/ui/bin/text:text_manager_comp_v2",
-    "//src/ui/testing/ui_test_manager:scenic_only",
+    "//src/ui/testing/ui_test_realm:scenic_only",
     "//src/ui/tests/integration_input_tests/virtual-keyboard/web-virtual-keyboard-client:component",
   ]
   test_specs = {

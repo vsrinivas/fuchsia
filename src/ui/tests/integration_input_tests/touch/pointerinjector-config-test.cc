@@ -172,7 +172,7 @@ class ResponseListenerServer : public ResponseListener, public LocalComponent {
 
 class PointerInjectorConfigTest
     : public gtest::RealLoopFixture,
-      public testing::WithParamInterface<ui_testing::UITestManager::SceneOwnerType> {
+      public testing::WithParamInterface<ui_testing::UITestRealm::SceneOwnerType> {
  protected:
   PointerInjectorConfigTest() = default;
   ~PointerInjectorConfigTest() override {
@@ -186,10 +186,10 @@ class PointerInjectorConfigTest
         [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
         kTimeout);
 
-    ui_testing::UITestManager::Config config;
+    ui_testing::UITestRealm::Config config;
     config.scene_owner = GetParam();
     config.use_input = true;
-    config.accessibility_owner = ui_testing::UITestManager::AccessibilityOwnerType::FAKE;
+    config.accessibility_owner = ui_testing::UITestRealm::AccessibilityOwnerType::FAKE;
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
     ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
 
@@ -363,7 +363,7 @@ class PointerInjectorConfigTest
 
     ui_test_manager_->BuildRealm();
 
-    realm_exposed_services_ = ui_test_manager_->TakeExposedServicesDirectory();
+    realm_exposed_services_ = ui_test_manager_->CloneExposedServicesDirectory();
   }
 
   template <typename TimeT>
@@ -404,10 +404,9 @@ class PointerInjectorConfigTest
   static constexpr auto kCppGfxClientUrl = "#meta/touch-gfx-client.cm";
 };
 
-INSTANTIATE_TEST_SUITE_P(
-    PointerInjectorConfigTestWithParams, PointerInjectorConfigTest,
-    ::testing::Values(ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER,
-                      ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER));
+INSTANTIATE_TEST_SUITE_P(PointerInjectorConfigTestWithParams, PointerInjectorConfigTest,
+                         ::testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
+                                           ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER));
 
 TEST_P(PointerInjectorConfigTest, CppGfxClientTapScaled) {
   // Use `ZX_CLOCK_MONOTONIC` to avoid complications due to wall-clock time changes.

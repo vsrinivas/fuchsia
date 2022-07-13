@@ -124,11 +124,11 @@ class TextInputTest : public gtest::RealLoopFixture {
         [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
         kTimeout);
 
-    ui_testing::UITestManager::Config config;
+    ui_testing::UITestRealm::Config config;
     config.use_flatland = true;
-    config.scene_owner = ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
     config.use_input = true;
-    config.accessibility_owner = ui_testing::UITestManager::AccessibilityOwnerType::FAKE;
+    config.accessibility_owner = ui_testing::UITestRealm::AccessibilityOwnerType::FAKE;
     config.ui_to_client_services = {
         fuchsia::ui::scenic::Scenic::Name_, fuchsia::ui::composition::Flatland::Name_,
         fuchsia::ui::composition::Allocator::Name_, fuchsia::ui::input::ImeService::Name_,
@@ -176,7 +176,7 @@ class TextInputTest : public gtest::RealLoopFixture {
                            .targets = {ChildRef{kTextInputFlutter}}});
 
     ui_test_manager_->BuildRealm();
-    realm_exposed_services_ = ui_test_manager_->TakeExposedServicesDirectory();
+    realm_exposed_services_ = ui_test_manager_->CloneExposedServicesDirectory();
 
     // Initialize scene, and attach client view.
     ui_test_manager_->InitializeScene();

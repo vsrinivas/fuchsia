@@ -143,10 +143,10 @@ class VirtualKeyboardBase : public gtest::RealLoopFixture {
 
   void SetUp() override {
     FX_LOGS(INFO) << "Setting up test case";
-    ui_testing::UITestManager::Config config;
-    config.accessibility_owner = ui_testing::UITestManager::AccessibilityOwnerType::FAKE;
+    ui_testing::UITestRealm::Config config;
+    config.accessibility_owner = ui_testing::UITestRealm::AccessibilityOwnerType::FAKE;
     config.use_input = true;
-    config.scene_owner = ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_,
                                     fuchsia::accessibility::semantics::SemanticsManager::Name_,
                                     fuchsia::ui::input3::Keyboard::Name_,
@@ -289,7 +289,7 @@ class VirtualKeyboardBase : public gtest::RealLoopFixture {
     }
 
     ui_test_manager_->BuildRealm();
-    realm_exposed_services_ = ui_test_manager_->TakeExposedServicesDirectory();
+    realm_exposed_services_ = ui_test_manager_->CloneExposedServicesDirectory();
   }
 
   // Configures a RealmBuilder realm and manages scene on behalf of the test

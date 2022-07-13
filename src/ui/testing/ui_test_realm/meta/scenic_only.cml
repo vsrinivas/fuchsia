@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 {
     include: [
-        "//src/ui/testing/ui_test_manager/meta/base_ui_realm.shard.cml",
-        "//src/ui/testing/ui_test_manager/meta/scenic.shard.cml",
+        "//src/ui/testing/ui_test_realm/meta/base_ui_realm.shard.cml",
+        "//src/ui/testing/ui_test_realm/meta/scenic.shard.cml",
     ],
 }

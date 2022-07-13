@@ -14,136 +14,16 @@ source_set("ui_test_manager") {
   ]
 
   public_deps = [
-    ":a11y_deps",
-    ":test_realms",
-    "//sdk/fidl/fuchsia.accessibility",
-    "//sdk/fidl/fuchsia.accessibility.scene",
-    "//sdk/fidl/fuchsia.accessibility.semantics",
-    "//sdk/fidl/fuchsia.input.injection",
-    "//sdk/fidl/fuchsia.input.virtualkeyboard",
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/fidl/fuchsia.scheduler",
     "//sdk/fidl/fuchsia.session.scene",
-    "//sdk/fidl/fuchsia.tracing.provider",
-    "//sdk/fidl/fuchsia.ui.accessibility.view",
     "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.composition",
-    "//sdk/fidl/fuchsia.ui.focus",
-    "//sdk/fidl/fuchsia.ui.input",
     "//sdk/fidl/fuchsia.ui.observation.test",
-    "//sdk/fidl/fuchsia.ui.pointerinjector",
-    "//sdk/fidl/fuchsia.ui.pointerinjector.configuration",
     "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.test.scene",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/fidl/fuchsia.vulkan.loader",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/lib/ui/input-synthesis:test.inputsynthesis",
-    "//src/ui/a11y/testing/fidl:test.accessibility",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-group("test_realms") {
-  testonly = true
-
-  deps = [
-    ":root_presenter_scene",
-    ":root_presenter_scene_with_input",
-    ":scene_manager_scene",
-    ":scene_manager_scene_with_input",
-    ":scenic_only",
-  ]
-}
-
-fuchsia_component("scenic_only") {
-  testonly = true
-
-  component_name = "scenic_only"
-  manifest = "meta/scenic_only.cml"
-  deps = [
-    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
-    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
-    "//src/ui/scenic:component_v2_with_supplied_display_provider",
-  ]
-}
-
-group("a11y_deps") {
-  testonly = true
-
-  deps = [
-    "//src/ui/a11y/bin/a11y_manager:component_v2",
-    "//src/ui/a11y/testing:fake-a11y-manager",
-  ]
-}
-
-fuchsia_component("root_presenter_scene") {
-  testonly = true
-
-  component_name = "root_presenter_scene"
-  manifest = "meta/root_presenter_scene.cml"
-  deps = [
-    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
-    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
-    "//src/ui/bin/root_presenter:component_v2",
-    "//src/ui/scenic:component_v2_with_supplied_display_provider",
-    "//src/ui/testing/scene_provider:scene-provider-deps",
-  ]
-}
-
-fuchsia_component("root_presenter_scene_with_input") {
-  testonly = true
-
-  component_name = "root_presenter_scene_with_input"
-  manifest = "meta/root_presenter_scene_with_input.cml"
-  deps = [
-    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
-    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
-    "//src/ui/bin/input-pipeline:component-v2",
-    "//src/ui/bin/root_presenter:component_v2",
-    "//src/ui/bin/text:text_manager_comp_v2",
-    "//src/ui/scenic:component_v2_with_supplied_display_provider",
-    "//src/ui/testing/scene_provider:scene-provider-deps",
-  ]
-}
-
-fuchsia_component("scene_manager_scene") {
-  testonly = true
-
-  component_name = "scene_manager_scene"
-  manifest = "meta/scene_manager_scene.cml"
-  deps = [
-    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
-    "//src/ui/a11y/bin/a11y_manager:component_v2",
-    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
-    "//src/ui/bin/scene_manager:scene_manager_component",
-    "//src/ui/scenic:component_v2_with_supplied_display_provider",
-    "//src/ui/testing/scene_provider:scene-provider-deps",
-  ]
-}
-
-fuchsia_component("scene_manager_scene_with_input") {
-  testonly = true
-
-  component_name = "scene_manager_scene_with_input"
-  manifest = "meta/scene_manager_scene_with_input.cml"
-  deps = [
-    "//src/cobalt/bin/testing/mock_cobalt:component_v2",
-    "//src/lib/ui/input-synthesis:input-synthesis-component",
-    "//src/lib/ui/input-synthesis:test.inputsynthesis",
-    "//src/ui/a11y/bin/a11y_manager:component_v2",
-    "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
-    "//src/ui/bin/scene_manager:scene_manager_component",
-    "//src/ui/bin/shortcut:shortcut_manager",
-    "//src/ui/bin/text:text_manager_comp_v2",
-    "//src/ui/scenic:component_v2_with_supplied_display_provider",
-    "//src/ui/testing/scene_provider:scene-provider-deps",
+    "//src/ui/testing/ui_test_realm",
   ]
 }

@@ -128,7 +128,7 @@ class GfxAccessibilitySceneTestBase : public gtest::RealLoopFixture {
   ~GfxAccessibilitySceneTestBase() override = default;
 
   void SetUp() override {
-    ui_testing::UITestManager::Config config;
+    ui_testing::UITestRealm::Config config;
     config.scene_owner = SceneOwner();
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_,
                                     fuchsia::ui::accessibility::view::Registry::Name_};
@@ -184,10 +184,10 @@ class GfxAccessibilitySceneTestBase : public gtest::RealLoopFixture {
               .targets = {ChildRef{kA11yManager}}});
 
     ui_test_manager_->BuildRealm();
-    realm_exposed_services_ = ui_test_manager_->TakeExposedServicesDirectory();
+    realm_exposed_services_ = ui_test_manager_->CloneExposedServicesDirectory();
   }
 
-  virtual ui_testing::UITestManager::SceneOwnerType SceneOwner() = 0;
+  virtual ui_testing::UITestRealm::SceneOwnerType SceneOwner() = 0;
 
  protected:
   std::optional<ui_testing::UITestManager> ui_test_manager_;
@@ -199,18 +199,17 @@ class GfxAccessibilitySceneTestBase : public gtest::RealLoopFixture {
 
 class ClientAttachesFirst
     : public GfxAccessibilitySceneTestBase,
-      public ::testing::WithParamInterface<ui_testing::UITestManager::SceneOwnerType> {
+      public ::testing::WithParamInterface<ui_testing::UITestRealm::SceneOwnerType> {
  public:
   ClientAttachesFirst() = default;
   ~ClientAttachesFirst() override = default;
 
-  ui_testing::UITestManager::SceneOwnerType SceneOwner() override { return GetParam(); }
+  ui_testing::UITestRealm::SceneOwnerType SceneOwner() override { return GetParam(); }
 };
 
-INSTANTIATE_TEST_SUITE_P(
-    GfxAccessibilityTestWithParams, ClientAttachesFirst,
-    ::testing::Values(ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER,
-                      ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER));
+INSTANTIATE_TEST_SUITE_P(GfxAccessibilityTestWithParams, ClientAttachesFirst,
+                         ::testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
+                                           ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER));
 
 TEST_P(ClientAttachesFirst, SceneReconnectedAndClientRefocused) {
   FX_LOGS(INFO) << "Starting test case";
@@ -253,8 +252,8 @@ class A11yViewAttachesFirstTest : public GfxAccessibilitySceneTestBase {
   A11yViewAttachesFirstTest() = default;
   ~A11yViewAttachesFirstTest() = default;
 
-  ui_testing::UITestManager::SceneOwnerType SceneOwner() override {
-    return ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER;
+  ui_testing::UITestRealm::SceneOwnerType SceneOwner() override {
+    return ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
   }
 };
 

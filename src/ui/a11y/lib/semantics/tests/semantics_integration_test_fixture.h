@@ -66,7 +66,7 @@ class SemanticsManagerProxy : public fuchsia::accessibility::semantics::Semantic
 
 class SemanticsIntegrationTestV2
     : public gtest::RealLoopFixture,
-      public testing::WithParamInterface<ui_testing::UITestManager::Config> {
+      public testing::WithParamInterface<ui_testing::UITestRealm::Config> {
  public:
   static constexpr auto kSemanticsManager = "semantics_manager";
   static constexpr auto kSemanticsManagerRef = ChildRef{kSemanticsManager};
@@ -80,7 +80,7 @@ class SemanticsIntegrationTestV2
   virtual void ConfigureRealm() {}
 
   // Set of UI configurations to run our semantics integration tests against.
-  static std::vector<ui_testing::UITestManager::Config> UIConfigurationsToTest();
+  static std::vector<ui_testing::UITestRealm::Config> UIConfigurationsToTest();
 
   // Returns the expected pixel scale factor observed by the client view with
   // the given `display_pixel_density`.

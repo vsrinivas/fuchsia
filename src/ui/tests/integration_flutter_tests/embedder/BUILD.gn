@@ -30,7 +30,7 @@ fuchsia_unittest_package("flutter-embedder-test") {
     "//src/connectivity/network/netstack:component-legacy",
     "//src/lib/fuchsia-component-test/realm_builder_server:fuchsia-component-test",
     "//src/ui/bin/root_presenter:component_v2_for_test",
-    "//src/ui/testing/ui_test_manager:scenic_only",
+    "//src/ui/testing/ui_test_realm:scenic_only",
     "//src/ui/tests/integration_flutter_tests/embedder/child-view",
     "//src/ui/tests/integration_flutter_tests/embedder/parent-view",
   ]
@@ -80,7 +80,7 @@ fuchsia_unittest_package("flutter-embedder-test-ip") {
     ":flutter-embedder-test-ip-bin",
     "//src/connectivity/network/netstack:component-legacy",
     "//src/lib/fuchsia-component-test/realm_builder_server:fuchsia-component-test",
-    "//src/ui/testing/ui_test_manager:test_realms",
+    "//src/ui/testing/ui_test_realm:test_realms",
     "//src/ui/tests/integration_flutter_tests/embedder/child-view",
     "//src/ui/tests/integration_flutter_tests/embedder/parent-view",
   ]

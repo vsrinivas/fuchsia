@@ -80,13 +80,13 @@ class MediaButtonsListenerTest : public gtest::RealLoopFixture {
         [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
         kTimeout);
 
-    ui_testing::UITestManager::Config config;
-    config.scene_owner = ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER;
+    ui_testing::UITestRealm::Config config;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
     config.use_input = true;
     ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
 
     ui_test_manager_->BuildRealm();
-    realm_exposed_services_ = ui_test_manager_->TakeExposedServicesDirectory();
+    realm_exposed_services_ = ui_test_manager_->CloneExposedServicesDirectory();
   }
 
   void RegisterInjectionDevice() {

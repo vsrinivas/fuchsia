@@ -336,8 +336,7 @@ class ResponseListenerServer : public ResponseListener, public LocalComponent {
 
 class TouchInputBase : public gtest::RealLoopFixture {
  protected:
-  TouchInputBase(ui_testing::UITestManager::SceneOwnerType scene_owner)
-      : scene_owner_(scene_owner) {}
+  TouchInputBase(ui_testing::UITestRealm::SceneOwnerType scene_owner) : scene_owner_(scene_owner) {}
   ~TouchInputBase() override {
     FX_CHECK(injection_count_ > 0) << "injection expected but didn't happen.";
   }
@@ -349,11 +348,11 @@ class TouchInputBase : public gtest::RealLoopFixture {
         [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
         kTimeout);
 
-    ui_testing::UITestManager::Config config;
+    ui_testing::UITestRealm::Config config;
     config.scene_owner = scene_owner_;
     config.display_rotation = 90;
     config.use_input = true;
-    config.accessibility_owner = ui_testing::UITestManager::AccessibilityOwnerType::FAKE;
+    config.accessibility_owner = ui_testing::UITestRealm::AccessibilityOwnerType::FAKE;
     config.exposed_client_services = {test::touch::TestAppLauncher::Name_};
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_,
                                     fuchsia::accessibility::semantics::SemanticsManager::Name_};
@@ -650,7 +649,7 @@ class TouchInputBase : public gtest::RealLoopFixture {
 
     ui_test_manager_->BuildRealm();
 
-    realm_exposed_services_ = ui_test_manager_->TakeExposedServicesDirectory();
+    realm_exposed_services_ = ui_test_manager_->CloneExposedServicesDirectory();
   }
 
   template <typename TimeT>
@@ -687,24 +686,23 @@ class TouchInputBase : public gtest::RealLoopFixture {
   uint32_t display_width_ = 0;
   uint32_t display_height_ = 0;
 
-  ui_testing::UITestManager::SceneOwnerType scene_owner_ =
-      ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER;
+  ui_testing::UITestRealm::SceneOwnerType scene_owner_ =
+      ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
 
   fuchsia::sys::ComponentControllerPtr client_component_;
 };
 
 class TouchInputBaseParameterized
     : public TouchInputBase,
-      public testing::WithParamInterface<ui_testing::UITestManager::SceneOwnerType> {
+      public testing::WithParamInterface<ui_testing::UITestRealm::SceneOwnerType> {
  protected:
   TouchInputBaseParameterized()
-      : TouchInputBase(ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER) {}
+      : TouchInputBase(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER) {}
 };
 
 class FlutterInputTestIp : public TouchInputBase {
  protected:
-  FlutterInputTestIp()
-      : TouchInputBase(ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER) {}
+  FlutterInputTestIp() : TouchInputBase(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER) {}
 
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
     return {
@@ -798,7 +796,7 @@ INSTANTIATE_TEST_SUITE_P(FlutterSwipeTest, FlutterSwipeTestParameterized,
 
 class GfxInputTestIp : public TouchInputBase {
  protected:
-  GfxInputTestIp() : TouchInputBase(ui_testing::UITestManager::SceneOwnerType::ROOT_PRESENTER) {}
+  GfxInputTestIp() : TouchInputBase(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER) {}
 
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
     return {std::make_pair(kCppGfxClient, kCppGfxClientUrl)};

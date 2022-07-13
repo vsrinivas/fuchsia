@@ -38,16 +38,16 @@ constexpr auto kViewProvider = "view-provider";
 // that the a11y manager behaves correctly.
 class AccessibilitySceneTest
     : public gtest::RealLoopFixture,
-      public ::testing::WithParamInterface<ui_testing::UITestManager::AccessibilityOwnerType> {
+      public ::testing::WithParamInterface<ui_testing::UITestRealm::AccessibilityOwnerType> {
  public:
   AccessibilitySceneTest() = default;
   ~AccessibilitySceneTest() override = default;
 
   void SetUp() override {
-    ui_testing::UITestManager::Config config;
+    ui_testing::UITestRealm::Config config;
     config.use_flatland = true;
     config.accessibility_owner = GetParam();
-    config.scene_owner = ui_testing::UITestManager::SceneOwnerType::SCENE_MANAGER;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_,
                                     fuchsia::ui::composition::Flatland::Name_,
                                     fuchsia::ui::composition::Allocator::Name_};
@@ -79,10 +79,9 @@ class AccessibilitySceneTest
 
 // Run test with both the real and fake a11y components, because other tests
 // will rely on the fake to vend `fuchsia.accessibility.scene.Provider`.
-INSTANTIATE_TEST_SUITE_P(
-    MagnificationPixelTestWithParams, AccessibilitySceneTest,
-    ::testing::Values(ui_testing::UITestManager::AccessibilityOwnerType::FAKE,
-                      ui_testing::UITestManager::AccessibilityOwnerType::REAL));
+INSTANTIATE_TEST_SUITE_P(MagnificationPixelTestWithParams, AccessibilitySceneTest,
+                         ::testing::Values(ui_testing::UITestRealm::AccessibilityOwnerType::FAKE,
+                                           ui_testing::UITestRealm::AccessibilityOwnerType::REAL));
 
 TEST_P(AccessibilitySceneTest, AccessibilityViewInserted) {
   EXPECT_FALSE(ui_test_manager_->ClientViewIsRendering());
