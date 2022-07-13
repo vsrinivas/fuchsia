@@ -61,6 +61,7 @@ type cachedPkgRepo struct {
 	loggerCtx        context.Context
 	downloadManifest []downloadRecord
 	gcsClient        *storage.Client
+	fileServer       http.Handler
 	repoPath         string
 	repoURL          *url.URL
 	blobURL          *url.URL
@@ -85,11 +86,12 @@ func newCachedPkgRepo(ctx context.Context, repoPath, repoURL, blobURL string) (*
 		return nil, err
 	}
 	return &cachedPkgRepo{
-		loggerCtx: ctx,
-		repoPath:  repoPath,
-		gcsClient: client,
-		repoURL:   rURL,
-		blobURL:   bURL,
+		loggerCtx:  ctx,
+		fileServer: http.FileServer(http.Dir(repoPath)),
+		repoPath:   repoPath,
+		gcsClient:  client,
+		repoURL:    rURL,
+		blobURL:    bURL,
 	}, nil
 }
 
@@ -100,8 +102,9 @@ func (c *cachedPkgRepo) logf(msg string, args ...interface{}) {
 func (c *cachedPkgRepo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	startTime := time.Now()
 	localPath := path.Join(c.repoPath, r.URL.Path)
+
+	// If the requested path does not exist locally, fetch it from GCS.
 	if _, err := os.Stat(localPath); err != nil {
-		// If the requested path does not exist locally, fetch it from GCS.
 		if errors.Is(err, os.ErrNotExist) {
 			statusCode, err := c.fetchFromGCS(r.Context(), r.URL, localPath)
 			if err != nil {
@@ -115,20 +118,20 @@ func (c *cachedPkgRepo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	contents, err := ioutil.ReadFile(localPath)
-	if err != nil {
-		c.logf("failed to read file %s: %s", localPath, err)
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
 
-	// The package resolver requires the Content-Length header.
-	w.Header().Set("Content-Length", strconv.Itoa(len(contents)))
-	w.WriteHeader(http.StatusOK)
-	w.Write(contents)
+	// Once we've asserted that the blob exists locally, redirect the request
+	// to the file server.
+	c.fileServer.ServeHTTP(w, r)
 
 	// Update the serving metrics.
-	c.totalBytesServed += len(contents)
+	if length := w.Header().Get("Content-Length"); length != "" {
+		l, err := strconv.Atoi(length)
+		if err != nil {
+			c.logf("failed to convert content length %s to integer: %s", length, err)
+		} else {
+			c.totalBytesServed += l
+		}
+	}
 	c.serveTimeSec += time.Since(startTime).Seconds()
 }
 
