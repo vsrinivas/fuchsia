@@ -59,7 +59,7 @@ def convert_budget_format(component, all_manifests):
         "obj/build/images/fuchsia/fuchsia/repackaged",
     ]
     # And these are the assembly bundle locations that packages can be from
-    for bundle_name in ["common_minimal"]:
+    for bundle_name in ["common_minimal", "common_minimal_eng"]:
         prefixes_for_prefixes.append("obj/bundles/assembly/" + bundle_name)
 
     prefixes = tuple(

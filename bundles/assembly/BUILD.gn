@@ -10,6 +10,7 @@ assert(is_fuchsia,
 group("assembly") {
   deps = [
     ":common_minimal",
+    ":common_minimal_eng",
     ":emulator_support",
   ]
 }
@@ -38,6 +39,16 @@ assembly_input_bundle("common_minimal") {
 
     # Hardware Information
     #"//src/hwinfo:hwinfo",
+  ]
+}
+
+# This is common across all eng-mode products, at the minimal or higher service
+# level.
+#
+assembly_input_bundle("common_minimal_eng") {
+  base_packages = [
+    # Empty placeholder for now, this is setting up the pattern, before actually
+    # moving packages into it (the next CL)
   ]
 }
 

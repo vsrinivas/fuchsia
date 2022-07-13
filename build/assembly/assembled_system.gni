@@ -238,6 +238,7 @@ template("assembled_system") {
     _platform_aib_names = [
       # "common_base",
       "common_minimal",
+      "common_minimal_eng",
       "emulator_support",
     ]
 

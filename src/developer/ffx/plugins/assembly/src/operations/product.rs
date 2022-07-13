@@ -5,9 +5,12 @@
 use crate::operations::product::assembly_builder::ImageAssemblyConfigBuilder;
 use crate::util;
 use anyhow::{Context, Result};
-use assembly_config_schema::product_config::ProductAssemblyConfig;
+use assembly_config_schema::product_config::{
+    BuildType, FeatureSupportLevel, ProductAssemblyConfig,
+};
 use ffx_assembly_args::ProductArgs;
 use log::info;
+use std::path::PathBuf;
 
 mod assembly_builder;
 
@@ -29,15 +32,39 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
 
     let mut builder = ImageAssemblyConfigBuilder::default();
 
-    let legacy_bundle_path = legacy_bundle_dir.join("legacy").join("assembly_config.json");
-    let emulator_bundle_path =
-        input_bundles_dir.join("emulator_support").join("assembly_config.json");
+    // Choose platform bundles based on the chosen base level of support and build type
+    //
+    // TODO(tbd): Move this to the `assembly_platform_configuration` crate after
+    // https://fxrev.dev/694448 lands.
+    let mut platform_bundles =
+        match (&config.platform.feature_set_level, &config.platform.build_type) {
+            (FeatureSupportLevel::Minimal, BuildType::Eng) => {
+                vec!["common_minimal", "common_minimal_eng"]
+            }
+            (FeatureSupportLevel::Minimal, _) => {
+                vec!["common_minimal"]
+            }
+            _ => vec![],
+        };
+    platform_bundles.push("emulator_support");
 
-    for bundle_path in vec![legacy_bundle_path, emulator_bundle_path] {
-        builder
-            .add_bundle(&bundle_path)
-            .context(format!("Adding input bundle: {}", bundle_path.display()))?;
+    // Add the platform bundles chosen above.
+    for platform_bundle_name in platform_bundles {
+        let platform_bundle_path = make_bundle_path(&input_bundles_dir, platform_bundle_name);
+        builder.add_bundle(&platform_bundle_path).with_context(|| {
+            format!(
+                "Adding platform bundle {} ({})",
+                platform_bundle_name,
+                platform_bundle_path.display()
+            )
+        })?;
     }
+
+    let legacy_bundle_path = make_bundle_path(&legacy_bundle_dir, "legacy");
+
+    builder
+        .add_bundle(&legacy_bundle_path)
+        .context(format!("Adding legacy bundle: {}", legacy_bundle_path.display()))?;
 
     // Set structured configuration
     builder.set_bootfs_structured_config(assembly_platform_configuration::define_bootfs_config(
@@ -69,4 +96,8 @@ pub fn assemble(args: ProductArgs) -> Result<()> {
     serde_json::to_writer_pretty(image_assembly_file, &image_assembly)?;
 
     Ok(())
+}
+
+fn make_bundle_path(bundles_dir: &PathBuf, name: &str) -> PathBuf {
+    bundles_dir.join(name).join("assembly_config.json")
 }
