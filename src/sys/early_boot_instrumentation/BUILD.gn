@@ -19,9 +19,18 @@ source_set("coverage-source") {
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+    "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_c",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_c",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/stdcompat",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
 
@@ -43,6 +52,8 @@ test("coverage-source-test") {
   sources = [ "coverage_source_test.cc" ]
   deps = [
     ":coverage-source",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_llcpp",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",

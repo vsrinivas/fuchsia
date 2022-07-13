@@ -261,6 +261,8 @@ config("fidl-deprecated-c-bindings") {
     "//src/storage/volume_image/fvm:fvm_sparse_image_reader_test",
     "//src/sys/bin/psutils:kstats",
     "//src/sys/bin/psutils:memgraph",
+    "//src/sys/early_boot_instrumentation:coverage-source",
+    "//src/ui/input/drivers/pc-ps2:pc-ps2-driver",
     "//src/ui/lib/display:hdcp_service",
     "//src/virtualization/bin/vmm/device:block",
     "//src/virtualization/bin/vmm/device:magma_image",

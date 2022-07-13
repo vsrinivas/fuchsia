@@ -44,6 +44,13 @@ zx::status<> ExposeKernelProfileData(fbl::unique_fd& kernel_data_dir, vfs::Pseud
 // Usually |phys_data_dir| is '/boot/kernel/data/phys'.
 zx::status<> ExposePhysbootProfileData(fbl::unique_fd& physboot_data_dir, vfs::PseudoDir& out_dir);
 
+// Given a channel which is a server end of 'fuchsia.boot.SvcStash', will inspect all queued request
+// on each stashed 'svc' and expose the published DebugData as a vmo file.
+// Following the |debugdata.Publisher| protocol, the vmos are exposed as dynamic if the provided
+// token has been signaled with |ZX_EVENTPAIR_PEER_CLOSED|, and static otherwise.
+void ExposeEarlyBootStashedProfileData(zx::unowned_channel svc_stash, vfs::PseudoDir& dynamic_out,
+                                       vfs::PseudoDir& static_out);
+
 }  // namespace early_boot_instrumentation
 
 #endif  // SRC_SYS_EARLY_BOOT_INSTRUMENTATION_COVERAGE_SOURCE_H_
