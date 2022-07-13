@@ -18,8 +18,7 @@
             "fuchsia.mediacodec.CodecFactory",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.sysinfo.SysInfo",
-            "fuchsia.tracing.provider.Registry"
+            "fuchsia.sysinfo.SysInfo"
         ]
     }
 }

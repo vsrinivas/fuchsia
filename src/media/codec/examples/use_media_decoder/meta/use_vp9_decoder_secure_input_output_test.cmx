@@ -31,8 +31,7 @@
             "fuchsia.sysinfo.SysInfo",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tee.Application.41fe9859-71e4-4bf4-bbaa-d71435b127ae",
-            "fuchsia.tee.DeviceInfo",
-            "fuchsia.tracing.provider.Registry"
+            "fuchsia.tee.DeviceInfo"
         ]
     }
 }

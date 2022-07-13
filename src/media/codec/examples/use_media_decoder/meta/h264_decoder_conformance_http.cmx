@@ -15,8 +15,7 @@
             "fuchsia.net.http.Loader",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.sysmem.Allocator",
-            "fuchsia.tracing.provider.Registry"
+            "fuchsia.sysmem.Allocator"
         ]
     }
 }
