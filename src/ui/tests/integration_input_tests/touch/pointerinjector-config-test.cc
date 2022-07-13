@@ -170,9 +170,24 @@ class ResponseListenerServer : public ResponseListener, public LocalComponent {
   fit::function<void(test::touch::PointerData)> respond_callback_;
 };
 
+struct PointerInjectorConfigTestData {
+  int display_rotation;
+
+  float clip_scale = 1.f;
+  float clip_translation_x = 0.f;
+  float clip_translation_y = 0.f;
+
+  // expected location of the pointer event, in client view space, where the
+  // range of the X and Y axes is [0, 1]
+  float expected_x;
+  float expected_y;
+};
+using PointerInjectorConfigTestParams =
+    std::tuple<ui_testing::UITestRealm::SceneOwnerType, PointerInjectorConfigTestData>;
+
 class PointerInjectorConfigTest
     : public gtest::RealLoopFixture,
-      public testing::WithParamInterface<ui_testing::UITestRealm::SceneOwnerType> {
+      public testing::WithParamInterface<PointerInjectorConfigTestParams> {
  protected:
   PointerInjectorConfigTest() = default;
   ~PointerInjectorConfigTest() override {
@@ -186,8 +201,11 @@ class PointerInjectorConfigTest
         [] { FX_LOGS(FATAL) << "\n\n>> Test did not complete in time, terminating.  <<\n\n"; },
         kTimeout);
 
+    auto [scene_owner, test_data] = GetParam();
+
     ui_testing::UITestRealm::Config config;
-    config.scene_owner = GetParam();
+    config.display_rotation = test_data.display_rotation;
+    config.scene_owner = scene_owner;
     config.use_input = true;
     config.accessibility_owner = ui_testing::UITestRealm::AccessibilityOwnerType::FAKE;
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
@@ -230,7 +248,6 @@ class PointerInjectorConfigTest
                         << ").";
 
           // Allow for minor rounding differences in coordinates.
-
           EXPECT_EQ(pointer_data.component_name(), component_name);
           if (abs(pointer_data.local_x() - expected_x) <= kViewCoordinateEpsilon &&
               abs(pointer_data.local_y() - expected_y) <= kViewCoordinateEpsilon) {
@@ -276,17 +293,27 @@ class PointerInjectorConfigTest
                   << "and y touch range = (-1000, 1000).";
   }
 
-  // Inject directly into Input Pipeline, using fuchsia.input.injection FIDLs.
-  zx::basic_time<ZX_CLOCK_MONOTONIC> InjectInput(TapLocation tap_location) {
-    // Set InputReports to inject. One contact at the center of the top right quadrant, followed
+  zx::basic_time<ZX_CLOCK_MONOTONIC> TapTopLeft() {
+    // Inject directly into Input Pipeline, using fuchsia.input.injection FIDLs.
+
+    // Set InputReports to inject. One contact at the center of the top left quadrant, followed
     // by no contacts.
     fuchsia::input::report::ContactInputReport contact_input_report;
     contact_input_report.set_contact_id(1);
 
+    auto [scene_owner, test_data] = GetParam();
+
     // Inject one input report, then a conclusion (empty) report.
-    switch (tap_location) {
-      case TapLocation::kTopLeft:
+    switch (test_data.display_rotation) {
+      case 0:
         contact_input_report.set_position_x(-500);
+        contact_input_report.set_position_y(-500);
+        break;
+      case 90:
+        // The /config/data/display_rotation (90) specifies how many degrees to rotate the
+        // presentation child view, counter-clockwise, in a right-handed coordinate system. Thus,
+        // the user observes the child view to rotate *clockwise* by that amount (90).
+        contact_input_report.set_position_x(500);
         contact_input_report.set_position_y(-500);
         break;
       default:
@@ -317,7 +344,7 @@ class PointerInjectorConfigTest
   // Try injecting a tap every `kTapRetryInterval` until the test completes.
   void TryInjectRepeatedly(TapLocation tap_location,
                            zx::basic_time<ZX_CLOCK_MONOTONIC> input_injection_time) {
-    input_injection_time = InjectInput(tap_location);
+    input_injection_time = TapTopLeft();
     async::PostDelayedTask(
         dispatcher(),
         [this, tap_location, input_injection_time] {
@@ -331,8 +358,8 @@ class PointerInjectorConfigTest
   }
 
   // Guaranteed to be initialized after SetUp().
-  uint32_t display_width() const { return display_width_; }
-  uint32_t display_height() const { return display_height_; }
+  float display_width() const { return static_cast<float>(display_width_); }
+  float display_height() const { return static_cast<float>(display_height_); }
 
   sys::ServiceDirectory* realm_exposed_services() { return realm_exposed_services_.get(); }
   Realm* realm() { return realm_.get(); }
@@ -404,57 +431,98 @@ class PointerInjectorConfigTest
   static constexpr auto kCppGfxClientUrl = "#meta/touch-gfx-client.cm";
 };
 
-INSTANTIATE_TEST_SUITE_P(PointerInjectorConfigTestWithParams, PointerInjectorConfigTest,
-                         ::testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
-                                           ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER));
+// Declare test data.
+// In all these tests, we tap the center of the top left quadrant of the
+// physical display (after rotation), and verify that the client view gets a
+// pointer event with the expected coordinates.
 
-TEST_P(PointerInjectorConfigTest, CppGfxClientTapScaled) {
+// No changes to display rotation or clip space
+constexpr PointerInjectorConfigTestData kTestDataBaseCase = {
+    .display_rotation = 0, .expected_x = 1.f / 4.f, .expected_y = 1.f / 4.f};
+
+// Test scale by a factor of 2.
+// Intuitive argument for these expected coordinates:
+// Here we've zoomed into the center of the client view, scaling it up by 2x. So, the touch point
+// will have 'migrated' halfway towards the center of the client view:  3/8 instead of 1/4.
+constexpr PointerInjectorConfigTestData kTestDataScale = {
+    .display_rotation = 0, .clip_scale = 2.f, .expected_x = 3.f / 8.f, .expected_y = 3.f / 8.f};
+
+// Test display rotation by 90 degrees.
+// In this case, rotation shouldn't affect what the client view sees.
+constexpr PointerInjectorConfigTestData kTestDataRotateAndScale = {
+    .display_rotation = 90, .clip_scale = 2.f, .expected_x = 3.f / 8.f, .expected_y = 3.f / 8.f};
+
+// Test scaling and translation.
+constexpr float kScale = 3.f;
+constexpr float kTranslationX = -0.2f;
+constexpr float kTranslationY = 0.1f;
+constexpr PointerInjectorConfigTestData kTestDataScaleAndTranslate = {
+    .display_rotation = 0,
+    .clip_scale = kScale,
+    .clip_translation_x = kTranslationX,
+    .clip_translation_y = kTranslationY,
+    // Terms: 'Original position' + 'movement due to scale' + 'movement due to translation'
+    .expected_x = 0.25f + 0.25f * (1.f - 1.f / kScale) - kTranslationX / 2.f / kScale,
+    .expected_y = 0.25f + 0.25f * (1.f - 1.f / kScale) - kTranslationY / 2.f / kScale};
+
+// Test scaling, translation, and rotation at once.
+//
+// Here, the translation does affect what the client view sees, so we have to account for it.
+// This is what the translation looks like in client view coordinates, where it's rotated 90
+// degrees.
+constexpr float kClientViewTranslationX = kTranslationY;
+constexpr float kClientViewTranslationY = -kTranslationX;
+constexpr PointerInjectorConfigTestData kTestDataScaleTranslateRotate = {
+    .display_rotation = 90,
+    .clip_scale = kScale,
+    .clip_translation_x = kTranslationX,
+    .clip_translation_y = kTranslationY,
+    // Same formula as before, but with different transform values.
+    .expected_x = 0.25f + 0.25f * (1.f - 1.f / kScale) - kClientViewTranslationX / 2.f / kScale,
+    .expected_y = 0.25f + 0.25f * (1.f - 1.f / kScale) - kClientViewTranslationY / 2.f / kScale};
+
+INSTANTIATE_TEST_SUITE_P(
+    PointerInjectorConfigTestWithParams, PointerInjectorConfigTest,
+    ::testing::Combine(::testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
+                                         ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER),
+                       ::testing::Values(kTestDataBaseCase, kTestDataScale, kTestDataRotateAndScale,
+                                         kTestDataScaleAndTranslate,
+                                         kTestDataScaleTranslateRotate)));
+
+TEST_P(PointerInjectorConfigTest, CppGfxClientTapTest) {
+  auto [scene_owner, test_data] = GetParam();
+
+  FX_LOGS(INFO) << "Starting test with params: display_rotation=" << test_data.display_rotation
+                << ", clip_scale=" << test_data.clip_scale
+                << ", clip_translation_x=" << test_data.clip_translation_x
+                << ", clip_translation_y=" << test_data.clip_translation_y
+                << ", expected_x=" << test_data.expected_x
+                << ", expected_y=" << test_data.expected_y;
+
   // Use `ZX_CLOCK_MONOTONIC` to avoid complications due to wall-clock time changes.
   zx::basic_time<ZX_CLOCK_MONOTONIC> input_injection_time(0);
 
-  SetClipSpaceTransform(2.0f, 0.0, 0.0);
+  SetClipSpaceTransform(test_data.clip_scale, test_data.clip_translation_x,
+                        test_data.clip_translation_y);
 
   TryInjectRepeatedly(TapLocation::kTopLeft, input_injection_time);
 
-  // Intuitive argument for these client view pointer event coordinates:
-  // If we hadn't set a clip space transform, (expected_x, expected_y) would be
-  // (display_width() / 4.f, display_height / 4.f).  However, here we've zoomed
-  // into the center of the client view, scaling it up by 2x.  So, the points
-  // will have 'migrated' halfway towards the center of the client view: 3/8
-  // instead of 1/4.
-  WaitForAResponseMeetingExpectations(
-      /*expected_x=*/static_cast<float>(display_width()) * 3.f / 8.f,
-      /*expected_y=*/static_cast<float>(display_height()) * 3.f / 8.f,
-      /*component_name=*/"touch-gfx-client");
-
-  RunLoop();
-}
-
-TEST_P(PointerInjectorConfigTest, CppGfxClientTapScaledAndOffset) {
-  // Use `ZX_CLOCK_MONOTONIC` to avoid complications due to wall-clock time changes.
-  zx::basic_time<ZX_CLOCK_MONOTONIC> input_injection_time(0);
-
-  const float kScale = 2.f;
-  const float kTranslationX = -0.2f;
-  const float kTranslationY = 0.1f;
-  SetClipSpaceTransform(kScale, kTranslationX, kTranslationY);
-
-  // General solution for the expected client view pointer event coordinates.
-  const auto scaled_viewport_width = static_cast<float>(display_width()) / kScale;
-  FX_LOGS(INFO) << "Scaled width: " << scaled_viewport_width;
-  const auto scaled_viewport_height = static_cast<float>(display_height()) / kScale;
-  FX_LOGS(INFO) << "Scaled height: " << scaled_viewport_height;
-  const auto expected_x = ((kScale - 1.f - kTranslationX) * (scaled_viewport_width / 2.f)) +
-                          (scaled_viewport_width / 4.f);
-  const auto expected_y = ((kScale - 1.f - kTranslationY) * (scaled_viewport_height / 2.f)) +
-                          (scaled_viewport_height / 4.f);
-  FX_LOGS(INFO) << "Expected x: " << expected_x;
-  FX_LOGS(INFO) << "Expected y: " << expected_y;
-
-  TryInjectRepeatedly(TapLocation::kTopLeft, input_injection_time);
-
-  WaitForAResponseMeetingExpectations(expected_x, expected_y,
-                                      /*component_name=*/"touch-gfx-client");
+  switch (test_data.display_rotation) {
+    case 0:
+      WaitForAResponseMeetingExpectations(
+          /*expected_x=*/display_width() * test_data.expected_x,
+          /*expected_y=*/display_height() * test_data.expected_y,
+          /*component_name=*/"touch-gfx-client");
+      break;
+    case 90:
+      WaitForAResponseMeetingExpectations(
+          /*expected_x=*/display_height() * test_data.expected_x,
+          /*expected_y=*/display_width() * test_data.expected_y,
+          /*component_name=*/"touch-gfx-client");
+      break;
+    default:
+      FX_NOTREACHED();
+  }
 
   RunLoop();
 }

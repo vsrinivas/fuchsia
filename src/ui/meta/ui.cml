@@ -47,8 +47,14 @@
         {
             directory: "config-data",
             from: "parent",
-            to: "#scenic",
+            to: [ "#scenic" ],
             subdir: "scenic",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#scene_manager" ],
+            subdir: "scene_manager",
         },
         {
             directory: "dev-display-controller",

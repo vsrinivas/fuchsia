@@ -43,6 +43,18 @@ enum ExposedServices {
 
 #[fuchsia::main(logging_tags = [ "scene_manager" ])]
 async fn main() -> Result<(), Error> {
+    let result = inner_main().await;
+    if let Err(e) = result {
+        fx_log_err!("Uncaught error in main(): {}", e);
+        return Err(e);
+    }
+    Ok(())
+}
+
+// TODO(fxbug.dev/89425): Ideally we wouldn't need to have separate inner_main() and main()
+// functions in order to catch and log top-level errors.  Instead, the #[fuchsia::main] macro
+// could catch and log the error.
+async fn inner_main() -> Result<(), Error> {
     let mut fs = ServiceFs::new_local();
 
     inspect_runtime::serve(inspect::component::inspector(), &mut fs)?;
@@ -93,8 +105,19 @@ async fn main() -> Result<(), Error> {
         )))
     } else {
         let view_ref_installed = connect_to_protocol::<ui_views::ViewRefInstalledMarker>()?;
+        let display_rotation = match std::fs::read_to_string("/config/data/display_rotation") {
+            Ok(contents) => contents.parse::<i32>()?,
+            Err(_) => 0,
+        };
         let gfx_scene_manager: Arc<Mutex<Box<dyn SceneManager>>> = Arc::new(Mutex::new(Box::new(
-            scene_management::GfxSceneManager::new(scenic, view_ref_installed, None, None).await?,
+            scene_management::GfxSceneManager::new(
+                scenic,
+                view_ref_installed,
+                display_rotation,
+                None,
+                None,
+            )
+            .await?,
         )));
         if let Err(e) = register_gfx_as_magnifier(Arc::clone(&gfx_scene_manager)) {
             fx_log_warn!("failed to register as the magnification handler: {:?}", e);

@@ -34,6 +34,12 @@
             path: "/dev/class/input-report",
         },
         {
+            directory: "config-data",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
             protocol: [
                 // Used to register with the a11y service as the magnification handler.
                 "fuchsia.accessibility.Magnifier",

@@ -59,6 +59,9 @@ pub struct GfxSceneManager {
     /// The metrics for the display presenting the scene.
     pub display_metrics: DisplayMetrics,
 
+    /// Whether the display metrics dictate flipping dimensions of child viewports.
+    pub should_flip_viewport_dimensions: bool,
+
     /// The camera of the scene.
     camera: scenic::Camera,
 
@@ -202,7 +205,17 @@ impl SceneManager for GfxSceneManager {
         let view_holder = GfxSceneManager::create_view_holder(
             &self.a11y_proxy_session,
             token_pair.view_holder_token,
-            self.display_metrics,
+            match self.should_flip_viewport_dimensions {
+                false => {
+                    (self.display_metrics.width_in_pips(), self.display_metrics.height_in_pips())
+                }
+                true => {
+                    (self.display_metrics.height_in_pips(), self.display_metrics.width_in_pips())
+                }
+            },
+            None,
+            None,
+            None,
             Some("root".to_string()),
         );
 
@@ -240,7 +253,17 @@ impl SceneManager for GfxSceneManager {
         let a11y_view_holder = GfxSceneManager::create_view_holder(
             &self.pointerinjector_session,
             a11y_view_holder_token,
-            self.display_metrics,
+            match self.should_flip_viewport_dimensions {
+                false => {
+                    (self.display_metrics.width_in_pips(), self.display_metrics.height_in_pips())
+                }
+                true => {
+                    (self.display_metrics.height_in_pips(), self.display_metrics.width_in_pips())
+                }
+            },
+            None,
+            None,
+            None,
             Some(String::from("a11y view holder")),
         );
         self.pointerinjector_view.add_child(&a11y_view_holder);
@@ -374,11 +397,23 @@ impl GfxSceneManager {
 
     /// Creates a new SceneManager.
     ///
+    /// # Parameters
+    /// - `scenic`: The [`ScenicProxy`] which is used to create the session.
+    /// - `view_ref_installed_proxy`: See `GfxSceneManager::view_ref_installed`.
+    /// - `display_rotation`: How much the physical display is rotated, in
+    /// degrees counter-clockwise. For example, 90 means that the physical
+    /// display has been rotated so that its top edge is now its left edge.
+    /// - `display_pixel_density`: The pixel density of the display, in pixels
+    /// per mm. If this isn't provided, we'll try to guess one.
+    /// - `viewing_distance`: The viewing distance. If this isn't provided,
+    /// we'll try to guess one.
+    ///
     /// # Errors
     /// Returns an error if a Scenic session could not be initialized, or the scene setup fails.
     pub async fn new(
         scenic: ui_scenic::ScenicProxy,
         view_ref_installed_proxy: ui_views::ViewRefInstalledProxy,
+        display_rotation: i32,
         display_pixel_density: Option<f32>,
         viewing_distance: Option<ViewingDistance>,
     ) -> Result<Self, Error> {
@@ -402,25 +437,50 @@ impl GfxSceneManager {
 
         let display_metrics =
             DisplayMetrics::new(size_in_pixels, display_pixel_density, viewing_distance, None);
-
-        scene.set_scale(display_metrics.pixels_per_pip(), display_metrics.pixels_per_pip(), 1.0);
-
+        let (display_rotation_enum, pointerinjector_translation, should_flip_viewport_dimensions) =
+            match display_rotation % 360 {
+                0 => Ok((scenic::DisplayRotation::None, (0.0, 0.0), false)),
+                90 => Ok((
+                    scenic::DisplayRotation::By90Degrees,
+                    (display_metrics.width_in_pixels() as f32, 0.0),
+                    true,
+                )),
+                180 => Ok((
+                    scenic::DisplayRotation::By180Degrees,
+                    (
+                        display_metrics.width_in_pixels() as f32,
+                        display_metrics.height_in_pixels() as f32,
+                    ),
+                    false,
+                )),
+                270 => Ok((
+                    scenic::DisplayRotation::By270Degrees,
+                    (0.0, display_metrics.height_in_pixels() as f32),
+                    true,
+                )),
+                _ => Err(anyhow::anyhow!("Invalid display rotation; must be {{0,90,180,270}}")),
+            }?;
         let layer = GfxSceneManager::create_layer(&session, &renderer, size_in_pixels);
         let layer_stack = GfxSceneManager::create_layer_stack(&session, &layer);
-        let compositor = GfxSceneManager::create_compositor(&session, &layer_stack);
+        let compositor =
+            GfxSceneManager::create_compositor(&session, &layer_stack, display_rotation_enum);
 
         // Add the root node to the scene immediately.
         let root_node = scenic::EntityNode::new(session.clone());
 
         scene.add_child(&root_node);
 
-        // Create pointer injector view/viewholder and add to the scene.
+        // Create root view/viewholder and add to the scene.
+        // Root view dimensions should not account for display rotation.
         let root_view_token_pair = scenic::ViewTokenPair::new()?;
         let root_viewref_pair = scenic::ViewRefPair::new()?;
         let root_view_holder = GfxSceneManager::create_view_holder(
             &session,
             root_view_token_pair.view_holder_token,
-            display_metrics,
+            (display_metrics.width_in_pixels() as f32, display_metrics.height_in_pixels() as f32),
+            None,
+            None,
+            None,
             Some(String::from("root view holder")),
         );
 
@@ -442,7 +502,13 @@ impl GfxSceneManager {
         let pointerinjector_view_holder = GfxSceneManager::create_view_holder(
             &session,
             pointerinjector_token_pair.view_holder_token,
-            display_metrics,
+            match should_flip_viewport_dimensions {
+                false => (display_metrics.width_in_pips(), display_metrics.height_in_pips()),
+                true => (display_metrics.height_in_pips(), display_metrics.width_in_pips()),
+            },
+            Some(display_metrics.pixels_per_pip()),
+            Some(display_rotation as f32),
+            Some(pointerinjector_translation),
             Some(String::from("pointerinjector view holder")),
         );
         let (pointerinjector_session, _pointerinjector_focuser) =
@@ -465,7 +531,13 @@ impl GfxSceneManager {
         let a11y_proxy_view_holder = GfxSceneManager::create_view_holder(
             &pointerinjector_session,
             a11y_proxy_token_pair.view_holder_token,
-            display_metrics,
+            match should_flip_viewport_dimensions {
+                false => (display_metrics.width_in_pips(), display_metrics.height_in_pips()),
+                true => (display_metrics.height_in_pips(), display_metrics.width_in_pips()),
+            },
+            None,
+            None,
+            None,
             Some(String::from("a11y proxy view holder")),
         );
         let (a11y_proxy_session, _a11y_proxy_focuser) = GfxSceneManager::create_session(&scenic)?;
@@ -550,6 +622,7 @@ impl GfxSceneManager {
             context_view_ref,
             target_view_ref,
             display_metrics,
+            should_flip_viewport_dimensions,
             cursor_node: None,
             cursor_shape: None,
             _resources: resources,
@@ -689,9 +762,11 @@ impl GfxSceneManager {
     fn create_compositor(
         session: &scenic::SessionPtr,
         layer_stack: &scenic::LayerStack,
+        display_rotation: scenic::DisplayRotation,
     ) -> scenic::DisplayCompositor {
         let compositor = scenic::DisplayCompositor::new(session.clone());
         compositor.set_layer_stack(&layer_stack);
+        compositor.set_display_rotation(display_rotation);
 
         compositor
     }
@@ -701,12 +776,15 @@ impl GfxSceneManager {
     /// # Parameters
     /// - `session`: The scenic session in which to create the view holder.
     /// - `view_holder_token`: The view holder token used to create the view holder.
-    /// - `display_metrics`: The metrics for the display presenting the scene.
+    /// - `scale`, `rotation`, `translation`: Used to adjust the view holder's transform.
     /// - `name`: The debug name of the view holder.
     fn create_view_holder(
         session: &scenic::SessionPtr,
         view_holder_token: ui_views::ViewHolderToken,
-        display_metrics: DisplayMetrics,
+        dimensions: (f32, f32),
+        scale: Option<f32>,
+        rotation: Option<f32>,
+        translation: Option<(f32, f32)>,
         name: Option<String>,
     ) -> scenic::ViewHolder {
         let view_holder = scenic::ViewHolder::new(session.clone(), view_holder_token, name);
@@ -714,11 +792,7 @@ impl GfxSceneManager {
         let view_properties = ui_gfx::ViewProperties {
             bounding_box: ui_gfx::BoundingBox {
                 min: ui_gfx::Vec3 { x: 0.0, y: 0.0, z: GfxSceneManager::VIEW_BOUNDS_DEPTH },
-                max: ui_gfx::Vec3 {
-                    x: display_metrics.width_in_pips(),
-                    y: display_metrics.height_in_pips(),
-                    z: 0.0,
-                },
+                max: ui_gfx::Vec3 { x: dimensions.0, y: dimensions.1, z: 0.0 },
             },
             downward_input: true,
             focus_change: true,
@@ -726,6 +800,19 @@ impl GfxSceneManager {
             inset_from_max: ui_gfx::Vec3 { x: 0.0, y: 0.0, z: 0.0 },
         };
         view_holder.set_view_properties(view_properties);
+        if let Some(s) = scale {
+            view_holder.set_scale(s, s, 1.0);
+        }
+        if let Some(angle) = rotation {
+            // This is a quarternion representing a rotation of `angle` degrees
+            // around the z-axis.  See also:
+            // https://en.wikipedia.org/wiki/Conversion_between_quaternions_and_Euler_angles#Intuition
+            let half_angle = 0.5 * angle.to_radians();
+            view_holder.set_rotation(0.0, 0.0, half_angle.sin(), half_angle.cos());
+        }
+        if let Some((x, y)) = translation {
+            view_holder.set_translation(x, y, 0.0);
+        }
 
         view_holder
     }
