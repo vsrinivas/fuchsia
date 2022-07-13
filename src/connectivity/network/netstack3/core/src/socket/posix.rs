@@ -16,7 +16,7 @@ use crate::{
     socket::{
         address::{AddrVecIter, ConnAddr, ConnIpAddr, IpAddrVec, ListenerAddr, ListenerIpAddr},
         AddrVec, Bound, IncompatibleError, InsertError, RemoveResult, SocketAddrType,
-        SocketMapAddrSpec, SocketMapAddrStateSpec, SocketMapStateSpec,
+        SocketMapAddrSpec, SocketMapAddrStateSpec, SocketMapConflictPolicy, SocketMapStateSpec,
     },
 };
 
@@ -238,19 +238,14 @@ impl<T> ToPosixSharingOptions for (T, PosixSharingOptions) {
     }
 }
 
-impl<AA, I, P, A> SocketMapAddrStateSpec<AA, PosixSharingOptions, I, A, P> for PosixAddrState<I>
-where
-    AA: Into<AddrVec<A>> + Clone,
-    P: PosixSocketStateSpec + PosixConflictPolicy<A>,
-    A: SocketMapAddrSpec,
-    I: PartialEq + Debug,
-{
-    fn check_for_conflicts(
-        new_sharing_state: &PosixSharingOptions,
-        addr: &AA,
-        socketmap: &SocketMap<AddrVec<A>, Bound<P>>,
-    ) -> Result<(), InsertError> {
-        P::check_posix_sharing(*new_sharing_state, addr.clone().into(), socketmap)
+impl<I: Debug + Eq> SocketMapAddrStateSpec for PosixAddrState<I> {
+    type Id = I;
+    type SharingState = PosixSharingOptions;
+    fn new(new_sharing_state: &PosixSharingOptions, id: I) -> Self {
+        match new_sharing_state {
+            PosixSharingOptions::Exclusive => Self::Exclusive(id),
+            PosixSharingOptions::ReusePort => Self::ReusePort(vec![id]),
+        }
     }
 
     fn try_get_dest<'a, 'b>(
@@ -263,13 +258,6 @@ where
                 PosixSharingOptions::Exclusive => Err(IncompatibleError),
                 PosixSharingOptions::ReusePort => Ok(ids),
             },
-        }
-    }
-
-    fn new_addr_state(new_sharing_state: &PosixSharingOptions, id: I) -> Self {
-        match new_sharing_state {
-            PosixSharingOptions::Exclusive => Self::Exclusive(id),
-            PosixSharingOptions::ReusePort => Self::ReusePort(vec![id]),
         }
     }
 
@@ -286,6 +274,21 @@ where
                 }
             }
         }
+    }
+}
+
+impl<AA, P, A> SocketMapConflictPolicy<AA, PosixSharingOptions, A> for P
+where
+    AA: Into<AddrVec<A>> + Clone,
+    P: PosixSocketStateSpec + PosixConflictPolicy<A>,
+    A: SocketMapAddrSpec,
+{
+    fn check_for_conflicts(
+        new_sharing_state: &PosixSharingOptions,
+        addr: &AA,
+        socketmap: &SocketMap<AddrVec<A>, Bound<P>>,
+    ) -> Result<(), InsertError> {
+        P::check_posix_sharing(*new_sharing_state, addr.clone().into(), socketmap)
     }
 }
 

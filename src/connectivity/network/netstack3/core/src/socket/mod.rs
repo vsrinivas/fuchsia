@@ -111,13 +111,33 @@ pub(crate) trait SocketMapStateSpec {
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub(crate) struct IncompatibleError;
 
-pub(crate) trait SocketMapAddrStateSpec<
-    Addr,
-    SharingState,
-    Id,
-    A: SocketMapAddrSpec,
-    S: SocketMapStateSpec + ?Sized,
->
+pub(crate) trait SocketMapAddrStateSpec {
+    type Id;
+    type SharingState;
+    /// Creates a new `Self` holding the provided socket with the given new
+    /// sharing state at the specified address.
+    fn new(new_sharing_state: &Self::SharingState, id: Self::Id) -> Self;
+
+    /// Gets the target in the existing socket(s) in `self` for a new socket
+    /// with the provided state.
+    ///
+    /// If the new state is incompatible with the existing socket(s),
+    /// implementations of this function should return
+    /// `Err(IncompatibleError)`. If `Ok(dest)` is returned, the new socket ID
+    /// will be appended to `dest`.
+    fn try_get_dest<'a, 'b>(
+        &'b mut self,
+        new_sharing_state: &'a Self::SharingState,
+    ) -> Result<&'b mut Vec<Self::Id>, IncompatibleError>;
+
+    /// Removes the given socket from the existing state.
+    ///
+    /// Implementations should assume that `id` is contained in `self`.
+    fn remove_by_id(&mut self, id: Self::Id) -> RemoveResult;
+}
+
+pub(crate) trait SocketMapConflictPolicy<Addr, SharingState, A: SocketMapAddrSpec>:
+    SocketMapStateSpec
 {
     /// Checks whether a new socket with the provided state can be inserted at
     /// the given address in the existing socket map, returning an error
@@ -130,31 +150,10 @@ pub(crate) trait SocketMapAddrStateSpec<
     fn check_for_conflicts(
         new_sharing_state: &SharingState,
         addr: &Addr,
-        socketmap: &SocketMap<AddrVec<A>, Bound<S>>,
+        socketmap: &SocketMap<AddrVec<A>, Bound<Self>>,
     ) -> Result<(), InsertError>
     where
-        Bound<S>: Tagged<AddrVec<A>>;
-
-    /// Gets the target in the existing socket(s) in `self` for a new socket
-    /// with the provided state.
-    ///
-    /// If the new state is incompatible with the existing socket(s),
-    /// implementations of this function should return
-    /// `Err(IncompatibleError)`. If `Ok(dest)` is returned, the new socket ID
-    /// will be appended to `dest`.
-    fn try_get_dest<'a, 'b>(
-        &'b mut self,
-        new_sharing_state: &'a SharingState,
-    ) -> Result<&'b mut Vec<Id>, IncompatibleError>;
-
-    /// Creates a new `Self` holding the provided socket with the given new
-    /// sharing state at the specified address.
-    fn new_addr_state(new_sharing_state: &SharingState, id: Id) -> Self;
-
-    /// Removes the given socket from the existing state.
-    ///
-    /// Implementations should assume that `id` is contained in `self`.
-    fn remove_by_id(&mut self, id: Id) -> RemoveResult;
+        Bound<Self>: Tagged<AddrVec<A>>;
 }
 
 #[derive(Derivative)]
@@ -376,28 +375,27 @@ where
 
 impl<
         'a,
-        Id: Clone + From<usize> + Into<usize>,
         State,
-        SharingState,
         Addr: Clone + Debug,
-        AddrState: Debug + SocketMapAddrStateSpec<Addr, SharingState, Id, A, S>,
+        AddrState: SocketMapAddrStateSpec,
         Convert: ConvertSocketTypeState<A, S, Addr, AddrState>,
         A: SocketMapAddrSpec,
-        S: SocketMapStateSpec,
+        S: SocketMapStateSpec + SocketMapConflictPolicy<Addr, AddrState::SharingState, A>,
     > SocketTypeStateMut<'a>
     for Sockets<
-        &'a mut IdMap<(State, SharingState, Addr)>,
+        &'a mut IdMap<(State, AddrState::SharingState, Addr)>,
         &'a mut SocketMap<AddrVec<A>, Bound<S>>,
-        Id,
+        AddrState::Id,
         AddrState,
         Convert,
     >
 where
     Bound<S>: Tagged<AddrVec<A>>,
+    AddrState::Id: Clone + From<usize> + Into<usize>,
 {
-    type Id = Id;
+    type Id = AddrState::Id;
     type State = State;
-    type SharingState = SharingState;
+    type SharingState = AddrState::SharingState;
     type Addr = Addr;
 
     fn get_by_id_mut(
@@ -417,7 +415,7 @@ where
         tag_state: Self::SharingState,
     ) -> Result<Self::Id, (InsertError, Self::State, Self::SharingState)> {
         let Self(id_to_sock, addr_to_state, _) = self;
-        match AddrState::check_for_conflicts(&tag_state, &socket_addr, &addr_to_state) {
+        match S::check_for_conflicts(&tag_state, &socket_addr, &addr_to_state) {
             Err(e) => return Err((e, state, tag_state)),
             Ok(()) => (),
         };
@@ -446,7 +444,7 @@ where
                 let index = id_to_sock.push((state, tag_state, socket_addr));
                 let (_state, tag_state, _addr): &(Self::State, _, Self::Addr) =
                     id_to_sock.get(index).unwrap();
-                v.insert(Convert::to_bound(AddrState::new_addr_state(tag_state, index.into())));
+                v.insert(Convert::to_bound(AddrState::new(tag_state, index.into())));
                 Ok(index.into())
             }
         }
@@ -517,24 +515,20 @@ where
     }
 }
 
-impl<A: SocketMapAddrSpec, S: SocketMapStateSpec> BoundSocketMap<A, S>
+impl<A: SocketMapAddrSpec, S> BoundSocketMap<A, S>
 where
     Bound<S>: Tagged<AddrVec<A>>,
     AddrVec<A>: IterShadows,
-    S::ConnAddrState: SocketMapAddrStateSpec<
-        ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
-        S::ConnSharingState,
-        S::ConnId,
-        A,
-        S,
-    >,
-    S::ListenerAddrState: SocketMapAddrStateSpec<
-        ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
-        S::ListenerSharingState,
-        S::ListenerId,
-        A,
-        S,
-    >,
+    S: SocketMapStateSpec
+        + SocketMapConflictPolicy<
+            ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
+            <S as SocketMapStateSpec>::ConnSharingState,
+            A,
+        > + SocketMapConflictPolicy<
+            ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
+            <S as SocketMapStateSpec>::ListenerSharingState,
+            A,
+        >,
 {
     pub(crate) fn listeners(
         &self,
@@ -562,7 +556,11 @@ where
         State = S::ListenerState,
         SharingState = S::ListenerSharingState,
         Addr = ListenerAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier>,
-    > {
+    >
+    where
+        S::ListenerAddrState:
+            SocketMapAddrStateSpec<Id = S::ListenerId, SharingState = S::ListenerSharingState>,
+    {
         let Self { listener_id_to_sock, conn_id_to_sock: _, addr_to_state } = self;
         Sockets::<_, _, S::ListenerId, S::ListenerAddrState, Self>(
             listener_id_to_sock,
@@ -597,7 +595,11 @@ where
         State = S::ConnState,
         SharingState = S::ConnSharingState,
         Addr = ConnAddr<A::IpAddr, A::DeviceId, A::LocalIdentifier, A::RemoteIdentifier>,
-    > {
+    >
+    where
+        S::ConnAddrState:
+            SocketMapAddrStateSpec<Id = S::ConnId, SharingState = S::ConnSharingState>,
+    {
         let Self { listener_id_to_sock: _, conn_id_to_sock, addr_to_state } = self;
         Sockets::<_, _, S::ConnId, S::ConnAddrState, Self>(
             conn_id_to_sock,
@@ -786,8 +788,36 @@ mod tests {
 
     type FakeBoundSocketMap = BoundSocketMap<FakeAddrSpec, FakeSpec>;
 
-    impl<A: Into<AddrVec<FakeAddrSpec>> + Clone, I: Eq>
-        SocketMapAddrStateSpec<A, char, I, FakeAddrSpec, FakeSpec> for Multiple<I>
+    impl<I: Eq> SocketMapAddrStateSpec for Multiple<I> {
+        type Id = I;
+        type SharingState = char;
+
+        fn new(new_sharing_state: &char, id: I) -> Self {
+            Self(*new_sharing_state, vec![id])
+        }
+
+        fn try_get_dest<'a, 'b>(
+            &'b mut self,
+            new_state: &'a char,
+        ) -> Result<&'b mut Vec<I>, IncompatibleError> {
+            let Self(c, v) = self;
+            (new_state == c).then(|| v).ok_or(IncompatibleError)
+        }
+
+        fn remove_by_id(&mut self, id: I) -> RemoveResult {
+            let Self(_, v) = self;
+            let index = v.iter().position(|i| i == &id).expect("did not find id");
+            let _: I = v.swap_remove(index);
+            if v.is_empty() {
+                RemoveResult::IsLast
+            } else {
+                RemoveResult::Success
+            }
+        }
+    }
+
+    impl<A: Into<AddrVec<FakeAddrSpec>> + Clone> SocketMapConflictPolicy<A, char, FakeAddrSpec>
+        for FakeSpec
     {
         fn check_for_conflicts(
             new_state: &char,
@@ -810,29 +840,6 @@ mod tests {
                 Err(InsertError::ShadowerExists)
             } else {
                 Ok(())
-            }
-        }
-
-        fn try_get_dest<'a, 'b>(
-            &'b mut self,
-            new_state: &'a char,
-        ) -> Result<&'b mut Vec<I>, IncompatibleError> {
-            let Self(c, v) = self;
-            (new_state == c).then(|| v).ok_or(IncompatibleError)
-        }
-
-        fn new_addr_state(new_sharing_state: &char, id: I) -> Self {
-            Self(*new_sharing_state, vec![id])
-        }
-
-        fn remove_by_id(&mut self, id: I) -> RemoveResult {
-            let Self(_, v) = self;
-            let index = v.iter().position(|i| i == &id).expect("did not find id");
-            let _: I = v.swap_remove(index);
-            if v.is_empty() {
-                RemoveResult::IsLast
-            } else {
-                RemoveResult::Success
             }
         }
     }

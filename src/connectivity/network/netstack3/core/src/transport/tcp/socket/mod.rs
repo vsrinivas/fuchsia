@@ -42,16 +42,17 @@ use rand::RngCore;
 
 use crate::{
     algorithm::{PortAlloc, PortAllocImpl},
-    context::{InstantContext, RngContext},
-    data_structures::socketmap::{IterShadows as _, SocketMap},
+    context::InstantContext,
+    data_structures::socketmap::{IterShadows as _, SocketMap, Tagged},
     ip::{
         socket::{IpSock, IpSocket as _},
         BufferTransportIpContext, IpDeviceId,
     },
     socket::{
         address::{ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr, ListenerIpAddr},
-        posix::{PosixConflictPolicy, PosixSharingOptions, PosixSocketStateSpec},
-        AddrVec, Bound, BoundSocketMap, InsertError, SocketTypeState as _, SocketTypeStateMut as _,
+        AddrVec, Bound, BoundSocketMap, IncompatibleError, InsertError, RemoveResult,
+        SocketAddrTypeTag, SocketMapAddrStateSpec, SocketMapConflictPolicy, SocketMapStateSpec,
+        SocketTypeState as _, SocketTypeStateMut as _,
     },
     transport::tcp::{
         buffer::{ReceiveBuffer, SendBuffer},
@@ -86,56 +87,81 @@ struct SocketAddr<A: IpAddress> {
 /// An implementation of [`IpTransportContext`] for TCP.
 pub(crate) enum TcpIpTransportContext {}
 
-/// Uninstantiatable type for implementing [`PosixSocketMapSpec`].
-struct TcpPosixSocketSpec<Ip, Device, Instant, ReceiveBuffer, SendBuffer>(
+/// Uninstantiatable type for implementing [`SocketMapStateSpec`].
+struct TcpSocketSpec<Ip, Device, Instant, ReceiveBuffer, SendBuffer>(
     PhantomData<(Ip, Device, Instant, ReceiveBuffer, SendBuffer)>,
     Never,
 );
 
-impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer> PosixSocketStateSpec
-    for TcpPosixSocketSpec<I, D, II, R, S>
+impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer> SocketMapStateSpec
+    for TcpSocketSpec<I, D, II, R, S>
 {
     type ListenerId = MaybeListenerId;
     type ConnId = ConnectionId;
 
     type ListenerState = MaybeListener;
     type ConnState = Connection<I, D, II, R, S>;
+
+    type ListenerSharingState = ();
+    type ConnSharingState = ();
+    type AddrVecTag = SocketAddrTypeTag<()>;
+
+    type ListenerAddrState = MaybeListenerId;
+    type ConnAddrState = ConnectionId;
 }
 
 impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer>
-    PosixConflictPolicy<IpPortSpec<I, D>> for TcpPosixSocketSpec<I, D, II, R, S>
+    SocketMapConflictPolicy<ListenerAddr<I::Addr, D, NonZeroU16>, (), IpPortSpec<I, D>>
+    for TcpSocketSpec<I, D, II, R, S>
 {
-    fn check_posix_sharing(
-        new_sharing: PosixSharingOptions,
-        addr: AddrVec<IpPortSpec<I, D>>,
+    fn check_for_conflicts(
+        (): &(),
+        addr: &ListenerAddr<I::Addr, D, NonZeroU16>,
         socketmap: &SocketMap<AddrVec<IpPortSpec<I, D>>, Bound<Self>>,
     ) -> Result<(), InsertError> {
-        match new_sharing {
-            PosixSharingOptions::Exclusive => {}
-            PosixSharingOptions::ReusePort => {
-                todo!("https://fxbug.dev/101596: Support port sharing for TCP")
-            }
+        let addr = AddrVec::Listen(*addr);
+        // Check if any shadow address is present, specifically, if
+        // there is an any-listener with the same port.
+        if addr.iter_shadows().any(|a| socketmap.get(&a).is_some()) {
+            return Err(InsertError::ShadowAddrExists);
         }
-        match &addr {
-            AddrVec::Listen(_) => {
-                // Check if any shadow address is present, specifically, if
-                // there is an any-listener with the same port.
-                if addr.iter_shadows().any(|a| socketmap.get(&a).is_some()) {
-                    return Err(InsertError::ShadowAddrExists);
-                }
 
-                // Check if shadower exists. Note: Listeners do conflict
-                // with existing connections.
-                if socketmap.descendant_counts(&addr).len() > 0 {
-                    return Err(InsertError::ShadowerExists);
-                }
-                Ok(())
-            }
-            // Connections don't conflict with existing listeners. If there
-            // are connections with the same local and remote address, it
-            // will be decided by the socket sharing options.
-            AddrVec::Conn(_) => Ok(()),
+        // Check if shadower exists. Note: Listeners do conflict
+        // with existing connections.
+        if socketmap.descendant_counts(&addr).len() > 0 {
+            return Err(InsertError::ShadowerExists);
         }
+        Ok(())
+    }
+}
+
+impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer>
+    SocketMapConflictPolicy<ConnAddr<I::Addr, D, NonZeroU16, NonZeroU16>, (), IpPortSpec<I, D>>
+    for TcpSocketSpec<I, D, II, R, S>
+{
+    fn check_for_conflicts(
+        (): &(),
+        _addr: &ConnAddr<I::Addr, D, NonZeroU16, NonZeroU16>,
+        _socketmap: &SocketMap<AddrVec<IpPortSpec<I, D>>, Bound<Self>>,
+    ) -> Result<(), InsertError> {
+        // Connections don't conflict with existing listeners. If there
+        // are connections with the same local and remote address, it
+        // will be decided by the socket sharing options.
+        Ok(())
+    }
+}
+
+impl<A: IpAddress, D, LI> Tagged<ListenerAddr<A, D, LI>> for MaybeListenerId {
+    type Tag = SocketAddrTypeTag<()>;
+    fn tag(&self, address: &ListenerAddr<A, D, LI>) -> Self::Tag {
+        (address, ()).into()
+    }
+}
+
+impl<A: IpAddress, D, LI, RI> Tagged<ConnAddr<A, D, LI, RI>> for ConnectionId {
+    type Tag = SocketAddrTypeTag<()>;
+    fn tag(&self, address: &ConnAddr<A, D, LI, RI>) -> Self::Tag {
+        (address, ()).into()
     }
 }
 
@@ -158,18 +184,18 @@ pub struct TcpSockets<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> {
     port_alloc: PortAlloc<
         BoundSocketMap<
             IpPortSpec<I, D>,
-            TcpPosixSocketSpec<I, D, C::Instant, C::ReceiveBuffer, C::SendBuffer>,
+            TcpSocketSpec<I, D, C::Instant, C::ReceiveBuffer, C::SendBuffer>,
         >,
     >,
     inactive: IdMap<Inactive>,
     socketmap: BoundSocketMap<
         IpPortSpec<I, D>,
-        TcpPosixSocketSpec<I, D, C::Instant, C::ReceiveBuffer, C::SendBuffer>,
+        TcpSocketSpec<I, D, C::Instant, C::ReceiveBuffer, C::SendBuffer>,
     >,
 }
 
 impl<I: IpExt, D: IpDeviceId, II: Instant, R: ReceiveBuffer, S: SendBuffer> PortAllocImpl
-    for BoundSocketMap<IpPortSpec<I, D>, TcpPosixSocketSpec<I, D, II, R, S>>
+    for BoundSocketMap<IpPortSpec<I, D>, TcpSocketSpec<I, D, II, R, S>>
 {
     const TABLE_SIZE: NonZeroUsize = nonzero!(20usize);
     const EPHEMERAL_RANGE: RangeInclusive<u16> = 49152..=65535;
@@ -285,6 +311,48 @@ struct MaybeListenerId(usize);
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct ConnectionId(usize);
 
+impl SocketMapAddrStateSpec for MaybeListenerId {
+    type Id = MaybeListenerId;
+    type SharingState = ();
+
+    fn new((): &(), id: MaybeListenerId) -> Self {
+        id
+    }
+
+    fn remove_by_id(&mut self, id: MaybeListenerId) -> RemoveResult {
+        assert_eq!(self, &id);
+        RemoveResult::IsLast
+    }
+
+    fn try_get_dest<'a, 'b>(
+        &'b mut self,
+        (): &'a (),
+    ) -> Result<&'b mut Vec<MaybeListenerId>, IncompatibleError> {
+        Err(IncompatibleError)
+    }
+}
+
+impl SocketMapAddrStateSpec for ConnectionId {
+    type Id = ConnectionId;
+    type SharingState = ();
+
+    fn new((): &(), id: ConnectionId) -> Self {
+        id
+    }
+
+    fn remove_by_id(&mut self, id: ConnectionId) -> RemoveResult {
+        assert_eq!(self, &id);
+        RemoveResult::IsLast
+    }
+
+    fn try_get_dest<'a, 'b>(
+        &'b mut self,
+        (): &'a (),
+    ) -> Result<&'b mut Vec<ConnectionId>, IncompatibleError> {
+        Err(IncompatibleError)
+    }
+}
+
 fn create_socket<I, SC, C>(sync_ctx: &mut SC, _ctx: &mut C) -> UnboundId
 where
     I: IpExt,
@@ -356,10 +424,10 @@ where
             ListenerAddr { ip: ListenerIpAddr { addr: local_ip, identifier: port }, device: None },
             MaybeListener::Bound(inactive.clone()),
             // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
-            PosixSharingOptions::Exclusive,
+            (),
         )
         .map(|MaybeListenerId(x)| BoundId(x))
-        .map_err(|(err, _, _): (_, MaybeListener, PosixSharingOptions)| {
+        .map_err(|(err, _, _): (_, MaybeListener, ())| {
             assert_eq!(sync_ctx.get_tcp_state_mut().inactive.insert(idmap_key, inactive), None);
             BindError::Conflict(err)
         })
@@ -377,7 +445,7 @@ where
     SC: TcpSyncContext<I, C>,
 {
     let id = MaybeListenerId::from(id);
-    let (listener, _, _): (_, &PosixSharingOptions, &ListenerAddr<_, _, _>) = sync_ctx
+    let (listener, _, _): (_, &(), &ListenerAddr<_, _, _>) = sync_ctx
         .get_tcp_state_mut()
         .socketmap
         .listeners_mut()
@@ -412,7 +480,7 @@ where
     let listener =
         sync_ctx.get_tcp_state_mut().get_listener_by_id_mut(id).expect("invalid listener id");
     let conn_id = listener.ready.pop_front().ok_or(AcceptError::WouldBlock)?;
-    let (conn, _, conn_addr): (_, &PosixSharingOptions, _) = sync_ctx
+    let (conn, _, conn_addr): (_, &(), _) = sync_ctx
         .get_tcp_state_mut()
         .socketmap
         .conns_mut()
@@ -442,14 +510,13 @@ where
     SC: TcpSyncContext<I, C> + BufferTransportIpContext<I, C, Buf<Vec<u8>>>,
 {
     let bound_id = MaybeListenerId::from(id);
-    let (bound, sharing, bound_addr) = sync_ctx
+    let (bound, (), bound_addr) = sync_ctx
         .get_tcp_state_mut()
         .socketmap
         .listeners()
         .get_by_id(&bound_id)
         .expect("invalid socket id");
     assert_matches!(bound, MaybeListener::Bound(_));
-    assert_eq!(sharing, &PosixSharingOptions::Exclusive);
     let ListenerAddr { ip: ListenerIpAddr { addr: local_ip, identifier: local_port }, device } =
         *bound_addr;
     let ip_sock = sync_ctx
@@ -527,7 +594,7 @@ where
                 ip_sock: ip_sock.clone(),
             },
             // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
-            PosixSharingOptions::Exclusive,
+            (),
         )
         .expect("failed to insert connection");
     sync_ctx
@@ -879,7 +946,7 @@ mod tests {
         }
 
         let mut assert_connected = |name: &'static str, conn_id: ConnectionId| {
-            let (state, sharing, _): &(_, _, ConnAddr<_, _, _, _>) = net
+            let (state, (), _): &(_, _, ConnAddr<_, _, _, _>) = net
                 .sync_ctx(name)
                 .get_ref()
                 .sockets
@@ -891,7 +958,6 @@ mod tests {
                 state,
                 Connection { acceptor: None, state: State::Established(_), ip_sock: _ }
             );
-            assert_eq!(sharing, &PosixSharingOptions::Exclusive);
         };
 
         assert_connected(LOCAL, client);
@@ -990,7 +1056,7 @@ mod tests {
 
         net.run_until_idle(handle_frame, panic_if_any_timer);
         // Finally, the connection should be reset.
-        let (state, _, _): &(_, PosixSharingOptions, ConnAddr<_, _, _, _>) = net
+        let (state, (), _): &(_, _, ConnAddr<_, _, _, _>) = net
             .sync_ctx(LOCAL)
             .get_ref()
             .sockets

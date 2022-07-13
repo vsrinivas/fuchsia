@@ -20,8 +20,7 @@ use thiserror::Error;
 use crate::{
     ip::{BufferIpTransportContext, BufferTransportIpContext, TransportReceiveError},
     socket::{
-        address::{ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr},
-        posix::{PosixAddrState, PosixAddrVecIter, PosixSharingOptions},
+        address::{AddrVecIter, ConnAddr, ConnIpAddr, IpPortSpec, ListenerAddr},
         AddrVec, SocketTypeState as _, SocketTypeStateMut as _,
     },
     transport::tcp::{
@@ -86,22 +85,13 @@ where
             ConnIpAddr { local: (local_ip, local_port), remote: (remote_ip, remote_port) };
 
         let mut addrs_to_search =
-            PosixAddrVecIter::<IpPortSpec<I, SC::DeviceId>>::with_device(conn_addr.clone(), device);
+            AddrVecIter::<IpPortSpec<I, SC::DeviceId>>::with_device(conn_addr.into(), device);
 
         let conn_id = addrs_to_search.find_map(|addr| -> Option<ConnectionId> {match addr {
             // Connections are always searched before listeners because they
             // are more specific.
             AddrVec::Conn(conn_addr) => {
-                sync_ctx.get_tcp_state_mut().socketmap.conns().get_by_addr(&conn_addr).map(|addr_state| {
-                    match addr_state {
-                        PosixAddrState::Exclusive(conn_id) => *conn_id,
-                        PosixAddrState::ReusePort(_) =>  {
-                            // TODO(https://fxbug.dev/101596): Encode this
-                            // constraint into the type system.
-                            unreachable!("connections should never reuse port");
-                        }
-                    }
-                })
+                sync_ctx.get_tcp_state_mut().socketmap.conns().get_by_addr(&conn_addr).cloned()
             }
             AddrVec::Listen(listener_addr) => {
                 if incoming.contents.control() != Some(Control::SYN) {
@@ -111,17 +101,11 @@ where
                 // allocate a new connection entry in the demuxer.
                 // TODO(https://fxbug.dev/101992): Support SYN cookies.
                 let maybe_listener_id =
-                    sync_ctx.get_tcp_state_mut().socketmap.listeners().get_by_addr(&listener_addr).map(
-                        |addr_state| match addr_state {
-                            PosixAddrState::Exclusive(listener_id) => *listener_id,
-                            PosixAddrState::ReusePort(_) => {
-                                todo!("https://fxbug.dev/101596: support SO_REUSEPORT");
-                            }
-                        },
-                    );
+                    sync_ctx.get_tcp_state_mut().socketmap.listeners().get_by_addr(&listener_addr).cloned()
+                    ;
                 maybe_listener_id.and_then(|listener_id| {
                     let socketmap = &mut sync_ctx.get_tcp_state_mut().socketmap;
-                    let (maybe_listener, _, _): &(_, PosixSharingOptions, ListenerAddr<_, _, _>) =
+                    let (maybe_listener, (), _): &(_, _, ListenerAddr<_, _, _>) =
                         socketmap.listeners().get_by_id(&listener_id).expect("invalid listener_id");
 
                     let listener = match maybe_listener {
@@ -185,11 +169,11 @@ where
                                 ip_sock,
                             },
                             // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
-                            PosixSharingOptions::Exclusive,
+                            (),
                         )
                         .expect("failed to create a new connection");
 
-                    let (maybe_listener, _, _): (_, &PosixSharingOptions, &ListenerAddr<_, _, _>) = sync_ctx
+                    let (maybe_listener, _, _): (_, &(), &ListenerAddr<_, _, _>) = sync_ctx
                         .get_tcp_state_mut()
                         .socketmap
                         .listeners_mut().get_by_id_mut(&listener_id)
@@ -212,7 +196,7 @@ where
             Some(id) => {
                 let (Connection { acceptor: _, state, ip_sock }, _, _): (
                     _,
-                    &PosixSharingOptions,
+                    &(),
                     &ConnAddr<_, _, _, _>,
                 ) = sync_ctx
                     .get_tcp_state_mut()
@@ -267,7 +251,7 @@ where
         }
 
         let _: Option<()> = conn_id.and_then(|conn_id| {
-            let (conn, _, _): (_, &PosixSharingOptions, &ConnAddr<_, _, _, _>) = sync_ctx
+            let (conn, _, _): (_, &(), &ConnAddr<_, _, _, _>) = sync_ctx
                 .get_tcp_state_mut()
                 .socketmap
                 .conns_mut()
