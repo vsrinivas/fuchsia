@@ -1,4 +1,4 @@
-{% include "docs/development/editors/vscode/_common/_vscode_header.md" %}
+{% include "docs/reference/tools/editors/vscode/_common/_vscode_header.md" %}
 
 # Using the Fuchsia developer extension
 
