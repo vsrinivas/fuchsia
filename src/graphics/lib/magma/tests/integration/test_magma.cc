@@ -121,7 +121,7 @@ class TestConnection {
  public:
   static constexpr const char* kDevicePathFuchsia = "/dev/class/gpu";
   static constexpr const char* kDeviceNameLinux = "/dev/dri/renderD128";
-  static constexpr const char* kDeviceNameVirt = "/dev/magma0";
+  static constexpr const char* kDeviceNameVirtioMagma = "/dev/magma0";
 
 #if defined(__Fuchsia__)
   static constexpr bool is_valid_handle(magma_handle_t handle) { return handle != 0; }
@@ -131,21 +131,7 @@ class TestConnection {
   }
 #endif
 
-#if defined(VIRTMAGMA)
-  static std::string device_name() { return kDeviceNameVirt; }
-#elif defined(__linux__)
-  static std::string device_name() { return kDeviceNameLinux; }
-#elif defined(__Fuchsia__)
-  static std::string device_name() {
-    std::string name;
-    magma_device_t device;
-    if (OpenFuchsiaDevice(&name, &device)) {
-      magma_device_release(device);
-      return name;
-    }
-    return "";
-  }
-
+#if defined(__Fuchsia__)
   static bool OpenFuchsiaDevice(std::string* device_name_out, magma_device_t* device_out) {
     std::string device_name;
     magma_device_t device = 0;
@@ -196,28 +182,33 @@ class TestConnection {
     return true;
   }
 
-#else
-#error Unimplemented
 #endif
 
-  static bool is_virtmagma() { return device_name() == kDeviceNameVirt; }
+  std::string device_name() { return device_name_; }
+
+  bool is_virtmagma() { return is_virtmagma_; }
 
   TestConnection() {
 #if defined(__Fuchsia__)
-    std::string device;
-    EXPECT_TRUE(OpenFuchsiaDevice(&device, &device_));
+    EXPECT_TRUE(OpenFuchsiaDevice(&device_name_, &device_));
 
 #elif defined(__linux__)
-    std::string device = device_name();
-    EXPECT_FALSE(device.empty()) << " No GPU device";
-    if (device.empty())
-      return;
-
-    int fd = open(device.c_str(), O_RDWR);
+    int fd = open(kDeviceNameVirtioMagma, O_RDWR);
+    if (fd >= 0) {
+      device_name_ = kDeviceNameVirtioMagma;
+    } else {
+      fd = open(kDeviceNameLinux, O_RDWR);
+      if (fd >= 0) {
+        device_name_ = kDeviceNameLinux;
+      }
+    }
     EXPECT_TRUE(fd >= 0);
     if (fd >= 0) {
       EXPECT_EQ(MAGMA_STATUS_OK, magma_device_import(fd, &device_));
     }
+#if defined(VIRTMAGMA)
+    is_virtmagma_ = true;
+#endif
 #else
 #error Unimplemented
 #endif
@@ -452,16 +443,6 @@ class TestConnection {
     EXPECT_NE(magma_get_buffer_id(buffer), exported_id);
 
     magma_release_buffer(connection_, buffer);
-  }
-
-  static void BufferImportExport(TestConnection* test1, TestConnection* test2) {
-    if (is_virtmagma())
-      GTEST_SKIP();  // TODO(fxbug.dev/13278)
-
-    uint32_t handle;
-    uint64_t exported_id;
-    test1->BufferExport(&handle, &exported_id);
-    test2->BufferImport(handle, exported_id);
   }
 
   static magma_status_t wait_all(std::vector<magma_poll_item_t>& items, int64_t timeout_ns) {
@@ -727,7 +708,7 @@ class TestConnection {
   }
 
   void ImmediateCommands() {
-    if (TestConnection::is_virtmagma())
+    if (is_virtmagma())
       GTEST_SKIP();
 
     ASSERT_TRUE(connection_);
@@ -1107,6 +1088,8 @@ class TestConnection {
   }
 
  private:
+  std::string device_name_;
+  bool is_virtmagma_ = false;
   int fd_ = -1;
   magma_device_t device_ = 0;
   magma_connection_t connection_ = 0;
@@ -1290,7 +1273,14 @@ TEST_F(Magma, BufferImportInvalid) { TestConnection().BufferImportInvalid(); }
 TEST_F(Magma, BufferImportExport) {
   TestConnection test1;
   TestConnection test2;
-  TestConnection::BufferImportExport(&test1, &test2);
+
+  if (test1.is_virtmagma())
+    GTEST_SKIP();  // TODO(fxbug.dev/13278)
+
+  uint32_t handle;
+  uint64_t exported_id;
+  test1.BufferExport(&handle, &exported_id);
+  test2.BufferImport(handle, exported_id);
 }
 
 TEST_F(Magma, Semaphore) {
@@ -1331,7 +1321,7 @@ TEST_F(Magma, SysmemLinearFormatModifier) {
   test.Sysmem(true);
 }
 
-TEST_F(Magma, FromC) { EXPECT_TRUE(test_magma_from_c(TestConnection::device_name().c_str())); }
+TEST_F(Magma, FromC) { EXPECT_TRUE(test_magma_from_c(TestConnection().device_name().c_str())); }
 
 TEST_F(Magma, ExecuteCommand) { TestConnectionWithContext().ExecuteCommand(5); }
 
@@ -1344,7 +1334,8 @@ TEST_F(Magma, ExecuteCommandTwoCommandBuffers) {
 }
 
 TEST_F(Magma, FlowControl) {
-  if (TestConnection::is_virtmagma())
+  TestConnection test;
+  if (test.is_virtmagma())
     GTEST_SKIP();
 
   // Each call to Buffer is 2 messages.
@@ -1352,9 +1343,8 @@ TEST_F(Magma, FlowControl) {
   // or an OOM.
   constexpr uint32_t kIterations = 10000 / 2;
 
-  TestConnection test_connection;
   for (uint32_t i = 0; i < kIterations; i++) {
-    test_connection.Buffer();
+    test.Buffer();
   }
 }
 
@@ -1411,9 +1401,7 @@ TEST_F(Magma, CommitBuffer) {
   magma_release_buffer(connection.connection(), buffer);
 }
 
-class MagmaAbi : public Magma {};
-
-TEST_F(MagmaAbi, MapWithBufferHandle2) {
+TEST_F(Magma, MapWithBufferHandle2) {
   TestConnection connection;
 
   magma_buffer_t buffer;
@@ -1444,29 +1432,32 @@ TEST_F(MagmaAbi, MapWithBufferHandle2) {
 
   EXPECT_TRUE(magma::UnmapCpuHelper(full_range_ptr, actual_size));
 
-  void* first_page_ptr;
-  EXPECT_TRUE(magma::MapCpuHelper(buffer, 0 /*offset*/, page_size(), &first_page_ptr));
+  // virtio-gpu doesn't support partial mappings
+  if (!connection.is_virtmagma()) {
+    void* first_page_ptr;
+    EXPECT_TRUE(magma::MapCpuHelper(buffer, 0 /*offset*/, page_size(), &first_page_ptr));
 
-  void* last_page_ptr;
-  EXPECT_TRUE(magma::MapCpuHelper(buffer, (kBufferSizeInPages - 1) * page_size() /*offset*/,
-                                  page_size(), &last_page_ptr));
+    void* last_page_ptr;
+    EXPECT_TRUE(magma::MapCpuHelper(buffer, (kBufferSizeInPages - 1) * page_size() /*offset*/,
+                                    page_size(), &last_page_ptr));
 
-  // Check that written values match.
-  EXPECT_EQ(reinterpret_cast<uint32_t*>(first_page_ptr)[0], kPattern[0]);
-  EXPECT_EQ(reinterpret_cast<uint32_t*>(first_page_ptr)[1], kPattern[1]);
+    // Check that written values match.
+    EXPECT_EQ(reinterpret_cast<uint32_t*>(first_page_ptr)[0], kPattern[0]);
+    EXPECT_EQ(reinterpret_cast<uint32_t*>(first_page_ptr)[1], kPattern[1]);
 
-  EXPECT_EQ(reinterpret_cast<uint32_t*>(last_page_ptr)[page_size() / sizeof(uint32_t) - 2],
-            kPattern[2]);
-  EXPECT_EQ(reinterpret_cast<uint32_t*>(last_page_ptr)[page_size() / sizeof(uint32_t) - 1],
-            kPattern[3]);
+    EXPECT_EQ(reinterpret_cast<uint32_t*>(last_page_ptr)[page_size() / sizeof(uint32_t) - 2],
+              kPattern[2]);
+    EXPECT_EQ(reinterpret_cast<uint32_t*>(last_page_ptr)[page_size() / sizeof(uint32_t) - 1],
+              kPattern[3]);
 
-  EXPECT_TRUE(magma::UnmapCpuHelper(last_page_ptr, page_size()));
-  EXPECT_TRUE(magma::UnmapCpuHelper(first_page_ptr, page_size()));
+    EXPECT_TRUE(magma::UnmapCpuHelper(last_page_ptr, page_size()));
+    EXPECT_TRUE(magma::UnmapCpuHelper(first_page_ptr, page_size()));
+  }
 
   magma_release_buffer(connection.connection(), buffer);
 }
 
-TEST_F(MagmaAbi, MaxBufferHandle2) {
+TEST_F(Magma, MaxBufferHandle2) {
   TestConnection connection;
 
   magma_buffer_t buffer;
