@@ -32,12 +32,6 @@ group("sdk") {
   data_deps = [ ":sdk_source_set_list" ]
 }
 
-# Minimal set of targets that must always be built.
-group("default") {
-  testonly = true
-  deps = [ ":core_idk" ]
-}
-
 # This file contains the list of all source files used in sdk_source_set()
 # targets reachable from //sdk:sdk. The schema is simply a JSON list, where
 # each item is the path to a single source file, relative to the source

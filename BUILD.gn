@@ -1176,7 +1176,7 @@ group("default") {
     "//build/images/updates:packages",
     "//build/input:build_only",
     "//build/zircon/zbi_tests",
-    "//sdk:default",
+    "//sdk",
   ]
 
   # SDK-only builds must not attempt to build images.
