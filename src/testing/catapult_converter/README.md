@@ -1,9 +1,9 @@
 
 # Catapult performance results converter
 
-This directory contains the `catapult_converter` command line tool
-which takes perf test results in [our format] and converts them to the
-[Catapult Dashboard](https://github.com/catapult-project/catapult)'s
+This directory contains the `catapult_converter` command line tool which
+takes perf test results in [the Fuchsiaperf format] and converts them to
+the [Catapult Dashboard](https://github.com/catapult-project/catapult)'s
 [JSON "HistogramSet" format](
 https://github.com/catapult-project/catapult/blob/HEAD/docs/histogram-set-json-format.md).
 
@@ -61,4 +61,4 @@ This is an optional parameter that the Catapult dashboard accepts:
 For more information on Catapult's format, see [How to Write
 Metrics](https://github.com/catapult-project/catapult/blob/HEAD/docs/how-to-write-metrics.md).
 
-[our format]: /docs/development/benchmarking/results_schema.md
+[the Fuchsiaperf format]: /docs/development/benchmarking/fuchsiaperf_format.md

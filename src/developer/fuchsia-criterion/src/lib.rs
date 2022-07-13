@@ -9,8 +9,7 @@
 //! implements `Deref<Target = Criterion>` with two constructors.
 //!
 //! By default, calling [`FuchsiaCriterion::default`] will create a [`Criterion`] object whose
-//! output is saved to a command-line-provided JSON file that matches the
-//! [Fuchsia benchmarking schema].
+//! output is saved to a command-line-provided JSON file in the [Fuchsiaperf file format].
 //!
 //! In order to benchmark locally, i.e. in an `fx shell`, simply pass `--args=local_bench='true'` to
 //! the `fx set` command which will create a CMD-configurable Criterion object that is useful for
@@ -25,7 +24,7 @@
 //!
 //! [Criterion benchmark suite]: https://github.com/bheisler/criterion.rs
 //! [default]: https://doc.rust-lang.org/std/default/trait.Default.html#tymethod.default
-//! [Fuchsia benchmarking schema]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/development/benchmarking/results_schema.md
+//! [Fuchsiaperf file format]: https://fuchsia.dev/fuchsia-src/development/benchmarking/fuchsiaperf_format
 
 #![deny(missing_docs)]
 
@@ -62,9 +61,9 @@ impl FuchsiaCriterion {
     ///
     /// It calls its [`Default::default`] constructor with 10,000 resamples, then looks for a CMD
     /// argument providing the path for JSON file where the micro-benchmark results should be
-    /// stored. The format respects the [Fuchsia benchmarking schema].
+    /// written (in the [Fuchsiaperf file format]).
     ///
-    /// [Fuchsia benchmarking schema]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/development/benchmarking/results_schema.md
+    /// [Fuchsiaperf file format]: https://fuchsia.dev/fuchsia-src/development/benchmarking/fuchsiaperf_format
     pub fn fuchsia_bench() -> Self {
         fn help_and_exit(name: &str, wrong_args: Option<String>) -> ! {
             println!(

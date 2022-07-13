@@ -34,4 +34,4 @@ You could then scp the file off of the device:
     fx scp "[$(fx get-device-addr)]:/data/r/sys/r/fidl_benchmarks/fuchsia.com:dart-fidl-benchmarks:0#meta:dart-fidl-benchmarks.cmx/results.json" results.json
 
 <!-- xref -->
-[schema]: /docs/development/benchmarking/results_schema.md
+[schema]: /docs/development/benchmarking/fuchsiaperf_format.md

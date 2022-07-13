@@ -1,4 +1,4 @@
-# Benchmark Results Schema
+# Fuchsiaperf format for performance test results
 
 [TOC]
 

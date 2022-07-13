@@ -8,5 +8,5 @@
 toc:
 - title: "Viewing Zircon microbenchmarks with Chromeperf"
   path: /docs/development/benchmarking/chromeperf_user_guide.md
-- title: "Benchmark results schema"
-  path: /docs/development/benchmarking/results_schema.md
+- title: "Fuchsiaperf format for performance test results"
+  path: /docs/development/benchmarking/fuchsiaperf_format.md

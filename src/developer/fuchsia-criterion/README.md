@@ -5,8 +5,8 @@ simple means of generating benchmark data for the Chromeperf dashboard, but also
 benchmarking with Criterion.
 
 When generating Fuchsia benchmarking results (`FuchsiaCriterion::default`), the main function where
-this constructor is called will expect an output JSON path where it will store the results according
-to the [Fuchsia benchmarking schema].
+this constructor is called will expect an output JSON path where it will store the results in the
+[Fuchsiaperf file format].
 
 ## Example - Criterion Bench
 
@@ -58,5 +58,5 @@ allows you to replace Step 5 above with `fx shell criterion_bench`, and directly
 benchmark output to console.
 
 [Criterion benchmark suite]: https://github.com/bheisler/criterion.rs
-[Fuchsia benchmarking schema]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/docs/development/benchmarking/results_schema.md
+[Fuchsiaperf file format]: /docs/development/benchmarking/fuchsiaperf_format.md
 [examples/main.rs]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/developer/fuchsia-criterion/examples/main.rs

@@ -29,8 +29,7 @@ There are two ways to run fuchsia_microbenchmarks:
   library.
 
   For this, run `fuchsia_microbenchmarks -p --out=output.json`. The result
-  data will be written to `output.json` using our [perf test result
-  schema].
+  data will be written to `output.json` in the [Fuchsiaperf format].
 
   See Zircon's perftest library for details of the other command line
   options.
@@ -43,4 +42,4 @@ There are two ways to run fuchsia_microbenchmarks:
   For this, run
   `run-test-component fuchsia-pkg://fuchsia.com/fuchsia_microbenchmarks#meta/fuchsia_microbenchmarks.cmx`.
 
-[perf test result schema]: /docs/development/benchmarking/results_schema.md
+[Fuchsiaperf format]: /docs/development/benchmarking/fuchsiaperf_format.md

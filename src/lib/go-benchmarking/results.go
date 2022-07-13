@@ -4,7 +4,7 @@
 
 // This file implements the perf test results schema.
 //
-// See https://fuchsia.dev/fuchsia-src/development/benchmarking/results_schema.md
+// See https://fuchsia.dev/fuchsia-src/development/benchmarking/fuchsiaperf_format
 // for more details.
 
 package benchmarking
