@@ -7,7 +7,6 @@ use {
     crate::index::{
         dynamic::{DynamicIndex, FulfillNotNeededBlobError},
         retained::RetainedIndex,
-        QueryPackageMetadataError,
     },
     fuchsia_hash::Hash,
     fuchsia_inspect as finspect,
@@ -29,14 +28,14 @@ pub struct PackageIndex {
 
 #[derive(thiserror::Error, Debug)]
 pub enum FulfillMetaFarError {
-    #[error("the blob ({0}) is not present in blobfs")]
-    BlobNotFound(Hash),
-
-    #[error("failed to query package metadata")]
-    QueryPackageMetadata(#[from] QueryPackageMetadataError),
-
     #[error("the blob is not needed by any index")]
     FulfillNotNeededBlob(#[from] FulfillNotNeededBlobError),
+
+    #[error("creating RootDir for meta.far")]
+    CreateRootDir(#[from] package_directory::Error),
+
+    #[error("obtaining package path from meta.far")]
+    PackagePath(#[from] package_directory::PathError),
 }
 
 impl PackageIndex {
@@ -158,14 +157,14 @@ pub async fn fulfill_meta_far_blob(
     index: &async_lock::RwLock<PackageIndex>,
     blobfs: &blobfs::Client,
     meta_hash: Hash,
-) -> Result<HashSet<Hash>, FulfillMetaFarError> {
-    let (path, content_blobs) = crate::index::enumerate_package_blobs(blobfs, &meta_hash)
-        .await?
-        .ok_or_else(|| FulfillMetaFarError::BlobNotFound(meta_hash))?;
-
-    let () = index.write().await.fulfill_meta_far(meta_hash, path, content_blobs.clone())?;
-
-    Ok(content_blobs)
+) -> Result<package_directory::RootDir<blobfs::Client>, FulfillMetaFarError> {
+    let root_dir = package_directory::RootDir::new(blobfs.clone(), meta_hash).await?;
+    let () = index.write().await.fulfill_meta_far(
+        meta_hash,
+        root_dir.path().await?,
+        root_dir.external_file_hashes().copied().collect::<HashSet<_>>(),
+    )?;
+    Ok(root_dir)
 }
 
 /// Replaces the retained index with one that tracks the given meta far hashes.
@@ -497,7 +496,7 @@ mod tests {
 
         assert_matches!(
             fulfill_meta_far_blob(&index, &blobfs, meta_far_hash).await,
-            Err(FulfillMetaFarError::BlobNotFound(hash)) if hash == meta_far_hash
+            Err(FulfillMetaFarError::CreateRootDir(package_directory::Error::MissingMetaFar))
         );
     }
 }

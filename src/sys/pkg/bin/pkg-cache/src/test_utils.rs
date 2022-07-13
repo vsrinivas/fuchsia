@@ -23,7 +23,11 @@ pub fn get_meta_far(
     needed_blobs: impl IntoIterator<Item = Hash>,
 ) -> Vec<u8> {
     let meta_contents = MetaContents::from_map(
-        needed_blobs.into_iter().map(|hash| (hash.to_string(), hash)).collect(),
+        needed_blobs
+            .into_iter()
+            .enumerate()
+            .map(|(i, hash)| (format!("{i}-{hash}"), hash))
+            .collect(),
     )
     .unwrap();
     let mut meta_contents_bytes = Vec::new();

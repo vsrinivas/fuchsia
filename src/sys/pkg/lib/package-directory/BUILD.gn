@@ -9,6 +9,12 @@ rustc_library("package-directory") {
   version = "0.1.0"
   edition = "2021"
   with_unit_tests = true
+  visibility = [
+    ":*",
+    "//src/sys/base-resolver:*",
+    "//src/sys/component_manager:*",
+    "//src/sys/pkg/*",
+  ]
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",

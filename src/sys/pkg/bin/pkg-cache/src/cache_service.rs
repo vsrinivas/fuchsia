@@ -33,6 +33,7 @@ use {
             Arc,
         },
     },
+    vfs::directory::entry::DirectoryEntry as _,
 };
 
 pub async fn serve(
@@ -193,7 +194,7 @@ fn make_pkgdir_flags(executability_status: ExecutabilityStatus) -> fio::OpenFlag
 }
 
 /// Fetch a package, and optionally open it.
-async fn get<'a>(
+async fn get(
     package_index: &async_lock::RwLock<PackageIndex>,
     base_packages: &BasePackages,
     executability_restrictions: system_image::ExecutabilityRestrictions,
@@ -212,16 +213,16 @@ async fn get<'a>(
 
     let needed_blobs = needed_blobs.into_stream().map_err(|_| Status::INTERNAL)?;
 
-    let package_status =
+    let (root_dir, package_status) =
         match get_package_status(base_packages, package_index, &meta_far_blob.blob_id.into()).await
         {
             ps @ PackageStatus::Base | ps @ PackageStatus::Active(_) => {
                 let () = needed_blobs.control_handle().shutdown_with_epitaph(Status::OK);
-                ps
+                (None, ps)
             }
             PackageStatus::Other => {
                 fx_log_info!("get package {}", meta_far_blob.blob_id);
-                let name = serve_needed_blobs(
+                let (root_dir, name) = serve_needed_blobs(
                     needed_blobs,
                     meta_far_blob,
                     package_index,
@@ -244,37 +245,47 @@ async fn get<'a>(
                     );
                     Status::UNAVAILABLE
                 })?;
-                if let Some(name) = name {
+                let package_status = if let Some(name) = name {
                     PackageStatus::Active(name)
                 } else {
                     PackageStatus::Other
-                }
+                };
+                (Some(root_dir), package_status)
             }
         };
 
     if let Some((dir, scope)) = dir_and_scope {
-        let () = package_directory::serve(
+        let root_dir = if let Some(root_dir) = root_dir {
+            root_dir
+        } else {
+            package_directory::RootDir::new(blobfs.clone(), meta_far_blob.blob_id.into())
+                .await
+                .map_err(|e| {
+                    fx_log_err!(
+                        "get: creating RootDir {}: {:#}",
+                        meta_far_blob.blob_id,
+                        anyhow!(e)
+                    );
+                    cobalt_sender.log_event_count(
+                        metrics::PKG_CACHE_OPEN_METRIC_ID,
+                        metrics::PkgCacheOpenMetricDimensionResult::Io,
+                        0,
+                        1,
+                    );
+                    Status::INTERNAL
+                })?
+        };
+        let () = Arc::new(root_dir).open(
             scope,
-            blobfs.clone(),
-            meta_far_blob.blob_id.into(),
             make_pkgdir_flags(executability_status(
                 executability_restrictions,
                 &package_status,
                 non_static_allow_list,
             )),
-            dir,
-        )
-        .map_err(|e| {
-            fx_log_err!("get: error serving package {}: {:#}", meta_far_blob.blob_id, anyhow!(e));
-            cobalt_sender.log_event_count(
-                metrics::PKG_CACHE_OPEN_METRIC_ID,
-                metrics::PkgCacheOpenMetricDimensionResult::Io,
-                0,
-                1,
-            );
-            Status::INTERNAL
-        })
-        .await?;
+            0,
+            vfs::path::Path::dot(),
+            dir.into_channel().into(),
+        );
     }
 
     cobalt_sender.log_event_count(
@@ -287,7 +298,7 @@ async fn get<'a>(
 }
 
 /// Open a package directory.
-async fn open<'a>(
+async fn open(
     package_index: &async_lock::RwLock<PackageIndex>,
     base_packages: &BasePackages,
     executability_restrictions: system_image::ExecutabilityRestrictions,
@@ -431,11 +442,14 @@ async fn serve_needed_blobs(
     blobfs: &blobfs::Client,
     node: &finspect::Node,
     trace_id: ftrace::Id,
-) -> Result<Option<fuchsia_pkg::PackageName>, ServeNeededBlobsError> {
+) -> Result<
+    (package_directory::RootDir<blobfs::Client>, Option<fuchsia_pkg::PackageName>),
+    ServeNeededBlobsError,
+> {
     let state = node.create_string("state", "need-meta-far");
     let res = async {
         // Step 1: Open and write the meta.far, or determine it is not needed.
-        let content_blobs = handle_open_meta_blob(
+        let root_dir = handle_open_meta_blob(
             &mut stream,
             meta_far_info,
             blobfs,
@@ -446,8 +460,12 @@ async fn serve_needed_blobs(
         .await?;
 
         // Step 2: Determine which data blobs are needed and report them to the client.
-        let (serve_iterator, needs) =
-            handle_get_missing_blobs(&mut stream, blobfs, &content_blobs).await?;
+        let (serve_iterator, needs) = handle_get_missing_blobs(
+            &mut stream,
+            blobfs,
+            &root_dir.external_file_hashes().copied().collect::<HashSet<_>>(),
+        )
+        .await?;
 
         state.set("need-content-blobs");
 
@@ -455,12 +473,15 @@ async fn serve_needed_blobs(
         let () = handle_open_blobs(&mut stream, needs, blobfs, &node, trace_id).await?;
 
         serve_iterator.await;
-        Ok(())
+        Ok(root_dir)
     }
     .await;
 
     let res = match res {
-        Ok(()) => Ok(package_index.write().await.complete_install(meta_far_info.blob_id.into())?),
+        Ok(root_dir) => Ok((
+            root_dir,
+            package_index.write().await.complete_install(meta_far_info.blob_id.into())?,
+        )),
         Err(e) => {
             package_index.write().await.cancel_install(&meta_far_info.blob_id.into());
             Err(e)
@@ -487,7 +508,7 @@ async fn handle_open_meta_blob(
     package_index: &async_lock::RwLock<PackageIndex>,
     state: &StringProperty,
     trace_id: ftrace::Id,
-) -> Result<HashSet<Hash>, ServeNeededBlobsError> {
+) -> Result<package_directory::RootDir<blobfs::Client>, ServeNeededBlobsError> {
     let hash = meta_far_info.blob_id.into();
     package_index.write().await.start_install(hash);
 
@@ -521,9 +542,7 @@ async fn handle_open_meta_blob(
 
     state.set("enumerate-missing-blobs");
 
-    let content_blobs = fulfill_meta_far_blob(package_index, blobfs, hash).await?;
-
-    Ok(content_blobs)
+    Ok(fulfill_meta_far_blob(package_index, blobfs, hash).await?)
 }
 
 async fn handle_get_missing_blobs(
@@ -1200,16 +1219,19 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn expects_open_meta_blob_once() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 4 };
-        let (task, proxy, mut blobfs) = spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+        let (serve_needed_task, proxy, mut blobfs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
         // Open a needed meta FAR blob and write it.
-        let ((), ()) = future::join(
+        let (serve_meta_task, ()) = future::join(
+            // serve_meta_task does not complete until later.
+            #[allow(clippy::async_yields_async)]
             async {
                 blobfs.expect_create_blob([0; 32].into()).await.expect_payload(b"test").await;
 
                 // serve_needed_blobs parses the meta far after it is written.  Feed that logic a
                 // valid, minimal far that doesn't actually correlate to what we just wrote.
-                serve_minimal_far(&mut blobfs, [0; 32].into()).await;
+                serve_minimal_far(&mut blobfs, [0; 32].into()).await
             },
             async {
                 let (blob, blob_server_end) =
@@ -1247,22 +1269,26 @@ mod serve_needed_blobs_tests {
         );
 
         assert_matches!(
-            task.await,
+            serve_needed_task.await,
             Err(ServeNeededBlobsError::UnexpectedRequest {
                 received: "open_meta_blob",
                 expected: "get_missing_blobs"
             })
         );
+        let () = serve_meta_task.await;
         blobfs.expect_done().await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handles_present_meta_blob() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut blobfs) = spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+        let (serve_needed_task, proxy, mut blobfs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
         // Try to open the meta FAR blob, but report it is no longer needed.
-        let ((), ()) = future::join(
+        let (serve_meta_task, ()) = future::join(
+            // serve_meta_task does not complete until later.
+            #[allow(clippy::async_yields_async)]
             async {
                 blobfs.expect_create_blob([0; 32].into()).await.fail_open_with_already_exists();
                 blobfs
@@ -1273,7 +1299,7 @@ mod serve_needed_blobs_tests {
 
                 // serve_needed_blobs parses the meta far after it is written.  Feed that logic a
                 // valid, minimal far that doesn't actually correlate to what we just wrote.
-                serve_minimal_far(&mut blobfs, [0; 32].into()).await;
+                serve_minimal_far(&mut blobfs, [0; 32].into()).await
             },
             async {
                 let (blob, blob_server_end) =
@@ -1297,19 +1323,21 @@ mod serve_needed_blobs_tests {
         );
 
         assert_matches!(
-            task.await,
+            serve_needed_task.await,
             Err(ServeNeededBlobsError::UnexpectedRequest {
                 received: "open_meta_blob",
                 expected: "get_missing_blobs"
             })
         );
+        let () = serve_meta_task.await;
         blobfs.expect_done().await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn allows_retrying_nonfatal_open_meta_blob_errors() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 1 };
-        let (task, proxy, mut blobfs) = spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+        let (serve_needed_task, proxy, mut blobfs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
         // Try to open the meta FAR blob, but report it is already being written concurrently.
         let ((), ()) = future::join(
@@ -1383,13 +1411,15 @@ mod serve_needed_blobs_tests {
         .await;
 
         // Operation succeeds after blobfs cooperates.
-        let ((), ()) = future::join(
+        let (serve_meta_task, ()) = future::join(
+            // serve_meta_task does not complete until later.
+            #[allow(clippy::async_yields_async)]
             async {
                 blobfs.expect_create_blob([0; 32].into()).await.expect_payload(&[0]).await;
 
                 // serve_needed_blobs parses the meta far after it is written.  Feed that logic a
                 // valid, minimal far that doesn't actually correlate to what we just wrote.
-                serve_minimal_far(&mut blobfs, [0; 32].into()).await;
+                serve_minimal_far(&mut blobfs, [0; 32].into()).await
             },
             async {
                 let (blob, blob_server_end) =
@@ -1426,34 +1456,41 @@ mod serve_needed_blobs_tests {
             Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
         );
         assert_matches!(
-            task.await,
+            serve_needed_task.await,
             Err(ServeNeededBlobsError::UnexpectedRequest {
                 received: "open_meta_blob",
                 expected: "get_missing_blobs"
             })
         );
+        let () = serve_meta_task.await;
         blobfs.expect_done().await;
     }
 
-    pub(super) async fn serve_minimal_far(blobfs: &mut blobfs::Mock, meta_hash: Hash) {
+    /// The returned task completes when the connection to the meta blob closes.
+    pub(super) async fn serve_minimal_far(blobfs: &mut blobfs::Mock, meta_hash: Hash) -> Task<()> {
         let far_data = crate::test_utils::get_meta_far("fake-package", vec![]);
 
-        blobfs.expect_open_blob(meta_hash.into()).await.serve_contents(&far_data[..]).await;
+        let blob = blobfs.expect_open_blob(meta_hash.into()).await;
+        Task::spawn(async move { blob.serve_contents(&far_data[..]).await })
     }
 
+    /// The returned task completes when the connection to the meta blob closes, which is normally
+    /// when the task serving the NeededBlobs stream completes.
     pub(super) async fn write_meta_blob(
         proxy: &NeededBlobsProxy,
         blobfs: &mut blobfs::Mock,
         meta_blob_info: BlobInfo,
         needed_blobs: impl IntoIterator<Item = Hash>,
-    ) {
+    ) -> Task<()> {
         let far_data = crate::test_utils::get_meta_far("fake-package", needed_blobs);
 
-        let ((), ()) = future::join(
+        let (serve_contents, ()) = future::join(
+            // serve_contents does not complete until later.
+            #[allow(clippy::async_yields_async)]
             async {
                 // Fail the create request, then succeed an open request that checks if the blob is
                 // readable. The already_exists error could indicate that the blob is being
-                // written, so pkg-cache need to disambiguate the 2 cases.
+                // written, so pkg-cache needs to disambiguate the 2 cases.
                 blobfs
                     .expect_create_blob(meta_blob_info.blob_id.into())
                     .await
@@ -1464,11 +1501,11 @@ mod serve_needed_blobs_tests {
                     .succeed_open_with_blob_readable()
                     .await;
 
-                blobfs
-                    .expect_open_blob(meta_blob_info.blob_id.into())
-                    .await
-                    .serve_contents(&far_data[..])
-                    .await;
+                let blob = blobfs.expect_open_blob(meta_blob_info.blob_id.into()).await;
+
+                // the serving task does not complete until later.
+                #[allow(clippy::async_yields_async)]
+                Task::spawn(async move { blob.serve_contents(&far_data[..]).await })
             },
             async {
                 let (_blob, blob_server_end) =
@@ -1478,6 +1515,7 @@ mod serve_needed_blobs_tests {
             },
         )
         .await;
+        serve_contents
     }
 
     async fn collect_blob_info_iterator(proxy: BlobInfoIteratorProxy) -> Vec<BlobInfo> {
@@ -1499,11 +1537,13 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn discovers_and_reports_missing_blobs() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut blobfs) = spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+        let (serve_needed_task, proxy, mut blobfs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
         let expected = HashRangeFull::default().skip(1).take(2000).collect::<Vec<_>>();
 
-        write_meta_blob(&proxy, &mut blobfs, meta_blob_info, expected.iter().copied()).await;
+        let serve_meta_task =
+            write_meta_blob(&proxy, &mut blobfs, meta_blob_info, expected.iter().copied()).await;
 
         let ((), ()) = future::join(
             async {
@@ -1531,18 +1571,20 @@ mod serve_needed_blobs_tests {
 
         drop(proxy);
         assert_matches!(
-            task.await,
+            serve_needed_task.await,
             Err(ServeNeededBlobsError::UnexpectedClose("handle_open_blobs"))
         );
+        let () = serve_meta_task.await;
         blobfs.expect_done().await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handles_no_missing_blobs() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut blobfs) = spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+        let (serve_needed_task, proxy, mut blobfs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
-        write_meta_blob(&proxy, &mut blobfs, meta_blob_info, vec![]).await;
+        let serve_meta_task = write_meta_blob(&proxy, &mut blobfs, meta_blob_info, vec![]).await;
 
         let (missing_blobs_iter, missing_blobs_iter_server_end) =
             fidl::endpoints::create_proxy::<BlobInfoIteratorMarker>().unwrap();
@@ -1550,11 +1592,12 @@ mod serve_needed_blobs_tests {
         let missing_blobs = collect_blob_info_iterator(missing_blobs_iter).await;
         assert_eq!(missing_blobs, vec![]);
 
-        assert_matches!(task.await, Ok(()));
+        assert_matches!(serve_needed_task.await, Ok(()));
         assert_matches!(
             proxy.take_event_stream().next().await,
             Some(Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. }))
         );
+        let () = serve_meta_task.await;
         blobfs.expect_done().await;
     }
 
@@ -1598,9 +1641,9 @@ mod serve_needed_blobs_tests {
         drop(proxy);
         assert_matches!(
             task.await,
-            Err(ServeNeededBlobsError::FulfillMetaFar(FulfillMetaFarError::QueryPackageMetadata(
-                _
-            )),)
+            Err(ServeNeededBlobsError::FulfillMetaFar(FulfillMetaFarError::CreateRootDir(
+                package_directory::Error::ArchiveReader(fuchsia_archive::Error::InvalidMagic(_))
+            )))
         );
         blobfs.expect_done().await;
     }
@@ -1608,10 +1651,12 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn dropping_needed_blobs_stops_missing_blob_iterator() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut blobfs) = spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+        let (serve_needed_task, proxy, mut blobfs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
         let missing = HashRangeFull::default().take(10).collect::<Vec<_>>();
-        write_meta_blob(&proxy, &mut blobfs, meta_blob_info, missing.iter().copied()).await;
+        let serve_meta_task =
+            write_meta_blob(&proxy, &mut blobfs, meta_blob_info, missing.iter().copied()).await;
 
         let ((), ()) = future::join(
             async {
@@ -1636,19 +1681,22 @@ mod serve_needed_blobs_tests {
         .await;
 
         assert_matches!(
-            task.await,
+            serve_needed_task.await,
             Err(ServeNeededBlobsError::UnexpectedClose("handle_open_blobs"))
         );
+        let () = serve_meta_task.await;
         blobfs.expect_done().await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn expects_get_missing_blobs_once() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut blobfs) = spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+        let (serve_needed_task, proxy, mut blobfs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
         let missing = HashRangeFull::default().take(10).collect::<Vec<_>>();
-        write_meta_blob(&proxy, &mut blobfs, meta_blob_info, missing.iter().copied()).await;
+        let serve_meta_task =
+            write_meta_blob(&proxy, &mut blobfs, meta_blob_info, missing.iter().copied()).await;
 
         // Enumerate the needs successfully once.
         let ((), ()) = future::join(
@@ -1674,12 +1722,13 @@ mod serve_needed_blobs_tests {
         assert_matches!(proxy.get_missing_blobs(missing_blobs_iter_server_end), Ok(()));
 
         assert_matches!(
-            task.await,
+            serve_needed_task.await,
             Err(ServeNeededBlobsError::UnexpectedRequest {
                 received: "get_missing_blobs",
                 expected: "open_blob"
             })
         );
+        let () = serve_meta_task.await;
         blobfs.expect_done().await;
     }
 
@@ -1720,9 +1769,11 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn single_need() {
         let meta_blob_info = BlobInfo { blob_id: [1; 32].into(), length: 0 };
-        let (task, proxy, mut blobfs) = spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+        let (serve_needed_task, proxy, mut blobfs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
-        write_meta_blob(&proxy, &mut blobfs, meta_blob_info, vec![[2; 32].into()]).await;
+        let serve_meta_task =
+            write_meta_blob(&proxy, &mut blobfs, meta_blob_info, vec![[2; 32].into()]).await;
         enumerate_readable_missing_blobs(
             &proxy,
             &mut blobfs,
@@ -1768,20 +1819,23 @@ mod serve_needed_blobs_tests {
         )
         .await;
 
-        assert_matches!(task.await, Ok(()));
+        assert_matches!(serve_needed_task.await, Ok(()));
         assert_matches!(
             proxy.take_event_stream().next().await,
             Some(Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. }))
         );
+        let () = serve_meta_task.await;
         blobfs.expect_done().await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn expects_open_blob_per_blob_once() {
         let meta_blob_info = BlobInfo { blob_id: [1; 32].into(), length: 0 };
-        let (task, proxy, mut blobfs) = spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+        let (serve_needed_task, proxy, mut blobfs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
-        write_meta_blob(&proxy, &mut blobfs, meta_blob_info, vec![[2; 32].into()]).await;
+        let serve_meta_task =
+            write_meta_blob(&proxy, &mut blobfs, meta_blob_info, vec![[2; 32].into()]).await;
         enumerate_readable_missing_blobs(
             &proxy,
             &mut blobfs,
@@ -1813,19 +1867,25 @@ mod serve_needed_blobs_tests {
         )
         .await;
 
-        assert_matches!(task.await, Err(ServeNeededBlobsError::BlobNotNeeded(hash)) if hash == [2; 32].into());
+        assert_matches!(
+            serve_needed_task.await,
+            Err(ServeNeededBlobsError::BlobNotNeeded(hash)) if hash == [2; 32].into()
+        );
         assert_matches!(proxy.take_event_stream().next().await, None);
+        let () = serve_meta_task.await;
         blobfs.expect_done().await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handles_many_content_blobs_that_need_written() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut blobfs) = spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+        let (serve_needed_task, proxy, mut blobfs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
         let content_blobs = || HashRangeFull::default().skip(1).take(100);
 
-        write_meta_blob(&proxy, &mut blobfs, meta_blob_info, content_blobs()).await;
+        let serve_meta_task =
+            write_meta_blob(&proxy, &mut blobfs, meta_blob_info, content_blobs()).await;
         enumerate_readable_missing_blobs(&proxy, &mut blobfs, std::iter::empty(), content_blobs())
             .await;
 
@@ -1881,22 +1941,25 @@ mod serve_needed_blobs_tests {
         )
         .await;
 
-        assert_matches!(task.await, Ok(()));
+        assert_matches!(serve_needed_task.await, Ok(()));
         assert_matches!(
             proxy.take_event_stream().next().await,
             Some(Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. }))
         );
+        let () = serve_meta_task.await;
         blobfs.expect_done().await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn handles_many_content_blobs_that_are_already_present() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut blobfs) = spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+        let (serve_needed_task, proxy, mut blobfs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
         let content_blobs = || HashRangeFull::default().skip(1).take(100);
 
-        write_meta_blob(&proxy, &mut blobfs, meta_blob_info, content_blobs()).await;
+        let serve_meta_task =
+            write_meta_blob(&proxy, &mut blobfs, meta_blob_info, content_blobs()).await;
         enumerate_readable_missing_blobs(&proxy, &mut blobfs, std::iter::empty(), content_blobs())
             .await;
 
@@ -1926,22 +1989,25 @@ mod serve_needed_blobs_tests {
         )
         .await;
 
-        assert_matches!(task.await, Ok(()));
+        assert_matches!(serve_needed_task.await, Ok(()));
         assert_matches!(
             proxy.take_event_stream().next().await,
             Some(Err(fidl::Error::ClientChannelClosed { status: Status::OK, .. }))
         );
+        let () = serve_meta_task.await;
         blobfs.expect_done().await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn allows_retrying_nonfatal_open_blob_errors() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut blobfs) = spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+        let (serve_needed_task, proxy, mut blobfs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
         let content_blob = Hash::from([1; 32]);
 
-        write_meta_blob(&proxy, &mut blobfs, meta_blob_info, vec![content_blob]).await;
+        let serve_meta_task =
+            write_meta_blob(&proxy, &mut blobfs, meta_blob_info, vec![content_blob]).await;
         enumerate_readable_missing_blobs(
             &proxy,
             &mut blobfs,
@@ -2064,7 +2130,8 @@ mod serve_needed_blobs_tests {
         .await;
 
         // That was the only data blob, so the operation is now done.
-        assert_matches!(task.await, Ok(()));
+        assert_matches!(serve_needed_task.await, Ok(()));
+        let () = serve_meta_task.await;
         blobfs.expect_done().await;
     }
 
@@ -2086,11 +2153,13 @@ mod serve_needed_blobs_tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn abort_waits_for_pending_blob_writes_before_responding() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut blobfs) = spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+        let (serve_needed_task, proxy, mut blobfs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
         let content_blob = Hash::from([1; 32]);
 
-        write_meta_blob(&proxy, &mut blobfs, meta_blob_info, vec![content_blob]).await;
+        let serve_meta_task =
+            write_meta_blob(&proxy, &mut blobfs, meta_blob_info, vec![content_blob]).await;
         enumerate_readable_missing_blobs(
             &proxy,
             &mut blobfs,
@@ -2162,33 +2231,38 @@ mod serve_needed_blobs_tests {
             Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
         );
 
-        assert_matches!(task.await, Err(ServeNeededBlobsError::Aborted));
+        assert_matches!(serve_needed_task.await, Err(ServeNeededBlobsError::Aborted));
+        let () = serve_meta_task.await;
         blobfs.expect_done().await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn abort_aborts_while_waiting_for_get_missing_blobs() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut blobfs) = spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+        let (serve_needed_task, proxy, mut blobfs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
-        write_meta_blob(&proxy, &mut blobfs, meta_blob_info, vec![]).await;
+        let serve_meta_task = write_meta_blob(&proxy, &mut blobfs, meta_blob_info, vec![]).await;
 
         let abort_fut = proxy.abort();
 
-        assert_matches!(task.await, Err(ServeNeededBlobsError::Aborted));
+        assert_matches!(serve_needed_task.await, Err(ServeNeededBlobsError::Aborted));
         assert_matches!(
             abort_fut.await,
             Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
         );
+        let () = serve_meta_task.await;
         blobfs.expect_done().await;
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn abort_aborts_while_waiting_for_open_blobs() {
         let meta_blob_info = BlobInfo { blob_id: [0; 32].into(), length: 0 };
-        let (task, proxy, mut blobfs) = spawn_serve_needed_blobs_with_mocks(meta_blob_info);
+        let (serve_needed_task, proxy, mut blobfs) =
+            spawn_serve_needed_blobs_with_mocks(meta_blob_info);
 
-        write_meta_blob(&proxy, &mut blobfs, meta_blob_info, vec![[2; 32].into()]).await;
+        let serve_meta_task =
+            write_meta_blob(&proxy, &mut blobfs, meta_blob_info, vec![[2; 32].into()]).await;
         enumerate_readable_missing_blobs(
             &proxy,
             &mut blobfs,
@@ -2199,11 +2273,12 @@ mod serve_needed_blobs_tests {
 
         let abort_fut = proxy.abort();
 
-        assert_matches!(task.await, Err(ServeNeededBlobsError::Aborted));
+        assert_matches!(serve_needed_task.await, Err(ServeNeededBlobsError::Aborted));
         assert_matches!(
             abort_fut.await,
             Err(fidl::Error::ClientChannelClosed { status: Status::PEER_CLOSED, .. })
         );
+        let () = serve_meta_task.await;
         blobfs.expect_done().await;
     }
 }

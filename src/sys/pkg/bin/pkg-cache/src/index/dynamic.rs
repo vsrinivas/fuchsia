@@ -249,30 +249,41 @@ pub async fn load_cache_packages(
     // with *only* blobs that are readable, i.e. blobs for which the `USER_0` signal is set (which
     // is currently checked per-package per-blob by `blobfs.filter_to_missing_blobs()`). Would need
     // to confirm with the storage team that blobfs meets this requirement.
-    // TODO(fxb/90656): ensure non-fuchsia.com URLs are correctly handled in dynamic index.
+    // TODO(fxbug.dev/90656): ensure non-fuchsia.com URLs are correctly handled in dynamic index.
     for url in cache_packages.contents() {
         let hash = url.hash();
         let path = PackagePath::from_name_and_variant(
             url.name().clone(),
             url.variant().unwrap_or(&fuchsia_pkg::PackageVariant::zero()).clone(),
         );
-        let required_blobs = match super::enumerate_package_blobs(blobfs, &hash).await {
-            Ok(Some((path_from_far, required_blobs))) => {
-                if path_from_far != path {
+        let required_blobs = match package_directory::RootDir::new(blobfs.clone(), hash).await {
+            Ok(root_dir) => match root_dir.path().await {
+                Ok(path_from_far) => {
+                    if path_from_far != path {
+                        fx_log_err!(
+                            "load_cache_packages: path mismatch for {}, manifest: {}, far: {}",
+                            hash,
+                            path,
+                            path_from_far
+                        );
+                        continue;
+                    }
+                    root_dir.external_file_hashes().copied().collect::<HashSet<_>>()
+                }
+                Err(e) => {
                     fx_log_err!(
-                        "load_cache_packages: path mismatch for {} from manifest {} from far {}",
+                        "load_cache_packages: obtaining path for {} {} failed: {:#}",
                         hash,
                         path,
-                        path_from_far
+                        anyhow!(e)
                     );
                     continue;
                 }
-                required_blobs
-            }
-            Ok(None) => continue,
+            },
+            Err(package_directory::Error::MissingMetaFar) => continue,
             Err(e) => {
                 fx_log_err!(
-                    "load_cache_packages: enumerate_package_blobs of {} {} failed: {:#}",
+                    "load_cache_packages: creating RootDir for {} {} failed: {:#}",
                     hash,
                     path,
                     anyhow!(e)

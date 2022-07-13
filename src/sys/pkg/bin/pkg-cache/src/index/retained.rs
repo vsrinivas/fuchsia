@@ -262,16 +262,16 @@ pub async fn populate_retained_index(
     meta_hashes: &[Hash],
 ) -> RetainedIndex {
     let mut packages = HashMap::with_capacity(meta_hashes.len());
-
     for meta_hash in meta_hashes {
-        let content_hashes = match crate::index::enumerate_package_blobs(blobfs, meta_hash).await {
-            Ok(Some((_path, content_hashes))) => {
-                let mut content_hashes = content_hashes.iter().copied().collect::<Vec<Hash>>();
-                content_hashes.sort_unstable();
-
-                Some(content_hashes)
+        let content_hashes = match package_directory::RootDir::new(blobfs.clone(), *meta_hash).await
+        {
+            Ok(root_dir) => {
+                let mut hashes = root_dir.external_file_hashes().copied().collect::<Vec<_>>();
+                hashes.sort_unstable();
+                hashes.dedup();
+                Some(hashes)
             }
-            Ok(None) => None,
+            Err(package_directory::Error::MissingMetaFar) => None,
             Err(e) => {
                 // The package isn't readable yet, so the system updater will need to fetch it.
                 // Assume None for now and let the package fetch flow populate this later.
@@ -283,7 +283,6 @@ pub async fn populate_retained_index(
                 None
             }
         };
-
         let content_hashes = RetainedContentHashes { content_hashes, ..Default::default() };
         packages.insert(*meta_hash, content_hashes);
     }
@@ -563,8 +562,8 @@ mod tests {
         assert_eq!(
             index,
             RetainedIndex::from_packages(hashmap! {
-                        hash(0) => Some(vec![hash(1), hash(2), hash(30)]),
-                        hash(10) => Some(vec![hash(11), hash(12), hash(30)]),
+                hash(0) => Some(vec![hash(1), hash(2), hash(30)]),
+                hash(10) => Some(vec![hash(11), hash(12), hash(30)]),
             })
         );
     }
@@ -583,6 +582,22 @@ mod tests {
             RetainedIndex::from_packages(hashmap! {
                 hash(0) => None,
                 hash(10) => Some(vec![hash(1), hash(2), hash(3)]),
+            })
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn populate_retained_index_dedupes_content_blobs() {
+        let (blobfs_fake, blobfs) = fuchsia_pkg_testing::blobfs::Fake::new();
+
+        add_meta_far_to_blobfs(&blobfs_fake, hash(0), "pkg-0", vec![hash(1), hash(1)]);
+
+        let index = populate_retained_index(&blobfs, &[hash(0)]).await;
+
+        assert_eq!(
+            index,
+            RetainedIndex::from_packages(hashmap! {
+                hash(0) => Some(vec![hash(1)]),
             })
         );
     }
