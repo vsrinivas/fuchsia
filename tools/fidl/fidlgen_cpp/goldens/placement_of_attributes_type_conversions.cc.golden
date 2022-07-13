@@ -47,7 +47,7 @@ namespace internal {
       return ::test_placementofattributes::ExampleXUnion::WithVariant(
           WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.variant())));
     default:
-      return ::test_placementofattributes::ExampleXUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
+      return ::test_placementofattributes::ExampleXUnion();
   }
 }
 ::test_placementofattributes::wire::ExampleXUnion WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleXUnion, ::test_placementofattributes::ExampleXUnion>::ToWire(fidl::AnyArena& arena, ::test_placementofattributes::ExampleXUnion src) {

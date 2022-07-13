@@ -736,7 +736,7 @@ class EchoConnection final : public fidl::Server<Echo> {
       }
     } else {
       std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
-      std::optional<RequestUnion> req;
+      RequestUnion req;
       if (request.Which() == RequestUnion::Tag::kSigned) {
         req = RequestUnion::WithSigned_(
             ::fidl_test_compatibility::Signed(request.signed_()->value(), ""));
@@ -744,7 +744,7 @@ class EchoConnection final : public fidl::Server<Echo> {
         req = RequestUnion::WithUnsigned_(
             ::fidl_test_compatibility::Unsigned(request.unsigned_()->value(), ""));
       }
-      app->EchoUnionPayload(std::move(*req),
+      app->EchoUnionPayload(std::move(req),
                             [completer = completer.ToAsync(), extend_lifetime = app](
                                 fidl::Result<Echo::EchoUnionPayload>& result) mutable {
                               ZX_ASSERT_MSG(result.is_ok(), "Forwarding failed: %s",
@@ -775,7 +775,7 @@ class EchoConnection final : public fidl::Server<Echo> {
       }
     } else {
       std::shared_ptr<EchoClientApp> app = std::make_shared<EchoClientApp>();
-      std::optional<EchoEchoUnionPayloadWithErrorRequest> req;
+      EchoEchoUnionPayloadWithErrorRequest req;
       if (request.Which() == EchoEchoUnionPayloadWithErrorRequest::Tag::kSigned) {
         auto variant = request.signed_();
         req = EchoEchoUnionPayloadWithErrorRequest::WithSigned_(
@@ -789,8 +789,8 @@ class EchoConnection final : public fidl::Server<Echo> {
       }
 
       app->EchoUnionPayloadWithError(
-          std::move(*req), [completer = completer.ToAsync(), extend_lifetime = app](
-                               fidl::Result<Echo::EchoUnionPayloadWithError>& result) mutable {
+          std::move(req), [completer = completer.ToAsync(), extend_lifetime = app](
+                              fidl::Result<Echo::EchoUnionPayloadWithError>& result) mutable {
             ZX_ASSERT_MSG(result.is_ok() || result.error_value().is_application_error(),
                           "Forwarding failed: %s",
                           result.error_value().FormatDescription().c_str());
@@ -819,7 +819,7 @@ class EchoConnection final : public fidl::Server<Echo> {
     } else {
       EventProxy event_handler(server_binding_.value());
       EchoClientApp app(&event_handler);
-      std::optional<RequestUnion> req;
+      RequestUnion req;
       if (request.Which() == RequestUnion::Tag::kSigned) {
         req = RequestUnion::WithSigned_(
             ::fidl_test_compatibility::Signed(request.signed_()->value(), ""));
@@ -828,7 +828,7 @@ class EchoConnection final : public fidl::Server<Echo> {
             ::fidl_test_compatibility::Unsigned(request.unsigned_()->value(), ""));
       }
 
-      zx_status_t status = app.EchoUnionPayloadNoRetVal(std::move(*req));
+      zx_status_t status = app.EchoUnionPayloadNoRetVal(std::move(req));
       ZX_ASSERT_MSG(status == ZX_OK, "Replying with event failed direct: %s",
                     zx_status_get_string(status));
       auto result = event_handler.WaitForEvent();

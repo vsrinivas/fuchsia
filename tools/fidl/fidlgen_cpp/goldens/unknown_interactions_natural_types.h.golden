@@ -1483,8 +1483,7 @@ class UnknownInteractionsProtocolStrictTwoWayErrResult {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
 
-  UnknownInteractionsProtocolStrictTwoWayErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  UnknownInteractionsProtocolStrictTwoWayErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -2507,8 +2506,7 @@ class UnknownInteractionsProtocolStrictEventErrResult {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
 
-  UnknownInteractionsProtocolStrictEventErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  UnknownInteractionsProtocolStrictEventErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -2762,8 +2760,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayResult {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
 
-  UnknownInteractionsProtocolFlexibleTwoWayResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  UnknownInteractionsProtocolFlexibleTwoWayResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -4620,8 +4617,7 @@ class UnknownInteractionsProtocolFlexibleTwoWayErrResult {
       return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
     }
 
-  UnknownInteractionsProtocolFlexibleTwoWayErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  UnknownInteractionsProtocolFlexibleTwoWayErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -5647,8 +5643,7 @@ class UnknownInteractionsProtocolFlexibleEventErrResult {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
 
-  UnknownInteractionsProtocolFlexibleEventErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  UnknownInteractionsProtocolFlexibleEventErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -7343,8 +7338,7 @@ class UnknownInteractionsDriverProtocolStrictTwoWayErrResult {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
 
-  UnknownInteractionsDriverProtocolStrictTwoWayErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  UnknownInteractionsDriverProtocolStrictTwoWayErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -7598,8 +7592,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayResult {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
 
-  UnknownInteractionsDriverProtocolFlexibleTwoWayResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  UnknownInteractionsDriverProtocolFlexibleTwoWayResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -9456,8 +9449,7 @@ class UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult {
       return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
     }
 
-  UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  UnknownInteractionsDriverProtocolFlexibleTwoWayErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -10709,8 +10701,7 @@ class UnknownInteractionsClosedProtocolStrictTwoWayErrResult {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
 
-  UnknownInteractionsClosedProtocolStrictTwoWayErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  UnknownInteractionsClosedProtocolStrictTwoWayErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -11733,8 +11724,7 @@ class UnknownInteractionsClosedProtocolStrictEventErrResult {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
 
-  UnknownInteractionsClosedProtocolStrictEventErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  UnknownInteractionsClosedProtocolStrictEventErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -13206,8 +13196,7 @@ class UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
 
-  UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  UnknownInteractionsClosedDriverProtocolStrictTwoWayErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -14456,8 +14445,7 @@ class UnknownInteractionsAjarProtocolStrictTwoWayErrResult {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
 
-  UnknownInteractionsAjarProtocolStrictTwoWayErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  UnknownInteractionsAjarProtocolStrictTwoWayErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -15480,8 +15468,7 @@ class UnknownInteractionsAjarProtocolStrictEventErrResult {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
 
-  UnknownInteractionsAjarProtocolStrictEventErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  UnknownInteractionsAjarProtocolStrictEventErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -16504,8 +16491,7 @@ class UnknownInteractionsAjarProtocolFlexibleEventErrResult {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
 
-  UnknownInteractionsAjarProtocolFlexibleEventErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  UnknownInteractionsAjarProtocolFlexibleEventErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -18200,8 +18186,7 @@ class UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
 
-  UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  UnknownInteractionsAjarDriverProtocolStrictTwoWayErrResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;

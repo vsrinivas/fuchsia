@@ -89,8 +89,7 @@ class UnionSize8Alignment4 {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  UnionSize8Alignment4(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  UnionSize8Alignment4(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -269,8 +268,7 @@ class UnionSize36Alignment4 {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  UnionSize36Alignment4(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  UnionSize36Alignment4(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -449,8 +447,7 @@ class UnionSize12Alignment4 {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  UnionSize12Alignment4(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  UnionSize12Alignment4(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -702,8 +699,7 @@ class UnionSize24Alignment8 {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  UnionSize24Alignment8(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  UnionSize24Alignment8(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;

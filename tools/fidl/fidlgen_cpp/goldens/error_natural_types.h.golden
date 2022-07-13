@@ -154,8 +154,7 @@ class ExampleFooResult {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
 
-  ExampleFooResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  ExampleFooResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;

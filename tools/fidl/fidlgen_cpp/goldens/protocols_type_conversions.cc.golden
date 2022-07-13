@@ -607,7 +607,7 @@ std::unique_ptr<::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult> WireNat
       return ::test_protocols::TheUnion::WithV(
           WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.v())));
     default:
-      return ::test_protocols::TheUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
+      return ::test_protocols::TheUnion();
   }
 }
 ::test_protocols::wire::TheUnion WireNaturalConversionTraits<::test_protocols::wire::TheUnion, ::test_protocols::TheUnion>::ToWire(fidl::AnyArena& arena, ::test_protocols::TheUnion src) {

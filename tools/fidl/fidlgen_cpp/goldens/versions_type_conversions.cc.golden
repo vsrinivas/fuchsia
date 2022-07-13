@@ -38,7 +38,7 @@ namespace internal {
       return ::test_versions::Union::WithX(
           WireNaturalConversionTraits<uint32_t, uint32_t>::ToNatural(std::move(src.x())));
     default:
-      return ::test_versions::Union(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
+      return ::test_versions::Union();
   }
 }
 ::test_versions::wire::Union WireNaturalConversionTraits<::test_versions::wire::Union, ::test_versions::Union>::ToWire(fidl::AnyArena& arena, ::test_versions::Union src) {

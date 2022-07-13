@@ -60,11 +60,7 @@ TEST(UnionConversion, FlexibleToHLCPP) {
   ASSERT_TRUE(copyable.is_copyable());
   EXPECT_EQ(copyable.copyable().x, 23);
 
-  // Use an internal API to make an unknown union.
-  // In practice, this will only happen during IPC and when the sender/receiver
-  // schema mismatch.
-  auto unknown = fidl::NaturalToHLCPP(
-      test_types::TestXUnion(fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}));
+  auto unknown = fidl::NaturalToHLCPP(test_types::TestXUnion{});
   ASSERT_TRUE(unknown.has_invalid_tag());
 }
 

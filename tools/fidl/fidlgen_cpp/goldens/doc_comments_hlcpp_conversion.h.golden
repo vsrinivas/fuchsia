@@ -167,7 +167,7 @@ struct HLCPPToNaturalTraits<::test::doccomments::FlexibleUnion> {
       return _NaturalUnion::WithField(
           ::fidl::HLCPPToNatural(std::move(value.Field())));
     default:
-      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
+      return _NaturalUnion();
   }
 }
 

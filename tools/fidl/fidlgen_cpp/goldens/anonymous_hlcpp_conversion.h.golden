@@ -282,7 +282,7 @@ struct HLCPPToNaturalTraits<::test::anonymous::SomeProtocol_SomeMethod_Result> {
       return _NaturalUnion::WithUnionData(
           ::fidl::HLCPPToNatural(std::move(value.union_data())));
     default:
-      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
+      return _NaturalUnion();
   }
 }
 ::test::anonymous::Expression NaturalToHLCPPTraits<::test_anonymous::Expression>::Convert(::test_anonymous::Expression&& value) {
@@ -316,7 +316,7 @@ struct HLCPPToNaturalTraits<::test::anonymous::SomeProtocol_SomeMethod_Result> {
       return _NaturalUnion::WithFunctionApplication(
           ::fidl::HLCPPToNatural(std::move(value.function_application())));
     default:
-      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
+      return _NaturalUnion();
   }
 }
 ::test::anonymous::SomeProtocol_SomeMethod_Result NaturalToHLCPPTraits<::test_anonymous::SomeProtocolSomeMethodResult>::Convert(::test_anonymous::SomeProtocolSomeMethodResult&& value) {

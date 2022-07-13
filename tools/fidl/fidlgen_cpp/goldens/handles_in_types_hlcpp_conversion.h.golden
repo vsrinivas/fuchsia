@@ -101,7 +101,7 @@ struct HLCPPToNaturalTraits<::test::handlesintypes::UnionWithHandle> {
       return _NaturalUnion::WithH(
           ::fidl::HLCPPToNatural(std::move(value.h())));
     default:
-      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
+      return _NaturalUnion();
   }
 }
 

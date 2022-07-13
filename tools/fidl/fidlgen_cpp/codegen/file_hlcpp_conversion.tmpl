@@ -185,7 +185,7 @@
         {{- end }}
           default:
         {{- if .IsFlexible }}
-            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
+            return _NaturalUnion();
         {{- else }}
             ZX_PANIC("Can't convert invalid strict union %s from HLCPP to Natural", "{{ .HLCPP }}");
         {{- end }}

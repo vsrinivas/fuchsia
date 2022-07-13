@@ -467,8 +467,7 @@ class WithErrorSyntaxResponseAsStructResult {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
 
-  WithErrorSyntaxResponseAsStructResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  WithErrorSyntaxResponseAsStructResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -671,8 +670,7 @@ class WithErrorSyntaxHandleInResultResult {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
 
-  WithErrorSyntaxHandleInResultResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  WithErrorSyntaxHandleInResultResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -888,8 +886,7 @@ class WithErrorSyntaxErrorAsPrimitiveResult {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
 
-  WithErrorSyntaxErrorAsPrimitiveResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  WithErrorSyntaxErrorAsPrimitiveResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -1659,6 +1656,8 @@ class TheUnion {
     kV = 1,  // 0x1
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
+  // Create an unknown value of this union.
+  TheUnion() : storage_(std::make_shared<Storage_>()) {}
 
   TheUnion(TheUnion&& other) noexcept
       : TheUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
@@ -1701,8 +1700,7 @@ class TheUnion {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  TheUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  TheUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -2620,8 +2618,7 @@ class WithErrorSyntaxErrorAsEnumResult {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
 
-  WithErrorSyntaxErrorAsEnumResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
-      : storage_(std::make_shared<Storage_>()) {}
+  WithErrorSyntaxErrorAsEnumResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;

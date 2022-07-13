@@ -1366,7 +1366,7 @@ struct HLCPPToNaturalTraits<::test::protocols::WithErrorSyntax_ErrorAsEnum_Resul
       return _NaturalUnion::WithV(
           ::fidl::HLCPPToNatural(std::move(value.v())));
     default:
-      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
+      return _NaturalUnion();
   }
 }
 ::test::protocols::WithErrorSyntax_ErrorAsEnum_Result NaturalToHLCPPTraits<::test_protocols::WithErrorSyntaxErrorAsEnumResult>::Convert(::test_protocols::WithErrorSyntaxErrorAsEnumResult&& value) {
