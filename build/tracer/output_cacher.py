@@ -36,9 +36,11 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from typing import Any, Callable, Collection, Dict, Iterable, Sequence, Tuple
 import dataclasses
 
+_SCRIPT_BASENAME = os.path.basename(__file__)
 
 def _partition(
         iterable: Iterable[Any],
@@ -60,7 +62,6 @@ def files_match(file1: str, file2: str):
     # filecmp.cmp does not invoke any subprocesses.
     return filecmp.cmp(file1, file2, shallow=False)
 
-
 def move_if_different(src: str, dest: str, verbose: bool = False) -> bool:
     """Moves src -> dest if their contents differ.
 
@@ -77,8 +78,16 @@ def move_if_different(src: str, dest: str, verbose: bool = False) -> bool:
       False if the destination already matches source.
     """
     if not os.path.exists(src):
-        # The original command failed to produce this file.
-        raise FileNotFoundError(f"  *** Expected file not found: {src}")
+        # This branch should be highly unlikely, so it is allowed to be slow.
+        # Either the original command failed to produce this file, or something
+        # could be wrong with file system synchronization or delays.
+        # Flush writes, sleep, try again.
+        print(f"[{_SCRIPT_BASENAME}] Expected output file not found: {src} (Waiting a bit ...)")
+        os.sync()
+        time.sleep(3)
+        # Recheck for existence.
+        if not os.path.exists(src):
+          raise FileNotFoundError(f"[{_SCRIPT_BASENAME}] *** Expected output file not found: {src}")
     if not os.path.exists(dest) or not files_match(dest, src):
         if verbose:
             print(f"  === Updated: {dest}")
