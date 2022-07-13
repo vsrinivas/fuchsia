@@ -55,6 +55,10 @@ AmlTdmConfigDevice::AmlTdmConfigDevice(const metadata::AmlConfig& metadata, fdf:
         mclk = MCLK_C;
         break;
     }
+
+    if (metadata.is_custom_tdm_clk_sel)
+      mclk = ToMclkId(metadata.tdm_clk_sel);
+
     device_ = AmlTdmOutDevice::Create(std::move(mmio), HIFI_PLL, tdm, ddr, mclk, metadata.version);
   }
   ZX_ASSERT(device_ != nullptr);
@@ -108,6 +112,10 @@ zx_status_t AmlTdmConfigDevice::InitHW(const metadata::AmlConfig& metadata,
       zxlogf(ERROR, "could not configure TDM lane %d", status);
       return status;
     }
+
+    if (metadata.dpad_mask & (1 << i)) {
+      device_->SetDatPad(ToDatPadId(metadata.dpad_sel[i]), static_cast<aml_tdm_dat_lane_t>(i));
+    }
   }
 
   if (metadata.mClockDivFactor) {
@@ -133,7 +141,11 @@ zx_status_t AmlTdmConfigDevice::InitHW(const metadata::AmlConfig& metadata,
       zxlogf(ERROR, "could not configure MCLK %d", status);
       return status;
     }
-    device_->SetMClkPad(MCLK_PAD_0);
+    if (metadata.is_custom_tdm_mpad_sel) {
+      device_->SetMClkPad(ToMclkPadId(metadata.mpad_sel));
+    } else {
+      device_->SetMClkPad(MCLK_PAD_0);
+    }
   }
   if (metadata.sClockDivFactor) {
     uint32_t frame_sync_clks = 0;
@@ -148,6 +160,7 @@ zx_status_t AmlTdmConfigDevice::InitHW(const metadata::AmlConfig& metadata,
         frame_sync_clks = 1;
         break;
     }
+    device_->SetSclkPad(ToSclkPadId(metadata.spad_sel), metadata.is_custom_tdm_spad_sel);
     status = device_->SetSclkDiv(metadata.sClockDivFactor - 1, frame_sync_clks - 1,
                                  (metadata.dai.bits_per_slot * metadata.dai.number_of_channels) - 1,
                                  !metadata.dai.sclk_on_raising);

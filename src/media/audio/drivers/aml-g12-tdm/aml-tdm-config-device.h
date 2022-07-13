@@ -31,6 +31,68 @@ class AmlTdmConfigDevice {
   uint32_t GetBufferAlignment() const { return device_->GetBufferAlignment(); }
   void Shutdown() { device_->Shutdown(); }
 
+  static aml_tdm_mclk_t ToMclkId(const metadata::AmlTdmclk clk) {
+    switch (clk) {
+      case metadata::AmlTdmclk::CLK_A:
+        return MCLK_A;
+      case metadata::AmlTdmclk::CLK_B:
+        return MCLK_B;
+      case metadata::AmlTdmclk::CLK_C:
+        return MCLK_C;
+      case metadata::AmlTdmclk::CLK_D:
+        return MCLK_D;
+      case metadata::AmlTdmclk::CLK_E:
+        return MCLK_E;
+      case metadata::AmlTdmclk::CLK_F:
+        return MCLK_F;
+    }
+    assert(0);
+    return MCLK_A;
+  }
+
+  static aml_tdm_mclk_pad_t ToMclkPadId(const metadata::AmlTdmMclkPad mpad) {
+    switch (mpad) {
+      case metadata::AmlTdmMclkPad::MCLK_PAD_0:
+        return MCLK_PAD_0;
+      case metadata::AmlTdmMclkPad::MCLK_PAD_1:
+        return MCLK_PAD_1;
+    }
+    assert(0);
+    return MCLK_PAD_0;
+  }
+
+  static aml_tdm_sclk_pad_t ToSclkPadId(const metadata::AmlTdmSclkPad spad) {
+    switch (spad) {
+      case metadata::AmlTdmSclkPad::SCLK_PAD_0:
+        return SCLK_PAD_0;
+      case metadata::AmlTdmSclkPad::SCLK_PAD_1:
+        return SCLK_PAD_1;
+      case metadata::AmlTdmSclkPad::SCLK_PAD_2:
+        return SCLK_PAD_2;
+    }
+    assert(0);
+    return SCLK_PAD_0;
+  }
+
+  static aml_tdm_dat_pad_t ToDatPadId(const metadata::AmlTdmDatPad pad) {
+    switch (pad) {
+      case metadata::AmlTdmDatPad::TDM_D4:
+        return TDM_D4;
+      case metadata::AmlTdmDatPad::TDM_D5:
+        return TDM_D5;
+      case metadata::AmlTdmDatPad::TDM_D8:
+        return TDM_D8;
+      case metadata::AmlTdmDatPad::TDM_D9:
+        return TDM_D9;
+      case metadata::AmlTdmDatPad::TDM_D10:
+        return TDM_D10;
+      case metadata::AmlTdmDatPad::TDM_D11:
+        return TDM_D11;
+    }
+    assert(0);
+    return TDM_D4;
+  }
+
  private:
   std::unique_ptr<AmlTdmDevice> device_;
 };

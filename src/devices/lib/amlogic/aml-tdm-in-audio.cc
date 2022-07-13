@@ -67,6 +67,10 @@ void AmlTdmInDevice::Initialize() {
                         (tdm_ch_ << 0),  // select TDM_IN A/B/C as data source.
                     GetToddrOffset(TODDR_CTRL0_OFFS));
       break;
+    // TODO(104017): Add tdm in
+    case metadata::AmlVersion::kA5:
+      ZX_ASSERT_MSG(0, "Unsupport yet");
+      break;
   }
 
   mmio_.Write32((1 << 25) |  // set the magic force end bit(25) to cause fetch from start
@@ -93,6 +97,10 @@ void AmlTdmInDevice::Initialize() {
       break;
     case metadata::AmlVersion::kS905D3G:
       pad1 = EE_AUDIO_MST_PAD_CTRL1_D3G;
+      break;
+    // TODO(104017): Add tdm in
+    case metadata::AmlVersion::kA5:
+      ZX_ASSERT_MSG(0, "Unsupport yet");
       break;
   }
   // Only modify the part of the MST PAD register that corresponds to the engine in use.
@@ -132,6 +140,14 @@ zx_status_t AmlTdmInDevice::SetBuffer(zx_paddr_t buf, size_t len) {
   return ZX_OK;
 }
 
+zx_status_t AmlTdmInDevice::SetSclkPad(aml_tdm_sclk_pad_t sclk_pad, bool is_custom_select) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t AmlTdmInDevice::SetDatPad(aml_tdm_dat_pad_t tdm_pin, aml_tdm_dat_lane_t dat_lane) {
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 // bit_offset - bit position in frame where first slot will appear.
 // num_slots - number of slots per frame minus one.
 // bits_per_slot - width of each slot minus one.
@@ -164,6 +180,10 @@ void AmlTdmInDevice::ConfigTdmSlot(uint8_t bit_offset, uint8_t num_slots, uint8_
                       bits_per_slot;
       mmio_.Write32(reg0, GetTdmOffset(TDMIN_CTRL_OFFS));
     } break;
+    // TODO(104017): Add tdm in
+    case metadata::AmlVersion::kA5:
+      ZX_ASSERT_MSG(0, "Unsupport yet");
+      break;
   }
 }
 

@@ -19,6 +19,9 @@ void AmlTdmDevice::InitMclk() {
     case metadata::AmlVersion::kS905D3G:
       mclk_a = EE_AUDIO_MCLK_A_CTRL_D3G;
       break;
+    case metadata::AmlVersion::kA5:
+      mclk_a = EE_AUDIO_MCLK_A_CTRL_A5;
+      break;
   }
   // Set chosen mclk channels input to selected source
   // Since this is init, set the divider to max value assuming it will
@@ -42,6 +45,9 @@ zx_status_t AmlTdmDevice::SetMclkDiv(uint32_t div) {
       break;
     case metadata::AmlVersion::kS905D3G:
       mclk_a = EE_AUDIO_MCLK_A_CTRL_D3G;
+      break;
+    case metadata::AmlVersion::kA5:
+      mclk_a = EE_AUDIO_MCLK_A_CTRL_A5;
       break;
   }
   zx_off_t ptr = mclk_a + (mclk_ch_ * sizeof(uint32_t));
@@ -93,6 +99,11 @@ zx_status_t AmlTdmDevice::SetMClkPad(aml_tdm_mclk_pad_t mclk_pad) {
           GetMmio().ModifyBits<uint32_t>(mclk_ch_, 8, 2, EE_AUDIO_MST_PAD_CTRL0);
           GetMmio().ModifyBits<uint32_t>(1, 15, 1, EE_AUDIO_MST_PAD_CTRL0);  // Bit 15 to enable.
           break;
+        case metadata::AmlVersion::kA5:
+          GetMmio().ModifyBits<uint32_t>(mclk_ch_, 8, 2, EE_AUDIO_MCLK_PAD_CTRL0_A5);
+          GetMmio().ModifyBits<uint32_t>(1, 15, 1,
+                                         EE_AUDIO_MCLK_PAD_CTRL0_A5);  // Bit 31 to enable.
+          break;
       }
       break;
     case MCLK_PAD_1:
@@ -103,6 +114,11 @@ zx_status_t AmlTdmDevice::SetMClkPad(aml_tdm_mclk_pad_t mclk_pad) {
         case metadata::AmlVersion::kS905D3G:
           GetMmio().ModifyBits<uint32_t>(mclk_ch_, 24, 2, EE_AUDIO_MST_PAD_CTRL0);
           GetMmio().ModifyBits<uint32_t>(1, 31, 1, EE_AUDIO_MST_PAD_CTRL0);  // Bit 31 to enable.
+          break;
+        case metadata::AmlVersion::kA5:
+          GetMmio().ModifyBits<uint32_t>(mclk_ch_, 24, 2, EE_AUDIO_MCLK_PAD_CTRL0_A5);
+          GetMmio().ModifyBits<uint32_t>(1, 31, 1,
+                                         EE_AUDIO_MCLK_PAD_CTRL0_A5);  // Bit 31 to enable.
           break;
       }
       break;

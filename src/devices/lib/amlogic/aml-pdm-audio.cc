@@ -105,6 +105,9 @@ void AmlPdmDevice::InitRegs() {
                               (0x02 << 8),                     // STATUS2 source is ddr position
                           GetToddrOffset(TODDR_CTRL1_OFFS));
       break;
+    case metadata::AmlVersion::kA5:
+      ZX_ASSERT_MSG(0, "Unsupport yet");
+      break;
   }
 
   //*To keep things simple, we are using the same clock source for both the

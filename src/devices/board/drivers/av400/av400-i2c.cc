@@ -74,6 +74,14 @@ static const i2c_channel_t i2c_channels[] = {
         .pid = 0,
         .did = 0,
     },
+    // ti, tas5707 amplifier
+    {
+        .bus_id = 1,
+        .address = 0x1b,
+        .vid = 0,
+        .pid = 0,
+        .did = 0,
+    },
     // ESMT audio amplifier
     {
         .bus_id = 1,

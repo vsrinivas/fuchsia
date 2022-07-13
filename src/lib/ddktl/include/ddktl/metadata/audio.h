@@ -17,6 +17,7 @@ enum class CodecType : uint32_t {
   Tas5782,
   Tas58xx,
   Tas5720,
+  Tas5707,
 };
 
 enum class DaiType : uint32_t {

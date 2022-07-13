@@ -33,6 +33,7 @@ enum {
   BTI_MALI,
   BTI_VIDEO,
   BTI_SPI1,
+  BTI_AUDIO_OUT,
 };
 
 // Av400 SPI bus arbiters (should match spi_channels[] in av400-spi.cc  ).
@@ -77,6 +78,7 @@ class Av400 : public Av400Type {
   zx_status_t SdioInit();
   zx_status_t EthInit();
   zx_status_t RtcInit();
+  zx_status_t AudioInit();
 
   int Thread();
 

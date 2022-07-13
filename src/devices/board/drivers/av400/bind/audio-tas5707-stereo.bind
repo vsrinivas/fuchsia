@@ -1,0 +1,13 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite audio_tas5707_stereo;
+
+using fuchsia.i2c;
+
+primary node "i2c" {
+    fuchsia.BIND_FIDL_PROTOCOL == fuchsia.i2c.BIND_FIDL_PROTOCOL.DEVICE;
+    fuchsia.BIND_I2C_BUS_ID == 1; // AV400_I2C_3
+    fuchsia.BIND_I2C_ADDRESS == 0x1b;
+}

@@ -160,6 +160,7 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
       "dwmac/dwmac/Designware-MAC/ethernet",
       "ethernet_mac/aml-ethernet",
       "sys/platform/05:07:2e/aml-rtc",
+      "av400-i2s-audio-out",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));

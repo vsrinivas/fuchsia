@@ -65,6 +65,23 @@ driver_bind_rules("spi_1_bind") {
   ]
 }
 
+driver_bind_rules("tdm-i2s-bind") {
+  rules = "bind/tdm-i2s.bind"
+  header_output = "tdm-i2s-bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.codec",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.ti.platform",
+  ]
+}
+
+driver_bind_rules("audio-tas5707-stereo-bind") {
+  rules = "bind/audio-tas5707-stereo.bind"
+  header_output = "audio-tas5707-stereo-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+}
+
 fuchsia_driver("av400-driver") {
   output_name = "av400"
   configs += [
@@ -72,6 +89,7 @@ fuchsia_driver("av400-driver") {
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
   sources = [
+    "av400-audio.cc",
     "av400-clk.cc",
     "av400-emmc.cc",
     "av400-eth.cc",
@@ -85,11 +103,13 @@ fuchsia_driver("av400-driver") {
     "av400.cc",
   ]
   deps = [
+    ":audio-tas5707-stereo-bind_header",
     ":av400-bind",
     ":av400-emmc-bind_header",
     ":av400-sdio-bind_header",
     ":pwm_init_bind_header",
     ":spi_1_bind_header",
+    ":tdm-i2s-bind_header",
     "//sdk/banjo/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
@@ -104,6 +124,7 @@ fuchsia_driver("av400-driver") {
     "//src/devices/lib/fidl-metadata",
     "//src/devices/lib/metadata:llcpp",
     "//src/devices/lib/mmio",
+    "//src/devices/lib/ti",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
 

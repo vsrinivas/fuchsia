@@ -157,6 +157,12 @@
 #define A5_GPIOB_10_EMMC_CMD_FN 1
 #define A5_GPIOB_11_EMMC_DS_FN 1
 
+// GPIOC pin alternate functions
+#define A5_GPIOC_2_TDMB_FS_1_FN 1
+#define A5_GPIOC_3_TDMB_SCLK_1_FN 1
+#define A5_GPIOC_4_MCLK_1_FN 1
+#define A5_GPIOC_5_TDMB_D4_FN 1
+
 // GPIOT pin alternate functions
 #define A5_GPIOT_10_SPI_B_SS0_FN 0
 #define A5_GPIOT_11_SPI_B_SCLK_FN 3

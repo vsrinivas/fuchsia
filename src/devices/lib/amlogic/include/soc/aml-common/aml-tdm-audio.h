@@ -29,6 +29,10 @@ class AmlTdmDevice {
   zx_status_t SetSclkDiv(uint32_t sdiv, uint32_t lrduty, uint32_t lrdiv, bool sclk_invert_ph0);
   // Configures the mclk pad.
   zx_status_t SetMClkPad(aml_tdm_mclk_pad_t mclk_pad);
+  // Configures the sclk / lrclk pad.
+  virtual zx_status_t SetSclkPad(aml_tdm_sclk_pad_t sclk_pad, bool is_custom_select) = 0;
+  // configure the data pad.
+  virtual zx_status_t SetDatPad(aml_tdm_dat_pad_t tdm_pin, aml_tdm_dat_lane_t dat_lane) = 0;
 
   // Configures placement of data on the tdm bus
   virtual void ConfigTdmSlot(uint8_t bit_offset, uint8_t num_slots, uint8_t bits_per_slot,
@@ -110,6 +114,8 @@ class AmlTdmOutDevice : public AmlTdmDevice {  // Not final for unit testing.
   zx_status_t ConfigTdmLane(size_t lane, uint32_t enable_mask, uint32_t mute_mask) override;
   void ConfigTdmSwaps(uint32_t swaps) override;
   zx_status_t SetBuffer(zx_paddr_t buf, size_t len) override;
+  zx_status_t SetSclkPad(aml_tdm_sclk_pad_t sclk_pad, bool is_custom_select) override;
+  zx_status_t SetDatPad(aml_tdm_dat_pad_t tdm_pin, aml_tdm_dat_lane_t dat_lane) override;
   uint32_t GetRingPosition() override;
   uint32_t GetDmaStatus() override;
   uint32_t GetTdmStatus() override;
@@ -197,6 +203,8 @@ class AmlTdmInDevice : public AmlTdmDevice {  // Not final for unit testing.
   zx_status_t ConfigTdmLane(size_t lane, uint32_t enable_mask, uint32_t mute_mask) override;
   void ConfigTdmSwaps(uint32_t swaps) override;
   zx_status_t SetBuffer(zx_paddr_t buf, size_t len) override;
+  zx_status_t SetSclkPad(aml_tdm_sclk_pad_t sclk_pad, bool is_custom_select) override;
+  zx_status_t SetDatPad(aml_tdm_dat_pad_t tdm_pin, aml_tdm_dat_lane_t dat_lane) override;
   uint32_t GetRingPosition() override;
   uint32_t GetDmaStatus() override;
   uint32_t GetTdmStatus() override;

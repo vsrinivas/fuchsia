@@ -11,6 +11,8 @@
 
 #define A5_MSR_CLK_BASE 0xfe048000
 #define A5_MSR_CLK_LENGTH 0x2000
+#define A5_MSR_CLK_REG0 (0x0000 << 2)
+#define A5_MSR_CLK_REG2 (0x0002 << 2)
 
 // gpio
 #define A5_GPIO_BASE 0xfe004000
@@ -33,6 +35,19 @@
 
 // Peripherals - datasheet is nondescript about this section, but it contains
 //  top level ethernet control and temp sensor registers
+
+// Analog Control
+#define PLL_LOCK_CHECK_MAX 3
+#define A5_ANACTRL_BASE 0xfe008000
+#define A5_ANACTRL_LENGTH 0x1000
+#define A5_ANACTRL_HIFIPLL_CTRL0 (0x0040 << 2)  // 0x100
+#define A5_ANACTRL_HIFIPLL_CTRL1 (0x0041 << 2)  // 0x104
+#define A5_ANACTRL_HIFIPLL_CTRL2 (0x0042 << 2)  // 0x108
+#define A5_ANACTRL_HIFIPLL_CTRL3 (0x0043 << 2)  // 0x10c
+#define A5_ANACTRL_HIFIPLL_CTRL4 (0x0044 << 2)  // 0x110
+#define A5_ANACTRL_HIFIPLL_CTRL5 (0x0045 << 2)  // 0x114
+#define A5_ANACTRL_HIFIPLL_CTRL6 (0x0046 << 2)  // 0x118
+#define A5_ANACTRL_HIFIPLL_STS (0x0047 << 2)    // 0x11c
 
 // Ethernet
 
@@ -86,6 +101,13 @@
 #define A5_GPIO_IRQ_9 51   // 32+19
 #define A5_GPIO_IRQ_10 52  // 32+20
 #define A5_GPIO_IRQ_11 53  // 32+21
+
+#define A5_AUDIO_TODDR_A 64  // 32+32
+#define A5_AUDIO_TODDR_B 65  // 33+32
+#define A5_AUDIO_SPDIFIN 67  // 35+32
+#define A5_AUDIO_FRDDR_A 68  // 36+32
+#define A5_AUDIO_FRDDR_B 69  // 37+32
+#define A5_AUDIO_FRDDR_C 70  // 38+32
 
 #define A5_I2C_C_IRQ 194  // 162+32
 #define A5_I2C_D_IRQ 195  // 163+32
@@ -149,6 +171,19 @@
 #define A5_PWM_H2 0x18
 #define A5_PWM_BLINK_GH 0x1c
 #define A5_PWM_LOCK_GH 0x20
+
+// AUDIO
+#define A5_EE_AUDIO_BASE 0xfe330000
+#define A5_EE_AUDIO_LENGTH 0x1000
+
+#define A5_EE_AUDIO2_BASE 0xfe334c00
+#define A5_EE_AUDIO2_LENGTH 0x300
+
+// For 'fdf::MmioBuffer::Create'
+// |base| is guaranteed to be page aligned.
+#define A5_EE_AUDIO2_BASE_ALIGN 0xfe334000
+#define A5_EE_AUDIO2_LENGTH_ALIGN 0x1000
+#define A5_EE_AUDIO2_CLK_GATE_EN0 (0xc00 + (0x0003 << 2))
 
 // USB
 

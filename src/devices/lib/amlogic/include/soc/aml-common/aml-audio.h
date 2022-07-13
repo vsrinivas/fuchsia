@@ -17,6 +17,7 @@ static constexpr uint32_t kMaxAmlConfigString = 32;
 enum class AmlVersion : uint32_t {
   kS905D2G = 1,  // Also works with T931G.
   kS905D3G = 2,
+  kA5 = 3,
 };
 
 enum class AmlBus : uint32_t {
@@ -25,10 +26,85 @@ enum class AmlBus : uint32_t {
   TDM_C = 3,
 };
 
+enum class AmlTdmclk : uint32_t {
+  CLK_A = 0,
+  CLK_B = 1,
+  CLK_C = 2,
+  CLK_D = 3,
+  CLK_E = 4,
+  CLK_F = 5,
+};
+
+enum class AmlTdmMclkPad : uint32_t {
+  MCLK_PAD_0 = 0,
+  MCLK_PAD_1 = 1,
+};
+
+enum class AmlTdmSclkPad : uint32_t {
+  SCLK_PAD_0 = 0,
+  SCLK_PAD_1 = 1,
+  SCLK_PAD_2 = 2,
+};
+
+enum class AmlTdmDatPad : uint32_t {
+  TDM_D4 = 4,
+  TDM_D5 = 5,
+  TDM_D8 = 8,
+  TDM_D9 = 9,
+  TDM_D10 = 10,
+  TDM_D11 = 11,
+};
+
 struct AmlConfig {
   char manufacturer[kMaxAmlConfigString];
   char product_name[kMaxAmlConfigString];
   bool is_input;
+  // If false, it will use same suffix channel by default.
+  // e.g.
+  //  TDMOUT_A -> MCLK_A -> SCLK_A -> LRCLK_A
+  //  TDMOUT_B -> MCLK_B -> SCLK_B -> LRCLK_B
+  //  TDMOUT_C -> MCLK_C -> SCLK_C -> LRCLK_C
+  // If true, select the channel you want.
+  // e.g.
+  //  TDMOUT_A -> MCLK_C -> SCLK_C -> LRCLK_C
+  //
+  bool is_custom_tdm_clk_sel;
+  AmlTdmclk tdm_clk_sel;
+  // If false, it will use MCLK_PAD_0 by default.
+  //  TDMOUT_A/B/C -> MCLK_PAD_0
+  // If true, according to board layout design (which pin you used?)
+  // then select the right mclk_pad.
+  // e.g.
+  //  TDMOUT_A -> MCLK_PAD_2
+  //
+  bool is_custom_tdm_mpad_sel;
+  AmlTdmMclkPad mpad_sel;
+  // If false, it will use same suffix channel by default.
+  //  TDMOUT_A -> SCLK_PAD_0 -> LRCLK_PAD_0
+  //  TDMOUT_B -> SCLK_PAD_1 -> LRCLK_PAD_1
+  //  TDMOUT_C -> SCLK_PAD_2 -> LRCLK_PAD_2
+  // If true, according to board layout design (which pins you used?)
+  // then select the right sclk_pad, lrclk_pad.
+  // e.g.
+  //  TDMOUT_A -> SCLK_PAD_2, LRCLK_PAD_2
+  //
+  bool is_custom_tdm_spad_sel;
+  AmlTdmSclkPad spad_sel;
+  // dpad_mask: support 8x data lane out select.
+  // bit[7:0] : lane0 ~ lane7.
+  // each lane can choose one of tmd_out(32 channel).
+  // e.g. use 4 lane (tdmoutb)
+  // Note: tdm_d2/d3  -> pin function
+  //
+  //  -     / LANE_0 -> tdm_d2 -> GPIOC_0 -> codec sdin_0
+  // |d|   /  LANE_1 -> tdm_d3 -> GPIOC_1 -> codec sdin_1
+  // |a| =>
+  // |t|   \  LANE_2 -> tdm_d4 -> GPIOC_5 -> codec sdin_2
+  // |a|    \ LANE_3 -> tdm_d5 -> GPIOC_6 -> codec sdin_3
+  //  -
+  //
+  uint8_t dpad_mask;
+  AmlTdmDatPad dpad_sel[kMaxNumberOfLanes];
   uint32_t mClockDivFactor;
   uint32_t sClockDivFactor;
   audio_stream_unique_id_t unique_id;

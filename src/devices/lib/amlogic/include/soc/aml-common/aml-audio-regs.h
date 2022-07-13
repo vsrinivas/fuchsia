@@ -53,6 +53,21 @@ __BEGIN_CDECLS
 #define EE_AUDIO_SW_RESET0_D3G          0x0028
 #define EE_AUDIO_SW_RESET1_D3G          0x002c
 
+// For version A5 - src/devices/lib/amlogic/include/soc/aml-a5/a5-hw.h
+// REG_BASE: A5_EE_AUDIO_BASE = 0xfe330000, offset = 0x4;
+#define EE_AUDIO_CLK_GATE_EN0_A5      0x0000
+#define EE_AUDIO_CLK_GATE_EN1_A5      0x0004
+#define EE_AUDIO_MCLK_A_CTRL_A5       0x0008
+#define EE_AUDIO_DAT_PAD_CTRL6_A5     0x0e58 // TDM_D3  ~ TDM_D0  - out src sel
+#define EE_AUDIO_DAT_PAD_CTRL7_A5     0x0e5c // TDM_D7  ~ TDM_D4  - out src sel
+#define EE_AUDIO_DAT_PAD_CTRL8_A5     0x0e60 // TDM_D11 ~ TDM_D8  - out src sel
+#define EE_AUDIO_DAT_PAD_CTRL9_A5     0x0e64 // TDM_D15 ~ TDM_D12 - out src sel
+#define EE_AUDIO_DAT_PAD_CTRLF_A5     0x0e7c // TDM_Dxx oen: 0 - output; 1 - input
+
+#define EE_AUDIO_MCLK_PAD_CTRL0_A5    0x0e80
+#define EE_AUDIO_SCLK_PAD_CTRL0_A5    0x0e88
+#define EE_AUDIO_LRCLK_PAD_CTRL0_A5   0x0e8c
+
 #define EE_AUDIO_MST_A_SCLK_CTRL0     0x0040
 #define EE_AUDIO_MST_A_SCLK_CTRL1     0x0044
 #define EE_AUDIO_MST_B_SCLK_CTRL0     0x0048
@@ -100,6 +115,7 @@ __BEGIN_CDECLS
 #define FRDDR_STATUS1_OFFS      (0x05 << 2)
 #define FRDDR_STATUS2_OFFS      (0x06 << 2)
 #define FRDDR_CTRL2_OFFS_D3G    (0x0a << 2)
+#define FRDDR_CTRL2_OFFS_A5     (0x0a << 2)
 
 #define EE_AUDIO_TODDR_A_CTRL0       (0x40 << 2)
 #define EE_AUDIO_TODDR_B_CTRL0       (0x50 << 2)
@@ -128,6 +144,7 @@ __BEGIN_CDECLS
 #define TDMOUT_MUTE3_OFFS     (0x0e << 2)
 #define TDMOUT_MASK_VAL_OFFS  (0x0f << 2)
 #define TDMOUT_CTRL2_OFFS_D3G (0x160 << 2)
+#define TDMOUT_CTRL2_OFFS_A5  (0x2a0 << 2)
 
 #define EE_AUDIO_TDMOUT_A_CTRL0         (0x140 << 2)
 #define EE_AUDIO_TDMOUT_B_CTRL0         (0x150 << 2)
@@ -170,6 +187,8 @@ __BEGIN_CDECLS
 #define EE_AUDIO_CLK_GATE_TODDRC     (1 << 14)
 
 
+//Audio TOP control reg offsets
+#define EE_AUDIO2_CLK_GATE_EN0_A5     (0x0003  << 2)
 
 typedef enum {
     MP0_PLL = 0,
@@ -195,6 +214,32 @@ typedef enum {
     MCLK_PAD_0 = 0,
     MCLK_PAD_1
 } aml_tdm_mclk_pad_t;
+
+typedef enum {
+    SCLK_PAD_0 = 0,
+    SCLK_PAD_1,
+    SCLK_PAD_2
+} aml_tdm_sclk_pad_t;
+
+typedef enum {
+    LANE_0 = 0,
+    LANE_1,
+    LANE_2,
+    LANE_3,
+    LANE_4,
+    LANE_5,
+    LANE_6,
+    LANE_7
+} aml_tdm_dat_lane_t;
+
+typedef enum {
+    TDM_D4 = 4,
+    TDM_D5 = 5,
+    TDM_D8 = 8,
+    TDM_D9 = 9,
+    TDM_D10 = 10,
+    TDM_D11 = 11
+} aml_tdm_dat_pad_t;
 
 typedef enum {
     TDM_OUT_A = 0,

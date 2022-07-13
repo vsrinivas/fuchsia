@@ -16,10 +16,23 @@ std::unique_ptr<AmlTdmDevice> AmlTdmOutDevice::Create(fdf::MmioBuffer mmio, ee_a
                                                       aml_tdm_out_t tdm, aml_frddr_t frddr,
                                                       aml_tdm_mclk_t mclk,
                                                       metadata::AmlVersion version) {
-  // FRDDR A has 256 64-bit lines in the FIFO, B and C have 128.
   uint32_t fifo_depth = 128 * 8;  // in bytes.
-  if (frddr == FRDDR_A) {
-    fifo_depth = 256 * 8;
+  switch (version) {
+    case metadata::AmlVersion::kS905D2G:
+      if (frddr == FRDDR_A)
+        fifo_depth = 256 * 8;  // FRDDR_A has 256 x 64-bit
+      else
+        fifo_depth = 128 * 8;  // FRDDR_B/C has 128 x 64-bit
+      break;
+    case metadata::AmlVersion::kS905D3G:
+      if (frddr == FRDDR_A)
+        fifo_depth = 256 * 8;  // FRDDR_A has 256 x 64-bit
+      else
+        fifo_depth = 128 * 8;  // FRDDR_B/C/D has 128 x 64-bit
+      break;
+    case metadata::AmlVersion::kA5:
+      fifo_depth = 64 * 8;  // FRDDR_A/B/C has 64 x 64-bit
+      break;
   }
 
   fbl::AllocChecker ac;
@@ -47,9 +60,6 @@ void AmlTdmOutDevice::Initialize() {
   constexpr uint32_t sclk_ws_inv = 1;
   mmio_.Write32((0x03 << 30) | (sclk_ws_inv << 28) | (mclk_ch_ << 24) | (mclk_ch_ << 20), ptr);
 
-  // Enable DDR ARB, and enable this ddr channels bit.
-  mmio_.SetBits32((1 << 31) | (1 << (4 + frddr_ch_)), EE_AUDIO_ARB_CTRL);
-
   // Disable the FRDDR Channel
   // Only use one buffer
   // Interrupts on for FIFO errors
@@ -57,10 +67,17 @@ void AmlTdmOutDevice::Initialize() {
   // set destination tdm block and enable that selection
   switch (version_) {
     case metadata::AmlVersion::kS905D2G:
+      // Enable DDR ARB, and enable this ddr channels bit.
+      mmio_.SetBits32((1 << 31) | (1 << (4 + frddr_ch_)), EE_AUDIO_ARB_CTRL);
       mmio_.Write32(tdm_ch_ | (0x30 << 16) | (1 << 3), GetFrddrOffset(FRDDR_CTRL0_OFFS));
       break;
     case metadata::AmlVersion::kS905D3G:
+      // Enable DDR ARB, and enable this ddr channels bit.
+      mmio_.SetBits32((1 << 31) | (1 << (4 + frddr_ch_)), EE_AUDIO_ARB_CTRL);
       mmio_.Write32(tdm_ch_ | (1 << 4), GetFrddrOffset(FRDDR_CTRL2_OFFS_D3G));
+      break;
+    case metadata::AmlVersion::kA5:
+      mmio_.Write32(tdm_ch_ | (1 << 4), GetFrddrOffset(FRDDR_CTRL2_OFFS_A5));
       break;
   }
   // use entire fifo, start transfer request when fifo is at 1/2 full
@@ -79,32 +96,6 @@ void AmlTdmOutDevice::Initialize() {
   mmio_.Write32(0x00000000, GetTdmOffset(TDMOUT_MUTE1_OFFS));  // Disable lane 1 muting.
   mmio_.Write32(0x00000000, GetTdmOffset(TDMOUT_MUTE2_OFFS));  // Disable lane 2 muting.
   mmio_.Write32(0x00000000, GetTdmOffset(TDMOUT_MUTE3_OFFS));  // Disable lane 3 muting.
-
-  // Datasheets state that PAD_CTRL1 controls sclk and lrclk source selection (which mclk),
-  // it does this per pad (0, 1, 2).  These pads are tied to the TDM channel in use
-  // (this is not specified in the datasheets but confirmed empirically) such that TDM_OUT_A
-  // corresponds to pad 0, TDM_OUT_B to pad 1, and TDM_OUT_C to pad 2.
-  uint32_t pad1 = {};
-  switch (version_) {
-    case metadata::AmlVersion::kS905D2G:
-      pad1 = EE_AUDIO_MST_PAD_CTRL1;
-      break;
-    case metadata::AmlVersion::kS905D3G:
-      pad1 = EE_AUDIO_MST_PAD_CTRL1_D3G;
-      break;
-  }
-  // Only modify the part of the MST PAD register that corresponds to the engine in use.
-  switch (tdm_ch_) {
-    case TDM_OUT_A:
-      mmio_.ModifyBits32((mclk_ch_ << 16) | (mclk_ch_ << 0), (7 << 16) | (7 << 0), pad1);
-      break;
-    case TDM_OUT_B:
-      mmio_.ModifyBits32((mclk_ch_ << 20) | (mclk_ch_ << 4), (7 << 20) | (7 << 4), pad1);
-      break;
-    case TDM_OUT_C:
-      mmio_.ModifyBits32((mclk_ch_ << 24) | (mclk_ch_ << 8), (7 << 24) | (7 << 8), pad1);
-      break;
-  }
 }
 
 uint32_t AmlTdmOutDevice::GetRingPosition() {
@@ -130,6 +121,128 @@ zx_status_t AmlTdmOutDevice::SetBuffer(zx_paddr_t buf, size_t len) {
   //    is pointer to the last 64-bit fetch (inclusive)
   mmio_.Write32(static_cast<uint32_t>(buf), GetFrddrOffset(FRDDR_START_ADDR_OFFS));
   mmio_.Write32(static_cast<uint32_t>(buf + len - 8), GetFrddrOffset(FRDDR_FINISH_ADDR_OFFS));
+
+  return ZX_OK;
+}
+
+zx_status_t AmlTdmOutDevice::SetSclkPad(aml_tdm_sclk_pad_t sclk_pad, bool is_custom_select) {
+  // Datasheets state that PAD_CTRL1 controls sclk and lrclk source selection (which mclk),
+  // it does this per pad (0, 1, 2).  These pads are tied to the TDM channel in use
+  // According to board layout design, select the right sclk pad, lrclk pad.
+  // Note: tdm_ch_ no obvious relationship with clk_pad
+  uint32_t pad[2] = {};
+  bool pad_ctrl_separated = false;
+  switch (version_) {
+    case metadata::AmlVersion::kS905D2G:
+      pad[0] = EE_AUDIO_MST_PAD_CTRL1;
+      break;
+    case metadata::AmlVersion::kS905D3G:
+      pad[0] = EE_AUDIO_MST_PAD_CTRL1_D3G;
+      break;
+    case metadata::AmlVersion::kA5:
+      pad[0] = EE_AUDIO_SCLK_PAD_CTRL0_A5;
+      pad[1] = EE_AUDIO_LRCLK_PAD_CTRL0_A5;
+      pad_ctrl_separated = true;
+      break;
+  }
+
+  aml_tdm_sclk_pad_t spad = {};
+  switch (tdm_ch_) {
+    case TDM_OUT_A:
+      spad = SCLK_PAD_0;
+      break;
+    case TDM_OUT_B:
+      spad = SCLK_PAD_1;
+      break;
+    case TDM_OUT_C:
+      spad = SCLK_PAD_2;
+      break;
+  }
+
+  if (is_custom_select)
+    spad = sclk_pad;
+
+  // Only modify the part of the MST PAD register that corresponds to the engine in use.
+  switch (spad) {
+    case SCLK_PAD_0:
+      if (pad_ctrl_separated) {
+        mmio_.ClearBits32(1 << 3, pad[0]);  // sclk_pad0 as output
+        mmio_.ClearBits32(1 << 3, pad[1]);  // lrclk_pad0 as output
+        mmio_.ModifyBits32((mclk_ch_ << 0), (7 << 0), pad[0]);
+        mmio_.ModifyBits32((mclk_ch_ << 0), (7 << 0), pad[1]);
+      } else {
+        mmio_.ModifyBits32((mclk_ch_ << 16) | (mclk_ch_ << 0), (7 << 16) | (7 << 0), pad[0]);
+      }
+      break;
+    case SCLK_PAD_1:
+      if (pad_ctrl_separated) {
+        mmio_.ClearBits32(1 << 7, pad[0]);  // sclk_pad1 as output
+        mmio_.ClearBits32(1 << 7, pad[1]);  // lrclk_pad1 as output
+        mmio_.ModifyBits32((mclk_ch_ << 4), (7 << 4), pad[0]);
+        mmio_.ModifyBits32((mclk_ch_ << 4), (7 << 4), pad[1]);
+      } else {
+        mmio_.ModifyBits32((mclk_ch_ << 20) | (mclk_ch_ << 4), (7 << 20) | (7 << 4), pad[0]);
+      }
+      break;
+      break;
+    case SCLK_PAD_2:
+      if (pad_ctrl_separated) {
+        mmio_.ClearBits32(1 << 11, pad[0]);  // sclk_pad2 as output
+        mmio_.ClearBits32(1 << 11, pad[1]);  // lrclk_pad2 as output
+        mmio_.ModifyBits32((mclk_ch_ << 8), (7 << 8), pad[0]);
+        mmio_.ModifyBits32((mclk_ch_ << 8), (7 << 8), pad[1]);
+      } else {
+        mmio_.ModifyBits32((mclk_ch_ << 24) | (mclk_ch_ << 8), (7 << 24) | (7 << 8), pad[0]);
+      }
+      break;
+    default:
+      return ZX_ERR_INVALID_ARGS;
+  }
+  return ZX_OK;
+}
+
+zx_status_t AmlTdmOutDevice::SetDatPad(aml_tdm_dat_pad_t tdm_pin, aml_tdm_dat_lane_t lane_id) {
+  // val - out src sel
+  // 0  ~  7: tdmout_a lane0 ~ lane7;
+  // 8  ~ 15: tmdout_b lane0 ~ lane7;
+  // 16 ~ 23: tmdout_c lane0 ~ lane7;
+  // 24 ~ 31: tmdout_d lane0 ~ lane7;
+  uint32_t val = tdm_ch_ * 8 + lane_id;
+
+  // CTRL6: TDM_D0 ~ D3
+  // CTRL7: TDM_D4 ~ D7
+  // CTRL8: TDM_D8 ~ D11
+  // ...
+  // CTRLD: TDM_D28 ~ D31
+  zx_off_t ptr = EE_AUDIO_DAT_PAD_CTRL6_A5 + tdm_pin / 4 * sizeof(uint32_t);
+
+  if (version_ != metadata::AmlVersion::kA5)
+    return ZX_OK;
+
+  switch (tdm_pin) {
+    // D0,D4,D8 ... D28
+    case TDM_D4:
+    case TDM_D8:
+      mmio_.ModifyBits32(val << 0, 0x1f << 0, ptr);
+      break;
+    // D1,D5,D9 ... D29
+    case TDM_D5:
+    case TDM_D9:
+      mmio_.ModifyBits32(val << 8, 0x1f << 8, ptr);
+      break;
+    // D2,D6,D10 ... D30
+    case TDM_D10:
+      mmio_.ModifyBits32(val << 16, 0x1f << 16, ptr);
+      break;
+    // D3,D7,D11 ... D31
+    case TDM_D11:
+      mmio_.ModifyBits32(val << 24, 0x1f << 24, ptr);
+      break;
+  }
+
+  // oen val: 0 - output; 1 - input;
+  // bit[31:0] - D31 ~ D0
+  mmio_.ClearBits32(1 << tdm_pin, EE_AUDIO_DAT_PAD_CTRLF_A5);
   return ZX_OK;
 }
 
@@ -154,6 +267,13 @@ void AmlTdmOutDevice::ConfigTdmSlot(uint8_t bit_offset, uint8_t num_slots, uint8
       mmio_.Write32(reg0, GetTdmOffset(TDMOUT_CTRL0_OFFS));
       uint32_t reg2 = (mix_mask << 0);
       mmio_.Write32(reg2, GetTdmOffset(TDMOUT_CTRL2_OFFS_D3G));
+    } break;
+    case metadata::AmlVersion::kA5: {
+      uint32_t reg0 =
+          bits_per_slot | (num_slots << 5) | (bit_offset << 15) | (1 << 31);  // Bit 31 to enable.
+      mmio_.Write32(reg0, GetTdmOffset(TDMOUT_CTRL0_OFFS));
+      uint32_t reg2 = (mix_mask << 0);
+      mmio_.Write32(reg2, GetTdmOffset(TDMOUT_CTRL2_OFFS_A5));
     } break;
   }
 
