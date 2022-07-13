@@ -20,14 +20,9 @@
     EXPECT_FALSE(fidl_validate_string(bytes, num_bytes), explanation); \
   }
 
-TEST(ValidateString, safe_on_nullptr) { EXPECT_FALSE(fidl_validate_string(nullptr, 10)); }
+TEST(ValidateString, SafeOnNullptr) { EXPECT_FALSE(fidl_validate_string(nullptr, 10)); }
 
-TEST(ValidateString, string_with_size_too_big) {
-  uint64_t size_too_big = static_cast<uint64_t>(FIDL_MAX_SIZE) + 1;
-  EXPECT_FALSE(fidl_validate_string("", size_too_big));
-}
-
-TEST(ValidateString, min_max_code_units_and_minus_one_and_plus_one) {
+TEST(ValidateString, MinMaxCodeUnitsAndMinusOneAndPlusOne) {
   EXPECT_VALID_STRING("\x00");              // single byte, min: 0
   EXPECT_VALID_STRING("\x7f");              // single byte, max: 127
   EXPECT_VALID_STRING("\xc2\x80");          // two bytes,   min: 128
@@ -46,7 +41,7 @@ TEST(ValidateString, min_max_code_units_and_minus_one_and_plus_one) {
   EXPECT_INVALID_STRING("\xf7\xbf\xbf\xc0", "1 above max four bytes");
 }
 
-TEST(ValidateString, invalid_continuations) {
+TEST(ValidateString, InvalidContinuations) {
   // 1 test for the first following byte of an initial two byte value not having the high bit.
   EXPECT_VALID_STRING("\xc2\x80");
   EXPECT_INVALID_STRING("\xc2\x7f", "first byte following two byte value not starting with 0b10");
@@ -69,7 +64,7 @@ TEST(ValidateString, invalid_continuations) {
                         "third byte following four byte value not starting with 0b10");
 }
 
-TEST(ValidateString, only_shortest_encoding_is_valid) {
+TEST(ValidateString, OnlyShortestEncodingIsValid) {
   // All encodings of slash, only the shortest is valid.
   //
   // For further details, see "code unit" defined to be 'The minimal bit
@@ -81,7 +76,7 @@ TEST(ValidateString, only_shortest_encoding_is_valid) {
   EXPECT_INVALID_STRING("\xf0\x80\x80\xaf", "slash (4)");
 }
 
-TEST(ValidateString, valid_noncharacter_codepoints) {
+TEST(ValidateString, ValidNoncharacterCodepoints) {
   EXPECT_VALID_STRING("\xd8\x9d");          // U+061D
   EXPECT_VALID_STRING("\xd7\xb6");          // U+05F6
   EXPECT_VALID_STRING("\xe0\xab\xb4");      // U+0AF4
@@ -90,12 +85,12 @@ TEST(ValidateString, valid_noncharacter_codepoints) {
   EXPECT_VALID_STRING("\xf0\x9f\xa5\xb8");  // U+1F978
 }
 
-TEST(ValidateString, various) {
+TEST(ValidateString, Various) {
   EXPECT_VALID_STRING("");
   EXPECT_VALID_STRING("a");
   EXPECT_VALID_STRING("€");  // \xe2\x82\xac
 
-  // Mix and match from min_max_code_units_and_minus_one_and_plus_one
+  // Mix and match from MinMaxCodeUnitsAndMinusOneAndPlusOne
   EXPECT_VALID_STRING("\x00\xf4\x8f\xbf\xbf\x7f\xf0\x90\x80\x80\xc2\x80");
   EXPECT_VALID_STRING("\xdf\xbf\xef\xbf\xbf\xe1\x80\x80");
 
@@ -158,10 +153,54 @@ TEST(ValidateString, various) {
 
   // Beyond U+10FFFF
   EXPECT_INVALID_STRING("\xf4\x90\x80\x80", "U+110000");
+  EXPECT_INVALID_STRING("\xf5\xaf\xb6\x96", "first byte beyond 0xF4");
   EXPECT_INVALID_STRING("\xf8\xa0\xbf\x80\xbf", "5 bytes");
   EXPECT_INVALID_STRING("\xfc\x9c\xbf\x80\xbf\x80", "6 bytes");
 
   // BOMs in UTF-16(BE|LE)
   EXPECT_INVALID_STRING("\xfe\xff", "BOMs in UTF-16 BE");
   EXPECT_INVALID_STRING("\xff\xfe", "BOMs in UTF-16 LE");
+}
+
+TEST(ValidateString, IncompleteCodepointEndOfString) {
+  EXPECT_INVALID_STRING("\xc2", "incomplete 2-byte codepoint");
+  EXPECT_INVALID_STRING("\xd0", "incomplete 2-byte codepoint");
+
+  EXPECT_INVALID_STRING("\xe0", "incomplete 3-byte codepoint");
+  EXPECT_INVALID_STRING("\xe0\xa9", "incomplete 3-byte codepoint");
+  EXPECT_INVALID_STRING("\xed", "incomplete 3-byte codepoint");
+  EXPECT_INVALID_STRING("\xed\x9f", "incomplete 3-byte codepoint");
+  EXPECT_INVALID_STRING("\xea", "incomplete 3-byte codepoint");
+
+  EXPECT_INVALID_STRING("\xf0", "incomplete 4-byte codepoint");
+  EXPECT_INVALID_STRING("\xf0\xaa", "incomplete 4-byte codepoint");
+  EXPECT_INVALID_STRING("\xf0\xaa\x80", "incomplete 4-byte codepoint");
+  EXPECT_INVALID_STRING("\xf4", "incomplete 4-byte codepoint");
+  EXPECT_INVALID_STRING("\xf4\x8f", "incomplete 4-byte codepoint");
+  EXPECT_INVALID_STRING("\xf4\xbf\xbf", "incomplete 4-byte codepoint");
+}
+
+TEST(ValidateString, InvalidSpecialCharacterRanges) {
+  // [0x80, 0xC1]
+  EXPECT_INVALID_STRING("\x80", "invalid 1st byte character in range [0x80, 0xC1]");
+  EXPECT_INVALID_STRING("\x9d\x9d\x0a", "invalid 1st byte character in range [0x80, 0xC1]");
+  EXPECT_INVALID_STRING("\xa0", "invalid 1st byte character in range [0x80, 0xC1]");
+  EXPECT_INVALID_STRING("\xb6", "invalid 1st byte character in range [0x80, 0xC1]");
+  EXPECT_INVALID_STRING("\xc1", "invalid 1st byte character in range [0x80, 0xC1]");
+
+  // 0xE0 followed by something not in [0xA0, 0xBF]
+  EXPECT_INVALID_STRING("\xe0\x16\xc1", "0xE0 followed by something not in [0xA0, 0xBF]");
+  EXPECT_INVALID_STRING("\xe0\xc0\xbf", "0xE0 followed by something not in [0xA0, 0xBF]");
+
+  // 0xED followed by something not in [0x80, 0x9F]
+  EXPECT_INVALID_STRING("\xed\x7f\xbf", "0xED followed by something not in [0x80, 0x9F]");
+  EXPECT_INVALID_STRING("\xed\x7f\xbf", "0xED followed by something not in [0x80, 0x9F]");
+
+  // 0xF0 followed by something not in [0x90, 0xBF]
+  EXPECT_INVALID_STRING("\xf0\x8e\xbf", "0xF0 followed by something not in [0x90, 0xBF]");
+  EXPECT_INVALID_STRING("\xf0\xc1\xbf", "0xF0 followed by something not in [0x90, 0xBF]");
+
+  // 0xF4 followed by something not in [0x80-0x8F]
+  EXPECT_INVALID_STRING("\xf4\x7d\xbc", "0xF4 followed by something not in [0x80, 0x8F]");
+  EXPECT_INVALID_STRING("\xf4\x92\xa8", "0xF4 followed by something not in [0x80, 0x8F]");
 }
