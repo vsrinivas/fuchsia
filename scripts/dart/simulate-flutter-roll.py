@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env fuchsia-vendored-python
 
 # Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -80,7 +80,7 @@ def main():
     os.system(update_flutter)
 
     # Update third_party packages locally.
-    os.system("python ../scripts/dart/update_3p_packages.py")
+    os.system("../scripts/dart/update_3p_packages.py")
 
     # # Update lock files.
     os.system("./update-lockfiles.sh")
