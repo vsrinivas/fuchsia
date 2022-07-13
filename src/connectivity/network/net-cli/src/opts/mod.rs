@@ -8,6 +8,7 @@ use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_net_ext as fnet_ext;
 use fidl_fuchsia_net_interfaces as finterfaces;
 use fidl_fuchsia_net_interfaces_ext as finterfaces_ext;
+use fidl_fuchsia_net_stack as fnet_stack;
 use std::convert::{TryFrom as _, TryInto as _};
 
 pub(crate) mod dhcpd;
@@ -599,19 +600,15 @@ macro_rules! route_struct {
         }
 
         impl $ty_name {
-            pub fn into_route_table_entry(
-                self,
-                nicid: u32,
-            ) -> fidl_fuchsia_net_stack::ForwardingEntry {
+            pub fn into_route_table_entry(self, nicid: u32) -> fnet_stack::ForwardingEntry {
                 let Self { destination, prefix_len, gateway, interface: _, metric } = self;
-                fidl_fuchsia_net_stack::ForwardingEntry {
-                    subnet: fidl_fuchsia_net::Subnet {
-                        addr: fidl_fuchsia_net_ext::IpAddress(destination).into(),
+                fnet_stack::ForwardingEntry {
+                    subnet: fnet::Subnet {
+                        addr: fnet_ext::IpAddress(destination).into(),
                         prefix_len,
                     },
                     device_id: nicid.into(),
-                    next_hop: gateway
-                        .map(|gateway| Box::new(fidl_fuchsia_net_ext::IpAddress(gateway).into())),
+                    next_hop: gateway.map(|gateway| Box::new(fnet_ext::IpAddress(gateway).into())),
                     metric,
                 }
             }
