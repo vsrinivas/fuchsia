@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components/fuchsia_test_component_manifest.gni")
 import("//build/dart/dart_build_config.gni")
 import("//build/flutter/internal/flutter_dart_test_component.gni")
 
@@ -40,8 +41,8 @@ import("//build/flutter/internal/flutter_dart_test_component.gni")
 #
 # Parameters
 #
-#   manifest (required)
-#     The path to the component manifest
+#   manifest (optional)
+#     The path to the component manifest. If not provided, a basic CML will be auto-generated.
 #     Type: path
 #
 #   sources (required)
@@ -76,13 +77,37 @@ template("dart_test_component") {
     _build_cfg = dart_default_build_cfg
   }
 
+  if (defined(invoker.manifest)) {
+    _manifest = invoker.manifest
+  } else {
+    generated_target = "${target_name}_generated_manifest"
+    fuchsia_test_component_manifest(generated_target) {
+      forward_variables_from(invoker, [ "deps" ])
+      visibility = [ ":*" ]
+      metadata = {
+        test_component_manifest_cml = [
+          {
+            include = [ "syslog/client.shard.cml" ]
+          },
+        ]
+      }
+    }
+    _manifest = get_target_outputs(":$generated_target")
+    _manifest = _manifest[0]
+  }
+
   flutter_dart_test_component(target_name) {
     forward_variables_from(invoker, "*", [ "build_cfg" ])
 
     build_cfg = _build_cfg
+    manifest = _manifest
+
+    if (defined(generated_target)) {
+      manifest_deps = [ ":$generated_target" ]
+    }
 
     # Add test shard that exposes the suite protocol from test component.
-    if (get_path_info(invoker.manifest, "extension") == "cml") {
+    if (get_path_info(_manifest, "extension") == "cml") {
       test_runtime_shard = "//build/dart/meta/test_runtime.shard.cml"
     }
   }

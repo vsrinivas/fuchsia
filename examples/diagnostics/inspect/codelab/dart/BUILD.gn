@@ -24,13 +24,13 @@ unit_test_components = []
 
 foreach(part_id, part_ids) {
   part = "part_" + part_id
-  unit_test_target = part + "_unit_tests_component"
+  component_name = part + "_unit_tests"
+  unit_test_target = component_name + "_component"
   unit_test_components += [ ":" + unit_test_target ]
 
   dart_test_component(unit_test_target) {
-    component_name = part + "_unit_tests"
+    component_name = component_name
     package_root = part
-    manifest = part + "/meta/unit_tests.cml"
     sources = [ "reverser_test.dart" ]
 
     deps = [
