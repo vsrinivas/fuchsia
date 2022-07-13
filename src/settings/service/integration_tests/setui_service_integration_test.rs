@@ -9,7 +9,7 @@ use fidl_fuchsia_camera3::{
     DeviceRequest, DeviceWatcherRequest, DeviceWatcherRequestStream, WatchDevicesEvent,
 };
 use fuchsia_async as fasync;
-use fuchsia_component::server::ServiceFs;
+use fuchsia_component::server::{ServiceFs, ServiceFsDir};
 use fuchsia_component_test::LocalComponentHandles;
 use fuchsia_syslog::fx_log_info;
 use futures::{StreamExt, TryStreamExt};
@@ -27,50 +27,56 @@ impl Mocks for SetuiServiceTest {
         cam_muted: Arc<AtomicBool>,
     ) -> Result<(), Error> {
         let mut fs = ServiceFs::new();
-        fs.dir("svc").add_fidl_service(move |mut stream: DeviceWatcherRequestStream| {
-            let cam_muted = Arc::clone(&cam_muted);
-            fasync::Task::spawn(async move {
-                while let Ok(Some(req)) = stream.try_next().await {
-                    // Support future expansion of FIDL.
-                    #[allow(unreachable_patterns)]
-                    match req {
-                        DeviceWatcherRequest::WatchDevices { responder } => {
-                            let mut camera_device = WatchDevicesEvent::Added(1);
-                            let camera_devices = vec![&mut camera_device];
+        let _: &mut ServiceFsDir<'_, _> =
+            fs.dir("svc").add_fidl_service(move |mut stream: DeviceWatcherRequestStream| {
+                let cam_muted = Arc::clone(&cam_muted);
+                fasync::Task::spawn(async move {
+                    while let Ok(Some(req)) = stream.try_next().await {
+                        // Support future expansion of FIDL.
+                        #[allow(unreachable_patterns)]
+                        match req {
+                            DeviceWatcherRequest::WatchDevices { responder } => {
+                                let mut camera_device = WatchDevicesEvent::Added(1);
+                                let camera_devices = vec![&mut camera_device];
 
-                            let mut devices = camera_devices.into_iter();
-                            responder.send(&mut devices).expect("Failed to send devices response");
-                        }
-                        DeviceWatcherRequest::ConnectToDevice {
-                            id: _,
-                            request,
-                            control_handle: _,
-                        } => {
-                            let mut stream = request.into_stream().unwrap();
-                            let cam_muted = Arc::clone(&cam_muted);
-                            fasync::Task::spawn(async move {
-                                while let Some(req) = stream.try_next().await.unwrap() {
-                                    match req {
-                                        DeviceRequest::SetSoftwareMuteState {
-                                            muted,
-                                            responder,
-                                        } => {
-                                            fx_log_info!("SetSoftwareMuteState has been called.");
-                                            (*cam_muted).store(muted, Ordering::Relaxed);
-                                            let _ = responder.send();
+                                let mut devices = camera_devices.into_iter();
+                                responder
+                                    .send(&mut devices)
+                                    .expect("Failed to send devices response");
+                            }
+                            DeviceWatcherRequest::ConnectToDevice {
+                                id: _,
+                                request,
+                                control_handle: _,
+                            } => {
+                                let mut stream = request.into_stream().unwrap();
+                                let cam_muted = Arc::clone(&cam_muted);
+                                fasync::Task::spawn(async move {
+                                    while let Some(req) = stream.try_next().await.unwrap() {
+                                        match req {
+                                            DeviceRequest::SetSoftwareMuteState {
+                                                muted,
+                                                responder,
+                                            } => {
+                                                fx_log_info!(
+                                                    "SetSoftwareMuteState has been called."
+                                                );
+                                                (*cam_muted).store(muted, Ordering::Relaxed);
+                                                let _ = responder.send();
+                                            }
+                                            _ => {}
                                         }
-                                        _ => {}
                                     }
-                                }
-                            })
-                            .detach();
+                                })
+                                .detach();
+                            }
                         }
                     }
-                }
-            })
-            .detach();
-        });
-        fs.serve_connection(handles.outgoing_dir.into_channel()).unwrap();
+                })
+                .detach();
+            });
+        let _: &mut ServiceFs<_> =
+            fs.serve_connection(handles.outgoing_dir.into_channel()).unwrap();
         fs.collect::<()>().await;
         Ok(())
     }

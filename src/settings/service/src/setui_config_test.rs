@@ -56,9 +56,10 @@ fn read_config<C: DeserializeOwned>(path: &OsStr) -> Result<(), Error> {
     let mut file = File::open(path)
         .with_context(|| format!("Couldn't open path `{}`", path.to_string_lossy()))?;
     let mut contents = String::new();
-    file.read_to_string(&mut contents)
+    let _: usize = file
+        .read_to_string(&mut contents)
         .with_context(|| format!("Couldn't read file at path `{}`", path.to_string_lossy()))?;
-    let _ =
+    let _: C =
         serde_json::from_str::<C>(&contents).context("Failed to deserialize flag configuration")?;
     Ok(())
 }

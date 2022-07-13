@@ -29,6 +29,8 @@ rustc_test("bin") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
   ]
+
+  configs -= [ "//build/config/rust:allow_unused_results" ]
 }
 
 fuchsia_component("setui_service_integration_test") {
