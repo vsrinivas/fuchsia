@@ -442,7 +442,7 @@ struct HLCPPToNaturalTraits<::test::protocollayouts::MainProtocol_OnLocalWithErr
       return _NaturalUnion::WithB(
           ::fidl::HLCPPToNatural(std::move(value.b())));
     default:
-      return _NaturalUnion();
+      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test::protocollayouts::MainProtocol_TwoWayAnonWithError_Result NaturalToHLCPPTraits<::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult>::Convert(::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult&& value) {
@@ -548,7 +548,7 @@ struct HLCPPToNaturalTraits<::test::protocollayouts::MainProtocol_OnLocalWithErr
       return _NaturalUnion::WithB(
           ::fidl::HLCPPToNatural(std::move(value.b())));
     default:
-      return _NaturalUnion();
+      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test::protocollayouts::MainProtocolOnAnonRequest NaturalToHLCPPTraits<::test_protocollayouts::MainProtocolOnAnonRequest>::Convert(::test_protocollayouts::MainProtocolOnAnonRequest&& value) {
@@ -570,7 +570,7 @@ struct HLCPPToNaturalTraits<::test::protocollayouts::MainProtocol_OnLocalWithErr
       return _NaturalUnion::WithB(
           ::fidl::HLCPPToNatural(std::move(value.b())));
     default:
-      return _NaturalUnion();
+      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test::protocollayouts::LocalUnionPayload NaturalToHLCPPTraits<::test_protocollayouts::LocalUnionPayload>::Convert(::test_protocollayouts::LocalUnionPayload&& value) {
@@ -592,7 +592,7 @@ struct HLCPPToNaturalTraits<::test::protocollayouts::MainProtocol_OnLocalWithErr
       return _NaturalUnion::WithB(
           ::fidl::HLCPPToNatural(std::move(value.b())));
     default:
-      return _NaturalUnion();
+      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test::protocollayouts::MainProtocol_TwoWayLocalWithError_Result NaturalToHLCPPTraits<::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult>::Convert(::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult&& value) {

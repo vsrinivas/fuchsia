@@ -62,17 +62,26 @@ TEST(StrictUnion, Move) {
 }
 
 TEST(FlexibleUnion, Construction) {
-  test_types::TestXUnion default_unknown;
-  EXPECT_EQ(default_unknown.Which(), test_types::TestXUnion::Tag::kUnknown);
-  EXPECT_FALSE(default_unknown.primitive().has_value());
-  EXPECT_FALSE(default_unknown.copyable().has_value());
-  EXPECT_FALSE(default_unknown.h().has_value());
+  // Flexible union is not default constructible.
+  static_assert(!std::is_default_constructible_v<test_types::TestXUnion>);
+
+  // As are any aggregates thereof.
+  static_assert(!std::is_default_constructible_v<test_types::TestFlexibleUnionInStruct>,
+                "Struct of flexible union is not default constructible");
+  static_assert(!std::is_default_constructible_v<test_types::TestFlexibleUnionInArrayInStruct>,
+                "Flexible union is not default constructible");
 
   test_types::TestXUnion value = test_types::TestXUnion::WithCopyable({{.x = 42}});
   EXPECT_TRUE(value.copyable());
   EXPECT_TRUE(value.copyable().has_value());
   EXPECT_EQ(value.copyable().value().x(), 42);
   EXPECT_EQ(value.copyable()->x(), 42);
+}
+
+TEST(FlexibleUnion, Unknown) {
+  // Use an internal API to make an unknown union.
+  test_types::TestXUnion unknown{fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}};
+  EXPECT_EQ(unknown.Which(), test_types::TestXUnion::Tag::kUnknown);
 }
 
 // In flexible unions it might be tempting to reset the moved-from union to an
@@ -108,7 +117,7 @@ TEST(FlexibleUnion, Move) {
 
 // These operations should be common across strict/flexible unions.
 TEST(Union, SetAndGetFields) {
-  test_types::TestXUnion u;
+  test_types::TestXUnion u = test_types::TestXUnion::WithPrimitive(0);
   u.primitive() = 42;
   EXPECT_EQ(u.Which(), test_types::TestXUnion::Tag::kPrimitive);
   u.copyable() = test_types::CopyableStruct{42};
@@ -119,13 +128,11 @@ TEST(Union, SetAndGetFields) {
 }
 
 TEST(Union, IntoOptional) {
-  test_types::TestXUnion u;
-  u.primitive() = 42;
+  test_types::TestXUnion u = test_types::TestXUnion::WithPrimitive(42);
   std::optional<int32_t> p = u.primitive();
   EXPECT_TRUE(p.has_value());
   EXPECT_EQ(p.value(), 42);
 
-  test_types::TestXUnion mu;
   u.h() = MakeEvent();
   std::optional<zx::handle> h = u.h().take();
   EXPECT_TRUE(h.has_value());

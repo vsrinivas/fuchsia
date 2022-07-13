@@ -52,8 +52,6 @@ class UnionMember {
     kUnionData = 2,  // 0x2
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-  // Create an unknown value of this union.
-  UnionMember() : storage_(std::make_shared<Storage_>()) {}
 
   UnionMember(UnionMember&& other) noexcept
       : UnionMember(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
@@ -96,7 +94,8 @@ class UnionMember {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  UnionMember(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  UnionMember(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -468,8 +467,6 @@ class Expression {
     kFunctionApplication = 3,  // 0x3
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-  // Create an unknown value of this union.
-  Expression() : storage_(std::make_shared<Storage_>()) {}
 
   Expression(Expression&& other) noexcept
       : Expression(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
@@ -536,7 +533,8 @@ class Expression {
     return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
   }
 
-  Expression(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  Expression(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -706,7 +704,8 @@ class SomeProtocolSomeMethodResult {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
 
-  SomeProtocolSomeMethodResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  SomeProtocolSomeMethodResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;

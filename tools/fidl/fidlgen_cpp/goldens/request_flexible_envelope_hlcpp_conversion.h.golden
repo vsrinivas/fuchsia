@@ -201,7 +201,7 @@ struct HLCPPToNaturalTraits<::test::requestflexibleenvelope::FlexibleFoo> {
       return _NaturalUnion::WithI(
           ::fidl::HLCPPToNatural(std::move(value.i())));
     default:
-      return _NaturalUnion();
+      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 

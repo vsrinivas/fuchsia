@@ -3761,7 +3761,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsProtocol_StrictTwoWayUnionErr_Result NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResult>::Convert(::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrResult&& value) {
@@ -3895,7 +3895,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsProtocol_StrictEventUnionErr_Result NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResult>::Convert(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionErrResult&& value) {
@@ -4057,7 +4057,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnion_Result NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResult>::Convert(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionResult&& value) {
@@ -4107,7 +4107,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleTwoWayUnionErr_Result NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult>::Convert(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleTwoWayUnionErrResult&& value) {
@@ -4321,7 +4321,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsProtocol_FlexibleEventUnionErr_Result NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResult>::Convert(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionErrResult&& value) {
@@ -4455,7 +4455,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest>::Convert(::test_unknowninteractions::UnknownInteractionsProtocolStrictEventUnionRequest&& value) {
@@ -4477,7 +4477,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest>::Convert(::test_unknowninteractions::UnknownInteractionsProtocolFlexibleEventUnionRequest&& value) {
@@ -4499,7 +4499,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_Response NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse>::Convert(::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResponse&& value) {
@@ -4521,7 +4521,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsDriverProtocol_StrictTwoWayUnionErr_Result NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult>::Convert(::test_unknowninteractions::UnknownInteractionsDriverProtocolStrictTwoWayUnionErrResult&& value) {
@@ -4683,7 +4683,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayUnion_Result NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult>::Convert(::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionResult&& value) {
@@ -4733,7 +4733,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsDriverProtocol_FlexibleTwoWayUnionErr_Result NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult>::Convert(::test_unknowninteractions::UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrResult&& value) {
@@ -4947,7 +4947,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_Response NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse>::Convert(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResponse&& value) {
@@ -4969,7 +4969,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictTwoWayUnionErr_Result NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult>::Convert(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictTwoWayUnionErrResult&& value) {
@@ -5103,7 +5103,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsClosedProtocol_StrictEventUnionErr_Result NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResult>::Convert(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionErrResult&& value) {
@@ -5237,7 +5237,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest>::Convert(::test_unknowninteractions::UnknownInteractionsClosedProtocolStrictEventUnionRequest&& value) {
@@ -5259,7 +5259,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_Response NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse>::Convert(::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResponse&& value) {
@@ -5281,7 +5281,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsClosedDriverProtocol_StrictTwoWayUnionErr_Result NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult>::Convert(::test_unknowninteractions::UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrResult&& value) {
@@ -5415,7 +5415,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_Response NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse>::Convert(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResponse&& value) {
@@ -5437,7 +5437,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsAjarProtocol_StrictTwoWayUnionErr_Result NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult>::Convert(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictTwoWayUnionErrResult&& value) {
@@ -5571,7 +5571,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsAjarProtocol_StrictEventUnionErr_Result NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResult>::Convert(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionErrResult&& value) {
@@ -5705,7 +5705,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsAjarProtocol_FlexibleEventUnionErr_Result NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult>::Convert(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionErrResult&& value) {
@@ -5839,7 +5839,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest>::Convert(::test_unknowninteractions::UnknownInteractionsAjarProtocolStrictEventUnionRequest&& value) {
@@ -5861,7 +5861,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest>::Convert(::test_unknowninteractions::UnknownInteractionsAjarProtocolFlexibleEventUnionRequest&& value) {
@@ -5883,7 +5883,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_Response NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse>::Convert(::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResponse&& value) {
@@ -5905,7 +5905,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
     ::test::unknowninteractions::UnknownInteractionsAjarDriverProtocol_StrictTwoWayUnionErr_Result NaturalToHLCPPTraits<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResult>::Convert(::test_unknowninteractions::UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrResult&& value) {
@@ -6039,7 +6039,7 @@ namespace internal {
             return _NaturalUnion::WithSomeField(
                   ::fidl::HLCPPToNatural(std::move(value.some_field())));
           default:
-            return _NaturalUnion();
+            return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
       }
     }
 

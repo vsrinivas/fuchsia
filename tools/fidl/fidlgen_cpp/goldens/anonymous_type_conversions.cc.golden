@@ -118,7 +118,7 @@ namespace internal {
       return ::test_anonymous::UnionMember::WithUnionData(
           WireNaturalConversionTraits<uint8_t, uint8_t>::ToNatural(std::move(src.union_data())));
     default:
-      return ::test_anonymous::UnionMember();
+      return ::test_anonymous::UnionMember(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test_anonymous::wire::UnionMember WireNaturalConversionTraits<::test_anonymous::wire::UnionMember, ::test_anonymous::UnionMember>::ToWire(fidl::AnyArena& arena, ::test_anonymous::UnionMember src) {
@@ -156,7 +156,7 @@ std::unique_ptr<::test_anonymous::UnionMember> WireNaturalConversionTraits<::tes
       return ::test_anonymous::Expression::WithFunctionApplication(
           WireNaturalConversionTraits<::test_anonymous::wire::FunctionApplication, ::test_anonymous::FunctionApplication>::ToNatural(std::move(src.function_application())));
     default:
-      return ::test_anonymous::Expression();
+      return ::test_anonymous::Expression(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test_anonymous::wire::Expression WireNaturalConversionTraits<::test_anonymous::wire::Expression, ::test_anonymous::Expression>::ToWire(fidl::AnyArena& arena, ::test_anonymous::Expression src) {

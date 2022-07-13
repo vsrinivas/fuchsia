@@ -86,7 +86,7 @@ std::unique_ptr<::test_requestflexibleenvelope::StrictFoo> WireNaturalConversion
       return ::test_requestflexibleenvelope::FlexibleFoo::WithI(
           WireNaturalConversionTraits<int32_t, int32_t>::ToNatural(std::move(src.i())));
     default:
-      return ::test_requestflexibleenvelope::FlexibleFoo();
+      return ::test_requestflexibleenvelope::FlexibleFoo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test_requestflexibleenvelope::wire::FlexibleFoo WireNaturalConversionTraits<::test_requestflexibleenvelope::wire::FlexibleFoo, ::test_requestflexibleenvelope::FlexibleFoo>::ToWire(fidl::AnyArena& arena, ::test_requestflexibleenvelope::FlexibleFoo src) {

@@ -122,7 +122,8 @@ class OnlyLlcpp {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  OnlyLlcpp(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  OnlyLlcpp(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -402,7 +403,8 @@ class DenyEachBindingOnlyDenySyzkallerResult {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
 
-  DenyEachBindingOnlyDenySyzkallerResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  DenyEachBindingOnlyDenySyzkallerResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -626,7 +628,8 @@ class DenyEachBindingOnlyDenyRustResult {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
 
-  DenyEachBindingOnlyDenyRustResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  DenyEachBindingOnlyDenyRustResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -850,7 +853,8 @@ class DenyEachBindingOnlyDenyLibfuzzerResult {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
 
-  DenyEachBindingOnlyDenyLibfuzzerResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  DenyEachBindingOnlyDenyLibfuzzerResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -1074,7 +1078,8 @@ class DenyEachBindingOnlyDenyGoResult {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
 
-  DenyEachBindingOnlyDenyGoResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  DenyEachBindingOnlyDenyGoResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -1298,7 +1303,8 @@ class DenyEachBindingOnlyDenyDartResult {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
 
-  DenyEachBindingOnlyDenyDartResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  DenyEachBindingOnlyDenyDartResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;

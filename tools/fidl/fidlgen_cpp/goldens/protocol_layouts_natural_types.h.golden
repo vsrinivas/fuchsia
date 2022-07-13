@@ -129,7 +129,8 @@ class MainProtocolTwoWayImportWithErrorResult {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
 
-  MainProtocolTwoWayImportWithErrorResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  MainProtocolTwoWayImportWithErrorResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -239,8 +240,6 @@ class MainProtocolTwoWayAnonWithErrorResponse {
     kB = 1,  // 0x1
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-  // Create an unknown value of this union.
-  MainProtocolTwoWayAnonWithErrorResponse() : storage_(std::make_shared<Storage_>()) {}
 
   MainProtocolTwoWayAnonWithErrorResponse(MainProtocolTwoWayAnonWithErrorResponse&& other) noexcept
       : MainProtocolTwoWayAnonWithErrorResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
@@ -283,7 +282,8 @@ class MainProtocolTwoWayAnonWithErrorResponse {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  MainProtocolTwoWayAnonWithErrorResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  MainProtocolTwoWayAnonWithErrorResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -385,7 +385,8 @@ class MainProtocolTwoWayAnonWithErrorResult {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
 
-  MainProtocolTwoWayAnonWithErrorResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  MainProtocolTwoWayAnonWithErrorResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -549,7 +550,8 @@ class MainProtocolOnImportWithErrorResult {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
 
-  MainProtocolOnImportWithErrorResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  MainProtocolOnImportWithErrorResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -759,7 +761,8 @@ class MainProtocolOnAnonWithErrorResult {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
 
-  MainProtocolOnAnonWithErrorResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  MainProtocolOnAnonWithErrorResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -961,8 +964,6 @@ class MainProtocolTwoWayAnonRequest {
     kB = 1,  // 0x1
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-  // Create an unknown value of this union.
-  MainProtocolTwoWayAnonRequest() : storage_(std::make_shared<Storage_>()) {}
 
   MainProtocolTwoWayAnonRequest(MainProtocolTwoWayAnonRequest&& other) noexcept
       : MainProtocolTwoWayAnonRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
@@ -1005,7 +1006,8 @@ class MainProtocolTwoWayAnonRequest {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  MainProtocolTwoWayAnonRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  MainProtocolTwoWayAnonRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -1099,8 +1101,6 @@ class MainProtocolOnAnonRequest {
     kB = 1,  // 0x1
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-  // Create an unknown value of this union.
-  MainProtocolOnAnonRequest() : storage_(std::make_shared<Storage_>()) {}
 
   MainProtocolOnAnonRequest(MainProtocolOnAnonRequest&& other) noexcept
       : MainProtocolOnAnonRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
@@ -1143,7 +1143,8 @@ class MainProtocolOnAnonRequest {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  MainProtocolOnAnonRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  MainProtocolOnAnonRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -1191,8 +1192,6 @@ class LocalUnionPayload {
     kB = 1,  // 0x1
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
-  // Create an unknown value of this union.
-  LocalUnionPayload() : storage_(std::make_shared<Storage_>()) {}
 
   LocalUnionPayload(LocalUnionPayload&& other) noexcept
       : LocalUnionPayload(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{}) {
@@ -1235,7 +1234,8 @@ class LocalUnionPayload {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
 
-  LocalUnionPayload(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  LocalUnionPayload(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -1337,7 +1337,8 @@ class MainProtocolTwoWayLocalWithErrorResult {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
 
-  MainProtocolTwoWayLocalWithErrorResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  MainProtocolTwoWayLocalWithErrorResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;
@@ -1547,7 +1548,8 @@ class MainProtocolOnLocalWithErrorResult {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
 
-  MainProtocolOnLocalWithErrorResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : storage_(std::make_shared<Storage_>()) {}
+  MainProtocolOnLocalWithErrorResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
+      : storage_(std::make_shared<Storage_>()) {}
 
  private:
   std::shared_ptr<Storage_> storage_;

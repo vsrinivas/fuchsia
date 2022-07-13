@@ -445,7 +445,7 @@ struct HLCPPToNaturalTraits<::test::union_::XUnionContainingEmptyStruct> {
       return _NaturalUnion::WithX(
           ::fidl::HLCPPToNatural(std::move(value.x())));
     default:
-      return _NaturalUnion();
+      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test::union_::Union NaturalToHLCPPTraits<::test_union::Union>::Convert(::test_union::Union&& value) {
@@ -709,7 +709,7 @@ struct HLCPPToNaturalTraits<::test::union_::XUnionContainingEmptyStruct> {
       return _NaturalUnion::WithPasta(
           ::fidl::HLCPPToNatural(std::move(value.pasta())));
     default:
-      return _NaturalUnion();
+      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test::union_::ExplicitPizzaOrPasta NaturalToHLCPPTraits<::test_union::ExplicitPizzaOrPasta>::Convert(::test_union::ExplicitPizzaOrPasta&& value) {
@@ -765,7 +765,7 @@ struct HLCPPToNaturalTraits<::test::union_::XUnionContainingEmptyStruct> {
       return _NaturalUnion::WithF(
           ::fidl::HLCPPToNatural(std::move(value.f())));
     default:
-      return _NaturalUnion();
+      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test::union_::NewerSimpleUnion NaturalToHLCPPTraits<::test_union::NewerSimpleUnion>::Convert(::test_union::NewerSimpleUnion&& value) {
@@ -799,7 +799,7 @@ struct HLCPPToNaturalTraits<::test::union_::XUnionContainingEmptyStruct> {
       return _NaturalUnion::WithV(
           ::fidl::HLCPPToNatural(std::move(value.v())));
     default:
-      return _NaturalUnion();
+      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test::union_::FlexibleUnion NaturalToHLCPPTraits<::test_union::FlexibleUnion>::Convert(::test_union::FlexibleUnion&& value) {
@@ -833,7 +833,7 @@ struct HLCPPToNaturalTraits<::test::union_::XUnionContainingEmptyStruct> {
       return _NaturalUnion::WithVectorStringAlsoNeedsConstructor(
           ::fidl::HLCPPToNatural(std::move(value.VectorStringAlsoNeedsConstructor())));
     default:
-      return _NaturalUnion();
+      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test::union_::FlexibleFoo NaturalToHLCPPTraits<::test_union::FlexibleFoo>::Convert(::test_union::FlexibleFoo&& value) {
@@ -861,7 +861,7 @@ struct HLCPPToNaturalTraits<::test::union_::XUnionContainingEmptyStruct> {
       return _NaturalUnion::WithI(
           ::fidl::HLCPPToNatural(std::move(value.i())));
     default:
-      return _NaturalUnion();
+      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test::union_::FieldCollision NaturalToHLCPPTraits<::test_union::FieldCollision>::Convert(::test_union::FieldCollision&& value) {
@@ -911,7 +911,7 @@ struct HLCPPToNaturalTraits<::test::union_::XUnionContainingEmptyStruct> {
       return _NaturalUnion::WithF(
           ::fidl::HLCPPToNatural(std::move(value.f())));
     default:
-      return _NaturalUnion();
+      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test::union_::ExplicitUnion NaturalToHLCPPTraits<::test_union::ExplicitUnion>::Convert(::test_union::ExplicitUnion&& value) {
@@ -995,7 +995,7 @@ struct HLCPPToNaturalTraits<::test::union_::XUnionContainingEmptyStruct> {
       return _NaturalUnion::WithI(
           ::fidl::HLCPPToNatural(std::move(value.i())));
     default:
-      return _NaturalUnion();
+      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 ::test::union_::XUnionContainingEmptyStruct NaturalToHLCPPTraits<::test_union::XUnionContainingEmptyStruct>::Convert(::test_union::XUnionContainingEmptyStruct&& value) {
@@ -1017,7 +1017,7 @@ struct HLCPPToNaturalTraits<::test::union_::XUnionContainingEmptyStruct> {
       return _NaturalUnion::WithEmpty(
           ::fidl::HLCPPToNatural(std::move(value.empty())));
     default:
-      return _NaturalUnion();
+      return _NaturalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{});
   }
 }
 
