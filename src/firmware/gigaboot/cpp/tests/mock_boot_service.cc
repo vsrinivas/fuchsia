@@ -6,6 +6,10 @@
 
 #include <zircon/assert.h>
 
+efi_loaded_image_protocol* gEfiLoadedImage = nullptr;
+efi_system_table* gEfiSystemTable = nullptr;
+efi_handle gEfiImageHandle;
+
 namespace gigaboot {
 
 // A helper that creates a realistic device path protocol
@@ -145,6 +149,23 @@ efi_status MockStubService::OpenProtocol(efi_handle handle, const efi_guid* prot
   }
 
   return *intf ? EFI_SUCCESS : EFI_UNSUPPORTED;
+}
+
+efi_status MockStubService::GetMemoryMap(size_t* memory_map_size, efi_memory_descriptor* memory_map,
+                                         size_t* map_key, size_t* desc_size,
+                                         uint32_t* desc_version) {
+  *map_key = 0;
+  *desc_version = 0;
+  *desc_size = sizeof(efi_memory_descriptor);
+  size_t total_size = memory_map_.size() * sizeof(efi_memory_descriptor);
+  if (*memory_map_size < total_size) {
+    return EFI_INVALID_PARAMETER;
+  }
+
+  *memory_map_size = total_size;
+  memcpy(memory_map, memory_map_.data(), total_size);
+
+  return EFI_SUCCESS;
 }
 
 }  // namespace gigaboot

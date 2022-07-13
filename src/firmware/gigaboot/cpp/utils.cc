@@ -4,6 +4,8 @@
 
 #include "utils.h"
 
+#include <lib/zbi/zbi.h>
+
 #include <efi/types.h>
 
 namespace gigaboot {
@@ -55,6 +57,19 @@ const char* EfiStatusToString(efi_status status) {
   }
 
   return "<Unknown error>";
+}
+
+// Converts an EFI memory type to a zbi_mem_range_t type.
+uint32_t EfiToZbiMemRangeType(uint32_t efi_mem_type) {
+  switch (efi_mem_type) {
+    case EfiLoaderCode:
+    case EfiLoaderData:
+    case EfiBootServicesCode:
+    case EfiBootServicesData:
+    case EfiConventionalMemory:
+      return ZBI_MEM_RANGE_RAM;
+  }
+  return ZBI_MEM_RANGE_RESERVED;
 }
 
 }  // namespace gigaboot

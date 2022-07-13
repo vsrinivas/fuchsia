@@ -73,6 +73,9 @@ inline fitx::result<efi_status, HandleBuffer> EfiLocateHandleBufferByProtocol() 
 // Convert a given efi_status code to informative string.
 const char* EfiStatusToString(efi_status status);
 
+// Convert efi memory type code to zbi memory type code.
+uint32_t EfiToZbiMemRangeType(uint32_t efi_mem_type);
+
 }  // namespace gigaboot
 
 #endif  // SRC_FIRMWARE_GIGABOOT_CPP_UTILS_H_

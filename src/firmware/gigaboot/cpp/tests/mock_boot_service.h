@@ -90,10 +90,20 @@ class MockStubService : public efi::StubBootServices {
     return EFI_SUCCESS;
   }
 
+  virtual efi_status GetMemoryMap(size_t* memory_map_size, efi_memory_descriptor* memory_map,
+                                  size_t* map_key, size_t* desc_size,
+                                  uint32_t* desc_version) override;
+
   void AddDevice(Device* device) { devices_.push_back(device); }
+
+  void SetMemoryMap(const std::vector<efi_memory_descriptor>& memory_map) {
+    memory_map_ = memory_map;
+  }
 
  private:
   std::vector<Device*> devices_;
+
+  std::vector<efi_memory_descriptor> memory_map_;
 };
 
 // The following overrides Efi global variables for test.

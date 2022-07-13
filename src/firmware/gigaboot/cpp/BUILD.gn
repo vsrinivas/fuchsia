@@ -7,6 +7,8 @@ import("//zircon/kernel/phys/efi/efi_executable.gni")
 
 source_set("lib") {
   sources = [
+    "boot_zbi_items.cc",
+    "boot_zbi_items.h",
     "device_path.cc",
     "device_path.h",
     "gpt.cc",
@@ -17,6 +19,7 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/lib/fit",
+    "//src/firmware/lib/zbi:in_tree",
     "//src/lib/utf_conversion",
     "//zircon/kernel/lib/efi",
     "//zircon/kernel/phys/efi:main",
@@ -48,6 +51,7 @@ efi_executable("gigaboot") {
     "//src/lib/zbitl",
     "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/libc",
+    "//zircon/kernel/phys:boot-zbi",
     "//zircon/third_party/ulib/cksum",
   ]
 

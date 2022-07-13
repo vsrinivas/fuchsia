@@ -9,10 +9,6 @@
 #include "src/lib/utf_conversion/utf_conversion.h"
 #include "utils.h"
 
-efi_loaded_image_protocol* gEfiLoadedImage = nullptr;
-efi_system_table* gEfiSystemTable = nullptr;
-efi_handle gEfiImageHandle;
-
 namespace gigaboot {
 namespace {
 

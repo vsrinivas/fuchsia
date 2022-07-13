@@ -2,8 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/zbitl/error-stdio.h>
 #include <lib/zircon_boot/zircon_boot.h>
 
+#include <phys/boot-zbi.h>
+
+#include "boot_zbi_items.h"
 #include "gpt.h"
 
 namespace gigaboot {
@@ -64,18 +68,37 @@ bool WriteToPartition(ZirconBootOps* ops, const char* part, size_t offset, size_
   return gpt_device.value().WritePartition(MapPartitionName(part), src, offset, size).is_ok();
 }
 
-void Boot(ZirconBootOps* ops, zbi_header_t* image, size_t capacity, AbrSlotIndex slot) {
-  // TODO(b/235489025): To implement. The C gigaboot implementation is in function zbi_boot() in
-  // `src/firmware/gigaboot/src/zircon.c`. But this can potentially also be done using the boot-shim
-  // utils from `zircon/kernel/phys/include/phys/boot-zbi.h`. See
-  // `zircon/kernel/phys/boot-shim/zbi-boot-shim.cc` for an example.
+void Boot(ZirconBootOps* ops, zbi_header_t* zbi, size_t capacity, AbrSlotIndex slot) {
+  // TODO(https://fxbug.dev/78965): Implement the same relocation logic in zircon_boot
+  // library and use it here to validate.
+  printf("Booting zircon\n");
+
+  BootZbi::InputZbi input_zbi_view(
+      zbitl::StorageFromRawHeader(static_cast<const zbi_header_t*>(zbi)));
+
+  BootZbi boot;
+  if (auto result = boot.Init(input_zbi_view); result.is_error()) {
+    printf("boot: Not a bootable ZBI: ");
+    zbitl::PrintViewCopyError(result.error_value());
+    abort();
+  }
+
+  if (auto result = boot.Load(); result.is_error()) {
+    printf("boot: Failed to load ZBI: ");
+    zbitl::PrintViewCopyError(result.error_value());
+    abort();
+  }
+
+  // TODO(b/235489025): Perform ExitBootService() here.
+
+  boot.Boot();
 }
 
 bool AddZbiItems(ZirconBootOps* ops, zbi_header_t* image, size_t capacity, AbrSlotIndex slot) {
   // TODO(b/235489025): To implement. Append necessary ZBI items for booting the ZBI image. Refers
   // to the C Gigaboot implementation in function boot_zircon() in
   // `src/firmware/gigaboot/src/zircon.c` for what items are needed.
-  return false;
+  return AddGigabootZbiItems(image, capacity);
 }
 
 }  // namespace

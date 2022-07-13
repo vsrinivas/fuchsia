@@ -6,6 +6,7 @@ import("//build/test.gni")
 
 test("unittests") {
   sources = [
+    "boot_zbi_items_tests.cc",
     "gpt_tests.cc",
     "mock_boot_service.cc",
     "mock_boot_service.h",
@@ -14,6 +15,7 @@ test("unittests") {
     "..:lib",
     "//sdk/lib/fit",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/zbitl",
     "//zircon/kernel/lib/efi",
     "//zircon/kernel/lib/efi/testing",
   ]
