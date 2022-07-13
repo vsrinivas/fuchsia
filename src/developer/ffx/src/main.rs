@@ -493,7 +493,7 @@ async fn run() -> Result<()> {
     let timing_in_millis = (command_done - command_start).as_millis().to_string();
 
     let analytics_task = fuchsia_async::Task::local(async move {
-        let sanitized_args = redact_arg_values::<Ffx>();
+        let sanitized_args = redact_arg_values();
         if let Err(e) = add_ffx_launch_and_timing_events(sanitized_args, timing_in_millis).await {
             log::error!("metrics submission failed: {}", e);
         }
