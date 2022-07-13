@@ -40,17 +40,30 @@ zx_status_t sysmem_bind(void* driver_ctx, zx_device_t* parent_device) {
 
   auto device = std::make_unique<Device>(parent_device, driver);
 
-  auto status = device->Bind();
+  zx_status_t status = device->Bind();
   if (status != ZX_OK) {
-    DRIVER_ERROR("Bind() failed - status: %d\n", status);
+    DRIVER_ERROR("Bind() failed: %s\n", zx_status_get_string(status));
     return status;
   }
-  ZX_DEBUG_ASSERT(status == ZX_OK);
+
+  // Create a second device to serve the FIDL protocol. This is temporary while
+  // we migrate sysmem clients from Banjo to FIDL. It is a child of the sysmem
+  // device so that the parent is guaranteed to outlive it.
+  async_dispatcher_t* dispatcher =
+      fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_get_current_dispatcher());
+  auto fidl_device = std::make_unique<FidlDevice>(device.get()->zxdev(), device.get(), dispatcher);
 
   // For now at least, there's only one sysmem device and it isn't ever
   // removed, so just release() the pointer so it lives as long as this
   // devhost process.
   __UNUSED auto ptr = device.release();
+
+  status = fidl_device->Bind();
+  if (status != ZX_OK) {
+    DRIVER_ERROR("Bind() failed for FIDL device: %s\n", zx_status_get_string(status));
+    return status;
+  }
+  __UNUSED auto ptr2 = fidl_device.release();
 
   return ZX_OK;
 }

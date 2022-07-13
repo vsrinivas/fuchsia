@@ -1,0 +1,39 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.sysmem;
+
+using zx;
+using fuchsia.sysmem;
+using fuchsia.sysmem2;
+
+@discoverable
+protocol Sysmem {
+    /// Takes the server end of a FIDL connection that'll serve
+    /// fuchsia.sysmem.Allocator.  If the connection fails, the channel will
+    /// close.
+    ///
+    /// TODO(fxb/104188): Remove this method.
+    ConnectServer(resource struct {
+        allocator_request server_end:fuchsia.sysmem.Allocator;
+    });
+
+    /// Takes the client end of a FIDL connection that'll serve
+    /// fuchsia.sysmem2.Heap.
+    RegisterHeap(resource struct {
+        heap uint64;
+        heap_connection client_end:fuchsia.sysmem2.Heap;
+    });
+
+    /// Takes the client end of a FIDL connection that'll serve
+    /// fuchsia.sysmem.SecureMem, which is a protocol that's specific to
+    /// sysmem<->securemem concerns.
+    RegisterSecureMem(resource struct {
+        secure_mem_connection client_end:fuchsia.sysmem.SecureMem;
+    });
+
+    /// Informs sysmem that the channel previously passed to RegisterSecureMem()
+    /// will be closing soon, and that this channel closure should not be
+    /// considered an error.
+    UnregisterSecureMem() -> (struct {}) error zx.status;
+};

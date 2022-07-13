@@ -32,6 +32,7 @@ constexpr std::array kDriverAllowlist{
     "libc++.so.2",
     "libc++abi.so.1",
     "libunwind.so.1",
+    "libsvc.so",
 };
 
 // Check if the driver is in the allowlist.

@@ -53,10 +53,12 @@ source_set("sysmem_common_srcs") {
     "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/banjo/fuchsia.sysmem:fuchsia.sysmem_banjo_c",
     "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/fidl/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_llcpp",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_llcpp",
     "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_llcpp",
     "//sdk/lib/fidl",
     "//sdk/lib/fit",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp:cpp",
     "//src/devices/sysmem/metrics",
     "//src/lib/ddk",
@@ -115,8 +117,10 @@ fuchsia_driver("sysmem-driver") {
   deps = [
     ":sysmem_bind",
     ":sysmem_common_srcs",
+    "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//sdk/lib/syslog/cpp:backend",
     "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
     "//zircon/system/ulib/sysmem-version",
   ]
 

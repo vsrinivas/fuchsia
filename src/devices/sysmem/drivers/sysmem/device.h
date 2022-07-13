@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_DEVICE_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_DEVICE_H_
 
+#include <fidl/fuchsia.hardware.sysmem/cpp/wire.h>
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
@@ -19,6 +20,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/fit/thread_checker.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 
@@ -72,7 +74,8 @@ class Device final : public DdkDeviceType,
   // The rest of the methods are only valid to call after Bind().
   //
 
-  // SysmemProtocol implementation.
+  // SysmemProtocol Banjo implementation. This will be removed soon in favor of
+  // a FIDL implementation.
   [[nodiscard]] zx_status_t SysmemConnect(zx::channel allocator_request);
   [[nodiscard]] zx_status_t SysmemRegisterHeap(uint64_t heap, zx::channel heap_connection);
   [[nodiscard]] zx_status_t SysmemRegisterSecureMem(zx::channel tee_connection);
@@ -277,6 +280,39 @@ class Device final : public DdkDeviceType,
   bool waiting_for_unbind_ __TA_GUARDED(*loop_checker_) = false;
 
   SysmemMetrics metrics_;
+};
+
+class FidlDevice;
+
+using DdkFidlDeviceType =
+    ddk::Device<FidlDevice, ddk::Messageable<fuchsia_hardware_sysmem::Sysmem>::Mixin>;
+
+// This device offers a FIDL interface of the fuchsia.hardware.sysmem protocol,
+// using Device's Banjo implementation under the hood. It will only exist as
+// long as we are incrementally migrating sysmem clients from Banjo to FIDL.
+// Once all clients are on FIDL, the Device class will be changed into a FIDL
+// server and this class will be removed.
+class FidlDevice : public DdkFidlDeviceType {
+ public:
+  FidlDevice(zx_device_t* parent, sysmem_driver::Device* sysmem_device,
+             async_dispatcher_t* dispatcher);
+
+  zx_status_t Bind();
+  void DdkRelease() { delete this; }
+
+  // SysmemProtocol FIDL implementation.
+  void ConnectServer(ConnectServerRequestView request,
+                     ConnectServerCompleter::Sync& completer) override;
+  void RegisterHeap(RegisterHeapRequestView request,
+                    RegisterHeapCompleter::Sync& completer) override;
+  void RegisterSecureMem(RegisterSecureMemRequestView request,
+                         RegisterSecureMemCompleter::Sync& completer) override;
+  void UnregisterSecureMem(UnregisterSecureMemRequestView request,
+                           UnregisterSecureMemCompleter::Sync& completer) override;
+
+ private:
+  sysmem_driver::Device* sysmem_device_;
+  component::OutgoingDirectory outgoing_;
 };
 
 }  // namespace sysmem_driver

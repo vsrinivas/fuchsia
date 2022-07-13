@@ -612,7 +612,7 @@ zx_status_t Device::Bind() {
   ddk::PBusProtocolClient pbus;
   status = ddk::PBusProtocolClient::CreateFromDevice(parent_, &pbus);
   if (status != ZX_OK) {
-    zxlogf(INFO, "ZX_PROTOCL_PBUS not available %d", status);
+    zxlogf(INFO, "ZX_PROTOCOL_PBUS not available: %d", status);
   }
 
   sync_completion_t completion;
@@ -1045,6 +1045,82 @@ Device::SecureMemConnection::SecureMemConnection(zx::channel connection,
 zx_handle_t Device::SecureMemConnection::channel() {
   ZX_DEBUG_ASSERT(connection_);
   return connection_.get();
+}
+
+FidlDevice::FidlDevice(zx_device_t* parent, sysmem_driver::Device* sysmem_device,
+                       async_dispatcher_t* dispatcher)
+    : DdkFidlDeviceType(parent),
+      sysmem_device_(sysmem_device),
+      outgoing_(component::OutgoingDirectory::Create(dispatcher)) {
+  ZX_DEBUG_ASSERT(parent_);
+  ZX_DEBUG_ASSERT(sysmem_device_);
+}
+
+zx_status_t FidlDevice::Bind() {
+  zx::status status =
+      outgoing_.AddProtocol(this, fidl::DiscoverableProtocolName<fuchsia_hardware_sysmem::Sysmem>);
+  if (status.is_error()) {
+    zxlogf(ERROR, "failed to add FIDL protocol to the outgoing directory: %s",
+           status.status_string());
+    return status.status_value();
+  }
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  if (endpoints.is_error()) {
+    return endpoints.status_value();
+  }
+
+  status = outgoing_.Serve(std::move(endpoints->server));
+  std::array offers = {
+      fidl::DiscoverableProtocolName<fuchsia_hardware_sysmem::Sysmem>,
+  };
+
+  zx_status_t add_status =
+      DdkAdd(ddk::DeviceAddArgs("sysmem-fidl")
+                 .set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE | DEVICE_ADD_MUST_ISOLATE)
+                 .set_fidl_protocol_offers(offers)
+                 .set_outgoing_dir(endpoints->client.TakeChannel()));
+
+  if (add_status != ZX_OK) {
+    DRIVER_ERROR("Failed to bind FIDL device");
+  }
+  return add_status;
+}
+
+void FidlDevice::ConnectServer(ConnectServerRequestView request,
+                               ConnectServerCompleter::Sync& completer) {
+  zx_status_t status = sysmem_device_->SysmemConnect(request->allocator_request.TakeChannel());
+  if (status != ZX_OK) {
+    completer.Close(status);
+  }
+}
+
+void FidlDevice::RegisterHeap(RegisterHeapRequestView request,
+                              RegisterHeapCompleter::Sync& completer) {
+  zx_status_t status =
+      sysmem_device_->SysmemRegisterHeap(request->heap, request->heap_connection.TakeChannel());
+  if (status != ZX_OK) {
+    completer.Close(status);
+  }
+}
+
+void FidlDevice::RegisterSecureMem(RegisterSecureMemRequestView request,
+                                   RegisterSecureMemCompleter::Sync& completer) {
+  zx_status_t status =
+      sysmem_device_->SysmemRegisterSecureMem(request->secure_mem_connection.TakeChannel());
+  if (status != ZX_OK) {
+    completer.Close(status);
+  }
+}
+
+void FidlDevice::UnregisterSecureMem(UnregisterSecureMemRequestView request,
+                                     UnregisterSecureMemCompleter::Sync& completer) {
+  zx_status_t status = sysmem_device_->SysmemUnregisterSecureMem();
+  if (status == ZX_OK) {
+    completer.ReplySuccess();
+  } else {
+    completer.ReplyError(status);
+  }
 }
 
 }  // namespace sysmem_driver
