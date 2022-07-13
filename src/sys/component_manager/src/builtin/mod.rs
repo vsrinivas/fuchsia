@@ -29,6 +29,7 @@ pub mod root_resource;
 pub mod route_validator;
 pub mod runner;
 pub mod smc_resource;
+pub mod svc_stash_provider;
 pub mod system_controller;
 pub mod time;
 pub mod vmex_resource;

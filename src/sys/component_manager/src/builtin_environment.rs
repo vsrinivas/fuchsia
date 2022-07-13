@@ -37,6 +37,7 @@ use {
             route_validator::RouteValidator,
             runner::{BuiltinRunner, BuiltinRunnerFactory},
             smc_resource::SmcResource,
+            svc_stash_provider::SvcStashCapability,
             system_controller::SystemController,
             time::{create_utc_clock, UtcTimeMaintainer},
             vmex_resource::VmexResource,
@@ -406,6 +407,7 @@ pub struct BuiltinEnvironment {
     pub utc_time_maintainer: Option<Arc<UtcTimeMaintainer>>,
     pub vmex_resource: Option<Arc<VmexResource>>,
     pub crash_records_svc: Arc<CrashIntrospectSvc>,
+    pub svc_stash_provider: Option<Arc<SvcStashCapability>>,
 
     pub binder_capability_host: Arc<BinderCapabilityHost>,
     pub realm_capability_host: Arc<RealmCapabilityHost>,
@@ -521,6 +523,14 @@ impl BuiltinEnvironment {
             ),
             None => None,
         };
+
+        // Set up fuchsia.boot.SvcStashProvider service.
+        let svc_stash_provider = take_startup_handle(HandleInfo::new(HandleType::User0, 0))
+            .map(zx::Channel::from)
+            .map(SvcStashCapability::new);
+        if let Some(svc_stash_provider) = svc_stash_provider.as_ref() {
+            model.root().hooks.install(svc_stash_provider.hooks()).await;
+        }
 
         // Set up BootArguments service.
         let boot_args = BootArguments::new(&mut zbi_parser).await?;
@@ -909,6 +919,7 @@ impl BuiltinEnvironment {
             smc_resource: _smc_resource,
             vmex_resource,
             crash_records_svc,
+            svc_stash_provider,
             root_resource,
             system_controller,
             utc_time_maintainer,
