@@ -2307,7 +2307,7 @@ rust_library("chrono-v0_4_11") {
   deps += [ ":num-integer-v0_1_44" ]
   deps += [ ":num-traits-v0_2_14" ]
   deps += [ ":serde-v1_0_116" ]
-  deps += [ ":time-v0_1_42" ]
+  deps += [ ":time-v0_1_43" ]
 
   rustenv = []
 
@@ -2335,7 +2335,7 @@ rust_library("chrono-english-v0_1_4") {
   deps = []
   deps += [ ":chrono-v0_4_11" ]
   deps += [ ":scanlex-v0_1_4" ]
-  deps += [ ":time-v0_1_42" ]
+  deps += [ ":time-v0_1_43" ]
 
   rustenv = []
 
@@ -10368,17 +10368,14 @@ rust_library("thread_local-v1_0_1") {
   visibility = [ ":*" ]
 }
 
-rust_library("time-v0_1_42") {
+rust_library("time-v0_1_43") {
   crate_name = "time"
   crate_root = "//third_party/rust_crates/vendor/time/src/lib.rs"
-  output_name = "time-8624bef189b0fa67"
+  output_name = "time-f3381b83c7164a8b"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
   deps += [ ":libc-v0_2_116" ]
-  if (false) {
-    deps += [ ":redox_syscall-v0_1_51" ]
-  }
   if (false) {
     deps += [ ":winapi-v0_3_9" ]
   }
@@ -10388,13 +10385,10 @@ rust_library("time-v0_1_42") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=8624bef189b0fa67",
-    "-Cextra-filename=-8624bef189b0fa67",
+    "-Cmetadata=f3381b83c7164a8b",
+    "-Cextra-filename=-f3381b83c7164a8b",
   ]
 
-  aliased_deps = {
-    syscall = ":redox_syscall-v0_1_51"
-  }
   visibility = [ ":*" ]
 }
 
