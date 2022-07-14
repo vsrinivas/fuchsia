@@ -1,5 +1,4 @@
-crjohns@google.com
-miguelfrde@google.com
-shayba@google.com
+include /src/diagnostics/OWNERS
+claytonmccray@google.com
 
-# COMPONENT: Diagnostics
+# COMPONENT: Diagnostics>Inspect
