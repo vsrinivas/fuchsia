@@ -37,10 +37,9 @@ _common_bootfs_deps += [
   #   "//src/ui/input/drivers/cypress",
 ]
 
-# TODO(fxbug.dev/94099): still to be brought back
 _common_bootfs_deps += [
-  #   "//src/ui/light/drivers/lp50xx-light",
-  #   "//src/devices/i2c/drivers/dw-i2c",
+  "//src/devices/i2c/drivers/dw-i2c",
+  "//src/ui/light/drivers/lp50xx-light",
 ]
 _common_bootfs_deps += [ "//src/security/policy/zxcrypt:null" ]
 
