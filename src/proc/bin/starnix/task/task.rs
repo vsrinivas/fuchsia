@@ -323,36 +323,42 @@ impl Task {
 
         let kernel = &self.thread_group.kernel;
         let mut pids = kernel.pids.write();
-        let thread_group_state = self.thread_group.write();
-        let state = self.read();
 
-        let pid = pids.allocate_pid();
-        let command = self.command();
-        let argv = state.argv.clone();
-        let creds = self.creds();
-        let (thread, thread_group, mm) = if clone_thread {
-            // Drop both locks when leaving this block
-            let (_state, _thread_group_state) = (state, thread_group_state);
-            create_zircon_thread(self)?
-        } else {
-            // Drop the lock on this task before entering `create_zircon_process`, because it will
-            // take a lock on the new thread group, and locks on thread groups have a higher
-            // priority than locks on the task in the thread group.
-            std::mem::drop(state);
-            let signal_actions = if clone_sighand {
-                self.thread_group.signal_actions.clone()
+        let pid;
+        let command;
+        let argv;
+        let creds;
+        let (thread, thread_group, mm) = {
+            // Make sure to drop these locks ASAP to avoid inversion
+            let thread_group_state = self.thread_group.write();
+            let state = self.read();
+
+            pid = pids.allocate_pid();
+            command = self.command();
+            argv = state.argv.clone();
+            creds = self.creds();
+            if clone_thread {
+                create_zircon_thread(self)?
             } else {
-                self.thread_group.signal_actions.fork()
-            };
-            let process_group = thread_group_state.process_group.clone();
-            create_zircon_process(
-                kernel,
-                Some(thread_group_state),
-                pid,
-                process_group,
-                signal_actions,
-                &command,
-            )?
+                // Drop the lock on this task before entering `create_zircon_process`, because it will
+                // take a lock on the new thread group, and locks on thread groups have a higher
+                // priority than locks on the task in the thread group.
+                std::mem::drop(state);
+                let signal_actions = if clone_sighand {
+                    self.thread_group.signal_actions.clone()
+                } else {
+                    self.thread_group.signal_actions.fork()
+                };
+                let process_group = thread_group_state.process_group.clone();
+                create_zircon_process(
+                    kernel,
+                    Some(thread_group_state),
+                    pid,
+                    process_group,
+                    signal_actions,
+                    &command,
+                )?
+            }
         };
 
         let child = Self::new(
@@ -370,6 +376,15 @@ impl Task {
             child_exit_signal,
         );
 
+        // Drop the pids lock as soon as possible after creating the child. Destroying the child
+        // and removing it from the pids table itself requires the pids lock, so if an early exit
+        // takes place we have a self deadlock.
+        pids.add_task(&child.task);
+        if !clone_thread {
+            pids.add_thread_group(&child.thread_group);
+        }
+        std::mem::drop(pids);
+
         // Child lock must be taken before this lock. Drop the lock on the task, take a writable
         // lock on the child and take the current state back.
 
@@ -383,15 +398,12 @@ impl Task {
             }
         }
 
-        pids.add_task(&child.task);
-
         if clone_thread {
             self.thread_group.add(&child.task)?;
         } else {
             child.thread_group.add(&child.task)?;
             let mut child_state = child.write();
             let state = self.read();
-            pids.add_thread_group(&child.thread_group);
             child_state.signals.alt_stack = state.signals.alt_stack;
             child_state.signals.mask = state.signals.mask;
             self.mm.snapshot_to(&child.mm)?;
