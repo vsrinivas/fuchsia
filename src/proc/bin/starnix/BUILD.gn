@@ -110,7 +110,6 @@ if (target_cpu == "x64") {
       "device/binder.rs",
       "device/features.rs",
       "device/logd.rs",
-      "device/magma/device.rs",
       "device/magma/ffi.rs",
       "device/magma/file.rs",
       "device/magma/magma.rs",

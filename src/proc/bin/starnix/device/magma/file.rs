@@ -41,7 +41,12 @@ pub struct MagmaFile {
 }
 
 impl MagmaFile {
-    pub fn new() -> Result<Box<dyn FileOps>, Errno> {
+    pub fn new(
+        _current_task: &CurrentTask,
+        _dev: DeviceType,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
         Ok(Box::new(Self {
             devices: Arc::new(Mutex::new(vec![])),
             connections: Arc::new(Mutex::new(HashMap::new())),

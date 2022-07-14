@@ -29,6 +29,25 @@ pub trait DeviceOps: Send + Sync {
     ) -> Result<Box<dyn FileOps>, Errno>;
 }
 
+/// Allows directly using a function or closure as an implementation of DeviceOps, avoiding having
+/// to write a zero-size struct and an impl for it.
+impl<F> DeviceOps for F
+where
+    F: Send
+        + Sync
+        + Fn(&CurrentTask, DeviceType, &FsNode, OpenFlags) -> Result<Box<dyn FileOps>, Errno>,
+{
+    fn open(
+        &self,
+        current_task: &CurrentTask,
+        id: DeviceType,
+        node: &FsNode,
+        flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
+        self(current_task, id, node, flags)
+    }
+}
+
 /// The kernel's registry of drivers.
 pub struct DeviceRegistry {
     /// Maps device identifier to character device implementation.

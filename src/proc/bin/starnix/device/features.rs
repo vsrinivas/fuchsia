@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use crate::device::{
-    binder::create_binders, logd::create_socket_and_start_server, magma::MagmaDev,
+    binder::create_binders, logd::create_socket_and_start_server, magma::MagmaFile,
     wayland::serve_wayland,
 };
 use crate::fs::{devtmpfs::dev_tmp_fs, SpecialNode};
@@ -47,7 +47,7 @@ pub fn run_component_features<'a>(
         match entry.as_str() {
             "wayland" => {
                 let kernel = current_task.kernel();
-                let dev = kernel.device_registry.write().register_misc_chrdev(MagmaDev::new())?;
+                let dev = kernel.device_registry.write().register_misc_chrdev(MagmaFile::new)?;
                 dev_tmp_fs(kernel).root().add_node_ops_dev(
                     b"magma0",
                     mode!(IFCHR, 0o600),
