@@ -7,7 +7,7 @@
 #![deny(missing_docs)]
 
 /// Creates an `&'static str` containing the URL of a Fuchsia package
-/// from a string literal containng the name of a fuchsia component
+/// from a string literal containing the name of a Fuchsia component
 /// containing only a single package.
 ///
 /// e.g. `fuchsia_single_component_package_url!("my_server")` would
