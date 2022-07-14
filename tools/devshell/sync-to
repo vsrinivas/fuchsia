@@ -278,6 +278,7 @@ class SyncToCommand:
             raise Error(
                 "Invalid Jiri history timestamp. See valid options by running:\n"
                 f"  ls {update_history_dir}")
+        self.sync_to_snapshot(snapshot_file)
 
     def sync_to_snapshot(self, snapshot_file: pathlib.Path) -> None:
         integration_remote = self.jiri(
