@@ -5,6 +5,7 @@
 use {
     anyhow::{Context as _, Error},
     fidl::endpoints::{create_endpoints, ServerEnd},
+    fidl::AsHandleRef,
     fidl_fidl_serversuite::{
         ReporterProxy, RunnerRequest, RunnerRequestStream, TargetMarker, TargetRequest,
         TargetTwoWayResultRequest, Test,
@@ -40,6 +41,27 @@ async fn run_target_server(
                     }
                     .expect("failed to send two way payload response");
                 }
+                TargetRequest::GetHandleRights { handle, responder } => {
+                    let basic_info = handle
+                        .as_handle_ref()
+                        .basic_info()
+                        .expect("failed to get basic handle info");
+                    let rights = fidl_zx::Rights::from_bits(basic_info.rights.bits())
+                        .expect("bits should be valid");
+                    responder.send(rights).expect("failed to send response");
+                }
+                TargetRequest::GetSignalableEventRights { handle, responder } => {
+                    let basic_info = handle
+                        .as_handle_ref()
+                        .basic_info()
+                        .expect("failed to get basic handle info");
+                    let rights = fidl_zx::Rights::from_bits(basic_info.rights.bits())
+                        .expect("bits should be valid");
+                    responder.send(rights).expect("failed to send response");
+                }
+                TargetRequest::EchoAsTransferableSignalableEvent { handle, responder } => {
+                    responder.send(fidl::Event::from(handle)).expect("failed to send response");
+                }
             }
             Ok(())
         })
@@ -53,7 +75,11 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
             match request {
                 RunnerRequest::IsTestEnabled { test, responder } => {
                     let enabled = match test {
-                        Test::OneWayWithNonZeroTxid | Test::TwoWayNoPayloadWithZeroTxid => false,
+                        Test::OneWayWithNonZeroTxid
+                        | Test::TwoWayNoPayloadWithZeroTxid
+                        | Test::BadAtRestFlagsCausesClose
+                        | Test::BadDynamicFlagsCausesClose
+                        | Test::ServerSendsTooFewRights => false,
                         _ => true,
                     };
                     responder.send(enabled)?;

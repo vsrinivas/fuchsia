@@ -9,12 +9,15 @@ executable("bin") {
   testonly = true
   output_name = "server_suite_harness"
   sources = [
+    "basic_tests.cc",
     "bytes.h",
     "channel.h",
+    "coding_tests.cc",
+    "handle_rights_tests.cc",
     "harness.cc",
     "harness.h",
+    "message_header_tests.cc",
     "ordinals.h",
-    "tests.cc",
   ]
 
   deps = [

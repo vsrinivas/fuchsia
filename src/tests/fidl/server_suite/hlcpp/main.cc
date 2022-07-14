@@ -46,6 +46,25 @@ class TargetServer : public fidl::serversuite::Target {
     }
   }
 
+  void GetHandleRights(zx::handle handle, GetHandleRightsCallback callback) override {
+    zx_info_handle_basic_t info;
+    ZX_ASSERT(ZX_OK ==
+              handle.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
+    callback(info.rights);
+  }
+
+  void GetSignalableEventRights(zx::event event,
+                                GetSignalableEventRightsCallback callback) override {
+    zx_info_handle_basic_t info;
+    ZX_ASSERT(ZX_OK == event.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
+    callback(info.rights);
+  }
+
+  void EchoAsTransferableSignalableEvent(
+      zx::handle handle, EchoAsTransferableSignalableEventCallback callback) override {
+    callback(zx::event(handle.release()));
+  }
+
  private:
   fidl::InterfacePtr<fidl::serversuite::Reporter> reporter_;
 };
@@ -55,7 +74,16 @@ class RunnerServer : public fidl::serversuite::Runner {
   explicit RunnerServer(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
   void IsTestEnabled(fidl::serversuite::Test test, IsTestEnabledCallback callback) override {
-    callback(true);
+    switch (test) {
+      case fidl::serversuite::Test::BAD_AT_REST_FLAGS_CAUSES_CLOSE:
+      case fidl::serversuite::Test::BAD_DYNAMIC_FLAGS_CAUSES_CLOSE:
+      case fidl::serversuite::Test::SERVER_SENDS_TOO_FEW_RIGHTS:
+        callback(false);
+        return;
+      default:
+        callback(true);
+        return;
+    }
   }
 
   void Start(fidl::InterfaceHandle<fidl::serversuite::Reporter> reporter,

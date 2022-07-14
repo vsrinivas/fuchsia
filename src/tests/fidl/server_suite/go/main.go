@@ -16,6 +16,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 
 	"fidl/fidl/serversuite"
+	fidlzx "fidl/zx"
 )
 
 type targetImpl struct {
@@ -49,6 +50,26 @@ func (t *targetImpl) TwoWayResult(_ fidl.Context, request serversuite.TargetTwoW
 	return result, nil
 }
 
+func (t *targetImpl) GetHandleRights(_ fidl.Context, handle zx.Handle) (fidlzx.Rights, error) {
+	info, err := handle.GetInfoHandleBasic()
+	if err != nil {
+		return 0, err
+	}
+	return fidlzx.Rights(info.Rights), nil
+}
+
+func (t *targetImpl) GetSignalableEventRights(_ fidl.Context, handle zx.Event) (fidlzx.Rights, error) {
+	info, err := handle.Handle().GetInfoHandleBasic()
+	if err != nil {
+		return 0, err
+	}
+	return fidlzx.Rights(info.Rights), nil
+}
+
+func (t *targetImpl) EchoAsTransferableSignalableEvent(_ fidl.Context, handle zx.Handle) (zx.Event, error) {
+	return zx.Event(handle), nil
+}
+
 type runnerImpl struct{}
 
 var _ serversuite.RunnerWithCtx = (*runnerImpl)(nil)
@@ -59,6 +80,10 @@ func (*runnerImpl) IsTestEnabled(_ fidl.Context, test serversuite.Test) (bool, e
 		case serversuite.TestOneWayWithNonZeroTxid:
 			return false
 		case serversuite.TestTwoWayNoPayloadWithZeroTxid:
+			return false
+		case serversuite.TestBadAtRestFlagsCausesClose:
+			return false
+		case serversuite.TestBadDynamicFlagsCausesClose:
 			return false
 		default:
 			return true

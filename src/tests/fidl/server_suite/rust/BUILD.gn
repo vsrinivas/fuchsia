@@ -17,6 +17,7 @@ rustc_binary("server_suite_under_test_rust") {
     "//src/tests/fidl/server_suite/fidl:fidl.serversuite-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//zircon/vdso/zx:zx-rustc",
   ]
 }
 

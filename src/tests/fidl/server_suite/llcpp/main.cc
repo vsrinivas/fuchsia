@@ -42,6 +42,28 @@ class TargetServer : public fidl::WireServer<fidl_serversuite::Target> {
     ZX_PANIC("unhandled case");
   }
 
+  void GetHandleRights(GetHandleRightsRequestView request,
+                       GetHandleRightsCompleter::Sync& completer) override {
+    zx_info_handle_basic_t info;
+    ZX_ASSERT(ZX_OK == request->handle.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr,
+                                                nullptr));
+    completer.Reply(info.rights);
+  }
+
+  void GetSignalableEventRights(GetSignalableEventRightsRequestView request,
+                                GetSignalableEventRightsCompleter::Sync& completer) override {
+    zx_info_handle_basic_t info;
+    ZX_ASSERT(ZX_OK == request->handle.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr,
+                                                nullptr));
+    completer.Reply(info.rights);
+  }
+
+  void EchoAsTransferableSignalableEvent(
+      EchoAsTransferableSignalableEventRequestView request,
+      EchoAsTransferableSignalableEventCompleter::Sync& completer) override {
+    completer.Reply(zx::event(request->handle.release()));
+  }
+
  private:
   fidl::WireSyncClient<fidl_serversuite::Reporter> reporter_;
 };
@@ -56,6 +78,8 @@ class RunnerServer : public fidl::WireServer<fidl_serversuite::Runner> {
       switch (request->test) {
         case fidl_serversuite::Test::kOneWayWithNonZeroTxid:
         case fidl_serversuite::Test::kTwoWayNoPayloadWithZeroTxid:
+        case fidl_serversuite::Test::kBadAtRestFlagsCausesClose:
+        case fidl_serversuite::Test::kBadDynamicFlagsCausesClose:
           return false;
         default:
           return true;

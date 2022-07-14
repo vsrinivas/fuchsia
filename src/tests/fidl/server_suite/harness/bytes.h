@@ -107,11 +107,6 @@ inline Bytes union_ordinal(uint64_t ordinal) { return u64(ordinal); }
 
 inline Bytes string_length(uint64_t length) { return u64(length); }
 
-inline Bytes presence32() { return repeat(0xff).times(4); }
-inline Bytes presence64() { return repeat(0xff).times(8); }
-inline Bytes absence32() { return repeat(0x00).times(4); }
-inline Bytes absence64() { return repeat(0x00).times(8); }
-
 inline Bytes out_of_line_envelope(uint16_t num_bytes, uint8_t num_handles) {
   return {u32(num_bytes), u16(num_handles), u16(0)};
 }
@@ -119,6 +114,12 @@ inline Bytes inline_envelope(const Bytes& value, bool has_handles) {
   ZX_ASSERT_MSG(value.size() == 4, "inline envelope values are 4 bytes");
   return {value, u16(has_handles), u16(1)};
 }
+
+inline Bytes handle_present() { return repeat(0xff).times(4); }
+inline Bytes handle_absent() { return repeat(0x00).times(4); }
+
+inline Bytes pointer_present() { return repeat(0xff).times(8); }
+inline Bytes pointer_absent() { return repeat(0x00).times(8); }
 
 }  // namespace server_suite
 

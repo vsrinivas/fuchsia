@@ -102,24 +102,22 @@ TEST(Bytes, StringLength) {
   ASSERT_EQ(expected, string_length(3));
 }
 
-TEST(Bytes, Presence32) {
+TEST(Bytes, HandlePresent) {
   Bytes expected = {0xff, 0xff, 0xff, 0xff};
-  ASSERT_EQ(expected, presence32());
+  ASSERT_EQ(expected, handle_present());
 }
-
-TEST(Bytes, Presence64) {
-  Bytes expected = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-  ASSERT_EQ(expected, presence64());
-}
-
-TEST(Bytes, Absence32) {
+TEST(Bytes, HandleAbsent) {
   Bytes expected = {0x00, 0x00, 0x00, 0x00};
-  ASSERT_EQ(expected, absence32());
+  ASSERT_EQ(expected, handle_absent());
 }
 
-TEST(Bytes, Absence64) {
+TEST(Bytes, PointerPresent) {
+  Bytes expected = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+  ASSERT_EQ(expected, pointer_present());
+}
+TEST(Bytes, PointerAbsent) {
   Bytes expected = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-  ASSERT_EQ(expected, absence64());
+  ASSERT_EQ(expected, pointer_absent());
 }
 
 TEST(Bytes, OutOfLineEnvelope) {
