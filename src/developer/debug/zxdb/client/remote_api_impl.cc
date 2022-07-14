@@ -41,11 +41,6 @@ void RemoteAPIImpl::Attach(const debug_ipc::AttachRequest& request,
   Send(request, std::move(cb));
 }
 
-void RemoteAPIImpl::ConfigAgent(const debug_ipc::ConfigAgentRequest& request,
-                                fit::callback<void(const Err&, debug_ipc::ConfigAgentReply)> cb) {
-  Send(request, std::move(cb));
-}
-
 void RemoteAPIImpl::Detach(const debug_ipc::DetachRequest& request,
                            fit::callback<void(const Err&, debug_ipc::DetachReply)> cb) {
   Send(request, std::move(cb));
@@ -58,11 +53,6 @@ void RemoteAPIImpl::Modules(const debug_ipc::ModulesRequest& request,
 
 void RemoteAPIImpl::Pause(const debug_ipc::PauseRequest& request,
                           fit::callback<void(const Err&, debug_ipc::PauseReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::QuitAgent(const debug_ipc::QuitAgentRequest& request,
-                              fit::callback<void(const Err&, debug_ipc::QuitAgentReply)> cb) {
   Send(request, std::move(cb));
 }
 
@@ -117,12 +107,6 @@ void RemoteAPIImpl::SysInfo(const debug_ipc::SysInfoRequest& request,
 
 void RemoteAPIImpl::Status(const debug_ipc::StatusRequest& request,
                            fit::callback<void(const Err&, debug_ipc::StatusReply)> cb) {
-  Send(request, std::move(cb));
-}
-
-void RemoteAPIImpl::ProcessStatus(
-    const debug_ipc::ProcessStatusRequest& request,
-    fit::callback<void(const Err&, debug_ipc::ProcessStatusReply)> cb) {
   Send(request, std::move(cb));
 }
 

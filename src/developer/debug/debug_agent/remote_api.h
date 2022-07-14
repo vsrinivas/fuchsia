@@ -23,9 +23,6 @@ class RemoteAPI {
   virtual void OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::LaunchReply* reply) = 0;
   virtual void OnKill(const debug_ipc::KillRequest& request, debug_ipc::KillReply* reply) = 0;
 
-  virtual void OnConfigAgent(const debug_ipc::ConfigAgentRequest& request,
-                             debug_ipc::ConfigAgentReply* reply) = 0;
-
   // Attach is special because it needs to follow the reply immediately with
   // a series of notifications about the current threads. This means it
   // can't use the automatic reply sending. It must manually deserialize and
@@ -41,9 +38,6 @@ class RemoteAPI {
                          debug_ipc::ModulesReply* reply) = 0;
 
   virtual void OnPause(const debug_ipc::PauseRequest& request, debug_ipc::PauseReply* reply) = 0;
-
-  virtual void OnQuitAgent(const debug_ipc::QuitAgentRequest& request,
-                           debug_ipc::QuitAgentReply* reply) = 0;
 
   virtual void OnResume(const debug_ipc::ResumeRequest& request, debug_ipc::ResumeReply* reply) = 0;
 
@@ -70,9 +64,6 @@ class RemoteAPI {
 
   virtual void OnSysInfo(const debug_ipc::SysInfoRequest& request,
                          debug_ipc::SysInfoReply* reply) = 0;
-
-  virtual void OnProcessStatus(const debug_ipc::ProcessStatusRequest& request,
-                               debug_ipc::ProcessStatusReply* reply) = 0;
 
   virtual void OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,
                               debug_ipc::ThreadStatusReply* reply) = 0;

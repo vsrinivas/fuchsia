@@ -91,8 +91,6 @@ static_library("console") {
     "commands/verb_ps.h",
     "commands/verb_quit.cc",
     "commands/verb_quit.h",
-    "commands/verb_quit_agent.cc",
-    "commands/verb_quit_agent.h",
     "commands/verb_regs.cc",
     "commands/verb_regs.h",
     "commands/verb_rm.cc",

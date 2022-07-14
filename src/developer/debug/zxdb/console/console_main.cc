@@ -211,10 +211,6 @@ int ConsoleMain(int argc, const char* argv[]) {
     }
 
     ConsoleImpl console(&session);
-    if (options.quit_agent_on_quit) {
-      session.system().settings().SetBool(ClientSettings::System::kQuitAgentOnExit, true);
-    }
-
     SetupCommandLineOptions(options, &session);
 
     if (!actions.empty()) {

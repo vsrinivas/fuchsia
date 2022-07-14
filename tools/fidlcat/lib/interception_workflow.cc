@@ -201,12 +201,8 @@ void InterceptionWorkflow::Initialize(
     const std::vector<std::string>& symbol_paths, const std::vector<std::string>& build_id_dirs,
     const std::vector<std::string>& ids_txts, const std::optional<std::string>& symbol_cache,
     const std::vector<std::string>& symbol_servers,
-    std::unique_ptr<SyscallDecoderDispatcher> syscall_decoder_dispatcher, bool quit_agent_on_exit) {
+    std::unique_ptr<SyscallDecoderDispatcher> syscall_decoder_dispatcher) {
   syscall_decoder_dispatcher_ = std::move(syscall_decoder_dispatcher);
-
-  if (quit_agent_on_exit) {
-    session_->system().settings().SetBool(zxdb::ClientSettings::System::kQuitAgentOnExit, true);
-  }
 
   // 1) Set up symbol index.
 

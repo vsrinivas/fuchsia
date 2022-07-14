@@ -12,7 +12,7 @@
 
 namespace debug_ipc {
 
-constexpr uint32_t kProtocolVersion = 41;
+constexpr uint32_t kProtocolVersion = 42;
 
 // This is so that it's obvious if the timestamp wasn't properly set (that number should be at
 // least 30,000 years) but it's not the max so that if things add to it then time keeps moving
@@ -37,7 +37,6 @@ struct MsgHeader {
 
     kAddOrChangeBreakpoint,
     kAddressSpace,
-    kConfigAgent,
     kAttach,
     kDetach,
     kUpdateFilter,
@@ -45,9 +44,7 @@ struct MsgHeader {
     kLaunch,
     kModules,
     kPause,
-    kProcessStatus,
     kProcessTree,
-    kQuitAgent,
     kReadMemory,
     kReadRegisters,
     kWriteRegisters,
@@ -121,16 +118,6 @@ struct StatusReply {
   // no exception handler attached. If the system is configured to keep those around in order to
   // wait for a debugger, it is said that those processes are in "limbo".
   std::vector<ProcessRecord> limbo;
-};
-
-// Triggers the system to send the notifications (process starting, modules) for an already
-// attached process.
-struct ProcessStatusRequest {
-  uint64_t process_koid = 0;
-};
-
-struct ProcessStatusReply {
-  debug::Status status;
 };
 
 struct LaunchRequest {
@@ -208,9 +195,6 @@ struct PauseReply {
   // The updated thead state for all affected threads.
   std::vector<ThreadRecord> threads;
 };
-
-struct QuitAgentRequest {};
-struct QuitAgentReply {};
 
 struct ResumeRequest {
   enum class How : uint32_t {
@@ -392,19 +376,6 @@ struct WriteRegistersReply {
   // This allows clients to validate that the change actually took effect. All known registers
   // from all categories changed by the write request will be sent.
   std::vector<debug::RegisterValue> registers;
-};
-
-// Agent Config ----------------------------------------------------------------
-//
-// The client sends a list of configurations and will receive a status result
-// for each of them in order.
-
-struct ConfigAgentRequest {
-  std::vector<ConfigAction> actions;
-};
-
-struct ConfigAgentReply {
-  std::vector<debug::Status> results;
 };
 
 // Notifications ---------------------------------------------------------------

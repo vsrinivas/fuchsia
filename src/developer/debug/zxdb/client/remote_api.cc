@@ -30,11 +30,6 @@ void RemoteAPI::Attach(const debug_ipc::AttachRequest& request,
   FX_NOTREACHED();
 }
 
-void RemoteAPI::ConfigAgent(const debug_ipc::ConfigAgentRequest& request,
-                            fit::callback<void(const Err&, debug_ipc::ConfigAgentReply)> cb) {
-  FX_NOTREACHED();
-}
-
 void RemoteAPI::Detach(const debug_ipc::DetachRequest& request,
                        fit::callback<void(const Err&, debug_ipc::DetachReply)> cb) {
   FX_NOTREACHED();
@@ -47,11 +42,6 @@ void RemoteAPI::Modules(const debug_ipc::ModulesRequest& request,
 
 void RemoteAPI::Pause(const debug_ipc::PauseRequest& request,
                       fit::callback<void(const Err&, debug_ipc::PauseReply)> cb) {
-  FX_NOTREACHED();
-}
-
-void RemoteAPI::QuitAgent(const debug_ipc::QuitAgentRequest& request,
-                          fit::callback<void(const Err&, debug_ipc::QuitAgentReply)> cb) {
   FX_NOTREACHED();
 }
 
@@ -104,11 +94,6 @@ void RemoteAPI::SysInfo(const debug_ipc::SysInfoRequest& request,
 
 void RemoteAPI::Status(const debug_ipc::StatusRequest& request,
                        fit::callback<void(const Err&, debug_ipc::StatusReply)> cb) {
-  FX_NOTREACHED();
-}
-
-void RemoteAPI::ProcessStatus(const debug_ipc::ProcessStatusRequest& request,
-                              fit::callback<void(const Err&, debug_ipc::ProcessStatusReply)> cb) {
   FX_NOTREACHED();
 }
 

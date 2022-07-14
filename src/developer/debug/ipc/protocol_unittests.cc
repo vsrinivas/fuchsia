@@ -70,42 +70,6 @@ bool SerializeDeserializeNotification(const NotificationType& in, NotificationTy
 
 constexpr uint64_t kTestTimestampDefault = 0x74657374l;  // hexadecimal for "test" in ascii
 
-// ConfigAgent -------------------------------------------------------------------------------------
-
-TEST(Protocol, ConfigAgentRequest) {
-  ConfigAgentRequest initial;
-  initial.actions.push_back({ConfigAction::Type::kQuitOnExit, "true"});
-  initial.actions.push_back({ConfigAction::Type::kQuitOnExit, "false"});
-  initial.actions.push_back({ConfigAction::Type::kQuitOnExit, "bla"});
-
-  ConfigAgentRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
-
-  ASSERT_EQ(second.actions.size(), 3u);
-  EXPECT_EQ(second.actions[0].type, initial.actions[0].type);
-  EXPECT_EQ(second.actions[0].value, initial.actions[0].value);
-  EXPECT_EQ(second.actions[1].type, initial.actions[1].type);
-  EXPECT_EQ(second.actions[1].value, initial.actions[1].value);
-  EXPECT_EQ(second.actions[2].type, initial.actions[2].type);
-  EXPECT_EQ(second.actions[2].value, initial.actions[2].value);
-}
-
-TEST(Protocol, ConfigAgentReply) {
-  ConfigAgentReply initial;
-  initial.results.push_back(debug::Status());
-  initial.results.push_back(debug::Status("This is an error message"));
-  initial.results.push_back(
-      debug::Status(debug::Status::InternalValues(), debug::Status::kPlatformError, 45, "foo"));
-
-  ConfigAgentReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
-
-  ASSERT_EQ(second.results.size(), 3u);
-  EXPECT_EQ(second.results[0], initial.results[0]);
-  EXPECT_EQ(second.results[1], initial.results[1]);
-  EXPECT_EQ(second.results[2], initial.results[2]);
-}
-
 // Hello -------------------------------------------------------------------------------------------
 
 TEST(Protocol, HelloRequest) {
@@ -196,26 +160,6 @@ TEST(Protocol, StatusReply) {
   ASSERT_EQ(two.limbo[0].threads[1].name, one.limbo[0].threads[1].name);
   ASSERT_EQ(two.limbo[0].threads[2].id, one.limbo[0].threads[2].id);
   ASSERT_EQ(two.limbo[0].threads[2].name, one.limbo[0].threads[2].name);
-}
-
-// ProcessStatus -----------------------------------------------------------------------------------
-
-TEST(Protocol, ProcessStatusRequest) {
-  ProcessStatusRequest initial;
-  initial.process_koid = 0x1234;
-
-  ProcessStatusRequest second;
-  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
-  EXPECT_EQ(second.process_koid, initial.process_koid);
-}
-
-TEST(Protocol, ProcessStatusReply) {
-  ProcessStatusReply initial;
-  initial.status = debug::Status();
-
-  ProcessStatusReply second;
-  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
-  EXPECT_EQ(second.status, initial.status);
 }
 
 // Launch ------------------------------------------------------------------------------------------

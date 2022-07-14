@@ -95,11 +95,6 @@ const char* const kIdsTxtHelp = R"(  --ids-txt=<path>
       "ids.txt", serves as a mapping from build ID to symbol file path and
       should contain multiple lines in the format of "<build ID> <file path>".)";
 
-const char* const kQuitAgentOnExitHelp = R"(  --quit-agent-on-exit
-      Will send a quit message to a connected debug agent in order for it to
-      shutdown. This is so that fidlcat doesn't leak unwanted debug agents on
-      "on-the-fly" debugging sessions.)";
-
 const char* const kFromHelp = R"(  --from=<source>
       This option must be used at most once.
       Source can be:
@@ -340,8 +335,6 @@ std::string ParseCommandLine(int argc, const char* argv[], CommandLineOptions* o
   // Fidlcat system options:
   parser.AddSwitch("fidl-ir-path", 0, kFidlIrPathHelp, &CommandLineOptions::fidl_ir_paths);
   parser.AddSwitch("ids-txt", 0, kIdsTxtHelp, &CommandLineOptions::ids_txts);
-  parser.AddSwitch("quit-agent-on-exit", 0, kQuitAgentOnExitHelp,
-                   &CommandLineOptions::quit_agent_on_exit);
   // Input option:
   parser.AddSwitch("from", 0, kFromHelp, &CommandLineOptions::from);
   // Session save option:

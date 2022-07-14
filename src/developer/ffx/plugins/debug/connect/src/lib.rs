@@ -41,11 +41,7 @@ pub async fn connect(
 
     let zxdb_path = sdk.get_host_tool("zxdb")?;
 
-    let mut args: Vec<&OsStr> = vec![
-        "--unix-connect".as_ref(),
-        socket.unix_socket_path().as_ref(),
-        "--quit-agent-on-exit".as_ref(),
-    ];
+    let mut args: Vec<&OsStr> = vec!["--unix-connect".as_ref(), socket.unix_socket_path().as_ref()];
 
     if cmd.no_auto_attach_limbo {
         args.push("--no-auto-attach-limbo".as_ref());

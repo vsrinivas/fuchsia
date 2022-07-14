@@ -109,17 +109,6 @@ bool Deserialize(MessageReader* reader, BreakpointSettings* settings) {
   return Deserialize(reader, &settings->instructions);
 }
 
-bool Deserialize(MessageReader* reader, ConfigAction* action) {
-  uint32_t type = 0;
-  if (!reader->ReadUint32(&type) || type >= static_cast<uint32_t>(ConfigAction::Type::kLast)) {
-    return false;
-  }
-  action->type = static_cast<ConfigAction::Type>(type);
-  if (!reader->ReadString(&action->value))
-    return false;
-  return true;
-}
-
 bool Deserialize(MessageReader* reader, Filter* filter) {
   uint32_t type = 0;
   if (!reader->ReadUint32(&type) || type >= static_cast<uint32_t>(Filter::Type::kLast)) {
@@ -232,24 +221,6 @@ void WriteReply(const StatusReply& reply, uint32_t transaction_id, MessageWriter
   Serialize(reply.limbo, writer);
 }
 
-// ProcessStatus -----------------------------------------------------------------------------------
-
-bool ReadRequest(MessageReader* reader, ProcessStatusRequest* request, uint32_t* transaction_id) {
-  MsgHeader header;
-  if (!reader->ReadHeader(&header))
-    return false;
-  *transaction_id = header.transaction_id;
-
-  if (!reader->ReadUint64(&request->process_koid))
-    return false;
-  return true;
-}
-
-void WriteReply(const ProcessStatusReply& reply, uint32_t transaction_id, MessageWriter* writer) {
-  writer->WriteHeader(MsgHeader::Type::kProcessStatus, transaction_id);
-  Serialize(reply.status, writer);
-}
-
 // Launch ------------------------------------------------------------------------------------------
 
 bool ReadRequest(MessageReader* reader, LaunchRequest* request, uint32_t* transaction_id) {
@@ -354,20 +325,6 @@ bool ReadRequest(MessageReader* reader, PauseRequest* request, uint32_t* transac
 void WriteReply(const PauseReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kPause, transaction_id);
   Serialize(reply.threads, writer);
-}
-
-// QuitAgent ---------------------------------------------------------------------------------------
-
-bool ReadRequest(MessageReader* reader, QuitAgentRequest* request, uint32_t* transaction_id) {
-  MsgHeader header;
-  if (!reader->ReadHeader(&header))
-    return false;
-  *transaction_id = header.transaction_id;
-  return true;
-}
-
-void WriteReply(const QuitAgentReply& reply, uint32_t transaction_id, MessageWriter* writer) {
-  writer->WriteHeader(MsgHeader::Type::kQuitAgent, transaction_id);
 }
 
 // Resume ------------------------------------------------------------------------------------------
@@ -647,21 +604,6 @@ bool ReadRequest(MessageReader* reader, AddressSpaceRequest* request, uint32_t* 
 void WriteReply(const AddressSpaceReply& reply, uint32_t transaction_id, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kAddressSpace, transaction_id);
   Serialize(reply.map, writer);
-}
-
-// ConfigAgent -------------------------------------------------------------------------------------
-
-bool ReadRequest(MessageReader* reader, ConfigAgentRequest* request, uint32_t* transaction_id) {
-  MsgHeader header;
-  if (!reader->ReadHeader(&header))
-    return false;
-  *transaction_id = header.transaction_id;
-  return Deserialize(reader, &request->actions);
-}
-
-void WriteReply(const ConfigAgentReply& reply, uint32_t transaction_id, MessageWriter* writer) {
-  writer->WriteHeader(MsgHeader::Type::kConfigAgent, transaction_id);
-  Serialize(reply.results, writer);
 }
 
 // Notifications -----------------------------------------------------------------------------------

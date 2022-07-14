@@ -60,11 +60,6 @@ const char kFilterHelp[] = R"(  --filter=<regexp>
       to processes matching this regexp that are launched in the job. Multiple
       filters can be specified to match more than one process.)";
 
-const char kQuitAgentOnExit[] = R"(  --quit-agent-on-exit
-      Will send a quit message to a connected debug agent in order for it to
-      shutdown. This is so that zxdb doesn't leak unwanted debug agents on
-      "on-the-fly" debugging sessions.)";
-
 const char kScriptFileHelp[] = R"(  --script-file=<file>
   -S <file>
       Reads a script file from a file. The file must contains valid zxdb
@@ -144,8 +139,6 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("unix-connect", 'u', kUnixConnectHelp, &CommandLineOptions::unix_connect);
   parser.AddSwitch("core", 0, kCoreHelp, &CommandLineOptions::core);
   parser.AddSwitch("debug-mode", 'd', kDebugModeHelp, &CommandLineOptions::debug_mode);
-  parser.AddSwitch("quit-agent-on-exit", 0, kQuitAgentOnExit,
-                   &CommandLineOptions::quit_agent_on_quit);
   parser.AddSwitch("run", 'r', kRunHelp, &CommandLineOptions::run);
   parser.AddSwitch("filter", 'f', kFilterHelp, &CommandLineOptions::filter);
   parser.AddSwitch("script-file", 'S', kScriptFileHelp, &CommandLineOptions::script_file);

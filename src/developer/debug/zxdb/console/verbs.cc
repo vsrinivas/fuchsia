@@ -41,7 +41,6 @@
 #include "src/developer/debug/zxdb/console/commands/verb_print.h"
 #include "src/developer/debug/zxdb/console/commands/verb_ps.h"
 #include "src/developer/debug/zxdb/console/commands/verb_quit.h"
-#include "src/developer/debug/zxdb/console/commands/verb_quit_agent.h"
 #include "src/developer/debug/zxdb/console/commands/verb_regs.h"
 #include "src/developer/debug/zxdb/console/commands/verb_rm.h"
 #include "src/developer/debug/zxdb/console/commands/verb_run.h"
@@ -148,7 +147,6 @@ const std::map<Verb, VerbRecord>& GetVerbs() {
     all_verbs[Verb::kOpenDump] = GetOpendumpVerbRecord();
     all_verbs[Verb::kPause] = GetPauseVerbRecord();
     all_verbs[Verb::kPrint] = GetPrintVerbRecord();
-    all_verbs[Verb::kQuitAgent] = GetQuitAgentVerbRecord();
     all_verbs[Verb::kQuit] = GetQuitVerbRecord();
     all_verbs[Verb::kRegs] = GetRegsVerbRecord();
     all_verbs[Verb::kRm] = GetRmVerbRecord();

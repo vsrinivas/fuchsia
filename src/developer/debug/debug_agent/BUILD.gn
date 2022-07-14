@@ -13,8 +13,6 @@ include_helper_executables = false
 
 static_library("lib") {
   sources = [
-    "agent_configuration.cc",
-    "agent_configuration.h",
     "align.cc",
     "align.h",
     "arch.cc",

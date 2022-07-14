@@ -116,8 +116,7 @@ class InterceptionWorkflow {
                   const std::vector<std::string>& ids_txts,
                   const std::optional<std::string>& symbol_cache,
                   const std::vector<std::string>& symbol_servers,
-                  std::unique_ptr<SyscallDecoderDispatcher> syscall_decoder_dispatcher,
-                  bool quit_agent_on_exit);
+                  std::unique_ptr<SyscallDecoderDispatcher> syscall_decoder_dispatcher);
 
   void AuthenticateServer(zxdb::SymbolServer* server);
 

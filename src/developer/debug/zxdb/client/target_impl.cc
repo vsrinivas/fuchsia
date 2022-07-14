@@ -250,8 +250,10 @@ void TargetImpl::OnLaunchOrAttachReply(CallbackWithTimestamp callback, const Err
 
   if (err.has_error()) {
     if (err.type() == ErrType::kAlreadyExists) {
-      HandleAttachAlreadyExists(std::move(callback), koid, process_name, timestamp);
-      return;  // The above handler will issue the callback.
+      FX_DCHECK(system_->ProcessFromKoid(koid));
+      callback(GetWeakPtr(), Err("Process " + std::to_string(koid) + " is already being debugged."),
+               timestamp);
+      return;
     }
     state_ = State::kNone;
   } else {
@@ -268,42 +270,6 @@ void TargetImpl::OnLaunchOrAttachReply(CallbackWithTimestamp callback, const Err
     for (auto& observer : session()->process_observers())
       observer.DidCreateProcess(process_.get(), false, timestamp);
   }
-}
-
-void TargetImpl::HandleAttachAlreadyExists(CallbackWithTimestamp callback, uint64_t koid,
-                                           const std::string& process_name, uint64_t timestamp) {
-  // "Already exists" can mean two things. In the first case, it could be a mistake where the user
-  // is trying to attach to the same process twice.
-  if (system_->ProcessFromKoid(koid)) {
-    callback(GetWeakPtr(), Err("Process " + std::to_string(koid) + " is already being debugged."),
-             timestamp);
-    return;
-  }
-
-  // The other case for "already exists" is that the agent is attached to that process already
-  // but the debugger doesn't know about it. This can happen when connecting to an already-running
-  // debug agent. In this case, get the status to sync with the agent.
-  debug_ipc::ProcessStatusRequest request = {};
-  request.process_koid = koid;
-
-  DEBUG_LOG(Session) << "Re-attaching to process " << process_name << " (" << koid << ").";
-  session()->remote_api()->ProcessStatus(
-      request, [target = GetWeakPtr(), callback = std::move(callback), process_name, timestamp](
-                   const Err& err, debug_ipc::ProcessStatusReply reply) mutable {
-        if (!target)
-          return;
-
-        if (err.has_error())
-          return callback(target, err, timestamp);
-
-        if (reply.status.has_error()) {
-          Err error("Could not attach to process %s: %s", process_name.c_str(),
-                    reply.status.message().c_str());
-          return callback(target, err, timestamp);
-        }
-
-        return callback(target, Err(), timestamp);
-      });
 }
 
 void TargetImpl::OnKillOrDetachReply(ProcessObserver::DestroyReason reason, const Err& err,

@@ -147,64 +147,6 @@ TEST_F(DebugAgentTests, OnGlobalStatus) {
   // TODO(donosoc): Add exception type.
 }
 
-TEST_F(DebugAgentTests, OnProcessStatus) {
-  MockDebugAgentHarness harness;
-  RemoteAPI* remote_api = harness.debug_agent();
-
-  constexpr uint64_t kProcessKoid1 = 0x1234;
-  std::string kProcessName1 = "process-1";
-  auto process1 =
-      std::make_unique<DebugAgentMockProcess>(harness.debug_agent(), kProcessKoid1, kProcessName1);
-  harness.debug_agent()->InjectProcessForTest(std::move(process1));
-
-  constexpr uint64_t kProcessKoid2 = 0x5678;
-  std::string kProcessName2 = "process-2";
-  auto process2 =
-      std::make_unique<DebugAgentMockProcess>(harness.debug_agent(), kProcessKoid2, kProcessName2);
-  auto* process2_ptr = process2.get();
-  harness.debug_agent()->InjectProcessForTest(std::move(process2));
-
-  // Asking for a un-existent process should fail.
-  debug_ipc::ProcessStatusRequest request = {};
-  request.process_koid = 0xdeadbeef;
-
-  debug_ipc::ProcessStatusReply reply = {};
-  remote_api->OnProcessStatus(request, &reply);
-  EXPECT_TRUE(reply.status.has_error());
-
-  debug_ipc::NotifyModules modules_to_send = {};
-  modules_to_send.process_koid = kProcessKoid2;
-  modules_to_send.modules.push_back({"module-1", 0x1, 0x5, "build-1"});
-  modules_to_send.modules.push_back({"module-2", 0x2, 0x7, "build-2"});
-  process2_ptr->set_modules_to_send(modules_to_send);
-
-  // Asking for an existent one should send the process and modules notification.
-  request.process_koid = kProcessKoid2;
-  remote_api->OnProcessStatus(request, &reply);
-  EXPECT_TRUE(reply.status.ok());
-
-  loop().RunUntilNoTasks();
-
-  auto& process_starts = harness.stream_backend()->process_starts();
-  ASSERT_EQ(process_starts.size(), 1u);
-  EXPECT_EQ(process_starts[0].koid, kProcessKoid2);
-  EXPECT_EQ(process_starts[0].name, kProcessName2);
-
-  auto& modules = harness.stream_backend()->modules();
-  ASSERT_EQ(modules.size(), 1u);
-  EXPECT_EQ(modules[0].process_koid, kProcessKoid2);
-
-  ASSERT_EQ(modules[0].modules.size(), modules_to_send.modules.size());
-  ASSERT_EQ(modules[0].modules[0].name, modules_to_send.modules[0].name);
-  ASSERT_EQ(modules[0].modules[0].base, modules_to_send.modules[0].base);
-  ASSERT_EQ(modules[0].modules[0].debug_address, modules_to_send.modules[0].debug_address);
-  ASSERT_EQ(modules[0].modules[0].build_id, modules_to_send.modules[0].build_id);
-  ASSERT_EQ(modules[0].modules[1].name, modules_to_send.modules[1].name);
-  ASSERT_EQ(modules[0].modules[1].base, modules_to_send.modules[1].base);
-  ASSERT_EQ(modules[0].modules[1].debug_address, modules_to_send.modules[1].debug_address);
-  ASSERT_EQ(modules[0].modules[1].build_id, modules_to_send.modules[1].build_id);
-}
-
 TEST_F(DebugAgentTests, OnAttachNotFound) {
   uint32_t transaction_id = 1u;
 

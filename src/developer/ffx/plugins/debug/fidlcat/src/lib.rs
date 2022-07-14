@@ -102,9 +102,6 @@ pub async fn fidlcat(
         let unix_socket_path = socket.unix_socket_path().to_str().unwrap();
         // Connect to the Unix socket.
         arguments.add_value("--unix-connect", unix_socket_path);
-
-        // Terminate the debug agent when exiting.
-        arguments.add_flag("--quit-agent-on-exit", true);
     }
 
     arguments.arguments.extend(cmd.extra_args);

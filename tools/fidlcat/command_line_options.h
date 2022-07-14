@@ -31,7 +31,6 @@ struct CommandLineOptions {
   // fidlcat system option:
   std::vector<std::string> fidl_ir_paths;
   std::vector<std::string> ids_txts;
-  bool quit_agent_on_exit = false;
   // Input option:
   std::string from;
   // Session save option:

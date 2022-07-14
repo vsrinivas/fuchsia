@@ -210,7 +210,7 @@ int ConsoleMain(int argc, const char* argv[]) {
     InterceptionWorkflow workflow;
     workflow.Initialize(options.symbol_index_files, options.symbol_paths, options.build_id_dirs,
                         options.ids_txts, options.symbol_cache, options.symbol_servers,
-                        std::move(decoder_dispatcher), options.quit_agent_on_exit);
+                        std::move(decoder_dispatcher));
 
     if (workflow.HasSymbolServers()) {
       for (const auto& server : workflow.GetSymbolServers()) {

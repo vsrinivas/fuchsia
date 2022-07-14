@@ -30,7 +30,6 @@ struct ClientSettings {
     static const char* kAutoAttachLimbo;
     static const char* kPauseOnLaunch;
     static const char* kPauseOnAttach;
-    static const char* kQuitAgentOnExit;
     static const char* kShowFilePaths;
     static const char* kShowStdout;
 

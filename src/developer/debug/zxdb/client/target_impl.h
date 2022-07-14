@@ -77,10 +77,6 @@ class TargetImpl : public Target {
                              const std::string& process_name, uint64_t timestamp,
                              std::optional<debug_ipc::ComponentInfo> component_info);
 
-  // Handles "already exists" error from attaching which get special logic.
-  void HandleAttachAlreadyExists(CallbackWithTimestamp callback, uint64_t koid,
-                                 const std::string& process_name, uint64_t timestamp);
-
   void OnKillOrDetachReply(ProcessObserver::DestroyReason reason, const Err& err,
                            const debug::Status& status, Callback callback, uint64_t timestamp);
 

@@ -160,9 +160,6 @@ class Session : public SettingStoreObserver {
   void DispatchProcessStarting(const debug_ipc::NotifyProcessStarting&);
   void DispatchNotifyIO(const debug_ipc::NotifyIO& notify);
 
-  // Sends an explicit quit cmd to the agent.
-  void QuitAgent(fit::callback<void(const Err&)> callback);
-
   // SettingStoreObserver
   void OnSettingChanged(const SettingStore&, const std::string& setting_name) override;
 
@@ -206,15 +203,6 @@ class Session : public SettingStoreObserver {
   void ListenForSystemSettings();
 
   void AttachToLimboProcessAndNotify(uint64_t koid, const std::string& process_name);
-
-  // Configurations --------------------------------------------------------------------------------
-
-  // Upon connection, the session will tell the agent of all the configurations it should know
-  // about.
-  void SendAgentConfiguration();
-
-  // Pushes the quit agent config action into |actions|.
-  void ConfigQuitAgent(bool quit, std::vector<debug_ipc::ConfigAction>* actions);
 
   // Whether we have opened a core dump. Makes much of the connection-related stuff obsolete.
   bool is_minidump_ = false;

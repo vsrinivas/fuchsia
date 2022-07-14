@@ -40,10 +40,6 @@ bool ReadReply(MessageReader* reader, DetachReply* reply, uint32_t* transaction_
 void WriteRequest(const PauseRequest& request, uint32_t transaction_id, MessageWriter* writer);
 bool ReadReply(MessageReader* reader, PauseReply* reply, uint32_t* transaction_id);
 
-// QuitAgent.
-void WriteRequest(const QuitAgentRequest& request, uint32_t transaction_id, MessageWriter* writer);
-bool ReadReply(MessageReader* reader, QuitAgentReply* reply, uint32_t* transaction_id);
-
 // Resume.
 void WriteRequest(const ResumeRequest& request, uint32_t transaction_id, MessageWriter* writer);
 bool ReadReply(MessageReader* reader, ResumeReply* reply, uint32_t* transaction_id);
@@ -85,11 +81,6 @@ bool ReadReply(MessageReader* reader, RemoveBreakpointReply* reply, uint32_t* tr
 void WriteRequest(const SysInfoRequest& request, uint32_t transaction_id, MessageWriter* writer);
 bool ReadReply(MessageReader* reader, SysInfoReply* reply, uint32_t* transaction_id);
 
-// ProcessStatus.
-void WriteRequest(const ProcessStatusRequest& request, uint32_t transaction_id,
-                  MessageWriter* writer);
-bool ReadReply(MessageReader* reader, ProcessStatusReply* reply, uint32_t* transaction_id);
-
 // ThreadStatus.
 void WriteRequest(const ThreadStatusRequest& request, uint32_t transaction_id,
                   MessageWriter* writer);
@@ -123,11 +114,6 @@ bool ReadReply(MessageReader* reader, LoadInfoHandleTableReply* reply, uint32_t*
 void WriteRequest(const UpdateGlobalSettingsRequest& request, uint32_t transaction_id,
                   MessageWriter* writer);
 bool ReadReply(MessageReader* reader, UpdateGlobalSettingsReply* reply, uint32_t* transaction_id);
-
-// ConfigAgent.
-void WriteRequest(const ConfigAgentRequest& request, uint32_t transaction_id,
-                  MessageWriter* writer);
-bool ReadReply(MessageReader* reader, ConfigAgentReply* reply, uint32_t* transaction_id);
 
 // Notifications ---------------------------------------------------------------
 //

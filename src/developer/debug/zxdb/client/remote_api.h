@@ -32,16 +32,12 @@ class RemoteAPI {
                     fit::callback<void(const Err&, debug_ipc::KillReply)> cb);
   virtual void Attach(const debug_ipc::AttachRequest& request,
                       fit::callback<void(const Err&, debug_ipc::AttachReply)> cb);
-  virtual void ConfigAgent(const debug_ipc::ConfigAgentRequest& request,
-                           fit::callback<void(const Err&, debug_ipc::ConfigAgentReply)> cb);
   virtual void Detach(const debug_ipc::DetachRequest& request,
                       fit::callback<void(const Err&, debug_ipc::DetachReply)> cb);
   virtual void Modules(const debug_ipc::ModulesRequest& request,
                        fit::callback<void(const Err&, debug_ipc::ModulesReply)> cb);
   virtual void Pause(const debug_ipc::PauseRequest& request,
                      fit::callback<void(const Err&, debug_ipc::PauseReply)> cb);
-  virtual void QuitAgent(const debug_ipc::QuitAgentRequest& request,
-                         fit::callback<void(const Err&, debug_ipc::QuitAgentReply)> cb);
   virtual void Resume(const debug_ipc::ResumeRequest& request,
                       fit::callback<void(const Err&, debug_ipc::ResumeReply)> cb);
   virtual void ProcessTree(const debug_ipc::ProcessTreeRequest& request,
@@ -64,8 +60,6 @@ class RemoteAPI {
                        fit::callback<void(const Err&, debug_ipc::SysInfoReply)> cb);
   virtual void Status(const debug_ipc::StatusRequest& request,
                       fit::callback<void(const Err&, debug_ipc::StatusReply)> cb);
-  virtual void ProcessStatus(const debug_ipc::ProcessStatusRequest& request,
-                             fit::callback<void(const Err&, debug_ipc::ProcessStatusReply)> cb);
   virtual void ThreadStatus(const debug_ipc::ThreadStatusRequest& request,
                             fit::callback<void(const Err&, debug_ipc::ThreadStatusReply)> cb);
   virtual void AddressSpace(const debug_ipc::AddressSpaceRequest& request,

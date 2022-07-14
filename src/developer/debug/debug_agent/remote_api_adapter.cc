@@ -81,7 +81,6 @@ void RemoteAPIAdapter::OnStreamReadable() {
     switch (header.type) {
       DISPATCH(AddOrChangeBreakpoint);
       DISPATCH(AddressSpace);
-      DISPATCH(ConfigAgent);
       DISPATCH(Detach);
       DISPATCH(UpdateFilter);
       DISPATCH(Hello);
@@ -89,9 +88,7 @@ void RemoteAPIAdapter::OnStreamReadable() {
       DISPATCH(Launch);
       DISPATCH(Modules);
       DISPATCH(Pause);
-      DISPATCH(ProcessStatus);
       DISPATCH(ProcessTree);
-      DISPATCH(QuitAgent);
       DISPATCH(ReadMemory);
       DISPATCH(ReadRegisters);
       DISPATCH(WriteRegisters);

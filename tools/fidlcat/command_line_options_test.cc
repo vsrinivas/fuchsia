@@ -94,9 +94,8 @@ TEST_F(CommandLineOptionsTest, ArgfileTest) {
 // Test to ensure that non-existent files are reported accordingly.
 TEST_F(CommandLineOptionsTest, BadOptionsTest) {
   // Parse the command line.
-  std::vector<const char*> argv = {
-      "fakebinary", "--fidl-ir-path", "blah.fidl.json", "--remote-pid",
-      "3141",       "--fidl-ir-path", "@all_files.txt", "--quit-agent-on-exit"};
+  std::vector<const char*> argv = {"fakebinary", "--fidl-ir-path", "blah.fidl.json", "--remote-pid",
+                                   "3141",       "--fidl-ir-path", "@all_files.txt"};
   CommandLineOptions options;
   DecodeOptions decode_options;
   DisplayOptions display_options;

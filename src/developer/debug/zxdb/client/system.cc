@@ -75,10 +75,6 @@ static const char* kShowStdoutDescription =
   output it's stdout/stderr to zxdb. This setting is global but can be overridden
   by each individual process.)";
 
-const char* ClientSettings::System::kQuitAgentOnExit = "quit-agent-on-exit";
-static const char* kQuitAgentOnExitDescription =
-    R"(  Whether the client will shutdown the connected agent upon exiting.")";
-
 const char* ClientSettings::System::kLanguage = "language";
 static const char* kLanguageDescription =
     R"(  Programming language for expressions given to commands such as print.
@@ -155,7 +151,6 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
   schema->AddBool(ClientSettings::System::kAutoAttachLimbo, kAutoAttachLimboDescription, true);
   schema->AddBool(ClientSettings::System::kPauseOnLaunch, kPauseOnLaunchDescription, false);
   schema->AddBool(ClientSettings::System::kPauseOnAttach, kPauseOnAttachDescription, false);
-  schema->AddBool(ClientSettings::System::kQuitAgentOnExit, kQuitAgentOnExitDescription, false);
   schema->AddBool(ClientSettings::System::kShowFilePaths, kShowFilePathsDescription, false);
   schema->AddBool(ClientSettings::System::kShowStdout, kShowStdoutDescription, true);
   schema->AddString(ClientSettings::System::kLanguage, kLanguageDescription, "auto",

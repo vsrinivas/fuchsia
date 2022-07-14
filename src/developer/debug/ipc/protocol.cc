@@ -14,8 +14,6 @@ constexpr uint64_t HelloReply::kStreamSignature;
 
 const char* MsgHeader::TypeToString(MsgHeader::Type type) {
   switch (type) {
-    case MsgHeader::Type::kConfigAgent:
-      return "ConfigAgent";
     case MsgHeader::Type::kNone:
       return "None";
     case MsgHeader::Type::kHello:
@@ -34,8 +32,6 @@ const char* MsgHeader::TypeToString(MsgHeader::Type type) {
       return "Modules";
     case MsgHeader::Type::kPause:
       return "Pause";
-    case MsgHeader::Type::kQuitAgent:
-      return "QuitAgent";
     case MsgHeader::Type::kResume:
       return "Resume";
     case MsgHeader::Type::kProcessTree:
@@ -60,8 +56,6 @@ const char* MsgHeader::TypeToString(MsgHeader::Type type) {
       return "RemoveBreakpoint";
     case MsgHeader::Type::kSysInfo:
       return "SysInfo";
-    case MsgHeader::Type::kProcessStatus:
-      return "ProcessStatus";
     case MsgHeader::Type::kThreadStatus:
       return "ThreadStatus";
     case MsgHeader::Type::kAddressSpace:

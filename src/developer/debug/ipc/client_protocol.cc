@@ -182,11 +182,6 @@ void Serialize(const BreakpointSettings& settings, MessageWriter* writer) {
   Serialize(settings.instructions, writer);
 }
 
-void Serialize(const ConfigAction& action, MessageWriter* writer) {
-  writer->WriteUint32(static_cast<uint32_t>(action.type));
-  writer->WriteString(action.value);
-}
-
 void Serialize(const Filter& filter, MessageWriter* writer) {
   writer->WriteUint32(static_cast<uint32_t>(filter.type));
   writer->WriteString(filter.pattern);
@@ -222,25 +217,6 @@ bool ReadReply(MessageReader* reader, StatusReply* reply, uint32_t* transaction_
   if (!Deserialize(reader, &reply->processes))
     return false;
   return Deserialize(reader, &reply->limbo);
-}
-
-// ProcessStatus -----------------------------------------------------------------------------------
-
-void WriteRequest(const ProcessStatusRequest& request, uint32_t transaction_id,
-                  MessageWriter* writer) {
-  writer->WriteHeader(MsgHeader::Type::kProcessStatus, transaction_id);
-  writer->WriteUint64(request.process_koid);
-}
-
-bool ReadReply(MessageReader* reader, ProcessStatusReply* reply, uint32_t* transaction_id) {
-  MsgHeader header;
-  if (!reader->ReadHeader(&header))
-    return false;
-  *transaction_id = header.transaction_id;
-
-  if (!Deserialize(reader, &reply->status))
-    return false;
-  return true;
 }
 
 // Launch ------------------------------------------------------------------------------------------
@@ -358,20 +334,6 @@ bool ReadReply(MessageReader* reader, PauseReply* reply, uint32_t* transaction_i
   *transaction_id = header.transaction_id;
 
   return Deserialize(reader, &reply->threads);
-}
-
-// QuitAgent ---------------------------------------------------------------------------------------
-
-void WriteRequest(const QuitAgentRequest& request, uint32_t transaction_id, MessageWriter* writer) {
-  writer->WriteHeader(MsgHeader::Type::kQuitAgent, transaction_id);
-}
-
-bool ReadReply(MessageReader* reader, QuitAgentReply* reply, uint32_t* transaction_id) {
-  MsgHeader header;
-  if (!reader->ReadHeader(&header))
-    return false;
-  *transaction_id = header.transaction_id;
-  return true;
 }
 
 // Resume ------------------------------------------------------------------------------------------
@@ -655,23 +617,6 @@ bool ReadReply(MessageReader* reader, UpdateGlobalSettingsReply* reply, uint32_t
   *transaction_id = header.transaction_id;
 
   return Deserialize(reader, &reply->status);
-}
-
-// ConfigAgent -------------------------------------------------------------------------------------
-
-void WriteRequest(const ConfigAgentRequest& request, uint32_t transaction_id,
-                  MessageWriter* writer) {
-  writer->WriteHeader(MsgHeader::Type::kConfigAgent, transaction_id);
-  Serialize(request.actions, writer);
-}
-
-bool ReadReply(MessageReader* reader, ConfigAgentReply* reply, uint32_t* transaction_id) {
-  MsgHeader header;
-  if (!reader->ReadHeader(&header))
-    return false;
-  *transaction_id = header.transaction_id;
-
-  return Deserialize(reader, &reply->results);
 }
 
 // Notifications -----------------------------------------------------------------------------------

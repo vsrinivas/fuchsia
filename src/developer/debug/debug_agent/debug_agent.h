@@ -11,7 +11,6 @@
 #include <memory>
 
 #include "gtest/gtest_prod.h"
-#include "src/developer/debug/debug_agent/agent_configuration.h"
 #include "src/developer/debug/debug_agent/breakpoint.h"
 #include "src/developer/debug/debug_agent/debugged_job.h"
 #include "src/developer/debug/debug_agent/debugged_process.h"
@@ -69,8 +68,6 @@ class DebugAgent : public RemoteAPI,
 
   void InjectProcessForTest(std::unique_ptr<DebuggedProcess> process);
 
-  bool should_quit() const { return configuration_.quit_on_exit; }
-
   DebuggedJob* GetDebuggedJob(zx_koid_t koid);
   DebuggedProcess* GetDebuggedProcess(zx_koid_t koid);
   DebuggedThread* GetDebuggedThread(const debug_ipc::ProcessThreadId& id);
@@ -87,8 +84,6 @@ class DebugAgent : public RemoteAPI,
       zx_koid_t except_process = ZX_KOID_INVALID, zx_koid_t except_thread = ZX_KOID_INVALID);
 
   // RemoteAPI implementation.
-  void OnConfigAgent(const debug_ipc::ConfigAgentRequest& request,
-                     debug_ipc::ConfigAgentReply* reply) override;
   void OnHello(const debug_ipc::HelloRequest& request, debug_ipc::HelloReply* reply) override;
   void OnStatus(const debug_ipc::StatusRequest& request, debug_ipc::StatusReply* reply) override;
   void OnLaunch(const debug_ipc::LaunchRequest& request, debug_ipc::LaunchReply* reply) override;
@@ -98,8 +93,6 @@ class DebugAgent : public RemoteAPI,
   void OnAttach(uint32_t transaction_id, const debug_ipc::AttachRequest&) override;
   void OnDetach(const debug_ipc::DetachRequest& request, debug_ipc::DetachReply* reply) override;
   void OnPause(const debug_ipc::PauseRequest& request, debug_ipc::PauseReply* reply) override;
-  void OnQuitAgent(const debug_ipc::QuitAgentRequest& request,
-                   debug_ipc::QuitAgentReply* reply) override;
   void OnResume(const debug_ipc::ResumeRequest& request, debug_ipc::ResumeReply* reply) override;
   void OnModules(const debug_ipc::ModulesRequest& request, debug_ipc::ModulesReply* reply) override;
   void OnProcessTree(const debug_ipc::ProcessTreeRequest& request,
@@ -116,8 +109,6 @@ class DebugAgent : public RemoteAPI,
   void OnRemoveBreakpoint(const debug_ipc::RemoveBreakpointRequest& request,
                           debug_ipc::RemoveBreakpointReply* reply) override;
   void OnSysInfo(const debug_ipc::SysInfoRequest& request, debug_ipc::SysInfoReply* reply) override;
-  void OnProcessStatus(const debug_ipc::ProcessStatusRequest& request,
-                       debug_ipc::ProcessStatusReply* reply) override;
   void OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,
                       debug_ipc::ThreadStatusReply* reply) override;
   void OnAddressSpace(const debug_ipc::AddressSpaceRequest& request,
@@ -212,8 +203,6 @@ class DebugAgent : public RemoteAPI,
   zx_koid_t attached_root_job_koid_ = 0;
 
   std::map<debug_ipc::ExceptionType, debug_ipc::ExceptionStrategy> exception_strategies_;
-
-  AgentConfiguration configuration_;
 
   fxl::WeakPtrFactory<DebugAgent> weak_factory_;
 

@@ -185,18 +185,6 @@ bool IsWatchpointType(debug_ipc::BreakpointType type) {
   // clang-format on
 }
 
-const char* ConfigAction::TypeToString(Type type) {
-  switch (type) {
-    case Type::kQuitOnExit:
-      return "Quit On Exit";
-    case Type::kLast:
-      return "Last";
-  }
-
-  FX_NOTREACHED();
-  return nullptr;
-}
-
 const char* Filter::TypeToString(Type type) {
   switch (type) {
     case Type::kUnset:

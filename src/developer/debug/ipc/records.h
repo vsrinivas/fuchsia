@@ -376,23 +376,6 @@ struct AddressRegion {
   uint64_t depth;
 };
 
-// ReadRegisters -----------------------------------------------------------------------------------
-
-struct ConfigAction {
-  enum class Type : uint32_t {
-    // Quit whenever the connection shutdowns.
-    kQuitOnExit,  // Values are "false" | "true"
-
-    kLast,  // Not valid.
-  };
-  static const char* TypeToString(Type);
-
-  Type type = Type::kLast;
-
-  // Each action uses a different set of values.
-  std::string value;
-};
-
 // LoadInfoHandleTable -----------------------------------------------------------------------------
 
 // VMO-specific handle information from zx_info_vmo that's not in the InfoHandle structure.

@@ -130,11 +130,6 @@ void DebugAgent::RemoveBreakpoint(uint32_t breakpoint_id) {
     breakpoints_.erase(found);
 }
 
-void DebugAgent::OnConfigAgent(const debug_ipc::ConfigAgentRequest& request,
-                               debug_ipc::ConfigAgentReply* reply) {
-  reply->results = HandleActions(request.actions, &configuration_);
-}
-
 void DebugAgent::OnHello(const debug_ipc::HelloRequest& request, debug_ipc::HelloReply* reply) {
   // Version and signature are default-initialized to their current values.
   reply->arch = arch::GetCurrentArch();
@@ -295,11 +290,6 @@ void DebugAgent::OnPause(const debug_ipc::PauseRequest& request, debug_ipc::Paus
   }
 }
 
-void DebugAgent::OnQuitAgent(const debug_ipc::QuitAgentRequest& request,
-                             debug_ipc::QuitAgentReply* reply) {
-  debug::MessageLoop::Current()->QuitNow();
-}
-
 void DebugAgent::OnResume(const debug_ipc::ResumeRequest& request, debug_ipc::ResumeReply* reply) {
   DEBUG_LOG(Agent) << LogResumeRequest(request);
 
@@ -408,34 +398,6 @@ void DebugAgent::OnSysInfo(const debug_ipc::SysInfoRequest& request,
 
   reply->hw_breakpoint_count = arch::GetHardwareBreakpointCount();
   reply->hw_watchpoint_count = arch::GetHardwareWatchpointCount();
-}
-
-void DebugAgent::OnProcessStatus(const debug_ipc::ProcessStatusRequest& request,
-                                 debug_ipc::ProcessStatusReply* reply) {
-  auto it = procs_.find(request.process_koid);
-  if (it == procs_.end()) {
-    reply->status =
-        debug::Status("Not currently attached to process " + std::to_string(request.process_koid));
-    return;
-  }
-
-  DebuggedProcess* process = it->second.get();
-
-  debug::MessageLoop::Current()->PostTask(FROM_HERE, [this, process]() mutable {
-    debug_ipc::NotifyProcessStarting notify = {};
-    notify.koid = process->koid();
-    notify.name = process->process_handle().GetName();
-    notify.timestamp = GetNowTimestamp();
-
-    debug_ipc::MessageWriter writer;
-    debug_ipc::WriteNotifyProcessStarting(notify, &writer);
-    stream()->Write(writer.MessageComplete());
-
-    // Send the modules notification.
-    process->SuspendAndSendModulesIfKnown();
-  });
-
-  reply->status = debug::Status();
 }
 
 void DebugAgent::OnThreadStatus(const debug_ipc::ThreadStatusRequest& request,
