@@ -67,7 +67,6 @@ zx_status_t As370::I2cInit() {
   };
 
   // I2C channels for as370 synaptics
-  // TODO(fxbug.dev/94099): Convert to FIDLized form
   constexpr i2c_channel_t synaptics_i2c_channels[] = {
       // For audio out
       {
@@ -123,19 +122,33 @@ zx_status_t As370::I2cInit() {
       },
   };
 
+  auto synaptics_i2c_channels_fidl = fidl_metadata::i2c::I2CChannelsToFidl(synaptics_i2c_channels);
+  if (synaptics_i2c_channels_fidl.is_error()) {
+    zxlogf(ERROR, "Failed to FIDL encode I2C channel metadata: %d",
+           synaptics_i2c_channels_fidl.error_value());
+    return synaptics_i2c_channels_fidl.error_value();
+  }
+
+  auto visalia_i2c_channels_fidl = fidl_metadata::i2c::I2CChannelsToFidl(visalia_i2c_channels);
+  if (visalia_i2c_channels_fidl.is_error()) {
+    zxlogf(ERROR, "Failed to FIDL encode I2C channel metadata: %d",
+           visalia_i2c_channels_fidl.error_value());
+    return visalia_i2c_channels_fidl.error_value();
+  }
+
   const pbus_metadata_t synaptics_i2c_metadata[] = {
       {
           .type = DEVICE_METADATA_I2C_CHANNELS,
-          .data_buffer = reinterpret_cast<const uint8_t*>(&synaptics_i2c_channels),
-          .data_size = sizeof(synaptics_i2c_channels),
+          .data_buffer = synaptics_i2c_channels_fidl->data(),
+          .data_size = synaptics_i2c_channels_fidl->size(),
       },
   };
 
   const pbus_metadata_t visalia_i2c_metadata[] = {
       {
           .type = DEVICE_METADATA_I2C_CHANNELS,
-          .data_buffer = reinterpret_cast<const uint8_t*>(&visalia_i2c_channels),
-          .data_size = sizeof(visalia_i2c_channels),
+          .data_buffer = visalia_i2c_channels_fidl->data(),
+          .data_size = visalia_i2c_channels_fidl->size(),
       },
   };
 
