@@ -483,14 +483,6 @@ FakeNetstack::~FakeNetstack() {
   loop_.JoinThreads();
 }
 
-void FakeNetstack::Install(sys::testing::EnvironmentServices& services) {
-  zx_status_t status =
-      services.AddService(network_->GetHandler(), fuchsia::net::virtualization::Control::Name_);
-  FX_CHECK(status == ZX_OK)
-      << "Failure installing fuchsia.net.virtualization.Control into environment: "
-      << zx_status_get_string(status);
-}
-
 fpromise::promise<void, zx_status_t> FakeNetstack::SendUdpPacket(
     const fuchsia::hardware::ethernet::MacAddress& mac_addr, std::vector<uint8_t> packet) {
   size_t total_length = sizeof(ethhdr) + sizeof(iphdr) + sizeof(udphdr) + packet.size();

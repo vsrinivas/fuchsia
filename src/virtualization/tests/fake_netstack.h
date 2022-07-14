@@ -11,7 +11,6 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/fpromise/promise.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
-#include <lib/sys/cpp/testing/enclosing_environment.h>
 #include <zircon/device/ethernet.h>
 
 #include <memory>
@@ -33,9 +32,6 @@ class FakeNetstack : public component_testing::LocalComponent {
  public:
   FakeNetstack();
   ~FakeNetstack();
-
-  // Install FIDL services required for the fake netstack into the given environment.
-  void Install(sys::testing::EnvironmentServices& services);
 
   // Send a packet with UDP headers, including the ethernet and IPv6 headers, to the interface with
   // the specified MAC address.
