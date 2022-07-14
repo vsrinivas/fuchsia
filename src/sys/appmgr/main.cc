@@ -7,7 +7,6 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/syslog/global.h>
 #include <lib/trace-provider/provider.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>

@@ -67,7 +67,6 @@ syslog_visibility_allowlist = [
   "//src/storage/extractor/cpp:*",
   "//src/storage/fuchsia-fatfs:*",
   "//src/storage/lib/watchdog:*",
-  "//src/sys/appmgr:*",
   "//src/sys/tools/log:*",
   "//sdk/lib/driver2:*",
   "//src/virtualization/bin/vmm/device:*",
