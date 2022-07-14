@@ -17,6 +17,12 @@ clang_toolchain_suite("linux_x64") {
   use_strip = true
 }
 
+clang_toolchain_suite("win_x64") {
+  toolchain_cpu = "x64"
+  toolchain_os = "win"
+  use_strip = true
+}
+
 clang_toolchain_suite("linux_arm64") {
   toolchain_cpu = "arm64"
   toolchain_os = "linux"

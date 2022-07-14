@@ -17,6 +17,17 @@ if (current_os == target_os && target_sysroot != "") {
 } else if (is_mac) {
   import("//build/config/mac/mac_sdk.gni")
   sysroot = mac_sdk_path
-} else {
+} else if (is_win) {
+  # Building C/C++ on Windows requires a complicated SDK setup
+  # and cannot be simplified as a single sysroot directory. Leave
+  # it empty.
   sysroot = ""
+} else if (current_cpu == "wasm32") {
+  sysroot = ""
+} else {
+  # For other platforms that are not currently supported, do not define `sysroot`.
+  # Fail the GN and notify user.
+  assert(
+      false,
+      "$current_os is unsupported, no sysroot is defined for toolchain $current_toolchain")
 }

@@ -66,6 +66,7 @@ host_x64_toolchain = "//build/toolchain:host_x64"
 host_arm64_toolchain = "//build/toolchain:host_arm64"
 host_toolchain_for_target_cpu = "//build/toolchain:host_${target_cpu}"
 linux_x64_toolchain = "//build/toolchain:linux_x64"
+win_x64_toolchain = "//build/toolchain:win_x64"
 linux_arm64_toolchain = "//build/toolchain:linux_arm64"
 unknown_wasm32_toolchain = "//build/toolchain:unknown_wasm32-shared"
 
