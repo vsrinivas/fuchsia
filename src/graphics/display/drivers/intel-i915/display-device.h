@@ -8,7 +8,9 @@
 #include <fidl/fuchsia.hardware.backlight/cpp/wire.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <lib/mmio/mmio.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
+#include <zircon/types.h>
 
 #include <ddktl/device.h>
 #include <region-alloc/region-alloc.h>
@@ -44,8 +46,8 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
     kDvi,
   };
 
-  DisplayDevice(Controller* device, uint64_t id, registers::Ddi ddi, Type type);
-  virtual ~DisplayDevice();
+  DisplayDevice(Controller* controller, uint64_t id, registers::Ddi ddi, Type type);
+  ~DisplayDevice() override;
 
   bool AttachPipe(Pipe* pipe);
   void ApplyConfiguration(const display_config_t* config, const config_stamp_t* config_stamp);
@@ -94,11 +96,11 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
   void set_type(Type type) { type_ = type; }
 
   virtual bool HasBacklight() { return false; }
-  virtual zx_status_t SetBacklightState(bool power, double brightness) {
-    return ZX_ERR_NOT_SUPPORTED;
+  virtual zx::status<> SetBacklightState(bool power, double brightness) {
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
-  virtual zx_status_t GetBacklightState(bool* power, double* brightness) {
-    return ZX_ERR_NOT_SUPPORTED;
+  virtual zx::status<FidlBacklight::wire::State> GetBacklightState() {
+    return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   virtual bool CheckPixelRate(uint64_t pixel_rate) = 0;

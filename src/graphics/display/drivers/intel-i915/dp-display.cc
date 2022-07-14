@@ -6,6 +6,7 @@
 
 #include <endian.h>
 #include <lib/ddk/driver.h>
+#include <lib/zx/status.h>
 #include <math.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -1460,9 +1461,7 @@ bool DpDisplay::HandleHotplug(bool long_pulse) {
 
 bool DpDisplay::HasBacklight() { return type() == Type::kEdp; }
 
-namespace FidlBacklight = fuchsia_hardware_backlight;
-
-zx_status_t DpDisplay::SetBacklightState(bool power, double brightness) {
+zx::status<> DpDisplay::SetBacklightState(bool power, double brightness) {
   SetBacklightOn(power);
 
   brightness = std::max(brightness, 0.0);
@@ -1471,15 +1470,16 @@ zx_status_t DpDisplay::SetBacklightState(bool power, double brightness) {
   double range = 1.0f - controller()->igd_opregion().GetMinBacklightBrightness();
   if (!SetBacklightBrightness((range * brightness) +
                               controller()->igd_opregion().GetMinBacklightBrightness())) {
-    return ZX_ERR_IO;
+    return zx::error(ZX_ERR_IO);
   }
-  return ZX_OK;
+  return zx::success();
 }
 
-zx_status_t DpDisplay::GetBacklightState(bool* power, double* brightness) {
-  *power = IsBacklightOn();
-  *brightness = GetBacklightBrightness();
-  return ZX_OK;
+zx::status<FidlBacklight::wire::State> DpDisplay::GetBacklightState() {
+  return zx::success(FidlBacklight::wire::State{
+      .backlight_on = IsBacklightOn(),
+      .brightness = GetBacklightBrightness(),
+  });
 }
 
 void DpDisplay::SetLinkRate(uint32_t value) {

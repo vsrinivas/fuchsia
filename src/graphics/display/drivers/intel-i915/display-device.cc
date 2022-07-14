@@ -5,9 +5,13 @@
 #include "src/graphics/display/drivers/intel-i915/display-device.h"
 
 #include <float.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/fit/function.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 #include <math.h>
+#include <zircon/errors.h>
 
 #include <ddktl/fidl.h>
 
@@ -34,7 +38,11 @@ zx_status_t backlight_message(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* t
 
 void backlight_release(void* ctx) { delete static_cast<i915::display_ref_t*>(ctx); }
 
-static zx_protocol_device_t backlight_ops = {};
+constexpr zx_protocol_device_t kBacklightDeviceOps = {
+    .version = DEVICE_OPS_VERSION,
+    .release = &backlight_release,
+    .message = &backlight_message,
+};
 
 }  // namespace
 
@@ -86,18 +94,16 @@ void DisplayDevice::InitBacklight() {
         display_ref->display_device = this;
       }
 
-      backlight_ops.version = DEVICE_OPS_VERSION;
-      backlight_ops.message = backlight_message;
-      backlight_ops.release = backlight_release;
+      device_add_args_t args = {
+          .version = DEVICE_ADD_ARGS_VERSION,
+          .name = "backlight",
+          .ctx = display_ref.get(),
+          .ops = &kBacklightDeviceOps,
+          .proto_id = ZX_PROTOCOL_BACKLIGHT,
+      };
 
-      device_add_args_t args = {};
-      args.version = DEVICE_ADD_ARGS_VERSION;
-      args.name = "backlight";
-      args.ctx = display_ref.get();
-      args.ops = &backlight_ops;
-      args.proto_id = ZX_PROTOCOL_BACKLIGHT;
-
-      if ((status = device_add(controller_->zxdev(), &args, &backlight_device_)) == ZX_OK) {
+      status = device_add(controller_->zxdev(), &args, &backlight_device_);
+      if (status == ZX_OK) {
         display_ref_ = display_ref.release();
       }
     }
@@ -105,7 +111,7 @@ void DisplayDevice::InitBacklight() {
       zxlogf(WARNING, "Failed to add backlight (%d)", status);
     }
 
-    SetBacklightState(true, 1.0);
+    std::ignore = SetBacklightState(true, 1.0);
   }
 }
 
@@ -151,7 +157,7 @@ bool DisplayDevice::CheckNeedsModeset(const display_mode_t* mode) {
   // Check the clock and the flags later
   size_t cmp_start = offsetof(display_mode_t, h_addressable);
   size_t cmp_end = offsetof(display_mode_t, flags);
-  if (memcmp(&mode->h_addressable, &info_.h_addressable, cmp_end - cmp_start)) {
+  if (memcmp(&mode->h_addressable, &info_.h_addressable, cmp_end - cmp_start) != 0) {
     // Modeset is necessary if display params other than the clock frequency differ
     zxlogf(DEBUG, "Modeset necessary for display params");
     return true;
@@ -207,29 +213,25 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config,
 
 void DisplayDevice::GetStateNormalized(GetStateNormalizedRequestView request,
                                        GetStateNormalizedCompleter::Sync& completer) {
-  zx_status_t status = ZX_OK;
-  FidlBacklight::wire::State state = {};
+  zx::status<FidlBacklight::wire::State> backlight_state = zx::error(ZX_ERR_BAD_STATE);
 
   if (display_ref_ != nullptr) {
     fbl::AutoLock lock(&display_ref_->mtx);
     if (display_ref_->display_device != nullptr) {
-      status =
-          display_ref_->display_device->GetBacklightState(&state.backlight_on, &state.brightness);
+      backlight_state = display_ref_->display_device->GetBacklightState();
     }
-  } else {
-    status = ZX_ERR_BAD_STATE;
   }
 
-  if (status == ZX_OK) {
-    completer.ReplySuccess(state);
+  if (backlight_state.is_ok()) {
+    completer.ReplySuccess(backlight_state.value());
   } else {
-    completer.ReplyError(status);
+    completer.ReplyError(backlight_state.status_value());
   }
 }
 
 void DisplayDevice::SetStateNormalized(SetStateNormalizedRequestView request,
                                        SetStateNormalizedCompleter::Sync& completer) {
-  zx_status_t status = ZX_OK;
+  zx::status<> status = zx::error(ZX_ERR_BAD_STATE);
 
   if (display_ref_ != nullptr) {
     fbl::AutoLock lock(&display_ref_->mtx);
@@ -237,12 +239,10 @@ void DisplayDevice::SetStateNormalized(SetStateNormalizedRequestView request,
       status = display_ref_->display_device->SetBacklightState(request->state.backlight_on,
                                                                request->state.brightness);
     }
-  } else {
-    status = ZX_ERR_BAD_STATE;
   }
 
-  if (status != ZX_OK) {
-    completer.ReplyError(status);
+  if (status.is_error()) {
+    completer.ReplyError(status.status_value());
     return;
   }
   completer.ReplySuccess();

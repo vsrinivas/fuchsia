@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
 #include <lib/inspect/cpp/inspect.h>
+#include <zircon/types.h>
 
 #include "src/graphics/display/drivers/intel-i915/display-device.h"
 #include "src/graphics/display/drivers/intel-i915/dpcd.h"
@@ -32,8 +33,8 @@ class DpAux : public DpcdChannel {
   zx_status_t I2cTransact(const i2c_impl_op_t* ops, size_t count);
 
   // DpcdChannel overrides:
-  bool DpcdRead(uint32_t addr, uint8_t* buf, size_t size) final override;
-  bool DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size) final override;
+  bool DpcdRead(uint32_t addr, uint8_t* buf, size_t size) final;
+  bool DpcdWrite(uint32_t addr, const uint8_t* buf, size_t size) final;
 
  private:
   const registers::Ddi ddi_;
@@ -82,7 +83,8 @@ struct DpCapabilities final {
   // are not available.
   uint8_t edp_dpcd_at(dpcd::EdpRegister address) const {
     ZX_ASSERT(edp_dpcd_.has_value());
-    ZX_ASSERT(address < dpcd::DPCD_EDP_RESERVED && address >= dpcd::DPCD_EDP_CAP_START);
+    ZX_ASSERT(address < dpcd::DPCD_EDP_RESERVED);
+    ZX_ASSERT(address >= dpcd::DPCD_EDP_CAP_START);
     return edp_dpcd_->bytes[address - dpcd::DPCD_EDP_CAP_START];
   }
 
@@ -101,7 +103,9 @@ struct DpCapabilities final {
     return reg;
   }
 
-  dpcd::Revision dpcd_revision() const { return dpcd::Revision(dpcd_[dpcd::DPCD_REV]); }
+  dpcd::Revision dpcd_revision() const {
+    return static_cast<dpcd::Revision>(dpcd_[dpcd::DPCD_REV]);
+  }
 
   std::optional<dpcd::EdpRevision> edp_revision() const {
     if (edp_dpcd_) {
@@ -223,8 +227,8 @@ class DpDisplay : public DisplayDevice {
 
   bool HandleHotplug(bool long_pulse) override;
   bool HasBacklight() override;
-  zx_status_t SetBacklightState(bool power, double brightness) override;
-  zx_status_t GetBacklightState(bool* power, double* brightness) override;
+  zx::status<> SetBacklightState(bool power, double brightness) override;
+  zx::status<FidlBacklight::wire::State> GetBacklightState() override;
 
   void SetLinkRate(uint32_t value);
 
