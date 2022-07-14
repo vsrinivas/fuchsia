@@ -64,8 +64,8 @@ async fn component_manager_namespace() {
 
     // Security checks prevent access to the below protocols, although they are still
     // hosted in component manager.
-    // TODO(fxbug.dev/104365): Give this test permission to access these resources as we expand io compliance
-    // enforcement in CM.
+    // TODO(https://fxbug.dev/104365): Give this test permission to access these
+    // resources as we expand io compliance enforcement in CM.
     // let _hanging_resources = [
     //     "/svc/fuchsia.kernel.RootJob",
     //     "/svc/fuchsia.kernel.RootJobForInspect",
@@ -84,6 +84,11 @@ async fn component_manager_namespace() {
 }
 
 async fn validate_open_with_node_reference_and_describe(path: &str) -> Result<(), OpenError> {
+    // The Rust VFS defines the only valid call for DESCRIBE on a service node to be one
+    // that includes the NODE_REFERENCE flag. Component framework aims to adhere to the rust
+    // VFS implementation of the io protocol.
+    // TODO(https://fxbug.dev/104406): If the rust VFS interpretation of the DESCRIBE
+    // flag behavior on service nodes is incorrect, update this call.
     let node = fuchsia_fs::node::open_in_namespace(
         path,
         fio::OpenFlags::DESCRIBE | fio::OpenFlags::NODE_REFERENCE,
