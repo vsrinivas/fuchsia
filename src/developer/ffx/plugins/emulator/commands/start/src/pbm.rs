@@ -274,8 +274,8 @@ mod tests {
     use super::*;
     use ffx_emulator_common::config::EMU_INSTANCE_ROOT_DIR;
     use ffx_emulator_config::{
-        AccelerationMode, ConsoleType, CpuArchitecture, EmulatorConfiguration, EngineType, GpuType,
-        LogLevel, NetworkingMode, PortMapping,
+        AccelerationMode, ConsoleType, CpuArchitecture, EmulatorConfiguration, GpuType, LogLevel,
+        NetworkingMode, PortMapping,
     };
     use regex::Regex;
     use std::{
@@ -295,7 +295,6 @@ mod tests {
             accel: AccelerationMode::Hyper,
             console: true,
             debugger: true,
-            engine: EngineType::Qemu,
             gpu: GpuType::Host,
             headless: true,
             hidpi_scaling: true,

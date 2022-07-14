@@ -8,9 +8,11 @@ use errors::ffx_bail;
 use ffx_config::sdk::SdkVersion;
 use ffx_core::ffx_plugin;
 use ffx_emulator_common::config::FfxConfigWrapper;
+use ffx_emulator_config::EngineType;
 use ffx_emulator_engines::EngineBuilder;
 use ffx_emulator_start_args::StartCommand;
 use fidl_fuchsia_developer_ffx::TargetCollectionProxy;
+use std::str::FromStr;
 
 mod pbm;
 
@@ -46,9 +48,14 @@ pub async fn start(cmd: StartCommand, proxy: TargetCollectionProxy) -> Result<()
     };
 
     // Initialize an engine of the requested type with the configuration defined in the manifest.
+    let engine_type = match EngineType::from_str(&cmd.engine().await.unwrap_or("femu".to_string()))
+    {
+        Ok(e) => e,
+        Err(e) => ffx_bail!("{:?}", e.context("Couldn't retrieve engine type from ffx config.")),
+    };
     let mut engine = match EngineBuilder::new()
         .config(emulator_configuration)
-        .engine_type(cmd.engine)
+        .engine_type(engine_type)
         .build()
         .await
     {

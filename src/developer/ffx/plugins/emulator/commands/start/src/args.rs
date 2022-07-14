@@ -5,7 +5,7 @@
 use argh::FromArgs;
 use ffx_config::FfxConfigBacked;
 use ffx_core::ffx_command;
-use ffx_emulator_config::{AccelerationMode, EngineType, GpuType, NetworkingMode};
+use ffx_emulator_config::{AccelerationMode, GpuType, NetworkingMode};
 use std::path::PathBuf;
 
 #[ffx_command()]
@@ -59,9 +59,10 @@ pub struct StartCommand {
 
     /// emulation engine to use for this instance. Allowed values are "femu" which is based on
     /// Android Emulator, and "qemu" which uses the version of Qemu packaged with Fuchsia. Default
-    /// is "femu".
-    #[argh(option, default = "EngineType::Femu")]
-    pub engine: EngineType,
+    /// is "femu". This can be overridden by running `ffx config set emu.engine <type>`.
+    #[argh(option)]
+    #[ffx_config_default(key = "emu.engine", default = "femu")]
+    pub engine: Option<String>,
 
     /// GPU acceleration mode. Allowed values are "host", "guest", "swiftshader_indirect", or
     /// "auto". Default is "auto". Note: this is unused when using the "qemu" engine type. See

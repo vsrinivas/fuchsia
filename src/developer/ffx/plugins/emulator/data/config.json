@@ -1,5 +1,6 @@
 {
     "emu": {
+        "engine": "femu",
         "instance_dir": "$DATA/emu/instances",
         "kvm_path": "/dev/kvm",
         "start": {
