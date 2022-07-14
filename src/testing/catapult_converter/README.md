@@ -61,4 +61,4 @@ This is an optional parameter that the Catapult dashboard accepts:
 For more information on Catapult's format, see [How to Write
 Metrics](https://github.com/catapult-project/catapult/blob/HEAD/docs/how-to-write-metrics.md).
 
-[the Fuchsiaperf format]: /docs/development/benchmarking/fuchsiaperf_format.md
+[the Fuchsiaperf format]: /docs/development/performance/fuchsiaperf_format.md

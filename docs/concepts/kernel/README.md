@@ -63,5 +63,5 @@ This page is a non-comprehensive index of the zircon documentation.
 + [Memory usage analysis tools](/docs/development/kernel/memory/memory.md)
 + [Symbolizer](/docs/reference/kernel/symbolizer_markup.md)
 + [Relationship with LK](zx_and_lk.md)
-+ [Viewing microbenchmarks with Chromeperf](/docs/development/benchmarking/chromeperf_user_guide.md)
++ [Viewing microbenchmarks with Chromeperf](/docs/development/performance/chromeperf_user_guide.md)
 + [Avoiding a problem with the SYSRET instruction](sysret_problem.md)

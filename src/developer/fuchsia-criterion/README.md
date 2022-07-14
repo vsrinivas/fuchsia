@@ -58,5 +58,5 @@ allows you to replace Step 5 above with `fx shell criterion_bench`, and directly
 benchmark output to console.
 
 [Criterion benchmark suite]: https://github.com/bheisler/criterion.rs
-[Fuchsiaperf file format]: /docs/development/benchmarking/fuchsiaperf_format.md
+[Fuchsiaperf file format]: /docs/development/performance/fuchsiaperf_format.md
 [examples/main.rs]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/src/developer/fuchsia-criterion/examples/main.rs

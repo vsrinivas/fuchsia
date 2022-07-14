@@ -89,9 +89,9 @@ toc:
   - title: "Error codes"
     section:
     - include: /docs/development/error_codes/_toc.yaml
-- title: "Benchmark"
+- title: "Performance testing"
   section:
-  - include: /docs/development/benchmarking/_toc.yaml
+  - include: /docs/development/performance/_toc.yaml
 - title: "Debug"
   section:
   - include: /docs/development/debugging/_toc.yaml

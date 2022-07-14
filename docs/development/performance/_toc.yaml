@@ -7,6 +7,6 @@
 # team as reviewer.
 toc:
 - title: "Viewing Zircon microbenchmarks with Chromeperf"
-  path: /docs/development/benchmarking/chromeperf_user_guide.md
+  path: /docs/development/performance/chromeperf_user_guide.md
 - title: "Fuchsiaperf format for performance test results"
-  path: /docs/development/benchmarking/fuchsiaperf_format.md
+  path: /docs/development/performance/fuchsiaperf_format.md

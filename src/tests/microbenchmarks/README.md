@@ -42,4 +42,4 @@ There are two ways to run fuchsia_microbenchmarks:
   For this, run
   `run-test-component fuchsia-pkg://fuchsia.com/fuchsia_microbenchmarks#meta/fuchsia_microbenchmarks.cmx`.
 
-[Fuchsiaperf format]: /docs/development/benchmarking/fuchsiaperf_format.md
+[Fuchsiaperf format]: /docs/development/performance/fuchsiaperf_format.md

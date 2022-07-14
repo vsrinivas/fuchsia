@@ -8,6 +8,6 @@
 # Using ? or * is not supported in the redirect links.
 redirects:
 - from: /docs/development/benchmarking/catapult_user_guide.md
-  to: /docs/development/benchmarking/chromeperf_user_guide.md
+  to: /docs/development/performance/chromeperf_user_guide.md
 - from: /docs/development/benchmarking/results_schema.md
-  to: /docs/development/benchmarking/fuchsiaperf_format.md
+  to: /docs/development/performance/fuchsiaperf_format.md

@@ -65,4 +65,4 @@ In the profiler output, results are preceded by a legend describing the result f
 <!-- Reference links -->
 
 [perfcompare]: /src/testing/perfcompare/README.md
-[chromeperf]: /docs/development/benchmarking/chromeperf_user_guide.md
+[chromeperf]: /docs/development/performance/chromeperf_user_guide.md

@@ -54,4 +54,4 @@ You can view the test results from CI builds in [Chromeperf][chromeperf].
 [SL4F]: /docs/concepts/testing/sl4f.md
 [Inspect]: /docs/development/inspect/README.md
 [fuchsia_microbenchmarks]: /src/tests/microbenchmarks
-[chromeperf]: /docs/development/benchmarking/chromeperf_user_guide.md
+[chromeperf]: /docs/development/performance/chromeperf_user_guide.md
