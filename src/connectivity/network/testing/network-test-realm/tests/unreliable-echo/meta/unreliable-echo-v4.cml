@@ -4,6 +4,7 @@
 {
     include: [ "//src/connectivity/network/testing/network-test-realm/meta/stub-socket-client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/unreliable_echo",
         args: [ "4" ],
     },

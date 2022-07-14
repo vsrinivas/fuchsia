@@ -4,6 +4,7 @@
 {
     include: [ "//src/connectivity/network/netcfg/meta/common.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/netcfg_basic",
     },
 }

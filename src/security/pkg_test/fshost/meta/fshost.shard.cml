@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 {
     include: [
-        "//sdk/lib/inspect/client.shard.cml",
-        "//sdk/lib/syslog/client.shard.cml",
-        "//sdk/lib/syslog/elf_stdio.shard.cml",
         "//src/storage/testing/driver_test_realm/meta/client.shard.cml",
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
+        runner: "elf",
         binary: "bin/product_security_fshost",
 
         // Note: Manifests including this shard must provide args:

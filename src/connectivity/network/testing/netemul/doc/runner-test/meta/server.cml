@@ -4,9 +4,10 @@
 {
     include: [
         "//src/connectivity/network/testing/netemul/sync-manager/meta/client.shard.cml",
-        "syslog/elf_stdio.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
+        runner: "elf",
         binary: "bin/netemul_runner_test_server",
     },
     use: [

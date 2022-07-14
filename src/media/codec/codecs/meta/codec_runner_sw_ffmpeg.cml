@@ -5,7 +5,6 @@
     include: [
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
-        "syslog/elf_stdio.shard.cml",
     ],
     program: {
         runner: "elf",

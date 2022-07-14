@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [
-        // Enable logging on stdout
-        "syslog/elf_stdio.shard.cml",
-    ],
+    include: [ "syslog/client.shard.cml" ],
 
     // Information about the program to run.
     program: {

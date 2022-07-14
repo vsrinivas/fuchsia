@@ -5,9 +5,9 @@
     include: [
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
-        "syslog/elf_stdio.shard.cml",
     ],
     program: {
+        runner: "elf",
         binary: "bin/vulkan_loader",
     },
     collections: [

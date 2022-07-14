@@ -4,9 +4,10 @@
 {
     include: [
         "//src/connectivity/network/lib/net_interfaces/client.shard.cml",
-        "syslog/elf_stdio.shard.cml",
+        "syslog/client.shard.cml",
     ],
     program: {
+        runner: "elf",
         binary: "bin/mdns",
     },
     capabilities: [

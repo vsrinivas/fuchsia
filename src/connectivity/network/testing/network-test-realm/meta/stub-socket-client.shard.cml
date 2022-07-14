@@ -6,7 +6,7 @@
 //  - Forwards stdout and stderr streams to LogSink.
 //  - Routes the capabilities needed to create sockets.
 {
-    include: [ "syslog/elf_stdio.shard.cml" ],
+    include: [ "syslog/client.shard.cml" ],
     use: [
         {
             protocol: [

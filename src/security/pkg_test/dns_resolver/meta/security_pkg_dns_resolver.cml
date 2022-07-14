@@ -2,11 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [
-        "//sdk/lib/syslog/client.shard.cml",
-        "//sdk/lib/syslog/elf_stdio.shard.cml",
-    ],
+    include: [ "syslog/client.shard.cml" ],
     program: {
+        runner: "elf",
         binary: "bin/security_pkg_dns_resolver",
         args: [
             "--test-config-path",
