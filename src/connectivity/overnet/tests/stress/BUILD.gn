@@ -73,6 +73,10 @@ fuchsia_test_package("overnet-stress-test") {
     "//src/connectivity/overnet/overnetstack:component-with-udp",
     "//src/testing/fidl/proxy_stressor",
   ]
+
+  test_specs = {
+    parallel = 1
+  }
 }
 
 group("tests") {
