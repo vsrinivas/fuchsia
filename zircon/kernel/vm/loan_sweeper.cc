@@ -191,7 +191,7 @@ uint64_t LoanSweeper::SynchronousSweepInternal() {
       // vmo_backlink.offset is offset in cow
       zx_status_t replace_result =
           cow_container->ReplacePage(page, vmo_backlink.offset,
-                                     /*with_loaned=*/ppb_enabled ? true : false);
+                                     /*with_loaned=*/ppb_enabled ? true : false, nullptr);
       if (replace_result == ZX_ERR_NOT_FOUND) {
         // No longer owned by cow or no longer replaceable.  Go around again to figure out which and
         // continue chasing it down.  We limit the iteration count however, since it's not critical

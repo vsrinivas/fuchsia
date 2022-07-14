@@ -351,6 +351,14 @@ true, decommit on a contiguous VMO can work and return ZX_OK.  The pages are
 loaned to the rest of the system for potential borrowing.  If false, decommit
 will return ZX_ERR_NOT_SUPPORTED.
 
+### kernel.ppb.replace-on-unloan=\<bool>
+**Default:** `false`
+
+This controls what happens when a loaned page is re-committed to its original
+contiguous VMO. If false, the page is evicted from where it is loaned from,
+requiring that content to be faulted back in. If true, the contents are copied
+to a new page that is swapped in to replace the loaned page.
+
 ### kernel.render-dlog-to-crashlog=\<bool>
 **Default:** `false`
 

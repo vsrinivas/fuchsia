@@ -468,8 +468,8 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::ProcessQueueHelper(
           DEBUG_ASSERT(sweep_to_loaned[i].cow);
           // We ignore the return value because the page may have moved, become pinned, we may not
           // have any free loaned pages any more, or the VmCowPages may not be able to borrow.
-          sweep_to_loaned[i].cow->ReplacePage(sweep_to_loaned[i].page, sweep_to_loaned[i].offset,
-                                              /*with_loaned=*/true);
+          sweep_to_loaned[i].cow->ReplacePageWithLoaned(sweep_to_loaned[i].page,
+                                                        sweep_to_loaned[i].offset);
         }
       });
 
