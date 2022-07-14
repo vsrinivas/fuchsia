@@ -41,7 +41,6 @@ syslog_visibility_allowlist = [
   "//src/camera/drivers/controller:*",
   "//src/camera/drivers/hw_accel/gdc:*",
   "//src/camera/drivers/hw_accel/task:*",
-  "//src/sys/test_manager/debug_data_processor:*",
   "//src/devices/sysmem/bin/sysmem_connector:*",
   "//src/camera/drivers/test_utils:*",
   "//src/firmware/lib/fastboot:*",

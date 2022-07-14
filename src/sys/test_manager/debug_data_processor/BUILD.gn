@@ -44,7 +44,6 @@ executable("debug_data_processor_bin") {
     "//src/sys/test_manager/fidl/fuchsia.test.debug",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/syslog",
   ]
 }
 
