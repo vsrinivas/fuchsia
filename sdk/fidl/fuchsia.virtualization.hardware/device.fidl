@@ -8,6 +8,7 @@ using fuchsia.sysmem;
 using fuchsia.ui.composition;
 using fuchsia.ui.gfx;
 using fuchsia.ui.input;
+using fuchsia.ui.input3;
 using fuchsia.virtualization;
 using fuchsia.wayland;
 using zx;
@@ -122,7 +123,10 @@ protocol VirtioConsole {
 /// Provides a way for VirtioInput to listen to keyboard events.
 @discoverable
 protocol KeyboardListener {
+    compose fuchsia.ui.input3.KeyboardListener;
+
     /// Called when a view receives keyboard events.
+    @transitional
     OnKeyboardEvent(struct {
         event fuchsia.ui.input.KeyboardEvent;
     });

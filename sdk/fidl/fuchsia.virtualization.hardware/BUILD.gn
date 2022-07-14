@@ -16,6 +16,7 @@ fidl("fuchsia.virtualization.hardware") {
     "//sdk/fidl/fuchsia.ui.composition",
     "//sdk/fidl/fuchsia.ui.gfx",
     "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.input3",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/fidl/fuchsia.wayland",
   ]

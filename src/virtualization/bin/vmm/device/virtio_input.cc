@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/ui/input3/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fit/defer.h>
@@ -238,6 +239,11 @@ class EventStream : public StreamBase,
   size_t head_ = 0;
   size_t tail_ = 0;
   fuchsia::ui::gfx::vec3 view_size_ = {0, 0, 0};
+
+  // |fuchsia::ui::input3::KeyboardListener|
+  void OnKeyEvent(::fuchsia::ui::input3::KeyEvent event, OnKeyEventCallback callback) override {
+    FX_CHECK(false) << "VirtioInput does not support input3.KeyboardListener";
+  }
 
   // |fuchsia::virtualization::hardware::KeyboardListener|
   void OnKeyboardEvent(fuchsia::ui::input::KeyboardEvent event) override {

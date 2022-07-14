@@ -2,19 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod input_device;
 mod wire;
 
 use {
+    crate::input_device::InputDevice,
     anyhow::{anyhow, Context},
     fidl::endpoints::RequestStream,
-    fidl_fuchsia_virtualization_hardware::VirtioInputRequestStream,
+    fidl_fuchsia_virtualization_hardware::{
+        KeyboardListenerRequestStream, VirtioInputRequestStream,
+    },
     fuchsia_component::server,
-    futures::{StreamExt, TryFutureExt, TryStreamExt},
+    futures::{channel::mpsc, SinkExt, StreamExt, TryFutureExt, TryStreamExt},
+    std::cell::RefCell,
     tracing,
 };
 
 async fn run_virtio_input(
     mut virtio_input_fidl: VirtioInputRequestStream,
+    receiver: mpsc::Receiver<KeyboardListenerRequestStream>,
 ) -> Result<(), anyhow::Error> {
     // Receive start info as first message.
     let (start_info, responder) = virtio_input_fidl
@@ -40,24 +46,50 @@ async fn run_virtio_input(
     .await
     .context("Failed to initialize device.")?;
 
-    let _event_stream = device.take_stream(wire::EVENTQ)?;
-    let _status_stream = device.take_stream(wire::STATUSQ)?;
+    let mut input_device = InputDevice::new(
+        receiver,
+        device.take_stream(wire::EVENTQ)?,
+        device.take_stream(wire::STATUSQ)?,
+    );
     ready_responder.send()?;
 
-    futures::try_join!(device
-        .run_device_notify(virtio_device_fidl)
-        .map_err(|e| anyhow!("run_device_notify: {}", e)),)?;
+    futures::try_join!(
+        device
+            .run_device_notify(virtio_device_fidl)
+            .map_err(|e| anyhow!("run_device_notify: {}", e)),
+        input_device.run(),
+    )?;
     Ok(())
+}
+
+enum IncomingService {
+    VirtioInput(VirtioInputRequestStream),
+    KeyboardListener(KeyboardListenerRequestStream),
 }
 
 #[fuchsia::main(logging = true, threads = 1)]
 async fn main() -> Result<(), anyhow::Error> {
     let mut fs = server::ServiceFs::new();
-    fs.dir("svc").add_fidl_service(|stream: VirtioInputRequestStream| stream);
+    fs.dir("svc")
+        .add_fidl_service(IncomingService::VirtioInput)
+        .add_fidl_service(IncomingService::KeyboardListener);
     fs.take_and_serve_directory_handle().context("Error starting server")?;
-    fs.for_each_concurrent(None, |stream| async {
-        if let Err(e) = run_virtio_input(stream).await {
-            tracing::error!("Error running virtio_input service: {}", e);
+
+    let (sender, receiver) = mpsc::channel::<KeyboardListenerRequestStream>(1);
+    let receiver = RefCell::new(Some(receiver));
+    fs.for_each_concurrent(None, |service| async {
+        match service {
+            IncomingService::VirtioInput(stream) => {
+                if let Some(receiver) = receiver.borrow_mut().take() {
+                    if let Err(e) = run_virtio_input(stream, receiver).await {
+                        tracing::error!("Error running virtio_input service: {}", e);
+                    }
+                } else {
+                    tracing::error!("virtio-input supports only a single connection");
+                    return;
+                }
+            }
+            IncomingService::KeyboardListener(stream) => sender.clone().send(stream).await.unwrap(),
         }
     })
     .await;
