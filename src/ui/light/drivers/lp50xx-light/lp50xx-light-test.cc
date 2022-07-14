@@ -4,6 +4,7 @@
 
 #include "lp50xx-light.h"
 
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
@@ -15,17 +16,25 @@ namespace lp50xx_light {
 
 class Lp50xxLightTest : public Lp50xxLight {
  public:
-  Lp50xxLightTest(zx_device_t* parent) : Lp50xxLight(parent) {}
+  Lp50xxLightTest(zx_device_t* parent)
+      : Lp50xxLight(parent), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
   virtual zx_status_t InitHelper() {
-    auto proto = ddk::I2cProtocolClient(mock_i2c.GetProto());
-    i2c_ = std::move(proto);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+    if (endpoints.is_error()) {
+      return endpoints.error_value();
+    }
+
+    fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &mock_i2c);
+
+    i2c_ = std::move(endpoints->client);
 
     mock_i2c.ExpectWriteStop({0x00, 0x40}).ExpectWriteStop({0x01, 0x3C});
 
     pid_ = PDEV_PID_TI_LP5018;
     led_count_ = 6;
-    return ZX_OK;
+
+    return loop_.StartThread();
   }
 
   zx_status_t GetRgb(uint32_t index, fuchsia_hardware_light::wire::Rgb* rgb) {
@@ -39,6 +48,9 @@ class Lp50xxLightTest : public Lp50xxLight {
   void Verify() { mock_i2c.VerifyAndClear(); }
 
   mock_i2c::MockI2c mock_i2c;
+
+ private:
+  async::Loop loop_;
 };
 
 TEST(Lp50xxLightTest, InitTest) {

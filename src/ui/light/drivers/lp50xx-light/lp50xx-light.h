@@ -5,10 +5,9 @@
 #ifndef SRC_UI_LIGHT_DRIVERS_LP50XX_LIGHT_LP50XX_LIGHT_H_
 #define SRC_UI_LIGHT_DRIVERS_LP50XX_LIGHT_LP50XX_LIGHT_H_
 
+#include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
 #include <fidl/fuchsia.hardware.light/cpp/wire.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
-#include <fuchsia/hardware/i2c/cpp/banjo.h>
-#include <lib/device-protocol/i2c.h>
 #include <threads.h>
 
 #include <map>
@@ -85,7 +84,7 @@ class Lp50xxLight : public Lp50xxLightType, public ddk::EmptyProtocol<ZX_PROTOCO
   zx_status_t GetRgbValue(uint32_t index, fuchsia_hardware_light::wire::Rgb* rgb);
 
   uint32_t pid_ = 0;
-  ddk::I2cProtocolClient i2c_;
+  fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c_;
 
  private:
   friend class Lp50xxLightTest;

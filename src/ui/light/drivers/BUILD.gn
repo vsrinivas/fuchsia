@@ -6,6 +6,7 @@ group("light") {
   deps = [
     "aml-light",
     "gpio-light",
+    "lp50xx-light",
   ]
 }
 
@@ -14,5 +15,6 @@ group("tests") {
   deps = [
     "aml-light:tests",
     "gpio-light:tests",
+    "lp50xx-light",
   ]
 }
