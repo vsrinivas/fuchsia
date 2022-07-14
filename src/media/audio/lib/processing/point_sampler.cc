@@ -139,13 +139,13 @@ class PointSamplerImpl : public PointSampler {
 
 // Helper functions to expand the combinations of possible `PointSamplerImpl` configurations.
 template <typename SourceSampleType, size_t SourceChannelCount, size_t DestChannelCount>
-std::shared_ptr<Sampler> CreateWith() {
-  return std::make_shared<
+std::unique_ptr<Sampler> CreateWith() {
+  return std::make_unique<
       PointSamplerImpl<SourceSampleType, SourceChannelCount, DestChannelCount>>();
 }
 
 template <typename SourceSampleType, size_t SourceChannelCount>
-std::shared_ptr<Sampler> CreateWith(int64_t dest_channel_count) {
+std::unique_ptr<Sampler> CreateWith(int64_t dest_channel_count) {
   switch (dest_channel_count) {
     case 1:
       return CreateWith<SourceSampleType, SourceChannelCount, 1>();
@@ -170,7 +170,7 @@ std::shared_ptr<Sampler> CreateWith(int64_t dest_channel_count) {
 }
 
 template <typename SourceSampleType>
-std::shared_ptr<Sampler> CreateWith(int64_t source_channel_count, int64_t dest_channel_count) {
+std::unique_ptr<Sampler> CreateWith(int64_t source_channel_count, int64_t dest_channel_count) {
   // N -> N channel configuration.
   if (source_channel_count == dest_channel_count) {
     switch (source_channel_count) {
@@ -216,7 +216,7 @@ std::shared_ptr<Sampler> CreateWith(int64_t source_channel_count, int64_t dest_c
 
 }  // namespace
 
-std::shared_ptr<Sampler> PointSampler::Create(const Format& source_format,
+std::unique_ptr<Sampler> PointSampler::Create(const Format& source_format,
                                               const Format& dest_format) {
   TRACE_DURATION("audio", "PointSampler::Create");
 

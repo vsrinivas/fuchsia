@@ -9,6 +9,7 @@
 #include <optional>
 
 #include "src/media/audio/lib/format2/fixed.h"
+#include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/lib/processing/gain.h"
 
 namespace media_audio {
@@ -84,6 +85,20 @@ class Sampler {
     };
   };
 
+  // Sampler type.
+  enum class Type {
+    kDefault = 0,
+    kPointSampler = 1,
+    kSincSampler = 2,
+  };
+
+  // Creates an appropriate `Sampler` for a given `source_format` and `dest_format`. If a sampler
+  // `type` is specified explicitly (i.e. `type != Type::kDefault`), this will either return a
+  // `Sampler` of that requested `type`, or `nullptr` if a `Sampler` with that `type` cannot be
+  // created with the given configuration.
+  static std::unique_ptr<Sampler> Create(const Format& source_format, const Format& dest_format,
+                                         Type type = Type::kDefault);
+
   // Default destructor.
   virtual ~Sampler() = default;
 
@@ -94,6 +109,9 @@ class Sampler {
 
   // Processes `source` into `dest` with `gain`.
   virtual void Process(Source source, Dest dest, Gain gain, bool accumulate) = 0;
+
+  // Returns sampler type.
+  virtual Type type() const = 0;
 
   // Returns positive filter length in frames.
   Fixed pos_filter_length() const { return pos_filter_length_; }

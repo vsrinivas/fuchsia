@@ -6,12 +6,62 @@
 
 #include <vector>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
+#include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/lib/processing/gain.h"
 
 namespace media_audio {
 namespace {
+
+using ::fuchsia_mediastreams::wire::AudioSampleFormat;
+using ::testing::IsNull;
+using ::testing::NotNull;
+
+TEST(SamplerTest, CreateWithUnityRate) {
+  const Format source_format = Format::CreateOrDie({AudioSampleFormat::kSigned16, 1, 44100});
+  const Format dest_format = Format::CreateOrDie({AudioSampleFormat::kFloat, 2, 44100});
+
+  // Default should return a valid `PointSampler`.
+  const auto default_sampler = Sampler::Create(source_format, dest_format);
+  ASSERT_THAT(default_sampler, NotNull());
+  EXPECT_EQ(default_sampler->type(), Sampler::Type::kPointSampler);
+
+  // `kPointSampler` should return the same valid `PointSampler` as the default case.
+  const auto point_sampler =
+      Sampler::Create(source_format, dest_format, Sampler::Type::kPointSampler);
+  ASSERT_THAT(point_sampler, NotNull());
+  EXPECT_EQ(point_sampler->type(), Sampler::Type::kPointSampler);
+
+  // `kSincSampler` should return a valid `SincSampler` although not optimal in practice.
+  const auto sinc_sampler =
+      Sampler::Create(source_format, dest_format, Sampler::Type::kSincSampler);
+  ASSERT_THAT(sinc_sampler, NotNull());
+  EXPECT_EQ(sinc_sampler->type(), Sampler::Type::kSincSampler);
+}
+
+TEST(SamplerTest, CreateWithNonUnityRate) {
+  const Format source_format = Format::CreateOrDie({AudioSampleFormat::kFloat, 2, 8000});
+  const Format dest_format = Format::CreateOrDie({AudioSampleFormat::kFloat, 1, 44100});
+
+  // Default should return a valid `SincSampler`.
+  const auto default_sampler = Sampler::Create(source_format, dest_format);
+  ASSERT_THAT(default_sampler, NotNull());
+  EXPECT_EQ(default_sampler->type(), Sampler::Type::kSincSampler);
+
+  // `kPointSampler` should return `nullptr` since `PointSampler` is only supported for unity rates.
+  const auto point_sampler =
+      Sampler::Create(source_format, dest_format, Sampler::Type::kPointSampler);
+  EXPECT_THAT(point_sampler, IsNull());
+
+  // `kSincSampler` should return the same valid `SincSampler` as the default case.
+  const auto sinc_sampler =
+      Sampler::Create(source_format, dest_format, Sampler::Type::kSincSampler);
+  EXPECT_THAT(sinc_sampler, NotNull());
+  EXPECT_EQ(sinc_sampler->type(), Sampler::Type::kSincSampler);
+}
 
 TEST(SamplerTest, MixSampleSilent) {
   const std::vector<float> source_samples = {-0.5f, 0.25f, 1.0f, 2.0f};

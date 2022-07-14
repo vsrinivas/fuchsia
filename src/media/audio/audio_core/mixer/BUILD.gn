@@ -118,6 +118,8 @@ executable("mixer_death_unittest_bin") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
+    "//src/media/audio/lib/format2",
+    "//src/media/audio/lib/processing",
     "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
     "//third_party/googletest:gmock",
   ]

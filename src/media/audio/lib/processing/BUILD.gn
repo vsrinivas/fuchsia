@@ -47,6 +47,7 @@ source_set("sampler") {
     "point_sampler.h",
     "position_manager.cc",
     "position_manager.h",
+    "sampler.cc",
     "sampler.h",
     "sinc_sampler.cc",
     "sinc_sampler.h",
@@ -135,11 +136,11 @@ executable("unittest-bin") {
 
   deps = [
     ":coefficient_table",
+    ":prebuilt_coefficient_tables",
     ":processing",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/audio/lib/format2",
-    "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/trace",
   ]
