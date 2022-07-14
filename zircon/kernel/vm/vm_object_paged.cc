@@ -817,12 +817,6 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
         cow_pages_locked()->CommitRangeLocked(offset, len, &committed_len, &page_request);
     DEBUG_ASSERT(committed_len <= len);
 
-    // Regardless of the return state some pages may have been committed and so unmap any pages in
-    // the range we touched.
-    if (committed_len > 0) {
-      RangeChangeUpdateLocked(offset, committed_len, RangeChangeOp::Unmap);
-    }
-
     // Now we can exit if we received any error states.
     if (commit_status != ZX_OK && commit_status != ZX_ERR_SHOULD_WAIT) {
       return commit_status;
