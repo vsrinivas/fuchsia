@@ -47,4 +47,13 @@ if [[ "${script_dir}" != "${fuchsia_dir}"* ]]; then
   exit 1
 fi
 
+# This script is usually used to invoke `ffx` directly while in-tree without
+# explicitly wrapping it in `fx` (ie. `fx ffx --help`). If we don't set a
+# wrapper here, the `fx`'s ffx subscript will override it and produce confusing
+# help output.
+# So be explicit, and unless something else overrode this when invoking *this*
+# script, force our 'name' to just be `ffx`.
+FFX_WRAPPER_INVOKE=${FFX_WRAPPER_INVOKE:-ffx}
+export FFX_WRAPPER_INVOKE
+
 exec "${fuchsia_dir}"/scripts/fx ffx "$@"

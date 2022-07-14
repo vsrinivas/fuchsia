@@ -11,6 +11,13 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/va
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/updates.sh || exit $?
 fx-config-read
 
+# If this was invoked as `fx ffx`, we want the help output to say `fx ffx` instead
+# of just `ffx`, but if something that called this already overrode the wrapper name,
+# don't double-override it. Specifically, the .jiri_root/ffx script in most people's
+# environment will set it for us.
+FFX_WRAPPER_INVOKE=${FFX_WRAPPER_INVOKE:-fx ffx}
+export FFX_WRAPPER_INVOKE
+
 if is-remote-workflow-device; then
   fx-command-run host-tool ffx target add $(get-device-pair)
 fi
