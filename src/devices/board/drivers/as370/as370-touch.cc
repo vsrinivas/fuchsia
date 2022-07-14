@@ -18,7 +18,7 @@
 namespace board_as370 {
 
 static const zx_bind_inst_t ref_out_i2c_match[] = {
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_I2C),
+    BI_ABORT_IF(NE, BIND_FIDL_PROTOCOL, ZX_FIDL_PROTOCOL_I2C),
     BI_ABORT_IF(NE, BIND_I2C_BUS_ID, 0),
     BI_MATCH_IF(EQ, BIND_I2C_ADDRESS, 0x37),
 };
@@ -36,7 +36,7 @@ static const device_fragment_part_t ref_out_touch_gpio_fragment[] = {
 
 static const device_fragment_t controller_fragments[] = {
     {"i2c", countof(ref_out_i2c_fragment), ref_out_i2c_fragment},
-    {"gpio-touch", countof(ref_out_touch_gpio_fragment), ref_out_touch_gpio_fragment},
+    {"gpio", countof(ref_out_touch_gpio_fragment), ref_out_touch_gpio_fragment},
 };
 
 zx_status_t As370::TouchInit() {
@@ -73,6 +73,8 @@ zx_status_t As370::TouchInit() {
       .props_count = countof(props),
       .fragments = controller_fragments,
       .fragments_count = countof(controller_fragments),
+      .primary_fragment = "i2c",
+      .spawn_colocated = false,
       .metadata_list = as370_touch_metadata,
       .metadata_count = countof(as370_touch_metadata),
   };

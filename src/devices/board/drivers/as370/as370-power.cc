@@ -31,7 +31,7 @@ zx_device_prop_t power_domain_kBuckSoC_props[] = {
 };
 
 constexpr device_fragment_t power_domain_kBuckSoC_fragments[] = {
-    {"power", std::size(power_impl_fragment), power_impl_fragment},
+    {"power-impl", std::size(power_impl_fragment), power_impl_fragment},
 };
 
 static const power_domain_t power_domain_kBuckSoC[] = {
@@ -51,6 +51,8 @@ const composite_device_desc_t power_domain_kBuckSoC_desc = {
     .props_count = std::size(power_domain_kBuckSoC_props),
     .fragments = power_domain_kBuckSoC_fragments,
     .fragments_count = std::size(power_domain_kBuckSoC_fragments),
+    .primary_fragment = "power-impl",
+    .spawn_colocated = true,
     .metadata_list = power_domain_kBuckSoC_metadata,
     .metadata_count = std::size(power_domain_kBuckSoC_metadata),
 };
@@ -79,6 +81,8 @@ const composite_device_desc_t comp_desc = {
     .props_count = std::size(props),
     .fragments = fragments,
     .fragments_count = std::size(fragments),
+    .primary_fragment = "i2c",
+    .spawn_colocated = false,
     .metadata_list = nullptr,
     .metadata_count = 0,
 };
