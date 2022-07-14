@@ -8,7 +8,6 @@ group("fidl") {
   testonly = true
   deps = [
     ":app_client",
-    ":app_client_unittest",
     ":array_to_string",
     ":clone",
     ":environment",
@@ -17,7 +16,6 @@ group("fidl") {
     ":json_xdr_unittest_fidl",
     ":proxy",
     ":single_service_app",
-    ":test.modular.lib.fidl.appclient",
     ":unittests",
     ":view_host",
   ]
@@ -137,38 +135,10 @@ source_set("view_host") {
   ]
 }
 
-fidl("test.modular.lib.fidl.appclient") {
-  # TODO(fxbug.dev/35879): Remove lint exclusions by fixing known FIDL lint violations in this target
-  excluded_checks = [ "too-many-nested-libraries" ]
-
-  testonly = true
-
-  sources = [ "app_client_unittest.fidl" ]
-}
-
 group("unittests") {
   testonly = true
 
-  deps = [
-    ":app_client_unittest",
-    ":json_xdr_unittest",
-  ]
-}
-
-source_set("app_client_unittest") {
-  testonly = true
-
-  sources = [ "app_client_unittest.cc" ]
-
-  deps = [
-    ":app_client",
-    ":test.modular.lib.fidl.appclient",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//src/lib/fsl",
-    "//src/lib/testing/loop_fixture",
-    "//third_party/googletest:gtest",
-  ]
+  deps = [ ":json_xdr_unittest" ]
 }
 
 fidl("json_xdr_unittest_fidl") {
