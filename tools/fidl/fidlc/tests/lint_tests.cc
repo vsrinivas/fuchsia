@@ -121,4 +121,17 @@ alias unused = good_using.handle;
   ASSERT_WARNINGS(0, library, "");
 }
 
+// TODO(fxbug.dev/7807): Delete this test once new-types are supported.
+// This is a case where compilation would fail, but since the linter only operates on the parsed
+// raw AST, we would not yet know it. Thus, we expect compilation to fail, but linting to pass.
+TEST(LintTests, GoodIgnoreNewTypes) {
+  TestLibrary library(R"FIDL(
+library fuchsia.a;
+
+type TransactionId = uint64;
+)FIDL");
+  ASSERT_FALSE(library.Compile());
+  ASSERT_TRUE(library.Lint());
+}
+
 }  // namespace

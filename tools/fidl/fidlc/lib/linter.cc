@@ -532,8 +532,15 @@ Linter::Linter()
       [&linter = *this]
       //
       (const raw::TypeDecl& element) {
-        auto* inline_layout =
-            static_cast<raw::InlineLayoutReference*>(element.type_ctor->layout_ref.get());
+        auto* layout_ref = element.type_ctor->layout_ref.get();
+
+        // TODO(fxbug.dev/7807): Delete this check once new-types are supported. Instead, we should
+        // have new-type specific language to report the invalid naming case to the user.
+        if (layout_ref->kind == raw::LayoutReference::kNamed) {
+          return;
+        }
+
+        auto* inline_layout = static_cast<raw::InlineLayoutReference*>(layout_ref);
         std::string layout_kind = name_layout_kind(*inline_layout->layout);
         linter.CheckCase(layout_kind + "s", element.identifier, linter.invalid_case_for_decl_name(),
                          linter.decl_case_type_for_style());
