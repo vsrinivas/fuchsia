@@ -589,12 +589,6 @@ async fn device_control_create_interface<N: Netstack>(name: &str) {
 #[test_case(false; "no_detach")]
 #[test_case(true; "detach")]
 async fn device_control_owns_interfaces_lifetimes<N: Netstack>(name: &str, detach: bool) {
-    if detach && N::VERSION == NetstackVersion::Netstack3 {
-        // TODO(https://fxbug.dev/100867): Run this test when we support
-        // detaching.
-        return;
-    }
-
     let detach_str = if detach { "detach" } else { "no_detach" };
     let name = format!("{name}_{detach_str}");
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");

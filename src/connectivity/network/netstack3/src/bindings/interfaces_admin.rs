@@ -53,74 +53,67 @@ enum DeviceControlError {
 async fn run_device_control(
     ns: Netstack,
     device: fidl::endpoints::ClientEnd<fhardware_network::DeviceMarker>,
-    device_control: fnet_interfaces_admin::DeviceControlRequestStream,
+    req_stream: fnet_interfaces_admin::DeviceControlRequestStream,
 ) -> Result<(), DeviceControlError> {
     let worker = netdevice_worker::NetdeviceWorker::new(ns.ctx.clone(), device).await?;
     let handler = worker.new_handler();
     let worker_fut = worker.run().map_err(DeviceControlError::Worker);
     let stop_event = async_utils::event::Event::new();
-    let control_stream = device_control
-        .take_until(stop_event.wait_or_dropped())
-        .map_err(DeviceControlError::Fidl)
-        .try_filter_map(|req| match req {
-            fnet_interfaces_admin::DeviceControlRequest::CreateInterface {
-                port,
-                control,
-                options,
-                control_handle: _,
-            } => create_interface(
-                port,
-                control,
-                options,
-                &ns,
-                &handler,
-                stop_event.wait_or_dropped(),
-            ),
-            fnet_interfaces_admin::DeviceControlRequest::Detach { control_handle: _ } => {
-                todo!("https://fxbug.dev/100867 support detach");
-            }
-        });
+    let req_stream =
+        req_stream.take_until(stop_event.wait_or_dropped()).map_err(DeviceControlError::Fidl);
     futures::pin_mut!(worker_fut);
-    futures::pin_mut!(control_stream);
+    futures::pin_mut!(req_stream);
+    let mut detached = false;
     let mut tasks = futures::stream::FuturesUnordered::new();
     let res = loop {
-        let mut tasks_fut = if tasks.is_empty() {
-            futures::future::pending().left_future()
-        } else {
-            tasks.by_ref().next().right_future()
-        };
         let result = futures::select! {
-            r = control_stream.try_next() => r,
+            req = req_stream.try_next() => req,
             r = worker_fut => match r {
                 Ok(never) => match never {},
                 Err(e) => Err(e)
             },
-            ready_task = tasks_fut => {
+            ready_task = tasks.next() => {
                 let () = ready_task.unwrap_or_else(|| ());
                 continue;
             }
         };
         match result {
-            Ok(Some(task)) => tasks.push(task),
-            Ok(None) => break Ok(()),
+            Ok(None) => {
+                // The client hung up; stop serving if not detached.
+                if !detached {
+                    break Ok(());
+                }
+            }
+            Ok(Some(req)) => match req {
+                fnet_interfaces_admin::DeviceControlRequest::CreateInterface {
+                    port,
+                    control,
+                    options,
+                    control_handle: _,
+                } => {
+                    if let Some(interface_control_task) = create_interface(
+                        port,
+                        control,
+                        options,
+                        &ns,
+                        &handler,
+                        stop_event.wait_or_dropped(),
+                    )
+                    .await
+                    {
+                        tasks.push(interface_control_task);
+                    }
+                }
+                fnet_interfaces_admin::DeviceControlRequest::Detach { control_handle: _ } => {
+                    detached = true;
+                }
+            },
             Err(e) => break Err(e),
         }
     };
 
     // Send a stop signal to all tasks.
     assert!(stop_event.signal(), "event was already signaled");
-    match &res {
-        // Control stream has finished, don't need to drain it.
-        Ok(()) | Err(DeviceControlError::Fidl(_)) => (),
-        Err(DeviceControlError::Worker(_)) => {
-            // Drain control stream to make sure we have all the tasks. The stop
-            // trigger will make it stop operating on new requests.
-            control_stream
-                .try_for_each(|t| futures::future::ok(tasks.push(t)))
-                .await
-                .unwrap_or_else(|e| log::warn!("failed to accumulate remaining tasks: {:?}", e));
-        }
-    }
     // Run all the tasks to completion. We sent the stop signal, they should all
     // complete and perform interface cleanup.
     tasks.collect::<()>().await;
@@ -187,7 +180,7 @@ impl OwnedControlHandle {
 /// Operates a fuchsia.net.interfaces.admin/DeviceControl.CreateInterface
 /// request.
 ///
-/// Returns `Ok(Some(fuchsia_async::Task))` if an interface was created
+/// Returns `Some(fuchsia_async::Task)` if an interface was created
 /// successfully. The returned `Task` must be polled to completion and is tied
 /// to the created interface's lifetime.
 async fn create_interface(
@@ -197,7 +190,7 @@ async fn create_interface(
     ns: &Netstack,
     handler: &netdevice_worker::DeviceHandler,
     device_stopped_fut: async_utils::event::EventWaitResult,
-) -> Result<Option<fuchsia_async::Task<()>>, DeviceControlError> {
+) -> Option<fuchsia_async::Task<()>> {
     log::debug!("creating interface from {:?} with {:?}", port, options);
     let fnet_interfaces_admin::Options { name, metric: _, .. } = options;
     let (control_sender, mut control_receiver) =
@@ -207,13 +200,13 @@ async fn create_interface(
         .await
     {
         Ok((binding_id, status_stream)) => {
-            Ok(Some(fasync::Task::spawn(run_netdevice_interface_control(
+            Some(fasync::Task::spawn(run_netdevice_interface_control(
                 ns.ctx.clone(),
                 binding_id,
                 status_stream,
                 device_stopped_fut,
                 control_receiver,
-            ))))
+            )))
         }
         Err(e) => {
             log::warn!("failed to add port {:?} to device: {:?}", port, e);
@@ -268,7 +261,7 @@ async fn create_interface(
                     log::warn!("failed to send removed reason: {:?}", e);
                 });
             }
-            Ok(None)
+            None
         }
     }
 }
