@@ -150,8 +150,6 @@ const char* di_bind_param_name(uint32_t param_num) {
       return "PCI.DID";
     case BIND_PCI_CLASS:
       return "PCI.Class";
-    case BIND_PCI_COMPONENT:
-      return "PCI.Component";
     case BIND_PCI_SUBCLASS:
       return "PCI.Subclass";
     case BIND_PCI_INTERFACE:

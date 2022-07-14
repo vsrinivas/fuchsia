@@ -70,7 +70,6 @@ __BEGIN_CDECLS
 #define BIND_PCI_SUBCLASS 0x0103
 #define BIND_PCI_INTERFACE 0x0104
 #define BIND_PCI_REVISION 0x0105
-#define BIND_PCI_COMPONENT 0x0106
 #define BIND_PCI_TOPO 0x0107
 
 #define BIND_PCI_TOPO_PACK(bus, dev, func) (((bus) << 8) | (dev << 3) | (func))
@@ -142,7 +141,6 @@ __BEGIN_CDECLS
 #define BIND_CLOCK_ID 0x0A30
 
 // SPI binding variables at 0x0A4X
-#define BIND_SPI_CLASS 0x0A40
 #define BIND_SPI_BUS_ID 0x0A41
 #define BIND_SPI_CHIP_SELECT 0x0A42
 

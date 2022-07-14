@@ -226,7 +226,6 @@ fn deprecated_keys() -> Vec<(String, u32)> {
     keys.push(("BIND_PCI_SUBCLASS".to_string(), 0x0103));
     keys.push(("BIND_PCI_INTERFACE".to_string(), 0x0104));
     keys.push(("BIND_PCI_REVISION".to_string(), 0x0105));
-    keys.push(("BIND_PCI_COMPONENT".to_string(), 0x0106));
     keys.push(("BIND_PCI_TOPO".to_string(), 0x0107));
 
     // usb binding variables at 0x02XX
@@ -293,7 +292,6 @@ fn deprecated_keys() -> Vec<(String, u32)> {
     keys.push(("BIND_CLOCK_ID".to_string(), 0x0A30));
 
     // SPI binding variables at 0x0A4X
-    keys.push(("BIND_SPI_CLASS".to_string(), 0x0A40));
     keys.push(("BIND_SPI_BUS_ID".to_string(), 0x0A41));
     keys.push(("BIND_SPI_CHIP_SELECT".to_string(), 0x0A42));
 
