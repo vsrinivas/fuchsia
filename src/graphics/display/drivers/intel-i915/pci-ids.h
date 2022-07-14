@@ -8,6 +8,18 @@
 #include <stdint.h>
 #include <zircon/assert.h>
 
+// PCI Device ID sources.
+//
+// Skylake: IHD-OS-SKL-Vol 4-05.16 page 11 and page 12
+// Kaby Lake: IHD-OS-KBL-Vol 4-1.17 page 10
+// Tiger Lake: IHD-OS-TGL-Vol 4-12.21 page 9
+//
+// Other lines that use Kaby Lake graphics:
+// * Coffee Lake: IHD-OS-CFL-Vol 1-1.20 page 10
+// * Amber Lake: IHD-OS-AML-Vol 1-1.20 pages 9-10
+// * Whiskey Lake: IHD-OS-WHL-Vol 1-1.20 page 7
+// * Comet Lake: IHD-OS-CML-Vol 1-4.20 pages 9-10
+
 namespace i915 {
 
 constexpr bool is_skl(uint16_t device_id) { return (device_id & 0xff00) == 0x1900; }

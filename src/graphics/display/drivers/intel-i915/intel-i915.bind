@@ -7,36 +7,42 @@ using fuchsia.pci;
 
 fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
 fuchsia.BIND_PCI_VID == fuchsia.pci.BIND_PCI_VID.INTEL;
-accept fuchsia.BIND_PCI_DID {
-  // Skylake DIDs
-  0x191b,
-  0x1912,
-  0x191d,
-  0x1902,
-  0x1916,
-  0x191e,
-  0x1906,
-  0x190b,
-  0x1926,
-  0x1927,
-  0x1923,
-  0x193b,
-  0x192d,
-  0x193d,
 
-  // Kaby lake DIDs
-  0x5916,
-  0x591c,
-  0x591e,
-  0x591b,
-  0x5912,
-  0x5926,
-  0x5906,
-  0x5927,
-  0x5902,
-  0x591a,
-  0x591d,
-  0x3ea5,
+accept fuchsia.BIND_PCI_DID {
+  // Skylake device IDs: IHD-OS-SKL-Vol 4-05.16 page 11 and page 12
+  0x191b,  // SKL 4+2 DT - GT2
+  0x1912,  // SKL 2+2 / 4+2 DT - GT2
+  0x191d,  // SKL WKS 4+2 - GT2
+  0x1902,  // SKL 2+1F DT - GT 1F
+  0x1916,  // SKL U - ULT 2+2 - GT2
+  0x191e,  // SKL Y - ULX 2+2 - GT2
+  0x1906,  // SKL U - ULT 2+1F - GT 1F
+  0x190b,  // SKL H - 4+1F - GT1F
+  0x1926,  // SKL U - ULT 2+3E (15W) - GT3e
+  0x1927,  // SKL U - ULT 2+3E (28W) - GT3e
+  0x1923,  // SKL U - ULT 2+3 - GT3
+  0x193b,  // SKL H - Halo 4+4E - GT4e
+  0x192d,  // SKL Media Server 4+3FE - GT3e
+  0x193d,  // SKL WKS 4+4E - GT4e
+
+  // Kaby Lake device IDs: IHD-OS-KBL-Vol 4-1.17 page 10
+  0x5916,  // KBL-U 2+2 - GT2
+  0x591e,  // KBL-Y 2+2 - GT2
+  0x591b,  // KBL-H 4+2 - GT2
+  0x5912,  // KBL-S 4+2 - GT2
+  0x5926,  // KBL-U 2+3 - GT3
+  0x5906,  // KBL-U ULT2+1F - GT1
+  0x5927,  // KBL-U ULT2+3E, 28W - GT3
+  0x5902,  // KBL DT 2+1F - GT1
+  0x591a,  // KBL SRV 4+2 - GT2
+  0x591d,  // KBL WKS 4+2 - GT2
+
+  // Amber Lake device IDs: IHD-OS-AML-Vol 1-1.20 page 9
+  0x591c,  // AML Y22
+
+  // Coffee Lake device IDs: IHD-OS-CFL-Vol 1-1.20 pages 10-11
+  // Cofee Lake uses the same graphics and display engines as Kaby Lake.
+  0x3ea5,  // CFL-U 43e
 }
 
 if fuchsia.BIND_COMPOSITE == 1 {
