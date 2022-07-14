@@ -298,6 +298,7 @@ executable("device_tests") {
     ":lib",
     ":magma_image",
     "//sdk/fidl/fuchsia.hardware.network",
+    "//sdk/fidl/fuchsia.input",
     "//sdk/fidl/fuchsia.logger",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.net.interfaces",
