@@ -64,11 +64,15 @@ fn timestamp_to_partial_secs(ts: i64) -> f64 {
 
 fn severity_to_color_str(s: Severity) -> String {
     match s {
+        Severity::Fatal => format!("{}{}", color::Bg(color::Red), color::Fg(color::White)),
         Severity::Error => color::Fg(color::Red).to_string(),
         Severity::Warn => color::Fg(color::Yellow).to_string(),
-        _ => "".to_string(),
+        Severity::Info => String::new(),
+        Severity::Debug => color::Fg(color::LightBlue).to_string(),
+        Severity::Trace => color::Fg(color::LightMagenta).to_string(),
     }
 }
+
 fn format_ffx_event(msg: &str, timestamp: Option<Timestamp>) -> String {
     let ts: i64 = timestamp.unwrap_or_else(|| get_timestamp().unwrap()).into();
     let dt = Local
@@ -431,16 +435,14 @@ impl<'a> DefaultLogFormatter<'a> {
 
         let severity_str = &format!("{}", data.metadata.severity)[..1];
         format!(
-            "[{}]{}[{}]{}[{}{}{}]{} {}{}{}{}",
+            "{}[{}]{}[{}]{}[{}]{} {}{}{}",
+            color_str,
             ts,
             process_info_str,
             moniker,
             tags_str,
-            color_str,
             severity_str,
-            reset_str,
             file_info_str,
-            color_str,
             msg,
             kvps,
             reset_str
@@ -1775,7 +1777,7 @@ mod test {
             DisplayOption::Text(options) => {
                 assert_eq!(
                     formatter.format_target_log_data(&options, logs_data(), None),
-                    "[1615535969.000][moniker][\u{1b}[38;5;3mW\u{1b}[m] \u{1b}[38;5;3mmessage\u{1b}[m"
+                    "\u{1b}[38;5;3m[1615535969.000][moniker][W] message\u{1b}[m"
                 );
             }
             DisplayOption::Json => unreachable!("The default display option must be Text"),
