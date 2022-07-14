@@ -29,7 +29,7 @@ copy("copy_benchmark_component_analysis_options") {
 
 dart_test_component("benchmark-component") {
   component_name = "dart-fidl-benchmarks"
-  manifest = "meta/dart-fidl-benchmarks.cmx"
+  manifest = "meta/dart-fidl-benchmarks.cml"
   package_root = benchmark_dir
   sources = [ benchmark_file ]
   deps = [
