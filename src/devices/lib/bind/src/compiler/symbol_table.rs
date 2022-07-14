@@ -263,14 +263,6 @@ fn deprecated_keys() -> Vec<(String, u32)> {
     // NAND binding variables at 0x07XX
     keys.push(("BIND_NAND_CLASS".to_string(), 0x0700));
 
-    // Bluetooth binding variables at 0x08XX
-    keys.push(("BIND_BT_GATT_SVC_UUID16".to_string(), 0x0800));
-    // 128-bit UUID is split across 4 32-bit unsigned ints
-    keys.push(("BIND_BT_GATT_SVC_UUID128_1".to_string(), 0x0801));
-    keys.push(("BIND_BT_GATT_SVC_UUID128_2".to_string(), 0x0802));
-    keys.push(("BIND_BT_GATT_SVC_UUID128_3".to_string(), 0x0803));
-    keys.push(("BIND_BT_GATT_SVC_UUID128_4".to_string(), 0x0804));
-
     // SDIO binding variables at 0x09XX
     keys.push(("BIND_SDIO_VID".to_string(), 0x0900));
     keys.push(("BIND_SDIO_PID".to_string(), 0x0901));
