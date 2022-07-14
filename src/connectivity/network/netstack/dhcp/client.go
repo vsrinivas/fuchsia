@@ -424,7 +424,7 @@ func (c *Client) Run(ctx context.Context) (rtn tcpip.AddressWithPrefix) {
 				}
 			}
 
-			c.assign(ctx, &info, info.Acquired, cfg, txnStart)
+			c.assign(ctx, &info, info.Acquired, &cfg, txnStart)
 
 			return nil
 		}(); err != nil {
@@ -506,19 +506,19 @@ func (c *Client) lost(ctx context.Context, lost tcpip.AddressWithPrefix) {
 	c.acquired(ctx, lost, tcpip.AddressWithPrefix{}, Config{})
 }
 
-func (c *Client) assign(ctx context.Context, info *Info, acquired tcpip.AddressWithPrefix, config Config, now time.Time) {
+func (c *Client) assign(ctx context.Context, info *Info, acquired tcpip.AddressWithPrefix, config *Config, now time.Time) {
 	prevAssigned := c.updateInfo(info, acquired, config, now, bound)
-	c.acquired(ctx, prevAssigned, acquired, config)
+	c.acquired(ctx, prevAssigned, acquired, *config)
 }
 
-func (c *Client) updateInfo(info *Info, acquired tcpip.AddressWithPrefix, config Config, now time.Time, state dhcpClientState) tcpip.AddressWithPrefix {
+func (c *Client) updateInfo(info *Info, acquired tcpip.AddressWithPrefix, config *Config, now time.Time, state dhcpClientState) tcpip.AddressWithPrefix {
 	config.UpdatedAt = now
 	prevAssigned := info.Assigned
 	info.Assigned = acquired
 	info.LeaseExpiration = now.Add(config.LeaseLength.Duration())
 	info.RenewTime = now.Add(config.RenewTime.Duration())
 	info.RebindTime = now.Add(config.RebindTime.Duration())
-	info.Config = config
+	info.Config = *config
 	info.State = state
 	c.StoreInfo(info)
 	return prevAssigned
@@ -562,7 +562,7 @@ func (c *Client) cleanup(info *Info, nicName string, release bool) tcpip.Address
 		}
 	}
 
-	return c.updateInfo(info, tcpip.AddressWithPrefix{}, Config{}, time.Time{}, info.State)
+	return c.updateInfo(info, tcpip.AddressWithPrefix{}, &Config{}, time.Time{}, info.State)
 }
 
 const maxBackoff = 64 * time.Second

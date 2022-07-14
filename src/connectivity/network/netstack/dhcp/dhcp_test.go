@@ -2323,11 +2323,16 @@ func TestClientUpdateInfo(t *testing.T) {
 			t.Errorf("cfg.UpdatedAt=%d, want=%d", cfg.UpdatedAt, offeredAt)
 		}
 	}
-	state := bound
 	cfg := Config{LeaseLength: defaultLeaseLength, RenewTime: renewTime, RebindTime: rebindTime}
 	info := c.Info()
-	c.updateInfo(&info, acquired, cfg, offeredAt, state)
+	c.assign(context.Background(), &info, acquired, &cfg, offeredAt)
 	info = c.Info()
+	if cfg.UpdatedAt != offeredAt {
+		t.Errorf("cfg.UpdatedAt=%s, want=%s", cfg.UpdatedAt, offeredAt)
+	}
+	if diff := cmp.Diff(cfg, info.Config, cmp.AllowUnexported(time.Time{})); diff != "" {
+		t.Errorf("-want +got: %s", diff)
+	}
 	if info.Assigned != acquired {
 		t.Errorf("info.Assigned=%s, want=%s", info.Assigned, acquired)
 	}
@@ -2340,7 +2345,7 @@ func TestClientUpdateInfo(t *testing.T) {
 	if want := offeredAt.Add(rebindTime.Duration()); info.RebindTime != want {
 		t.Errorf("info.RebindTime=%s, want=%s", info.RebindTime, want)
 	}
-	if info.State != state {
-		t.Errorf("info.State=%s, want=%s", info.State, state)
+	if want := bound; info.State != want {
+		t.Errorf("info.State=%s, want=%s", info.State, want)
 	}
 }
