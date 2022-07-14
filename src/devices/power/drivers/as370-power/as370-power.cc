@@ -290,6 +290,7 @@ zx_status_t As370Power::InitializeProtocols(fidl::ClientEnd<fuchsia_hardware_i2c
     return status;
   }
 
+  *i2c = std::move(endpoints->client);
   return ZX_OK;
 }
 
