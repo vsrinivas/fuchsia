@@ -13,3 +13,10 @@ cts_fidl("test.unknown.interactions") {
   sources = [ "unknown_interactions.test.fidl" ]
   experimental_flags = [ "unknown_interactions" ]
 }
+
+cts_fidl("test.protocol.connector") {
+  testonly = true
+  dest = "pkg/fidl_test_support/protocol_connector_tests"
+
+  sources = [ "protocol_connector.test.fidl" ]
+}

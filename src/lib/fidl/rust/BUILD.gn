@@ -43,6 +43,7 @@ group("tests") {
     ":fidl_rust_conformance_tests_bin($host_toolchain)",
     "external_tests",
     "fidl:tests",
+    "fidl-contrib:tests",
     "handle_tests",
   ]
 }
