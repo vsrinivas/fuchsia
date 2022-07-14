@@ -62,6 +62,32 @@ def files_match(file1: str, file2: str):
     # filecmp.cmp does not invoke any subprocesses.
     return filecmp.cmp(file1, file2, shallow=False)
 
+def ensure_file_exists(path):
+    """Assert that a file exists, or wait for it to appear.
+
+    It has been shown that some fault tolerance is needed
+    regarding expecting files to be produced by a subprocess.
+
+    Args:
+      path: path to file that is expected to exist.
+
+    Raises:
+      FileNotFoundError if path does not exist, even after waiting.
+    """
+    for delay in (3, 6, 15):
+        if os.path.exists(path):
+            return
+
+        # This branch should be highly unlikely, so it is allowed to be slow.
+        # Either the original command failed to produce this file, or something
+        # could be wrong with file system synchronization or delays.
+        # Flush writes, sleep, try again.
+        print(f"[{_SCRIPT_BASENAME}] Expected output file not found: {path} (Waiting {delay}s ...)")
+        os.sync()
+        time.sleep(delay)
+
+    raise FileNotFoundError(f"[{_SCRIPT_BASENAME}] *** Expected output file not found: {path}")
+
 def move_if_different(src: str, dest: str, verbose: bool = False) -> bool:
     """Moves src -> dest if their contents differ.
 
@@ -70,24 +96,11 @@ def move_if_different(src: str, dest: str, verbose: bool = False) -> bool:
       dest: destination path
       verbose: if True, print whether a move actually happened.
 
-    Raises:
-      FileNotFoundError if src does not exist.
-
     Returns:
       True if move occurred,
       False if the destination already matches source.
     """
-    if not os.path.exists(src):
-        # This branch should be highly unlikely, so it is allowed to be slow.
-        # Either the original command failed to produce this file, or something
-        # could be wrong with file system synchronization or delays.
-        # Flush writes, sleep, try again.
-        print(f"[{_SCRIPT_BASENAME}] Expected output file not found: {src} (Waiting a bit ...)")
-        os.sync()
-        time.sleep(3)
-        # Recheck for existence.
-        if not os.path.exists(src):
-          raise FileNotFoundError(f"[{_SCRIPT_BASENAME}] *** Expected output file not found: {src}")
+    ensure_file_exists(src)
     if not os.path.exists(dest) or not files_match(dest, src):
         if verbose:
             print(f"  === Updated: {dest}")

@@ -6,6 +6,7 @@
 import os
 import shutil
 import subprocess
+import time
 import unittest
 from unittest import mock
 
@@ -148,6 +149,33 @@ class LexicallyRewriteTokenTest(unittest.TestCase):
                 '--foo=file1,file2', transform), '--foo=tmp-file1,tmp-file2')
 
 
+class EnsureFileExists(unittest.TestCase):
+
+    def test_file_exists(self):
+        with mock.patch.object(os.path, "exists",
+                               return_value=True) as mock_exists:
+            output_cacher.ensure_file_exists("some/file.txt")
+        mock_exists.assert_called()
+        # just make sure no exception raised
+
+    def test_file_not_exists(self):
+        with mock.patch.object(os.path, "exists",
+                               return_value=False) as mock_exists:
+            with mock.patch.object(time, "sleep") as mock_sleep:
+                with self.assertRaises(FileNotFoundError):
+                    output_cacher.ensure_file_exists("not/a/file.txt")
+        mock_exists.assert_called()
+
+    def test_file_exists_later(self):
+        with mock.patch.object(os.path, "exists",
+                               side_effect=[False, True]) as mock_exists:
+            with mock.patch.object(time, "sleep") as mock_sleep:
+                output_cacher.ensure_file_exists("late/file.txt")
+        mock_exists.assert_called()
+        mock_sleep.assert_called()
+        # just make sure no exception raised
+
+
 class MoveIfDifferentTests(unittest.TestCase):
 
     def test_nonexistent_source(self):
@@ -155,9 +183,10 @@ class MoveIfDifferentTests(unittest.TestCase):
                                return_value=False) as mock_exists:
             with mock.patch.object(shutil, "move") as mock_move:
                 with mock.patch.object(os, "remove") as mock_remove:
-                    with self.assertRaises(FileNotFoundError):
-                        output_cacher.move_if_different(
-                            "source.txt", "dest.txt")
+                    with mock.patch.object(time, "sleep") as mock_sleep:
+                        with self.assertRaises(FileNotFoundError):
+                            output_cacher.move_if_different(
+                                "source.txt", "dest.txt")
         mock_exists.assert_called()
         mock_move.assert_not_called()
         mock_remove.assert_not_called()
@@ -205,8 +234,11 @@ class MoveIfDifferentTests(unittest.TestCase):
                                    return_value=True) as mock_diff:
                 with mock.patch.object(shutil, "move") as mock_move:
                     with mock.patch.object(os, "remove") as mock_remove:
-                        moved = output_cacher.move_if_different(
-                            "source.txt", "dest.txt")
+                        with mock.patch.object(
+                                output_cacher,
+                                "ensure_file_exists") as mock_exists:
+                            moved = output_cacher.move_if_different(
+                                "source.txt", "dest.txt")
         self.assertFalse(moved)
         mock_exists.assert_called()
         mock_diff.assert_called()
