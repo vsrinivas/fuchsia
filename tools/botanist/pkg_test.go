@@ -97,8 +97,8 @@ func TestPackageServer(t *testing.T) {
 
 			// Override the GCS reader to effectively return a 404 unless the
 			// test case overrides it below.
-			getGCSReader = func(_ context.Context, _ *storage.Client, _, _ string) (io.ReadCloser, error) {
-				return nil, storage.ErrObjectNotExist
+			getGCSReader = func(_ context.Context, _ *storage.Client, _, _ string) (io.ReadCloser, int, error) {
+				return nil, 0, storage.ErrObjectNotExist
 			}
 
 			// Add any contents to the repo (both locally and in the "remote")
@@ -110,9 +110,9 @@ func TestPackageServer(t *testing.T) {
 						t.Fatalf("WriteFile(%s, %s) failed; got %s, want <nil> error", localPath, tc.wantContents, err)
 					}
 				} else {
-					getGCSReader = func(_ context.Context, _ *storage.Client, _, _ string) (io.ReadCloser, error) {
+					getGCSReader = func(_ context.Context, _ *storage.Client, _, _ string) (io.ReadCloser, int, error) {
 						r := strings.NewReader(tc.wantContents)
-						return io.NopCloser(r), nil
+						return io.NopCloser(r), len(tc.wantContents), nil
 					}
 				}
 			}

@@ -49,10 +49,18 @@ type downloadRecord struct {
 	Size int `json:"size"`
 }
 
-func getGCSReaderImpl(ctx context.Context, client *storage.Client, bucket, path string) (io.ReadCloser, error) {
+func getGCSReaderImpl(ctx context.Context, client *storage.Client, bucket, path string) (io.ReadCloser, int, error) {
 	bkt := client.Bucket(bucket)
 	obj := bkt.Object(path)
-	return gcsutil.NewObjectReader(ctx, obj)
+	attrs, err := obj.Attrs(ctx)
+	if err != nil {
+		return nil, 0, err
+	}
+	r, err := gcsutil.NewObjectReader(ctx, obj)
+	if err != nil {
+		return nil, 0, err
+	}
+	return r, int(attrs.Size), nil
 }
 
 // cachedPkgRepo is a custom HTTP handler that acts as a GCS redirector with a
@@ -104,24 +112,17 @@ func (c *cachedPkgRepo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	localPath := path.Join(c.repoPath, r.URL.Path)
 
 	// If the requested path does not exist locally, fetch it from GCS.
+	// Otherwise, serve the blob from the cache.
 	if _, err := os.Stat(localPath); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			statusCode, err := c.fetchFromGCS(r.Context(), r.URL, localPath)
-			if err != nil {
-				c.logf("failed to fetch %s from GCS: %s", r.URL.Path, err)
-				w.WriteHeader(statusCode)
-				return
-			}
-		} else {
+		if !errors.Is(err, os.ErrNotExist) {
 			c.logf("failed to stat %s: %s", localPath, err)
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		c.fetchFromGCS(w, r, localPath)
+	} else {
+		c.fileServer.ServeHTTP(w, r)
 	}
-
-	// Once we've asserted that the blob exists locally, redirect the request
-	// to the file server.
-	c.fileServer.ServeHTTP(w, r)
 
 	// Update the serving metrics.
 	if length := w.Header().Get("Content-Length"); length != "" {
@@ -135,47 +136,59 @@ func (c *cachedPkgRepo) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	c.serveTimeSec += time.Since(startTime).Seconds()
 }
 
-func (c *cachedPkgRepo) fetchFromGCS(ctx context.Context, resource *url.URL, localPath string) (int, error) {
+func (c *cachedPkgRepo) fetchFromGCS(w http.ResponseWriter, r *http.Request, localPath string) {
 	startTime := time.Now()
+	// Parse the GCS bucket from the URL.
 	var bucket string
-	if strings.HasPrefix(resource.Path, "/repository") {
+	if strings.HasPrefix(r.URL.Path, "/repository") {
 		bucket = c.repoURL.Host
-	} else if strings.HasPrefix(resource.Path, "/blobs") {
+	} else if strings.HasPrefix(r.URL.Path, "/blobs") {
 		bucket = c.blobURL.Host
 	} else {
-		return http.StatusBadRequest, fmt.Errorf("unsupported path: %s", resource.Path)
+		w.WriteHeader(http.StatusBadRequest)
+		return
 	}
 
-	resourcePath := strings.TrimLeft(resource.Path, "/")
-	r, err := getGCSReader(ctx, c.gcsClient, bucket, resourcePath)
+	// Retrieve a GCS reader from the bucket.
+	resourcePath := strings.TrimLeft(r.URL.Path, "/")
+	gcsRdr, size, err := getGCSReader(r.Context(), c.gcsClient, bucket, resourcePath)
 	if err != nil {
 		if errors.Is(err, storage.ErrObjectNotExist) {
-			return http.StatusNotFound, err
+			w.WriteHeader(http.StatusNotFound)
+		} else {
+			c.logf("failed to get GCS reader: %s", err)
+			w.WriteHeader(http.StatusInternalServerError)
 		}
-		return http.StatusInternalServerError, err
+		return
 	}
-	defer r.Close()
+	defer gcsRdr.Close()
 
-	w, err := os.Create(localPath)
+	// Create a locally cached copy for future requests to use.
+	f, err := os.Create(localPath)
 	if err != nil {
-		return http.StatusInternalServerError, err
+		c.logf("failed to create local blob %s: %s", localPath, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
-	defer w.Close()
+	defer f.Close()
 
-	size, err := io.Copy(w, r)
-	if err != nil {
-		return http.StatusInternalServerError, err
+	// Copy the blob from the remote to both the client and the cache.
+	w.Header().Set("Content-Length", strconv.Itoa(size))
+	mw := io.MultiWriter(w, f)
+	if _, err := io.Copy(mw, gcsRdr); err != nil {
+		c.logf("failed to copy blob %s: %s", localPath, err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	// Update metrics and download records.
 	dr := downloadRecord{
 		Path: resourcePath,
-		Size: int(size),
+		Size: size,
 	}
 	c.downloadManifest = append(c.downloadManifest, dr)
 	c.gcsFetchTimeSec += time.Since(startTime).Seconds()
-	c.totalBytesFetched += int(size)
-	return http.StatusOK, nil
+	c.totalBytesFetched += size
 }
 
 func (c *cachedPkgRepo) writeDownloadManifest(path string) error {
