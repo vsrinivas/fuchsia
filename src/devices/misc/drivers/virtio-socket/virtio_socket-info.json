@@ -1,9 +1,0 @@
-{
-    "short_description": "Virtio emulation socket driver",
-    "manufacturer": "",
-    "families": [],
-    "models": [],
-    "areas": [
-        "Misc"
-    ]
-}

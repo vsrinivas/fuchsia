@@ -152,7 +152,6 @@
 //src/devices/misc/drivers/test-parent:test-parent-sys_driver
 //src/devices/misc/drivers/test:test-driver
 //src/devices/misc/drivers/virtio-rng:virtio_rng-driver
-//src/devices/misc/drivers/virtio-socket:virtio_socket-driver
 //src/devices/ml/drivers/aml-nna:aml-nna-driver
 //src/devices/ml/drivers/usb-harriet:usb-harriet-driver
 //src/devices/nand/drivers/aml-rawnand:aml-rawnand-driver

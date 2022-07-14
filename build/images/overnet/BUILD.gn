@@ -35,7 +35,6 @@ assembled_system("overnet") {
     "//src/sys/pkg/bin/system-updater",
     "//src/sys/pkg/bin/system-update-checker",
     "//src/sys/pkg/bin/system-update-committer",
-    "//src/zircon/bin/vsock_service:vsock_service",
   ]
   bootfs_labels = [
     ":root",

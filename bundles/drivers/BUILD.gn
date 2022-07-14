@@ -76,7 +76,6 @@ group("pci") {
     "//src/devices/block/drivers/virtio:virtio_block",
     "//src/devices/i2c/drivers/intel-i2c:intel-i2c",
     "//src/devices/misc/drivers/virtio-rng:virtio_rng",
-    "//src/devices/misc/drivers/virtio-socket:virtio_socket",
     "//src/devices/serial/drivers/virtio-console:virtio_console",
     "//src/devices/usb/drivers/xhci:xhci",
     "//src/graphics/display/drivers/intel-i915:intel-i915",

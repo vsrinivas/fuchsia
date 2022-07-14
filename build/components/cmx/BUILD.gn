@@ -642,7 +642,6 @@ group("cmx_allowlist") {
     "//src/zircon/bin/hwstress:hwstress_component_manifest_compile",
     "//src/zircon/bin/hwstress:led_component_manifest_compile",
     "//src/zircon/bin/hwstress:memory_component_manifest_compile",
-    "//src/zircon/bin/vsock_service:vsock_service_component_manifest_compile",
     "//third_party/boringssl:bn_div_fuzzer_component_manifest_compile",
     "//third_party/boringssl:bn_mod_exp_fuzzer_component_manifest_compile",
     "//third_party/boringssl:cert_fuzzer_component_manifest_compile",

@@ -11,7 +11,6 @@ virtio_drivers = [
   "//src/devices/block/drivers/virtio:virtio_block",
   "//src/devices/block/drivers/virtio:virtio_scsi",
   "//src/devices/misc/drivers/virtio-rng:virtio_rng",
-  "//src/devices/misc/drivers/virtio-socket:virtio_socket",
   "//src/devices/serial/drivers/virtio-console:virtio_console",
   "//src/graphics/drivers/misc:goldfish_fuchsia_drivers",
   "//src/graphics/display/drivers/goldfish-display",
