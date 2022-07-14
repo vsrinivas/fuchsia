@@ -36,7 +36,9 @@ class BalloonStream : public StreamBase {
     for (; queue_.NextChain(&chain_); chain_.Return()) {
       while (chain_.NextDescriptor(&desc_)) {
         zx_status_t status = DoOperation(vmo, op);
-        FX_CHECK(status == ZX_OK) << "Operation failed " << status;
+        if (status != ZX_OK) {
+          FX_PLOGS(ERROR, status) << "Operation failed";
+        }
       }
     }
   }

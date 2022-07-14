@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod balloon_device;
 mod wire;
 
 use {
+    crate::balloon_device::BalloonDevice,
     anyhow::{anyhow, Context},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_virtualization_hardware::VirtioBalloonRequestStream,
     fuchsia_component::server,
     futures::{StreamExt, TryFutureExt, TryStreamExt},
     tracing,
+    virtio_device::chain::ReadableChain,
 };
 
 async fn run_virtio_balloon(
@@ -25,9 +28,9 @@ async fn run_virtio_balloon(
         .ok_or(anyhow!("Start should be the first message sent."))?;
 
     // Prepare the device builder
-    let (device_builder, guest_mem) = machina_virtio_device::from_start_info(start_info)?;
-
+    let (mut device_builder, guest_mem) = machina_virtio_device::from_start_info(start_info)?;
     responder.send()?;
+    let vmo = device_builder.take_vmo().expect("VMO must be provided to virtio_balloon device");
 
     // Complete the setup of queues and get a device.
     let mut virtio_device_fidl = virtio_balloon_fidl.cast_stream();
@@ -41,14 +44,42 @@ async fn run_virtio_balloon(
     .context("Failed to initialize device.")?;
 
     // Initialize all queues.
-    let _inflate_stream = device.take_stream(wire::INFLATEQ)?;
-    let _deflate_stream = device.take_stream(wire::DEFLATEQ)?;
+    let inflate_stream = device.take_stream(wire::INFLATEQ)?;
+    let deflate_stream = device.take_stream(wire::DEFLATEQ)?;
     let _stats_stream = device.take_stream(wire::STATSQ)?;
     ready_responder.send()?;
 
-    futures::try_join!(device
-        .run_device_notify(virtio_device_fidl)
-        .map_err(|e| anyhow!("run_device_notify: {}", e)),)?;
+    let balloon_device = BalloonDevice::new(vmo);
+
+    futures::try_join!(
+        device
+            .run_device_notify(virtio_device_fidl)
+            .map_err(|e| anyhow!("run_device_notify: {}", e)),
+        inflate_stream.map(|chain| Ok(chain)).try_for_each_concurrent(None, {
+            let guest_mem = &guest_mem;
+            let balloon_device = &balloon_device;
+            move |chain| async move {
+                if let Err(e) =
+                    balloon_device.process_inflate_chain(ReadableChain::new(chain, guest_mem))
+                {
+                    tracing::warn!("Failed to inflate chain {}", e);
+                }
+                Ok(())
+            }
+        }),
+        deflate_stream.map(|chain| Ok(chain)).try_for_each_concurrent(None, {
+            let guest_mem = &guest_mem;
+            let balloon_device = &balloon_device;
+            move |chain| async move {
+                if let Err(e) =
+                    balloon_device.process_deflate_chain(ReadableChain::new(chain, guest_mem))
+                {
+                    tracing::warn!("Failed to deflate chain {}", e);
+                }
+                Ok(())
+            }
+        }),
+    )?;
     Ok(())
 }
 
