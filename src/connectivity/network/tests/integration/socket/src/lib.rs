@@ -664,67 +664,6 @@ async fn run_tcp_socket_test(
     let ((), ()) = futures::future::join(client_fut, server_fut).await;
 }
 
-async fn tcp_socket_accept_cross_ns<
-    Client: TestNetstackExt,
-    Server: TestNetstackExt,
-    E: netemul::Endpoint,
->(
-    name: &str,
-) {
-    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
-    let net = sandbox.create_network("net").await.expect("failed to create network");
-
-    let client = sandbox
-        .create_netstack_realm::<Client, _>(format!("{}_client", name))
-        .expect("failed to create client realm");
-    let _client_interface = join_network::<E, Client, _>(
-        &client,
-        &net,
-        "client-ep",
-        fidl_ip_v4_with_prefix!("192.168.0.2/24"),
-    )
-    .await
-    .expect("install interface in netstack");
-
-    let server = sandbox
-        .create_netstack_realm::<Server, _>(format!("{}_client", name))
-        .expect("failed to create server realm");
-    let _server_interface = join_network::<E, Server, _>(
-        &server,
-        &net,
-        "server-ep",
-        fidl_ip_v4_with_prefix!("192.168.0.1/24"),
-    )
-    .await
-    .expect("install interface in netstack");
-
-    let fidl_fuchsia_net_ext::IpAddress(client_ip) = CLIENT_SUBNET.addr.into();
-
-    let fidl_fuchsia_net_ext::IpAddress(server_ip) = SERVER_SUBNET.addr.into();
-    let server_addr = std::net::SocketAddr::new(server_ip, 8080);
-
-    let listener = fasync::net::TcpListener::listen_in_realm(&server, server_addr)
-        .await
-        .expect("failed to create server socket");
-
-    let _client = fasync::net::TcpStream::connect_in_realm(&client, server_addr)
-        .await
-        .expect("failed to create client socket");
-
-    let (_, _accepted, from) = listener.accept().await.expect("accept failed");
-    assert_eq!(from.ip(), client_ip);
-}
-
-// TODO(https://fxbug.dev/88796): parameterize this test over endpoint types
-// once Netstack3 fully supports admin API surface.
-#[fuchsia_async::run_singlethreaded(test)]
-async fn tcp_socket_accept() {
-    let ((), ()) = futures::join!(
-        tcp_socket_accept_cross_ns::<Netstack2, Netstack3, netemul::Ethernet>("2to3"),
-        tcp_socket_accept_cross_ns::<Netstack3, Netstack2, netemul::Ethernet>("3to2"),
-    );
-}
-
 #[variants_test]
 async fn test_tcp_socket<E: netemul::Endpoint>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");

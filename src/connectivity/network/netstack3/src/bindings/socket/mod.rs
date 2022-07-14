@@ -5,7 +5,6 @@
 //! Socket features exposed by netstack3.
 
 pub(crate) mod datagram;
-mod stream;
 
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_posix::Errno;
@@ -32,7 +31,6 @@ use crate::bindings::{
 // public header from FDIO somehow so we don't need to redefine.
 const ZXSIO_SIGNAL_INCOMING: zx::Signals = zx::Signals::USER_0;
 const ZXSIO_SIGNAL_OUTGOING: zx::Signals = zx::Signals::USER_1;
-const ZXSIO_SIGNAL_CONNECTED: zx::Signals = zx::Signals::USER_3;
 
 /// Common properties for socket workers.
 #[derive(Debug)]
@@ -62,23 +60,8 @@ where
                     // TODO(https://fxbug.dev/48969): implement this method.
                     responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
                 }
-                psocket::ProviderRequest::StreamSocket { domain, proto, responder } => {
-                    match fidl::endpoints::create_request_stream() {
-                        Ok((client, request_stream)) => {
-                            responder_send!(
-                                responder,
-                                &mut stream::spawn_worker(
-                                    domain,
-                                    proto,
-                                    ctx.clone(),
-                                    request_stream
-                                )
-                                .await
-                                .map(|()| client)
-                            );
-                        }
-                        Err(_) => responder_send!(responder, &mut Err(Errno::Enobufs)),
-                    }
+                psocket::ProviderRequest::StreamSocket { domain: _, proto: _, responder } => {
+                    responder_send!(responder, &mut Err(Errno::Eprotonosupport));
                 }
                 psocket::ProviderRequest::DatagramSocketDeprecated { domain, proto, responder } => {
                     let mut response = (|| {

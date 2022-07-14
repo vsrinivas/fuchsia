@@ -42,7 +42,7 @@ mod ip;
 mod socket;
 #[cfg(test)]
 mod testutil;
-pub mod transport;
+mod transport;
 
 use log::trace;
 
@@ -64,10 +64,7 @@ pub use crate::{
         },
         forwarding::AddRouteError,
         get_all_routes, icmp,
-        socket::{
-            BufferIpSocketHandler, IpSockCreationError, IpSockRouteError, IpSockSendError,
-            IpSockUnroutableError,
-        },
+        socket::{IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError},
         AddableEntry, AddableEntryEither, EntryEither, IpDeviceIdContext, IpExt, IpLayerEvent,
         Ipv4StateBuilder, Ipv6StateBuilder, TransportIpContext,
     },
