@@ -1084,7 +1084,7 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
 
   adapter->online = e1000_status_online(adapter);
 
-  zx_device_str_prop_t prop = {
+  const zx_device_str_prop_t prop = {
       .key = "fuchsia.ethernet.NETDEVICE_MIGRATION",
       .property_value =
           {
@@ -1101,8 +1101,7 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
       .proto_id = ZX_PROTOCOL_ETHERNET_IMPL,
       .proto_ops = &e1000_ethernet_impl_ops,
       .str_props = &prop,
-      // TODO(fxbug.dev/93333): Make this 1 once GND is ready everywhere.
-      .str_prop_count = device_is_dfv2(dev) ? 1 : 0,
+      .str_prop_count = 1,
   };
 
   if ((status = device_add(dev, &args, &adapter->zxdev)) != ZX_OK) {
