@@ -52,19 +52,19 @@ class PointerCaptureTest : public InputSystemTest {
    public:
     ListenerSessionWrapper(scenic_impl::Scenic* scenic) : SessionWrapper(scenic) {}
 
-    void Register(scenic_impl::input::InputSystem* pointer_capture_registry, ViewRef view_ref,
+    void Register(scenic_impl::input::TouchSystem& pointer_capture_registry, ViewRef view_ref,
                   fit::function<void()> run_loop_until_idle) {
       listener_.binding_.set_error_handler([](zx_status_t err) {
         FX_LOGS(ERROR) << "Binding Error: " << zx_status_get_string(err);
       });
 
       bool register_returned = false;
-      pointer_capture_registry->RegisterListener(listener_.binding_.NewBinding(),
-                                                 std::move(view_ref),
-                                                 [this, &register_returned](bool success) {
-                                                   register_returned = true;
-                                                   register_successful_ = success;
-                                                 });
+      pointer_capture_registry.RegisterListener(listener_.binding_.NewBinding(),
+                                                std::move(view_ref),
+                                                [this, &register_returned](bool success) {
+                                                  register_returned = true;
+                                                  register_successful_ = success;
+                                                });
 
       run_loop_until_idle();
       ASSERT_TRUE(register_returned);
@@ -89,7 +89,7 @@ class PointerCaptureTest : public InputSystemTest {
     scenic::View view(listener_wrapper->session(), std::move(view_token),
                       std::move(pair.control_ref), std::move(pair.view_ref), name);
     SetUpTestView(&view);
-    listener_wrapper->Register(input_system(), std::move(view_ref_clone2),
+    listener_wrapper->Register(touch_system(), std::move(view_ref_clone2),
                                [this] { RunLoopUntilIdle(); });
     return listener_wrapper;
   }

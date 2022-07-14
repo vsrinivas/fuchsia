@@ -159,6 +159,19 @@ void InputSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
       display_->vsync_timing(),
       std::make_unique<ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
 
+  std::function<void(zx_koid_t)> request_focus = [this, use_auto_focus =
+                                                            auto_focus_behavior()](zx_koid_t koid) {
+    if (!use_auto_focus)
+      return;
+
+    const auto& focus_chain = focus_manager_.focus_chain();
+    if (!focus_chain.empty()) {
+      const zx_koid_t requestor = focus_chain[0];
+      const zx_koid_t request = koid != ZX_KOID_INVALID ? koid : requestor;
+      focus_manager_.RequestFocus(requestor, request);
+    }
+  };
+
   auto gfx = scenic->RegisterSystem<GfxSystem>(engine_.get(),
                                                /* sysmem */ nullptr,
                                                /* display_manager */ nullptr,
@@ -167,20 +180,8 @@ void InputSystemTest::InitializeScenic(std::shared_ptr<Scenic> scenic) {
 
   // TODO(fxbug.dev/72919): There's a bunch of logic copied from app.cc here. This will be removed
   // when moving out the integration tests from this folder.
-  input_system_ = scenic->RegisterSystem<InputSystem>(
-      engine_->scene_graph(),
-      /*request_focus*/
-      [this, use_auto_focus = auto_focus_behavior()](zx_koid_t koid) {
-        if (!use_auto_focus)
-          return;
-
-        const auto& focus_chain = focus_manager_.focus_chain();
-        if (!focus_chain.empty()) {
-          const zx_koid_t requestor = focus_chain[0];
-          const zx_koid_t request = koid != ZX_KOID_INVALID ? koid : requestor;
-          focus_manager_.RequestFocus(requestor, request);
-        }
-      });
+  input_system_ =
+      scenic->RegisterSystem<InputSystem>(engine_->scene_graph(), /*request_focus*/ request_focus);
 
   {
     std::vector<view_tree::SubtreeSnapshotGenerator> subtrees;

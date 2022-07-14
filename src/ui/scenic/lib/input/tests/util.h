@@ -110,6 +110,7 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   void RequestToPresent(scenic::Session* session);
 
   scenic_impl::input::InputSystem* input_system() { return input_system_.get(); }
+  scenic_impl::input::TouchSystem& touch_system() { return input_system_->touch_system(); }
 
   scenic_impl::gfx::Engine* engine() { return engine_.get(); }
 
@@ -153,6 +154,7 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   void InitializeScenic(std::shared_ptr<scenic_impl::Scenic> scenic) override;
 
   sys::testing::ComponentContextProvider context_provider_;
+  inspect::Node inspect_node_;
   std::shared_ptr<scheduling::DefaultFrameScheduler> frame_scheduler_;
   std::shared_ptr<scenic_impl::gfx::Engine> engine_;
   std::shared_ptr<scenic_impl::display::Display> display_;

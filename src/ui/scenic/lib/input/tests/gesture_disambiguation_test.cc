@@ -10,7 +10,7 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
-#include "src/ui/scenic/lib/input/input_system.h"
+#include "src/ui/scenic/lib/input/touch_system.h"
 
 // These tests exercise the full gesture disambiguation implementation of InputSystem for
 // clients of the  fuchsia.ui.pointer.TouchSource protocol.
@@ -93,26 +93,34 @@ std::shared_ptr<view_tree::Snapshot> NewSnapshot(std::vector<zx_koid_t> hits,
 class GestureDisambiguationTest : public gtest::TestLoopFixture {
  public:
   GestureDisambiguationTest()
-      : input_system_(
-            scenic_impl::SystemContext(context_provider_.context(), inspect::Node(), [] {}),
-            fxl::WeakPtr<scenic_impl::gfx::SceneGraph>(), /*request_focus*/ [](auto...) {}) {}
+      : hit_tester_(view_tree_snapshot_, inspect_node_),
+        touch_system_(
+            context_provider_.context(), view_tree_snapshot_, hit_tester_, inspect_node_,
+            /*request_focus*/ [](auto...) {}, nullptr) {}
 
   void SetUp() override {
     client1_ptr_.set_error_handler([](auto) { FAIL() << "Client1's channel closed"; });
     client2_ptr_.set_error_handler([](auto) { FAIL() << "Client2's channel closed"; });
 
-    input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+    OnNewViewTreeSnapshot(NewSnapshot(
         /*hits*/ {}, /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
-    input_system_.RegisterTouchSource(client1_ptr_.NewRequest(), kClient1Koid);
-    input_system_.RegisterTouchSource(client2_ptr_.NewRequest(), kClient2Koid);
+    touch_system_.RegisterTouchSource(client1_ptr_.NewRequest(), kClient1Koid);
+    touch_system_.RegisterTouchSource(client2_ptr_.NewRequest(), kClient2Koid);
+  }
+
+  void OnNewViewTreeSnapshot(std::shared_ptr<const view_tree::Snapshot> snapshot) {
+    view_tree_snapshot_ = snapshot;
   }
 
  private:
-  // Must be initialized before |input_system_|.
+  // Must be initialized before |touch_system_|.
   sys::testing::ComponentContextProvider context_provider_;
 
  protected:
-  scenic_impl::input::InputSystem input_system_;
+  inspect::Node inspect_node_;
+  std::shared_ptr<const view_tree::Snapshot> view_tree_snapshot_;
+  scenic_impl::input::HitTester hit_tester_;
+  scenic_impl::input::TouchSystem touch_system_;
   fuchsia::ui::pointer::TouchSourcePtr client1_ptr_;
   fuchsia::ui::pointer::TouchSourcePtr client2_ptr_;
 };
@@ -152,7 +160,7 @@ TEST_F(GestureDisambiguationTest, ExclusiveInjection_ShouldBeDeliveredOnlyToTarg
   EXPECT_TRUE(received_events1.empty());
   EXPECT_TRUE(received_events2.empty());
 
-  input_system_.InjectTouchEventExclusive(PointerEventTemplate(kClient1Koid), kStream1Id);
+  touch_system_.InjectTouchEventExclusive(PointerEventTemplate(kClient1Koid), kStream1Id);
   RunLoopUntilIdle();
   EXPECT_EQ(received_events1.size(), 1u);
   ASSERT_TRUE(received_events1[0].has_interaction_result());
@@ -160,7 +168,7 @@ TEST_F(GestureDisambiguationTest, ExclusiveInjection_ShouldBeDeliveredOnlyToTarg
   EXPECT_TRUE(received_events2.empty());
 
   received_events1.clear();
-  input_system_.InjectTouchEventExclusive(PointerEventTemplate(kClient2Koid), kStream2Id);
+  touch_system_.InjectTouchEventExclusive(PointerEventTemplate(kClient2Koid), kStream2Id);
   RunLoopUntilIdle();
   ASSERT_EQ(received_events2.size(), 1u);
   ASSERT_TRUE(received_events2[0].has_interaction_result());
@@ -183,20 +191,20 @@ TEST_F(GestureDisambiguationTest,
   EXPECT_TRUE(received_events1.empty());
   EXPECT_TRUE(received_events2.empty());
 
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {kClient1Koid}, /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
 
-  input_system_.InjectTouchEventHitTested(PointerEventTemplate(kClient1Koid), kStream1Id);
+  touch_system_.InjectTouchEventHitTested(PointerEventTemplate(kClient1Koid), kStream1Id);
   RunLoopUntilIdle();
   ASSERT_EQ(received_events1.size(), 1u);
   ASSERT_TRUE(received_events1[0].has_interaction_result());
   EXPECT_EQ(received_events1[0].interaction_result().status, fup_TouchInteractionStatus::GRANTED);
   EXPECT_TRUE(received_events2.empty());
 
-  input_system_.OnNewViewTreeSnapshot(
+  OnNewViewTreeSnapshot(
       NewSnapshot(/*hits*/ {kClient2Koid}, /*hierarchy*/ {kContextKoid, kClient2Koid}));
 
-  input_system_.InjectTouchEventHitTested(PointerEventTemplate(kClient2Koid), kStream2Id);
+  touch_system_.InjectTouchEventHitTested(PointerEventTemplate(kClient2Koid), kStream2Id);
   RunLoopUntilIdle();
   ASSERT_EQ(received_events2.size(), 1u);
   ASSERT_TRUE(received_events2[0].has_interaction_result());
@@ -218,9 +226,9 @@ TEST_F(GestureDisambiguationTest,
   EXPECT_TRUE(received_events1.empty());
   EXPECT_TRUE(received_events2.empty());
 
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {kClient2Koid}, /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
-  input_system_.InjectTouchEventHitTested(PointerEventTemplate(kClient1Koid), kStream1Id);
+  touch_system_.InjectTouchEventHitTested(PointerEventTemplate(kClient1Koid), kStream1Id);
 
   RunLoopUntilIdle();
   ASSERT_EQ(received_events1.size(), 1u);
@@ -264,11 +272,11 @@ TEST_F(GestureDisambiguationTest, Contest_ShouldNotIncludeContext) {
   EXPECT_TRUE(received_events2.empty());
 
   // Inject an event with kClient1Koid as the context and kClient2Koid as the target.
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {kClient2Koid}, /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
   auto event = PointerEventTemplate(kClient2Koid);
   event.context = kClient1Koid;
-  input_system_.InjectTouchEventHitTested(event, kStream1Id);
+  touch_system_.InjectTouchEventHitTested(event, kStream1Id);
 
   RunLoopUntilIdle();
   EXPECT_TRUE(received_events1.empty()) << "The context should not receive any events.";
@@ -289,9 +297,9 @@ TEST_F(GestureDisambiguationTest, ContestResolution) {
   EXPECT_TRUE(received_events1.empty());
   EXPECT_TRUE(received_events2.empty());
 
-  input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+  OnNewViewTreeSnapshot(NewSnapshot(
       /*hits*/ {kClient2Koid}, /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
-  input_system_.InjectTouchEventHitTested(PointerEventTemplate(kClient1Koid), kStream1Id);
+  touch_system_.InjectTouchEventHitTested(PointerEventTemplate(kClient1Koid), kStream1Id);
 
   RunLoopUntilIdle();
   ASSERT_EQ(received_events1.size(), 1u);
@@ -342,7 +350,7 @@ TEST_F(GestureDisambiguationTest, ContestResolution) {
 
   auto event = PointerEventTemplate(kClient1Koid);
   event.phase = Phase::kChange;
-  input_system_.InjectTouchEventHitTested(event, kStream1Id);
+  touch_system_.InjectTouchEventHitTested(event, kStream1Id);
 
   RunLoopUntilIdle();
   EXPECT_EQ(received_events1.size(), 3u);
@@ -350,10 +358,9 @@ TEST_F(GestureDisambiguationTest, ContestResolution) {
 }
 
 TEST_F(GestureDisambiguationTest, MidStreamChannelClose_ShouldGrantStreamToCompetitor) {
-  input_system_.OnNewViewTreeSnapshot(
-      NewSnapshot(/*hits*/ {kClient2Koid},
-                  /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
-  input_system_.InjectTouchEventHitTested(PointerEventTemplate(kClient1Koid), kStream1Id);
+  OnNewViewTreeSnapshot(NewSnapshot(/*hits*/ {kClient2Koid},
+                                    /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
+  touch_system_.InjectTouchEventHitTested(PointerEventTemplate(kClient1Koid), kStream1Id);
 
   {
     std::vector<fup_TouchEvent> received_events;
@@ -396,10 +403,9 @@ TEST_F(GestureDisambiguationTest, MidStreamChannelForcedClose_ShouldGrantStreamT
   bool channel_closed = false;
   client1_ptr_.set_error_handler([&channel_closed](auto...) { channel_closed = true; });
 
-  input_system_.OnNewViewTreeSnapshot(
-      NewSnapshot(/*hits*/ {kClient2Koid},
-                  /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
-  input_system_.InjectTouchEventHitTested(PointerEventTemplate(kClient1Koid), kStream1Id);
+  OnNewViewTreeSnapshot(NewSnapshot(/*hits*/ {kClient2Koid},
+                                    /*hierarchy*/ {kContextKoid, kClient1Koid, kClient2Koid}));
+  touch_system_.InjectTouchEventHitTested(PointerEventTemplate(kClient1Koid), kStream1Id);
 
   {
     std::vector<fup_TouchEvent> received_events;

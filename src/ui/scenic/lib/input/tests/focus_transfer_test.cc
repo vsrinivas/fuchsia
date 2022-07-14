@@ -159,9 +159,9 @@ class NoFocusTransferTest : public FocusTransferTest {
 // Some tests require the presence of an accessibility listener to trigger pointer interception.
 class A11yListener : public fuchsia::ui::input::accessibility::PointerEventListener {
  public:
-  A11yListener(scenic_impl::input::InputSystem* input_system) : listener_binding_(this) {
-    input_system->RegisterA11yListener(listener_binding_.NewBinding(),
-                                       [](bool success) { ASSERT_TRUE(success); });
+  A11yListener(scenic_impl::input::TouchSystem& touch_system) : listener_binding_(this) {
+    touch_system.RegisterA11yListener(listener_binding_.NewBinding(),
+                                      [](bool success) { ASSERT_TRUE(success); });
   }
 
  private:
@@ -312,7 +312,7 @@ TEST_F(FocusTransferTest, TouchFocusDisconnectSceneAfterDown) {
 
 // Ensure TouchFocusWithValidTarget works after accessibility rejects the pointer stream.
 TEST_F(FocusTransferTest, TouchFocusWithValidTargetAfterA11yRejects) {
-  A11yListener a11y_listener(input_system());  // Turn on accessibility interception.
+  A11yListener a11y_listener(touch_system());  // Turn on accessibility interception.
   RunLoopUntilIdle();                          // Ensure FIDL calls get processed.
 
   // Inject ADD/DOWN on client 2 to trigger delayed focus dispatch.

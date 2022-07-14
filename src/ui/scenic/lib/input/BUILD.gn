@@ -22,15 +22,12 @@ source_set("system") {
   ]
 
   deps = [
-    ":constants",
     ":injection",
     ":legacy",
     ":mouse",
     ":touch",
     ":utils",
     "//src/ui/scenic/lib/gfx",
-    "//zircon/system/ulib/inspect",
-    "//zircon/system/ulib/trace",
   ]
 
   public_deps = [ "//src/ui/scenic/lib/view_tree:view_tree_snapshot" ]
@@ -169,11 +166,17 @@ source_set("touch") {
     "gesture_arena.h",
     "touch_source.cc",
     "touch_source.h",
+    "touch_system.cc",
+    "touch_system.h",
   ]
 
   deps = [
+    ":constants",
     ":gesture_contender_interface",
+    ":legacy",
     ":utils",
+    "//sdk/lib/sys/cpp",
+    "//src/ui/scenic/lib/gfx",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/trace",
   ]

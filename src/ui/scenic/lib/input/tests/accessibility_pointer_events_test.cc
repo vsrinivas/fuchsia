@@ -87,10 +87,11 @@ std::shared_ptr<view_tree::Snapshot> NewSnapshot(std::vector<zx_koid_t> hits,
 class MockAccessibilityPointerEventListener
     : public fuchsia::ui::input::accessibility::PointerEventListener {
  public:
-  MockAccessibilityPointerEventListener(scenic_impl::input::InputSystem* input) : binding_(this) {
+  MockAccessibilityPointerEventListener(scenic_impl::input::TouchSystem* touch_system)
+      : binding_(this) {
     binding_.set_error_handler([this](zx_status_t) { is_registered_ = false; });
-    input->RegisterA11yListener(binding_.NewBinding(),
-                                [this](bool success) { is_registered_ = success; });
+    touch_system->RegisterA11yListener(binding_.NewBinding(),
+                                       [this](bool success) { is_registered_ = success; });
   }
 
   bool is_registered() const { return is_registered_; }
@@ -137,25 +138,33 @@ class MockAccessibilityPointerEventListener
 class AccessibilityPointerEventsTest : public gtest::TestLoopFixture {
  public:
   AccessibilityPointerEventsTest()
-      : input_system_(
-            scenic_impl::SystemContext(context_provider_.context(), inspect::Node(), [] {}),
-            fxl::WeakPtr<scenic_impl::gfx::SceneGraph>(), /*request_focus*/ [](auto...) {}) {}
+      : hit_tester_(view_tree_snapshot_, inspect_node_),
+        touch_system_(
+            context_provider_.context(), view_tree_snapshot_, hit_tester_, inspect_node_,
+            /*request_focus*/ [](auto...) {}, nullptr) {}
 
   void SetUp() override {
-    input_system_.OnNewViewTreeSnapshot(NewSnapshot(
+    OnNewViewTreeSnapshot(NewSnapshot(
         /*hits*/ {kClientKoid}, /*hierarchy*/ {kContextKoid, kClientKoid}));
 
     client_ptr_.set_error_handler([](auto) { FAIL() << "Client1's channel closed"; });
-    input_system_.RegisterTouchSource(client_ptr_.NewRequest(), kClientKoid);
+    touch_system_.RegisterTouchSource(client_ptr_.NewRequest(), kClientKoid);
     Watch({});
   }
 
+  void OnNewViewTreeSnapshot(std::shared_ptr<const view_tree::Snapshot> snapshot) {
+    view_tree_snapshot_ = snapshot;
+  }
+
  private:
-  // Must be initialized before |input_system_|.
+  // Must be initialized before |touch_system_|.
   sys::testing::ComponentContextProvider context_provider_;
+  std::shared_ptr<const view_tree::Snapshot> view_tree_snapshot_;
+  inspect::Node inspect_node_;
+  scenic_impl::input::HitTester hit_tester_;
 
  protected:
-  scenic_impl::input::InputSystem input_system_;
+  scenic_impl::input::TouchSystem touch_system_;
   std::unordered_map<StreamId, TouchInteractionStatus> client_contests_;
 
  private:
@@ -188,12 +197,12 @@ class AccessibilityPointerEventsTest : public gtest::TestLoopFixture {
 
 // This test makes sure that first to register win is working.
 TEST_F(AccessibilityPointerEventsTest, RegistersAccessibilityListenerOnlyOnce) {
-  MockAccessibilityPointerEventListener listener_1(&input_system_);
+  MockAccessibilityPointerEventListener listener_1(&touch_system_);
   RunLoopUntilIdle();
 
   EXPECT_TRUE(listener_1.is_registered());
 
-  MockAccessibilityPointerEventListener listener_2(&input_system_);
+  MockAccessibilityPointerEventListener listener_2(&touch_system_);
   RunLoopUntilIdle();
 
   EXPECT_FALSE(listener_2.is_registered()) << "The second listener that attempts to connect should "
@@ -205,14 +214,14 @@ TEST_F(AccessibilityPointerEventsTest, RegistersAccessibilityListenerOnlyOnce) {
 // four pointer events, will be accepted in the second pointer event. The second one, also with four
 // pointer events, will be accepted in the fourth one.
 TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
-  MockAccessibilityPointerEventListener listener(&input_system_);
+  MockAccessibilityPointerEventListener listener(&touch_system_);
   listener.SetResponses({
       {2, fuchsia::ui::input::accessibility::EventHandling::CONSUMED},
       {4, fuchsia::ui::input::accessibility::EventHandling::CONSUMED},
   });
 
   // A touch sequence that starts at the (2.5,2.5) location of the 5x5 display.
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 2.5f, 2.5f, impl_Phase::kAdd), kStream1Id);
   RunLoopUntilIdle();
 
@@ -233,7 +242,7 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
     }
   }
 
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 2.5f, 2.5f, impl_Phase::kChange), kStream1Id);
   RunLoopUntilIdle();
 
@@ -256,9 +265,9 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
   listener.events().clear();
 
   // Accessibility consumed the two events. Continue sending pointer events in the same stream.
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 2.5f, 3.5f, impl_Phase::kChange), kStream1Id);
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 2.5f, 3.5f, impl_Phase::kRemove), kStream1Id);
   RunLoopUntilIdle();
 
@@ -291,9 +300,9 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
 
   listener.events().clear();
 
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 3.5f, 1.5f, impl_Phase::kAdd), kStream2Id);
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 3.5f, 1.5f, impl_Phase::kRemove),
       kStream2Id);  // Consume happens here.
   RunLoopUntilIdle();
@@ -330,11 +339,11 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
 // One pointer stream is injected in the input system. The listener rejects the pointer event. this
 // test makes sure that buffered (past), as well as future pointer events are sent to the view.
 TEST_F(AccessibilityPointerEventsTest, RejectsPointerEvents) {
-  MockAccessibilityPointerEventListener listener(&input_system_);
+  MockAccessibilityPointerEventListener listener(&touch_system_);
   listener.SetResponses({{1, fuchsia::ui::input::accessibility::EventHandling::REJECTED}});
 
   // A touch sequence that starts at the (2.5,2.5) location of the 5x5 display.
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 2.5f, 2.5f, impl_Phase::kAdd), kStream1Id);
   RunLoopUntilIdle();
 
@@ -361,9 +370,9 @@ TEST_F(AccessibilityPointerEventsTest, RejectsPointerEvents) {
   listener.events().clear();
 
   // Send the rest of the stream.
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 2.5f, 3.5f, impl_Phase::kChange), kStream1Id);
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 2.5f, 3.5f, impl_Phase::kRemove), kStream1Id);
   RunLoopUntilIdle();
 
@@ -374,7 +383,7 @@ TEST_F(AccessibilityPointerEventsTest, RejectsPointerEvents) {
 // In this test three streams will be injected in the input system, where the first will be
 // consumed, the second rejected and the third also consumed.
 TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
-  MockAccessibilityPointerEventListener listener(&input_system_);
+  MockAccessibilityPointerEventListener listener(&touch_system_);
   listener.SetResponses({
       {2, fuchsia::ui::input::accessibility::EventHandling::CONSUMED},
       {2, fuchsia::ui::input::accessibility::EventHandling::REJECTED},
@@ -384,21 +393,21 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
   // Send in the input.
   // First stream:
   // A touch sequence that starts at the (1.5,1.5) location of the 5x5 display.
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 1.5f, 1.5f, impl_Phase::kAdd), kStream1Id);
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 1.5f, 1.5f, impl_Phase::kRemove),
       kStream1Id);  // Consume happens here.
   // Second stream:
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 2.5f, 2.5f, impl_Phase::kAdd), kStream2Id);
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 2.5f, 2.5f, impl_Phase::kRemove),
       kStream2Id);  // Reject happens here.
   // Third stream:
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 3.5f, 3.5f, impl_Phase::kAdd), kStream3Id);
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 3.5f, 3.5f, impl_Phase::kRemove),
       kStream3Id);  // Consume happens here.
   RunLoopUntilIdle();
@@ -492,7 +501,7 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
 TEST_F(AccessibilityPointerEventsTest, DiscardActiveStreamOnConnection) {
   // Send in the input.
   // A touch sequence that starts at the (1.5,1.5) location of the 5x5 display.
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 1.5f, 1.5f, impl_Phase::kAdd), kStream1Id);
   RunLoopUntilIdle();
 
@@ -500,12 +509,12 @@ TEST_F(AccessibilityPointerEventsTest, DiscardActiveStreamOnConnection) {
   EXPECT_EQ(client_contests_.at(kStream1Id), TouchInteractionStatus::GRANTED);
 
   // Now, connect the accessibility listener in the middle of a stream.
-  MockAccessibilityPointerEventListener listener(&input_system_);
+  MockAccessibilityPointerEventListener listener(&touch_system_);
 
   // Sends the rest of the stream.
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 1.5f, 1.5f, impl_Phase::kChange), kStream1Id);
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 1.5f, 1.5f, impl_Phase::kRemove), kStream1Id);
   RunLoopUntilIdle();
 
@@ -518,11 +527,11 @@ TEST_F(AccessibilityPointerEventsTest, DiscardActiveStreamOnConnection) {
 // stream is sent to regular clients.
 TEST_F(AccessibilityPointerEventsTest, DispatchEventsAfterDisconnection) {
   {
-    MockAccessibilityPointerEventListener listener(&input_system_);
+    MockAccessibilityPointerEventListener listener(&touch_system_);
 
     // Send in the input.
     // A touch sequence that starts at the (2.5,2.5) location of the 5x5 display.
-    input_system_.InjectTouchEventHitTested(
+    touch_system_.InjectTouchEventHitTested(
         PointerEventTemplate(kClientKoid, 2.5f, 2.5f, impl_Phase::kAdd), kStream1Id);
     RunLoopUntilIdle();
 
@@ -544,16 +553,15 @@ TEST_F(AccessibilityPointerEventsTest, DispatchEventsAfterDisconnection) {
 // alternate the elevation of the views; in each case, the topmost view's ViewRef KOID should be
 // observed.
 TEST_F(AccessibilityPointerEventsTest, ExposeTopMostViewRefKoid) {
-  MockAccessibilityPointerEventListener listener(&input_system_);
+  MockAccessibilityPointerEventListener listener(&touch_system_);
 
   // Set client 1 above client 2 in the hit test.
-  input_system_.OnNewViewTreeSnapshot(
-      NewSnapshot(/*hits*/ {kClientKoid, kClient2Koid},
-                  /*hierarchy*/ {kContextKoid, kClientKoid, kClient2Koid}));
+  OnNewViewTreeSnapshot(NewSnapshot(/*hits*/ {kClientKoid, kClient2Koid},
+                                    /*hierarchy*/ {kContextKoid, kClientKoid, kClient2Koid}));
 
   // Scene is now set up; send in the input.
   // A touch sequence that starts at the (2.5,2.5) location of the 5x5 display.
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 2.5f, 2.5f, impl_Phase::kAdd), kStream1Id);
   RunLoopUntilIdle();
 
@@ -573,11 +581,10 @@ TEST_F(AccessibilityPointerEventsTest, ExposeTopMostViewRefKoid) {
   }
 
   // Now set client 2 above client 1 in the hit test.
-  input_system_.OnNewViewTreeSnapshot(
-      NewSnapshot(/*hits*/ {kClient2Koid, kClientKoid},
-                  /*hierarchy*/ {kContextKoid, kClientKoid, kClient2Koid}));
+  OnNewViewTreeSnapshot(NewSnapshot(/*hits*/ {kClient2Koid, kClientKoid},
+                                    /*hierarchy*/ {kContextKoid, kClientKoid, kClient2Koid}));
   // Send in the rest of the stream.
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 1.5f, 3.5f, impl_Phase::kRemove), kStream1Id);
   RunLoopUntilIdle();
 
@@ -601,15 +608,14 @@ TEST_F(AccessibilityPointerEventsTest, ExposeTopMostViewRefKoid) {
 // However, (1) accessibility should receive initial events, and (2) acceptance by accessibility (on
 // first MOVE) means accessibility continues to observe events, despite absence of latch.
 TEST_F(AccessibilityPointerEventsTest, NoDownLatchAndA11yAccepts) {
-  MockAccessibilityPointerEventListener listener(&input_system_);
+  MockAccessibilityPointerEventListener listener(&touch_system_);
   // Respond after three events: ADD / MOVE / MOVE.
   listener.SetResponses({{3, fuchsia::ui::input::accessibility::EventHandling::CONSUMED}});
 
   // No hits!
-  input_system_.OnNewViewTreeSnapshot(
-      NewSnapshot(/*hits*/ {}, /*hierarchy*/ {kContextKoid, kClientKoid}));
+  OnNewViewTreeSnapshot(NewSnapshot(/*hits*/ {}, /*hierarchy*/ {kContextKoid, kClientKoid}));
   // Send in input.
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 0.5f, 0.5f, impl_Phase::kAdd), kStream1Id);
   RunLoopUntilIdle();
 
@@ -617,12 +623,12 @@ TEST_F(AccessibilityPointerEventsTest, NoDownLatchAndA11yAccepts) {
       << "Contest should not have ended (nor even begun)";
 
   // The rest of the input should have hits.
-  input_system_.OnNewViewTreeSnapshot(
+  OnNewViewTreeSnapshot(
       NewSnapshot(/*hits*/ {kClientKoid}, /*hierarchy*/ {kContextKoid, kClientKoid}));
   // A touch sequence that starts at the (1.5,1.5) location of the 5x5 display.
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 1.5f, 1.5f, impl_Phase::kChange), kStream1Id);
-  input_system_.InjectTouchEventHitTested(
+  touch_system_.InjectTouchEventHitTested(
       PointerEventTemplate(kClientKoid, 2.5f, 2.5f, impl_Phase::kChange), kStream1Id);
   RunLoopUntilIdle();
 
@@ -662,12 +668,11 @@ TEST_F(AccessibilityPointerEventsTest, NoDownLatchAndA11yAccepts) {
 // Injection in EXCLUSIVE_TARGET mode should never be delivered to a11y. This test sets up
 // a valid environment for a11y to get events, except for the DispatchPolicy.
 TEST_F(AccessibilityPointerEventsTest, TopHitInjectionByNonRootView_IsNotDeliveredToA11y) {
-  MockAccessibilityPointerEventListener listener(&input_system_);
+  MockAccessibilityPointerEventListener listener(&touch_system_);
 
-  input_system_.OnNewViewTreeSnapshot(
-      NewSnapshot(/*hits*/ {}, /*hierarchy*/ {kContextKoid, kClientKoid}));
+  OnNewViewTreeSnapshot(NewSnapshot(/*hits*/ {}, /*hierarchy*/ {kContextKoid, kClientKoid}));
   // A touch sequence that starts at the (2.5,2.5) location of the 5x5 display.
-  input_system_.InjectTouchEventExclusive(
+  touch_system_.InjectTouchEventExclusive(
       PointerEventTemplate(kClientKoid, 2.5f, 2.5f, impl_Phase::kAdd), kStream1Id);
   RunLoopUntilIdle();
 
