@@ -14,6 +14,7 @@ executable("log_message_store_unittest_exe") {
   sources = [ "log_message_store_unittest.cc" ]
 
   deps = [
+    "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data/system_log_recorder:src",
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:identity_encoder",
@@ -22,7 +23,6 @@ executable("log_message_store_unittest_exe") {
     "//src/developer/forensics/testing:unit_test_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/syslog",
   ]
 }
 
@@ -62,7 +62,6 @@ executable("reader_unittest_exe") {
     "//src/lib/fxl",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/syslog",
   ]
 }
 
@@ -85,7 +84,6 @@ executable("system_log_recorder_unittest_exe") {
     "//src/lib/files",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/syslog",
   ]
 }
 
@@ -95,6 +93,7 @@ executable("writer_unittest_exe") {
   sources = [ "writer_unittest.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.logger",
     "//src/developer/forensics/feedback_data/system_log_recorder:reader",
     "//src/developer/forensics/feedback_data/system_log_recorder:src",
     "//src/developer/forensics/feedback_data/system_log_recorder/encoding:decoder",
@@ -108,7 +107,6 @@ executable("writer_unittest_exe") {
     "//src/lib/files",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/syslog",
   ]
 }
 

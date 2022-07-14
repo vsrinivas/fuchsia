@@ -5,7 +5,7 @@
 #include "src/developer/forensics/feedback_data/system_log_recorder/reader.h"
 
 #include <lib/inspect/cpp/vmo/types.h>
-#include <lib/syslog/logger.h>
+#include <lib/syslog/cpp/log_level.h>
 
 #include <memory>
 #include <vector>
@@ -37,7 +37,7 @@ namespace {
 
 // Only change "X" for one character. i.e. X -> 12 is not allowed.
 const StorageSize kMaxLogLineSize =
-    StorageSize::Bytes(Format(BuildLogMessage(FX_LOG_INFO, "line X").value()).size());
+    StorageSize::Bytes(Format(BuildLogMessage(syslog::LOG_INFO, "line X").value()).size());
 
 std::unique_ptr<Encoder> MakeIdentityEncoder() {
   return std::unique_ptr<Encoder>(new IdentityEncoder());
@@ -151,15 +151,15 @@ TEST(ReaderTest, SortsMessages) {
                         MakeIdentityRedactor(), MakeIdentityEncoder());
   SystemLogWriter writer(temp_dir.path(), 1u, &store);
 
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0", zx::msec(0))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 3", zx::msec(3))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 2", zx::msec(2))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1", zx::msec(1))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1.1", zx::msec(1))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "duplicated line", zx::msec(5))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "duplicated line", zx::msec(6))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "duplicated line", zx::msec(7))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "multi\nline\nmessage", zx::msec(4))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(syslog::LOG_INFO, "line 0", zx::msec(0))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(syslog::LOG_INFO, "line 3", zx::msec(3))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(syslog::LOG_INFO, "line 2", zx::msec(2))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(syslog::LOG_INFO, "line 1", zx::msec(1))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(syslog::LOG_INFO, "line 1.1", zx::msec(1))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(syslog::LOG_INFO, "duplicated line", zx::msec(5))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(syslog::LOG_INFO, "duplicated line", zx::msec(6))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(syslog::LOG_INFO, "duplicated line", zx::msec(7))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(syslog::LOG_INFO, "multi\nline\nmessage", zx::msec(4))));
   writer.Write();
 
   files::ScopedTempDir output_dir;
@@ -225,17 +225,17 @@ TEST(ReaderTest, SortsMessagesMultipleFiles) {
                         MakeIdentityEncoder());
   SystemLogWriter writer(temp_dir.path(), 8u, &store);
 
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0", zx::msec(0))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 3", zx::msec(3))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 2", zx::msec(2))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1", zx::msec(1))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(syslog::LOG_INFO, "line 0", zx::msec(0))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(syslog::LOG_INFO, "line 3", zx::msec(3))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(syslog::LOG_INFO, "line 2", zx::msec(2))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(syslog::LOG_INFO, "line 1", zx::msec(1))));
   writer.Write();
 
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line11", zx::msec(1))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "dup", zx::msec(5))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "dup", zx::msec(6))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "dup", zx::msec(7))));
-  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line\n4", zx::msec(4))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(syslog::LOG_INFO, "line11", zx::msec(1))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(syslog::LOG_INFO, "dup", zx::msec(5))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(syslog::LOG_INFO, "dup", zx::msec(6))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(syslog::LOG_INFO, "dup", zx::msec(7))));
+  EXPECT_TRUE(store.Add(BuildLogMessage(syslog::LOG_INFO, "line\n4", zx::msec(4))));
   writer.Write();
 
   files::ScopedTempDir output_dir;

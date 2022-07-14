@@ -4,8 +4,6 @@
 
 #include "src/developer/forensics/feedback_data/system_log_recorder/system_log_recorder.h"
 
-#include <lib/syslog/logger.h>
-
 #include <memory>
 #include <vector>
 

@@ -5,7 +5,6 @@
 #include "src/developer/forensics/feedback/namespace_init.h"
 
 #include <lib/syslog/cpp/macros.h>
-#include <lib/syslog/logger.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -176,7 +175,7 @@ TEST_F(NamespaceInitTest, CreatePreviousLogsFile) {
   std::string previous_log_contents = "";
   for (const auto& filepath : CurrentLogFilePaths(logs_dir)) {
     auto encoder = feedback_data::system_log_recorder::ProductionEncoder();
-    const std::string str = Format(BuildLogMessage(FX_LOG_INFO, "Log for file: " + filepath));
+    const std::string str = Format(BuildLogMessage(syslog::LOG_INFO, "Log for file: " + filepath));
     previous_log_contents = previous_log_contents + str;
     WriteFile(filepath, encoder.Encode(str));
   }

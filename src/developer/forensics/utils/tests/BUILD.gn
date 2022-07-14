@@ -118,11 +118,11 @@ executable("log_format_unittest_exe") {
   sources = [ "log_format_unittest.cc" ]
 
   deps = [
+    "//sdk/fidl/fuchsia.logger",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils:logs",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/syslog",
   ]
 }
 
