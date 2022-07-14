@@ -133,6 +133,7 @@ func addNoopEndpoint(t *testing.T, ns *Netstack, name string) *ifState {
 		&noopController{},
 		nil,                    /* observer */
 		defaultInterfaceMetric, /* metric */
+		qdiscConfig{},
 	)
 	if err != nil {
 		t.Fatal(err)

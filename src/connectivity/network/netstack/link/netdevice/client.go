@@ -113,6 +113,10 @@ type Port struct {
 	}
 }
 
+func (p *Port) TxDepth() uint32 {
+	return p.client.handler.TxDepth
+}
+
 func (p *Port) MTU() uint32 {
 	p.mtu.mu.Lock()
 	mtu := p.mtu.mu.value
@@ -349,15 +353,6 @@ func (c *Client) Run(ctx context.Context) {
 			detachWithError(fmt.Errorf("TX read loop: %w", err))
 		}
 		_ = syslog.VLogTf(syslog.DebugVerbosity, tag, "TX read loop finished")
-	}()
-
-	wg.Add(1)
-	go func() {
-		wg.Done()
-		if err := c.handler.TxSenderLoop(); err != nil {
-			detachWithError(fmt.Errorf("TX write loop: %w", err))
-		}
-		_ = syslog.VLogTf(syslog.DebugVerbosity, tag, "TX write loop finished")
 	}()
 
 	wg.Add(1)

@@ -199,6 +199,7 @@ func TestStackNICRemove(t *testing.T) {
 		&noopController{},
 		&obs,
 		defaultInterfaceMetric, /* metric */
+		qdiscConfig{},
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -550,6 +551,7 @@ func TestTCPEndpointMapConnect(t *testing.T) {
 		&noopController{},
 		nil,
 		defaultInterfaceMetric, /* metric */
+		qdiscConfig{},
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -797,6 +799,7 @@ func TestNotStartedByDefault(t *testing.T) {
 		&controller,
 		nil,                    /* observer */
 		defaultInterfaceMetric, /* metric */
+		qdiscConfig{},
 	); err != nil {
 		t.Fatal(err)
 	}
@@ -894,6 +897,7 @@ func TestIpv6LinkLocalOnLinkRouteOnUp(t *testing.T) {
 		&noopController{},
 		nil,                    /* observer */
 		defaultInterfaceMetric, /* metric */
+		qdiscConfig{},
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -1223,6 +1227,7 @@ func TestListInterfaceAddresses(t *testing.T) {
 		&noopController{},
 		nil,                    /* observer */
 		defaultInterfaceMetric, /* metric */
+		qdiscConfig{},
 	)
 	if err != nil {
 		t.Fatal(err)

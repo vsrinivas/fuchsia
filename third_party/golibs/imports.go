@@ -66,6 +66,7 @@ import (
 	_ "gvisor.dev/gvisor/pkg/tcpip/link/nested"
 	_ "gvisor.dev/gvisor/pkg/tcpip/link/packetsocket"
 	_ "gvisor.dev/gvisor/pkg/tcpip/link/pipe"
+	_ "gvisor.dev/gvisor/pkg/tcpip/link/qdisc/fifo"
 	_ "gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
 	_ "gvisor.dev/gvisor/pkg/tcpip/network/arp"
 	_ "gvisor.dev/gvisor/pkg/tcpip/network/ipv4"

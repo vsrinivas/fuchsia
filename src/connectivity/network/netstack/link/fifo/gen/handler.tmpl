@@ -31,6 +31,7 @@ type {{ .Handler }} struct {
 		mu struct {
 			sync.Mutex
 			waiters int
+			scratch []{{ .EntryType }}
 
 			entries {{ .Entries }}
 
@@ -45,7 +46,6 @@ type {{ .Handler }} struct {
 		Tx fifo.TxStats
 	}
 }
-
 
 func (h *{{ .Handler }}) TxReceiverLoop(wasSent func(entry *{{ .EntryType }}) bool) error {
 	scratch := make([]{{ .EntryType }}, h.TxDepth)
@@ -82,49 +82,6 @@ func (h *{{ .Handler }}) TxReceiverLoop(wasSent func(entry *{{ .EntryType }}) bo
 			return nil
 		}, h.TxFifo, zx.SignalFIFOReadable, zx.SignalFIFOPeerClosed); err != nil {
 			return err
-		}
-	}
-}
-
-func (h *{{ .Handler }}) TxSenderLoop() error {
-	scratch := make([]{{ .EntryType }}, h.TxDepth)
-	for {
-		var batch []{{ .EntryType }}
-		h.tx.mu.Lock()
-		for {
-			if h.tx.mu.detached {
-				h.tx.mu.Unlock()
-				return nil
-			}
-			if batchSize := len(scratch) - int(h.tx.mu.entries.InFlight()); batchSize != 0 {
-				if h.tx.mu.entries.HaveQueued() {
-					if h.tx.mu.waiters == 0 || !h.tx.mu.entries.HaveReadied() {
-						// No application threads are waiting OR application threads are waiting on the
-						// reader.
-						//
-						// This condition is an optimization; if application threads are waiting when
-						// buffers are available then we were probably just woken up by the reader having
-						// retrieved buffers from the fifo. We avoid creating a batch until the application
-						// threads have all been satisfied, or until the buffers have all been used up.
-						batch = scratch[:batchSize]
-						break
-					}
-				}
-			}
-			h.tx.cond.Wait()
-		}
-		n := h.tx.mu.entries.GetQueued(batch)
-		h.tx.mu.entries.IncrementSent(uint16(n))
-		h.tx.mu.Unlock()
-
-		switch status, count := FifoWrite(h.TxFifo, batch[:n]); status {
-		case zx.ErrOk:
-			if n := uint32(n); count != n {
-				return fmt.Errorf("FifoWrite(TX): tx_depth invariant violation; observed=%d expected=%d", h.TxDepth-n+count, h.TxDepth)
-			}
-			h.Stats.Tx.Writes(count).Increment()
-		default:
-			return &zx.Error{Status: status, Text: "FifoWrite(TX)"}
 		}
 	}
 }
@@ -221,8 +178,24 @@ func (h *{{ .Handler }}) ProcessWrite(pbList stack.PacketBufferList, processor f
 			processor(entry, pkts[i])
 			h.tx.mu.entries.IncrementQueued(1)
 		}
+
+		batch := h.tx.mu.scratch[:len(h.tx.mu.scratch) - int(h.tx.mu.entries.InFlight())]
+		n := h.tx.mu.entries.GetQueued(batch)
+		h.tx.mu.entries.IncrementSent(uint16(n))
 		h.tx.mu.Unlock()
-		h.tx.cond.Broadcast()
+
+		switch status, count := FifoWrite(h.TxFifo, batch[:n]); status {
+		case zx.ErrOk:
+			if n := uint32(n); count != n {
+				panic(fmt.Sprintf("FifoWrite(TX): tx_depth invariant violation; observed=%d expected=%d", h.TxDepth-n+count, h.TxDepth))
+			}
+			h.Stats.Tx.Writes(count).Increment()
+		case zx.ErrPeerClosed:
+			h.DetachTx()
+			return i, &tcpip.ErrClosedForSend{}
+		default:
+			panic(fmt.Sprintf("FifoWrite(TX): (%v, %d)", status, count))
+		}
 	}
 
 	return i, nil
@@ -241,6 +214,9 @@ func (h *{{ .Handler }}) InitRx(capacity uint16) uint16 {
 
 func (h *{{ .Handler }}) InitTx(capacity uint16) uint16 {
 	h.tx.cond.L = &h.tx.mu.Mutex
+	h.tx.mu.Lock()
+	h.tx.mu.scratch = make([]{{ .EntryType }}, h.TxDepth)
+	h.tx.mu.Unlock()
 	return h.tx.mu.entries.Init(capacity)
 }
 

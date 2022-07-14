@@ -34,6 +34,7 @@ import (
 	"gvisor.dev/gvisor/pkg/tcpip/link/ethernet"
 	"gvisor.dev/gvisor/pkg/tcpip/link/loopback"
 	"gvisor.dev/gvisor/pkg/tcpip/link/packetsocket"
+	"gvisor.dev/gvisor/pkg/tcpip/link/qdisc/fifo"
 	"gvisor.dev/gvisor/pkg/tcpip/link/sniffer"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv4"
 	"gvisor.dev/gvisor/pkg/tcpip/network/ipv6"
@@ -53,6 +54,15 @@ const (
 	dhcpAcquisition    = 60 * zxtime.Second
 	dhcpBackoff        = 1 * zxtime.Second
 	dhcpRetransmission = 4 * zxtime.Second
+
+	// Devices do not support multiple queues yet.
+	numQDiscFIFOQueues = 1
+	// A multiplier to apply to a device's TX Depth to calculate qdisc's queue
+	// length.
+	//
+	// A large enough value was chosen through experimentation to handle sudden
+	// bursts of traffic.
+	qdiscTxDepthMultiplier = 20
 )
 
 func ipv6LinkLocalOnLinkRoute(nicID tcpip.NICID) tcpip.Route {
@@ -1036,6 +1046,7 @@ func (ns *Netstack) addLoopback() error {
 		nil, /* controller */
 		nil, /* observer */
 		defaultInterfaceMetric,
+		qdiscConfig{},
 	)
 	if err != nil {
 		return err
@@ -1148,6 +1159,7 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 		b,
 		nil, /* observer */
 		metric,
+		qdiscConfig{},
 	)
 	if err != nil {
 		return nil, err
@@ -1201,7 +1213,13 @@ func (ns *Netstack) addEth(topopath string, config netstack.InterfaceConfig, dev
 		client,
 		client,
 		routes.Metric(config.Metric),
+		qdiscConfig{numQueues: numQDiscFIFOQueues, queueLen: int(client.TxDepth()) * qdiscTxDepthMultiplier},
 	)
+}
+
+type qdiscConfig struct {
+	numQueues int
+	queueLen  int
 }
 
 // addEndpoint creates a new NIC with stack.Stack.
@@ -1211,6 +1229,7 @@ func (ns *Netstack) addEndpoint(
 	controller link.Controller,
 	observer link.Observer,
 	metric routes.Metric,
+	qdisc qdiscConfig,
 ) (*ifState, error) {
 	ifs := &ifState{
 		ns:         ns,
@@ -1246,7 +1265,14 @@ func (ns *Netstack) addEndpoint(
 	ifs.mu.Lock()
 	defer ifs.mu.Unlock()
 
-	if err := ns.stack.CreateNICWithOptions(ifs.nicid, ep, stack.NICOptions{Name: name, Context: ifs, Disabled: true}); err != nil {
+	nicOpts := stack.NICOptions{Name: name, Context: ifs, Disabled: true}
+	if qdisc.numQueues > 0 {
+		if qdisc.queueLen == 0 {
+			panic("attempted to configure qdisc with zero-length queue")
+		}
+		nicOpts.QDisc = fifo.New(ep, qdisc.numQueues, qdisc.queueLen)
+	}
+	if err := ns.stack.CreateNICWithOptions(ifs.nicid, ep, nicOpts); err != nil {
 		return nil, fmt.Errorf("NIC %s: could not create NIC: %w", name, WrapTcpIpError(err))
 	}
 

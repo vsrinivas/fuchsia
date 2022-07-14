@@ -295,6 +295,17 @@ func TestClient(t *testing.T) {
 							break
 						}
 
+						dropsBefore := client.TxStats().Drops.Value()
+
+						// cycleTX in a goroutine since WritePackets will block until all
+						// packets are written and if we send more packets than the TX
+						// depth, we will block forever unless something is reading from the
+						// TX FIFO as we write.
+						cycleTXErr := make(chan error)
+						go func() {
+							cycleTXErr <- cycleTX(deviceFifos.Tx, writeSize, device.iob, nil)
+						}()
+
 						// Use WritePackets to get deterministic batch sizes.
 						count, err := client.WritePackets(pkts)
 						if err != nil {
@@ -304,9 +315,7 @@ func TestClient(t *testing.T) {
 							t.Fatalf("got WritePackets(_) = %d, want %d", got, writeSize)
 						}
 
-						dropsBefore := client.TxStats().Drops.Value()
-
-						if err := cycleTX(deviceFifos.Tx, writeSize, device.iob, nil); err != nil {
+						if err := <-cycleTXErr; err != nil {
 							t.Fatal(err)
 						}
 						if err := checkTXDone(deviceFifos.Tx); err != nil {

@@ -128,7 +128,8 @@ func NewClient(clientName string, topopath, filepath string, device ethernet.Dev
 	}
 
 	rxStorage := int(c.handler.InitRx(uint16(fifos.RxDepth * 2)))
-	txStorage := int(c.handler.InitTx(uint16(fifos.TxDepth * 2)))
+	// No multiplier because in-flight TX backlog is handled by qdisc.
+	txStorage := int(c.handler.InitTx(uint16(fifos.TxDepth)))
 
 	var offset uint32
 	for i := 0; i < rxStorage; i++ {
@@ -160,6 +161,10 @@ func NewClient(clientName string, topopath, filepath string, device ethernet.Dev
 	c.handler.Stats.Tx.FifoStats = fifo.MakeFifoStats(fifos.TxDepth)
 
 	return c, nil
+}
+
+func (c *Client) TxDepth() uint32 {
+	return c.handler.TxDepth
 }
 
 func (c *Client) MTU() uint32 { return c.Info.Mtu }
@@ -224,14 +229,6 @@ func (c *Client) Attach(dispatcher stack.NetworkDispatcher) {
 			return entry.Flags()&eth.FifoTXOK != 0
 		}); err != nil {
 			detachWithError(fmt.Errorf("TX read loop error: %w", err))
-		}
-	}()
-
-	c.wg.Add(1)
-	go func() {
-		defer c.wg.Done()
-		if err := c.handler.TxSenderLoop(); err != nil {
-			detachWithError(fmt.Errorf("TX write loop error: %w", err))
 		}
 	}()
 

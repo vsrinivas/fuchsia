@@ -823,6 +823,7 @@ func (d *interfacesAdminDeviceControlImpl) CreateInterface(_ fidl.Context, portI
 			port,
 			port,
 			metric,
+			qdiscConfig{numQueues: numQDiscFIFOQueues, queueLen: int(port.TxDepth()) * qdiscTxDepthMultiplier},
 		)
 		if err != nil {
 			_ = syslog.WarnTf(deviceControlName, "addEndpoint failed: %s", err)

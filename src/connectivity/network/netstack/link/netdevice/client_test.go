@@ -405,6 +405,7 @@ func TestClient_WritePackets(t *testing.T) {
 		pkt := stack.NewPacketBuffer(stack.PacketBufferOptions{
 			ReserveHeaderBytes: int(linkEndpoint.MaxHeaderLength()),
 		})
+		pkt.NetworkProtocolNumber = header.IPv4ProtocolNumber
 		pkts.PushBack(pkt)
 
 		linkEndpoint.AddHeader(pkt)
