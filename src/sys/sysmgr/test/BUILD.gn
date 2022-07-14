@@ -18,7 +18,6 @@ executable("app_test") {
     "config_test.cc",
   ]
   deps = [
-    "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

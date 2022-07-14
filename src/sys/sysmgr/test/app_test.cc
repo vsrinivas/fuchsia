@@ -9,7 +9,6 @@
 #include <lib/fidl/cpp/interface_ptr.h>
 #include <lib/fidl/cpp/string.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/testing/component_interceptor.h>
 
 #include <gtest/gtest.h>
 
