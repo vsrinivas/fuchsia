@@ -6,10 +6,7 @@ import("//build/components.gni")
 
 fuchsia_package("archivist-log-integration-tests") {
   testonly = true
-  deps = [
-    "cpp",
-    "cpp:cpp-structured",
-  ]
+  deps = [ "cpp" ]
 }
 
 group("tests") {
@@ -17,6 +14,5 @@ group("tests") {
   deps = [
     ":archivist-log-integration-tests",
     "cpp:test-spec",
-    "cpp:test-spec-structured",
   ]
 }

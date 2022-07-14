@@ -5,20 +5,16 @@
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
-#include <zircon/syscalls/log.h>
 #include <zircon/types.h>
 
 #include <memory>
 #include <vector>
 
-#include <gmock/gmock.h>
 #include <gtest/gtest.h>
-
-#include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
+#include <src/lib/fsl/handles/object_info.h>
+#include <src/lib/testing/loop_fixture/real_loop_fixture.h>
 
 namespace {
 
@@ -28,18 +24,13 @@ class StubLogListener : public fuchsia::logger::LogListenerSafe {
   StubLogListener();
   ~StubLogListener() override;
 
-  void LogMany(::std::vector<fuchsia::logger::LogMessage> Log, LogManyCallback done) override;
-  void Log(fuchsia::logger::LogMessage Log, LogCallback done) override;
-  void Done() override;
-
   const std::vector<fuchsia::logger::LogMessage>& GetLogs() { return log_messages_; }
 
   bool ListenFiltered(const std::shared_ptr<sys::ServiceDirectory>& svc, zx_koid_t pid,
                       const std::string& tag);
-
-  bool DumpLogs(fuchsia::logger::LogPtr log_service, DoneCallback done_callback);
-
-  bool Listen(fuchsia::logger::LogPtr log_service);
+  void LogMany(::std::vector<fuchsia::logger::LogMessage> Log, LogManyCallback done) override;
+  void Log(fuchsia::logger::LogMessage Log, LogCallback done) override;
+  void Done() override;
 
  private:
   ::fidl::Binding<fuchsia::logger::LogListenerSafe> binding_;
@@ -69,14 +60,6 @@ void StubLogListener::Done() {
   }
 }
 
-bool StubLogListener::Listen(fuchsia::logger::LogPtr log_service) {
-  if (!log_listener_) {
-    return false;
-  }
-  log_service->ListenSafe(std::move(log_listener_), nullptr);
-  return true;
-}
-
 bool StubLogListener::ListenFiltered(const std::shared_ptr<sys::ServiceDirectory>& svc,
                                      zx_koid_t pid, const std::string& tag) {
   if (!log_listener_) {
@@ -93,17 +76,7 @@ bool StubLogListener::ListenFiltered(const std::shared_ptr<sys::ServiceDirectory
   return true;
 }
 
-bool StubLogListener::DumpLogs(fuchsia::logger::LogPtr log_service, DoneCallback done_callback) {
-  if (!log_listener_) {
-    return false;
-  }
-  auto options = std::make_unique<fuchsia::logger::LogFilterOptions>();
-  log_service->DumpLogsSafe(std::move(log_listener_), std::move(options));
-  done_callback_ = std::move(done_callback);
-  return true;
-}
-
-using LoggerIntegrationTest = gtest::TestWithEnvironmentFixture;
+using LoggerIntegrationTest = gtest::RealLoopFixture;
 
 TEST_F(LoggerIntegrationTest, ListenFiltered) {
   // Make sure there is one syslog message coming from that pid and with a tag
@@ -176,33 +149,6 @@ TEST_F(LoggerIntegrationTest, ListenFiltered) {
     EXPECT_EQ(sorted_by_severity[i].pid, pid);
     EXPECT_TRUE(sorted_by_severity[i].msg.find(message) != std::string::npos);
   }
-}
-
-TEST_F(LoggerIntegrationTest, NoKlogs) {
-  auto svcs = CreateServices();
-  fuchsia::sys::LaunchInfo linfo;
-  linfo.url = "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx";
-  fuchsia::sys::LaunchInfo linfo_dup;
-  ASSERT_EQ(ZX_OK, linfo.Clone(&linfo_dup));
-  svcs->AddServiceWithLaunchInfo(std::move(linfo), fuchsia::logger::Log::Name_);
-  svcs->AddServiceWithLaunchInfo(std::move(linfo_dup), fuchsia::logger::LogSink::Name_);
-  auto env = CreateNewEnclosingEnvironment("no_klogs", std::move(svcs));
-  WaitForEnclosingEnvToStart(env.get());
-
-  auto log_sink = env->ConnectToService<fuchsia::logger::LogSink>();
-  const char* tag = "my-tag";
-
-  syslog::SetLogSettings(syslog::LogSettings{.log_sink = log_sink.Unbind().TakeChannel().release()},
-                         {tag});
-  FX_SLOG(INFO, "hello world");
-  StubLogListener log_listener;
-  ASSERT_TRUE(log_listener.Listen(env->ConnectToService<fuchsia::logger::Log>()));
-
-  RunLoopUntil([&log_listener]() { return log_listener.GetLogs().size() >= 1; });
-  auto& logs = log_listener.GetLogs();
-  auto& msg = logs[0];
-  ASSERT_EQ(msg.tags.size(), 1u);
-  ASSERT_EQ(msg.tags[0], tag);
 }
 
 }  // namespace
