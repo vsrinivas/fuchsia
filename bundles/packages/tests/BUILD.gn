@@ -71,7 +71,6 @@ group("all") {
     "//src/sys/device_settings:device_settings_manager",
     "//src/sys/sysmgr/integration_tests",
     "//src/sys/sysmgr/test:sysmgr-tests",
-    "//src/sys/tools/run/test",
     "//src/ui/a11y/bundles:tests",
     "//src/ui/bin/shortcut:tests",
     "//src/ui/bin/terminal:tests",
