@@ -5973,11 +5973,13 @@ bool VmCowPagesContainer::RemovePageForEviction(vm_page_t* page, uint64_t offset
   return cow().RemovePageForEviction(page, offset, hint_action);
 }
 
-zx_status_t VmCowPagesContainer::ReplacePageWithLoaned(vm_page_t* page, uint64_t offset) {
+zx_status_t VmCowPagesContainer::ReplacePage(vm_page_t* before_page, uint64_t offset,
+                                             bool with_loaned, vm_page_t** after_page,
+                                             LazyPageRequest* page_request) {
   // While the caller must have a ref on VmCowPagesContainer, the caller doesn't need to have a ref
   // on VmCowPages, for ReplacePage() in particular.
   DEBUG_ASSERT(ref_count_debug() >= 1);
-  return cow().ReplacePageWithLoaned(page, offset);
+  return cow().ReplacePage(before_page, offset, with_loaned, after_page, page_request);
 }
 
 template <class... Args>
