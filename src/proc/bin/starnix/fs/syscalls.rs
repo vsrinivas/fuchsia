@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 use std::convert::TryInto;
+use std::sync::Arc;
 use std::usize;
 
 use crate::fs::eventfd::*;
 use crate::fs::fuchsia::*;
 use crate::fs::pipe::*;
 use crate::fs::*;
+use crate::lock::Mutex;
 use crate::logging::{not_implemented, strace};
 use crate::syscalls::*;
 use crate::task::*;
@@ -1440,6 +1442,11 @@ pub fn sys_epoll_pwait(
     Ok(active_events.len())
 }
 
+struct ReadyPollItem {
+    index: usize,
+    events: u32,
+}
+
 fn poll(
     current_task: &mut CurrentTask,
     user_pollfds: UserRef<pollfd>,
@@ -1454,34 +1461,54 @@ fn poll(
 
     let timeout = duration_from_poll_timeout(timeout)?;
     let mut pollfds = vec![pollfd::default(); num_fds as usize];
-    let file_object = EpollFileObject::new(current_task);
-    let epoll_file = file_object.downcast_file::<EpollFileObject>().unwrap();
+    let ready_items = Arc::new(Mutex::new(Vec::<ReadyPollItem>::new()));
+    let waiter = Waiter::new();
 
     for (index, poll_descriptor) in pollfds.iter_mut().enumerate() {
         *poll_descriptor = current_task.mm.read_object(user_pollfds.at(index))?;
+        poll_descriptor.revents = 0;
         if poll_descriptor.fd < 0 {
             continue;
         }
-        poll_descriptor.revents = 0;
         let file = current_task.files.get(FdNumber::from_raw(poll_descriptor.fd as i32))?;
-        let event = EpollEvent { events: poll_descriptor.events as u32, data: index as u64 };
-        epoll_file.add(&current_task, &file, &file_object, event)?;
+        let handler_ready_items = ready_items.clone();
+        let handler = move |observed: FdEvents| {
+            handler_ready_items.lock().push(ReadyPollItem { index, events: observed.mask() });
+        };
+
+        let sought_events =
+            FdEvents::from(poll_descriptor.events as u32) | FdEvents::POLLERR | FdEvents::POLLHUP;
+        file.wait_async(
+            current_task,
+            &waiter,
+            sought_events,
+            Box::new(handler),
+            WaitAsyncOptions::empty(),
+        );
     }
 
     let mask = mask.unwrap_or_else(|| current_task.read().signals.mask);
-    let ready_fds = current_task.wait_with_temporary_mask(mask, |current_task| {
-        epoll_file.wait(current_task, num_fds, timeout)
-    })?;
+    match current_task.wait_with_temporary_mask(mask, |current_task| {
+        waiter.wait_until(current_task, zx::Time::after(timeout))
+    }) {
+        Err(err) if err == ETIMEDOUT => {}
+        result => result?,
+    }
 
-    for event in &ready_fds {
-        pollfds[event.data as usize].revents = event.events as i16;
+    let ready_items = ready_items.lock();
+    for ready_item in ready_items.iter() {
+        let interested_events = FdEvents::from(pollfds[ready_item.index].events as u32)
+            | FdEvents::POLLERR
+            | FdEvents::POLLHUP;
+        let return_events = interested_events.mask() & ready_item.events;
+        pollfds[ready_item.index].revents = return_events as i16;
     }
 
     for (index, poll_descriptor) in pollfds.iter().enumerate() {
         current_task.mm.write_object(user_pollfds.at(index), poll_descriptor)?;
     }
 
-    Ok(ready_fds.len())
+    Ok(ready_items.len())
 }
 
 pub fn sys_ppoll(
