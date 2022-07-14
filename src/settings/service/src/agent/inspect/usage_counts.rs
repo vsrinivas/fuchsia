@@ -13,17 +13,16 @@ use crate::agent::Payload;
 use crate::base::SettingType;
 use crate::blueprint_definition;
 use crate::handler::base::{Payload as HandlerPayload, Request};
-use crate::inspect::utils::inspect_writable_map::InspectWritableMap;
+use crate::inspect::utils::managed_inspect_map::ManagedInspectMap;
 use crate::message::base::{filter, MessageEvent, MessengerType};
 use crate::service::TryFromWithClient;
 use crate::{service, trace};
-
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, component};
-use fuchsia_inspect_derive::{Inspect, WithInspect};
+use fuchsia_inspect_derive::Inspect;
 use futures::StreamExt;
 use inspect::NumericProperty;
-
+use std::collections::HashMap;
 use std::sync::Arc;
 
 blueprint_definition!(
@@ -32,20 +31,18 @@ blueprint_definition!(
 );
 
 /// Information about a setting type usage count to be written to inspect.
-#[derive(Default, Inspect)]
 struct SettingTypeUsageInspectInfo {
     /// Map from the name of the Request variant to its calling counts.
-    requests_by_type: InspectWritableMap<UsageInfo>,
-
-    /// Node of this info.
-    inspect_node: inspect::Node,
+    requests_by_type: ManagedInspectMap<UsageInfo>,
 }
 
 impl SettingTypeUsageInspectInfo {
-    fn new(node: &inspect::Node, key: &str) -> Self {
-        Self::default()
-            .with_inspect(node, key)
-            .expect("Failed to create SettingTypeUsageInspectInfo node")
+    fn new(parent: &inspect::Node, setting_type_str: &str) -> Self {
+        Self {
+            requests_by_type: ManagedInspectMap::<UsageInfo>::with_node(
+                parent.create_child(setting_type_str),
+            ),
+        }
     }
 }
 
@@ -58,12 +55,6 @@ struct UsageInfo {
     count: inspect::IntProperty,
 }
 
-impl UsageInfo {
-    fn new(node: &inspect::Node, key: &str) -> Self {
-        Self::default().with_inspect(node, key).expect("failed to create UsageInfo inspect node")
-    }
-}
-
 /// The SettingTypeUsageInspectAgent is responsible for listening to requests to the setting
 /// handlers and recording the related API usage counts to Inspect.
 pub(crate) struct SettingTypeUsageInspectAgent {
@@ -71,7 +62,7 @@ pub(crate) struct SettingTypeUsageInspectAgent {
     inspect_node: inspect::Node,
 
     /// Mapping from SettingType key to api usage counts.
-    api_call_counts: InspectWritableMap<SettingTypeUsageInspectInfo>,
+    api_call_counts: HashMap<String, SettingTypeUsageInspectInfo>,
 }
 
 impl SettingTypeUsageInspectAgent {
@@ -98,10 +89,8 @@ impl SettingTypeUsageInspectAgent {
             .await
             .expect("should receive client");
 
-        let mut agent = SettingTypeUsageInspectAgent {
-            inspect_node: node,
-            api_call_counts: InspectWritableMap::<SettingTypeUsageInspectInfo>::new(),
-        };
+        let mut agent =
+            SettingTypeUsageInspectAgent { inspect_node: node, api_call_counts: HashMap::new() };
 
         fasync::Task::spawn({
             async move {
@@ -160,16 +149,16 @@ impl SettingTypeUsageInspectAgent {
     /// Write a usage count to inspect.
     fn record_usage(&mut self, setting_type: SettingType, request: &Request) {
         let inspect_node = &self.inspect_node;
-        let setting_type_info =
-            self.api_call_counts.get_or_insert_with(format!("{:?}", setting_type), || {
-                SettingTypeUsageInspectInfo::new(inspect_node, &format!("{:?}", setting_type))
-            });
+        let setting_type_str = format!("{:?}", setting_type);
+        let setting_type_info = self
+            .api_call_counts
+            .entry(setting_type_str.clone())
+            .or_insert_with(|| SettingTypeUsageInspectInfo::new(inspect_node, &setting_type_str));
 
         let key = request.for_inspect();
-        let usage_inspect_node = &setting_type_info.inspect_node;
         let usage = setting_type_info
             .requests_by_type
-            .get_or_insert_with(key.to_string(), || UsageInfo::new(usage_inspect_node, key));
+            .get_or_insert_with(key.to_string(), UsageInfo::default);
         usage.count.add(1);
     }
 }
