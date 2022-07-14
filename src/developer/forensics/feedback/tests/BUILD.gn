@@ -250,12 +250,12 @@ executable("kernel_log_integration_test_exe") {
 
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/developer/forensics/feedback/attachments",
     "//src/developer/forensics/feedback/attachments:kernel_log",
     "//src/developer/forensics/utils:errors",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture:gtest",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/zx",

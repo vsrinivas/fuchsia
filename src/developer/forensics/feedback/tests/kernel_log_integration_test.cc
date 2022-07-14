@@ -8,7 +8,6 @@
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/inspect/cpp/vmo/types.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
@@ -22,14 +21,14 @@
 #include "src/developer/forensics/feedback/attachments/kernel_log.h"
 #include "src/developer/forensics/feedback/attachments/types.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 
 namespace forensics::feedback {
 namespace {
 
 using testing::UnorderedElementsAreArray;
 
-class CollectKernelLogTest : public gtest::TestWithEnvironmentFixture {
+class CollectKernelLogTest : public gtest::RealLoopFixture {
  public:
   CollectKernelLogTest() : executor_(dispatcher()) {
     environment_services_ = sys::ServiceDirectory::CreateFromNamespace();
