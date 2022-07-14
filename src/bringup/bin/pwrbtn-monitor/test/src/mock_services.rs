@@ -150,7 +150,9 @@ async fn main() -> Result<(), Error> {
                                     zx::Status::OK.into_raw(),
                                     msg,
                                     zx::Time::get_monotonic().into_nanos(),
-                                ).expect("failed sending response to ReadReport");
+                                ).unwrap_or_else(|e| {
+                                    fx_log_warn!("failed sending response to ReadReport: {:?}", e);
+                                });
                             }
                             _ => panic!("unexpected call to fuchsia.hardware.input.Device"),
                         }
