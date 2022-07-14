@@ -8,7 +8,6 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl_test_base.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
-#include <lib/sys/cpp/testing/fake_component.h>
 
 #include <set>
 #include <unordered_map>

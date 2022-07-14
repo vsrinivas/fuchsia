@@ -9,13 +9,12 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
-#include <lib/sys/cpp/service_directory.h>
-#include <lib/sys/cpp/testing/test_with_environment_fixture.h>
 
 #include <memory>
 
+#include <gtest/gtest.h>
+
 #include "lib/async/dispatcher.h"
-#include "lib/sys/cpp/testing/enclosing_environment.h"
 #include "src/virtualization/lib/grpc/grpc_vsock_server.h"
 #include "src/virtualization/lib/vsh/command_runner.h"
 #include "src/virtualization/tests/fake_netstack.h"
