@@ -76,6 +76,7 @@ rustc_binary("bin") {
     "src/bindings/netdevice_worker.rs",
     "src/bindings/socket/datagram.rs",
     "src/bindings/socket/mod.rs",
+    "src/bindings/socket/stream.rs",
     "src/bindings/stack_fidl_worker.rs",
     "src/bindings/timers.rs",
     "src/bindings/util.rs",
