@@ -4,7 +4,7 @@
 
 #include "src/lib/fidl/cpp/contrib/connection/service_reconnector.h"
 
-#include <fidl/test.protocol/cpp/fidl.h>
+#include <fidl/test.protocol.connector/cpp/fidl.h>
 #include <lib/service/llcpp/service.h>
 
 #include <functional>
@@ -14,7 +14,6 @@
 
 #include <sdk/lib/sys/component/cpp/outgoing_directory.h>
 
-#include "fidl/test.protocol/cpp/natural_types.h"
 #include "lib/async/cpp/task.h"
 #include "lib/fidl/llcpp/channel.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
@@ -25,8 +24,8 @@
 namespace {
 
 using fidl::contrib::ServiceReconnector;
-using test_protocol::Error;
-using test_protocol::SimpleProtocol;
+using test_protocol_connector::Error;
+using test_protocol_connector::SimpleProtocol;
 
 class SimpleProtocolImpl : public fidl::Server<SimpleProtocol> {
  public:
@@ -82,7 +81,7 @@ class ServiceReconnectorTest : public gtest::TestLoopFixture {
   void ReplaceProtocol() {
     // Close all existing connections.
     if (!server_bindings_.empty()) {
-      std::vector<fidl::ServerBindingRef<test_protocol::SimpleProtocol>> old_bindings;
+      std::vector<fidl::ServerBindingRef<test_protocol_connector::SimpleProtocol>> old_bindings;
       old_bindings.swap(server_bindings_);
 
       for (auto binding : old_bindings) {
@@ -113,7 +112,8 @@ class ServiceReconnectorTest : public gtest::TestLoopFixture {
 
   void DoAction() {
     reconnector()->Do([](fidl::Client<SimpleProtocol>& client) {
-      client->DoAction().Then([](fidl::Result<test_protocol::SimpleProtocol::DoAction>& resp) {});
+      client->DoAction().Then(
+          [](fidl::Result<test_protocol_connector::SimpleProtocol::DoAction>& resp) {});
     });
   }
 
@@ -124,13 +124,14 @@ class ServiceReconnectorTest : public gtest::TestLoopFixture {
     // Serve ProtocolFactory
     outgoing_directory_ = std::make_unique<component::OutgoingDirectory>(
         component::OutgoingDirectory::Create(dispatcher()));
-    ASSERT_EQ(ZX_OK, outgoing_directory_
-                         ->AddProtocol<test_protocol::SimpleProtocol>(
-                             [this](fidl::ServerEnd<test_protocol::SimpleProtocol> request) {
-                               server_bindings_.push_back(fidl::BindServer(
-                                   dispatcher(), std::move(request), protocol_impl_.get()));
-                             })
-                         .status_value());
+    ASSERT_EQ(ZX_OK,
+              outgoing_directory_
+                  ->AddProtocol<test_protocol_connector::SimpleProtocol>(
+                      [this](fidl::ServerEnd<test_protocol_connector::SimpleProtocol> request) {
+                        server_bindings_.push_back(fidl::BindServer(
+                            dispatcher(), std::move(request), protocol_impl_.get()));
+                      })
+                  .status_value());
 
     // Connect to /svc endpoint
     auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
@@ -150,7 +151,7 @@ class ServiceReconnectorTest : public gtest::TestLoopFixture {
   fidl::ClientEnd<fuchsia_io::Directory> root_dir_;
   fidl::ClientEnd<fuchsia_io::Directory> svc_dir_;
   std::unique_ptr<SimpleProtocolImpl> protocol_impl_;
-  std::vector<fidl::ServerBindingRef<test_protocol::SimpleProtocol>> server_bindings_;
+  std::vector<fidl::ServerBindingRef<test_protocol_connector::SimpleProtocol>> server_bindings_;
   std::shared_ptr<ServiceReconnector<SimpleProtocol>> reconnector_;
 };
 
@@ -222,7 +223,8 @@ TEST_F(ServiceReconnectorTest, BacksOff) {
       });
 
   protocol->Do([](fidl::Client<SimpleProtocol>& client) {
-    client->DoAction().Then([](fidl::Result<test_protocol::SimpleProtocol::DoAction>& resp) {});
+    client->DoAction().Then(
+        [](fidl::Result<test_protocol_connector::SimpleProtocol::DoAction>& resp) {});
   });
 
   RunLoopFor(zx::min(5));

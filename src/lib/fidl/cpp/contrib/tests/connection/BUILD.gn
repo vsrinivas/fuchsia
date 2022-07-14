@@ -6,18 +6,12 @@ import("//build/components.gni")
 import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 
-fidl("test.protocol") {
-  sdk_category = "internal"
-  api = "test.protocol"
-  sources = [ "test.protocol.test.fidl" ]
-}
-
 test("service_hub_connector_tests_bin") {
   output_name = "service_hub_connector_tests_bin"
   sources = [ "service_hub_connector_test.cc" ]
   deps = [
-    ":test.protocol_cpp",
     "//sdk/lib/sys/component/cpp",
+    "//sdk/testing/fidl/protocols_tests:test.protocol.connector_cpp",
     "//src/lib/fidl/cpp/contrib/connection:service_hub_connector",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/vfs/cpp",
@@ -30,8 +24,8 @@ test("service_reconnector_tests_bin") {
   output_name = "service_reconnector_tests_bin"
   sources = [ "service_reconnector_test.cc" ]
   deps = [
-    ":test.protocol_cpp",
     "//sdk/lib/sys/component/cpp",
+    "//sdk/testing/fidl/protocols_tests:test.protocol.connector_cpp",
     "//src/lib/fidl/cpp/contrib/connection:service_reconnector",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/vfs/cpp",

@@ -4,7 +4,7 @@
 
 #include "src/lib/fidl/cpp/contrib/connection/service_hub_connector.h"
 
-#include <fidl/test.protocol/cpp/fidl.h>
+#include <fidl/test.protocol.connector/cpp/fidl.h>
 #include <lib/service/llcpp/service.h>
 
 #include <functional>
@@ -14,7 +14,6 @@
 
 #include <sdk/lib/sys/component/cpp/outgoing_directory.h>
 
-#include "fidl/test.protocol/cpp/natural_types.h"
 #include "lib/async/cpp/task.h"
 #include "lib/fidl/llcpp/channel.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
@@ -26,9 +25,9 @@ namespace {
 
 constexpr size_t kMaxBufferSize = 20;
 
-using test_protocol::Error;
-using test_protocol::Protocol;
-using test_protocol::ProtocolFactory;
+using test_protocol_connector::Error;
+using test_protocol_connector::Protocol;
+using test_protocol_connector::ProtocolFactory;
 
 class ProtocolConnector : public fidl::contrib::ServiceHubConnector<ProtocolFactory, Protocol> {
  public:
@@ -40,7 +39,7 @@ class ProtocolConnector : public fidl::contrib::ServiceHubConnector<ProtocolFact
     Do([](fidl::Client<Protocol>& protocol, DoResolver resolver) {
       protocol->DoAction().Then(
           [resolver = std::move(resolver)](
-              fidl::Result<test_protocol::Protocol::DoAction>& status) mutable {
+              fidl::Result<test_protocol_connector::Protocol::DoAction>& status) mutable {
             resolver.resolve(status.is_error() &&
                              (status.error_value().is_transport_error() ||
                               status.error_value().application_error() == Error::kTransient));
@@ -63,8 +62,8 @@ class ProtocolConnector : public fidl::contrib::ServiceHubConnector<ProtocolFact
     auto endpoints = fidl::CreateEndpoints<Protocol>();
 
     factory
-        ->CreateProtocol(
-            test_protocol::ProtocolFactoryCreateProtocolRequest(std::move(endpoints->server)))
+        ->CreateProtocol(test_protocol_connector::ProtocolFactoryCreateProtocolRequest(
+            std::move(endpoints->server)))
         .Then([resolver = std::move(resolver), client_end = std::move(endpoints->client)](
                   fidl::Result<ProtocolFactory::CreateProtocol>& response) mutable {
           if (response.is_ok()) {
@@ -166,7 +165,7 @@ class ServiceHubConnectorTest : public gtest::TestLoopFixture {
   void ReplaceProtocol() {
     // Close all existing connections.
     if (!server_bindings_.empty()) {
-      std::vector<fidl::ServerBindingRef<test_protocol::ProtocolFactory>> old_bindings;
+      std::vector<fidl::ServerBindingRef<test_protocol_connector::ProtocolFactory>> old_bindings;
       old_bindings.swap(server_bindings_);
 
       for (auto binding : old_bindings) {
@@ -191,14 +190,15 @@ class ServiceHubConnectorTest : public gtest::TestLoopFixture {
     // Serve ProtocolFactory
     outgoing_directory_ = std::make_unique<component::OutgoingDirectory>(
         component::OutgoingDirectory::Create(dispatcher()));
-    ASSERT_EQ(ZX_OK, outgoing_directory_
-                         ->AddProtocol<test_protocol::ProtocolFactory>(
-                             [this](fidl::ServerEnd<test_protocol::ProtocolFactory> request) {
-                               FX_LOGS(INFO) << "Binding attempted!";
-                               server_bindings_.push_back(fidl::BindServer(
-                                   dispatcher(), std::move(request), factory_impl_.get()));
-                             })
-                         .status_value());
+    ASSERT_EQ(ZX_OK,
+              outgoing_directory_
+                  ->AddProtocol<test_protocol_connector::ProtocolFactory>(
+                      [this](fidl::ServerEnd<test_protocol_connector::ProtocolFactory> request) {
+                        FX_LOGS(INFO) << "Binding attempted!";
+                        server_bindings_.push_back(fidl::BindServer(
+                            dispatcher(), std::move(request), factory_impl_.get()));
+                      })
+                  .status_value());
 
     // Connect to /svc endpoint
     auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
@@ -219,7 +219,7 @@ class ServiceHubConnectorTest : public gtest::TestLoopFixture {
   fidl::ClientEnd<fuchsia_io::Directory> root_dir_;
   fidl::ClientEnd<fuchsia_io::Directory> svc_dir_;
   std::unique_ptr<FakeProtocolFactoryImpl> factory_impl_;
-  std::vector<fidl::ServerBindingRef<test_protocol::ProtocolFactory>> server_bindings_;
+  std::vector<fidl::ServerBindingRef<test_protocol_connector::ProtocolFactory>> server_bindings_;
   std::unique_ptr<ProtocolConnector> protocol_connector_;
 };
 
@@ -316,8 +316,8 @@ TEST_F(ServiceHubConnectorTest, RetriesTransientErrors) {
   ASSERT_NE(protocol(), nullptr);
   ASSERT_EQ(protocol()->ActionsSuccessful(), 1U);
 
-  protocol()->QueueError(test_protocol::Error::kTransient);
-  protocol()->QueueError(test_protocol::Error::kTransient);
+  protocol()->QueueError(test_protocol_connector::Error::kTransient);
+  protocol()->QueueError(test_protocol_connector::Error::kTransient);
   protocol_connector().DoAction();
   RunLoopFor(zx::min(10));
 
@@ -332,8 +332,8 @@ TEST_F(ServiceHubConnectorTest, DoesNotRetryPermanentErrors) {
   ASSERT_NE(protocol(), nullptr);
   ASSERT_EQ(protocol()->ActionsSuccessful(), 1U);
 
-  protocol()->QueueError(test_protocol::Error::kPermanent);
-  protocol()->QueueError(test_protocol::Error::kPermanent);
+  protocol()->QueueError(test_protocol_connector::Error::kPermanent);
+  protocol()->QueueError(test_protocol_connector::Error::kPermanent);
 
   // First permanent failure. Should be attempted once, but not succeed.
   protocol_connector().DoAction();
