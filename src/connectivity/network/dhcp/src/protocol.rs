@@ -9,7 +9,9 @@ use std::convert::{Infallible as Never, TryFrom, TryInto};
 use std::fmt;
 use std::iter::Iterator;
 use std::net::Ipv4Addr;
+use std::num::NonZeroU8;
 use thiserror::Error;
+use tracing::warn;
 
 pub const SERVER_PORT: u16 = 67;
 pub const CLIENT_PORT: u16 = 68;
@@ -43,6 +45,15 @@ const SNAME_LEN: usize = 64;
 const FILE_LEN: usize = 128;
 const IPV4_ADDR_LEN: usize = 4;
 
+// Datagrams and DHCP Messages must both be at least 576 bytes.
+// - Datagram: https://datatracker.ietf.org/doc/html/rfc2132#section-4.4
+// - DHCP Message: https://datatracker.ietf.org/doc/html/rfc2132#section-9.10
+const MIN_MESSAGE_SIZE: u16 = 576;
+
+// Minimum legal value for mtu is 68.
+// https://datatracker.ietf.org/doc/html/rfc2132#section-5.1
+const MIN_MTU_VAL: u16 = 68;
+
 #[derive(Debug, Error, PartialEq)]
 pub enum ProtocolError {
     #[error("invalid buffer length: {}", _0)]
@@ -51,14 +62,12 @@ pub enum ProtocolError {
     InvalidFidlOption(DhcpOption),
     #[error("invalid message type: {}", _0)]
     InvalidMessageType(u8),
-    #[error("invalid netbios over tcpip node type: {}", _0)]
-    InvalidNodeType(u8),
     #[error("invalid bootp op code: {}", _0)]
     InvalidOpCode(u8),
     #[error("invalid option code: {}", _0)]
     InvalidOptionCode(u8),
-    #[error("invalid option overload: {}", _0)]
-    InvalidOverload(u8),
+    #[error("invalid option value. code: {}, value: {:?}", _0, _1)]
+    InvalidOptionValue(OptionCode, Vec<u8>),
     #[error("missing opcode")]
     MissingOpCode,
     #[error("missing expected option: {}", _0)]
@@ -565,7 +574,8 @@ pub enum DhcpOption {
     NonLocalSourceRouting(bool),
     PolicyFilter(Vec<Ipv4Addr>),
     MaxDatagramReassemblySize(u16),
-    DefaultIpTtl(u8),
+    // DefaultIpTtl cannot be zero: https://datatracker.ietf.org/doc/html/rfc2132#section-4.5
+    DefaultIpTtl(NonZeroU8),
     PathMtuAgingTimeout(u32),
     PathMtuPlateauTable(Vec<u16>),
     InterfaceMtu(u16),
@@ -579,7 +589,8 @@ pub enum DhcpOption {
     TrailerEncapsulation(bool),
     ArpCacheTimeout(u32),
     EthernetEncapsulation(bool),
-    TcpDefaultTtl(u8),
+    // TcpDefaultTtl cannot be zero: https://datatracker.ietf.org/doc/html/rfc2132#section-7.1
+    TcpDefaultTtl(NonZeroU8),
     TcpKeepaliveInterval(u32),
     TcpKeepaliveGarbage(bool),
     NetworkInformationServiceDomain(String),
@@ -662,9 +673,13 @@ impl DhcpOption {
             OptionCode::ExtensionsPath => {
                 Ok(DhcpOption::ExtensionsPath(bytes_to_nonempty_str(val)?))
             }
-            OptionCode::IpForwarding => Ok(DhcpOption::IpForwarding(bytes_to_bool(val)?)),
+            OptionCode::IpForwarding => {
+                let flag = bytes_to_bool(val).map_err(|e| e.to_protocol(code))?;
+                Ok(DhcpOption::IpForwarding(flag))
+            }
             OptionCode::NonLocalSourceRouting => {
-                Ok(DhcpOption::NonLocalSourceRouting(bytes_to_bool(val)?))
+                let flag = bytes_to_bool(val).map_err(|e| e.to_protocol(code))?;
+                Ok(DhcpOption::NonLocalSourceRouting(flag))
             }
             OptionCode::PolicyFilter => {
                 let addrs = bytes_to_addrs(val)?;
@@ -675,10 +690,15 @@ impl DhcpOption {
             }
             OptionCode::MaxDatagramReassemblySize => {
                 let max_datagram = get_byte_array::<2>(val).map(u16::from_be_bytes)?;
+                if max_datagram < MIN_MESSAGE_SIZE {
+                    return Err(ProtocolError::InvalidOptionValue(code, val.to_vec()));
+                }
                 Ok(DhcpOption::MaxDatagramReassemblySize(max_datagram))
             }
             OptionCode::DefaultIpTtl => {
                 let ttl = get_byte(val)?;
+                let ttl = NonZeroU8::new(ttl)
+                    .ok_or(ProtocolError::InvalidOptionValue(code, val.to_vec()))?;
                 Ok(DhcpOption::DefaultIpTtl(ttl))
             }
             OptionCode::PathMtuAgingTimeout => {
@@ -698,16 +718,27 @@ impl DhcpOption {
             }
             OptionCode::InterfaceMtu => {
                 let mtu = get_byte_array::<2>(val).map(u16::from_be_bytes)?;
+                if mtu < MIN_MTU_VAL {
+                    return Err(ProtocolError::InvalidOptionValue(code, val.to_vec()));
+                }
                 Ok(DhcpOption::InterfaceMtu(mtu))
             }
-            OptionCode::AllSubnetsLocal => Ok(DhcpOption::AllSubnetsLocal(bytes_to_bool(val)?)),
+            OptionCode::AllSubnetsLocal => {
+                let flag = bytes_to_bool(val).map_err(|e| e.to_protocol(code))?;
+                Ok(DhcpOption::AllSubnetsLocal(flag))
+            }
             OptionCode::BroadcastAddress => Ok(DhcpOption::BroadcastAddress(bytes_to_addr(val)?)),
             OptionCode::PerformMaskDiscovery => {
-                Ok(DhcpOption::PerformMaskDiscovery(bytes_to_bool(val)?))
+                let flag = bytes_to_bool(val).map_err(|e| e.to_protocol(code))?;
+                Ok(DhcpOption::PerformMaskDiscovery(flag))
             }
-            OptionCode::MaskSupplier => Ok(DhcpOption::MaskSupplier(bytes_to_bool(val)?)),
+            OptionCode::MaskSupplier => {
+                let flag = bytes_to_bool(val).map_err(|e| e.to_protocol(code))?;
+                Ok(DhcpOption::MaskSupplier(flag))
+            }
             OptionCode::PerformRouterDiscovery => {
-                Ok(DhcpOption::PerformRouterDiscovery(bytes_to_bool(val)?))
+                let flag = bytes_to_bool(val).map_err(|e| e.to_protocol(code))?;
+                Ok(DhcpOption::PerformRouterDiscovery(flag))
             }
             OptionCode::RouterSolicitationAddress => {
                 Ok(DhcpOption::RouterSolicitationAddress(bytes_to_addr(val)?))
@@ -720,24 +751,30 @@ impl DhcpOption {
                 Ok(DhcpOption::StaticRoute(addrs))
             }
             OptionCode::TrailerEncapsulation => {
-                Ok(DhcpOption::TrailerEncapsulation(bytes_to_bool(val)?))
+                let flag = bytes_to_bool(val).map_err(|e| e.to_protocol(code))?;
+                Ok(DhcpOption::TrailerEncapsulation(flag))
             }
             OptionCode::ArpCacheTimeout => {
                 let timeout = get_byte_array::<4>(val).map(u32::from_be_bytes)?;
                 Ok(DhcpOption::ArpCacheTimeout(timeout))
             }
             OptionCode::EthernetEncapsulation => {
-                Ok(DhcpOption::EthernetEncapsulation(bytes_to_bool(val)?))
+                let flag = bytes_to_bool(val).map_err(|e| e.to_protocol(code))?;
+                Ok(DhcpOption::EthernetEncapsulation(flag))
             }
-            OptionCode::TcpDefaultTtl => Ok(DhcpOption::TcpDefaultTtl(
-                *val.first().ok_or(ProtocolError::InvalidBufferLength(val.len()))?,
-            )),
+            OptionCode::TcpDefaultTtl => {
+                let ttl = get_byte(val)?;
+                let ttl = NonZeroU8::new(ttl)
+                    .ok_or(ProtocolError::InvalidOptionValue(code, val.to_vec()))?;
+                Ok(DhcpOption::TcpDefaultTtl(ttl))
+            }
             OptionCode::TcpKeepaliveInterval => {
                 let interval = get_byte_array::<4>(val).map(u32::from_be_bytes)?;
                 Ok(DhcpOption::TcpKeepaliveInterval(interval))
             }
             OptionCode::TcpKeepaliveGarbage => {
-                Ok(DhcpOption::TcpKeepaliveGarbage(bytes_to_bool(val)?))
+                let flag = bytes_to_bool(val).map_err(|e| e.to_protocol(code))?;
+                Ok(DhcpOption::TcpKeepaliveGarbage(flag))
             }
             OptionCode::NetworkInformationServiceDomain => {
                 let name = bytes_to_nonempty_str(val)?;
@@ -835,6 +872,9 @@ impl DhcpOption {
             OptionCode::Message => Ok(DhcpOption::Message(bytes_to_nonempty_str(val)?)),
             OptionCode::MaxDhcpMessageSize => {
                 let max_size = get_byte_array::<2>(val).map(u16::from_be_bytes)?;
+                if max_size < MIN_MESSAGE_SIZE {
+                    return Err(ProtocolError::InvalidOptionValue(code, val.to_vec()));
+                }
                 Ok(DhcpOption::MaxDhcpMessageSize(max_size))
             }
             OptionCode::RenewalTimeValue => {
@@ -903,7 +943,7 @@ impl DhcpOption {
             DhcpOption::MaxDatagramReassemblySize(v) => {
                 serialize_u16(OptionCode::MaxDatagramReassemblySize, v, buf)
             }
-            DhcpOption::DefaultIpTtl(v) => serialize_u8(OptionCode::DefaultIpTtl, v, buf),
+            DhcpOption::DefaultIpTtl(v) => serialize_u8(OptionCode::DefaultIpTtl, v.into(), buf),
             DhcpOption::PathMtuAgingTimeout(v) => {
                 serialize_u32(OptionCode::PathMtuAgingTimeout, v, buf)
             }
@@ -938,7 +978,7 @@ impl DhcpOption {
             DhcpOption::EthernetEncapsulation(v) => {
                 serialize_flag(OptionCode::EthernetEncapsulation, v, buf)
             }
-            DhcpOption::TcpDefaultTtl(v) => serialize_u8(OptionCode::TcpDefaultTtl, v, buf),
+            DhcpOption::TcpDefaultTtl(v) => serialize_u8(OptionCode::TcpDefaultTtl, v.into(), buf),
             DhcpOption::TcpKeepaliveInterval(v) => {
                 serialize_u32(OptionCode::TcpKeepaliveInterval, v, buf)
             }
@@ -1305,7 +1345,9 @@ impl FidlCompatible<fidl_fuchsia_net_dhcp::Option_> for DhcpOption {
             DhcpOption::MaxDatagramReassemblySize(v) => {
                 Ok(fidl_fuchsia_net_dhcp::Option_::MaxDatagramReassemblySize(v))
             }
-            DhcpOption::DefaultIpTtl(v) => Ok(fidl_fuchsia_net_dhcp::Option_::DefaultIpTtl(v)),
+            DhcpOption::DefaultIpTtl(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::DefaultIpTtl(v.into()))
+            }
             DhcpOption::PathMtuAgingTimeout(v) => {
                 Ok(fidl_fuchsia_net_dhcp::Option_::PathMtuAgingTimeout(v))
             }
@@ -1341,7 +1383,9 @@ impl FidlCompatible<fidl_fuchsia_net_dhcp::Option_> for DhcpOption {
             DhcpOption::EthernetEncapsulation(v) => {
                 Ok(fidl_fuchsia_net_dhcp::Option_::EthernetEncapsulation(v))
             }
-            DhcpOption::TcpDefaultTtl(v) => Ok(fidl_fuchsia_net_dhcp::Option_::TcpDefaultTtl(v)),
+            DhcpOption::TcpDefaultTtl(v) => {
+                Ok(fidl_fuchsia_net_dhcp::Option_::TcpDefaultTtl(v.into()))
+            }
             DhcpOption::TcpKeepaliveInterval(v) => {
                 Ok(fidl_fuchsia_net_dhcp::Option_::TcpKeepaliveInterval(v))
             }
@@ -1490,7 +1534,11 @@ impl FidlCompatible<fidl_fuchsia_net_dhcp::Option_> for DhcpOption {
             fidl_fuchsia_net_dhcp::Option_::MaxDatagramReassemblySize(v) => {
                 Ok(DhcpOption::MaxDatagramReassemblySize(v))
             }
-            fidl_fuchsia_net_dhcp::Option_::DefaultIpTtl(v) => Ok(DhcpOption::DefaultIpTtl(v)),
+            fidl_fuchsia_net_dhcp::Option_::DefaultIpTtl(v) => {
+                let ttl = NonZeroU8::new(v)
+                    .ok_or(ProtocolError::InvalidOptionValue(OptionCode::DefaultIpTtl, vec![v]))?;
+                Ok(DhcpOption::DefaultIpTtl(ttl))
+            }
             fidl_fuchsia_net_dhcp::Option_::PathMtuAgingTimeout(v) => {
                 Ok(DhcpOption::PathMtuAgingTimeout(v))
             }
@@ -1526,7 +1574,11 @@ impl FidlCompatible<fidl_fuchsia_net_dhcp::Option_> for DhcpOption {
             fidl_fuchsia_net_dhcp::Option_::EthernetEncapsulation(v) => {
                 Ok(DhcpOption::EthernetEncapsulation(v))
             }
-            fidl_fuchsia_net_dhcp::Option_::TcpDefaultTtl(v) => Ok(DhcpOption::TcpDefaultTtl(v)),
+            fidl_fuchsia_net_dhcp::Option_::TcpDefaultTtl(v) => {
+                let ttl = NonZeroU8::new(v)
+                    .ok_or(ProtocolError::InvalidOptionValue(OptionCode::TcpDefaultTtl, vec![v]))?;
+                Ok(DhcpOption::TcpDefaultTtl(ttl))
+            }
             fidl_fuchsia_net_dhcp::Option_::TcpKeepaliveInterval(v) => {
                 Ok(DhcpOption::TcpKeepaliveInterval(v))
             }
@@ -1634,7 +1686,8 @@ impl TryFrom<u8> for NodeType {
     type Error = ProtocolError;
 
     fn try_from(n: u8) -> Result<Self, Self::Error> {
-        <Self as num_traits::FromPrimitive>::from_u8(n).ok_or(ProtocolError::InvalidNodeType(n))
+        <Self as num_traits::FromPrimitive>::from_u8(n)
+            .ok_or(ProtocolError::InvalidOptionValue(OptionCode::NetBiosOverTcpipNodeType, vec![n]))
     }
 }
 
@@ -1654,7 +1707,10 @@ impl FidlCompatible<fidl_fuchsia_net_dhcp::NodeTypes> for NodeType {
             fidl_fuchsia_net_dhcp::NodeTypes::P_NODE => Ok(NodeType::PNode),
             fidl_fuchsia_net_dhcp::NodeTypes::M_NODE => Ok(NodeType::MNode),
             fidl_fuchsia_net_dhcp::NodeTypes::H_NODE => Ok(NodeType::HNode),
-            other => Err(ProtocolError::InvalidNodeType(other.bits())),
+            other => Err(ProtocolError::InvalidOptionValue(
+                OptionCode::NetBiosOverTcpipNodeType,
+                vec![other.bits()],
+            )),
         }
     }
 
@@ -1691,7 +1747,8 @@ impl TryFrom<u8> for Overload {
     type Error = ProtocolError;
 
     fn try_from(n: u8) -> Result<Self, Self::Error> {
-        <Self as num_traits::FromPrimitive>::from_u8(n).ok_or(ProtocolError::InvalidOverload(n))
+        <Self as num_traits::FromPrimitive>::from_u8(n)
+            .ok_or(ProtocolError::InvalidOptionValue(OptionCode::OptionOverload, vec![n]))
     }
 }
 
@@ -1811,11 +1868,20 @@ fn parse_options<T: Extend<DhcpOption>>(
                     Err(e) => return Err(e),
                 };
 
-                // Ignore options with incorrect lengths.
                 match DhcpOption::from_raw_parts(code, val) {
                     Ok(option) => options.extend(std::iter::once(option)),
-                    Err(ProtocolError::InvalidBufferLength(_)) => continue,
-                    Err(e) => return Err(e),
+                    Err(e) => {
+                        // RFC 2131 does not define how to handle invalid options.
+                        // In order to match prior art, like ISC and dnsmasq, we strive to
+                        // be lenient. We throw out as little as necessary and will allow a packet
+                        // even if a subset of the options are invalid.
+                        //
+                        // For example, here is a case where ISC will use the first 4 bytes of an
+                        // IPv4 Address even if the option had > 4 length.
+                        // https://github.com/isc-projects/dhcp/blob/31e68e5/server/dhcp.c#L947-L959
+                        warn!("Error while parsing Option: {}", e);
+                        continue;
+                    }
                 }
             }
         }
@@ -1838,9 +1904,9 @@ fn get_byte_array<const T: usize>(bytes: &[u8]) -> Result<[u8; T], InvalidBuffer
 
 // Converts input byte slice into a single byte.
 fn get_byte(bytes: &[u8]) -> Result<u8, InvalidBufferLengthError> {
-    match bytes.len() {
-        1 => Ok(bytes[0]),
-        n => Err(InvalidBufferLengthError(n)),
+    match bytes {
+        [b] => Ok(*b),
+        bytes => Err(InvalidBufferLengthError(bytes.len())),
     }
 }
 
@@ -1864,11 +1930,31 @@ fn bytes_to_addrs(bytes: &[u8]) -> Result<Vec<Ipv4Addr>, InvalidBufferLengthErro
         .map_err(|InvalidBufferLengthError(_)| InvalidBufferLengthError(bytes.len()))
 }
 
+#[derive(Debug, Error, PartialEq)]
+enum BooleanConversionError {
+    #[error("invalid buffer length: {}", _0)]
+    InvalidBufferLength(usize),
+    #[error("invalid value: {}", _0)]
+    InvalidValue(u8),
+}
+
+impl BooleanConversionError {
+    fn to_protocol(&self, code: OptionCode) -> ProtocolError {
+        match self {
+            Self::InvalidBufferLength(len) => ProtocolError::InvalidBufferLength(*len),
+            Self::InvalidValue(val) => ProtocolError::InvalidOptionValue(code, vec![*val]),
+        }
+    }
+}
+
 // Returns a bool from a nonempty byte slice.
-fn bytes_to_bool(bytes: &[u8]) -> Result<bool, InvalidBufferLengthError> {
-    let byte = get_byte(bytes)?;
-    // TODO(fxbug.dev/101061): Return Err if value is not either 0 or 1.
-    return Ok(byte == 1u8);
+fn bytes_to_bool(bytes: &[u8]) -> Result<bool, BooleanConversionError> {
+    let byte = get_byte(bytes)
+        .map_err(|InvalidBufferLengthError(n)| BooleanConversionError::InvalidBufferLength(n))?;
+    match byte {
+        0 | 1 => Ok(byte == 1),
+        b => Err(BooleanConversionError::InvalidValue(b)),
+    }
 }
 
 // Returns an Ipv4Addr when given a byte buffer in network order whose len >= start + 4.
@@ -2197,6 +2283,58 @@ mod tests {
     fn parse_options_with_invalid_length_multiples(code: OptionCode, len: usize) {
         let option = DhcpOption::from_raw_parts(code, &vec![0; len]);
         assert_eq!(Err(ProtocolError::InvalidBufferLength(len)), option)
+    }
+
+    #[test_case(OptionCode::IpForwarding)]
+    #[test_case(OptionCode::NonLocalSourceRouting)]
+    #[test_case(OptionCode::AllSubnetsLocal)]
+    #[test_case(OptionCode::PerformMaskDiscovery)]
+    #[test_case(OptionCode::MaskSupplier)]
+    #[test_case(OptionCode::PerformRouterDiscovery)]
+    #[test_case(OptionCode::TrailerEncapsulation)]
+    #[test_case(OptionCode::EthernetEncapsulation)]
+    #[test_case(OptionCode::TcpKeepaliveGarbage)]
+    fn parse_options_with_invalid_flag_value(code: OptionCode) {
+        let val = vec![2];
+        let option = DhcpOption::from_raw_parts(code, &val);
+        assert_eq!(Err(ProtocolError::InvalidOptionValue(code, val)), option)
+    }
+
+    #[test_case(0)]
+    #[test_case(4)]
+    fn parse_options_with_invalid_overload_value(overload: u8) {
+        let code = OptionCode::OptionOverload;
+        let val = vec![overload];
+        let option = DhcpOption::from_raw_parts(code, &val);
+
+        // Valid values are 1, 2, 3.
+        assert_eq!(Err(ProtocolError::InvalidOptionValue(code, val)), option);
+    }
+
+    #[test]
+    fn parse_options_with_invalid_netbios_node_value() {
+        // Valid values are 1, 2, 4, 8
+        let code = OptionCode::NetBiosOverTcpipNodeType;
+        let val = vec![3];
+        let option = DhcpOption::from_raw_parts(code, &val);
+        assert_eq!(Err(ProtocolError::InvalidOptionValue(code, val)), option);
+    }
+
+    #[test_case(OptionCode::DefaultIpTtl)]
+    #[test_case(OptionCode::TcpDefaultTtl)]
+    fn parse_options_with_invalid_ttl_value(code: OptionCode) {
+        let val = vec![0];
+        let option = DhcpOption::from_raw_parts(code, &val);
+        assert_eq!(Err(ProtocolError::InvalidOptionValue(code, val)), option);
+    }
+
+    #[test_case(OptionCode::MaxDatagramReassemblySize, MIN_MESSAGE_SIZE)]
+    #[test_case(OptionCode::MaxDhcpMessageSize, MIN_MESSAGE_SIZE)]
+    #[test_case(OptionCode::InterfaceMtu, MIN_MTU_VAL)]
+    fn parse_options_with_too_low_value(code: OptionCode, min_size: u16) {
+        let val = (min_size - 1).to_be_bytes().to_vec();
+        let option = DhcpOption::from_raw_parts(code, &val);
+        assert_eq!(Err(ProtocolError::InvalidOptionValue(code, val)), option);
     }
 
     #[test]
