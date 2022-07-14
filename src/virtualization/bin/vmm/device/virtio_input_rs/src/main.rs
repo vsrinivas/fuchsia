@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod input_device;
+mod keyboard;
 mod wire;
 
 use {
@@ -47,6 +48,7 @@ async fn run_virtio_input(
     .context("Failed to initialize device.")?;
 
     let mut input_device = InputDevice::new(
+        &guest_mem,
         receiver,
         device.take_stream(wire::EVENTQ)?,
         device.take_stream(wire::STATUSQ)?,
