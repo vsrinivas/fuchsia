@@ -20,13 +20,12 @@
 #include <map>
 
 #include "src/lib/storage/fs_management/cpp/format.h"
+#include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/fshost/fdio.h"
 #include "src/storage/fshost/fshost-boot-args.h"
 #include "src/storage/fshost/fshost_config.h"
 #include "src/storage/fshost/inspect-manager.h"
-#include "src/storage/memfs/memfs.h"
-#include "src/storage/memfs/vnode_dir.h"
 
 namespace fshost {
 
@@ -162,9 +161,6 @@ class FsManager {
     std::optional<fidl::ServerEnd<fuchsia_io::Directory>> server_end;
   };
   std::map<MountPoint, MountNode> mount_nodes_;
-
-  // The memfs which serves the /tmp directory.
-  std::unique_ptr<memfs::Memfs> tmp_;
 
   std::unique_ptr<async::Loop> global_loop_;
   fs::ManagedVfs vfs_;

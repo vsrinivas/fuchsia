@@ -157,22 +157,16 @@ fuchsia_component("test_manager_for_test_cmp") {
   manifest = "meta/test_manager_for_tests.cml"
 }
 
-fuchsia_component("memfs") {
-  testonly = true
-  deps = [ "//src/sys/component_manager/tests/memfs" ]
-  manifest = "meta/memfs.cml"
-}
-
 fuchsia_package("test_manager_pkg") {
   testonly = true
   package_name = "test_manager"
   deps = [
-    ":memfs",
     ":test_manager_cmp",
     "cmx_runner",
     "debug_data:debug_data_rust",
     "debug_data_processor",
     "//src/diagnostics/archivist:archivist-for-embedding-v2",
+    "//src/storage/memfs:memfs_component",
     "//src/sys/early_boot_instrumentation:early-boot-instrumentation",
   ]
 }

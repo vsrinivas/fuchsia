@@ -45,6 +45,6 @@ rustc_binary("fshost-binary") {
     "//src/storage/bin/blobfs",
 
     # Child component: memfs.
-    "//src/sys/component_manager/tests/storage:memfs",
+    "//src/storage/memfs:memfs_component",
   ]
 }

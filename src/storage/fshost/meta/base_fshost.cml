@@ -7,6 +7,12 @@
         "inspect/client.shard.cml",
         "syslog/client.shard.cml",
     ],
+    children: [
+        {
+            name: "tmpfs",
+            url: "#meta/memfs.cm",
+        },
+    ],
     capabilities: [
         {
             directory: "factory",
@@ -22,11 +28,6 @@
             directory: "mnt",
             rights: [ "rw*" ],
             path: "/mnt",
-        },
-        {
-            directory: "tmp",
-            rights: [ "rw*" ],
-            path: "/tmp",
         },
         {
             protocol: [
@@ -63,15 +64,26 @@
             availability: "optional",
         },
     ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#tmpfs" ],
+        },
+    ],
     expose: [
         {
             directory: [
                 "durable",
                 "factory",
                 "mnt",
-                "tmp",
             ],
             from: "self",
+        },
+        {
+            directory: "memfs",
+            from: "#tmpfs",
+            as: "tmp",
         },
         {
             protocol: [

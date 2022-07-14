@@ -34,14 +34,8 @@ fuchsia_component("integration-test") {
   manifest = "meta/integration_test.cml"
 }
 
-fuchsia_component("memfs") {
-  testonly = true
-  deps = [ "//src/sys/component_manager/tests/memfs" ]
-  manifest = "meta/memfs.cml"
-}
-
 fuchsia_test_package("package") {
   package_name = "capability-provider-vfs-compliance-integration-test"
   test_components = [ ":integration-test" ]
-  deps = [ ":memfs" ]
+  deps = [ "//src/storage/memfs:memfs_component" ]
 }

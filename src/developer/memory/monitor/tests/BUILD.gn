@@ -95,6 +95,6 @@ fuchsia_test_package("memory_monitor_inspect_integration_tests") {
   test_components = [ ":memory_monitor_inspect_integration_tests_component" ]
   deps = [
     ":memory_monitor_test_app_component",
-    "//src/sys/test_manager:memfs",
+    "//src/storage/memfs:memfs_component",
   ]
 }

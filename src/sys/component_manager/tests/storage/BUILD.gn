@@ -101,11 +101,6 @@ rustc_binary("only_exits_bin") {
   sources = [ "only_exits.rs" ]
 }
 
-fuchsia_component("memfs") {
-  deps = [ "//src/sys/component_manager/tests/memfs" ]
-  manifest = "meta/memfs.cml"
-}
-
 fuchsia_component("storage_user") {
   deps = [ ":storage_user_bin" ]
   manifest = "meta/storage_user.cml"
@@ -148,12 +143,18 @@ fuchsia_test_package("storage_integration_test") {
     ":storage_admin_integration_test_component",
   ]
   deps = [
-    ":memfs",
     ":only_exits",
     ":storage_realm",
     ":storage_realm_coll",
     ":storage_realm_coll_invalid_route",
     ":storage_user",
+    "//src/storage/memfs:memfs_component",
     "//src/sys/component_manager:component-manager-realm-builder-debug-cmp",
   ]
+}
+
+# This is used out-of-tree.
+group("memfs") {
+  testonly = true
+  deps = [ "//src/storage/memfs:memfs_component" ]
 }

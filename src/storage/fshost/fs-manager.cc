@@ -169,13 +169,6 @@ zx_status_t FsManager::Initialize(
   diagnostics_dir_ = inspect_manager_.Initialize(global_loop_->dispatcher());
   outgoing_dir->AddEntry("diagnostics", diagnostics_dir_);
 
-  fbl::RefPtr<memfs::VnodeDir> tmp_vnode;
-  zx_status_t status = memfs::Memfs::Create(global_loop_->dispatcher(), "<tmp>", &tmp_, &tmp_vnode);
-  if (status != ZX_OK) {
-    return status;
-  }
-  outgoing_dir->AddEntry("tmp", tmp_vnode);
-
   mnt_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
   outgoing_dir->AddEntry("mnt", mnt_dir_);
 
@@ -283,10 +276,9 @@ void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
   //    drivers running out of /system should be shut down.
   // 1. Shut down any filesystems which were started, synchronously calling shutdown on each one in
   //    no particular order.
-  // 2. Shut down the memfs which hosts /tmp.
-  // 3. Shut down the vfs. This hosts the fshost outgoing directory.
-  // 4. Call the shutdown callback provided when the shutdown function was called.
-  // 5. Signal the shutdown completion that shutdown is complete. After this point, the FsManager
+  // 2. Shut down the vfs. This hosts the fshost outgoing directory.
+  // 3. Call the shutdown callback provided when the shutdown function was called.
+  // 4. Signal the shutdown completion that shutdown is complete. After this point, the FsManager
   //    class can be destroyed, and fshost can exit.
   // If at any point we hit an error, we log loudly, but continue with the shutdown procedure. At
   // the end, we send the callback whatever the first error value we encountered was.
@@ -324,22 +316,15 @@ void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
     zx_status_t status = async::PostTask(
         global_loop_->dispatcher(),
         [this, callback = std::move(callback), merge_status = std::move(merge_status)]() mutable {
-          tmp_->Shutdown([this, callback = std::move(callback),
-                          merge_status = std::move(merge_status)](zx_status_t status) mutable {
+          vfs_.Shutdown([this, callback = std::move(callback),
+                         merge_status = std::move(merge_status)](zx_status_t status) mutable {
             if (status != ZX_OK) {
-              FX_LOGS(ERROR) << "tmp shutdown failed: " << zx_status_get_string(status);
+              FX_LOGS(ERROR) << "vfs shutdown failed: " << zx_status_get_string(status);
               merge_status(status);
             }
-            vfs_.Shutdown([this, callback = std::move(callback),
-                           merge_status = std::move(merge_status)](zx_status_t status) mutable {
-              if (status != ZX_OK) {
-                FX_LOGS(ERROR) << "vfs shutdown failed: " << zx_status_get_string(status);
-                merge_status(status);
-              }
-              callback(merge_status(ZX_OK));
-              sync_completion_signal(&shutdown_);
-              // after this signal, FsManager can be destroyed.
-            });
+            callback(merge_status(ZX_OK));
+            sync_completion_signal(&shutdown_);
+            // after this signal, FsManager can be destroyed.
           });
         });
     if (status != ZX_OK) {

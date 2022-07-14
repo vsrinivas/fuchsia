@@ -65,7 +65,7 @@ async fn main() {
         .unwrap();
 
     // Ensure that memfs does not have a directory for the dynamic child
-    let dir = read_dir("/hub/children/memfs/exec/out/svc/fuchsia.io.Directory").unwrap();
+    let dir = read_dir("/hub/children/memfs/exec/expose/memfs").unwrap();
     let entries: Vec<DirEntry> = dir.map(|e| e.unwrap()).collect();
     assert!(entries.is_empty());
 }

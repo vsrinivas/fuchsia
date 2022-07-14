@@ -53,7 +53,6 @@ source_set("fshost-registry") {
     "//src/lib/storage/vfs/cpp",
     "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_llcpp",
     "//src/storage/fxfs:fuchsia.fxfs_llcpp",
-    "//src/storage/memfs:lib",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fdio-caller",
@@ -189,6 +188,7 @@ executable("fshost") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/ramdevice_client/cpp",
+    "//src/storage/memfs:memfs_component",
     "//third_party/zstd",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
