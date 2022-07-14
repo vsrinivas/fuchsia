@@ -38,11 +38,11 @@ using audio::utils::AudioInput;
 using audio::utils::AudioOutput;
 
 fbl::String GetDeviceName(AudioDeviceStream* stream) {
-  StatusOr<fbl::String> result = GetStreamConfigString(stream, AUDIO_STREAM_STR_ID_PRODUCT);
-  if (!result.ok()) {
+  zx::status<fbl::String> result = GetStreamConfigString(stream, AUDIO_STREAM_STR_ID_PRODUCT);
+  if (!result.is_ok()) {
     return "<error>";
   }
-  return result.ValueOrDie();
+  return result.value();
 }
 
 TEST(PixelbookEveAudio, Topology) {

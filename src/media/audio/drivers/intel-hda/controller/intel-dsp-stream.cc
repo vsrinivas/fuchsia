@@ -90,10 +90,10 @@ void IntelDspStream::Start(StartRequestView request, StartCompleter::Sync& compl
   }
 
   auto dsp = fbl::RefPtr<IntelDsp>::Downcast(parent_codec());
-  Status status = dsp->StartPipeline(stream_.id);
-  if (!status.ok()) {
-    LOG(ERROR, "Error on pipeline start res = %s", status.ToString().c_str());
-    completer.Close(status.code());
+  zx::status status = dsp->StartPipeline(stream_.id);
+  if (!status.is_ok()) {
+    LOG(ERROR, "Error on pipeline start res = %s", status.status_string());
+    completer.Close(status.status_value());
     return;
   }
   completer.Reply(result.value().start_time);
@@ -103,10 +103,10 @@ void IntelDspStream::Start(StartRequestView request, StartCompleter::Sync& compl
 void IntelDspStream::Stop(StopRequestView request, StopCompleter::Sync& completer) {
   fbl::AutoLock lock(obj_lock());
   auto dsp = fbl::RefPtr<IntelDsp>::Downcast(parent_codec());
-  Status status = dsp->PausePipeline(stream_.id);
-  if (!status.ok()) {
-    LOG(ERROR, "Error on pipeline pause res = %s", status.ToString().c_str());
-    completer.Close(status.code());
+  zx::status status = dsp->PausePipeline(stream_.id);
+  if (!status.is_ok()) {
+    LOG(ERROR, "Error on pipeline pause res = %s", status.status_string());
+    completer.Close(status.status_value());
     return;
   }
 

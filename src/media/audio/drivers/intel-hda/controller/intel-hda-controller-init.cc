@@ -16,8 +16,6 @@
 #include <algorithm>
 #include <utility>
 
-#include <intel-hda/utils/status.h>
-
 #include "debug-logging.h"
 #include "device-ids.h"
 #include "intel-dsp.h"
@@ -565,10 +563,10 @@ zx_status_t IntelHDAController::ProbeAudioDSP(zx_device_t* dsp_dev) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  Status result = dsp_->Init(dsp_dev);
-  if (!result.ok()) {
-    LOG(INFO, "DSP device not initialized (e.g. if not present): %s", result.ToString().c_str());
-    return result.code();
+  zx::status result = dsp_->Init(dsp_dev);
+  if (!result.is_ok()) {
+    LOG(INFO, "DSP device not initialized (e.g. if not present): %s", result.status_string());
+    return result.status_value();
   }
 
   return ZX_OK;

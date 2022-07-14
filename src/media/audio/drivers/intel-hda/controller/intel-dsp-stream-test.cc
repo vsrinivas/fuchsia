@@ -48,7 +48,7 @@ class TestCodec : public codecs::IntelHDACodecDriverBase {
     return codecs::IntelHDACodecDriverBase::ActivateStream(stream);
   }
 
-  Status Bind(zx_device_t* codec_dev, const char* name) {
+  zx::status<> Bind(zx_device_t* codec_dev, const char* name) {
     return codecs::IntelHDACodecDriverBase::Bind(codec_dev, name);
   }
   void DeviceRelease() { codecs::IntelHDACodecDriverBase::DeviceRelease(); }
@@ -176,7 +176,7 @@ class SstStreamTest : public zxtest::Test {
     ASSERT_OK(fake_controller_.Bind());
     codec_ = fbl::AdoptRef(new TestCodec);
     auto ret = codec_->Bind(fake_controller_.dev(), "test");
-    ASSERT_OK(ret.code());
+    ASSERT_OK(ret.status_value());
     stream_ = fbl::AdoptRef(new TestStream);
     ASSERT_OK(codec_->ActivateStream(stream_));
     ASSERT_OK(stream_->Bind());
@@ -312,7 +312,7 @@ TEST(SstStream, GetDaiFormats2) {
   ASSERT_OK(fake_controller.Bind());
   fbl::RefPtr<TestCodec> codec = fbl::AdoptRef(new TestCodec);
   auto ret = codec->Bind(fake_controller.dev(), "test");
-  ASSERT_OK(ret.code());
+  ASSERT_OK(ret.status_value());
   auto stream = fbl::AdoptRef(new TestStream2);
   ASSERT_OK(codec->ActivateStream(stream));
   ASSERT_OK(stream->Bind());

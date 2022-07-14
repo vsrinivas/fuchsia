@@ -10,6 +10,7 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_NHLT_H_
 
 #include <lib/stdcompat/span.h>
+#include <lib/zx/status.h>
 #include <zircon/compiler.h>
 
 #include <cstdint>
@@ -19,8 +20,6 @@
 #include <fbl/macros.h>
 #include <fbl/vector.h>
 #include <intel-hda/utils/nhlt.h>
-#include <intel-hda/utils/status.h>
-#include <intel-hda/utils/status_or.h>
 
 namespace audio::intel_hda {
 
@@ -44,7 +43,7 @@ class Nhlt {
   Nhlt() = default;
 
   // Parse the given raw NHLT data.
-  static StatusOr<std::unique_ptr<Nhlt>> FromBuffer(cpp20::span<const uint8_t> buffer);
+  static zx::status<std::unique_ptr<Nhlt>> FromBuffer(cpp20::span<const uint8_t> buffer);
 
   // Get parsed I2S configs.
   const fbl::Vector<EndPointConfig>& configs() const { return configs_; }

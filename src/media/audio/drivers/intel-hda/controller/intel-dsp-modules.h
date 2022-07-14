@@ -14,8 +14,6 @@
 #include <vector>
 
 #include <intel-hda/utils/intel-audio-dsp-ipc.h>
-#include <intel-hda/utils/status.h>
-#include <intel-hda/utils/status_or.h>
 
 #include "intel-dsp-ipc.h"
 
@@ -53,27 +51,28 @@ class DspModuleController {
   // Create a pipeline.
   //
   // Return ths ID of the created pipeline on success.
-  StatusOr<DspPipelineId> CreatePipeline(uint8_t priority, uint16_t memory_pages, bool low_power);
+  zx::status<DspPipelineId> CreatePipeline(uint8_t priority, uint16_t memory_pages, bool low_power);
 
   // Create an instance of the module "type" in the given pipeline.
   //
   // Returns the ID of the created module on success.
-  StatusOr<DspModuleId> CreateModule(DspModuleType type, DspPipelineId parent_pipeline,
-                                     ProcDomain scheduling_domain, cpp20::span<const uint8_t> data);
+  zx::status<DspModuleId> CreateModule(DspModuleType type, DspPipelineId parent_pipeline,
+                                       ProcDomain scheduling_domain,
+                                       cpp20::span<const uint8_t> data);
 
   // Connect an output pin of one module to the input pin of another.
-  Status BindModules(DspModuleId source_module, uint8_t src_output_pin, DspModuleId dest_module,
-                     uint8_t dest_input_pin);
+  zx::status<> BindModules(DspModuleId source_module, uint8_t src_output_pin,
+                           DspModuleId dest_module, uint8_t dest_input_pin);
 
   // Enable/disable the given pipeline.
-  Status SetPipelineState(DspPipelineId pipeline, PipelineState state, bool sync_stop_start);
+  zx::status<> SetPipelineState(DspPipelineId pipeline, PipelineState state, bool sync_stop_start);
 
   // Fetch details about modules available on the DSP.
-  StatusOr<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ReadModuleDetails();
+  zx::status<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ReadModuleDetails();
 
  private:
   // Allocate an instance ID for module of type |type|.
-  StatusOr<uint8_t> AllocateInstanceId(DspModuleType type);
+  zx::status<uint8_t> AllocateInstanceId(DspModuleType type);
 
   // Number of instances of each module type that have been created.
   std::unordered_map<DspModuleType, uint8_t> allocated_instances_;
@@ -92,11 +91,11 @@ class DspModuleController {
 //
 // Modules should be listed in source to sink order. Each module will be
 // joined to the previous module, connecting output pin 0 to input pin 0.
-StatusOr<DspPipelineId> CreateSimplePipeline(DspModuleController* controller,
-                                             std::initializer_list<DspModule> modules);
+zx::status<DspPipelineId> CreateSimplePipeline(DspModuleController* controller,
+                                               std::initializer_list<DspModule> modules);
 
 // Exposed for testing.
-StatusOr<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ParseModules(
+zx::status<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ParseModules(
     cpp20::span<const uint8_t> data);
 
 }  // namespace intel_hda

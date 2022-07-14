@@ -10,13 +10,13 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/zx/handle.h>
+#include <lib/zx/status.h>
 
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 #include <intel-hda/utils/codec-commands.h>
 #include <intel-hda/utils/intel-hda-proto.h>
-#include <intel-hda/utils/status.h>
 
 #include "channel.h"
 
@@ -60,7 +60,7 @@ class IntelHDACodecDriverBase : public fbl::RefCounted<IntelHDACodecDriverBase> 
   // Bind should only ever be called exactly once (during driver
   // instantiation).  Drivers must make sure that no other methods are in
   // flight during a call to Bind.
-  Status Bind(zx_device_t* codec_dev, const char* name);
+  zx::status<> Bind(zx_device_t* codec_dev, const char* name);
 
   // Send a codec command to our codec device.
   zx_status_t SendCodecCommand(uint16_t nid, CodecVerb verb, bool no_ack);
