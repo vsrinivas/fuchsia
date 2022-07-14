@@ -198,7 +198,6 @@ executable("unittest_bin") {
   sources = [
     "allow_list_unittest.cc",
     "component_controller_unittest.cc",
-    "component_event_provider_unittest.cc",
     "component_id_index_unittest.cc",
     "cpu_watcher_unittest.cc",
     "hub/hub_holder_unittest.cc",
@@ -207,7 +206,6 @@ executable("unittest_bin") {
     "namespace_builder_unittest.cc",
     "namespace_unittest.cc",
     "policy_checker_unittest.cc",
-    "realm_unittests.cc",
     "scheme_map_unittest.cc",
     "service_provider_dir_unittest.cc",
     "storage_metrics_unittest.cc",
@@ -222,7 +220,6 @@ executable("unittest_bin") {
     "//sdk/fidl/fuchsia.sys.internal",
     "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/vfs/cpp",
     "//src/lib/fxl/test:gtest_main",

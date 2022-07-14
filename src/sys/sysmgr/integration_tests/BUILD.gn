@@ -90,31 +90,6 @@ fuchsia_component("service_startup_test") {
   ]
 }
 
-executable("package_updating_loader_test_bin") {
-  testonly = true
-  output_name = "package_updating_loader_test"
-
-  sources = [ "package_updating_loader_test.cc" ]
-
-  deps = [
-    ":interface",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/storage/vfs/cpp",
-    "//src/lib/testing/loop_fixture",
-    "//src/sys/appmgr/integration_tests/fidl:echo",
-    "//src/sys/sysmgr:lib",
-    "//zircon/system/ulib/zx",
-  ]
-}
-
-fuchsia_component("package_updating_loader_test") {
-  testonly = true
-  manifest = "meta/package_updating_loader_test.cmx"
-  deps = [ ":package_updating_loader_test_bin" ]
-}
-
 config_data("sysmgr_integration_test_observer_config") {
   for_pkg = "sysmgr-integration-tests"
   outputs = [ "service_startup_test.config" ]
@@ -122,10 +97,7 @@ config_data("sysmgr_integration_test_observer_config") {
 }
 
 fuchsia_test_package("sysmgr-integration-tests") {
-  test_components = [
-    ":service_startup_test",
-    ":package_updating_loader_test",
-  ]
+  test_components = [ ":service_startup_test" ]
   deps = [
     ":mock_resolver",
     ":test_sysmgr_service",

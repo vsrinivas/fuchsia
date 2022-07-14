@@ -24,25 +24,6 @@ group("integration_tests") {
   ]
 }
 
-executable("full_tests") {
-  testonly = true
-
-  output_name = "appmgr_full_integration_tests"
-
-  sources = [ "full_integration_test.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.hardware.power.statecontrol",
-    "//sdk/fidl/fuchsia.logger",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/fxl",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gtest",
-  ]
-}
-
 executable("realm_tests") {
   testonly = true
 
@@ -173,12 +154,6 @@ fuchsia_component("appmgr_integration_tests_inspect_test_app") {
   manifest = "inspect/meta/inspect_vmo_test_app.cmx"
 }
 
-fuchsia_component("appmgr_full_integration_tests") {
-  testonly = true
-  deps = [ ":full_tests" ]
-  manifest = "meta/appmgr_full_integration_tests.cmx"
-}
-
 fuchsia_component("appmgr_hub_integration_tests") {
   testonly = true
   deps = [ ":hub_tests" ]
@@ -211,7 +186,6 @@ fuchsia_component("crashing_component") {
 
 fuchsia_test_package("appmgr_integration_tests") {
   test_components = [
-    ":appmgr_full_integration_tests",
     ":appmgr_hub_integration_tests",
     ":appmgr_realm_integration_tests",
   ]
