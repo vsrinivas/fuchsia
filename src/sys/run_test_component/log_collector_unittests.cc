@@ -5,7 +5,6 @@
 #include <fuchsia/logger/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/syslog/logger.h>
 #include <zircon/errors.h>
 
 #include <string>

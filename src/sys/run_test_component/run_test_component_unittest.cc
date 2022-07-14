@@ -6,7 +6,6 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/syslog/logger.h>
 
 #include <string>
 
@@ -35,7 +34,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(0u, result.matching_urls.size());
     EXPECT_EQ("", result.realm_label);
     EXPECT_EQ(-1, result.timeout);
-    EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
+    EXPECT_EQ(syslog::LOG_TRACE, result.min_log_severity);
   }
 
   {
@@ -50,7 +49,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[argc - 1], result.launch_info.arguments->at(1));
     EXPECT_EQ("", result.realm_label);
     EXPECT_EQ(-1, result.timeout);
-    EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
+    EXPECT_EQ(syslog::LOG_TRACE, result.min_log_severity);
   }
 
   {
@@ -66,7 +65,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[argc - 1], result.launch_info.arguments->at(1));
     EXPECT_EQ("kittens", result.realm_label);
     EXPECT_EQ(-1, result.timeout);
-    EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
+    EXPECT_EQ(syslog::LOG_TRACE, result.min_log_severity);
   }
 
   {
@@ -82,7 +81,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[argc - 1], result.launch_info.arguments->at(1));
     EXPECT_EQ("kittens", result.realm_label);
     EXPECT_EQ(30, result.timeout);
-    EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
+    EXPECT_EQ(syslog::LOG_TRACE, result.min_log_severity);
   }
 
   {
@@ -142,7 +141,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[argc - 2], result.launch_info.arguments->at(0));
     EXPECT_EQ(argv[argc - 1], result.launch_info.arguments->at(1));
     EXPECT_EQ("kittens", result.realm_label);
-    EXPECT_EQ(FX_LOG_WARNING, result.min_log_severity);
+    EXPECT_EQ(syslog::LOG_WARNING, result.min_log_severity);
   }
 
   {
@@ -162,7 +161,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[argc - 2], result.launch_info.arguments->at(0));
     EXPECT_EQ(argv[argc - 1], result.launch_info.arguments->at(1));
     EXPECT_EQ("kittens", result.realm_label);
-    EXPECT_EQ(FX_LOG_INFO, result.min_log_severity);
+    EXPECT_EQ(syslog::LOG_INFO, result.min_log_severity);
   }
 
   {
@@ -177,7 +176,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[argc - 2], result.launch_info.arguments->at(0));
     EXPECT_EQ(argv[argc - 1], result.launch_info.arguments->at(1));
     EXPECT_EQ("", result.realm_label);
-    EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
+    EXPECT_EQ(syslog::LOG_TRACE, result.min_log_severity);
   }
 
   {
@@ -208,8 +207,8 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[argc - 2], result.launch_info.arguments->at(0));
     EXPECT_EQ(argv[argc - 1], result.launch_info.arguments->at(1));
     EXPECT_EQ("", result.realm_label);
-    EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
-    EXPECT_EQ(FX_LOG_ERROR, result.max_log_severity);
+    EXPECT_EQ(syslog::LOG_TRACE, result.min_log_severity);
+    EXPECT_EQ(syslog::LOG_ERROR, result.max_log_severity);
   }
 
   // check that for time being we can pass tets args without using option delimiter(--).
@@ -225,7 +224,7 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[argc - 1], result.launch_info.arguments->at(1));
     EXPECT_EQ("", result.realm_label);
     EXPECT_EQ(-1, result.timeout);
-    EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
+    EXPECT_EQ(syslog::LOG_TRACE, result.min_log_severity);
   }
 }
 
