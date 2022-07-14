@@ -2,12 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [
-        "//src/lib/vulkan/vulkan-test.shard.cml",
-        "//src/sys/test_runners/rust/default.shard.cml",
-        "inspect/client.shard.cml",
-        "syslog/client.shard.cml",
-    ],
+    include: [ "//src/ui/tests/scenic-stress-tests/meta/scenic_stressor.shard.cml" ],
     program: {
         binary: "bin/scenic_stressor",
         args: [
@@ -15,83 +10,4 @@
             "1000",
         ],
     },
-    children: [
-        {
-            name: "scenic",
-            url: "fuchsia-pkg://fuchsia.com/scenic-stress-tests#meta/scenic-for-stress-tests.cm",
-        },
-        {
-            name: "hdcp",
-            url: "fuchsia-pkg://fuchsia.com/scenic-stress-tests#meta/hdcp.cm",
-        },
-    ],
-    use: [
-        {
-            protocol: "fuchsia.component.Realm",
-            from: "framework",
-        },
-    ],
-    offer: [
-        {
-            directory: "dev-display-controller",
-            from: "parent",
-            to: "#scenic",
-        },
-        {
-            directory: "dev-goldfish-address-space",
-            from: "parent",
-            to: "#scenic",
-        },
-        {
-            directory: "dev-goldfish-control",
-            from: "parent",
-            to: "#scenic",
-        },
-        {
-            directory: "dev-goldfish-pipe",
-            from: "parent",
-            to: "#scenic",
-        },
-        {
-            directory: "dev-goldfish-sync",
-            from: "parent",
-            to: "#scenic",
-        },
-        {
-            directory: "dev-gpu",
-            from: "parent",
-            to: "#scenic",
-        },
-        {
-            directory: "tmp",
-            from: "parent",
-            to: [ "#scenic" ],
-        },
-        {
-            protocol: [
-                "fuchsia.cobalt.LoggerFactory",
-                "fuchsia.logger.LogSink",
-                "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.tracing.provider.Registry",
-                "fuchsia.ui.input.ImeService",
-                "fuchsia.vulkan.loader.Loader",
-            ],
-            from: "parent",
-            to: "#scenic",
-        },
-        {
-            protocol: [
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.tracing.provider.Registry",
-            ],
-            from: "parent",
-            to: "#hdcp",
-        },
-        {
-            protocol: [ "fuchsia.hardware.display.Provider" ],
-            from: "#hdcp",
-            to: "#scenic",
-        },
-    ],
 }

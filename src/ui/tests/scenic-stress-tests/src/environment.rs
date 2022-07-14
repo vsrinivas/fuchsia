@@ -5,9 +5,10 @@
 use {
     crate::{input_actor::InputActor, session::Session, session_actor::SessionActor, Args},
     async_trait::async_trait,
-    fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
-    fidl_fuchsia_io as fio, fidl_fuchsia_ui_scenic as fscenic,
-    fuchsia_component::client::{connect_to_protocol, connect_to_protocol_at_dir_root},
+    fidl_fuchsia_ui_scenic as fscenic,
+    fuchsia_component_test::{
+        Capability, ChildOptions, DirectoryContents, RealmBuilder, RealmInstance, Ref, Route,
+    },
     futures::lock::Mutex,
     rand::{rngs::SmallRng, SeedableRng},
     std::sync::Arc,
@@ -19,27 +20,71 @@ use {
 /// This object lives for the entire duration of the test.
 pub struct ScenicEnvironment {
     args: Args,
-    scenic_exposed_dir: fio::DirectoryProxy,
+    realm_instance: RealmInstance,
 }
 
 impl ScenicEnvironment {
     pub async fn new(args: Args) -> Self {
-        // Bind to the scenic component, causing it to start
-        let realm_svc = connect_to_protocol::<fcomponent::RealmMarker>()
-            .expect("Could not connect to Realm service");
-        let mut child = fdecl::ChildRef { name: "scenic".to_string(), collection: None };
+        let builder = RealmBuilder::new().await.unwrap();
+        let hdcp = builder.add_child("hdcp", "#meta/hdcp.cm", ChildOptions::new()).await.unwrap();
+        let scenic =
+            builder.add_child("scenic", "#meta/scenic.cm", ChildOptions::new()).await.unwrap();
 
-        // Create endpoints for the fuchsia.io.Directory protocol.
-        // Component manager will connect us to the exposed directory of the component we bound to.
-        let (scenic_exposed_dir, server_end) =
-            fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
-        realm_svc
-            .open_exposed_dir(&mut child, server_end)
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.sysmem.Allocator"))
+                    .capability(Capability::protocol_by_name("fuchsia.tracing.provider.Registry"))
+                    .from(Ref::parent())
+                    .to(&scenic)
+                    .to(&hdcp),
+            )
             .await
-            .expect("Could not send open_exposed_dir command")
-            .expect("open_exposed_dir command did not succeed");
+            .unwrap();
 
-        Self { args, scenic_exposed_dir }
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
+                    .capability(Capability::protocol_by_name("fuchsia.vulkan.loader.Loader"))
+                    .from(Ref::parent())
+                    .to(&scenic),
+            )
+            .await
+            .unwrap();
+
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.hardware.display.Provider"))
+                    .from(&hdcp)
+                    .to(&scenic),
+            )
+            .await
+            .unwrap();
+
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.ui.scenic.Scenic"))
+                    .from(&scenic)
+                    .to(Ref::parent()),
+            )
+            .await
+            .unwrap();
+
+        // Override scenic's "i_can_haz_flatland" flag.
+        builder
+            .read_only_directory(
+                "config-data",
+                vec![&scenic],
+                DirectoryContents::new()
+                    .add_file("scenic_config", r#"{ "i_can_haz_flatland": false }"#),
+            )
+            .await
+            .unwrap();
+        let realm_instance = builder.build().await.expect("Failed to create realm");
+        Self { args, realm_instance }
     }
 }
 
@@ -64,11 +109,11 @@ impl Environment for ScenicEnvironment {
         let mut rng = SmallRng::seed_from_u64(seed);
 
         // Connect to the Scenic protocol
-        let scenic_proxy =
-            connect_to_protocol_at_dir_root::<fscenic::ScenicMarker>(&self.scenic_exposed_dir)
-                .expect(
-                    "Could not connect to Scenic protocol from scenic component exposed directory",
-                );
+        let scenic_proxy = self
+            .realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<fscenic::ScenicMarker>()
+            .expect("Could not connect to Scenic protocol");
         let scenic_proxy = Arc::new(scenic_proxy);
 
         // Create the root session

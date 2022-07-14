@@ -25,6 +25,7 @@ rustc_test("scenic-stressor-bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/ui/fuchsia-scenic",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -50,18 +51,13 @@ rustc_test("scenic-stressor-bin") {
   ]
 }
 
-fuchsia_component("scenic-for-stress-tests") {
-  manifest = "meta/scenic-for-stress-tests.cml"
-  deps = [ "//src/ui/scenic/bin" ]
-}
-
 fuchsia_unittest_package("scenic-stress-tests") {
   manifest = "meta/scenic_stressor.cml"
   deps = [
-    ":scenic-for-stress-tests",
     ":scenic-stressor-bin",
     "//src/lib/vulkan/validation_layers",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
+    "//src/ui/scenic:component_v2_with_supplied_display_provider",
   ]
 
   if (escher_use_runtime_glsl) {
@@ -88,10 +84,10 @@ fuchsia_unittest_package("scenic-stress-tests") {
 fuchsia_unittest_package("scenic-stress-tests-short") {
   manifest = "meta/scenic_stressor_short.cml"
   deps = [
-    ":scenic-for-stress-tests",
     ":scenic-stressor-bin",
     "//src/lib/vulkan/validation_layers",
     "//src/ui/bin/hardware_display_controller_provider:fake-hardware-display-controller-provider-cmv2-component",
+    "//src/ui/scenic:component_v2_with_supplied_display_provider",
   ]
 
   if (escher_use_runtime_glsl) {
