@@ -566,6 +566,8 @@ if (is_fuchsia) {
 
     sources = [
       "${files.outdir}/legacy",
+      "${files.platform_aib_dir}/common_minimal",
+      "${files.platform_aib_dir}/common_minimal_eng",
       "${files.platform_aib_dir}/emulator_support",
     ]
 
