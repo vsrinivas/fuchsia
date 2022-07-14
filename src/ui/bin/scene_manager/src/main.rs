@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
+    anyhow::{Context, Error},
     fidl::prelude::*,
     fidl_fuchsia_accessibility::{MagnificationHandlerMarker, MagnifierMarker},
     fidl_fuchsia_accessibility_scene as a11y_view,
@@ -106,8 +106,14 @@ async fn inner_main() -> Result<(), Error> {
     } else {
         let view_ref_installed = connect_to_protocol::<ui_views::ViewRefInstalledMarker>()?;
         let display_rotation = match std::fs::read_to_string("/config/data/display_rotation") {
-            Ok(contents) => contents.parse::<i32>()?,
-            Err(_) => 0,
+            Ok(contents) => {
+                let contents = contents.trim();
+                contents.parse::<i32>().context(format!("Failed to parse /config/data/display_rotation - expected an integer, got {contents}"))?
+            }
+            Err(e) => {
+                fx_log_warn!("Wasn't able to read config/data/display_rotation, defaulting to a display rotation of 0 degrees: {}", e);
+                0
+            }
         };
         let gfx_scene_manager: Arc<Mutex<Box<dyn SceneManager>>> = Arc::new(Mutex::new(Box::new(
             scene_management::GfxSceneManager::new(
