@@ -214,6 +214,10 @@
                   "name": "this.usePointerInjection",
                   "type": "FieldFormalParameterImpl"
                 },
+                "this.usePointerInjection2": {
+                  "name": "this.usePointerInjection2",
+                  "type": "FieldFormalParameterImpl"
+                },
                 "this.viewHolderToken": {
                   "name": "this.viewHolderToken",
                   "type": "FieldFormalParameterImpl"
@@ -276,8 +280,8 @@
                   "name": "this.useFlatland",
                   "type": "FieldFormalParameterImpl"
                 },
-                "this.usePointerInjection": {
-                  "name": "this.usePointerInjection",
+                "this.usePointerInjection2": {
+                  "name": "this.usePointerInjection2",
                   "type": "FieldFormalParameterImpl"
                 },
                 "this.viewRef": {
@@ -397,6 +401,14 @@
               "isFinal": true,
               "isLate": false,
               "name": "usePointerInjection",
+              "type": "VariableDeclarationImpl",
+              "varType": "bool"
+            },
+            "usePointerInjection2": {
+              "isConst": false,
+              "isFinal": true,
+              "isLate": false,
+              "name": "usePointerInjection2",
               "type": "VariableDeclarationImpl",
               "varType": "bool"
             },
@@ -911,6 +923,60 @@
               "isSetter": false,
               "isStatic": false,
               "name": "destroyView",
+              "returnType": "Future<void>",
+              "type": "MethodDeclarationImpl"
+            },
+            "dispatchPointerEvent": {
+              "SimpleFormalParameterImpl": {
+                "pointer": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": true,
+                  "isRequiredNamed": true,
+                  "isRequiredPositional": false,
+                  "name": "pointer",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "PointerEvent"
+                },
+                "viewId": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": false,
+                  "isOptionalNamed": false,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": true,
+                  "isRequiredNamed": true,
+                  "isRequiredPositional": false,
+                  "name": "viewId",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int"
+                },
+                "viewRef": {
+                  "isConst": false,
+                  "isFinal": false,
+                  "isOptional": true,
+                  "isOptionalNamed": true,
+                  "isOptionalPositional": false,
+                  "isPositional": false,
+                  "isRequired": false,
+                  "isRequiredNamed": false,
+                  "isRequiredPositional": false,
+                  "name": "viewRef",
+                  "type": "SimpleFormalParameterImpl",
+                  "varType": "int?"
+                }
+              },
+              "isAbstract": false,
+              "isGetter": false,
+              "isOperator": false,
+              "isSetter": false,
+              "isStatic": false,
+              "name": "dispatchPointerEvent",
               "returnType": "Future<void>",
               "type": "MethodDeclarationImpl"
             },

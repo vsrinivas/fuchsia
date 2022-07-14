@@ -5,7 +5,7 @@
 // ignore_for_file: avoid_as, dead_code, null_check_always_fails
 
 import 'dart:async';
-import 'dart:ui';
+import 'dart:ui' as ui;
 
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/gestures.dart';
@@ -20,6 +20,7 @@ import 'package:zircon/zircon.dart';
 
 void main() {
   const testViewId = 42;
+  const testHandle = 10;
 
   Future<void> sendViewConnectedEvent(int viewId) {
     return FuchsiaViewsService.instance.platformViewChannel.binaryMessenger
@@ -233,11 +234,85 @@ void main() {
         anyOf(equals(null), equals(firstDownEvent),
             equals([firstDownEvent, secondDownEvent])));
   });
+
+  testWidgets('usePointerInjection2 generates correct platform message',
+      (WidgetTester tester) async {
+    final pointerX = 10.0, pointerY = 10.0, device = 1, traceFlowId = 1;
+    final pointerEvent = PointerDownEvent(
+        position: Offset(pointerX, pointerY),
+        device: device,
+        pointer: traceFlowId);
+
+    ui.Size window = ui.window.physicalSize / ui.window.devicePixelRatio;
+
+    var args = <String, dynamic>{
+      'viewId': testViewId,
+      'x': pointerX,
+      'y': pointerY,
+      'phase': 1, // EventPhase.add
+      'pointerId': device,
+      'traceFlowId': traceFlowId,
+      'logicalWidth': window.width,
+      'logicalHeight': window.height,
+      'viewRef': testHandle
+    };
+
+    // Correct pointer injector platform message is generated for GFX views.
+    {
+      final connection = TestFuchsiaViewConnection(
+        _mockViewHolderToken(testViewId),
+        viewRef: _mockViewRef(handleValue: testHandle),
+        usePointerInjection2: true,
+      );
+
+      expectPlatformViewChannelCall(tester, 'View.create', <String, dynamic>{
+        'viewId': testViewId,
+        'hitTestable': true,
+        'focusable': true,
+        'viewOcclusionHintLTRB': <double>[0, 0, 0, 0],
+      });
+
+      await connection.connect();
+
+      expectPlatformViewChannelCall(
+          tester, 'View.pointerinjector.inject', args);
+
+      await connection.dispatchPointerEvent(pointerEvent);
+    }
+
+    // Correct pointer injector platform message is generated for Flatland views.
+    {
+      final connection = TestFuchsiaViewConnection.flatland(
+        _mockViewportCreationToken(testViewId),
+        usePointerInjection2: true,
+      );
+
+      expectPlatformViewChannelCall(tester, 'View.create', <String, dynamic>{
+        'viewId': testViewId,
+        'hitTestable': true,
+        'focusable': true,
+        'viewOcclusionHintLTRB': <double>[0, 0, 0, 0],
+      });
+
+      await connection.connect();
+
+      // viewRef is not present in the platform message for flatland views as
+      // the flutter engine holds the viewRef and does not provide it to the
+      // dart code.
+      args.remove('viewRef');
+
+      expectPlatformViewChannelCall(
+          tester, 'View.pointerinjector.inject', args);
+
+      await connection.dispatchPointerEvent(pointerEvent);
+    }
+  });
 }
 
-ViewRef _mockViewRef() {
+ViewRef _mockViewRef({int handleValue = 0}) {
   final handle = MockHandle();
   when(handle.isValid).thenReturn(true);
+  when(handle.handle).thenReturn(handleValue);
   when(handle.duplicate(any)).thenReturn(handle);
   final eventPair = MockEventPair();
   when(eventPair.handle).thenReturn(handle);
@@ -261,6 +336,19 @@ ViewHolderToken _mockViewHolderToken(int handleValue) {
   return viewHolderToken;
 }
 
+ViewportCreationToken _mockViewportCreationToken(int handleValue) {
+  final handle = MockHandle();
+  when(handle.handle).thenReturn(handleValue);
+  when(handle.isValid).thenReturn(true);
+  final channel = MockChannel();
+  when(channel.handle).thenReturn(handle);
+  when(channel.isValid).thenReturn(true);
+  final viewportCreationToken = MockViewportCreationToken();
+  when(viewportCreationToken.value).thenReturn(channel);
+
+  return viewportCreationToken;
+}
+
 class TestFuchsiaViewConnection extends FuchsiaViewConnection {
   // ignore: prefer_final_fields
   var _pointerInjector = MockPointerInjector();
@@ -272,6 +360,7 @@ class TestFuchsiaViewConnection extends FuchsiaViewConnection {
     FuchsiaViewConnectionCallback? onViewDisconnected,
     FuchsiaViewConnectionStateCallback? onViewStateChanged,
     bool usePointerInjection = false,
+    bool usePointerInjection2 = false,
   }) : super(
           viewHolderToken,
           viewRef: viewRef,
@@ -279,6 +368,22 @@ class TestFuchsiaViewConnection extends FuchsiaViewConnection {
           onViewDisconnected: onViewDisconnected,
           onViewStateChanged: onViewStateChanged,
           usePointerInjection: usePointerInjection,
+          usePointerInjection2: usePointerInjection2,
+        );
+
+  TestFuchsiaViewConnection.flatland(
+    ViewportCreationToken viewportCreationToken, {
+    FuchsiaViewConnectionCallback? onViewConnected,
+    FuchsiaViewConnectionCallback? onViewDisconnected,
+    FuchsiaViewConnectionStateCallback? onViewStateChanged,
+    bool usePointerInjection = false,
+    bool usePointerInjection2 = false,
+  }) : super.flatland(
+          viewportCreationToken,
+          onViewConnected: onViewConnected,
+          onViewDisconnected: onViewDisconnected,
+          onViewStateChanged: onViewStateChanged,
+          usePointerInjection2: usePointerInjection2,
         );
 
   @override
@@ -297,6 +402,15 @@ class MockViewHolderToken extends Mock implements ViewHolderToken {
       super.noSuchMethod(Invocation.method(#==, [other]));
 }
 
+class MockViewportCreationToken extends Mock implements ViewportCreationToken {
+  @override
+  int get hashCode => super.noSuchMethod(Invocation.method(#hashCode, []));
+
+  @override
+  bool operator ==(dynamic other) =>
+      super.noSuchMethod(Invocation.method(#==, [other]));
+}
+
 class MockViewRef extends Mock implements ViewRef {
   @override
   int get hashCode => super.noSuchMethod(Invocation.method(#hashCode, []));
@@ -307,6 +421,8 @@ class MockViewRef extends Mock implements ViewRef {
 }
 
 class MockEventPair extends Mock implements EventPair {}
+
+class MockChannel extends Mock implements Channel {}
 
 class MockHandle extends Mock implements Handle {
   @override
