@@ -132,6 +132,12 @@
             to: "#session-manager",
         },
         {
+            protocol: [ "fuchsia.ui.policy.Presenter" ],
+            from: "void",
+            to: "#session-manager",
+            availability: "optional",
+        },
+        {
             directory: "config-data",
             from: "parent",
             to: "#ui",

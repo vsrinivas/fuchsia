@@ -243,12 +243,20 @@
         },
         {
             // Routed to session-manager via ui.core_shard.cml
+            protocol: [ "fuchsia.accessibility.semantics.SemanticsManager" ],
+            from: "parent",
+            to: "#session",
+        },
+        {
+            // Routed to session-manager via ui.core_shard.cml
+            // Varies per-product.
             protocol: [
-                "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.session.scene.Manager",
+                "fuchsia.ui.policy.Presenter",
             ],
             from: "parent",
             to: "#session",
+            availability: "optional",
         },
         {
             // Routed to session-manager via audio_core
@@ -297,7 +305,6 @@
                 "fuchsia.ui.keyboard.focus.Controller",
                 "fuchsia.ui.lifecycle.LifecycleController",
                 "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.policy.Presenter",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.views.ViewRefInstalled",

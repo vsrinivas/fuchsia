@@ -129,6 +129,17 @@
             to: "#ui",
         },
         {
+            protocol: [ "fuchsia.ui.policy.Presenter" ],
+            from: "#ui",
+            to: "#session-manager",
+        },
+        {
+            protocol: [ "fuchsia.session.scene.Manager" ],
+            from: "void",
+            to: "#session-manager",
+            availability: "optional",
+        },
+        {
             directory: "config-data",
             from: "parent",
             to: "#ui",

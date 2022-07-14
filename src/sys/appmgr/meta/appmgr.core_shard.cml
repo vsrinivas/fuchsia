@@ -390,7 +390,6 @@
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.lifecycle.LifecycleController",
                 "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.policy.Presenter",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.ui.views.ViewRefInstalled",
             ],
