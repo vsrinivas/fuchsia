@@ -14,6 +14,7 @@ source_set("metrics_buffer") {
     "//src/lib/cobalt/cpp:cobalt_logger",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/syslog",
 
     # Only for <ddk/debug.h>'s severity levels.
     "//src/lib/ddk",

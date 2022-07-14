@@ -26,9 +26,6 @@
 #include <lib/async/dispatcher.h>
 #include <lib/async/wait.h>
 #include <lib/fpromise/promise.h>
-#include <lib/syslog/global.h>
-#include <lib/syslog/logger.h>
-#include <lib/syslog/wire_format.h>
 #include <lib/zx/socket.h>
 
 #include <cinttypes>
@@ -53,16 +50,7 @@ namespace {
 class LoggingFixture : public ::testing::Test {
  public:
   LoggingFixture() : old_severity_(GetMinLogLevel()), old_stderr_(dup(STDERR_FILENO)) {}
-  ~LoggingFixture() {
-    SetLogSettings({.min_log_level = old_severity_});
-#ifdef __Fuchsia__
-    // Go back to using STDERR.
-    fx_logger_t* logger = fx_log_get_logger();
-    fx_logger_activate_fallback(logger, -1);
-#else
-    dup2(old_stderr_, STDERR_FILENO);
-#endif
-  }
+  ~LoggingFixture() { SetLogSettings({.min_log_level = old_severity_}); }
 
  private:
   LogSeverity old_severity_;

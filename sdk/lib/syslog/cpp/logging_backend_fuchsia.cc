@@ -37,10 +37,6 @@ namespace syslog_backend {
 // and related driver functionality.
 bool fx_log_compat_no_interest_listener();
 
-// Flushes a record to the legacy fx_logger, if available.
-// Returns true on success.
-bool fx_log_compat_flush_record(LogBuffer* buffer);
-
 bool HasStructuredBackend() { return true; }
 
 using log_word_t = uint64_t;

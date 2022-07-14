@@ -136,7 +136,6 @@ sdk_source_set("backend_fuchsia_lib") {
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/sync",
-    "//zircon/system/ulib/syslog",
   ]
 
   data_deps = [ "//sdk/lib/syslog:client_includes" ]
@@ -226,7 +225,6 @@ test("logging_cpp_unittests") {
       "//zircon/system/ulib/async",
       "//zircon/system/ulib/async:async-cpp",
       "//zircon/system/ulib/async-loop:async-loop-cpp",
-      "//zircon/system/ulib/syslog",
     ]
   }
 }
