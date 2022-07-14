@@ -21,6 +21,8 @@ source_set("common") {
     "basic_types.h",
     "global_task_queue.cc",
     "global_task_queue.h",
+    "memory_mapped_buffer.cc",
+    "memory_mapped_buffer.h",
     "thread_safe_queue.h",
   ]
 
@@ -31,6 +33,7 @@ source_set("common") {
     "//src/media/audio/lib/clock",
     "//src/media/audio/lib/format2",
     "//src/media/audio/lib/timeline",
+    "//zircon/system/ulib/fzl",
   ]
 
   deps = [ "//sdk/lib/syslog/cpp" ]
@@ -42,6 +45,7 @@ executable("common_unittests") {
 
   sources = [
     "global_task_queue_unittest.cc",
+    "memory_mapped_buffer_unittest.cc",
     "thread_safe_queue_unittest.cc",
   ]
 
