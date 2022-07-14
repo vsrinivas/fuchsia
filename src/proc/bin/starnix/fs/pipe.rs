@@ -263,7 +263,9 @@ impl FileOps for PipeFileObject {
                 if pipe.reader_count > 0 {
                     events |= FdEvents::POLLHUP;
                 }
-                events |= FdEvents::POLLIN;
+                if !pipe.messages.is_empty() {
+                    events |= FdEvents::POLLIN;
+                }
             }
         }
         if events != FdEvents::empty() {
