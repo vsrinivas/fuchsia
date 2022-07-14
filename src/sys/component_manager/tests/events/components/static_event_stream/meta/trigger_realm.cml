@@ -11,7 +11,7 @@
     children: [
         {
             name: "components",
-            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/static_event_stream_components_realm.cm",
+            url: "#meta/static_event_stream_components_realm.cm",
             startup: "eager",
         },
     ],

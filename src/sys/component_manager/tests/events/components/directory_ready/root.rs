@@ -57,11 +57,6 @@ async fn main() {
 
     for _ in 0..3 {
         let event = EventMatcher::default().expect_match::<DirectoryReady>(&mut event_stream).await;
-
-        assert_eq!(
-            event.component_url(),
-            "fuchsia-pkg://fuchsia.com/events_integration_test#meta/directory_ready_child.cm"
-        );
         assert_eq!(event.target_moniker(), "./child");
 
         match event.result() {

@@ -22,11 +22,8 @@ async fn main() {
 
     // Make 4 components: 1 directory ready child and 3 stub children
     let mut instances = vec![];
-    let url =
-        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/stub_component.cm".to_string();
-    let url_cap_ready =
-        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/directory_ready_child.cm"
-            .to_string();
+    let url = "#meta/stub_component.cm".to_string();
+    let url_cap_ready = "#meta/directory_ready_child.cm".to_string();
     let scoped_instance =
         ScopedInstance::new("coll".to_string(), url_cap_ready.clone()).await.unwrap();
     let _ = scoped_instance.connect_to_binder().unwrap();

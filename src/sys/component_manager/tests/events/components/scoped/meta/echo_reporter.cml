@@ -10,7 +10,7 @@
     children: [
         {
             name: "echo_server",
-            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/echo_server.cm",
+            url: "#meta/echo_server.cm",
         },
     ],
     use: [

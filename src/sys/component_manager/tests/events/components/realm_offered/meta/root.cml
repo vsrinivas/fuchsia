@@ -6,7 +6,7 @@
     children: [
         {
             name: "nested_realm",
-            url: "fuchsia-pkg://fuchsia.com/events_integration_test#meta/realm_offered_nested.cm",
+            url: "#meta/realm_offered_nested.cm",
             startup: "eager",
         },
     ],

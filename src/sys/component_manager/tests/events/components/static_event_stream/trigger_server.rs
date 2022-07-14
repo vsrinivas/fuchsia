@@ -43,9 +43,6 @@ fn run_main_event_stream(
         let mut capability_request =
             EventMatcher::ok().expect_match::<CapabilityRequested>(&mut event_stream).await;
         assert_eq!("./trigger_client", capability_request.target_moniker());
-        assert_eq!(
-            "fuchsia-pkg://fuchsia.com/events_integration_test#meta/static_event_stream_trigger_client.cm",
-            capability_request.component_url());
 
         assert_eq!(
             format!("{}", ftest::TriggerMarker::PROTOCOL_NAME),
@@ -56,7 +53,8 @@ fn run_main_event_stream(
             trigger_capability.serve_async(trigger_stream);
             tx.send(()).await.expect("Could not send response");
         }
-    }).detach();
+    })
+    .detach();
 }
 
 fn run_second_event_stream(mut event_stream: EventStream, mut tx: mpsc::UnboundedSender<()>) {

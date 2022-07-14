@@ -20,8 +20,7 @@ async fn main() {
         .unwrap();
 
     let mut instances = vec![];
-    let url =
-        "fuchsia-pkg://fuchsia.com/events_integration_test#meta/stub_component.cm".to_string();
+    let url = "#meta/stub_component.cm".to_string();
     for _ in 1..=3 {
         let scoped_instance = ScopedInstance::new("coll".to_string(), url.clone()).await.unwrap();
         let _ = scoped_instance.connect_to_binder().unwrap();
