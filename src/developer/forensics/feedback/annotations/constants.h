@@ -47,6 +47,9 @@ constexpr const char kSystemLastRebootUptimeKey[] = "system.last-reboot.uptime";
 constexpr const char kSystemTimezonePrimaryKey[] = "system.timezone.primary";
 constexpr const char kSystemUpdateChannelCurrentKey[] = "system.update-channel.current";
 constexpr const char kSystemUpdateChannelTargetKey[] = "system.update-channel.target";
+constexpr const char kSystemUserActivityCurrentStateKey[] = "system.user-activity.current.state";
+constexpr const char kSystemUserActivityCurrentDurationKey[] =
+    "system.user-activity.current.duration";
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // RESTRICTIONS
