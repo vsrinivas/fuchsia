@@ -928,6 +928,93 @@ TEST_F(VirtioVsockTest, Write) {
   ASSERT_NO_FATAL_FAILURE(GuestWriteClientRead(data, conn));
 }
 
+TEST_F(VirtioVsockTest, WriteMultiple) {
+  TestConnection conn;
+  ASSERT_NO_FATAL_FAILURE(ClientConnectOnPort(kVirtioVsockGuestPort, conn));
+  ASSERT_NO_FATAL_FAILURE(conn.AssertSocketValid());
+
+  SendPacket(conn.host_port(), conn.guest_port(), {'a'});
+  SendPacket(conn.host_port(), conn.guest_port(), {'b'});
+
+  // Wait for the two bytes to appear on the client socket (or a 5s timeout).
+  RunLoopWithTimeoutOrUntil(
+      [&] {
+        zx_info_socket_t info;
+        if (conn.socket().get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr) !=
+            ZX_OK) {
+          return false;
+        }
+
+        return info.rx_buf_available == 2;
+      },
+      zx::sec(5));
+
+  size_t actual;
+  std::vector<uint8_t> actual_data(2, 0);
+  ASSERT_EQ(ZX_OK,
+            conn.read(actual_data.data(), static_cast<uint32_t>(actual_data.size()), &actual));
+  ASSERT_EQ(actual, actual_data.size());
+
+  EXPECT_EQ('a', actual_data[0]);
+  EXPECT_EQ('b', actual_data[1]);
+}
+
+TEST_F(VirtioVsockTest, WriteUpdateCredit) {
+  TestConnection conn;
+  ASSERT_NO_FATAL_FAILURE(ClientConnectOnPort(kVirtioVsockGuestPort, conn));
+  ASSERT_NO_FATAL_FAILURE(conn.AssertSocketValid());
+
+  SendPacket(conn.host_port(), conn.guest_port(), {'a'});
+  SendPacket(conn.host_port(), conn.guest_port(), {'b'});
+
+  // Request credit update, expect 0 fwd_cnt bytes as the data is still in the
+  // socket.
+  SendHeaderOnlyPacket(conn.host_port(), conn.guest_port(), VIRTIO_VSOCK_OP_CREDIT_REQUEST);
+
+  virtio_vsock_hdr_t* header;
+  ASSERT_NO_FATAL_FAILURE(GetHeaderOnlyPacketFromRxQueue(&header));
+  EXPECT_EQ(header->op, VIRTIO_VSOCK_OP_CREDIT_UPDATE);
+  EXPECT_GT(header->buf_alloc, 0u);
+  EXPECT_EQ(header->fwd_cnt, 0u);
+
+  // Read from socket.
+  size_t actual;
+  std::vector<uint8_t> actual_data(2, 0);
+  ASSERT_EQ(ZX_OK,
+            conn.read(actual_data.data(), static_cast<uint32_t>(actual_data.size()), &actual));
+  ASSERT_EQ(actual, actual_data.size());
+
+  EXPECT_EQ('a', actual_data[0]);
+  EXPECT_EQ('b', actual_data[1]);
+
+  // Request credit update, expect 2 fwd_cnt bytes as the data has been
+  // extracted from the socket.
+  SendHeaderOnlyPacket(conn.host_port(), conn.guest_port(), VIRTIO_VSOCK_OP_CREDIT_REQUEST);
+
+  ASSERT_NO_FATAL_FAILURE(GetHeaderOnlyPacketFromRxQueue(&header));
+  EXPECT_EQ(header->op, VIRTIO_VSOCK_OP_CREDIT_UPDATE);
+  EXPECT_GT(header->buf_alloc, 0u);
+  EXPECT_EQ(header->fwd_cnt, 2u);
+}
+
+TEST_F(VirtioVsockTest, WriteMultipleConnections) {
+  TestConnection a_conn;
+  ASSERT_NO_FATAL_FAILURE(ClientConnectOnPort(kVirtioVsockGuestPort, a_conn));
+  ASSERT_NO_FATAL_FAILURE(a_conn.AssertSocketValid());
+
+  TestConnection b_conn;
+  ASSERT_NO_FATAL_FAILURE(ClientConnectOnPort(kVirtioVsockGuestPort, b_conn));
+  ASSERT_NO_FATAL_FAILURE(b_conn.AssertSocketValid());
+
+  std::vector<uint8_t> data1 = {1, 2, 3, 4};
+  std::vector<uint8_t> data2 = {5, 6, 7, 8};
+
+  ASSERT_NO_FATAL_FAILURE(GuestWriteClientRead(data1, a_conn));
+  ASSERT_NO_FATAL_FAILURE(GuestWriteClientRead(data2, b_conn));
+  ASSERT_NO_FATAL_FAILURE(ClientWriteGuestRead(data1, a_conn));
+  ASSERT_NO_FATAL_FAILURE(ClientWriteGuestRead(data2, b_conn));
+}
+
 TEST_F(VirtioVsockTest, NoResponseToSpuriousReset) {
   // Spurious reset for a non-existent connection.
   SendHeaderOnlyPacket(kVirtioVsockHostPort, kVirtioVsockGuestPort, VIRTIO_VSOCK_OP_RST);
@@ -962,67 +1049,76 @@ TEST_F(VirtioVsockTest, NonResetSpuriousPacketsGetResetResponse) {
   }
 }
 
+TEST_F(VirtioVsockTest, UnsupportedSocketType) {
+  // Only VIRTIO_VSOCK_TYPE_STREAM is currently supported.
+  uint16_t VIRTIO_VSOCK_TYPE_SEQPACKET = 2;
+
+  virtio_vsock_hdr_t tx_header = {
+      .src_cid = fuchsia::virtualization::DEFAULT_GUEST_CID,
+      .dst_cid = fuchsia::virtualization::HOST_CID,
+      .src_port = kVirtioVsockGuestPort,
+      .dst_port = kVirtioVsockHostPort,
+      .type = VIRTIO_VSOCK_TYPE_SEQPACKET,
+      .op = VIRTIO_VSOCK_OP_REQUEST,
+      .flags = 0,
+      .buf_alloc = this->buf_alloc,
+      .fwd_cnt = this->fwd_cnt,
+  };
+
+  std::vector<std::vector<uint8_t>> buffer;
+  buffer.push_back(GetHeaderBytes(tx_header));
+
+  ASSERT_NO_FATAL_FAILURE(SendToTxQueue(buffer));
+
+  RunLoopUntilIdle();
+
+  virtio_vsock_hdr_t* header;
+  ASSERT_NO_FATAL_FAILURE(GetHeaderOnlyPacketFromRxQueue(&header));
+
+  EXPECT_EQ(header->op, VIRTIO_VSOCK_OP_RST);
+}
+
+TEST_F(VirtioVsockTest, SkipBadRxDescriptors) {
+  // First empty the RX queue of available chains.
+  for (size_t i = 0; i < std::size(rx_buffers_); i++) {
+    SendHeaderOnlyPacket(kVirtioVsockHostPort, kVirtioVsockGuestPort, VIRTIO_VSOCK_OP_SHUTDOWN);
+
+    virtio_vsock_hdr_t* header;
+    ASSERT_NO_FATAL_FAILURE(GetHeaderOnlyPacketFromRxQueue(&header));
+    EXPECT_EQ(header->op, VIRTIO_VSOCK_OP_RST);
+  }
+
+  // Too small.
+  ASSERT_EQ(ZX_OK,
+            DescriptorChainBuilder(*rx_queue_)
+                .AppendWritableDescriptor(&rx_buffers_[0].header, sizeof(virtio_vsock_hdr_t) / 2)
+                .Build());
+
+  // Contains wrong type.
+  ASSERT_EQ(ZX_OK, DescriptorChainBuilder(*rx_queue_)
+                       .AppendReadableDescriptor(&rx_buffers_[0].header, sizeof(virtio_vsock_hdr_t))
+                       .AppendWritableDescriptor(&rx_buffers_[0].header, sizeof(virtio_vsock_hdr_t))
+                       .Build());
+
+  // Add valid chains back into the RX queue.
+  ASSERT_NO_FATAL_FAILURE(FillRxQueue());
+
+  // Ignore the two bad chains which both went unusued.
+  RxBuffer* buffer;
+  ASSERT_NO_FATAL_FAILURE(DoReceive(&buffer));
+  ASSERT_EQ(buffer->used_bytes, 0ul);
+
+  ASSERT_NO_FATAL_FAILURE(DoReceive(&buffer));
+  ASSERT_EQ(buffer->used_bytes, 0ul);
+
+  // Get another reset packet using one of the valid chains.
+  SendHeaderOnlyPacket(kVirtioVsockHostPort, kVirtioVsockGuestPort, VIRTIO_VSOCK_OP_SHUTDOWN);
+  virtio_vsock_hdr_t* header;
+  ASSERT_NO_FATAL_FAILURE(GetHeaderOnlyPacketFromRxQueue(&header));
+  EXPECT_EQ(header->op, VIRTIO_VSOCK_OP_RST);
+}
+
 #if ENABLE_UNSUPPORTED_TESTS
-
-struct SingleBytePacket {
-  virtio_vsock_hdr_t header;
-  char c;
-
-  SingleBytePacket(char c_) : c(c_) {}
-} __PACKED;
-
-TEST_F(VirtioVsockTest, WriteMultiple) {
-  TestConnection connection;
-  HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
-  HostConnectOnPortResponse(kVirtioVsockHostPort);
-
-  SingleBytePacket p1('a');
-  SingleBytePacket p2('b');
-  HostQueueWriteOnPort(kVirtioVsockHostPort, reinterpret_cast<uint8_t*>(&p1), sizeof(p1));
-  HostQueueWriteOnPort(kVirtioVsockHostPort, reinterpret_cast<uint8_t*>(&p2), sizeof(p2));
-  RunLoopUntilIdle();
-
-  size_t actual_len = 0;
-  uint8_t actual_data[3] = {};
-  ASSERT_EQ(connection.socket().read(0, actual_data, sizeof(actual_data), &actual_len), ZX_OK);
-  ASSERT_EQ(2u, actual_len);
-  ASSERT_EQ('a', actual_data[0]);
-  ASSERT_EQ('b', actual_data[1]);
-}
-
-TEST_F(VirtioVsockTest, WriteUpdateCredit) {
-  TestConnection connection;
-  HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
-  HostConnectOnPortResponse(kVirtioVsockHostPort);
-
-  SingleBytePacket p1('a');
-  SingleBytePacket p2('b');
-  HostQueueWriteOnPort(kVirtioVsockHostPort, reinterpret_cast<uint8_t*>(&p1), sizeof(p1));
-  HostQueueWriteOnPort(kVirtioVsockHostPort, reinterpret_cast<uint8_t*>(&p2), sizeof(p2));
-  RunLoopUntilIdle();
-
-  // Request credit update, expect 0 fwd_cnt bytes as the data is still in the
-  // socket.
-  virtio_vsock_hdr_t* header = GetCreditUpdate();
-  EXPECT_EQ(header->op, VIRTIO_VSOCK_OP_CREDIT_UPDATE);
-  EXPECT_GT(header->buf_alloc, 0u);
-  EXPECT_EQ(header->fwd_cnt, 0u);
-
-  // Read from socket.
-  size_t actual_len = 0;
-  uint8_t actual_data[3] = {};
-  ASSERT_EQ(connection.socket().read(0, actual_data, sizeof(actual_data), &actual_len), ZX_OK);
-  ASSERT_EQ(2u, actual_len);
-  ASSERT_EQ('a', actual_data[0]);
-  ASSERT_EQ('b', actual_data[1]);
-
-  // Request credit update, expect 2 fwd_cnt bytes as the data has been
-  // extracted from the socket.
-  header = GetCreditUpdate();
-  EXPECT_EQ(header->op, VIRTIO_VSOCK_OP_CREDIT_UPDATE);
-  EXPECT_GT(header->buf_alloc, 0u);
-  EXPECT_EQ(header->fwd_cnt, 2u);
-}
 
 TEST_F(VirtioVsockTest, WriteSocketFullReset) {
   // If the guest writes enough bytes to overflow our socket buffer then we
@@ -1084,156 +1180,6 @@ TEST_F(VirtioVsockTest, SendCreditUpdateWhenSocketIsDrained) {
   ASSERT_NE(credit_update, nullptr);
   ASSERT_EQ(info.tx_buf_max, credit_update->header.buf_alloc);
   ASSERT_EQ(actual_len, credit_update->header.fwd_cnt);
-}
-
-TEST_F(VirtioVsockTest, MultipleConnections) {
-  TestConnection a_connection;
-  HostConnectOnPortRequest(kVirtioVsockHostPort + 1000, &a_connection);
-  HostConnectOnPortResponse(kVirtioVsockHostPort + 1000);
-
-  TestConnection b_connection;
-  HostConnectOnPortRequest(kVirtioVsockHostPort + 2000, &b_connection);
-  HostConnectOnPortResponse(kVirtioVsockHostPort + 2000);
-
-  for (auto i = 0; i < (kVirtioVsockRxBuffers / 4); i++) {
-    HostReadOnPort(kVirtioVsockHostPort + 1000, &a_connection);
-    HostReadOnPort(kVirtioVsockHostPort + 2000, &b_connection);
-    HostWriteOnPort(kVirtioVsockHostPort + 1000, &a_connection);
-    HostWriteOnPort(kVirtioVsockHostPort + 2000, &b_connection);
-  }
-}
-
-TEST_F(VirtioVsockTest, InvalidBuffer) {
-  zx::socket mock_socket;
-  ConnectionKey mock_key{0, 0, 0, 0};
-  std::unique_ptr<VirtioVsock::Connection> conn =
-      VirtioVsock::Connection::Create(mock_key, std::move(mock_socket), nullptr, nullptr, nullptr);
-
-  conn.get()->SetCredit(0, 2);
-  ASSERT_EQ(conn.get()->op(), VIRTIO_VSOCK_OP_RST);
-}
-
-TEST_F(VirtioVsockTest, CreditRequest) {
-  TestConnection connection;
-  HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
-  HostConnectOnPortResponse(kVirtioVsockHostPort);
-
-  // Test credit request.
-  DoSend(kVirtioVsockHostPort, kVirtioVsockGuestCid, kVirtioVsockGuestPort,
-         VIRTIO_VSOCK_TYPE_STREAM, VIRTIO_VSOCK_OP_CREDIT_REQUEST);
-
-  RxBuffer* rx_buffer = DoReceive();
-  ASSERT_NE(nullptr, rx_buffer);
-  VerifyHeader(rx_buffer, kVirtioVsockHostPort, kVirtioVsockGuestPort, 0,
-               VIRTIO_VSOCK_OP_CREDIT_UPDATE, 0);
-  EXPECT_GT(rx_buffer->header.buf_alloc, 0u);
-  EXPECT_EQ(rx_buffer->header.fwd_cnt, 0u);
-}
-
-TEST_F(VirtioVsockTest, UnsupportedSocketType) {
-  // Test connection request with invalid type.
-  DoSend(kVirtioVsockHostPort, kVirtioVsockGuestCid, kVirtioVsockGuestPort, UINT16_MAX,
-         VIRTIO_VSOCK_OP_REQUEST);
-
-  RxBuffer* rx_buffer = DoReceive();
-  ASSERT_NE(nullptr, rx_buffer);
-  virtio_vsock_hdr_t* rx_header = &rx_buffer->header;
-  EXPECT_EQ(rx_header->src_cid, fuchsia::virtualization::HOST_CID);
-  EXPECT_EQ(rx_header->dst_cid, kVirtioVsockGuestCid);
-  EXPECT_EQ(rx_header->src_port, kVirtioVsockHostPort);
-  EXPECT_EQ(rx_header->dst_port, kVirtioVsockGuestPort);
-  EXPECT_EQ(rx_header->type, VIRTIO_VSOCK_TYPE_STREAM);
-  EXPECT_EQ(rx_header->op, VIRTIO_VSOCK_OP_RST);
-  EXPECT_EQ(rx_header->flags, 0u);
-}
-
-TEST_F(VirtioVsockTest, InitialCredit) {
-  GuestConnectOnPort(kVirtioVsockHostPort, kVirtioVsockGuestEphemeralPort, CreateSocket);
-  ASSERT_TRUE(remote_handles_.size() == 1);
-
-  zx::socket socket(std::move(remote_handles_.back()));
-
-  std::vector<uint8_t> expected = {1, 2, 3, 4};
-
-  // Write data to socket.
-  size_t actual;
-  ASSERT_EQ(socket.write(0, expected.data(), expected.size(), &actual), ZX_OK);
-  EXPECT_EQ(actual, expected.size());
-
-  // Expect that the connection has correct initial credit and so the guest
-  // will be able to pull out the data.
-  RxBuffer* rx_buffer = DoReceive();
-  ASSERT_NE(nullptr, rx_buffer);
-  VerifyHeader(rx_buffer, kVirtioVsockHostPort, kVirtioVsockGuestEphemeralPort, expected.size(),
-               VIRTIO_VSOCK_OP_RW, 0);
-  EXPECT_EQ(memcmp(rx_buffer->data, expected.data(), expected.size()), 0);
-}
-
-TEST(VirtioVsockChain, AllocateAndFree) {
-  VirtioDeviceFake device;
-  VirtioQueue* queue = device.queue();
-  VirtioQueueFake* fake_queue = device.queue_fake();
-
-  // Add an item to the queue.
-  virtio_vsock_hdr_t header = {
-      .src_port = 1234,
-  };
-  uint16_t index;
-  fake_queue->BuildDescriptor().AppendReadable(&header, sizeof(header)).Build(&index);
-
-  // Ensure we can take the item off the queue and read the header value from it.
-  std::optional<VsockChain> chain = VsockChain::FromQueue(queue, /*writable=*/false);
-  ASSERT_TRUE(chain.has_value());
-  EXPECT_EQ(chain->header()->src_port, 1234u);
-  EXPECT_TRUE(!queue->HasAvail());
-
-  // Return the item.
-  chain->Return(/*used=*/0);
-  EXPECT_TRUE(fake_queue->HasUsed());
-}
-
-TEST(VirtioVsockChain, AllocateEmptyQueue) {
-  VirtioDeviceFake device;
-
-  // Attempt to take an item off the queue. It should fail.
-  std::optional<VsockChain> chain = VsockChain::FromQueue(device.queue(), /*writable=*/false);
-  EXPECT_FALSE(chain.has_value());
-}
-
-TEST(VirtioVsockChain, AllocateSkipsBadDescriptors) {
-  VirtioDeviceFake device;
-  VirtioQueue* queue = device.queue();
-  VirtioQueueFake* fake_queue = device.queue_fake();
-
-  // Add a too-short descriptor.
-  uint8_t byte;
-  uint16_t too_small_id;
-  fake_queue->BuildDescriptor().AppendReadable(&byte, sizeof(byte)).Build(&too_small_id);
-
-  // Add a writable descriptor when the caller will ask for a readable descriptor.
-  virtio_vsock_hdr_t writable_header{};
-  uint16_t writable_header_id;
-  fake_queue->BuildDescriptor()
-      .AppendWritable(&writable_header, sizeof(writable_header))
-      .Build(&writable_header_id);
-
-  // Add a valid descriptor.
-  virtio_vsock_hdr_t header{
-      .src_port = 1234,
-  };
-  uint16_t valid_id;
-  fake_queue->BuildDescriptor().AppendReadable(&header, sizeof(header)).Build(&valid_id);
-
-  // Ensure the valid descriptor was read.
-  std::optional<VsockChain> chain = VsockChain::FromQueue(queue, /*writable=*/false);
-  ASSERT_TRUE(chain.has_value());
-  EXPECT_EQ(chain->header()->src_port, 1234u);
-
-  // Ensure the two invalid descriptors were returned.
-  EXPECT_EQ(too_small_id, fake_queue->NextUsed().id);
-  EXPECT_EQ(writable_header_id, fake_queue->NextUsed().id);
-
-  chain->Return(/*used=*/0);
 }
 
 #endif  // ENABLE_UNSUPPORTED_TESTS
