@@ -165,6 +165,14 @@ driver_bind_rules("ti_ina231_speakers_bind") {
   deps = [ "//src/devices/bind/fuchsia.i2c" ]
 }
 
+driver_bind_rules("ti_ina231_mlb_proto_bind") {
+  rules = "bind/ti_ina231_mlb_proto.bind"
+  header_output = "ti_ina231_mlb_proto_bind.h"
+  bind_output = "ti_ina231_mlb_proto_bind.bc"
+  tests = "bind-tests/ti_ina231_mlb_proto-test.json"
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+}
+
 driver_bind_rules("brownout_protection_bind") {
   rules = "bind/brownout_protection.bind"
   header_output = "brownout_protection_bind.h"
@@ -431,6 +439,7 @@ fuchsia_driver("nelson-module-driver") {
     ":spi_0_bind_header",
     ":spi_1_bind_header",
     ":ti_ina231_mlb_bind_header",
+    ":ti_ina231_mlb_proto_bind_header",
     ":ti_ina231_speakers_bind_header",
     "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",

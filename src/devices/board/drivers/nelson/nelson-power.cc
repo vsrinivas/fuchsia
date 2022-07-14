@@ -12,6 +12,7 @@
 #include "nelson.h"
 #include "src/devices/board/drivers/nelson/brownout_protection_bind.h"
 #include "src/devices/board/drivers/nelson/ti_ina231_mlb_bind.h"
+#include "src/devices/board/drivers/nelson/ti_ina231_mlb_proto_bind.h"
 #include "src/devices/board/drivers/nelson/ti_ina231_speakers_bind.h"
 #include "src/devices/power/drivers/ti-ina231/ti-ina231-metadata.h"
 
@@ -88,6 +89,17 @@ constexpr composite_device_desc_t speakers_power_sensor_dev = {
     .metadata_count = std::size(kAudioMetadata),
 };
 
+constexpr composite_device_desc_t mlb_power_sensor_proto_dev = {
+    .props = props,
+    .props_count = std::size(props),
+    .fragments = ti_ina231_mlb_proto_fragments,
+    .fragments_count = std::size(ti_ina231_mlb_proto_fragments),
+    .primary_fragment = "i2c",
+    .spawn_colocated = true,
+    .metadata_list = kMlbMetadata,
+    .metadata_count = std::size(kMlbMetadata),
+};
+
 constexpr zx_device_prop_t brownout_protection_props[] = {
     {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GOOGLE},
     {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_NELSON},
@@ -104,7 +116,13 @@ constexpr composite_device_desc_t brownout_protection_dev = {
 };
 
 zx_status_t Nelson::PowerInit() {
-  zx_status_t status = DdkAddComposite("ti-ina231-mlb", &mlb_power_sensor_dev);
+  zx_status_t status;
+  if (GetBoardRev() == BOARD_REV_P1) {
+    status = DdkAddComposite("ti-ina231-mlb", &mlb_power_sensor_proto_dev);
+  } else {
+    status = DdkAddComposite("ti-ina231-mlb", &mlb_power_sensor_dev);
+  }
+
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s DdkAddComposite failed %d", __FUNCTION__, status);
     return status;
