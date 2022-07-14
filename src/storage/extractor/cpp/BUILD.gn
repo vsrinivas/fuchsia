@@ -120,7 +120,6 @@ static_library("disk_extractor") {
     public_deps += [
       "//zircon/system/ulib/fzl",
       "//zircon/system/ulib/id_allocator",
-      "//zircon/system/ulib/syslog",
     ]
     deps += [
       "//sdk/lib/fdio",

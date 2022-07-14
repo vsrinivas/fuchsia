@@ -72,8 +72,6 @@ rustc_fuzzer("fat-fuzzer") {
 
   sources = [ "src/fuzzer.rs" ] + fatfs_sources
   deps = fatfs_deps
-
-  non_rust_deps = [ "//zircon/system/ulib/syslog" ]
 }
 
 fuzzers_package("fuchsia-fatfs-fuzzer") {

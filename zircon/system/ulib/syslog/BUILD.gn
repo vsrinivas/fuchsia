@@ -64,8 +64,6 @@ syslog_visibility_allowlist = [
   "//src/diagnostics/archivist/tests/logs/cpp:*",
   "//src/lib/metrics_buffer:*",
   "//src/lib/syslog/rust:*",
-  "//src/storage/extractor/cpp:*",
-  "//src/storage/fuchsia-fatfs:*",
   "//src/storage/lib/watchdog:*",
   "//src/sys/tools/log:*",
   "//sdk/lib/driver2:*",
