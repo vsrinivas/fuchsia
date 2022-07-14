@@ -34,3 +34,46 @@ fn main() -> Result<(), anyhow::Error> {
     let args: Args = argh::from_env();
     main_inner(&args)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use lib::test_support;
+
+    #[test]
+    fn test_config_ok() {
+        use eager_package_config::omaha_client::EagerPackageConfigsJson as OmahaConfigsJson;
+        use eager_package_config::pkg_resolver::EagerPackageConfigs as ResolverConfigs;
+        use tempfile::NamedTempFile;
+
+        let omaha_out = NamedTempFile::new().unwrap();
+        let pkgresolver_out = NamedTempFile::new().unwrap();
+
+        let keyconfig_file = NamedTempFile::new().unwrap();
+        serde_json::to_writer(&keyconfig_file, &test_support::make_key_config_for_test()).unwrap();
+
+        let input_files: Vec<NamedTempFile> = test_support::make_configs_for_test()
+            .iter()
+            .filter(|input_config| input_config.service_url.is_some())
+            .map(|config| {
+                let tempfile = NamedTempFile::new().unwrap();
+                serde_json::to_writer(&tempfile, &config).unwrap();
+                tempfile
+            })
+            .collect();
+
+        let location_of = |f: &NamedTempFile| f.path().to_str().unwrap().to_string();
+
+        main_inner(&Args {
+            out_omaha_client_config: location_of(&omaha_out),
+            out_pkg_resolver_config: location_of(&pkgresolver_out),
+            key_config_file: location_of(&keyconfig_file),
+            eager_package_config_files: input_files.iter().map(|file| location_of(&file)).collect(),
+        })
+        .unwrap();
+
+        // assert that both generated configs are valid and parseable.
+        let _: OmahaConfigsJson = serde_json::from_reader(BufReader::new(omaha_out)).unwrap();
+        let _: ResolverConfigs = serde_json::from_reader(BufReader::new(pkgresolver_out)).unwrap();
+    }
+}

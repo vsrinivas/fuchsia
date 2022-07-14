@@ -7,7 +7,7 @@ use http_uri_ext::HttpUriExt as _;
 use hyper::header::ETAG;
 use p256::ecdsa::{signature::Verifier as _, DerSignature};
 use rand::{thread_rng, Rng};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use sha2::{digest, Digest, Sha256};
 use signature::Signature;
 use std::{collections::HashMap, convert::TryInto, fmt, fmt::Debug};
@@ -58,9 +58,22 @@ where
     s.parse().map_err(de::Error::custom)
 }
 
+fn to_pem<S>(public_key: &PublicKey, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    use pkcs8::EncodePublicKey;
+    use serde::ser;
+    serializer.serialize_str(
+        &elliptic_curve::PublicKey::from(public_key)
+            .to_public_key_pem(pkcs8::LineEnding::LF)
+            .map_err(ser::Error::custom)?,
+    )
+}
+
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PublicKeyAndId {
-    #[serde(deserialize_with = "from_pem")]
+    #[serde(deserialize_with = "from_pem", serialize_with = "to_pem")]
     pub key: PublicKey,
     pub id: PublicKeyId,
 }
@@ -808,6 +821,16 @@ mod tests {
         .unwrap();
 
         assert_eq!(public_key_and_id.key, test_support::make_default_public_key_for_test());
+    }
+
+    #[test]
+    fn test_publickeys_roundtrip() {
+        // Test that serializing and deserializing a PublicKeys struct using
+        // from_pem / to_pem results in the same struct.
+        let public_keys = test_support::make_default_public_keys_for_test();
+        let public_keys_serialized = serde_json::to_string(&public_keys).unwrap();
+        let public_keys_reconstituted = serde_json::from_str(&public_keys_serialized).unwrap();
+        assert_eq!(public_keys, public_keys_reconstituted);
     }
 
     #[test]

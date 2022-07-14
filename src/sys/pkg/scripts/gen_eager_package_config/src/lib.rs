@@ -13,7 +13,7 @@ use {
     eager_package_config::pkg_resolver::EagerPackageConfigs as ResolverConfigs,
     fuchsia_url::UnpinnedAbsolutePackageUrl,
     omaha_client::cup_ecdsa::{PublicKeyAndId, PublicKeys},
-    serde::Deserialize,
+    serde::{Deserialize, Serialize},
     std::collections::HashMap,
 };
 
@@ -38,7 +38,7 @@ pub struct Args {
 
 pub type PublicKeysByServiceUrl = HashMap<String, PublicKeys>;
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 struct Realm {
     /// The Omaha App ID for this realm.
     app_id: String,
@@ -46,7 +46,7 @@ struct Realm {
     channels: Vec<String>,
 }
 
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct InputConfig {
     /// The URL of the package.
     url: UnpinnedAbsolutePackageUrl,
@@ -60,7 +60,7 @@ pub struct InputConfig {
     /// List of realms.
     realms: Vec<Realm>,
     /// The URL of the Omaha server.
-    service_url: Option<String>,
+    pub service_url: Option<String>,
 }
 
 fn make_public_keys(service_url: &str, key_config: &PublicKeysByServiceUrl) -> PublicKeys {
@@ -156,12 +156,11 @@ pub fn generate_pkg_resolver_config(
     }
 }
 
-#[cfg(test)]
-mod tests {
+pub mod test_support {
     use super::*;
     use omaha_client::cup_ecdsa::{test_support, PublicKeyId};
 
-    fn make_key_config() -> PublicKeysByServiceUrl {
+    pub fn make_key_config_for_test() -> PublicKeysByServiceUrl {
         let (_, public_key) = test_support::make_keys_for_test();
         let public_key_id: PublicKeyId = 42.try_into().unwrap();
         HashMap::from([(
@@ -170,7 +169,7 @@ mod tests {
         )])
     }
 
-    fn make_configs() -> Vec<InputConfig> {
+    pub fn make_configs_for_test() -> Vec<InputConfig> {
         vec![
             InputConfig {
                 url: "fuchsia-pkg://example.com/package_service_1".parse().unwrap(),
@@ -226,17 +225,23 @@ mod tests {
         ]
     }
 
-    fn compare_ignoring_whitespace(a: &str, b: &str) {
+    pub fn compare_ignoring_whitespace(a: &str, b: &str) {
         assert_eq!(
             a.chars().filter(|c| !c.is_whitespace()).collect::<String>(),
             b.chars().filter(|c| !c.is_whitespace()).collect::<String>(),
         );
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::test_support;
 
     #[test]
     fn test_generate_omaha_client_config() {
-        let key_config = make_key_config();
-        let configs = make_configs();
+        let key_config = test_support::make_key_config_for_test();
+        let configs = test_support::make_configs_for_test();
         let omaha_client_config = generate_omaha_client_config(&configs, &key_config);
         let expected = r#"{
             "eager_package_configs": [
@@ -280,7 +285,7 @@ mod tests {
                   "service_url": "https://example.com",
                   "public_keys": {
                     "latest": {
-                      "key": [ 48, 89, 48, 19, 6, 7, 42, 134, 72, 206, 61, 2, 1, 6, 8, 42, 134, 72, 206, 61, 3, 1, 7, 3, 66, 0, 4, 28, 172, 255, 181, 95, 47, 44, 239, 216, 157, 137, 235, 55, 75, 38, 129, 21, 36, 82, 128, 45, 238, 160, 153, 22, 6, 129, 55, 216, 57, 207, 127, 196, 129, 164, 68, 146, 48, 77, 126, 246, 106, 193, 23, 190, 254, 131, 168, 208, 143, 21, 95, 43, 82, 249, 246, 24, 221, 68, 112, 41, 4, 142, 15 ],
+                      "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----\n",
                       "id": 42
                     },
                     "historical": []
@@ -339,7 +344,7 @@ mod tests {
               }
             ]
         }"#;
-        compare_ignoring_whitespace(
+        test_support::compare_ignoring_whitespace(
             &serde_json::to_string_pretty(&omaha_client_config).unwrap(),
             &expected,
         );
@@ -348,7 +353,7 @@ mod tests {
     #[test]
     #[should_panic(expected = "Default channel must appear in some realm's channel.")]
     fn test_generate_omaha_client_config_wrong_default_channel() {
-        let key_config = make_key_config();
+        let key_config = test_support::make_key_config_for_test();
         let configs = vec![InputConfig {
             url: "fuchsia-pkg://example.com/package_service_1".parse().unwrap(),
             default_channel: Some("wrong".to_string()),
@@ -367,7 +372,7 @@ mod tests {
     fn test_generate_omaha_client_config_no_default() {
         // If there is no default package, we should not create an empty config.
         // Here, a default package is any package without a service URL.
-        let key_config = make_key_config();
+        let key_config = test_support::make_key_config_for_test();
         let configs = vec![InputConfig {
             url: "fuchsia-pkg://example.com/package_service_1".parse().unwrap(),
             default_channel: Some("stable".to_string()),
@@ -390,7 +395,7 @@ mod tests {
                         "service_url": "https://example.com",
                         "public_keys": {
                             "latest": {
-                                "key": [48,89,48,19,6,7,42,134,72,206,61,2,1,6,8,42,134,72,206,61,3,1,7,3,66,0,4,28,172,255,181,95,47,44,239,216,157,137,235,55,75,38,129,21,36,82,128,45,238,160,153,22,6,129,55,216,57,207,127,196,129,164,68,146,48,77,126,246,106,193,23,190,254,131,168,208,143,21,95,43,82,249,246,24,221,68,112,41,4,142,15],
+                                "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----\n",
                                 "id": 42
                             },
                             "historical": []
@@ -433,7 +438,7 @@ mod tests {
                     ]
             }
         ]}"#;
-        compare_ignoring_whitespace(
+        test_support::compare_ignoring_whitespace(
             &serde_json::to_string_pretty(&omaha_client_config).unwrap(),
             &expected,
         );
@@ -441,7 +446,7 @@ mod tests {
 
     #[test]
     fn test_generate_pkg_resolver_config() {
-        let key_config = make_key_config();
+        let key_config = test_support::make_key_config_for_test();
         let configs = vec![InputConfig {
             url: "fuchsia-pkg://example.com/package_service_1".parse().unwrap(),
             default_channel: Some("stable".to_string()),
@@ -461,7 +466,7 @@ mod tests {
                     "executable": false,
                     "public_keys": {
                         "latest": {
-                            "key": [48,89,48,19,6,7,42,134,72,206,61,2,1,6,8,42,134,72,206,61,3,1,7,3,66,0,4,28,172,255,181,95,47,44,239,216,157,137,235,55,75,38,129,21,36,82,128,45,238,160,153,22,6,129,55,216,57,207,127,196,129,164,68,146,48,77,126,246,106,193,23,190,254,131,168,208,143,21,95,43,82,249,246,24,221,68,112,41,4,142,15],
+                            "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----\n",
                             "id": 42
                         },
                         "historical": []
@@ -469,7 +474,7 @@ mod tests {
                 }
             ]
         }"#;
-        compare_ignoring_whitespace(
+        test_support::compare_ignoring_whitespace(
             &serde_json::to_string_pretty(&pkg_resolver_config).unwrap(),
             &expected,
         );
