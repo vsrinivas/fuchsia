@@ -50,7 +50,6 @@ TEST(Ns8250Tests, SetLineControl) {
       .ExpectWrite(uint8_t{kDefaultLineControls}, 3)
       .ExpectWrite(uint8_t{0b0000'0011}, 4)
       .ExpectRead(uint8_t{0b1110'0001}, 2)
-      .ExpectRead(uint8_t{0b0110'0000}, 5)   // TxReady -> true
       .ExpectWrite(uint8_t{0b1000'0000}, 3)  // SetLineControl
       .ExpectWrite(uint8_t{0b0000'0001}, 0)
       .ExpectWrite(uint8_t{0b0000'0000}, 1)

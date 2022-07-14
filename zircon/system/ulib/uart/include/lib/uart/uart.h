@@ -372,7 +372,6 @@ class KernelDriver {
     // TODO(fxbug.dev/102726): Set it on all variants.
     if constexpr (kCanSetLineControl) {
       Guard lock(sync_);
-      uart_.Init(io_);
       uart_.SetLineControl(io_);
     }
   }
@@ -432,8 +431,9 @@ class KernelDriver {
   };
 
   // SFINAE check for a UartType::SetLineControl method.
-  template <typename UartType = uart_type,
-            typename = decltype(std::declval<UartType>().SetLineControl())>
+  template <typename UartType = uart_type,                                                      //
+            typename Io = IoProvider<typename UartType::config_type>,                           //
+            typename = decltype(std::declval<UartType>().SetLineControl(std::declval<Io&>()))>  //
   static constexpr bool SfinaeSetLineControl(int ignored) {
     return true;
   }
