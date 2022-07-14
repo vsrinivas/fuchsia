@@ -75,14 +75,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/a479927186409cc1bcce82c0e023676cd9744f1a/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/f1084574b6010fde43ae96a1b926b3802251dc81/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/a479927186409cc1bcce82c0e023676cd9744f1a/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/f1084574b6010fde43ae96a1b926b3802251dc81/src/intel/vulkan/BUILD.gn#30)
 
 ### api_compatibility_testing
 Whether to run API compatibility tests.
@@ -4818,6 +4818,14 @@ git clone "https://fuchsia.googlesource.com/third_party/ffmpeg" third_party/ffmp
 **Current value (from the default):** `true`
 
 From //src/media/lib/ffmpeg/BUILD.gn:28
+
+### use_scene_manager_as_scene_owner
+If true, use scene_manager as the scene owner component (via ui.cml).
+Otherwise use root_presenter (via ui_with_root_presenter.cml).
+
+**Current value (from the default):** `false`
+
+From //src/ui/build_args.gni:8
 
 ### use_spinel_for_carnelian_examples
 Include a config in the example packages to attempt to use Spinel
