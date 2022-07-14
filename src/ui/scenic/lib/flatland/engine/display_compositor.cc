@@ -930,6 +930,16 @@ void DisplayCompositor::SetColorConversionValues(const std::array<float, 9>& coe
   renderer_->SetColorConversionValues(coefficients, preoffsets, postoffsets);
 }
 
+bool DisplayCompositor::SetMinimumRgb(uint8_t minimum_rgb) {
+  fuchsia::hardware::display::Controller_SetMinimumRgb_Result cmd_result;
+  auto status = (*display_controller_)->SetMinimumRgb(minimum_rgb, &cmd_result);
+  if (status != ZX_OK || cmd_result.is_err()) {
+    FX_LOGS(WARNING) << "FlatlandDisplayCompositor SetMinimumRGB failed";
+    return false;
+  }
+  return true;
+}
+
 uint64_t DisplayCompositor::InternalImageId(allocation::GlobalImageId image_id) const {
   // Lock the whole function.
   std::unique_lock<std::mutex> lock(lock_);

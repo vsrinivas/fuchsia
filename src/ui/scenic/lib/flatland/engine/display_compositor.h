@@ -95,6 +95,9 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
                                 const std::array<float, 3>& preoffsets,
                                 const std::array<float, 3>& postoffsets);
 
+  // Clamps the minimum value for all channels on all pixels on the display to this number.
+  bool SetMinimumRgb(uint8_t minimum_rgb);
+
  private:
   friend class test::DisplayCompositorSmokeTest;
   friend class test::DisplayCompositorPixelTest;

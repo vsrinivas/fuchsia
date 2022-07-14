@@ -256,4 +256,9 @@ void Engine::ColorConversionImpl::SetValues(
   callback(ZX_OK);
 }
 
+void Engine::ColorConversionImpl::SetMinimumRgb(uint8_t minimum_rgb,
+                                                SetMinimumRgbCallback callback) {
+  callback(flatland_compositor_->SetMinimumRgb(minimum_rgb));
+}
+
 }  // namespace flatland

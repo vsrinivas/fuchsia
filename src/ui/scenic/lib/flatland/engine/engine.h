@@ -82,6 +82,9 @@ class Engine {
     void SetValues(fuchsia::ui::display::color::ConversionProperties properties,
                    SetValuesCallback callback) override;
 
+    // |fuchsia::ui::display::color::Converter|
+    void SetMinimumRgb(uint8_t minimum_rgb, SetMinimumRgbCallback callback) override;
+
    private:
     // The FIDL binding for the color correction api, which references |this| as the implementation.
     fidl::Binding<fuchsia::ui::display::color::Converter> binding_;
