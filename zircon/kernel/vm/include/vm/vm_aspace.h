@@ -270,7 +270,7 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   char name_[32] TA_GUARDED(lock_);
   bool aspace_destroyed_ TA_GUARDED(lock_) = false;
 
-  // TODO(fxb/85056): This is a temporary solution and needs to be replaced with something that is
+  // TODO(fxb/101641): This is a temporary solution and needs to be replaced with something that is
   // formalized.
   // Indicates whether or not this aspace is considered a latency sensitive object. For an aspace,
   // being latency sensitive means it will not perform page table reclamation, and will also pass on

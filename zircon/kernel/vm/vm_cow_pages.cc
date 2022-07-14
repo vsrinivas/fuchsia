@@ -330,7 +330,7 @@ bool VmCowPages::DedupZeroPage(vm_page_t* page, uint64_t offset) {
 
   Guard<Mutex> guard{&lock_};
 
-  // TODO(fxb/85056): Formalize this.
+  // TODO(fxb/101641): Formalize this.
   // Forbid zero page deduping if this is latency sensitive.
   if (is_latency_sensitive_) {
     return false;

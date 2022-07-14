@@ -1280,13 +1280,13 @@ class VmCowPages final
   // raw pointer to avoid circular references, the VmObjectPaged destructor needs to update it.
   VmObjectPaged* paged_ref_ TA_GUARDED(lock_) = nullptr;
 
-  // TODO(fxb/85056): This is a temporary solution and needs to be replaced with something that is
+  // TODO(fxb/101641): This is a temporary solution and needs to be replaced with something that is
   // formalized.
   // Marks whether or not this VMO is considered a latency sensitive object. For a VMO being latency
   // sensitive means pages that get committed should not be decommitted (or made expensive to
   // access) by any background kernel process, such as the zero page deduper.
   // Note: This does not presently protect against user pager eviction, as there is already a
-  // separate mechanism for that. Once fxb/85056 is resolved this might change.
+  // separate mechanism for that. Once fxb/101641 is resolved this might change.
   bool is_latency_sensitive_ TA_GUARDED(lock_) = false;
 
   using Cursor =

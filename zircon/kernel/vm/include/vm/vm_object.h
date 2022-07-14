@@ -451,7 +451,7 @@ class VmObject : public VmHierarchyBase,
     return ZX_OK;
   }
 
-  // TODO(fxb/85056): This is a temporary solution and needs to be replaced with something that is
+  // TODO(fxb/101641): This is a temporary solution and needs to be replaced with something that is
   // formalized.
   virtual void MarkAsLatencySensitive() {
     // This does nothing by default.

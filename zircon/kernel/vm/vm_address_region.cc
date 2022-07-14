@@ -272,7 +272,7 @@ zx_status_t VmAddressRegion::CreateVmMapping(size_t mapping_offset, size_t size,
   if (status != ZX_OK) {
     return status;
   }
-  // TODO(fxb/85056): For the moment we forward the latency sensitivity permanently onto any VMO
+  // TODO(fxb/101641): For the moment we forward the latency sensitivity permanently onto any VMO
   // that gets mapped.
   if (aspace_->IsLatencySensitive()) {
     vmo->MarkAsLatencySensitive();
@@ -574,7 +574,7 @@ zx_status_t VmAddressRegion::RangeOp(RangeOpType op, vaddr_t base, size_t len,
   const vaddr_t last_addr = base + len;
 
   if (op == RangeOpType::AlwaysNeed) {
-    // TODO(fxb/85056): For the moment marking any part of the address space as always need causes
+    // TODO(fxb/101641): For the moment marking any part of the address space as always need causes
     // the entire aspace to be considered latency sensitive.
     aspace_->MarkAsLatencySensitive();
   }

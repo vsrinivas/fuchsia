@@ -761,7 +761,8 @@ void VmAspace::MarkAsLatencySensitive() {
     return;
   }
 
-  // TODO(fxb/85056): Need a better mechanism than checking for the process name here.
+  // TODO(fxb/101641): Need a better mechanism than checking for the process name here. See
+  // fxbug.dev/85056 for more context.
   char name[ZX_MAX_NAME_LEN];
   auto up = ProcessDispatcher::GetCurrent();
   if (up->aspace().get() != this) {
@@ -800,7 +801,7 @@ void VmAspace::HarvestAllUserAccessedBits(NonTerminalAction non_terminal_action,
 
   for (auto& a : aspaces_list_) {
     if (a.is_user()) {
-      // TODO(fxb/85056): Formalize this.
+      // TODO(fxb/101641): Formalize this.
       // Forbid PT reclamation and accessed bit harvesting on latency sensitive aspaces.
       const NonTerminalAction apply_non_terminal_action =
           a.IsLatencySensitive() ? NonTerminalAction::Retain : non_terminal_action;

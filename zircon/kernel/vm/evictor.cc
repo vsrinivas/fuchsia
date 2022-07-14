@@ -322,8 +322,8 @@ Evictor::EvictedPageCounts Evictor::EvictPagerBacked(uint64_t target_pages,
           ? PageQueues::kNumActiveQueues
           : PageQueues::kNumPagerBacked - PageQueues::kNumOldestQueues;
 
-  // TODO(fxbug.dev/85056): Always follow the hint for now, i.e. protect hinted pages from eviction
-  // even in the face of OOM.
+  // TODO(fxbug.dev/101641): Always follow the hint for now, i.e. protect hinted pages from eviction
+  // even in the face of OOM. See fxbug.dev/85056 for more context.
   //
   // Desired future behavior:
   // If we're going to include newest pages, ignore eviction hints as well, i.e. also consider
