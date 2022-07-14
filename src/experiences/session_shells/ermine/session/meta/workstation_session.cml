@@ -23,12 +23,19 @@
         },
         {
             protocol: [
-                "fuchsia.session.scene.Manager",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.keyboard.focus.Controller",
                 "fuchsia.ui.shortcut.Manager",
                 "fuchsia.ui.views.ViewRefInstalled",
             ],
+            from: "parent",
+        },
+        {
+            protocol: [
+                "fuchsia.session.scene.Manager",
+            ],
+            from: "parent",
+            availability: "optional",
         },
         {
             directory: "config-data",

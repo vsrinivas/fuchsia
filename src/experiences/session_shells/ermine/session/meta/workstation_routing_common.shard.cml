@@ -36,7 +36,6 @@
                 "fuchsia.power.button.Monitor",
                 "fuchsia.process.Launcher",
                 "fuchsia.recovery.FactoryReset",
-                "fuchsia.session.scene.Manager",
                 "fuchsia.settings.Intl",
                 "fuchsia.settings.Keyboard",
                 "fuchsia.settings.Privacy",
@@ -66,6 +65,14 @@
             ],
             from: "parent",
             to: [ "#workstation_session" ],
+        },
+        {
+            protocol: [
+                "fuchsia.session.scene.Manager",
+            ],
+            from: "parent",
+            to: [ "#workstation_session" ],
+            availability: "optional",
         },
         {
             // Protocols used by element_manager
