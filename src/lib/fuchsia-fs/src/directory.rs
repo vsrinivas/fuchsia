@@ -51,21 +51,45 @@ pub enum DecodeDirentError {
     InvalidUtf8(Utf8Error),
 }
 
-/// Opens the given `path` from the current namespace as a [`DirectoryProxy`]. The target is not
-/// verified to be any particular type and may not implement the fuchsia.io.Directory protocol.
+/// Opens the given `path` from the current namespace as a [`DirectoryProxy`].
+///
+/// The target is assumed to implement fuchsia.io.Directory but this isn't verified. To connect to
+/// a filesystem node which doesn't implement fuchsia.io.Directory, use the functions in
+/// [`fuchsia_component::client`] instead.
+///
+/// If the namespace path doesn't exist, or we fail to make the channel pair, this returns an
+/// error. However, if incorrect flags are sent, or if the rest of the path sent to the filesystem
+/// server doesn't exist, this will still return success. Instead, the returned DirectoryProxy
+/// channel pair will be closed with an epitaph.
 #[cfg(target_os = "fuchsia")]
 pub fn open_in_namespace(
     path: &str,
     flags: fio::OpenFlags,
 ) -> Result<fio::DirectoryProxy, OpenError> {
-    let (dir, server_end) =
-        fidl::endpoints::create_proxy::<fio::DirectoryMarker>().map_err(OpenError::CreateProxy)?;
+    let (node, request) = fidl::endpoints::create_proxy().map_err(OpenError::CreateProxy)?;
+    open_channel_in_namespace(path, flags, request)?;
+    Ok(node)
+}
 
+/// Asynchronously opens the given [`path`] in the current namespace, serving the connection over
+/// [`request`]. Once the channel is connected, any calls made prior are serviced.
+///
+/// The target is assumed to implement fuchsia.io.Directory but this isn't verified. To connect to
+/// a filesystem node which doesn't implement fuchsia.io.Directory, use the functions in
+/// [`fuchsia_component::client`] instead.
+///
+/// If the namespace path doesn't exist, this returns an error. However, if incorrect flags are
+/// sent, or if the rest of the path sent to the filesystem server doesn't exist, this will still
+/// return success. Instead, the [`request`] channel will be closed with an epitaph.
+#[cfg(target_os = "fuchsia")]
+pub fn open_channel_in_namespace(
+    path: &str,
+    flags: fio::OpenFlags,
+    request: fidl::endpoints::ServerEnd<fio::DirectoryMarker>,
+) -> Result<(), OpenError> {
     let flags = flags | fio::OpenFlags::DIRECTORY;
-    node::connect_in_namespace(path, flags, server_end.into_channel())
-        .map_err(OpenError::Namespace)?;
-
-    Ok(dir)
+    let namespace = fdio::Namespace::installed().map_err(OpenError::Namespace)?;
+    namespace.open(path, flags, request.into_channel()).map_err(OpenError::Namespace)
 }
 
 /// Opens the given `path` from the given `parent` directory as a [`DirectoryProxy`]. The target is
