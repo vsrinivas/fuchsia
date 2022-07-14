@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 use crate::agent::storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::agent::storage::storage_factory::StorageAccess;
-use crate::audio::types::{
-    AudioInfo, AudioInputInfo, AudioStream, AudioStreamType, SetAudioStream,
-};
+use crate::audio::types::{AudioInfo, AudioStream, AudioStreamType, SetAudioStream};
 use crate::audio::{
     create_default_modified_counters, default_audio_info, ModifiedCounters, StreamVolumeControl,
 };
@@ -15,10 +13,8 @@ use crate::handler::setting_handler::persist::{
     controller as data_controller, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{
-    controller, ControllerError, ControllerStateResult, Event, IntoHandlerResult,
-    SettingHandlerResult, State,
+    controller, ControllerError, ControllerStateResult, Event, SettingHandlerResult, State,
 };
-use crate::input::MediaButtons;
 use crate::{trace, trace_guard};
 use async_trait::async_trait;
 use fuchsia_async as fasync;
@@ -46,7 +42,6 @@ pub(crate) struct VolumeController {
     client: ClientProxy,
     audio_service_connected: bool,
     stream_volume_controls: HashMap<AudioStreamType, StreamVolumeControl>,
-    mic_mute_state: Option<bool>,
     modified_counters: ModifiedCounters,
 }
 
@@ -61,7 +56,6 @@ impl VolumeController {
             client,
             stream_volume_controls: HashMap::new(),
             audio_service_connected: false,
-            mic_mute_state: None,
             modified_counters: create_default_modified_counters(),
         }))
     }
@@ -89,11 +83,6 @@ impl VolumeController {
 
     async fn get_info(&self, id: ftrace::Id) -> Result<AudioInfo, ControllerError> {
         let mut audio_info = self.client.read_setting::<AudioInfo>(id).await;
-
-        // Only override the mic mute state if present.
-        if let Some(mic_mute_state) = self.mic_mute_state {
-            audio_info.input = AudioInputInfo { mic_mute: mic_mute_state };
-        }
 
         audio_info.modified_counters = Some(self.modified_counters.clone());
         Ok(audio_info)
@@ -125,20 +114,6 @@ impl VolumeController {
         }
 
         Ok(None)
-    }
-
-    async fn set_mic_mute_state(
-        &mut self,
-        mic_mute_state: bool,
-        id: ftrace::Id,
-    ) -> SettingHandlerResult {
-        trace!(id, "set mic mute state");
-        self.mic_mute_state = Some(mic_mute_state);
-
-        let mut audio_info = self.client.read_setting::<AudioInfo>(id).await;
-        audio_info.input.mic_mute = mic_mute_state;
-
-        self.client.write_setting(audio_info.into(), id).await.into_handler_result()
     }
 
     /// Updates the state with the given streams' volume levels.
@@ -337,10 +312,6 @@ impl controller::Handle for AudioController {
             Request::Get => {
                 let id = ftrace::Id::new();
                 Some(self.volume.lock().await.get_info(id).await.map(|info| Some(info.into())))
-            }
-            Request::OnButton(MediaButtons { mic_mute: Some(mic_mute), .. }) => {
-                let id = ftrace::Id::new();
-                Some(self.volume.lock().await.set_mic_mute_state(mic_mute, id).await)
             }
             _ => None,
         }

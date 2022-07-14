@@ -64,11 +64,7 @@ impl AvrcpVolume {
             }),
             ..settings::AudioStreamSettings::EMPTY
         };
-        settings::AudioSettings {
-            streams: Some(vec![settings]),
-            input: None,
-            ..settings::AudioSettings::EMPTY
-        }
+        settings::AudioSettings { streams: Some(vec![settings]), ..settings::AudioSettings::EMPTY }
     }
 }
 

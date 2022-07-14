@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
-use crate::audio::ModifiedCounters;
+use crate::agent::storage::device_storage::DeviceStorageCompatible;
+use crate::audio::{create_default_modified_counters, default_audio_info, ModifiedCounters};
 
-#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum AudioSettingSource {
     User,
     System,
@@ -65,15 +67,9 @@ impl From<AudioStream> for SetAudioStream {
     }
 }
 
-#[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct AudioInputInfo {
-    pub mic_mute: bool,
-}
-
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct AudioInfo {
     pub streams: [AudioStream; 5],
-    pub input: AudioInputInfo,
     pub modified_counters: Option<ModifiedCounters>,
 }
 
@@ -85,6 +81,89 @@ impl AudioInfo {
     pub(crate) fn replace_stream(&mut self, stream: AudioStream) {
         if let Some(s) = self.streams.iter_mut().find(|s| s.stream_type == stream.stream_type) {
             *s = stream;
+        }
+    }
+}
+
+impl DeviceStorageCompatible for AudioInfo {
+    const KEY: &'static str = "audio_info";
+
+    fn default_value() -> Self {
+        default_audio_info()
+    }
+
+    fn deserialize_from(value: &str) -> Self {
+        Self::extract(value).unwrap_or_else(|_| Self::from(AudioInfoV2::deserialize_from(value)))
+    }
+}
+
+////////////////////////////////////////////////////////////////
+/// Past versions of AudioInfo.
+////////////////////////////////////////////////////////////////
+
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct AudioInputInfo {
+    pub mic_mute: bool,
+}
+
+/// The following struct should never be modified. It represents an old
+/// version of the audio settings.
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+pub struct AudioInfoV2 {
+    pub streams: [AudioStream; 5],
+    pub input: AudioInputInfo,
+    pub modified_counters: Option<ModifiedCounters>,
+}
+
+impl DeviceStorageCompatible for AudioInfoV2 {
+    const KEY: &'static str = "audio_info";
+
+    fn default_value() -> Self {
+        AudioInfoV2 {
+            streams: default_audio_info().streams,
+            input: AudioInputInfo { mic_mute: false },
+            modified_counters: None,
+        }
+    }
+
+    fn deserialize_from(value: &str) -> Self {
+        Self::extract(value).unwrap_or_else(|_| Self::from(AudioInfoV1::deserialize_from(value)))
+    }
+}
+
+impl From<AudioInfoV2> for AudioInfo {
+    fn from(v2: AudioInfoV2) -> AudioInfo {
+        AudioInfo { streams: v2.streams, modified_counters: v2.modified_counters }
+    }
+}
+
+/// The following struct should never be modified. It represents an old
+/// version of the audio settings.
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+pub struct AudioInfoV1 {
+    pub streams: [AudioStream; 5],
+    pub input: AudioInputInfo,
+    pub modified_timestamps: Option<HashMap<AudioStreamType, String>>,
+}
+
+impl DeviceStorageCompatible for AudioInfoV1 {
+    const KEY: &'static str = "audio_info";
+
+    fn default_value() -> Self {
+        AudioInfoV1 {
+            streams: default_audio_info().streams,
+            input: AudioInputInfo { mic_mute: false },
+            modified_timestamps: None,
+        }
+    }
+}
+
+impl From<AudioInfoV1> for AudioInfoV2 {
+    fn from(v1: AudioInfoV1) -> Self {
+        AudioInfoV2 {
+            streams: v1.streams,
+            input: v1.input,
+            modified_counters: Some(create_default_modified_counters()),
         }
     }
 }

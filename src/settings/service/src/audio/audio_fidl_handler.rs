@@ -6,7 +6,7 @@ use std::convert::TryFrom;
 
 use fidl::prelude::*;
 use fidl_fuchsia_settings::{
-    AudioInput, AudioMarker, AudioRequest, AudioSetResponder, AudioSetResult, AudioSettings,
+    AudioMarker, AudioRequest, AudioSetResponder, AudioSetResult, AudioSettings,
     AudioStreamSettingSource, AudioStreamSettings, AudioWatchResponder, Volume,
 };
 use fuchsia_syslog::{fx_log_err, fx_log_warn};
@@ -108,12 +108,8 @@ impl From<SettingInfo> for AudioSettings {
                 streams.push(AudioStreamSettings::from(*stream));
             }
 
-            let mut audio_input = AudioInput::EMPTY;
-            audio_input.muted = Some(info.input.mic_mute);
-
             let mut audio_settings = AudioSettings::EMPTY;
             audio_settings.streams = Some(streams);
-            audio_settings.input = Some(audio_input);
             audio_settings
         } else {
             panic!("incorrect value sent to audio");

@@ -4,9 +4,7 @@
 
 use argh::FromArgs;
 use ffx_core::ffx_command;
-use fidl_fuchsia_settings::{
-    AudioInput, AudioSettings, AudioStreamSettingSource, AudioStreamSettings, Volume,
-};
+use fidl_fuchsia_settings::{AudioSettings, AudioStreamSettingSource, AudioStreamSettings, Volume};
 
 #[ffx_command()]
 #[derive(FromArgs, Debug, PartialEq, Clone, Copy)]
@@ -32,11 +30,6 @@ pub struct Audio {
     /// whether or not the volume is muted
     #[argh(option, short = 'v')]
     pub volume_muted: Option<bool>,
-
-    // AudioInput
-    /// whether or not the input, e.g. microphone, is muted
-    #[argh(option, short = 'm')]
-    pub input_muted: Option<bool>,
 }
 
 fn str_to_audio_stream(src: &str) -> Result<fidl_fuchsia_media::AudioRenderUsage, String> {
@@ -74,7 +67,6 @@ impl From<Audio> for AudioSettings {
             user_volume: if volume == Volume::EMPTY { None } else { Some(volume) },
             ..AudioStreamSettings::EMPTY
         };
-        let audio_input = AudioInput { muted: src.input_muted, ..AudioInput::EMPTY };
 
         AudioSettings {
             streams: if stream_settings == AudioStreamSettings::EMPTY {
@@ -82,7 +74,6 @@ impl From<Audio> for AudioSettings {
             } else {
                 Some(vec![stream_settings])
             },
-            input: if audio_input == AudioInput::EMPTY { None } else { Some(audio_input) },
             ..AudioSettings::EMPTY
         }
     }
@@ -100,7 +91,7 @@ mod tests {
         let source = "system";
         let level = "0.6";
         let not_muted = "false";
-        let args = &["-t", render, "-s", source, "-l", level, "-m", not_muted, "-v", not_muted];
+        let args = &["-t", render, "-s", source, "-l", level, "-v", not_muted];
         assert_eq!(
             Audio::from_args(CMD_NAME, args),
             Ok(Audio {
@@ -108,7 +99,6 @@ mod tests {
                 source: Some(str_to_audio_source(source).unwrap()),
                 level: Some(0.6),
                 volume_muted: Some(false),
-                input_muted: Some(false)
             })
         )
     }

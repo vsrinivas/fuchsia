@@ -72,10 +72,11 @@ type AudioSettings = table {
     /// one AudioStreamSettings for each fuchsia.media.AudioRenderUsage.
     1: streams vector<AudioStreamSettings>:5;
 
-    /// To be deprecated in favor of fuchsia.settings.InputDeviceSettings.
+    @available(deprecated=8, removed=9)
     2: input AudioInput;
 };
 
+@available(deprecated=8, removed=9)
 type AudioInput = table {
     /// Whether the audio input is muted. Takes into consideration the hardware state.
     1: muted bool;

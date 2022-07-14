@@ -81,20 +81,6 @@
         "name": "fuchsia.settings/Audio"
     },
     {
-        "declaration": "bool",
-        "kind": "table/member",
-        "name": "fuchsia.settings/AudioInput.muted"
-    },
-    {
-        "kind": "table",
-        "name": "fuchsia.settings/AudioInput"
-    },
-    {
-        "declaration": "fuchsia.settings/AudioInput",
-        "kind": "table/member",
-        "name": "fuchsia.settings/AudioSettings.input"
-    },
-    {
         "declaration": "vector<fuchsia.settings/AudioStreamSettings>:5",
         "kind": "table/member",
         "name": "fuchsia.settings/AudioSettings.streams"

@@ -47,13 +47,8 @@ mod test {
             }
         });
 
-        let audio = Audio {
-            stream: None,
-            source: None,
-            level: Some(0.5),
-            volume_muted: Some(false),
-            input_muted: Some(false),
-        };
+        let audio =
+            Audio { stream: None, source: None, level: Some(0.5), volume_muted: Some(false) };
         let response = run_command(proxy, audio).await;
         assert!(response.is_ok());
     }
@@ -64,7 +59,6 @@ mod test {
             source: Some(fidl_fuchsia_settings::AudioStreamSettingSource::User),
             level: Some(0.6),
             volume_muted: Some(false),
-            input_muted: Some(false),
         };
         "Test audio set() output with non-empty input."
     )]
@@ -74,7 +68,6 @@ mod test {
             source: Some(fidl_fuchsia_settings::AudioStreamSettingSource::User),
             level: Some(0.1),
             volume_muted: Some(false),
-            input_muted: Some(true),
         };
         "Test audio set() output with a different non-empty input."
     )]
@@ -100,7 +93,6 @@ mod test {
             source: None,
             level: None,
             volume_muted: None,
-            input_muted: None,
         };
         "Test audio watch() output with empty input."
     )]
@@ -110,7 +102,6 @@ mod test {
             source: Some(fidl_fuchsia_settings::AudioStreamSettingSource::User),
             level: Some(0.1),
             volume_muted: Some(false),
-            input_muted: Some(true),
         };
         "Test audio watch() output with non-empty input."
     )]
@@ -127,13 +118,7 @@ mod test {
 
         let output = utils::assert_watch!(command(
             proxy,
-            Audio {
-                stream: None,
-                source: None,
-                level: None,
-                volume_muted: None,
-                input_muted: None
-            }
+            Audio { stream: None, source: None, level: None, volume_muted: None }
         ));
         assert_eq!(output, format!("{:#?}", AudioSettings::from(expected_audio)));
         Ok(())

@@ -206,7 +206,6 @@ impl SetUiFacade {
         };
         let settings = fsettings::AudioSettings {
             streams: Some(vec![stream_settings]),
-            input: None,
             ..fsettings::AudioSettings::EMPTY
         };
 
