@@ -66,6 +66,10 @@ struct Executor {
 
     /// Waiters waiting for all connections to be closed.
     waiters: std::vec::Vec<oneshot::Sender<()>>,
+
+    /// Records if shutdown has been called on the executor. Any new tasks started on an executor
+    /// that has been shutdown will immediately be sent the shutdown signal.
+    is_shutdown: bool,
 }
 
 impl ExecutionScope {
@@ -206,7 +210,11 @@ impl ExecutionScopeParams {
 
     pub fn new(self) -> ExecutionScope {
         ExecutionScope {
-            executor: Arc::new(Mutex::new(Executor { running: Slab::new(), waiters: Vec::new() })),
+            executor: Arc::new(Mutex::new(Executor {
+                running: Slab::new(),
+                waiters: Vec::new(),
+                is_shutdown: false,
+            })),
             token_registry: self.token_registry,
             inode_registry: self.inode_registry,
             entry_constructor: self.entry_constructor,
@@ -265,7 +273,14 @@ impl Executor {
     ) {
         let mut this = executor.lock().unwrap();
 
-        let task_id = this.running.insert(Some(shutdown));
+        let shutdown = if this.is_shutdown {
+            shutdown.send(()).expect("Shutdown receiver was dropped before its task was started");
+            None
+        } else {
+            Some(shutdown)
+        };
+        let task_id = this.running.insert(shutdown);
+
         let executor_clone = executor.clone();
         let task = task
             .then(move |_| async move { executor_clone.lock().unwrap().task_did_finish(task_id) });
@@ -273,6 +288,7 @@ impl Executor {
     }
 
     fn shutdown(&mut self) {
+        self.is_shutdown = true;
         for (_key, task) in self.running.iter_mut() {
             // As the task removal is processed by the task itself, we may see cases when we have
             // already sent the stop message, but the task did not remove its entry from the list
@@ -440,6 +456,23 @@ mod tests {
             processing_done_sender.send(()).unwrap();
 
             shutdown_complete_receiver.await.unwrap();
+        });
+    }
+
+    #[test]
+    fn spawn_with_shutdown_after_shutdown_receives_shutdown_signal() {
+        run_test(|scope| async move {
+            scope.spawn_with_shutdown({
+                let scope = scope.clone();
+                |shutdown| async move {
+                    let _ = shutdown.await;
+                    scope.spawn_with_shutdown(|shutdown| async move {
+                        let _ = shutdown.await;
+                    });
+                }
+            });
+            scope.shutdown();
+            scope.wait().await;
         });
     }
 
