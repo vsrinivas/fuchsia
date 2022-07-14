@@ -165,10 +165,14 @@ pub struct LogCommand {
     #[argh(option, from_str_fn(parse_log_interest_selector))]
     pub select: Vec<LogInterestSelector>,
 
-    /// if provided, enable log spam filtering
-    /// TODO(fxbug.dev/102481): Support disabling spamfilter and default path.
+    /// if provided, overrides the default log spam list path that's optionally
+    /// specified in FFX config under the "log_cmd.spam_filepath" key.
     #[argh(option)]
     pub spam_list_path: Option<String>,
+
+    /// if set, disable log spam filtering
+    #[argh(switch)]
+    pub disable_spam_filter: bool,
 }
 
 impl Default for LogCommand {
@@ -194,6 +198,7 @@ impl Default for LogCommand {
             select: vec![],
             show_full_moniker: false,
             spam_list_path: None,
+            disable_spam_filter: false,
         }
     }
 }

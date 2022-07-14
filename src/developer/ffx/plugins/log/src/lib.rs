@@ -20,7 +20,6 @@ use {
     fidl_fuchsia_diagnostics::LogSettingsProxy,
     futures::{AsyncWrite, AsyncWriteExt},
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase},
-    std::convert::TryFrom,
     std::{fs, iter::Iterator, time::SystemTime},
     termion::{color, style},
 };
@@ -29,6 +28,7 @@ mod spam_filter;
 
 type ArchiveIteratorResult = Result<LogEntry, ArchiveIteratorError>;
 const COLOR_CONFIG_NAME: &str = "log_cmd.color";
+const LOG_SPAM_CONFIG_NAME: &str = "log_cmd.spam_filepath";
 const SYMBOLIZE_ENABLED_CONFIG: &str = "proactive_log.symbolize.enabled";
 const NANOS_IN_SECOND: i64 = 1_000_000_000;
 const TIMESTAMP_FORMAT: &str = "%Y-%m-%d %H:%M:%S.%3f";
@@ -127,6 +127,35 @@ impl LogFilterCriteria {
         }
     }
 
+    fn try_from_cmd(
+        cmd: &LogCommand,
+        default_log_spam_path: Option<String>,
+    ) -> Result<Self, Error> {
+        let mut spam_filter: Option<Box<dyn spam_filter::LogSpamFilter>> = None;
+        if !cmd.disable_spam_filter {
+            let spam_list_path: Option<String> = match cmd.spam_list_path.as_ref() {
+                Some(path) => Some(path.to_string()),
+                None => default_log_spam_path,
+            };
+            if let Some(spam_list_path) = spam_list_path {
+                log::info!("Filtering Log spam based on spam definition file {:?}", spam_list_path);
+                let contents = fs::read_to_string(spam_list_path)?;
+                let spam_list: spam_filter::LogSpamList = serde_json::from_str(&contents)?;
+                spam_filter = Some(Box::new(spam_filter::LogSpamFilterImpl::new(spam_list)))
+            }
+        }
+
+        Ok(Self::new(
+            cmd.severity,
+            cmd.filter.clone(),
+            cmd.exclude.clone(),
+            cmd.tags.clone(),
+            cmd.exclude_tags.clone(),
+            cmd.kernel,
+            spam_filter,
+        ))
+    }
+
     fn matches_spam(&self, data: &LogsData, msg: &str) -> bool {
         match &self.spam_filter {
             None => false,
@@ -186,32 +215,6 @@ impl LogFilterCriteria {
             }
             _ => true,
         }
-    }
-}
-
-impl TryFrom<&LogCommand> for LogFilterCriteria {
-    type Error = Error;
-
-    fn try_from(cmd: &LogCommand) -> Result<Self, Self::Error> {
-        let spam_filter: Option<Box<dyn spam_filter::LogSpamFilter>> =
-            match cmd.spam_list_path.as_ref() {
-                Some(path) => {
-                    let contents = fs::read_to_string(path)?;
-                    let spam_list: spam_filter::LogSpamList = serde_json::from_str(&contents)?;
-                    Some(Box::new(spam_filter::LogSpamFilterImpl::new(spam_list)))
-                }
-                None => None,
-            };
-
-        Ok(LogFilterCriteria::new(
-            cmd.severity,
-            cmd.filter.clone(),
-            cmd.exclude.clone(),
-            cmd.tags.clone(),
-            cmd.exclude_tags.clone(),
-            cmd.kernel,
-            spam_filter,
-        ))
     }
 }
 
@@ -504,10 +507,11 @@ pub async fn log_impl<W: std::io::Write>(
     opts: LogOpts,
 ) -> Result<()> {
     let config_color: bool = get(COLOR_CONFIG_NAME).await?;
+    let default_log_spam_path = get(LOG_SPAM_CONFIG_NAME).await.ok();
 
     let mut stdout = Unblock::new(std::io::stdout());
     let mut formatter = DefaultLogFormatter::new(
-        LogFilterCriteria::try_from(&cmd)?,
+        LogFilterCriteria::try_from_cmd(&cmd, default_log_spam_path)?,
         &mut stdout,
         LogFormatterOptions {
             no_symbols: cmd.no_symbols,
@@ -657,7 +661,8 @@ mod test {
             Interest, LogInterestSelector, LogSettingsRequest, Severity as FidlSeverity,
         },
         selectors::{parse_component_selector, VerboseError},
-        std::{sync::Arc, time::Duration},
+        std::{io::Write, sync::Arc, time::Duration},
+        tempfile::NamedTempFile,
     };
 
     const DEFAULT_TS_NANOS: u64 = 1615535969000000000;
@@ -798,6 +803,7 @@ mod test {
             until: None,
             until_monotonic: None,
             spam_list_path: None,
+            disable_spam_filter: false,
         }
     }
 
@@ -1108,7 +1114,7 @@ mod test {
             severity: Severity::Error,
             ..empty_dump_command()
         };
-        let criteria = LogFilterCriteria::try_from(&cmd).unwrap();
+        let criteria = LogFilterCriteria::try_from_cmd(&cmd, None).unwrap();
 
         assert!(criteria.matches(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
@@ -1175,7 +1181,7 @@ mod test {
             severity: Severity::Error,
             ..empty_dump_command()
         };
-        let criteria = LogFilterCriteria::try_from(&cmd).unwrap();
+        let criteria = LogFilterCriteria::try_from_cmd(&cmd, None).unwrap();
 
         assert!(criteria.matches(&make_log_entry(LogData::SymbolizedTargetLog(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
@@ -1228,7 +1234,7 @@ mod test {
     #[fuchsia::test]
     async fn test_empty_criteria() {
         let cmd = empty_dump_command();
-        let criteria = LogFilterCriteria::try_from(&cmd).unwrap();
+        let criteria = LogFilterCriteria::try_from_cmd(&cmd, None).unwrap();
 
         assert!(criteria.matches(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
@@ -1268,7 +1274,7 @@ mod test {
     #[fuchsia::test]
     async fn test_criteria_klog_only() {
         let cmd = LogCommand { kernel: true, ..empty_dump_command() };
-        let criteria = LogFilterCriteria::try_from(&cmd).unwrap();
+        let criteria = LogFilterCriteria::try_from_cmd(&cmd, None).unwrap();
 
         assert!(criteria.matches(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
@@ -1300,7 +1306,7 @@ mod test {
             filter: vec!["included".to_string(), "also".to_string()],
             ..empty_dump_command()
         };
-        let criteria = LogFilterCriteria::try_from(&cmd).unwrap();
+        let criteria = LogFilterCriteria::try_from_cmd(&cmd, None).unwrap();
 
         assert!(criteria.matches(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
@@ -1354,7 +1360,7 @@ mod test {
             exclude: vec![".cmx".to_string(), "also".to_string()],
             ..empty_dump_command()
         };
-        let criteria = LogFilterCriteria::try_from(&cmd).unwrap();
+        let criteria = LogFilterCriteria::try_from_cmd(&cmd, None).unwrap();
 
         assert!(!criteria.matches(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
@@ -1398,7 +1404,7 @@ mod test {
             exclude_tags: vec!["tag3".to_string()],
             ..empty_dump_command()
         };
-        let criteria = LogFilterCriteria::try_from(&cmd).unwrap();
+        let criteria = LogFilterCriteria::try_from_cmd(&cmd, None).unwrap();
 
         assert!(criteria.matches(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
@@ -1448,7 +1454,7 @@ mod test {
             exclude: vec!["not-this-component.cmx".to_string()],
             ..empty_dump_command()
         };
-        let criteria = LogFilterCriteria::try_from(&cmd).unwrap();
+        let criteria = LogFilterCriteria::try_from_cmd(&cmd, None).unwrap();
 
         assert!(criteria.matches(&make_log_entry(
             diagnostics_data::LogsDataBuilder::new(diagnostics_data::BuilderArgs {
@@ -1488,7 +1494,7 @@ mod test {
     #[fuchsia::test]
     async fn test_criteria_matches_spam_filter() {
         let cmd = LogCommand { ..empty_dump_command() };
-        let mut criteria = LogFilterCriteria::try_from(&cmd).unwrap();
+        let mut criteria = LogFilterCriteria::try_from_cmd(&cmd, None).unwrap();
 
         // spam match
         let spam_filter = FakeLogSpamFilter { is_spam_result: true };
@@ -1530,6 +1536,60 @@ mod test {
             .build()
             .into()
         )));
+    }
+
+    #[fuchsia::test]
+    async fn test_criteria_disable_spam_filter() {
+        let cmd = LogCommand {
+            spam_list_path: Some("dummy_path".to_string()),
+            disable_spam_filter: true,
+            ..empty_dump_command()
+        };
+        let criteria = LogFilterCriteria::try_from_cmd(&cmd, None).unwrap();
+        assert!(criteria.spam_filter.is_none())
+    }
+
+    #[fuchsia::test]
+    async fn test_criteria_spam_list_path_flag_set() {
+        let mut tmp = NamedTempFile::new().unwrap();
+        writeln!(tmp, r#"{{"logSpam": []}}"#).unwrap();
+        let cmd = LogCommand {
+            spam_list_path: tmp.path().to_str().map(|s| s.to_string()),
+            ..empty_dump_command()
+        };
+        let criteria = LogFilterCriteria::try_from_cmd(&cmd, None).unwrap();
+        assert!(criteria.spam_filter.is_some())
+    }
+
+    #[fuchsia::test]
+    async fn test_criteria_spam_list_default_config_set() {
+        let mut tmp = NamedTempFile::new().unwrap();
+        writeln!(tmp, r#"{{"logSpam": []}}"#).unwrap();
+        let cmd = LogCommand { ..empty_dump_command() };
+        let default_config: Option<String> = Some(tmp.path().to_str().unwrap().into());
+        let criteria = LogFilterCriteria::try_from_cmd(&cmd, default_config).unwrap();
+        assert!(criteria.spam_filter.is_some())
+    }
+
+    #[fuchsia::test]
+    async fn test_criteria_prefer_spam_list_flag_override() {
+        let mut tmp = NamedTempFile::new().unwrap();
+        writeln!(tmp, r#"{{"logSpam": []}}"#).unwrap();
+        let cmd = LogCommand {
+            spam_list_path: tmp.path().to_str().map(|s| s.to_string()),
+            ..empty_dump_command()
+        };
+        let default_config = Some("invalid_path".to_string());
+        let criteria = LogFilterCriteria::try_from_cmd(&cmd, default_config).unwrap();
+        assert!(criteria.spam_filter.is_some())
+    }
+
+    #[fuchsia::test]
+    async fn test_criteria_spam_list_default_config_unset() {
+        let cmd = LogCommand { ..empty_dump_command() };
+        let default_config = None;
+        let criteria = LogFilterCriteria::try_from_cmd(&cmd, default_config).unwrap();
+        assert!(criteria.spam_filter.is_none())
     }
 
     #[fuchsia::test]
