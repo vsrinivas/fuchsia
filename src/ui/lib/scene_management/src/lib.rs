@@ -10,6 +10,7 @@ mod pointerinjector_config;
 mod scene_manager;
 
 pub use display_metrics::DisplayMetrics;
+pub use display_metrics::ViewingDistance;
 pub use flatland_scene_manager::FlatlandSceneManager;
 pub use gfx_scene_manager::GfxSceneManager;
 pub use graphics_utils::ScreenCoordinates;

@@ -25,7 +25,7 @@ use {
     fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::{StreamExt, TryStreamExt},
-    scene_management::{self, SceneManager},
+    scene_management::{self, SceneManager, ViewingDistance},
     std::rc::Rc,
     std::sync::Arc,
 };
@@ -115,13 +115,29 @@ async fn inner_main() -> Result<(), Error> {
                 0
             }
         };
+        let display_pixel_density =
+            match std::fs::read_to_string("/config/data/display_pixel_density") {
+                Ok(contents) => Some(contents.parse::<f32>()?),
+                Err(_) => None,
+            };
+        let viewing_distance = match std::fs::read_to_string("/config/data/display_usage") {
+            Ok(s) => Some(match s.trim() {
+                "handheld" => ViewingDistance::Handheld,
+                "close" => ViewingDistance::Close,
+                "near" => ViewingDistance::Near,
+                "midrange" => ViewingDistance::Midrange,
+                "far" => ViewingDistance::Far,
+                unknown => anyhow::bail!("Invalid /config/data/display_usage value: {unknown}"),
+            }),
+            Err(_) => None,
+        };
         let gfx_scene_manager: Arc<Mutex<Box<dyn SceneManager>>> = Arc::new(Mutex::new(Box::new(
             scene_management::GfxSceneManager::new(
                 scenic,
                 view_ref_installed,
                 display_rotation,
-                None,
-                None,
+                display_pixel_density,
+                viewing_distance,
             )
             .await?,
         )));

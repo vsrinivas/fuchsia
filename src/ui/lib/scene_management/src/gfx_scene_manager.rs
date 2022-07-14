@@ -775,6 +775,7 @@ impl GfxSceneManager {
     ///
     /// # Parameters
     /// - `session`: The scenic session in which to create the view holder.
+    /// - `dimensions`: The dimensions of the view's bounding box.
     /// - `view_holder_token`: The view holder token used to create the view holder.
     /// - `scale`, `rotation`, `translation`: Used to adjust the view holder's transform.
     /// - `name`: The debug name of the view holder.
