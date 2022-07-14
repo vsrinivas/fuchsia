@@ -131,6 +131,12 @@ do
   # Reject absolute paths, for the sake of build artifact portability,
   # and remote-action cache hit benefits.
   case "$opt" in
+    -fdebug-prefix-map="$project_root"*)
+      # -fdebug-prefix-map (clang, gcc) takes an absolute path for
+      # the sake of remapping debug paths to canonical prefixes, thus
+      # making their outputs reproducible across different build environments.
+      # It is up to RBE/reclient to handle this flag transparently.
+      ;;
     *"$project_root"*)
       cat <<EOF
 Absolute paths are not remote-portable.  Found:
