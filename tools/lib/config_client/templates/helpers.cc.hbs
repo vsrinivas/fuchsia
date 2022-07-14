@@ -25,13 +25,20 @@ void Config::RecordInspect(inspect::Node* node) {
 std::ostream& operator<<(std::ostream& os, const Config& c) {
   {{#each fields}}
     {{#if (is_vector type_)}}
-      os << "  {{ident}}: [" << std::endl;
-      for (auto value : c.{{ident}}()) {
-        os << "    " << value << "," << std::endl;
+      os << "{{ident}}: [";
+      for (auto iter = c.{{ident}}().begin(); iter != c.{{ident}}().end(); iter++) {
+        if (iter != c.{{ident}}().begin()) os << ", ";
+        os << *iter;
       }
-      os << "]" << std::endl;
+      os << "]";
     {{else}}
-      os << "  {{ident}}: " << c.{{ident}}() << std::endl;
+      {{#if (is_bool type_)}}
+        if (c.{{ident}}()) {
+          os << "{{ident}}; ";
+        }
+      {{else}}
+        os << "{{ident}}=" << c.{{ident}}() << "; ";
+      {{/if}}
     {{/if}}
   {{~/each~}}
   return os;

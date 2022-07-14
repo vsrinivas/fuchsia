@@ -67,6 +67,7 @@ pub fn create_cpp_wrapper(
     hbars.register_escape_fn(handlebars::no_escape);
     hbars.register_helper("hex_byte", Box::new(hex_byte));
     hbars.register_helper("is_string_vector", Box::new(is_string_vector));
+    hbars.register_helper("is_bool", Box::new(is_bool));
     hbars.register_helper("is_vector", Box::new(is_vector));
     hbars.register_helper("is_string", Box::new(is_string));
     hbars.register_helper("cpp_type", Box::new(cpp_type));
@@ -130,6 +131,7 @@ handlebars_helper!(hex_byte: |b: u8| format!("{:#04x}", b));
 handlebars_helper!(is_string_vector: |t: ConfigValueType| matches!(t, ConfigValueType::Vector {
     nested_type: ConfigNestedValueType::String { .. }, ..
 }));
+handlebars_helper!(is_bool: |t: ConfigValueType| matches!(t, ConfigValueType::Bool { .. }));
 handlebars_helper!(is_vector: |t: ConfigValueType| matches!(t, ConfigValueType::Vector { .. }));
 handlebars_helper!(is_string: |t: ConfigValueType| matches!(t, ConfigValueType::String { .. }));
 handlebars_helper!(cpp_type: |t: ConfigValueType| match t {
