@@ -66,20 +66,26 @@ impl Joined {
     /// Returns Ok(AkmAlgorithm) if authentication request was sent successfully, Err(()) otherwise.
     fn start_authenticating(&self, sta: &mut BoundClient<'_>) -> Result<akm::AkmAlgorithm, ()> {
         let auth_type = sta.sta.connect_req.auth_type;
-        let mut algorithm = match auth_type {
-            fidl_mlme::AuthenticationTypes::OpenSystem => akm::AkmAlgorithm::OpenSupplicant,
-            fidl_mlme::AuthenticationTypes::Sae => akm::AkmAlgorithm::Sae,
+        let algorithm_candidate = match auth_type {
+            fidl_mlme::AuthenticationTypes::OpenSystem => Ok(akm::AkmAlgorithm::OpenSupplicant),
+            fidl_mlme::AuthenticationTypes::Sae => Ok(akm::AkmAlgorithm::Sae),
             _ => {
                 error!("Unhandled authentication algorithm: {:?}", auth_type);
-                return Err(());
+                Err(fidl_ieee80211::StatusCode::UnsupportedAuthAlgorithm)
             }
         };
 
-        let result = match algorithm.initiate(sta) {
-            Ok(akm::AkmState::Failed) => Err(fidl_ieee80211::StatusCode::UnsupportedAuthAlgorithm),
-            Err(_) => Err(fidl_ieee80211::StatusCode::RefusedReasonUnspecified),
-            Ok(_) => Ok(algorithm),
+        let result = match algorithm_candidate {
+            Err(e) => Err(e),
+            Ok(mut algorithm) => match algorithm.initiate(sta) {
+                Ok(akm::AkmState::Failed) => {
+                    Err(fidl_ieee80211::StatusCode::UnsupportedAuthAlgorithm)
+                }
+                Err(_) => Err(fidl_ieee80211::StatusCode::RefusedReasonUnspecified),
+                Ok(_) => Ok(algorithm),
+            },
         };
+
         result.map_err(|status_code| {
             sta.send_connect_conf_failure(status_code);
             if let Err(e) = sta.ctx.device.clear_assoc(&sta.sta.bssid().0) {
@@ -1520,6 +1526,42 @@ mod tests {
                 association_ies: vec![],
             }
         );
+    }
+
+    #[test]
+    fn joined_no_authentication_algorithm() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut ctx = m.make_ctx_with_bss();
+        let connect_req = ParsedConnectRequest {
+            selected_bss: fake_bss_description!(Open, bssid: BSSID.0),
+            connect_failure_timeout: 10,
+            // use an unsupported AuthenticationType
+            auth_type: fidl_mlme::AuthenticationTypes::SharedKey,
+            sae_password: vec![],
+            wep_key: None,
+            security_ie: vec![],
+        };
+        let mut sta = Client::new(connect_req, IFACE_MAC, fake_client_capabilities());
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.chan_sched, &mut m.channel_state);
+        let state = Joined;
+
+        assert!(m.fake_device.bss_cfg.is_some());
+        let _state = state.start_authenticating(&mut sta).expect_err("should fail authenticating");
+
+        // Verify MLME-CONNECT.confirm message was sent.
+        let msg = m.fake_device.next_mlme_msg::<fidl_mlme::ConnectConfirm>().expect("expect msg");
+        assert_eq!(
+            msg,
+            fidl_mlme::ConnectConfirm {
+                peer_sta_address: [6, 6, 6, 6, 6, 6],
+                result_code: fidl_ieee80211::StatusCode::UnsupportedAuthAlgorithm,
+                association_id: 0,
+                association_ies: vec![],
+            }
+        );
+
+        assert!(m.fake_device.bss_cfg.is_none());
     }
 
     #[test]
