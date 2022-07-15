@@ -118,7 +118,7 @@ async fn verify_wlan_inspect() {
                 &client_controller,
                 &AP_SSID,
                 fidl_policy::SecurityType::None,
-                password_to_policy_credential::<String>(None),
+                password_or_psk_to_policy_credential::<String>(None),
             )
             .await;
             wait_until_client_state(&mut client_state_update_stream, |update| {
@@ -205,7 +205,7 @@ async fn verify_wlan_inspect() {
         &client_controller,
         &AP_SSID,
         fidl_policy::SecurityType::None,
-        password_to_policy_credential::<String>(None),
+        password_or_psk_to_policy_credential::<String>(None),
     )
     .await;
     wait_until_client_state(&mut client_state_update_stream, |update| {

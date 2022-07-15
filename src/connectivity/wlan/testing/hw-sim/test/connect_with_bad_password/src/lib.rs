@@ -29,7 +29,7 @@ async fn connect_future(
         client_controller,
         &AP_SSID,
         security_type,
-        password_to_policy_credential(Some(password)),
+        password_or_psk_to_policy_credential(Some(password)),
     )
     .await;
     let network_identifier =
@@ -39,7 +39,7 @@ async fn connect_future(
         client_controller,
         &AP_SSID,
         security_type,
-        password_to_policy_credential(Some(password)),
+        password_or_psk_to_policy_credential(Some(password)),
     )
     .await;
 }

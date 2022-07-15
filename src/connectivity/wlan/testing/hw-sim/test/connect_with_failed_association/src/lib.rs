@@ -57,7 +57,7 @@ async fn save_network_and_await_failed_connection(
         client_controller,
         &AP_SSID,
         fidl_policy::SecurityType::None,
-        password_to_policy_credential::<String>(None),
+        password_or_psk_to_policy_credential::<String>(None),
     )
     .await;
     let network_identifier = fidl_policy::NetworkIdentifier {

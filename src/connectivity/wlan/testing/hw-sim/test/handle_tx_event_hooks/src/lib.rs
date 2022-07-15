@@ -123,7 +123,7 @@ async fn handle_tx_event_hooks() {
             save_network_and_wait_until_connected(
                 &AP_SSID,
                 fidl_policy::SecurityType::Wpa2,
-                password_to_policy_credential(password)
+                password_or_psk_to_policy_credential(password)
             ),
             async {
                 esssa_established_receiver

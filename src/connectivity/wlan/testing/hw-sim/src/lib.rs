@@ -48,6 +48,7 @@ mod event_handler_helper;
 mod wlancfg_helper;
 mod wlanstack_helper;
 
+pub const PSK_STR_LEN: usize = 64;
 pub const CLIENT_MAC_ADDR: [u8; 6] = [0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b];
 pub const AP_MAC_ADDR: Bssid = Bssid([0x70, 0xf1, 0x1c, 0x05, 0x2d, 0x7f]);
 lazy_static! {
@@ -327,17 +328,28 @@ pub fn send_disassociate(
     Ok(())
 }
 
-pub fn password_to_policy_credential<S: ToString>(password: Option<S>) -> fidl_policy::Credential {
-    return match password {
+pub fn password_or_psk_to_policy_credential<S: ToString>(
+    password_or_psk: Option<S>,
+) -> fidl_policy::Credential {
+    return match password_or_psk {
         None => fidl_policy::Credential::None(fidl_policy::Empty),
-        Some(p) => fidl_policy::Credential::Password(p.to_string().as_bytes().to_vec()),
+        Some(p) => {
+            let p = p.to_string().as_bytes().to_vec();
+            if p.len() == PSK_STR_LEN {
+                // The PSK is given in a 64 character hexadecimal string.
+                let psk = hex::decode(p).expect("Failed to decode psk");
+                fidl_policy::Credential::Psk(psk)
+            } else {
+                fidl_policy::Credential::Password(p)
+            }
+        }
     };
 }
 
 pub fn create_authenticator(
     bssid: &Bssid,
     ssid: &Ssid,
-    password: &str,
+    password_or_psk: &str,
     // The group key cipher
     gtk_cipher: Cipher,
     // The advertised protection in the IEs during the 4-way handshake
@@ -369,7 +381,15 @@ pub fn create_authenticator(
 
     match supplicant_protection {
         Protection::Wpa1 | Protection::Wpa2Personal => {
-            let psk = wlan_rsn::psk::compute(password.as_bytes(), ssid).expect("computing PSK");
+            let psk = match password_or_psk.len() {
+                PSK_STR_LEN => {
+                    // The PSK is given in a 64 character hexadecimal string.
+                    hex::decode(password_or_psk).expect("Failed to decode psk").into_boxed_slice()
+                }
+                _ => {
+                    wlan_rsn::psk::compute(password_or_psk.as_bytes(), ssid).expect("computing PSK")
+                }
+            };
             let supplicant_protection_info = match supplicant_protection {
                 Protection::Wpa1 => wlan_rsn::ProtectionInfo::LegacyWpa(
                     wpa::fake_wpa_ies::fake_deprecated_wpa1_vendor_ie(),
@@ -398,7 +418,7 @@ pub fn create_authenticator(
                 std::sync::Arc::new(std::sync::Mutex::new(gtk_provider)),
                 std::sync::Arc::new(std::sync::Mutex::new(igtk_provider)),
                 ssid.clone(),
-                password.as_bytes().to_vec(),
+                password_or_psk.as_bytes().to_vec(),
                 CLIENT_MAC_ADDR,
                 supplicant_protection_info,
                 bssid.0,
@@ -737,18 +757,18 @@ pub async fn connect_with_security_type(
     helper: &mut test_utils::TestHelper,
     ssid: &Ssid,
     bssid: &Bssid,
-    password: Option<&str>,
+    password_or_psk: Option<&str>,
     bss_protection: Protection,
     policy_security_type: fidl_policy::SecurityType,
 ) {
-    let credential = password_to_policy_credential(password);
+    let credential = password_or_psk_to_policy_credential(password_or_psk);
     let connect_fut = save_network_and_wait_until_connected(ssid, policy_security_type, credential);
     pin_mut!(connect_fut);
 
     // Create the authenticator
     let (mut authenticator, mut update_sink) = match bss_protection {
         Protection::Wpa3Personal | Protection::Wpa2Wpa3Personal => (
-            password.map(|p| {
+            password_or_psk.map(|p| {
                 create_authenticator(
                     bssid,
                     ssid,
@@ -761,7 +781,7 @@ pub async fn connect_with_security_type(
             Some(wlan_rsn::rsna::UpdateSink::default()),
         ),
         Protection::Wpa2Personal | Protection::Wpa1Wpa2Personal => (
-            password.map(|p| {
+            password_or_psk.map(|p| {
                 create_authenticator(
                     bssid,
                     ssid,
@@ -777,7 +797,7 @@ pub async fn connect_with_security_type(
             panic!("need tkip support")
         }
         Protection::Wpa1 => (
-            password.map(|p| {
+            password_or_psk.map(|p| {
                 create_authenticator(bssid, ssid, p, CIPHER_TKIP, bss_protection, Protection::Wpa1)
             }),
             Some(wlan_rsn::rsna::UpdateSink::default()),

@@ -59,7 +59,7 @@ async fn connecting_to_aps_with_wrong_credential_types() {
             &client_controller,
             &mut client_state_update_stream,
             fidl_policy::SecurityType::None,
-            password_to_policy_credential::<String>(None),
+            password_or_psk_to_policy_credential::<String>(None),
         );
         pin_mut!(main_future);
         info!("Attempting to connect to a WPA2 network with no password.");
@@ -93,7 +93,7 @@ async fn connecting_to_aps_with_wrong_credential_types() {
             &client_controller,
             &mut client_state_update_stream,
             fidl_policy::SecurityType::None,
-            password_to_policy_credential::<String>(None),
+            password_or_psk_to_policy_credential::<String>(None),
         );
         pin_mut!(main_future);
         info!("Attempting to connect to a WPA1 network with no password.");
@@ -119,7 +119,7 @@ async fn connecting_to_aps_with_wrong_credential_types() {
             &client_controller,
             &mut client_state_update_stream,
             fidl_policy::SecurityType::None,
-            password_to_policy_credential::<String>(None),
+            password_or_psk_to_policy_credential::<String>(None),
         );
         pin_mut!(main_future);
         info!("Attempting to connect to a WEP network with no password.");
@@ -145,7 +145,7 @@ async fn connecting_to_aps_with_wrong_credential_types() {
             &client_controller,
             &mut client_state_update_stream,
             fidl_policy::SecurityType::Wpa2,
-            password_to_policy_credential(Some("password")),
+            password_or_psk_to_policy_credential(Some("password")),
         );
         pin_mut!(main_future);
         info!("Attempting to connect to an open network with a password.");
