@@ -7,8 +7,8 @@ toc:
 - heading: Driver development
 - title: "Get started with driver development"
   path: /docs/get-started/sdk/get-started-with-driver.md
-- title: "Write bind rules for a driver"
-  path: /docs/development/sdk/driver-bind-rules.md
 - title: "Driver sample walkthrough: qemu_edu"
   path: /docs/development/sdk/driver-sample-qemu-edu.md
+- title: "Write bind rules for a driver"
+  path: /docs/development/sdk/write-bind-rules-for-driver.md
 - include: /docs/development/sdk/ffx/_toc.yaml
