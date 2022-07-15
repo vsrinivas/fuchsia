@@ -302,6 +302,44 @@ impl<'a> MulticastForwardingNetwork<'a> {
             .expect("add_route error");
     }
 
+    /// Waits for the multicast routing table to be cleared.
+    ///
+    /// The routing table is cleared when the corresponding controller is
+    /// dropped. Since this cleanup process is not awaitable, callers may invoke
+    /// this function to ensure that a packet eventually becomes unrouteable.
+    async fn wait_for_packet_to_become_unrouteable(&self) {
+        const MAX_ATTEMPTS: usize = 20;
+        const WAIT_BEFORE_RETRY_DURATION: std::time::Duration = std::time::Duration::from_secs(3);
+        match fuchsia_backoff::retry_or_last_error(
+            std::iter::repeat(WAIT_BEFORE_RETRY_DURATION).take(MAX_ATTEMPTS),
+            || async {
+                self.send_multicast_packet().await;
+                futures::stream::iter([Client::A, Client::B])
+                    .map(Ok)
+                    .try_for_each(|client| async move {
+                        let mut buf = [0u8; 1024];
+                        let socket = &self.get_client(client).socket;
+                        socket
+                            .recv_from(&mut buf[..])
+                            .map_ok(Err)
+                            .on_timeout(
+                                netstack_testing_common::ASYNC_EVENT_NEGATIVE_CHECK_TIMEOUT
+                                    .after_now(),
+                                || Ok(Ok(())),
+                            )
+                            .await
+                            .expect("recv_from failed")
+                    })
+                    .await
+            },
+        )
+        .await
+        {
+            Ok(()) => {}
+            Err((_r, from)) => panic!("unexpectedly received packet from {:?}", from),
+        }
+    }
+
     /// Sends a multicast packet and verifies the receipt of the packet against
     /// the provided `expectations`.
     ///
@@ -844,18 +882,20 @@ async fn multicast_forwarding<E: netemul::Endpoint>(
         .expect("add_route error");
 
     match controller_action {
-        ControllerAction::Drop => drop(controller.take()),
+        ControllerAction::Drop => {
+            drop(controller.take());
+            test_network.wait_for_packet_to_become_unrouteable().await;
+        }
         ControllerAction::None
         | ControllerAction::ExpectMissingRouteEvent
-        | ControllerAction::ExpectWrongInputInterfaceEvent => {}
+        | ControllerAction::ExpectWrongInputInterfaceEvent => {
+            let expectations = clients
+                .into_iter()
+                .map(|(client, config)| (client, config.expect_forwarded_packet))
+                .collect();
+            test_network.send_and_receive_multicast_packet(expectations).await;
+        }
     }
-
-    let expectations = clients
-        .into_iter()
-        .map(|(client, config)| (client, config.expect_forwarded_packet))
-        .collect();
-
-    test_network.send_and_receive_multicast_packet(expectations).await;
 
     let expected_event = match controller_action {
         ControllerAction::ExpectMissingRouteEvent => {
@@ -1301,8 +1341,8 @@ async fn watch_routing_events_already_hanging<E: netemul::Endpoint>(name: &str) 
     .await;
 
     // The routing table should be dropped when the controller is closed. As a
-    // result, a packet should no longer be forwarded
-    test_network.send_and_receive_multicast_packet(hashmap! { Client::A => false }).await;
+    // result, a packet should no longer be forwarded.
+    test_network.wait_for_packet_to_become_unrouteable().await;
 }
 
 #[variants_test]
