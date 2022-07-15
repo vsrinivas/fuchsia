@@ -145,6 +145,7 @@
                 "fuchsia.bluetooth.le.Central",
                 "fuchsia.bluetooth.le.Peripheral",
                 "fuchsia.bluetooth.sys.Access",
+                "fuchsia.bluetooth.sys.Pairing",
             ],
             from: "#bluetooth-core",
             to: "#session-manager",
