@@ -61,7 +61,7 @@ fuchsia_package("sysmem-memory-pressure") {
 fuchsia_component("memory-pressure-test-component") {
   testonly = true
   component_name = "sysmem-memory-pressure-test"
-  manifest = "meta/sysmem-memory-pressure-test.cmx"
+  manifest = "meta/sysmem-memory-pressure-test.cml"
   deps = [ ":memory-pressure-test-executable" ]
 }
 
