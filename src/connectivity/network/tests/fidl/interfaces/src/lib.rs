@@ -982,11 +982,13 @@ async fn test_watcher() {
         Result::Ok(watcher)
     };
 
-    let blocking_watcher = initialize_watcher().await.expect("initialize blocking watcher");
-    let blocking_stream = fidl_fuchsia_net_interfaces_ext::event_stream(blocking_watcher.clone());
+    let blocking_stream = fidl_fuchsia_net_interfaces_ext::event_stream(
+        initialize_watcher().await.expect("initialize blocking watcher"),
+    );
     futures::pin_mut!(blocking_stream);
-    let watcher = initialize_watcher().await.expect("initialize watcher");
-    let stream = fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone());
+    let stream = fidl_fuchsia_net_interfaces_ext::event_stream(
+        initialize_watcher().await.expect("initialize watcher"),
+    );
     futures::pin_mut!(stream);
 
     async fn assert_blocked<S>(stream: &mut S)
@@ -1050,121 +1052,88 @@ async fn test_watcher() {
     let () = assert_blocked(&mut blocking_stream).await;
     let did_enable = dev.control().enable().await.expect("send enable").expect("enable");
     assert!(did_enable);
-    // NB The following fold function is necessary because IPv6 link-local addresses are configured
-    // when the interface is brought up (and removed when the interface is brought down) such
-    // that the ordering or the number of events that reports the changes in the online and
-    // addresses properties cannot be guaranteed. As such, we assert that:
-    //
-    // 1. the online property MUST change to the expected value in the first event and never change
-    //    again,
-    // 2. the addresses property changes over some number of events (including possibly the first
-    //    event) and eventually reaches the desired count, and
-    // 3. no other properties change in any of the events.
-    //
-    // It would be ideal to disable IPv6 LL address configuration for this test, which would
-    // simplify this significantly.
-    let fold_fn = |want_online, want_addr_count| {
-        move |(mut online_changed, mut addresses), event| match event {
-            fidl_fuchsia_net_interfaces::Event::Changed(
-                fidl_fuchsia_net_interfaces::Properties {
-                    id: Some(event_id),
-                    online,
-                    addresses: got_addrs,
-                    name: None,
-                    device_class: None,
-                    has_default_ipv4_route: None,
-                    has_default_ipv6_route: None,
-                    ..
-                },
-            ) if event_id == id => {
-                if let Some(got_online) = online {
-                    if online_changed {
-                        panic!("duplicate online property change to new value of {}", got_online,);
-                    }
-                    if got_online != want_online {
-                        panic!("got online: {}, want {}", got_online, want_online);
-                    }
-                    online_changed = true;
-                }
-                if let Some(got_addrs) = got_addrs {
-                    if !online_changed {
-                        panic!(
-                            "addresses changed before online property change, addresses: {:?}",
-                            got_addrs
-                        );
-                    }
-                    let got_addrs = got_addrs
-                        .iter()
-                        .filter_map(
-                            |&fidl_fuchsia_net_interfaces::Address {
-                                 addr, valid_until, ..
-                             }| {
-                                assert_eq!(
-                                    valid_until,
-                                    Some(fuchsia_zircon::sys::ZX_TIME_INFINITE)
-                                );
-                                let subnet = addr?;
-                                match &subnet.addr {
-                                    fidl_fuchsia_net::IpAddress::Ipv4(
-                                        fidl_fuchsia_net::Ipv4Address { .. },
-                                    ) => None,
-                                    fidl_fuchsia_net::IpAddress::Ipv6(
-                                        fidl_fuchsia_net::Ipv6Address { .. },
-                                    ) => Some(subnet),
-                                }
-                            },
-                        )
-                        .collect::<HashSet<_>>();
-                    if got_addrs.len() == want_addr_count {
-                        return futures::future::ready(async_utils::fold::FoldWhile::Done(
-                            got_addrs,
-                        ));
-                    }
-                    addresses = Some(got_addrs);
-                }
-                futures::future::ready(async_utils::fold::FoldWhile::Continue((
-                    online_changed,
-                    addresses,
-                )))
-            }
-            event => {
-                panic!("got: {:?}, want online and/or IPv6 link-local address change event", event)
-            }
-        }
-    };
     const LL_ADDR_COUNT: usize = 1;
-    let want_online = true;
-    let ll_addrs = async_utils::fold::fold_while(
-        blocking_stream.map(|r| r.expect("blocking event stream error")),
-        (false, None),
-        fold_fn(want_online, LL_ADDR_COUNT),
-    )
-        .await.short_circuited().unwrap_or_else(|(online_changed, addresses)| {
-        panic!(
-            "event stream ended unexpectedly while waiting for interface online = {} and LL addr count = {}, final state online_changed = {} addresses = {:?}",
-            want_online, LL_ADDR_COUNT,
-            online_changed,
-            addresses
-        )
-    });
-
-    let addrs = async_utils::fold::fold_while(
-        stream.map(|r| r.expect("non-blocking event stream error")),
-        (false, None),
-        fold_fn(true, LL_ADDR_COUNT),
-    )
-        .await.short_circuited().unwrap_or_else(|(online_changed, addresses)| {
-        panic!(
-            "event stream ended unexpectedly while waiting for interface online = {} and LL addr count = {}, final state online_changed = {} addresses = {:?}",
-            want_online, LL_ADDR_COUNT,
-            online_changed,
-            addresses
-        )});
-    assert_eq!(ll_addrs, addrs);
-    let blocking_stream = fidl_fuchsia_net_interfaces_ext::event_stream(blocking_watcher.clone());
-    futures::pin_mut!(blocking_stream);
-    let stream = fidl_fuchsia_net_interfaces_ext::event_stream(watcher.clone());
-    futures::pin_mut!(stream);
+    // NB The following fold function is necessary because IPv6 link-local
+    // addresses are configured when the interface is brought up such that the
+    // ordering or the number of events that reports the changes in the online
+    // and addresses properties cannot be guaranteed. As such, we only assert
+    // that:
+    // 1. the online property changes exactly once to `true`,
+    // 2. all addresses added are IPv6 and eventually reach the expected count, and
+    // 3. no other properties change.
+    //
+    // It would be ideal to disable IPv6 LL address configuration for this
+    // test, which would simplify this significantly.
+    let fold_fn = |(online_changed, addresses): (bool, _), event| {
+        let (online, got_addrs) = assert_matches::assert_matches!(
+            event,
+            fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
+                id: Some(got_id),
+                online,
+                addresses,
+                name: None,
+                device_class: None,
+                has_default_ipv4_route: None,
+                has_default_ipv6_route: None,
+                ..
+            }) if got_id == id => (online, addresses)
+        );
+        let online_changed = online.map_or(online_changed, |got_online| {
+            assert!(
+                !online_changed,
+                "duplicate online property change to new value of {}",
+                got_online
+            );
+            assert!(got_online, "got offline, expected online");
+            true
+        });
+        let addresses = got_addrs.map_or(addresses, |got_addrs| {
+            got_addrs
+                .iter()
+                .map(|addr| {
+                    let addr = fidl_fuchsia_net_interfaces_ext::Address::try_from(addr.clone())
+                        .expect("failed to validate address");
+                    assert_matches::assert_matches!(
+                        addr,
+                        fidl_fuchsia_net_interfaces_ext::Address {
+                            addr: fidl_fuchsia_net::Subnet {
+                                addr: fidl_fuchsia_net::IpAddress::Ipv6(
+                                    fidl_fuchsia_net::Ipv6Address { .. }
+                                ),
+                                prefix_len: _,
+                            },
+                            valid_until: _,
+                        }
+                    );
+                    addr
+                })
+                .collect::<HashSet<_>>()
+        });
+        futures::future::ready(if addresses.len() == LL_ADDR_COUNT && online_changed {
+            async_utils::fold::FoldWhile::Done(addresses)
+        } else {
+            async_utils::fold::FoldWhile::Continue((online_changed, addresses))
+        })
+    };
+    let ll_addrs = assert_matches::assert_matches!(
+        async_utils::fold::fold_while(
+            blocking_stream.by_ref().map(|r| r.expect("blocking event stream error")),
+            (false, HashSet::new()),
+            fold_fn,
+        ).await,
+        async_utils::fold::FoldResult::ShortCircuited(addresses) => addresses
+    );
+    {
+        let addrs = assert_matches::assert_matches!(
+            async_utils::fold::fold_while(
+                stream.by_ref().map(|r| r.expect("non-blocking event stream error")),
+                (false, HashSet::new()),
+                fold_fn,
+            ).await,
+            async_utils::fold::FoldResult::ShortCircuited(addresses) => addresses
+        );
+        assert_eq!(ll_addrs, addrs);
+    }
 
     // Add an address and subnet route.
     let () = assert_blocked(&mut blocking_stream).await;
@@ -1176,26 +1145,37 @@ async fn test_watcher() {
     )
     .await
     .expect("add subnet address and route");
-    let addresses_changed = |event| match event {
-        fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
-            id: Some(event_id),
-            addresses: Some(addresses),
-            name: None,
-            device_class: None,
-            online: None,
-            has_default_ipv4_route: None,
-            has_default_ipv6_route: None,
-            ..
-        }) if event_id == id => addresses
-            .iter()
-            .filter_map(|&fidl_fuchsia_net_interfaces::Address { addr, valid_until, .. }| {
-                assert_eq!(valid_until, Some(fuchsia_zircon::sys::ZX_TIME_INFINITE));
-                addr
-            })
-            .collect::<HashSet<_>>(),
-        event => panic!("got: {:?}, want changed event with added IPv4 address", event),
+    let addresses_changed = |event| {
+        assert_matches::assert_matches!(
+            event,
+            fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
+                id: Some(event_id),
+                addresses: Some(addresses),
+                name: None,
+                device_class: None,
+                online: None,
+                has_default_ipv4_route: None,
+                has_default_ipv6_route: None,
+                ..
+            }) if event_id == id => {
+                addresses
+                    .iter()
+                    .map(|addr| {
+                        fidl_fuchsia_net_interfaces_ext::Address::try_from(addr.clone())
+                            .expect("failed to validate address")
+                    })
+                    .collect::<HashSet<_>>()
+            }
+        )
     };
-    let want = ll_addrs.iter().cloned().chain(std::iter::once(subnet)).collect();
+    let want = ll_addrs
+        .iter()
+        .cloned()
+        .chain(std::iter::once(fidl_fuchsia_net_interfaces_ext::Address {
+            addr: subnet,
+            valid_until: zx::sys::ZX_TIME_INFINITE,
+        }))
+        .collect();
     assert_eq!(addresses_changed(next(&mut blocking_stream).await), want);
     assert_eq!(addresses_changed(next(&mut stream).await), want);
 
@@ -1247,37 +1227,66 @@ async fn test_watcher() {
     assert_eq!(addresses_changed(next(&mut stream).await), ll_addrs);
 
     // Set the link to down.
-    let () = assert_blocked(&mut blocking_stream).await;
-    let () = dev.set_link_up(false).await.expect("bring device up");
-    const LL_ADDR_COUNT_AFTER_LINK_DOWN: usize = 0;
-    let want_online = false;
-    let addresses = async_utils::fold::fold_while(
-        blocking_stream.map(|r| r.expect("blocking event stream error")),
-        (false, None),
-        fold_fn(want_online, LL_ADDR_COUNT_AFTER_LINK_DOWN),
-    )
-        .await.short_circuited().unwrap_or_else(|(online_changed, addresses)| {
-        panic!(
-            "event stream ended unexpectedly while waiting for interface online = {} and LL addr count = {}, final state online_changed = {} addresses = {:?}",
-            want_online, LL_ADDR_COUNT_AFTER_LINK_DOWN,
-            online_changed,
-            addresses
-        )
-    });
-    assert!(addresses.is_subset(&ll_addrs), "got {:?}, want a subset of {:?}", addresses, ll_addrs);
-    assert_eq!(
-        async_utils::fold::fold_while(
-            stream.map(|r| r.expect("non-blocking event stream error")),
-            (false, None),
-            fold_fn(false, LL_ADDR_COUNT_AFTER_LINK_DOWN),
-        )
-        .await,
-        async_utils::fold::FoldResult::ShortCircuited(addresses),
-    );
-    let blocking_stream = fidl_fuchsia_net_interfaces_ext::event_stream(blocking_watcher);
-    futures::pin_mut!(blocking_stream);
-    let stream = fidl_fuchsia_net_interfaces_ext::event_stream(watcher);
-    futures::pin_mut!(stream);
+    {
+        let () = assert_blocked(&mut blocking_stream).await;
+        let () = dev.set_link_up(false).await.expect("bring device up");
+        let fold_fn = |(online_changed, addresses_empty): (bool, bool), event| {
+            let (online, addresses) = assert_matches::assert_matches!(
+                event,
+                fidl_fuchsia_net_interfaces::Event::Changed(fidl_fuchsia_net_interfaces::Properties {
+                    id: Some(got_id),
+                    online,
+                    addresses,
+                    name: None,
+                    device_class: None,
+                    has_default_ipv4_route: None,
+                    has_default_ipv6_route: None,
+                    ..
+                }) if got_id == id => (online, addresses)
+            );
+            let online_changed = online.map_or(online_changed, |online| {
+                assert!(
+                    !online_changed,
+                    "duplicate online property change to new value of {}",
+                    online
+                );
+                assert!(!online, "got online changed to true, want false");
+                true
+            });
+            let addresses_empty = addresses.map_or(addresses_empty, |addresses| {
+                assert!(
+                    !addresses_empty,
+                    "duplicate addresses property change to new value of {:?}",
+                    addresses
+                );
+                assert_eq!(addresses[..], []);
+                true
+            });
+            futures::future::ready(if addresses_empty && online_changed {
+                async_utils::fold::FoldWhile::Done(())
+            } else {
+                async_utils::fold::FoldWhile::Continue((online_changed, addresses_empty))
+            })
+        };
+        assert_eq!(
+            async_utils::fold::fold_while(
+                blocking_stream.by_ref().map(|r| r.expect("blocking event stream error")),
+                (false, false),
+                fold_fn,
+            )
+            .await,
+            async_utils::fold::FoldResult::ShortCircuited(()),
+        );
+        assert_eq!(
+            async_utils::fold::fold_while(
+                stream.by_ref().map(|r| r.expect("non-blocking event stream error")),
+                (false, false),
+                fold_fn,
+            )
+            .await,
+            async_utils::fold::FoldResult::ShortCircuited(()),
+        );
+    }
 
     // Remove the ethernet interface.
     let () = assert_blocked(&mut blocking_stream).await;

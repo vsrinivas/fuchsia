@@ -43,7 +43,7 @@ pub struct Properties {
 
 // TODO(fxbug.dev/66175) Prevent this type from becoming stale.
 /// An address and its properties.
-#[derive(Clone, Debug, Eq, PartialEq, ValidFidlTable)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq, ValidFidlTable)]
 #[fidl_table_src(fnet_interfaces::Address)]
 #[fidl_table_validator(AddressValidator)]
 pub struct Address {
