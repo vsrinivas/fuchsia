@@ -18,7 +18,6 @@ rustc_binary("actor-bin") {
     "//src/sys/test_runners/stress_test/actor",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
   ]
 

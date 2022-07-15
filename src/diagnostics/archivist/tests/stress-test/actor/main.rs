@@ -12,9 +12,9 @@ use {
     fidl_fuchsia_diagnostics::ArchiveAccessorMarker,
     fuchsia_component::client::connect_to_protocol,
     futures::{future::BoxFuture, FutureExt, StreamExt},
-    log::info,
     rand::{rngs::SmallRng, Rng},
     stress_test_actor::{actor_loop, Action},
+    tracing::info,
 };
 
 /// Stores all data needed by this Worker. This singleton gets passed into every action.
