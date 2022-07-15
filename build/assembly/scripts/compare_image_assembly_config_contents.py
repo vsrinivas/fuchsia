@@ -21,7 +21,10 @@ T = TypeVar('T')
 MISMATCH_PACKAGE_EXCEPTIONS = [
     "config-data", "password_authenticator", "session_manager"
 ]
-ADDITIONAL_PACKAGE_EXCEPTIONS = []
+ADDITIONAL_PACKAGE_EXCEPTIONS = [
+    "build-info-service", "hwinfo", "pkg-cache", "pkg-resolver",
+    "system-updater", "system-update-committer"
+]
 MISMATCH_FILE_EXCEPTIONS = ["meta/console.cvf"]
 
 

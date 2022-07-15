@@ -56,7 +56,6 @@ legacy_base_package_labels += [
   # reference v1 components.
   "//src/connectivity/network:network-legacy-deprecated",
 
-  "//src/developer/build_info:build-info-service",
   "//src/developer/forensics:pkg",
   "//src/developer/memory/monitor",
   "//src/diagnostics/config/persistence",
@@ -66,13 +65,11 @@ legacy_base_package_labels += [
   "//src/diagnostics/persistence:diagnostics-persistence",
   "//src/diagnostics/log-stats:package",
   "//src/diagnostics/sampler",
-  "//src/hwinfo:hwinfo",
   "//src/hwinfo:default_product_config",
   "//src/recovery/factory_reset",
   "//src/security/root_ssl_certificates",
   "//src/sys/activity",
   "//src/sys/device_settings:device_settings_manager",
-  "//src/sys/pkg:core",
   "//src/sys/pkg:system-update-checker",
   "//src/sys/pkg/bin/system-update-committer:enable_reboot_on_verification_failure",
   "//src/sys/stash:pkg",
@@ -100,12 +97,6 @@ use_modern_input_injection = true
 # session_manager also needs a core realm shard but they currently vary between products, they
 # must be added in individual product configs.
 legacy_base_package_labels += [ "//src/session/bin/session_manager" ]
-
-# Use the product assembly config file to specify the product configuration.
-#
-# This should be overridden by products which inherit from minimal.
-fuchsia_product_assembly_config_file =
-    "//build/assembly/empty_product_config.json"
 
 # TODO(fxbug.dev/102390): deprecate appmgr from minimal.
 # Try to move up to core.gni or "higher" / specific product configurations.

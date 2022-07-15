@@ -27,18 +27,18 @@ group("assembly") {
 assembly_input_bundle("common_minimal") {
   base_packages = [
     # The required SWD stack artifacts to enable packages in an FVM.
-    #"//src/sys/pkg/bin/pkg-cache",
-    #"//src/sys/pkg/bin/pkg-resolver",
+    "//src/sys/pkg/bin/pkg-cache",
+    "//src/sys/pkg/bin/pkg-resolver",
 
     # The SWD stack artifacts that enable OTAs
-    #"//src/sys/pkg/bin/system-update-committer",
-    #"//src/sys/pkg/bin/system-updater",
+    "//src/sys/pkg/bin/system-update-committer",
+    "//src/sys/pkg/bin/system-updater",
 
     # Build-Information
-    #"//src/developer/build_info:build-info-service",
+    "//src/developer/build_info:build-info-service",
 
     # Hardware Information
-    #"//src/hwinfo:hwinfo",
+    "//src/hwinfo:hwinfo",
   ]
 }
 

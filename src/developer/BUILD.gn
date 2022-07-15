@@ -6,7 +6,6 @@ group("developer") {
   testonly = true
   deps = [
     ":tests",
-    "build_info:build-info-service",
     "debug",
     "ffx",
     "forensics",
