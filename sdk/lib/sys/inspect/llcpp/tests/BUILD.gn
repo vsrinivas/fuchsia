@@ -5,20 +5,49 @@
 import("//build/components.gni")
 import("//build/test.gni")
 
-test("inspect_service_llcpp_unittests") {
+# Service tests (ie only FIDL)
+executable("inspect_service_llcpp_unittests_bin") {
+  testonly = true
   sources = [ "service_unittests.cc" ]
   deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component_llcpp",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_llcpp",
+    "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_llcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/inspect/contrib/cpp:archive_reader",
     "//sdk/lib/inspect/testing/cpp",
+    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/llcpp:service",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/inspect",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
 }
 
+executable("program_writing_inspect_bin") {
+  sources = [ "program.cc" ]
+
+  deps = [
+    "//sdk/lib/sys/inspect/llcpp:component_inspector",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/inspect",
+  ]
+}
+
+fuchsia_component("program_writing_inspect") {
+  deps = [ ":program_writing_inspect_bin" ]
+  manifest = "meta/program.cml"
+}
+
 fuchsia_unittest_package("inspect_service_llcpp_tests") {
-  deps = [ ":inspect_service_llcpp_unittests" ]
+  manifest = "meta/test.cml"
+  deps = [
+    ":inspect_service_llcpp_unittests_bin",
+    ":program_writing_inspect",
+  ]
 }

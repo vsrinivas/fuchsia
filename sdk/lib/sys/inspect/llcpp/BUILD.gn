@@ -29,6 +29,28 @@ sdk_source_set("service") {
   public_configs = [ "//sdk/config" ]
 }
 
+sdk_source_set("component_inspector") {
+  category = "internal"
+
+  sdk_name = "llcpp_component_inspector"
+
+  include_base = "//sdk"
+  sources = [
+    "component.cc",
+    "component.h",
+  ]
+
+  public_deps = [
+    ":service",
+    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/sys/inspect:tree_service_common",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/inspect",
+  ]
+
+  public_configs = [ "//sdk/config" ]
+}
+
 group("tests") {
   testonly = true
   deps = [ "tests:inspect_service_llcpp_tests" ]

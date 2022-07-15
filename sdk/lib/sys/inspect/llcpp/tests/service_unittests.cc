@@ -2,11 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.component/cpp/markers.h>
+#include <fidl/fuchsia.component/cpp/wire.h>
 #include <fidl/fuchsia.inspect/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fuchsia/diagnostics/cpp/fidl.h>
 #include <lib/fpromise/promise.h>
+#include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/reader.h>
+#include <lib/service/llcpp/service.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/sys/inspect/llcpp/service.h>
 #include <lib/sys/inspect/llcpp/testing.h>
 #include <lib/syslog/cpp/macros.h>
@@ -344,5 +351,45 @@ TEST_F(InspectServiceTest, ReadMultiLevelIntoHierarchy) {
       hierarchy.children().at(0).children().at(0).node().get_property<inspect::IntPropertyValue>(
           "val");
   ASSERT_EQ(1, a->value());
+}
+
+TEST_F(InspectServiceTest, ReadFromComponentInspector) {
+  auto svc = service::OpenServiceRoot();
+  auto client_end = service::ConnectAt<fuchsia_component::Binder>(*svc);
+  ASSERT_TRUE(client_end.is_ok());
+
+  fidl::BindSyncClient(std::move(*client_end));
+
+  auto context = sys::ComponentContext::Create();
+  fuchsia::diagnostics::ArchiveAccessorPtr accessor;
+  ASSERT_EQ(ZX_OK, context->svc()->Connect(accessor.NewRequest(dispatcher())));
+
+  inspect::contrib::ArchiveReader reader(std::move(accessor), {});
+
+  auto result = RunPromise(reader.SnapshotInspectUntilPresent({"inspect_writer_app"}));
+
+  auto data = result.take_value();
+  uint64_t app_index;
+  bool found = false;
+  for (uint64_t i = 0; i < data.size(); i++) {
+    if (data.at(i).component_name() == "inspect_writer_app") {
+      app_index = i;
+      found = true;
+      break;
+    }
+  }
+
+  ASSERT_TRUE(found);
+
+  auto& app_data = data.at(app_index);
+
+  ASSERT_EQ(1, app_data.GetByPath({"root", "val1"}).GetInt());
+  ASSERT_EQ(2, app_data.GetByPath({"root", "val2"}).GetInt());
+  ASSERT_EQ(3, app_data.GetByPath({"root", "val3"}).GetInt());
+  ASSERT_EQ(4, app_data.GetByPath({"root", "val4"}).GetInt());
+  ASSERT_EQ(0, app_data.GetByPath({"root", "child", "val"}).GetInt());
+  ASSERT_EQ(
+      std::string("OK"),
+      std::string(app_data.GetByPath({"root", "fuchsia.inspect.Health", "status"}).GetString()));
 }
 }  // namespace
