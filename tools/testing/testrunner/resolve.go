@@ -47,25 +47,26 @@ func ResolveTestPackages(ctx context.Context, tests []testsharder.Test, addr net
 	// Note that this package resolution is best effort, as run-test-suite
 	// invocations will force a resolution even if this fails.
 	for _, url := range orderedURLs {
-		// Exit early if the context is closed.
-		if ctx.Err() != nil {
+		select {
+		case <-ctx.Done():
 			return nil
+		case <-time.After(2 * time.Second):
+			cmd := []string{"pkgctl", "resolve", url}
+			backoff := retry.NewConstantBackoff(1 * time.Second)
+			const maxReconnectAttempts = 3
+			retry.Retry(ctx, retry.WithMaxAttempts(backoff, maxReconnectAttempts), func() error {
+				if err := client.Run(ctx, cmd, l, l); err != nil {
+					if !sshutil.IsConnectionError(err) {
+						return retry.Fatal(err)
+					}
+					if err := client.Reconnect(ctx); err != nil {
+						return retry.Fatal(err)
+					}
+					return err
+				}
+				return nil
+			}, nil)
 		}
-		cmd := []string{"pkgctl", "resolve", url}
-		backoff := retry.NewConstantBackoff(1 * time.Second)
-		const maxReconnectAttempts = 3
-		retry.Retry(ctx, retry.WithMaxAttempts(backoff, maxReconnectAttempts), func() error {
-			if err := client.Run(ctx, cmd, l, l); err != nil {
-				if !sshutil.IsConnectionError(err) {
-					return retry.Fatal(err)
-				}
-				if err := client.Reconnect(ctx); err != nil {
-					return retry.Fatal(err)
-				}
-				return err
-			}
-			return nil
-		}, nil)
 	}
 	return nil
 }
