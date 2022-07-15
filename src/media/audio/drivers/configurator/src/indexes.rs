@@ -16,3 +16,6 @@ pub const STREAM_CONFIG_INDEX_MICS: StreamConfigIndex =
 
 pub const STREAM_CONFIG_INDEX_HEADSET_OUT: StreamConfigIndex =
     StreamConfigIndex { id: [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], is_input: false };
+
+pub const STREAM_CONFIG_INDEX_HEADSET_IN: StreamConfigIndex =
+    StreamConfigIndex { id: [2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], is_input: true };

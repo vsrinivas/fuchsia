@@ -4,8 +4,8 @@
 
 use {
     crate::indexes::{
-        StreamConfigIndex, STREAM_CONFIG_INDEX_HEADSET_OUT, STREAM_CONFIG_INDEX_MICS,
-        STREAM_CONFIG_INDEX_SPEAKERS,
+        StreamConfigIndex, STREAM_CONFIG_INDEX_HEADSET_IN, STREAM_CONFIG_INDEX_HEADSET_OUT,
+        STREAM_CONFIG_INDEX_MICS, STREAM_CONFIG_INDEX_SPEAKERS,
     },
     anyhow::Error,
     std::collections::HashMap,
@@ -78,6 +78,16 @@ impl Config {
                 },
                 STREAM_CONFIG_INDEX_HEADSET_OUT,
             ),
+            (
+                Device {
+                    manufacturer: "Dialog".to_string(),
+                    product: "DA7219".to_string(),
+                    hardwired: false,
+                    is_codec: true,
+                    dai_channel: 3,
+                },
+                STREAM_CONFIG_INDEX_HEADSET_IN,
+            ),
             // DAIs:
             (
                 Device {
@@ -102,12 +112,22 @@ impl Config {
             (
                 Device {
                     manufacturer: "Intel".to_string(),
-                    product: "Builtin Headphone Jack".to_string(),
+                    product: "Builtin Headphone Jack Output".to_string(),
                     hardwired: true,
                     is_codec: false,
                     dai_channel: 0,
                 },
                 STREAM_CONFIG_INDEX_HEADSET_OUT,
+            ),
+            (
+                Device {
+                    manufacturer: "Intel".to_string(),
+                    product: "Builtin Headphone Jack Input".to_string(),
+                    hardwired: true,
+                    is_codec: false,
+                    dai_channel: 0,
+                },
+                STREAM_CONFIG_INDEX_HEADSET_IN,
             ),
         ]);
         self.stream_config_indexes = indexes;
