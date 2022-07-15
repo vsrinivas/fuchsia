@@ -311,6 +311,34 @@ pub(crate) trait GmpHandler<I: Ip, C>: IpDeviceIdContext<I> {
     ) -> GroupLeaveResult;
 }
 
+impl<I: Ip, C: GmpNonSyncContext<I, SC::DeviceId>, SC: GmpContext<I, C>> GmpHandler<I, C> for SC {
+    fn gmp_handle_maybe_enabled(&mut self, ctx: &mut C, device: Self::DeviceId) {
+        gmp_handle_maybe_enabled(self, ctx, device)
+    }
+
+    fn gmp_handle_disabled(&mut self, ctx: &mut C, device: Self::DeviceId) {
+        gmp_handle_disabled(self, ctx, device)
+    }
+
+    fn gmp_join_group(
+        &mut self,
+        ctx: &mut C,
+        device: SC::DeviceId,
+        group_addr: MulticastAddr<I::Addr>,
+    ) -> GroupJoinResult {
+        gmp_join_group(self, ctx, device, group_addr)
+    }
+
+    fn gmp_leave_group(
+        &mut self,
+        ctx: &mut C,
+        device: SC::DeviceId,
+        group_addr: MulticastAddr<I::Addr>,
+    ) -> GroupLeaveResult {
+        gmp_leave_group(self, ctx, device, group_addr)
+    }
+}
+
 /// This trait is used to model the different parts of the two protocols.
 ///
 /// Though MLD and IGMPv2 share the most part of their state machines there are

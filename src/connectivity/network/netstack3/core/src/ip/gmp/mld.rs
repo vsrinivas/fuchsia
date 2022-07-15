@@ -38,10 +38,9 @@ use crate::{
     context::{FrameContext, RngContext, TimerContext, TimerHandler},
     ip::{
         gmp::{
-            gmp_handle_disabled, gmp_handle_maybe_enabled, gmp_handle_timer, gmp_join_group,
-            gmp_leave_group, handle_query_message, handle_report_message, GmpContext,
-            GmpDelayedReportTimerId, GmpHandler, GmpMessage, GmpMessageType, GmpStateMachine,
-            GroupJoinResult, GroupLeaveResult, MulticastGroupSet, ProtocolSpecific, QueryTarget,
+            gmp_handle_timer, handle_query_message, handle_report_message, GmpContext,
+            GmpDelayedReportTimerId, GmpMessage, GmpMessageType, GmpStateMachine,
+            MulticastGroupSet, ProtocolSpecific, QueryTarget,
         },
         IpDeviceIdContext,
     },
@@ -106,34 +105,6 @@ pub(crate) trait MldContext<C: MldNonSyncContext<Self::DeviceId>>:
         &self,
         device: Self::DeviceId,
     ) -> &MulticastGroupSet<Ipv6Addr, MldGroupState<C::Instant>>;
-}
-
-impl<C: MldNonSyncContext<SC::DeviceId>, SC: MldContext<C>> GmpHandler<Ipv6, C> for SC {
-    fn gmp_handle_maybe_enabled(&mut self, ctx: &mut C, device: Self::DeviceId) {
-        gmp_handle_maybe_enabled(self, ctx, device)
-    }
-
-    fn gmp_handle_disabled(&mut self, ctx: &mut C, device: Self::DeviceId) {
-        gmp_handle_disabled(self, ctx, device)
-    }
-
-    fn gmp_join_group(
-        &mut self,
-        ctx: &mut C,
-        device: Self::DeviceId,
-        group_addr: MulticastAddr<Ipv6Addr>,
-    ) -> GroupJoinResult {
-        gmp_join_group(self, ctx, device, group_addr)
-    }
-
-    fn gmp_leave_group(
-        &mut self,
-        ctx: &mut C,
-        device: Self::DeviceId,
-        group_addr: MulticastAddr<Ipv6Addr>,
-    ) -> GroupLeaveResult {
-        gmp_leave_group(self, ctx, device, group_addr)
-    }
 }
 
 /// A handler for incoming MLD packets.
@@ -471,7 +442,10 @@ mod tests {
         },
         ip::{
             device::Ipv6DeviceTimerId,
-            gmp::{MemberState, QueryReceivedActions, QueryReceivedGenericAction},
+            gmp::{
+                GmpHandler as _, GroupJoinResult, GroupLeaveResult, MemberState,
+                QueryReceivedActions, QueryReceivedGenericAction,
+            },
             DummyDeviceId,
         },
         testutil::{
