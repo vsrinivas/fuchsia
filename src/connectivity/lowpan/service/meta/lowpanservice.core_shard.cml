@@ -9,28 +9,6 @@
             environment: "#full-resolver-env",
         },
     ],
-    capabilities: [
-        {
-            protocol: [
-                "fuchsia.factory.lowpan.FactoryLookup",
-                "fuchsia.factory.lowpan.FactoryRegister",
-                "fuchsia.lowpan.device.CountersConnector",
-                "fuchsia.lowpan.device.DeviceConnector",
-                "fuchsia.lowpan.device.DeviceExtraConnector",
-                "fuchsia.lowpan.device.EnergyScanConnector",
-                "fuchsia.lowpan.DeviceWatcher",
-                "fuchsia.lowpan.driver.Register",
-                "fuchsia.lowpan.experimental.DeviceConnector",
-                "fuchsia.lowpan.experimental.DeviceExtraConnector",
-                "fuchsia.lowpan.experimental.DeviceRouteConnector",
-                "fuchsia.lowpan.experimental.DeviceRouteExtraConnector",
-                "fuchsia.lowpan.experimental.LegacyJoiningConnector",
-                "fuchsia.lowpan.test.DeviceTestConnector",
-                "fuchsia.lowpan.thread.DatasetConnector",
-                "fuchsia.lowpan.thread.MeshcopConnector",
-            ],
-        },
-    ],
     use: [
         {
             protocol: [
