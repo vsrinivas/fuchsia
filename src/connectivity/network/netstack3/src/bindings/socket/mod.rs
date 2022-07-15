@@ -6,13 +6,18 @@
 
 pub(crate) mod datagram;
 
+use std::convert::Infallible as Never;
+use std::num::NonZeroU64;
+
 use fidl_fuchsia_net as fnet;
 use fidl_fuchsia_posix::Errno;
 use fidl_fuchsia_posix_socket as psocket;
 use fuchsia_zircon as zx;
 use futures::{TryFutureExt as _, TryStreamExt as _};
-use net_types::ip::{Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
-use net_types::SpecifiedAddr;
+use net_types::{
+    ip::{Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
+    ScopeableAddress, SpecifiedAddr,
+};
 use netstack3_core::{
     IpSockCreationError, IpSockRouteError, IpSockSendError, IpSockUnroutableError,
     LocalAddressError, NetstackError, RemoteAddressError, SocketError, UdpSendError,
@@ -114,9 +119,11 @@ where
 /// sockaddr`, expressed as a stream of bytes.
 pub(crate) trait SockAddr: std::fmt::Debug + Sized {
     /// The concrete address type for this `SockAddr`.
-    type AddrType: IpAddress;
+    type AddrType: IpAddress + ScopeableAddress;
     /// The socket's domain.
     const DOMAIN: psocket::Domain;
+    /// The type of a zone identifier for this `SockAddr`.
+    type Zone;
 
     /// Creates a new `SockAddr`.
     ///
@@ -140,6 +147,9 @@ pub(crate) trait SockAddr: std::fmt::Debug + Sized {
         SpecifiedAddr::<Self::AddrType>::new(self.addr())
     }
 
+    /// Gets this `SockAddr`'s zone identifier.
+    fn zone(&self) -> Option<Self::Zone>;
+
     /// Converts this `SockAddr` into an [`fnet::SocketAddress`].
     fn into_sock_addr(self) -> fnet::SocketAddress;
 
@@ -150,6 +160,7 @@ pub(crate) trait SockAddr: std::fmt::Debug + Sized {
 impl SockAddr for fnet::Ipv6SocketAddress {
     type AddrType = Ipv6Addr;
     const DOMAIN: psocket::Domain = psocket::Domain::Ipv6;
+    type Zone = NonZeroU64;
 
     /// Creates a new `SockAddr6`.
     fn new(addr: Ipv6Addr, port: u16) -> Self {
@@ -172,6 +183,10 @@ impl SockAddr for fnet::Ipv6SocketAddress {
         self.port = port
     }
 
+    fn zone(&self) -> Option<Self::Zone> {
+        NonZeroU64::new(self.zone_index)
+    }
+
     fn into_sock_addr(self) -> fnet::SocketAddress {
         fnet::SocketAddress::Ipv6(self)
     }
@@ -187,6 +202,7 @@ impl SockAddr for fnet::Ipv6SocketAddress {
 impl SockAddr for fnet::Ipv4SocketAddress {
     type AddrType = Ipv4Addr;
     const DOMAIN: psocket::Domain = psocket::Domain::Ipv4;
+    type Zone = Never;
 
     /// Creates a new `SockAddr4`.
     fn new(addr: Ipv4Addr, port: u16) -> Self {
@@ -207,6 +223,10 @@ impl SockAddr for fnet::Ipv4SocketAddress {
 
     fn set_port(&mut self, port: u16) {
         self.port = port
+    }
+
+    fn zone(&self) -> Option<Self::Zone> {
+        None
     }
 
     fn into_sock_addr(self) -> fnet::SocketAddress {
@@ -317,6 +337,7 @@ impl IntoErrno for LocalAddressError {
             | LocalAddressError::FailedToAllocateLocalPort => Errno::Eaddrnotavail,
             LocalAddressError::AddressMismatch => Errno::Einval,
             LocalAddressError::AddressInUse => Errno::Eaddrinuse,
+            LocalAddressError::AddressRequiresZone => Errno::Einval,
         }
     }
 }

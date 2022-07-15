@@ -10,13 +10,15 @@ use fidl_fuchsia_posix as fposix;
 use net_types::{
     ethernet::Mac,
     ip::{
-        AddrSubnetEither, AddrSubnetError, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither, SubnetError,
+        AddrSubnetEither, AddrSubnetError, IpAddr, IpAddress, Ipv4Addr, Ipv6Addr, SubnetEither,
+        SubnetError,
     },
+    AddrAndZone, ZonedAddr,
 };
 use net_types::{SpecifiedAddr, Witness};
 use netstack3_core::{AddRouteError, AddableEntryEither, DeviceId, EntryEither, NetstackError};
 
-use crate::bindings::socket::IntoErrno;
+use crate::bindings::socket::{IntoErrno, IpSockAddrExt, SockAddr};
 
 /// A core type which can be fallibly converted from the FIDL type `F`.
 ///
@@ -402,7 +404,7 @@ where
 
 impl<F, C: TryFromFidlWithContext<F>> TryIntoCoreWithContext<C> for F {}
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct DeviceNotFoundError;
 
 impl TryFromFidlWithContext<u64> for DeviceId {
@@ -413,6 +415,81 @@ impl TryFromFidlWithContext<u64> for DeviceId {
         fidl: u64,
     ) -> Result<DeviceId, DeviceNotFoundError> {
         ctx.get_core_id(fidl).ok_or(DeviceNotFoundError)
+    }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum SocketAddressError {
+    Device(DeviceNotFoundError),
+    UnexpectedZone,
+}
+
+impl IntoErrno for SocketAddressError {
+    fn into_errno(self) -> fposix::Errno {
+        match self {
+            SocketAddressError::Device(d) => d.into_errno(),
+            SocketAddressError::UnexpectedZone => todo!(),
+        }
+    }
+}
+
+impl<A: IpAddress, D> TryFromFidlWithContext<<A::Version as IpSockAddrExt>::SocketAddress>
+    for Option<ZonedAddr<A, D>>
+where
+    A::Version: IpSockAddrExt,
+    D: TryFromFidlWithContext<
+        <<A::Version as IpSockAddrExt>::SocketAddress as SockAddr>::Zone,
+        Error = DeviceNotFoundError,
+    >,
+{
+    type Error = SocketAddressError;
+
+    fn try_from_fidl_with_ctx<C: ConversionContext>(
+        ctx: &C,
+        fidl: <A::Version as IpSockAddrExt>::SocketAddress,
+    ) -> Result<Self, Self::Error> {
+        let specified = match fidl.get_specified_addr() {
+            Some(addr) => addr,
+            None => return Ok(None),
+        };
+
+        let zoned = match fidl.zone() {
+            Some(zone) => {
+                let addr_and_zone = AddrAndZone::new(specified.get(), zone)
+                    .ok_or(SocketAddressError::UnexpectedZone)?;
+
+                addr_and_zone
+                    .try_map_zone(|zone| {
+                        TryFromFidlWithContext::try_from_fidl_with_ctx(ctx, zone)
+                            .map_err(SocketAddressError::Device)
+                    })
+                    .map(ZonedAddr::Zoned)?
+            }
+            None => ZonedAddr::Unzoned(specified),
+        };
+        Ok(Some(zoned))
+    }
+}
+
+impl TryFromFidlWithContext<Never> for DeviceId {
+    type Error = DeviceNotFoundError;
+
+    fn try_from_fidl_with_ctx<C: ConversionContext>(
+        _ctx: &C,
+        fidl: Never,
+    ) -> Result<Self, Self::Error> {
+        match fidl {}
+    }
+}
+
+impl TryFromFidlWithContext<NonZeroU64> for DeviceId {
+    type Error = DeviceNotFoundError;
+
+    fn try_from_fidl_with_ctx<C: ConversionContext>(
+        ctx: &C,
+        fidl: NonZeroU64,
+    ) -> Result<Self, Self::Error> {
+        TryFromFidlWithContext::try_from_fidl_with_ctx(ctx, fidl.get())
     }
 }
 
@@ -512,14 +589,44 @@ impl TryIntoFidlWithContext<fidl_net_stack::ForwardingEntry> for EntryEither<Dev
 
 #[cfg(test)]
 mod tests {
+
     use fidl_fuchsia_net as fidl_net;
-    use net_types::ip::{Ipv4Addr, Ipv6Addr};
+    use fidl_fuchsia_net_ext::IntoExt;
+    use net_declare::{net_ip_v4, net_ip_v6};
+    use net_types::{
+        ip::{Ipv4Addr, Ipv6Addr},
+        UnicastAddr,
+    };
+    use netstack3_core::Ctx;
+    use test_case::test_case;
+
+    use crate::bindings::NetstackContext;
 
     use super::*;
 
     struct FakeConversionContext {
         binding: u64,
         core: DeviceId,
+    }
+
+    impl FakeConversionContext {
+        fn new() -> Self {
+            // We need a valid context to be able to create DeviceIds, so
+            // we just create it, get the device id, and then destroy
+            // everything.
+            let ctx = NetstackContext::default();
+            let mut state = ctx.try_lock().unwrap();
+            let state: &mut Ctx<_> = &mut state;
+
+            let core = netstack3_core::add_ethernet_device(
+                &mut state.sync_ctx,
+                &mut state.non_sync_ctx,
+                UnicastAddr::new(Mac::new([2, 3, 4, 5, 6, 7])).unwrap(),
+                1500,
+            );
+
+            Self { binding: 1, core }
+        }
     }
 
     impl ConversionContext for FakeConversionContext {
@@ -641,5 +748,77 @@ mod tests {
 
         assert_eq!(fidl, core.into_fidl());
         assert_eq!(core, fidl.try_into_core().unwrap());
+    }
+
+    #[test_case(
+        fidl_net::Ipv4SocketAddress {address: net_ip_v4!("192.168.0.0").into_ext(), port: 8080},
+        Ok(Some(ZonedAddr::Unzoned(SpecifiedAddr::new(net_ip_v4!("192.168.0.0")).unwrap())));
+        "IPv4 specified")]
+    #[test_case(
+        fidl_net::Ipv4SocketAddress {address: net_ip_v4!("0.0.0.0").into_ext(), port: 8080},
+        Ok(None);
+        "IPv4 unspecified")]
+    #[test_case(
+        fidl_net::Ipv6SocketAddress {
+            address: net_ip_v6!("1:2:3:4::").into_ext(),
+            port: 8080,
+            zone_index: 0
+        },
+        Ok(Some(ZonedAddr::Unzoned(SpecifiedAddr::new(net_ip_v6!("1:2:3:4::")).unwrap())));
+        "IPv6 specified no zone")]
+    #[test_case(
+        fidl_net::Ipv6SocketAddress {
+            address: net_ip_v6!("::").into_ext(),
+            port: 8080,
+            zone_index: 0,
+        },
+        Ok(None);
+        "IPv6 unspecified")]
+    #[test_case(
+        fidl_net::Ipv6SocketAddress {
+            address: net_ip_v6!("1:2:3:4::").into_ext(),
+            port: 8080,
+            zone_index: 1
+        },
+        Err(SocketAddressError::UnexpectedZone);
+        "IPv6 specified unexpected zone")]
+    #[test_case(
+        fidl_net::Ipv6SocketAddress {
+            address: net_ip_v6!("fe80::1").into_ext(),
+            port: 8080,
+            zone_index: 1
+        },
+        Ok(Some(ZonedAddr::Zoned(
+            AddrAndZone::new(net_ip_v6!("fe80::1"), ()).unwrap()
+        )));
+        "IPv6 specified valid zone")]
+    #[test_case(
+        fidl_net::Ipv6SocketAddress {
+            address: net_ip_v6!("fe80::1").into_ext(),
+            port: 8080,
+            zone_index: 2
+        },
+        Err(SocketAddressError::Device(DeviceNotFoundError));
+        "IPv6 specified invalid zone")]
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_zoned_addr<A: SockAddr>(
+        addr: A,
+        expected: Result<Option<ZonedAddr<A::AddrType, ()>>, SocketAddressError>,
+    ) where
+        Option<ZonedAddr<A::AddrType, DeviceId>>:
+            TryFromFidlWithContext<A, Error = SocketAddressError>,
+        <A::AddrType as IpAddress>::Version: IpSockAddrExt<SocketAddress = A>,
+        DeviceId: TryFromFidlWithContext<A::Zone, Error = DeviceNotFoundError>,
+    {
+        let ctx = FakeConversionContext::new();
+
+        let result =
+            addr.try_into_core_with_ctx(&ctx).map(|zoned: Option<ZonedAddr<_, DeviceId>>| {
+                zoned.map(|zoned| match zoned {
+                    ZonedAddr::Unzoned(z) => ZonedAddr::Unzoned(z),
+                    ZonedAddr::Zoned(z) => ZonedAddr::Zoned(z.map_zone(|_: DeviceId| ())),
+                })
+            });
+        assert_eq!(result, expected);
     }
 }

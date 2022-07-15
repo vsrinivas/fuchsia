@@ -833,6 +833,21 @@ impl<A: ScopeableAddress, Z> AddrAndZone<A, Z> {
         let AddrAndZone(addr, zone) = self;
         (addr, zone)
     }
+
+    /// Translates the zone identifier using the provided function.
+    pub fn map_zone<Y>(self, f: impl FnOnce(Z) -> Y) -> AddrAndZone<A, Y> {
+        let AddrAndZone(addr, zone) = self;
+        AddrAndZone(addr, f(zone))
+    }
+
+    /// Attempts to translate the zone identifier using the provided function.
+    pub fn try_map_zone<Y, E>(
+        self,
+        f: impl FnOnce(Z) -> Result<Y, E>,
+    ) -> Result<AddrAndZone<A, Y>, E> {
+        let AddrAndZone(addr, zone) = self;
+        f(zone).map(|zone| AddrAndZone(addr, zone))
+    }
 }
 
 impl<A, Z> AddrAndZone<A, Z> {
@@ -1131,6 +1146,27 @@ mod tests {
             unsafe { AddrAndZone::new_unchecked(Address::LinkLocalUnicast, ()) },
             AddrAndZone(Address::LinkLocalUnicast, ())
         );
+    }
+
+    #[test]
+    fn test_addr_and_zone_map_zone() {
+        let addr_and_zone = AddrAndZone::new(Address::LinkLocalUnicast, 65).unwrap();
+        assert_eq!(
+            addr_and_zone.map_zone(|x| char::from_u32(x).unwrap()),
+            AddrAndZone::new(Address::LinkLocalUnicast, 'A').unwrap()
+        );
+    }
+
+    #[test]
+    fn test_addr_and_zone_try_map_zone() {
+        let addr_and_zone = AddrAndZone::new(Address::LinkLocalUnicast, 32).unwrap();
+        assert_eq!(
+            addr_and_zone.try_map_zone(|x| Ok::<_, ()>(x + 1)),
+            Ok(AddrAndZone::new(Address::LinkLocalUnicast, 33).unwrap())
+        );
+
+        let addr_and_zone = AddrAndZone::new(Address::LinkLocalUnicast, 32).unwrap();
+        assert_eq!(addr_and_zone.try_map_zone(|x| Err::<i32, _>(x - 1)), Err(31),);
     }
 
     #[test]

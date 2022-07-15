@@ -30,7 +30,7 @@ use futures::{StreamExt as _, TryFutureExt as _};
 use log::{error, trace, warn};
 use net_types::{
     ip::{Ip, IpVersion, Ipv4, Ipv6},
-    SpecifiedAddr,
+    SpecifiedAddr, ZonedAddr,
 };
 use netstack3_core::{
     connect_udp, create_udp_unbound, get_udp_bound_device, get_udp_conn_info,
@@ -55,7 +55,9 @@ use thiserror::Error;
 
 use crate::bindings::{
     devices::Devices,
-    util::{DeviceNotFoundError, TryFromFidlWithContext, TryIntoFidlWithContext},
+    util::{
+        DeviceNotFoundError, SocketAddressError, TryFromFidlWithContext, TryIntoFidlWithContext,
+    },
     CommonInfo, Lockable, LockableContext,
 };
 
@@ -219,7 +221,7 @@ pub(crate) trait TransportState<I: Ip, C, SC: IpDeviceIdContext<I>>: Transport<I
         sync_ctx: &mut SC,
         ctx: &mut C,
         id: Self::UnboundId,
-        addr: Option<SpecifiedAddr<I::Addr>>,
+        addr: Option<ZonedAddr<I::Addr, SC::DeviceId>>,
         port: Option<Self::LocalIdentifier>,
     ) -> Result<Self::ListenerId, Self::CreateListenerError>;
 
@@ -372,7 +374,7 @@ impl<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I, C>> Transpor
         sync_ctx: &mut SC,
         ctx: &mut C,
         id: Self::UnboundId,
-        addr: Option<SpecifiedAddr<I::Addr>>,
+        addr: Option<ZonedAddr<I::Addr, SC::DeviceId>>,
         port: Option<Self::LocalIdentifier>,
     ) -> Result<Self::ListenerId, Self::CreateListenerError> {
         listen_udp(sync_ctx, ctx, id, addr, port)
@@ -836,7 +838,7 @@ impl<I: IcmpEchoIpExt, NonSyncCtx: NonSyncContext>
         _sync_ctx: &mut SyncCtx<NonSyncCtx>,
         _ctx: &mut NonSyncCtx,
         _id: Self::UnboundId,
-        _addr: Option<SpecifiedAddr<I::Addr>>,
+        _addr: Option<ZonedAddr<I::Addr, <SyncCtx<NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId>>,
         _stream_id: Option<Self::LocalIdentifier>,
     ) -> Result<Self::ListenerId, Self::CreateListenerError> {
         todo!("https://fxbug.dev/47321: needs Core implementation")
@@ -1194,7 +1196,12 @@ where
     <SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx> as IpDeviceIdContext<I>>::DeviceId:
         IdMapCollectionKey
             + TryFromFidlWithContext<u64, Error = DeviceNotFoundError>
-            + TryIntoFidlWithContext<u64, Error = DeviceNotFoundError>,
+            + TryIntoFidlWithContext<u64, Error = DeviceNotFoundError>
+            + TryFromFidlWithContext<
+                <I::SocketAddress as SockAddr>::Zone,
+                Error = DeviceNotFoundError,
+            >,
+
     <SC as RequestHandlerContext<I, T>>::NonSyncCtx:
         AsRef<
             Devices<
@@ -2033,9 +2040,27 @@ where
     /// Handles a [POSIX socket bind request].
     ///
     /// [POSIX socket bind request]: fposix_socket::SynchronousDatagramSocketRequest::Bind
-    fn bind(mut self, addr: fnet::SocketAddress) -> Result<(), fposix::Errno> {
+    fn bind(mut self, addr: fnet::SocketAddress) -> Result<(), fposix::Errno>
+    where
+        Option<
+            ZonedAddr<
+                I::Addr,
+                <SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx> as IpDeviceIdContext<
+                    I,
+                >>::DeviceId,
+            >,
+        >: TryFromFidlWithContext<I::SocketAddress, Error = SocketAddressError>,
+                <SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx> as IpDeviceIdContext<
+                    I,
+                >>::DeviceId:
+                TryFromFidlWithContext<<I::SocketAddress as SockAddr>::Zone>,
+    {
         let sockaddr = I::SocketAddress::from_sock_addr(addr)?;
         trace!("bind sockaddr: {:?}", sockaddr);
+        let port = sockaddr.port();
+        let sockaddr =
+            TryFromFidlWithContext::try_from_fidl_with_ctx(&self.ctx.non_sync_ctx, sockaddr)
+                .map_err(IntoErrno::into_errno)?;
         let unbound_id = match self.get_state().info.state {
             SocketState::Unbound { unbound_id } => Ok(unbound_id),
             SocketState::BoundListen { listener_id: _ }
@@ -2043,19 +2068,22 @@ where
                 Err(fposix::Errno::Ealready)
             }
         }?;
-        self.bind_inner(
-            unbound_id,
-            sockaddr.get_specified_addr(),
-            T::LocalIdentifier::from_u16(sockaddr.port()),
-        )
-        .map(|_: <T as Transport<I>>::ListenerId| ())
+        self.bind_inner(unbound_id, sockaddr, T::LocalIdentifier::from_u16(port))
+            .map(|_: <T as Transport<I>>::ListenerId| ())
     }
 
     /// Helper function for common functionality to self.bind() and self.send_msg().
     fn bind_inner(
         &mut self,
         unbound_id: <T as Transport<I>>::UnboundId,
-        local_addr: Option<SpecifiedAddr<I::Addr>>,
+        local_addr: Option<
+            ZonedAddr<
+                I::Addr,
+                <SyncCtx<<SC as RequestHandlerContext<I, T>>::NonSyncCtx> as IpDeviceIdContext<
+                    I,
+                >>::DeviceId,
+            >,
+        >,
         local_port: Option<
             <T as TransportState<
                 I,

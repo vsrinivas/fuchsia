@@ -95,6 +95,10 @@ pub enum LocalAddressError {
     /// The requested address/socket pair is in use.
     #[error("Address in use")]
     AddressInUse,
+
+    /// The requested address requires a zone.
+    #[error("address requires a zone")]
+    AddressRequiresZone,
 }
 
 // TODO(joshlf): Once we support a more general model of sockets in which UDP
