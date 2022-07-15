@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 #include <errno.h>
-#include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fuchsia/boot/c/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/service/llcpp/service.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,7 +13,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
-void usage() {
+void usage(void) {
   fprintf(stderr,
           "usage: dlog        dump the zircon debug log\n"
           "\n"
@@ -34,8 +33,7 @@ int main(int argc, char** argv) {
     if (!strcmp(argv[1], "-h")) {
       usage();
       return 0;
-    }
-    if (!strcmp(argv[1], "-f")) {
+    } else if (!strcmp(argv[1], "-f")) {
       tail = true;
     } else if (!strcmp(argv[1], "-t")) {
       plain = true;
@@ -47,7 +45,7 @@ int main(int argc, char** argv) {
         return -1;
       }
       errno = 0;
-      pid = strtoull(argv[1], nullptr, 0);
+      pid = strtoull(argv[1], NULL, 0);
       if (errno) {
         fprintf(stderr, "dlog: invalid pid\n");
         return -1;
@@ -61,55 +59,52 @@ int main(int argc, char** argv) {
     argv++;
   }
 
-  zx::status client = service::Connect<fuchsia_boot::ReadOnlyLog>();
-  if (client.is_error()) {
-    fprintf(stderr, "failed to connect to read only log: %s\n", client.status_string());
+  zx::channel local, remote;
+  zx_status_t status = zx::channel::create(0, &local, &remote);
+  if (status != ZX_OK) {
+    fprintf(stderr, "Failed to create channel: %d\n", status);
     return -1;
   }
 
-  const fidl::WireResult result = fidl::WireCall(client.value())->Get();
-  if (!result.ok()) {
-    fprintf(stderr, "failed to get read only log handle: %s\n", result.status_string());
+  const char kReadOnlyLogPath[] = "/svc/" fuchsia_boot_ReadOnlyLog_Name;
+  status = fdio_service_connect(kReadOnlyLogPath, remote.release());
+  if (status != ZX_OK) {
+    fprintf(stderr, "Failed to connect to ReadOnlyLog: %d\n", status);
     return -1;
   }
-  const zx::debuglog& log = result.value().log;
+
+  zx_handle_t h;
+  status = fuchsia_boot_ReadOnlyLogGet(local.get(), &h);
+  if (status != ZX_OK) {
+    fprintf(stderr, "ReadOnlyLogGet failed: %d\n", status);
+    return -1;
+  }
 
   char buf[ZX_LOG_RECORD_MAX];
+  zx_log_record_t* rec = (zx_log_record_t*)buf;
   for (;;) {
-    switch (zx_status_t status = log.read(0, buf, sizeof(buf)); status) {
-      case ZX_OK: {
-        zx_log_record_t& rec = *reinterpret_cast<zx_log_record_t*>(buf);
-        if (filter_pid && (pid != rec.pid)) {
-          continue;
-        }
-        if (!plain) {
-          char tmp[32];
-          size_t len = snprintf(tmp, sizeof(tmp), "[%05llu.%03llu] ", rec.timestamp / 1000000000ULL,
-                                (rec.timestamp / 1000000ULL) % 1000ULL);
-          write(1, tmp, (len > sizeof(tmp) ? sizeof(tmp) : len));
-        }
-        write(1, rec.data, rec.datalen);
-        if ((rec.datalen == 0) || (rec.data[rec.datalen - 1] != '\n')) {
-          write(1, "\n", 1);
-        }
-        break;
+    zx_status_t status;
+    if ((status = zx_debuglog_read(h, 0, rec, ZX_LOG_RECORD_MAX)) < 0) {
+      if ((status == ZX_ERR_SHOULD_WAIT) && tail) {
+        zx_object_wait_one(h, ZX_LOG_READABLE, ZX_TIME_INFINITE, NULL);
+        continue;
       }
-      case ZX_ERR_SHOULD_WAIT:
-        if (tail) {
-          if (zx_status_t status = log.wait_one(ZX_LOG_READABLE, zx::time::infinite(), nullptr);
-              status != ZX_OK) {
-            fprintf(stderr, "failed to wait for read only log handle: %s\n",
-                    zx_status_get_string(status));
-            return -1;
-          }
-          continue;
-        }
-        __FALLTHROUGH;
-      default:
-        fprintf(stderr, "failed to read from read only log handle: %s\n",
-                zx_status_get_string(status));
-        return -1;
+      break;
+    }
+    if (filter_pid && (pid != rec->pid)) {
+      continue;
+    }
+    if (!plain) {
+      char tmp[32];
+      size_t len = snprintf(tmp, sizeof(tmp), "[%05d.%03d] ", (int)(rec->timestamp / 1000000000ULL),
+                            (int)((rec->timestamp / 1000000ULL) % 1000ULL));
+      write(1, tmp, (len > sizeof(tmp) ? sizeof(tmp) : len));
+    }
+    write(1, rec->data, rec->datalen);
+    if ((rec->datalen == 0) || (rec->data[rec->datalen - 1] != '\n')) {
+      write(1, "\n", 1);
     }
   }
+  zx_handle_close(h);
   return 0;
 }
