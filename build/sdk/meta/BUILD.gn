@@ -97,6 +97,10 @@ if (is_host) {
     main_source = "//sdk/cts/build/scripts/verify_json_schemas_test.py"
     sources = [ "//sdk/cts/build/scripts/verify_json_schemas.py" ]
   }
+  python_host_test("verify_sdk_compatibility_test") {
+    main_source = "//sdk/cts/build/scripts/verify_sdk_compatibility_test.py"
+    sources = [ "//sdk/cts/build/scripts/verify_sdk_compatibility.py" ]
+  }
 }
 
 source_set("schemas") {
@@ -180,5 +184,6 @@ group("tests") {
     ":go_meta_tests($host_toolchain)",
     ":rust_test($host_toolchain)",
     ":verify_json_schemas_test($host_toolchain)",
+    ":verify_sdk_compatibility_test($host_toolchain)",
   ]
 }
