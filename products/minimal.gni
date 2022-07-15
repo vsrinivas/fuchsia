@@ -121,3 +121,9 @@ legacy_base_package_labels += [
   "//src/sys/appmgr:component_id_index_no_restrict_storage",
   "//src/sys/appmgr:core_component_id_index",
 ]
+
+# Use the product assembly config file to specify the product configuration.
+#
+# This should be overridden by products which inherit from minimal.
+fuchsia_product_assembly_config_label = "//products/minimal"
+fuchsia_product_assembly_config_file = "${root_build_dir}/obj/products/minimal/minimal/product_assembly_config.json"

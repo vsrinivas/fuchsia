@@ -86,5 +86,7 @@ legacy_universe_package_labels += [
 ]
 
 # Use the product assembly config file to specify the product configuration.
-fuchsia_product_assembly_config_file =
-    "//build/assembly/empty_product_config.json"
+#
+# This should be overridden by products which inherit from minimal.
+fuchsia_product_assembly_config_label = "//products/minimal"
+fuchsia_product_assembly_config_file = "${root_build_dir}/obj/products/minimal/minimal/product_assembly_config.json"

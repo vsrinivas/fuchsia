@@ -102,6 +102,9 @@ product_system_image_deps +=
 
 # Use the product assembly config file to specify the product configuration.
 #
-# This should be overridden by products which inherit from core.
-fuchsia_product_assembly_config_file =
-    "//build/assembly/empty_product_config.json"
+# NOTE: This should be overridden by products which inherit from core.
+#
+# NOTE: This is the same as is used by the `minimal` product, for now.  This may
+#       change in the future.  It is listed here for completeness.
+fuchsia_product_assembly_config_label = "//products/minimal"
+fuchsia_product_assembly_config_file = "${root_build_dir}/obj/products/minimal/minimal/product_assembly_config.json"

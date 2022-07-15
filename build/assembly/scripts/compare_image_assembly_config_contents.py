@@ -19,8 +19,9 @@ T = TypeVar('T')
 
 # packages and bootfs filenames which we knowingly mutate in the product assembly process
 MISMATCH_PACKAGE_EXCEPTIONS = [
-    "session_manager", "password_authenticator", "config-data"
+    "config-data", "password_authenticator", "session_manager"
 ]
+ADDITIONAL_PACKAGE_EXCEPTIONS = []
 MISMATCH_FILE_EXCEPTIONS = ["meta/console.cvf"]
 
 
@@ -78,7 +79,8 @@ def compare_packages(
         errors.append(f"Missing package ({setname}): {missing}")
 
     for extra in set(second_by_name.keys()).difference(first_by_name.keys()):
-        errors.append(f"Extra package ({setname}): {extra}")
+        if extra not in ADDITIONAL_PACKAGE_EXCEPTIONS:
+            errors.append(f"Extra package ({setname}): {extra}")
 
     for name in sorted(set(first_by_name.keys()).intersection(
             second_by_name.keys())):
