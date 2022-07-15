@@ -40,7 +40,6 @@ test("zxio") {
     "test_node_server.h",
     "tty-test.cc",
     "vmo-test.cc",
-    "vmofile-test.cc",
     "watcher-test.cc",
     "zxio-test.cc",
   ]
