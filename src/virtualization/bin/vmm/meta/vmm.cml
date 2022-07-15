@@ -67,7 +67,6 @@
             protocol: [
                 "fuchsia.kernel.HypervisorResource",
                 "fuchsia.kernel.IrqResource",
-                "fuchsia.kernel.MmioResource",
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.net.virtualization.Control",
                 "fuchsia.sysinfo.SysInfo",

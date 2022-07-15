@@ -50,7 +50,6 @@
             protocol: [
                 "fuchsia.kernel.HypervisorResource",
                 "fuchsia.kernel.IrqResource",
-                "fuchsia.kernel.MmioResource",
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.logger.LogSink",
                 "fuchsia.media.Audio",
