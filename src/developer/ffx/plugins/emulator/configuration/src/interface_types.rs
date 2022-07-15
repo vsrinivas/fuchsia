@@ -66,6 +66,12 @@ pub trait EmulatorEngine {
     /// Once the engine has been staged, this generates the command line required to start
     /// emulation. There are no side-effects, and the operation can be repeated as necessary.
     fn build_emulator_cmd(&self) -> Command;
+
+    /// Access to the engine's emulator_configuration field.
+    fn emu_config(&self) -> &EmulatorConfiguration;
+
+    /// Mutable access to the engine's emulator_configuration field.
+    fn emu_config_mut(&mut self) -> &mut EmulatorConfiguration;
 }
 
 /// Collects the specific configurations into a single struct for ease of passing around.

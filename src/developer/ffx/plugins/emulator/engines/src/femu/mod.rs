@@ -116,6 +116,14 @@ impl EmulatorEngine for FemuEngine {
         }
         cmd
     }
+
+    fn emu_config(&self) -> &EmulatorConfiguration {
+        return &self.emulator_configuration;
+    }
+
+    fn emu_config_mut(&mut self) -> &mut EmulatorConfiguration {
+        return &mut self.emulator_configuration;
+    }
 }
 
 #[async_trait]
@@ -128,13 +136,5 @@ impl QemuBasedEngine for FemuEngine {
 
     fn get_pid(&self) -> u32 {
         self.pid
-    }
-
-    fn emu_config(&self) -> &EmulatorConfiguration {
-        return &self.emulator_configuration;
-    }
-
-    fn emu_config_mut(&mut self) -> &mut EmulatorConfiguration {
-        return &mut self.emulator_configuration;
     }
 }

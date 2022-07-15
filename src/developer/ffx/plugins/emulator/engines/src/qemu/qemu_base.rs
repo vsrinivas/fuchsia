@@ -406,12 +406,6 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
     /// Access to the engine's pid field.
     fn set_pid(&mut self, pid: u32);
     fn get_pid(&self) -> u32;
-
-    /// Access to the engine's emulator_configuration field.
-    fn emu_config(&self) -> &EmulatorConfiguration;
-
-    /// Mutable access to the engine's emulator_configuration field.
-    fn emu_config_mut(&mut self) -> &mut EmulatorConfiguration;
 }
 
 #[cfg(test)]
@@ -429,12 +423,6 @@ mod tests {
     impl QemuBasedEngine for TestEngine {
         fn set_pid(&mut self, _pid: u32) {}
         fn get_pid(&self) -> u32 {
-            todo!()
-        }
-        fn emu_config(&self) -> &EmulatorConfiguration {
-            todo!()
-        }
-        fn emu_config_mut(&mut self) -> &mut EmulatorConfiguration {
             todo!()
         }
     }
@@ -462,6 +450,12 @@ mod tests {
             false
         }
         fn build_emulator_cmd(&self) -> Command {
+            todo!()
+        }
+        fn emu_config(&self) -> &EmulatorConfiguration {
+            todo!()
+        }
+        fn emu_config_mut(&mut self) -> &mut EmulatorConfiguration {
             todo!()
         }
     }
