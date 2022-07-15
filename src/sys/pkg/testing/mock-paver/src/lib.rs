@@ -6,7 +6,7 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_paver as paver, fuchsia_async as fasync,
-    fuchsia_zircon::{Status, Vmo},
+    fuchsia_zircon::{Status, Vmo, VmoOptions},
     futures::lock::Mutex as AsyncMutex,
     futures::{channel::mpsc, prelude::*},
     parking_lot::Mutex,
@@ -27,7 +27,8 @@ fn read_mem_buffer(buffer: &Buffer) -> Vec<u8> {
 }
 
 fn write_mem_buffer(payload: Vec<u8>) -> Buffer {
-    let vmo = Vmo::create(payload.len() as u64).expect("Creating VMO");
+    let vmo =
+        Vmo::create_with_opts(VmoOptions::RESIZABLE, payload.len() as u64).expect("Creating VMO");
     vmo.write(&payload, 0).expect("writing to VMO");
     Buffer { vmo, size: payload.len() as u64 }
 }
@@ -36,6 +37,7 @@ fn write_mem_buffer(payload: Vec<u8>) -> Buffer {
 pub enum PaverEvent {
     ReadAsset { configuration: paver::Configuration, asset: paver::Asset },
     WriteAsset { configuration: paver::Configuration, asset: paver::Asset, payload: Vec<u8> },
+    ReadFirmware { configuration: paver::Configuration, firmware_type: String },
     WriteFirmware { configuration: paver::Configuration, firmware_type: String, payload: Vec<u8> },
     QueryActiveConfiguration,
     QueryConfigurationLastSetActive,
@@ -73,6 +75,12 @@ impl PaverEvent {
                 PaverEvent::ReadAsset {
                     configuration: configuration.to_owned(),
                     asset: asset.to_owned(),
+                }
+            }
+            paver::DataSinkRequest::ReadFirmware { configuration, type_, .. } => {
+                PaverEvent::ReadFirmware {
+                    configuration: configuration.to_owned(),
+                    firmware_type: type_.to_owned(),
                 }
             }
             request => panic!("Unhandled method Paver::{}", request.method_name()),
@@ -290,6 +298,39 @@ pub mod hooks {
                 } => {
                     let mut result =
                         (self.0)(configuration, firmware_type, read_mem_buffer(&payload));
+                    // Ignore errors from peers closing the channel early
+                    let _ = responder.send(&mut result);
+                    None
+                }
+                request => Some(request),
+            }
+        }
+    }
+
+    /// A Hook for responding to `ReadFirmware` calls.
+    pub fn read_firmware<F>(callback: F) -> ReadFirmware<F>
+    where
+        F: Fn(paver::Configuration, String) -> Result<Vec<u8>, Status>,
+    {
+        ReadFirmware(callback)
+    }
+
+    pub struct ReadFirmware<F>(F);
+
+    #[async_trait]
+    impl<F> Hook for ReadFirmware<F>
+    where
+        F: Fn(paver::Configuration, String) -> Result<Vec<u8>, Status> + Sync,
+    {
+        async fn data_sink(
+            &self,
+            request: paver::DataSinkRequest,
+        ) -> Option<paver::DataSinkRequest> {
+            match request {
+                paver::DataSinkRequest::ReadFirmware { configuration, type_, responder } => {
+                    let mut result = (self.0)(configuration, type_)
+                        .map(write_mem_buffer)
+                        .map_err(Status::into_raw);
                     // Ignore errors from peers closing the channel early
                     let _ = responder.send(&mut result);
                     None
@@ -544,6 +585,9 @@ impl MockPaverService {
                     responder.send(Status::OK.into_raw())
                 }
                 paver::DataSinkRequest::ReadAsset { responder, .. } => {
+                    responder.send(&mut Ok(write_mem_buffer(vec![])))
+                }
+                paver::DataSinkRequest::ReadFirmware { responder, .. } => {
                     responder.send(&mut Ok(write_mem_buffer(vec![])))
                 }
                 request => panic!("Unhandled method Paver::{}", request.method_name()),

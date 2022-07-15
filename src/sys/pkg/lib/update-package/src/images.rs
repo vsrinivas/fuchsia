@@ -482,6 +482,18 @@ impl ImagePackagesSlots {
     pub fn fuchsia(&self) -> Option<&BootSlot> {
         self.fuchsia.as_ref()
     }
+
+    /// Returns an immutable borrow to the boot slot image package designated as "recovery" in this
+    /// image packages manifest.
+    pub fn recovery(&self) -> Option<&BootSlot> {
+        self.recovery.as_ref()
+    }
+
+    /// Returns an immutable borrow to the boot slot image package designated as "firmware" in this
+    /// image packages manifest.
+    pub fn firmware(&self) -> &BTreeMap<String, ImageMetadata> {
+        &self.firmware
+    }
 }
 
 impl<'de> Deserialize<'de> for ImagePackagesManifest {

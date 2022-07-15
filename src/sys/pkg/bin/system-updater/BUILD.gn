@@ -59,6 +59,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:pin-project",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:sha2",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:uuid",
   ]

@@ -20,7 +20,7 @@ use configuration::TargetConfiguration;
 pub use configuration::{CurrentConfiguration, NonCurrentConfiguration};
 
 #[derive(Debug, Error)]
-enum WriteAssetError {
+pub enum WriteAssetError {
     #[error("while performing write_asset call")]
     Fidl(#[from] fidl::Error),
 
@@ -49,6 +49,20 @@ async fn paver_write_firmware(
     }
 
     Ok(())
+}
+
+pub async fn paver_read_firmware(
+    data_sink: &DataSinkProxy,
+    configuration: Configuration,
+    subtype: &str,
+) -> Result<Buffer, Error> {
+    let result = data_sink
+        .read_firmware(configuration, subtype)
+        .await
+        .context("while performing the read_firmware call")?;
+    let buffer = result
+        .map_err(|status| anyhow!("read_firmware responded with {}", Status::from_raw(status)))?;
+    Ok(buffer)
 }
 
 async fn paver_write_asset(
@@ -188,7 +202,7 @@ async fn write_firmware_to_configurations(
     Ok(())
 }
 
-async fn write_image_buffer(
+pub async fn write_image_buffer(
     data_sink: &DataSinkProxy,
     buffer: Buffer,
     image: &Image,
@@ -483,9 +497,7 @@ pub async fn flush(
 
 #[cfg(test)]
 fn make_buffer(contents: impl AsRef<[u8]>) -> Buffer {
-    use {
-        fuchsia_zircon::{Vmo, VmoOptions},
-    };
+    use fuchsia_zircon::{Vmo, VmoOptions};
     let contents = contents.as_ref();
     let size = contents.len().try_into().unwrap();
 

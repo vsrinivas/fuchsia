@@ -8,7 +8,8 @@ use {
     epoch::EpochFile,
     fidl::endpoints::ProtocolMarker as _,
     fidl_fuchsia_io as fio,
-    fidl_fuchsia_paver::DataSinkProxy,
+    fidl_fuchsia_mem::Buffer,
+    fidl_fuchsia_paver::{Asset, DataSinkProxy},
     fidl_fuchsia_pkg::{
         PackageCacheProxy, PackageResolverProxy, RetainedPackagesMarker, RetainedPackagesProxy,
     },
@@ -17,13 +18,15 @@ use {
         FetchFailureReason, Options, PrepareFailureReason, State, UpdateInfo,
     },
     fuchsia_async::{Task, TimeoutExt as _},
+    fuchsia_hash::Hash,
     fuchsia_syslog::{fx_log_err, fx_log_info},
-    fuchsia_url::AbsolutePackageUrl,
+    fuchsia_url::{AbsoluteComponentUrl, AbsolutePackageUrl},
     futures::{prelude::*, stream::FusedStream},
     parking_lot::Mutex,
+    sha2::{Digest, Sha256},
     std::{pin::Pin, sync::Arc, time::Duration},
     thiserror::Error,
-    update_package::{Image, ImageType, UpdateMode, UpdatePackage},
+    update_package::{Image, ImagePackagesSlots, ImageType, UpdateMode, UpdatePackage},
 };
 
 mod config;
@@ -72,6 +75,15 @@ enum PrepareError {
     #[error("while determining update mode")]
     ParseUpdateMode(#[source] update_package::ParseUpdateModeError),
 
+    #[error("while reading from paver")]
+    PaverRead(#[source] anyhow::Error),
+
+    #[error("while writing asset to paver")]
+    PaverWriteAsset(#[source] anyhow::Error),
+
+    #[error("while writing firmware to paver")]
+    PaverWriteFirmware(#[source] anyhow::Error),
+
     #[error("while preparing partitions for update")]
     PreparePartitionMetdata(#[source] paver::PreparePartitionMetadataError),
 
@@ -91,6 +103,9 @@ enum PrepareError {
 
     #[error("force-recovery mode is incompatible with skip-recovery option")]
     VerifyUpdateMode,
+
+    #[error("while reading a buffer")]
+    VmoRead(#[source] fuchsia_zircon::Status),
 }
 
 impl PrepareError {
@@ -313,6 +328,43 @@ async fn flush_cobalt(cobalt_forwarder_task: impl Future<Output = ()>, flush_tim
     .await;
 }
 
+/// Struct representing images that need to be written during the update.
+/// Determined by parsing `images.json`.
+struct ImagesToWrite {
+    fuchsia: BootSlot,
+    recovery: BootSlot,
+    /// Unordered vector of (firmware_type, url).
+    firmware: Vec<(String, AbsoluteComponentUrl)>,
+}
+
+impl ImagesToWrite {
+    /// Default fields indicate that no images need to be written.
+    fn new() -> Self {
+        ImagesToWrite { fuchsia: BootSlot::new(), recovery: BootSlot::new(), firmware: vec![] }
+    }
+}
+
+struct BootSlot {
+    zbi: Option<AbsoluteComponentUrl>,
+    vbmeta: Option<AbsoluteComponentUrl>,
+}
+
+impl BootSlot {
+    fn new() -> Self {
+        BootSlot { zbi: None, vbmeta: None }
+    }
+
+    fn set_zbi(&mut self, zbi: Option<AbsoluteComponentUrl>) -> &mut Self {
+        self.zbi = zbi;
+        self
+    }
+
+    fn set_vbmeta(&mut self, vbmeta: Option<AbsoluteComponentUrl>) -> &mut Self {
+        self.vbmeta = vbmeta;
+        self
+    }
+}
+
 struct Attempt<'a> {
     config: &'a Config,
     env: &'a Environment,
@@ -328,10 +380,16 @@ impl<'a> Attempt<'a> {
         // Prepare
         let state = state::Prepare::enter(co).await;
 
-        let (update_pkg, mode, packages_to_fetch, current_configuration) =
+        let (update_pkg, mode, packages_to_fetch, _images_to_write, current_configuration) =
             match self.prepare(target_version).await {
-                Ok((update_pkg, mode, packages_to_fetch, current_configuration)) => {
-                    (update_pkg, mode, packages_to_fetch, current_configuration)
+                Ok((
+                    update_pkg,
+                    mode,
+                    packages_to_fetch,
+                    _images_to_write,
+                    current_configuration,
+                )) => {
+                    (update_pkg, mode, packages_to_fetch, _images_to_write, current_configuration)
                 }
                 Err(e) => {
                     state.fail(co, e.reason()).await;
@@ -386,7 +444,13 @@ impl<'a> Attempt<'a> {
         &mut self,
         target_version: &mut history::Version,
     ) -> Result<
-        (UpdatePackage, UpdateMode, Vec<AbsolutePackageUrl>, paver::CurrentConfiguration),
+        (
+            UpdatePackage,
+            UpdateMode,
+            Vec<AbsolutePackageUrl>,
+            ImagesToWrite,
+            paver::CurrentConfiguration,
+        ),
         PrepareError,
     > {
         // Ensure that the partition boot metadata is ready for the update to begin. Specifically:
@@ -465,7 +529,102 @@ impl<'a> Attempt<'a> {
             fx_log_err!("unable to gc packages: {:#}", anyhow!(e));
         }
 
-        Ok((update_pkg, mode, packages_to_fetch, current_config))
+        let mut images_to_write = ImagesToWrite::new();
+
+        if let Ok(image_package_manifest) = update_pkg.image_packages().await {
+            let manifest: ImagePackagesSlots = image_package_manifest.into();
+            if let Some(fuchsia) = manifest.fuchsia() {
+                // Determine if the fuchsia zbi has changed in this update. If an error is raised, do not fail the update.
+                match asset_to_write(
+                    fuchsia.zbi(),
+                    current_config,
+                    &self.env.data_sink,
+                    Asset::Kernel,
+                    &Image::new(ImageType::Zbi, None),
+                )
+                .await
+                {
+                    Ok(url) => images_to_write.fuchsia.set_zbi(url),
+                    Err(e) => {
+                        fx_log_err!(
+                            "Error while determining whether to write the zbi image, assume update is needed: {:#}", anyhow!(e));
+                        images_to_write.fuchsia.set_zbi(Some(fuchsia.zbi().url().to_owned()))
+                    }
+                };
+
+                if let Some(vbmeta_image) = fuchsia.vbmeta() {
+                    // Determine if the vbmeta has changed in this update. If an error is raised, do not fail the update.
+                    match asset_to_write(
+                        vbmeta_image,
+                        current_config,
+                        &self.env.data_sink,
+                        Asset::VerifiedBootMetadata,
+                        &Image::new(ImageType::FuchsiaVbmeta, None),
+                    )
+                    .await
+                    {
+                        Ok(url) => images_to_write.fuchsia.set_vbmeta(url),
+                        Err(e) => {
+                            fx_log_err!(
+                                "Error while determining whether to write the vbmeta image, assume update is needed: {:#}", anyhow!(e));
+                            images_to_write.fuchsia.set_vbmeta(Some(vbmeta_image.url().to_owned()))
+                        }
+                    };
+                }
+            }
+
+            if let Some(recovery) = manifest.recovery() {
+                match recovery_to_write(recovery.zbi(), &self.env.data_sink, Asset::Kernel).await {
+                    Ok(url) => images_to_write.recovery.set_zbi(url),
+                    Err(e) => {
+                        fx_log_err!(
+                            "Error while determining whether to write the recovery zbi image, assume update is needed: {:#}", anyhow!(e));
+                        images_to_write.recovery.set_zbi(Some(recovery.zbi().url().to_owned()))
+                    }
+                };
+
+                if let Some(vbmeta_image) = recovery.vbmeta() {
+                    // Determine if the vbmeta has changed in this update. If an error is raised, do not fail the update.
+                    match recovery_to_write(
+                        vbmeta_image,
+                        &self.env.data_sink,
+                        Asset::VerifiedBootMetadata,
+                    )
+                    .await
+                    {
+                        Ok(url) => images_to_write.recovery.set_vbmeta(url),
+                        Err(e) => {
+                            fx_log_err!("Error while determining whether to write the recovery vbmeta image, assume update is needed: {:#}", anyhow!(e));
+                            images_to_write.recovery.set_vbmeta(Some(vbmeta_image.url().to_owned()))
+                        }
+                    };
+                }
+            }
+
+            for (filename, imagemetadata) in manifest.firmware() {
+                match firmware_to_write(
+                    &filename,
+                    &imagemetadata,
+                    current_config,
+                    &self.env.data_sink,
+                    &Image::new(ImageType::Firmware, Some(&filename)),
+                )
+                .await
+                {
+                    Ok(Some(url)) => images_to_write.firmware.push((filename.to_string(), url)),
+                    Ok(None) => (),
+                    Err(e) => {
+                        // If an error is raised, do not fail the update.
+                        fx_log_err!("Error while determining firmware to write, assume update is needed: {:#}", anyhow!(e));
+                        images_to_write
+                            .firmware
+                            .push((filename.to_string(), imagemetadata.url().to_owned()))
+                    }
+                }
+            }
+        }
+
+        Ok((update_pkg, mode, packages_to_fetch, images_to_write, current_config))
     }
 
     /// Fetch all base packages needed by the target OS.
@@ -579,6 +738,160 @@ where
             .context("while writing images")?;
     }
     Ok(())
+}
+
+/// Ok(None) indicates that the firmware image is on the device in the desired configuration.
+/// If the firmware image is on the active configuration, this function will write it to the desired
+/// configuration before returning Ok(None).
+///
+/// Ok(Some(url)) indicates that the firmware image in the update differs from what is on the device.
+async fn firmware_to_write(
+    filename: &String,
+    image_metadata: &update_package::ImageMetadata,
+    current_config: paver::CurrentConfiguration,
+    data_sink: &DataSinkProxy,
+    image: &Image,
+) -> Result<Option<AbsoluteComponentUrl>, PrepareError> {
+    let desired_config = current_config.to_non_current_configuration();
+    if let Some(non_current_config) = desired_config.to_configuration() {
+        if let Some(_) = does_firmware_match_hash_and_size(
+            data_sink,
+            non_current_config,
+            filename,
+            image_metadata,
+        )
+        .await?
+        {
+            return Ok(None);
+        }
+
+        if let Some(current_config) = current_config.to_configuration() {
+            if let Some(buffer) = does_firmware_match_hash_and_size(
+                data_sink,
+                current_config,
+                filename,
+                image_metadata,
+            )
+            .await?
+            {
+                paver::write_image_buffer(data_sink, buffer, image, desired_config)
+                    .await
+                    .map_err(PrepareError::PaverWriteFirmware)?;
+                return Ok(None);
+            }
+        }
+    }
+    Ok(Some(image_metadata.url().to_owned()))
+}
+
+/// Ok(None) indicates that the asset is on the device in the desired configuration.
+/// If the asset is on the active configuration, this function will write it to the desired
+/// configuration before returning Ok(None).
+///
+/// Ok(Some(url)) indicates that the asset in the update differs from what is on the device.
+async fn asset_to_write(
+    image_metadata: &update_package::ImageMetadata,
+    current_config: paver::CurrentConfiguration,
+    data_sink: &DataSinkProxy,
+    asset: Asset,
+    image: &Image,
+) -> Result<Option<AbsoluteComponentUrl>, PrepareError> {
+    let desired_config = current_config.to_non_current_configuration();
+    if let Some(non_current_config) = desired_config.to_configuration() {
+        if let Some(_) =
+            does_asset_match_hash_and_size(data_sink, non_current_config, asset, image_metadata)
+                .await?
+        {
+            return Ok(None);
+        }
+
+        if let Some(current_config) = current_config.to_configuration() {
+            if let Some(buffer) =
+                does_asset_match_hash_and_size(data_sink, current_config, asset, image_metadata)
+                    .await?
+            {
+                paver::write_image_buffer(data_sink, buffer, image, desired_config)
+                    .await
+                    .map_err(PrepareError::PaverWriteAsset)?;
+                return Ok(None);
+            }
+
+            return Ok(Some(image_metadata.url().to_owned()));
+        }
+    }
+    Ok(Some(image_metadata.url().to_owned()))
+}
+
+/// Ok(None) indicates that the recovery asset is on the device in the recovery configuration.
+///
+/// Ok(Some(url)) indicates that the asset in the update differs from what is on the device.
+async fn recovery_to_write(
+    image_metadata: &update_package::ImageMetadata,
+    data_sink: &DataSinkProxy,
+    asset: Asset,
+) -> Result<Option<AbsoluteComponentUrl>, PrepareError> {
+    if let Some(_) = does_asset_match_hash_and_size(
+        data_sink,
+        fidl_fuchsia_paver::Configuration::Recovery,
+        asset,
+        image_metadata,
+    )
+    .await?
+    {
+        return Ok(None);
+    }
+    return Ok(Some(image_metadata.url().to_owned()));
+}
+
+async fn does_firmware_match_hash_and_size(
+    data_sink: &DataSinkProxy,
+    desired_configuration: fidl_fuchsia_paver::Configuration,
+    subtype: &String,
+    image: &update_package::ImageMetadata,
+) -> Result<Option<Buffer>, PrepareError> {
+    if let Ok(buffer) = paver::paver_read_firmware(data_sink, desired_configuration, subtype).await
+    {
+        let calculated_hash = calculate_hash(&buffer, image.size() as usize)?;
+        if calculated_hash == image.hash() {
+            return Ok(Some(buffer));
+        }
+    }
+    return Ok(None);
+}
+
+async fn does_asset_match_hash_and_size(
+    data_sink: &DataSinkProxy,
+    configuration: fidl_fuchsia_paver::Configuration,
+    asset: Asset,
+    image: &update_package::ImageMetadata,
+) -> Result<Option<Buffer>, PrepareError> {
+    let buffer = paver::paver_read_asset(data_sink, configuration, asset)
+        .await
+        .map_err(PrepareError::PaverRead)?;
+    let calculated_hash = calculate_hash(&buffer, image.size() as usize)?;
+    if calculated_hash == image.hash() {
+        return Ok(Some(buffer));
+    }
+    Ok(None)
+}
+
+fn calculate_hash(buffer: &Buffer, mut remaining: usize) -> Result<Hash, PrepareError> {
+    let mut hasher = Sha256::new();
+    let mut offset = 0;
+
+    while remaining > 0 {
+        let mut chunk = [0; 4096];
+        let chunk_len = remaining.min(4096) as usize;
+        let chunk = &mut chunk[..chunk_len];
+
+        buffer.vmo.read(chunk, offset).map_err(PrepareError::VmoRead)?;
+        hasher.update(chunk);
+
+        offset = offset + chunk_len as u64;
+        remaining = remaining - chunk_len as usize;
+    }
+
+    Ok(Hash::from(*AsRef::<[u8; 32]>::as_ref(&hasher.finalize())))
 }
 
 async fn sync_package_cache(pkg_cache: &PackageCacheProxy) -> Result<(), Error> {
@@ -724,11 +1037,14 @@ async fn replace_retained_packages(
 
 #[cfg(test)]
 mod tests {
+    use std::str::FromStr;
+
     use {
         super::*,
         assert_matches::assert_matches,
         fuchsia_async as fasync,
         fuchsia_pkg_testing::{make_epoch_json, TestUpdatePackage},
+        fuchsia_zircon::Status,
     };
 
     // Simulate the cobalt test hanging indefinitely, and ensure we time out correctly.
@@ -792,5 +1108,63 @@ mod tests {
             validate_epoch(&make_epoch_json(1), &p).await,
             Err(PrepareError::UnsupportedDowngrade { src: 1, target: 0 })
         );
+    }
+
+    fn write_mem_buffer(payload: Vec<u8>) -> Buffer {
+        let vmo = fuchsia_zircon::Vmo::create(payload.len() as u64).expect("Creating VMO");
+        vmo.write(&payload, 0).expect("writing to VMO");
+        Buffer { vmo, size: payload.len() as u64 }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn calculate_hash_test_empty_buffer() {
+        let buffer = write_mem_buffer(vec![]);
+        let image_size = 4 as usize;
+        let calc_hash = calculate_hash(&buffer, image_size);
+
+        assert_matches!(calc_hash, Err(PrepareError::VmoRead(Status::OUT_OF_RANGE)));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn calculate_hash_test_same_size() {
+        let buffer = write_mem_buffer(vec![0; 4]);
+        let image_size = 4 as usize;
+        let image_hash =
+            Hash::from_str("df3f619804a92fdb4057192dc43dd748ea778adc52bc498ce80524c014b81119")
+                .unwrap();
+        let calc_hash = calculate_hash(&buffer, image_size).unwrap();
+
+        assert_eq!(calc_hash, image_hash);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn calculate_hash_test_image_smaller_than_buffer() {
+        let buffer = write_mem_buffer(vec![0; 4]);
+
+        let mut hasher = Sha256::new();
+        let mut chunk = [0; 4096];
+        let chunk_len = 2 as usize;
+        let chunk = &mut chunk[..chunk_len];
+
+        buffer.vmo.read(chunk, 0).unwrap();
+        hasher.update(chunk);
+        let image_hash = Hash::from(*AsRef::<[u8; 32]>::as_ref(&hasher.finalize()));
+
+        let image_size = 2 as usize;
+        let calc_hash = calculate_hash(&buffer, image_size).unwrap();
+
+        assert_eq!(calc_hash, image_hash);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn calculate_hash_test_buffer_larger_than_vmo() {
+        let buffer = write_mem_buffer(vec![0; 4097]);
+        let image_size = 2 as usize;
+        let calc_hash = calculate_hash(&buffer, image_size).unwrap();
+        let image_hash =
+            Hash::from_str("96a296d224f285c67bee93c30f8a309157f0daa35dc5b87e410b78630a09cfc7")
+                .unwrap();
+
+        assert_eq!(calc_hash, image_hash);
     }
 }
