@@ -8,7 +8,7 @@ use std::sync::Arc;
 use crate::agent::{Context, Payload};
 use crate::blueprint_definition;
 use crate::clock;
-use crate::inspect::utils::inspect_writable_map::InspectWritableMap;
+use crate::inspect::utils::managed_inspect_map::ManagedInspectMap;
 use crate::message::base::{filter, role, MessageEvent, MessengerType};
 use crate::policy::{self as policy_base, Payload as PolicyPayload, Request, Role};
 use crate::service::message::{Audience, MessageClient, Messenger, Signature};
@@ -16,7 +16,7 @@ use crate::{service, trace};
 use anyhow::{format_err, Error};
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, component, Property};
-use fuchsia_inspect_derive::{Inspect, WithInspect};
+use fuchsia_inspect_derive::Inspect;
 use fuchsia_syslog::fx_log_err;
 use futures::StreamExt;
 
@@ -31,8 +31,7 @@ blueprint_definition!(
 /// to record their internal state to inspect.
 pub(crate) struct PolicyValuesInspectAgent {
     messenger_client: Messenger,
-    inspect_node: inspect::Node,
-    policy_values: InspectWritableMap<PolicyValuesInspectInfo>,
+    policy_values: ManagedInspectMap<PolicyValuesInspectInfo>,
 }
 
 /// Information about a policy to be written to inspect.
@@ -49,17 +48,6 @@ struct PolicyValuesInspectInfo {
 
     /// Milliseconds since Unix epoch that this policy was modified.
     timestamp: inspect::StringProperty,
-}
-
-impl PolicyValuesInspectInfo {
-    fn new(timestamp: String, value: String, node: &inspect::Node, key: &str) -> Self {
-        let info = Self::default()
-            .with_inspect(node, key)
-            .expect("Failed to create PolicyValuesInspectInfo node");
-        info.value.set(&value);
-        info.timestamp.set(&timestamp);
-        info
-    }
 }
 
 impl PolicyValuesInspectAgent {
@@ -98,8 +86,10 @@ impl PolicyValuesInspectAgent {
             }
         };
 
-        let mut agent =
-            Self { messenger_client, inspect_node, policy_values: InspectWritableMap::new() };
+        let mut agent = Self {
+            messenger_client,
+            policy_values: ManagedInspectMap::<PolicyValuesInspectInfo>::with_node(inspect_node),
+        };
 
         fasync::Task::spawn(async move {
             let _ = &context;
@@ -243,22 +233,19 @@ impl PolicyValuesInspectAgent {
         // Convert the response to a string for inspect.
         let (policy_name, value) = policy_info.for_inspect();
         let timestamp = clock::inspect_format_now();
-        let policy_inspect_node = &self.inspect_node;
-        let policy = self.policy_values.get_mut(policy_name);
 
-        if let Some(policy_val) = policy {
-            if ignore_if_present {
-                // Value already present in inspect, ignore this response.
-                return Ok(());
-            }
-            policy_val.timestamp.set(&timestamp);
-            policy_val.value.set(&value);
-        } else {
-            self.policy_values.set(
-                policy_name.to_string(),
-                PolicyValuesInspectInfo::new(timestamp, value, policy_inspect_node, policy_name),
-            );
+        let already_present = self.policy_values.map_mut().contains_key(policy_name);
+
+        let policy = self
+            .policy_values
+            .get_or_insert_with(policy_name.to_string(), PolicyValuesInspectInfo::default);
+
+        if already_present && ignore_if_present {
+            return Ok(());
         }
+
+        policy.timestamp.set(&timestamp);
+        policy.value.set(&value);
 
         Ok(())
     }
