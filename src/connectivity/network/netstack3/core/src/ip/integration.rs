@@ -19,45 +19,34 @@ use crate::{
         reassembly::FragmentStateContext,
         send_ipv4_packet_from_device, send_ipv6_packet_from_device,
         socket::{BufferIpSocketContext, IpSock, IpSocketContext, IpSocketNonSyncContext},
-        IpDeviceIdContext, IpLayerNonSyncContext, IpPacketFragmentCache, IpStateContext,
-        SendIpPacketMeta,
+        IpDeviceIdContext, IpLayerNonSyncContext, IpLayerStateIpExt, IpPacketFragmentCache,
+        IpStateContext, SendIpPacketMeta,
     },
     Instant,
 };
 
-// Note: we can't provide a single impl for `FragmentStateContext` which is
-// generic over all `I: IpLayerStateIpExt<C::Instant, SC::DeviceId>` because
-// we have a `DummyCtx` type in the reassembly tests module which implements
-// `FragmentStateContext` resulting in a conflicting implementations error.
-// Manually implementing `FragmentStateContext` for each `I: Ip` we support
-// seems to workaround this issue.
-//
-// See https://doc.rust-lang.org/error-index.html#E0119 for more details.
-
-impl<I: Instant, SC: IpStateContext<Ipv4, I>> FragmentStateContext<Ipv4, I> for SC {
-    fn get_state_mut(&mut self) -> &mut IpPacketFragmentCache<Ipv4, I> {
-        &mut self.get_ip_layer_state_mut().as_mut().fragment_cache
+impl<
+        Instant: crate::Instant,
+        I: IpLayerStateIpExt<Instant, SC::DeviceId>,
+        SC: IpStateContext<I, Instant> + NonTestCtxMarker,
+    > FragmentStateContext<I, Instant> for SC
+{
+    fn with_state_mut<O, F: FnOnce(&mut IpPacketFragmentCache<I, Instant>) -> O>(
+        &mut self,
+        cb: F,
+    ) -> O {
+        cb(&mut self.get_ip_layer_state_mut().as_mut().fragment_cache)
     }
 }
 
-impl<I: Instant, SC: IpStateContext<Ipv6, I>> FragmentStateContext<Ipv6, I> for SC {
-    fn get_state_mut(&mut self) -> &mut IpPacketFragmentCache<Ipv6, I> {
-        &mut self.get_ip_layer_state_mut().as_mut().fragment_cache
-    }
-}
-
-// We can't provide a single impl for `PmtuStateContext` which is generic over
-// `Ip` for the same reason as `FragmentStateContext` above.
-
-impl<I: Instant, SC: IpStateContext<Ipv4, I>> PmtuStateContext<Ipv4, I> for SC {
-    fn get_state_mut(&mut self) -> &mut PmtuCache<Ipv4, I> {
-        &mut self.get_ip_layer_state_mut().as_mut().pmtu_cache
-    }
-}
-
-impl<I: Instant, SC: IpStateContext<Ipv6, I>> PmtuStateContext<Ipv6, I> for SC {
-    fn get_state_mut(&mut self) -> &mut PmtuCache<Ipv6, I> {
-        &mut self.get_ip_layer_state_mut().as_mut().pmtu_cache
+impl<
+        Instant: crate::Instant,
+        I: IpLayerStateIpExt<Instant, SC::DeviceId>,
+        SC: IpStateContext<I, Instant> + NonTestCtxMarker,
+    > PmtuStateContext<I, Instant> for SC
+{
+    fn with_state_mut<F: FnOnce(&mut PmtuCache<I, Instant>)>(&mut self, cb: F) {
+        cb(&mut self.get_ip_layer_state_mut().as_mut().pmtu_cache)
     }
 }
 

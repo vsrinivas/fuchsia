@@ -85,7 +85,10 @@ const MAX_FRAGMENT_CACHE_SIZE: usize = 4 * 1024 * 1024;
 /// The state context for the fragment cache.
 pub(super) trait FragmentStateContext<I: Ip, Instant> {
     /// Returns a mutable reference to the fragment cache.
-    fn get_state_mut(&mut self) -> &mut IpPacketFragmentCache<I, Instant>;
+    fn with_state_mut<O, F: FnOnce(&mut IpPacketFragmentCache<I, Instant>) -> O>(
+        &mut self,
+        cb: F,
+    ) -> O;
 }
 
 /// The non-synchronized execution context for IP packet fragment reassembly.
@@ -152,20 +155,22 @@ impl<I: Ip, C: FragmentNonSyncContext<I>, SC: FragmentContext<I, C>> FragmentHan
     where
         <I as IpExtByteSlice<B>>::Packet: FragmentablePacket,
     {
-        let (res, timer_id) = self.get_state_mut().process_fragment(packet);
+        self.with_state_mut(|cache| {
+            let (res, timer_id) = cache.process_fragment(packet);
 
-        if let Some(timer_id) = timer_id {
-            match timer_id {
-                CacheTimerAction::CreateNewTimer(timer_id) => {
-                    assert_eq!(ctx.schedule_timer(REASSEMBLY_TIMEOUT, timer_id), None)
-                }
-                CacheTimerAction::CancelExistingTimer(timer_id) => {
-                    assert_ne!(ctx.cancel_timer(timer_id), None)
+            if let Some(timer_id) = timer_id {
+                match timer_id {
+                    CacheTimerAction::CreateNewTimer(timer_id) => {
+                        assert_eq!(ctx.schedule_timer(REASSEMBLY_TIMEOUT, timer_id), None)
+                    }
+                    CacheTimerAction::CancelExistingTimer(timer_id) => {
+                        assert_ne!(ctx.cancel_timer(timer_id), None)
+                    }
                 }
             }
-        }
 
-        res
+            res
+        })
     }
 
     fn reassemble_packet<B: ByteSliceMut, BV: BufferViewMut<B>>(
@@ -174,20 +179,22 @@ impl<I: Ip, C: FragmentNonSyncContext<I>, SC: FragmentContext<I, C>> FragmentHan
         key: &FragmentCacheKey<I::Addr>,
         buffer: BV,
     ) -> Result<<I as IpExtByteSlice<B>>::Packet, FragmentReassemblyError> {
-        let res = self.get_state_mut().reassemble_packet(key, buffer);
+        self.with_state_mut(|cache| {
+            let res = cache.reassemble_packet(key, buffer);
 
-        match res {
-            Ok(_) | Err(FragmentReassemblyError::PacketParsingError) => {
-                // Cancel the reassembly timer as we attempt reassembly which
-                // means we had all the fragments for the final packet, even
-                // if parsing the reassembled packet failed.
-                assert_matches!(ctx.cancel_timer(*key), Some(_));
+            match res {
+                Ok(_) | Err(FragmentReassemblyError::PacketParsingError) => {
+                    // Cancel the reassembly timer as we attempt reassembly which
+                    // means we had all the fragments for the final packet, even
+                    // if parsing the reassembled packet failed.
+                    assert_matches!(ctx.cancel_timer(*key), Some(_));
+                }
+                Err(FragmentReassemblyError::InvalidKey)
+                | Err(FragmentReassemblyError::MissingFragments) => {}
             }
-            Err(FragmentReassemblyError::InvalidKey)
-            | Err(FragmentReassemblyError::MissingFragments) => {}
-        }
 
-        res
+            res
+        })
     }
 }
 
@@ -196,7 +203,7 @@ impl<A: IpAddress, C: FragmentNonSyncContext<A::Version>, SC: FragmentContext<A:
 {
     fn handle_timer(&mut self, _ctx: &mut C, key: FragmentCacheKey<A>) {
         // If a timer fired, the `key` must still exist in our fragment cache.
-        assert_matches!(self.get_state_mut().remove_data(&key), Some(_));
+        assert_matches!(self.with_state_mut(|cache| cache.remove_data(&key)), Some(_));
     }
 }
 
@@ -849,8 +856,11 @@ mod tests {
     type MockSyncCtx<I> = DummySyncCtx<DummyFragmentContext<I>, (), ()>;
 
     impl<I: Ip> FragmentStateContext<I, DummyInstant> for MockSyncCtx<I> {
-        fn get_state_mut(&mut self) -> &mut IpPacketFragmentCache<I, DummyInstant> {
-            &mut self.get_mut().cache
+        fn with_state_mut<O, F: FnOnce(&mut IpPacketFragmentCache<I, DummyInstant>) -> O>(
+            &mut self,
+            cb: F,
+        ) -> O {
+            cb(&mut self.get_mut().cache)
         }
     }
 

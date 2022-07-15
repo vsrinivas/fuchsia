@@ -55,8 +55,8 @@ pub(crate) struct PmtuTimerId<I: Ip>(IpVersionMarker<I>);
 
 /// The state context for the path MTU cache.
 pub(super) trait PmtuStateContext<I: Ip, Instant> {
-    /// Returns a mutable reference to the PMTU cache.
-    fn get_state_mut(&mut self) -> &mut PmtuCache<I, Instant>;
+    /// Calls a function with a mutable reference to the PMTU cache.
+    fn with_state_mut<F: FnOnce(&mut PmtuCache<I, Instant>)>(&mut self, cb: F);
 }
 
 /// The non-synchronized execution context for path MTU discovery.
@@ -88,15 +88,12 @@ pub(crate) trait PmtuHandler<I: Ip, C> {
     fn update_pmtu_next_lower(&mut self, ctx: &mut C, src_ip: I::Addr, dst_ip: I::Addr, from: u32);
 }
 
-fn maybe_schedule_timer<I: Ip, C: PmtuNonSyncContext<I>, SC: PmtuContext<I, C>>(
-    sync_ctx: &mut SC,
-    ctx: &mut C,
-) {
+fn maybe_schedule_timer<I: Ip, C: PmtuNonSyncContext<I>>(ctx: &mut C, cache_is_empty: bool) {
     // Only attempt to create the next maintenance task if we still have
     // PMTU entries in the cache. If we don't, it would be a waste to
     // schedule the timer. We will let the next creation of a PMTU entry
     // create the timer.
-    if sync_ctx.get_state_mut().cache.is_empty() {
+    if cache_is_empty {
         return;
     }
 
@@ -113,29 +110,33 @@ fn maybe_schedule_timer<I: Ip, C: PmtuNonSyncContext<I>, SC: PmtuContext<I, C>>(
     }
 }
 
-fn handle_update_result<I: Ip, C: PmtuNonSyncContext<I>, SC: PmtuContext<I, C>>(
-    sync_ctx: &mut SC,
+fn handle_update_result<I: Ip, C: PmtuNonSyncContext<I>>(
     ctx: &mut C,
     result: Result<Option<u32>, Option<u32>>,
+    cache_is_empty: bool,
 ) {
     // TODO(https://fxbug.dev/92599): Do something with this `Result`.
     let _: Result<_, _> = result.map(|ret| {
-        maybe_schedule_timer(sync_ctx, ctx);
+        maybe_schedule_timer(ctx, cache_is_empty);
         ret
     });
 }
 
 impl<I: Ip, C: PmtuNonSyncContext<I>, SC: PmtuContext<I, C>> PmtuHandler<I, C> for SC {
     fn update_pmtu_if_less(&mut self, ctx: &mut C, src_ip: I::Addr, dst_ip: I::Addr, new_mtu: u32) {
-        let now = ctx.now();
-        let res = self.get_state_mut().update_pmtu_if_less(src_ip, dst_ip, new_mtu, now);
-        handle_update_result(self, ctx, res);
+        self.with_state_mut(|cache| {
+            let now = ctx.now();
+            let res = cache.update_pmtu_if_less(src_ip, dst_ip, new_mtu, now);
+            handle_update_result(ctx, res, cache.is_empty());
+        })
     }
 
     fn update_pmtu_next_lower(&mut self, ctx: &mut C, src_ip: I::Addr, dst_ip: I::Addr, from: u32) {
-        let now = ctx.now();
-        let res = self.get_state_mut().update_pmtu_next_lower(src_ip, dst_ip, from, now);
-        handle_update_result(self, ctx, res);
+        self.with_state_mut(|cache| {
+            let now = ctx.now();
+            let res = cache.update_pmtu_next_lower(src_ip, dst_ip, from, now);
+            handle_update_result(ctx, res, cache.is_empty());
+        })
     }
 }
 
@@ -143,9 +144,11 @@ impl<I: Ip, C: PmtuNonSyncContext<I>, SC: PmtuContext<I, C>> TimerHandler<C, Pmt
     for SC
 {
     fn handle_timer(&mut self, ctx: &mut C, _timer: PmtuTimerId<I>) {
-        let now = ctx.now();
-        self.get_state_mut().handle_timer(now);
-        maybe_schedule_timer(self, ctx);
+        self.with_state_mut(|cache| {
+            let now = ctx.now();
+            cache.handle_timer(now);
+            maybe_schedule_timer(ctx, cache.is_empty());
+        })
     }
 }
 
@@ -301,6 +304,10 @@ impl<I: Ip, Instant: crate::Instant> PmtuCache<I, Instant> {
             now.duration_since(v.last_updated) < PMTU_STALE_TIMEOUT
         });
     }
+
+    fn is_empty(&self) -> bool {
+        self.cache.is_empty()
+    }
 }
 
 /// Get next lower PMTU plateau value, if one exists.
@@ -425,8 +432,8 @@ mod tests {
     type MockSyncCtx<I> = DummySyncCtx<DummyPmtuContext<I>, (), ()>;
 
     impl<I: Ip> PmtuStateContext<I, DummyInstant> for MockSyncCtx<I> {
-        fn get_state_mut(&mut self) -> &mut PmtuCache<I, DummyInstant> {
-            &mut self.get_mut().cache
+        fn with_state_mut<F: FnOnce(&mut PmtuCache<I, DummyInstant>)>(&mut self, cb: F) {
+            cb(&mut self.get_mut().cache)
         }
     }
 
