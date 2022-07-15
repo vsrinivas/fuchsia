@@ -693,7 +693,8 @@ mod tests {
                 testing::{
                     test_helpers::{
                         component_decl_with_test_runner, dir_contains, list_directory,
-                        list_sub_directory, read_file, TestEnvironmentBuilder, TestModelResult,
+                        list_directory_recursive, list_sub_directory, read_file,
+                        TestEnvironmentBuilder, TestModelResult,
                     },
                     test_hook::HubInjectionTestHook,
                 },
@@ -1320,7 +1321,7 @@ mod tests {
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
-        assert_eq!(vec!["bar", "hippo"], list_directory(&expose_dir).await);
+        assert_eq!(vec!["bar", "hippo"], list_directory_recursive(&expose_dir).await);
     }
 
     #[fuchsia::test]
@@ -1467,6 +1468,6 @@ mod tests {
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .expect("Failed to open directory");
-        assert_eq!(vec!["bar", "hippo"], list_directory(&expose_dir).await);
+        assert_eq!(vec!["bar", "hippo"], list_directory_recursive(&expose_dir).await);
     }
 }

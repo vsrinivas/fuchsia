@@ -7,18 +7,17 @@ use {
         addable_directory::AddableDirectory, component::WeakComponentInstance, error::ModelError,
     },
     cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl},
-    fidl_fuchsia_io as fio,
     moniker::AbsoluteMoniker,
     std::collections::HashMap,
     vfs::directory::immutable::simple as pfs,
-    vfs::remote::{remote_boxed_with_type, RoutingFn},
+    vfs::remote::{remote_boxed, RoutingFn},
 };
 
 /// Represents the directory hierarchy of the exposed directory, not including the nodes for the
 /// capabilities themselves.
 pub(super) struct DirTree {
     directory_nodes: HashMap<String, Box<DirTree>>,
-    broker_nodes: HashMap<String, (fio::DirentType, RoutingFn)>,
+    broker_nodes: HashMap<String, RoutingFn>,
 }
 
 impl DirTree {
@@ -63,8 +62,8 @@ impl DirTree {
             subtree.install(moniker, &mut subdir)?;
             root_dir.add_node(&name, subdir, moniker)?;
         }
-        for (name, (type_, route_fn)) in self.broker_nodes {
-            let node = remote_boxed_with_type(route_fn, type_);
+        for (name, route_fn) in self.broker_nodes {
+            let node = remote_boxed(route_fn);
             root_dir.add_node(&name, node, moniker)?;
         }
         Ok(())
@@ -78,23 +77,20 @@ impl DirTree {
     ) {
         // Event and EventStream capabilities are used by the framework itself and not given to
         // components directly.
-        let type_ = match use_ {
+        match use_ {
             // TODO(fxbug.dev/81980): Add the event stream protocol to the directory tree.
             cm_rust::UseDecl::Event(_)
             | cm_rust::UseDecl::EventStreamDeprecated(_)
             | cm_rust::UseDecl::EventStream(_) => return,
-            cm_rust::UseDecl::Directory(_)
-            | cm_rust::UseDecl::Storage(_)
-            | cm_rust::UseDecl::Service(_) => fio::DirentType::Directory,
-            cm_rust::UseDecl::Protocol(_) => fio::DirentType::Service,
-        };
+            _ => {}
+        }
 
         let path = match use_.path() {
             Some(path) => path.clone(),
             None => return,
         };
         let routing_fn = routing_factory(component, use_.clone());
-        self.add_capability(path, type_, routing_fn);
+        self.add_capability(path, routing_fn);
     }
 
     fn add_expose_capability(
@@ -103,19 +99,16 @@ impl DirTree {
         component: WeakComponentInstance,
         expose: &ExposeDecl,
     ) {
-        let (type_, path) = match expose {
-            cm_rust::ExposeDecl::Service(d) => (
-                fio::DirentType::Directory,
-                format!("/{}", d.target_name).parse().expect("couldn't parse name as path"),
-            ),
-            cm_rust::ExposeDecl::Protocol(d) => (
-                fio::DirentType::Service,
-                format!("/{}", d.target_name).parse().expect("couldn't parse name as path"),
-            ),
-            cm_rust::ExposeDecl::Directory(d) => (
-                fio::DirentType::Directory,
-                format!("/{}", d.target_name).parse().expect("couldn't parse name as path"),
-            ),
+        let path: CapabilityPath = match expose {
+            cm_rust::ExposeDecl::Service(d) => {
+                format!("/{}", d.target_name).parse().expect("couldn't parse name as path")
+            }
+            cm_rust::ExposeDecl::Protocol(d) => {
+                format!("/{}", d.target_name).parse().expect("couldn't parse name as path")
+            }
+            cm_rust::ExposeDecl::Directory(d) => {
+                format!("/{}", d.target_name).parse().expect("couldn't parse name as path")
+            }
             cm_rust::ExposeDecl::Runner(_)
             | cm_rust::ExposeDecl::Resolver(_)
             | cm_rust::ExposeDecl::EventStream(_) => {
@@ -124,17 +117,12 @@ impl DirTree {
             }
         };
         let routing_fn = routing_factory(component, expose.clone());
-        self.add_capability(path, type_, routing_fn);
+        self.add_capability(path, routing_fn);
     }
 
-    fn add_capability(
-        &mut self,
-        path: CapabilityPath,
-        type_: fio::DirentType,
-        routing_fn: RoutingFn,
-    ) {
+    fn add_capability(&mut self, path: CapabilityPath, routing_fn: RoutingFn) {
         let tree = self.to_directory_node(&path);
-        tree.broker_nodes.insert(path.basename.to_string(), (type_, routing_fn));
+        tree.broker_nodes.insert(path.basename.to_string(), routing_fn);
     }
 
     fn to_directory_node(&mut self, path: &CapabilityPath) -> &mut DirTree {
@@ -283,12 +271,7 @@ mod tests {
             .into_proxy()
             .expect("failed to create directory proxy");
         assert_eq!(
-            vec![
-                "in/data/cache/hello",
-                "in/data/hippo/hello",
-                "in/data/persistent/hello",
-                "in/svc/hippo"
-            ],
+            vec!["in/data/cache", "in/data/hippo", "in/data/persistent", "in/svc/hippo"],
             test_helpers::list_directory_recursive(&in_dir_proxy).await
         );
 
@@ -366,7 +349,7 @@ mod tests {
             .into_proxy()
             .expect("failed to create directory proxy");
         assert_eq!(
-            vec!["bar-dir/hello", "hippo-dir/hello", "hippo-svc"],
+            vec!["bar-dir", "hippo-dir", "hippo-svc"],
             test_helpers::list_directory_recursive(&expose_dir_proxy).await
         );
 

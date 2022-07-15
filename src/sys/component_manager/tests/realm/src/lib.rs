@@ -96,15 +96,15 @@ pub async fn query_echo_server_child() {
         vec![
             fuchsia_fs::directory::DirEntry {
                 name: "fidl.examples.routing.echo.Echo".to_string(),
-                kind: fuchsia_fs::directory::DirentKind::Service,
+                kind: fuchsia_fs::directory::DirentKind::Unknown,
             },
             fuchsia_fs::directory::DirEntry {
                 name: "fuchsia.component.Binder".to_string(),
-                kind: fuchsia_fs::directory::DirentKind::Service,
+                kind: fuchsia_fs::directory::DirentKind::Unknown,
             },
             fuchsia_fs::directory::DirEntry {
                 name: "hub".to_string(),
-                kind: fuchsia_fs::directory::DirentKind::Directory,
+                kind: fuchsia_fs::directory::DirentKind::Unknown,
             }
         ]
     );
@@ -137,7 +137,7 @@ pub async fn query_echo_server_child() {
         entries,
         vec![fuchsia_fs::directory::DirEntry {
             name: "fuchsia.logger.LogSink".to_string(),
-            kind: fuchsia_fs::directory::DirentKind::Service,
+            kind: fuchsia_fs::directory::DirentKind::Unknown,
         }]
     );
 
