@@ -28,16 +28,6 @@ group("e2e_tests") {
   public_deps = [ "tests:e2e_tests" ]
 }
 
-# Targets to include in the base package set for the core product.
-group("core") {
-  public_deps = [
-    "bin/pkg-cache",
-    "bin/pkg-resolver",
-    "bin/system-update-committer",
-    "bin/system-updater",
-  ]
-}
-
 # Targets to include in the base package set for the core recovery image.
 group("recovery-core") {
   public_deps = [
