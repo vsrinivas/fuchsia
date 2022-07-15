@@ -1,0 +1,35 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/simplest_sysmem",
+
+        // Hardcode to always render png file. Eventually we'll be able to override this arg
+        // via "ffx session add". Valid args are "--rect", "--png", "--block".
+        args: [ "--png" ],
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+            from: "self",
+            to: "parent",
+        },
+    ],
+}

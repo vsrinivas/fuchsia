@@ -23,5 +23,6 @@ fuchsia_package("flatland-examples") {
     "flatland-display:flatland-display-rust",
     "flatland-view-provider",
     "flatland-view-provider:flatland-view-provider-v1",
+    "simplest_sysmem:simplest_sysmem_component",
   ]
 }

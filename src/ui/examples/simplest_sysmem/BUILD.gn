@@ -1,0 +1,60 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+executable("bin") {
+  output_name = "simplest_sysmem"
+
+  sources = [
+    "main.cc",
+    "view_provider.cc",
+    "view_provider.h",
+  ]
+  data_deps = [ ":images" ]
+
+  deps = [
+    ":helpers",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/ui/scenic/cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
+source_set("helpers") {
+  sources = [
+    "png_helper.cc",
+    "png_helper.h",
+    "sysmem_helper.cc",
+    "sysmem_helper.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/fidl/fuchsia.ui.composition",
+    "//sdk/lib/syslog/cpp",
+    "//third_party/libpng",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
+fuchsia_component("simplest_sysmem_component") {
+  component_name = "simplest_sysmem"
+  manifest = "meta/simplest_sysmem.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("simplest_sysmem") {
+  package_name = "simplest_sysmem"
+  deps = [ ":simplest_sysmem_component" ]
+}
+
+resource("images") {
+  sources = [ "data/smiley.png" ]
+  outputs = [ "data/images/{{source_file_part}}" ]
+}
