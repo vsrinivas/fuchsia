@@ -139,19 +139,18 @@ TEST(Nhlt, DefaultInitializer) {
 
 TEST(Nhlt, ParseEmpty) {
   cpp20::span<uint8_t> empty{};
-  EXPECT_FALSE(Nhlt::FromBuffer(empty).is_ok());
+  EXPECT_FALSE(Nhlt::FromBuffer(empty).ok());
 }
 
 TEST(Nhlt, ParseSimple) {
   std::vector<uint8_t> data = SampleNHLT();
-  zx::status<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
-  ASSERT_OK(nhlt.status_value());
+  StatusOr<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
+  ASSERT_OK(nhlt.status().code());
 
   // Ensure the data looks reasonable.
-  std::unique_ptr<Nhlt> nhlt_testvalue = std::move(nhlt.value());
-  ASSERT_EQ(nhlt_testvalue->configs().size(), 1);
-  ASSERT_EQ(nhlt_testvalue->configs()[0].formats.size(), 1);
-  ASSERT_EQ(nhlt_testvalue->configs()[0].formats[0].config.format_tag, 1);
+  ASSERT_EQ(nhlt.ValueOrDie()->configs().size(), 1);
+  ASSERT_EQ(nhlt.ValueOrDie()->configs()[0].formats.size(), 1);
+  ASSERT_EQ(nhlt.ValueOrDie()->configs()[0].formats[0].config.format_tag, 1);
 }
 
 TEST(Nhlt, ParseTruncated) {
@@ -160,33 +159,31 @@ TEST(Nhlt, ParseTruncated) {
   // Remove a byte, and ensure we still successfully notice that the data size is all wrong.
   do {
     data.resize(data.size() - 1);
-    zx::status<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
-    ASSERT_FALSE(nhlt.is_ok());
+    StatusOr<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
+    ASSERT_FALSE(nhlt.ok());
   } while (!data.empty());
 }
 
 TEST(Nhlt, ParseOemStrings) {
   std::vector<uint8_t> data = SampleNHLT();
-  zx::status<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
-  ASSERT_OK(nhlt.status_value());
+  StatusOr<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
+  ASSERT_OK(nhlt.status().code());
 
-  std::unique_ptr<Nhlt> nhlt_testvalue = std::move(nhlt.value());
   // Ensure the data looks reasonable.
-  ASSERT_FALSE(nhlt_testvalue->IsOemMatch("OEMMY", "TABLESSSS"));
-  ASSERT_TRUE(nhlt_testvalue->IsOemMatch("OEMMY", "OEMTABLE"));
-  ASSERT_FALSE(nhlt_testvalue->IsOemMatch("OMM", "OEMTABLE"));
+  ASSERT_FALSE(nhlt.ValueOrDie()->IsOemMatch("OMM", "OEMTABLE"));
+  ASSERT_FALSE(nhlt.ValueOrDie()->IsOemMatch("OEMMY", "TABLESSSS"));
+  ASSERT_TRUE(nhlt.ValueOrDie()->IsOemMatch("OEMMY", "OEMTABLE"));
 }
 
 TEST(Nhlt, ParseOemStrings2) {
   std::vector<uint8_t> data = SampleNHLT2();
-  zx::status<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
-  ASSERT_OK(nhlt.status_value());
+  StatusOr<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
+  ASSERT_OK(nhlt.status().code());
 
-  std::unique_ptr<Nhlt> nhlt_testvalue = std::move(nhlt.value());
   // Ensure the data looks reasonable.
-  ASSERT_FALSE(nhlt_testvalue->IsOemMatch("GOOGLW", "EVEMAX"));
-  ASSERT_FALSE(nhlt_testvalue->IsOemMatch("GOOGLE", "EVEMAXXX"));
-  ASSERT_TRUE(nhlt_testvalue->IsOemMatch("GOOGLE", "EVEMAX"));
+  ASSERT_FALSE(nhlt.ValueOrDie()->IsOemMatch("GOOGLW", "EVEMAX"));
+  ASSERT_FALSE(nhlt.ValueOrDie()->IsOemMatch("GOOGLE", "EVEMAXXX"));
+  ASSERT_TRUE(nhlt.ValueOrDie()->IsOemMatch("GOOGLE", "EVEMAX"));
 }
 
 }  // namespace

@@ -13,6 +13,7 @@
 #include <fbl/string_printf.h>
 #include <intel-hda/utils/intel-audio-dsp-ipc.h>
 #include <intel-hda/utils/intel-hda-registers.h>
+#include <intel-hda/utils/status.h>
 #include <intel-hda/utils/utils.h>
 
 #include "binary_decoder.h"
@@ -42,16 +43,16 @@ zx_status_t LargeConfigGet(DspChannel* ipc, uint16_t module_id, uint8_t instance
   }
 
   size_t bytes_received_local;
-  zx::status result =
+  Status result =
       ipc->SendWithData(IPC_PRI(MsgTarget::MODULE_MSG, MsgDir::MSG_REQUEST,
                                 ModuleMsgType::LARGE_CONFIG_GET, instance_id, module_id),
                         IPC_LARGE_CONFIG_EXT(true, false, to_underlying(large_param_id),
                                              static_cast<uint32_t>(buffer.size())),
                         cpp20::span<const uint8_t>(), buffer, &bytes_received_local);
-  if (!result.is_ok()) {
-    GLOBAL_LOG(ERROR, "LARGE_CONFIG_GET (mod %u inst %u large_param_id %u) failed :%s", module_id,
-               instance_id, to_underlying(large_param_id), result.status_string());
-    return result.status_value();
+  if (!result.ok()) {
+    GLOBAL_LOG(ERROR, "LARGE_CONFIG_GET (mod %u inst %u large_param_id %u) failed: %s", module_id,
+               instance_id, to_underlying(large_param_id), result.ToString().c_str());
+    return result.code();
   }
 
   GLOBAL_LOG(TRACE,
@@ -65,39 +66,37 @@ zx_status_t LargeConfigGet(DspChannel* ipc, uint16_t module_id, uint8_t instance
 }  // namespace
 
 // Parse the module list returned from the DSP.
-zx::status<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ParseModules(
+StatusOr<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ParseModules(
     cpp20::span<const uint8_t> data) {
   BinaryDecoder decoder(data);
 
   // Parse returned module information.
-  auto header = decoder.Read<ModulesInfo>();
-  if (!header.is_ok()) {
-    GLOBAL_LOG(ERROR, "Could not read DSP module information");
-    return zx::error(header.status_value());
+  StatusOr<ModulesInfo> header_or_err = decoder.Read<ModulesInfo>();
+  if (!header_or_err.ok()) {
+    return PrependMessage("Could not read DSP module information", header_or_err.status());
   }
 
   // Read modules.
-  uint32_t count = header.value().module_count;
+  uint32_t count = header_or_err.ValueOrDie().module_count;
   std::map<fbl::String, std::unique_ptr<ModuleEntry>> modules;
   for (uint32_t i = 0; i < count; i++) {
     // Parse the next module.
     auto entry = std::make_unique<ModuleEntry>();
-    zx_status_t status = decoder.Read<ModuleEntry>(entry.get());
-    if (status != ZX_OK) {
-      GLOBAL_LOG(ERROR, "Could not read module entry");
-      return zx::error(status);
+    Status status = decoder.Read<ModuleEntry>(entry.get());
+    if (!status.ok()) {
+      return PrependMessage("Could not read module entry: ", status);
     }
 
     // Add it to the dictionary, ensuring it is not already there.
     fbl::String name = ParseUnpaddedString(entry->name);
     auto [_, success] = modules.insert({name, std::move(entry)});
     if (!success) {
-      GLOBAL_LOG(ERROR, "Duplicate module name: '%s'.", name.c_str());
-      return zx::error(ZX_ERR_INTERNAL);
+      return Status(ZX_ERR_INTERNAL,
+                    fbl::StringPrintf("Duplicate module name: '%s'.", name.c_str()));
     }
   }
 
-  return zx::ok(std::move(modules));
+  return modules;
 }
 
 DspModuleController::DspModuleController(DspChannel* channel) : channel_(channel) {}
@@ -105,107 +104,108 @@ DspModuleController::DspModuleController(DspChannel* channel) : channel_(channel
 // Create an instance of the module "type".
 //
 // Returns the ID of the created module on success.
-zx::status<DspModuleId> DspModuleController::CreateModule(DspModuleType type,
-                                                          DspPipelineId parent_pipeline,
-                                                          ProcDomain scheduling_domain,
-                                                          cpp20::span<const uint8_t> data) {
+StatusOr<DspModuleId> DspModuleController::CreateModule(DspModuleType type,
+                                                        DspPipelineId parent_pipeline,
+                                                        ProcDomain scheduling_domain,
+                                                        cpp20::span<const uint8_t> data) {
   // Ensure data is not too large or non-word sized.
   if ((data.size() % kIpcInitInstanceExtBytesPerWord) ||
       data.size() >= std::numeric_limits<uint16_t>::max()) {
-    return zx::error(ZX_ERR_INVALID_ARGS);
+    return Status(ZX_ERR_INVALID_ARGS);
   }
 
   // Allocate an ID.
-  zx::status<uint8_t> instance_id = AllocateInstanceId(type);
-  if (!instance_id.is_ok()) {
-    return zx::error(instance_id.status_value());
+  StatusOr<uint8_t> instance_id = AllocateInstanceId(type);
+  if (!instance_id.ok()) {
+    return instance_id.status();
   }
-  GLOBAL_LOG(TRACE, "CreateModule(type %u, inst %u)", type, instance_id.value());
+  GLOBAL_LOG(TRACE, "CreateModule(type %u, inst %u)", type, instance_id.ValueOrDie());
 
   // Create the module.
-  zx::status result = channel_->SendWithData(
+  Status result = channel_->SendWithData(
       IPC_PRI(MsgTarget::MODULE_MSG, MsgDir::MSG_REQUEST, ModuleMsgType::INIT_INSTANCE,
-              instance_id.value(), type),
+              instance_id.ValueOrDie(), type),
       IPC_INIT_INSTANCE_EXT(scheduling_domain, /*core_id=*/0, parent_pipeline.id,
                             static_cast<uint16_t>((data.size()) / kIpcInitInstanceExtBytesPerWord)),
       data, cpp20::span<uint8_t>(), nullptr);
-  if (!result.is_ok()) {
-    GLOBAL_LOG(TRACE, "CreateModule failed: %s", result.status_string());
-    return zx::error(result.status_value());
+  if (!result.ok()) {
+    GLOBAL_LOG(TRACE, "CreateModule failed: %s", result.ToString().c_str());
+    return PrependMessage(fbl::StringPrintf("Failed to create module of type %u (instance #%u)",
+                                            type, instance_id.ValueOrDie()),
+                          result);
   }
-  return zx::ok(DspModuleId{/*type=*/type, /*id=*/instance_id.value()});
+
+  return DspModuleId{/*type=*/type, /*id=*/instance_id.ValueOrDie()};
 }
 
 // Create a pipeline.
 //
 // Return ths ID of the created pipeline on success.
-zx::status<DspPipelineId> DspModuleController::CreatePipeline(uint8_t priority,
-                                                              uint16_t memory_pages,
-                                                              bool low_power) {
+StatusOr<DspPipelineId> DspModuleController::CreatePipeline(uint8_t priority, uint16_t memory_pages,
+                                                            bool low_power) {
   // Allocate a pipeline name.
   if (pipelines_allocated_ >= kMaxPipelines) {
-    GLOBAL_LOG(ERROR, "Too many pipelines created.");
-    return zx::error(ZX_ERR_NO_RESOURCES);
+    return Status(ZX_ERR_NO_RESOURCES, "Too many pipelines created.");
   }
   uint8_t id = pipelines_allocated_++;
   GLOBAL_LOG(TRACE, "CreatePipeline(inst %u)", id);
 
   // Create the pipeline.
-  zx::status result = channel_->Send(IPC_CREATE_PIPELINE_PRI(id, priority, memory_pages),
-                                     IPC_CREATE_PIPELINE_EXT(low_power));
-  if (!result.is_ok()) {
-    GLOBAL_LOG(TRACE, "CreatePipeline failed: %s", result.status_string());
-    zx::error(result.status_value());
+  Status result = channel_->Send(IPC_CREATE_PIPELINE_PRI(id, priority, memory_pages),
+                                 IPC_CREATE_PIPELINE_EXT(low_power));
+  if (!result.ok()) {
+    GLOBAL_LOG(TRACE, "CreatePipeline failed: %s", result.ToString().c_str());
+    return PrependMessage(fbl::StringPrintf("Failed to create pipeline #%u", id), result);
   }
-  return zx::ok(DspPipelineId{id});
+
+  return DspPipelineId{id};
 }
 
 // Connect an output pin of one module to the input pin of another.
-zx::status<> DspModuleController::BindModules(DspModuleId source_module, uint8_t src_output_pin,
-                                              DspModuleId dest_module, uint8_t dest_input_pin) {
+Status DspModuleController::BindModules(DspModuleId source_module, uint8_t src_output_pin,
+                                        DspModuleId dest_module, uint8_t dest_input_pin) {
   GLOBAL_LOG(TRACE, "BindModules (mod %u inst %u):%u --> (mod %u, inst %u):%u", source_module.type,
              source_module.id, src_output_pin, dest_module.type, dest_module.id, dest_input_pin);
 
-  zx::status result = channel_->Send(
+  Status result = channel_->Send(
       IPC_PRI(MsgTarget::MODULE_MSG, MsgDir::MSG_REQUEST, ModuleMsgType::BIND, source_module.id,
               source_module.type),
       IPC_BIND_UNBIND_EXT(dest_module.type, dest_module.id, dest_input_pin, src_output_pin));
-  if (!result.is_ok()) {
-    GLOBAL_LOG(TRACE, "BindModules failed: %s", result.status_string());
-    return zx::error(result.status_value());
+  if (!result.ok()) {
+    GLOBAL_LOG(TRACE, "BindModules failed: %s", result.ToString().c_str());
+    return result;
   }
 
-  return zx::ok();
+  return result;
 }
 
 // Enable/disable the given pipeline.
-zx::status<> DspModuleController::SetPipelineState(DspPipelineId pipeline, PipelineState state,
-                                                   bool sync_stop_start) {
+Status DspModuleController::SetPipelineState(DspPipelineId pipeline, PipelineState state,
+                                             bool sync_stop_start) {
   GLOBAL_LOG(TRACE, "SetPipelineStatus(pipeline=%u, state=%u, sync_stop_start=%s)", pipeline.id,
              static_cast<unsigned int>(state), sync_stop_start ? "true" : "false");
 
-  zx::status result = channel_->Send(IPC_SET_PIPELINE_STATE_PRI(pipeline.id, state),
-                                     IPC_SET_PIPELINE_STATE_EXT(false, sync_stop_start));
-  if (!result.is_ok()) {
-    GLOBAL_LOG(TRACE, "SetPipelineStatus failed: %s", result.status_string());
-    return zx::error(result.status_value());
+  Status result = channel_->Send(IPC_SET_PIPELINE_STATE_PRI(pipeline.id, state),
+                                 IPC_SET_PIPELINE_STATE_EXT(false, sync_stop_start));
+  if (!result.ok()) {
+    GLOBAL_LOG(TRACE, "SetPipelineStatus failed: %s", result.ToString().c_str());
+    return result;
   }
 
-  return zx::ok();
+  return result;
 }
 
-zx::status<uint8_t> DspModuleController::AllocateInstanceId(DspModuleType type) {
+StatusOr<uint8_t> DspModuleController::AllocateInstanceId(DspModuleType type) {
   uint8_t& instance_count = allocated_instances_[type];
   if (instance_count >= kMaxInstancesPerModule) {
-    GLOBAL_LOG(ERROR, "Could not allocate more instances of given module type.");
-    return zx::error(ZX_ERR_NO_RESOURCES);
+    return Status(ZX_ERR_NO_RESOURCES, "Could not allocate more instances of given module type.");
   }
   uint8_t result = instance_count;
   instance_count++;
-  return zx::ok(std::move(result));
+  return result;
 }
 
-zx::status<std::map<fbl::String, std::unique_ptr<ModuleEntry>>>
+StatusOr<std::map<fbl::String, std::unique_ptr<ModuleEntry>>>
 DspModuleController::ReadModuleDetails() {
   constexpr int kMaxModules = 64;
   uint8_t buffer[sizeof(ModulesInfo) + (kMaxModules * sizeof(ModuleEntry))];
@@ -217,72 +217,71 @@ DspModuleController::ReadModuleDetails() {
       LargeConfigGet(channel_, /*module_id=*/0, /*instance_id=*/0,
                      /*large_param_id=*/BaseFWParamType::MODULES_INFO, data, &bytes_received);
   if (result != ZX_OK) {
-    GLOBAL_LOG(ERROR, "Failed to fetch module information from DSP");
-    return zx::error(result);
+    return Status(result, "Failed to fetch module information from DSP");
   }
 
   // Parse DSP's module list.
-  zx::status<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> modules =
+  StatusOr<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> modules_or_err =
       ParseModules(data.subspan(0, bytes_received));
-  if (!modules.is_ok()) {
-    GLOBAL_LOG(ERROR, "Could not parse DSP's module list");
-    return zx::error(modules.status_value());
+  if (!modules_or_err.ok()) {
+    return PrependMessage("Could not parse DSP's module list", (modules_or_err.status()));
   }
+  std::map<fbl::String, std::unique_ptr<ModuleEntry>> modules = modules_or_err.ConsumeValueOrDie();
 
   // If tracing is enabled, print basic module information.
   if (zxlog_level_enabled(DEBUG)) {
-    GLOBAL_LOG(DEBUG, "DSP firmware has %ld module(s) configured.", modules.value().size());
-    for (const auto& elem : modules.value()) {
+    GLOBAL_LOG(DEBUG, "DSP firmware has %ld module(s) configured.", modules.size());
+    for (const auto& elem : modules) {
       GLOBAL_LOG(DEBUG, "  module %s (id=%d)", elem.first.c_str(), elem.second->module_id);
     }
   }
 
-  return zx::ok(std::move(modules.value()));
+  return modules;
 }
 
-zx::status<DspPipelineId> CreateSimplePipeline(DspModuleController* controller,
-                                               std::initializer_list<DspModule> modules) {
+StatusOr<DspPipelineId> CreateSimplePipeline(DspModuleController* controller,
+                                             std::initializer_list<DspModule> modules) {
   // Create a pipeline.
   //
   // TODO(fxbug.dev/31426): Calculate actual memory usage.
   const uint16_t pipeline_memory_pages_needed = 4;
-  zx::status<DspPipelineId> pipeline =
+  StatusOr<DspPipelineId> pipeline_or_err =
       controller->CreatePipeline(/*pipeline_priority=*/0,
                                  /*pipeline_memory_pages=*/pipeline_memory_pages_needed,
                                  /*low_power=*/true);
-  if (!pipeline.is_ok()) {
-    GLOBAL_LOG(ERROR, "Could not create pipeline");
-    zx::error(pipeline.status_value());
+  if (!pipeline_or_err.ok()) {
+    return PrependMessage("Could not create pipeline", pipeline_or_err.status());
   }
-  DspPipelineId pipeline_id = std::move(pipeline.value());
+  DspPipelineId pipeline = pipeline_or_err.ValueOrDie();
 
   // Create the modules.
   int module_count = 0;
   DspModuleId prev_module;
   for (const DspModule& module : modules) {
     // Create the module.
-    zx::status<DspModuleId> id =
-        controller->CreateModule(module.type, pipeline_id, ProcDomain::LOW_LATENCY, module.data);
-    if (!id.is_ok()) {
-      GLOBAL_LOG(ERROR, "Failed creating module #%u.", module_count);
-      return zx::error(id.status_value());
+    StatusOr<DspModuleId> id =
+        controller->CreateModule(module.type, pipeline, ProcDomain::LOW_LATENCY, module.data);
+    if (!id.ok()) {
+      return PrependMessage(fbl::StringPrintf("Failed creating module #%u.", module_count),
+                            id.status());
     }
 
     // Join it to the previous module.
     if (module_count > 0) {
-      zx::status result = controller->BindModules(prev_module, /*src_output_pin=*/0, id.value(),
-                                                  /*dest_input_pin=*/0);
-      if (!result.is_ok()) {
-        GLOBAL_LOG(ERROR, "Failed to connect module #%u to #%u", module_count - 1, module_count);
-        return zx::error(result.status_value());
+      Status result = controller->BindModules(prev_module, /*src_output_pin=*/0, id.ValueOrDie(),
+                                              /*dest_input_pin=*/0);
+      if (!result.ok()) {
+        return PrependMessage(fbl::StringPrintf("Failed to connect module #%u to #%u",
+                                                module_count - 1, module_count),
+                              result);
       }
     }
 
-    prev_module = id.value();
+    prev_module = id.ValueOrDie();
     module_count++;
   }
 
-  return zx::ok(std::move(pipeline_id));
+  return pipeline;
 }
 
 }  // namespace intel_hda

@@ -7,10 +7,12 @@ import("//build/zircon/zx_library.gni")
 zx_library("intel-hda") {
   sdk = "source"
   sdk_headers = [
+    "intel-hda/utils/status_or.h",
     "intel-hda/utils/codec-commands.h",
     "intel-hda/utils/codec-caps.h",
     "intel-hda/utils/utils.h",
     "intel-hda/utils/intel-hda-proto.h",
+    "intel-hda/utils/status.h",
     "intel-hda/utils/intel-audio-dsp-ipc.h",
     "intel-hda/utils/nhlt.h",
     "intel-hda/utils/codec-state.h",
@@ -26,6 +28,7 @@ zx_library("intel-hda") {
     "codec-utils/stream-base.cc",
     "codec-utils/streamconfig-base.cc",
     "utils/codec-caps.cc",
+    "utils/status.cc",
     "utils/utils.cc",
   ]
   public_deps = [

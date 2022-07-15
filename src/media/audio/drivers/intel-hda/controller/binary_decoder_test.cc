@@ -20,11 +20,11 @@ TEST(BinaryDecoder, Empty) {
 
   // Empty read.
   auto empty_read = decoder.Read(0);
-  ASSERT_TRUE(empty_read.is_ok());
-  EXPECT_EQ(empty_read.value().size(), 0);
+  ASSERT_TRUE(empty_read.ok());
+  EXPECT_EQ(empty_read.ValueOrDie().size(), 0);
 
   // Non-empty read.
-  ASSERT_EQ(decoder.Read(1).status_value(), ZX_ERR_OUT_OF_RANGE);
+  ASSERT_EQ(decoder.Read(1).status().code(), ZX_ERR_OUT_OF_RANGE);
 }
 
 TEST(BinaryDecoder, NonEmptyRead) {
@@ -33,25 +33,25 @@ TEST(BinaryDecoder, NonEmptyRead) {
 
   // Successful read.
   auto a = decoder.Read(1);
-  ASSERT_TRUE(a.is_ok());
-  EXPECT_EQ(a.value().size(), 1);
-  EXPECT_EQ(a.value().begin(), &buffer[0]);
+  ASSERT_TRUE(a.ok());
+  EXPECT_EQ(a.ValueOrDie().size(), 1);
+  EXPECT_EQ(a.ValueOrDie().begin(), &buffer[0]);
 
   // Another read.
   auto b = decoder.Read(1);
-  ASSERT_TRUE(b.is_ok());
-  EXPECT_EQ(b.value().size(), 1);
-  EXPECT_EQ(b.value().begin(), &buffer[1]);
+  ASSERT_TRUE(b.ok());
+  EXPECT_EQ(b.ValueOrDie().size(), 1);
+  EXPECT_EQ(b.ValueOrDie().begin(), &buffer[1]);
 
   // Too big a read.
   auto c = decoder.Read(4);
-  ASSERT_EQ(c.status_value(), ZX_ERR_OUT_OF_RANGE);
+  ASSERT_EQ(c.status().code(), ZX_ERR_OUT_OF_RANGE);
 
   // But we should still be able to read the last three bytes.
   auto d = decoder.Read(3);
-  ASSERT_TRUE(d.is_ok());
-  EXPECT_EQ(d.value().size(), 3);
-  EXPECT_EQ(d.value().begin(), &buffer[2]);
+  ASSERT_TRUE(d.ok());
+  EXPECT_EQ(d.ValueOrDie().size(), 3);
+  EXPECT_EQ(d.ValueOrDie().begin(), &buffer[2]);
 }
 
 TEST(BinaryDecoder, ReadStruct) {
@@ -63,7 +63,7 @@ TEST(BinaryDecoder, ReadStruct) {
   {
     std::array<uint8_t, 1> small_buffer = {1};
     BinaryDecoder decoderA{cpp20::span<uint8_t>(small_buffer.begin(), small_buffer.size())};
-    ASSERT_EQ(decoderA.Read<MyStruct>().status_value(), ZX_ERR_OUT_OF_RANGE);
+    ASSERT_EQ(decoderA.Read<MyStruct>().status().code(), ZX_ERR_OUT_OF_RANGE);
   }
 
   // We should be able to read from a precisely sized buffer.
@@ -72,10 +72,10 @@ TEST(BinaryDecoder, ReadStruct) {
 
     BinaryDecoder decoderB{cpp20::span<uint8_t>(correct_buffer.begin(), correct_buffer.size())};
     auto value = decoderB.Read<MyStruct>();
-    ASSERT_TRUE(value.is_ok());
-    EXPECT_EQ(value.value().a, 1);
-    EXPECT_EQ(value.value().b, 2);
-    EXPECT_FALSE(decoderB.Read(1).is_ok());
+    ASSERT_TRUE(value.ok());
+    EXPECT_EQ(value.ValueOrDie().a, 1);
+    EXPECT_EQ(value.ValueOrDie().b, 2);
+    EXPECT_FALSE(decoderB.Read(1).ok());
   }
 
   // Reading from the beginning of a buffer is fine too.
@@ -84,10 +84,10 @@ TEST(BinaryDecoder, ReadStruct) {
 
     BinaryDecoder decoderC{cpp20::span<uint8_t>(big_buffer.begin(), big_buffer.size())};
     auto value = decoderC.Read<MyStruct>();
-    ASSERT_TRUE(value.is_ok());
-    EXPECT_EQ(value.value().a, 1);
-    EXPECT_EQ(value.value().b, 2);
-    EXPECT_TRUE(decoderC.Read(1).is_ok());
+    ASSERT_TRUE(value.ok());
+    EXPECT_EQ(value.ValueOrDie().a, 1);
+    EXPECT_EQ(value.ValueOrDie().b, 2);
+    EXPECT_TRUE(decoderC.Read(1).ok());
   }
 }
 
@@ -99,7 +99,7 @@ TEST(BinaryDecoder, ReadIntoPointerSuccess) {
   std::array<uint8_t, 2> correct_buffer = {1, 2};
   BinaryDecoder decoderB{cpp20::span<uint8_t>(correct_buffer.begin(), correct_buffer.size())};
   MyStruct value;
-  EXPECT_EQ(decoderB.Read<MyStruct>(&value), ZX_OK);
+  EXPECT_TRUE(decoderB.Read<MyStruct>(&value).ok());
   EXPECT_EQ(value.a, 1);
   EXPECT_EQ(value.b, 2);
 }
@@ -112,7 +112,7 @@ TEST(BinaryDecoder, ReadIntoPointerFailure) {
   std::array<uint8_t, 1> small_buffer = {1};
   BinaryDecoder decoderC{cpp20::span<uint8_t>(small_buffer.begin(), small_buffer.size())};
   MyStruct value;
-  EXPECT_NE(decoderC.Read<MyStruct>(&value), ZX_OK);
+  EXPECT_FALSE(decoderC.Read<MyStruct>(&value).ok());
 }
 
 TEST(BinaryDecoder, VarLengthRead) {
@@ -124,14 +124,14 @@ TEST(BinaryDecoder, VarLengthRead) {
   // Insufficient data available.
   {
     BinaryDecoder d{cpp20::span<uint8_t>()};
-    ASSERT_FALSE((d.VariableLengthRead<VarLength>(&VarLength::size).is_ok()));
+    ASSERT_FALSE((d.VariableLengthRead<VarLength>(&VarLength::size).ok()));
   }
 
   // Length is smaller than the header structure.
   {
     std::array<uint8_t, 3> buffer = {/*size=*/1, /*data=*/2, /*payload=*/3};
     BinaryDecoder d{cpp20::span<uint8_t>(buffer.begin(), buffer.size())};
-    EXPECT_EQ(d.VariableLengthRead<VarLength>(&VarLength::size).status_value(),
+    EXPECT_EQ(d.VariableLengthRead<VarLength>(&VarLength::size).status().code(),
               ZX_ERR_OUT_OF_RANGE);
   }
 
@@ -139,7 +139,7 @@ TEST(BinaryDecoder, VarLengthRead) {
   {
     std::array<uint8_t, 3> buffer = {/*size=*/4, /*data=*/2, /*payload=*/3};
     BinaryDecoder d{cpp20::span<uint8_t>(buffer.begin(), buffer.size())};
-    EXPECT_EQ(d.VariableLengthRead<VarLength>(&VarLength::size).status_value(),
+    EXPECT_EQ(d.VariableLengthRead<VarLength>(&VarLength::size).status().code(),
               ZX_ERR_OUT_OF_RANGE);
   }
 
@@ -147,9 +147,9 @@ TEST(BinaryDecoder, VarLengthRead) {
   {
     std::array<uint8_t, 3> buffer = {/*size=*/3, /*data=*/2, /*payload=*/1};
     BinaryDecoder d{cpp20::span<uint8_t>(buffer.begin(), buffer.size())};
-    auto val_status = d.VariableLengthRead<VarLength>(&VarLength::size);
-    ASSERT_TRUE(val_status.is_ok());
-    auto [val, payload] = val_status.value();
+    auto maybe_val = d.VariableLengthRead<VarLength>(&VarLength::size);
+    ASSERT_TRUE(maybe_val.ok());
+    auto [val, payload] = maybe_val.ValueOrDie();
     EXPECT_EQ(val.size, 3);
     EXPECT_EQ(val.data, 2);
     EXPECT_EQ(payload.size(), 1);

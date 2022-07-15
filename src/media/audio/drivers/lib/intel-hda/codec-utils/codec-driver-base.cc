@@ -46,19 +46,17 @@ zx_protocol_device_t IntelHDACodecDriverBase::CODEC_DEVICE_THUNKS = []() {
 }();
 #undef DEV
 
-zx::status<> IntelHDACodecDriverBase::Bind(zx_device_t* codec_dev, const char* name) {
+Status IntelHDACodecDriverBase::Bind(zx_device_t* codec_dev, const char* name) {
   ZX_ASSERT(codec_dev != nullptr);
 
   if (codec_device_ != nullptr) {
-    LOG("Codec already bound.");
-    return zx::error(ZX_ERR_BAD_STATE);
+    return Status(ZX_ERR_BAD_STATE, "Codec already bound.");
   }
 
   ddk::IhdaCodecProtocolClient client;
   zx_status_t result = ddk::IhdaCodecProtocolClient::CreateFromDevice(codec_dev, &client);
   if (result != ZX_OK) {
-    LOG("Failure while attempting to fetch DDK protocol.");
-    return zx::error(result);
+    return Status(result, "Failure while attempting to fetch DDK protocol.");
   }
 
   zx::channel channel;
@@ -66,14 +64,12 @@ zx::status<> IntelHDACodecDriverBase::Bind(zx_device_t* codec_dev, const char* n
   // Obtain a channel handle from the device
   result = client.GetDriverChannel(&channel);
   if (result != ZX_OK) {
-    LOG("Error fetching driver channel.");
-    return zx::error(result);
+    return Status(result, "Error fetching driver channel.");
   }
 
   auto device_channel = Channel::Create(std::move(channel));
   if (device_channel == nullptr) {
-    LOG("Error creating device channel.");
-    return zx::error(ZX_ERR_NO_MEMORY);
+    return Status(ZX_ERR_NO_MEMORY, "Error creating device channel.");
   }
 
   // Stash our reference to our device channel.  If activate succeeds, we
@@ -89,8 +85,7 @@ zx::status<> IntelHDACodecDriverBase::Bind(zx_device_t* codec_dev, const char* n
     result = device_channel_->BeginWait(loop_.dispatcher());
     if (result != ZX_OK) {
       device_channel_.reset();
-      LOG("Error on begin wait.");
-      return zx::error(result);
+      return Status(result, "Error on begin wait.");
     }
   }
 
@@ -118,14 +113,13 @@ zx::status<> IntelHDACodecDriverBase::Bind(zx_device_t* codec_dev, const char* n
     device_channel_.reset();
     codec->Shutdown();
     codec.reset();
-    LOG("Failed to add codec device for \"%s\".", name);
-    return zx::error(result);
+    return Status(result, fbl::StringPrintf("Failed to add codec device for \"%s\".", name));
   }
 
   // Success!  Now that we are started, stash a pointer to the codec device
   // that we are the driver for.
   codec_device_ = codec_dev;
-  return zx::ok();
+  return OkStatus();
 }
 
 void IntelHDACodecDriverBase::ChannelSignalled(async_dispatcher_t* dispatcher,

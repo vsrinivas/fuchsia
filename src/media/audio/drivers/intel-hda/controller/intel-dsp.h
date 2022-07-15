@@ -24,6 +24,8 @@
 #include <intel-hda/utils/intel-audio-dsp-ipc.h>
 #include <intel-hda/utils/intel-hda-registers.h>
 #include <intel-hda/utils/nhlt.h>
+#include <intel-hda/utils/status.h>
+#include <intel-hda/utils/status_or.h>
 #include <intel-hda/utils/utils.h>
 
 #include "debug-logging.h"
@@ -44,7 +46,7 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   IntelDsp(IntelHDAController* controller, MMIO_PTR hda_pp_registers_t* pp_regs);
   ~IntelDsp();
 
-  zx::status<> Init(zx_device_t* dsp_dev);
+  Status Init(zx_device_t* dsp_dev);
   void ChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                         const zx_packet_signal_t* signal);
 
@@ -54,8 +56,8 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   void ProcessIrq();
 
   // Start and stop DSP pipelines.
-  zx::status<> StartPipeline(DspPipelineId id);
-  zx::status<> PausePipeline(DspPipelineId id);
+  Status StartPipeline(DspPipelineId id);
+  Status PausePipeline(DspPipelineId id);
 
   void DeviceShutdown();
   zx_status_t Suspend(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason,
@@ -69,9 +71,9 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   MMIO_PTR adsp_registers_t* regs() const;
   MMIO_PTR adsp_fw_registers_t* fw_regs() const;
 
-  zx::status<> SetupDspDevice();
-  zx::status<> InitializeDsp();
-  zx::status<> ParseNhlt();
+  Status SetupDspDevice();
+  Status InitializeDsp();
+  Status ParseNhlt();
 
   zx_status_t Boot();
   zx_status_t StripFirmware(const zx::vmo& fw, void* out, size_t* size_inout);
@@ -81,8 +83,8 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
                          const void** out_blob, size_t* out_size);
 
   zx_status_t GetModulesInfo();
-  zx::status<std::vector<uint8_t>> GetI2SModuleConfig(uint8_t i2s_instance_id, uint8_t direction,
-                                                      const CopierCfg& base_cfg);
+  StatusOr<std::vector<uint8_t>> GetI2SModuleConfig(uint8_t i2s_instance_id, uint8_t direction,
+                                                    const CopierCfg& base_cfg);
   bool IsCoreEnabled(uint8_t core_mask);
 
   zx_status_t ResetCore(uint8_t core_mask);
@@ -106,7 +108,7 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   zx_status_t ProcessSetStreamFmt(Channel* channel, const ihda_proto::SetStreamFmtReq& req,
                                   zx::handle rxed_handle);
 
-  zx::status<> CreateAndStartStreams();
+  Status CreateAndStartStreams();
 
   // Receive a notification from the DSP.
   void DspNotificationReceived(NotificationType type);

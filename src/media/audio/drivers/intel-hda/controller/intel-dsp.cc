@@ -72,7 +72,7 @@ IntelDsp::~IntelDsp() {
   }
 }
 
-zx::status<> IntelDsp::ParseNhlt() {
+Status IntelDsp::ParseNhlt() {
   std::array<fuchsia_hardware_acpi::wire::Object, 3> args;
   // Reference:
   // Intel Smart Sound Technology NHLT Specification
@@ -98,16 +98,15 @@ zx::status<> IntelDsp::ParseNhlt() {
       "_DSM", fuchsia_hardware_acpi::wire::EvaluateObjectMode::kParseResources,
       fidl::VectorView<fuchsia_hardware_acpi::wire::Object>::FromExternal(args));
   if (!result.ok()) {
-    return zx::error(result.status());
+    return Status(result.status(), result.FormatDescription());
   }
   if (result->is_error()) {
-    LOG(ERROR, "NHLT query failed: %d", int(result->error_value()));
-    return zx::error(ZX_ERR_INTERNAL);
+    return Status(ZX_ERR_INTERNAL,
+                  fbl::StringPrintf("NHLT query failed: %d", int(result->error_value())));
   }
   if (!result->value()->result.is_resources() || result->value()->result.resources().empty() ||
       !result->value()->result.resources()[0].is_mmio()) {
-    LOG(ERROR, "ACPI did not return NHLT resource");
-    return zx::error(ZX_ERR_INTERNAL);
+    return Status(ZX_ERR_INTERNAL, "ACPI did not return NHLT resource");
   }
   auto& resource = result->value()->result.resources()[0].mmio();
   size_t size = resource.size;
@@ -115,7 +114,7 @@ zx::status<> IntelDsp::ParseNhlt() {
   fbl::AllocChecker ac;
   auto* buff = new (&ac) uint8_t[size];
   if (!ac.check()) {
-    return zx::error(ZX_ERR_NO_MEMORY);
+    return Status(ZX_ERR_NO_MEMORY);
   }
   fbl::Array<uint8_t> buffer = fbl::Array<uint8_t>(buff, size);
 
@@ -123,59 +122,54 @@ zx::status<> IntelDsp::ParseNhlt() {
   fzl::VmoMapper mapper;
   zx_status_t res = mapper.Map(resource.vmo, 0, 0, ZX_VM_PERM_READ);
   if (res != ZX_OK) {
-    return zx::error(res);
+    return Status(res, "Failed to map NHLT");
   }
   // Fetch actual NHLT data.
   memcpy(buffer.begin(), static_cast<uint8_t*>(mapper.start()) + resource.offset, buffer.size());
   // Parse NHLT.
-  zx::status<std::unique_ptr<Nhlt>> nhlt =
+  StatusOr<std::unique_ptr<Nhlt>> nhlt =
       Nhlt::FromBuffer(cpp20::span<const uint8_t>(buffer.begin(), buffer.end()));
-  if (!nhlt.is_ok()) {
-    return zx::error(nhlt.status_value());
+  if (!nhlt.ok()) {
+    return nhlt.status();
   }
-  nhlt_ = std::move(nhlt.value());
+  nhlt_ = nhlt.ConsumeValueOrDie();
 
   if (zxlog_level_enabled(DEBUG)) {
     nhlt_->Dump();
   }
 
-  return zx::ok();
+  return OkStatus();
 }
 
-zx::status<> IntelDsp::Init(zx_device_t* dsp_dev) {
-  zx::status result = Bind(dsp_dev, "intel-sst-dsp");
-  if (!result.is_ok()) {
-    LOG(ERROR, "Error binding DSP device");
-    return zx::error(result.status_value());
+Status IntelDsp::Init(zx_device_t* dsp_dev) {
+  Status result = Bind(dsp_dev, "intel-sst-dsp");
+  if (!result.ok()) {
+    return PrependMessage("Error binding DSP device", result);
   }
 
   result = SetupDspDevice();
-  if (!result.is_ok()) {
-    LOG(ERROR, "Error setting up DSP");
-    return zx::error(result.status_value());
+  if (!result.ok()) {
+    return PrependMessage("Error setting up DSP", result);
   }
 
   result = ParseNhlt();
-  if (!result.is_ok()) {
-    LOG(ERROR, "Error parsing NHLT");
-    return zx::error(result.status_value());
+  if (!result.ok()) {
+    return PrependMessage("Error parsing NHLT", result);
   }
   LOG(DEBUG, "parse success, found %zu formats", nhlt_->configs().size());
 
   result = InitializeDsp();
-  if (!result.is_ok()) {
-    LOG(ERROR, "Error initializing DSP");
-    return zx::error(result.status_value());
+  if (!result.ok()) {
+    return PrependMessage("Error initializing DSP", result);
   }
 
   result = CreateAndStartStreams();
-  if (!result.is_ok()) {
+  if (!result.ok()) {
     DeviceShutdown();
-    LOG(ERROR, "Error creating and publishing streams");
-    return zx::error(result.status_value());
+    return PrependMessage("Error creating and publishing streams", result);
   }
 
-  return zx::ok();
+  return OkStatus();
 }
 
 MMIO_PTR adsp_registers_t* IntelDsp::regs() const {
@@ -466,7 +460,7 @@ zx_status_t IntelDsp::ProcessSetStreamFmt(Channel* channel, const ihda_proto::Se
   return res;
 }
 
-zx::status<> IntelDsp::SetupDspDevice() {
+Status IntelDsp::SetupDspDevice() {
   const pci_device_info_t& hda_dev_info = controller_->dev_info();
   snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP %02x:%02x.%01x", hda_dev_info.bus_id,
            hda_dev_info.dev_id, hda_dev_info.func_id);
@@ -475,13 +469,13 @@ zx::status<> IntelDsp::SetupDspDevice() {
   zx_status_t res = controller_->pci().MapMmio(4u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to fetch and map DSP register (err %u)", res);
-    return zx::error(res);
+    return Status(res);
   }
 
   if (mmio->get_size() < sizeof(adsp_registers_t)) {
     LOG(ERROR, "Bad register window size (expected 0x%zx got 0x%zx)", sizeof(adsp_registers_t),
         mmio->get_size());
-    return zx::error(res);
+    return Status(res);
   }
   mapped_regs_ = std::move(mmio);
 
@@ -495,7 +489,7 @@ zx::status<> IntelDsp::SetupDspDevice() {
   // Enable HDA interrupt. Interrupts are still masked at the DSP level.
   IrqEnable();
 
-  return zx::ok();
+  return OkStatus();
 }
 
 void IntelDsp::DeviceShutdown() {
@@ -531,7 +525,7 @@ zx_status_t IntelDsp::Suspend(uint8_t requested_state, bool enable_wake, uint8_t
   }
 }
 
-zx::status<> IntelDsp::InitializeDsp() {
+Status IntelDsp::InitializeDsp() {
   auto cleanup = fit::defer([this]() { DeviceShutdown(); });
 
   // Enable Audio DSP
@@ -542,7 +536,7 @@ zx::status<> IntelDsp::InitializeDsp() {
   zx_status_t st = Boot();
   if (st != ZX_OK) {
     LOG(ERROR, "Error in DSP boot (err %d)", st);
-    return zx::error(st);
+    return Status(st);
   }
 
   // Wait for ROM initialization done
@@ -552,7 +546,7 @@ zx::status<> IntelDsp::InitializeDsp() {
   });
   if (st != ZX_OK) {
     LOG(ERROR, "Error waiting for DSP ROM init (err %d)", st);
-    return zx::error(st);
+    return Status(st);
   }
 
   state_ = State::OPERATING;
@@ -562,13 +556,13 @@ zx::status<> IntelDsp::InitializeDsp() {
   st = LoadFirmware();
   if (st != ZX_OK) {
     LOG(ERROR, "Error loading firmware (err %d)", st);
-    return zx::error(st);
+    return Status(st);
   }
 
   // DSP Firmware is now ready.
   LOG(INFO, "DSP firmware ready");
   cleanup.cancel();
-  return zx::ok();
+  return OkStatus();
 }
 
 zx_status_t IntelDsp::Boot() {

@@ -15,6 +15,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/string_printf.h>
 #include <intel-hda/utils/intel-hda-registers.h>
+#include <intel-hda/utils/status.h>
 #include <intel-hda/utils/utils.h>
 #include <refcount/blocking_refcount.h>
 
@@ -43,10 +44,9 @@ class HardwareDspChannel : public DspChannel {
   // Implementation of DspChannel.
   void Shutdown() override TA_EXCL(lock_);
   void ProcessIrq() override;
-  zx::status<> Send(uint32_t primary, uint32_t extension) override;
-  zx::status<> SendWithData(uint32_t primary, uint32_t extension,
-                            cpp20::span<const uint8_t> payload, cpp20::span<uint8_t> recv_buffer,
-                            size_t* bytes_received) override;
+  Status Send(uint32_t primary, uint32_t extension) override;
+  Status SendWithData(uint32_t primary, uint32_t extension, cpp20::span<const uint8_t> payload,
+                      cpp20::span<uint8_t> recv_buffer, size_t* bytes_received) override;
 
   // Return true if at least one operation is pending.
   bool IsOperationPending() const override;
@@ -179,12 +179,11 @@ void HardwareDspChannel::Shutdown() {
   in_flight_callbacks_.WaitForZero();
 }
 
-zx::status<> HardwareDspChannel::SendWithData(uint32_t primary, uint32_t extension,
-                                              cpp20::span<const uint8_t> payload,
-                                              cpp20::span<uint8_t> recv_buffer,
-                                              size_t* bytes_received) {
+Status HardwareDspChannel::SendWithData(uint32_t primary, uint32_t extension,
+                                        cpp20::span<const uint8_t> payload,
+                                        cpp20::span<uint8_t> recv_buffer, size_t* bytes_received) {
   if (payload.size() > MAILBOX_SIZE) {
-    return zx::error(ZX_ERR_INVALID_ARGS);
+    return Status(ZX_ERR_INVALID_ARGS);
   }
 
   Txn txn{primary,
@@ -196,24 +195,23 @@ zx::status<> HardwareDspChannel::SendWithData(uint32_t primary, uint32_t extensi
 
   zx_status_t res = SendIpcWait(&txn);
   if (res != ZX_OK) {
-    return zx::error(res);
+    return Status(res);
   }
   if (!txn.done) {
-    LOG(ERROR, "Operation cancelled due to IPC shutdown.");
-    return zx::error(ZX_ERR_CANCELED);
+    return Status(ZX_ERR_CANCELED, "Operation cancelled due to IPC shutdown.");
   }
   if (txn.reply.status() != MsgStatus::IPC_SUCCESS) {
-    LOG(ERROR, "DSP returned error %d", to_underlying(txn.reply.status()));
-    return zx::error(ZX_ERR_INTERNAL);
+    return Status(ZX_ERR_INTERNAL,
+                  fbl::StringPrintf("DSP returned error %d", to_underlying(txn.reply.status())));
   }
 
   if (bytes_received != nullptr) {
     *bytes_received = txn.rx_actual;
   }
-  return zx::ok();
+  return OkStatus();
 }
 
-zx::status<> HardwareDspChannel::Send(uint32_t primary, uint32_t extension) {
+Status HardwareDspChannel::Send(uint32_t primary, uint32_t extension) {
   return SendWithData(primary, extension, cpp20::span<uint8_t>(), cpp20::span<uint8_t>(), nullptr);
 }
 

@@ -42,16 +42,15 @@ class FakeDspChannel : public DspChannel {
   void ProcessIrq() override {}
   bool IsOperationPending() const override { return false; }
 
-  zx::status<> Send(uint32_t primary, uint32_t extension) override {
+  Status Send(uint32_t primary, uint32_t extension) override {
     return SendWithData(primary, extension, cpp20::span<const uint8_t>(), cpp20::span<uint8_t>(),
                         nullptr);
   }
 
-  zx::status<> SendWithData(uint32_t primary, uint32_t extension,
-                            cpp20::span<const uint8_t> payload, cpp20::span<uint8_t> recv_buffer,
-                            size_t* bytes_received) override {
+  Status SendWithData(uint32_t primary, uint32_t extension, cpp20::span<const uint8_t> payload,
+                      cpp20::span<uint8_t> recv_buffer, size_t* bytes_received) override {
     ipcs_.push_back(Ipc{primary, extension, std::vector<uint8_t>(payload.begin(), payload.end())});
-    return zx::ok();
+    return OkStatus();
   }
 
   const std::vector<Ipc>& ipcs() const { return ipcs_; }
@@ -65,9 +64,9 @@ TEST(DspModuleController, AllocatePipelineIds) {
   DspModuleController controller(&fake_channel);
 
   // Allocate 3 IDs. Expect them to be allocated from 0 upwards.
-  EXPECT_EQ(0, controller.CreatePipeline(0, 0, 0).value().id);
-  EXPECT_EQ(1, controller.CreatePipeline(0, 0, 0).value().id);
-  EXPECT_EQ(2, controller.CreatePipeline(0, 0, 0).value().id);
+  EXPECT_EQ(0, controller.CreatePipeline(0, 0, 0).ValueOrDie().id);
+  EXPECT_EQ(1, controller.CreatePipeline(0, 0, 0).ValueOrDie().id);
+  EXPECT_EQ(2, controller.CreatePipeline(0, 0, 0).ValueOrDie().id);
 }
 
 TEST(DspModuleController, TooManyPipelines) {
@@ -78,12 +77,12 @@ TEST(DspModuleController, TooManyPipelines) {
   std::unordered_set<uint8_t> seen_ids;
   bool saw_error = false;
   for (int i = 0; i < 1000; i++) {
-    zx::status<DspPipelineId> pipeline = controller.CreatePipeline(0, 0, 0);
-    if (!pipeline.is_ok()) {
+    StatusOr<DspPipelineId> pipeline = controller.CreatePipeline(0, 0, 0);
+    if (!pipeline.ok()) {
       saw_error = true;
       break;
     }
-    auto id = pipeline.value().id;
+    auto id = pipeline.ValueOrDie().id;
     auto [_, inserted] = seen_ids.insert(id);
     // Ensure we hadn't seen this ID yet.
     EXPECT_TRUE(inserted);
@@ -95,12 +94,12 @@ TEST(DspModuleController, TooManyPipelines) {
 TEST(DspModuleController, AllocateModuleIds) {
   FakeDspChannel fake_channel;
   DspModuleController controller(&fake_channel);
-  DspPipelineId pipeline = controller.CreatePipeline(0, 0, 0).value();
+  DspPipelineId pipeline = controller.CreatePipeline(0, 0, 0).ValueOrDie();
 
   // Allocate some module IDs. Expect them to be allocated from 0 upwards.
   for (int i = 0; i < 10; i++) {
     DspModuleId m =
-        controller.CreateModule(/*type=*/42, pipeline, ProcDomain::LOW_LATENCY, {}).value();
+        controller.CreateModule(/*type=*/42, pipeline, ProcDomain::LOW_LATENCY, {}).ValueOrDie();
     EXPECT_EQ(m.type, 42);
     EXPECT_EQ(m.id, i);
   }
@@ -109,19 +108,19 @@ TEST(DspModuleController, AllocateModuleIds) {
 TEST(DspModuleController, TooManyModules) {
   FakeDspChannel fake_channel;
   DspModuleController controller(&fake_channel);
-  DspPipelineId pipeline = controller.CreatePipeline(0, 0, 0).value();
+  DspPipelineId pipeline = controller.CreatePipeline(0, 0, 0).ValueOrDie();
 
   // Expect allocation to fail gracefully at some time, without duplicates.
   std::unordered_set<uint8_t> seen_ids;
   bool saw_error = false;
   for (int i = 0; i < 1000; i++) {
-    zx::status<DspModuleId> module = controller.CreateModule(
+    StatusOr<DspModuleId> module = controller.CreateModule(
         /*type=*/42, pipeline, ProcDomain::LOW_LATENCY, {});
-    if (!module.is_ok()) {
+    if (!module.ok()) {
       saw_error = true;
       break;
     }
-    auto id = module.value().id;
+    auto id = module.ValueOrDie().id;
     auto [_, inserted] = seen_ids.insert(id);
     // Ensure we hadn't seen this ID yet.
     EXPECT_TRUE(inserted);
@@ -136,7 +135,7 @@ TEST(DspModuleController, CreatePipelineIpc) {
 
   // Send the IPC.
   EXPECT_TRUE(
-      controller.CreatePipeline(/*priority=*/1, /*memory_pages=*/2, /*low_power=*/true).is_ok());
+      controller.CreatePipeline(/*priority=*/1, /*memory_pages=*/2, /*low_power=*/true).ok());
 
   // Ensure the correct IPC was sent.
   ASSERT_EQ(fake_channel.ipcs().size(), 1);
@@ -156,7 +155,7 @@ TEST(DspModuleController, CreateModuleIpc) {
   EXPECT_TRUE(controller
                   .CreateModule(/*type=*/42, /*parent_pipeline=*/{17},
                                 /*scheduling_domain=*/ProcDomain::LOW_LATENCY, data)
-                  .is_ok());
+                  .ok());
 
   // Ensure the correct IPC was sent.
   ASSERT_EQ(fake_channel.ipcs().size(), 1);
@@ -179,7 +178,7 @@ TEST(DspModuleController, CreateModuleIpcBadDataSize) {
   EXPECT_FALSE(controller
                    .CreateModule(/*type=*/42, /*parent_pipeline=*/{17},
                                  /*scheduling_domain=*/ProcDomain::LOW_LATENCY, data)
-                   .is_ok());
+                   .ok());
 }
 
 TEST(DspModuleController, CreateModuleIpcBigData) {
@@ -194,7 +193,8 @@ TEST(DspModuleController, CreateModuleIpcBigData) {
   EXPECT_EQ(controller
                 .CreateModule(/*type=*/42, /*parent_pipeline=*/{17},
                               /*scheduling_domain=*/ProcDomain::LOW_LATENCY, data)
-                .status_value(),
+                .status()
+                .code(),
             ZX_ERR_INVALID_ARGS);
 }
 
@@ -207,7 +207,7 @@ TEST(DspModuleController, BindModules) {
   DspModuleId dest_module = {3, 4};
   EXPECT_TRUE(
       controller.BindModules(source_module, /*src_output_pin=*/5, dest_module, /*dest_input_pin=*/6)
-          .is_ok());
+          .ok());
 
   // Ensure the correct IPC was sent.
   ASSERT_EQ(fake_channel.ipcs().size(), 1);
@@ -227,7 +227,7 @@ TEST(DspModuleController, SetPipelineState) {
   // Send the IPC.
   EXPECT_TRUE(
       controller.SetPipelineState(/*pipeline=*/{1}, PipelineState::RESET, /*sync_stop_start=*/true)
-          .is_ok());
+          .ok());
 
   // Ensure the correct IPC was sent.
   ASSERT_EQ(fake_channel.ipcs().size(), 1);
@@ -246,7 +246,7 @@ TEST(ParseModules, TruncatedData) {
     ModulesInfo info{};
     info.module_count = 1;
     memcpy(buff, &info, sizeof(ModulesInfo));
-    EXPECT_TRUE(!ParseModules(cpp20::span<uint8_t>(buff)).is_ok());
+    EXPECT_TRUE(!ParseModules(cpp20::span<uint8_t>(buff)).ok());
   }
 }
 
@@ -266,8 +266,8 @@ TEST(ParseModules, RealData) {
   data.entry2.module_id = 17;
 
   // Parse the modules.
-  auto result =
-      ParseModules(cpp20::span(reinterpret_cast<const uint8_t*>(&data), sizeof(data))).value();
+  auto result = ParseModules(cpp20::span(reinterpret_cast<const uint8_t*>(&data), sizeof(data)))
+                    .ConsumeValueOrDie();
 
   // Ensure both module entries appear in the output.
   EXPECT_EQ(result.size(), 2);

@@ -121,9 +121,9 @@ TEST(Ipc, SimpleSend) {
 
   // Start a thread, give it a chance to run.
   auto worker = Thread([&]() {
-    zx::status result = dsp->Send(0xaa, 0x55);
-    ZX_ASSERT_MSG(result.is_ok(), "Send failed: %s (code: %d)", result.status_string(),
-                  result.status_value());
+    Status result = dsp->Send(0xaa, 0x55);
+    ZX_ASSERT_MSG(result.ok(), "Send failed: %s (code: %d)", result.ToString().c_str(),
+                  result.code());
   });
 
   // Simulate the DSP reading the message.
@@ -146,9 +146,9 @@ TEST(Ipc, ErrorReply) {
 
   // Start a thread.
   auto worker = Thread([&]() {
-    zx::status result = dsp->Send(0xaa, 0x55);
-    ZX_ASSERT_MSG(result.status_value() == ZX_ERR_INTERNAL, "Got incorrect error message: %s",
-                  result.status_string());
+    Status result = dsp->Send(0xaa, 0x55);
+    ZX_ASSERT_MSG(result.ToString() == "DSP returned error 42 (ZX_ERR_INTERNAL)",
+                  "Got incorrect error message: %s", result.ToString().c_str());
   });
 
   // Read (and ignore) the message.
@@ -167,9 +167,9 @@ TEST(Ipc, HardwareTimeout) {
 
   // Start a thread.
   auto worker = Thread([&]() {
-    zx::status result = dsp->Send(0xaa, 0x55);
-    ZX_ASSERT_MSG(result.status_value() == ZX_ERR_TIMED_OUT, "Got incorrect error: %s",
-                  result.status_string());
+    Status result = dsp->Send(0xaa, 0x55);
+    ZX_ASSERT_MSG(result.code() == ZX_ERR_TIMED_OUT, "Got incorrect error: %s",
+                  result.ToString().c_str());
   });
 
   // Wait for it to time out.
@@ -195,9 +195,9 @@ TEST(Ipc, QueuedMessages) {
   std::array<std::unique_ptr<Thread>, kNumThreads> workers;
   for (int i = 0; i < kNumThreads; i++) {
     workers[i] = std::make_unique<Thread>([i, &dsp]() {
-      zx::status result = dsp->Send(0, i);
-      ZX_ASSERT_MSG(result.is_ok(), "Send failed: %s (code: %d)", result.status_string(),
-                    result.status_value());
+      Status result = dsp->Send(0, i);
+      ZX_ASSERT_MSG(result.ok(), "Send failed: %s (code: %d)", result.ToString().c_str(),
+                    result.code());
     });
   }
 
@@ -219,10 +219,10 @@ TEST(Ipc, ShutdownWithQueuedSend) {
 
   // Start a thread, and wait for it to send.
   Thread thread([&dsp]() {
-    zx::status result = dsp->Send(0, 0);
-    ZX_ASSERT_MSG(!result.is_ok() && result.status_value() == ZX_ERR_CANCELED,
+    Status result = dsp->Send(0, 0);
+    ZX_ASSERT_MSG(!result.ok() && result.code() == ZX_ERR_CANCELED,
                   "Expected send to fail with 'ZX_ERR_CANCELED', but got: %s",
-                  result.status_string());
+                  result.ToString().c_str());
   });
   WaitForCond([&]() { return dsp->IsOperationPending(); });
 
@@ -237,10 +237,10 @@ TEST(Ipc, DestructWithQueuedThread) {
 
   // Start a thread, and wait for it to send.
   Thread thread([&dsp]() {
-    zx::status result = dsp->Send(0, 0);
-    ZX_ASSERT_MSG(!result.is_ok() && result.status_value() == ZX_ERR_CANCELED,
+    Status result = dsp->Send(0, 0);
+    ZX_ASSERT_MSG(!result.ok() && result.code() == ZX_ERR_CANCELED,
                   "Expected send to fail with 'ZX_ERR_CANCELED', but got: %s",
-                  result.status_string());
+                  result.ToString().c_str());
   });
   WaitForCond([&]() { return dsp->IsOperationPending(); });
 
@@ -280,7 +280,7 @@ TEST(Ipc, SendBigData) {
   data.resize(1'000'000);
 
   // Ensure we get a valid error trying to send it.
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, dsp->SendWithData(0, 0, data, {}, nullptr).status_value());
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, dsp->SendWithData(0, 0, data, {}, nullptr).code());
 }
 
 }  // namespace

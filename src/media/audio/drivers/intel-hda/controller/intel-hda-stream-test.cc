@@ -55,7 +55,7 @@ class TestCodec : public codecs::IntelHDACodecDriverBase {
     return codecs::IntelHDACodecDriverBase::ActivateStream(stream);
   }
 
-  zx::status<> Bind(zx_device_t* codec_dev, const char* name) {
+  Status Bind(zx_device_t* codec_dev, const char* name) {
     return codecs::IntelHDACodecDriverBase::Bind(codec_dev, name);
   }
   void DeviceRelease() { codecs::IntelHDACodecDriverBase::DeviceRelease(); }
@@ -154,7 +154,7 @@ TEST(HdaStreamTest, GetStreamPropertiesDefaults) {
 
   auto codec = fbl::AdoptRef(new TestCodec);
   auto ret = codec->Bind(fake_controller.dev(), "test");
-  ASSERT_OK(ret.status_value());
+  ASSERT_OK(ret.code());
   auto stream = fbl::AdoptRef(new TestStream);
   ASSERT_OK(codec->ActivateStream(stream));
   ASSERT_OK(stream->Bind());
@@ -191,7 +191,7 @@ TEST(HdaStreamTest, SetAndGetGainDefaults) {
 
   auto codec = fbl::AdoptRef(new TestCodec);
   auto ret = codec->Bind(fake_controller.dev(), "test");
-  ASSERT_OK(ret.status_value());
+  ASSERT_OK(ret.code());
   auto stream = fbl::AdoptRef(new TestStream);
   ASSERT_OK(codec->ActivateStream(stream));
   ASSERT_OK(stream->Bind());
@@ -227,8 +227,7 @@ TEST(HdaStreamTest, WatchPlugStateDefaults) {
 
   auto codec = fbl::AdoptRef(new TestCodec);
   auto ret = codec->Bind(fake_controller.dev(), "test");
-  ASSERT_OK(ret.status_value());
-
+  ASSERT_OK(ret.code());
   auto stream = fbl::AdoptRef(new TestStream);
   ASSERT_OK(codec->ActivateStream(stream));
   ASSERT_OK(stream->Bind());
@@ -291,7 +290,7 @@ TEST(HdaStreamTest, GetStreamProperties) {
 
   auto codec = fbl::AdoptRef(new TestCodec);
   auto ret = codec->Bind(fake_controller.dev(), "test");
-  ASSERT_OK(ret.status_value());
+  ASSERT_OK(ret.code());
   auto stream = fbl::AdoptRef(new TestStreamCustom);
   ASSERT_OK(codec->ActivateStream(stream));
   ASSERT_OK(stream->Bind());
@@ -328,7 +327,7 @@ TEST(HdaStreamTest, SetAndGetGain) {
 
   auto codec = fbl::AdoptRef(new TestCodec);
   auto ret = codec->Bind(fake_controller.dev(), "test");
-  ASSERT_OK(ret.status_value());
+  ASSERT_OK(ret.code());
   auto stream = fbl::AdoptRef(new TestStreamCustom);
   ASSERT_OK(codec->ActivateStream(stream));
   ASSERT_OK(stream->Bind());
@@ -376,7 +375,7 @@ TEST(HdaStreamTest, WatchPlugState) {
 
   auto codec = fbl::AdoptRef(new TestCodec);
   auto ret = codec->Bind(fake_controller.dev(), "test");
-  ASSERT_OK(ret.status_value());
+  ASSERT_OK(ret.code());
   auto stream = fbl::AdoptRef(new TestStreamCustom);
   ASSERT_OK(codec->ActivateStream(stream));
   ASSERT_OK(stream->Bind());

@@ -24,6 +24,7 @@
 #include <audio-utils/audio-output.h>
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
+#include <intel-hda/utils/status_or.h>
 
 namespace audio::intel_hda {
 
@@ -32,14 +33,14 @@ namespace {
 // Return the files in the given directory.
 //
 // The given path should end with "/".
-zx::status<std::vector<fbl::String>> GetFilesInDir(const char* path) {
+StatusOr<std::vector<fbl::String>> GetFilesInDir(const char* path) {
   std::vector<fbl::String> result;
 
   // Open path.
   DIR* dir = opendir(path);
   if (dir == nullptr) {
-    std::cerr << "Couldn't open directory " << path << strerror(errno);
-    return zx::error(ZX_ERR_INTERNAL);
+    return Status(ZX_ERR_INTERNAL,
+                  fbl::StringPrintf("Couldn't open directory '%s': %s", path, strerror(errno)));
   }
 
   // Read through all files.
@@ -52,7 +53,7 @@ zx::status<std::vector<fbl::String>> GetFilesInDir(const char* path) {
   }
 
   closedir(dir);
-  return zx::ok(std::move(result));
+  return result;
 }
 
 // Create a new stream on the default device.
@@ -80,14 +81,14 @@ std::unique_ptr<T> CreateAndOpenStream(const char* device) {
 
 SystemAudioDevices GetSystemAudioDevices() {
   SystemAudioDevices results{};
-  if (auto inputs = GetFilesInDir("/dev/class/audio-input/"); inputs.is_ok()) {
-    results.inputs = inputs.value();
+  if (auto inputs = GetFilesInDir("/dev/class/audio-input/"); inputs.ok()) {
+    results.inputs = inputs.ValueOrDie();
   }
-  if (auto outputs = GetFilesInDir("/dev/class/audio-output/"); outputs.is_ok()) {
-    results.outputs = outputs.value();
+  if (auto outputs = GetFilesInDir("/dev/class/audio-output/"); outputs.ok()) {
+    results.outputs = outputs.ValueOrDie();
   }
-  if (auto controllers = GetFilesInDir("/dev/class/intel-hda/"); controllers.is_ok()) {
-    results.controllers = controllers.value();
+  if (auto controllers = GetFilesInDir("/dev/class/intel-hda/"); controllers.ok()) {
+    results.controllers = controllers.ValueOrDie();
   }
   return results;
 }
@@ -97,24 +98,23 @@ bool IsIntelHdaDevicePresent() {
   return !devices.controllers.empty() && !devices.inputs.empty() && !devices.outputs.empty();
 }
 
-zx::status<fbl::String> GetStreamConfigString(audio::utils::AudioDeviceStream* stream,
-                                              audio_stream_string_id_t id) {
+StatusOr<fbl::String> GetStreamConfigString(audio::utils::AudioDeviceStream* stream,
+                                            audio_stream_string_id_t id) {
   // Fetch information from stream.
   audio_stream_cmd_get_string_resp_t response;
   zx_status_t status = stream->GetString(id, &response);
   if (status != ZX_OK) {
-    zx::error(ZX_ERR_INTERNAL);
+    return Status(status);
   }
 
   // Ensure the claimed string length is valid.
   if (response.strlen > sizeof(response.str)) {
-    std::cerr << "Response string length larger than buffer:" << response.strlen
-              << sizeof(response.str);
-    zx::error(ZX_ERR_INTERNAL);
+    return Status(ZX_ERR_INTERNAL,
+                  fbl::StringPrintf("Response string length larger than buffer: %d/%ld",
+                                    response.strlen, sizeof(response.str)));
   }
-  fbl::String valid_string =
-      fbl::String(reinterpret_cast<const char*>(response.str), response.strlen);
-  return zx::ok(valid_string);
+
+  return fbl::String(reinterpret_cast<const char*>(response.str), response.strlen);
 }
 
 std::unique_ptr<audio::utils::AudioOutput> CreateAndOpenOutputStream(const char* device) {

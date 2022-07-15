@@ -5,7 +5,6 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_TEST_AUDIO_TEST_TOOLS_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_TEST_AUDIO_TEST_TOOLS_H_
 
-#include <lib/zx/status.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -23,6 +22,7 @@
 #include <audio-utils/audio-input.h>
 #include <audio-utils/audio-output.h>
 #include <fbl/string.h>
+#include <intel-hda/utils/status_or.h>
 
 namespace audio::intel_hda {
 
@@ -48,8 +48,8 @@ std::unique_ptr<audio::utils::AudioOutput> CreateAndOpenOutputStream(const char*
 std::unique_ptr<audio::utils::AudioInput> CreateAndOpenInputStream(const char* device);
 
 // Fetch the string |id| from the given audio stream / device node.
-zx::status<fbl::String> GetStreamConfigString(audio::utils::AudioDeviceStream* stream,
-                                              audio_stream_string_id_t id);
+StatusOr<fbl::String> GetStreamConfigString(audio::utils::AudioDeviceStream* stream,
+                                            audio_stream_string_id_t id);
 
 }  // namespace audio::intel_hda
 
