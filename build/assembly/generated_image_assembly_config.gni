@@ -47,6 +47,9 @@ import("//build/zbi/kernel_cmdline.gni")
 #     command arguments to add to the ZBI.
 #
 template("generated_image_assembly_config") {
+  assert(
+      current_toolchain == default_toolchain,
+      "The image assembly config can only be created in the default toolchain")
   assert(defined(invoker.output_path), "Need to define output_path")
   assert(defined(invoker.kernel_image), "Need to define kernel_image")
 

@@ -39,6 +39,10 @@ template("legacy_assembly_input_bundle") {
   #        that template supports all the categories that are needed by the
   #        legacy AIB.
 
+  assert(
+      current_toolchain == default_toolchain,
+      "The legacy assembly input bundle can only be created in the default toolchain")
+
   forward_variables_from(invoker,
                          [
                            "image_assembly_label",

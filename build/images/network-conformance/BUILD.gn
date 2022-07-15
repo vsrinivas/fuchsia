@@ -5,8 +5,10 @@
 import(
     "//build/images/network-conformance/assemble_network_conformance_system.gni")
 
-assemble_network_conformance_system("network-conformance-base") {
-  additional_base_packages = []
+if (is_fuchsia) {
+  assemble_network_conformance_system("network-conformance-base") {
+    additional_base_packages = []
+  }
 }
 
 if (is_host) {

@@ -7,41 +7,44 @@ import("//build/components/fuchsia_package.gni")
 import("//build/config.gni")
 import("//build/testing/host_test_data.gni")
 
-# `assembled_system` needs at least one package in base_packages.
-fuchsia_package("empty-pkg") {
-  testonly = true
-  package_name = "empty-pkg"
-}
-
-config_data("empty_config") {
-  for_pkg = "empty-pkg"
-  sources = [ "empty_config" ]
-  outputs = [ "empty/{{source_file_part}}" ]
-}
-
-# `assembled_system` builds a zbi and blob.blk for consumption by the test.
 _assemble_system_target_name = "assembly"
-assembled_system(_assemble_system_target_name) {
-  testonly = true
-  bootfs_labels = []
-  base_packages = [
-    ":empty-pkg",
-    ":empty_config",
-  ]
-}
-
-# `assembled_system` builds a zbi, specifying `ramdisk_fvm_in_zbi = true`
-# tests the path where the blobfs exists in the zbi and is automatically
-# extracted as part of the zbi, such as in recovery images.
 _assemble_system_recovery_target_name = "assembly_recovery"
-assembled_system(_assemble_system_recovery_target_name) {
-  testonly = true
-  bootfs_labels = []
-  ramdisk_fvm_in_zbi = true
-  base_packages = [
-    ":empty-pkg",
-    ":empty_config",
-  ]
+
+if (is_fuchsia) {
+  # `assembled_system` needs at least one package in base_packages.
+  fuchsia_package("empty-pkg") {
+    testonly = true
+    package_name = "empty-pkg"
+  }
+
+  config_data("empty_config") {
+    for_pkg = "empty-pkg"
+    sources = [ "empty_config" ]
+    outputs = [ "empty/{{source_file_part}}" ]
+  }
+
+  # `assembled_system` builds a zbi and blob.blk for consumption by the test.
+  assembled_system(_assemble_system_target_name) {
+    testonly = true
+    bootfs_labels = []
+    base_packages = [
+      ":empty-pkg",
+      ":empty_config",
+    ]
+  }
+
+  # `assembled_system` builds a zbi, specifying `ramdisk_fvm_in_zbi = true`
+  # tests the path where the blobfs exists in the zbi and is automatically
+  # extracted as part of the zbi, such as in recovery images.
+  assembled_system(_assemble_system_recovery_target_name) {
+    testonly = true
+    bootfs_labels = []
+    ramdisk_fvm_in_zbi = true
+    base_packages = [
+      ":empty-pkg",
+      ":empty_config",
+    ]
+  }
 }
 
 if (is_host) {
