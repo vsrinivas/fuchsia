@@ -10,7 +10,7 @@
 use {
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_examples_services as fexamples, fidl_fuchsia_io as fio,
-    fuchsia_component::client as fclient, log::*,
+    fuchsia_component::client as fclient, tracing::*,
 };
 
 const COLLECTION_NAME: &'static str = "account_providers";
@@ -39,7 +39,7 @@ async fn read_and_write_to_multiple_service_instances() {
         let read_only_account = proxy.read_only().expect("read_only protocol");
         let owner = read_only_account.get_owner().await.expect("failed to get owner");
         let initial_balance = read_only_account.get_balance().await.expect("failed to get_balance");
-        info!("retrieved account for owner '{}' with balance ${}", &owner, &initial_balance);
+        info!(%owner, balance = %initial_balance, "retrieved account");
 
         let read_write_account = proxy.read_write().expect("read_write protocol");
         assert_eq!(read_write_account.get_owner().await.expect("failed to get_owner"), owner);
@@ -47,7 +47,7 @@ async fn read_and_write_to_multiple_service_instances() {
             read_write_account.get_balance().await.expect("failed to get_balance"),
             initial_balance
         );
-        info!("debiting account of owner '{}'", &owner);
+        info!(%owner, "debiting account");
         read_write_account.debit(5).await.expect("failed to debit");
         assert_eq!(
             read_write_account.get_balance().await.expect("failed to get_balance"),
@@ -61,7 +61,7 @@ async fn start_provider(
     name: &str,
     url: &str,
 ) -> fio::DirectoryProxy {
-    info!("creating BankAccount provider \"{}\" with url={}", name, url);
+    info!(%name, %url, "creating BankAccount provider");
     let child_args = fcomponent::CreateChildArgs {
         numbered_handles: None,
         ..fcomponent::CreateChildArgs::EMPTY
@@ -85,7 +85,7 @@ async fn start_provider(
     let (exposed_dir, exposed_dir_server_end) =
         fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
             .expect("failed to create endpoints");
-    info!("open exposed dir of BankAccount provider \"{}\" with url={}", name, url);
+    info!(%name, %url, "open exposed dir of BankAccount provider");
     realm
         .open_exposed_dir(
             &mut fdecl::ChildRef {

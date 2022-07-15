@@ -34,7 +34,6 @@ third_party_rust_crate_log_visibility = [
   # Can't be listed in more detail here (but should still be removed)
   "//vendor/google/*",
 
-  "//examples/components/services:*",
   "//examples/diagnostics/logs/rust:*",
   "//src/sys/run_test_component/test:*",
   "//src/connectivity/bluetooth/core/bt-gap:*",
