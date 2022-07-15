@@ -191,6 +191,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     #[fuchsia_async::run_singlethreaded(test)]
+    #[ignore] // TODO(fxbug.dev/104006) re-enable this test when de-flaked
     async fn collect_test_stdout() {
         let (sock_server, sock_client) =
             fidl::Socket::create(fidl::SocketOpts::STREAM).expect("Failed while creating socket");
