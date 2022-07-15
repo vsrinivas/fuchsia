@@ -4273,7 +4273,7 @@ mod tests {
     fn process_options_mismatched_client_id() {
         let client_id = v6::duid_uuid();
         let mut wrong_client_id = client_id.clone();
-        wrong_client_id.iter_mut().for_each(|byte| *byte += 1);
+        wrong_client_id.iter_mut().for_each(|byte| *byte = u8::MAX - *byte);
         let options =
             [v6::DhcpOption::ClientId(&wrong_client_id), v6::DhcpOption::ServerId(&[1, 2, 3])];
         let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, [0, 1, 2], &options);
