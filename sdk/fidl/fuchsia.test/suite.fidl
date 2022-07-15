@@ -23,6 +23,7 @@ type Case = table {
 };
 
 /// Represents success, failure, or other possible conditions following a test invocation.
+// TODO(fxbug.dev/104384): Decide if this should be `flexible`. #strictaudit
 type Status = strict enum {
     /// The test passed.
     PASSED = 1;
