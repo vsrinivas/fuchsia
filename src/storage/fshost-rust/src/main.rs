@@ -3,18 +3,22 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Error},
+    anyhow::{format_err, Result},
     fidl::prelude::*,
     fidl_fuchsia_fshost as fshost, fidl_fuchsia_io as fio,
     fuchsia_runtime::{take_startup_handle, HandleType},
-    futures::{channel::mpsc, StreamExt},
+    futures::channel::mpsc,
     vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path},
 };
 
+mod device;
+mod manager;
+mod matcher;
 mod service;
+mod watcher;
 
 #[fuchsia::main]
-async fn main() -> Result<(), Error> {
+async fn main() -> Result<()> {
     log::info!("fshost started");
 
     let directory_request =
@@ -22,7 +26,7 @@ async fn main() -> Result<(), Error> {
             format_err!("missing DirectoryRequest startup handle - not launched as a component?")
         })?;
 
-    let (shutdown_tx, mut shutdown_rx) = mpsc::channel::<service::FshostShutdownResponder>(1);
+    let (shutdown_tx, shutdown_rx) = mpsc::channel::<service::FshostShutdownResponder>(1);
 
     let export = vfs::pseudo_directory! {
         "svc" => vfs::pseudo_directory! {
@@ -39,11 +43,10 @@ async fn main() -> Result<(), Error> {
         directory_request.into(),
     );
 
-    // when we get a message on the shutdown channel, it's time to exit.
-    let shutdown_responder = shutdown_rx
-        .next()
-        .await
-        .ok_or_else(|| format_err!("shutdown signal stream ended unexpectedly"))?;
+    // Run the main loop of fshost, handling devices as they appear according to our filesystem
+    // policy.
+    let mut fs_manager = manager::Manager::new(shutdown_rx);
+    let shutdown_responder = fs_manager.device_handler().await?;
 
     log::info!("shutdown signal received");
 
@@ -59,6 +62,7 @@ async fn main() -> Result<(), Error> {
     scope.shutdown();
 
     // 2. Shut down all the filesystems we started.
+    fs_manager.shutdown().await?;
 
     // 3. Notify whoever asked for a shutdown that it's complete. After this point, it's possible
     //    the fshost process will be terminated externally.
