@@ -29,8 +29,7 @@ using Rectangle2D = escher::Rectangle2D;
 
 class ScreenCapture : public fuchsia::ui::composition::internal::ScreenCapture {
  public:
-  ScreenCapture(fidl::InterfaceRequest<fuchsia::ui::composition::internal::ScreenCapture> request,
-                std::shared_ptr<screen_capture::ScreenCaptureBufferCollectionImporter>
+  ScreenCapture(std::shared_ptr<screen_capture::ScreenCaptureBufferCollectionImporter>
                     screen_capture_buffer_collection_importer,
                 std::shared_ptr<flatland::Renderer> renderer, GetRenderables get_renderables);
 
@@ -41,8 +40,10 @@ class ScreenCapture : public fuchsia::ui::composition::internal::ScreenCapture {
 
   void GetNextFrame(GetNextFrameCallback callback) override;
 
-  // Called by GetNextFrame() and ScreenCapture2Manager when a new frame should be rendered.
-  void RenderFrame();
+  // Called by GetNextFrame() and ScreenCapture2Manager when a new frame should be rendered. If
+  // there are no available buffers or MaybeRenderFrame() is currently processing, it will return
+  // and do nothing.
+  void MaybeRenderFrame();
 
  private:
   friend class test::ScreenCapture2Test;
@@ -55,8 +56,6 @@ class ScreenCapture : public fuchsia::ui::composition::internal::ScreenCapture {
 
   // For validating calls in tests only.
   bool get_client_received_last_frame() { return client_received_last_frame_; }
-
-  fidl::Binding<fuchsia::ui::composition::internal::ScreenCapture> binding_;
 
   std::shared_ptr<screen_capture::ScreenCaptureBufferCollectionImporter>
       screen_capture_buffer_collection_importer_;
@@ -79,7 +78,9 @@ class ScreenCapture : public fuchsia::ui::composition::internal::ScreenCapture {
   // correctly return a new frame immediately or wait for the next frame to be produced.
   bool client_received_last_frame_;
 
-  // Acts as a lock to RenderFrame() so it can not be used while it is still on a previous call.
+  // Acts as a lock to MaybeRenderFrame() so it can not be used while it is still on a previous
+  // call.
+  // TODO(fxbug.dev/104367): If we make ScreenCapture multi-threaded, this will need to be a mutex.
   bool render_frame_in_progress_;
 
   GetRenderables get_renderables_;

@@ -22,6 +22,7 @@
 #include "src/ui/scenic/lib/flatland/renderer/mock_renderer.h"
 #include "src/ui/scenic/lib/flatland/renderer/null_renderer.h"
 #include "src/ui/scenic/lib/screen_capture/screen_capture_buffer_collection_importer.h"
+#include "src/ui/scenic/lib/screen_capture2/tests/common.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
 using allocation::Allocator;
@@ -45,7 +46,7 @@ class ScreenCapture2Test : public gtest::TestLoopFixture {
     sysmem_allocator_ = utils::CreateSysmemAllocatorSyncPtr();
 
     renderer_ = std::make_shared<flatland::NullRenderer>();
-    importer_ = std::make_unique<ScreenCaptureBufferCollectionImporter>(
+    importer_ = std::make_shared<ScreenCaptureBufferCollectionImporter>(
         utils::CreateSysmemAllocatorSyncPtr("ScreenCapture2Test"), renderer_,
         /*enable_copy_fallback=*/false);
 
@@ -55,18 +56,9 @@ class ScreenCapture2Test : public gtest::TestLoopFixture {
 
   void SetUpMockImporter() {
     mock_renderer_ = std::make_shared<flatland::MockRenderer>();
-    importer_ = std::make_unique<ScreenCaptureBufferCollectionImporter>(
+    importer_ = std::make_shared<ScreenCaptureBufferCollectionImporter>(
         utils::CreateSysmemAllocatorSyncPtr("ScreenCapture2Test"), mock_renderer_,
         /*enable_copy_fallback=*/false);
-  }
-
-  std::shared_ptr<Allocator> CreateAllocator() {
-    std::vector<std::shared_ptr<BufferCollectionImporter>> extra_importers;
-    std::vector<std::shared_ptr<BufferCollectionImporter>> screenshot_importers;
-    screenshot_importers.push_back(importer_);
-    return std::make_shared<Allocator>(context_provider_.context(), extra_importers,
-                                       screenshot_importers,
-                                       utils::CreateSysmemAllocatorSyncPtr("-allocator"));
   }
 
   // Configures ScreenCapture with given args successfully.
@@ -112,10 +104,11 @@ class ScreenCapture2Test : public gtest::TestLoopFixture {
     allocation::BufferCollectionImportExportTokens ref_pair =
         allocation::BufferCollectionImportExportTokens::New();
 
-    std::shared_ptr<Allocator> flatland_allocator = CreateAllocator();
+    std::shared_ptr<Allocator> flatland_allocator =
+        CreateAllocator(importer_, context_provider_.context());
     CreateBufferCollectionInfo2WithConstraints(
         utils::CreateDefaultConstraints(buffer_count, image_width, image_height),
-        std::move(ref_pair.export_token), flatland_allocator);
+        std::move(ref_pair.export_token), flatland_allocator, sysmem_allocator_.get());
 
     ScreenCaptureConfig args;
     args.set_import_token(std::move(ref_pair.import_token));
@@ -129,49 +122,6 @@ class ScreenCapture2Test : public gtest::TestLoopFixture {
                  });
     RunLoopUntilIdle();
     EXPECT_TRUE(configure_result.is_ok());
-  }
-
-  void CreateBufferCollectionInfo2WithConstraints(
-      fuchsia::sysmem::BufferCollectionConstraints constraints,
-      allocation::BufferCollectionExportToken export_token,
-      std::shared_ptr<Allocator> flatland_allocator) {
-    RegisterBufferCollectionArgs rbc_args = {};
-
-    zx_status_t status;
-    // Create Sysmem tokens.
-    auto [local_token, dup_token] = utils::CreateSysmemTokens(sysmem_allocator_.get());
-
-    rbc_args.set_export_token(std::move(export_token));
-    rbc_args.set_buffer_collection_token(std::move(dup_token));
-    rbc_args.set_usage(RegisterBufferCollectionUsage::SCREENSHOT);
-
-    fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
-    status = sysmem_allocator_->BindSharedCollection(std::move(local_token),
-                                                     buffer_collection.NewRequest());
-    EXPECT_EQ(status, ZX_OK);
-
-    status = buffer_collection->SetConstraints(true, constraints);
-    EXPECT_EQ(status, ZX_OK);
-
-    bool processed_callback = false;
-    flatland_allocator->RegisterBufferCollection(
-        std::move(rbc_args),
-        [&processed_callback](
-            fuchsia::ui::composition::Allocator_RegisterBufferCollection_Result result) {
-          EXPECT_EQ(false, result.is_err());
-          processed_callback = true;
-        });
-
-    // Wait for allocation.
-    zx_status_t allocation_status = ZX_OK;
-    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info = {};
-    status =
-        buffer_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
-    ASSERT_EQ(ZX_OK, status);
-    ASSERT_EQ(ZX_OK, allocation_status);
-    ASSERT_EQ(constraints.min_buffer_count, buffer_collection_info.buffer_count);
-
-    buffer_collection->Close();
   }
 
   std::pair<std::vector<Rectangle2D>, std::vector<allocation::ImageMetadata>> GetRenderables() {
@@ -195,19 +145,20 @@ class ScreenCapture2Test : public gtest::TestLoopFixture {
 };
 
 TEST_F(ScreenCapture2Test, ConfigureWithMissingArguments) {
-  fuchsia::ui::composition::internal::ScreenCapturePtr screencapturer;
-  screen_capture2::ScreenCapture sc(screencapturer.NewRequest(), importer_, nullptr,
+  screen_capture2::ScreenCapture sc(importer_, nullptr,
                                     [this]() { return this->GetRenderables(); });
+
   const BufferCount buffer_count = 1;
   const uint32_t image_width = 1;
   const uint32_t image_height = 1;
   allocation::BufferCollectionImportExportTokens ref_pair =
       allocation::BufferCollectionImportExportTokens::New();
 
-  std::shared_ptr<Allocator> flatland_allocator = CreateAllocator();
+  std::shared_ptr<Allocator> flatland_allocator =
+      CreateAllocator(importer_, context_provider_.context());
   CreateBufferCollectionInfo2WithConstraints(
       utils::CreateDefaultConstraints(buffer_count, image_width, image_height),
-      std::move(ref_pair.export_token), flatland_allocator);
+      std::move(ref_pair.export_token), flatland_allocator, sysmem_allocator_.get());
 
   // Missing image size.
   {
@@ -296,19 +247,20 @@ TEST_F(ScreenCapture2Test, Configure_BufferCollectionFailure) {
             return true;
           });
 
-  fuchsia::ui::composition::internal::ScreenCapturePtr screencapturer;
-  screen_capture2::ScreenCapture sc(screencapturer.NewRequest(), importer_, nullptr,
+  screen_capture2::ScreenCapture sc(importer_, nullptr,
                                     [this]() { return this->GetRenderables(); });
+
   const BufferCount buffer_count = 3;
   const uint32_t image_width = 1;
   const uint32_t image_height = 1;
   allocation::BufferCollectionImportExportTokens ref_pair =
       allocation::BufferCollectionImportExportTokens::New();
 
-  std::shared_ptr<Allocator> flatland_allocator = CreateAllocator();
+  std::shared_ptr<Allocator> flatland_allocator =
+      CreateAllocator(importer_, context_provider_.context());
   CreateBufferCollectionInfo2WithConstraints(
       utils::CreateDefaultConstraints(buffer_count, image_width, image_height),
-      std::move(ref_pair.export_token), flatland_allocator);
+      std::move(ref_pair.export_token), flatland_allocator, sysmem_allocator_.get());
 
   ScreenCaptureConfig args;
   args.set_import_token(std::move(ref_pair.import_token));
@@ -334,8 +286,7 @@ TEST_F(ScreenCapture2Test, Configure_BufferCollectionFailure) {
 }
 
 TEST_F(ScreenCapture2Test, Configure_Success) {
-  fuchsia::ui::composition::internal::ScreenCapturePtr screencapturer;
-  screen_capture2::ScreenCapture sc(screencapturer.NewRequest(), importer_, renderer_,
+  screen_capture2::ScreenCapture sc(importer_, renderer_,
                                     [this]() { return this->GetRenderables(); });
   const BufferCount buffer_count = 1;
   const uint32_t image_width = 1;
@@ -345,8 +296,7 @@ TEST_F(ScreenCapture2Test, Configure_Success) {
 }
 
 TEST_F(ScreenCapture2Test, GetNextFrame_Success) {
-  fuchsia::ui::composition::internal::ScreenCapturePtr screencapturer;
-  screen_capture2::ScreenCapture sc(screencapturer.NewRequest(), importer_, renderer_,
+  screen_capture2::ScreenCapture sc(importer_, renderer_,
                                     [this]() { return this->GetRenderables(); });
   const BufferCount buffer_count = 1;
   const uint32_t image_width = 1;
@@ -366,8 +316,7 @@ TEST_F(ScreenCapture2Test, GetNextFrame_Success) {
 // Releasing buffer after first render allows it to be reused during successive call.
 TEST_F(ScreenCapture2Test, GetNextFrame_SuccessiveCallSuccess) {
   SetUpMockImporter();
-  fuchsia::ui::composition::internal::ScreenCapturePtr screencapturer;
-  screen_capture2::ScreenCapture sc(screencapturer.NewRequest(), importer_, mock_renderer_,
+  screen_capture2::ScreenCapture sc(importer_, mock_renderer_,
                                     [this]() { return this->GetRenderables(); });
   const BufferCount buffer_count = 1;
   const uint32_t image_width = 1;
@@ -398,7 +347,7 @@ TEST_F(ScreenCapture2Test, GetNextFrame_SuccessiveCallSuccess) {
   RunLoopUntilIdle();
 
   // Since |recieved_last_frame_| is true, GetNextFrame() will be hanging.
-  sc.RenderFrame();
+  sc.MaybeRenderFrame();
   RunLoopUntilIdle();
 
   EXPECT_TRUE(gnf_result2.is_ok());
@@ -410,8 +359,7 @@ TEST_F(ScreenCapture2Test, GetNextFrame_SuccessiveCallSuccess) {
 
 TEST_F(ScreenCapture2Test, GetNextFrame_Errors) {
   SetUpMockImporter();
-  fuchsia::ui::composition::internal::ScreenCapturePtr screencapturer;
-  screen_capture2::ScreenCapture sc(screencapturer.NewRequest(), importer_, mock_renderer_,
+  screen_capture2::ScreenCapture sc(importer_, mock_renderer_,
                                     [this]() { return this->GetRenderables(); });
   const BufferCount buffer_count = 1;
   const uint32_t image_width = 1;
@@ -442,9 +390,9 @@ TEST_F(ScreenCapture2Test, GetNextFrame_Errors) {
 // Releasing buffer while client has been waiting immediately renders the frame.
 TEST_F(ScreenCapture2Test, GetNextFrame_BuffersFull) {
   SetUpMockImporter();
-  fuchsia::ui::composition::internal::ScreenCapturePtr screencapturer;
-  screen_capture2::ScreenCapture sc(screencapturer.NewRequest(), importer_, mock_renderer_,
+  screen_capture2::ScreenCapture sc(importer_, mock_renderer_,
                                     [this]() { return this->GetRenderables(); });
+
   const BufferCount buffer_count = 1;
   const uint32_t image_width = 1;
   const uint32_t image_height = 1;
@@ -478,7 +426,7 @@ TEST_F(ScreenCapture2Test, GetNextFrame_BuffersFull) {
   RunLoopUntilIdle();
 
   // Since |received_last_frame_| is true, GetNextFrame will be hanging.
-  sc.RenderFrame();
+  sc.MaybeRenderFrame();
   RunLoopUntilIdle();
 
   EXPECT_TRUE(gnf_result2.is_ok());
@@ -489,11 +437,11 @@ TEST_F(ScreenCapture2Test, GetNextFrame_BuffersFull) {
   EXPECT_CALL(*mock_renderer_, ReleaseBufferImage(_)).Times(1);
 }
 
-TEST_F(ScreenCapture2Test, RenderFrame_Errors) {
+TEST_F(ScreenCapture2Test, MaybeRenderFrame_Errors) {
   SetUpMockImporter();
-  fuchsia::ui::composition::internal::ScreenCapturePtr screencapturer;
-  screen_capture2::ScreenCapture sc(screencapturer.NewRequest(), importer_, mock_renderer_,
+  screen_capture2::ScreenCapture sc(importer_, mock_renderer_,
                                     [this]() { return this->GetRenderables(); });
+
   const BufferCount buffer_count = 1;
   const uint32_t image_width = 1;
   const uint32_t image_height = 1;
@@ -516,7 +464,7 @@ TEST_F(ScreenCapture2Test, RenderFrame_Errors) {
       callback_called = true;
     });
     RunLoopUntilIdle();
-    sc.RenderFrame();
+    sc.MaybeRenderFrame();
     RunLoopUntilIdle();
     EXPECT_FALSE(callback_called);
     EXPECT_FALSE(GetReceivedLastFrame(sc));
@@ -534,7 +482,7 @@ TEST_F(ScreenCapture2Test, RenderFrame_Errors) {
   {
     EXPECT_TRUE(GetReceivedLastFrame(sc));
 
-    sc.RenderFrame();
+    sc.MaybeRenderFrame();
     RunLoopUntilIdle();
     EXPECT_FALSE(GetReceivedLastFrame(sc));
   }

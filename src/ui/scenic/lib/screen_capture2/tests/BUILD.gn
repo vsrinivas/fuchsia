@@ -10,10 +10,13 @@ group("tests") {
 
 executable("unittests") {
   output_name = "screen_capture2_unittests"
-
   testonly = true
-
-  sources = [ "screen_capture2_unittest.cc" ]
+  sources = [
+    "common.cc",
+    "common.h",
+    "screen_capture2_manager_unittest.cc",
+    "screen_capture2_unittest.cc",
+  ]
 
   deps = [
     "//sdk/lib/sys/cpp/testing:unit",
@@ -22,6 +25,7 @@ executable("unittests") {
     "//src/lib/testing/loop_fixture:gtest",
     "//src/ui/scenic/lib/allocation",
     "//src/ui/scenic/lib/flatland/engine",
+    "//src/ui/scenic/lib/flatland/tests",
     "//src/ui/scenic/lib/screen_capture",
     "//src/ui/scenic/lib/screen_capture2",
     "//src/ui/scenic/lib/utils",

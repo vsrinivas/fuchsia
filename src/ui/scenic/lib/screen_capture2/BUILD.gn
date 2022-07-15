@@ -6,6 +6,8 @@ source_set("screen_capture2") {
   sources = [
     "screen_capture2.cc",
     "screen_capture2.h",
+    "screen_capture2_manager.cc",
+    "screen_capture2_manager.h",
   ]
   public_deps = [ "//sdk/fidl/fuchsia.ui.composition.internal" ]
 
@@ -15,6 +17,7 @@ source_set("screen_capture2") {
     "//src/lib/fxl",
     "//src/ui/scenic/lib/allocation",
     "//src/ui/scenic/lib/flatland/engine",
+    "//src/ui/scenic/lib/scheduling:frame_scheduler_interface",
     "//src/ui/scenic/lib/screen_capture",
     "//src/ui/scenic/lib/utils",
     "//zircon/system/ulib/fbl",

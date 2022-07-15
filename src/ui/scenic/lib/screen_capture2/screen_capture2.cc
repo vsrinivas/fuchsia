@@ -20,13 +20,11 @@ using std::vector;
 
 namespace screen_capture2 {
 
-ScreenCapture::ScreenCapture(
-    fidl::InterfaceRequest<fuchsia::ui::composition::internal::ScreenCapture> request,
-    std::shared_ptr<screen_capture::ScreenCaptureBufferCollectionImporter>
-        screen_capture_buffer_collection_importer,
-    std::shared_ptr<flatland::Renderer> renderer, GetRenderables get_renderables)
-    : binding_(this, std::move(request)),
-      screen_capture_buffer_collection_importer_(screen_capture_buffer_collection_importer),
+ScreenCapture::ScreenCapture(std::shared_ptr<screen_capture::ScreenCaptureBufferCollectionImporter>
+                                 screen_capture_buffer_collection_importer,
+                             std::shared_ptr<flatland::Renderer> renderer,
+                             GetRenderables get_renderables)
+    : screen_capture_buffer_collection_importer_(screen_capture_buffer_collection_importer),
       renderer_(std::move(renderer)),
       get_renderables_(std::move(get_renderables)),
       weak_factory_(this) {}
@@ -120,14 +118,15 @@ void ScreenCapture::GetNextFrame(ScreenCapture::GetNextFrameCallback callback) {
   }
   current_callback_ = std::move(callback);
   if (!client_received_last_frame_ && !available_buffers_.empty()) {
-    RenderFrame();
+    MaybeRenderFrame();
   }
 }
 
-void ScreenCapture::RenderFrame() {
+void ScreenCapture::MaybeRenderFrame() {
   if (render_frame_in_progress_) {
     return;
   }
+
   render_frame_in_progress_ = true;
 
   if (current_callback_ == std::nullopt) {
@@ -137,8 +136,8 @@ void ScreenCapture::RenderFrame() {
   }
 
   if (available_buffers_.empty()) {
-    FX_LOGS(WARNING)
-        << "ScreenCapture::RenderFrame: Should ensure there are available buffers before call.";
+    FX_LOGS(WARNING) << "ScreenCapture::MaybeRenderFrame: Should ensure there are available "
+                        "buffers before call.";
     client_received_last_frame_ = false;
     render_frame_in_progress_ = false;
     return;
@@ -216,7 +215,7 @@ void ScreenCapture::HandleBufferRelease(uint32_t buffer_index) {
   buffer_server_tokens_.erase(buffer_index);
   if (available_buffers_.empty() && (current_callback_ != std::nullopt)) {
     available_buffers_.push_front(buffer_index);
-    RenderFrame();
+    MaybeRenderFrame();
     return;
   }
   available_buffers_.push_front(buffer_index);
