@@ -10,50 +10,73 @@
 #include <fuchsia/hardware/audio/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/irq.h>
+#include <lib/fit/function.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/interrupt.h>
 
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 
-namespace audio {
+namespace audio::da7219 {
 
-class Da7219;
-using Da7219Base =
-    ddk::Device<Da7219, ddk::Messageable<fuchsia_hardware_audio::CodecConnector>::Mixin,
-                ddk::Suspendable, ddk::Unbindable>;
-
-class Da7219 : public Da7219Base,
-               public fidl::WireServer<fuchsia_hardware_audio::Codec>,
-               public ddk::CodecProtocol<Da7219, ddk::base_protocol> {
+class Core {
  public:
-  explicit Da7219(zx_device_t* parent, fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c,
-                  zx::interrupt irq);
-  ~Da7219() override = default;
+  explicit Core(fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c, zx::interrupt irq);
+  ~Core() = default;
+
+  using PlugCallback = fit::function<void(bool)>;
 
   void Shutdown();
+  fidl::ClientEnd<fuchsia_hardware_i2c::Device>& i2c() { return i2c_; }
+  async_dispatcher_t* dispatcher() { return loop_->dispatcher(); }
+  zx_status_t Reset();
+  zx_status_t Initialize();
+  void AddPlugCallback(bool is_input, PlugCallback cb);
+
+ private:
+  void HandleIrq(async_dispatcher_t* dispatcher, async::IrqBase* irq, zx_status_t status,
+                 const zx_packet_interrupt_t* interrupt);
+  void PlugDetected(bool plugged, bool with_mic);
+
+  fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c_;
+  zx::interrupt irq_;
+  async::IrqMethod<Core, &Core::HandleIrq> irq_handler_{this};
+
+  std::optional<async::Loop> loop_;
+  std::optional<PlugCallback> plug_callback_input_;
+  std::optional<PlugCallback> plug_callback_output_;
+};
+
+class Driver;
+using Base = ddk::Device<Driver, ddk::Messageable<fuchsia_hardware_audio::CodecConnector>::Mixin,
+                         ddk::Suspendable, ddk::Unbindable>;
+
+class Driver : public Base,
+               public fidl::WireServer<fuchsia_hardware_audio::Codec>,
+               public ddk::CodecProtocol<Driver, ddk::base_protocol> {
+ public:
+  explicit Driver(zx_device_t* parent, std::shared_ptr<Core> core, bool is_input);
 
   static zx_status_t Bind(void* ctx, zx_device_t* dev);
   void DdkInit(ddk::InitTxn txn);
   void DdkRelease();
   void DdkUnbind(ddk::UnbindTxn txn) {
-    Shutdown();
+    // Either driver shuts down the whole core.
+    core_->Shutdown();
     txn.Reply();
   }
   void DdkSuspend(ddk::SuspendTxn txn) {
-    Shutdown();
+    // Either driver shuts down the whole core.
+    core_->Shutdown();
     txn.Reply(ZX_OK, txn.requested_state());
   }
 
   zx_status_t CodecConnect(zx::channel channel) {
     fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::Codec>>(
-        loop_->dispatcher(), fidl::ServerEnd<fuchsia_hardware_audio::Codec>(std::move(channel)),
+        core_->dispatcher(), fidl::ServerEnd<fuchsia_hardware_audio::Codec>(std::move(channel)),
         this);
     return ZX_OK;
   }
-
- protected:
-  zx_status_t Initialize();  // protected for unit tests.
 
  private:
   // LLCPP implementation for the Codec API.
@@ -85,16 +108,8 @@ class Da7219 : public Da7219Base,
                                SignalProcessingConnectCompleter::Sync& completer) override {}
   void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override;
 
-  zx_status_t Reset();
-
-  void HandleIrq(async_dispatcher_t* dispatcher, async::IrqBase* irq, zx_status_t status,
-                 const zx_packet_interrupt_t* interrupt);
-  void PlugDetected(bool plugged);
-
-  fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c_;
-  zx::interrupt irq_;
-  async::IrqMethod<Da7219, &Da7219::HandleIrq> irq_handler_{this};
-
+  std::shared_ptr<Core> core_;
+  bool is_input_;
   // Plug state. Must reply to the first Watch request, if there is no plug state update before the
   // first Watch, reply with unplugged at time 0.
   bool plugged_ = false;
@@ -103,10 +118,9 @@ class Da7219 : public Da7219Base,
   std::optional<WatchPlugStateCompleter::Async> plug_state_completer_;
   bool gain_state_replied_ = false;
   std::optional<WatchGainStateCompleter::Async> gain_state_completer_;
-  std::optional<async::Loop> loop_;
   bool bound_ = false;
 };
 
-}  // namespace audio
+}  // namespace audio::da7219
 
 #endif  // SRC_MEDIA_AUDIO_DRIVERS_CODECS_DA7219_DA7219_H_

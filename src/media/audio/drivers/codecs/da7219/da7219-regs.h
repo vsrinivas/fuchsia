@@ -16,6 +16,10 @@ struct I2cRegister : public hwreg::I2cRegisterBase<DerivedType, uint8_t, 1> {
   // Read from I2C and log errors.
   static zx::status<DerivedType> Read(fidl::ClientEnd<fuchsia_hardware_i2c::Device>& i2c) {
     auto ret = Get();
+// #define TRACE_I2C
+#ifdef TRACE_I2C
+    printf("Reading register 0x%02X\n", ret.reg_addr());
+#endif
     zx_status_t status = ret.ReadFrom(i2c);
     if (status != ZX_OK) {
       zxlogf(ERROR, "I2C read reg 0x%02x error: %s", ret.reg_addr(), zx_status_get_string(status));
@@ -25,6 +29,10 @@ struct I2cRegister : public hwreg::I2cRegisterBase<DerivedType, uint8_t, 1> {
   }
   // Write to I2C and log errors.
   zx_status_t Write(fidl::ClientEnd<fuchsia_hardware_i2c::Device>& i2c) {
+#ifdef TRACE_I2C
+    printf("Writting register 0x%02X\n",
+           hwreg::I2cRegisterBase<DerivedType, uint8_t, 1>::reg_addr());
+#endif
     zx_status_t status = hwreg::I2cRegisterBase<DerivedType, uint8_t, 1>::WriteTo(i2c);
     if (status != ZX_OK) {
       zxlogf(ERROR, "I2C write reg 0x%02x error: %s",
@@ -51,6 +59,16 @@ struct PllCtrl : public I2cRegister<PllCtrl, 0x20> {
   static constexpr uint8_t kPllIndiv36plusMHz = 4;
 };
 
+// DIG_ROUTING_DAI.
+struct DigRoutingDai : public I2cRegister<DigRoutingDai, 0x2a> {
+  DEF_FIELD(5, 4, dai_r_src);
+  DEF_FIELD(1, 0, dai_l_src);
+  static constexpr uint8_t kAdcLeft = 0;
+  static constexpr uint8_t kToneGenerator = 1;
+  static constexpr uint8_t DaiInputLeftDataDaiMonoMix = 2;
+  static constexpr uint8_t DaiInputRightDataDaiMonoMix = 3;
+};
+
 // DAI_CTRL.
 struct DaiCtrl : public I2cRegister<DaiCtrl, 0x2c> {
   DEF_BIT(7, dai_en);
@@ -75,6 +93,28 @@ struct DaiTdmCtrl : public I2cRegister<DaiTdmCtrl, 0x2d> {
   DEF_BIT(7, dai_tdm_mode_en);
   DEF_BIT(6, dai_oe);
   DEF_FIELD(1, 0, dai_tdm_ch_en);
+  static constexpr uint8_t kLeftChannelAndRightChannelBothDisabled = 0;
+  static constexpr uint8_t kLeftChannelEnabledRightChannelDisabled = 1;
+  static constexpr uint8_t kLeftChannelDisabledRightChannelEnabled = 2;
+  static constexpr uint8_t kLeftChannelAndRightChannelBothEnabled = 3;
+};
+
+// MIXIN_L_SELECT
+struct MixinLSelect : public I2cRegister<MixinLSelect, 0x33> {
+  DEF_BIT(0, mixin_l_mix_select);
+};
+
+// MIC_1_GAIN
+struct Mic1Gain : public I2cRegister<Mic1Gain, 0x39> {
+  DEF_FIELD(2, 0, mic_1_amp_gain);
+  static constexpr uint8_t kMinus6dB = 0;
+  static constexpr uint8_t k0dB = 1;
+  static constexpr uint8_t k6dB = 2;
+  static constexpr uint8_t k12dB = 3;
+  static constexpr uint8_t k18dB = 4;
+  static constexpr uint8_t k24dB = 5;
+  static constexpr uint8_t k30dB = 6;
+  static constexpr uint8_t k36dB = 7;
 };
 
 // CP_CTRL.
@@ -94,6 +134,35 @@ struct MixoutLSelect : public I2cRegister<MixoutLSelect, 0x4b> {
 // MIXOUT_R_SELECT.
 struct MixoutRSelect : public I2cRegister<MixoutRSelect, 0x4c> {
   DEF_BIT(0, mixout_r_mix_select);
+};
+
+// MICBIAS_CTRL.
+struct MicbiasCtrl : public I2cRegister<MicbiasCtrl, 0x62> {
+  DEF_BIT(3, micbias1_en);
+  DEF_FIELD(2, 0, micbias1_level);
+};
+
+// MIC_1_CTRL.
+struct Mic1Ctrl : public I2cRegister<Mic1Ctrl, 0x63> {
+  DEF_BIT(7, mic_1_amp_en);
+  DEF_BIT(6, mic_1_amp_mute_en);
+  DEF_BIT(5, mic_1_amp_ramp_en);
+};
+
+// MIXIN_L_CTRL.
+struct MixinLCtrl : public I2cRegister<MixinLCtrl, 0x65> {
+  DEF_BIT(7, mixin_l_amp_en);
+  DEF_BIT(6, mixin_l_amp_mute_en);
+  DEF_BIT(5, mixin_l_amp_ramp_en);
+  DEF_BIT(4, mixin_l_amp_zc_en);
+  DEF_BIT(3, mixin_l_mix_en);
+};
+
+// ADC_L_CTRL.
+struct AdcLCtrl : public I2cRegister<AdcLCtrl, 0x67> {
+  DEF_BIT(7, adc_l_en);
+  DEF_BIT(6, adc_l_mute_en);
+  DEF_BIT(5, adc_l_ramp_en);
 };
 
 // DAC_L_CTRL.

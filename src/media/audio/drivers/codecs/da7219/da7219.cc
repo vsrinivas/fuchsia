@@ -11,11 +11,10 @@
 #include "src/media/audio/drivers/codecs/da7219/da7219-bind.h"
 #include "src/media/audio/drivers/codecs/da7219/da7219-regs.h"
 
-namespace audio {
+namespace audio::da7219 {
 
-Da7219::Da7219(zx_device_t* parent, fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c,
-               zx::interrupt irq)
-    : Da7219Base(parent), i2c_(std::move(i2c)), irq_(std::move(irq)) {
+Core::Core(fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c, zx::interrupt irq)
+    : i2c_(std::move(i2c)), irq_(std::move(irq)) {
   async_loop_config_t config = kAsyncLoopConfigNeverAttachToThread;
   config.irq_support = true;
   loop_.emplace(&config);
@@ -24,7 +23,7 @@ Da7219::Da7219(zx_device_t* parent, fidl::ClientEnd<fuchsia_hardware_i2c::Device
   loop_->StartThread();
 }
 
-void Da7219::Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) {
+void Driver::Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) {
   if (bound_) {
     completer.Close(ZX_ERR_NO_RESOURCES);  // Only allow one connection.
     return;
@@ -41,16 +40,29 @@ void Da7219::Connect(ConnectRequestView request, ConnectCompleter::Sync& complet
       };
 
   fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::Codec>>(
-      loop_->dispatcher(), std::move(request->codec_protocol), this, std::move(on_unbound));
+      core_->dispatcher(), std::move(request->codec_protocol), this, std::move(on_unbound));
 }
 
-void Da7219::Shutdown() {
+void Core::AddPlugCallback(bool is_input, PlugCallback cb) {
+  if (is_input) {
+    plug_callback_input_.emplace(std::move(cb));
+  } else {
+    plug_callback_output_.emplace(std::move(cb));
+  }
+}
+
+void Core::Shutdown() {
+  zx_status_t status = SystemActive::Get().set_system_active(false).Write(i2c_);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Could not deactive the HW: %s", zx_status_get_string(status));
+  }
+
   loop_->Shutdown();
   irq_handler_.Cancel();
   irq_.destroy();
 }
 
-zx_status_t Da7219::Initialize() {
+zx_status_t Core::Initialize() {
   auto chip_id1 = ChipId1::Read(i2c_);
   if (!chip_id1.is_ok())
     return chip_id1.status_value();
@@ -76,16 +88,7 @@ zx_status_t Da7219::Initialize() {
   return ZX_OK;
 }
 
-void Da7219::Reset(ResetRequestView request, ResetCompleter::Sync& completer) {
-  zx_status_t status = Reset();
-  if (status != ZX_OK) {
-    completer.Close(status);
-    return;
-  }
-  completer.Reply();
-}
-
-zx_status_t Da7219::Reset() {
+zx_status_t Core::Reset() {
   zx_status_t status = SystemActive::Get().set_system_active(true).Write(i2c_);
   if (status != ZX_OK)
     return status;
@@ -104,7 +107,8 @@ zx_status_t Da7219::Reset() {
   if (status != ZX_OK)
     return status;
 
-  // Routing, configure headphones and leave disabled for AAD (Advanced Accessory Detect).
+  // Output routing, configure headset output but leave them disabled for AAD (Advanced Accessory
+  // Detect).
   status =
       DacLCtrl::Get().set_dac_l_en(true).set_dac_l_mute_en(false).set_dac_l_ramp_en(false).Write(
           i2c_);
@@ -148,6 +152,39 @@ zx_status_t Da7219::Reset() {
   if (status != ZX_OK)
     return status;
 
+  // Input routing, configure headset input with arbitrary gain.
+  status = Mic1Gain::Get().set_mic_1_amp_gain(Mic1Gain::k30dB).Write(i2c_);
+  if (status != ZX_OK)
+    return status;
+  status = Mic1Ctrl::Get()
+               .set_mic_1_amp_en(true)
+               .set_mic_1_amp_mute_en(false)
+               .set_mic_1_amp_ramp_en(false)
+               .Write(i2c_);
+  if (status != ZX_OK)
+    return status;
+  status = MixinLSelect::Get().set_mixin_l_mix_select(true).Write(i2c_);
+  if (status != ZX_OK)
+    return status;
+  status = MixinLCtrl::Get()
+               .set_mixin_l_amp_en(true)
+               .set_mixin_l_amp_mute_en(false)
+               .set_mixin_l_amp_ramp_en(false)
+               .set_mixin_l_amp_zc_en(false)
+               .set_mixin_l_mix_en(true)
+               .Write(i2c_);
+  status =
+      AdcLCtrl::Get().set_adc_l_en(true).set_adc_l_mute_en(false).set_adc_l_ramp_en(false).Write(
+          i2c_);
+  if (status != ZX_OK)
+    return status;
+  status = DigRoutingDai::Get()
+               .set_dai_r_src(DigRoutingDai::kAdcLeft)
+               .set_dai_l_src(DigRoutingDai::kAdcLeft)
+               .Write(i2c_);
+  if (status != ZX_OK)
+    return status;
+
   // Enable AAD (Advanced Accessory Detect).
   status = AccdetConfig1::Get()
                .set_pin_order_det_en(true)
@@ -162,7 +199,7 @@ zx_status_t Da7219::Reset() {
   auto status_a = AccdetStatusA::Read(i2c_);
   if (!status_a.is_ok())
     return status_a.error_value();
-  PlugDetected(status_a->jack_insertion_sts());
+  PlugDetected(status_a->jack_insertion_sts(), status_a->jack_type_sts());
 
   // Unmask AAD IRQs.
   status = AccdetIrqMaskA::Get()
@@ -200,21 +237,52 @@ zx_status_t Da7219::Reset() {
       .Write(i2c_);
 }
 
-void Da7219::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
+Driver::Driver(zx_device_t* parent, std::shared_ptr<Core> core, bool is_input)
+    : Base(parent), core_(core), is_input_(is_input) {
+  core_->AddPlugCallback(is_input_, [this](bool plugged) {
+    // Update plug state if we haven't set it yet, or if changed.
+    if (!plugged_time_.get() || plugged_ != plugged) {
+      plugged_ = plugged;
+      plugged_time_ = zx::clock::get_monotonic();
+      if (plug_state_completer_) {
+        plug_state_updated_ = false;
+        fidl::Arena arena;
+        auto plug_state = fuchsia_hardware_audio::wire::PlugState::Builder(arena);
+        plug_state.plugged(plugged_).plug_state_time(plugged_time_.get());
+        plug_state_completer_->Reply(plug_state.Build());
+        plug_state_completer_.reset();
+      } else {
+        plug_state_updated_ = true;
+      }
+    }
+  });
+}
+
+void Driver::Reset(ResetRequestView request, ResetCompleter::Sync& completer) {
+  // Either driver resets the whole core.
+  zx_status_t status = core_->Reset();
+  if (status != ZX_OK) {
+    completer.Close(status);
+    return;
+  }
+  completer.Reply();
+}
+
+void Driver::GetInfo(GetInfoRequestView request, GetInfoCompleter::Sync& completer) {
   fuchsia_hardware_audio::wire::CodecInfo info{
       .unique_id = "", .manufacturer = "Dialog", .product_name = "DA7219"};
   completer.Reply(info);
 }
 
-void Da7219::Stop(StopRequestView request, StopCompleter::Sync& completer) {
+void Driver::Stop(StopRequestView request, StopCompleter::Sync& completer) {
   completer.Close(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Da7219::Start(StartRequestView request, StartCompleter::Sync& completer) {
+void Driver::Start(StartRequestView request, StartCompleter::Sync& completer) {
   completer.Reply({});  // Always started.
 }
 
-void Da7219::GetGainFormat(GetGainFormatRequestView request,
+void Driver::GetGainFormat(GetGainFormatRequestView request,
                            GetGainFormatCompleter::Sync& completer) {
   fidl::Arena arena;
   auto gain_format = fuchsia_hardware_audio::wire::GainFormat::Builder(arena);
@@ -227,11 +295,11 @@ void Da7219::GetGainFormat(GetGainFormatRequestView request,
   completer.Reply(gain_format.Build());
 }
 
-void Da7219::SetGainState(SetGainStateRequestView request, SetGainStateCompleter::Sync& completer) {
+void Driver::SetGainState(SetGainStateRequestView request, SetGainStateCompleter::Sync& completer) {
   // No gain support and no reply required.
 }
 
-void Da7219::WatchGainState(WatchGainStateRequestView request,
+void Driver::WatchGainState(WatchGainStateRequestView request,
                             WatchGainStateCompleter::Sync& completer) {
   // Only reply to the first watch request.
   if (!gain_state_replied_) {
@@ -247,21 +315,21 @@ void Da7219::WatchGainState(WatchGainStateRequestView request,
   }
 }
 
-void Da7219::GetHealthState(GetHealthStateRequestView request,
+void Driver::GetHealthState(GetHealthStateRequestView request,
                             GetHealthStateCompleter::Sync& completer) {
   completer.Reply({});
 }
 
-void Da7219::IsBridgeable(IsBridgeableRequestView request, IsBridgeableCompleter::Sync& completer) {
+void Driver::IsBridgeable(IsBridgeableRequestView request, IsBridgeableCompleter::Sync& completer) {
   completer.Reply(false);
 }
 
-void Da7219::SetBridgedMode(SetBridgedModeRequestView request,
+void Driver::SetBridgedMode(SetBridgedModeRequestView request,
                             SetBridgedModeCompleter::Sync& completer) {
   completer.Close(ZX_ERR_NOT_SUPPORTED);
 }
 
-void Da7219::GetDaiFormats(GetDaiFormatsRequestView request,
+void Driver::GetDaiFormats(GetDaiFormatsRequestView request,
                            GetDaiFormatsCompleter::Sync& completer) {
   // TODO(104023): Add handling for the other formats supported by this hardware.
   fidl::Arena arena;
@@ -294,7 +362,7 @@ void Da7219::GetDaiFormats(GetDaiFormatsRequestView request,
   completer.ReplySuccess(std::move(all_formats2));
 }
 
-void Da7219::SetDaiFormat(SetDaiFormatRequestView request, SetDaiFormatCompleter::Sync& completer) {
+void Driver::SetDaiFormat(SetDaiFormatRequestView request, SetDaiFormatCompleter::Sync& completer) {
   auto format = request->format;
   uint8_t dai_word_length = 0;
   // clang-format off
@@ -312,9 +380,9 @@ void Da7219::SetDaiFormat(SetDaiFormatRequestView request, SetDaiFormatCompleter
 
   zx_status_t status = DaiTdmCtrl::Get()
                            .set_dai_tdm_mode_en(false)  // Mode set is I2S, not TDM.
-                           .set_dai_oe(false)
-                           .set_dai_tdm_ch_en(false)
-                           .Write(i2c_);
+                           .set_dai_oe(true)
+                           .set_dai_tdm_ch_en(DaiTdmCtrl::kLeftChannelAndRightChannelBothEnabled)
+                           .Write(core_->i2c());
   if (status != ZX_OK) {
     completer.Close(status);
     return;
@@ -324,7 +392,7 @@ void Da7219::SetDaiFormat(SetDaiFormatRequestView request, SetDaiFormatCompleter
                .set_dai_ch_num(DaiCtrl::kDaiChNumLeftAndRightChannelsAreEnabled)
                .set_dai_word_length(dai_word_length)
                .set_dai_format(DaiCtrl::kDaiFormatI2sMode)
-               .Write(i2c_);
+               .Write(core_->i2c());
   if (status != ZX_OK) {
     completer.Close(status);
     return;
@@ -332,15 +400,18 @@ void Da7219::SetDaiFormat(SetDaiFormatRequestView request, SetDaiFormatCompleter
   completer.ReplySuccess({});
 }
 
-void Da7219::GetPlugDetectCapabilities(GetPlugDetectCapabilitiesRequestView request,
+void Driver::GetPlugDetectCapabilities(GetPlugDetectCapabilitiesRequestView request,
                                        GetPlugDetectCapabilitiesCompleter::Sync& completer) {
   completer.Reply(fuchsia_hardware_audio::wire::PlugDetectCapabilities::kCanAsyncNotify);
 }
 
-void Da7219::HandleIrq(async_dispatcher_t* dispatcher, async::IrqBase* irq, zx_status_t status,
-                       const zx_packet_interrupt_t* interrupt) {
+void Core::HandleIrq(async_dispatcher_t* dispatcher, async::IrqBase* irq, zx_status_t status,
+                     const zx_packet_interrupt_t* interrupt) {
   if (status != ZX_OK) {
-    zxlogf(ERROR, "IRQ wait: %s", zx_status_get_string(status));
+    // Do not log canceled cases which happens too often in particular in test cases.
+    if (status != ZX_ERR_CANCELED) {
+      zxlogf(ERROR, "IRQ wait: %s", zx_status_get_string(status));
+    }
     return;
   }
 
@@ -348,10 +419,15 @@ void Da7219::HandleIrq(async_dispatcher_t* dispatcher, async::IrqBase* irq, zx_s
   if (!event_a.is_ok())
     return;
 
+  auto status_a = AccdetStatusA::Read(i2c_);
+  if (!status_a.is_ok())
+    return;
+
   if (event_a->e_jack_detect_complete()) {
-    PlugDetected(true);  // Only report once we are done with detection.
+    // Only report once we are done with detection.
+    PlugDetected(true, status_a->jack_type_sts());
   } else if (event_a->e_jack_removed()) {
-    PlugDetected(false);
+    PlugDetected(false, status_a->jack_type_sts());
   }
 
   irq_.ack();
@@ -364,7 +440,7 @@ void Da7219::HandleIrq(async_dispatcher_t* dispatcher, async::IrqBase* irq, zx_s
     return;
 }
 
-void Da7219::WatchPlugState(WatchPlugStateRequestView request,
+void Driver::WatchPlugState(WatchPlugStateRequestView request,
                             WatchPlugStateCompleter::Sync& completer) {
   fidl::Arena arena;
   auto plug_state = fuchsia_hardware_audio::wire::PlugState::Builder(arena);
@@ -379,8 +455,9 @@ void Da7219::WatchPlugState(WatchPlugStateRequestView request,
   }
 }
 
-void Da7219::PlugDetected(bool plugged) {
-  zxlogf(INFO, "Plug event: %s", plugged ? "plug" : "unplug");
+void Core::PlugDetected(bool plugged, bool with_mic) {
+  zxlogf(INFO, "Plug event: %s %s", plugged ? "plugged" : "unplugged",
+         with_mic ? "with mic" : "no mic");
 
   // Enable/disable HP left.
   auto hplctrl = HpLCtrl::Read(i2c_);
@@ -406,38 +483,31 @@ void Da7219::PlugDetected(bool plugged) {
   if (status != ZX_OK)
     return;
 
-  // No errors, update plug state if we haven't set it yet, or if changed.
-  if (!plugged_time_.get() || plugged_ != plugged) {
-    plugged_ = plugged;
-    plugged_time_ = zx::clock::get_monotonic();
-    if (plug_state_completer_) {
-      plug_state_updated_ = false;
-      fidl::Arena arena;
-      auto plug_state = fuchsia_hardware_audio::wire::PlugState::Builder(arena);
-      plug_state.plugged(plugged_).plug_state_time(plugged_time_.get());
-      plug_state_completer_->Reply(plug_state.Build());
-      plug_state_completer_.reset();
-    } else {
-      plug_state_updated_ = true;
-    }
+  // No errors, now update callbacks. Input is plugged only if the HW detected a 4-pole jack.
+  if (plug_callback_input_.has_value()) {
+    (*plug_callback_input_)(plugged && with_mic);
+  }
+
+  if (plug_callback_output_.has_value()) {
+    (*plug_callback_output_)(plugged);
   }
 }
 
-zx_status_t Da7219::Bind(void* ctx, zx_device_t* parent) {
+zx_status_t Driver::Bind(void* ctx, zx_device_t* parent) {
   auto client = acpi::Client::Create(parent);
   if (!client.is_ok()) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
-  if (endpoints.is_error()) {
+  auto i2c_endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+  if (i2c_endpoints.is_error()) {
     zxlogf(ERROR, "Failed to create I2C endpoints");
-    return endpoints.error_value();
+    return i2c_endpoints.error_value();
   }
 
   zx_status_t status = device_connect_fragment_fidl_protocol(
       parent, "i2c000", fidl::DiscoverableProtocolName<fuchsia_hardware_i2c::Device>,
-      endpoints->server.TakeChannel().release());
+      i2c_endpoints->server.TakeChannel().release());
   if (status != ZX_OK) {
     zxlogf(ERROR, "Could not get i2c protocol");
     return ZX_ERR_NO_RESOURCES;
@@ -451,38 +521,57 @@ zx_status_t Da7219::Bind(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  auto device = std::make_unique<Da7219>(parent, std::move(endpoints->client),
-                                         std::move(result.value().value()->irq));
-  status = device->Initialize();
+  // There is a core class that implements the core logic and interaction with the hardware, and a
+  // Driver class that allows the creation of multiple instances (one for input and one for output)
+  // via multiple DdkAdd invocations.
+  auto core = std::make_shared<Core>(std::move(i2c_endpoints->client),
+                                     std::move(result.value().value()->irq));
+  status = core->Initialize();
   if (status != ZX_OK) {
     zxlogf(ERROR, "Could not initialize");
     return status;
   }
-  zx_device_prop_t props[] = {
+
+  auto output_driver = std::make_unique<Driver>(parent, core, false);
+  zx_device_prop_t output_props[] = {
       {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_DIALOG},
       {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_DIALOG_DA7219},
+      {BIND_CODEC_INSTANCE, 0, 1},
   };
-  status = device->DdkAdd(ddk::DeviceAddArgs("DA7219").set_props(props));
+  status = output_driver->DdkAdd(ddk::DeviceAddArgs("DA7219-output").set_props(output_props));
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not add to the DDK");
+    zxlogf(ERROR, "Could not add to DDK");
     return status;
   }
+  output_driver.release();
 
-  device.release();
+  auto input_driver = std::make_unique<Driver>(parent, core, true);
+  zx_device_prop_t input_props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_DIALOG},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_DIALOG_DA7219},
+      {BIND_CODEC_INSTANCE, 0, 2},
+  };
+  status = input_driver->DdkAdd(ddk::DeviceAddArgs("DA7219-input").set_props(input_props));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Could not add to DDK");
+    return status;
+  }
+  input_driver.release();
+
   return ZX_OK;
 }
 
-void Da7219::DdkInit(ddk::InitTxn txn) { txn.Reply(ZX_OK); }
+void Driver::DdkInit(ddk::InitTxn txn) { txn.Reply(ZX_OK); }
 
-void Da7219::DdkRelease() { delete this; }
+void Driver::DdkRelease() { delete this; }
 
-static zx_driver_ops_t da7219_driver_ops = []() -> zx_driver_ops_t {
+static zx_driver_ops_t driver_ops = []() -> zx_driver_ops_t {
   zx_driver_ops_t ops = {};
   ops.version = DRIVER_OPS_VERSION;
-  ops.bind = Da7219::Bind;
+  ops.bind = Driver::Bind;
   return ops;
 }();
 
-}  // namespace audio
+}  // namespace audio::da7219
 
-ZIRCON_DRIVER(Da7219, audio::da7219_driver_ops, "zircon", "0.1");
+ZIRCON_DRIVER(Da7219, audio::da7219::driver_ops, "zircon", "0.1");
