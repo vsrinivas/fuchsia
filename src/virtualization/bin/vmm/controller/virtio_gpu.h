@@ -5,6 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_GPU_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_CONTROLLER_VIRTIO_GPU_H_
 
+#include <fidl/fuchsia.virtualization.hardware/cpp/fidl.h>
 #include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
@@ -20,7 +21,8 @@
 static constexpr uint16_t kVirtioGpuNumQueues = 2;
 
 class VirtioGpu
-    : public VirtioComponentDevice<VIRTIO_ID_GPU, kVirtioGpuNumQueues, virtio_gpu_config_t> {
+    : public VirtioComponentDevice<VIRTIO_ID_GPU, kVirtioGpuNumQueues, virtio_gpu_config_t>,
+      public fidl::WireAsyncEventHandler<fuchsia_virtualization_hardware::VirtioGpu> {
  public:
   explicit VirtioGpu(const PhysMem& phys_mem);
 
@@ -41,12 +43,15 @@ class VirtioGpu
   std::shared_ptr<sys::ServiceDirectory> services_;
   fuchsia::sys::ComponentControllerPtr controller_;
   // Use a sync pointer for consistency of virtual machine execution.
-  fuchsia::virtualization::hardware::VirtioGpuSyncPtr gpu_;
-  fuchsia::virtualization::hardware::VirtioGpuPtr events_;
+  fidl::WireClient<fuchsia_virtualization_hardware::VirtioGpu> gpu_;
 
   zx_status_t ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc, zx_gpaddr_t avail,
                              zx_gpaddr_t used);
   zx_status_t Ready(uint32_t negotiated_features);
+
+  void OnConfigChanged(
+      fidl::WireEvent<fuchsia_virtualization_hardware::VirtioGpu::OnConfigChanged>* event) override;
+  void on_fidl_error(fidl::UnbindInfo error) override;
 
   void OnConfigChanged();
 };

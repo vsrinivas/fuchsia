@@ -40,32 +40,51 @@ zx_status_t VirtioGpu::Start(
   constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cm";
 #endif
 
+  auto endpoints = fidl::CreateEndpoints<fuchsia_virtualization_hardware::VirtioGpu>();
+  auto [client_end, server_end] = std::move(endpoints.value());
+  fidl::InterfaceRequest<fuchsia::virtualization::hardware::VirtioGpu> gpu_request(
+      server_end.TakeChannel());
+  gpu_.Bind(std::move(client_end), dispatcher, this);
+
   zx_status_t status =
       CreateDynamicComponent(realm, kComponentCollectionName, kComponentName, kComponentUrl,
-                             [gpu = gpu_.NewRequest(), events = events_.NewRequest()](
+                             [gpu_request = std::move(gpu_request)](
                                  std::shared_ptr<sys::ServiceDirectory> services) mutable {
-                               zx_status_t status = services->Connect(std::move(gpu));
-                               if (status != ZX_OK) {
-                                 return status;
-                               }
-                               return services->Connect(std::move(events));
+                               return services->Connect(std::move(gpu_request));
                              });
   if (status != ZX_OK) {
     return status;
   }
-  events_.events().OnConfigChanged = fit::bind_member(this, &VirtioGpu::OnConfigChanged);
   fuchsia::virtualization::hardware::StartInfo start_info;
   status = PrepStart(guest, dispatcher, &start_info);
   if (status != ZX_OK) {
     return status;
   }
-  return gpu_->Start(std::move(start_info), std::move(keyboard_listener),
-                     std::move(pointer_listener));
+
+  // Convert to llcpp types
+  fuchsia_virtualization_hardware::wire::StartInfo start_info_llcpp{
+      .trap =
+          {
+              .addr = start_info.trap.addr,
+              .size = start_info.trap.size,
+          },
+      .guest = std::move(start_info.guest),
+      .event = std::move(start_info.event),
+      .vmo = std::move(start_info.vmo),
+  };
+  fidl::ClientEnd<fuchsia_virtualization_hardware::KeyboardListener> llcpp_keyboard_listener(
+      keyboard_listener.TakeChannel());
+  fidl::ClientEnd<fuchsia_virtualization_hardware::PointerListener> llcpp_pointer_listener(
+      pointer_listener.TakeChannel());
+  return gpu_.sync()
+      ->Start(std::move(start_info_llcpp), std::move(llcpp_keyboard_listener),
+              std::move(llcpp_pointer_listener))
+      .status();
 }
 
 zx_status_t VirtioGpu::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
                                       zx_gpaddr_t avail, zx_gpaddr_t used) {
-  return gpu_->ConfigureQueue(queue, size, desc, avail, used);
+  return gpu_.sync()->ConfigureQueue(queue, size, desc, avail, used).status();
 }
 
 zx_status_t VirtioGpu::Ready(uint32_t negotiated_features) {
@@ -74,7 +93,15 @@ zx_status_t VirtioGpu::Ready(uint32_t negotiated_features) {
   if (prev_state == State::CONFIG_READY) {
     OnConfigChanged();
   }
-  return gpu_->Ready(negotiated_features);
+  return gpu_.sync()->Ready(negotiated_features).status();
+}
+
+void VirtioGpu::OnConfigChanged(
+    fidl::WireEvent<fuchsia_virtualization_hardware::VirtioGpu::OnConfigChanged>* event) {
+  OnConfigChanged();
+}
+void VirtioGpu::on_fidl_error(fidl::UnbindInfo error) {
+  FX_LOGS(ERROR) << "Connection to VirtioGpu lost: " << error;
 }
 
 void VirtioGpu::OnConfigChanged() {
