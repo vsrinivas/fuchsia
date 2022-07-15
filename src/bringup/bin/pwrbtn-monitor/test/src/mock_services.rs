@@ -11,9 +11,9 @@ use {
     fidl_fuchsia_hardware_power_statecontrol as statecontrol, fidl_fuchsia_io as fio,
     fidl_fuchsia_test_pwrbtn as test_pwrbtn, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
-    fuchsia_syslog::{self as syslog, macros::*},
     fuchsia_zircon::{self as zx, AsHandleRef, HandleBased},
     futures::{channel::oneshot, StreamExt, TryFutureExt, TryStreamExt},
+    tracing::{info, warn},
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path as pfsPath,
         pseudo_directory, service,
@@ -24,10 +24,9 @@ fn event_handle_rights() -> zx::Rights {
     zx::Rights::BASIC | zx::Rights::SIGNAL
 }
 
-#[fasync::run_singlethreaded()]
+#[fuchsia::main(logging_tags = ["pwrbtn-monitor-mock-services"])]
 async fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&["pwrbtn-monitor-mock-services"])?;
-    fx_log_info!("started");
+    info!("started");
     let (send_test_result, recv_test_result) = oneshot::channel();
     let mut recv_test_result = Some(recv_test_result);
     let mut send_test_result = Some(send_test_result);
@@ -40,7 +39,7 @@ async fn main() -> Result<(), Error> {
         let recv_test_result = recv_test_result.take();
         fasync::Task::spawn(
             async move {
-                fx_log_info!("new connection to {}", test_pwrbtn::TestsMarker::DEBUG_NAME);
+                info!("new connection to {}", test_pwrbtn::TestsMarker::DEBUG_NAME);
                 match stream.try_next().await? {
                     Some(test_pwrbtn::TestsRequest::Run { responder }) => {
                         if let Some(recv_test_result) = recv_test_result {
@@ -67,7 +66,7 @@ async fn main() -> Result<(), Error> {
             .expect("failed to clone event");
         fasync::Task::spawn(
             async move {
-                fx_log_info!("new connection to {}", statecontrol::AdminMarker::DEBUG_NAME);
+                info!("new connection to {}", statecontrol::AdminMarker::DEBUG_NAME);
                 match stream.try_next().await? {
                     Some(statecontrol::AdminRequest::Poweroff { responder }) => {
                         // If we respond to pwrbtn-monitor it will go back to check the signals
@@ -111,13 +110,13 @@ async fn main() -> Result<(), Error> {
             let event = event.duplicate_handle(event_handle_rights()).expect("failed to clone event");
             fasync::Task::spawn(
                 async move {
-                    fx_log_info!("new connection to the mock input device");
+                    info!("new connection to the mock input device");
                     let mut stream = finput::DeviceRequestStream::from_channel(channel);
 
                     while let Some(req) = stream.try_next().await? {
                         match req {
                             finput::DeviceRequest::GetReportDesc { responder } => {
-                                fx_log_info!("sending report desc");
+                                info!("sending report desc");
                                 // The following sequence of numbers is a HID report containing a
                                 // power button press. This is used to convince pwrbtn-monitor that
                                 // the power button has been pressed, and that it should begin a
@@ -137,21 +136,21 @@ async fn main() -> Result<(), Error> {
                                 ]).expect("failed sending report desc");
                             }
                             finput::DeviceRequest::GetReportsEvent { responder } => {
-                                fx_log_info!("sending reports event and signalling the event");
+                                info!("sending reports event and signalling the event");
                                 let event_dup = event.duplicate_handle(event_handle_rights())?;
                                 responder.send(zx::Status::OK.into_raw(), event_dup)
                                     .expect("failed sending reports event");
                                 event.signal_handle(zx::Signals::NONE, zx::Signals::USER_0)?;
                             }
                             finput::DeviceRequest::ReadReport { responder } => {
-                                fx_log_info!("sending report");
+                                info!("sending report");
                                 let msg = &[1]; // 1 means "power off", 0 would mean "don't power off"
                                 responder.send(
                                     zx::Status::OK.into_raw(),
                                     msg,
                                     zx::Time::get_monotonic().into_nanos(),
                                 ).unwrap_or_else(|e| {
-                                    fx_log_warn!("failed sending response to ReadReport: {:?}", e);
+                                    warn!("failed sending response to ReadReport: {:?}", e);
                                 });
                             }
                             _ => panic!("unexpected call to fuchsia.hardware.input.Device"),

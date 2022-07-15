@@ -3,21 +3,18 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Error,
-    fidl_fuchsia_test_pwrbtn as test_pwrbtn, fuchsia_async as fasync,
-    fuchsia_component::client as fclient,
-    fuchsia_syslog::{self as syslog, macros::*},
+    anyhow::Error, fidl_fuchsia_test_pwrbtn as test_pwrbtn, fuchsia_component::client as fclient,
+    tracing::info,
 };
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test(logging_tags = ["pwrbtn-monitor-integration-test"])]
 async fn run() -> Result<(), Error> {
-    syslog::init_with_tags(&["pwrbtn-monitor-integration-test"])?;
-    fx_log_info!("started");
+    info!("started");
 
     let tests_proxy = fclient::connect_to_protocol::<test_pwrbtn::TestsMarker>()?;
     // Run the tests. If this function returns then we know the tests have passed.
     tests_proxy.run().await?;
 
-    fx_log_info!("test success");
+    info!("test success");
     Ok(())
 }
