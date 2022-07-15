@@ -71,21 +71,12 @@ pub const SONG_POSITION_NOT_SUPPORTED: u32 = 0xFFFFFFFF;
 #[derive(Debug)]
 /// AVRCP 1.6.1 section 6.7.1 GetPlayStatus
 pub struct GetPlayStatusResponse {
+    /// Total length of playing song in milliseconds. Valid values are in [0, (2^32 - 1)].
     pub song_length: u32,
+    /// Position of playing song in milliseconds. Valid values are in [0, (2^32 - 1)].
     pub song_position: u32,
+    /// Current playback status of the song.
     pub playback_status: PlaybackStatus,
-}
-
-impl GetPlayStatusResponse {
-    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
-    /// Time is encoded as milliseconds. Max value is (2^32 – 1)
-    pub fn new(
-        song_length: u32,
-        song_position: u32,
-        playback_status: PlaybackStatus,
-    ) -> GetPlayStatusResponse {
-        Self { song_length, song_position, playback_status }
-    }
 }
 
 /// Packet PDU ID for vendor dependent packet encoding.
@@ -165,7 +156,11 @@ mod tests {
 
     #[test]
     fn test_get_play_status_response_encode() {
-        let b = GetPlayStatusResponse::new(0x64, 0x102095, PlaybackStatus::Playing);
+        let b = GetPlayStatusResponse {
+            song_length: 0x64,
+            song_position: 0x102095,
+            playback_status: PlaybackStatus::Playing,
+        };
         assert_eq!(b.encoded_len(), 9);
         let mut buf = vec![0; b.encoded_len()];
         assert!(b.encode(&mut buf[..]).is_ok());

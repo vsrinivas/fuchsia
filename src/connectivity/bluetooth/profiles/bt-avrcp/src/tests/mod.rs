@@ -457,10 +457,13 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
                     let _get_play_status_comand = GetPlayStatusCommand::decode(body)
                         .expect("GetPlayStatus: unable to packet body");
                     // Reply back with arbitrary status response. Song pos not supported.
-                    let response =
-                        GetPlayStatusResponse::new(100, 0xFFFFFFFF, PlaybackStatus::Stopped)
-                            .encode_packet()
-                            .expect("unable to encode response");
+                    let response = GetPlayStatusResponse {
+                        song_length: 100,
+                        song_position: 0xFFFFFFFF,
+                        playback_status: PlaybackStatus::Stopped,
+                    }
+                    .encode_packet()
+                    .expect("unable to encode response");
                     let _ = avc_command
                         .send_response(AvcResponseType::ImplementedStable, &response[..]);
                 }

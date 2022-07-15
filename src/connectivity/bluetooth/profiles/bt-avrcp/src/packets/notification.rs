@@ -147,7 +147,6 @@ impl RegisterNotificationCommand {
         &self.event_id
     }
 
-    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn playback_interval(&self) -> u32 {
         self.playback_interval
     }
@@ -212,12 +211,10 @@ pub struct VolumeChangedNotificationResponse {
 }
 
 impl VolumeChangedNotificationResponse {
-    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn new(volume: u8) -> Self {
         Self { volume }
     }
 
-    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn volume(&self) -> u8 {
         self.volume
     }
@@ -271,7 +268,6 @@ pub struct PlaybackStatusChangedNotificationResponse {
 }
 
 impl PlaybackStatusChangedNotificationResponse {
-    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn new(playback_status: PlaybackStatus) -> Self {
         Self { playback_status }
     }
@@ -329,17 +325,18 @@ pub struct TrackChangedNotificationResponse {
 }
 
 impl TrackChangedNotificationResponse {
-    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn new(identifier: u64) -> Self {
         Self { identifier }
     }
 
-    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
-    pub fn unknown() -> Self {
+    /// If Browsing is not supported and a track is selected, then return 0x0 in the response.
+    /// See AVRCP v1.6.2 Table 6.32.
+    #[cfg(test)]
+    pub fn selected() -> Self {
         Self::new(0x0)
     }
 
-    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
+    #[cfg(test)]
     pub fn none() -> Self {
         Self::new(u64::MAX)
     }
@@ -401,14 +398,8 @@ pub struct PlaybackPosChangedNotificationResponse {
 }
 
 impl PlaybackPosChangedNotificationResponse {
-    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn new(position: u32) -> Self {
         Self { position }
-    }
-
-    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
-    pub fn no_track() -> Self {
-        Self::new(0xFFFFFFFF)
     }
 
     pub fn position(&self) -> u32 {
@@ -775,7 +766,7 @@ mod tests {
 
     #[test]
     fn test_track_changed_notification_encode_unknown() {
-        let cmd = TrackChangedNotificationResponse::unknown();
+        let cmd = TrackChangedNotificationResponse::selected();
         assert_eq!(0, cmd.identifier());
         let mut buf = vec![0; cmd.encoded_len()];
         cmd.encode(&mut buf[..]).expect("unable to encode packet");

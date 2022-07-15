@@ -32,7 +32,7 @@ impl GetElementAttributesCommand {
         Self { attributes: MediaAttributeId::VARIANTS.to_vec() }
     }
 
-    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
+    #[cfg(test)]
     pub fn from_attributes(attributes: &[MediaAttributeId]) -> GetElementAttributesCommand {
         if attributes.len() == 0 {
             return Self::all_attributes();
@@ -40,7 +40,6 @@ impl GetElementAttributesCommand {
         Self { attributes: attributes.to_vec() }
     }
 
-    #[allow(dead_code)] // TODO(fxbug.dev/2741): WIP. Remove once used.
     pub fn attributes(&self) -> &[MediaAttributeId] {
         return &self.attributes[..];
     }
