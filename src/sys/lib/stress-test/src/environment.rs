@@ -20,7 +20,7 @@ pub trait Environment: Send + Sync + Debug {
     fn timeout_seconds(&self) -> Option<u64>;
 
     /// Return the runners for all the actors
-    fn actor_runners(&mut self) -> Vec<ActorRunner>;
+    async fn actor_runners(&mut self) -> Vec<ActorRunner>;
 
     /// Reset the environment, when an actor requests one
     async fn reset(&mut self);

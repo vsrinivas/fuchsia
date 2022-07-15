@@ -163,7 +163,7 @@ impl Environment for BlobfsEnvironment {
         self.args.time_limit_secs
     }
 
-    fn actor_runners(&mut self) -> Vec<ActorRunner> {
+    async fn actor_runners(&mut self) -> Vec<ActorRunner> {
         let mut runners = vec![
             ActorRunner::new("small_blob_actor", None, self.small_blob_actor.clone()),
             ActorRunner::new("medium_blob_actor", None, self.medium_blob_actor.clone()),

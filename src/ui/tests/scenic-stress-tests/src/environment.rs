@@ -104,7 +104,7 @@ impl Environment for ScenicEnvironment {
         self.args.time_limit_secs
     }
 
-    fn actor_runners(&mut self) -> Vec<ActorRunner> {
+    async fn actor_runners(&mut self) -> Vec<ActorRunner> {
         let seed = random_seed();
         let mut rng = SmallRng::seed_from_u64(seed);
 

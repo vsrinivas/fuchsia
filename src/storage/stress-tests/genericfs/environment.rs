@@ -133,7 +133,7 @@ impl<FSC: 'static + FSConfig + Clone + Send + Sync> Environment for FsEnvironmen
         self.args.time_limit_secs
     }
 
-    fn actor_runners(&mut self) -> Vec<ActorRunner> {
+    async fn actor_runners(&mut self) -> Vec<ActorRunner> {
         let mut runners = vec![
             ActorRunner::new("file_actor", None, self.file_actor.clone()),
             ActorRunner::new(

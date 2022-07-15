@@ -89,7 +89,7 @@ impl Environment for FvmEnvironment {
         self.args.time_limit_secs
     }
 
-    fn actor_runners(&mut self) -> Vec<ActorRunner> {
+    async fn actor_runners(&mut self) -> Vec<ActorRunner> {
         let mut runners = vec![];
 
         for (guid, actor) in &self.volume_actors {

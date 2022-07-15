@@ -109,8 +109,12 @@ pub async fn run_test<E: 'static + Environment>(mut env: E) {
     let mut generation: u64 = 0;
 
     // Start all the runners
-    let (mut runner_tasks, mut runner_abort): (FuturesUnordered<_>, Vec<_>) =
-        env.actor_runners().into_iter().map(|r| r.run(counter_tx.clone(), generation)).unzip();
+    let (mut runner_tasks, mut runner_abort): (FuturesUnordered<_>, Vec<_>) = env
+        .actor_runners()
+        .await
+        .into_iter()
+        .map(|r| r.run(counter_tx.clone(), generation))
+        .unzip();
 
     loop {
         // Wait for one of the runners, counter task or timer to return
