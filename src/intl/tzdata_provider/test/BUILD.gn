@@ -1,0 +1,42 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_test.gni")
+
+group("test") {
+  testonly = true
+  deps = [ ":tzdata-provider-test" ]
+}
+
+rustc_test("bin") {
+  edition = "2021"
+  name = "tzdata_provider_test"
+
+  deps = [
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/icu_data/rust/icu_data",
+    "//third_party/rust_crates:rust_icu_ucal",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}
+
+fuchsia_component("component") {
+  testonly = true
+  component_name = "tzdata-provider-test"
+  manifest = "meta/tzdata_provider_test.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_test_package("tzdata-provider-test") {
+  test_components = [ ":component" ]
+  deps = [
+    "//src/intl:icudtl",
+    "//src/intl/tzdata_provider:component",
+    "//src/intl/tzdata_provider:icu_tzdata_44_le",
+  ]
+}

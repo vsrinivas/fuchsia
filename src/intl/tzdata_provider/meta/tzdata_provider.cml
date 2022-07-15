@@ -1,0 +1,19 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    expose: [
+        {
+            directory: "pkg",
+            from: "framework",
+            as: "tzdata",
+            subdir: "data/tzdata",
+        },
+        {
+            directory: "pkg",
+            from: "framework",
+            as: "tzdata-icu-44-le",
+            subdir: "data/tzdata/icu/44/le",
+        },
+    ],
+}

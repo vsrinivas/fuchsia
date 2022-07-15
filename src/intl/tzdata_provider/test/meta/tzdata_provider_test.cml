@@ -1,0 +1,32 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/tzdata_provider_test",
+    },
+    children: [
+        {
+            name: "tzdata-provider",
+            url: "#meta/tzdata-provider.cm",
+        },
+    ],
+    use: [
+        {
+            directory: "tzdata",
+            from: "#tzdata-provider",
+            rights: [ "r*" ],
+            path: "/tzdata",
+        },
+        {
+            directory: "tzdata-icu-44-le",
+            from: "#tzdata-provider",
+            rights: [ "r*" ],
+            path: "/tzdata-icu-44-le",
+        },
+    ],
+}
