@@ -338,6 +338,7 @@ impl IntoErrno for LocalAddressError {
             LocalAddressError::AddressMismatch => Errno::Einval,
             LocalAddressError::AddressInUse => Errno::Eaddrinuse,
             LocalAddressError::AddressRequiresZone => Errno::Einval,
+            LocalAddressError::ZoneCannotBeChanged => Errno::Einval,
         }
     }
 }

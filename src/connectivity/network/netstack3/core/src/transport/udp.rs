@@ -23,8 +23,7 @@ use either::Either;
 use log::trace;
 use net_types::{
     ip::{Ip, IpAddress, IpVersionMarker},
-    MulticastAddr, MulticastAddress as _, Scope as _, ScopeableAddress as _, SpecifiedAddr,
-    Witness, ZonedAddr,
+    MulticastAddr, MulticastAddress as _, Scope as _, SpecifiedAddr, Witness, ZonedAddr,
 };
 use nonzero_ext::nonzero;
 use packet::{BufferMut, ParsablePacket, ParseBuffer, Serializer};
@@ -1509,6 +1508,36 @@ pub fn set_bound_udp_device<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpState
 ) -> Result<(), LocalAddressError> {
     sync_ctx.with_state_mut(|state| {
         let UdpConnectionState { ref mut bound } = state.conn_state;
+
+        // Don't allow changing the device if one of the IP addresses in the socket
+        // address vector requires a zone (scope ID).
+        let (device, mut addrs) = match id {
+            UdpBoundId::Listening(id) => {
+                let (_, _, addr): &(ListenerState<_, _>, PosixSharingOptions, _) = bound
+                    .listeners()
+                    .get_by_id(&id)
+                    .unwrap_or_else(|| panic!("invalid listener ID {:?}", id));
+                let ListenerAddr { device, ip: ListenerIpAddr { addr, identifier: _ } } = addr;
+                (device, Either::Left(addr.as_ref().into_iter()))
+            }
+            UdpBoundId::Connected(id) => {
+                let (_, _, addr): &(ConnState<_, _, _>, PosixSharingOptions, _) = bound
+                    .conns()
+                    .get_by_id(&id)
+                    .unwrap_or_else(|| panic!("invalid conn ID {:?}", id));
+                let ConnAddr {
+                    device,
+                    ip: ConnIpAddr { local: (local_ip, _), remote: (remote_ip, _) },
+                } = addr;
+                (device, Either::Right(IntoIterator::into_iter([local_ip, remote_ip])))
+            }
+        };
+
+        if device != &device_id && addrs.any(must_have_zone) {
+            return Err(LocalAddressError::ZoneCannotBeChanged);
+        }
+        drop(addrs);
+
         match id {
             UdpBoundId::Listening(id) => bound
                 .listeners_mut()
@@ -1863,6 +1892,10 @@ pub fn get_udp_conn_info<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateCon
     })
 }
 
+fn must_have_zone<A: IpAddress>(addr: &SpecifiedAddr<A>) -> bool {
+    addr.scope().can_have_zone() && !addr.get().is_loopback()
+}
+
 /// Use an existing socket to listen for incoming UDP packets.
 ///
 /// `listen_udp` converts `id` into a listening socket and registers `listener`
@@ -1917,7 +1950,7 @@ pub fn listen_udp<I: IpExt, C: UdpStateNonSyncContext<I>, SC: UdpStateContext<I,
                     // the socket was previously bound.
                     let (addr, device) = match addr {
                         ZonedAddr::Unzoned(addr) => {
-                            if addr.scope().can_have_zone() && !addr.get().is_loopback() {
+                            if must_have_zone(&addr) {
                                 return Err(LocalAddressError::AddressRequiresZone);
                             } else {
                                 (addr, *device)
@@ -2053,7 +2086,7 @@ mod tests {
     use net_declare::net_ip_v6;
     use net_types::{
         ip::{Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr},
-        AddrAndZone, LinkLocalAddr, MulticastAddr,
+        AddrAndZone, LinkLocalAddr, MulticastAddr, ScopeableAddress as _,
     };
     use packet::{Buf, InnerPacketBuilder, ParsablePacket, Serializer};
     use packet_formats::{
@@ -4857,6 +4890,53 @@ mod tests {
         )
         .map(|_: UdpListenerId<I>| ());
         assert_eq!(result, expected_result);
+    }
+
+    #[test_case(None, Err(LocalAddressError::ZoneCannotBeChanged); "clear device")]
+    #[test_case(Some(MultipleDevicesId::A), Ok(()); "set same device")]
+    #[test_case(Some(MultipleDevicesId::B),
+                Err(LocalAddressError::ZoneCannotBeChanged); "change device")]
+    fn test_listen_udp_ipv6_listen_link_local_update_bound_device(
+        new_device: Option<MultipleDevicesId>,
+        expected_result: Result<(), LocalAddressError>,
+    ) {
+        type I = Ipv6;
+        let ll_addr = LinkLocalAddr::new(net_ip_v6!("fe80::1234")).unwrap().into_specified();
+        assert!(ll_addr.scope().can_have_zone());
+
+        let remote_ips = vec![remote_ip::<I>()];
+        let MultiDeviceDummyCtx { mut sync_ctx, mut non_sync_ctx } =
+            MultiDeviceDummyCtx::with_sync_ctx(MultiDeviceDummySyncCtx::<I>::with_state(
+                DummyUdpCtx::with_ip_socket_ctx(DummyIpSocketCtx::new_ipv6(
+                    [(MultipleDevicesId::A, ll_addr), (MultipleDevicesId::B, local_ip::<I>())].map(
+                        |(device, local_ip)| DummyDeviceConfig {
+                            device,
+                            local_ips: vec![local_ip],
+                            remote_ips: remote_ips.clone(),
+                        },
+                    ),
+                )),
+            ));
+
+        let unbound = create_udp_unbound(&mut sync_ctx);
+        let listener = listen_udp::<I, _, _>(
+            &mut sync_ctx,
+            &mut non_sync_ctx,
+            unbound,
+            Some(ZonedAddr::Zoned(AddrAndZone::new(ll_addr.get(), MultipleDevicesId::A).unwrap())),
+            NonZeroU16::new(200),
+        )
+        .expect("listen failed");
+
+        assert_eq!(
+            get_udp_bound_device(&mut sync_ctx, &mut non_sync_ctx, listener.into()),
+            Some(MultipleDevicesId::A)
+        );
+
+        assert_eq!(
+            set_bound_udp_device(&mut sync_ctx, &mut non_sync_ctx, listener.into(), new_device),
+            expected_result,
+        );
     }
 
     #[ip_test]
