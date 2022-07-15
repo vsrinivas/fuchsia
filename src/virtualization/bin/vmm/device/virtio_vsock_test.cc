@@ -1031,7 +1031,7 @@ TEST_F(VirtioVsockTest, WriteSocketFullReset) {
   EXPECT_EQ(header->dst_port, conn.guest_port());
 }
 
-TEST_F(VirtioVsockTest, SendCreditUpdateWhenSocketIsDrained) {
+TEST_F(VirtioVsockTest, DISABLED_SendCreditUpdateWhenSocketIsDrained) {
   TestConnection conn;
   ASSERT_NO_FATAL_FAILURE(ClientConnectOnPort(kVirtioVsockGuestPort, conn));
   ASSERT_NO_FATAL_FAILURE(conn.AssertSocketValid());
