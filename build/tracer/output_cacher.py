@@ -42,6 +42,7 @@ import dataclasses
 
 _SCRIPT_BASENAME = os.path.basename(__file__)
 
+
 def _partition(
         iterable: Iterable[Any],
         predicate: Callable[[Any],
@@ -61,6 +62,7 @@ def files_match(file1: str, file2: str):
     """Compares two files, returns True if they both exist and match."""
     # filecmp.cmp does not invoke any subprocesses.
     return filecmp.cmp(file1, file2, shallow=False)
+
 
 def ensure_file_exists(path):
     """Assert that a file exists, or wait for it to appear.
@@ -82,11 +84,29 @@ def ensure_file_exists(path):
         # Either the original command failed to produce this file, or something
         # could be wrong with file system synchronization or delays.
         # Flush writes, sleep, try again.
-        print(f"[{_SCRIPT_BASENAME}] Expected output file not found: {path} (Waiting {delay}s ...)")
+        print(
+            f"[{_SCRIPT_BASENAME}] Expected output file not found: {path} (Retrying after {delay}s ...)"
+        )
         os.sync()
         time.sleep(delay)
 
-    raise FileNotFoundError(f"[{_SCRIPT_BASENAME}] *** Expected output file not found: {path}")
+    raise FileNotFoundError(
+        f"[{_SCRIPT_BASENAME}] *** Expected output file not found: {path}")
+
+
+def retry_file_op_once_with_delay(
+        fileop: Callable[[], Any], failmsg: str, delay: int):
+    """Insanity is doing the same thing and expecting a different result."""
+    try:
+        fileop()
+    except FileNotFoundError:
+        # one-time retry
+        print(
+            f'[{_SCRIPT_BASENAME}] {failmsg}  (Retrying once after {delay}s.)')
+        time.sleep(delay)
+        fileop()
+        # If this fails again, exception will be raised.
+
 
 def move_if_different(src: str, dest: str, verbose: bool = False) -> bool:
     """Moves src -> dest if their contents differ.
@@ -280,7 +300,12 @@ class Action(object):
         move_err = False
         for orig_out, temp_out in renamed_outputs.items():
             try:
-                move_if_different(src=temp_out, dest=orig_out, verbose=verbose)
+                retry_file_op_once_with_delay(
+                    lambda: move_if_different(
+                        src=temp_out, dest=orig_out, verbose=verbose),
+                    f'Failed to update {temp_out} -> {orig_out}.',
+                    5,
+                )
             except FileNotFoundError as e:
                 print(e)
                 move_err = True
