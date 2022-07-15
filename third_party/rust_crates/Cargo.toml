@@ -238,7 +238,6 @@ getopts = "0.2"
 hyper-rustls = { version = "0.22.1", default-features = false }
 lipsum = "0.6.0"
 openat = "0.1.17"
-owning_ref = "0.4.0"
 pretty = "0.5.2"
 proc-macro-nested = "0.1.7"
 rust_icu_common = { version = "2.0.2", default-features = false, features = ["renaming"] }

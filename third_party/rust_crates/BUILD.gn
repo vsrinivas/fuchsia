@@ -509,12 +509,6 @@ if (current_os == "fuchsia") {
   }
 }
 
-if (current_os == "fuchsia") {
-  group("owning_ref") {
-    public_deps = [ ":owning_ref-v0_4_0" ]
-  }
-}
-
 group("p256") {
   public_deps = [ ":p256-v0_10_1" ]
 }
@@ -6341,27 +6335,6 @@ rust_library("openssl-probe-v0_1_2") {
   visibility = [ ":*" ]
 }
 
-rust_library("owning_ref-v0_4_0") {
-  crate_name = "owning_ref"
-  crate_root = "//third_party/rust_crates/vendor/owning_ref/src/lib.rs"
-  output_name = "owning_ref-163177019c6dfe3a"
-  configs -= [ "//build/config/rust:2018_idioms" ]
-
-  deps = []
-  deps += [ ":stable_deref_trait-v1_1_1" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=163177019c6dfe3a",
-    "-Cextra-filename=-163177019c6dfe3a",
-  ]
-
-  visibility = [ ":*" ]
-}
-
 rust_library("p256-v0_10_1") {
   crate_name = "p256"
   crate_root = "//third_party/rust_crates/vendor/p256/src/lib.rs"
@@ -9820,28 +9793,6 @@ rust_library("splines-v2_2_0") {
     "--edition=2018",
     "-Cmetadata=d1b51f4ec5d923f7",
     "-Cextra-filename=-d1b51f4ec5d923f7",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"std\"",
-  ]
-
-  visibility = [ ":*" ]
-}
-
-rust_library("stable_deref_trait-v1_1_1") {
-  crate_name = "stable_deref_trait"
-  crate_root = "//third_party/rust_crates/vendor/stable_deref_trait/src/lib.rs"
-  output_name = "stable_deref_trait-1bde01aa2aa758b9"
-  configs -= [ "//build/config/rust:2018_idioms" ]
-
-  deps = []
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=1bde01aa2aa758b9",
-    "-Cextra-filename=-1bde01aa2aa758b9",
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"std\"",
   ]
