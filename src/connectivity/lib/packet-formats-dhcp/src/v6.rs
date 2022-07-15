@@ -42,6 +42,8 @@ pub enum ParseError {
     InvalidOpLen(OptionCode, usize),
     #[error("invalid status code: {}", _0)]
     InvalidStatusCode(u16),
+    #[error("invalid error status code: {}", _0)]
+    InvalidErrorStatusCode(u16),
     #[error("buffer exhausted while more bytes are expected")]
     BufferExhausted,
     #[error("failed to parse domain {:?}", _0)]
@@ -90,21 +92,18 @@ impl TryFrom<u8> for MessageType {
 ///
 /// [RFC 8415, Section 21.13]: https://tools.ietf.org/html/rfc8415#section-21.13
 #[allow(missing_docs)]
-#[derive(Debug, PartialEq, FromPrimitive, AsBytes, Copy, Clone)]
-#[repr(u16)]
+#[derive(Debug, PartialEq, Copy, Clone)]
 pub enum StatusCode {
-    Success = 0,
-    UnspecFail = 1,
-    NoAddrsAvail = 2,
-    NoBinding = 3,
-    NotOnLink = 4,
-    UseMulticast = 5,
-    NoPrefixAvail = 6,
+    Success,
+    Failure(ErrorStatusCode),
 }
 
 impl From<StatusCode> for u16 {
     fn from(t: StatusCode) -> u16 {
-        t as u16
+        match t {
+            StatusCode::Success => 0,
+            StatusCode::Failure(error_status) => error_status.into(),
+        }
     }
 }
 
@@ -112,7 +111,66 @@ impl TryFrom<u16> for StatusCode {
     type Error = ParseError;
 
     fn try_from(b: u16) -> Result<StatusCode, ParseError> {
-        <Self as num_traits::FromPrimitive>::from_u16(b).ok_or(ParseError::InvalidStatusCode(b))
+        match b {
+            0 => Ok(Self::Success),
+            b => ErrorStatusCode::try_from(b).map(Self::Failure).map_err(|e| match e {
+                ParseError::InvalidErrorStatusCode(b) => ParseError::InvalidStatusCode(b),
+                e => unreachable!("unexpected error parsing u16 as ErrorStatusCode: {}", e),
+            }),
+        }
+    }
+}
+
+impl StatusCode {
+    /// Converts into either `Ok(())` if the status code is Success or an error
+    /// containing the failure status code.
+    pub fn into_result(self) -> Result<(), ErrorStatusCode> {
+        match self {
+            Self::Success => Ok(()),
+            Self::Failure(error_status) => Err(error_status),
+        }
+    }
+}
+
+/// A DHCPv6 error status code as defined in [RFC 8415, Section 21.13].
+///
+/// [RFC 8415, Section 21.13]: https://tools.ietf.org/html/rfc8415#section-21.13
+#[allow(missing_docs)]
+#[derive(thiserror::Error, Debug, PartialEq, FromPrimitive, AsBytes, Copy, Clone)]
+#[repr(u16)]
+pub enum ErrorStatusCode {
+    #[error("unspecified failure")]
+    UnspecFail = 1,
+    #[error("no addresses available")]
+    NoAddrsAvail = 2,
+    #[error("no binding")]
+    NoBinding = 3,
+    #[error("not on-link")]
+    NotOnLink = 4,
+    #[error("use multicast")]
+    UseMulticast = 5,
+    #[error("no prefixes available")]
+    NoPrefixAvail = 6,
+}
+
+impl From<ErrorStatusCode> for u16 {
+    fn from(code: ErrorStatusCode) -> u16 {
+        code as u16
+    }
+}
+
+impl From<ErrorStatusCode> for StatusCode {
+    fn from(code: ErrorStatusCode) -> Self {
+        Self::Failure(code)
+    }
+}
+
+impl TryFrom<u16> for ErrorStatusCode {
+    type Error = ParseError;
+
+    fn try_from(b: u16) -> Result<Self, ParseError> {
+        <Self as num_traits::FromPrimitive>::from_u16(b)
+            .ok_or(ParseError::InvalidErrorStatusCode(b))
     }
 }
 

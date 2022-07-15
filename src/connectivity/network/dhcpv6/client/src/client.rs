@@ -964,7 +964,7 @@ mod tests {
                     &server_socket,
                     client_addr,
                     transaction_id,
-                    &[v6::DhcpOption::DnsServers(&[])],
+                    &[v6::DhcpOption::ServerId(&[1, 2, 3]), v6::DhcpOption::DnsServers(&[])],
                 ))
                 .expect("failed to send test reply");
             assert_matches!(exec.run_until_stalled(&mut test_fut), Poll::Pending);
@@ -979,7 +979,10 @@ mod tests {
                     &server_socket,
                     client_addr,
                     transaction_id,
-                    &[v6::DhcpOption::DnsServers(&dns_servers)],
+                    &[
+                        v6::DhcpOption::ServerId(&[1, 2, 3]),
+                        v6::DhcpOption::DnsServers(&dns_servers),
+                    ],
                 ))
                 .expect("failed to send test reply");
             let want_servers = vec![create_test_dns_server(
@@ -1008,7 +1011,10 @@ mod tests {
                     &server_socket,
                     client_addr,
                     transaction_id,
-                    &[v6::DhcpOption::DnsServers(&dns_servers)],
+                    &[
+                        v6::DhcpOption::ServerId(&[1, 2, 3]),
+                        v6::DhcpOption::DnsServers(&dns_servers),
+                    ],
                 ))
                 .expect("failed to send test reply");
             assert_matches!(exec.run_until_stalled(&mut test_fut), Poll::Pending);
@@ -1023,7 +1029,10 @@ mod tests {
                     &server_socket,
                     client_addr,
                     transaction_id,
-                    &[v6::DhcpOption::DnsServers(&dns_servers)],
+                    &[
+                        v6::DhcpOption::ServerId(&[1, 2, 3]),
+                        v6::DhcpOption::DnsServers(&dns_servers),
+                    ],
                 ))
                 .expect("failed to send test reply");
             let want_servers = vec![
@@ -1057,7 +1066,7 @@ mod tests {
                     &server_socket,
                     client_addr,
                     transaction_id,
-                    &[v6::DhcpOption::DnsServers(&[])],
+                    &[v6::DhcpOption::ServerId(&[1, 2, 3]), v6::DhcpOption::DnsServers(&[])],
                 ))
                 .expect("failed to send test reply");
             build_test_fut!(test_fut);
@@ -1097,7 +1106,7 @@ mod tests {
             &server_socket,
             client_addr,
             transaction_id,
-            &[v6::DhcpOption::DnsServers(&dns_servers)],
+            &[v6::DhcpOption::ServerId(&[4, 5, 6]), v6::DhcpOption::DnsServers(&dns_servers)],
         )
         .await
         .expect("failed to send test message");
@@ -1287,9 +1296,14 @@ mod tests {
         );
 
         // Message targeting this client should cause the client to transition state.
-        let () = send_reply_with_options(&server_socket, client_addr, [1, 2, 3], &[])
-            .await
-            .expect("failed to send test message");
+        let () = send_reply_with_options(
+            &server_socket,
+            client_addr,
+            [1, 2, 3],
+            &[v6::DhcpOption::ServerId(&[4, 5, 6])],
+        )
+        .await
+        .expect("failed to send test message");
         assert_matches!(client.handle_next_event(&mut buf).await, Ok(Some(())));
         assert_eq!(
             client.timer_abort_handles.keys().collect::<Vec<_>>(),

@@ -17,7 +17,7 @@ use std::{
     net::Ipv6Addr,
     time::{Duration, Instant},
 };
-use tracing::debug;
+use tracing::{debug, info, warn};
 use zerocopy::ByteSlice;
 
 /// Initial Information-request timeout `INF_TIMEOUT` from [RFC 8415, Section 7.6].
@@ -302,31 +302,60 @@ impl InformationRequesting {
     ///
     /// [RFC 8415, Section 18.2.10.4]: https://tools.ietf.org/html/rfc8415#section-18.2.10.4
     fn reply_message_received<B: ByteSlice>(self, msg: v6::Message<'_, B>) -> Transition {
-        let mut information_refresh_time = IRT_DEFAULT;
-        let mut dns_servers: Option<Vec<Ipv6Addr>> = None;
+        // Note that although RFC 8415 states that SOL_MAX_RT must be handled,
+        // we never send Solicit messages when running in stateless mode, so
+        // there is no point in storing or doing anything with it.
+        let ProcessedOptions { server_id, solicit_max_rt_opt: _, result } =
+            match process_options(&msg, ExchangeType::ReplyToInformationRequest, None) {
+                Ok(processed_options) => processed_options,
+                Err(e) => {
+                    warn!("ignoring Reply to Information-Request: {}", e);
+                    return Transition {
+                        state: ClientState::InformationRequesting(self),
+                        actions: Vec::new(),
+                        transaction_id: None,
+                    };
+                }
+            };
 
-        for opt in msg.options() {
-            match opt {
-                v6::ParsedDhcpOption::InformationRefreshTime(refresh_time) => {
-                    information_refresh_time = Duration::from_secs(u64::from(refresh_time))
-                }
-                v6::ParsedDhcpOption::DnsServers(server_addrs) => dns_servers = Some(server_addrs),
-                v6::ParsedDhcpOption::DomainList(_) => {
-                    // TODO(https://fxbug.dev/87176) implement domain list.
-                }
-                v6::ParsedDhcpOption::ClientId(_)
-                | v6::ParsedDhcpOption::ServerId(_)
-                | v6::ParsedDhcpOption::SolMaxRt(_)
-                | v6::ParsedDhcpOption::Preference(_)
-                | v6::ParsedDhcpOption::Iana(_)
-                | v6::ParsedDhcpOption::IaAddr(_)
-                | v6::ParsedDhcpOption::Oro(_)
-                | v6::ParsedDhcpOption::ElapsedTime(_)
-                | v6::ParsedDhcpOption::StatusCode(_, _) => {
-                    // TODO(https://fxbug.dev/48867): emit more actions for other options received.
-                }
+        let Options {
+            success_status_message,
+            preference: _,
+            addresses: _,
+            dns_servers,
+            information_refresh_time,
+        } = match result {
+            Ok(options) => options,
+            Err(e) => {
+                warn!(
+                    "Reply to Information-Request from server {:?} error status code: {}",
+                    server_id, e
+                );
+                return Transition {
+                    state: ClientState::InformationRequesting(self),
+                    actions: Vec::new(),
+                    transaction_id: None,
+                };
+            }
+        };
+
+        if let Some(success_status_message) = success_status_message {
+            if !success_status_message.is_empty() {
+                info!(
+                    "Reply to Information-Request from server {:?} \
+                    contains success status code message: {}",
+                    server_id, success_status_message,
+                );
             }
         }
+
+        // Per RFC 8415 section 21.23:
+        //
+        //    If the Reply to an Information-request message does not contain this
+        //    option, the client MUST behave as if the option with the value
+        //    IRT_DEFAULT was provided.
+        let information_refresh_time =
+            information_refresh_time.map(|t| Duration::from_secs(t.into())).unwrap_or(IRT_DEFAULT);
 
         let actions = IntoIterator::into_iter([
             Action::CancelTimer(ClientTimerType::Retransmission),
@@ -495,6 +524,482 @@ fn get_common_value(values: &Vec<u32>) -> Option<Duration> {
         return Some(Duration::from_secs(values[0].into()));
     }
     None
+}
+
+#[derive(thiserror::Error, Debug)]
+enum LifetimesError {
+    #[error("valid lifetime is zero")]
+    ValidLifetimeZero,
+    #[error("preferred lifetime greater than valid lifetime: {0:?}")]
+    PreferredLifetimeGreaterThanValidLifetime(Lifetimes),
+}
+
+#[derive(Debug)]
+struct Lifetimes {
+    preferred_lifetime: v6::TimeValue,
+    valid_lifetime: v6::NonZeroTimeValue,
+}
+
+#[derive(Debug)]
+struct IaAddress {
+    address: Ipv6Addr,
+    lifetimes: Result<Lifetimes, LifetimesError>,
+}
+
+#[derive(thiserror::Error, Debug)]
+enum IaNaError {
+    #[error("T1={t1:?} greater than T2={t2:?}")]
+    T1GreaterThanT2 { t1: v6::TimeValue, t2: v6::TimeValue },
+    #[error("unknown status code {0}")]
+    InvalidStatusCode(u16),
+    #[error("duplicate Status Code option {0:?} and {1:?}")]
+    DuplicateStatusCode((v6::StatusCode, String), (v6::StatusCode, String)),
+    // NB: Currently only one address is requested per IA_NA option, so
+    // receiving an IA_NA option with multiple IA Address suboptions is
+    // indicative of a misbehaving server.
+    #[error("duplicate IA Address option {0:?} and {1:?}")]
+    MultipleIaAddress(IaAddress, IaAddress),
+    // TODO(https://fxbug.dev/104297): Use an owned option type rather
+    // than a string of the debug representation of the invalid option.
+    #[error("invalid option: {0:?}")]
+    InvalidOption(String),
+}
+
+#[derive(Debug)]
+enum IaNa {
+    Success {
+        status_message: Option<String>,
+        _t1: v6::TimeValue,
+        _t2: v6::TimeValue,
+        ia_addr: Option<IaAddress>,
+    },
+    Failure(StatusCodeError),
+}
+
+// TODO(https://fxbug.dev/104519): Move this function and associated types
+// into packet-formats-dhcp.
+fn process_ia_na(ia_na_data: &v6::IanaData<&'_ [u8]>) -> Result<IaNa, IaNaError> {
+    // Ignore invalid IANA options, per RFC 8415, section 21.4:
+    //
+    //    If a client receives an IA_NA with T1 greater than T2 and both T1
+    //    and T2 are greater than 0, the client discards the IA_NA option
+    //    and processes the remainder of the message as though the server
+    //    had not included the invalid IA_NA option.
+    let (t1, t2) = (ia_na_data.t1(), ia_na_data.t2());
+    match (t1, t2) {
+        (v6::TimeValue::Zero, _) | (_, v6::TimeValue::Zero) => {}
+        (t1, t2) => {
+            if t1 > t2 {
+                return Err(IaNaError::T1GreaterThanT2 { t1, t2 });
+            }
+        }
+    }
+
+    let mut ia_addr_opt = None;
+    let mut success_status_message = None;
+    for ia_na_opt in ia_na_data.iter_options() {
+        match ia_na_opt {
+            v6::ParsedDhcpOption::StatusCode(code, msg) => {
+                let status_code = code.get().try_into().map_err(|e| match e {
+                    v6::ParseError::InvalidStatusCode(code) => IaNaError::InvalidStatusCode(code),
+                    e => unreachable!("unreachable status code parse error: {}", e),
+                })?;
+                if let Some(existing) = success_status_message {
+                    return Err(IaNaError::DuplicateStatusCode(
+                        (v6::StatusCode::Success, existing),
+                        (status_code, msg.to_string()),
+                    ));
+                }
+                match status_code.into_result() {
+                    Ok(()) => {
+                        success_status_message = Some(msg.to_string());
+                    }
+                    Err(error_status_code) => {
+                        return Ok(IaNa::Failure(StatusCodeError(
+                            error_status_code,
+                            msg.to_string(),
+                        )))
+                    }
+                }
+            }
+            v6::ParsedDhcpOption::IaAddr(ia_addr_data) => {
+                let lifetimes = match ia_addr_data.valid_lifetime() {
+                    v6::TimeValue::Zero => Err(LifetimesError::ValidLifetimeZero),
+                    vl @ v6::TimeValue::NonZero(valid_lifetime) => {
+                        let preferred_lifetime = ia_addr_data.preferred_lifetime();
+                        // Ignore invalid IA Address options, per RFC
+                        // 8415, section 21.6:
+                        //
+                        //    The client MUST discard any addresses for
+                        //    which the preferred lifetime is greater
+                        //    than the valid lifetime.
+                        if preferred_lifetime > vl {
+                            Err(LifetimesError::PreferredLifetimeGreaterThanValidLifetime(
+                                Lifetimes { preferred_lifetime, valid_lifetime },
+                            ))
+                        } else {
+                            Ok(Lifetimes { preferred_lifetime, valid_lifetime })
+                        }
+                    }
+                };
+                let ia_addr = IaAddress { address: ia_addr_data.addr(), lifetimes };
+                if let Some(existing) = ia_addr_opt {
+                    return Err(IaNaError::MultipleIaAddress(existing, ia_addr));
+                }
+                ia_addr_opt = Some(ia_addr);
+            }
+            v6::ParsedDhcpOption::ClientId(_)
+            | v6::ParsedDhcpOption::ServerId(_)
+            | v6::ParsedDhcpOption::SolMaxRt(_)
+            | v6::ParsedDhcpOption::Preference(_)
+            | v6::ParsedDhcpOption::Iana(_)
+            | v6::ParsedDhcpOption::InformationRefreshTime(_)
+            | v6::ParsedDhcpOption::Oro(_)
+            | v6::ParsedDhcpOption::ElapsedTime(_)
+            | v6::ParsedDhcpOption::DnsServers(_)
+            | v6::ParsedDhcpOption::DomainList(_) => {
+                return Err(IaNaError::InvalidOption(format!("{:?}", ia_na_opt)));
+            }
+        }
+    }
+    // Missing status code option means success per RFC 8415 section 7.5:
+    //
+    //    If the Status Code option (see Section 21.13) does not appear
+    //    in a message in which the option could appear, the status
+    //    of the message is assumed to be Success.
+    Ok(IaNa::Success {
+        status_message: success_status_message,
+        _t1: t1,
+        _t2: t2,
+        ia_addr: ia_addr_opt,
+    })
+}
+
+#[derive(Debug)]
+struct Options {
+    success_status_message: Option<String>,
+    preference: Option<u8>,
+    addresses: HashMap<v6::IAID, IaNa>,
+    dns_servers: Option<Vec<Ipv6Addr>>,
+    information_refresh_time: Option<u32>,
+}
+
+#[derive(Debug)]
+struct ProcessedOptions {
+    server_id: Vec<u8>,
+    solicit_max_rt_opt: Option<u32>,
+    result: Result<Options, StatusCodeError>,
+}
+
+#[derive(thiserror::Error, Debug)]
+#[error("error status code={0}, message='{1}'")]
+struct StatusCodeError(v6::ErrorStatusCode, String);
+
+#[derive(thiserror::Error, Debug)]
+enum OptionsError {
+    // TODO(https://fxbug.dev/104297): Use an owned option type rather
+    // than a string of the debug representation of the invalid option.
+    #[error("duplicate option with code {0:?} {1} and {2}")]
+    DuplicateOption(v6::OptionCode, String, String),
+    #[error("unknown status code {0} with message '{1}'")]
+    InvalidStatusCode(u16, String),
+    #[error("IA_NA option error")]
+    IaNaError(#[from] IaNaError),
+    #[error("duplicate IA_NA option with IAID={0:?} {1:?} and {2:?}")]
+    DuplicateIaNaId(v6::IAID, IaNa, IaNa),
+    #[error("missing Server Id option")]
+    MissingServerId,
+    #[error("missing Client Id option")]
+    MissingClientId,
+    #[error("got Client ID option {got:?} but want {want:?}")]
+    MismatchedClientId { got: Vec<u8>, want: [u8; CLIENT_ID_LEN] },
+    #[error("unexpected Client ID in Reply to anonymous Information-Request: {0:?}")]
+    UnexpectedClientId(Vec<u8>),
+    // TODO(https://fxbug.dev/104297): Use an owned option type rather
+    // than a string of the debug representation of the invalid option.
+    #[error("invalid option found: {0:?}")]
+    InvalidOption(String),
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+enum ExchangeType {
+    ReplyToInformationRequest,
+    AdvertiseToSolicit,
+}
+
+// TODO(https://fxbug.dev/104025): Make the choice between ignoring invalid
+// options and discarding the entire message configurable.
+// TODO(https://fxbug.dev/104519): Move this function and associated types
+// into packet-formats-dhcp.
+/// Process options.
+///
+/// If any singleton options appears more than once, or there are multiple
+/// IA options of the same type with duplicate ID's, the entire message will
+/// be ignored as if it was never received.
+///
+/// Per RFC 8415, section 16:
+///
+///    This section describes which options are valid in which kinds of
+///    message types and explains what to do when a client or server
+///    receives a message that contains known options that are invalid for
+///    that message. [...]
+///
+///    Clients and servers MAY choose to either (1) extract information from
+///    such a message if the information is of use to the recipient or
+///    (2) ignore such a message completely and just discard it.
+///
+/// The choice made by this function is (2): an error will be returned in such
+/// cases to inform callers that they should ignore the entire message.
+fn process_options<B: ByteSlice>(
+    msg: &v6::Message<'_, B>,
+    exchange_type: ExchangeType,
+    want_client_id: Option<[u8; CLIENT_ID_LEN]>,
+) -> Result<ProcessedOptions, OptionsError> {
+    let mut solicit_max_rt_option = None;
+    let mut server_id_option = None;
+    let mut client_id_option = None;
+    let mut preference = None;
+    let mut addresses = HashMap::new();
+    let mut status_code_option = None;
+    let mut dns_servers = None;
+    let mut refresh_time_option = None;
+
+    struct AllowedOptions {
+        preference: bool,
+        information_refresh_time: bool,
+        ia_na: bool,
+    }
+    // See RFC 8415 appendix B for a summary of which options are allowed in
+    // which message types.
+    let AllowedOptions {
+        preference: preference_allowed,
+        information_refresh_time: information_refresh_time_allowed,
+        ia_na: ia_na_allowed,
+    } = match exchange_type {
+        ExchangeType::ReplyToInformationRequest => AllowedOptions {
+            preference: false,
+            information_refresh_time: true,
+            // Per RFC 8415, section 16.12:
+            //
+            //    Servers MUST discard any received Information-request message that
+            //    meets any of the following conditions:
+            //
+            //    -  the message includes an IA option.
+            //
+            // Since it's invalid to include IA options in an Information-request message,
+            // it is also invalid to receive IA options in a Reply in response to an
+            // Information-request message.
+            ia_na: false,
+        },
+        ExchangeType::AdvertiseToSolicit => {
+            AllowedOptions { preference: true, information_refresh_time: false, ia_na: true }
+        }
+    };
+
+    for opt in msg.options() {
+        match opt {
+            v6::ParsedDhcpOption::ClientId(client_id) => {
+                if let Some(existing) = client_id_option {
+                    return Err(OptionsError::DuplicateOption(
+                        v6::OptionCode::ClientId,
+                        format!("{:?}", existing),
+                        format!("{:?}", client_id.to_vec()),
+                    ));
+                }
+                client_id_option = Some(client_id.to_vec());
+            }
+            v6::ParsedDhcpOption::ServerId(server_id_opt) => {
+                if let Some(existing) = server_id_option {
+                    return Err(OptionsError::DuplicateOption(
+                        v6::OptionCode::ServerId,
+                        format!("{:?}", existing),
+                        format!("{:?}", server_id_opt.to_vec()),
+                    ));
+                }
+                server_id_option = Some(server_id_opt.to_vec());
+            }
+            v6::ParsedDhcpOption::SolMaxRt(sol_max_rt_opt) => {
+                if let Some(existing) = solicit_max_rt_option {
+                    return Err(OptionsError::DuplicateOption(
+                        v6::OptionCode::SolMaxRt,
+                        format!("{:?}", existing),
+                        format!("{:?}", sol_max_rt_opt.get()),
+                    ));
+                }
+                // Per RFC 8415, section 21.24:
+                //
+                //    SOL_MAX_RT value MUST be in this range: 60 <= "value" <= 86400
+                //
+                //    A DHCP client MUST ignore any SOL_MAX_RT option values that are
+                //    less than 60 or more than 86400.
+                if !VALID_MAX_SOLICIT_TIMEOUT_RANGE.contains(&sol_max_rt_opt.get()) {
+                    warn!(
+                        "{:?}: ignoring SOL_MAX_RT value {} outside of range {:?}",
+                        exchange_type,
+                        sol_max_rt_opt.get(),
+                        VALID_MAX_SOLICIT_TIMEOUT_RANGE,
+                    );
+                } else {
+                    // TODO(https://fxbug.dev/103407): Use a bounded type to
+                    // store SOL_MAX_RT.
+                    solicit_max_rt_option = Some(sol_max_rt_opt.get());
+                }
+            }
+            v6::ParsedDhcpOption::Preference(preference_opt) => {
+                if !preference_allowed {
+                    return Err(OptionsError::InvalidOption(format!("{:?}", opt)));
+                }
+                if let Some(existing) = preference {
+                    return Err(OptionsError::DuplicateOption(
+                        v6::OptionCode::Preference,
+                        format!("{:?}", existing),
+                        format!("{:?}", preference_opt),
+                    ));
+                }
+                preference = Some(preference_opt);
+            }
+            v6::ParsedDhcpOption::Iana(ref iana_data) => {
+                if !ia_na_allowed {
+                    return Err(OptionsError::InvalidOption(format!("{:?}", opt)));
+                }
+                let iaid = v6::IAID::new(iana_data.iaid());
+                let processed_ia_na = process_ia_na(iana_data)?;
+                // Per RFC 8415, section 21.4, IAIDs are expected to be
+                // unique.
+                //
+                //    A DHCP message may contain multiple IA_NA options
+                //    (though each must have a unique IAID).
+                match addresses.entry(iaid) {
+                    Entry::Occupied(entry) => {
+                        return Err(OptionsError::DuplicateIaNaId(
+                            iaid,
+                            entry.remove(),
+                            processed_ia_na,
+                        ));
+                    }
+                    Entry::Vacant(entry) => {
+                        let _: &mut IaNa = entry.insert(processed_ia_na);
+                    }
+                };
+            }
+            v6::ParsedDhcpOption::StatusCode(code, message) => {
+                let status_code = match v6::StatusCode::try_from(code.get()) {
+                    Ok(status_code) => status_code,
+                    Err(v6::ParseError::InvalidStatusCode(invalid)) => {
+                        return Err(OptionsError::InvalidStatusCode(invalid, message.to_string()));
+                    }
+                    Err(e) => {
+                        unreachable!("unreachable status code parse error: {}", e);
+                    }
+                };
+                if let Some(existing) = status_code_option {
+                    return Err(OptionsError::DuplicateOption(
+                        v6::OptionCode::StatusCode,
+                        format!("{:?}", existing),
+                        format!("{:?}", (status_code, message.to_string())),
+                    ));
+                }
+                status_code_option = Some((status_code, message.to_string()));
+            }
+            v6::ParsedDhcpOption::InformationRefreshTime(information_refresh_time) => {
+                if !information_refresh_time_allowed {
+                    return Err(OptionsError::InvalidOption(format!("{:?}", opt)));
+                }
+                if let Some(existing) = refresh_time_option {
+                    return Err(OptionsError::DuplicateOption(
+                        v6::OptionCode::InformationRefreshTime,
+                        format!("{:?}", existing),
+                        format!("{:?}", information_refresh_time),
+                    ));
+                }
+                refresh_time_option = Some(information_refresh_time);
+            }
+            v6::ParsedDhcpOption::IaAddr(_)
+            | v6::ParsedDhcpOption::Oro(_)
+            | v6::ParsedDhcpOption::ElapsedTime(_) => {
+                return Err(OptionsError::InvalidOption(format!("{:?}", opt)));
+            }
+            v6::ParsedDhcpOption::DnsServers(server_addrs) => {
+                if let Some(existing) = dns_servers {
+                    return Err(OptionsError::DuplicateOption(
+                        v6::OptionCode::DnsServers,
+                        format!("{:?}", existing),
+                        format!("{:?}", server_addrs),
+                    ));
+                }
+                dns_servers = Some(server_addrs);
+            }
+            v6::ParsedDhcpOption::DomainList(_domains) => {
+                // TODO(https://fxbug.dev/87176) implement domain list.
+            }
+        }
+    }
+    // For all three message types the server sends to the client (Advertise, Reply,
+    // and Reconfigue), RFC 8415 sections 16.3, 16.10, and 16.11 respectively state
+    // that:
+    //
+    //    Clients MUST discard any received ... message that meets
+    //    any of the following conditions:
+    //    -  the message does not include a Server Identifier option (see
+    //       Section 21.3).
+    let server_id = server_id_option.ok_or(OptionsError::MissingServerId)?;
+    // For all three message types the server sends to the client (Advertise, Reply,
+    // and Reconfigue), RFC 8415 sections 16.3, 16.10, and 16.11 respectively state
+    // that:
+    //
+    //    Clients MUST discard any received ... message that meets
+    //    any of the following conditions:
+    //    -  the message does not include a Client Identifier option (see
+    //       Section 21.2).
+    //    -  the contents of the Client Identifier option do not match the
+    //       client's DUID.
+    //
+    // The exception is that clients may send Information-Request messages
+    // without a client ID per RFC 8415 section 18.2.6:
+    //
+    //    The client SHOULD include a Client Identifier option (see
+    //    Section 21.2) to identify itself to the server (however, see
+    //    Section 4.3.1 of [RFC7844] for reasons why a client may not want to
+    //    include this option).
+    match (client_id_option, want_client_id) {
+        (None, None) => {}
+        (Some(got), None) => return Err(OptionsError::UnexpectedClientId(got)),
+        (None, Some::<[u8; CLIENT_ID_LEN]>(_)) => return Err(OptionsError::MissingClientId),
+        (Some(got), Some(want)) => {
+            if got != want {
+                return Err(OptionsError::MismatchedClientId { want, got });
+            }
+        }
+    }
+    let success_status_message = match status_code_option {
+        Some((status_code, message)) => match status_code.into_result() {
+            Ok(()) => Some(message),
+            Err(error_code) => {
+                return Ok(ProcessedOptions {
+                    server_id,
+                    solicit_max_rt_opt: solicit_max_rt_option,
+                    result: Err(StatusCodeError(error_code, message)),
+                });
+            }
+        },
+        // Missing status code option means success per RFC 8415 section 7.5:
+        //
+        //    If the Status Code option (see Section 21.13) does not appear
+        //    in a message in which the option could appear, the status
+        //    of the message is assumed to be Success.
+        None => None,
+    };
+    Ok(ProcessedOptions {
+        server_id,
+        solicit_max_rt_opt: solicit_max_rt_option,
+        result: Ok(Options {
+            success_status_message,
+            preference,
+            addresses,
+            dns_servers,
+            information_refresh_time: refresh_time_option,
+        }),
+    })
 }
 
 /// Provides methods for handling state transitions from server discovery
@@ -717,174 +1222,53 @@ impl ServerDiscovery {
             collected_advertise,
             collected_sol_max_rt,
         } = self;
-        let mut client_id_option = None;
-        let mut solicit_max_rt_option = None;
-        let mut server_id = None;
-        let mut preference = 0;
-        let mut addresses: HashMap<v6::IAID, IdentityAssociation> = HashMap::new();
-        let mut status_code = None;
-        let mut dns_servers: Option<Vec<Ipv6Addr>> = None;
 
-        // Process options; the client does not check whether an option is
-        // present in the Advertise message multiple times because each option
-        // is expected to appear only once, per RFC 8415, section 21:
-        //
-        //    Unless otherwise noted, each option may appear only in the options
-        //    area of a DHCP message and may appear only once.
-        //
-        // If an option is present more than once, the client will use the value
-        // of the last read option.
-        //
-        // Options that are not allowed in Advertise messages, as specified in
-        // RFC 8415, appendix B table, are ignored.
-        for opt in msg.options() {
-            match opt {
-                v6::ParsedDhcpOption::ClientId(client_id_opt) => {
-                    client_id_option = Some(client_id_opt)
-                }
-                v6::ParsedDhcpOption::ServerId(server_id_opt) => {
-                    server_id = Some(server_id_opt.to_vec())
-                }
-                v6::ParsedDhcpOption::SolMaxRt(sol_max_rt_opt) => {
-                    solicit_max_rt_option = Some(sol_max_rt_opt.get())
-                }
-                v6::ParsedDhcpOption::Preference(preference_opt) => preference = preference_opt,
-                v6::ParsedDhcpOption::Iana(iana_data) => {
-                    // Ignore invalid IANA options, per RFC 8415, section 21.4:
-                    //
-                    //    If a client receives an IA_NA with T1 greater than T2
-                    //    and both T1 and T2 are greater than 0, the client
-                    //    discards the IA_NA option and processes the remainder
-                    //    of the message as though the server had not included
-                    //    the invalid IA_NA option.
-                    match (iana_data.t1(), iana_data.t2()) {
-                        (v6::TimeValue::Zero, _) | (_, v6::TimeValue::Zero) => {}
-                        (t1, t2) => {
-                            if t1 > t2 {
-                                continue;
-                            }
-                        }
-                    }
-
-                    // Per RFC 8415, section 21.4, IAIDs are expected to be
-                    // unique. Ignore IA_NA option with duplicate IAID.
-                    //
-                    //    A DHCP message may contain multiple IA_NA options
-                    //    (though each must have a unique IAID).
-                    let vacant_ia_entry = match addresses.entry(v6::IAID::new(iana_data.iaid())) {
-                        Entry::Occupied(entry) => {
-                            debug!(
-                                "received unexpected IA_NA option with non-unique IAID {:?}.",
-                                entry.key()
-                            );
-                            continue;
-                        }
-                        Entry::Vacant(entry) => entry,
+        let ProcessedOptions { server_id, solicit_max_rt_opt, result } =
+            match process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(client_id)) {
+                Ok(processed_options) => processed_options,
+                Err(e) => {
+                    warn!("ignoring Advertise: {}", e);
+                    return Transition {
+                        state: ClientState::ServerDiscovery(ServerDiscovery {
+                            client_id,
+                            configured_addresses,
+                            first_solicit_time,
+                            retrans_timeout,
+                            solicit_max_rt,
+                            collected_advertise,
+                            collected_sol_max_rt,
+                        }),
+                        actions: Vec::new(),
+                        transaction_id: None,
                     };
+                }
+            };
 
-                    let mut iaaddr_opt = None;
-                    let mut iana_status_code = None;
-                    for iana_opt in iana_data.iter_options() {
-                        match iana_opt {
-                            v6::ParsedDhcpOption::IaAddr(iaaddr_data) => {
-                                // Ignore invalid IA Address options, per RFC
-                                // 8415, section 21.6:
-                                //
-                                //    The client MUST discard any addresses for
-                                //    which the preferred lifetime is greater
-                                //    than the valid lifetime.
-                                if iaaddr_data.preferred_lifetime() > iaaddr_data.valid_lifetime() {
-                                    continue;
-                                }
-                                iaaddr_opt = Some(iaaddr_data);
-                            }
-                            v6::ParsedDhcpOption::StatusCode(code, _) => {
-                                iana_status_code = Some(code.get());
-                            }
-                            v6::ParsedDhcpOption::ClientId(_)
-                            | v6::ParsedDhcpOption::ServerId(_)
-                            | v6::ParsedDhcpOption::SolMaxRt(_)
-                            | v6::ParsedDhcpOption::Preference(_)
-                            | v6::ParsedDhcpOption::Iana(_)
-                            | v6::ParsedDhcpOption::InformationRefreshTime(_)
-                            | v6::ParsedDhcpOption::Oro(_)
-                            | v6::ParsedDhcpOption::ElapsedTime(_)
-                            | v6::ParsedDhcpOption::DnsServers(_)
-                            | v6::ParsedDhcpOption::DomainList(_) => {
-                                debug!(
-                                    "received unexpected suboption with code \
-                                    {:?} in IANA options in Advertise message.",
-                                    iana_opt.code()
-                                );
-                            }
-                        }
-                    }
-                    if let Some(iaaddr_data) = iaaddr_opt {
-                        if iana_status_code.is_none()
-                            || iana_status_code == Some(v6::StatusCode::Success.into())
-                        {
-                            let _: &mut IdentityAssociation =
-                                vacant_ia_entry.insert(IdentityAssociation {
-                                    address: Ipv6Addr::from(iaaddr_data.addr()),
-                                    preferred_lifetime: iaaddr_data.preferred_lifetime(),
-                                    valid_lifetime: iaaddr_data.valid_lifetime(),
-                                });
-                        }
-                    }
-                }
-                v6::ParsedDhcpOption::StatusCode(code, message) => {
-                    status_code = Some(code.get());
-                    if !message.is_empty() {
-                        debug!("received status code {:?}: {}", status_code.as_ref(), message);
-                    }
-                }
-                v6::ParsedDhcpOption::InformationRefreshTime(refresh_time) => {
-                    debug!(
-                        "received unexpected option Information Refresh Time \
-                        ({:?}) in Advertise message",
-                        refresh_time
-                    );
-                }
-                v6::ParsedDhcpOption::IaAddr(iaaddr_data) => {
-                    debug!(
-                        "received unexpected option IA Addr [addr: {:?}] as top \
-                        option in Advertise message",
-                        iaaddr_data.addr()
-                    );
-                }
-                v6::ParsedDhcpOption::Oro(option_codes) => {
-                    debug!(
-                        "received unexpected option ORO ({:?}) in Advertise message",
-                        option_codes
-                    );
-                }
-                v6::ParsedDhcpOption::ElapsedTime(elapsed_time) => {
-                    debug!(
-                        "received unexpected option Elapsed Time ({:?}) in Advertise message",
-                        elapsed_time
-                    );
-                }
-                v6::ParsedDhcpOption::DnsServers(server_addrs) => dns_servers = Some(server_addrs),
-                v6::ParsedDhcpOption::DomainList(_domains) => {
-                    // TODO(https://fxbug.dev/87176) implement domain list.
-                }
-            }
-        }
-
-        // Per RFC 8415, section 16.3:
+        // Process SOL_MAX_RT and discard invalid advertise following RFC 8415,
+        // section 18.2.9:
         //
-        //    Clients MUST discard any received Advertise message that meets
-        //    any of the following conditions:
-        //    -  the message does not include a Server Identifier option (see
-        //       Section 21.3).
-        //    -  the message does not include a Client Identifier option (see
-        //       Section 21.2).
-        //    -  the contents of the Client Identifier option do not match the
-        //       client's DUID.
-        let (server_id, client_id_option) =
-            if let (Some(sid), Some(cid)) = (server_id, client_id_option) {
-                (sid, cid)
-            } else {
+        //    The client MUST process any SOL_MAX_RT option [..] even if the
+        //    message contains a Status Code option indicating a failure, and
+        //    the Advertise message will be discarded by the client.
+        //
+        //    The client MUST ignore any Advertise message that contains no
+        //    addresses [..], with the exception that the client MUST process
+        //    an included SOL_MAX_RT option.
+        //
+        let mut collected_sol_max_rt = collected_sol_max_rt;
+        if let Some(solicit_max_rt) = solicit_max_rt_opt {
+            collected_sol_max_rt.push(solicit_max_rt);
+        }
+        let Options {
+            success_status_message,
+            preference,
+            mut addresses,
+            dns_servers,
+            information_refresh_time,
+        } = match result {
+            Ok(options) => options,
+            Err(e) => {
+                warn!("Advertise from server {:?} error status code: {}", server_id, e);
                 return Transition {
                     state: ClientState::ServerDiscovery(ServerDiscovery {
                         client_id,
@@ -898,50 +1282,65 @@ impl ServerDiscovery {
                     actions: Vec::new(),
                     transaction_id: None,
                 };
-            };
-        if &client_id != client_id_option {
-            return Transition {
-                state: ClientState::ServerDiscovery(ServerDiscovery {
-                    client_id,
-                    configured_addresses,
-                    first_solicit_time,
-                    retrans_timeout,
-                    solicit_max_rt,
-                    collected_advertise,
-                    collected_sol_max_rt,
-                }),
-                actions: Vec::new(),
-                transaction_id: None,
-            };
-        }
-
-        // Process SOL_MAX_RT and discard invalid advertise following RFC 8415,
-        // section 18.2.9:
-        //
-        //    The client MUST process any SOL_MAX_RT option [..] even if the
-        //    message contains a Status Code option indicating a failure, and
-        //    the Advertise message will be discarded by the client.
-        //
-        //    The client MUST ignore any Advertise message that contains no
-        //    addresses [..], with the exception that the client MUST process
-        //    an included SOL_MAX_RT option.
-        //
-        // Per RFC 8415, section 21.24:
-        //
-        //    SOL_MAX_RT value MUST be in this range: 60 <= "value" <= 86400
-        //
-        //    A DHCP client MUST ignore any SOL_MAX_RT option values that are
-        //    less than 60 or more than 86400.
-        //
-        let mut collected_sol_max_rt = collected_sol_max_rt;
-        if let Some(solicit_max_rt_option) = solicit_max_rt_option {
-            if VALID_MAX_SOLICIT_TIMEOUT_RANGE.contains(&solicit_max_rt_option) {
-                collected_sol_max_rt.push(solicit_max_rt_option);
+            }
+        };
+        assert_eq!(
+            information_refresh_time, None,
+            "Information Refresh Time option must not be present in Advertise"
+        );
+        if let Some(success_status_message) = success_status_message {
+            if !success_status_message.is_empty() {
+                info!(
+                    "Advertise from server {:?} contains success status code message: {}",
+                    server_id, success_status_message,
+                );
             }
         }
-        if addresses.is_empty()
-            || status_code.is_some() && status_code != Some(v6::StatusCode::Success.into())
-        {
+        let addresses = addresses
+            .drain()
+            .filter_map(|(iaid, ia_na)| {
+                let (success_status_message, ia_addr) = match ia_na {
+                    IaNa::Success { status_message, _t1, _t2, ia_addr } => {
+                        (status_message, ia_addr)
+                    }
+                    IaNa::Failure(e) => {
+                        warn!(
+                            "Advertise from server {:?} contains IA_NA with error status code: {}",
+                            server_id, e
+                        );
+                        return None;
+                    }
+                };
+                if let Some(success_status_message) = success_status_message {
+                    if !success_status_message.is_empty() {
+                        info!(
+                            "Advertise from server {:?} IA_NA with IAID {:?} \
+                            success status code message: {}",
+                            server_id, iaid, success_status_message,
+                        );
+                    }
+                }
+                ia_addr.and_then(|IaAddress { address, lifetimes }| match lifetimes {
+                    Ok(Lifetimes { preferred_lifetime, valid_lifetime }) => Some((
+                        iaid,
+                        IdentityAssociation {
+                            address,
+                            preferred_lifetime,
+                            valid_lifetime: v6::TimeValue::NonZero(valid_lifetime),
+                        },
+                    )),
+                    Err(e) => {
+                        warn!(
+                            "Advertise from server {:?}: \
+                            ignoring IA_NA with IAID {:?} because of invalid lifetimes: {}",
+                            server_id, iaid, e
+                        );
+                        None
+                    }
+                })
+            })
+            .collect::<HashMap<_, _>>();
+        if addresses.is_empty() {
             return Transition {
                 state: ClientState::ServerDiscovery(ServerDiscovery {
                     client_id,
@@ -963,7 +1362,11 @@ impl ServerDiscovery {
             server_id,
             addresses,
             dns_servers: dns_servers.unwrap_or(Vec::new()),
-            preference,
+            // Per RFC 8415, section 18.2.1:
+            //
+            //   Any valid Advertise that does not include a Preference
+            //   option is considered to have a preference value of 0.
+            preference: preference.unwrap_or(0),
             receive_time: now,
             preferred_addresses_count,
         };
@@ -1814,7 +2217,7 @@ impl Requesting {
                                 );
                             }
                         }
-                        v6::StatusCode::NotOnLink => {
+                        v6::StatusCode::Failure(v6::ErrorStatusCode::NotOnLink) => {
                             // If the client receives IAs with NotOnLink status,
                             // try to obtain other addresses in follow-up messages.
                             let _: &mut AddressEntry =
@@ -1822,11 +2225,11 @@ impl Requesting {
                                     AddressToRequest::new(None, configured_address),
                                 ));
                         }
-                        v6::StatusCode::UnspecFail
-                        | v6::StatusCode::NoAddrsAvail
-                        | v6::StatusCode::NoBinding
-                        | v6::StatusCode::UseMulticast
-                        | v6::StatusCode::NoPrefixAvail => {
+                        v6::StatusCode::Failure(v6::ErrorStatusCode::UnspecFail)
+                        | v6::StatusCode::Failure(v6::ErrorStatusCode::NoAddrsAvail)
+                        | v6::StatusCode::Failure(v6::ErrorStatusCode::NoBinding)
+                        | v6::StatusCode::Failure(v6::ErrorStatusCode::UseMulticast)
+                        | v6::StatusCode::Failure(v6::ErrorStatusCode::NoPrefixAvail) => {
                             debug!(
                                 "received unexpected status code {:?} in IANA option",
                                 iana_status_code
@@ -1835,12 +2238,12 @@ impl Requesting {
                     }
                 }
                 v6::ParsedDhcpOption::DnsServers(server_addrs) => dns_servers = Some(server_addrs),
-                v6::ParsedDhcpOption::InformationRefreshTime(refresh_time) => {
+                v6::ParsedDhcpOption::InformationRefreshTime(information_refresh_time) => {
                     debug!(
                         "received unexpected option Information Refresh \
                         Time ({:?}) in Reply to non-Information Request \
                         message",
-                        refresh_time
+                        information_refresh_time
                     );
                 }
                 v6::ParsedDhcpOption::IaAddr(iaaddr_data) => {
@@ -1914,7 +2317,7 @@ impl Requesting {
         //    message is assumed to be Success.
         let status_code = status_code.unwrap_or(v6::StatusCode::Success);
         match status_code {
-            v6::StatusCode::UnspecFail => {
+            v6::StatusCode::Failure(v6::ErrorStatusCode::UnspecFail) => {
                 // Per RFC 8415, section 18.2.10:
                 //
                 //    If the client receives a Reply message with a status code of
@@ -1943,7 +2346,7 @@ impl Requesting {
                     now,
                 );
             }
-            v6::StatusCode::NotOnLink => {
+            v6::StatusCode::Failure(v6::ErrorStatusCode::NotOnLink) => {
                 // Per RFC 8415, section 18.2.10.1:
                 //
                 //    If the client receives a NotOnLink status from the server in
@@ -1990,11 +2393,11 @@ impl Requesting {
             }
             // TODO(https://fxbug.dev/76764): implement unicast.
             // The client already uses multicast.
-            v6::StatusCode::UseMulticast |
+            v6::StatusCode::Failure(v6::ErrorStatusCode::UseMulticast) |
             // Not expected as top level status.
-            v6::StatusCode::NoAddrsAvail
-            | v6::StatusCode::NoPrefixAvail
-            | v6::StatusCode::NoBinding => {
+            v6::StatusCode::Failure(v6::ErrorStatusCode::NoAddrsAvail)
+            | v6::StatusCode::Failure(v6::ErrorStatusCode::NoPrefixAvail)
+            | v6::StatusCode::Failure(v6::ErrorStatusCode::NoBinding) => {
                 debug!(
                     "received top level error status code {:?} in Reply to Request",
                     status_code,
@@ -3434,6 +3837,7 @@ mod tests {
     use testutil::TestIdentityAssociation;
 
     const INFINITY: u32 = u32::MAX;
+    const DNS_SERVERS: [Ipv6Addr; 2] = [std_ip_v6!("ff01::0102"), std_ip_v6!("ff01::0304")];
 
     #[test]
     fn send_information_request_and_receive_reply() {
@@ -3482,12 +3886,11 @@ mod tests {
                 ]
             );
 
-            let dns_servers = [std_ip_v6!("ff01::0102"), std_ip_v6!("ff01::0304")];
-
             let test_dhcp_refresh_time = 42u32;
             let options = [
+                v6::DhcpOption::ServerId(&[1, 2, 3]),
                 v6::DhcpOption::InformationRefreshTime(test_dhcp_refresh_time),
-                v6::DhcpOption::DnsServers(&dns_servers),
+                v6::DhcpOption::DnsServers(&DNS_SERVERS),
             ];
             let builder =
                 v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
@@ -3503,8 +3906,8 @@ mod tests {
             {
                 assert_matches!(
                     state,
-                    Some(ClientState::InformationReceived(InformationReceived {dns_servers: d
-                    })) if d == dns_servers.to_vec()
+                    Some(ClientState::InformationReceived(InformationReceived {dns_servers }))
+                        if dns_servers == DNS_SERVERS.to_vec()
                 );
             }
             // Upon receiving a valid reply, client should set up for refresh based on the reply.
@@ -3516,7 +3919,7 @@ mod tests {
                         ClientTimerType::Refresh,
                         Duration::from_secs(u64::from(test_dhcp_refresh_time)),
                     ),
-                    Action::UpdateDnsServers(dns_servers.to_vec())
+                    Action::UpdateDnsServers(DNS_SERVERS.to_vec())
                 ]
             );
         }
@@ -3555,7 +3958,8 @@ mod tests {
 
         let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
             &client;
-        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &[]);
+        let options = [v6::DhcpOption::ServerId(&[1, 2, 3])];
+        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
         builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
@@ -3772,6 +4176,169 @@ mod tests {
             &configured_addresses,
         );
         assert!(advertise1 > advertise2);
+    }
+
+    #[test_case(v6::DhcpOption::StatusCode(v6::StatusCode::Success.into(), ""); "status_code")]
+    #[test_case(v6::DhcpOption::ClientId(&[4, 5, 6]); "client_id")]
+    #[test_case(v6::DhcpOption::ServerId(&[1, 2, 3]); "server_id")]
+    #[test_case(v6::DhcpOption::Preference(ADVERTISE_MAX_PREFERENCE); "preference")]
+    #[test_case(v6::DhcpOption::SolMaxRt(*VALID_MAX_SOLICIT_TIMEOUT_RANGE.end()); "sol_max_rt")]
+    #[test_case(v6::DhcpOption::DnsServers(&DNS_SERVERS); "dns_servers")]
+    fn process_options_duplicates<'a>(opt: v6::DhcpOption<'a>) {
+        let client_id = v6::duid_uuid();
+        let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            std_ip_v6!("::ffff:c00a:1ff"),
+            60,
+            60,
+            &[],
+        ))];
+        let options = [
+            v6::DhcpOption::StatusCode(v6::StatusCode::Success.into(), ""),
+            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::ServerId(&[1, 2, 3]),
+            v6::DhcpOption::Preference(ADVERTISE_MAX_PREFERENCE),
+            v6::DhcpOption::SolMaxRt(*VALID_MAX_SOLICIT_TIMEOUT_RANGE.end()),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &iana_options)),
+            v6::DhcpOption::DnsServers(&DNS_SERVERS),
+            opt,
+        ];
+        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, [0, 1, 2], &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        assert_matches!(
+            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(client_id)),
+            Err(OptionsError::DuplicateOption(_, _, _))
+        );
+    }
+
+    #[test]
+    fn process_options_duplicate_ia_na_id() {
+        let client_id = v6::duid_uuid();
+        let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            std_ip_v6!("::ffff:c00a:1ff"),
+            60,
+            60,
+            &[],
+        ))];
+        let iaid = v6::IAID::new(0);
+        let options = [
+            v6::DhcpOption::ClientId(&client_id),
+            v6::DhcpOption::ServerId(&[1, 2, 3]),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(iaid, 60, 60, &iana_options)),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(iaid, 60, 60, &iana_options)),
+        ];
+        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, [0, 1, 2], &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        assert_matches!(
+            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(client_id)),
+            Err(OptionsError::DuplicateIaNaId(got_iaid, _, _)) if got_iaid == iaid
+        );
+    }
+
+    #[test]
+    fn process_options_missing_server_id() {
+        let client_id = v6::duid_uuid();
+        let options = [v6::DhcpOption::ClientId(&client_id)];
+        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, [0, 1, 2], &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        assert_matches!(
+            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(client_id)),
+            Err(OptionsError::MissingServerId)
+        );
+    }
+
+    #[test]
+    fn process_options_missing_client_id() {
+        let options = [v6::DhcpOption::ServerId(&[1, 2, 3])];
+        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, [0, 1, 2], &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        assert_matches!(
+            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(v6::duid_uuid())),
+            Err(OptionsError::MissingClientId)
+        );
+    }
+
+    #[test]
+    fn process_options_mismatched_client_id() {
+        let client_id = v6::duid_uuid();
+        let mut wrong_client_id = client_id.clone();
+        wrong_client_id.iter_mut().for_each(|byte| *byte += 1);
+        let options =
+            [v6::DhcpOption::ClientId(&wrong_client_id), v6::DhcpOption::ServerId(&[1, 2, 3])];
+        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, [0, 1, 2], &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        assert_matches!(
+            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(client_id)),
+            Err(OptionsError::MismatchedClientId { got, want })
+                if got[..] == wrong_client_id && want == client_id
+        );
+    }
+
+    #[test]
+    fn process_options_unexpected_client_id() {
+        let client_id = v6::duid_uuid();
+        let options = [v6::DhcpOption::ClientId(&client_id), v6::DhcpOption::ServerId(&[1, 2, 3])];
+        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, [0, 1, 2], &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        assert_matches!(
+            process_options(&msg, ExchangeType::ReplyToInformationRequest, None),
+            Err(OptionsError::UnexpectedClientId(got))
+                if got[..] == client_id
+        );
+    }
+
+    #[test_case(
+        v6::MessageType::Reply,
+        ExchangeType::ReplyToInformationRequest,
+        v6::DhcpOption::Preference(ADVERTISE_MAX_PREFERENCE);
+        "reply_to_information_request_preference"
+    )]
+    #[test_case(
+        v6::MessageType::Reply,
+        ExchangeType::ReplyToInformationRequest,
+        v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &[]));
+        "reply_to_information_request_ia_na"
+    )]
+    #[test_case(
+        v6::MessageType::Advertise,
+        ExchangeType::AdvertiseToSolicit,
+        v6::DhcpOption::InformationRefreshTime(42u32);
+        "advertise_to_solicit_information_refresh_time"
+    )]
+    fn process_options_invalid<'a>(
+        message_type: v6::MessageType,
+        exchange_type: ExchangeType,
+        opt: v6::DhcpOption<'a>,
+    ) {
+        let client_id = v6::duid_uuid();
+        let options =
+            [v6::DhcpOption::ClientId(&client_id), v6::DhcpOption::ServerId(&[1, 2, 3]), opt];
+        let builder = v6::MessageBuilder::new(message_type, [0, 1, 2], &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        assert_matches!(
+            process_options(&msg, exchange_type, Some(client_id)),
+            Err(OptionsError::InvalidOption(_))
+        );
     }
 
     #[test]
@@ -4118,7 +4685,7 @@ mod tests {
             v6::DhcpOption::ServerId(&[1, 2, 3]),
             v6::DhcpOption::ClientId(&client_id),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &[])),
-            v6::DhcpOption::StatusCode(v6::StatusCode::UnspecFail.into(), ""),
+            v6::DhcpOption::StatusCode(v6::ErrorStatusCode::UnspecFail.into(), ""),
         ];
         let request_transaction_id = transaction_id.unwrap();
         let builder =
@@ -4151,7 +4718,7 @@ mod tests {
             v6::DhcpOption::ServerId(&[1, 2, 3]),
             v6::DhcpOption::ClientId(&client_id),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &[])),
-            v6::DhcpOption::StatusCode(v6::StatusCode::NotOnLink.into(), ""),
+            v6::DhcpOption::StatusCode(v6::ErrorStatusCode::NotOnLink.into(), ""),
         ];
         let request_transaction_id = transaction_id.unwrap();
         let builder =
@@ -4190,7 +4757,7 @@ mod tests {
             v6::DhcpOption::ServerId(&[1, 2, 3]),
             v6::DhcpOption::ClientId(&client_id),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(v6::IAID::new(0), 60, 60, &[])),
-            v6::DhcpOption::StatusCode(v6::StatusCode::NoAddrsAvail.into(), ""),
+            v6::DhcpOption::StatusCode(v6::ErrorStatusCode::NoAddrsAvail.into(), ""),
         ];
         let builder =
             v6::MessageBuilder::new(v6::MessageType::Reply, request_transaction_id, &options);
@@ -4222,7 +4789,8 @@ mod tests {
 
         // If the reply contains no usable addresses, the client selects
         // another server and sends a request to it.
-        let iana_options = [v6::DhcpOption::StatusCode(v6::StatusCode::NoAddrsAvail.into(), "")];
+        let iana_options =
+            [v6::DhcpOption::StatusCode(v6::ErrorStatusCode::NoAddrsAvail.into(), "")];
         let options = [
             v6::DhcpOption::ServerId(&[4, 5, 6]),
             v6::DhcpOption::ClientId(&client_id),
@@ -4287,7 +4855,7 @@ mod tests {
         // If the reply contains an address with status code NotOnLink, the
         // client should request the IAs without specifying any addresses in
         // subsequent messages.
-        let iana_options1 = [v6::DhcpOption::StatusCode(v6::StatusCode::NotOnLink.into(), "")];
+        let iana_options1 = [v6::DhcpOption::StatusCode(v6::ErrorStatusCode::NotOnLink.into(), "")];
         let preferred_lifetime_value = 60;
         let valid_lifetime_value = 90;
         let iana_options2 = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
@@ -5243,26 +5811,28 @@ mod tests {
             }))
         );
 
-        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &[]);
+        let options = [v6::DhcpOption::ServerId(&[1, 2, 3])];
+        let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
         builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         // Transition to InformationReceived state.
         let time = Instant::now();
-        assert_eq!(
-            client.handle_message_receive(msg, time)[..],
-            [
-                Action::CancelTimer(ClientTimerType::Retransmission),
-                Action::ScheduleTimer(ClientTimerType::Refresh, IRT_DEFAULT)
-            ]
-        );
+        let actions = client.handle_message_receive(msg, time);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
         assert_matches!(
             state,
             Some(ClientState::InformationReceived(InformationReceived { dns_servers}))
                 if dns_servers.is_empty()
+        );
+        assert_eq!(
+            actions[..],
+            [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::ScheduleTimer(ClientTimerType::Refresh, IRT_DEFAULT)
+            ]
         );
 
         // Should panic if Retransmission timeout is received while in
