@@ -241,11 +241,7 @@ void Service::Launch(int conn, const std::string& peer_name) {
   // TODO(fxbug.dev/97903): don't give sshd all of legacy sys.
   std::string sys_path;
   files::Glob glob("/hub/r/sys/*");
-  if (glob.size() == 0) {
-    // sshd-host.cmx is launched in sys, so its /hub is sys.
-    // TODO(fxbug.dev/90440): delete this branch once sshd-host.cmx is gone.
-    sys_path = "/hub";
-  } else if (glob.size() == 1) {
+  if (glob.size() == 1) {
     sys_path = *(glob.begin());
   } else {
     FX_LOGS(ERROR) << "Could not find sys realm, found " << glob.size() << " matches";
