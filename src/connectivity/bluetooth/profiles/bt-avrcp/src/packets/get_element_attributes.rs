@@ -8,8 +8,8 @@ use {
 };
 
 use crate::packets::{
-    AvcCommandType, CharsetId, Error, FillExt, MediaAttributeId, PacketResult, PduId,
-    VendorCommand, VendorDependentPdu, ATTRIBUTE_ID_LEN,
+    AvcCommandType, CharsetId, Error, MediaAttributeId, PacketResult, PduId, VendorCommand,
+    VendorDependentPdu, ATTRIBUTE_ID_LEN,
 };
 
 // See AVRCP 1.6.1 section 6.6 Media Information PDUs - GetElementAttributes for format.
@@ -118,7 +118,7 @@ impl Encodable for GetElementAttributesCommand {
         }
 
         // Only supported command is NOW_PLAYING (0x00 x8)
-        FillExt::fill(&mut buf[0..IDENTIFIER_LEN], 0);
+        buf[0..IDENTIFIER_LEN].fill(0);
         if self.attributes == MediaAttributeId::VARIANTS {
             buf[ATTRIBUTE_COUNT_OFFSET] = 0;
         } else {

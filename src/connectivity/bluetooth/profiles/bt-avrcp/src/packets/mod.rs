@@ -497,20 +497,6 @@ impl VendorCommand for RawVendorDependentPacket {
     }
 }
 
-// TODO: Remove once slice_fill feature stabilizes.
-// https://github.com/rust-lang/rust/issues/70758
-trait FillExt<T> {
-    fn fill(&mut self, v: T);
-}
-
-impl FillExt<u8> for [u8] {
-    fn fill(&mut self, v: u8) {
-        for i in self {
-            *i = v
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
