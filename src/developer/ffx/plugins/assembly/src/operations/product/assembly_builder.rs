@@ -14,7 +14,7 @@ use assembly_config_schema::{
 use assembly_package_utils::PackageManifestPathBuf;
 use assembly_platform_configuration::{PackageConfigPatch, StructuredConfigPatches};
 use assembly_structured_config::Repackager;
-use assembly_util::{InsertAllUniqueExt, InsertUniqueExt, MapEntry};
+use assembly_util::{DuplicateKeyError, InsertAllUniqueExt, InsertUniqueExt, MapEntry};
 use fuchsia_pkg::PackageManifest;
 use std::path::Path;
 use std::{
@@ -451,11 +451,17 @@ where
     }
 
     fn try_insert_unique(&mut self, name: String, value: T) -> Result<()> {
-        let result =
-            self.entries.try_insert_unique(MapEntry(name, value)).map_err(|e| format!("{:?}", e));
+        let result = self.entries.try_insert_unique(MapEntry(name, value)).map_err(|e| {
+            format!(
+                "key: '{}'\n  existing value: {:#?}\n  new value: {:#?}",
+                e.key(),
+                e.previous_value(),
+                e.new_value()
+            )
+        });
         // The error is mapped a second time to separate the borrow of entries
         // from the borrow of name.
-        result.map_err(|e| anyhow!("duplicate entry for {}: {}", self.name, e))
+        result.map_err(|e| anyhow!("duplicate entry in {}:\n  {}", self.name, e))
     }
 }
 
