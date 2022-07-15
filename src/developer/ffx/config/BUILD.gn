@@ -43,6 +43,7 @@ if (is_host) {
       "src/cache.rs",
       "src/environment.rs",
       "src/lib.rs",
+      "src/lockfile.rs",
       "src/logging.rs",
       "src/mapping/cache.rs",
       "src/mapping/config.rs",

@@ -25,6 +25,7 @@ pub use config_macros::FfxConfigBacked;
 
 pub mod api;
 pub mod environment;
+pub mod lockfile;
 pub mod logging;
 pub mod sdk;
 

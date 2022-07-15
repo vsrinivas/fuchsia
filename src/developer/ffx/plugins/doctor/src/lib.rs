@@ -11,7 +11,7 @@ use {
     async_trait::async_trait,
     doctor_utils::{DaemonManager, DefaultDaemonManager, DoctorRecorder, Recorder},
     errors::ffx_bail,
-    ffx_config::{get, print_config},
+    ffx_config::{get, lockfile::LockfileCreateError, print_config},
     ffx_core::ffx_plugin,
     ffx_doctor_args::DoctorCommand,
     fidl::{endpoints::create_proxy, prelude::*},
@@ -26,7 +26,7 @@ use {
     std::sync::Arc,
     std::{
         collections::HashSet,
-        io::{stdout, BufWriter, Write},
+        io::{stdout, BufWriter, ErrorKind, Write},
         path::PathBuf,
         process::Command,
         time::Duration,
@@ -796,6 +796,35 @@ async fn doctor_summary<W: Write>(
     ledger.set_outcome(ffx_path_node, LedgerOutcome::Info)?;
 
     ledger.close(main_node)?;
+
+    if let Some(env_file) = ffx_config::env_file() {
+        main_node = ledger.add_node("Config Lock Files", LedgerMode::Automatic)?;
+
+        for (file, locked) in ffx_config::environment::Environment::check_locks(&env_file)? {
+            let (outcome, description) = match locked {
+                Err(LockfileCreateError { error, lock_path, owner: None, .. }) if error.kind() == ErrorKind::AlreadyExists=> (
+                    LedgerOutcome::Failure,
+                    format!("Lockfile `{lockfile}` exists, but is malformed. It should be removed.", lockfile=lock_path.display()),
+                ),
+                Err(LockfileCreateError { lock_path, owner: Some(owner), .. }) => (
+                    LedgerOutcome::Failure,
+                    format!("Lockfile `{lockfile}` was owned by another process that didn't release it in our timeout. Check that it's running? Pid {pid}", lockfile=lock_path.display(), pid=owner.pid),
+                ),
+                Err(LockfileCreateError { error, lock_path, .. }) => (
+                    LedgerOutcome::Failure,
+                    format!("Could not open lockfile `{lockfile}` due to error: {error:?}, check permissions on the directory.", lockfile=lock_path.display()),
+                ),
+                Ok(_) => (
+                    LedgerOutcome::Success,
+                    format!("Config file: {path}", path=file.display()),
+                )
+            };
+            let node = ledger.add_node(&description, LedgerMode::Automatic)?;
+            ledger.set_outcome(node, outcome)?;
+        }
+
+        ledger.close(main_node)?;
+    }
 
     main_node = ledger.add_node("Checking daemon", LedgerMode::Automatic)?;
 

@@ -3,11 +3,12 @@
 // found in the LICENSE file.
 
 use {
+    crate::lockfile::{Lockfile, LockfileCreateError},
     crate::paths::get_default_user_file_path,
     crate::ConfigLevel,
     anyhow::{bail, Context, Result},
     errors::ffx_error,
-    log::info,
+    log::{error, info},
     serde::{Deserialize, Serialize},
     std::{
         collections::HashMap,
@@ -15,7 +16,7 @@ use {
         fs::{File, OpenOptions},
         io::{BufReader, Write},
         path::{Path, PathBuf},
-        sync::Mutex,
+        time::Duration,
     },
 };
 
@@ -32,20 +33,6 @@ pub struct Environment {
     files: EnvironmentFiles,
 }
 
-// This lock protects from concurrent [Environment]s from modifying the same underlying file.
-// While in the normal case we typically only have one [Environment], it's possible to have
-// multiple instances during tests. If we're not careful, it's possible concurrent [Environment]s
-// could stomp on each other if they happen to use the same underlying file. To protect against
-// this, we hold a lock while we read or write to the underlying file.
-//
-// It is inefficient to hold the lock for all [Environment] files, since we only need it when
-// we're reading and writing to the same file. We could be more efficient if we a global map to
-// control access to individual files, but we only encounter multiple [Environment]s in tests, so
-// it's probably not worth the overhead.
-lazy_static::lazy_static! {
-    static ref ENV_MUTEX: Mutex<()> = Mutex::default();
-}
-
 impl Environment {
     /// Creates a new empty env that will be saved to a specific path, but is initialized
     /// with no settings.
@@ -58,12 +45,43 @@ impl Environment {
         let path = path.as_ref().to_owned();
 
         // Grab the lock because we're reading from the environment file.
-        let _e = ENV_MUTEX.lock().unwrap();
-        let file = File::open(&path).context("opening file for read")?;
+        let lockfile = Self::lock_env(&path)?;
+        Self::load_with_lock(lockfile, path)
+    }
 
-        let files = serde_json::from_reader(BufReader::new(file))
-            .context("reading environment from disk")?;
-        Ok(Self { path: Some(path), files })
+    /// Checks if we can manage to open the given environment file's lockfile,
+    /// as well as each configuration file referenced by it, and returns the lockfile
+    /// owner if we can't. Will return a normal error via result if any non-lockfile
+    /// error is encountered while processing the files.
+    ///
+    /// Used to implement diagnostics for `ffx doctor`.
+    pub fn check_locks(
+        path: &Path,
+    ) -> Result<Vec<(PathBuf, Result<PathBuf, LockfileCreateError>)>> {
+        let path = path.to_owned();
+        let (lock_path, env) = match Self::lock_env(&path) {
+            Ok(lockfile) => {
+                (lockfile.path().to_owned(), Self::load_with_lock(lockfile, path.clone())?)
+            }
+            Err(e) => return Ok(vec![(path, Err(e))]),
+        };
+
+        let mut checked = vec![(path, Ok(lock_path))];
+
+        if let Some(user) = env.files.user {
+            let res = Lockfile::lock_for(&user, Duration::from_secs(1));
+            checked.push((user, res.map(|lock| lock.path().to_owned())));
+        }
+        if let Some(global) = env.files.global {
+            let res = Lockfile::lock_for(&global, Duration::from_secs(1));
+            checked.push((global, res.map(|lock| lock.path().to_owned())));
+        }
+        for (_, build) in env.files.build.unwrap_or_default() {
+            let res = Lockfile::lock_for(&build, Duration::from_secs(1));
+            checked.push((build, res.map(|lock| lock.path().to_owned())));
+        }
+
+        Ok(checked)
     }
 
     pub async fn save(&self) -> Result<()> {
@@ -75,7 +93,7 @@ impl Environment {
                 let mut tmp = tempfile::NamedTempFile::new_in(parent)?;
 
                 // Grab the lock because we're writing to the environment file.
-                let _e = ENV_MUTEX.lock().unwrap();
+                let _e = Self::lock_env(path)?;
                 serde_json::to_writer_pretty(&mut tmp, &self.files)
                     .context("writing environment to disk")?;
 
@@ -89,6 +107,21 @@ impl Environment {
             }
             None => Err(anyhow::anyhow!("Tried to save environment with no path set")),
         }
+    }
+
+    fn load_with_lock(_lockfile: Lockfile, path: PathBuf) -> Result<Self> {
+        let file = File::open(&path).context("opening file for read")?;
+
+        let files = serde_json::from_reader(BufReader::new(file))
+            .context("reading environment from disk")?;
+        Ok(Self { path: Some(path), files })
+    }
+
+    fn lock_env(path: &Path) -> Result<Lockfile, LockfileCreateError> {
+        Lockfile::lock_for(path, Duration::from_secs(2)).map_err(|e| {
+            error!("Failed to create a lockfile for environment file {path}. Check that {lockpath} doesn't exist and can be written to. Ownership information: {owner:#?}", path=path.display(), lockpath=e.lock_path.display(), owner=e.owner);
+            e
+        })
     }
 
     pub fn get_path(&self) -> Option<&Path> {
@@ -174,7 +207,7 @@ impl Environment {
     }
 
     pub fn init_env_file(path: &Path) -> Result<()> {
-        let _e = ENV_MUTEX.lock().unwrap();
+        let _e = Self::lock_env(path)?;
         let mut f = OpenOptions::new()
             .read(true)
             .write(true)

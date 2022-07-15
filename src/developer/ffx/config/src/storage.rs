@@ -5,10 +5,12 @@
 use {
     crate::api::query::SelectMode,
     crate::environment::Environment,
+    crate::lockfile::Lockfile,
     crate::nested::{nested_get, nested_remove, nested_set},
     crate::ConfigLevel,
     anyhow::{bail, Context, Result},
     config_macros::include_default,
+    log::error,
     serde::de::DeserializeOwned,
     serde_json::{Map, Value},
     std::{
@@ -92,6 +94,11 @@ where
     F: FnOnce(Option<BufWriter<&mut tempfile::NamedTempFile>>) -> Result<()>,
 {
     if let Some(path) = path {
+        let path = Path::new(path);
+        let _lockfile = Lockfile::lock_for(path, std::time::Duration::from_secs(2)).map_err(|e| {
+            error!("Failed to create a lockfile for {path}. Check that {lockpath} doesn't exist and can be written to. Ownership information: {owner:#?}", path=path.display(), lockpath=e.lock_path.display(), owner=e.owner);
+            e
+        })?;
         let parent = path.parent().unwrap_or_else(|| Path::new("."));
         let mut tmp = tempfile::NamedTempFile::new_in(parent)?;
 
