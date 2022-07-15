@@ -213,9 +213,8 @@ impl<B: ByteSlice, M: MessageType<B, FixedHeader = Ipv4Addr>> GmpMessage<Ipv4>
     }
 }
 
-impl<C: IgmpNonSyncContext<SC::DeviceId>, SC: IgmpContext<C>>
-    GmpContext<Ipv4, C, Igmpv2ProtocolSpecific> for SC
-{
+impl<C: IgmpNonSyncContext<SC::DeviceId>, SC: IgmpContext<C>> GmpContext<Ipv4, C> for SC {
+    type ProtocolSpecific = Igmpv2ProtocolSpecific;
     type Err = IgmpError;
     type GroupState = IgmpGroupState<C::Instant>;
 
@@ -396,7 +395,7 @@ where
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-struct Igmpv2ProtocolSpecific {
+pub(super) struct Igmpv2ProtocolSpecific {
     v1_router_present: bool,
 }
 
@@ -407,12 +406,12 @@ impl Default for Igmpv2ProtocolSpecific {
 }
 
 #[derive(PartialEq, Eq, Debug)]
-enum Igmpv2Actions {
+pub(super) enum Igmpv2Actions {
     ScheduleV1RouterPresentTimer(Duration),
 }
 
 #[derive(Debug)]
-struct Igmpv2HostConfig {
+pub(super) struct Igmpv2HostConfig {
     // When a host wants to send a report not because of a query, this value is
     // used as the delay timer.
     unsolicited_report_interval: Duration,

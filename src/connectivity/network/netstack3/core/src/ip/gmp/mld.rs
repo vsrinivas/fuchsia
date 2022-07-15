@@ -203,9 +203,8 @@ impl<B: ByteSlice> GmpMessage<Ipv6> for Mldv1Body<B> {
     }
 }
 
-impl<C: MldNonSyncContext<SC::DeviceId>, SC: MldContext<C>> GmpContext<Ipv6, C, MldProtocolSpecific>
-    for SC
-{
+impl<C: MldNonSyncContext<SC::DeviceId>, SC: MldContext<C>> GmpContext<Ipv6, C> for SC {
+    type ProtocolSpecific = MldProtocolSpecific;
     type Err = MldError;
     type GroupState = MldGroupState<C::Instant>;
 
