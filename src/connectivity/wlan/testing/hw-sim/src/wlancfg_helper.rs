@@ -11,8 +11,8 @@ use {
     fuchsia_zircon::prelude::*,
     futures::{StreamExt, TryStreamExt},
     ieee80211::Ssid,
-    log::info,
     std::convert::TryInto,
+    tracing::info,
 };
 
 fn create_network_config(

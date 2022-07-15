@@ -303,7 +303,7 @@ impl<'a> EventHandlerBuilder<'a> {
                 wlantap::WlantapPhyEvent::Tx { ref args } => {
                     // TODO(fxbug.dev/91118) - Added to help investigate hw-sim test. Remove later
                     if let Some(debug_name) = &self.debug_name {
-                        log::info!(
+                        tracing::info!(
                             "[{}] - Tx({} bytes): {:X?}",
                             debug_name,
                             args.packet.data.len(),

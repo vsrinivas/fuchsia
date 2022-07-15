@@ -13,13 +13,12 @@ use {
         SetChannelArgs, TxArgs, WlanRxInfo, WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy,
     },
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_syslog as syslog,
     fuchsia_zircon::prelude::*,
     ieee80211::{Bssid, Ssid},
     lazy_static::lazy_static,
-    log::{debug, error},
     pin_utils::pin_mut,
     std::{convert::TryFrom, future::Future, marker::Unpin},
+    tracing::{debug, error},
     wlan_common::{
         bss::Protection,
         data_writer,
@@ -517,7 +516,7 @@ pub fn handle_tx_event<F>(
                             let mut update_sink = update_sink.as_mut().unwrap_or_else(|| {
                                 panic!("No UpdateSink provided with Authenticator.")
                             });
-                            log::info!("auth_txn_seq_num: {}", { auth_hdr.auth_txn_seq_num });
+                            tracing::info!("auth_txn_seq_num: {}", { auth_hdr.auth_txn_seq_num });
                             // Reset authenticator state just in case this is not the 1st
                             // connection attempt. SAE handshake uses multiple frames, so only
                             // reset on the first auth frame.
@@ -865,10 +864,11 @@ pub async fn loop_until_iface_is_found() {
 }
 
 pub fn init_syslog() {
-    syslog::init().unwrap();
-
-    // Change the severity to DEBUG in order to increase the verbosity of hw-sim logging.
-    // For example, DEBUG level logging prints more information about the internal state of
-    // the main_future polled by TestHelper::run_until_complete_or_timeout during a test.
-    syslog::set_severity(syslog::levels::INFO);
+    diagnostics_log::init!(
+        &[],
+        diagnostics_log::Interest {
+            min_severity: Some(diagnostics_log::Severity::Info),
+            ..diagnostics_log::Interest::EMPTY
+        }
+    );
 }

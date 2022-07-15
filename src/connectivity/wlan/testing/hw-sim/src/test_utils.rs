@@ -17,7 +17,6 @@ use {
     fuchsia_zircon::{self as zx, prelude::*},
     futures::{channel::oneshot, FutureExt, StreamExt},
     ieee80211::{Bssid, Ssid},
-    log::{debug, info},
     pin_utils::pin_mut,
     std::{
         convert::TryFrom,
@@ -27,6 +26,7 @@ use {
         sync::Arc,
         task::{Context, Poll},
     },
+    tracing::{debug, info},
     wlan_common::{bss::Protection, test_utils::ExpectWithin},
     wlan_dev::DeviceEnv,
     wlantap_client::Wlantap,

@@ -11,10 +11,10 @@ use {
     fuchsia_zircon::DurationNum,
     futures::{channel::mpsc, poll, StreamExt},
     ieee80211::Bssid,
-    log::info,
     pin_utils::pin_mut,
     std::collections::HashMap,
     std::task::Poll,
+    tracing::info,
     wlan_common::{appendable::Appendable, big_endian::BigEndianU16, bss::Protection, mac},
     wlan_hw_sim::*,
 };

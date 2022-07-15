@@ -8,7 +8,7 @@ use {
     fidl_fuchsia_wlan_sme::{ApSmeProxy, ClientSmeProxy},
     fidl_fuchsia_wlan_tap::WlantapPhyConfig,
     fuchsia_zircon::{sys::ZX_OK, DurationNum},
-    log::info,
+    tracing::info,
 };
 
 pub struct CreateDeviceHelper<'a> {

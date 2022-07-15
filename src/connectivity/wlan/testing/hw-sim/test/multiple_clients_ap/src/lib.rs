@@ -62,7 +62,7 @@ async fn canary(mut finish_receiver: oneshot::Receiver<()>) {
     loop {
         futures::select! {
             _ = interval_stream.next() => {
-                log::info!("1 second canary");
+                tracing::info!("1 second canary");
             }
             _ = finish_receiver => {
                 return;

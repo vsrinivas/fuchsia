@@ -7,8 +7,8 @@ use {
     fidl_fuchsia_wlan_tap::{WlantapPhyEvent, WlantapPhyProxy},
     fuchsia_zircon::DurationNum as _,
     futures::{channel::oneshot, join, TryFutureExt},
-    log::{info, warn},
     pin_utils::pin_mut,
+    tracing::{info, warn},
     wlan_common::bss::Protection::Wpa2Personal,
     wlan_hw_sim::*,
 };

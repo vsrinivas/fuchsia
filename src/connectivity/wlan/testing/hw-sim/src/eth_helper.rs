@@ -11,9 +11,9 @@ use {
         task::{Context, Poll},
         Future, StreamExt,
     },
-    log::info,
     pin_utils::pin_mut,
     std::{fs::File, path::Path, pin::Pin},
+    tracing::info,
     wlan_common::{
         appendable::Appendable, big_endian::BigEndianU16, buffer_reader::BufferReader, mac,
     },

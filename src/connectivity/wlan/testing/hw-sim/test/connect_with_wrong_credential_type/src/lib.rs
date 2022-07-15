@@ -4,8 +4,8 @@
 use {
     fidl_fuchsia_wlan_policy as fidl_policy,
     ieee80211::Bssid,
-    log::info,
     pin_utils::pin_mut,
+    tracing::info,
     wlan_common::{
         bss::Protection,
         ie::rsn::cipher::{CIPHER_CCMP_128, CIPHER_TKIP},

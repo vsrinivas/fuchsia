@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_wlan_policy as fidl_policy, ieee80211::Bssid, log::info,
+    fidl_fuchsia_wlan_policy as fidl_policy, ieee80211::Bssid, tracing::info,
     wlan_common::bss::Protection, wlan_hw_sim::*,
 };
 
