@@ -35,7 +35,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   #
   # To regenerate:
   # fx gn refs $(fx get-build-dir) //src/lib/syslog/rust:syslog //src/lib/syslog/rust:rust | grep -v "//src/lib/syslog/rust" | sed 's|\(.*:\).*|"\1*",|' | sort | uniq
-  "//examples/diagnostics/logs/rust:*",
   "//src/sys/run_test_component/test:*",
   "//src/bringup/bin/pwrbtn-monitor/test:*",
   "//src/connectivity/bluetooth/core/bt-init:*",

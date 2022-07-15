@@ -5,7 +5,6 @@
 use diagnostics_reader::{assert_data_tree, ArchiveReader, Data, Logs, Severity};
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage};
 use fuchsia_async::Task;
-use fuchsia_syslog as syslog;
 use fuchsia_syslog_listener::run_log_listener_with_proxy;
 use futures::{channel::mpsc, prelude::*};
 
@@ -19,7 +18,7 @@ async fn launch_example_and_read_hello_world() {
     pin_utils::pin_mut!(logs);
 
     let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
-    assert_eq!(next.severity, i32::from(syslog::levels::INFO));
+    assert_eq!(Severity::try_from(next.severity).unwrap(), Severity::Info);
     assert_eq!(next.tags, vec!["logs_example"]);
     assert_eq!(next.msg, "should print");
     assert_ne!(next.pid, 0);
@@ -36,7 +35,7 @@ async fn launch_example_and_read_hello_world() {
     });
 
     let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
-    assert_eq!(next.severity, i32::from(syslog::levels::INFO));
+    assert_eq!(Severity::try_from(next.severity).unwrap(), Severity::Info);
     assert_eq!(next.tags, vec!["logs_example"]);
     assert_eq!(next.msg, "hello, world! bar=baz foo=1");
     assert_ne!(next.pid, 0);
@@ -56,24 +55,6 @@ async fn launch_example_and_read_hello_world() {
         {
             "foo": 1u64,
             "bar": "baz",
-        }
-    });
-
-    let (next, new_next) = (logs.next().await.unwrap(), new_logs.next().await.unwrap());
-    assert_eq!(next.severity, i32::from(syslog::levels::WARN));
-    assert_eq!(next.tags, vec!["logs_example"]);
-    assert_eq!(next.msg, "warning: using old api");
-    assert_ne!(next.pid, 0);
-    assert_ne!(next.tid, 0);
-
-    assert_eq!(new_next.metadata.severity, Severity::Warn);
-    assert_eq!(new_next.metadata.component_url, Some(url.to_string()));
-    assert_eq!(new_next.moniker, "logs_example");
-    assert_data_tree!(new_next.payload.unwrap(), root:
-    {
-    "message":
-        {
-            "value": "warning: using old api",
         }
     });
 }

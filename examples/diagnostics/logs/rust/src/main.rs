@@ -6,7 +6,6 @@
 async fn main() -> Result<(), anyhow::Error> {
     tracing::trace!("should not print");
     tracing::info!("should print");
-    tracing::info!({ foo = 1, bar = "baz" }, "hello, world!");
-    log::warn!("warning: using old api");
+    tracing::info!(foo = 1, bar = "baz", "hello, world!");
     Ok(())
 }

@@ -17,6 +17,7 @@ use serde::{
 use std::{
     borrow::Borrow,
     cmp::Ordering,
+    convert::TryFrom,
     fmt,
     hash::Hash,
     ops::{Deref, DerefMut},
@@ -393,6 +394,18 @@ pub enum Severity {
     /// Fatal records convey information about operations which cause a program's termination.
     #[serde(rename = "FATAL", alias = "Fatal")]
     Fatal,
+}
+
+impl TryFrom<i32> for Severity {
+    type Error = anyhow::Error;
+
+    fn try_from(value: i32) -> Result<Self, anyhow::Error> {
+        u8::try_from(value)
+            .ok()
+            .and_then(|num| FidlSeverity::from_primitive(num))
+            .map(|s| Severity::from(s))
+            .ok_or(format_err!("invalid severity number: {}", value))
+    }
 }
 
 impl fmt::Display for Severity {
