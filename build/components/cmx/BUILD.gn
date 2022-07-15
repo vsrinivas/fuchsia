@@ -270,7 +270,6 @@ group("cmx_allowlist") {
     "//src/graphics/tests/vkpriority:vkpriority_cmp_manifest_compile",
     "//src/graphics/tests/vkvalidation:vkvalidation_cmp_manifest_compile",
     "//src/hwinfo:legacy_hwinfo_component_manifest_compile",
-    "//src/identity/bin:account_handler_test_manifest_compile",
     "//src/identity/bin/account_handler:account_handler_cmp_manifest_compile",
     "//src/identity/bin/account_handler:account_handler_ephemeral_manifest_compile",
     "//src/identity/bin/account_manager:account_manager_component_manifest_compile",

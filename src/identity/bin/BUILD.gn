@@ -28,7 +28,7 @@ group("tests") {
 
 fuchsia_unittest_component("account_handler_test") {
   deps = [ "account_handler:bin_test" ]
-  manifest = "meta/account_handler_bin_test.cmx"
+  manifest = "meta/account_handler_bin_test.cml"
 }
 
 fuchsia_unittest_component("account_manager_test") {
@@ -46,6 +46,8 @@ fuchsia_test_package("identity_bin_unittests") {
     ":account_manager_test",
     ":dev_authenticator_test",
   ]
+
+  deps = [ "//src/sys/stash:stash_v2" ]
 }
 
 # Account system should be included in products that require platform-level

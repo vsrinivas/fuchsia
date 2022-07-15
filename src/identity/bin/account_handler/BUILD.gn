@@ -69,9 +69,22 @@ fuchsia_component("account_handler_ephemeral") {
   manifest = "meta/account_handler_ephemeral.cmx"
 }
 
+fuchsia_component("account_handler_cmp_v2") {
+  deps = [ ":bin" ]
+  component_name = "account_handler"
+  manifest = "meta/account_handler.cml"
+}
+
+fuchsia_component("account_handler_ephemeral_v2") {
+  deps = [ ":bin" ]
+  manifest = "meta/account_handler_ephemeral.cml"
+}
+
 fuchsia_package("account_handler") {
   deps = [
     ":account_handler_cmp",
+    ":account_handler_cmp_v2",
     ":account_handler_ephemeral",
+    ":account_handler_ephemeral_v2",
   ]
 }

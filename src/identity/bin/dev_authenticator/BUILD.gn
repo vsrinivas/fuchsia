@@ -42,9 +42,21 @@ fuchsia_component("dev_authenticator_always_fail_authentication") {
   manifest = "meta/dev_authenticator_always_fail_authentication.cmx"
 }
 
+fuchsia_component("dev_authenticator_always_succeed_v2") {
+  deps = [ ":bin" ]
+  manifest = "meta/dev_authenticator_always_succeed.cml"
+}
+
+fuchsia_component("dev_authenticator_always_fail_authentication_v2") {
+  deps = [ ":bin" ]
+  manifest = "meta/dev_authenticator_always_fail_authentication.cml"
+}
+
 fuchsia_package("dev_authenticator") {
   deps = [
     ":dev_authenticator_always_fail_authentication",
+    ":dev_authenticator_always_fail_authentication_v2",
     ":dev_authenticator_always_succeed",
+    ":dev_authenticator_always_succeed_v2",
   ]
 }
