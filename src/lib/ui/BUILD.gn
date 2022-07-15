@@ -5,8 +5,11 @@
 import("//build/components.gni")
 
 group("ui") {
+  testonly = true
   deps = [
     "carnelian",
+    "fidl_fuchsia_ui_focus_ext",
+    "fidl_fuchsia_ui_views_ext",
     "input-synthesis",
     "keymaps",
     "scenic/cpp",
@@ -19,6 +22,8 @@ group("tests") {
   testonly = true
   public_deps = [
     "carnelian:carnelian-tests",
+    "fidl_fuchsia_ui_focus_ext:tests",
+    "fidl_fuchsia_ui_views_ext:tests",
     "flatland-frame-scheduling:tests",
     "fuchsia-framebuffer:fuchsia-framebuffer-tests",
     "fuchsia-scenic:fuchsia-scenic-tests",

@@ -5,7 +5,7 @@
 use {
     anyhow::Error,
     fidl_fuchsia_ui_views::{ViewRef, ViewRefControl},
-    fuchsia_zircon::{AsHandleRef, EventPair, HandleBased, Rights},
+    fuchsia_zircon::{AsHandleRef, EventPair, HandleBased, Rights, Status},
 };
 
 pub struct ViewRefPair {
@@ -42,7 +42,7 @@ impl From<ViewRefPair> for fidl_fuchsia_ui_views::ViewIdentityOnCreation {
 }
 
 /// Given a ViewRef, returns a new version which has been duplicated.
-pub fn duplicate_view_ref(view_ref: &ViewRef) -> Result<ViewRef, Error> {
+pub fn duplicate_view_ref(view_ref: &ViewRef) -> Result<ViewRef, Status> {
     let handle = view_ref.reference.as_handle_ref().duplicate(Rights::SAME_RIGHTS)?;
     Ok(ViewRef { reference: handle.into() })
 }
