@@ -17,6 +17,7 @@ var (
 		"two-directory-index-entries.far",
 		"two-directory-names-index-entries.far",
 		"duplicate-index-entries-of-unknown-type.far",
+		"no-index-entries.far",
 		"no-directory-index-entry.far",
 		"no-directory-names-index-entry.far",
 		"directory-chunk-length-not-a-multiple-of-32-bytes.far",

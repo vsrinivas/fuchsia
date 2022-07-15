@@ -32,6 +32,7 @@ compiled_action("generate-invalid-fars") {
     "${target_out_dir}/two-directory-index-entries.far",
     "${target_out_dir}/two-directory-names-index-entries.far",
     "${target_out_dir}/duplicate-index-entries-of-unknown-type.far",
+    "${target_out_dir}/no-index-entries.far",
     "${target_out_dir}/no-directory-index-entry.far",
     "${target_out_dir}/no-directory-names-index-entry.far",
     "${target_out_dir}/directory-chunk-length-not-a-multiple-of-32-bytes.far",

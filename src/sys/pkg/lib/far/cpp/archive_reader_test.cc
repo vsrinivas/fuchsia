@@ -111,12 +111,13 @@ TEST(ValidateArchive, ValidExampleArchive) {
 TEST(ValidateArchive, GeneratedArchiveIsInvalid) {
   // Generated invalid archives from the "//src/sys/pkg/testing/invalid-fars:resource"
   // target to test various constraints mandated by the spec.
-  const std::array<std::string, 33> test_files = {
+  const std::array<std::string, 34> test_files = {
       "invalid-magic-bytes.far",
       "index-entries-length-not-a-multiple-of-24-bytes.far",
       "directory-names-index-entry-before-directory-index-entry.far",
       "two-directory-index-entries.far",
       "two-directory-names-index-entries.far",
+      "no-index-entries.far",
       "no-directory-index-entry.far",
       "no-directory-names-index-entry.far",
       "directory-chunk-length-not-a-multiple-of-32-bytes.far",

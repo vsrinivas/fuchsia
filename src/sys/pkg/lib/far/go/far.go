@@ -239,9 +239,6 @@ func (r *Reader) readIndex() error {
 	}
 
 	nentries := r.index.Length / IndexEntryLen
-	if nentries == 0 {
-		return nil
-	}
 	r.indexEntries = make([]IndexEntry, nentries)
 
 	if err := r.readEntries(); err != nil {

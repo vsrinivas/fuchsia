@@ -80,6 +80,8 @@ tests! {
             next: ALL_ZEROES_CHUNK_TYPE
         }),
 
+    no_index_entries => Err(Error::MissingDirectoryChunkIndexEntry),
+
     no_directory_index_entry => Err(Error::MissingDirectoryChunkIndexEntry),
 
     no_directory_names_index_entry => Err(Error::MissingDirectoryNamesChunkIndexEntry),

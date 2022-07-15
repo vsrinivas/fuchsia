@@ -96,6 +96,8 @@ fn main() {
         },
     );
 
+    make_test_file!("no-index-entries.far", Index { entries: &[] },);
+
     make_test_file!(
         "no-directory-index-entry.far",
         Index { entries: &[IndexEntry { chunk_type: DIR_NAMES_CHUNK_TYPE, offset: 40, len: 0 },] },
