@@ -217,7 +217,8 @@ This section provides additional FEMU options.
 
 ### See all available flags
 
-To see a full list of the emulator's supported flags:
+To see a [full list][ffx-emu-reference] of the emulator's supported flags, run the
+following command:
 
 ```posix-terminal
 ffx emu start --help
@@ -234,12 +235,9 @@ ffx emu start --headless
 
 ### Specify GPU used by FEMU
 
-By default, the FEMU launcher uses software rendering using
-[SwiftShader][swiftshader]{: .external}. To force FEMU to use a specific
-graphics emulation method, use the parameters `--gpu host` or
-`--gpu guest` with the `ffx emu start` command.
-
-These are the valid commands and options:
+By default, the FEMU launcher attempts to detect if the host has a GPU that can be used for
+graphics rendering. If you need to explicitly set the rendering type, you can use
+the `--gpu` flag with the following options:
 
 <table><tbody>
   <tr>
@@ -325,6 +323,7 @@ for FEMU on Linux machine using [TUN/TAP][tuntap]{: .external}.
 [get-fuchsia-source]: /docs/get-started/get_fuchsia_source.md
 [build-fuchsia]: /docs/get-started/build_fuchsia.md
 [femu-overview]: /docs/development/build/emulator.md
+[ffx-emu-reference]: https://fuchsia.dev/reference/tools/sdk/ffx#emu
 [hypervisor-framework]: https://developer.apple.com/documentation/hypervisor
 [explore-fuchsia]: /docs/get-started/explore_fuchsia.md
 [swiftshader]: https://swiftshader.googlesource.com/SwiftShader/
