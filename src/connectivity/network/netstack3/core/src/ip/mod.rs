@@ -407,11 +407,11 @@ pub(crate) trait IpStateContext<
     Instant: crate::Instant,
 >: IpDeviceIdContext<I>
 {
-    /// Gets immutable access to the IP layer state.
-    fn get_ip_layer_state(&self) -> &I::State;
+    /// Calls the function with an immutable reference to IP layer state.
+    fn with_ip_layer_state<O, F: FnOnce(&I::State) -> O>(&self, cb: F) -> O;
 
-    /// Gets mutable access to the IP layer state.
-    fn get_ip_layer_state_mut(&mut self) -> &mut I::State;
+    /// Calls the function with a mutable reference to IP layer state.
+    fn with_ip_layer_state_mut<O, F: FnOnce(&mut I::State) -> O>(&mut self, cb: F) -> O;
 }
 
 /// The IP device context provided to the IP layer.
@@ -645,22 +645,34 @@ impl<
 }
 
 impl<NonSyncCtx: NonSyncContext> IpStateContext<Ipv4, NonSyncCtx::Instant> for SyncCtx<NonSyncCtx> {
-    fn get_ip_layer_state(&self) -> &Ipv4State<NonSyncCtx::Instant, DeviceId> {
-        &self.state.ipv4
+    fn with_ip_layer_state<O, F: FnOnce(&Ipv4State<NonSyncCtx::Instant, DeviceId>) -> O>(
+        &self,
+        cb: F,
+    ) -> O {
+        cb(&self.state.ipv4)
     }
 
-    fn get_ip_layer_state_mut(&mut self) -> &mut Ipv4State<NonSyncCtx::Instant, DeviceId> {
-        &mut self.state.ipv4
+    fn with_ip_layer_state_mut<O, F: FnOnce(&mut Ipv4State<NonSyncCtx::Instant, DeviceId>) -> O>(
+        &mut self,
+        cb: F,
+    ) -> O {
+        cb(&mut self.state.ipv4)
     }
 }
 
 impl<NonSyncCtx: NonSyncContext> IpStateContext<Ipv6, NonSyncCtx::Instant> for SyncCtx<NonSyncCtx> {
-    fn get_ip_layer_state(&self) -> &Ipv6State<NonSyncCtx::Instant, DeviceId> {
-        &self.state.ipv6
+    fn with_ip_layer_state<O, F: FnOnce(&Ipv6State<NonSyncCtx::Instant, DeviceId>) -> O>(
+        &self,
+        cb: F,
+    ) -> O {
+        cb(&self.state.ipv6)
     }
 
-    fn get_ip_layer_state_mut(&mut self) -> &mut Ipv6State<NonSyncCtx::Instant, DeviceId> {
-        &mut self.state.ipv6
+    fn with_ip_layer_state_mut<O, F: FnOnce(&mut Ipv6State<NonSyncCtx::Instant, DeviceId>) -> O>(
+        &mut self,
+        cb: F,
+    ) -> O {
+        cb(&mut self.state.ipv6)
     }
 }
 
@@ -946,9 +958,10 @@ impl<I: Instant, DeviceId> AsMut<IpStateInner<Ipv4, I, DeviceId>> for Ipv4State<
 
 fn gen_ipv4_packet_id<I: Instant, C: IpStateContext<Ipv4, I>>(sync_ctx: &mut C) -> u16 {
     // TODO(https://fxbug.dev/87588): Generate IPv4 IDs unpredictably
-    let state = sync_ctx.get_ip_layer_state_mut();
-    state.next_packet_id = state.next_packet_id.wrapping_add(1);
-    state.next_packet_id
+    sync_ctx.with_ip_layer_state_mut(|state| {
+        state.next_packet_id = state.next_packet_id.wrapping_add(1);
+        state.next_packet_id
+    })
 }
 
 pub(crate) struct Ipv6State<Instant: crate::Instant, D> {
@@ -2072,21 +2085,23 @@ fn lookup_route<
     device: Option<SC::DeviceId>,
     dst_ip: SpecifiedAddr<I::Addr>,
 ) -> Option<Destination<I::Addr, SC::DeviceId>> {
-    AsRef::<IpStateInner<_, _, _>>::as_ref(sync_ctx.get_ip_layer_state())
-        .table
-        .lookup(device, dst_ip)
+    sync_ctx.with_ip_layer_state(|state| {
+        AsRef::<IpStateInner<_, _, _>>::as_ref(state).table.lookup(device, dst_ip)
+    })
 }
 
-fn get_ip_layer_state_inner_mut<
+fn with_ip_layer_state_inner_mut<
     'a,
     I: IpLayerStateIpExt<C::Instant, SC::DeviceId>,
     C: IpLayerNonSyncContext<I, SC::DeviceId>,
     SC: IpLayerContext<I, C>,
+    O,
+    F: FnOnce(&mut IpStateInner<I, C::Instant, SC::DeviceId>) -> O,
 >(
-    sync_ctx: &'a mut SC,
-    _ctx: &mut C,
-) -> &'a mut IpStateInner<I, C::Instant, SC::DeviceId> {
-    sync_ctx.get_ip_layer_state_mut().as_mut()
+    sync_ctx: &mut SC,
+    cb: F,
+) -> O {
+    sync_ctx.with_ip_layer_state_mut(|state| cb(state.as_mut()))
 }
 
 /// Add a route to the forwarding table, returning `Err` if the subnet
@@ -2097,11 +2112,11 @@ pub(crate) fn add_route<
     SC: IpLayerContext<I, C>,
 >(
     sync_ctx: &mut SC,
-    ctx: &mut C,
+    _ctx: &mut C,
     subnet: Subnet<I::Addr>,
     next_hop: SpecifiedAddr<I::Addr>,
 ) -> Result<(), AddRouteError> {
-    get_ip_layer_state_inner_mut(sync_ctx, ctx).table.add_route(subnet, next_hop)
+    with_ip_layer_state_inner_mut(sync_ctx, |state| state.table.add_route(subnet, next_hop))
 }
 
 /// Add a device route to the forwarding table, returning `Err` if the
@@ -2116,8 +2131,10 @@ pub(crate) fn add_device_route<
     subnet: Subnet<I::Addr>,
     device: SC::DeviceId,
 ) -> Result<(), ExistsError> {
-    get_ip_layer_state_inner_mut(sync_ctx, ctx).table.add_device_route(subnet, device).map(|()| {
-        ctx.on_event(IpLayerEvent::DeviceRouteAdded { device, subnet });
+    with_ip_layer_state_inner_mut(sync_ctx, |state| {
+        state.table.add_device_route(subnet, device).map(|()| {
+            ctx.on_event(IpLayerEvent::DeviceRouteAdded { device, subnet });
+        })
     })
 }
 
@@ -2132,11 +2149,13 @@ pub(crate) fn del_route<
     ctx: &mut C,
     subnet: Subnet<I::Addr>,
 ) -> Result<(), NotFoundError> {
-    get_ip_layer_state_inner_mut(sync_ctx, ctx).table.del_route(subnet).map(|removed| {
-        removed.into_iter().for_each(|Entry { subnet, device, gateway }| match gateway {
-            None => ctx.on_event(IpLayerEvent::DeviceRouteRemoved { device, subnet }),
-            Some(SpecifiedAddr { .. }) => (),
-        });
+    with_ip_layer_state_inner_mut(sync_ctx, |state| {
+        state.table.del_route(subnet).map(|removed| {
+            removed.into_iter().for_each(|Entry { subnet, device, gateway }| match gateway {
+                None => ctx.on_event(IpLayerEvent::DeviceRouteRemoved { device, subnet }),
+                Some(SpecifiedAddr { .. }) => (),
+            })
+        })
     })
 }
 
@@ -2146,12 +2165,12 @@ pub(crate) fn del_device_routes<
     C: IpLayerNonSyncContext<I, SC::DeviceId>,
 >(
     sync_ctx: &mut SC,
-    ctx: &mut C,
+    _ctx: &mut C,
     to_delete: &SC::DeviceId,
 ) {
-    get_ip_layer_state_inner_mut(sync_ctx, ctx)
-        .table
-        .retain(|Entry { subnet: _, device, gateway: _ }| device != to_delete)
+    with_ip_layer_state_inner_mut(sync_ctx, |state| {
+        state.table.retain(|Entry { subnet: _, device, gateway: _ }| device != to_delete)
+    })
 }
 
 /// Get all the routes.

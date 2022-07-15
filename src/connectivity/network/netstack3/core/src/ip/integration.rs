@@ -33,7 +33,7 @@ impl<
         &mut self,
         cb: F,
     ) -> O {
-        cb(&mut self.get_ip_layer_state_mut().as_mut().fragment_cache)
+        self.with_ip_layer_state_mut(|state| cb(&mut state.as_mut().fragment_cache))
     }
 }
 
@@ -44,7 +44,7 @@ impl<
     > PmtuStateContext<I, Instant> for SC
 {
     fn with_state_mut<F: FnOnce(&mut PmtuCache<I, Instant>)>(&mut self, cb: F) {
-        cb(&mut self.get_ip_layer_state_mut().as_mut().pmtu_cache)
+        self.with_ip_layer_state_mut(|state| cb(&mut state.as_mut().pmtu_cache))
     }
 }
 
