@@ -7,6 +7,7 @@ pub mod blobfs;
 pub mod bootfs;
 pub mod fvm;
 pub mod golden;
+pub mod io;
 pub mod key_value;
 pub mod package;
 pub mod path;

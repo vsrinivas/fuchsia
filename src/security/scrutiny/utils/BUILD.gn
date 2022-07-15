@@ -109,6 +109,8 @@ if (is_host) {
       "src/bootfs.rs",
       "src/fvm.rs",
       "src/golden.rs",
+      "src/io/mod.rs",
+      "src/io/u64_arithmetic.rs",
       "src/key_value.rs",
       "src/lib.rs",
       "src/package.rs",
