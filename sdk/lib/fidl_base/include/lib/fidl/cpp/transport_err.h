@@ -7,12 +7,14 @@
 
 #include <zircon/fidl.h>
 
-namespace fidl::internal {
+namespace fidl {
+namespace internal {
 
 enum class TransportErr : fidl_transport_err_t {
   kUnknownMethod = FIDL_TRANSPORT_ERR_UNKNOWN_METHOD,
 };
 
-}  // namespace fidl::internal
+}  // namespace internal
+}  // namespace fidl
 
 #endif  // LIB_FIDL_BASE_INCLUDE_LIB_FIDL_CPP_TRANSPORT_ERR_H_
