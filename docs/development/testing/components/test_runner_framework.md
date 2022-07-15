@@ -440,7 +440,6 @@ capabilities from the [test root's](#tests-as-components) parent.
 
 The tests are by default hermetic unless explicitly stated otherwise.
 
-
 ### Hermetic capabilities for tests
 
 There are some capabilities which all tests can use which do not violate test
@@ -500,7 +499,6 @@ Add a use declaration in test's manifest file to use these capabilities.
 
 The framework also provides some [capabilities][framework-capabilities] to all
 the components and can be used by test components if required.
-
 
 ### Hermetic component resolution {#hermetic-resolver}
 
@@ -598,7 +596,7 @@ non-hermetic "system" realm as shown below.
 The shard includes following facet in the manifest file:
 
 ```json5
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="src/sys/test_manager/system-test.shard.cml" %}
+{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="sdk/lib/sys/testing/system-test.shard.cml" %}
 ```
 
 Possible values of `fuchsia.test.type`:
@@ -682,15 +680,15 @@ extra overhead per process launched.
 
 Components in the test realm may play various roles in the test, as follows:
 
--   Test driver: The component that actually runs the test, and implements
+- Test driver: The component that actually runs the test, and implements
     (either directly or through a [test runner](#test-runners)) the
     [`fuchsia.test.Suite`][test-suite-protocol] protocol. This role may be, but
     is not necessarily, owned by the [test root](#tests-as-components).
--   Capability provider: A component that provides a capability that the test
+- Capability provider: A component that provides a capability that the test
     will exercise somehow. The component may either provide a "fake"
     implementation of the capability for test, or a "real" implementation that
     is equivalent to what production uses.
--   Component under test: A component that exercises some behavior to be tested.
+- Component under test: A component that exercises some behavior to be tested.
     This may be identical to a component from production, or a component written
     specifically for the test intended to model production behavior.
 
@@ -708,9 +706,22 @@ Caused by:
 
 To address the issue, explore the following options:
 
+- [The test is using wrong test runner](#troubleshoot-wrong-test-runner)
 - [The test failed to expose `fuchsia.test.Suite` to test manager](#troubleshoot-test-root)
 - [The test driver failed to expose `fuchsia.test.Suite` to the root](#troubleshoot-test-routing)
 - [The test driver does not use a test runner](#troubleshoot-test-runner)
+
+### The test is using wrong test runner {#troubleshoot-wrong-test-runner}
+
+If you encountered this error during test enumeration then probably you are
+using the wrong test runner.
+
+For example: your Rust test file might be running the
+test without using Rust test framework (i.e it is a simple Rust binary with its
+own main function). In this case change your test manifest file to use
+[elf_test_runner](#elf-test-runner).
+
+Read more about in-built [test runners](#test-runners).
 
 ### The test failed to expose `fuchsia.test.Suite` to test manager {#troubleshoot-test-root}
 

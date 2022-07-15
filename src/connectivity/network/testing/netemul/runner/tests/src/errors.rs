@@ -13,20 +13,20 @@ fn test_url(component: &str) -> String {
 
 #[test_case(
     "invalid-config",
-    // [`test_manager_test_lib::SuiteLaunchError::InternalError`]
-    "internal error";
+    // [`test_manager_test_lib::SuiteLaunchError::CaseEnumeration`]
+    "Cannot enumerate tests";
     "configuration is provided but is invalid"
 )]
 #[test_case(
     "missing-config",
-    // [`test_manager_test_lib::SuiteLaunchError::InternalError`]
-    "internal error";
+    // [`test_manager_test_lib::SuiteLaunchError::CaseEnumeration`]
+    "Cannot enumerate tests";
     "configuration is not included in `program` section of manifest"
 )]
 #[test_case(
     "test-suite-not-used",
-    // [`test_manager_test_lib::SuiteLaunchError::InstanceCannotResolve`]
-    "Cannot resolve test url";
+    // [`test_manager_test_lib::SuiteLaunchError::CaseEnumeration`]
+    "Cannot enumerate tests";
     "the `fuchsia.test/Suite` protocol is not available in the test root component's namespace"
 )]
 #[fuchsia_async::run_singlethreaded(test)]

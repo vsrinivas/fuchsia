@@ -11,7 +11,7 @@ use {
         error::LaunchTestError,
         facet, resolver,
         run_events::SuiteEvents,
-        utilities::{map_suite_error_epitaph, stream_fn},
+        utilities::stream_fn,
     },
     anyhow::{anyhow, format_err, Context, Error},
     cm_rust,
@@ -200,10 +200,7 @@ impl RunningSuite {
                 }
                 Ok(i) => i,
                 Err(e) => {
-                    sender
-                        .send(Err(map_suite_error_epitaph(suite, LaunchError::CaseEnumeration)))
-                        .await
-                        .unwrap();
+                    sender.send(Err(LaunchError::CaseEnumeration)).await.unwrap();
                     return Err(e);
                 }
             };
@@ -424,11 +421,11 @@ pub(crate) async fn enumerate_test_cases(
     debug!("enumerating tests");
     let (case_iterator, server_end) =
         fidl::endpoints::create_proxy().expect("cannot create case iterator");
-    suite.get_tests(server_end).map_err(suite_error)?;
+    suite.get_tests(server_end).map_err(enumeration_error)?;
     let mut invocations = vec![];
 
     loop {
-        let cases = case_iterator.get_next().await.map_err(suite_error)?;
+        let cases = case_iterator.get_next().await.map_err(enumeration_error)?;
         if cases.is_empty() {
             break;
         }
@@ -942,11 +939,11 @@ fn get_suite_status_from_case_status(
     concat_suite_status(initial_suite_status, status)
 }
 
-fn suite_error(err: fidl::Error) -> anyhow::Error {
+fn enumeration_error(err: fidl::Error) -> anyhow::Error {
     match err {
         fidl::Error::ClientChannelClosed { .. } => anyhow::anyhow!(
-            "The test protocol was closed. This may mean `fuchsia.test.Suite` was not \
-            configured correctly. Refer to: \
+            "The test protocol was closed during enumeration. This may mean that the test is using
+            wrong test runner or `fuchsia.test.Suite` was not configured correctly. Refer to: \
             https://fuchsia.dev/go/components/test-errors"
         ),
         err => err.into(),

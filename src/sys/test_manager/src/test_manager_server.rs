@@ -10,7 +10,6 @@ use {
         running_suite::{enumerate_test_cases, RunningSuite},
         self_diagnostics,
         test_suite::{Suite, TestRunBuilder},
-        utilities::map_suite_error_epitaph,
     },
     fidl::endpoints::{create_endpoints, create_proxy},
     fidl::prelude::*,
@@ -167,10 +166,7 @@ pub async fn run_test_manager_query_server(
                             }
                             Err(e) => {
                                 warn!("cannot enumerate tests for {}: {:?}", test_url, e);
-                                let _ = responder.send(&mut Err(map_suite_error_epitaph(
-                                    suite,
-                                    LaunchError::CaseEnumeration,
-                                )));
+                                let _ = responder.send(&mut Err(LaunchError::CaseEnumeration));
                             }
                         }
                         if let Err(err) = t.await {
