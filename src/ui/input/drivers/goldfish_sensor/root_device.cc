@@ -48,7 +48,7 @@ zx_status_t RootDevice::Create(void* ctx, zx_device_t* device) {
   // Create and bind all sensor input devices.
   status = sensor_root->Setup(kInputDevices);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Cannot setup input devices, error %d", status);
+    zxlogf(ERROR, "cannot setup input devices: %s", zx_status_get_string(status));
     return status;
   }
 
@@ -77,9 +77,8 @@ zx_status_t RootDevice::Setup(const std::map<uint64_t, InputDeviceInfo>& input_d
     return endpoints.status_value();
   }
 
-  zx_status_t status = device_connect_fragment_fidl_protocol(
-      parent(), "goldfish-pipe",
-      fidl::DiscoverableProtocolName<fuchsia_hardware_goldfish_pipe::GoldfishPipe>,
+  zx_status_t status = device_connect_fidl_protocol(
+      parent(), fidl::DiscoverableProtocolName<fuchsia_hardware_goldfish_pipe::GoldfishPipe>,
       endpoints->server.TakeChannel().release());
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: could not connect to goldfish-pipe protocol: %s", kTag,

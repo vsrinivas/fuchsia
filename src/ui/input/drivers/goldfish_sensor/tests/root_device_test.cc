@@ -125,8 +125,7 @@ class RootDeviceTest : public ::testing::Test {
               fidl::ServerEnd<fuchsia_hardware_goldfish_pipe::GoldfishPipe>(std::move(channel)),
               &fake_pipe_);
           return ZX_OK;
-        },
-        "goldfish-pipe");
+        });
 
     auto device = std::make_unique<TestRootDevice>(fake_parent_.get());
     ASSERT_EQ(device->Bind(), ZX_OK);
