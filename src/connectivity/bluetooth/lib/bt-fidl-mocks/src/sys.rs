@@ -102,23 +102,6 @@ impl AccessMock {
         })
         .await
     }
-
-    // TODO(fxbug.dev/98413): Remove this when SetPairingDelegate is removed from `sys.Access`.
-    pub async fn expect_set_pairing_delegate(
-        &mut self,
-        expected_input_cap: InputCapability,
-        expected_output_cap: OutputCapability,
-    ) -> Result<PairingDelegateProxy, Error> {
-        expect_call(&mut self.stream, self.timeout, move |req| match req {
-            AccessRequest::SetPairingDelegate { input, output, delegate, control_handle: _ }
-                if input == expected_input_cap && output == expected_output_cap =>
-            {
-                Ok(Status::Satisfied(delegate.into_proxy()?))
-            }
-            _ => Ok(Status::Pending),
-        })
-        .await
-    }
 }
 
 #[cfg(test)]

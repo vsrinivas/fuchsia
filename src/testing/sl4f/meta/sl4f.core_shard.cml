@@ -56,6 +56,7 @@
                 "fuchsia.bluetooth.sys.Access",
                 "fuchsia.bluetooth.sys.Configuration",
                 "fuchsia.bluetooth.sys.HostWatcher",
+                "fuchsia.bluetooth.sys.Pairing",
             ],
             from: "#bluetooth-core",
             to: "#sl4f",

@@ -4,13 +4,14 @@
 
 use anyhow::Error;
 use async_utils::hanging_get::client::HangingGetStream;
-use fidl::endpoints::RequestStream;
+use fidl::endpoints::{Proxy, RequestStream};
 use fidl_fuchsia_bluetooth::PeerId;
 use fidl_fuchsia_bluetooth_sys::{
     AccessMarker, AccessProxy, BondableMode, ConfigurationMarker, ConfigurationProxy, HostInfo,
     HostWatcherMarker, HostWatcherProxy, InputCapability, OutputCapability, PairingDelegateMarker,
-    PairingDelegateRequest, PairingDelegateRequestStream, PairingMethod, PairingOptions,
-    PairingSecurityLevel, Peer, ProcedureTokenProxy, Settings, TechnologyType,
+    PairingDelegateRequest, PairingDelegateRequestStream, PairingMarker, PairingMethod,
+    PairingOptions, PairingProxy, PairingSecurityLevel, Peer, ProcedureTokenProxy, Settings,
+    TechnologyType,
 };
 use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
 use fuchsia_bluetooth::types::Address;
@@ -36,6 +37,9 @@ static ERR_NO_ACCESS_PROXY_DETECTED: &'static str = "No Bluetooth Access Proxy d
 struct InnerBluetoothSysFacade {
     /// The current Bluetooth Access Interface Proxy
     access_proxy: Option<AccessProxy>,
+
+    /// The connection to the Bluetooth Pairing interface.
+    pairing_proxy: Option<PairingProxy>,
 
     /// The current fuchsia.bluetooth.sys.Configuration Proxy
     config_proxy: Option<ConfigurationProxy>,
@@ -82,6 +86,7 @@ impl BluetoothSysFacade {
             initialized: RwLock::new(false),
             inner: RwLock::new(InnerBluetoothSysFacade {
                 access_proxy: None,
+                pairing_proxy: None,
                 config_proxy: None,
                 client_pin_sender: None,
                 client_pin_receiver: None,
@@ -126,6 +131,18 @@ impl BluetoothSysFacade {
 
         inner.peer_watcher_stream =
             Some(HangingGetStream::new_with_fn_ptr(access_proxy, AccessProxy::watch_peers));
+
+        if inner.pairing_proxy.as_ref().map_or(true, |p| p.is_closed()) {
+            fx_log_info!(tag: &with_line!(tag), "Setting new Pairing proxy");
+            let proxy = component::client::connect_to_protocol::<PairingMarker>();
+            if let Err(err) = proxy {
+                fx_err_and_bail!(
+                    &with_line!(tag),
+                    format_err!("Failed to create Pairing proxy: {:?}", err)
+                );
+            }
+            inner.pairing_proxy = Some(proxy.expect("is Ok"));
+        }
 
         let host_watcher_proxy = match component::client::connect_to_protocol::<HostWatcherMarker>()
         {
@@ -286,9 +303,9 @@ impl BluetoothSysFacade {
         let delegate_local = fasync::Channel::from_channel(delegate_local)?;
         let delegate_ptr =
             fidl::endpoints::ClientEnd::<PairingDelegateMarker>::new(delegate_remote);
-        let _result = match &self.inner.read().access_proxy {
+        let _result = match &self.inner.read().pairing_proxy {
             Some(p) => p.set_pairing_delegate(input_capability, output_capability, delegate_ptr),
-            None => fx_err_and_bail!(&with_line!(tag), "No Bluetooth Access Proxy Set."),
+            None => fx_err_and_bail!(&with_line!(tag), "No Bluetooth Pairing Proxy Set."),
         };
         let delegate_request_stream = PairingDelegateRequestStream::from_channel(delegate_local);
 
@@ -703,6 +720,7 @@ impl BluetoothSysFacade {
     pub fn cleanup(&self) {
         let mut inner = self.inner.write();
         inner.access_proxy = None;
+        inner.pairing_proxy = None;
         inner.client_pin_sender = None;
         inner.client_pin_receiver = None;
         inner.discovered_device_list.clear();
@@ -713,7 +731,8 @@ impl BluetoothSysFacade {
     /// Prints useful information.
     pub fn print(&self) {
         let tag = "BluetoothSysFacade::print:";
-        fx_log_info!(tag: &with_line!(tag), "access_proxy: {:?}", self.inner.read().access_proxy);
+        fx_log_info!(tag: &with_line!(tag), "Access: {:?}", self.inner.read().access_proxy);
+        fx_log_info!(tag: &with_line!(tag), "Pairing: {:?}", self.inner.read().pairing_proxy);
         fx_log_info!(
             tag: &with_line!(tag),
             "discovered_device_list: {:?}",
