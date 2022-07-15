@@ -38,6 +38,17 @@ func isUsedForTesting(s *Shard, image build.Image, pave bool) bool {
 		// https://cs.opensource.google/fuchsia/fuchsia/+/master:tools/botanist/target/qemu.go?q=zbi_zircon
 		return image.Name == "qemu-kernel" || image.Name == "storage-full" || image.Name == "zircon-a"
 	}
-	// TODO(fxubg.dev/47531): Remove zedboot images once we switch to flashing.
-	return (pave && len(image.PaveArgs) != 0) || (!pave && len(image.NetbootArgs) != 0) || (len(image.PaveZedbootArgs) != 0)
+	if isFlashingDep(image) {
+		return true
+	}
+	// TODO(fxbug.dev/47531): Remove zedboot/paving images once we switch to flashing.
+	return ((pave && len(image.PaveArgs) != 0) ||
+		(!pave && len(image.NetbootArgs) != 0) ||
+		(len(image.PaveZedbootArgs) != 0) ||
+		(pave && len(image.FastbootFlashArgs) != 0) ||
+		(!pave && len(image.FastbootBootArgs) != 0))
+}
+
+func isFlashingDep(image build.Image) bool {
+	return image.Name == "flash-script" || image.Name == "fastboot" || image.Name == "fastboot-boot-script"
 }
