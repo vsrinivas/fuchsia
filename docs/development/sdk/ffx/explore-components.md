@@ -18,18 +18,12 @@ presented as files and directories to aid in exploration.
 
 ## Getting started
 
-Since this is still an experimental ffx plugin, there are a few steps necessary
-to try it out:
-
 1.  Ensure your branch is synced to tip-of-tree with `jiri update`.
-1.  Add the `dash-launcher` component to your build:
 
-    ```none
-    > fx set <product>.<arch> --with //src/sys/tools/dash-launcher
-    > fx build
-    ```
+1.  Ensure that you are building an engineering product like `core`, `terminal`
+    or `workstation_eng`.
 
-1.  Start up an emulator and/or connect to a device using the build from step 2.
+1.  Start up an emulator and/or connect to a device.
 
 1.  Choose a component moniker and start exploring:
 

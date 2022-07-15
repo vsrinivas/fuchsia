@@ -63,6 +63,7 @@ fuchsia_package("dash-launcher") {
     "//third_party/sbase:bins",
     "//zircon/third_party/uapp/dash",
   ]
+  visibility = [ "//bundles/assembly/*" ]
 }
 
 group("tests") {

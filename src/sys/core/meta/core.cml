@@ -17,7 +17,6 @@
         {
             name: "dash-launcher",
             url: "fuchsia-pkg://fuchsia.com/dash-launcher#meta/dash_launcher.cm",
-            environment: "#full-resolver-env",
         },
         {
             name: "session-manager",

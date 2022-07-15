@@ -49,6 +49,9 @@ assembly_input_bundle("common_minimal_eng") {
   base_packages = [
     # Empty placeholder for now, this is setting up the pattern, before actually
     # moving packages into it (the next CL)
+
+    # Dash launcher should be available in every engineering-mode product.
+    "//src/sys/tools/dash-launcher",
   ]
 }
 
