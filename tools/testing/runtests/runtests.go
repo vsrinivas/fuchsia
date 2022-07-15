@@ -43,6 +43,12 @@ const (
 	TestSkipped TestResult = "SKIP"
 )
 
+// IsFailure returns whether a test result corresponds to any failure condition
+// (failure, timeout, etc.).
+func IsFailure(tr TestResult) bool {
+	return tr != TestSuccess && tr != TestSkipped
+}
+
 // TestSummary is a summary of a suite of test runs. It represents the output
 // file format of a runtests invocation.
 type TestSummary struct {

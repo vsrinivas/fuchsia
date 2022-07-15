@@ -17,8 +17,8 @@ func TestMassTestFailureCheck(t *testing.T) {
 		Tests: []runtests.TestDetails{
 			{Name: "test 1", Result: runtests.TestFailure},
 			{Name: "test 1", Result: runtests.TestFailure},
-			{Name: "test 2", Result: runtests.TestFailure},
-			{Name: "test 3", Result: runtests.TestFailure},
+			{Name: "test 2", Result: runtests.TestAborted},
+			{Name: "test 3", Result: runtests.TestAborted},
 		},
 	}
 	to := TestingOutputs{
