@@ -45,8 +45,7 @@ use packet_formats::{
 
 use crate::{
     context::{
-        CounterContext, EventContext, InstantContext, NonTestCtxMarker, RngContext, StateContext,
-        TimerHandler,
+        CounterContext, EventContext, InstantContext, NonTestCtxMarker, RngContext, TimerHandler,
     },
     device::{DeviceId, FrameDestination},
     error::{ExistsError, NotFoundError},
@@ -59,10 +58,9 @@ use crate::{
         forwarding::{AddRouteError, Destination, ForwardingTable},
         gmp::igmp::IgmpPacketHandler,
         icmp::{
-            BufferIcmpHandler, IcmpHandlerIpExt, IcmpIpExt, IcmpIpTransportContext, IcmpNonSyncCtx,
-            IcmpState, Icmpv4Error, Icmpv4ErrorCode, Icmpv4ErrorKind, Icmpv4State,
-            Icmpv4StateBuilder, Icmpv6ErrorCode, Icmpv6ErrorKind, Icmpv6State, Icmpv6StateBuilder,
-            InnerIcmpContext,
+            BufferIcmpHandler, IcmpHandlerIpExt, IcmpIpExt, IcmpIpTransportContext, IcmpState,
+            Icmpv4Error, Icmpv4ErrorCode, Icmpv4ErrorKind, Icmpv4State, Icmpv4StateBuilder,
+            Icmpv6ErrorCode, Icmpv6ErrorKind, Icmpv6State, Icmpv6StateBuilder, InnerIcmpContext,
         },
         ipv6::Ipv6PacketAction,
         path_mtu::{PmtuCache, PmtuTimerId},
@@ -2334,17 +2332,11 @@ pub(crate) fn send_ipv6_packet_from_device<
     }
 }
 
-impl<
-        C: IpLayerNonSyncContext<Ipv4, SC::DeviceId> + IcmpNonSyncCtx<Ipv4>,
-        SC: IpTransportLayerContext<Ipv4, C>
-            + StateContext<C, IcmpState<Ipv4Addr, C::Instant, IpSock<Ipv4, SC::DeviceId>>>
-            + IpSocketHandler<Ipv4, C>,
-    > InnerIcmpContext<Ipv4, C> for SC
-{
+impl<C: NonSyncContext> InnerIcmpContext<Ipv4, C> for SyncCtx<C> {
     fn receive_icmp_error(
         &mut self,
         ctx: &mut C,
-        device: SC::DeviceId,
+        device: DeviceId,
         original_src_ip: Option<SpecifiedAddr<Ipv4Addr>>,
         original_dst_ip: SpecifiedAddr<Ipv4Addr>,
         original_proto: Ipv4Proto,
@@ -2359,7 +2351,7 @@ impl<
                 match original_proto {
                     Ipv4Proto::Icmp => <IcmpIpTransportContext as IpTransportContext<Ipv4, _, _>>
                                 ::receive_icmp_error(self,ctx, device, original_src_ip, original_dst_ip, original_body, err),
-                    $($cond => <<SC as IpTransportLayerContext<_, _>>::$ty as IpTransportContext<Ipv4, _, _>>
+                    $($cond => <<Self as IpTransportLayerContext<Ipv4, _>>::$ty as IpTransportContext<Ipv4, _, _>>
                                 ::receive_icmp_error(self,ctx, device, original_src_ip, original_dst_ip, original_body, err),)*
                     // TODO(joshlf): Once all IP protocol numbers are covered,
                     // remove this default case.
@@ -2374,19 +2366,30 @@ impl<
             Ipv4Proto::Proto(IpProto::Udp) => Udp
         );
     }
+
+    fn with_state<O, F: FnOnce(&IcmpState<Ipv4Addr, C::Instant, IpSock<Ipv4, DeviceId>>) -> O>(
+        &self,
+        cb: F,
+    ) -> O {
+        cb(&self.state.ipv4.icmp.as_ref())
+    }
+
+    fn with_state_mut<
+        O,
+        F: FnOnce(&mut IcmpState<Ipv4Addr, C::Instant, IpSock<Ipv4, DeviceId>>) -> O,
+    >(
+        &mut self,
+        cb: F,
+    ) -> O {
+        cb(&mut self.state.ipv4.icmp.as_mut())
+    }
 }
 
-impl<
-        C: IpLayerNonSyncContext<Ipv6, SC::DeviceId> + IcmpNonSyncCtx<Ipv6>,
-        SC: IpTransportLayerContext<Ipv6, C>
-            + StateContext<C, IcmpState<Ipv6Addr, C::Instant, IpSock<Ipv6, SC::DeviceId>>>
-            + IpSocketHandler<Ipv6, C>,
-    > InnerIcmpContext<Ipv6, C> for SC
-{
+impl<C: NonSyncContext> InnerIcmpContext<Ipv6, C> for SyncCtx<C> {
     fn receive_icmp_error(
         &mut self,
         ctx: &mut C,
-        device: SC::DeviceId,
+        device: DeviceId,
         original_src_ip: Option<SpecifiedAddr<Ipv6Addr>>,
         original_dst_ip: SpecifiedAddr<Ipv6Addr>,
         original_next_header: Ipv6Proto,
@@ -2401,7 +2404,7 @@ impl<
                 match original_next_header {
                     Ipv6Proto::Icmpv6 => <IcmpIpTransportContext as IpTransportContext<Ipv6, _, _>>
                     ::receive_icmp_error(self, ctx, device, original_src_ip, original_dst_ip, original_body, err),
-                    $($cond => <<SC as IpTransportLayerContext<_, _>>::$ty as IpTransportContext<Ipv6, _, _>>
+                    $($cond => <<Self as IpTransportLayerContext<Ipv6, _>>::$ty as IpTransportContext<Ipv6, _, _>>
                                 ::receive_icmp_error(self, ctx, device, original_src_ip, original_dst_ip, original_body, err),)*
                     // TODO(joshlf): Once all IP protocol numbers are covered,
                     // remove this default case.
@@ -2415,6 +2418,23 @@ impl<
             Ipv6Proto::Proto(IpProto::Tcp) => Tcp,
             Ipv6Proto::Proto(IpProto::Udp) => Udp
         );
+    }
+
+    fn with_state<O, F: FnOnce(&IcmpState<Ipv6Addr, C::Instant, IpSock<Ipv6, DeviceId>>) -> O>(
+        &self,
+        cb: F,
+    ) -> O {
+        cb(&self.state.ipv6.icmp.as_ref())
+    }
+
+    fn with_state_mut<
+        O,
+        F: FnOnce(&mut IcmpState<Ipv6Addr, C::Instant, IpSock<Ipv6, DeviceId>>) -> O,
+    >(
+        &mut self,
+        cb: F,
+    ) -> O {
+        cb(&mut self.state.ipv6.icmp.as_mut())
     }
 }
 

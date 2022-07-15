@@ -38,7 +38,7 @@ use thiserror::Error;
 use zerocopy::ByteSlice;
 
 use crate::{
-    context::{CounterContext, InstantContext, StateContext},
+    context::{CounterContext, InstantContext},
     data_structures::{token_bucket::TokenBucket, IdMap, IdMapCollectionKey},
     device::ndp::NdpPacketHandler,
     device::FrameDestination,
@@ -59,7 +59,7 @@ use crate::{
         IpTransportContext, SendIpPacketMeta, TransportReceiveError, IPV6_DEFAULT_SUBNET,
     },
     socket::{ConnSocketEntry, ConnSocketMap},
-    BufferNonSyncContext, NonSyncContext, SyncCtx,
+    BufferNonSyncContext, DeviceId, NonSyncContext, SyncCtx,
 };
 
 /// The default number of ICMP error messages to send per second.
@@ -610,12 +610,7 @@ impl<I: IcmpIpExt, C: InstantContext + IcmpContext<I> + CounterContext> IcmpNonS
 /// Unlike [`IcmpContext`], `InnerIcmpContext` is not exposed outside of this
 /// crate.
 pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt, C: IcmpNonSyncCtx<I>>:
-    IpSocketHandler<I, C>
-    + IpDeviceIdContext<I>
-    + StateContext<
-        C,
-        IcmpState<I::Addr, C::Instant, IpSock<I, <Self as IpDeviceIdContext<I>>::DeviceId>>,
-    >
+    IpSocketHandler<I, C> + IpDeviceIdContext<I>
 {
     // TODO(joshlf): If we end up needing to respond to these messages with new
     // outbound packets, then perhaps it'd be worth passing the original buffer
@@ -656,6 +651,21 @@ pub(crate) trait InnerIcmpContext<I: IcmpIpExt + IpExt, C: IcmpNonSyncCtx<I>>:
         original_body: &[u8],
         err: I::ErrorCode,
     );
+
+    /// Calls the function with an immutable reference to ICMP state.
+    fn with_state<O, F: FnOnce(&IcmpState<I::Addr, C::Instant, IpSock<I, Self::DeviceId>>) -> O>(
+        &self,
+        cb: F,
+    ) -> O;
+
+    /// Calls the function with a mutable reference to ICMP state.
+    fn with_state_mut<
+        O,
+        F: FnOnce(&mut IcmpState<I::Addr, C::Instant, IpSock<I, Self::DeviceId>>) -> O,
+    >(
+        &mut self,
+        cb: F,
+    ) -> O;
 }
 
 /// The non-synchronized execution context shared by both ICMPv4 and ICMPv6,
@@ -693,22 +703,37 @@ impl<
 /// `InnerIcmpv4Context` is a shorthand for a larger collection of traits.
 pub(crate) trait InnerIcmpv4Context<C: IcmpNonSyncCtx<Ipv4>>:
     InnerIcmpContext<Ipv4, C>
-    + StateContext<
-        C,
-        Icmpv4State<C::Instant, IpSock<Ipv4, <Self as IpDeviceIdContext<Ipv4>>::DeviceId>>,
-    >
 {
+    /// Calls the function with an immutable reference to ICMPv4 state.
+    fn with_state<O, F: FnOnce(&Icmpv4State<C::Instant, IpSock<Ipv4, Self::DeviceId>>) -> O>(
+        &self,
+        cb: F,
+    ) -> O;
+
+    /// Calls the function with a mutable reference to ICMPv4 state.
+    fn with_state_mut<
+        O,
+        F: FnOnce(&mut Icmpv4State<C::Instant, IpSock<Ipv4, Self::DeviceId>>) -> O,
+    >(
+        &mut self,
+        cb: F,
+    ) -> O;
 }
 
-impl<
-        C: IcmpNonSyncCtx<Ipv4>,
-        SC: InnerIcmpContext<Ipv4, C>
-            + StateContext<
-                C,
-                Icmpv4State<C::Instant, IpSock<Ipv4, <Self as IpDeviceIdContext<Ipv4>>::DeviceId>>,
-            >,
-    > InnerIcmpv4Context<C> for SC
-{
+impl<C: NonSyncContext> InnerIcmpv4Context<C> for SyncCtx<C> {
+    fn with_state<O, F: FnOnce(&Icmpv4State<C::Instant, IpSock<Ipv4, DeviceId>>) -> O>(
+        &self,
+        cb: F,
+    ) -> O {
+        cb(&self.state.ipv4.icmp)
+    }
+
+    fn with_state_mut<O, F: FnOnce(&mut Icmpv4State<C::Instant, IpSock<Ipv4, DeviceId>>) -> O>(
+        &mut self,
+        cb: F,
+    ) -> O {
+        cb(&mut self.state.ipv4.icmp)
+    }
 }
 
 /// The execution context for ICMPv4 where a buffer is required.
@@ -727,60 +752,42 @@ impl<
 {
 }
 
-impl<C, SC>
-    StateContext<
-        C,
-        IcmpState<Ipv4Addr, C::Instant, IpSock<Ipv4, <SC as IpDeviceIdContext<Ipv4>>::DeviceId>>,
-    > for SC
-where
-    C: IcmpNonSyncCtx<Ipv4>,
-    SC: IpDeviceIdContext<Ipv4>
-        + StateContext<
-            C,
-            Icmpv4State<C::Instant, IpSock<Ipv4, <SC as IpDeviceIdContext<Ipv4>>::DeviceId>>,
-        >,
-{
-    fn get_state_with(
-        &self,
-        _id: (),
-    ) -> &IcmpState<Ipv4Addr, C::Instant, IpSock<Ipv4, <Self as IpDeviceIdContext<Ipv4>>::DeviceId>>
-    {
-        &self.get_state().inner
-    }
-
-    fn get_state_mut_with(
-        &mut self,
-        _id: (),
-    ) -> &mut IcmpState<
-        Ipv4Addr,
-        C::Instant,
-        IpSock<Ipv4, <Self as IpDeviceIdContext<Ipv4>>::DeviceId>,
-    > {
-        &mut self.get_state_mut().inner
-    }
-}
-
 /// The execution context for ICMPv6.
 ///
 /// `InnerIcmpv6Context` is a shorthand for a larger collection of traits.
 pub(crate) trait InnerIcmpv6Context<C: IcmpNonSyncCtx<Ipv6>>:
     InnerIcmpContext<Ipv6, C>
-    + StateContext<
-        C,
-        Icmpv6State<C::Instant, IpSock<Ipv6, <Self as IpDeviceIdContext<Ipv6>>::DeviceId>>,
-    >
 {
+    /// Calls the function with an immutable reference to ICMPv6 state.
+    fn with_state<O, F: FnOnce(&Icmpv6State<C::Instant, IpSock<Ipv6, Self::DeviceId>>) -> O>(
+        &self,
+        cb: F,
+    ) -> O;
+
+    /// Calls the function with a mutable reference to ICMPv6 state.
+    fn with_state_mut<
+        O,
+        F: FnOnce(&mut Icmpv6State<C::Instant, IpSock<Ipv6, Self::DeviceId>>) -> O,
+    >(
+        &mut self,
+        cb: F,
+    ) -> O;
 }
 
-impl<C, SC> InnerIcmpv6Context<C> for SC
-where
-    C: IcmpNonSyncCtx<Ipv6>,
-    SC: InnerIcmpContext<Ipv6, C>
-        + StateContext<
-            C,
-            Icmpv6State<C::Instant, IpSock<Ipv6, <Self as IpDeviceIdContext<Ipv6>>::DeviceId>>,
-        >,
-{
+impl<C: NonSyncContext> InnerIcmpv6Context<C> for SyncCtx<C> {
+    fn with_state<O, F: FnOnce(&Icmpv6State<C::Instant, IpSock<Ipv6, DeviceId>>) -> O>(
+        &self,
+        cb: F,
+    ) -> O {
+        cb(&self.state.ipv6.icmp)
+    }
+
+    fn with_state_mut<O, F: FnOnce(&mut Icmpv6State<C::Instant, IpSock<Ipv6, DeviceId>>) -> O>(
+        &mut self,
+        cb: F,
+    ) -> O {
+        cb(&mut self.state.ipv6.icmp)
+    }
 }
 
 /// The execution context for ICMPv6 where a buffer is required.
@@ -797,39 +804,6 @@ impl<
         SC: InnerIcmpv6Context<C> + InnerBufferIcmpContext<Ipv6, C, B>,
     > InnerBufferIcmpv6Context<C, B> for SC
 {
-}
-
-impl<C, SC>
-    StateContext<
-        C,
-        IcmpState<Ipv6Addr, C::Instant, IpSock<Ipv6, <SC as IpDeviceIdContext<Ipv6>>::DeviceId>>,
-    > for SC
-where
-    C: IcmpNonSyncCtx<Ipv6>,
-    SC: IpDeviceIdContext<Ipv6>
-        + StateContext<
-            C,
-            Icmpv6State<C::Instant, IpSock<Ipv6, <SC as IpDeviceIdContext<Ipv6>>::DeviceId>>,
-        >,
-{
-    fn get_state_with(
-        &self,
-        _id: (),
-    ) -> &IcmpState<Ipv6Addr, C::Instant, IpSock<Ipv6, <Self as IpDeviceIdContext<Ipv6>>::DeviceId>>
-    {
-        &self.get_state().inner
-    }
-
-    fn get_state_mut_with(
-        &mut self,
-        _id: (),
-    ) -> &mut IcmpState<
-        Ipv6Addr,
-        C::Instant,
-        IpSock<Ipv6, <Self as IpDeviceIdContext<Ipv6>>::DeviceId>,
-    > {
-        &mut self.get_state_mut().inner
-    }
 }
 
 /// Attempt to send an ICMP or ICMPv6 error message, applying a rate limit.
@@ -851,8 +825,11 @@ macro_rules! try_send_error {
         // unconditionally. See the documentation on the `CachedInstantCtx` type
         // for more information.
         let instant_ctx = crate::context::new_cached_instant_context($ctx);
-        let state: &mut IcmpState<_, _, _> = $sync_ctx.get_state_mut();
-        if state.error_send_bucket.try_take(&instant_ctx) {
+        let send = InnerIcmpContext::with_state_mut($sync_ctx, |state| {
+            state.error_send_bucket.try_take(&instant_ctx)
+        });
+
+        if send {
             $ctx.increment_counter($counter_name);
             $e
         } else {
@@ -901,17 +878,19 @@ where
             }
         };
         let id = echo_request.message().id();
-        if let Some(conn) = sync_ctx.get_state().conns.get_id_by_addr(&IcmpAddr {
-            local_addr: original_src_ip,
-            remote_addr: original_dst_ip,
-            icmp_id: id,
-        }) {
-            let seq = echo_request.message().seq();
-            ctx.increment_counter("IcmpContext::receive_icmp_error");
-            IcmpContext::receive_icmp_error(ctx, IcmpConnId::new(conn), seq, err);
-        } else {
-            trace!("IcmpIpTransportContext::receive_icmp_error: Got ICMP error message for nonexistent ICMP echo socket; either the socket responsible has since been removed, or the error message was sent in error or corrupted");
-        }
+        sync_ctx.with_state(|state| {
+            if let Some(conn) = state.conns.get_id_by_addr(&IcmpAddr {
+                local_addr: original_src_ip,
+                remote_addr: original_dst_ip,
+                icmp_id: id,
+            }) {
+                let seq = echo_request.message().seq();
+                ctx.increment_counter("IcmpContext::receive_icmp_error");
+                IcmpContext::receive_icmp_error(ctx, IcmpConnId::new(conn), seq, err);
+            } else {
+                trace!("IcmpIpTransportContext::receive_icmp_error: Got ICMP error message for nonexistent ICMP echo socket; either the socket responsible has since been removed, or the error message was sent in error or corrupted");
+            }
+        })
     }
 }
 
@@ -972,7 +951,8 @@ impl<
             Icmpv4Packet::TimestampRequest(timestamp_request) => {
                 ctx.increment_counter("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet::timestamp_request");
                 if let Some(src_ip) = SpecifiedAddr::new(src_ip) {
-                    if StateContext::<_, Icmpv4State<_, _>>::get_state(sync_ctx).send_timestamp_reply {
+                    let send_timestamp_reply = InnerIcmpv4Context::with_state(sync_ctx, |state| state.send_timestamp_reply);
+                    if send_timestamp_reply {
                         trace!("<IcmpIpTransportContext as BufferIpTransportContext<Ipv4>>::receive_ip_packet: Responding to Timestamp Request message");
                         // We're supposed to respond with the time that we
                         // processed this message as measured in milliseconds
@@ -2557,39 +2537,41 @@ fn receive_icmp_echo_reply<
     body: B,
 ) {
     if let Some(src_ip) = SpecifiedAddr::new(src_ip) {
-        if let Some(conn) = sync_ctx.get_state().conns.get_id_by_addr(&IcmpAddr {
-            local_addr: dst_ip,
-            remote_addr: src_ip,
-            icmp_id: id,
-        }) {
-            trace!("receive_icmp_echo_reply: Received echo reply for local socket");
-            ctx.receive_icmp_echo_reply(
-                IcmpConnId::new(conn),
-                src_ip.get(),
-                dst_ip.get(),
-                id,
-                seq,
-                body,
-            );
-        } else {
-            // TODO(fxbug.dev/47952): Neither the ICMPv4 or ICMPv6 RFCs
-            // explicitly state what to do in case we receive an "unsolicited"
-            // echo reply. We only expose the replies if we have a registered
-            // connection for the IcmpAddr of the incoming reply for now. Given
-            // that a reply should only be sent in response to a request, an
-            // ICMP unreachable-type message is probably not appropriate for
-            // unsolicited replies. However, it's also possible that we sent a
-            // request and then closed the socket before receiving the reply, so
-            // this doesn't necessarily indicate a buggy or malicious remote
-            // host. We should figure this out definitively.
-            //
-            // If we do decide to send an ICMP error message, the appropriate
-            // thing to do is probably to have this function return a `Result`,
-            // and then have the top-level implementation of
-            // `BufferIpTransportContext::receive_ip_packet` return the
-            // appropriate error.
-            trace!("receive_icmp_echo_reply: Received echo reply with no local socket");
-        }
+        sync_ctx.with_state(|state| {
+            if let Some(conn) = state.conns.get_id_by_addr(&IcmpAddr {
+                local_addr: dst_ip,
+                remote_addr: src_ip,
+                icmp_id: id,
+            }) {
+                trace!("receive_icmp_echo_reply: Received echo reply for local socket");
+                ctx.receive_icmp_echo_reply(
+                    IcmpConnId::new(conn),
+                    src_ip.get(),
+                    dst_ip.get(),
+                    id,
+                    seq,
+                    body,
+                );
+            } else {
+                // TODO(fxbug.dev/47952): Neither the ICMPv4 or ICMPv6 RFCs
+                // explicitly state what to do in case we receive an "unsolicited"
+                // echo reply. We only expose the replies if we have a registered
+                // connection for the IcmpAddr of the incoming reply for now. Given
+                // that a reply should only be sent in response to a request, an
+                // ICMP unreachable-type message is probably not appropriate for
+                // unsolicited replies. However, it's also possible that we sent a
+                // request and then closed the socket before receiving the reply, so
+                // this doesn't necessarily indicate a buggy or malicious remote
+                // host. We should figure this out definitively.
+                //
+                // If we do decide to send an ICMP error message, the appropriate
+                // thing to do is probably to have this function return a `Result`,
+                // and then have the top-level implementation of
+                // `BufferIpTransportContext::receive_ip_packet` return the
+                // appropriate error.
+                trace!("receive_icmp_echo_reply: Received echo reply with no local socket");
+            }
+        })
     } else {
         trace!("receive_icmp_echo_reply: Received echo reply with an unspecified source address");
     }
@@ -2644,12 +2626,14 @@ where
 {
     // TODO(joshlf): Come up with a better approach to the lifetimes issues than
     // cloning the entire socket.
-    let ConnSocketEntry { sock, addr: _ } = sync_ctx
-        .get_state_mut()
-        .conns
-        .get_sock_by_id(conn.0)
-        .expect("icmp::send_icmp_echo_request_inner: no such socket");
-    let conn = sock.clone();
+    let conn = sync_ctx.with_state_mut(|state| {
+        let ConnSocketEntry { sock, addr: _ } = state
+            .conns
+            .get_sock_by_id(conn.0)
+            .expect("icmp::send_icmp_echo_request_inner: no such socket");
+        sock.clone()
+    });
+
     sync_ctx
         .send_ip_packet(
             ctx,
@@ -2689,27 +2673,25 @@ pub fn create_icmpv4_unbound<NonSyncCtx: NonSyncContext>(
 // existing `create_icmpv4_unbound`) once the ICMP context traits are part of
 // the public API.
 fn create_icmpv4_unbound_inner<C: IcmpNonSyncCtx<Ipv4>, SC: InnerIcmpv4Context<C>>(
-    ctx: &mut SC,
+    sync_ctx: &mut SC,
 ) -> IcmpUnboundId<Ipv4> {
-    let state: &mut IcmpState<_, _, _> = ctx.get_state_mut();
-    IcmpUnboundId::new(state.unbound.push(()))
+    InnerIcmpContext::with_state_mut(sync_ctx, |state| IcmpUnboundId::new(state.unbound.push(())))
 }
 
 /// Creates a new unbound ICMPv6 socket.
 pub fn create_icmpv6_unbound<NonSyncCtx: NonSyncContext>(
-    ctx: &mut SyncCtx<NonSyncCtx>,
+    sync_ctx: &mut SyncCtx<NonSyncCtx>,
 ) -> IcmpUnboundId<Ipv6> {
-    create_icmpv6_unbound_inner(ctx)
+    create_icmpv6_unbound_inner(sync_ctx)
 }
 
 // TODO(https://fxbug.dev/48578): Make this the external function (replacing the
 // existing `create_icmpv6_unbound`) once the ICMP context traits are part of
 // the public API.
 fn create_icmpv6_unbound_inner<C: IcmpNonSyncCtx<Ipv6>, SC: InnerIcmpv6Context<C>>(
-    ctx: &mut SC,
+    sync_ctx: &mut SC,
 ) -> IcmpUnboundId<Ipv6> {
-    let state: &mut IcmpState<_, _, _> = ctx.get_state_mut();
-    IcmpUnboundId::new(state.unbound.push(()))
+    InnerIcmpContext::with_state_mut(sync_ctx, |state| IcmpUnboundId::new(state.unbound.push(())))
 }
 
 /// Removes an unbound ICMPv4 socket.
@@ -2728,11 +2710,15 @@ pub fn remove_icmpv4_unbound<NonSyncCtx: NonSyncContext>(
 // existing `create_icmpv6_unbound`) once the ICMP context traits are part of
 // the public API.
 fn remove_icmpv4_unbound_inner<C: IcmpNonSyncCtx<Ipv4>, SC: InnerIcmpv4Context<C>>(
-    ctx: &mut SC,
+    sync_ctx: &mut SC,
     id: IcmpUnboundId<Ipv4>,
 ) {
-    let state: &mut IcmpState<_, _, _> = ctx.get_state_mut();
-    assert_eq!(state.unbound.remove(id.into()), Some(()), "unbound ID is invalid: {:?}", id);
+    assert_eq!(
+        InnerIcmpContext::with_state_mut(sync_ctx, |state| state.unbound.remove(id.into())),
+        Some(()),
+        "unbound ID is invalid: {:?}",
+        id
+    );
 }
 
 /// Removes an unbound ICMPv6 socket.
@@ -2751,11 +2737,15 @@ pub fn remove_icmpv6_unbound<NonSyncCtx: NonSyncContext>(
 // existing `create_icmpv6_unbound`) once the ICMP context traits are part of
 // the public API.
 fn remove_icmpv6_unbound_inner<C: IcmpNonSyncCtx<Ipv6>, SC: InnerIcmpv6Context<C>>(
-    ctx: &mut SC,
+    sync_ctx: &mut SC,
     id: IcmpUnboundId<Ipv6>,
 ) {
-    let state: &mut IcmpState<_, _, _> = ctx.get_state_mut();
-    assert_eq!(state.unbound.remove(id.into()), Some(()), "unbound ID is invalid: {:?}", id);
+    assert_eq!(
+        InnerIcmpContext::with_state_mut(sync_ctx, |state| state.unbound.remove(id.into())),
+        Some(()),
+        "unbound ID is invalid: {:?}",
+        id
+    );
 }
 
 /// Connects an unbound ICMPv4 socket.
@@ -2793,8 +2783,12 @@ fn connect_icmpv4_inner<C: IcmpNonSyncCtx<Ipv4>, SC: InnerIcmpv4Context<C>>(
     icmp_id: u16,
 ) -> Result<IcmpConnId<Ipv4>, IcmpSockCreationError> {
     let ip = sync_ctx.new_ip_socket(ctx, None, local_addr, remote_addr, Ipv4Proto::Icmp, None)?;
-    let IcmpState { unbound, conns, error_send_bucket: _ } = sync_ctx.get_state_mut();
-    Ok(connect_icmp_inner(unbound, conns, id, remote_addr, icmp_id, ip)?)
+    InnerIcmpContext::with_state_mut(
+        sync_ctx,
+        |IcmpState { unbound, conns, error_send_bucket: _ }| {
+            connect_icmp_inner(unbound, conns, id, remote_addr, icmp_id, ip)
+        },
+    )
 }
 
 /// Connects an unbound ICMPv6 socket.
@@ -2832,8 +2826,12 @@ fn connect_icmpv6_inner<C: IcmpNonSyncCtx<Ipv6>, SC: InnerIcmpv6Context<C>>(
     icmp_id: u16,
 ) -> Result<IcmpConnId<Ipv6>, IcmpSockCreationError> {
     let ip = sync_ctx.new_ip_socket(ctx, None, local_addr, remote_addr, Ipv6Proto::Icmpv6, None)?;
-    let IcmpState { unbound, conns, error_send_bucket: _ } = sync_ctx.get_state_mut();
-    Ok(connect_icmp_inner(unbound, conns, id, remote_addr, icmp_id, ip)?)
+    InnerIcmpContext::with_state_mut(
+        sync_ctx,
+        |IcmpState { unbound, conns, error_send_bucket: _ }| {
+            connect_icmp_inner(unbound, conns, id, remote_addr, icmp_id, ip)
+        },
+    )
 }
 
 fn connect_icmp_inner<I: IcmpIpExt + IpExt, S: IpSocket<I>>(
@@ -3825,22 +3823,6 @@ mod tests {
                 }
             }
 
-            impl StateContext<$outer_non_sync_ctx, $state<DummyInstant, IpSock<$ip, DummyDeviceId>>> for $outer_sync_ctx {
-                fn get_state_with(
-                    &self,
-                    _id: (),
-                ) -> &$state<DummyInstant, IpSock<$ip, DummyDeviceId>> {
-                    &self.get_ref().icmp_state
-                }
-
-                fn get_state_mut_with(
-                    &mut self,
-                    _id: (),
-                ) -> &mut $state<DummyInstant, IpSock<$ip, DummyDeviceId>> {
-                    &mut self.get_mut().icmp_state
-                }
-            }
-
             impl IcmpContext<$ip> for $outer_non_sync_ctx {
                 fn receive_icmp_error(
                     &mut self,
@@ -3900,6 +3882,23 @@ mod tests {
                         );
                     }
                 }
+
+                fn with_state<O, F: FnOnce(&IcmpState<<$ip as Ip>::Addr, DummyInstant, IpSock<$ip, DummyDeviceId>>) -> O>(
+                    &self,
+                    cb: F,
+                ) -> O {
+                    cb(&self.get_ref().icmp_state.inner)
+                }
+
+                fn with_state_mut<
+                    O,
+                F: FnOnce(&mut IcmpState<<$ip as Ip>::Addr, DummyInstant, IpSock<$ip, DummyDeviceId>>) -> O,
+                >(
+                    &mut self,
+                    cb: F,
+                ) -> O {
+                    cb(&mut self.get_mut().icmp_state.inner)
+                }
             }
         };
     }
@@ -3912,6 +3911,29 @@ mod tests {
         Dummyv4NonSyncCtx,
         Icmpv4State
     );
+
+    impl InnerIcmpv4Context<Dummyv4NonSyncCtx> for Dummyv4SyncCtx {
+        fn with_state<
+            O,
+            F: FnOnce(&Icmpv4State<DummyInstant, IpSock<Ipv4, DummyDeviceId>>) -> O,
+        >(
+            &self,
+            cb: F,
+        ) -> O {
+            cb(&self.get_ref().icmp_state)
+        }
+
+        fn with_state_mut<
+            O,
+            F: FnOnce(&mut Icmpv4State<DummyInstant, IpSock<Ipv4, DummyDeviceId>>) -> O,
+        >(
+            &mut self,
+            cb: F,
+        ) -> O {
+            cb(&mut self.get_mut().icmp_state)
+        }
+    }
+
     impl_context_traits!(
         Ipv6,
         DummyIcmpv6Ctx,
@@ -3920,6 +3942,28 @@ mod tests {
         Dummyv6NonSyncCtx,
         Icmpv6State
     );
+
+    impl InnerIcmpv6Context<Dummyv6NonSyncCtx> for Dummyv6SyncCtx {
+        fn with_state<
+            O,
+            F: FnOnce(&Icmpv6State<DummyInstant, IpSock<Ipv6, DummyDeviceId>>) -> O,
+        >(
+            &self,
+            cb: F,
+        ) -> O {
+            cb(&self.get_ref().icmp_state)
+        }
+
+        fn with_state_mut<
+            O,
+            F: FnOnce(&mut Icmpv6State<DummyInstant, IpSock<Ipv6, DummyDeviceId>>) -> O,
+        >(
+            &mut self,
+            cb: F,
+        ) -> O {
+            cb(&mut self.get_mut().icmp_state)
+        }
+    }
 
     impl NdpPacketHandler<Dummyv6NonSyncCtx, DummyDeviceId> for Dummyv6SyncCtx {
         fn receive_ndp_packet<B: ByteSlice>(

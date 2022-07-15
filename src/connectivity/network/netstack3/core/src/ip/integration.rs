@@ -11,18 +11,16 @@ use net_types::{
 use packet::{BufferMut, Serializer};
 
 use crate::{
-    context::{NonTestCtxMarker, StateContext},
+    context::NonTestCtxMarker,
     ip::{
         self,
-        icmp::{Icmpv4State, Icmpv6State},
         path_mtu::{PmtuCache, PmtuStateContext},
         reassembly::FragmentStateContext,
         send_ipv4_packet_from_device, send_ipv6_packet_from_device,
-        socket::{BufferIpSocketContext, IpSock, IpSocketContext, IpSocketNonSyncContext},
+        socket::{BufferIpSocketContext, IpSocketContext, IpSocketNonSyncContext},
         IpDeviceIdContext, IpLayerNonSyncContext, IpLayerStateIpExt, IpPacketFragmentCache,
         IpStateContext, SendIpPacketMeta,
     },
-    Instant,
 };
 
 impl<
@@ -47,30 +45,6 @@ impl<
 {
     fn with_state_mut<F: FnOnce(&mut PmtuCache<I, Instant>)>(&mut self, cb: F) {
         cb(&mut self.get_ip_layer_state_mut().as_mut().pmtu_cache)
-    }
-}
-
-impl<C, I: Instant, SC: IpStateContext<Ipv4, I>>
-    StateContext<C, Icmpv4State<I, IpSock<Ipv4, SC::DeviceId>>> for SC
-{
-    fn get_state_with(&self, _id: ()) -> &Icmpv4State<I, IpSock<Ipv4, SC::DeviceId>> {
-        &self.get_ip_layer_state().icmp
-    }
-
-    fn get_state_mut_with(&mut self, _id: ()) -> &mut Icmpv4State<I, IpSock<Ipv4, SC::DeviceId>> {
-        &mut self.get_ip_layer_state_mut().icmp
-    }
-}
-
-impl<C, I: Instant, SC: IpStateContext<Ipv6, I>>
-    StateContext<C, Icmpv6State<I, IpSock<Ipv6, SC::DeviceId>>> for SC
-{
-    fn get_state_with(&self, _id: ()) -> &Icmpv6State<I, IpSock<Ipv6, SC::DeviceId>> {
-        &self.get_ip_layer_state().icmp
-    }
-
-    fn get_state_mut_with(&mut self, _id: ()) -> &mut Icmpv6State<I, IpSock<Ipv6, SC::DeviceId>> {
-        &mut self.get_ip_layer_state_mut().icmp
     }
 }
 
