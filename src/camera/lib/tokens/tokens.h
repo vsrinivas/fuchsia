@@ -36,11 +36,11 @@ class SharedToken {
                 [callback = std::move(callback),
                  dispatcher =
                      dispatcher ? dispatcher : async_get_default_dispatcher()](auto ptr) mutable {
-                  async::PostTask(dispatcher,
-                                  [callback = std::move(callback), ptr = std::unique_ptr<T>(ptr)] {
-                                    callback();
-                                    ptr = nullptr;
-                                  });
+                  async::PostTask(dispatcher, [callback = std::move(callback),
+                                               ptr = std::unique_ptr<T>(ptr)]() mutable {
+                    callback();
+                    ptr = nullptr;
+                  });
                 }} {
     ZX_ASSERT_MSG(dispatcher || async_get_default_dispatcher(),
                   "default dispatcher for thread is not set");
