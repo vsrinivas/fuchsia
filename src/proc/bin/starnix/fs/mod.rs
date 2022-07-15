@@ -24,6 +24,7 @@ mod vmo_file;
 mod xattr;
 
 pub mod buffers;
+pub mod cgroup;
 pub mod devpts;
 pub mod devtmpfs;
 pub mod eventfd;

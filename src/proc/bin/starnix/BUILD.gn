@@ -136,6 +136,7 @@ if (target_cpu == "x64") {
       "fs/buffers/message_queue.rs",
       "fs/buffers/message_types.rs",
       "fs/buffers/mod.rs",
+      "fs/cgroup.rs",
       "fs/devpts.rs",
       "fs/devtmpfs.rs",
       "fs/dir_entry.rs",

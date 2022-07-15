@@ -4,7 +4,7 @@
 
 use super::*;
 use crate::auth::FsCred;
-use crate::fs::tmpfs::TmpfsDirectory;
+use crate::fs::cgroup::CgroupDirectoryNode;
 use crate::task::*;
 use crate::types::*;
 
@@ -30,7 +30,7 @@ impl SysFs {
                     .add_node_entry(
                         b"cgroup",
                         fs.create_node(
-                            Box::new(TmpfsDirectory::new()),
+                            CgroupDirectoryNode::new(),
                             mode!(IFDIR, 0o755),
                             FsCred::root(),
                         ),
