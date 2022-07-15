@@ -10,17 +10,6 @@
 #include <src/virtualization/bin/vmm/device/virtio_queue_fake.h>
 #include <virtio/vsock.h>
 
-// These tests have been ported over from the in-process virtio-vsock device test suite, but the
-// out-of-process virtio-vsock device is does not yet support all functionality. These tests
-// have been left in this file to allow incrementally re-enabling them as functionality is added
-// to the device.
-//
-// Note that many of these tests don't compile in their current state as boilerplate and helper
-// functions need to be changed.
-//
-// See fxb/97355 for more information.
-#define ENABLE_UNSUPPORTED_TESTS 0
-
 namespace {
 
 using ::fuchsia::virtualization::HostVsockAcceptor;
@@ -244,7 +233,7 @@ class VirtioVsockTest : public TestWithDevice {
     host_endpoint_ = realm_->Connect<HostVsockEndpoint>();
 
     rx_queue_ = std::make_unique<VirtioQueueFake>(phys_mem_, PAGE_SIZE, kVirtioVsockQueueSize);
-    tx_queue_ = std::make_unique<VirtioQueueFake>(phys_mem_, rx_queue_->end() + PAGE_SIZE,
+    tx_queue_ = std::make_unique<VirtioQueueFake>(phys_mem_, rx_queue_->end() + PAGE_SIZE * 128,
                                                   kVirtioVsockQueueSize);
     event_queue_ = std::make_unique<VirtioQueueFake>(phys_mem_, tx_queue_->end() + PAGE_SIZE,
                                                      kVirtioVsockQueueSize);
@@ -262,7 +251,7 @@ class VirtioVsockTest : public TestWithDevice {
     rx_queue_->Configure(0, PAGE_SIZE);
     ASSERT_EQ(ZX_OK, vsock_->ConfigureQueue(kVirtioRxQueueId, rx_queue_->size(), rx_queue_->desc(),
                                             rx_queue_->avail(), rx_queue_->used()));
-    tx_queue_->Configure(rx_queue_->end(), PAGE_SIZE);
+    tx_queue_->Configure(rx_queue_->end(), PAGE_SIZE * 128);
     ASSERT_EQ(ZX_OK, vsock_->ConfigureQueue(kVirtioTxQueueId, tx_queue_->size(), tx_queue_->desc(),
                                             tx_queue_->avail(), tx_queue_->used()));
     event_queue_->Configure(tx_queue_->end(), PAGE_SIZE);
@@ -1015,6 +1004,62 @@ TEST_F(VirtioVsockTest, WriteMultipleConnections) {
   ASSERT_NO_FATAL_FAILURE(ClientWriteGuestRead(data2, b_conn));
 }
 
+TEST_F(VirtioVsockTest, WriteSocketFullReset) {
+  // If the guest writes enough bytes to overflow our socket buffer then we
+  // must reset the connection as we would lose data.
+  //
+  // 5.7.6.3.1: VIRTIO_VSOCK_OP_RW data packets MUST only be transmitted when
+  // the peer has sufficient free buffer space for the payload.
+  TestConnection conn;
+  ASSERT_NO_FATAL_FAILURE(ClientConnectOnPort(kVirtioVsockGuestPort, conn));
+  ASSERT_NO_FATAL_FAILURE(conn.AssertSocketValid());
+
+  SendHeaderOnlyPacket(conn.host_port(), conn.guest_port(), VIRTIO_VSOCK_OP_CREDIT_REQUEST);
+
+  virtio_vsock_hdr_t* header;
+  ASSERT_NO_FATAL_FAILURE(GetHeaderOnlyPacketFromRxQueue(&header));
+  EXPECT_EQ(header->op, VIRTIO_VSOCK_OP_CREDIT_UPDATE);
+
+  // This is one byte more than the reported credit, which should reset the connection.
+  std::vector<uint8_t> buffer(header->buf_alloc + 1, 'a');
+  SendPacket(conn.host_port(), conn.guest_port(), buffer);
+
+  ASSERT_NO_FATAL_FAILURE(GetHeaderOnlyPacketFromRxQueue(&header));
+
+  EXPECT_EQ(header->op, VIRTIO_VSOCK_OP_RST);
+  EXPECT_EQ(header->src_port, conn.host_port());
+  EXPECT_EQ(header->dst_port, conn.guest_port());
+}
+
+TEST_F(VirtioVsockTest, SendCreditUpdateWhenSocketIsDrained) {
+  TestConnection conn;
+  ASSERT_NO_FATAL_FAILURE(ClientConnectOnPort(kVirtioVsockGuestPort, conn));
+  ASSERT_NO_FATAL_FAILURE(conn.AssertSocketValid());
+
+  SendHeaderOnlyPacket(conn.host_port(), conn.guest_port(), VIRTIO_VSOCK_OP_CREDIT_REQUEST);
+
+  virtio_vsock_hdr_t* header;
+  ASSERT_NO_FATAL_FAILURE(GetHeaderOnlyPacketFromRxQueue(&header));
+  EXPECT_EQ(header->op, VIRTIO_VSOCK_OP_CREDIT_UPDATE);
+
+  // Fill socket buffer completely.
+  std::vector<uint8_t> buffer(header->buf_alloc, 'a');
+  SendPacket(conn.host_port(), conn.guest_port(), buffer);
+
+  // Read a single byte from socket to free up space in the socket buffer and
+  // make the socket writable again.
+  uint8_t byte;
+  size_t actual_len = 0;
+  ASSERT_EQ(ZX_OK, conn.read(&byte, 1, &actual_len));
+  ASSERT_EQ(1u, actual_len);
+  ASSERT_EQ('a', byte);
+
+  // Verify we get a credit update now that the socket is writable.
+  ASSERT_NO_FATAL_FAILURE(GetHeaderOnlyPacketFromRxQueue(&header));
+  EXPECT_EQ(header->op, VIRTIO_VSOCK_OP_CREDIT_UPDATE);
+  ASSERT_EQ(header->fwd_cnt, actual_len);
+}
+
 TEST_F(VirtioVsockTest, NoResponseToSpuriousReset) {
   // Spurious reset for a non-existent connection.
   SendHeaderOnlyPacket(kVirtioVsockHostPort, kVirtioVsockGuestPort, VIRTIO_VSOCK_OP_RST);
@@ -1117,71 +1162,5 @@ TEST_F(VirtioVsockTest, SkipBadRxDescriptors) {
   ASSERT_NO_FATAL_FAILURE(GetHeaderOnlyPacketFromRxQueue(&header));
   EXPECT_EQ(header->op, VIRTIO_VSOCK_OP_RST);
 }
-
-#if ENABLE_UNSUPPORTED_TESTS
-
-TEST_F(VirtioVsockTest, WriteSocketFullReset) {
-  // If the guest writes enough bytes to overflow our socket buffer then we
-  // must reset the connection as we would lose data.
-  //
-  // 5.7.6.3.1: VIRTIO_VSOCK_OP_RW data packets MUST only be transmitted when
-  // the peer has sufficient free buffer space for the payload.
-  TestConnection connection;
-  HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
-  HostConnectOnPortResponse(kVirtioVsockHostPort);
-
-  zx_info_socket_t info = {};
-  ASSERT_EQ(ZX_OK,
-            connection.socket().get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
-  size_t buf_size = info.tx_buf_max + sizeof(virtio_vsock_hdr_t) + 1;
-  auto buf = std::make_unique<uint8_t[]>(buf_size);
-  memset(buf.get(), 'a', buf_size);
-
-  // Queue one descriptor that will completely fill the socket (and then some),
-  // We'll verify that this resets the connection.
-  HostQueueWriteOnPort(kVirtioVsockHostPort, buf.get(), buf_size);
-  RunLoopUntilIdle();
-
-  RxBuffer* reset = DoReceive();
-  ASSERT_NE(nullptr, reset);
-  VerifyHeader(reset, kVirtioVsockHostPort, kVirtioVsockGuestPort, 0, VIRTIO_VSOCK_OP_RST, 0);
-}
-
-TEST_F(VirtioVsockTest, SendCreditUpdateWhenSocketIsDrained) {
-  TestConnection connection;
-  HostConnectOnPortRequest(kVirtioVsockHostPort, &connection);
-  HostConnectOnPortResponse(kVirtioVsockHostPort);
-
-  // Fill socket buffer completely.
-  zx_info_socket_t info = {};
-  ASSERT_EQ(ZX_OK,
-            connection.socket().get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr));
-  size_t buf_size = info.tx_buf_max + sizeof(virtio_vsock_hdr_t);
-  auto buf = std::make_unique<uint8_t[]>(buf_size);
-  memset(buf.get(), 'a', buf_size);
-  HostQueueWriteOnPort(kVirtioVsockHostPort, buf.get(), buf_size);
-  RunLoopUntilIdle();
-
-  // No buffers should be available to read.
-  ASSERT_EQ(nullptr, DoReceive());
-
-  // Read a single byte from socket to free up space in the socket buffer and
-  // make the socket writable again.
-  memset(buf.get(), 0, buf_size);
-  uint8_t byte;
-  size_t actual_len = 0;
-  ASSERT_EQ(connection.socket().read(0, &byte, 1, &actual_len), ZX_OK);
-  ASSERT_EQ(1u, actual_len);
-  ASSERT_EQ('a', byte);
-
-  // Verify we get a credit update now that the socket is writable.
-  RunLoopUntilIdle();
-  RxBuffer* credit_update = DoReceive();
-  ASSERT_NE(credit_update, nullptr);
-  ASSERT_EQ(info.tx_buf_max, credit_update->header.buf_alloc);
-  ASSERT_EQ(actual_len, credit_update->header.fwd_cnt);
-}
-
-#endif  // ENABLE_UNSUPPORTED_TESTS
 
 }  // namespace
