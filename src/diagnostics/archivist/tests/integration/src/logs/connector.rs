@@ -26,6 +26,8 @@ use fuchsia_syslog_listener::run_log_listener_with_proxy;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, SinkExt, StreamExt, TryStreamExt};
 
+// TODO(fxbug.dev/104555): re-enable when fixing the flake.
+#[ignore]
 #[fuchsia::test]
 async fn same_log_sink_simultaneously_via_connector() {
     let (take_log_listener_response_snd, mut take_log_listener_response_rcv) =
