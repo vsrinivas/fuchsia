@@ -36,12 +36,12 @@ rustc_binary("bin") {
 }
 
 components = [
-  "alpha",
-  "cast",
-  "misc",
-  "playready",
-  "weave",
-  "widevine",
+  "fake_alpha",
+  "fake_cast",
+  "fake_misc",
+  "fake_playready",
+  "fake_weave",
+  "fake_widevine",
 ]
 component_deps = []
 foreach(comp, components) {
@@ -49,7 +49,7 @@ foreach(comp, components) {
   component_deps += [ ":$comp_target_name" ]
   fuchsia_component(comp_target_name) {
     component_name = comp
-    manifest = "meta/${comp}.cmx"
+    manifest = "meta/${comp}.cml"
     deps = [ ":bin" ]
   }
 }
@@ -78,13 +78,14 @@ rustc_test("fake_factory_store_providers_test") {
 }
 
 fuchsia_unittest_package("fake_factory_store_providers_tests") {
-  manifest = "meta/fake_factory_store_providers_test.cmx"
-  deps = [ ":fake_factory_store_providers_test" ]
+  manifest = "meta/fake_factory_store_providers_test.cml"
+  deps = component_deps + [
+           ":fake_factory_store_providers_test",
+           ":test_fake_factory_store_providers_config",
+         ]
 }
 
-config_data("test_fake_factory_store_providers_config") {
-  for_pkg = "fake_factory_store_providers"
-
+resource("test_fake_factory_store_providers_config") {
   sources = [
     "testdata/test_alpha.config",
     "testdata/test_cast.config",
@@ -93,6 +94,7 @@ config_data("test_fake_factory_store_providers_config") {
     "testdata/test_weave.config",
     "testdata/test_widevine.config",
   ]
+  outputs = [ "data/{{source_file_part}}" ]
 }
 
 group("tests") {

@@ -1,0 +1,89 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        // Select the appropriate test runner shard here:
+        // rust, gtest, go, etc.
+        "//src/sys/test_runners/rust/default.shard.cml",
+
+        // In order to use config-data, we need to mark the test non-hermetic
+        "sys/testing/system-test.shard.cml",
+
+        // Enable system logging
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/fake_factory_store_providers_test",
+    },
+
+    // Add capability providers
+    children: [
+        {
+            name: "alpha",
+            url: "#meta/fake_alpha.cm",
+        },
+        {
+            name: "cast",
+            url: "#meta/fake_cast.cm",
+        },
+        {
+            name: "misc",
+            url: "#meta/fake_misc.cm",
+        },
+        {
+            name: "playready",
+            url: "#meta/fake_playready.cm",
+        },
+        {
+            name: "weave",
+            url: "#meta/fake_weave.cm",
+        },
+        {
+            name: "widevine",
+            url: "#meta/fake_widevine.cm",
+        },
+    ],
+
+    // Route capabilities from the components
+    use: [
+        {
+            protocol: [ "fuchsia.factory.AlphaFactoryStoreProvider" ],
+            from: "#alpha",
+        },
+        {
+            protocol: [ "fuchsia.factory.CastCredentialsFactoryStoreProvider" ],
+            from: "#cast",
+        },
+        {
+            protocol: [ "fuchsia.factory.MiscFactoryStoreProvider" ],
+            from: "#misc",
+        },
+        {
+            protocol: [ "fuchsia.factory.PlayReadyFactoryStoreProvider" ],
+            from: "#playready",
+        },
+        {
+            protocol: [ "fuchsia.factory.WeaveFactoryStoreProvider" ],
+            from: "#weave",
+        },
+        {
+            protocol: [ "fuchsia.factory.WidevineFactoryStoreProvider" ],
+            from: "#widevine",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#alpha",
+                "#cast",
+                "#misc",
+                "#playready",
+                "#weave",
+                "#widevine",
+            ],
+        },
+    ],
+}
