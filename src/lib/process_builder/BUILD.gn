@@ -32,7 +32,6 @@ rustc_library("process_builder") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:num-derive",
     "//third_party/rust_crates:num-traits",
-    "//third_party/rust_crates:owning_ref",
     "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:thiserror",
   ]

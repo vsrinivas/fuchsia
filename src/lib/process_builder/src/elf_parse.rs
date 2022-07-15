@@ -12,12 +12,11 @@ use {
     fuchsia_zircon as zx,
     num_derive::FromPrimitive,
     num_traits::cast::FromPrimitive,
-    owning_ref::OwningRef,
     static_assertions::assert_eq_size,
     std::fmt,
     std::mem,
     thiserror::Error,
-    zerocopy::{AsBytes, FromBytes, LayoutVerified},
+    zerocopy::{AsBytes, FromBytes},
 };
 
 /// Possible errors that can occur during ELF parsing.
@@ -56,7 +55,7 @@ trait Validate {
 }
 
 /// ELF identity header.
-#[derive(FromBytes, Debug, Eq, PartialEq)]
+#[derive(FromBytes, AsBytes, Debug, Eq, PartialEq, Default, Clone, Copy)]
 #[repr(C)]
 pub struct ElfIdent {
     /// e_ident[EI_MAG0:EI_MAG3]
@@ -127,7 +126,7 @@ impl ElfIdent {
     }
 }
 
-#[derive(FromBytes, Debug, Eq, PartialEq)]
+#[derive(FromBytes, AsBytes, Debug, Eq, PartialEq, Default, Clone, Copy)]
 #[repr(C)]
 pub struct Elf64FileHeader {
     pub ident: ElfIdent,
@@ -196,11 +195,6 @@ impl Elf64FileHeader {
     pub fn machine(&self) -> Result<ElfArchitecture, u16> {
         ElfArchitecture::from_u16(self.machine).ok_or(self.machine)
     }
-
-    fn from_bytes(bytes: &[u8]) -> Result<LayoutVerified<&[u8], Elf64FileHeader>, ElfParseError> {
-        LayoutVerified::new(bytes)
-            .ok_or(ElfParseError::ParseError("Failed to parse ELF64 file header"))
-    }
 }
 
 impl Validate for Elf64FileHeader {
@@ -239,7 +233,7 @@ impl Validate for Elf64FileHeader {
     }
 }
 
-#[derive(FromBytes, Debug, Eq, PartialEq)]
+#[derive(FromBytes, AsBytes, Debug, Eq, PartialEq, Default, Clone, Copy)]
 #[repr(C)]
 pub struct Elf64ProgramHeader {
     pub segment_type: u32,
@@ -405,12 +399,10 @@ impl Validate for [Elf64ProgramHeader] {
 }
 
 pub struct Elf64Headers {
-    // These headers are read straight out of a VMO and then parsed with zerocopy, so we use
-    // OwningRef to keep ownership of the underlying bytes and hold a reference to the parsed
-    // structs that will be actually used. Public accessors provide access to the parsed headers
-    // and hide this detail.
-    file_header: OwningRef<Vec<u8>, Elf64FileHeader>,
-    program_headers: Option<OwningRef<Vec<u8>, [Elf64ProgramHeader]>>,
+    file_header: Box<Elf64FileHeader>,
+    // Use a Box<[_]> instead of a Vec<> to communicate/enforce that the slice is not mutated after
+    // construction.
+    program_headers: Option<Box<[Elf64ProgramHeader]>>,
     // Section headers are not parsed currently since they aren't needed for the current use case,
     // but could be added if needed.
 }
@@ -418,31 +410,20 @@ pub struct Elf64Headers {
 impl Elf64Headers {
     pub fn from_vmo(vmo: &zx::Vmo) -> Result<Elf64Headers, ElfParseError> {
         // Read and parse the ELF file header from the VMO.
-        let file_hdr_len = mem::size_of::<Elf64FileHeader>();
-        let mut data = vec![0u8; file_hdr_len];
-        vmo.read(&mut data[..], 0).map_err(|s| ElfParseError::ReadError(s))?;
-        let data_oref = OwningRef::new(data);
-        let file_header: OwningRef<Vec<u8>, Elf64FileHeader> =
-            data_oref.try_map(|v| Elf64FileHeader::from_bytes(v).map(|lv| lv.into_ref()))?;
+        let mut file_header = Box::<Elf64FileHeader>::default();
+        vmo.read(file_header.as_bytes_mut(), 0).map_err(|s| ElfParseError::ReadError(s))?;
         file_header.validate()?;
 
         // Read and parse the ELF program headers from the VMO. Also support the degenerate case
         // where there are no program headers, which is valid ELF but probably not useful outside
         // tests.
         let mut program_headers = None;
-        let phdrs_size = file_header.phnum as usize * mem::size_of::<Elf64ProgramHeader>();
-        if phdrs_size > 0 {
-            let mut phdrs_data = vec![0; phdrs_size];
-            vmo.read(&mut phdrs_data[..], file_header.phoff as u64)
+        if file_header.phnum > 0 {
+            let mut phdrs = vec![Elf64ProgramHeader::default(); file_header.phnum as usize];
+            vmo.read(phdrs.as_bytes_mut(), file_header.phoff as u64)
                 .map_err(|s| ElfParseError::ReadError(s))?;
-            let phdrs_data_oref = OwningRef::new(phdrs_data);
-            let phdrs = phdrs_data_oref.try_map(|v| {
-                LayoutVerified::new_slice(v)
-                    .ok_or(ElfParseError::ParseError("Failed to parse ELF64 program headers"))
-                    .map(|lv| lv.into_slice())
-            })?;
             phdrs.validate()?;
-            program_headers = Some(phdrs);
+            program_headers = Some(phdrs.into_boxed_slice());
         }
 
         Ok(Elf64Headers { file_header, program_headers })
@@ -454,7 +435,7 @@ impl Elf64Headers {
 
     pub fn program_headers(&self) -> &[Elf64ProgramHeader] {
         match &self.program_headers {
-            Some(own_ref) => &*own_ref,
+            Some(boxed_slice) => &*boxed_slice,
             None => &[],
         }
     }
@@ -485,17 +466,14 @@ impl Elf64Headers {
     }
 
     /// Creates an instance of Elf64Headers from in-memory representations of the ELF headers.
-    /// The data must have a static lifetime as it is not derived from the bytes owned by this
-    /// instance.
     #[cfg(test)]
     pub fn new_for_test(
-        file_header: &'static Elf64FileHeader,
-        program_headers: Option<&'static [Elf64ProgramHeader]>,
+        file_header: &Elf64FileHeader,
+        program_headers: Option<&[Elf64ProgramHeader]>,
     ) -> Self {
         Self {
-            file_header: OwningRef::new(Vec::new()).map(|_| file_header),
-            program_headers: program_headers
-                .map(|headers| OwningRef::new(Vec::new()).map(|_| headers)),
+            file_header: Box::new(*file_header),
+            program_headers: program_headers.map(|headers| headers.into()),
         }
     }
 }
