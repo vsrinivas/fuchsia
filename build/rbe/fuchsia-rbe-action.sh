@@ -49,6 +49,7 @@ options:
 
   --log: capture stdout/stderr to \$output_files[0].remote-log.
       This is useful when the stdout/stderr size exceeds RPC limits.
+  --log=LOGBASE: same as --log, but uses LOGBASE as the log basename.
 
   --fsatrace-path: location of fsatrace tool (which must reside under
       'exec_root').  If provided, a remote trace will be created and
@@ -81,6 +82,7 @@ want_auto_reproxy=0
 canonicalize_working_dir="false"
 diagnose_nonzero_exit=0
 label=
+logbase=
 
 prev_opt=
 # Extract script options before --
@@ -102,6 +104,7 @@ do
   case "$opt" in
     --help|-h) usage; exit;;
     --dry-run) dry_run=1 ;;
+    --log=*) log=1 ; logbase="$optarg";;
     --log) log=1 ;;
 
     --cfg=*) config="$optarg" ;;
@@ -154,16 +157,15 @@ remote_env=/usr/bin/env
 IFS="," read -r -a inputs_array <<< "$inputs"
 IFS="," read -r -a output_files_array <<< "$output_files"
 
-default_primary_output=rbe-action-output
 if test "${#output_files_array[@]}" -gt 0
 then
-  primary_output="${output_files_array[0]}"
+  primary_output_name="${output_files_array[0]}"
 else
-  # This name is not unique, but this is only used for tracing,
-  # which should be investigated one action at a time.
-  primary_output="$build_subdir/$default_primary_output"
+  # The default name is not necessarily unique, but this is fine when
+  # tracing one action at a time.
+  primary_output_name="$build_subdir/${logbase:-"rbe-action-output"}"
 fi
-primary_output_rel="${primary_output#$build_subdir/}"
+primary_output_rel="${primary_output_name#$build_subdir/}"
 
 # When --log is requested, capture stdout/err to a log file remotely,
 # and then download it.
@@ -184,7 +186,7 @@ test -z "$fsatrace_path" || {
   fsatrace_relpath="$(realpath -s --relative-to="$project_root" "$fsatrace_path")"
   fsatrace_so="$fsatrace_relpath.so"
   inputs_array+=( "$fsatrace_relpath" "$fsatrace_so" )
-  output_files_array+=( "$primary_output.remote-fsatrace" )
+  output_files_array+=( "$primary_output_name.remote-fsatrace" )
   fsatrace_prefix=(
     "$remote_env" FSAT_BUF_SIZE=5000000
     "$fsatrace_path" erwdtmq "$primary_output_rel.remote-fsatrace" --
