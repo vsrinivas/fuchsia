@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1757
+From //build/config/BUILDCONFIG.gn:1758
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -75,14 +75,14 @@ TODO(fxbug.dev/67565) - remove once external sync FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/f1084574b6010fde43ae96a1b926b3802251dc81/src/intel/vulkan/BUILD.gn#27)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:27](https://fuchsia.googlesource.com/third_party/mesa/+/db238ede37707e4f28f8e0ef5e17bbad916f261f/src/intel/vulkan/BUILD.gn#27)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/f1084574b6010fde43ae96a1b926b3802251dc81/src/intel/vulkan/BUILD.gn#30)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/mesa/+/db238ede37707e4f28f8e0ef5e17bbad916f261f/src/intel/vulkan/BUILD.gn#30)
 
 ### api_compatibility_testing
 Whether to run API compatibility tests.
@@ -1580,7 +1580,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1504
+From //build/config/BUILDCONFIG.gn:1505
 
 ### extra_vbmeta_descriptors
 Additional VBMeta Descriptors to add to the vbmeta image during assembly.
@@ -2679,7 +2679,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1326
+From //build/config/BUILDCONFIG.gn:1327
 
 ### launch_basemgr_on_boot
 Indicates whether to start basemgr.cmx on boot.
@@ -4207,7 +4207,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1747
+From //build/config/BUILDCONFIG.gn:1748
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -4216,7 +4216,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1752
+From //build/config/BUILDCONFIG.gn:1753
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -4266,7 +4266,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1550
+From //build/config/BUILDCONFIG.gn:1551
 
 ### size_checker_input
 The input to the size checker.
@@ -4541,7 +4541,7 @@ for details and documentation for each field.
 }
 ```
 
-From //build/config/BUILDCONFIG.gn:100
+From //build/config/BUILDCONFIG.gn:101
 
 ### tsan_default_options
 Default [ThreadSanitizer](https://clang.llvm.org/docs/ThreadSanitizer.html)
@@ -4591,7 +4591,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1534
+From //build/config/BUILDCONFIG.gn:1535
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -5234,7 +5234,7 @@ This allows testing for a Zircon-specific toolchain with:
 
 **Current value (from the default):** `false`
 
-From //build/config/BUILDCONFIG.gn:117
+From //build/config/BUILDCONFIG.gn:118
 
 ### zircon_tracelog
 Where to emit a tracelog from Zircon's GN run. No trace will be produced if
