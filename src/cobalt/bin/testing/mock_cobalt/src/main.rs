@@ -10,12 +10,11 @@ use {
     },
     fidl_fuchsia_cobalt_test as cobalt_test,
     fidl_fuchsia_metrics::MetricEvent,
-    fuchsia_async as fasync,
     fuchsia_cobalt::{CobaltEventExt, MetricEventExt},
-    fuchsia_syslog::{self as syslog, fx_log_info},
     fuchsia_zircon_status as zx_status,
     futures::{lock::Mutex, StreamExt, TryStreamExt},
     std::{collections::HashMap, sync::Arc},
+    tracing::info,
 };
 
 /// MAX_QUERY_LENGTH is used as a usize in this component
@@ -604,10 +603,9 @@ enum IncomingService {
     MetricsQuery(fidl_fuchsia_metrics_test::MetricEventLoggerQuerierRequestStream),
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["mock-cobalt"])]
 async fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&["mock-cobalt"])?;
-    fx_log_info!("Starting mock cobalt service...");
+    info!("Starting mock cobalt service...");
 
     let loggers = LoggersHandle::default();
 
