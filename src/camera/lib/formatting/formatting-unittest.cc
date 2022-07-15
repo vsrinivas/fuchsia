@@ -14,8 +14,12 @@ namespace {
 TEST(Formatting, BasicFormat) {
   fuchsia::camera2::FrameRate fps{.frames_per_sec_numerator = 22, .frames_per_sec_denominator = 7};
   constexpr auto kExpected =
-      "\"frames_per_sec_numerator\": \"22\"\n"
-      "\"frames_per_sec_denominator\": \"7\"\n";
+      "\"frames_per_sec_numerator\": {\n"
+      "\"22\"\n"
+      "}\n"
+      "\"frames_per_sec_denominator\": {\n"
+      "\"7\"\n"
+      "}\n";
   auto string = ::camera::formatting::ToString(fps);
   EXPECT_EQ(string, kExpected);
   std::ostringstream oss;

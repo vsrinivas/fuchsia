@@ -23,10 +23,12 @@ group("tests") {
     "fake_camera:tests",
     "fake_legacy_stream:tests",
     "fake_stream:tests",
+    "formatting:tests",
     "hanging_get_helper:tests",
     "image_utils:tests",
     "numerics:tests",
     "stream_utils:tests",
+    "tokens:tests",
     "virtual_camera:tests",
     "vmo_pool_wrapper:tests",
   ]
