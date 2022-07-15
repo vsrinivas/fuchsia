@@ -40,11 +40,13 @@ fuchsia_driver("driver") {
   ]
   deps = [
     ":bind",
+    "//sdk/banjo/fuchsia.hardware.audio:fuchsia.hardware.audio_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_llcpp",
     "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_llcpp",
     "//src/devices/lib/acpi",
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
-    "//src/media/audio/lib/simple-codec",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg-i2c",
     "//zircon/system/ulib/inspect",

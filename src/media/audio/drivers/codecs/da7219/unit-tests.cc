@@ -22,6 +22,7 @@ struct Da7219Codec : public Da7219 {
                        zx::interrupt irq)
       : Da7219(parent, std::move(i2c), std::move(irq)) {}
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
+  zx_status_t Initialize() { return Da7219::Initialize(); }
 };
 
 class Da7219Test : public InspectTestHelper, public zxtest::Test {
@@ -43,8 +44,13 @@ class Da7219Test : public InspectTestHelper, public zxtest::Test {
     ASSERT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq_));
     zx::interrupt irq2;
     ASSERT_OK(irq_.duplicate(ZX_RIGHT_SAME_RIGHTS, &irq2));
-    ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Da7219Codec>(
-        fake_root_.get(), std::move(endpoints->client), std::move(irq2)));
+
+    auto device = std::make_unique<Da7219Codec>(fake_root_.get(), std::move(endpoints->client),
+                                                std::move(irq2));
+    ASSERT_OK(device->Initialize());
+    ASSERT_OK(
+        device->DdkAdd(ddk::DeviceAddArgs("DA7219").set_flags(DEVICE_ADD_ALLOW_MULTI_COMPOSITE)));
+    device.release();
   }
 
   void TearDown() override { mock_i2c_.VerifyAndClear(); }
