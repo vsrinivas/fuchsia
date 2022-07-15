@@ -11,6 +11,7 @@ use fidl::{
     endpoints::{ClientEnd, DiscoverableProtocolMarker, ServerEnd},
     Socket, SocketOpts,
 };
+use fidl_fuchsia_diagnostics as fdiagnostics;
 use fidl_fuchsia_diagnostics_test::ControllerMarker;
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogSinkMarker};
 use fidl_fuchsia_sys2::EventSourceMarker;
@@ -21,7 +22,6 @@ use fidl_fuchsia_sys_internal::{
 use fuchsia_async as fasync;
 use fuchsia_component::{client, server::ServiceFs};
 use fuchsia_component_test::{Capability, ChildOptions, LocalComponentHandles, Ref, Route};
-use fuchsia_syslog::levels::INFO;
 use fuchsia_syslog_listener::run_log_listener_with_proxy;
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, SinkExt, StreamExt, TryStreamExt};
@@ -99,9 +99,12 @@ async fn same_log_sink_simultaneously_via_connector() {
 
     assert_eq!(
         logs,
-        std::iter::repeat((i32::from(INFO), "repeated log".to_owned()))
-            .take(250)
-            .collect::<Vec<_>>()
+        std::iter::repeat((
+            fdiagnostics::Severity::Info.into_primitive() as i32,
+            "repeated log".to_owned()
+        ))
+        .take(250)
+        .collect::<Vec<_>>()
     );
 }
 

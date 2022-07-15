@@ -14,7 +14,7 @@ use fidl_fuchsia_archivist_tests::{
 use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_component::RealmMarker;
 use fidl_fuchsia_component_decl::ChildRef;
-use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
+use fidl_fuchsia_diagnostics as fdiagnostics;
 use fidl_fuchsia_io as fio;
 use fuchsia_async::Task;
 use fuchsia_component::{client, server::ServiceFs};
@@ -142,8 +142,12 @@ impl PuppetEnv {
         test_topology::expose_test_realm_protocol(&builder, &test_realm).await;
         let instance = builder.build().await.expect("create instance");
 
-        let archive =
-            || instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
+        let archive = || {
+            instance
+                .root
+                .connect_to_protocol_at_exposed_dir::<fdiagnostics::ArchiveAccessorMarker>()
+                .unwrap()
+        };
         let mut inspect_reader = ArchiveReader::new();
         inspect_reader
             .with_archive(archive())
@@ -231,7 +235,7 @@ impl Puppet {
     async fn emit_packet(&self) -> MessageReceipt {
         let timestamp = zx::Time::get_monotonic().into_nanos();
         let mut packet: fx_log_packet_t = Default::default();
-        packet.metadata.severity = i32::from(fuchsia_syslog::levels::INFO);
+        packet.metadata.severity = fdiagnostics::Severity::Info.into_primitive() as i32;
         packet.metadata.time = timestamp;
         packet.fill_data(1..(TEST_PACKET_LEN - METADATA_SIZE), b'A' as _);
         self.proxy.emit_packet(packet.as_bytes()).await.unwrap();

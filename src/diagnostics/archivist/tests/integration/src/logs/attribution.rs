@@ -11,10 +11,9 @@ use diagnostics_hierarchy::assert_data_tree;
 use diagnostics_message::fx_log_packet_t;
 use diagnostics_reader::{ArchiveReader, Logs, Severity};
 use fidl::{Socket, SocketOpts};
-use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
+use fidl_fuchsia_diagnostics as fdiagnostics;
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogSinkMarker};
 use fuchsia_async as fasync;
-use fuchsia_syslog::levels::INFO;
 use fuchsia_syslog_listener::run_log_listener_with_proxy;
 use futures::{channel::mpsc, StreamExt};
 
@@ -30,8 +29,10 @@ async fn log_attribution() {
 
     let instance = builder.build().await.expect("create instance");
 
-    let accessor =
-        instance.root.connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>().unwrap();
+    let accessor = instance
+        .root
+        .connect_to_protocol_at_exposed_dir::<fdiagnostics::ArchiveAccessorMarker>()
+        .unwrap();
     let mut result = ArchiveReader::new()
         .with_archive(accessor)
         .snapshot_then_subscribe::<Logs>()
@@ -125,8 +126,11 @@ async fn log_unattributed_stream() {
 
     assert_eq!(
         logs,
-        std::iter::repeat((i32::from(INFO), "repeated log".to_owned()))
-            .take(250)
-            .collect::<Vec<_>>()
+        std::iter::repeat((
+            fdiagnostics::Severity::Info.into_primitive() as i32,
+            "repeated log".to_owned()
+        ))
+        .take(250)
+        .collect::<Vec<_>>()
     );
 }

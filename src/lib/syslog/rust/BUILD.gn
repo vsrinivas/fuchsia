@@ -98,8 +98,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/developer/remote-control/testing/mock-sys-launcher:*",
   "//src/devices/bin/driver-index:*",
   "//src/diagnostics/archivist:*",
-  "//src/diagnostics/archivist/tests/logs-connector:*",
-  "//src/diagnostics/archivist/tests/integration:*",
   "//src/diagnostics/iquery:*",
   "//src/diagnostics/validator/logs/sink:*",
   "//src/factory/factory_store_providers:*",

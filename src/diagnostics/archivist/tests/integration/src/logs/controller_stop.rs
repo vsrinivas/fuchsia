@@ -11,7 +11,7 @@ use diagnostics_data::Severity;
 use diagnostics_reader::{ArchiveReader, Data, Logs};
 use fidl_fuchsia_component as fcomponent;
 use fidl_fuchsia_component_decl as fdecl;
-use fidl_fuchsia_diagnostics::ArchiveAccessorMarker;
+use fidl_fuchsia_diagnostics as fdiagnostics;
 use fidl_fuchsia_diagnostics_test::ControllerMarker;
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMarker, LogMessage};
@@ -19,7 +19,6 @@ use fidl_fuchsia_sys2::EventSourceMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::client;
 use fuchsia_component_test::RealmInstance;
-use fuchsia_syslog::levels::{DEBUG, INFO, WARN};
 use fuchsia_syslog_listener::{run_log_listener_with_proxy, LogProcessor};
 use futures::{channel::mpsc, StreamExt};
 
@@ -73,10 +72,13 @@ async fn embedding_stop_api_for_log_listener() {
     assert_eq!(
         logs,
         vec![
-            (DEBUG, "Logging initialized".to_owned()),
-            (DEBUG, "my debug message.".to_owned()),
-            (INFO, "my info message.".to_owned()),
-            (WARN, "my warn message.".to_owned()),
+            (
+                fdiagnostics::Severity::Debug.into_primitive() as i8,
+                "Logging initialized".to_owned()
+            ),
+            (fdiagnostics::Severity::Debug.into_primitive() as i8, "my debug message.".to_owned()),
+            (fdiagnostics::Severity::Info.into_primitive() as i8, "my info message.".to_owned()),
+            (fdiagnostics::Severity::Warn.into_primitive() as i8, "my warn message.".to_owned()),
         ]
     );
 }
@@ -86,7 +88,7 @@ async fn embedding_stop_api_works_for_batch_iterator() {
     let instance = initialize_topology().await;
     let accessor = instance
         .root
-        .connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>()
+        .connect_to_protocol_at_exposed_dir::<fdiagnostics::ArchiveAccessorMarker>()
         .expect("cannot connect to accessor proxy");
     let subscription =
         ArchiveReader::new().with_archive(accessor).snapshot_then_subscribe().expect("subscribed");
