@@ -5,6 +5,11 @@
 import("//build/components.gni")
 import("//build/test.gni")
 
+group("tests") {
+  testonly = true
+  deps = [ ":sys_cpp_tests" ]
+}
+
 test("component_cpp_unittests_bin") {
   sources = [
     "component_context_unittest.cc",
@@ -33,7 +38,7 @@ test("component_cpp_unittests_bin") {
 }
 
 fuchsia_unittest_component("component_cpp_unittests") {
-  manifest = "meta/component_cpp_unittests.cmx"
+  manifest = "meta/component_cpp_unittests.cml"
   deps = [ ":component_cpp_unittests_bin" ]
 }
 
@@ -57,55 +62,7 @@ test("component_cpp_testing_unittests_bin") {
 
 fuchsia_unittest_component("component_cpp_testing_unittests") {
   deps = [ ":component_cpp_testing_unittests_bin" ]
-  manifest = "meta/component_cpp_testing_unittests.cmx"
-}
-
-test("component_cpp_testing_tests_bin") {
-  sources = [
-    "component_interceptor_unittest.cc",
-    "enclosing_environment_test.cc",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.debugdata",
-    "//sdk/fidl/fuchsia.io",
-    "//sdk/fidl/fuchsia.sys2",
-    "//sdk/lib/fidl",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
-    "//src/testing/fidl:placeholders",
-  ]
-}
-
-fuchsia_unittest_component("component_cpp_testing_tests") {
-  deps = [ ":component_cpp_testing_tests_bin" ]
-  manifest = "meta/component_cpp_testing_tests.cmx"
-}
-
-executable("helper_proc_bin") {
-  testonly = true
-
-  sources = [ "helper.cc" ]
-
-  deps = [
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
-    "//src/testing/fidl:placeholders",
-    "//zircon/system/ulib/async:async-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-fuchsia_component("helper_proc") {
-  deps = [ ":helper_proc_bin" ]
-  manifest = "meta/helper_proc.cmx"
-  testonly = true
+  manifest = "meta/component_cpp_testing_unittests.cml"
 }
 
 executable("constructor_helper_proc") {
@@ -127,12 +84,8 @@ executable("constructor_helper_proc") {
 
 fuchsia_test_package("sys_cpp_tests") {
   test_components = [
-    ":component_cpp_testing_tests",
     ":component_cpp_testing_unittests",
     ":component_cpp_unittests",
   ]
-  deps = [
-    ":constructor_helper_proc",
-    ":helper_proc",
-  ]
+  deps = [ ":constructor_helper_proc" ]
 }

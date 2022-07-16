@@ -8,14 +8,6 @@
 
 namespace {
 
-TEST(FileDescriptorTest, CloneStdin) {
-  auto file_descriptor = sys::CloneFileDescriptor(0);
-  EXPECT_NE(nullptr, file_descriptor);
-  EXPECT_TRUE(file_descriptor->handle0.is_valid());
-  EXPECT_FALSE(file_descriptor->handle1.is_valid());
-  EXPECT_FALSE(file_descriptor->handle2.is_valid());
-}
-
 TEST(FileDescriptorTest, CloneBogus) {
   auto file_descriptor = sys::CloneFileDescriptor(53);
   EXPECT_EQ(nullptr, file_descriptor);
