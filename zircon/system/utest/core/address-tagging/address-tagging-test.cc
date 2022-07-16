@@ -30,15 +30,34 @@ constexpr size_t kTagShift = 56;
 constexpr uint8_t kTestTag = 0xAB;
 constexpr size_t kThreadStackSize = ZIRCON_DEFAULT_STACK_SIZE;
 
-constexpr uint64_t AddTag(uintptr_t ptr, uint8_t tag) {
+// Add a tag to the pointer if the pointer is untagged. An optional tag value
+// can be passed, and if one is, it will override the current tag.
+//
+// Under normal untagged use cases, this can be used for just adding an
+// arbitrary tag value to a pointer. If hwasan is enabled, the pointer may
+// already be tagged and will remain unchanged, unless a tag value is provided
+// to override it. In that case, users of this function should be careful this
+// doesn't lead to hwasan false-positives with tag-checking. Ideal cases where
+// one might want to override the tag if hwasan is present are for ensuring
+// that two pointers have different tags, since hwasan could technically but
+// unlikely produce the same tag for different pointers.
+constexpr uint64_t AddTagIfNeeded(uintptr_t ptr, uint8_t* newtag = nullptr) {
   constexpr uint64_t kTagMask = UINT64_C(0xff) << kTagShift;
-  ZX_ASSERT((kTagMask & ptr) == 0 && "Expected an untagged pointer.");
-  return (static_cast<uint64_t>(tag) << kTagShift) | static_cast<uint64_t>(ptr);
+  if (newtag) {
+    // Add the tag or overwrite it if there is one.
+    return (static_cast<uint64_t>(*newtag) << kTagShift) | (static_cast<uint64_t>(ptr) & ~kTagMask);
+  }
+  if (kTagMask & ptr) {
+    // There already exists a tag.
+    return ptr;
+  }
+  // Add the default test tag.
+  return (static_cast<uint64_t>(kTestTag) << kTagShift) | static_cast<uint64_t>(ptr);
 }
 
 template <typename T>
-T* AddTag(T* ptr, uint8_t tag) {
-  return reinterpret_cast<T*>(AddTag(reinterpret_cast<uintptr_t>(ptr), tag));
+T* AddTagIfNeeded(T* ptr, uint8_t* newtag = nullptr) {
+  return reinterpret_cast<T*>(AddTagIfNeeded(reinterpret_cast<uintptr_t>(ptr), newtag));
 }
 
 // Disable sanitizers for this because any sanitizer that involves doing a
@@ -59,7 +78,7 @@ TEST(TopByteIgnoreTests, AddressTaggingGetSystemFeaturesAArch64) {
 
   // Since TBI is supported, we can access tagged pointers.
   int val = 0;
-  DerefTaggedPtr(AddTag(&val, kTestTag));
+  DerefTaggedPtr(AddTagIfNeeded(&val));
   ASSERT_EQ(val, 1);
 }
 
@@ -159,15 +178,15 @@ TEST(TopByteIgnoreTests, VmarTaggedAddress) {
   zx::vmo vmo;
   zx::vmar vmar;
   zx_vaddr_t vmar_addr, map_addr;
-  ASSERT_OK(zx_vmo_create(kVmoSize, 0u, AddTag(vmo.reset_and_get_address(), kTestTag)));
+  ASSERT_OK(zx_vmo_create(kVmoSize, 0u, AddTagIfNeeded(vmo.reset_and_get_address())));
   ASSERT_OK(zx_vmar_allocate(zx_vmar_root_self(), kVmarOpts, 0u, kVmarSize,
-                             AddTag(vmar.reset_and_get_address(), kTestTag),
-                             AddTag(&vmar_addr, kTestTag)));
-  ASSERT_OK(vmar.map(kMapOpts, 0u, vmo, 0u, kVmoSize, AddTag(&map_addr, kTestTag)));
+                             AddTagIfNeeded(vmar.reset_and_get_address()),
+                             AddTagIfNeeded(&vmar_addr)));
+  ASSERT_OK(vmar.map(kMapOpts, 0u, vmo, 0u, kVmoSize, AddTagIfNeeded(&map_addr)));
 
   // Note that the mapopts were set when mapping meaning this would be a no-op,
   // but this just checks we can't tag vmar_protect regardless.
-  ASSERT_STATUS(vmar.protect(kMapOpts, AddTag(map_addr, kTestTag), kVmarSize), ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(vmar.protect(kMapOpts, AddTagIfNeeded(map_addr), kVmarSize), ZX_ERR_INVALID_ARGS);
   ASSERT_OK(vmar.protect(kMapOpts, map_addr, kVmarSize));
 
   auto IsUntagged = [](uintptr_t ptr) { return (ptr >> kTagShift) == 0; };
@@ -177,17 +196,17 @@ TEST(TopByteIgnoreTests, VmarTaggedAddress) {
   size_t actual = 0u;
 
   // Write via the VMO...
-  ASSERT_OK(vmo.write(AddTag(buff, kTestTag), 0u, kVmoSize));
+  ASSERT_OK(vmo.write(AddTagIfNeeded(buff), 0u, kVmoSize));
 
   // ...then read via zx_process_read_memory. The kernel will treat a tagged vmar address normally,
   // but fail when it sees there's no memory at the tagged address.
   auto buf = std::make_unique<uint8_t[]>(kVmoSize);
   ASSERT_STATUS(
-      zx::process::self()->read_memory(AddTag(vmar_addr, kTestTag), AddTag(buf.get(), kTestTag),
-                                       kVmoSize, AddTag(&actual, kTestTag)),
+      zx::process::self()->read_memory(AddTagIfNeeded(vmar_addr), AddTagIfNeeded(buf.get()),
+                                       kVmoSize, AddTagIfNeeded(&actual)),
       ZX_ERR_NO_MEMORY);
-  ASSERT_OK(zx::process::self()->read_memory(vmar_addr, AddTag(buf.get(), kTestTag), kVmoSize,
-                                             AddTag(&actual, kTestTag)));
+  ASSERT_OK(zx::process::self()->read_memory(vmar_addr, AddTagIfNeeded(buf.get()), kVmoSize,
+                                             AddTagIfNeeded(&actual)));
   ASSERT_EQ(actual, kVmoSize);
   ASSERT_EQ(memcmp(buf.get(), buff, kVmoSize), 0);
 
@@ -195,27 +214,25 @@ TEST(TopByteIgnoreTests, VmarTaggedAddress) {
   std::reverse(buff, buff + kVmoSize);
 
   // Now write via zx_process_write_memory...
-  ASSERT_STATUS(
-      zx::process::self()->write_memory(AddTag(vmar_addr, kTestTag), AddTag(buff, kTestTag),
-                                        kVmoSize, AddTag(&actual, kTestTag)),
-      ZX_ERR_NO_MEMORY);
-  ASSERT_OK(zx::process::self()->write_memory(vmar_addr, AddTag(buff, kTestTag), kVmoSize,
-                                              AddTag(&actual, kTestTag)));
+  ASSERT_STATUS(zx::process::self()->write_memory(AddTagIfNeeded(vmar_addr), AddTagIfNeeded(buff),
+                                                  kVmoSize, AddTagIfNeeded(&actual)),
+                ZX_ERR_NO_MEMORY);
+  ASSERT_OK(zx::process::self()->write_memory(vmar_addr, AddTagIfNeeded(buff), kVmoSize,
+                                              AddTagIfNeeded(&actual)));
   ASSERT_EQ(actual, kVmoSize);
 
   // ...then read via the VMO.
-  ASSERT_OK(vmo.read(AddTag(buf.get(), kTestTag), 0u, kVmoSize));
+  ASSERT_OK(vmo.read(AddTagIfNeeded(buf.get()), 0u, kVmoSize));
   ASSERT_EQ(memcmp(buf.get(), buff, kVmoSize), 0);
 
   // We're done with the vmo and vmar. Although they will be destroyed after
   // exiting this scope, we can do some checks here on syscalls for unmapping and
   // decommitting.
-  ASSERT_STATUS(
-      vmar.op_range(ZX_VMO_OP_DECOMMIT, AddTag(map_addr, kTestTag), kVmarSize, nullptr, 0u),
-      ZX_ERR_OUT_OF_RANGE);
+  ASSERT_STATUS(vmar.op_range(ZX_VMO_OP_DECOMMIT, AddTagIfNeeded(map_addr), kVmarSize, nullptr, 0u),
+                ZX_ERR_OUT_OF_RANGE);
   ASSERT_OK(vmar.op_range(ZX_VMO_OP_DECOMMIT, map_addr, kVmarSize, nullptr, 0u));
 
-  ASSERT_STATUS(vmar.unmap(AddTag(vmar_addr, kTestTag), kVmarSize), ZX_ERR_INVALID_ARGS);
+  ASSERT_STATUS(vmar.unmap(AddTagIfNeeded(vmar_addr), kVmarSize), ZX_ERR_INVALID_ARGS);
   ASSERT_OK(vmar.unmap(vmar_addr, kVmarSize));
 }
 
@@ -230,7 +247,7 @@ DerefTaggedPtrCrash(uintptr_t arg1, uintptr_t /*arg2*/) {
 
 TEST(TopByteIgnoreTests, TaggedFARSegfault) {
   // This is effectively a nullptr dereference.
-  uintptr_t tagged_ptr = AddTag(0, kTestTag);
+  uintptr_t tagged_ptr = AddTagIfNeeded(0);
   zx_exception_report_t report = {};
   ASSERT_NO_FATAL_FAILURE(
       CatchCrash(DerefTaggedPtrCrash, tagged_ptr, /*before_start=*/nullptr, &report));
@@ -266,7 +283,7 @@ void SetupWatchpoint(zx::thread& crash_thread) {
 TEST(TopByteIgnoreTests, TaggedFARWatchpoint) {
   uint64_t watched_addr = reinterpret_cast<uint64_t>(&gVariableToChange);
 
-  uintptr_t tagged_ptr = AddTag(watched_addr, kTestTag);
+  uintptr_t tagged_ptr = AddTagIfNeeded(watched_addr);
   zx_exception_report_t report = {};
   ASSERT_NO_FATAL_FAILURE(CatchCrash(DerefTaggedPtrCrash, tagged_ptr, SetupWatchpoint, &report));
   EXPECT_EQ(report.header.type, ZX_EXCP_HW_BREAKPOINT);
@@ -292,7 +309,9 @@ void TestFutexWaitWake(uint8_t wait_tag, uint8_t wake_tag, uint8_t get_owner_tag
     zx_handle_t new_owner;
   };
   ThreadArgs thread_args{
-      AddTag(&futex, wait_tag),
+      // Manually add the tag here which may be different from the one in the pointer passed to
+      // `zx_futex_get_owner`. This tag should be irrelevant on a futex comparison.
+      AddTagIfNeeded(&futex, &wait_tag),
       false,
       thrd_get_zx_handle(thrd_current()),
   };
@@ -332,11 +351,16 @@ void TestFutexWaitWake(uint8_t wait_tag, uint8_t wake_tag, uint8_t get_owner_tag
 
   // Check the owner.
   zx_koid_t owner;
-  EXPECT_OK(zx_futex_get_owner(AddTag(&futex, get_owner_tag), &owner));
+  // Manually add the tag here which may be different from the one in the initial `thread_args`.
+  // This tag should be irrelevant on a futex comparison.
+  EXPECT_OK(zx_futex_get_owner(AddTagIfNeeded(&futex, &get_owner_tag), &owner));
   EXPECT_EQ(owner, get_object_koid(thrd_get_zx_handle(thrd_current())));
 }
 
 TEST(TopByteIgnoreTests, FutexWaitWake) {
+  // These tags are manually included in futex pointers passed to futex syscalls. The actual tag
+  // values don't matter as long as we can test they work as intended if they're the same or
+  // different.
   TestFutexWaitWake(0, 0, 0);                       // Wait and wake same futex on the same tag.
   TestFutexWaitWake(kTestTag, kTestTag, kTestTag);  // Wait and wake same futex on the same tag.
   TestFutexWaitWake(kTestTag, kTestTag + 1,
@@ -379,7 +403,7 @@ TEST(TopByteIgnoreTests, VmmPageFaultHandlerDataAbort) {
   // then the kernel will still be able to handle this page fault successfully.
   EXPECT_OK(zx_vmar_op_range(decommit_vmar, ZX_VMAR_OP_DECOMMIT, mapping_addr,
                              zx_system_get_page_size(), nullptr, 0));
-  mapping_addr = AddTag(mapping_addr, kTestTag);
+  mapping_addr = AddTagIfNeeded(mapping_addr);
 
   // Do not do a regular dereference because ASan will right-shift the tag into the address bits
   // then complain that this address doesn't have a corresponding shadow.
@@ -397,7 +421,7 @@ TEST(TopByteIgnoreTests, InstructionAbortNoTag) {
   // Unlike a data abort, instruction aborts on AArch64 will not include the tag in the FAR, so a
   // tag will never reach the VM layer via an instruction abort. This test verifies the FAR does not
   // include the tag in this case.
-  uintptr_t pc = AddTag(reinterpret_cast<uintptr_t>(&kUdf0), kTestTag);
+  uintptr_t pc = AddTagIfNeeded(reinterpret_cast<uintptr_t>(&kUdf0));
   zx_exception_report_t report = {};
 
   ASSERT_NO_FATAL_FAILURE(CatchCrash(reinterpret_cast<crash_function_t>(pc), /*arg1=*/0,
@@ -431,13 +455,13 @@ TEST(TopByteIgnoreTests, ThreadStartTaggedAddress) {
     ASSERT_OK(thread.start(pc, sp, 0, 0));
     zx_signals_t observed;
     ASSERT_OK(
-        thread.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), AddTag(&observed, kTestTag)));
+        thread.wait_one(ZX_THREAD_TERMINATED, zx::time::infinite(), AddTagIfNeeded(&observed)));
     ASSERT_TRUE(observed & ZX_THREAD_TERMINATED);
   };
 
   // Both the PC and SP can be tagged.
-  run_thread(AddTag(pc, kTestTag), sp);
-  run_thread(pc, AddTag(sp, kTestTag));
+  run_thread(AddTagIfNeeded(pc), sp);
+  run_thread(pc, AddTagIfNeeded(sp));
 }
 
 TEST(TopByteIgnoreTests, ProcessStartTaggedAddress) {
@@ -462,7 +486,8 @@ TEST(TopByteIgnoreTests, ProcessStartTaggedAddress) {
     EXPECT_OK(mini_process_load_stack(vmar.get(), false, &stack_base, &sp));
     zx_handle_close(vmar.get());
 
-    ASSERT_OK(proc.start(thread, AddTag(entry, pc_tag), AddTag(sp, sp_tag), zx::handle(), 0));
+    ASSERT_OK(proc.start(thread, AddTagIfNeeded(entry, &pc_tag), AddTagIfNeeded(sp, &sp_tag),
+                         zx::handle(), 0));
 
     zx_signals_t signals;
     EXPECT_OK(proc.wait_one(ZX_TASK_TERMINATED, zx::deadline_after(zx::sec(1)), &signals));
