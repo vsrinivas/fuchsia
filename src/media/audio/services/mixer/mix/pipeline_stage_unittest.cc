@@ -50,6 +50,18 @@ class FakeStage : public PipelineStage {
   void AddSource(PipelineStagePtr source) override {}
   void RemoveSource(PipelineStagePtr source) override {}
 
+  void AdvanceSelfImpl(Fixed frame) override {
+    if (advance_calls_.empty() || frame > advance_calls_.back()) {
+      advance_calls_.push_back(frame);
+    }
+    // Release old packets.
+    while (!packets_.empty() && packets_[0].end <= frame) {
+      packets_.erase(packets_.begin());
+    }
+  }
+
+  void AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) override {}
+
   std::optional<Packet> ReadImpl(MixJobContext& ctx, Fixed start_frame,
                                  int64_t frame_count) override {
     if (cached_end_ && start_frame < *cached_end_) {
@@ -89,16 +101,6 @@ class FakeStage : public PipelineStage {
     return MakeUncachedPacket(isect->start(), isect->length(), isect->payload());
   }
 
-  void AdvanceImpl(Fixed frame) override {
-    if (advance_calls_.empty() || frame > advance_calls_.back()) {
-      advance_calls_.push_back(frame);
-    }
-    // Release old packets.
-    while (!packets_.empty() && packets_[0].end <= frame) {
-      packets_.erase(packets_.begin());
-    }
-  }
-
   std::vector<Fixed>& advance_calls() { return advance_calls_; }
 
   void PushPacket(QueuedPacket packet) { packets_.push_back(packet); }
@@ -120,12 +122,15 @@ class PassthroughStage : public PipelineStage {
   void AddSource(PipelineStagePtr source) override {}
   void RemoveSource(PipelineStagePtr source) override {}
 
+  void AdvanceSelfImpl(Fixed frame) override {}
+  void AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) override {
+    source_->Advance(ctx, frame);
+  }
+
   std::optional<Packet> ReadImpl(MixJobContext& ctx, Fixed start_frame,
                                  int64_t frame_count) override {
     return ForwardPacket(source_->Read(ctx, start_frame, frame_count));
   }
-
-  void AdvanceImpl(Fixed frame) override { source_->Advance(frame); }
 
  private:
   std::shared_ptr<FakeStage> source_;

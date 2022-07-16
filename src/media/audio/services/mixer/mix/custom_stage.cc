@@ -58,14 +58,11 @@ CustomStage::CustomStage(ProcessorConfiguration config, zx_koid_t reference_cloc
            config.inputs()[0].buffer().size);
 }
 
-void CustomStage::AdvanceImpl(Fixed frame) {
-  // `CustomStage` always produces data on integrally-aligned frames.
-  frame = Fixed(frame.Floor());
-  if (output_ && frame >= next_frame_to_process_) {
+void CustomStage::AdvanceSelfImpl(Fixed frame) {
+  if (output_ && Fixed(frame.Floor()) >= next_frame_to_process_) {
     // Invalidate output beyond the valid frames.
     output_ = nullptr;
   }
-  source_.Advance(frame);
 
   // Update `latency_frames_processed_` to compensate for the gap between the last processed frame
   // and the target `frame`. For example, given a sequence of calls with a latency of 3 frames and a
@@ -100,6 +97,10 @@ void CustomStage::AdvanceImpl(Fixed frame) {
     latency_frames_processed_ = std::max(latency_frames_processed_ - frames_to_skip, 0L);
     next_frame_to_process_ = frame.Floor();
   }
+}
+
+void CustomStage::AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) {
+  source_.Advance(ctx, Fixed(frame.Floor()));
 }
 
 std::optional<PipelineStage::Packet> CustomStage::ReadImpl(MixJobContext& ctx, Fixed start_frame,

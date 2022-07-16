@@ -14,9 +14,9 @@
 
 namespace media_audio {
 
-void SilencePaddingStage::AdvanceImpl(Fixed frame) {
+void SilencePaddingStage::AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) {
   if (source_) {
-    source_->Advance(frame);
+    source_->Advance(ctx, frame);
   }
 }
 

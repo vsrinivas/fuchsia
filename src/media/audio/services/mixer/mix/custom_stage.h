@@ -37,7 +37,8 @@ class CustomStage : public PipelineStage {
   void RemoveSource(PipelineStagePtr source) final { source_.RemoveSource(std::move(source)); }
 
  protected:
-  void AdvanceImpl(Fixed frame) final;
+  void AdvanceSelfImpl(Fixed frame) final;
+  void AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) final;
   std::optional<Packet> ReadImpl(MixJobContext& ctx, Fixed start_frame, int64_t frame_count) final;
 
  private:

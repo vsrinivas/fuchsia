@@ -81,11 +81,12 @@ class PipelineStage {
 
   // Advances the destination stream by releasing any frames before the given `frame`. This is a
   // declaration that the caller will not attempt to `Read` any frame before the given `frame`. If
-  // the stage has allocated packets for frames before `frame`, it can free those packets now.
+  // the stage has allocated packets for frames before `frame`, it can free those packets now. After
+  // the destination stream is advanced, the source streams are advanced, recursively.
   //
   // This must *not* be called while the stage is _locked_, i.e., until an acquired packet by a
   // `Read` call is destroyed.
-  void Advance(Fixed frame);
+  void Advance(MixJobContext& ctx, Fixed frame);
 
   // Reads the destination stream of this stage, and returns the acquired packet. The parameters
   // `start_frame` and `frame_count` represent a range of frames on the destination stream's frame
@@ -130,41 +131,46 @@ class PipelineStage {
   // Put differently, time advances when `Read` is called, when a packet is consumed, and on
   // explicit calls to `Advance`. Time does not go backwards, hence, each call to `Read` must have
   // `start_frame` that is not lesser than the last advanced frame.
-  std::optional<Packet> Read(MixJobContext& ctx, Fixed start_frame, int64_t frame_count);
+  [[nodiscard]] std::optional<Packet> Read(MixJobContext& ctx, Fixed start_frame,
+                                           int64_t frame_count);
 
   // Returns the stage's name. This is used for diagnostics only.
   // The name may not be a unique identifier.
-  std::string_view name() const { return name_; }
+  [[nodiscard]] std::string_view name() const { return name_; }
 
   // Returns the stage's format.
-  const Format& format() const { return format_; }
+  [[nodiscard]] const Format& format() const { return format_; }
 
   // Returns the stage's next readable frame.
-  std::optional<Fixed> next_readable_frame() { return next_readable_frame_; }
-
-  // Sets the stage's thread.
-  void set_thread(ThreadPtr thread) { std::atomic_store(&thread_, std::move(thread)); }
+  [[nodiscard]] std::optional<Fixed> next_readable_frame() { return next_readable_frame_; }
 
   // Returns the thread which currently controls this stage.
   // It is safe to call this method on any thread, but if not called from thread(),
   // the returned value may change concurrently.
-  ThreadPtr thread() const { return std::atomic_load(&thread_); }
+  [[nodiscard]] ThreadPtr thread() const { return std::atomic_load(&thread_); }
 
   // Returns the koid of the clock used by the stage's destination stream.
   // The source streams may use different clocks.
-  zx_koid_t reference_clock_koid() const { return reference_clock_koid_; }
+  [[nodiscard]] zx_koid_t reference_clock_koid() const { return reference_clock_koid_; }
 
   // Returns a function that translates from presentation time to frame time, where frame time is
   // represented by a `Fixed::raw_value()` while presentation time is represented by a `zx::time`.
-  std::optional<TimelineFunction> presentation_time_to_frac_frame() const {
+  [[nodiscard]] std::optional<TimelineFunction> presentation_time_to_frac_frame() const {
     return presentation_time_to_frac_frame_;
   }
+
+  // Sets the stage's thread.
+  void set_thread(ThreadPtr thread) { std::atomic_store(&thread_, std::move(thread)); }
 
   // TODO(fxbug.dev/87651): Add functionality to set presentation delay.
 
  protected:
   PipelineStage(std::string_view name, Format format, zx_koid_t reference_clock_koid)
-      : name_(name), format_(format), reference_clock_koid_(reference_clock_koid) {}
+      : name_(name),
+        format_(format),
+        reference_clock_koid_(reference_clock_koid),
+        advance_trace_name_(name_ + std::string("::Advance")),
+        read_trace_name_(name_ + std::string("::Read")) {}
 
   PipelineStage(const PipelineStage&) = delete;
   PipelineStage& operator=(const PipelineStage&) = delete;
@@ -172,10 +178,13 @@ class PipelineStage {
   PipelineStage(PipelineStage&&) = delete;
   PipelineStage& operator=(PipelineStage&&) = delete;
 
-  // Stage specific implementation of `Advance`.
-  virtual void AdvanceImpl(Fixed frame) = 0;
+  // Implements `Advance` by an internal `AdvanceSelf` function, which advances this stage, the
+  // `AdvanceSelfImpl` function, which is the stage-specific implementation of `AdvanceSelf`, and
+  // the `AdvanceSourcesImpl` function, which advances all connected source streams accordingly.
+  virtual void AdvanceSelfImpl(Fixed frame) = 0;
+  virtual void AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) = 0;
 
-  // Stage specific implementation of `Read`.
+  // Implements stage-specific `Read`.
   virtual std::optional<Packet> ReadImpl(MixJobContext& ctx, Fixed start_frame,
                                          int64_t frame_count) = 0;
 
@@ -193,9 +202,9 @@ class PipelineStage {
   //   `frame_count` can be arbitrarily large. This is useful for pipeline stages that generate data
   //   in fixed-sized blocks, as they may cache the entire block for future `Read` calls.
   //
-  // * The `payload` must remain valid until the packet is fully consumed, i.e., until an `Advance`
-  //   call past the end of the packet.
-  Packet MakeCachedPacket(Fixed start_frame, int64_t frame_count, void* payload);
+  // * The `payload` must remain valid until the packet is fully consumed, i.e., until an the stage
+  //   is advanced past the end of the packet.
+  [[nodiscard]] Packet MakeCachedPacket(Fixed start_frame, int64_t frame_count, void* payload);
 
   // `ReadImpl` should use this to create an uncached packet. If the packet is not fully consumed
   // after one `Read`, the next `Read` call will ask `ReadImpl` to recreate the packet.
@@ -208,11 +217,11 @@ class PipelineStage {
   // * The `start_frame` and the `frame_count` must obey the packet constraints described by `Read`.
   //
   // * The `payload` must remain valid until the packet is destroyed.
-  Packet MakeUncachedPacket(Fixed start_frame, int64_t frame_count, void* payload);
+  [[nodiscard]] Packet MakeUncachedPacket(Fixed start_frame, int64_t frame_count, void* payload);
 
   // `ReadImpl` should use this when forwarding a `Packet` from an upstream source. This may be used
   // by no-op pipeline stages. It is necessary to call `ForwardPacket`, rather than simply returning
-  // a packet from an upstream source, so that `Advance` is called when the packet is destroyed.
+  // a packet from an upstream source, so that `AdvanceSelf` is called when the packet is destroyed.
   //
   // If `start_frame` is specified, the start frame of the returned packet is set to the given
   // value, while the length of the packet is unchanged. This is useful when doing SampleAndHold on
@@ -225,16 +234,22 @@ class PipelineStage {
   //   ```
   //
   // If `start_frame` is not specified, the packet is forwarded unchanged.
-  std::optional<Packet> ForwardPacket(std::optional<Packet>&& packet,
-                                      std::optional<Fixed> start_frame = std::nullopt);
+  [[nodiscard]] std::optional<Packet> ForwardPacket(
+      std::optional<Packet>&& packet, std::optional<Fixed> start_frame = std::nullopt);
 
  private:
+  // Advances this stage, and returns whether it's needed to advance sources or not.
+  bool AdvanceSelf(Fixed frame);
+
   // Returns cached packet intersection at `start_frame` and `frame_count`.
-  std::optional<Packet> ReadFromCachedPacket(Fixed start_frame, int64_t frame_count);
+  [[nodiscard]] std::optional<Packet> ReadFromCachedPacket(Fixed start_frame, int64_t frame_count);
 
   const std::string name_;
   const Format format_;
   const zx_koid_t reference_clock_koid_;
+
+  const std::string advance_trace_name_;
+  const std::string read_trace_name_;
 
   // Cached packet from the last call to `ReadImpl`. It remains valid until `next_dest_frame_`
   // reaches the end of the packet.

@@ -408,27 +408,27 @@ TEST_F(PacketQueueProducerStageTest, Advance) {
 
   // The last frame in the first packet is 19.
   // Verify that advancing to that frame does not release the first packet.
-  packet_queue.Advance(Fixed(19));
+  packet_queue.Advance(DefaultCtx(), Fixed(19));
   EXPECT_FALSE(packet_queue.empty());
   EXPECT_TRUE(released_packets().empty());
 
   // Advance again with the same frame to verify it is idempotent.
-  packet_queue.Advance(Fixed(19));
+  packet_queue.Advance(DefaultCtx(), Fixed(19));
   EXPECT_FALSE(packet_queue.empty());
   EXPECT_TRUE(released_packets().empty());
 
   // Now advance to the next packet.
-  packet_queue.Advance(Fixed(20));
+  packet_queue.Advance(DefaultCtx(), Fixed(20));
   EXPECT_FALSE(packet_queue.empty());
   EXPECT_THAT(released_packets(), ElementsAre(0));
 
   // Now advance beyond packet 1 and 2 in one go (until just before packet 3 should be released).
-  packet_queue.Advance(Fixed(79));
+  packet_queue.Advance(DefaultCtx(), Fixed(79));
   EXPECT_FALSE(packet_queue.empty());
   EXPECT_THAT(released_packets(), ElementsAre(0, 1, 2));
 
   // Finally advance past the end of all packets.
-  packet_queue.Advance(Fixed(1000));
+  packet_queue.Advance(DefaultCtx(), Fixed(1000));
   EXPECT_TRUE(packet_queue.empty());
   EXPECT_THAT(released_packets(), ElementsAre(0, 1, 2, 3));
 }
@@ -448,12 +448,12 @@ TEST_F(PacketQueueProducerStageTest, AdvanceWithCommandQueue) {
   EXPECT_TRUE(released_packets().empty());
 
   // Advancing past the second packet should release the first two packets.
-  packet_queue.Advance(Fixed(40));
+  packet_queue.Advance(DefaultCtx(), Fixed(40));
   EXPECT_FALSE(packet_queue.empty());
   EXPECT_THAT(released_packets(), ElementsAre(0, 1));
 
   // Finally advance past the third packet.
-  packet_queue.Advance(Fixed(60));
+  packet_queue.Advance(DefaultCtx(), Fixed(60));
   EXPECT_TRUE(packet_queue.empty());
   EXPECT_THAT(released_packets(), ElementsAre(0, 1, 2));
 }

@@ -42,7 +42,7 @@ class RingBufferProducerStage : public ProducerStage {
 
  protected:
   // Since there are no resources to release, advancing is a no-op.
-  void AdvanceImpl(Fixed frame) final {}
+  void AdvanceSelfImpl(Fixed frame) final {}
 
   // Implements `PipelineStage`.
   std::optional<Packet> ReadImpl(MixJobContext& ctx, Fixed start_frame, int64_t frame_count) final;

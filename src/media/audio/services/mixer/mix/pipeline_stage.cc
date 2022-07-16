@@ -5,44 +5,39 @@
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 
 #include <optional>
 #include <utility>
 
 #include "src/media/audio/lib/format2/fixed.h"
+#include "src/media/audio/services/mixer/mix/mix_job_context.h"
 
 namespace media_audio {
 
-void PipelineStage::Advance(Fixed frame) {
-  // TODO(fxbug.dev/87651): Add more logging and tracing etc (similar to `ReadableStream`).
-  FX_CHECK(!is_locked_);
-
-  // Advance the next readable frame.
-  if (next_readable_frame_ && frame <= *next_readable_frame_) {
-    // Next read frame is already passed the advanced point.
-    return;
+void PipelineStage::Advance(MixJobContext& ctx, Fixed frame) {
+  TRACE_DURATION("audio", advance_trace_name_.c_str(), "frame", frame.Integral().Floor(),
+                 "frame.frac", frame.Fraction().raw_value());
+  if (AdvanceSelf(frame)) {
+    // Don't advance sources unless we've advanced passed all locally-cached data. Otherwise we may
+    // drop source data that is referenced by our local cache.
+    AdvanceSourcesImpl(ctx, frame);
   }
-  next_readable_frame_ = frame;
-
-  if (cached_packet_ && frame < cached_packet_->end()) {
-    // Cached packet is still in use.
-    return;
-  }
-  cached_packet_ = std::nullopt;
-  AdvanceImpl(frame);
 }
 
 std::optional<PipelineStage::Packet> PipelineStage::Read(MixJobContext& ctx, Fixed start_frame,
                                                          int64_t frame_count) {
-  // TODO(fxbug.dev/87651): Add more logging and tracing etc (similar to `ReadableStream`).
+  TRACE_DURATION("audio", advance_trace_name_.c_str(), "dest_frame", start_frame.Integral().Floor(),
+                 "dest_frame.frac", start_frame.Fraction().raw_value(), "frame_count", frame_count);
+
   FX_CHECK(!is_locked_);
 
   // Once a frame has been consumed, it cannot be locked again, we cannot travel backwards in time.
   FX_CHECK(!next_readable_frame_ || start_frame >= *next_readable_frame_);
 
-  // Advance until `start_frame`.
+  // Advance this stage until `start_frame`.
   if (start_frame > Fixed(0) && (!next_readable_frame_ || *next_readable_frame_ < start_frame)) {
-    Advance(start_frame);
+    AdvanceSelf(start_frame);
   }
 
   // Check if we can reuse the cached packet.
@@ -53,7 +48,7 @@ std::optional<PipelineStage::Packet> PipelineStage::Read(MixJobContext& ctx, Fix
 
   auto packet = ReadImpl(ctx, start_frame, frame_count);
   if (!packet) {
-    Advance(start_frame + Fixed(frame_count));
+    Advance(ctx, start_frame + Fixed(frame_count));
     return std::nullopt;
   }
   FX_CHECK(packet->length() > 0);
@@ -83,7 +78,7 @@ PipelineStage::Packet PipelineStage::MakeUncachedPacket(Fixed start_frame, int64
                 [this, start_frame](int64_t frames_consumed) {
                   // Unlock the stream.
                   is_locked_ = false;
-                  Advance(start_frame + Fixed(frames_consumed));
+                  AdvanceSelf(start_frame + Fixed(frames_consumed));
                 });
 }
 
@@ -102,11 +97,31 @@ std::optional<PipelineStage::Packet> PipelineStage::ForwardPacket(
         is_locked_ = false;
         // What is consumed from the proxy is also consumed from the source packet.
         packet->set_frames_consumed(frames_consumed);
-        // Destroy the source packet before calling `Advance` to ensure the source stream is
+        // Destroy the source packet before calling `AdvanceInternal` to ensure the source stream is
         // unlocked before it is advanced.
         packet = std::nullopt;
-        Advance(packet_start + Fixed(frames_consumed));
+        AdvanceSelf(packet_start + Fixed(frames_consumed));
       });
+}
+
+bool PipelineStage::AdvanceSelf(Fixed frame) {
+  FX_CHECK(!is_locked_);
+
+  // Advance the next readable frame.
+  if (next_readable_frame_ && frame <= *next_readable_frame_) {
+    // Next read frame is already passed the advanced point.
+    return false;
+  }
+  next_readable_frame_ = frame;
+
+  if (cached_packet_ && frame < cached_packet_->end()) {
+    // Cached packet is still in use.
+    return false;
+  }
+  cached_packet_ = std::nullopt;
+
+  AdvanceSelfImpl(frame);
+  return true;
 }
 
 std::optional<PipelineStage::Packet> PipelineStage::ReadFromCachedPacket(Fixed start_frame,

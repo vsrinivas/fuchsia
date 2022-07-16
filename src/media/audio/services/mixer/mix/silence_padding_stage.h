@@ -92,19 +92,22 @@ class SilencePaddingStage : public PipelineStage {
   // Implements `PipelineStage`.
   void AddSource(PipelineStagePtr source) final {
     FX_CHECK(!source_) << "SilencePaddingStage does not support multiple sources";
+    FX_CHECK(source) << "SilencePaddingStage cannot add null source";
     FX_CHECK(source->format() == format())
         << "SilencePaddingStage format does not match with source format";
     source_ = std::move(source);
   }
   void RemoveSource(PipelineStagePtr source) final {
     FX_CHECK(source_) << "SilencePaddingStage source was not found";
+    FX_CHECK(source) << "SilencePaddingStage cannot remove null source";
     FX_CHECK(source_ == source) << "SilencePaddingStage source " << source_->name()
                                 << " does not match with " << source->name();
     source_ = nullptr;
   }
 
  protected:
-  void AdvanceImpl(Fixed frame) final;
+  void AdvanceSelfImpl(Fixed frame) final {}
+  void AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) final;
   std::optional<Packet> ReadImpl(MixJobContext& ctx, Fixed start_frame, int64_t frame_count) final;
 
  private:

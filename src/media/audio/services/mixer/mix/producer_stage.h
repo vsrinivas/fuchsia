@@ -29,6 +29,8 @@ class ProducerStage : public PipelineStage {
  protected:
   ProducerStage(std::string_view name, Format format, zx_koid_t reference_clock_koid)
       : PipelineStage(name, format, reference_clock_koid) {}
+
+  void AdvanceSourcesImpl(MixJobContext& ctx, Fixed frame) final {}
 };
 
 }  // namespace media_audio

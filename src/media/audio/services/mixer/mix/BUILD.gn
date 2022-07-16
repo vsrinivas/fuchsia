@@ -52,6 +52,7 @@ source_set("mix") {
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/trace",
     "//zircon/system/ulib/zx",
   ]
 }

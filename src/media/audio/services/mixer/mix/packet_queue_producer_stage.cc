@@ -15,7 +15,7 @@
 
 namespace media_audio {
 
-void PacketQueueProducerStage::AdvanceImpl(Fixed frame) {
+void PacketQueueProducerStage::AdvanceSelfImpl(Fixed frame) {
   ApplyPendingCommands();
 
   while (!pending_packet_queue_.empty()) {
