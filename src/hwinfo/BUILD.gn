@@ -105,7 +105,7 @@ template("hwinfo_integration_test") {
   fuchsia_component("${test_name}_misc_cm") {
     testonly = true
     component_name = "fake_factory_store_providers"
-    manifest = "//src/factory/fake_factory_store_providers/meta/misc.cml"
+    manifest = "//src/factory/fake_factory_store_providers/meta/fake_misc.cml"
     if (test_name == "hwinfo_retail_tests") {
       manifest =
           "//src/factory/fake_factory_store_providers/meta/misc_retail.cml"
@@ -220,10 +220,9 @@ hwinfo_integration_test("hwinfo_retail_tests") {
   ]
 }
 
-config_data("hwinfo_tests_factory_config") {
-  for_pkg = "fake_factory_store_providers"
-
-  sources = [ "testdata/fuchsia.factory.MiscFactoryStoreProvider.config" ]
+resource("hwinfo_tests_factory_config") {
+  sources = [ "testdata/test_misc.config" ]
+  outputs = [ "data/{{source_file_part}}" ]
 }
 
 config_data("hwinfo_tests_config") {
@@ -254,7 +253,7 @@ config_data("hwinfo_retail_tests_config") {
 config_data("legacy_hwinfo_factory_config") {
   for_pkg = "fake_legacy_hwinfo"
 
-  sources = [ "testdata/fuchsia.factory.MiscFactoryStoreProvider.config" ]
+  sources = [ "testdata/test_misc.config" ]
 }
 
 config_data("legacy_hwinfo_config") {
