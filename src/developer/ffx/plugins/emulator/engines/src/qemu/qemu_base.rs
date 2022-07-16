@@ -16,12 +16,20 @@ use ffx_emulator_common::{
     target::{add_target, is_active, remove_target},
 };
 use ffx_emulator_config::{
-    ConsoleType, DeviceConfig, EmulatorConfiguration, EmulatorEngine, GuestConfig, NetworkingMode,
+    AccelerationMode, ConsoleType, DeviceConfig, EmulatorConfiguration, EmulatorEngine,
+    GuestConfig, NetworkingMode,
 };
 use fidl_fuchsia_developer_ffx as ffx;
 use shared_child::SharedChild;
 use std::{
-    env, fs, fs::File, io::Write, ops::Sub, path::PathBuf, process::Command, str, sync::Arc,
+    env, fs,
+    fs::File,
+    io::{stderr, Write},
+    ops::Sub,
+    path::PathBuf,
+    process::Command,
+    str,
+    sync::Arc,
     time::Duration,
 };
 
@@ -330,12 +338,11 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                             "Emulator process failed to launch, but we don't know the cause. \
                             Check the emulator log, or look for a crash log."
                         );
-                        println!("");
                         eprintln!(
-                            "Emulator process failed to launch, but we don't know the cause. \
+                            "\nEmulator process failed to launch, but we don't know the cause. \
                             Printing the contents of the emulator log...\n"
                         );
-                        match dump_log_to_out(&self.emu_config().host.log, &mut std::io::stderr()) {
+                        match dump_log_to_out(&self.emu_config().host.log, &mut stderr()) {
                             Ok(_) => (),
                             Err(e) => eprintln!("Couldn't print the log: {:?}", e),
                         };
@@ -359,9 +366,59 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
 
                     time_left = time_left.sub(Duration::from_secs(1));
                     if time_left.is_zero() {
+                        eprintln!();
                         eprintln!(
-                            "\nEmulator did not respond to a health check before timing out."
+                            "After {} seconds, the emulator has not responded to network queries.",
+                            self.emu_config().runtime.startup_timeout.as_secs()
                         );
+                        if self.is_running() {
+                            eprintln!(
+                                "The emulator process is still running (pid {}).",
+                                self.get_pid()
+                            );
+                            eprintln!(
+                                "The emulator is configured to {} network access.",
+                                match self.emu_config().host.networking {
+                                    NetworkingMode::Tap => "use tun/tap-based",
+                                    NetworkingMode::User => "use user-mode/port-mapped",
+                                    NetworkingMode::None => "disable all",
+                                    NetworkingMode::Auto => bail!(
+                                        "Auto Networking mode should not be possible after staging \
+                                        is complete. Configuration is corrupt; bailing out."
+                                    ),
+                                }
+                            );
+                            eprintln!(
+                                "Hardware acceleration is {}.",
+                                if self.emu_config().host.acceleration == AccelerationMode::Hyper {
+                                    "enabled"
+                                } else {
+                                    "disabled, which significantly slows down the emulator"
+                                }
+                            );
+                            eprintln!(
+                                "You can execute `ffx target list` to keep monitoring the device, \
+                                or `ffx emu stop` to terminate it."
+                            );
+                            eprintln!(
+                                "You can also change the timeout if you keep encountering this \
+                                message by executing `ffx config set emu.start.uptime <seconds>`."
+                            );
+                        } else {
+                            eprintln!();
+                            eprintln!(
+                                "Emulator process failed to launch, but we don't know the cause. \
+                                Printing the contents of the emulator log...\n"
+                            );
+                            match dump_log_to_out(
+                                &self.emu_config().host.log,
+                                &mut std::io::stderr(),
+                            ) {
+                                Ok(_) => (),
+                                Err(e) => eprintln!("Couldn't print the log: {:?}", e),
+                            };
+                        }
+
                         log::warn!("Emulator did not respond to a health check before timing out.");
                     }
                 }
