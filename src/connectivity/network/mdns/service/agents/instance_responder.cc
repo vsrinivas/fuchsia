@@ -11,22 +11,28 @@
 #include "src/connectivity/network/mdns/service/common/mdns_names.h"
 
 namespace mdns {
+namespace {
 
-InstanceResponder::InstanceResponder(MdnsAgent::Owner* owner, std::string host_full_name,
+constexpr size_t kHostNameSuffixLength = 7;  // ".local."
+
+}  // namespace
+
+InstanceResponder::InstanceResponder(MdnsAgent::Owner* owner, std::string host_name,
                                      std::vector<inet::IpAddress> addresses,
                                      std::string service_name, std::string instance_name,
                                      Media media, IpVersions ip_versions,
                                      Mdns::Publisher* publisher)
     : MdnsAgent(owner),
-      host_full_name_(std::move(host_full_name)),
+      host_full_name_(host_name.empty() ? host_name : MdnsNames::HostFullName(host_name)),
       addresses_(std::move(addresses)),
-      service_name_(service_name),
-      instance_name_(instance_name),
       instance_full_name_(MdnsNames::InstanceFullName(instance_name, service_name)),
       media_(media),
       ip_versions_(ip_versions),
       publisher_(publisher) {
-  FX_DCHECK(host_full_name_.empty() == addresses_.empty());
+  FX_DCHECK(host_name.empty() == addresses_.empty());
+  instance_.service_name_ = service_name;
+  instance_.instance_name_ = instance_name;
+  instance_.target_name_ = host_name;
 }
 
 InstanceResponder::~InstanceResponder() {}
@@ -37,7 +43,15 @@ void InstanceResponder::Start(const std::string& local_host_full_name) {
   MdnsAgent::Start(local_host_full_name);
 
   if (host_full_name_.empty()) {
+    is_from_proxy_ = false;
     host_full_name_ = local_host_full_name;
+  } else {
+    is_from_proxy_ = true;
+  }
+
+  if (!is_from_proxy_) {
+    instance_.target_name_ =
+        local_host_full_name.substr(0, sizeof(local_host_full_name) - kHostNameSuffixLength);
   }
 
   Reannounce();
@@ -63,7 +77,7 @@ void InstanceResponder::ReceiveQuestion(const DnsQuestion& question,
 
   switch (question.type_) {
     case DnsType::kPtr:
-      if (MdnsNames::MatchServiceName(name, service_name_, &subtype)) {
+      if (MdnsNames::MatchServiceName(name, instance_.service_name_, &subtype)) {
         LogSenderAddress(sender_address);
         MaybeGetAndSendPublication(publication_cause, subtype, Constrain(reply_address));
       } else if (question.name_.dotted_string_ == MdnsNames::kAnyServiceFullName) {
@@ -79,7 +93,7 @@ void InstanceResponder::ReceiveQuestion(const DnsQuestion& question,
       break;
     case DnsType::kAny:
       if (question.name_.dotted_string_ == instance_full_name_ ||
-          MdnsNames::MatchServiceName(name, service_name_, &subtype)) {
+          MdnsNames::MatchServiceName(name, instance_.service_name_, &subtype)) {
         LogSenderAddress(sender_address);
         MaybeGetAndSendPublication(publication_cause, subtype, Constrain(reply_address));
       }
@@ -97,6 +111,15 @@ void InstanceResponder::Quit() {
   publisher_ = nullptr;
 
   MdnsAgent::Quit();
+}
+
+void InstanceResponder::OnLocalHostAddressesChanged() {
+  if (from_proxy() || !port_.is_valid()) {
+    return;
+  }
+
+  UpdateInstanceAddresses();
+  ChangeLocalServiceInstance(instance_, false);
 }
 
 void InstanceResponder::SetSubtypes(std::vector<std::string> subtypes) {
@@ -163,7 +186,8 @@ void InstanceResponder::SendAnnouncement() {
 
 void InstanceResponder::SendAnyServiceResponse(const ReplyAddress& reply_address) {
   auto ptr_resource = std::make_shared<DnsResource>(MdnsNames::kAnyServiceFullName, DnsType::kPtr);
-  ptr_resource->ptr_.pointer_domain_name_ = DnsName(MdnsNames::ServiceFullName(service_name_));
+  ptr_resource->ptr_.pointer_domain_name_ =
+      DnsName(MdnsNames::ServiceFullName(instance_.service_name_));
   SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);
 }
 
@@ -242,13 +266,13 @@ void InstanceResponder::GetAndSendPublication(PublicationCause publication_cause
 
 void InstanceResponder::SendPublication(const Mdns::Publication& publication,
                                         const std::string& subtype,
-                                        const ReplyAddress& reply_address) const {
+                                        const ReplyAddress& reply_address) {
   if (!subtype.empty()) {
     SendSubtypePtrRecord(subtype, publication.ptr_ttl_seconds_, reply_address);
   }
 
-  auto ptr_resource =
-      std::make_shared<DnsResource>(MdnsNames::ServiceFullName(service_name_), DnsType::kPtr);
+  auto ptr_resource = std::make_shared<DnsResource>(
+      MdnsNames::ServiceFullName(instance_.service_name_), DnsType::kPtr);
   ptr_resource->time_to_live_ = publication.ptr_ttl_seconds_;
   ptr_resource->ptr_.pointer_domain_name_ = DnsName(instance_full_name_);
   SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);
@@ -276,6 +300,45 @@ void InstanceResponder::SendPublication(const Mdns::Publication& publication,
                    MdnsResourceSection::kAdditional, reply_address);
     }
   }
+
+  if (!subtype.empty()) {
+    return;
+  }
+
+  bool changed = false;
+
+  if (port_ != publication.port_) {
+    changed = true;
+    port_ = publication.port_;
+  }
+
+  if (instance_.text_ != publication.text_) {
+    instance_.text_ = publication.text_;
+    changed = true;
+  }
+
+  if (instance_.srv_priority_ != publication.srv_priority_) {
+    instance_.srv_priority_ = publication.srv_priority_;
+    changed = true;
+  }
+
+  if (instance_.srv_weight_ != publication.srv_weight_) {
+    instance_.srv_weight_ = publication.srv_weight_;
+    changed = true;
+  }
+
+  if (!changed) {
+    return;
+  }
+
+  UpdateInstanceAddresses();
+
+  if (instance_ready_) {
+    ChangeLocalServiceInstance(instance_, from_proxy());
+  } else {
+    instance_ready_ = true;
+    AddLocalServiceInstance(instance_, from_proxy());
+  }
 }
 
 void InstanceResponder::SendSubtypePtrRecord(const std::string& subtype, uint32_t ttl,
@@ -283,13 +346,13 @@ void InstanceResponder::SendSubtypePtrRecord(const std::string& subtype, uint32_
   FX_DCHECK(!subtype.empty());
 
   auto ptr_resource = std::make_shared<DnsResource>(
-      MdnsNames::ServiceSubtypeFullName(service_name_, subtype), DnsType::kPtr);
+      MdnsNames::ServiceSubtypeFullName(instance_.service_name_, subtype), DnsType::kPtr);
   ptr_resource->time_to_live_ = ttl;
   ptr_resource->ptr_.pointer_domain_name_ = DnsName(instance_full_name_);
   SendResource(ptr_resource, MdnsResourceSection::kAnswer, reply_address);
 }
 
-void InstanceResponder::SendGoodbye() const {
+void InstanceResponder::SendGoodbye() {
   Mdns::Publication publication;
   publication.ptr_ttl_seconds_ = 0;
   publication.srv_ttl_seconds_ = 0;
@@ -303,6 +366,15 @@ void InstanceResponder::IdleCheck(const std::string& subtype) {
   if (iter != throttle_state_by_subtype_.end() && iter->second + kMinMulticastInterval < now()) {
     throttle_state_by_subtype_.erase(iter);
   }
+}
+
+void InstanceResponder::UpdateInstanceAddresses() {
+  auto host_addresses = local_host_addresses();
+  instance_.addresses_.clear();
+  std::transform(host_addresses.begin(), host_addresses.end(),
+                 std::back_inserter(instance_.addresses_), [this](const HostAddress& address) {
+                   return inet::SocketAddress(address.address(), port_, address.interface_id());
+                 });
 }
 
 }  // namespace mdns

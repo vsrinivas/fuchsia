@@ -14,12 +14,15 @@
 namespace mdns {
 
 HostNameRequestor::HostNameRequestor(MdnsAgent::Owner* owner, const std::string& host_name,
-                                     Media media, IpVersions ip_versions)
+                                     Media media, IpVersions ip_versions, bool include_local,
+                                     bool include_local_proxies)
     : MdnsAgent(owner),
       host_name_(host_name),
       host_full_name_(MdnsNames::HostFullName(host_name)),
       media_(media),
-      ip_versions_(ip_versions) {}
+      ip_versions_(ip_versions),
+      include_local_(include_local),
+      include_local_proxies_(include_local_proxies) {}
 
 HostNameRequestor::~HostNameRequestor() {}
 
@@ -41,7 +44,15 @@ void HostNameRequestor::Start(const std::string& local_host_full_name) {
   // Note that |host_full_name_| is the name we're trying to resolve, not the
   // name of the local host, which is the parameter to this method.
 
+  local_host_full_name_ = local_host_full_name;
+
   MdnsAgent::Start(local_host_full_name);
+
+  if (include_local_ && host_full_name_ == local_host_full_name_) {
+    // Respond with local addresses.
+    OnLocalHostAddressesChanged();
+    return;
+  }
 
   SendQuestion(std::make_shared<DnsQuestion>(host_full_name_, DnsType::kA),
                ReplyAddress::Multicast(media_, ip_versions_));
@@ -53,6 +64,10 @@ void HostNameRequestor::ReceiveResource(const DnsResource& resource, MdnsResourc
                                         ReplyAddress sender_address) {
   if (!sender_address.Matches(media_) || !sender_address.Matches(ip_versions_) ||
       resource.name_.dotted_string_ != host_full_name_) {
+    return;
+  }
+
+  if (include_local_ && host_full_name_ == local_host_full_name_) {
     return;
   }
 
@@ -99,6 +114,51 @@ void HostNameRequestor::EndOfMessage() {
     return;
   }
 
+  SendAddressesChanged();
+}
+
+void HostNameRequestor::OnAddProxyHost(const std::string& host_full_name,
+                                       const std::vector<HostAddress>& addresses) {
+  if (!include_local_proxies_ || host_full_name != host_full_name_) {
+    return;
+  }
+
+  addresses_.clear();
+  for (auto& address : addresses) {
+    addresses_.insert(address);
+  }
+
+  if (addresses_ == prev_addresses_) {
+    addresses_.clear();
+    return;
+  }
+
+  SendAddressesChanged();
+}
+
+void HostNameRequestor::OnRemoveProxyHost(const std::string& host_full_name) {
+  if (!include_local_proxies_ || host_full_name != host_full_name_) {
+    return;
+  }
+
+  addresses_.clear();
+
+  SendAddressesChanged();
+}
+
+void HostNameRequestor::OnLocalHostAddressesChanged() {
+  if (!include_local_ || host_full_name_ != local_host_full_name_) {
+    return;
+  }
+
+  auto addresses = local_host_addresses();
+  std::unordered_set<HostAddress, HostAddress::Hash> addresses_set(addresses.begin(),
+                                                                   addresses.end());
+  if (addresses_set == addresses_) {
+    return;
+  }
+
+  addresses_ = addresses_set;
   SendAddressesChanged();
 }
 

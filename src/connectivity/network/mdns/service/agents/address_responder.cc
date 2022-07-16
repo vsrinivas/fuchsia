@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/connectivity/network/mdns/service/common/mdns_names.h"
+#include "src/connectivity/network/mdns/service/common/type_converters.h"
 
 namespace mdns {
 
@@ -26,6 +27,10 @@ AddressResponder::AddressResponder(MdnsAgent::Owner* owner, std::string host_ful
 }
 
 AddressResponder::~AddressResponder() {}
+
+std::vector<HostAddress> AddressResponder::addresses() const {
+  return fidl::To<std::vector<HostAddress>>(addresses_);
+}
 
 void AddressResponder::Start(const std::string& local_host_full_name) {
   FX_DCHECK(!local_host_full_name.empty());

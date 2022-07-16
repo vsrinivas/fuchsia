@@ -23,7 +23,7 @@ class InstanceRequestor : public MdnsAgent {
  public:
   // Creates an |InstanceRequestor|.
   InstanceRequestor(MdnsAgent::Owner* owner, const std::string& service_name, Media media,
-                    IpVersions ip_versions);
+                    IpVersions ip_versions, bool include_local, bool include_local_proxies);
 
   ~InstanceRequestor() override;
 
@@ -41,6 +41,14 @@ class InstanceRequestor : public MdnsAgent {
                        ReplyAddress sender_address) override;
 
   void EndOfMessage() override;
+
+  void OnAddLocalServiceInstance(const Mdns::ServiceInstance& instance, bool from_proxy) override;
+
+  void OnChangeLocalServiceInstance(const Mdns::ServiceInstance& instance,
+                                    bool from_proxy) override;
+
+  void OnRemoveLocalServiceInstance(const std::string& service_name,
+                                    const std::string& instance_name, bool from_proxy) override;
 
  private:
   // Describes a service instance.
@@ -91,6 +99,8 @@ class InstanceRequestor : public MdnsAgent {
   std::string service_full_name_;
   Media media_;
   IpVersions ip_versions_;
+  bool include_local_;
+  bool include_local_proxies_;
   std::unordered_set<Mdns::Subscriber*> subscribers_;
   std::unordered_map<std::string, InstanceInfo> instance_infos_by_full_name_;
   std::unordered_map<std::string, TargetInfo> target_infos_by_full_name_;

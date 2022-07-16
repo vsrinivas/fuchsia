@@ -21,6 +21,7 @@
 #include "src/connectivity/network/mdns/service/agents/address_prober.h"
 #include "src/connectivity/network/mdns/service/agents/address_responder.h"
 #include "src/connectivity/network/mdns/service/agents/mdns_agent.h"
+#include "src/connectivity/network/mdns/service/common/service_instance.h"
 #include "src/connectivity/network/mdns/service/encoding/dns_message.h"
 #include "src/connectivity/network/mdns/service/transport/mdns_interface_transceiver.h"
 #include "src/lib/inet/socket_address.h"
@@ -66,6 +67,9 @@ class Mdns : public MdnsAgent::Owner {
 
     // Writes log messages describing lifetime traffic.
     virtual void LogTraffic() = 0;
+
+    // Gets the list of addresses for the local host.
+    virtual std::vector<HostAddress> LocalHostAddresses() = 0;
   };
 
   // Describes an initial instance publication or query response.
@@ -75,7 +79,7 @@ class Mdns : public MdnsAgent::Owner {
         const std::vector<std::vector<uint8_t>>& text = std::vector<std::vector<uint8_t>>(),
         uint16_t srv_priority = 0, uint16_t srv_weight = 0);
 
-    std::unique_ptr<Publication> Clone();
+    std::unique_ptr<Publication> Clone() const;
 
     inet::IpPort port_;
     std::vector<std::vector<uint8_t>> text_;
@@ -85,6 +89,8 @@ class Mdns : public MdnsAgent::Owner {
     uint32_t srv_ttl_seconds_ = 120;   // default 2 minutes
     uint32_t txt_ttl_seconds_ = 4500;  // default 75 minutes
   };
+
+  using ServiceInstance = ServiceInstance;
 
   // Abstract base class for client-supplied subscriber.
   class HostNameSubscriber {
@@ -260,19 +266,22 @@ class Mdns : public MdnsAgent::Owner {
   // Resolves |host_name| to |IpAddress|es. Must not be called before |Start|'s ready callback is
   // called.
   void ResolveHostName(const std::string& host_name, zx::duration timeout, Media media,
-                       IpVersions ip_versions, ResolveHostNameCallback callback);
+                       IpVersions ip_versions, bool include_local, bool include_local_proxies,
+                       ResolveHostNameCallback callback);
 
   // Subscribers to the specified host name. Must not be called before
   // |Start|'s ready callback is called. The subscription is cancelled when
   // the subscriber is deleted or its |Unsubscribe| method is called.
   // Multiple subscriptions may be created for a given host name.
   void SubscribeToHostName(const std::string& host_name, Media media, IpVersions ip_versions,
+                           bool include_local, bool include_local_proxies,
                            HostNameSubscriber* subscriber);
 
   // Resolves |service+instance| to a node, i.e sends an SRV query and gets
   // a valid response if the service instance exists/is active.
   void ResolveServiceInstance(const std::string& service, const std::string& instance,
                               zx::time timeout, Media media, IpVersions ip_versions,
+                              bool include_local, bool include_local_proxies,
                               ResolveServiceInstanceCallback callback);
 
   // Subscribes to the specified service. The subscription is cancelled when
@@ -280,7 +289,7 @@ class Mdns : public MdnsAgent::Owner {
   // Multiple subscriptions may be created for a given service name. Must not be
   // called before |Start|'s ready callback is called.
   void SubscribeToService(const std::string& service_name, Media media, IpVersions ip_versions,
-                          Subscriber* subscriber);
+                          bool include_local, bool include_local_proxies, Subscriber* subscriber);
 
   // Publishes a service instance. Returns false if and only if the instance was
   // already published locally. The instance is unpublished when the publisher
@@ -440,6 +449,22 @@ class Mdns : public MdnsAgent::Owner {
   // established.
   void OnReady();
 
+  // Call |agent->OnAddProxyHost| for each agent in |agents_|.
+  void OnAddProxyHost(const std::string& host_full_name, const std::vector<HostAddress>& addresses);
+
+  // Call |agent->OnRemoveProxyHost| for each agent in |agents_|.
+  void OnRemoveProxyHost(const std::string& host_full_name);
+
+  // Call |agent->OnAddLocalServiceInstance| for each agent in |agents_|.
+  void OnAddLocalServiceInstance(const ServiceInstance& service_instance, bool from_proxy);
+
+  // Call |agent->OnChangeLocalServiceInstance| for each agent in |agents_|.
+  void OnChangeLocalServiceInstance(const ServiceInstance& service_instance, bool from_proxy);
+
+  // Call |agent->OnRemoveLocalServiceInstance| for each agent in |agents_|.
+  void OnRemoveLocalServiceInstance(const std::string& service_name,
+                                    const std::string& instance_name, bool from_proxy);
+
   // Determines what host name to try next after a conflict is detected and
   // calls |StartAddressProbe| with that name.
   void OnHostNameConflict();
@@ -461,6 +486,12 @@ class Mdns : public MdnsAgent::Owner {
   void RemoveAgent(std::shared_ptr<MdnsAgent> agent) override;
 
   void FlushSentItems() override;
+
+  void AddLocalServiceInstance(const ServiceInstance& instance, bool from_proxy) override;
+
+  void ChangeLocalServiceInstance(const ServiceInstance& instance, bool from_proxy) override;
+
+  std::vector<HostAddress> LocalHostAddresses() override;
 
   // Adds an agent and, if |started_|, starts it.
   void AddAgent(std::shared_ptr<MdnsAgent> agent);

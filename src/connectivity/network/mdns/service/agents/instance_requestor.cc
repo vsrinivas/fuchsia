@@ -7,6 +7,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
+#include <iterator>
+
 #include "src/connectivity/network/mdns/service/common/mdns_names.h"
 #include "src/connectivity/network/mdns/service/common/types.h"
 
@@ -19,12 +21,15 @@ static constexpr zx::duration kMaxQueryInterval = zx::hour(1);
 }  // namespace
 
 InstanceRequestor::InstanceRequestor(MdnsAgent::Owner* owner, const std::string& service_name,
-                                     Media media, IpVersions ip_versions)
+                                     Media media, IpVersions ip_versions, bool include_local,
+                                     bool include_local_proxies)
     : MdnsAgent(owner),
       service_name_(service_name),
       service_full_name_(MdnsNames::ServiceFullName(service_name)),
       media_(media),
       ip_versions_(ip_versions),
+      include_local_(include_local),
+      include_local_proxies_(include_local_proxies),
       question_(std::make_shared<DnsQuestion>(service_full_name_, DnsType::kPtr)) {}
 
 InstanceRequestor::~InstanceRequestor() {}
@@ -39,7 +44,7 @@ void InstanceRequestor::AddSubscriber(Mdns::Subscriber* subscriber) {
 void InstanceRequestor::RemoveSubscriber(Mdns::Subscriber* subscriber) {
   subscribers_.erase(subscriber);
   if (subscribers_.empty()) {
-    Quit();
+    PostTaskForTime([this, own_this = shared_from_this()]() { Quit(); }, now());
   }
 }
 
@@ -115,16 +120,17 @@ void InstanceRequestor::EndOfMessage() {
     }
 
     // Something has changed.
+    std::vector<Mdns::Subscriber*> subscribers(subscribers_.begin(), subscribers_.end());
     if (instance_info.new_) {
       instance_info.new_ = false;
-      for (auto subscriber : subscribers_) {
+      for (auto subscriber : subscribers) {
         subscriber->InstanceDiscovered(service_name_, instance_info.instance_name_,
                                        Addresses(target_info, instance_info.port_),
                                        instance_info.text_, instance_info.srv_priority_,
                                        instance_info.srv_weight_, instance_info.target_);
       }
     } else {
-      for (auto subscriber : subscribers_) {
+      for (auto subscriber : subscribers) {
         subscriber->InstanceChanged(service_name_, instance_info.instance_name_,
                                     Addresses(target_info, instance_info.port_),
                                     instance_info.text_, instance_info.srv_priority_,
@@ -332,6 +338,120 @@ std::vector<inet::SocketAddress> InstanceRequestor::Addresses(const TargetInfo& 
                    return inet::SocketAddress(address.address(), port, address.scope_id());
                  });
   return result;
+}
+
+void InstanceRequestor::OnAddLocalServiceInstance(const Mdns::ServiceInstance& instance,
+                                                  bool from_proxy) {
+  if (from_proxy ? !include_local_proxies_ : !include_local_) {
+    return;
+  }
+
+  if (instance.service_name_ != service_name_) {
+    return;
+  }
+
+  FX_DCHECK(!instance.addresses_.empty());
+
+  auto instance_full_name = MdnsNames::InstanceFullName(instance.instance_name_, service_name_);
+  auto [instance_iter, inserted] =
+      instance_infos_by_full_name_.insert(std::make_pair(instance_full_name, InstanceInfo()));
+  auto& instance_info = instance_iter->second;
+  instance_info.instance_name_ = instance.instance_name_;
+  instance_info.target_ = MdnsNames::HostFullName(instance.target_name_);
+  instance_info.port_ = instance.addresses_[0].port();
+  instance_info.text_ = instance.text_;
+  instance_info.srv_priority_ = instance.srv_priority_;
+  instance_info.srv_weight_ = instance.srv_weight_;
+  instance_info.new_ = inserted;
+
+  auto [target_iter, _] =
+      target_infos_by_full_name_.insert(std::make_pair(instance_info.target_, TargetInfo()));
+  auto& target_info = target_iter->second;
+
+  std::copy(instance.addresses_.begin(), instance.addresses_.end(),
+            std::inserter(target_info.addresses_, target_info.addresses_.end()));
+  target_info.dirty_ = true;
+
+  EndOfMessage();
+}
+
+void InstanceRequestor::OnChangeLocalServiceInstance(const Mdns::ServiceInstance& instance,
+                                                     bool from_proxy) {
+  if (from_proxy ? !include_local_proxies_ : !include_local_) {
+    return;
+  }
+
+  if (instance.service_name_ != service_name_) {
+    return;
+  }
+
+  FX_DCHECK(!instance.addresses_.empty());
+
+  auto instance_full_name = MdnsNames::InstanceFullName(instance.instance_name_, service_name_);
+  auto iter = instance_infos_by_full_name_.find(instance_full_name);
+  if (iter == instance_infos_by_full_name_.end()) {
+    return;
+  }
+
+  auto& instance_info = iter->second;
+  FX_DCHECK(instance_info.instance_name_ == instance.instance_name_);
+  if (instance_info.target_ != MdnsNames::HostFullName(instance.target_name_)) {
+    instance_info.target_ = MdnsNames::HostFullName(instance.target_name_);
+    instance_info.dirty_ = true;
+  }
+
+  if (instance_info.port_ != instance.addresses_[0].port()) {
+    instance_info.port_ = instance.addresses_[0].port();
+    instance_info.dirty_ = true;
+  }
+
+  if (instance_info.text_ != instance.text_) {
+    instance_info.text_ = instance.text_;
+    instance_info.dirty_ = true;
+  }
+
+  if (instance_info.srv_priority_ != instance.srv_priority_) {
+    instance_info.srv_priority_ = instance.srv_priority_;
+    instance_info.dirty_ = true;
+  }
+
+  if (instance_info.srv_weight_ != instance.srv_weight_) {
+    instance_info.srv_weight_ = instance.srv_weight_;
+    instance_info.dirty_ = true;
+  }
+
+  auto target_full_name = MdnsNames::HostFullName(instance.target_name_);
+  auto [target_iter, _] =
+      target_infos_by_full_name_.insert(std::make_pair(target_full_name, TargetInfo()));
+  auto& target_info = target_iter->second;
+
+  std::unordered_set<inet::SocketAddress> addresses;
+  std::copy(instance.addresses_.begin(), instance.addresses_.end(),
+            std::inserter(addresses, addresses.end()));
+  if (target_info.addresses_ != addresses) {
+    target_info.addresses_ = addresses;
+    target_info.dirty_ = true;
+  }
+
+  if (instance_info.dirty_ || target_info.dirty_) {
+    EndOfMessage();
+  }
+}
+
+void InstanceRequestor::OnRemoveLocalServiceInstance(const std::string& service_name,
+                                                     const std::string& instance_name,
+                                                     bool from_proxy) {
+  if (from_proxy ? !include_local_proxies_ : !include_local_) {
+    return;
+  }
+
+  if (service_name_ != service_name_) {
+    return;
+  }
+
+  RemoveInstance(MdnsNames::InstanceFullName(instance_name, service_name_));
+
+  EndOfMessage();
 }
 
 }  // namespace mdns

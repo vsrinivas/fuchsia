@@ -35,7 +35,12 @@ void ServiceSubscriberServiceImpl::SubscribeToService(
   auto subscriber = std::make_unique<Subscriber>(
       std::move(listener_handle), [this, id]() { service_instance_subscribers_by_id_.erase(id); });
 
-  mdns().SubscribeToService(service, media, ip_versions, subscriber.get());
+  bool include_local = !options.has_exclude_local() || !options.exclude_local();
+  bool include_local_proxies =
+      !options.has_exclude_local_proxies() || !options.exclude_local_proxies();
+
+  mdns().SubscribeToService(service, media, ip_versions, include_local, include_local_proxies,
+                            subscriber.get());
 
   service_instance_subscribers_by_id_.emplace(id, std::move(subscriber));
 }
@@ -45,15 +50,10 @@ void ServiceSubscriberServiceImpl::SubscribeToService(
 
 ServiceSubscriberServiceImpl::Subscriber::Subscriber(
     fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriptionListener> handle,
-    fit::closure deleter) {
+    fit::closure deleter)
+    : deleter_(std::move(deleter)) {
   client_.Bind(std::move(handle));
-  client_.set_error_handler([this, deleter = std::move(deleter)](zx_status_t status) mutable {
-    // Clearing the error handler frees the capture list, so we need to save |deleter|.
-    auto save_deleter = std::move(deleter);
-    client_.set_error_handler(nullptr);
-    client_.Unbind();
-    save_deleter();
-  });
+  client_.set_error_handler([this](zx_status_t status) mutable { MaybeDelete(); });
 }
 
 ServiceSubscriberServiceImpl::Subscriber::~Subscriber() {
@@ -112,6 +112,11 @@ void ServiceSubscriberServiceImpl::Subscriber::MaybeSendNextEntry() {
   Entry& entry = entries_.front();
   auto on_reply = fit::bind_member<&ServiceSubscriberServiceImpl::Subscriber::ReplyReceived>(this);
 
+  // The error handler for |client_| may be called synchronously in any of the proxy calls below.
+  // To ensure |this| doesn't get deleted while this method is running, we defer deletion until
+  // the method terminates.
+  DeferDeletion();
+
   FX_DCHECK(client_);
   switch (entry.type) {
     case EntryType::kInstanceDiscovered:
@@ -132,12 +137,26 @@ void ServiceSubscriberServiceImpl::Subscriber::MaybeSendNextEntry() {
 
   ++pipeline_depth_;
   entries_.pop();
+
+  MaybeDelete();
 }
 
 void ServiceSubscriberServiceImpl::Subscriber::ReplyReceived() {
   FX_DCHECK(pipeline_depth_ != 0);
   --pipeline_depth_;
   MaybeSendNextEntry();
+}
+
+void ServiceSubscriberServiceImpl::Subscriber::DeferDeletion() { ++one_based_delete_counter_; }
+
+void ServiceSubscriberServiceImpl::Subscriber::MaybeDelete() {
+  if (--one_based_delete_counter_ != 0) {
+    return;
+  }
+
+  client_.set_error_handler(nullptr);
+  client_.Unbind();
+  deleter_();
 }
 
 }  // namespace mdns

@@ -31,8 +31,12 @@ void HostNameResolverServiceImpl::ResolveHostName(
   IpVersions ip_versions =
       options.has_ip_versions() ? fidl::To<IpVersions>(options.ip_versions()) : IpVersions::kBoth;
 
+  bool include_local = !options.has_exclude_local() || !options.exclude_local();
+  bool include_local_proxies =
+      !options.has_exclude_local_proxies() || !options.exclude_local_proxies();
+
   mdns().ResolveHostName(
-      host, zx::nsec(timeout_ns), media, ip_versions,
+      host, zx::nsec(timeout_ns), media, ip_versions, include_local, include_local_proxies,
       [callback = std::move(callback)](const std::string& host,
                                        std::vector<HostAddress> addresses) {
         callback(fidl::To<std::vector<fuchsia::net::mdns::HostAddress>>(addresses));

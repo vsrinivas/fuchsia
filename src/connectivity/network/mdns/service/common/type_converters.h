@@ -9,6 +9,8 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "lib/fidl/cpp/type_converter.h"
+#include "src/connectivity/network/mdns/service/common/mdns_names.h"
+#include "src/connectivity/network/mdns/service/common/service_instance.h"
 #include "src/connectivity/network/mdns/service/common/types.h"
 #include "src/connectivity/network/mdns/service/encoding/dns_message.h"
 #include "src/connectivity/network/mdns/service/mdns.h"
@@ -98,6 +100,13 @@ struct TypeConverter<fuchsia::net::mdns::HostAddress, mdns::HostAddress> {
         .address = static_cast<fuchsia::net::IpAddress>(value.address()),
         .interface = value.interface_id(),
         .ttl = value.ttl().get()};
+  }
+};
+
+template <>
+struct TypeConverter<mdns::HostAddress, inet::IpAddress> {
+  static mdns::HostAddress Convert(const inet::IpAddress& value) {
+    return mdns::HostAddress(value, 0, zx::sec(mdns::DnsResource::kShortTimeToLive));
   }
 };
 
@@ -226,6 +235,43 @@ struct TypeConverter<std::vector<T>, std::vector<U>> {
     std::vector<T> result;
     std::transform(value.begin(), value.end(), std::back_inserter(result),
                    [](const U& u) { return fidl::To<T>(u); });
+    return result;
+  }
+};
+
+template <>
+struct TypeConverter<fuchsia::net::mdns::ServiceInstance, mdns::ServiceInstance> {
+  static fuchsia::net::mdns::ServiceInstance Convert(const mdns::ServiceInstance& value) {
+    fuchsia::net::mdns::ServiceInstance result;
+    result.set_service(value.service_name_);
+    result.set_instance(value.instance_name_);
+    result.set_srv_priority(value.srv_priority_);
+    result.set_srv_weight(value.srv_weight_);
+    result.set_target(mdns::MdnsNames::HostFullName(value.target_name_));
+    result.set_addresses(fidl::To<std::vector<fuchsia::net::SocketAddress>>(value.addresses_));
+    result.set_text_strings(value.text_);
+
+    // Deprecated items
+    result.set_text(fidl::To<std::vector<std::string>>(value.text_));
+
+    for (auto& address : result.addresses()) {
+      if (address.is_ipv4()) {
+        if (!result.has_ipv4_endpoint()) {
+          result.set_ipv4_endpoint(fidl::Clone(address.ipv4()));
+          if (result.has_ipv6_endpoint()) {
+            break;
+          }
+        }
+      } else {
+        if (!result.has_ipv6_endpoint()) {
+          result.set_ipv6_endpoint(fidl::Clone(address.ipv6()));
+          if (result.has_ipv4_endpoint()) {
+            break;
+          }
+        }
+      }
+    }
+
     return result;
   }
 };

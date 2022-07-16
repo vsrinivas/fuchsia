@@ -35,7 +35,12 @@ void HostNameSubscriberServiceImpl::SubscribeToHostName(
   auto subscriber = std::make_unique<Subscriber>(
       std::move(listener_handle), [this, id]() { host_name_subscribers_by_id_.erase(id); });
 
-  mdns().SubscribeToHostName(host_name, media, ip_versions, subscriber.get());
+  bool include_local = !options.has_exclude_local() || !options.exclude_local();
+  bool include_local_proxies =
+      !options.has_exclude_local_proxies() || !options.exclude_local_proxies();
+
+  mdns().SubscribeToHostName(host_name, media, ip_versions, include_local, include_local_proxies,
+                             subscriber.get());
 }
 
 ////////////////////////////////////////////////////////////////////////////////

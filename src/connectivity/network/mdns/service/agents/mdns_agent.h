@@ -12,6 +12,7 @@
 #include <memory>
 
 #include "src/connectivity/network/mdns/service/common/reply_address.h"
+#include "src/connectivity/network/mdns/service/common/service_instance.h"
 #include "src/connectivity/network/mdns/service/encoding/dns_message.h"
 #include "src/lib/inet/socket_address.h"
 
@@ -74,6 +75,18 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
 
     // Flushes sent questions and resources by sending the appropriate messages.
     virtual void FlushSentItems() = 0;
+
+    // Notifies all agents of the addition of a local service instance.|from_proxy| indicates
+    // whether the instance is published by the local host (false) or a local proxy host (true).
+    virtual void AddLocalServiceInstance(const ServiceInstance& instance, bool from_proxy) = 0;
+
+    // Notifies all agents of a change to a previously-added local service instance.|from_proxy|
+    // indicates whether the instance is published by the local host (false) or a local proxy host
+    // (true).
+    virtual void ChangeLocalServiceInstance(const ServiceInstance& instance, bool from_proxy) = 0;
+
+    // Returns the addresses for the local host.
+    virtual std::vector<HostAddress> LocalHostAddresses() = 0;
   };
 
   virtual ~MdnsAgent() {}
@@ -99,6 +112,34 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
   // Signals the end of a message. This agent must not call |RemoveSelf| during
   // a call to this method.
   virtual void EndOfMessage() {}
+
+  // Notifies the agent of the addition of a proxy host.
+  virtual void OnAddProxyHost(const std::string& host_full_name,
+                              const std::vector<HostAddress>& addresses) {}
+
+  // Notifies the agent of the removal of a proxy host.
+  virtual void OnRemoveProxyHost(const std::string& host_full_name) {}
+
+  // Notifies the agent of the addition of a local or local proxy service instance. |target|
+  // and |addresses| are empty for local service instances and non-empty for local proxy service
+  // instances. |from_proxy| indicates whether the instance is published by the local host (false)
+  // or a local proxy host (true).
+  virtual void OnAddLocalServiceInstance(const ServiceInstance& instance, bool from_proxy) {}
+
+  // Notifies the agent of a change to a local or local proxy service instance. |target| and
+  // |addresses| are empty for local service instances and non-empty for local proxy service
+  // instances.|from_proxy| indicates whether the instance is published by the local host (false)
+  // or a local proxy host (true).
+  virtual void OnChangeLocalServiceInstance(const ServiceInstance& instance, bool from_proxy) {}
+
+  // Notifies the agent of the removal of local or local proxy service instance. |from_proxy|
+  // indicates whether the instance is published by the local host (false) or a local proxy host
+  // (true).
+  virtual void OnRemoveLocalServiceInstance(const std::string& service_name,
+                                            const std::string& instance_name, bool from_proxy) {}
+
+  // Notifies the agent that local host addresses have changed.
+  virtual void OnLocalHostAddressesChanged() {}
 
   // Tells the agent to quit. Any overrides should call this base implementation.
   virtual void Quit() {
@@ -131,6 +172,9 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
     owner_->PostTaskForTime(this, std::move(task), target_time);
   }
 
+  // Returns the addresses for the local host.
+  std::vector<HostAddress> local_host_addresses() { return owner_->LocalHostAddresses(); }
+
   // Sends a question to the specified address.
   void SendQuestion(std::shared_ptr<DnsQuestion> question,
                     const ReplyAddress& reply_address) const {
@@ -153,6 +197,16 @@ class MdnsAgent : public std::enable_shared_from_this<MdnsAgent> {
   // |ReceiveQuestion|, |ReceiveResource|, |EndOfMessage|, |Quit| or a task posted using
   // |PostTaskForTime|. See the discussion at the top of the file.
   void FlushSentItems() { owner_->FlushSentItems(); }
+
+  // Notifies all agents of the addition of a local service instance.
+  void AddLocalServiceInstance(const ServiceInstance& instance, bool from_proxy) {
+    owner_->AddLocalServiceInstance(instance, from_proxy);
+  }
+
+  // Notifies all agents of a change to a previously-added local service instance.
+  void ChangeLocalServiceInstance(const ServiceInstance& instance, bool from_proxy) {
+    owner_->ChangeLocalServiceInstance(instance, from_proxy);
+  }
 
   // Registers the resource for renewal. Before the resource's TTL expires,
   // an attempt will be made to renew the resource by issuing queries for it.

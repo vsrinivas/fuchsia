@@ -12,6 +12,7 @@
 namespace mdns {
 namespace test {
 
+const std::string AgentTest::kLocalHostName = "testhost";
 const std::string AgentTest::kLocalHostFullName = "testhost.local.";
 
 void AgentTest::PostTaskForTime(MdnsAgent* agent, fit::closure task, zx::time target_time) {
@@ -95,6 +96,18 @@ void AgentTest::RemoveAgent(std::shared_ptr<MdnsAgent> agent) {
 }
 
 void AgentTest::FlushSentItems() { flush_sent_items_called_ = true; }
+
+void AgentTest::AddLocalServiceInstance(const ServiceInstance& instance, bool from_proxy) {
+  add_local_service_instance_called_ = true;
+  add_local_service_instance_instance_ = instance;
+  add_local_service_instance_from_proxy_ = from_proxy;
+}
+
+void AgentTest::ChangeLocalServiceInstance(const ServiceInstance& instance, bool from_proxy) {
+  change_local_service_instance_called_ = true;
+  change_local_service_instance_instance_ = instance;
+  change_local_service_instance_from_proxy_ = from_proxy;
+}
 
 void AgentTest::AdvanceTo(zx::time time) {
   EXPECT_LE(now_, time);

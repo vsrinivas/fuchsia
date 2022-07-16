@@ -55,6 +55,8 @@ void MdnsDeprecatedServiceImpl::ResolveHostName(std::string host, int64_t timeou
   }
 
   mdns_.ResolveHostName(host, zx::nsec(timeout_ns), Media::kBoth, IpVersions::kBoth,
+                        false,  // include_local
+                        true,   // include_local_proxies
                         [callback = std::move(callback)](const std::string& host,
                                                          std::vector<HostAddress> addresses) {
                           inet::IpAddress v4_address;
@@ -88,7 +90,10 @@ void MdnsDeprecatedServiceImpl::SubscribeToService(
   auto subscriber = std::make_unique<Subscriber>(std::move(subscriber_handle),
                                                  [this, id]() { subscribers_by_id_.erase(id); });
 
-  mdns_.SubscribeToService(service, Media::kBoth, IpVersions::kBoth, subscriber.get());
+  mdns_.SubscribeToService(service, Media::kBoth, IpVersions::kBoth,
+                           false,  // include_local
+                           true,   // include_local_proxies
+                           subscriber.get());
 
   subscribers_by_id_.emplace(id, std::move(subscriber));
 }
@@ -152,15 +157,10 @@ void MdnsDeprecatedServiceImpl::PublishServiceInstance(
 // MdnsDeprecatedServiceImpl::Subscriber implementation
 
 MdnsDeprecatedServiceImpl::Subscriber::Subscriber(
-    fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber> handle, fit::closure deleter) {
+    fidl::InterfaceHandle<fuchsia::net::mdns::ServiceSubscriber> handle, fit::closure deleter)
+    : deleter_(std::move(deleter)) {
   client_.Bind(std::move(handle));
-  client_.set_error_handler([this, deleter = std::move(deleter)](zx_status_t status) mutable {
-    // Clearing the error handler frees the capture list, so we need to save |deleter|.
-    auto save_deleter = std::move(deleter);
-    client_.set_error_handler(nullptr);
-    client_.Unbind();
-    save_deleter();
-  });
+  client_.set_error_handler([this](zx_status_t status) mutable { MaybeDelete(); });
 }
 
 MdnsDeprecatedServiceImpl::Subscriber::~Subscriber() {
@@ -219,6 +219,11 @@ void MdnsDeprecatedServiceImpl::Subscriber::MaybeSendNextEntry() {
   Entry& entry = entries_.front();
   auto on_reply = fit::bind_member<&MdnsDeprecatedServiceImpl::Subscriber::ReplyReceived>(this);
 
+  // The error handler for |client_| may be called synchronously in any of the proxy calls below.
+  // To ensure |this| doesn't get deleted while this method is running, we defer deletion until
+  // the method terminates.
+  DeferDeletion();
+
   FX_DCHECK(client_);
   switch (entry.type) {
     case EntryType::kInstanceDiscovered:
@@ -239,12 +244,26 @@ void MdnsDeprecatedServiceImpl::Subscriber::MaybeSendNextEntry() {
 
   ++pipeline_depth_;
   entries_.pop();
+
+  MaybeDelete();
 }
 
 void MdnsDeprecatedServiceImpl::Subscriber::ReplyReceived() {
   FX_DCHECK(pipeline_depth_ != 0);
   --pipeline_depth_;
   MaybeSendNextEntry();
+}
+
+void MdnsDeprecatedServiceImpl::Subscriber::DeferDeletion() { ++one_based_delete_counter_; }
+
+void MdnsDeprecatedServiceImpl::Subscriber::MaybeDelete() {
+  if (--one_based_delete_counter_ != 0) {
+    return;
+  }
+
+  client_.set_error_handler(nullptr);
+  client_.Unbind();
+  deleter_();
 }
 
 ////////////////////////////////////////////////////////////////////////////////

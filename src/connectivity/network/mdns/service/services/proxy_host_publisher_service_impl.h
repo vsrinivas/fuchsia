@@ -34,11 +34,11 @@ class ProxyHostPublisherServiceImpl
   // Publisher for |PublishHost|.
   class HostPublisher : public Mdns::HostPublisher {
    public:
-    HostPublisher() = default;
+    HostPublisher(PublishProxyHostCallback callback, Mdns& mdns, std::string host_name,
+                  std::vector<inet::IpAddress> addresses, Media media, IpVersions ip_versions,
+                  fidl::InterfaceRequest<fuchsia::net::mdns::ServiceInstancePublisher> request);
 
     ~HostPublisher() override = default;
-
-    void WhenSuccessReported(fit::function<void(bool)> callback);
 
     // Disallow copy, assign and move.
     HostPublisher(const HostPublisher&) = delete;
@@ -50,12 +50,15 @@ class ProxyHostPublisherServiceImpl
     void ReportSuccess(bool success) override;
 
    private:
-    std::optional<bool> success_;
-    fit::function<void(bool)> callback_;
+    PublishProxyHostCallback callback_;
+    Mdns& mdns_;
+    std::string host_name_;
+    std::vector<inet::IpAddress> addresses_;
+    Media media_;
+    IpVersions ip_versions_;
+    fidl::InterfaceRequest<fuchsia::net::mdns::ServiceInstancePublisher> request_;
+    std::unique_ptr<ServiceInstancePublisherServiceImpl> instance_publisher_service_;
   };
-
-  std::unique_ptr<HostPublisher> host_publisher_;
-  std::unique_ptr<ServiceInstancePublisherServiceImpl> instance_publisher_service_;
 };
 
 }  // namespace mdns

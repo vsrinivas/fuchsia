@@ -38,6 +38,8 @@ class TestTransceiver : public Mdns::Transceiver {
   void SendMessage(const DnsMessage& message, const ReplyAddress& reply_address) override {}
 
   void LogTraffic() override {}
+
+  std::vector<HostAddress> LocalHostAddresses() override { return std::vector<HostAddress>(); }
 };
 
 // Tests that publications outlive publishers.

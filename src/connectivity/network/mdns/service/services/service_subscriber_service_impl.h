@@ -73,9 +73,19 @@ class ServiceSubscriberServiceImpl
     // Decrements |pipeline_depth_| and calls |MaybeSendNextEntry|.
     void ReplyReceived();
 
+    // Prevents a call to |MaybeDelete| from calling the deleter by incrementing
+    // |one_based_delete_counter_|.
+    void DeferDeletion();
+
+    // Decrements |one_based_delete_counter_| and, if the resulting value is zero, calls the
+    // deleter.
+    void MaybeDelete();
+
     fuchsia::net::mdns::ServiceSubscriptionListenerPtr client_;
     std::queue<Entry> entries_;
     size_t pipeline_depth_ = 0;
+    size_t one_based_delete_counter_ = 1;
+    fit::closure deleter_;
 
     // Disallow copy, assign and move.
     Subscriber(const Subscriber&) = delete;
