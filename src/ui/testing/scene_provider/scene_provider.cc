@@ -29,7 +29,12 @@ void SceneProvider::AttachClientView(
   if (scene_provider_config.use_scene_manager()) {
     fuchsia::session::scene::ManagerSyncPtr scene_manager;
     context_->svc()->Connect(scene_manager.NewRequest());
-    scene_manager->SetRootView(std::move(*request.mutable_view_provider()), &client_view_ref);
+
+    fuchsia::session::scene::Manager_SetRootView_Result set_root_view_result;
+    scene_manager->SetRootView(std::move(*request.mutable_view_provider()), &set_root_view_result);
+    if (set_root_view_result.is_response()) {
+      client_view_ref = std::move(set_root_view_result.response().view_ref);
+    }
   } else {
     fuchsia::ui::policy::PresenterPtr root_presenter;
     context_->svc()->Connect(root_presenter.NewRequest());

@@ -18,11 +18,20 @@
     ],
     capabilities: [
         {
+            // Protocols routed for consumption by SL4F in system "E2E" tests or
+            // for consumption by UITestManager in integration tests.
+            protocol: [ "fuchsia.input.injection.InputDeviceRegistry" ],
+        },
+        {
             protocol: [
-                "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.recovery.policy.Device",
+                "fuchsia.recovery.ui.FactoryResetCountdown",
                 "fuchsia.session.scene.Manager",
                 "fuchsia.ui.accessibility.view.Registry",
+                "fuchsia.ui.brightness.ColorAdjustmentHandler",
                 "fuchsia.ui.input.config.Features",
+                "fuchsia.ui.policy.DeviceListenerRegistry",
+                "fuchsia.ui.policy.DisplayBacklight",
             ],
         },
     ],
@@ -89,11 +98,21 @@
     ],
     expose: [
         {
+            // Protocols routed for consumption by SL4F in system "E2E" tests or
+            // for consumption by UITestManager in integration tests.
+            protocol: [ "fuchsia.input.injection.InputDeviceRegistry" ],
+            from: "self",
+        },
+        {
             protocol: [
-                "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.recovery.policy.Device",
+                "fuchsia.recovery.ui.FactoryResetCountdown",
                 "fuchsia.session.scene.Manager",
                 "fuchsia.ui.accessibility.view.Registry",
+                "fuchsia.ui.brightness.ColorAdjustmentHandler",
                 "fuchsia.ui.input.config.Features",
+                "fuchsia.ui.policy.DeviceListenerRegistry",
+                "fuchsia.ui.policy.DisplayBacklight",
             ],
             from: "self",
         },

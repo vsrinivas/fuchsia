@@ -6,6 +6,12 @@ library fuchsia.session.scene;
 using fuchsia.ui.app;
 using fuchsia.ui.views;
 
+/// The possible errors from the `PresentRootView` family of requests.
+type PresentRootViewError = flexible enum {
+    /// An error occurred while processing the request.
+    INTERNAL_ERROR = 1;
+};
+
 /// A protocol used to manage the scene graph of the session.
 ///
 /// This protocol is exposed by the `scene_manager` component. The `scene_manager`
@@ -22,12 +28,44 @@ protocol Manager {
     /// If this ViewRef cannot be returned (e.g. in Flatland case, if the ViewCreationToken is
     /// dropped before it is given to Scenic), then the connection to the `Manager` will be closed.
     ///
+    /// TODO(fxbug.dev/104411): Fix this situation.
     /// NOTE: the ViewRef is only returned after the child view is connected to the scene graph.
     /// Therefore, the caller must guarantee that the child view will eventually be connected before
     /// waiting for the ViewRef; if the child view doesn't connect, it is possible to deadlock.
+    @deprecated("Use PresentRootView.")
     SetRootView(resource struct {
         view_provider client_end:fuchsia.ui.app.ViewProvider;
     }) -> (resource struct {
         view_ref fuchsia.ui.views.ViewRef;
-    });
+    }) error PresentRootViewError;
+
+    /// Presents a view tree to the display, via the provided view holder token.
+    ///
+    /// This call will present the view using the legacy GFX API.
+    ///
+    /// Subsequent calls will replace the view tree with the one starting at the new root viewport.
+    /// The root view is shared between all clients of `Manager`.
+    ///
+    /// TODO(fxbug.dev/104411): Fix this situation.
+    /// NOTE: this method returns only after the child view is connected to the scene graph.
+    /// Therefore, the caller must guarantee that the child view will eventually be connected before
+    /// waiting for the return; if the child view doesn't connect, it is possible to deadlock.
+    @deprecated("Use PresentRootView unless running GFX.")
+    PresentRootViewLegacy(resource struct {
+        view_holder_token fuchsia.ui.views.ViewHolderToken;
+        view_ref fuchsia.ui.views.ViewRef;
+    }) -> (struct {}) error PresentRootViewError;
+
+    /// Presents a view tree to the display, via the provided viewport token.
+    ///
+    /// Subsequent calls will replace the view tree with the one starting at the new root viewport.
+    /// The root view is shared between all clients of `Manager`.
+    ///
+    /// TODO(fxbug.dev/104411): Fix this situation.
+    /// NOTE: this method returns only after the child view is connected to the scene graph.
+    /// Therefore, the caller must guarantee that the child view will eventually be connected before
+    /// waiting for the return; if the child view doesn't connect, it is possible to deadlock.
+    PresentRootView(resource struct {
+        viewport_creation_token fuchsia.ui.views.ViewportCreationToken;
+    }) -> (struct {}) error PresentRootViewError;
 };

@@ -27,6 +27,12 @@ use {
     std::sync::{Arc, Weak},
 };
 
+/// ViewHolder / Viewport token union.
+pub enum ViewportToken {
+    Gfx(ui_views::ViewHolderToken),
+    Flatland(ui_views::ViewportCreationToken),
+}
+
 /// Presentation messages.
 pub enum PresentationMessage {
     /// Request a present call.
@@ -47,10 +53,7 @@ pub type PresentationSender = UnboundedSender<PresentationMessage>;
 /// Unbounded receiver used for presentation messages.
 pub type PresentationReceiver = UnboundedReceiver<PresentationMessage>;
 
-/// A [`SceneManager`] sets up and manages a Scenic scene graph.
-///
-/// A [`SceneManager`] allows clients to add views to the scene graph.
-///
+/// A [SceneManager] manages a Scenic scene graph, and allows clients to add views to it.
 /// Each [`SceneManager`] can choose how to configure the scene, including lighting, setting the
 /// frames of added views, etc.
 ///
@@ -61,21 +64,32 @@ pub type PresentationReceiver = UnboundedReceiver<PresentationMessage>;
 ///
 /// let scenic = connect_to_service::<ScenicMarker>()?;
 /// let mut scene_manager = scene_management::FlatSceneManager::new(scenic).await?;
-/// let node = scene_manager.add_view_to_scene(view_provider, Some("Demo View".to_string())).await?;
-/// node.set_translation(20.0, 30.0, 0.0);
+/// scene_manager.set_root_view(viewport_token).await?;
+///
 /// ```
 #[async_trait]
 pub trait SceneManager: Send {
     /// Sets the root view for the scene.
     ///
+    /// ViewRef will be unset for Flatland views.
+    ///
     /// Removes any previous root view, as well as all of its descendants.
     async fn set_root_view(
+        &mut self,
+        viewport_token: ViewportToken,
+        view_ref: Option<ui_views::ViewRef>,
+    ) -> Result<(), Error>;
+
+    /// DEPRECATED: Use ViewportToken version above.
+    /// Sets the root view for the scene.
+    ///
+    /// Removes any previous root view, as well as all of its descendants.
+    async fn set_root_view_deprecated(
         &mut self,
         view_provider: ui_app::ViewProviderProxy,
     ) -> Result<ui_views::ViewRef, Error>;
 
-    // TODO(fxbug.dev/87519): The goal is to remove this, instead setting focus automatically in
-    // set_root_view().
+    /// Requests focus be transferred to the scene.
     fn request_focus(
         &self,
         view_ref: &mut ui_views::ViewRef,

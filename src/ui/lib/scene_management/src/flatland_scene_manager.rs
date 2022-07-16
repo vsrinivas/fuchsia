@@ -8,7 +8,9 @@ use {
             InjectorViewportHangingGet, InjectorViewportPublisher, InjectorViewportSpec,
             InjectorViewportSubscriber,
         },
-        scene_manager::{self, PresentationMessage, PresentationSender, SceneManager},
+        scene_manager::{
+            self, PresentationMessage, PresentationSender, SceneManager, ViewportToken,
+        },
         DisplayMetrics,
     },
     anyhow::anyhow,
@@ -20,7 +22,7 @@ use {
     fidl_fuchsia_ui_app as ui_app,
     fidl_fuchsia_ui_composition::{self as ui_comp, ContentId, TransformId},
     fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
-    fuchsia_scenic as scenic, fuchsia_scenic,
+    fuchsia_scenic as scenic,
     fuchsia_syslog::fx_log_warn,
     futures::channel::mpsc::unbounded,
     input_pipeline::Size,
@@ -215,9 +217,24 @@ pub struct FlatlandSceneManager {
 impl SceneManager for FlatlandSceneManager {
     async fn set_root_view(
         &mut self,
+        viewport_token: ViewportToken,
+        _view_ref: Option<ui_views::ViewRef>,
+    ) -> Result<(), Error> {
+        let viewport_creation_token = match viewport_token {
+            ViewportToken::Gfx(_) => Err(anyhow::anyhow!(
+                "Gfx ViewHolderToken passed to FlatlandSceneManager.set_root_view!"
+            )),
+            ViewportToken::Flatland(viewport_creation_token) => Ok(viewport_creation_token),
+        }?;
+
+        self.set_root_view_internal(viewport_creation_token).await.map(|_view_ref| {})
+    }
+
+    async fn set_root_view_deprecated(
+        &mut self,
         view_provider: ui_app::ViewProviderProxy,
     ) -> Result<ui_views::ViewRef, Error> {
-        let mut link_token_pair = scenic::flatland::ViewCreationTokenPair::new()?;
+        let link_token_pair = scenic::flatland::ViewCreationTokenPair::new()?;
 
         // Use view provider to initiate creation of the view which will be connected to the
         // viewport that we create below.
@@ -226,68 +243,7 @@ impl SceneManager for FlatlandSceneManager {
             ..ui_app::CreateView2Args::EMPTY
         })?;
 
-        // Remove any existing viewport.
-        if let Some(ids) = &self.scene_root_viewport_ids {
-            let locked = self.scene_flatland.flatland.lock();
-            locked.set_content(&mut ids.transform_id.clone(), &mut ContentId { value: 0 })?;
-            locked.remove_child(
-                &mut self.scene_flatland.root_transform_id.clone(),
-                &mut ids.transform_id.clone(),
-            )?;
-            locked.release_transform(&mut ids.transform_id.clone())?;
-            let _ = locked.release_viewport(&mut ids.content_id.clone());
-            self.scene_root_viewport_ids = None;
-        }
-
-        // Create new viewport.
-        let ids = TransformContentIdPair {
-            transform_id: self.id_generator.next_transform_id(),
-            content_id: self.id_generator.next_content_id(),
-        };
-        let (child_view_watcher, child_view_watcher_request) =
-            create_proxy::<ui_comp::ChildViewWatcherMarker>()?;
-        {
-            let locked = self.scene_flatland.flatland.lock();
-            let viewport_properties = ui_comp::ViewportProperties {
-                logical_size: Some(self.layout_info.logical_size.unwrap()),
-                ..ui_comp::ViewportProperties::EMPTY
-            };
-            locked.create_viewport(
-                &mut ids.content_id.clone(),
-                &mut link_token_pair.viewport_creation_token,
-                viewport_properties,
-                child_view_watcher_request,
-            )?;
-            locked.create_transform(&mut ids.transform_id.clone())?;
-            locked.add_child(
-                &mut self.scene_flatland.root_transform_id.clone(),
-                &mut ids.transform_id.clone(),
-            )?;
-            locked.set_content(&mut ids.transform_id.clone(), &mut ids.content_id.clone())?;
-        }
-        self.scene_root_viewport_ids = Some(ids);
-
-        // Present the previous scene graph mutations.  This MUST be done before awaiting the result
-        // of get_view_ref() below, because otherwise the view won't become attached to the global
-        // scene graph topology, and the awaited ViewRef will never come.
-        self.scene_flatland_presentation_sender.unbounded_send(PresentationMessage::Present)?;
-
-        let mut view_ref = child_view_watcher.get_view_ref().await?;
-        let view_ref_copy = fuchsia_scenic::duplicate_view_ref(&view_ref)?;
-
-        let child_status = child_view_watcher.get_status().await?;
-        match child_status {
-            ui_comp::ChildViewStatus::ContentHasPresented => {}
-        }
-        let request_focus_result = self.root_flatland.focuser.request_focus(&mut view_ref).await;
-        match request_focus_result {
-            Err(e) => fx_log_warn!("Request focus failed with err: {}", e),
-            Ok(Err(value)) => fx_log_warn!("Request focus failed with err: {:?}", value),
-            Ok(_) => {}
-        }
-        self.root_flatland_presentation_sender.unbounded_send(PresentationMessage::Present)?;
-
-        Ok(view_ref_copy)
+        self.set_root_view_internal(link_token_pair.viewport_creation_token).await
     }
 
     fn request_focus(
@@ -639,5 +595,71 @@ impl FlatlandSceneManager {
             cursor_visibility: true,
             display_metrics,
         })
+    }
+
+    async fn set_root_view_internal(
+        &mut self,
+        mut viewport_creation_token: ui_views::ViewportCreationToken,
+    ) -> Result<ui_views::ViewRef, Error> {
+        // Remove any existing viewport.
+        if let Some(ids) = &self.scene_root_viewport_ids {
+            let locked = self.scene_flatland.flatland.lock();
+            locked.set_content(&mut ids.transform_id.clone(), &mut ContentId { value: 0 })?;
+            locked.remove_child(
+                &mut self.scene_flatland.root_transform_id.clone(),
+                &mut ids.transform_id.clone(),
+            )?;
+            locked.release_transform(&mut ids.transform_id.clone())?;
+            let _ = locked.release_viewport(&mut ids.content_id.clone());
+            self.scene_root_viewport_ids = None;
+        }
+
+        // Create new viewport.
+        let ids = TransformContentIdPair {
+            transform_id: self.id_generator.next_transform_id(),
+            content_id: self.id_generator.next_content_id(),
+        };
+        let (child_view_watcher, child_view_watcher_request) =
+            create_proxy::<ui_comp::ChildViewWatcherMarker>()?;
+        {
+            let locked = self.scene_flatland.flatland.lock();
+            let viewport_properties = ui_comp::ViewportProperties {
+                logical_size: Some(self.layout_info.logical_size.unwrap()),
+                ..ui_comp::ViewportProperties::EMPTY
+            };
+            locked.create_viewport(
+                &mut ids.content_id.clone(),
+                &mut viewport_creation_token,
+                viewport_properties,
+                child_view_watcher_request,
+            )?;
+            locked.create_transform(&mut ids.transform_id.clone())?;
+            locked.add_child(
+                &mut self.scene_flatland.root_transform_id.clone(),
+                &mut ids.transform_id.clone(),
+            )?;
+            locked.set_content(&mut ids.transform_id.clone(), &mut ids.content_id.clone())?;
+        }
+        self.scene_root_viewport_ids = Some(ids);
+
+        // Present the previous scene graph mutations.  This MUST be done before awaiting the result
+        // of get_view_ref() below, because otherwise the view won't become attached to the global
+        // scene graph topology, and the awaited ViewRef will never come.
+        self.scene_flatland_presentation_sender.unbounded_send(PresentationMessage::Present)?;
+
+        let _child_status = child_view_watcher.get_status().await?;
+        let mut child_view_ref = child_view_watcher.get_view_ref().await?;
+        let child_view_ref_copy = scenic::duplicate_view_ref(&child_view_ref)?;
+
+        let request_focus_result =
+            self.root_flatland.focuser.request_focus(&mut child_view_ref).await;
+        match request_focus_result {
+            Err(e) => fx_log_warn!("Request focus failed with err: {}", e),
+            Ok(Err(value)) => fx_log_warn!("Request focus failed with err: {:?}", value),
+            Ok(_) => {}
+        }
+        self.root_flatland_presentation_sender.unbounded_send(PresentationMessage::Present)?;
+
+        Ok(child_view_ref_copy)
     }
 }

@@ -9,7 +9,9 @@ use {
         InjectorViewportHangingGet, InjectorViewportPublisher, InjectorViewportSpec,
         InjectorViewportSubscriber,
     },
-    crate::scene_manager::{self, PresentationMessage, PresentationSender, SceneManager},
+    crate::scene_manager::{
+        self, PresentationMessage, PresentationSender, SceneManager, ViewportToken,
+    },
     anyhow::Error,
     async_trait::async_trait,
     fidl,
@@ -178,6 +180,32 @@ struct ScenicResources {
 impl SceneManager for GfxSceneManager {
     async fn set_root_view(
         &mut self,
+        viewport_token: ViewportToken,
+        view_ref: Option<ui_views::ViewRef>,
+    ) -> Result<(), Error> {
+        if self.client_root_view_holder_node.is_some() {
+            panic!("GFX set_root_view doesn't support replacing the current root view");
+        };
+
+        let view_holder_token = match viewport_token {
+            ViewportToken::Gfx(view_holder_token) => Ok(view_holder_token),
+            ViewportToken::Flatland(_) => {
+                Err(anyhow::anyhow!("Flatland token passed to GfxSceneManager.set_root_view"))
+            }
+        }?;
+        self.client_root_view_ref = match view_ref {
+            None => Err(anyhow::anyhow!("GfxSceneManager.set_root_view requires ViewRef")),
+            _ => Ok(view_ref),
+        }?;
+
+        self.add_view(view_holder_token, Some("root".to_string()));
+        GfxSceneManager::request_present(&self.a11y_proxy_presentation_sender);
+
+        Ok(())
+    }
+
+    async fn set_root_view_deprecated(
+        &mut self,
         view_provider: ui_app::ViewProviderProxy,
     ) -> Result<ui_views::ViewRef, Error> {
         if self.client_root_view_holder_node.is_some() {
@@ -202,29 +230,7 @@ impl SceneManager for GfxSceneManager {
             &mut viewref_pair.view_ref,
         )?;
 
-        let view_holder = GfxSceneManager::create_view_holder(
-            &self.a11y_proxy_session,
-            token_pair.view_holder_token,
-            match self.should_flip_viewport_dimensions {
-                false => {
-                    (self.display_metrics.width_in_pips(), self.display_metrics.height_in_pips())
-                }
-                true => {
-                    (self.display_metrics.height_in_pips(), self.display_metrics.width_in_pips())
-                }
-            },
-            None,
-            None,
-            None,
-            Some("root".to_string()),
-        );
-
-        let view_holder_node = scenic::EntityNode::new(self.a11y_proxy_session.clone());
-        view_holder_node.attach(&view_holder);
-        view_holder_node.set_translation(0.0, 0.0, 0.0);
-
-        self.a11y_proxy_view.add_child(&view_holder_node);
-        self.client_root_view_holder_node = Some(view_holder_node);
+        self.add_view(token_pair.view_holder_token, Some("root".to_string()));
         GfxSceneManager::request_present(&self.a11y_proxy_presentation_sender);
 
         Ok(viewref_dup)
@@ -429,41 +435,40 @@ impl GfxSceneManager {
 
         // Size the layer to fit the size of the display.
         let display_info = scenic.get_display_info().await?;
-
         let size_in_pixels = Size {
             width: display_info.width_in_px as f32,
             height: display_info.height_in_px as f32,
         };
-
-        let display_metrics =
-            DisplayMetrics::new(size_in_pixels, display_pixel_density, viewing_distance, None);
         let (display_rotation_enum, pointerinjector_translation, should_flip_viewport_dimensions) =
             match display_rotation % 360 {
                 0 => Ok((scenic::DisplayRotation::None, (0.0, 0.0), false)),
                 90 => Ok((
                     scenic::DisplayRotation::By90Degrees,
-                    (display_metrics.width_in_pixels() as f32, 0.0),
+                    (size_in_pixels.width as f32, 0.0),
                     true,
                 )),
                 180 => Ok((
                     scenic::DisplayRotation::By180Degrees,
-                    (
-                        display_metrics.width_in_pixels() as f32,
-                        display_metrics.height_in_pixels() as f32,
-                    ),
+                    (size_in_pixels.width as f32, size_in_pixels.height as f32),
                     false,
                 )),
                 270 => Ok((
                     scenic::DisplayRotation::By270Degrees,
-                    (0.0, display_metrics.height_in_pixels() as f32),
+                    (0.0, size_in_pixels.height as f32),
                     true,
                 )),
                 _ => Err(anyhow::anyhow!("Invalid display rotation; must be {{0,90,180,270}}")),
             }?;
+        let display_metrics = DisplayMetrics::new(
+            size_in_pixels,
+            display_pixel_density,
+            viewing_distance,
+            Some(display_rotation_enum),
+        );
         let layer = GfxSceneManager::create_layer(&session, &renderer, size_in_pixels);
         let layer_stack = GfxSceneManager::create_layer_stack(&session, &layer);
         let compositor =
-            GfxSceneManager::create_compositor(&session, &layer_stack, display_rotation_enum);
+            GfxSceneManager::create_compositor(&session, &layer_stack, display_metrics.rotation());
 
         // Add the root node to the scene immediately.
         let root_node = scenic::EntityNode::new(session.clone());
@@ -816,6 +821,37 @@ impl GfxSceneManager {
         }
 
         view_holder
+    }
+
+    /// Creates a view holder, stores it in [`self.views`], then wraps it in a view holder node.
+    ///
+    /// # Parameters
+    /// - `view_holder_token`: The view holder token used to create the view holder.
+    /// - `name`: The debugging name for the created view.
+    fn add_view(&mut self, view_holder_token: ui_views::ViewHolderToken, name: Option<String>) {
+        let view_holder = GfxSceneManager::create_view_holder(
+            &self.a11y_proxy_session,
+            view_holder_token,
+            match self.should_flip_viewport_dimensions {
+                false => {
+                    (self.display_metrics.width_in_pips(), self.display_metrics.height_in_pips())
+                }
+                true => {
+                    (self.display_metrics.height_in_pips(), self.display_metrics.width_in_pips())
+                }
+            },
+            None,
+            None,
+            None,
+            name,
+        );
+
+        let view_holder_node = scenic::EntityNode::new(self.a11y_proxy_session.clone());
+        view_holder_node.attach(&view_holder);
+        view_holder_node.set_translation(0.0, 0.0, 0.0);
+
+        self.a11y_proxy_view.add_child(&view_holder_node);
+        self.client_root_view_holder_node = Some(view_holder_node);
     }
 
     /// Sets focus on the root view if it exists.

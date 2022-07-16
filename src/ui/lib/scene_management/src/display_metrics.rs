@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {fuchsia_scenic::DisplayRotation, input_pipeline::Size, std::f32::consts as f32};
+use num_traits::float::FloatConst;
+use {fuchsia_scenic::DisplayRotation, input_pipeline::Size};
 
 /// Predefined viewing distances with values in millimeters.
 #[derive(Copy, Clone, PartialEq, Debug)]
@@ -83,6 +84,7 @@ impl DisplayMetrics {
     /// - `viewing_distance`: The expected viewing distance for the display (i.e., how far away the
     /// user is expected to be from the display) in mm. Defaults to [`DisplayMetrics::DEFAULT_VIEWING_DISTANCE`].
     /// This is used to compute the ratio of pixels per pip.
+    /// - `display_rotation`: The rotation of the display, counter-clockwise, in 90-degree increments.
     pub fn new(
         size_in_pixels: Size,
         density_in_pixels_per_mm: Option<f32>,
@@ -147,7 +149,7 @@ impl DisplayMetrics {
         // Compute the pip visual size as a function of viewing distance in
         // millimeters per millimeter.
         let pip_visual_size_in_mm_per_mm =
-            (Self::IDEAL_PIP_VISUAL_ANGLE_DEGREES * f32::PI / 180.0).tan() * adaptation_factor;
+            (Self::IDEAL_PIP_VISUAL_ANGLE_DEGREES * f32::PI() / 180.0).tan() * adaptation_factor;
 
         quantize(pip_visual_size_in_mm_per_mm / pvsize_in_mm_per_mm)
     }
@@ -230,8 +232,8 @@ impl DisplayMetrics {
     }
 
     #[inline]
-    pub fn rotation_in_degrees(&self) -> f32 {
-        self.display_rotation as u32 as f32
+    pub fn rotation_in_degrees(&self) -> u32 {
+        self.display_rotation as u32
     }
 
     #[inline]

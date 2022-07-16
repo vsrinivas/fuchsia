@@ -101,10 +101,12 @@ void UITestManager::InitializeScene(bool use_scene_provider) {
     } else if (scene_owner_ == UITestRealm::SceneOwnerType::SCENE_MANAGER) {
       scene_manager_ = realm_.realm_root()->Connect<fuchsia::session::scene::Manager>();
       auto view_provider = realm_.realm_root()->Connect<fuchsia::ui::app::ViewProvider>();
-      scene_manager_->SetRootView(std::move(view_provider),
-                                  [this](fuchsia::ui::views::ViewRef view_ref) {
-                                    client_view_ref_koid_ = fsl::GetKoid(view_ref.reference.get());
-                                  });
+      scene_manager_->SetRootView(
+          std::move(view_provider),
+          [this](fuchsia::session::scene::Manager_SetRootView_Result result) {
+            FX_CHECK(result.is_response());
+            client_view_ref_koid_ = fsl::GetKoid(result.response().view_ref.reference.get());
+          });
     } else {
       FX_LOGS(FATAL) << "Unsupported scene owner";
     }

@@ -8,15 +8,29 @@ use {
     fidl_fuchsia_accessibility::{MagnificationHandlerMarker, MagnifierMarker},
     fidl_fuchsia_accessibility_scene as a11y_view,
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
+    fidl_fuchsia_recovery_policy::{
+        DeviceRequest as FactoryResetDeviceRequest,
+        DeviceRequestStream as FactoryResetDeviceRequestStream,
+    },
+    fidl_fuchsia_recovery_ui::{FactoryResetCountdownRequest, FactoryResetCountdownRequestStream},
     fidl_fuchsia_session_scene::{
         ManagerRequest as SceneManagerRequest, ManagerRequestStream as SceneManagerRequestStream,
+        PresentRootViewError,
     },
     fidl_fuchsia_ui_accessibility_view::{
         RegistryRequest as A11yViewRegistryRequest,
         RegistryRequestStream as A11yViewRegistryRequestStream,
     },
-    fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_composition as fland,
+    fidl_fuchsia_ui_app as ui_app,
+    fidl_fuchsia_ui_brightness::{
+        ColorAdjustmentHandlerRequest, ColorAdjustmentHandlerRequestStream,
+    },
+    fidl_fuchsia_ui_composition as flatland,
     fidl_fuchsia_ui_input_config::FeaturesRequestStream as InputConfigFeaturesRequestStream,
+    fidl_fuchsia_ui_policy::{
+        DeviceListenerRegistryRequest, DeviceListenerRegistryRequestStream,
+        DisplayBacklightRequest, DisplayBacklightRequestStream,
+    },
     fidl_fuchsia_ui_scenic::ScenicMarker,
     fidl_fuchsia_ui_views as ui_views, fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_protocol, server::ServiceFs},
@@ -25,7 +39,7 @@ use {
     fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::{StreamExt, TryStreamExt},
-    scene_management::{self, SceneManager, ViewingDistance},
+    scene_management::{self, SceneManager, ViewingDistance, ViewportToken},
     std::rc::Rc,
     std::sync::Arc,
 };
@@ -36,9 +50,14 @@ mod input_pipeline;
 
 enum ExposedServices {
     AccessibilityViewRegistry(A11yViewRegistryRequestStream),
-    SceneManager(SceneManagerRequestStream),
-    InputDeviceRegistry(InputDeviceRegistryRequestStream),
+    ColorAdjustmentHandler(ColorAdjustmentHandlerRequestStream),
+    DeviceListenerRegistry(DeviceListenerRegistryRequestStream),
+    DisplayBacklight(DisplayBacklightRequestStream),
+    FactoryResetCountdown(FactoryResetCountdownRequestStream),
+    FactoryReset(FactoryResetDeviceRequestStream),
     InputConfigFeatures(InputConfigFeaturesRequestStream),
+    InputDeviceRegistry(InputDeviceRegistryRequestStream),
+    SceneManager(SceneManagerRequestStream),
 }
 
 #[fuchsia::main(logging_tags = [ "scene_manager" ])]
@@ -59,10 +78,16 @@ async fn inner_main() -> Result<(), Error> {
 
     inspect_runtime::serve(inspect::component::inspector(), &mut fs)?;
 
-    fs.dir("svc").add_fidl_service(ExposedServices::AccessibilityViewRegistry);
-    fs.dir("svc").add_fidl_service(ExposedServices::SceneManager);
-    fs.dir("svc").add_fidl_service(ExposedServices::InputDeviceRegistry);
-    fs.dir("svc").add_fidl_service(ExposedServices::InputConfigFeatures);
+    fs.dir("svc")
+        .add_fidl_service(ExposedServices::AccessibilityViewRegistry)
+        .add_fidl_service(ExposedServices::ColorAdjustmentHandler)
+        .add_fidl_service(ExposedServices::DeviceListenerRegistry)
+        .add_fidl_service(ExposedServices::DisplayBacklight)
+        .add_fidl_service(ExposedServices::FactoryResetCountdown)
+        .add_fidl_service(ExposedServices::FactoryReset)
+        .add_fidl_service(ExposedServices::InputConfigFeatures)
+        .add_fidl_service(ExposedServices::InputDeviceRegistry)
+        .add_fidl_service(ExposedServices::SceneManager);
     fs.take_and_serve_directory_handle()?;
 
     let (input_device_registry_server, input_device_registry_request_stream_receiver) =
@@ -76,7 +101,6 @@ async fn inner_main() -> Result<(), Error> {
     let icu_data_loader = icu_data::Loader::new().unwrap();
 
     let scenic = connect_to_protocol::<ScenicMarker>()?;
-
     let use_flatland = scenic.uses_flatland().await.expect("Failed to get flatland info.");
     let display_ownership =
         scenic.get_display_ownership_event().await.expect("Failed to get display ownership.");
@@ -85,19 +109,19 @@ async fn inner_main() -> Result<(), Error> {
     let scene_manager: Arc<Mutex<Box<dyn SceneManager>>> = if use_flatland {
         // TODO(fxbug.dev/86379): Support for insertion of accessibility view.  Pass ViewRefInstalled
         // to the SceneManager, the same way we do for the Gfx branch.
-        let display = connect_to_protocol::<fland::FlatlandDisplayMarker>()?;
-        let root_flatland = connect_to_protocol::<fland::FlatlandMarker>()?;
-        let pointerinjector_flatland = connect_to_protocol::<fland::FlatlandMarker>()?;
-        let a11y_flatland = connect_to_protocol::<fland::FlatlandMarker>()?;
+        let flatland_display = connect_to_protocol::<flatland::FlatlandDisplayMarker>()?;
+        let root_flatland = connect_to_protocol::<flatland::FlatlandMarker>()?;
+        let pointerinjector_flatland = connect_to_protocol::<flatland::FlatlandMarker>()?;
+        let scene_flatland = connect_to_protocol::<flatland::FlatlandMarker>()?;
         let cursor_view_provider = connect_to_protocol::<ui_app::ViewProviderMarker>()?;
         let a11y_view_provider = connect_to_protocol::<a11y_view::ProviderMarker>()?;
         Arc::new(Mutex::new(Box::new(
             scene_management::FlatlandSceneManager::new(
                 scenic,
-                display,
-                pointerinjector_flatland,
+                flatland_display,
                 root_flatland,
-                a11y_flatland,
+                pointerinjector_flatland,
+                scene_flatland,
                 cursor_view_provider,
                 a11y_view_provider,
             )
@@ -108,17 +132,37 @@ async fn inner_main() -> Result<(), Error> {
         let display_rotation = match std::fs::read_to_string("/config/data/display_rotation") {
             Ok(contents) => {
                 let contents = contents.trim();
-                contents.parse::<i32>().context(format!("Failed to parse /config/data/display_rotation - expected an integer, got {contents}"))?
+                contents.parse::<i32>().context(format!(
+                    "Failed to parse /config/data/display_rotation - \
+                expected an integer, got {contents}"
+                ))?
             }
             Err(e) => {
-                fx_log_warn!("Wasn't able to read config/data/display_rotation, defaulting to a display rotation of 0 degrees: {}", e);
+                fx_log_warn!(
+                    "Wasn't able to read config/data/display_rotation, \
+                    defaulting to a display rotation of 0 degrees: {}",
+                    e
+                );
                 0
             }
         };
         let display_pixel_density =
             match std::fs::read_to_string("/config/data/display_pixel_density") {
-                Ok(contents) => Some(contents.parse::<f32>()?),
-                Err(_) => None,
+                Ok(contents) => {
+                    let contents = contents.trim();
+                    Some(contents.parse::<f32>().context(format!(
+                        "Failed to parse /config/data/display_pixel_density - \
+                    expected a decimal, got {contents}"
+                    ))?)
+                }
+                Err(e) => {
+                    fx_log_warn!(
+                        "Wasn't able to read config/data/display_pixel_density, \
+                        guessing based on display size: {}",
+                        e
+                    );
+                    None
+                }
             };
         let viewing_distance = match std::fs::read_to_string("/config/data/display_usage") {
             Ok(s) => Some(match s.trim() {
@@ -129,7 +173,14 @@ async fn inner_main() -> Result<(), Error> {
                 "far" => ViewingDistance::Far,
                 unknown => anyhow::bail!("Invalid /config/data/display_usage value: {unknown}"),
             }),
-            Err(_) => None,
+            Err(e) => {
+                fx_log_warn!(
+                    "Wasn't able to read config/data/display_usage, \
+                    guessing based on display size: {}",
+                    e
+                );
+                None
+            }
         };
         let gfx_scene_manager: Arc<Mutex<Box<dyn SceneManager>>> = Arc::new(Mutex::new(Box::new(
             scene_management::GfxSceneManager::new(
@@ -170,6 +221,38 @@ async fn inner_main() -> Result<(), Error> {
         match service_request {
             ExposedServices::AccessibilityViewRegistry(request_stream) => {
                 fasync::Task::local(handle_accessibility_view_registry_request_stream(
+                    request_stream,
+                    Arc::clone(&scene_manager),
+                ))
+                .detach()
+            }
+            ExposedServices::ColorAdjustmentHandler(request_stream) => {
+                fasync::Task::local(handle_color_adjustment_handler_request_stream(
+                    request_stream,
+                    Arc::clone(&scene_manager),
+                ))
+                .detach()
+            }
+            ExposedServices::DeviceListenerRegistry(request_stream) => {
+                fasync::Task::local(handle_device_listener_registry_request_stream(
+                    request_stream,
+                    Arc::clone(&scene_manager),
+                ))
+                .detach()
+            }
+            ExposedServices::DisplayBacklight(request_stream) => fasync::Task::local(
+                handle_display_backlight_request_stream(request_stream, Arc::clone(&scene_manager)),
+            )
+            .detach(),
+            ExposedServices::FactoryResetCountdown(request_stream) => {
+                fasync::Task::local(handle_factory_reset_countdown_request_stream(
+                    request_stream,
+                    Arc::clone(&scene_manager),
+                ))
+                .detach()
+            }
+            ExposedServices::FactoryReset(request_stream) => {
+                fasync::Task::local(handle_factory_reset_device_request_stream(
                     request_stream,
                     Arc::clone(&scene_manager),
                 ))
@@ -223,36 +306,6 @@ async fn inner_main() -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn handle_scene_manager_request_stream(
-    mut request_stream: SceneManagerRequestStream,
-    scene_manager: Arc<Mutex<Box<dyn scene_management::SceneManager>>>,
-) {
-    while let Ok(Some(request)) = request_stream.try_next().await {
-        match request {
-            SceneManagerRequest::SetRootView { view_provider, responder } => {
-                if let Ok(proxy) = view_provider.into_proxy() {
-                    let mut scene_manager = scene_manager.lock().await;
-                    match scene_manager.set_root_view(proxy).await {
-                        Ok(mut view_ref) => match responder.send(&mut view_ref) {
-                            Ok(_) => {}
-                            Err(e) => {
-                                fx_log_err!("Error responding to SetRootView(): {}", e);
-                            }
-                        },
-                        Err(e) => {
-                            // Log an error and close the connection.  This can be a consequence of
-                            // the child View not connecting to the scene graph (hence we don't
-                            // receive the ViewRef to return), or perhaps an internal bug which
-                            // requires further investigation.
-                            fx_log_err!("Failed to obtain ViewRef from set_root_view(): {}", e);
-                        }
-                    }
-                }
-            }
-        };
-    }
-}
-
 pub async fn handle_accessibility_view_registry_request_stream(
     mut request_stream: A11yViewRegistryRequestStream,
     scene_manager: Arc<Mutex<Box<dyn scene_management::SceneManager>>>,
@@ -285,6 +338,147 @@ pub async fn handle_accessibility_view_registry_request_stream(
             } => {
                 fx_log_err!("A11yViewRegistry.CreateAccessibilityViewport not implemented!");
                 responder.control_handle().shutdown_with_epitaph(zx::Status::PEER_CLOSED);
+            }
+        };
+    }
+}
+
+pub async fn handle_color_adjustment_handler_request_stream(
+    mut request_stream: ColorAdjustmentHandlerRequestStream,
+    _scene_manager: Arc<Mutex<Box<dyn scene_management::SceneManager>>>,
+) {
+    while let Ok(Some(request)) = request_stream.try_next().await {
+        match request {
+            ColorAdjustmentHandlerRequest::SetColorAdjustment { color_adjustment, .. } => {
+                fx_log_err!(
+                    "ColorAdjustmentHandler.SetColorAdjustment() called with {color_adjustment:?}"
+                );
+            }
+        };
+    }
+}
+
+pub async fn handle_device_listener_registry_request_stream(
+    mut request_stream: DeviceListenerRegistryRequestStream,
+    _scene_manager: Arc<Mutex<Box<dyn scene_management::SceneManager>>>,
+) {
+    let mut listener_holder = None;
+    while let Ok(Some(request)) = request_stream.try_next().await {
+        match request {
+            DeviceListenerRegistryRequest::RegisterListener { listener, responder } => {
+                fx_log_err!("DeviceListenerRegistryRequest.RegisterListener() called");
+                if let None = listener_holder {
+                    listener_holder = Some(listener);
+                }
+                match responder.send() {
+                    Ok(_) => {}
+                    Err(e) => {
+                        fx_log_err!("Error responding to RegisterListener(): {}", e);
+                    }
+                }
+            }
+            _ => {}
+        };
+    }
+}
+
+pub async fn handle_display_backlight_request_stream(
+    mut request_stream: DisplayBacklightRequestStream,
+    _scene_manager: Arc<Mutex<Box<dyn scene_management::SceneManager>>>,
+) {
+    while let Ok(Some(request)) = request_stream.try_next().await {
+        match request {
+            DisplayBacklightRequest::SetMinimumRgb { minimum_rgb, responder } => {
+                fx_log_err!("DisplayBacklight.SetMinimumRgb() called with {minimum_rgb:?}");
+                match responder.send() {
+                    Ok(_) => {}
+                    Err(e) => {
+                        fx_log_err!("Error responding to SetMinimumRgb(): {}", e);
+                    }
+                }
+            }
+        };
+    }
+}
+
+pub async fn handle_factory_reset_countdown_request_stream(
+    mut request_stream: FactoryResetCountdownRequestStream,
+    _scene_manager: Arc<Mutex<Box<dyn scene_management::SceneManager>>>,
+) {
+    let mut responder_holder = None;
+    while let Ok(Some(request)) = request_stream.try_next().await {
+        match request {
+            FactoryResetCountdownRequest::Watch { responder, .. } => {
+                fx_log_err!("FactoryResetCountdown.Watch() called");
+                if let None = responder_holder {
+                    responder_holder = Some(responder);
+                }
+            }
+        };
+    }
+}
+
+pub async fn handle_factory_reset_device_request_stream(
+    mut request_stream: FactoryResetDeviceRequestStream,
+    _scene_manager: Arc<Mutex<Box<dyn scene_management::SceneManager>>>,
+) {
+    while let Ok(Some(request)) = request_stream.try_next().await {
+        match request {
+            FactoryResetDeviceRequest::SetIsLocalResetAllowed { allowed, .. } => {
+                fx_log_err!("FactoryResetCountdown.SetIsLocalResetAllowed() called: {allowed}");
+            }
+        };
+    }
+}
+
+pub async fn handle_scene_manager_request_stream(
+    mut request_stream: SceneManagerRequestStream,
+    scene_manager: Arc<Mutex<Box<dyn scene_management::SceneManager>>>,
+) {
+    while let Ok(Some(request)) = request_stream.try_next().await {
+        match request {
+            SceneManagerRequest::SetRootView { view_provider, responder } => {
+                if let Ok(proxy) = view_provider.into_proxy() {
+                    let mut scene_manager = scene_manager.lock().await;
+                    let mut set_root_view_result =
+                        scene_manager.set_root_view_deprecated(proxy).await.map_err(|e| {
+                            fx_log_err!("Failed to obtain ViewRef from SetRootView(): {}", e);
+                            PresentRootViewError::InternalError
+                        });
+                    if let Err(e) = responder.send(&mut set_root_view_result) {
+                        fx_log_err!("Error responding to SetRootView(): {}", e);
+                    }
+                }
+            }
+            SceneManagerRequest::PresentRootViewLegacy {
+                view_holder_token,
+                view_ref,
+                responder,
+            } => {
+                let mut scene_manager = scene_manager.lock().await;
+                let mut set_root_view_result = scene_manager
+                    .set_root_view(ViewportToken::Gfx(view_holder_token), Some(view_ref))
+                    .await
+                    .map_err(|e| {
+                        fx_log_err!("Failed to obtain ViewRef from PresentRootViewLegacy(): {}", e);
+                        PresentRootViewError::InternalError
+                    });
+                if let Err(e) = responder.send(&mut set_root_view_result) {
+                    fx_log_err!("Error responding to PresentRootViewLegacy(): {}", e);
+                }
+            }
+            SceneManagerRequest::PresentRootView { viewport_creation_token, responder } => {
+                let mut scene_manager = scene_manager.lock().await;
+                let mut set_root_view_result = scene_manager
+                    .set_root_view(ViewportToken::Flatland(viewport_creation_token), None)
+                    .await
+                    .map_err(|e| {
+                        fx_log_err!("Failed to obtain ViewRef from PresentRootView(): {}", e);
+                        PresentRootViewError::InternalError
+                    });
+                if let Err(e) = responder.send(&mut set_root_view_result) {
+                    fx_log_err!("Error responding to PresentRootView(): {}", e);
+                }
             }
         };
     }
