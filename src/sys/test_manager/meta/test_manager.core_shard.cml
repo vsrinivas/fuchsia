@@ -26,6 +26,7 @@
         {
             protocol: [
                 "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.boot.SvcStashProvider",
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.diagnostics.FeedbackArchiveAccessor",

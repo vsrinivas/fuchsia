@@ -576,6 +576,11 @@
             to: [ "#early_boot_instrumentation" ],
             rights: [ "r*" ],
         },
+        {
+            protocol: "fuchsia.boot.SvcStashProvider",
+            from: "parent",
+            to: [ "#early_boot_instrumentation" ],
+        },
 
         // Tests of the media system change their behavior based on board
         // TODO(fxbug.dev/83512): Remove when specialized test realms are ready.
