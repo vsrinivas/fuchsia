@@ -10,7 +10,7 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/setui_service_integration_test",
+        binary: "bin/privacy_integration_test",
     },
     offer: [
         {
@@ -28,7 +28,7 @@
             from: "parent",
             to: "#realm_builder",
             rights: [ "r*" ],
-            subdir: "integration_test_pkg",
+            subdir: "privacy_integration_test_pkg",
         },
     ],
 }

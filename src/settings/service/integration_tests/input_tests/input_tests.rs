@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::lib::{Mocks, SetuiServiceTest};
+use crate::lib::{InputTest, Mocks};
 use anyhow::Error;
 use async_trait::async_trait;
 use fidl_fuchsia_camera3::{
@@ -11,14 +11,13 @@ use fidl_fuchsia_camera3::{
 use fuchsia_async as fasync;
 use fuchsia_component::server::{ServiceFs, ServiceFsDir};
 use fuchsia_component_test::LocalComponentHandles;
-use fuchsia_syslog::fx_log_info;
 use futures::{StreamExt, TryStreamExt};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 mod lib;
 
 #[async_trait]
-impl Mocks for SetuiServiceTest {
+impl Mocks for InputTest {
     // Mock the camera dependency and verify the settings service interacts with the camera
     // dependency by checking the cam_muted has been updated to default value false through the
     // SetSoftwareMuteState request.
@@ -58,9 +57,6 @@ impl Mocks for SetuiServiceTest {
                                                 muted,
                                                 responder,
                                             } => {
-                                                fx_log_info!(
-                                                    "SetSoftwareMuteState has been called."
-                                                );
                                                 (*cam_muted).store(muted, Ordering::Relaxed);
                                                 let _ = responder.send();
                                             }
@@ -86,10 +82,9 @@ impl Mocks for SetuiServiceTest {
 #[fuchsia::test]
 async fn test_inputmarker() {
     let camera_sw_muted = Arc::new(AtomicBool::new(true));
-    let instance = SetuiServiceTest::create_realm(Arc::clone(&camera_sw_muted))
-        .await
-        .expect("setting up test realm");
-    let proxy = SetuiServiceTest::connect_to_inputmarker(&instance);
+    let instance =
+        InputTest::create_realm(Arc::clone(&camera_sw_muted)).await.expect("setting up test realm");
+    let proxy = InputTest::connect_to_inputmarker(&instance);
     // Make a watch call.
     let _ = proxy.watch().await.expect("watch completed");
     // Assert the camera_sw_muted value changes to default false.

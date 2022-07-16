@@ -2,63 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/components.gni")
-import("//build/config.gni")
-import("//build/rust/rustc_binary.gni")
-import("//build/rust/rustc_test.gni")
-
-rustc_test("bin") {
-  name = "setui_service_integration_test"
-  edition = "2021"
-  source_root = "setui_service_integration_test.rs"
-  sources = [
-    "lib.rs",
-    "setui_service_integration_test.rs",
-  ]
-  deps = [
-    "//sdk/fidl/fuchsia.camera3:fuchsia.camera3-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-component-test",
-    "//src/lib/syslog/rust:syslog",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:futures",
-  ]
-
-  configs -= [ "//build/config/rust:allow_unused_results" ]
-}
-
-fuchsia_component("setui_service_integration_test") {
-  testonly = true
-  manifest = "meta/setui_service_integration_test.cml"
-  deps = [ ":bin" ]
-}
-
-fuchsia_test_package("integration_test_pkg") {
-  package_name = "setui_service_integration_test"
-  test_components = [ ":setui_service_integration_test" ]
-  deps = [
-    ":setui_service_integration_test",
-    ":tests_config",
-    "//src/settings/service:setui_service_with_camera",
-    "//src/sys/stash:pkg",
-  ]
-}
-
-config_data("tests_config") {
-  for_pkg = "integration_test_pkg"
-  sources = [
-    "testdata/input_device_config.json",
-    "testdata/interface_configuration.json",
-  ]
-}
-
 group("integration_tests") {
   testonly = true
-  public_deps = [ ":integration_test_pkg" ]
+  public_deps = [
+    "input_tests",
+    "privacy_tests",
+  ]
 }

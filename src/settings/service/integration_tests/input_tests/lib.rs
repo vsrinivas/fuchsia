@@ -4,16 +4,15 @@
 
 use anyhow::Error;
 use async_trait::async_trait;
-use fidl_fuchsia_io as fio;
 use fidl_fuchsia_settings::*;
 use fuchsia_component_test::{
     Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
 };
 use std::sync::atomic::AtomicBool;
 use std::sync::Arc;
+use utils;
 
 const COMPONENT_URL: &str = "#meta/setui_service_with_camera.cm";
-const STORE_URL: &str = "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm";
 
 #[async_trait]
 pub trait Mocks {
@@ -23,37 +22,36 @@ pub trait Mocks {
     ) -> Result<(), Error>;
 }
 
-pub struct SetuiServiceTest {
+pub struct InputTest {
     pub camera_sw_muted: Arc<AtomicBool>,
 }
 
-impl SetuiServiceTest {
+impl InputTest {
     pub async fn create_realm(cam_muted: Arc<AtomicBool>) -> Result<RealmInstance, Error> {
         let builder = RealmBuilder::new().await?;
         // Add setui_service as child of the realm builder.
         let setui_service =
             builder.add_child("setui_service", COMPONENT_URL, ChildOptions::new()).await?;
-        // setui_service needs to connect to fidl_fuchsia_stash to start its storage.
-        let store = builder.add_child("store", STORE_URL, ChildOptions::new().eager()).await?;
-        builder
-            .add_route(
-                Route::new()
-                    .capability(Capability::protocol_by_name("fuchsia.stash.Store"))
-                    .from(&store)
-                    .to(&setui_service),
-            )
-            .await?;
+        let info = utils::SettingsRealmInfo {
+            builder,
+            settings: &setui_service,
+            has_config_data: true,
+            capabilities: vec!["fuchsia.settings.Input"],
+        };
+        // Add basic Settings service realm information.
+        utils::create_realm_basic(&info).await?;
         // Add mock camera dependency to test Input service with camera.
-        let camera = builder
+        let camera = info
+            .builder
             .add_local_child(
                 "camera",
                 move |handles: LocalComponentHandles| {
-                    Box::pin(SetuiServiceTest::device_watcher_impl(handles, Arc::clone(&cam_muted)))
+                    Box::pin(InputTest::device_watcher_impl(handles, Arc::clone(&cam_muted)))
                 },
                 ChildOptions::new().eager(),
             )
             .await?;
-        builder
+        info.builder
             .add_route(
                 Route::new()
                     .capability(Capability::protocol_by_name("fuchsia.camera3.DeviceWatcher"))
@@ -62,50 +60,16 @@ impl SetuiServiceTest {
                     .to(&setui_service),
             )
             .await?;
-        // Use for reading configuration files.
-        builder
-            .add_route(
-                Route::new()
-                    .capability(
-                        Capability::directory("config-data")
-                            .path("/config/data")
-                            .rights(fio::R_STAR_DIR),
-                    )
-                    .from(Ref::parent())
-                    .to(&setui_service),
-            )
-            .await?;
-        // Required by the store dependency.
-        builder
-            .add_route(
-                Route::new()
-                    .capability(Capability::storage("data").path("/data"))
-                    .from(Ref::parent())
-                    .to(&store),
-            )
-            .await?;
-        // Provide LogSink to print out logs of each service for debugging purpose.
-        builder
+        // Provide LogSink to print out logs of the camera component for debugging purpose.
+        info.builder
             .add_route(
                 Route::new()
                     .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
                     .from(Ref::parent())
-                    .to(&setui_service)
-                    .to(&store)
                     .to(&camera),
             )
             .await?;
-        // Used for Input service test.
-        builder
-            .add_route(
-                Route::new()
-                    .capability(Capability::protocol_by_name("fuchsia.settings.Input"))
-                    .from(&setui_service)
-                    .to(Ref::parent()),
-            )
-            .await?;
-
-        let instance = builder.build().await?;
+        let instance = info.builder.build().await?;
         Ok(instance)
     }
 
