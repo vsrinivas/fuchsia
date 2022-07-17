@@ -172,8 +172,8 @@ fn type_to_rust_str(
                     let decl = ir.get_const(identifier)?;
                     type_to_rust_str(&decl._type, maybe_attributes, ir)
                 }
-                Declaration::Enum => Ok(format!("{}", name = identifier.get_name())),
-                Declaration::Bits => Ok(format!("{}", name = identifier.get_name())),
+                Declaration::Enum => Ok(format!("{name}", name = identifier.get_name())),
+                Declaration::Bits => Ok(format!("{name}", name = identifier.get_name())),
                 // Protocols are not generated, but this supports some tests.
                 Declaration::Protocol => return Ok(to_c_name(identifier.get_name())),
                 Declaration::Struct | Declaration::Table | Declaration::Union => {
