@@ -23,7 +23,23 @@ namespace camera {
 
 namespace {
 
+// Pipeline-wide Parameters
+// Each processing node has access to an input collection, an output collection, or both. For each
+// collection it has access to, a certain amount of "camping" buffers are required, representing the
+// maximum number of buffers the node may need to hold in order to make forward progress. For most
+// processing tasks, the input and output buffer count will be 1 - when running, the node is reading
+// from one (input) buffer and writing to one (output) buffer. In addition to the values here,
+// stand-in values for future stream clients are specified below.
+constexpr uint32_t kMonitoringIspFROutputBuffers = 3;
+constexpr uint32_t kMonitoringIspDSOutputBuffers = 3;
+constexpr uint32_t kMonitoringGDC1InputBuffers = 1;
+constexpr uint32_t kMonitoringGDC1OutputBuffers = 1;
+constexpr uint32_t kMonitoringGDC2InputBuffers = 1;
+constexpr uint32_t kMonitoringGDC2OutputBuffers = 1;
+constexpr uint32_t kMonitoringGE2DInputBuffers = 1;
+
 // OutputStreamMLFR Parameters
+constexpr uint32_t kOutputStreamMlFRMaxClientBuffers = 2;
 constexpr uint32_t kOutputStreamMlFRWidth = 2176;
 constexpr uint32_t kOutputStreamMlFRHeight = 2720;
 constexpr uint32_t kOutputStreamMlFRFrameRate = 10;
@@ -31,6 +47,7 @@ constexpr fuchsia::sysmem::PixelFormatType kOutputStreamMlFRPixelFormat =
     fuchsia::sysmem::PixelFormatType::NV12;
 
 // OutputStreamMLDS Parameters
+constexpr uint32_t kOutputStreamMlDSMaxClientBuffers = 6;
 constexpr uint32_t kOutputStreamMlDSWidth = 640;
 constexpr uint32_t kOutputStreamMlDSHeight = 512;
 constexpr uint32_t kOutputStreamMlDSFrameRate = 10;
@@ -38,6 +55,7 @@ constexpr fuchsia::sysmem::PixelFormatType kOutputStreamMlDSPixelFormat =
     fuchsia::sysmem::PixelFormatType::NV12;
 
 // OutputStreamMonitoring Parameters
+constexpr uint32_t kOutputStreamMonitoringMaxClientBuffers = 5;
 constexpr uint32_t kOutputStreamDSWidth = 1152;
 constexpr uint32_t kOutputStreamDSHeight = 1440;
 constexpr uint32_t kOutputStreamMonitoringWidth = 1152;

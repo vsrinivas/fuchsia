@@ -375,9 +375,6 @@ TEST_F(TaskTest, RemoveTaskTest) {
   // Wait for the callback.
   WaitForRemoveTaskAndReset();
   EXPECT_EQ(frame_status_error_, TASK_REMOVE_STATUS_OK);
-
-  // |task_id| is no longer valid.
-  ASSERT_DEATH(([this, task_id]() { gdc_device_->GdcRemoveTask(task_id); }));
 }
 
 TEST_F(TaskTest, ProcessInvalidFrameTest) {
@@ -502,11 +499,6 @@ TEST_F(TaskTest, ReleaseInValidFrameTest) {
   WaitAndReset();
   EXPECT_EQ(1, GetCallbackSize());
   EXPECT_FALSE(frame_status_error_);
-
-  // Release the output buffer index provided as callback.
-  ASSERT_DEATH(([this, task_id]() {
-    gdc_device_->GdcReleaseFrame(task_id + 1, GetCallbackBackOutputBufferIndex());
-  }));
 }
 
 TEST_F(TaskTest, MultipleProcessFrameTest) {

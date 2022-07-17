@@ -7,6 +7,7 @@
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 
+#include <string>
 #include <vector>
 
 #include "src/camera/drivers/controller/configs/internal_config.h"
@@ -19,11 +20,15 @@ class ProductConfig {
 
   virtual ~ProductConfig() = default;
 
-  virtual std::vector<fuchsia::camera2::hal::Config> ExternalConfigs() = 0;
+  virtual std::vector<fuchsia::camera2::hal::Config> ExternalConfigs() const = 0;
 
-  virtual InternalConfigs InternalConfigs() = 0;
+  virtual InternalConfigs InternalConfigs() const = 0;
 
-  virtual const char* GetGdcConfigFile(GdcConfig config_type) = 0;
+  virtual const char* GetGdcConfigFile(GdcConfig config_type) const = 0;
+
+  virtual std::string ToString() const = 0;
+
+  static fuchsia::camera2::DeviceInfo DeviceInfo();
 };
 
 }  // namespace camera

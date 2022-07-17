@@ -10,39 +10,31 @@
 #include <lib/trace/event.h>
 
 #include "src/camera/drivers/controller/configs/product_config.h"
+#include "src/lib/fsl/handles/object_info.h"
 
 namespace camera {
 
-namespace {
-constexpr auto kTag = "camera_controller";
-}  // namespace
-
-ControllerImpl::ControllerImpl(zx_device_t* device,
-                               fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> control,
-                               async_dispatcher_t* dispatcher, const ddk::IspProtocolClient& isp,
-                               const ddk::GdcProtocolClient& gdc,
+ControllerImpl::ControllerImpl(async_dispatcher_t* dispatcher,
+                               const ddk::SysmemProtocolClient& sysmem,
+                               const ddk::IspProtocolClient& isp, const ddk::GdcProtocolClient& gdc,
                                const ddk::Ge2dProtocolClient& ge2d,
-                               fit::closure on_connection_closed,
-                               fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator,
-                               const zx::event& shutdown_event)
-    : binding_(this),
-      pipeline_manager_(device, dispatcher, isp, gdc, ge2d, std::move(sysmem_allocator),
-                        shutdown_event),
+                               LoadFirmwareCallback load_firmware)
+    : dispatcher_(dispatcher),
+      binding_(this),
+      pipeline_manager_(dispatcher, sysmem, isp, gdc, ge2d, std::move(load_firmware)),
       product_config_(ProductConfig::Create()) {
   binding_.set_error_handler(
-      [occ = std::move(on_connection_closed)](zx_status_t /*status*/) { occ(); });
-  PopulateConfigurations();
-  binding_.Bind(std::move(control), dispatcher);
+      [](zx_status_t status) { FX_PLOGS(INFO, status) << "controller client disconnected"; });
+  configs_ = product_config_->ExternalConfigs();
+  internal_configs_ = product_config_->InternalConfigs();
 }
 
-zx_status_t ControllerImpl::GetInternalConfiguration(uint32_t config_index,
-                                                     InternalConfigInfo** internal_config) {
-  if (config_index >= internal_configs_.configs_info.size() || internal_config == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
+void ControllerImpl::Connect(fidl::InterfaceRequest<fuchsia::camera2::hal::Controller> request) {
+  if (binding_.is_bound()) {
+    request.Close(ZX_ERR_ALREADY_BOUND);
+    return;
   }
-
-  *internal_config = &internal_configs_.configs_info[config_index];
-  return ZX_OK;
+  binding_.Bind(std::move(request), dispatcher_);
 }
 
 void ControllerImpl::GetNextConfig(GetNextConfigCallback callback) {
@@ -57,90 +49,86 @@ void ControllerImpl::GetNextConfig(GetNextConfigCallback callback) {
   config_count_++;
 }
 
-static InternalConfigNode* GetStreamConfigNode(
-    InternalConfigInfo* internal_config, fuchsia::camera2::CameraStreamType stream_config_type) {
-  // Internal API, assuming the pointer will be valid always.
-  for (auto& stream_info : internal_config->streams_info) {
-    auto supported_streams = stream_info.supported_streams;
-    if (std::any_of(supported_streams.begin(), supported_streams.end(),
-                    [stream_config_type](auto& supported_stream) {
-                      return supported_stream.type == stream_config_type;
-                    })) {
-      return &stream_info;
-    }
-  }
-  return nullptr;
-}
-
 void ControllerImpl::CreateStream(uint32_t config_index, uint32_t stream_index,
                                   uint32_t image_format_index,
                                   fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) {
   TRACE_DURATION("camera", "ControllerImpl::CreateStream");
-  zx_status_t status = ZX_OK;
-  auto cleanup = fit::defer([&stream, &status]() { stream.Close(status); });
-  auto external_configs = product_config_->ExternalConfigs();
 
-  // Input Validations
+  FX_LOGS(INFO) << "new request from remote channel koid "
+                << fsl::GetRelatedKoid(stream.channel().get()) << " for c" << config_index << "s"
+                << stream_index << "f" << image_format_index;
+
   if (config_index >= configs_.size()) {
-    FX_LOGST(DEBUG, kTag) << "Invalid config index " << config_index;
-    status = ZX_ERR_INVALID_ARGS;
+    stream.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
   const auto& config = configs_[config_index];
 
   if (stream_index >= config.stream_configs.size()) {
-    FX_LOGST(DEBUG, kTag) << "Invalid stream index " << stream_index;
-    status = ZX_ERR_INVALID_ARGS;
+    stream.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
   const auto& stream_config = config.stream_configs[stream_index];
 
   if (image_format_index >= stream_config.image_formats.size()) {
-    FX_LOGST(DEBUG, kTag) << "Invalid image format index " << image_format_index;
-    status = ZX_ERR_INVALID_ARGS;
-    return;
-  }
-  // Get Internal Configuration
-  InternalConfigInfo* internal_config;
-  status = GetInternalConfiguration(config_index, &internal_config);
-  if (status != ZX_OK) {
-    FX_PLOGST(DEBUG, kTag, status) << "Unable to get Internal configuration";
+    stream.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
 
-  // Check the Input Stream Type and see if it is already created
-  auto* stream_config_node =
-      GetStreamConfigNode(internal_config, stream_config.properties.stream_type());
-  if (stream_config_node == nullptr) {
-    FX_LOGST(DEBUG, kTag) << "Unable to get Internal stream config node";
+  // The presence of the requests queue indicates the pipeline manager is in transition.
+  if (requests_) {
+    // If a new config request arrives before the previous shutdown completed, discard any pending
+    // requests received in the interim period and just start tracking requests for the new config.
+    if (config_index != pipeline_config_index_) {
+      pipeline_config_index_ = config_index;
+      requests_ = {};
+    }
+    requests_->emplace(stream_index, image_format_index, std::move(stream));
     return;
   }
 
-  StreamCreationData info;
+  // TODO(fxbug.dev/100525): Move config index management into the pipeline manager, then delete
+  // shutdown/queueing in this component.
+  //
+  // If the requested config is different from the current
+  // config, handling it requires shutting down the current pipeline first.
+  if (config_index != pipeline_config_index_) {
+    pipeline_config_index_ = config_index;
+    requests_ = {};
+    requests_->emplace(stream_index, image_format_index, std::move(stream));
+    pipeline_manager_.Shutdown([this]() mutable {
+      TRACE_DURATION("camera", "ControllerImpl::CreateStream.shutdown.callback");
+      pipeline_manager_.SetRoots(
+          internal_configs_.configs_info[pipeline_config_index_].streams_info);
+      auto requests = std::move(*requests_);
+      requests_.reset();
+      while (!requests.empty()) {
+        auto [stream_index, image_format_index, stream] = std::move(requests.front());
+        requests.pop();
+        CreateStream(pipeline_config_index_, stream_index, image_format_index, std::move(stream));
+      }
+    });
+    return;
+  }
+
+  auto& internal_config = internal_configs_.configs_info[config_index];
+
+  StreamCreationData info{.roots = internal_config.streams_info};
   info.image_format_index = image_format_index;
-  info.node = *stream_config_node;
   info.stream_config = fidl::Clone(stream_config);
-  info.frame_rate_range = internal_config->frame_rate_range;
-
-  cleanup.cancel();
+  info.frame_rate_range = internal_config.frame_rate_range;
 
   // We now have the stream_config_node which needs to be configured
   // Configure the stream pipeline
   pipeline_manager_.ConfigureStreamPipeline(std::move(info), std::move(stream));
 }
 
-void ControllerImpl::EnableStreaming() { pipeline_manager_.StartStreaming(); }
+void ControllerImpl::EnableStreaming() { pipeline_manager_.SetStreamingEnabled(true); }
 
-void ControllerImpl::DisableStreaming() { pipeline_manager_.StopStreaming(); }
+void ControllerImpl::DisableStreaming() { pipeline_manager_.SetStreamingEnabled(false); }
 
 void ControllerImpl::GetDeviceInfo(GetDeviceInfoCallback callback) {
-  fuchsia::camera2::DeviceInfo camera_device_info;
-  camera_device_info.set_vendor_name(kCameraVendorName);
-  camera_device_info.set_vendor_id(kCameraVendorId);
-  camera_device_info.set_product_name(kCameraProductName);
-  camera_device_info.set_product_id(kCameraProductId);
-  camera_device_info.set_type(fuchsia::camera2::DeviceType::BUILTIN);
-  callback(std::move(camera_device_info));
+  callback(ProductConfig::DeviceInfo());
 }
 
 }  // namespace camera

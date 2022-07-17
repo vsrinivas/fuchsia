@@ -10,6 +10,7 @@
 #include <fuchsia/hardware/isp/cpp/banjo.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/thread_checker.h>
+#include <lib/stdcompat/source_location.h>
 #include <zircon/assert.h>
 
 #include <mutex>
@@ -20,211 +21,142 @@
 
 #include "src/camera/drivers/controller/configs/internal_config.h"
 #include "src/camera/drivers/controller/memory_allocation.h"
+#include "src/camera/lib/tokens/tokens.h"
 
 namespace camera {
 
-class ProcessNode;
-class StreamImpl;
-
+// A ProcessNode is an abstract base class that represents a logical or physical functional unit
+// within the camera hardware pipeline. A node owns its output collection but not its input
+// collection. Derived classes override the various methods based on their need.
 class ProcessNode {
  public:
-  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ProcessNode);
-  ProcessNode(NodeType type, ProcessNode* parent_node,
-              fuchsia::camera2::CameraStreamType current_stream_type,
-              const std::vector<fuchsia::sysmem::ImageFormat_2>& output_image_formats,
-              BufferCollection output_buffer_collection,
-              const std::vector<StreamInfo>& supported_streams, async_dispatcher_t* dispatcher,
-              fuchsia::camera2::FrameRate frame_rate, uint32_t current_image_format_index)
-      : dispatcher_(dispatcher),
-        output_frame_rate_(frame_rate),
-        type_(type),
-        parent_node_(parent_node),
-        output_buffer_collection_(std::move(output_buffer_collection)),
-        output_image_formats_(output_image_formats),
-        enabled_(false),
-        supported_streams_(supported_streams),
-        in_use_buffer_count_(output_buffer_collection_.buffers.buffer_count, 0),
-        current_image_format_index_(current_image_format_index) {
-    configured_streams_.push_back(current_stream_type);
-  }
+  // Wrapper for a set of input/output buffer collections and their associated formats.
+  struct BufferAttachments {
+    std::optional<std::reference_wrapper<BufferCollection>> input_collection;
+    std::optional<std::reference_wrapper<const std::vector<fuchsia::sysmem::ImageFormat_2>>>
+        input_formats;
+    std::optional<std::reference_wrapper<BufferCollection>> output_collection;
+    std::optional<std::reference_wrapper<const std::vector<fuchsia::sysmem::ImageFormat_2>>>
+        output_formats;
+  };
 
-  virtual ~ProcessNode() {
-    // We need to ensure that the child nodes
-    // are destructed before parent node.
-    child_nodes_.clear();
-  }
+  using FrameToken = SharedToken<const uint32_t>;
 
-  // Notifies that a frame is ready for processing at this node.
-  virtual void OnReadyToProcess(const frame_available_info_t* info) = 0;
+  // FrameCallback is a caller-provided handler that nodes should invoke when they have produced a
+  // new frame.
+  using FrameCallback = fit::function<void(FrameToken, frame_metadata_t)>;
+  ProcessNode(async_dispatcher_t* dispatcher, NodeType type, BufferAttachments attachments,
+              FrameCallback frame_callback);
 
-  // Notifies that a frame is released.
-  virtual void OnReleaseFrame(uint32_t buffer_index) = 0;
+  // Destroys the node instance. The caller must call Shutdown before destroying the instance or
+  // the process will terminate. If the node implementation relies on singleton hardware resources
+  // that cannot be safely accessed concurrently by multiple instances of the class, then the node
+  // must ensure that all such resources are released prior returning from this destructor.
+  virtual ~ProcessNode();
 
-  // Notifies that the client has requested to start streaming.
-  virtual void OnStartStreaming();
+  // Returns the NodeType specified on creation of the object.
+  NodeType Type() const;
 
-  // Notifies that the client has requested to stop streaming.
-  virtual void OnStopStreaming();
+  // Informs the node that it should begin processing the frame specified by the given token and
+  // associated with the given metadata. The node must maintain the token until it is no longer
+  // needed, after which point it can safely be destroyed.
+  virtual void ProcessFrame(FrameToken token, frame_metadata_t metadata) = 0;
 
-  // Shut down routine.
-  virtual void OnShutdown(fit::function<void(void)> shutdown_callback) = 0;
+  // Requests that the node node begin producing frames using the specified format index. As the
+  // node may pipeline frames, it is acceptable to continue producing frames at the previous
+  // format. But the node must invoke the provided callback after the last frame at the previous
+  // format was sent and before the first frame of the new format is sent.
+  //
+  // The caller may request multiple format changes without receiving frames. In these cases,
+  // the node must invoke all callbacks in the order received, but it does not need to produce a
+  // frame with each format requested. For example, if the caller requests a change from A to B to
+  // C, it is okay to produce a frame with format A, then invoke callback B followed by C, and then
+  // produce a frame with format C.
+  virtual void SetOutputFormat(uint32_t output_format_index, fit::closure callback) = 0;
 
-  // Notifies that the client has requested to change resolution.
-  virtual void OnResolutionChangeRequest(uint32_t output_format_index) = 0;
+  // Requests that the node cease processing frames and begin shutting itself down. The node must
+  // perform any flushing required in order to safely return frames that it received via
+  // ProcessFrame calls. The node must ensure all pending ProcessFrame callbacks are appropriately
+  // invoked, and then invoke the callback specified in this method, after which the node must make
+  // no further calls to the frame_callback provided during creation. After requesting shutdown, the
+  // caller will ensure that no further calls are made to the node.
+  void Shutdown(fit::closure callback);
 
-  // Notifies that the client has requested a new crop rectangle.
-  virtual zx_status_t OnSetCropRect(float /*x_min*/, float /*y_min*/, float /*x_max*/,
-                                    float /*y_max*/) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  // Notifies that the resolution has been changed.
-  void OnResolutionChanged(const frame_available_info* info);
-
-  void RunOnMainThread(fit::closure handler) { async::PostTask(dispatcher_, std::move(handler)); }
-
-  void set_enabled(bool enabled) { enabled_ = enabled; }
-
-  // Updates the frame counter for all child nodes.
-  void UpdateFrameCounterForAllChildren();
-
-  // Decides if we need to drop the frame.
-  bool NeedToDropFrame();
-
-  NodeType type() { return type_; }
-
-  std::vector<fuchsia::sysmem::ImageFormat_2>& output_image_formats() {
-    return output_image_formats_;
-  }
-
-  fuchsia::sysmem::BufferCollectionInfo_2& output_buffer_collection_info() {
-    return output_buffer_collection_.buffers;
-  }
-
-  fuchsia::sysmem::BufferCollectionPtr& output_buffer_collection() {
-    return output_buffer_collection_.ptr;
-  }
-
-  uint32_t current_image_format_index() const { return current_image_format_index_; }
-
-  ProcessNode* parent_node() { return parent_node_; }
-
-  uint32_t output_fps() const {
-    ZX_ASSERT_MSG(output_frame_rate_.frames_per_sec_numerator %
-                          output_frame_rate_.frames_per_sec_denominator ==
-                      0,
-                  "Unsupported Frame Rate");
-
-    return output_frame_rate_.frames_per_sec_numerator /
-           output_frame_rate_.frames_per_sec_denominator;
-  }
-
-  std::vector<fuchsia::camera2::CameraStreamType>& configured_streams() {
-    return configured_streams_;
-  }
-
-  // For tests.
-  uint32_t get_in_use_buffer_count(uint32_t buffer_index) {
-    {
-      std::lock_guard al(in_use_buffer_lock_);
-      ZX_ASSERT(buffer_index < in_use_buffer_count_.size());
-      return in_use_buffer_count_[buffer_index];
-    }
-  }
-
-  bool is_stream_supported(fuchsia::camera2::CameraStreamType stream) {
-    return std::any_of(
-        supported_streams_.begin(), supported_streams_.end(),
-        [stream](auto& supported_stream) { return supported_stream.type == stream; });
-  }
-
-  bool is_dynamic_resolution_supported(fuchsia::camera2::CameraStreamType stream) {
-    for (auto& supported_stream : supported_streams_) {
-      if (supported_stream.type == stream) {
-        return supported_stream.supports_dynamic_resolution;
-      }
-    }
-    return false;
-  }
-
-  bool is_crop_region_supported(fuchsia::camera2::CameraStreamType stream) {
-    for (auto& supported_stream : supported_streams_) {
-      if (supported_stream.type == stream) {
-        return supported_stream.supports_crop_region;
-      }
-    }
-    return false;
-  }
-
-  const std::vector<StreamInfo>& supported_streams() { return supported_streams_; }
-
-  std::vector<std::unique_ptr<ProcessNode>>& child_nodes() { return child_nodes_; }
-
-  // Adds a child node in the vector.
-  void AddChildNodeInfo(std::unique_ptr<ProcessNode> child_node) {
-    child_nodes_.push_back(std::move(child_node));
-  }
-
-  void set_current_image_format_index(uint32_t index) { current_image_format_index_ = index; }
-
-  // Curent state of the node.
-  bool enabled() const { return enabled_; }
-
-  uint32_t current_frame_count() const { return current_frame_count_; }
-
-  void AddToCurrentFrameCount(uint32_t frame_count) { current_frame_count_ += frame_count; }
-  void SubtractFromCurrentFrameCount(uint32_t frame_count) { current_frame_count_ -= frame_count; }
-
-  async_dispatcher_t* dispatcher() const { return dispatcher_; }
+  // Assigns a label to the node for logging purposes.
+  void SetLabel(std::string label);
 
  protected:
-  bool AllChildNodesDisabled();
+  // Nodes should use this method to invoke the top-level FrameCallback this node was created with.
+  void SendFrame(uint32_t index, frame_metadata_t metadata, fit::closure release_callback) const;
 
-  void OnCallbackReceived() {
-    if (node_callback_received_ && child_node_callback_received_) {
-      shutdown_callback_();
-    }
-  }
+  // Provides the node access to the input buffer collection it was created with.
+  const fuchsia::sysmem::BufferCollectionInfo_2& InputBuffers() const;
 
-  // Notifies that a frame is done processing by this node.
-  virtual void OnFrameAvailable(const frame_available_info_t* info);
+  // Provides the node access to the image formats associated with its inputs.
+  const std::vector<fuchsia::sysmem::ImageFormat_2>& InputFormats() const;
 
-  // Dispatcher for the frame processng loop.
+  // Provides the node access to the output buffer collection it was created with.
+  const fuchsia::sysmem::BufferCollectionInfo_2& OutputBuffers() const;
+
+  // Provides the node access to the image formats associated with its outputs.
+  const std::vector<fuchsia::sysmem::ImageFormat_2>& OutputFormats() const;
+
+  // fuchsia.hardware.camerahwaccel.*Callback implementations. The node receives these callbacks
+  // serially on the dispatcher it was created with.
+  virtual void HwFrameReady(frame_available_info_t info) = 0;
+  virtual void HwFrameResolutionChanged(frame_available_info_t info) = 0;
+  virtual void HwTaskRemoved(task_remove_status_t status) = 0;
+
+  // Nodes must implement this method. It is distinct from the non-virtual Shutdown method in order
+  // to allow the base class visibility into the state of the node's shutdown. Refer to the
+  // description of that method for details.
+  virtual void ShutdownImpl(fit::closure callback) = 0;
+
+  // Returns c-style callback pointers. When invoked by a consumer, the corresponding Hw* callback
+  // is invoked via the node's dispatcher. The callsite location is used to annotate the callback
+  // logs and trace events.
+  const hw_accel_frame_callback* GetHwFrameReadyCallback(
+      cpp20::source_location location = cpp20::source_location::current());
+  const hw_accel_res_change_callback* GetHwFrameResolutionChangeCallback(
+      cpp20::source_location location = cpp20::source_location::current());
+  const hw_accel_remove_task_callback* GetHwTaskRemovedCallback(
+      cpp20::source_location location = cpp20::source_location::current());
+
+  // Convenience method that wraps a call to async::PostTask with trace markers. These produce flow
+  // graph indicators which allow tracing the origin of a callback. By default, the trace events are
+  // annotated with the callsite of this method.
+  void PostTask(fit::closure task,
+                cpp20::source_location location = cpp20::source_location::current());
+
+ private:
+  // Static methods bound to the c-style callbacks.
+  static void StaticHwFrameReady(void* ctx, const frame_available_info_t* info);
+  static void StaticHwFrameResolutionChanged(void* ctx, const frame_available_info_t* info);
+  static void StaticHwTaskRemoved(void* ctx, task_remove_status_t status);
+
+  // Dispatcher for the frame processing loop.
   async_dispatcher_t* dispatcher_;
-  // Lock to guard |in_use_buffer_count_|
-  std::mutex in_use_buffer_lock_;
-  // The output frame rate for this node.
-  fuchsia::camera2::FrameRate output_frame_rate_;
-  // Current frame counter. This is in terms of no. of output frames
-  // worth of input received.
-  // current_frame_count = (no. of input frames generated * output_frame_rate)
-  uint32_t current_frame_count_ = 0;
-  // Type of node.
-  NodeType type_;
-  // List of all the children for this node.
-  std::vector<std::unique_ptr<ProcessNode>> child_nodes_;
-  // Parent node.
-  ProcessNode* const parent_node_;
-  BufferCollection output_buffer_collection_;
-  // Output Image formats.
-  // These are needed when we initialize HW accelerators.
-  std::vector<fuchsia::sysmem::ImageFormat_2> output_image_formats_;
-  bool enabled_;
-  // The Stream types this node already supports and configured.
-  std::vector<fuchsia::camera2::CameraStreamType> configured_streams_;
-  // The Stream types this node could support as well.
-  std::vector<StreamInfo> supported_streams_;
-  // A vector to keep track of outstanding in-use buffers handed off to all child nodes.
-  // [buffer_index] --> [count]
-  std::vector<uint32_t> in_use_buffer_count_ __TA_GUARDED(in_use_buffer_lock_);
-  // ISP/GDC or GE2D shutdown complete status.
-  bool node_callback_received_ = false;
-  // Child node shutdown complete status.
-  bool child_node_callback_received_ = false;
-  fit::function<void(void)> shutdown_callback_;
-  bool shutdown_requested_ = false;
-  uint32_t current_image_format_index_;
-  fit::thread_checker thread_checker_;
+  // Indicates the specific sub-type of process node.
+  const NodeType type_;
+  // Buffer collections and formats attached to the node.
+  BufferAttachments attachments_;
+  // Caller-provided callback to be invoked by the node when a new frame is available.
+  FrameCallback frame_callback_;
+  // Containers for the c-style callbacks. These are associated with the OnHw* callbacks.
+  struct {
+    const hw_accel_frame_callback frame;
+    std::vector<cpp20::source_location> frame_callsites;
+    const hw_accel_res_change_callback res_change;
+    std::vector<cpp20::source_location> res_change_callsites;
+    const hw_accel_remove_task_callback remove_task;
+    std::vector<cpp20::source_location> remove_task_callsites;
+  } hwaccel_callbacks_;
+  // Shutdown state tracking for caller validation.
+  struct {
+    bool requested = false;
+    bool completed = false;
+  } shutdown_state_;
+  std::string label_ = "<unset>";
 };
 
 }  // namespace camera

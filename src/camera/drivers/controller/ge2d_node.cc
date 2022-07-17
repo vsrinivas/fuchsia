@@ -14,8 +14,6 @@
 
 #include <safemath/safe_conversions.h>
 
-#include "src/camera/drivers/controller/graph_utils.h"
-#include "src/camera/drivers/controller/stream_pipeline_info.h"
 #include "src/camera/lib/format_conversion/buffer_collection_helper.h"
 #include "src/devices/lib/sysmem/sysmem.h"
 
@@ -23,52 +21,26 @@ namespace camera {
 
 constexpr auto kTag = "camera_controller_ge2d_node";
 
-void OnGe2dFrameAvailable(void* ctx, const frame_available_info_t* info) {
-  auto nonce = TRACE_NONCE();
-  TRACE_DURATION("camera", "OnGe2dFrameAvailable");
-  TRACE_FLOW_BEGIN("camera", "post_on_ge2d_frame_available", nonce);
-  // This method is invoked by the GE2D in its own thread,
-  // so the event must be marshalled to the
-  // controller's thread.
-  auto* ge2d_node = static_cast<Ge2dNode*>(ctx);
-  ge2d_node->RunOnMainThread([ge2d_node, info = *info, nonce]() {
-    TRACE_DURATION("camera", "OnGe2dFrameAvailable.task");
-    TRACE_FLOW_END("camera", "post_on_ge2d_frame_available", nonce);
-    ge2d_node->OnFrameAvailable(&info);
-  });
-}
+Ge2dNode::Ge2dNode(async_dispatcher_t* dispatcher, BufferAttachments attachments,
+                   FrameCallback frame_callback, const ddk::Ge2dProtocolClient& ge2d,
+                   const camera::InternalConfigNode& internal_ge2d_node)
+    : ProcessNode(dispatcher, NodeType::kGe2d, attachments, std::move(frame_callback)),
+      ge2d_(ge2d),
+      task_type_(internal_ge2d_node.ge2d_info.config_type),
+      in_place_(!internal_ge2d_node.output_constraints),
+      current_transform_(internal_ge2d_node.ge2d_info.resize) {}
 
-void OnGe2dResChange(void* ctx, const frame_available_info_t* info) {
-  static_cast<camera::ProcessNode*>(ctx)->OnResolutionChanged(info);
-}
+fpromise::result<std::unique_ptr<Ge2dNode>, zx_status_t> Ge2dNode::Create(
+    async_dispatcher_t* dispatcher, BufferAttachments attachments, FrameCallback frame_callback,
+    const LoadFirmwareCallback& load_firmware, const ddk::Ge2dProtocolClient& ge2d,
+    const InternalConfigNode& internal_ge2d_node, const StreamCreationData& info) {
+  TRACE_DURATION("camera", "Ge2dNode::Create");
+  auto node = std::make_unique<camera::Ge2dNode>(dispatcher, attachments, std::move(frame_callback),
+                                                 ge2d, internal_ge2d_node);
 
-void OnGe2dTaskRemoved(void* ctx, task_remove_status_t status) {
-  static_cast<Ge2dNode*>(ctx)->OnTaskRemoved(status);
-}
-
-fpromise::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
-    const ControllerMemoryAllocator& memory_allocator, async_dispatcher_t* dispatcher,
-    zx_device_t* device, const ddk::Ge2dProtocolClient& ge2d, StreamCreationData* info,
-    ProcessNode* parent_node, const InternalConfigNode& internal_ge2d_node) {
-  zx_status_t status = ZX_OK;
-  BufferCollection output_buffers;
-
-  auto& input_buffers_hlcpp = parent_node->output_buffer_collection_info();
-
-  if (internal_ge2d_node.in_place) {
-    output_buffers.buffers = fidl::Clone(input_buffers_hlcpp);
-    // ptr to collection remains invalid. Should reference via parent in case of in_place.
-  } else {
-    auto result = GetBuffers(memory_allocator, internal_ge2d_node, info, kTag);
-    if (result.is_error()) {
-      FX_LOGST(ERROR, kTag) << "Failed to get buffers";
-      return fpromise::error(result.error());
-    }
-    output_buffers = std::move(result.value());
-  }
-
-  BufferCollectionHelper output_buffer_collection_helper(output_buffers.buffers);
-  BufferCollectionHelper input_buffer_collection_helper(input_buffers_hlcpp);
+  BufferCollectionHelper input_buffer_collection_helper(node->InputBuffers());
+  BufferCollectionHelper output_buffer_collection_helper(node->in_place_ ? node->InputBuffers()
+                                                                         : node->OutputBuffers());
 
   std::vector<image_format_2_t> output_image_formats_c;
   for (auto& format : internal_ge2d_node.image_formats) {
@@ -80,7 +52,7 @@ fpromise::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
   }
 
   std::vector<image_format_2_t> input_image_formats_c;
-  for (auto& format : parent_node->output_image_formats()) {
+  for (auto& format : node->InputFormats()) {
     image_format_2_t value;
     auto original = GetImageFormatFromBufferCollection(*input_buffer_collection_helper.GetC(),
                                                        format.coded_width, format.coded_height);
@@ -88,16 +60,7 @@ fpromise::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
     input_image_formats_c.push_back(value);
   }
 
-  auto ge2d_node = std::make_unique<camera::Ge2dNode>(
-      dispatcher, ge2d, parent_node, internal_ge2d_node, std::move(output_buffers),
-      info->stream_type(), info->image_format_index, internal_ge2d_node.in_place);
-  if (!ge2d_node) {
-    FX_LOGST(ERROR, kTag) << "Failed to create GE2D node";
-    return fpromise::error(ZX_ERR_NO_MEMORY);
-  }
-
   // Initialize the GE2D to get a unique task index.
-  uint32_t ge2d_task_index = 0;
   buffer_collection_info_2 temp_input_collection, temp_output_collection;
   sysmem::buffer_collection_info_2_banjo_from_fidl(*input_buffer_collection_helper.GetC(),
                                                    temp_input_collection);
@@ -105,11 +68,12 @@ fpromise::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
                                                    temp_output_collection);
   switch (internal_ge2d_node.ge2d_info.config_type) {
     case Ge2DConfig::GE2D_RESIZE: {
-      status = ge2d.InitTaskResize(
-          &temp_input_collection, &temp_output_collection, ge2d_node->resize_info(),
+      zx_status_t status = ge2d.InitTaskResize(
+          &temp_input_collection, &temp_output_collection, &node->current_transform_,
           input_image_formats_c.data(), output_image_formats_c.data(),
-          output_image_formats_c.size(), info->image_format_index, ge2d_node->frame_callback(),
-          ge2d_node->res_callback(), ge2d_node->remove_task_callback(), &ge2d_task_index);
+          output_image_formats_c.size(), info.image_format_index, node->GetHwFrameReadyCallback(),
+          node->GetHwFrameResolutionChangeCallback(), node->GetHwTaskRemovedCallback(),
+          &node->task_index_);
       if (status != ZX_OK) {
         FX_PLOGST(ERROR, kTag, status) << "Failed to initialize GE2D resize task";
         return fpromise::error(status);
@@ -119,13 +83,12 @@ fpromise::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
     case Ge2DConfig::GE2D_WATERMARK: {
       std::vector<zx::vmo> watermark_vmos;
       for (auto watermark : internal_ge2d_node.ge2d_info.watermark) {
-        size_t size;
-        zx::vmo vmo;
-        auto status = load_firmware(device, watermark.filename, vmo.reset_and_get_address(), &size);
-        if (status != ZX_OK || size == 0) {
-          FX_PLOGST(ERROR, kTag, status) << "Failed to load the watermark image";
-          return fpromise::error(status);
+        auto result = load_firmware(watermark.filename);
+        if (result.is_error()) {
+          FX_PLOGST(ERROR, kTag, result.error()) << "Failed to load the watermark image";
+          return fpromise::error(result.error());
         }
+        auto [vmo, size] = result.take_value();
         watermark_vmos.push_back(std::move(vmo));
       }
 
@@ -150,18 +113,20 @@ fpromise::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
         }
       });
 
-      if (internal_ge2d_node.in_place) {
+      zx_status_t status = ZX_OK;
+      if (node->in_place_) {
         status = ge2d.InitTaskInPlaceWaterMark(
             &temp_input_collection, watermarks_info.data(), watermarks_info.size(),
-            input_image_formats_c.data(), input_image_formats_c.size(), info->image_format_index,
-            ge2d_node->frame_callback(), ge2d_node->res_callback(),
-            ge2d_node->remove_task_callback(), &ge2d_task_index);
+            input_image_formats_c.data(), input_image_formats_c.size(), info.image_format_index,
+            node->GetHwFrameReadyCallback(), node->GetHwFrameResolutionChangeCallback(),
+            node->GetHwTaskRemovedCallback(), &node->task_index_);
       } else {
-        status = ge2d.InitTaskWaterMark(
-            &temp_input_collection, &temp_output_collection, watermarks_info.data(),
-            watermarks_info.size(), input_image_formats_c.data(), input_image_formats_c.size(),
-            info->image_format_index, ge2d_node->frame_callback(), ge2d_node->res_callback(),
-            ge2d_node->remove_task_callback(), &ge2d_task_index);
+        status = ge2d.InitTaskWaterMark(&temp_input_collection, &temp_output_collection,
+                                        watermarks_info.data(), watermarks_info.size(),
+                                        input_image_formats_c.data(), input_image_formats_c.size(),
+                                        info.image_format_index, node->GetHwFrameReadyCallback(),
+                                        node->GetHwFrameResolutionChangeCallback(),
+                                        node->GetHwTaskRemovedCallback(), &node->task_index_);
       }
       if (status != ZX_OK) {
         FX_PLOGST(ERROR, kTag, status) << "Failed to initialize GE2D watermark task";
@@ -175,113 +140,86 @@ fpromise::result<ProcessNode*, zx_status_t> Ge2dNode::CreateGe2dNode(
     }
   }
 
-  ge2d_node->set_task_index(ge2d_task_index);
-
-  auto return_value = fpromise::ok(ge2d_node.get());
-  parent_node->AddChildNodeInfo(std::move(ge2d_node));
-  return return_value;
+  return fpromise::ok(std::move(node));
 }
 
-void Ge2dNode::OnFrameAvailable(const frame_available_info_t* info) {
-  ZX_ASSERT(thread_checker_.is_thread_valid());
-  TRACE_DURATION("camera", "Ge2dNode::OnFrameAvailable", "buffer_index", info->buffer_id);
-
-  if (shutdown_requested_ || info->frame_status != FRAME_STATUS_OK) {
+void Ge2dNode::ProcessFrame(FrameToken token, frame_metadata_t metadata) {
+  TRACE_DURATION("camera", "Ge2dNode::ProcessFrame", "buffer_index", *token);
+  if (shutdown_callback_) {
+    // ~token
     return;
   }
-  UpdateFrameCounterForAllChildren();
-
-  if (NeedToDropFrame()) {
-    if (!in_place_processing_) {
-      ge2d_.ReleaseFrame(task_index_, info->buffer_id);
-    }
-    parent_node_->OnReleaseFrame(info->metadata.input_buffer_index);
-    return;
-  }
-  // Free up parent's frame.
-  if (!in_place_processing_) {
-    parent_node_->OnReleaseFrame(info->metadata.input_buffer_index);
-  }
-  ProcessNode::OnFrameAvailable(info);
+  input_frame_queue_.push(token);
+  ZX_ASSERT(ge2d_.ProcessFrame(task_index_, *token, metadata.capture_timestamp) == ZX_OK);
 }
 
-void Ge2dNode::OnReleaseFrame(uint32_t buffer_index) {
-  TRACE_DURATION("camera", "Ge2dNode::OnReleaseFrame", "buffer_index", buffer_index);
-  std::lock_guard guard(in_use_buffer_lock_);
-  ZX_ASSERT(buffer_index < in_use_buffer_count_.size());
-  in_use_buffer_count_[buffer_index]--;
-  if (in_use_buffer_count_[buffer_index] != 0 || shutdown_requested_) {
-    return;
+void Ge2dNode::SetOutputFormat(uint32_t output_format_index, fit::closure callback) {
+  TRACE_DURATION("camera", "Ge2dNode::SetOutputFormat", "format_index", output_format_index);
+  if (task_type_ == Ge2DConfig::GE2D_WATERMARK) {
+    ge2d_.SetInputAndOutputResolution(task_index_, output_format_index);
+  } else {
+    ge2d_.SetOutputResolution(task_index_, output_format_index);
   }
-  if (in_place_processing_) {
-    parent_node_->OnReleaseFrame(buffer_index);
-    return;
-  }
-  ge2d_.ReleaseFrame(task_index_, buffer_index);
+  format_callback_ = std::move(callback);
 }
 
-void Ge2dNode::OnReadyToProcess(const frame_available_info_t* info) {
-  TRACE_DURATION("camera", "Ge2dNode::OnReadyToProcess");
-  TRACE_FLOW_BEGIN("camera", "ge2d_node_on_ready_to_process", info->buffer_id);
-  async::PostTask(dispatcher_, [this, buffer_index = info->buffer_id,
-                                capture_timestamp = info->metadata.capture_timestamp]() {
-    TRACE_DURATION("camera", "Ge2dNode::OnReadyToProcess.task");
-    TRACE_FLOW_END("camera", "ge2d_node_on_ready_to_process", buffer_index);
-    if (enabled_) {
-      ZX_ASSERT(ZX_OK == ge2d_.ProcessFrame(task_index_, buffer_index, capture_timestamp));
-    } else {
-      // Since streaming is disabled the incoming frame is released
-      // so it gets added back to the pool.
-      parent_node_->OnReleaseFrame(buffer_index);
-    }
-  });
-}
-
-void Ge2dNode::OnTaskRemoved(zx_status_t status) {
-  ZX_ASSERT(status == ZX_OK);
-
-  async::PostTask(dispatcher_, [this]() {
-    node_callback_received_ = true;
-    OnCallbackReceived();
-  });
-}
-
-void Ge2dNode::OnShutdown(fit::function<void(void)> shutdown_callback) {
-  shutdown_callback_ = std::move(shutdown_callback);
-
-  // After a shutdown request has been made,
-  // no other calls should be made to the GE2D driver.
-  shutdown_requested_ = true;
+void Ge2dNode::ShutdownImpl(fit::closure callback) {
+  TRACE_DURATION("camera", "Ge2dNode::ShutdownImpl");
+  ZX_ASSERT(!shutdown_callback_);
+  shutdown_callback_ = std::move(callback);
 
   // Request GE2D to shutdown.
   ge2d_.RemoveTask(task_index_);
-
-  auto child_shutdown_completion_callback = [this]() {
-    child_node_callback_received_ = true;
-    OnCallbackReceived();
-  };
-
-  ZX_ASSERT_MSG(configured_streams().size() == 1,
-                "Cannot shutdown a stream which supports multiple streams");
-
-  // Forward the shutdown request to child node.
-  child_nodes().at(0)->OnShutdown(child_shutdown_completion_callback);
 }
 
-void Ge2dNode::OnResolutionChangeRequest(uint32_t output_format_index) {
-  if (enabled_) {
-    TRACE_DURATION("camera", "Ge2dNode::OnResolutionChangeRequest", "index", output_format_index);
-    if (task_type_ == Ge2DConfig::GE2D_WATERMARK) {
-      ge2d_.SetInputAndOutputResolution(task_index_, output_format_index);
-    } else {
-      ge2d_.SetOutputResolution(task_index_, output_format_index);
-    }
-    set_current_image_format_index(output_format_index);
+void Ge2dNode::HwFrameReady(frame_available_info_t info) {
+  TRACE_DURATION("camera", "Ge2dNode::HwFrameReady", "status", info.frame_status, "buffer_index",
+                 info.buffer_id);
+  auto input_token = std::move(input_frame_queue_.front());
+  input_frame_queue_.pop();
+
+  // Don't do anything further with error frames.
+  if (info.frame_status != FRAME_STATUS_OK) {
+    FX_LOGST(ERROR, kTag) << "failed ge2d frame: " << static_cast<uint32_t>(info.frame_status);
+    return;
   }
+
+  // Send the frame onward. If this is an "in-place" operation, defer releasing the input buffer
+  // until the "output" buffer is released.
+  std::optional<FrameToken> maybe_input_token;
+  if (in_place_) {
+    maybe_input_token = input_token;
+  }
+  SendFrame(info.buffer_id, info.metadata,
+            [this, buffer_index = info.buffer_id, maybe_input_token] {
+              ge2d_.ReleaseFrame(task_index_, buffer_index);
+              // ~maybe_input_token
+            });
 }
 
-zx_status_t Ge2dNode::OnSetCropRect(float x_min, float y_min, float x_max, float y_max) {
-  TRACE_DURATION("camera", "Ge2dNode::OnSetCropRect");
+void Ge2dNode::HwFrameResolutionChanged(frame_available_info_t info) {
+  TRACE_DURATION("camera", "Ge2dNode::HwFrameResolutionChanged");
+  format_callback_();
+  format_callback_ = nullptr;
+}
+
+void Ge2dNode::HwTaskRemoved(task_remove_status_t status) {
+  TRACE_DURATION("camera", "Ge2dNode::HwTaskRemoved");
+  ZX_ASSERT(status == TASK_REMOVE_STATUS_OK);
+  ZX_ASSERT(shutdown_callback_);
+  if (!input_frame_queue_.empty()) {
+    FX_LOGS(WARNING)
+        << "GE2D driver completed task removal but did not complete processing for all "
+           "frames it was sent. These will be manually released.";
+    while (!input_frame_queue_.empty()) {
+      input_frame_queue_.pop();
+    }
+  }
+  shutdown_callback_();
+}
+
+zx_status_t Ge2dNode::SetCropRect(float x_min, float y_min, float x_max, float y_max) {
+  TRACE_DURATION("camera", "Ge2dNode::SetCropRect");
   if (task_type_ != Ge2DConfig::GE2D_RESIZE) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -303,7 +241,7 @@ zx_status_t Ge2dNode::OnSetCropRect(float x_min, float y_min, float x_max, float
   y_min = std::clamp(y_min, 0.0f, 1.0f);
   y_max = std::clamp(y_max, 0.0f, 1.0f);
 
-  auto& input_image_format = parent_node()->output_image_formats().at(0);
+  auto& input_image_format = InputFormats().at(0);
   auto normalized_x_min = safemath::checked_cast<uint32_t>(
       x_min * safemath::checked_cast<float>(input_image_format.coded_width) + 0.5f);
   auto normalized_y_min = safemath::checked_cast<uint32_t>(

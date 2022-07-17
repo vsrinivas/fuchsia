@@ -114,6 +114,14 @@ fuchsia_sysmem_ImageFormat_2 GetImageFormatFromBufferCollection(
   auto& constraints = buffer_collection.settings.image_format_constraints;
   uint32_t bytes_per_row;
   bool success = ImageFormatMinimumRowBytes(&constraints, coded_width, &bytes_per_row);
+  if (!success) {
+    ZX_ASSERT(coded_width > 0);
+    ZX_ASSERT(coded_width <= constraints.max_coded_width);
+    ZX_ASSERT(coded_width >= constraints.min_coded_width);
+    ZX_ASSERT(!constraints.pixel_format.has_format_modifier);
+    ZX_ASSERT_MSG(constraints.max_bytes_per_row >= coded_width, "???? %d vs %d",
+                  constraints.max_bytes_per_row, coded_width);
+  }
   ZX_ASSERT(success);
   return {.pixel_format = constraints.pixel_format,
           .coded_width = coded_width,

@@ -650,11 +650,6 @@ TEST_F(TaskTest, ReleaseInValidFrameTest) {
   EXPECT_EQ(1, GetCallbackSize());
   EXPECT_FALSE(frame_status_error_);
 
-  // Test releasing an invalid frame (invalid task id).
-  ASSERT_DEATH(([this, resize_task_id]() {
-    ge2d_device_->Ge2dReleaseFrame(resize_task_id + 1, GetCallbackBackOutputBufferIndex());
-  }));
-
   ASSERT_OK(ge2d_device_->StopThread());
 }
 

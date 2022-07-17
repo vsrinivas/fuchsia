@@ -34,6 +34,7 @@ source_set("config") {
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//src/camera/drivers/controller/configs",
+    "//src/camera/lib/formatting",
     "//src/camera/lib/stream_utils:stream_configs",
     "//zircon/system/ulib/fidl-utils",
   ]
@@ -63,6 +64,10 @@ camera_controller_driver("sherlock-camera-controller") {
   }
 }
 
+# TODO(fxbug.dev/100420): This test is of dubious value in its current state, and is little more
+# than a comparison of constants defined in one place to a set of shadowed constants defined in the
+# test. If the goal is to prevent accidental changes to the configuration constants, this would be
+# better accomplished with the "goldens" paradigm.
 executable("sherlock_configs_unittest_bin") {
   testonly = true
   sources = [ "configs_unittest.cc" ]

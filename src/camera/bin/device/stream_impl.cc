@@ -217,8 +217,11 @@ void StreamImpl::SetBufferCollection(
   frame_waiters_.clear();
 
   if (!legacy_stream_) {
-    // Connect to stream
-    on_stream_requested_(legacy_stream_.NewRequest(), legacy_stream_format_index_);
+    // Connect to stream. Instead of trying to configure the stream to begin with the specified
+    // format, the request is enqueued as the first command on the channel. This reduces complexity
+    // in the controller.
+    on_stream_requested_(legacy_stream_.NewRequest(), 0);
+    legacy_stream_->SetImageFormat(legacy_stream_format_index_, [](auto) {});
     legacy_stream_needs_start = true;
   }
 

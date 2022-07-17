@@ -20,7 +20,7 @@ namespace camera {
 struct StreamCreationData {
   // |node| is the head of the internal graph representing
   // the requested stream |stream_index| in config |config_index|.
-  InternalConfigNode node;
+  const std::vector<InternalConfigNode>& roots;
   // |stream_config| has the stream properties of the requested stream.
   fuchsia::camera2::hal::StreamConfig stream_config;
   // |image_format_index| is the output resolution index

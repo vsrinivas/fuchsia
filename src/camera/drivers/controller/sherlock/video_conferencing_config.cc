@@ -34,8 +34,8 @@ static fuchsia::camera2::hal::StreamConfig MLVideoFRConfig(bool extended_fov) {
   stream.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
   stream.set_contiguous(true);
   stream.set_frames_per_second(kMlFRFrameRate);
-  stream.set_buffer_count_for_camping(kExtraBuffers);
-  stream.set_min_buffer_count(kGdcBufferForCamping + kNumClientBuffers + kExtraBuffers);
+  stream.set_buffer_count_for_camping(kVideoConferencingGDC2OutputBuffers);
+  stream.set_min_buffer_count(kVideoConferencingGDC2OutputBuffers + kMlFRMaxClientBuffers);
   return stream.ConvertToStreamConfig();
 }
 
@@ -64,8 +64,8 @@ static fuchsia::camera2::hal::StreamConfig VideoConfig(bool extended_fov) {
   stream.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
   stream.set_contiguous(true);
   stream.set_frames_per_second(kVideoThrottledOutputFrameRate);
-  stream.set_buffer_count_for_camping(kGe2dBufferForCamping);
-  stream.set_min_buffer_count(kGe2dBufferForCamping + kNumClientBuffers + kExtraBuffers);
+  stream.set_buffer_count_for_camping(kVideoConferencingGE2DOutputBuffers);
+  stream.set_min_buffer_count(kVideoConferencingGE2DOutputBuffers + kVideoMaxClientBuffers);
   return stream.ConvertToStreamConfig();
 }
 
@@ -101,8 +101,10 @@ static InternalConfigNode OutputMLFR(bool extended_fov) {
                   .supports_crop_region = false,
               },
           },
+      .input_constraints = CopyConstraintsWithOverrides(
+          VideoConferencingConfig(extended_fov).stream_configs[0].constraints,
+          {.min_buffer_count_for_camping = 0}),
       .image_formats = MLFRImageFormats(),
-      .in_place = false,
   };
 }
 
@@ -124,8 +126,10 @@ static InternalConfigNode OutputVideoConferencing(bool extended_fov) {
                   .supports_crop_region = false,
               },
           },
+      .input_constraints = CopyConstraintsWithOverrides(
+          VideoConferencingConfig(extended_fov).stream_configs[1].constraints,
+          {.min_buffer_count_for_camping = 0}),
       .image_formats = VideoImageFormats(),
-      .in_place = false,
   };
 }
 
@@ -134,7 +138,7 @@ fuchsia::sysmem::BufferCollectionConstraints GdcVideo2Constraints() {
   stream_constraints.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
   stream_constraints.set_contiguous(true);
   stream_constraints.AddImageFormat(kGdcFRWidth, kGdcFRHeight, kFramePixelFormat);
-  stream_constraints.set_buffer_count_for_camping(kGdcBufferForCamping);
+  stream_constraints.set_buffer_count_for_camping(kVideoConferencingGDC2InputBuffers);
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 
@@ -172,7 +176,6 @@ static InternalConfigNode GdcVideo2(bool extended_fov) {
       .input_constraints = GdcVideo2Constraints(),
       .output_constraints = MLVideoFRConfig(extended_fov).constraints,
       .image_formats = MLFRImageFormats(),
-      .in_place = false,
   };
 }
 
@@ -181,7 +184,7 @@ fuchsia::sysmem::BufferCollectionConstraints Ge2dConstraints() {
   stream_constraints.set_bytes_per_row_divisor(kGe2dBytesPerRowDivisor);
   stream_constraints.set_contiguous(true);
   stream_constraints.AddImageFormat(kGdcFRWidth, kGdcFRHeight, kFramePixelFormat);
-  stream_constraints.set_buffer_count_for_camping(kGe2dBufferForCamping);
+  stream_constraints.set_buffer_count_for_camping(kVideoConferencingGE2DInputBuffers);
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 
@@ -227,7 +230,6 @@ static InternalConfigNode Ge2d(bool extended_fov) {
       .input_constraints = Ge2dConstraints(),
       .output_constraints = VideoConfig(extended_fov).constraints,
       .image_formats = VideoImageFormats(),
-      .in_place = false,
   };
 }
 
@@ -236,7 +238,7 @@ fuchsia::sysmem::BufferCollectionConstraints GdcVideo1InputConstraints() {
   stream_constraints.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
   stream_constraints.set_contiguous(true);
   stream_constraints.AddImageFormat(kIspFRWidth, kIspFRHeight, kFramePixelFormat);
-  stream_constraints.set_buffer_count_for_camping(kGdcBufferForCamping);
+  stream_constraints.set_buffer_count_for_camping(kVideoConferencingGDC1InputBuffers);
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 
@@ -245,7 +247,7 @@ fuchsia::sysmem::BufferCollectionConstraints GdcVideo1OutputConstraints() {
   stream_constraints.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
   stream_constraints.set_contiguous(true);
   stream_constraints.AddImageFormat(kGdcFRWidth, kGdcFRHeight, kFramePixelFormat);
-  stream_constraints.set_buffer_count_for_camping(kGdcBufferForCamping);
+  stream_constraints.set_buffer_count_for_camping(kVideoConferencingGDC1OutputBuffers);
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 
@@ -305,7 +307,6 @@ static InternalConfigNode GdcVideo1(bool extended_fov) {
       .input_constraints = GdcVideo1InputConstraints(),
       .output_constraints = GdcVideo1OutputConstraints(),
       .image_formats = GdcVideo1ImageFormats(),
-      .in_place = false,
   };
 }
 
@@ -314,7 +315,7 @@ fuchsia::sysmem::BufferCollectionConstraints VideoConfigFullResConstraints() {
   stream_constraints.set_bytes_per_row_divisor(kIspBytesPerRowDivisor);
   stream_constraints.set_contiguous(true);
   stream_constraints.AddImageFormat(kIspFRWidth, kIspFRHeight, kFramePixelFormat);
-  stream_constraints.set_buffer_count_for_camping(kIspBufferForCamping);
+  stream_constraints.set_buffer_count_for_camping(kVideoConferencingIspFROutputBuffers);
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 
@@ -357,10 +358,8 @@ InternalConfigNode VideoConfigFullRes(bool extended_fov) {
                   GdcVideo1(extended_fov),
               },
           },
-      .input_constraints = InvalidConstraints(),
       .output_constraints = VideoConfigFullResConstraints(),
       .image_formats = IspImageFormats(),
-      .in_place = false,
   };
 }
 

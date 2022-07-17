@@ -62,7 +62,7 @@ struct StreamConstraints {
 
  private:
   uint32_t bytes_per_row_divisor_ = 128;
-  uint32_t buffer_count_for_camping_ = 3;
+  uint32_t buffer_count_for_camping_ = 0;
   uint32_t min_buffer_count_ = 0;
   uint32_t frames_per_second_ = 30;
   bool contiguous_ = false;

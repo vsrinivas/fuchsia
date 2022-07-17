@@ -25,11 +25,10 @@ class ControllerDeviceTest : public gtest::TestLoopFixture {
     fragments[0].name = "sysmem";
     fragments[0].protocols.emplace_back(fake_sysmem_.ProtocolEntry());
     ddk_->SetFragments(std::move(fragments));
-    zx::event event;
-    ASSERT_EQ(ZX_OK, zx::event::create(0, &event));
 
-    controller_device_ =
-        std::make_unique<ControllerDevice>(fake_ddk::kFakeParent, std::move(event));
+    auto result = ControllerDevice::Create(fake_ddk::kFakeParent);
+    ASSERT_TRUE(result.is_ok());
+    controller_device_ = result.take_value();
   }
 
   void TearDown() override {
@@ -77,7 +76,6 @@ class ControllerDeviceTest : public gtest::TestLoopFixture {
 
   void BindControllerProtocol() {
     ASSERT_EQ(controller_device_->DdkAdd("test-camera-controller"), ZX_OK);
-    ASSERT_EQ(controller_device_->StartThread(), ZX_OK);
     ASSERT_EQ(camera_protocol_.Bind(std::move(ddk_->FidlClient())), ZX_OK);
     camera_protocol_.set_error_handler(FailErrorHandler);
     camera_protocol_->GetChannel2(controller_protocol_.NewRequest());
@@ -95,7 +93,6 @@ class ControllerDeviceTest : public gtest::TestLoopFixture {
 // Verifies controller can start up and shut down.
 TEST_F(ControllerDeviceTest, DdkLifecycle) {
   EXPECT_EQ(controller_device_->DdkAdd("test-camera-controller"), ZX_OK);
-  EXPECT_EQ(controller_device_->StartThread(), ZX_OK);
   controller_device_->DdkAsyncRemove();
   EXPECT_TRUE(ddk_->Ok());
 }
@@ -103,7 +100,6 @@ TEST_F(ControllerDeviceTest, DdkLifecycle) {
 // Verifies GetChannel is not supported.
 TEST_F(ControllerDeviceTest, GetChannel) {
   EXPECT_EQ(controller_device_->DdkAdd("test-camera-controller"), ZX_OK);
-  EXPECT_EQ(controller_device_->StartThread(), ZX_OK);
   ASSERT_EQ(camera_protocol_.Bind(std::move(ddk_->FidlClient())), ZX_OK);
   camera_protocol_->GetChannel(controller_protocol_.NewRequest().TakeChannel());
   RunLoopUntilIdle();
@@ -114,7 +110,6 @@ TEST_F(ControllerDeviceTest, GetChannel) {
 // Verifies that GetChannel2 works correctly.
 TEST_F(ControllerDeviceTest, GetChannel2) {
   EXPECT_EQ(controller_device_->DdkAdd("test-camera-controller"), ZX_OK);
-  EXPECT_EQ(controller_device_->StartThread(), ZX_OK);
   ASSERT_EQ(camera_protocol_.Bind(std::move(ddk_->FidlClient())), ZX_OK);
   camera_protocol_->GetChannel2(controller_protocol_.NewRequest());
   camera_protocol_.set_error_handler(FailErrorHandler);
@@ -124,7 +119,6 @@ TEST_F(ControllerDeviceTest, GetChannel2) {
 // Verifies that GetChannel2 can only have one binding.
 TEST_F(ControllerDeviceTest, GetChannel2InvokeTwice) {
   EXPECT_EQ(controller_device_->DdkAdd("test-camera-controller"), ZX_OK);
-  EXPECT_EQ(controller_device_->StartThread(), ZX_OK);
   ASSERT_EQ(camera_protocol_.Bind(std::move(ddk_->FidlClient())), ZX_OK);
   camera_protocol_->GetChannel2(controller_protocol_.NewRequest());
   RunLoopUntilIdle();
@@ -138,8 +132,10 @@ TEST_F(ControllerDeviceTest, GetChannel2InvokeTwice) {
 TEST_F(ControllerDeviceTest, GetDeviceInfo) {
   ASSERT_NO_FATAL_FAILURE(BindControllerProtocol());
   controller_protocol_->GetDeviceInfo([](fuchsia::camera2::DeviceInfo device_info) {
-    EXPECT_EQ(kCameraVendorName, device_info.vendor_name());
-    EXPECT_EQ(kCameraProductName, device_info.product_name());
+    ASSERT_TRUE(device_info.has_vendor_id());
+    ASSERT_TRUE(device_info.has_product_id());
+    EXPECT_NE(device_info.vendor_id(), 0u);
+    EXPECT_NE(device_info.product_id(), 0u);
     EXPECT_EQ(fuchsia::camera2::DeviceType::BUILTIN, device_info.type());
   });
   RunLoopUntilIdle();

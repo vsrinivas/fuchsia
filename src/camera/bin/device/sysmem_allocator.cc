@@ -80,7 +80,10 @@ fpromise::promise<BufferCollectionWithLifetime, zx_status_t> SysmemAllocator::Bi
   fuchsia::sysmem::BufferCollectionPtr collection;
   allocator_->BindSharedCollection(std::move(token), collection.NewRequest());
   collection->SetName(kNamePriority, std::move(name));
-  collection->SetConstraints(true, constraints);
+  // We only need to observe the created collection, not take any of its camping buffers.
+  fuchsia::sysmem::BufferCollectionConstraints observer_constraints{
+      .usage{.none = fuchsia::sysmem::noneUsage}};
+  collection->SetConstraints(true, observer_constraints);
   return WaitForBuffersAllocated(std::move(collection)).wrap_with(scope_);
 }
 

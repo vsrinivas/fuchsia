@@ -38,6 +38,15 @@ static void nop_buffers_requested(fuchsia::sysmem::BufferCollectionTokenHandle t
   callback(0);
 }
 
+// Constraints provided by the driver alone may resolve to zero-sized or empty collections. A set of
+// placeholder constrains can be used in cases where a test requires allocation to occur but does
+// not care about its properties.
+static constexpr fuchsia::sysmem::BufferCollectionConstraints kMinimalConstraintsForAllocation{
+    .usage{.cpu = fuchsia::sysmem::cpuUsageRead},
+    .min_buffer_count_for_camping = 1,
+    .has_buffer_memory_constraints = true,
+    .buffer_memory_constraints{.min_size_bytes = 4096}};
+
 class DeviceImplTest : public gtest::RealLoopFixture {
  protected:
   DeviceImplTest()
@@ -388,8 +397,7 @@ TEST_F(DeviceImplTest, ConfigurationSwitchingWhileAllocated) {
   stream->WatchBufferCollection(
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
         allocator_->BindSharedCollection(std::move(token), buffers.NewRequest());
-        buffers->SetConstraints(true, {.usage{.cpu = fuchsia::sysmem::cpuUsageRead},
-                                       .min_buffer_count_for_camping = 1});
+        buffers->SetConstraints(true, kMinimalConstraintsForAllocation);
         buffers->SetName(kNamePriority, "Testc0s0Buffers");
         buffers->WaitForBuffersAllocated(
             [&](zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 buffers) {
@@ -429,8 +437,7 @@ TEST_F(DeviceImplTest, ConfigurationSwitchingWhileAllocated) {
     stream2->WatchBufferCollection(
         [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
           allocator_->BindSharedCollection(std::move(token), buffers2.NewRequest());
-          buffers2->SetConstraints(true, {.usage{.cpu = fuchsia::sysmem::cpuUsageRead},
-                                          .min_buffer_count_for_camping = 1});
+          buffers2->SetConstraints(true, kMinimalConstraintsForAllocation);
           buffers2->SetName(kNamePriority, "Testc1s0Buffers");
           buffers2->WaitForBuffersAllocated(
               [&](zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 buffers) {
@@ -475,8 +482,7 @@ TEST_F(DeviceImplTest, RequestStreamFromController) {
   stream->WatchBufferCollection(
       [&](fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
         allocator_->BindSharedCollection(std::move(token), buffers.NewRequest());
-        buffers->SetConstraints(true, {.usage{.cpu = fuchsia::sysmem::cpuUsageRead},
-                                       .min_buffer_count_for_camping = 1});
+        buffers->SetConstraints(true, kMinimalConstraintsForAllocation);
         buffers->WaitForBuffersAllocated(
             [&](zx_status_t status, fuchsia::sysmem::BufferCollectionInfo_2 buffers) {
               EXPECT_EQ(status, ZX_OK);
@@ -491,7 +497,7 @@ TEST_F(DeviceImplTest, RequestStreamFromController) {
     vmo_name = fsl::GetObjectName(vmo.get());
     return vmo_name != "Sysmem-core";
   });
-  EXPECT_EQ(vmo_name, "camera_c0_s0:0");
+  EXPECT_EQ(vmo_name, "camera_c0s0:0");
 
   constexpr uint32_t kBufferId = 42;
   bool callback_received = false;

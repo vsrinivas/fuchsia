@@ -12,6 +12,7 @@
 #include "src/camera/drivers/controller/sherlock/video_conferencing_config.h"
 #include "src/camera/drivers/controller/test/fake_gdc.h"
 #include "src/camera/drivers/controller/test/fake_isp.h"
+#include "src/camera/drivers/controller/test/fake_sysmem.h"
 #include "src/camera/lib/format_conversion/buffer_collection_helper.h"
 #include "src/camera/lib/format_conversion/format_conversion.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
@@ -37,17 +38,18 @@ namespace camera {
 class ControllerMemoryAllocatorTest : public gtest::TestLoopFixture {
  public:
   ControllerMemoryAllocatorTest()
-      : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
+      : context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
+        fake_sysmem_([this](auto request) { return context_->svc()->Connect(std::move(request)); }),
+        sysmem_(fake_sysmem_.client()) {}
 
   void SetUp() override {
     ASSERT_EQ(ZX_OK, context_->svc()->Connect(sysmem_allocator_.NewRequest()));
     ASSERT_EQ(ZX_OK, zx::event::create(0, &event_));
 
-    controller_memory_allocator_ =
-        std::make_unique<ControllerMemoryAllocator>(std::move(sysmem_allocator_));
-    pipeline_manager_ =
-        std::make_unique<PipelineManager>(fake_ddk::kFakeParent, dispatcher(), isp_, gdc_, ge2d_,
-                                          std::move(sysmem_allocator1_), event_);
+    controller_memory_allocator_ = std::make_unique<ControllerMemoryAllocator>(sysmem_);
+    pipeline_manager_ = std::make_unique<PipelineManager>(
+        dispatcher(), sysmem_, isp_, gdc_, ge2d_,
+        fit::bind_member(this, &ControllerMemoryAllocatorTest::LoadFirmware));
   }
 
   void TearDown() override {
@@ -55,12 +57,23 @@ class ControllerMemoryAllocatorTest : public gtest::TestLoopFixture {
     sysmem_allocator_ = nullptr;
   }
 
+  fpromise::result<std::pair<zx::vmo, size_t>, zx_status_t> LoadFirmware(const std::string& path) {
+    constexpr size_t kVmoSize = 4096;
+    zx::vmo vmo;
+    zx_status_t status = zx::vmo::create(kVmoSize, 0, &vmo);
+    if (status != ZX_OK) {
+      return fpromise::error(status);
+    }
+    return fpromise::ok(std::pair{std::move(vmo), kVmoSize});
+  }
+
   zx::event event_;
   std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
   std::unique_ptr<ControllerMemoryAllocator> controller_memory_allocator_;
   std::unique_ptr<camera::PipelineManager> pipeline_manager_;
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator1_;
+  FakeSysmem fake_sysmem_;
+  ddk::SysmemProtocolClient sysmem_;
   ddk::IspProtocolClient isp_;
   ddk::GdcProtocolClient gdc_;
   ddk::Ge2dProtocolClient ge2d_;
@@ -70,8 +83,8 @@ class ControllerMemoryAllocatorTest : public gtest::TestLoopFixture {
 // Buffer collection constraints.
 TEST_F(ControllerMemoryAllocatorTest, MonitorConfigFR) {
   auto internal_config = MonitorConfigFullRes();
-  auto fr_constraints = internal_config.output_constraints;
-  auto gdc1_constraints = internal_config.child_nodes[1].input_constraints;
+  auto fr_constraints = *internal_config.output_constraints;
+  auto gdc1_constraints = *internal_config.child_nodes[0].child_nodes[1].input_constraints;
   BufferCollection buffer_collection;
   std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
   constraints.push_back(fr_constraints);
@@ -79,7 +92,6 @@ TEST_F(ControllerMemoryAllocatorTest, MonitorConfigFR) {
   RelaxMemoryConstraints(constraints);
   ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(
                        constraints, buffer_collection, "TestMonitorConfigFR"));
-  EXPECT_EQ(buffer_collection.buffers.buffer_count, kIspBufferForCamping + kNumMonitorMLFRBuffers);
   EXPECT_GT(buffer_collection.buffers.settings.buffer_settings.size_bytes,
             kOutputStreamMlFRHeight * kOutputStreamMlFRWidth);
   EXPECT_TRUE(buffer_collection.buffers.settings.has_image_format_constraints);
@@ -101,8 +113,8 @@ TEST_F(ControllerMemoryAllocatorTest, MonitorConfigFR) {
 // Validate FR --> GDC1
 TEST_F(ControllerMemoryAllocatorTest, VideoConfigFRGDC1) {
   auto internal_config = VideoConfigFullRes(false);
-  auto fr_constraints = internal_config.output_constraints;
-  auto gdc1_constraints = internal_config.child_nodes[0].input_constraints;
+  auto fr_constraints = *internal_config.output_constraints;
+  auto gdc1_constraints = *internal_config.child_nodes[0].input_constraints;
   BufferCollection buffer_collection;
   std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
   constraints.push_back(fr_constraints);
@@ -110,7 +122,6 @@ TEST_F(ControllerMemoryAllocatorTest, VideoConfigFRGDC1) {
   RelaxMemoryConstraints(constraints);
   ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(
                        constraints, buffer_collection, "TestVideoConfigFRGDC1"));
-  EXPECT_EQ(buffer_collection.buffers.buffer_count, kIspBufferForCamping + kGdcBufferForCamping);
   EXPECT_GT(buffer_collection.buffers.settings.buffer_settings.size_bytes,
             kIspFRWidth * kIspFRHeight);
   EXPECT_TRUE(buffer_collection.buffers.settings.has_image_format_constraints);
@@ -137,9 +148,9 @@ TEST_F(ControllerMemoryAllocatorTest, VideoConfigGDC1GDC2) {
   auto gdc1_node = input_node.child_nodes[0];
   auto gdc2_node = gdc1_node.child_nodes[0];
   auto ge2d_node = gdc1_node.child_nodes[1];
-  auto gdc1_constraints = gdc1_node.output_constraints;
-  auto gdc2_constraints = gdc2_node.input_constraints;
-  auto ge2d_constraints = ge2d_node.input_constraints;
+  auto gdc1_constraints = *gdc1_node.output_constraints;
+  auto gdc2_constraints = *gdc2_node.input_constraints;
+  auto ge2d_constraints = *ge2d_node.input_constraints;
   BufferCollection buffer_collection;
   std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
   constraints.push_back(gdc1_constraints);
@@ -148,8 +159,6 @@ TEST_F(ControllerMemoryAllocatorTest, VideoConfigGDC1GDC2) {
   RelaxMemoryConstraints(constraints);
   ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(
                        constraints, buffer_collection, "TestVideoConfigGDC1GDC2"));
-  EXPECT_EQ(buffer_collection.buffers.buffer_count,
-            2 * kGdcBufferForCamping + kGe2dBufferForCamping);
   EXPECT_GT(buffer_collection.buffers.settings.buffer_settings.size_bytes,
             kGdcFRWidth * kGdcFRHeight);
   EXPECT_TRUE(buffer_collection.buffers.settings.has_image_format_constraints);
@@ -173,8 +182,8 @@ TEST_F(ControllerMemoryAllocatorTest, VideoConfigGDC1GDC2) {
 // Buffer collection constraints.
 TEST_F(ControllerMemoryAllocatorTest, MonitorConfigDS) {
   auto internal_config = MonitorConfigDownScaledRes();
-  auto ds_constraints = internal_config.output_constraints;
-  auto gdc2_constraints = internal_config.child_nodes[0].input_constraints;
+  auto ds_constraints = *internal_config.output_constraints;
+  auto gdc2_constraints = *internal_config.child_nodes[0].input_constraints;
   BufferCollection buffer_collection;
   std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
   constraints.push_back(ds_constraints);
@@ -182,7 +191,6 @@ TEST_F(ControllerMemoryAllocatorTest, MonitorConfigDS) {
   RelaxMemoryConstraints(constraints);
   ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(
                        constraints, buffer_collection, "TestMonitorConfigDS"));
-  EXPECT_EQ(buffer_collection.buffers.buffer_count, kIspBufferForCamping + kGdcBufferForCamping);
   EXPECT_GT(buffer_collection.buffers.settings.buffer_settings.size_bytes,
             kOutputStreamDSHeight * kOutputStreamDSWidth);
   EXPECT_TRUE(buffer_collection.buffers.settings.has_image_format_constraints);
@@ -199,8 +207,8 @@ TEST_F(ControllerMemoryAllocatorTest, MonitorConfigDS) {
 
 TEST_F(ControllerMemoryAllocatorTest, ConvertBufferCollectionInfo2TypeTest) {
   auto internal_config = MonitorConfigFullRes();
-  auto fr_constraints = internal_config.output_constraints;
-  auto gdc1_constraints = internal_config.child_nodes[1].input_constraints;
+  auto fr_constraints = *internal_config.output_constraints;
+  auto gdc1_constraints = *internal_config.child_nodes[0].child_nodes[1].input_constraints;
   BufferCollection buffer_collection;
   std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
   constraints.push_back(fr_constraints);
@@ -209,7 +217,6 @@ TEST_F(ControllerMemoryAllocatorTest, ConvertBufferCollectionInfo2TypeTest) {
   // Allocating some buffer collection
   ASSERT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(
                        constraints, buffer_collection, "TestConvertBufferCollection2TypeTest"));
-  EXPECT_EQ(buffer_collection.buffers.buffer_count, kIspBufferForCamping + kNumMonitorMLFRBuffers);
 
   BufferCollectionHelper buffer_collection_helper(buffer_collection.buffers);
 

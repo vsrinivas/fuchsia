@@ -28,6 +28,21 @@ namespace {
 constexpr fuchsia::sysmem::PixelFormatType kFramePixelFormat =
     fuchsia::sysmem::PixelFormatType::NV12;
 
+// Pipeline-wide Parameters
+// Each processing node has access to an input collection, an output collection, or both. For each
+// collection it has access to, a certain amount of "camping" buffers are required, representing the
+// maximum number of buffers the node may need to hold in order to make forward progress. For most
+// processing tasks, the input and output buffer count will be 1 - when running, the node is reading
+// from one (input) buffer and writing to one (output) buffer. In addition to the values here,
+// stand-in values for future stream clients are specified below.
+constexpr uint32_t kVideoConferencingIspFROutputBuffers = 3;
+constexpr uint32_t kVideoConferencingGDC1InputBuffers = 1;
+constexpr uint32_t kVideoConferencingGDC1OutputBuffers = 1;
+constexpr uint32_t kVideoConferencingGDC2InputBuffers = 1;
+constexpr uint32_t kVideoConferencingGDC2OutputBuffers = 1;
+constexpr uint32_t kVideoConferencingGE2DInputBuffers = 1;
+constexpr uint32_t kVideoConferencingGE2DOutputBuffers = 1;
+
 // Isp FR parameters
 constexpr uint32_t kIspFRWidth = 2176;
 constexpr uint32_t kIspFRHeight = 2720;
@@ -37,11 +52,13 @@ constexpr uint32_t kGdcFRWidth = 2240;
 constexpr uint32_t kGdcFRHeight = 1792;
 
 // ML Video FR Parameters
+constexpr uint32_t kMlFRMaxClientBuffers = 5;
 constexpr uint32_t kMlFRWidth = 640;
 constexpr uint32_t kMlFRHeight = 512;
 constexpr uint32_t kMlFRFrameRate = 5;
 
 // Video Conferencing FR Parameters
+constexpr uint32_t kVideoMaxClientBuffers = 5;
 constexpr uint32_t kVideoWidth = 1280;
 constexpr uint32_t kVideoHeight = 720;
 constexpr uint32_t kVideoWidth1 = 896;

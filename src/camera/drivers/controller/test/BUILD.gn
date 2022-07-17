@@ -28,7 +28,6 @@ executable("controller_unittest_bin") {
     "fake_ge2d.h",
     "fake_isp.h",
     "fake_sysmem.h",
-    "protocol_test.cc",
   ]
   deps = [
     ":constants",

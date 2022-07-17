@@ -154,9 +154,19 @@ void Ge2dDevice::Ge2dReleaseFrame(uint32_t task_index, uint32_t buffer_index) {
   fbl::AutoLock al(&interface_lock_);
   // Find the entry in hashmap.
   auto task_entry = task_map_.find(task_index);
-  ZX_ASSERT(task_entry != task_map_.end());
+  if (task_entry == task_map_.end()) {
+    // RemoveTask and FrameReady are asynchronous, so it's possible for a client to receive a frame
+    // after it has requested task removal. If the client then returns this frame, the task may
+    // already be gone, so just log it as a warning and continue.
+    FX_LOGS(WARNING) << "spurious ReleaseFrame(" << buffer_index << ") for task " << task_index;
+    return;
+  }
 
   auto task = task_entry->second.get();
+  if (task->Ge2dTaskType() == Ge2dTask::GE2D_IN_PLACE_WATERMARK) {
+    // in-place watermark task does not use a vmo pool
+    return;
+  }
   ZX_ASSERT(ZX_OK == task->ReleaseOutputBuffer(buffer_index));
 }
 
