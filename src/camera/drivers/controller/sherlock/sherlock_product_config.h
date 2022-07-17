@@ -33,13 +33,15 @@ class SherlockProductConfig : public ProductConfig {
   // Config 2: // Video conferencing configuration with extended FOV enabled.
   //          Stream 0: ML | FR | VIDEO | EXTENDED_FOV
   //          Stream 1: VIDEO | | EXTENDED_FOV
-  std::vector<fuchsia::camera2::hal::Config> ExternalConfigs() override;
+  std::vector<fuchsia::camera2::hal::Config> ExternalConfigs() const override;
 
   // Returns the internal configuration corresponding to the
   // external configuration.
-  struct InternalConfigs InternalConfigs() override;
+  struct InternalConfigs InternalConfigs() const override;
 
-  const char* GetGdcConfigFile(GdcConfig config_type) override;
+  const char* GetGdcConfigFile(GdcConfig config_type) const override;
+
+  std::string ToString() const override;
 };
 
 }  // namespace camera

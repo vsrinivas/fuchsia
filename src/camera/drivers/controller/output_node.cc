@@ -9,64 +9,108 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include "src/camera/drivers/controller/stream_protocol.h"
+#include <safemath/safe_conversions.h>
 
 namespace camera {
 
 constexpr auto kTag = "camera_controller_output_node";
 
-fpromise::result<OutputNode*, zx_status_t> OutputNode::CreateOutputNode(
-    async_dispatcher_t* dispatcher, StreamCreationData* info, ProcessNode* parent_node,
-    const InternalConfigNode& internal_output_node) {
-  if (dispatcher == nullptr || info == nullptr || parent_node == nullptr) {
-    FX_LOGST(DEBUG, kTag) << "Invalid input parameters";
-    return fpromise::error(ZX_ERR_INVALID_ARGS);
-  }
-
-  BufferCollection unused_buffer_collection;
-
-  auto output_node = std::make_unique<camera::OutputNode>(
-      dispatcher, parent_node, internal_output_node, std::move(unused_buffer_collection),
-      info->stream_type(), info->image_format_index);
-  if (!output_node) {
-    FX_LOGST(ERROR, kTag) << "Failed to create output ProcessNode";
-    return fpromise::error(ZX_ERR_NO_MEMORY);
-  }
-
-  auto client_stream = std::make_unique<camera::StreamImpl>(output_node.get());
-  if (!client_stream) {
-    FX_LOGST(ERROR, kTag) << "Failed to create StreamImpl";
-    return fpromise::error(ZX_ERR_INTERNAL);
-  }
-
-  // Set the client stream.
-  output_node->set_client_stream(std::move(client_stream));
-  auto result = fpromise::ok(output_node.get());
-
-  // Add child node.
-  parent_node->AddChildNodeInfo(std::move(output_node));
-  return result;
+OutputNode::OutputNode(async_dispatcher_t* dispatcher, BufferAttachments attachments)
+    : ProcessNode(dispatcher, NodeType::kOutputStream, attachments,
+                  [](auto, auto) { FX_NOTREACHED(); }),
+      dispatcher_(dispatcher),
+      binding_(this) {
+  binding_.set_error_handler([this](auto status) { callbacks_.disconnect(); });
 }
 
-void OutputNode::OnReadyToProcess(const frame_available_info_t* info) {
-  TRACE_DURATION("camera", "OutputNode::OnReadyToProcess", "info->buffer_id", info->buffer_id);
-  if (enabled_) {
-    ZX_ASSERT(client_stream_ != nullptr);
-    client_stream_->FrameReady(info);
-    return;
+fpromise::result<std::unique_ptr<OutputNode>, zx_status_t> OutputNode::Create(
+    async_dispatcher_t* dispatcher, BufferAttachments attachments,
+    fidl::InterfaceRequest<fuchsia::camera2::Stream> request, Callbacks callbacks) {
+  ZX_ASSERT(request.is_valid());
+  TRACE_DURATION("camera", "OutputNode::Create");
+  auto node = std::make_unique<camera::OutputNode>(dispatcher, attachments);
+  node->callbacks_ = std::move(callbacks);
+  ZX_ASSERT(node->binding_.Bind(std::move(request), node->dispatcher_) == ZX_OK);
+  return fpromise::ok(std::move(node));
+}
+
+void OutputNode::ProcessFrame(FrameToken token, frame_metadata_t metadata) {
+  TRACE_DURATION("camera", "OutputNode::ProcessFrame", "buffer_index", *token);
+  if (!started_) {
+    return;  // ~token
   }
-  // Since streaming is disabled the incoming frame is released
-  // so it gets added back to the pool.
-  OnReleaseFrame(info->buffer_id);
+  if (!binding_.is_bound()) {
+    FX_LOGS(WARNING) << this << ": client disconnected? returning frame...";
+    return;  // ~token
+  }
+  TRACE_FLOW_BEGIN("camera", "camera_stream_on_frame_available", metadata.timestamp);
+  client_tokens_.emplace(*token, token);
+  fuchsia::camera2::FrameAvailableInfo frame_info{};
+  frame_info.frame_status = fuchsia::camera2::FrameStatus::OK;
+  frame_info.buffer_id = *token;
+  frame_info.metadata.set_image_format_index(metadata.image_format_index);
+  frame_info.metadata.set_timestamp(safemath::checked_cast<int64_t>(metadata.timestamp));
+  frame_info.metadata.set_capture_timestamp(
+      safemath::checked_cast<int64_t>(metadata.capture_timestamp));
+  ZX_ASSERT(binding_.is_bound());
+  binding_.events().OnFrameAvailable(std::move(frame_info));
 }
 
-void OutputNode::OnReleaseFrame(uint32_t buffer_index) {
-  TRACE_DURATION("camera", "OutputNode::OnReleaseFrame", "buffer_index", buffer_index);
-  parent_node_->OnReleaseFrame(buffer_index);
+void OutputNode::SetOutputFormat(uint32_t output_format_index, fit::closure callback) {
+  TRACE_DURATION("camera", "OutputNode::SetOutputFormat", "format_index", output_format_index);
+  callback();
 }
 
-zx_status_t OutputNode::Attach(zx::channel channel, fit::function<void(void)> disconnect_handler) {
-  return client_stream_->Attach(std::move(channel), std::move(disconnect_handler));
+void OutputNode::ShutdownImpl(fit::closure callback) {
+  TRACE_DURATION("camera", "OutputNode::ShutdownImpl");
+  client_tokens_.clear();
+  callback();
+}
+
+void OutputNode::HwFrameReady(frame_available_info_t info) { FX_NOTREACHED(); }
+void OutputNode::HwFrameResolutionChanged(frame_available_info_t info) { FX_NOTREACHED(); }
+void OutputNode::HwTaskRemoved(task_remove_status_t status) { FX_NOTREACHED(); }
+
+void OutputNode::Stop() {
+  FX_LOGS(INFO) << this << ": Stop()";
+  started_ = false;
+}
+
+void OutputNode::Start() {
+  FX_LOGS(INFO) << this << ": Start()";
+  started_ = true;
+}
+
+void OutputNode::ReleaseFrame(uint32_t buffer_id) {
+  auto element = client_tokens_.extract(buffer_id);
+  if (element.empty()) {
+    FX_LOGS(INFO) << "Client called ReleaseFrame on non-held buffer " << buffer_id;
+  }
+}
+
+void OutputNode::AcknowledgeFrameError() {
+  FX_LOGST(ERROR, kTag) << __PRETTY_FUNCTION__ << " not implemented";
+}
+
+void OutputNode::SetRegionOfInterest(float x_min, float y_min, float x_max, float y_max,
+                                     SetRegionOfInterestCallback callback) {
+  TRACE_DURATION("camera", "OutputNode::SetRegionOfInterest");
+  callbacks_.set_region_of_interest(x_min, y_min, x_max, y_max, std::move(callback));
+}
+
+void OutputNode::SetImageFormat(uint32_t image_format_index, SetImageFormatCallback callback) {
+  TRACE_DURATION("camera", "OutputNode::SetImageFormat");
+  callbacks_.set_image_format(image_format_index, std::move(callback));
+}
+
+void OutputNode::GetImageFormats(GetImageFormatsCallback callback) {
+  TRACE_DURATION("camera", "OutputNode::GetImageFormats");
+  callbacks_.get_image_formats(std::move(callback));
+}
+
+void OutputNode::GetBuffers(GetBuffersCallback callback) {
+  TRACE_DURATION("camera", "OutputNode::GetBuffers");
+  callbacks_.get_buffers(std::move(callback));
 }
 
 }  // namespace camera

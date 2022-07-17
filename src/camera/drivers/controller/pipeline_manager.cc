@@ -10,405 +10,543 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <csignal>
+#include <list>
+#include <numeric>
+#include <stack>
+#include <type_traits>
+
 #include "src/camera/drivers/controller/gdc_node.h"
 #include "src/camera/drivers/controller/ge2d_node.h"
-#include "src/camera/drivers/controller/graph_utils.h"
 #include "src/camera/drivers/controller/input_node.h"
+#include "src/camera/drivers/controller/output_node.h"
+#include "src/camera/drivers/controller/passthrough_node.h"
+#include "src/camera/drivers/controller/util.h"
+#include "src/camera/lib/formatting/formatting.h"
+#include "src/lib/digest/digest.h"
 
 namespace camera {
 
-constexpr auto kTag = "camera_controller";
+PipelineManager::PipelineManager(async_dispatcher_t* dispatcher,
+                                 const ddk::SysmemProtocolClient& sysmem,
+                                 const ddk::IspProtocolClient& isp,
+                                 const ddk::GdcProtocolClient& gdc,
+                                 const ddk::Ge2dProtocolClient& ge2d,
+                                 LoadFirmwareCallback load_firmware)
+    : dispatcher_(dispatcher),
+      isp_(isp),
+      gdc_(gdc),
+      ge2d_(ge2d),
+      memory_allocator_(sysmem),
+      load_firmware_(std::move(load_firmware)) {}
 
-fpromise::result<OutputNode*, zx_status_t> PipelineManager::CreateGraph(
-    StreamCreationData* info, const InternalConfigNode& internal_node, ProcessNode* parent_node) {
-  fpromise::result<OutputNode*, zx_status_t> result;
-  const auto* next_node_internal = GetNextNodeInPipeline(info->stream_type(), internal_node);
-  if (!next_node_internal) {
-    FX_LOGST(ERROR, kTag) << "Failed to get next node";
-    return fpromise::error(ZX_ERR_INTERNAL);
-  }
-
-  switch (next_node_internal->type) {
-    // Input Node
-    case NodeType::kInputStream: {
-      FX_LOGST(ERROR, kTag) << "Child node cannot be input node";
-      return fpromise::error(ZX_ERR_INVALID_ARGS);
-    }
-    // GDC
-    case NodeType::kGdc: {
-      auto gdc_result = camera::GdcNode::CreateGdcNode(
-          memory_allocator_, dispatcher_, device_, gdc_, info, parent_node, *next_node_internal);
-      if (gdc_result.is_error()) {
-        FX_PLOGST(ERROR, kTag, gdc_result.error()) << "Failed to configure GDC Node";
-        // TODO(braval): Handle already configured nodes
-        return fpromise::error(gdc_result.error());
-      }
-      return CreateGraph(info, *next_node_internal, gdc_result.value());
-    }
-    // GE2D
-    case NodeType::kGe2d: {
-      auto ge2d_result = camera::Ge2dNode::CreateGe2dNode(
-          memory_allocator_, dispatcher_, device_, ge2d_, info, parent_node, *next_node_internal);
-      if (ge2d_result.is_error()) {
-        FX_PLOGST(ERROR, kTag, ge2d_result.error()) << "Failed to configure GE2D Node";
-        // TODO(braval): Handle already configured nodes
-        return fpromise::error(ge2d_result.error());
-      }
-      return CreateGraph(info, *next_node_internal, ge2d_result.value());
-    }
-    // Output Node
-    case NodeType::kOutputStream: {
-      result =
-          camera::OutputNode::CreateOutputNode(dispatcher_, info, parent_node, *next_node_internal);
-      if (result.is_error()) {
-        FX_LOGST(ERROR, kTag) << "Failed to configure Output Node";
-        // TODO(braval): Handle already configured nodes
-        return result;
-      }
-      output_nodes_info_[info->stream_type()] = result.value();
-      break;
-    }
-      // clang-format off
-    default: {
-      return fpromise::error(ZX_ERR_NOT_SUPPORTED);
-    }
-      // clang-format on
-  }
-  return result;
+PipelineManager::~PipelineManager() {
+  ZX_ASSERT_MSG(state_ == State::Uninitialized,
+                "Caller destroying pipeline manager without awaiting shutdown completion.");
 }
 
-fpromise::result<std::pair<InternalConfigNode, ProcessNode*>, zx_status_t>
-PipelineManager::FindNodeToAttachNewStream(StreamCreationData* info,
-                                           const InternalConfigNode& current_internal_node,
-                                           ProcessNode* node) {
-  auto requested_stream_type = info->stream_type();
+void PipelineManager::SetRoots(const std::vector<InternalConfigNode>& roots) {
+  TRACE_DURATION("camera", "PipelineManager::SetRoots");
+  ZX_ASSERT(state_ == State::Uninitialized);
+  state_ = State::Configured;
+  current_roots_ = roots;
+}
 
-  // Validate if this node supports the requested stream type
-  // to be safe.
-  if (!node->is_stream_supported(requested_stream_type)) {
-    return fpromise::error(ZX_ERR_INVALID_ARGS);
-  }
-
-  // Traverse the |node| to find a node which supports this stream
-  // but none of its children support this stream.
-  for (auto& child_node : node->child_nodes()) {
-    if (child_node->is_stream_supported(requested_stream_type)) {
-      // If we find a child node which supports the requested stream type,
-      // we move on to that child node.
-      const auto* next_internal_node =
-          GetNextNodeInPipeline(info->stream_type(), current_internal_node);
-      if (!next_internal_node) {
-        FX_LOGS(ERROR) << "Failed to get next node for requested stream";
-        return fpromise::error(ZX_ERR_INTERNAL);
-      }
-      return FindNodeToAttachNewStream(info, *next_internal_node, child_node.get());
-    }
-    // This is the node we need to attach the new stream pipeline to
-    return fpromise::ok(std::make_pair(current_internal_node, node));
-  }
-
-  // Should not reach here
-  FX_LOGS(ERROR) << "Failed FindNodeToAttachNewStream";
-  return fpromise::error(ZX_ERR_INTERNAL);
+// Helper to check whether a config node supports a given stream type.
+static bool Supports(const InternalConfigNode& node, fuchsia::camera2::CameraStreamType type) {
+  return std::any_of(node.supported_streams.cbegin(), node.supported_streams.cend(),
+                     [type](const auto& supported) { return type == supported.type; });
 }
 
 void PipelineManager::ConfigureStreamPipeline(
-    StreamCreationData info, fidl::InterfaceRequest<fuchsia::camera2::Stream> stream) {
-  auto nonce = TRACE_NONCE();
+    StreamCreationData info, fidl::InterfaceRequest<fuchsia::camera2::Stream> request) {
   TRACE_DURATION("camera", "PipelineManager::ConfigureStreamPipeline");
-  TRACE_FLOW_BEGIN("camera", "post_configure_stream_pipeline_task", nonce);
-  PostTask([this, nonce, info = std::move(info), stream = std::move(stream)]() mutable {
-    TRACE_DURATION("camera", "PipelineManager::ConfigureStreamPipeline.task");
-    TRACE_FLOW_END("camera", "post_configure_stream_pipeline_task", nonce);
-    zx_status_t status = ZX_OK;
-    auto cleanup = fit::defer([this, &stream, &status]() {
-      TaskComplete();
-      if (status != ZX_OK) {
-        stream.Close(status);
-      }
-    });
+  ZX_ASSERT_MSG(state_ == State::Configured,
+                "caller tried to create a new pipeline while the current one is still shutting "
+                "down or roots are not set");
+  // Queue this request for later execution if the pipeline is currently changing.
+  if (pipeline_changing_) {
+    pending_requests_.configure_stream_pipeline.emplace(std::move(info), std::move(request));
+    return;
+  }
 
-    ProcessNode* graph_node_to_be_appended = nullptr;
-    camera::InternalConfigNode internal_graph_node_to_be_appended;
-    std::unique_ptr<camera::ProcessNode> graph_head;
-    auto shutdown_graph_on_error = fit::defer([&] {
-      if (graph_head) {
-        graph_head->OnShutdown([] {});
-      }
-    });
+  // The flag is set defensively for the duration of this method. Although it always completes prior
+  // to returning control to the loop, this helps ensure that future changes to othjer parts of the
+  // method body do not introduce callbacks that would lead to erroneous behavior.
+  SetPipelineChanging(true);
 
-    auto* input_node = FindStream(info.node.input_stream_type);
-    if (input_node) {
-      // If the same stream is requested again, return an error..
-      if (HasStreamType(input_node->configured_streams(),
-                        info.stream_config.properties.stream_type())) {
-        status = ZX_ERR_ALREADY_BOUND;
-        return;
-      }
-      // Find the node at which the new graph needs to be appended.
-      auto result = FindNodeToAttachNewStream(&info, info.node, input_node);
-      if (result.is_error()) {
-        FX_PLOGS(ERROR, result.error()) << "Failed FindNodeToAttachNewStream";
-        status = result.error();
-        return;
-      }
+  // Start with an empty path and the roots of the current configuration.
+  FrameGraph::Node::Path path;
+  auto candidates = std::cref(info.roots);
 
-      graph_node_to_be_appended = result.value().second;
-      internal_graph_node_to_be_appended = result.value().first;
-    } else {
-      auto input_result =
-          camera::InputNode::CreateInputNode(&info, memory_allocator_, dispatcher_, isp_);
-      if (input_result.is_error()) {
-        FX_PLOGST(ERROR, kTag, input_result.error()) << "Failed to ConfigureInputNode";
-        status = input_result.error();
-        return;
+  // Advance down the configuration tree until an output node is found, creating intermediate nodes
+  // along the way.
+  while (!candidates.get().empty()) {
+    std::vector<uint8_t> matches;
+    ZX_ASSERT(candidates.get().size() < std::numeric_limits<uint8_t>::max());
+    for (uint8_t i = 0; i < candidates.get().size(); ++i) {
+      if (Supports(candidates.get()[i], info.stream_type())) {
+        matches.push_back(i);
       }
-
-      graph_head = std::move(input_result.value());
-      graph_node_to_be_appended = graph_head.get();
-      internal_graph_node_to_be_appended = info.node;
     }
+    if (matches.empty() || matches.size() > 1) {
+      const auto reason = matches.empty() ? "no matches" : "multiple matches";
+      FX_LOGS(FATAL) << "invalid product config - " << reason << " for stream type "
+                     << formatting::ToString(info.stream_type()) << " at path " << Format(path);
+    }
+    path.push_back(matches[0]);
+    auto& current = candidates.get()[path.back()];
+    if (!graph_.Contains(path)) {
+      // If there is no node associated with the current config node, create it.
+      auto path_complete = CreateFGNode(info, path, request);
+      if (path_complete) {
+        SetPipelineChanging(false);
+        return;
+      }
+    }
+    candidates = current.child_nodes;
+  }
+  FX_LOGS(FATAL) << "invalid product config - no outputs below path " << Format(path);
+}
 
-    auto output_node_result =
-        CreateGraph(&info, internal_graph_node_to_be_appended, graph_node_to_be_appended);
-    if (output_node_result.is_error()) {
-      FX_PLOGST(ERROR, kTag, output_node_result.error()) << "Failed to CreateGraph";
-      status = output_node_result.error();
+void PipelineManager::SetStreamingEnabled(bool enabled) {
+  streaming_enabled_ = enabled;
+  UpdateInputNodeStreamingState();
+}
+
+void PipelineManager::Shutdown(fit::closure callback) {
+  TRACE_DURATION("camera", "PipelineManager::Shutdown", "this", this);
+  FX_LOGS(INFO) << "PipelineManager::Shutdown() - start";
+  ZX_ASSERT_MSG(state_ != State::ShuttingDown, "Caller requested shutdown multiple times.");
+  shutdown_state_.flow_nonce = TRACE_NONCE();
+  TRACE_FLOW_BEGIN("camera", "PipelineManager::ShutdownFlow", shutdown_state_.flow_nonce);
+  // Set the shutdown flag and save the callback to be invoked upon completion of shutdown.
+  state_ = State::ShuttingDown;
+  shutdown_state_.callback = std::move(callback);
+  // Discard any pending stream requests received before the shutdown, since they would just observe
+  // peer-closed anyway. Requests received subsequent to the shutdown will still be handled after it
+  // completes.
+  pending_requests_.configure_stream_pipeline = {};
+  // If the pipeline is changing, defer starting the shutdown.
+  if (pipeline_changing_) {
+    return;
+  }
+  // Otherwise, perform it immediately.
+  SetPipelineChanging(true);
+  ShutdownImpl();
+}
+
+void PipelineManager::ShutdownImpl() {
+  TRACE_DURATION("camera", "PipelineManager::ShutdownImpl", "this", this);
+  // Locate all active outputs in the graph. These are copied to a separate vector before removing
+  // them as doing so invalidates the map iterator.
+  shutdown_state_.started = true;
+  std::vector<std::vector<uint8_t>> output_paths;
+  for (auto& [key, node] : graph_.nodes) {
+    if (node.children.empty()) {
+      output_paths.push_back(key);
+    }
+  }
+  if (output_paths.empty()) {
+    SetPipelineChanging(false);
+    return;
+  }
+  for (auto& path : output_paths) {
+    ShutdownAndRemoveNode(path);
+  }
+}
+
+// TODO(fxbug.dev/100525): the notion of "shutdown" being a required step
+void PipelineManager::SetPipelineChanging(bool changing) {
+  TRACE_DURATION("camera", "PipelineManager::SetPipelineChanging", "changing", changing);
+  ZX_ASSERT_MSG(changing != pipeline_changing_, "pipeline already %s",
+                changing ? "changing" : "stable");
+  if (changing) {
+    pipeline_changing_ = true;
+    return;
+  }
+  // When transitioning from changing to stable, schedule a task to handle all accumulated requests.
+  // A task is used (vs. invoking the handlers immediately) in order to avoid unconstrained
+  // recursion. The requests are moved out of the main queue first in order to avoid an endless loop
+  // if the request relies on any async steps in order to complete.
+  async::PostTask(dispatcher_, [this] {
+    pipeline_changing_ = false;
+    // First handle any pending disconnects.
+    auto disconnects = std::move(pending_requests_.disconnects);
+    pending_requests_.disconnects = {};
+    while (!disconnects.empty()) {
+      ClientDisconnect(disconnects.front());
+      disconnects.pop();
+    }
+    // If any of the previous disconnects triggered a pipeline change, skip further handling as they
+    // will be handled upon subsequent transition to stable.
+    if (pipeline_changing_) {
       return;
     }
-
-    auto* output_node = output_node_result.value();
-    auto stream_configured = info.stream_type();
-    status = output_node->Attach(stream.TakeChannel(), [this, stream_configured]() {
-      FX_LOGS(DEBUG) << "Stream client disconnected";
-      OnClientStreamDisconnect(stream_configured);
-    });
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to bind output stream";
+    // Handle shutdown if it has been called. There should be no pending requests in this state.
+    if (state_ == State::ShuttingDown) {
+      ZX_ASSERT(pending_requests_.configure_stream_pipeline.empty());
+      if (shutdown_state_.started) {
+        // If the pipeline was actively shutting down, a transition to stable indicates this process
+        // has completed.
+        TRACE_FLOW_END("camera", "PipelineManager::ShutdownFlow", shutdown_state_.flow_nonce);
+        auto callback = std::move(shutdown_state_.callback);
+        shutdown_state_.callback = nullptr;
+        shutdown_state_.started = false;
+        state_ = State::Uninitialized;
+        callback();
+      } else {
+        // Otherwise, begin the shutdown process.
+        pipeline_changing_ = true;
+        ShutdownImpl();
+      }
       return;
     }
-
-    if (input_node) {
-      // Push this new requested stream to all pre-existing nodes |configured_streams| vector.
-      auto requested_stream_type = info.stream_type();
-      auto* current_node = graph_node_to_be_appended;
-      while (current_node) {
-        current_node->configured_streams().push_back(requested_stream_type);
-        current_node = current_node->parent_node();
-      }
-    } else {
-      status =
-          isp_.SetFrameRateRange(reinterpret_cast<const frame_rate_t*>(&info.frame_rate_range.min),
-                                 reinterpret_cast<const frame_rate_t*>(&info.frame_rate_range.max));
-      if (status != ZX_OK) {
-        FX_PLOGST(ERROR, kTag, status) << "Failed to SetFrameRateRange";
-        return;
-      }
-      shutdown_graph_on_error.cancel();
-      streams_[info.node.input_stream_type] = std::move(graph_head);
+    // Handle any pending connection requests.
+    auto requests = std::move(pending_requests_.configure_stream_pipeline);
+    pending_requests_.configure_stream_pipeline = {};
+    while (!requests.empty()) {
+      std::apply(fit::bind_member(this, &PipelineManager::ConfigureStreamPipeline),
+                 std::move(requests.front()));
+      requests.pop();
     }
   });
 }
 
-static void RemoveStreamType(std::vector<fuchsia::camera2::CameraStreamType>& streams,
-                             fuchsia::camera2::CameraStreamType stream_to_remove) {
-  auto it = std::find(streams.begin(), streams.end(), stream_to_remove);
-  if (it != streams.end()) {
-    streams.erase(it);
-  }
-}
-
-void PipelineManager::TaskComplete() {
-  task_in_progress_ = false;
-  tasks_event_.signal(0u, kTaskQueued);
-}
-
-void PipelineManager::DeleteGraphForDisconnectedStream(
-    ProcessNode* graph_head, fuchsia::camera2::CameraStreamType stream_to_disconnect) {
-  TRACE_DURATION("camera", "PipelineManager::DeleteGraphForDisconnectedStream", "stream_type",
-                 static_cast<uint32_t>(stream_to_disconnect));
-
-  // More than one stream supported by this graph.
-  // Check for this nodes children to see if we can find the |stream_to_disconnect|
-  // as part of configured_streams.
-  auto& child_nodes = graph_head->child_nodes();
-  for (auto it = child_nodes.begin(); it != child_nodes.end(); it++) {
-    if (HasStreamType(it->get()->configured_streams(), stream_to_disconnect)) {
-      if (it->get()->configured_streams().size() == 1) {
-        it = child_nodes.erase(it);
-
-        auto* current_node = graph_head;
-        while (current_node) {
-          // Remove entry from configured streams.
-          RemoveStreamType(current_node->configured_streams(), stream_to_disconnect);
-
-          current_node = current_node->parent_node();
-        }
-        TaskComplete();
-        return;
+void PipelineManager::UpdateInputNodeStreamingState() {
+  for (uint32_t i = 0; i < current_roots_.size(); ++i) {
+    auto input = graph_.nodes.find({static_cast<uint8_t>(i)});
+    if (input != graph_.nodes.end()) {
+      auto node = static_cast<InputNode*>(input->second.process_node.get());
+      // The input node is robust to idempotent start/stop requests.
+      FX_LOGS(INFO) << this << ": camera pipeline streaming "
+                    << (streaming_enabled_ ? "enabled" : "disabled");
+      if (streaming_enabled_) {
+        node->StartStreaming();
+      } else {
+        node->StopStreaming();
       }
-      return DeleteGraphForDisconnectedStream(it->get(), stream_to_disconnect);
     }
   }
 }
 
-void PipelineManager::DisconnectStream(ProcessNode* graph_head,
-                                       fuchsia::camera2::CameraStreamType input_stream_type,
-                                       fuchsia::camera2::CameraStreamType stream_to_disconnect) {
-  auto shutdown_callback = [this, input_stream_type, stream_to_disconnect]() {
-    TRACE_DURATION("camera", "PipelineManager::DisconnectStream Callback", "stream_type",
-                   static_cast<uint32_t>(stream_to_disconnect));
+void PipelineManager::ShutdownAndRemoveNode(const std::vector<uint8_t>& path) {
+  TRACE_DURATION("camera", "PipelineManager::ShutdownAndRemoveNode", "path", Format(path));
+  ZX_ASSERT(pipeline_changing_);
+  graph_.nodes.at(path).process_node->Shutdown([this, path = path] {
+    auto target = graph_.nodes.extract(path);
+    auto parent = path;
+    parent.pop_back();
+    if (!parent.empty()) {
+      FX_LOGS(INFO) << "Removing " << Format(path) << " from " << Format(parent) << " child set";
+      graph_.nodes.at(parent).children.erase(path);
+    }
+    Prune();
+  });
+}
 
-    ProcessNode* graph_head = nullptr;
+void PipelineManager::Prune() {
+  TRACE_DURATION("camera", "PipelineManager::Prune");
+  ZX_ASSERT(pipeline_changing_);
+  for (auto& [key, value] : graph_.nodes) {
+    if (value.children.empty() && value.process_node->Type() != kOutputStream) {
+      async::PostTask(dispatcher_, [this, path = key] { ShutdownAndRemoveNode(path); });
+      return;
+    }
+  }
+  FX_LOGS(INFO) << "Prune() - no prune targets found";
+  SetPipelineChanging(false);
+}
 
-    // Remove entry from shutdown book keeping.
-    output_nodes_info_.erase(stream_to_disconnect);
-    stream_shutdown_requested_.erase(
-        std::remove(stream_shutdown_requested_.begin(), stream_shutdown_requested_.end(),
-                    stream_to_disconnect),
-        stream_shutdown_requested_.end());
+std::vector<fuchsia::sysmem::BufferCollectionConstraints> PipelineManager::GatherOutputConstraints(
+    const camera::InternalConfigNode& node) {
+  std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
+  if (node.output_constraints) {
+    constraints.push_back(*node.output_constraints);
+  }
+  for (const auto& child : node.child_nodes) {
+    if (child.input_constraints) {
+      constraints.push_back(*child.input_constraints);
+    }
+    if (!child.output_constraints) {
+      constraints += GatherOutputConstraints(child);
+    }
+  }
+  return constraints;
+}
 
-    // Check if global shutdown was requested and it was complete before exiting
-    // this function.
-    auto shutdown_cleanup = fit::defer([this]() {
-      if (output_nodes_info_.empty() && global_shutdown_requested_) {
-        // Signal for pipeline manager shutdown complete.
-        shutdown_event_.signal(0, kPipelineManagerSignalExitDone);
+std::string PipelineManager::Dump(bool log, cpp20::source_location location) const {
+  std::stringstream ss;
+  ss << "graph_:\n";
+  for (auto& [key, node] : graph_.nodes) {
+    ss << "  " << Format(key) << ":\n";
+    ss << "    path: " << Format(key) << "\n";
+    ss << "    buffers: ";
+    if (node.output_buffers) {
+      auto& buffers = node.output_buffers->buffers;
+      ss << "[" << buffers.buffer_count << "] "
+         << (buffers.settings.buffer_settings.size_bytes / 1024) << " KiB ("
+         << buffers.settings.image_format_constraints.min_coded_width << "x"
+         << buffers.settings.image_format_constraints.min_coded_height << ")\n";
+    } else {
+      ss << "<none>\n";
+    }
+    ss << "    children: \n";
+    for (auto& child : node.children) {
+      ss << "      " << Format(child) << "\n";
+    }
+  }
+  auto str = ss.str();
+  if (log) {
+    // Derivation of FX_LOGS(severity) that accepts custom FILE and LINE parameters.
+    FX_LAZY_STREAM(::syslog::LogMessage(::syslog::LOG_SEVERITY_AND_ID_INFO, location.file_name(),
+                                        location.line(), nullptr, nullptr)
+                       .stream(),
+                   FX_LOG_IS_ON(INFO))
+        << "PipelineManager::Dump()\n"
+        << str;
+  }
+  return str;
+}
+
+// Returns a list of nodes corresponding to the given path.
+// TODO(100525): Ideally the controller would just create a bidirectionally traversible
+// representation of the product config when first loaded.
+std::list<std::reference_wrapper<const InternalConfigNode>> GetPathICNodes(
+    const std::vector<InternalConfigNode>& roots, std::vector<uint8_t> path) {
+  if (path.empty()) {
+    return {};
+  }
+  std::list<std::reference_wrapper<const InternalConfigNode>> nodes{roots[path[0]]};
+  for (size_t i = 1; i < path.size(); ++i) {
+    nodes.push_back(nodes.back().get().child_nodes[path[i]]);
+  }
+  return nodes;
+}
+
+bool PipelineManager::CreateFGNode(const StreamCreationData& info, const std::vector<uint8_t>& path,
+                                   fidl::InterfaceRequest<fuchsia::camera2::Stream>& request) {
+#ifndef NDEBUG
+  Dump();
+#endif
+  ZX_ASSERT(!graph_.Contains(path));
+  auto path_icnodes = GetPathICNodes(info.roots, path);
+  auto icself = path_icnodes.back().get();
+  FrameGraph::Node fgself{.pulldown{.interval = FramerateToInterval(icself.output_frame_rate)}};
+
+  ProcessNode::BufferAttachments attachments{};
+  if (icself.input_constraints) {
+    // Most nodes have input constraints (meaning it receives data from a preceding node). Search
+    // backwards along the current path for the closest producer node. This may not be the immediate
+    // parent, e.g. if the parent has no direct outputs and just operates "in place" on an input
+    // collection.
+    auto ancestor_path = path;
+    auto ancestor_icnodes = path_icnodes;
+    do {
+      ancestor_path.pop_back();
+      ancestor_icnodes.pop_back();
+    } while (!ancestor_path.empty() && !graph_.nodes.at(ancestor_path).output_buffers);
+    ZX_ASSERT(!ancestor_path.empty());
+    auto& ancestor_fgnode = graph_.nodes.at(ancestor_path);
+    attachments.input_collection = *ancestor_fgnode.output_buffers;
+    attachments.input_formats = ancestor_icnodes.back().get().image_formats;
+  }
+
+  if (icself.output_constraints) {
+    // Allocate a buffer collection by aggregating the current node's output constraints and all
+    // downstream input constraints. Downstream constraints propagate through "in place" processing
+    // nodes.
+    auto constraints = GatherOutputConstraints(icself);
+    BufferCollection buffers{};
+    zx_status_t status =
+        memory_allocator_.AllocateSharedMemory(constraints, buffers, NodeTypeName(icself));
+    if (status != ZX_OK) {
+      FX_PLOGS(FATAL, status) << "unable to allocate memory";
+    }
+    fgself.output_buffers = std::move(buffers);
+    attachments.output_collection = *fgself.output_buffers;
+    attachments.output_formats = icself.image_formats;
+  } else {
+    // A node that has no output constraints operates "in place" on the input collection it is
+    // provided, either modifying buffer content (GE2D) or sending it externally (output node). To
+    // avoid requiring special handling for these cases, the outputs are set to point to the same
+    // attachments as the inputs.
+    attachments.output_collection = attachments.input_collection;
+    attachments.output_formats = attachments.input_formats;
+  }
+
+  // The inter-node frame handler distributes an inbound frame to all active children.
+  auto frame_handler = [this, path](const ProcessNode::FrameToken& token,
+                                    frame_metadata_t metadata) {
+    std::stringstream ss;
+    auto& self_fnode = graph_.nodes.at(path);
+    for (auto& child_path : self_fnode.children) {
+      auto& child_fnode = graph_.nodes.at(child_path);
+      if (child_fnode.pulldown.accumulator <= numerics::Rational{0}) {
+        child_fnode.pulldown.accumulator += child_fnode.pulldown.interval;
+        ZX_ASSERT(child_fnode.process_node);
+        child_fnode.process_node->ProcessFrame(token, metadata);
       }
-    });
-
-    auto* input_node = FindStream(input_stream_type);
-    if (input_node == nullptr) {
-      ZX_ASSERT_MSG(false, "Invalid input stream type\n");
-      return;
+      child_fnode.pulldown.accumulator -= self_fnode.pulldown.interval;
     }
-
-    if (input_node->configured_streams().size() == 1) {
-      streams_.erase(input_stream_type);
-      TaskComplete();
-      return;
-    }
-
-    graph_head = input_node;
-    DeleteGraphForDisconnectedStream(graph_head, stream_to_disconnect);
   };
 
-  // Only one stream supported by the graph.
-  if (graph_head->configured_streams().size() == 1 &&
-      HasStreamType(graph_head->configured_streams(), stream_to_disconnect)) {
-    graph_head->OnShutdown(shutdown_callback);
+  switch (icself.type) {
+    // Input
+    case NodeType::kInputStream: {
+      auto result =
+          InputNode::Create(dispatcher_, attachments, std::move(frame_handler), isp_, info);
+      ZX_ASSERT(result.is_ok());
+      fgself.process_node = result.take_value();
+    } break;
+    // GDC
+    case NodeType::kGdc: {
+      auto result = GdcNode::Create(dispatcher_, attachments, std::move(frame_handler),
+                                    load_firmware_, gdc_, icself, info);
+      ZX_ASSERT(result.is_ok());
+      fgself.process_node = result.take_value();
+    } break;
+    // GE2D
+    case NodeType::kGe2d: {
+      auto result = camera::Ge2dNode::Create(dispatcher_, attachments, std::move(frame_handler),
+                                             load_firmware_, ge2d_, icself, info);
+      ZX_ASSERT(result.is_ok());
+      fgself.process_node = result.take_value();
+    } break;
+    // Output
+    case NodeType::kOutputStream: {
+      auto result = camera::OutputNode::Create(
+          dispatcher_, attachments, std::move(request),
+          {.disconnect = [this, path] { ClientDisconnect(path); },
+           .set_region_of_interest =
+               [this, path](auto x_min, auto y_min, auto x_max, auto y_max, auto callback) {
+                 SetRegionOfInterest(path, x_min, y_min, x_max, y_max, std::move(callback));
+               },
+           .set_image_format =
+               [this, path](auto image_format_index, auto callback) {
+                 SetImageFormat(path, image_format_index, std::move(callback));
+               },
+           .get_image_formats =
+               [this, path](auto callback) { GetImageFormats(path, std::move(callback)); },
+           .get_buffers = [this, path](auto callback) { GetBuffers(path, std::move(callback)); }});
+      ZX_ASSERT(result.is_ok());
+      fgself.process_node = result.take_value();
+    } break;
+    // Passthrough
+    case NodeType::kPassthrough: {
+      auto result = camera::PassthroughNode::Create(dispatcher_, attachments,
+                                                    std::move(frame_handler), icself, info);
+      ZX_ASSERT(result.is_ok());
+      fgself.process_node = result.take_value();
+    } break;
+    default:
+      ZX_PANIC("unsupported stream type %d", icself.type);
+  }
+  fgself.process_node->SetLabel(Format(path) + "(" + NodeTypeName(icself) + ")");
+
+  // Once the node has been created successfully, attach it to its relatives and add it to the
+  // graph.
+  if (path.size() > 1) {
+    auto parent_path = FrameGraph::Node::Path{path.begin(), path.end() - 1};
+    auto& fgparent = graph_.nodes.at(parent_path);
+    fgparent.children.insert(path);
+  }
+  graph_.nodes.emplace(path, std::move(fgself));
+#ifndef NDEBUG
+  Dump();
+#endif
+
+  // Return true if the configured node was an output. This indicates that the `request` channel was
+  // consumed and the pipeline is complete.
+  return icself.type == kOutputStream;
+}
+
+void PipelineManager::ClientDisconnect(const std::vector<uint8_t>& origin) {
+  TRACE_DURATION("camera", "PipelineManager::ClientDisconnect", "origin", &origin);
+  FX_LOGS(INFO) << "ClientDisconnect(" << Format(origin) << ")";
+  if (pipeline_changing_) {
+    pending_requests_.disconnects.push(origin);
     return;
   }
+  SetPipelineChanging(true);
+  ShutdownAndRemoveNode(origin);
+}
 
-  // More than one stream supported by this graph.
-  // Check for this nodes children to see if we can find the |stream_to_disconnect|
-  // as part of configured_streams.
-  auto& child_nodes = graph_head->child_nodes();
-  for (auto& child_node : child_nodes) {
-    if (HasStreamType(child_node->configured_streams(), stream_to_disconnect)) {
-      return DisconnectStream(child_node.get(), input_stream_type, stream_to_disconnect);
+// NOLINTBEGIN(bugprone-easily-swappable-parameters): protocol defined elsewhere
+void PipelineManager::SetRegionOfInterest(
+    const std::vector<uint8_t>& origin, float x_min, float y_min, float x_max, float y_max,
+    fuchsia::camera2::Stream::SetRegionOfInterestCallback callback) {
+  auto local_path = origin;
+  auto path_icnodes = GetPathICNodes(current_roots_, local_path);
+  while (!local_path.empty()) {
+    auto& icnode = path_icnodes.back().get();
+    auto& fgnode = graph_.nodes.at(local_path);
+    if (icnode.type == kGe2d && icnode.ge2d_info.config_type == GE2D_RESIZE) {
+      BindPolyMethod(fgnode.process_node.get(), &Ge2dNode::SetCropRect);
+      static_cast<Ge2dNode*>(fgnode.process_node.get())->SetCropRect(x_min, y_min, x_max, y_max);
     }
+    local_path.pop_back();
+    path_icnodes.pop_back();
   }
+  callback(ZX_OK);
 }
+// NOLINTEND(bugprone-easily-swappable-parameters)
 
-fpromise::result<std::pair<ProcessNode*, fuchsia::camera2::CameraStreamType>, zx_status_t>
-PipelineManager::FindGraphHead(fuchsia::camera2::CameraStreamType stream_type) {
-  for (auto& stream : streams_) {
-    if (HasStreamType(stream.second->configured_streams(), stream_type)) {
-      return fpromise::ok(std::make_pair(stream.second.get(), stream.first));
-    }
-  }
-  return fpromise::error(ZX_ERR_BAD_STATE);
-}
-
-void PipelineManager::OnClientStreamDisconnect(
-    fuchsia::camera2::CameraStreamType stream_to_disconnect) {
-  PostTask([this, stream_to_disconnect]() {
-    TRACE_DURATION("camera", "PipelineManager::OnClientStreamDisconnect", "stream_type",
-                   static_cast<uint32_t>(stream_to_disconnect));
-    stream_shutdown_requested_.push_back(stream_to_disconnect);
-
-    auto result = FindGraphHead(stream_to_disconnect);
-    if (result.is_error()) {
-      FX_PLOGS(ERROR, result.error()) << "Failed to FindGraphHead";
-      ZX_ASSERT_MSG(false, "Invalid stream_to_disconnect stream type\n");
-    }
-
-    DisconnectStream(result.value().first, result.value().second, stream_to_disconnect);
-  });
-}
-
-void PipelineManager::StopStreaming() {
-  for (auto output_node_info : output_nodes_info_) {
-    if (output_node_info.second) {
-      output_node_info.second->client_stream()->Stop();
-    }
-  }
-}
-
-void PipelineManager::StartStreaming() {
-  for (auto output_node_info : output_nodes_info_) {
-    if (output_node_info.second) {
-      output_node_info.second->client_stream()->Start();
-    }
-  }
-}
-
-void PipelineManager::Shutdown() {
-  // No existing streams, safe to signal shutdown complete.
-  if (output_nodes_info_.empty()) {
-    // Signal for pipeline manager shutdown complete.
-    shutdown_event_.signal(0u, kPipelineManagerSignalExitDone);
+void PipelineManager::SetImageFormat(const std::vector<uint8_t>& origin,
+                                     uint32_t image_format_index,
+                                     fuchsia::camera2::Stream::SetImageFormatCallback callback) {
+  // The existing implementation assumes that all nodes in the pipeline have either one image
+  // format or support the same number of formats. When a new format is requested, all nodes in
+  // the graph are notified. For most, the request does nothing.
+  auto local_path = origin;
+  auto path_icnodes = GetPathICNodes(current_roots_, local_path);
+  if (image_format_index >= path_icnodes.back().get().image_formats.size()) {
+    callback(ZX_ERR_INVALID_ARGS);
     return;
   }
-
-  // First stop streaming all active streams.
-  StopStreaming();
-
-  // Instantiate the shutdown of all active streams before transitioning the state to
-  // "global_shutdown_requested".
-  auto output_node_info_copy = output_nodes_info_;
-  for (auto output_node_info : output_node_info_copy) {
-    if (!HasStreamType(stream_shutdown_requested_, output_node_info.first)) {
-      OnClientStreamDisconnect(output_node_info.first);
+  while (!local_path.empty()) {
+    auto& icnode = path_icnodes.back().get();
+    auto& fgnode = graph_.nodes.at(local_path);
+    if (icnode.image_formats.size() > 1) {
+      fgnode.process_node->SetOutputFormat(image_format_index, [] {});
     }
+    local_path.pop_back();
+    path_icnodes.pop_back();
   }
-
-  // Transition the state to ensure that no new tasks are posted on the task queue.
-  global_shutdown_requested_ = true;
+  callback(ZX_OK);
 }
 
-void PipelineManager::SetupTaskWaiter() {
-  ZX_ASSERT_MSG(ZX_OK == zx::event::create(0, &tasks_event_), "Failed to create a task event");
-
-  tasks_event_waiter_.set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
-                                         zx_status_t status, const zx_packet_signal_t* signal) {
-    TRACE_DURATION("camera", "PipelineManager::TaskWaiter");
-    // Clear the signal.
-    tasks_event_.signal(kTaskQueued, 0u);
-
-    if (!task_in_progress_ && !task_queue_.empty()) {
-      task_in_progress_ = true;
-      auto task = std::move(task_queue_.front());
-      task_queue_.pop();
-      async::PostTask(dispatcher_, std::move(task));
-    }
-
-    tasks_event_waiter_.Begin(dispatcher_);
-  });
-
-  tasks_event_waiter_.set_object(tasks_event_.get());
-  tasks_event_waiter_.set_trigger(kTaskQueued);
-  tasks_event_waiter_.Begin(dispatcher_);
+void PipelineManager::GetImageFormats(const std::vector<uint8_t>& origin,
+                                      fuchsia::camera2::Stream::GetImageFormatsCallback callback) {
+  auto path_icnodes = GetPathICNodes(current_roots_, origin);
+  auto& icnode = path_icnodes.back().get();
+  callback({icnode.image_formats.begin(), icnode.image_formats.end()});
 }
 
-void PipelineManager::PostTask(fit::closure task) {
-  if (global_shutdown_requested_) {
-    FX_LOGS(DEBUG) << "Global shutdown requested, ignoring the task posted on the task queue";
-    return;
+void PipelineManager::GetBuffers(const std::vector<uint8_t>& origin,
+                                 fuchsia::camera2::Stream::GetBuffersCallback callback) {
+  // in_place nodes may not have bound buffer collection ptr, walk up to find the real collection.
+  auto local_path = origin;
+  local_path.pop_back();
+  while (!local_path.empty() && !graph_.nodes.at(local_path).output_buffers) {
+    local_path.pop_back();
   }
-  task_queue_.emplace(std::move(task));
-  tasks_event_.signal(0u, kTaskQueued);
+  if (local_path.empty()) {
+    FX_LOGS(FATAL) << "no output buffers found in ancestors of " << Format(origin);
+  }
+  auto& fgnode = graph_.nodes.at(local_path);
+  auto& input_buffer_collection = fgnode.output_buffers->ptr;
+  ZX_ASSERT(input_buffer_collection);
+  fuchsia::sysmem::BufferCollectionTokenHandle token;
+  input_buffer_collection->AttachToken(ZX_RIGHT_SAME_RIGHTS, token.NewRequest());
+  input_buffer_collection->Sync(
+      [callback = std::move(callback), token = std::move(token)]() mutable {
+        callback(std::move(token));
+      });
+}
+
+bool PipelineManager::FrameGraph::Contains(const Node::Path& path) const {
+  return nodes.find(path) != nodes.end();
 }
 
 }  // namespace camera

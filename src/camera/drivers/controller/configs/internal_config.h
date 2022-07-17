@@ -57,6 +57,7 @@ enum NodeType {
   kGdc,
   kGe2d,
   kOutputStream,
+  kPassthrough,
 };
 struct InternalConfigNode {
   // To identify the type of the node this is.
@@ -73,12 +74,14 @@ struct InternalConfigNode {
   // HWAccelerator Info if applicable.
   Ge2DInfo ge2d_info;
   GdcInfo gdc_info;
-  // Constraints
-  fuchsia::sysmem::BufferCollectionConstraints input_constraints;
-  fuchsia::sysmem::BufferCollectionConstraints output_constraints;
+  // Specifies constraints for the node's attachments. Input constraints are required for all nodes
+  // except Input nodes. If specified, output constraints indicate the node owns a buffer collection
+  // and populates it by processing content from the input collection. Otherwise, the node only uses
+  // the input collection, and does not have a collection of its own.
+  std::optional<fuchsia::sysmem::BufferCollectionConstraints> input_constraints;
+  std::optional<fuchsia::sysmem::BufferCollectionConstraints> output_constraints;
   // Image formats supported
   std::vector<fuchsia::sysmem::ImageFormat_2> image_formats;
-  bool in_place;
 };
 
 struct FrameRateRange {

@@ -12,6 +12,10 @@
 
 namespace camera {
 
+static InternalConfigNode Gdc1();
+static InternalConfigNode Ge2dMonitoring();
+static InternalConfigNode MLFRFrameSkipper();
+
 /**********************************
  * Output Stream ML FR parameters *
  **********************************
@@ -32,8 +36,10 @@ static fuchsia::camera2::hal::StreamConfig OutputStreamMLFRConfig() {
   stream.set_bytes_per_row_divisor(kIspBytesPerRowDivisor);
   stream.set_contiguous(true);
   stream.set_frames_per_second(kOutputStreamMlFRFrameRate);
-  stream.set_buffer_count_for_camping(kExtraBuffers);
-  stream.set_min_buffer_count(kExtraBuffers + kNumClientBuffers);
+  // TODO(fxbug.dev/99578): Support releasing initial participants' camping buffer counts.
+  stream.set_buffer_count_for_camping(kMonitoringIspFROutputBuffers + kMonitoringGDC1InputBuffers);
+  stream.set_min_buffer_count(kMonitoringIspFROutputBuffers + kMonitoringGDC1InputBuffers +
+                              kOutputStreamMlFRMaxClientBuffers);
   return stream.ConvertToStreamConfig();
 }
 
@@ -57,8 +63,8 @@ static fuchsia::camera2::hal::StreamConfig OutputStreamMLDSConfig() {
   stream.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
   stream.set_contiguous(true);
   stream.set_frames_per_second(kOutputStreamMlDSFrameRate);
-  stream.set_buffer_count_for_camping(kExtraBuffers);
-  stream.set_min_buffer_count(kGdcBufferForCamping + kNumMonitorMLDSBuffers);
+  stream.set_buffer_count_for_camping(kMonitoringGDC1OutputBuffers);
+  stream.set_min_buffer_count(kMonitoringGDC1OutputBuffers + kOutputStreamMlDSMaxClientBuffers);
   return stream.ConvertToStreamConfig();
 }
 
@@ -99,8 +105,9 @@ static fuchsia::camera2::hal::StreamConfig OutputStreamMonitoringConfig() {
   stream.set_bytes_per_row_divisor(kGe2dBytesPerRowDivisor);
   stream.set_contiguous(true);
   stream.set_frames_per_second(kMonitoringThrottledOutputFrameRate);
-  stream.set_buffer_count_for_camping(kExtraBuffers);
-  stream.set_min_buffer_count(kGe2dBufferForCamping + kNumClientBuffers + kExtraBuffers);
+  stream.set_buffer_count_for_camping(kMonitoringGDC2OutputBuffers + kMonitoringGE2DInputBuffers);
+  stream.set_min_buffer_count(kMonitoringGDC2OutputBuffers + kMonitoringGE2DInputBuffers +
+                              kOutputStreamMonitoringMaxClientBuffers);
   return stream.ConvertToStreamConfig();
 }
 
@@ -138,8 +145,9 @@ static InternalConfigNode OutputStreamMLFR() {
                   .supports_crop_region = false,
               },
           },
+      .input_constraints = CopyConstraintsWithOverrides(
+          MonitoringConfig().stream_configs[0].constraints, {.min_buffer_count_for_camping = 0}),
       .image_formats = OutputStreamMLFRImageFormats(),
-      .in_place = false,
   };
 }
 
@@ -160,8 +168,9 @@ static InternalConfigNode OutputStreamMLDS() {
                   .supports_crop_region = false,
               },
           },
+      .input_constraints = CopyConstraintsWithOverrides(
+          MonitoringConfig().stream_configs[1].constraints, {.min_buffer_count_for_camping = 0}),
       .image_formats = OutputStreamMLDSImageFormats(),
-      .in_place = false,
   };
 }
 
@@ -171,7 +180,7 @@ fuchsia::sysmem::BufferCollectionConstraints Gdc1Constraints() {
   stream_constraints.set_contiguous(true);
   stream_constraints.AddImageFormat(kOutputStreamMlFRWidth, kOutputStreamMlFRHeight,
                                     kOutputStreamMlFRPixelFormat);
-  stream_constraints.set_buffer_count_for_camping(kGdcBufferForCamping);
+  stream_constraints.set_buffer_count_for_camping(kMonitoringGDC1InputBuffers);
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 
@@ -206,9 +215,10 @@ static InternalConfigNode Gdc1() {
                   },
           },
       .input_constraints = Gdc1Constraints(),
-      .output_constraints = OutputStreamMLDSConfig().constraints,
+      .output_constraints = CopyConstraintsWithOverrides(
+          OutputStreamMLDSConfig().constraints,
+          {.min_buffer_count_for_camping = kMonitoringGDC1OutputBuffers}),
       .image_formats = OutputStreamMLDSImageFormats(),
-      .in_place = false,
   };
 }
 
@@ -218,8 +228,7 @@ fuchsia::sysmem::BufferCollectionConstraints MonitorConfigFullResConstraints() {
   stream_constraints.set_contiguous(true);
   stream_constraints.AddImageFormat(kOutputStreamMlFRWidth, kOutputStreamMlFRHeight,
                                     kOutputStreamMlFRPixelFormat);
-  stream_constraints.set_buffer_count_for_camping(kIspBufferForCamping);
-  stream_constraints.set_min_buffer_count(kIspBufferForCamping + kNumMonitorMLFRBuffers);
+  stream_constraints.set_buffer_count_for_camping(kMonitoringIspFROutputBuffers);
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 
@@ -250,17 +259,51 @@ InternalConfigNode MonitorConfigFullRes() {
       .child_nodes =
           {
               {
+                  MLFRFrameSkipper(),
+              },
+          },
+      // input constrains not applicable
+      .output_constraints = MonitorConfigFullResConstraints(),
+      .image_formats = OutputStreamMLFRImageFormats(),
+  };
+}
+
+static InternalConfigNode MLFRFrameSkipper() {
+  // This node serves to synchronize the skipped frames between the two reduced-fps downstream
+  // nodes.
+  static_assert(kOutputStreamMlFRFrameRate == kOutputStreamMlDSFrameRate);
+  return {
+      .type = kPassthrough,
+      .output_frame_rate =
+          {
+              .frames_per_sec_numerator = kOutputStreamMlFRFrameRate,
+              .frames_per_sec_denominator = 1,
+          },
+      .input_stream_type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
+      .supported_streams =
+          {
+              {
+                  .type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                          fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+              },
+              {
+                  .type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+                          fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+                  .supports_dynamic_resolution = false,
+                  .supports_crop_region = false,
+              },
+          },
+      .child_nodes =
+          {
+              {
                   OutputStreamMLFR(),
               },
               {
                   Gdc1(),
               },
           },
-      // Input node doesn't need |input_constraints|
-      .input_constraints = InvalidConstraints(),
-      .output_constraints = MonitorConfigFullResConstraints(),
-      .image_formats = OutputStreamMLFRImageFormats(),
-      .in_place = false,
   };
 }
 
@@ -282,8 +325,9 @@ static InternalConfigNode OutputStreamMonitoring() {
                   .supports_crop_region = false,
               },
           },
+      .input_constraints = CopyConstraintsWithOverrides(
+          MonitoringConfig().stream_configs[2].constraints, {.min_buffer_count_for_camping = 0}),
       .image_formats = OutputStreamMonitoringImageFormats(),
-      .in_place = false,
   };
 }
 
@@ -293,7 +337,7 @@ fuchsia::sysmem::BufferCollectionConstraints Gdc2Constraints() {
   stream_constraints.set_contiguous(true);
   stream_constraints.AddImageFormat(kOutputStreamDSWidth, kOutputStreamDSHeight,
                                     kOutputStreamMonitoringPixelFormat);
-  stream_constraints.set_buffer_count_for_camping(kGdcBufferForCamping);
+  stream_constraints.set_buffer_count_for_camping(kMonitoringGDC2InputBuffers);
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 
@@ -307,7 +351,7 @@ fuchsia::sysmem::BufferCollectionConstraints Ge2dMonitoringConstraints() {
                                     kOutputStreamMonitoringPixelFormat);
   stream_constraints.AddImageFormat(kOutputStreamMonitoringWidth2, kOutputStreamMonitoringHeight2,
                                     kOutputStreamMonitoringPixelFormat);
-  stream_constraints.set_buffer_count_for_camping(kGe2dBufferForCamping);
+  stream_constraints.set_buffer_count_for_camping(kMonitoringGE2DInputBuffers);
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 
@@ -361,10 +405,10 @@ static InternalConfigNode Ge2dMonitoring() {
                       },
                   },
           },
+      // Ge2dMonitoringConstraints uses kMonitoringGE2DInputBuffers, so modification is necessary to
+      // reflect the output constraints.
       .input_constraints = Ge2dMonitoringConstraints(),
-      .output_constraints = Ge2dMonitoringConstraints(),
       .image_formats = OutputStreamMonitoringImageFormats(),
-      .in_place = true,
   };
 }
 
@@ -378,8 +422,7 @@ fuchsia::sysmem::BufferCollectionConstraints Gdc2OutputConstraints() {
                                     kOutputStreamMonitoringPixelFormat);
   stream_constraints.AddImageFormat(kOutputStreamMonitoringWidth2, kOutputStreamMonitoringHeight2,
                                     kOutputStreamMonitoringPixelFormat);
-  stream_constraints.set_buffer_count_for_camping(kGdcBufferForCamping);
-  stream_constraints.set_min_buffer_count(kGdcBufferForCamping + kNumClientBuffers + kExtraBuffers);
+  stream_constraints.set_buffer_count_for_camping(kMonitoringGDC2OutputBuffers);
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 
@@ -417,7 +460,6 @@ static InternalConfigNode Gdc2() {
       .input_constraints = Gdc2Constraints(),
       .output_constraints = Gdc2OutputConstraints(),
       .image_formats = OutputStreamMonitoringImageFormats(),
-      .in_place = false,
   };
 }
 
@@ -427,7 +469,7 @@ fuchsia::sysmem::BufferCollectionConstraints MonitorConfigDownScaledResConstrain
   stream_constraints.set_contiguous(true);
   stream_constraints.AddImageFormat(kOutputStreamDSWidth, kOutputStreamDSHeight,
                                     kOutputStreamMonitoringPixelFormat);
-  stream_constraints.set_buffer_count_for_camping(kIspBufferForCamping);
+  stream_constraints.set_buffer_count_for_camping(kMonitoringIspDSOutputBuffers);
   return stream_constraints.MakeBufferCollectionConstraints();
 }
 
@@ -454,11 +496,9 @@ InternalConfigNode MonitorConfigDownScaledRes() {
                   Gdc2(),
               },
           },
-      .input_constraints = InvalidConstraints(),
+      // input constraints not applicable
       .output_constraints = MonitorConfigDownScaledResConstraints(),
-      // Input node doesn't need |input_constraints|
       .image_formats = MonitorConfigDownScaledResImageFormats(),
-      .in_place = false,
   };
 }
 

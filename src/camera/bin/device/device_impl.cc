@@ -356,14 +356,19 @@ void DeviceImpl::OnBuffersRequested(uint32_t index,
                                     fuchsia::sysmem::BufferCollectionTokenHandle token,
                                     fit::function<void(uint32_t)> max_camping_buffers_callback) {
   // Assign friendly names to each buffer for debugging and profiling.
-  std::ostringstream oss;
-  oss << "camera_c" << current_configuration_index_ << "_s" << index;
+  const std::string friendly_name =
+      "c" + std::to_string(current_configuration_index_) + "s" + std::to_string(index);
+
+  auto controller_camping_buffers = configs_[current_configuration_index_]
+                                        .stream_configs[index]
+                                        .constraints.min_buffer_count_for_camping;
 
   auto allocation_complete =
-      [this, index, max_camping_buffers_callback = std::move(max_camping_buffers_callback)](
+      [this, friendly_name, controller_camping_buffers,
+       max_camping_buffers_callback = std::move(max_camping_buffers_callback)](
           fpromise::result<BufferCollectionWithLifetime, zx_status_t>& result) mutable {
         if (result.is_error()) {
-          FX_LOGS(WARNING) << "Failed to allocate buffers";
+          FX_PLOGS(WARNING, result.error()) << friendly_name << ": failed to allocate buffers";
           return;
         }
 
@@ -371,14 +376,10 @@ void DeviceImpl::OnBuffersRequested(uint32_t index,
         auto buffers = std::move(buffer_collection_lifetime.buffers);
         deallocation_events_.push_back(std::move(buffer_collection_lifetime.deallocation_complete));
 
-        // Inform the stream of the maxmimum number of buffers it may hand out.
-        uint32_t max_camping_buffers =
-            buffers.buffer_count - configs_[current_configuration_index_]
-                                       .stream_configs[index]
-                                       .constraints.min_buffer_count_for_camping;
-        FX_LOGS(INFO) << "c" << current_configuration_index_ << "s" << index
-                      << ": collection resolved: at most " << max_camping_buffers << " of "
-                      << buffers.buffer_count
+        // Inform the stream of the maximum number of buffers it may hand out.
+        uint32_t max_camping_buffers = buffers.buffer_count - controller_camping_buffers;
+        FX_LOGS(INFO) << friendly_name << ": collection resolved: at most " << max_camping_buffers
+                      << " of " << buffers.buffer_count
                       << " buffers will be made available to clients concurrently";
         max_camping_buffers_callback(max_camping_buffers);
       };
@@ -387,7 +388,8 @@ void DeviceImpl::OnBuffersRequested(uint32_t index,
       sysmem_allocator_
           .BindSharedCollection(
               std::move(token),
-              configs_[current_configuration_index_].stream_configs[index].constraints, oss.str())
+              configs_[current_configuration_index_].stream_configs[index].constraints,
+              "camera_" + friendly_name)
           .then(std::move(allocation_complete))
           .wrap_with(streams_[index]->Scope()));
 }

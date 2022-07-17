@@ -10,7 +10,6 @@
 #include <lib/trace/event.h>
 #include <zircon/assert.h>
 
-#include "src/camera/drivers/controller/isp_stream_protocol.h"
 #include "src/camera/drivers/controller/memory_allocation.h"
 #include "src/camera/drivers/controller/processing_node.h"
 #include "src/camera/drivers/controller/stream_pipeline_info.h"
@@ -21,14 +20,8 @@ namespace camera {
 
 class InputNode : public ProcessNode {
  public:
-  InputNode(StreamCreationData* info, BufferCollection output_buffer_collection,
-            async_dispatcher_t* dispatcher, const ddk::IspProtocolClient& isp)
-      : ProcessNode(NodeType::kInputStream, nullptr, info->stream_type(), info->node.image_formats,
-                    std::move(output_buffer_collection), info->node.supported_streams, dispatcher,
-                    info->node.output_frame_rate, info->image_format_index),
-        isp_stream_type_(info->node.input_stream_type),
-        isp_frame_callback_{OnIspFrameAvailable, this},
-        isp_(isp) {}
+  InputNode(async_dispatcher_t* dispatcher, BufferAttachments attachments,
+            FrameCallback frame_callback, const ddk::IspProtocolClient& isp);
 
   // Creates an |InputNode| object.
   // 1. Creates the ISP stream protocol
@@ -39,64 +32,31 @@ class InputNode : public ProcessNode {
   // |memory_allocator| : Memory allocator object to allocate memory using sysmem.
   // |dispatcher| : Dispatcher on which GDC tasks can be queued up.
   // |isp| : ISP protocol to talk to the driver.
-  static fpromise::result<std::unique_ptr<InputNode>, zx_status_t> CreateInputNode(
-      StreamCreationData* info, const ControllerMemoryAllocator& memory_allocator,
-      async_dispatcher_t* dispatcher, const ddk::IspProtocolClient& isp);
+  static fpromise::result<std::unique_ptr<InputNode>, zx_status_t> Create(
+      async_dispatcher_t* dispatcher, BufferAttachments attachments, FrameCallback frame_callback,
+      const ddk::IspProtocolClient& isp, const StreamCreationData& info);
 
-  const hw_accel_frame_callback_t* isp_frame_callback() { return &isp_frame_callback_; }
-
-  std::unique_ptr<camera::IspStreamProtocol>& isp_stream_protocol() { return isp_stream_protocol_; }
-
-  void set_isp_stream_protocol(std::unique_ptr<camera::IspStreamProtocol> isp_stream_protocol) {
-    isp_stream_protocol_ = std::move(isp_stream_protocol);
-  }
-
-  // Notifies that a frame is ready to be sent to the client.
-  void OnReadyToProcess(const frame_available_info_t* info) override;
-
-  // Releases the frame associated with | buffer_index |.
-  void OnReleaseFrame(uint32_t buffer_index) override;
-
-  // Notifies that a frame is done processing by this node.
-  void OnFrameAvailable(const frame_available_info_t* info) override;
-
-  // Shuts down the stream with ISP.
-  void OnShutdown(fit::function<void(void)> shutdown_callback) override;
-
-  // Notifies that the client has requested to start streaming.
-  void OnStartStreaming() override;
-
-  // Notifies that the client has requested to stop streaming.
-  void OnStopStreaming() override;
-
-  // Notifies that the client has requested to change resolution.
-  void OnResolutionChangeRequest(uint32_t output_format_index) override {}
+  // Special functionality provided by the ISP node.
+  void StartStreaming();
+  void StopStreaming();
 
  private:
-  // Notifies when a new frame is available from the ISP.
-  static void OnIspFrameAvailable(void* ctx, const frame_available_info_t* info) {
-    auto nonce = TRACE_NONCE();
-    TRACE_DURATION("camera", "OnIspFrameAvailable");
-    TRACE_FLOW_BEGIN("camera", "post_ready_to_process", nonce);
-    // This method is invoked by the ISP in its own thread,
-    // so the event must be marshalled to the
-    // controller's thread.
-    auto* input_node = static_cast<InputNode*>(ctx);
-    input_node->RunOnMainThread([input_node, nonce, info = *info]() {
-      TRACE_DURATION("camera", "OnIspFrameAvailable.task");
-      TRACE_FLOW_END("camera", "post_ready_to_process", nonce);
-      input_node->OnReadyToProcess(&info);
-    });
-  }
+  // ProcessNode method implementations.
+  void ProcessFrame(FrameToken token, frame_metadata_t metadata) override;
+  void SetOutputFormat(uint32_t output_format_index, fit::closure callback) override;
+  void ShutdownImpl(fit::closure callback) override;
 
-  // ISP stream type.
-  fuchsia::camera2::CameraStreamType isp_stream_type_;
-  // ISP Frame callback.
-  hw_accel_frame_callback_t isp_frame_callback_;
-  // ISP stream protocol.
-  std::unique_ptr<IspStreamProtocol> isp_stream_protocol_;
+  // fuchsia.hardware.camerahwaccel.*Callback implementations.
+  void HwFrameReady(frame_available_info_t info) override;
+  void HwFrameResolutionChanged(frame_available_info_t info) override;
+  void HwTaskRemoved(task_remove_status_t status) override;
+
   // Protocol to talk to ISP driver.
   ddk::IspProtocolClient isp_;
+  // Protocol to talk to ISP stream.
+  ddk::OutputStreamProtocolClient stream_;
+  fit::closure shutdown_callback_;
+  zx::time last_frame_error_logged_ = zx::time::infinite_past();
 };
 
 }  // namespace camera

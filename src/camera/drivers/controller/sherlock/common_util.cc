@@ -4,6 +4,8 @@
 
 #include "src/camera/drivers/controller/sherlock/common_util.h"
 
+#include <sstream>
+
 namespace camera {
 
 fuchsia::camera2::StreamProperties GetStreamProperties(fuchsia::camera2::CameraStreamType type) {
@@ -19,6 +21,26 @@ fuchsia::sysmem::BufferCollectionConstraints InvalidConstraints() {
   stream_constraints.AddImageFormat(0, 0, fuchsia::sysmem::PixelFormatType::NV12);
   stream_constraints.set_buffer_count_for_camping(0);
   return stream_constraints.MakeBufferCollectionConstraints();
+}
+
+fuchsia::sysmem::BufferCollectionConstraints CopyConstraintsWithNewCampingBufferCount(
+    const fuchsia::sysmem::BufferCollectionConstraints& original,
+    uint32_t new_camping_buffer_count) {
+  auto constraints = original;
+  constraints.min_buffer_count_for_camping = new_camping_buffer_count;
+  return constraints;
+}
+
+fuchsia::sysmem::BufferCollectionConstraints CopyConstraintsWithOverrides(
+    const fuchsia::sysmem::BufferCollectionConstraints& original, ConstraintsOverrides overrides) {
+  auto modified = original;
+  if (overrides.min_buffer_count_for_camping) {
+    modified.min_buffer_count_for_camping = *overrides.min_buffer_count_for_camping;
+  }
+  if (overrides.min_buffer_count) {
+    modified.min_buffer_count = *overrides.min_buffer_count;
+  }
+  return modified;
 }
 
 }  // namespace camera

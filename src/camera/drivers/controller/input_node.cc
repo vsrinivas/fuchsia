@@ -10,7 +10,6 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include "src/camera/drivers/controller/graph_utils.h"
 #include "src/camera/lib/format_conversion/buffer_collection_helper.h"
 #include "src/camera/lib/format_conversion/format_conversion.h"
 #include "src/devices/lib/sysmem/sysmem.h"
@@ -19,157 +18,128 @@ namespace camera {
 
 constexpr auto kTag = "camera_controller_input_node";
 
-fpromise::result<std::unique_ptr<InputNode>, zx_status_t> InputNode::CreateInputNode(
-    StreamCreationData* info, const ControllerMemoryAllocator& memory_allocator,
-    async_dispatcher_t* dispatcher, const ddk::IspProtocolClient& isp) {
-  uint8_t isp_stream_type;
-  if (info->node.input_stream_type == fuchsia::camera2::CameraStreamType::FULL_RESOLUTION) {
+InputNode::InputNode(async_dispatcher_t* dispatcher, BufferAttachments attachments,
+                     FrameCallback frame_callback, const ddk::IspProtocolClient& isp)
+    : ProcessNode(dispatcher, NodeType::kInputStream, attachments, std::move(frame_callback)) {}
+
+fpromise::result<std::unique_ptr<InputNode>, zx_status_t> InputNode::Create(
+    async_dispatcher_t* dispatcher, BufferAttachments attachments, FrameCallback frame_callback,
+    const ddk::IspProtocolClient& isp, const StreamCreationData& info) {
+  // TODO(100525): this makes very specific assumptions about the layout of the monitoring config
+  const auto& inode = info.stream_type() == fuchsia::camera2::CameraStreamType::MONITORING
+                          ? info.roots[1]
+                          : info.roots[0];
+  // Create Input Node
+  auto pnode =
+      std::make_unique<camera::InputNode>(dispatcher, attachments, std::move(frame_callback), isp);
+
+  uint8_t isp_stream_type = 0;
+  if (inode.input_stream_type == fuchsia::camera2::CameraStreamType::FULL_RESOLUTION) {
     isp_stream_type = STREAM_TYPE_FULL_RESOLUTION;
-  } else if (info->node.input_stream_type ==
-             fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION) {
+  } else if (inode.input_stream_type == fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION) {
     isp_stream_type = STREAM_TYPE_DOWNSCALED;
   } else {
     return fpromise::error(ZX_ERR_INVALID_ARGS);
   }
 
-  auto result = camera::GetBuffers(memory_allocator, info->node, info, kTag);
-  if (result.is_error()) {
-    FX_PLOGST(ERROR, kTag, result.error()) << "Failed to get buffers";
-    return fpromise::error(result.error());
-  }
-  auto buffers = std::move(result.value());
-
   // Use a BufferCollectionHelper to manage the conversion
   // between buffer collection representations.
-  BufferCollectionHelper buffer_collection_helper(buffers.buffers);
+  BufferCollectionHelper buffer_collection_helper(pnode->OutputBuffers());
 
-  auto image_format = ConvertHlcppImageFormat2toCType(info->node.image_formats[0]);
-
-  // Create Input Node
-  auto processing_node =
-      std::make_unique<camera::InputNode>(info, std::move(buffers), dispatcher, isp);
-  if (!processing_node) {
-    FX_LOGST(ERROR, kTag) << "Failed to create Input node";
-    return fpromise::error(ZX_ERR_NO_MEMORY);
-  }
-
-  // Create stream with ISP
-  auto isp_stream_protocol = std::make_unique<camera::IspStreamProtocol>();
-  if (!isp_stream_protocol) {
-    FX_LOGST(ERROR, kTag) << "Failed to create ISP stream protocol";
-    return fpromise::error(ZX_ERR_INTERNAL);
-  }
+  auto image_format = ConvertHlcppImageFormat2toCType(inode.image_formats[0]);
 
   buffer_collection_info_2 temp_buffer_collection;
   image_format_2_t temp_image_format;
   sysmem::buffer_collection_info_2_banjo_from_fidl(*buffer_collection_helper.GetC(),
                                                    temp_buffer_collection);
   sysmem::image_format_2_banjo_from_fidl(image_format, temp_image_format);
+  output_stream_protocol_t isp_stream_protocol{};
   auto status = isp.CreateOutputStream(
       &temp_buffer_collection, &temp_image_format,
-      reinterpret_cast<const frame_rate_t*>(&info->node.output_frame_rate), isp_stream_type,
-      processing_node->isp_frame_callback(), isp_stream_protocol->protocol());
+      reinterpret_cast<const frame_rate_t*>(&inode.output_frame_rate), isp_stream_type,
+      pnode->GetHwFrameReadyCallback(), &isp_stream_protocol);
   if (status != ZX_OK) {
     FX_PLOGST(ERROR, kTag, status) << "Failed to create output stream on ISP";
     return fpromise::error(status);
   }
+  pnode->stream_ = ddk::OutputStreamProtocolClient(&isp_stream_protocol);
 
-  // Update the input node with the ISP stream protocol
-  processing_node->set_isp_stream_protocol(std::move(isp_stream_protocol));
-  return fpromise::ok(std::move(processing_node));
+  // Note that as clients can only access the camera via camera3, and camera3 only exposes a
+  // device-wide mute state (corresponding to StartStreaming/StopStreaming), individual camera2
+  // stream start/stop requests from the client are ignored.
+  ZX_ASSERT(pnode->stream_.Start() == ZX_OK);
+
+  return fpromise::ok(std::move(pnode));
 }
 
-void InputNode::OnReadyToProcess(const frame_available_info_t* info) {
-  // Use the timestamp of the input as the capture time.
-  auto modified = *info;
-  modified.metadata.capture_timestamp = info->metadata.timestamp;
-  OnFrameAvailable(&modified);
+void InputNode::ProcessFrame(FrameToken token, frame_metadata_t metadata) {
+  ZX_PANIC("InputNode cannot process frames!");
 }
 
-void InputNode::OnFrameAvailable(const frame_available_info_t* info) {
-  ZX_ASSERT(thread_checker_.is_thread_valid());
-  TRACE_DURATION("camera", "InputNode::OnFrameAvailable", "buffer_index", info->buffer_id,
-                 "isp_stream_type", (int)isp_stream_type_);
-  if (shutdown_requested_ || info->frame_status != FRAME_STATUS_OK) {
-    TRACE_INSTANT("camera", "bad_status", TRACE_SCOPE_THREAD, "frame_status",
-                  static_cast<uint32_t>(info->frame_status));
-    return;
-  }
-
-  UpdateFrameCounterForAllChildren();
-
-  if (NeedToDropFrame()) {
-    TRACE_INSTANT("camera", "drop_frame", TRACE_SCOPE_THREAD);
-    isp_stream_protocol_->ReleaseFrame(info->buffer_id);
-    return;
-  }
-  ProcessNode::OnFrameAvailable(info);
+void InputNode::SetOutputFormat(uint32_t output_format_index, fit::closure callback) {
+  ZX_PANIC("InputNode cannot set output format!");
 }
 
-void InputNode::OnReleaseFrame(uint32_t buffer_index) {
-  TRACE_DURATION("camera", "InputNode::OnReleaseFrame", "buffer_index", buffer_index);
-  std::lock_guard al(in_use_buffer_lock_);
-  ZX_ASSERT(buffer_index < in_use_buffer_count_.size());
-  in_use_buffer_count_[buffer_index]--;
-  if (in_use_buffer_count_[buffer_index] != 0) {
-    return;
-  }
-  if (!shutdown_requested_) {
-    isp_stream_protocol_->ReleaseFrame(buffer_index);
-  }
-}
+void InputNode::ShutdownImpl(fit::closure callback) {
+  TRACE_DURATION("camera", "InputNode::ShutdownImpl");
+  ZX_ASSERT(!shutdown_callback_);
+  shutdown_callback_ = std::move(callback);
 
-void InputNode::OnStartStreaming() {
-  enabled_ = true;
-  isp_stream_protocol_->Start();
-}
-
-void InputNode::OnStopStreaming() {
-  if (AllChildNodesDisabled()) {
-    enabled_ = false;
-    isp_stream_protocol_->Stop();
-  }
-}
-
-void InputNode::OnShutdown(fit::function<void(void)> shutdown_callback) {
-  shutdown_callback_ = std::move(shutdown_callback);
-
-  // After a shutdown request has been made,
-  // no other calls should be made to the ISP driver.
-  shutdown_requested_ = true;
-
-  isp_stream_shutdown_callback_t isp_stream_shutdown_cb = {
+  isp_stream_shutdown_callback_t isp_stream_shutdown_cb{
       .shutdown_complete =
-          [](void* ctx, zx_status_t /*status*/) {
-            auto* input_node = static_cast<decltype(this)>(ctx);
-            input_node->node_callback_received_ = true;
-            input_node->OnCallbackReceived();
+          [](void* ctx, zx_status_t status) {
+            ZX_ASSERT(status == ZX_OK);
+            auto node = static_cast<decltype(this)>(ctx);
+            node->PostTask([node] { node->shutdown_callback_(); });
           },
       .ctx = this,
   };
+  StopStreaming();
+  stream_.Shutdown(&isp_stream_shutdown_cb);
+}
 
-  zx_status_t status = isp_stream_protocol_->Shutdown(&isp_stream_shutdown_cb);
-  if (status != ZX_OK) {
-    FX_PLOGST(ERROR, kTag, status) << "Failure during stream shutdown";
+void InputNode::HwFrameReady(frame_available_info_t info) {
+  TRACE_DURATION("camera", "InputNode::HwFrameReady", "status",
+                 static_cast<uint32_t>(info.frame_status), "buffer_index", info.buffer_id);
+  // Don't do anything further with error frames.
+  if (info.frame_status != FRAME_STATUS_OK) {
+    constexpr auto kErrorFrameMinLogInterval = zx::sec(1);
+    auto now = zx::clock::get_monotonic();
+    if (now >= last_frame_error_logged_ + kErrorFrameMinLogInterval) {
+      FX_LOGST(ERROR, kTag) << "failed input frame: " << static_cast<uint32_t>(info.frame_status);
+      TRACE_INSTANT("camera", "bad_status", TRACE_SCOPE_THREAD, "frame_status",
+                    static_cast<uint32_t>(info.frame_status));
+      last_frame_error_logged_ = now;
+    }
+    return;
+  }
+  if (info.metadata.timestamp == 0) {
+    FX_LOGST(ERROR, kTag) << "missing timestamp on input buffer " << info.buffer_id;
+    stream_.ReleaseFrame(info.buffer_id);
     return;
   }
 
-  auto child_shutdown_completion_callback = [this]() {
-    child_node_callback_received_ = true;
-    OnCallbackReceived();
-  };
+  // Use the timestamp of the input as the capture time.
+  auto modified = info;
+  modified.metadata.capture_timestamp = info.metadata.timestamp;
 
-  ZX_ASSERT_MSG(configured_streams().size() == 1,
-                "Cannot shutdown a stream which supports multiple streams");
+  // Send the frame onward.
+  SendFrame(modified.buffer_id, modified.metadata,
+            [this, buffer_index = modified.buffer_id] { stream_.ReleaseFrame(buffer_index); });
+}
 
-  // Forward the shutdown request to child node.
-  if (child_nodes().empty()) {
-    // If an incomplete graph is shut down, invoke the completion directly.
-    child_shutdown_completion_callback();
-  } else {
-    // Otherwise, propagate the shutdown command and completion to the next child.
-    child_nodes().at(0)->OnShutdown(child_shutdown_completion_callback);
-  }
+void InputNode::HwFrameResolutionChanged(frame_available_info_t info) {}
+
+void InputNode::HwTaskRemoved(task_remove_status_t status) {}
+
+void InputNode::StartStreaming() {
+  TRACE_DURATION("camera", "InputNode::StartStreaming");
+  stream_.Start();
+}
+
+void InputNode::StopStreaming() {
+  TRACE_DURATION("camera", "InputNode::StopStreaming");
+  stream_.Stop();
 }
 
 }  // namespace camera
