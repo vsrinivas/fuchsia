@@ -217,10 +217,7 @@ fuchsia_test_package("factory_store_providers_tests") {
   }
 }
 
-# TODO(https://fxbug.dev/91509): Use resource and route as config-data
-config_data("factory_store_providers_ext4_tests_config") {
-  for_pkg = "factory_store_providers_ext4_tests"
-
+resource("factory_store_providers_ext4_tests_config") {
   sources = [
     "testdata/factory.config",
     "testdata/fuchsia.factory.AlphaFactoryStoreProvider.config",
@@ -230,11 +227,10 @@ config_data("factory_store_providers_ext4_tests_config") {
     "testdata/fuchsia.factory.WeaveFactoryStoreProvider.config",
     "testdata/fuchsia.factory.WidevineFactoryStoreProvider.config",
   ]
+  outputs = [ "data/{{source_file_part}}" ]
 }
 
-config_data("factory_store_providers_tests_config") {
-  for_pkg = "factory_store_providers_tests"
-
+resource("factory_store_providers_tests_config") {
   sources = [
     "testdata/fuchsia.factory.AlphaFactoryStoreProvider.config",
     "testdata/fuchsia.factory.CastCredentialsFactoryStoreProvider.config",
@@ -243,6 +239,7 @@ config_data("factory_store_providers_tests_config") {
     "testdata/fuchsia.factory.WeaveFactoryStoreProvider.config",
     "testdata/fuchsia.factory.WidevineFactoryStoreProvider.config",
   ]
+  outputs = [ "data/{{source_file_part}}" ]
 }
 
 group("tests") {

@@ -67,10 +67,11 @@
             to: [ "#factory_store_providers" ],
         },
         {
-            directory: "config-data",
-            from: "parent",
-            to: [ "#factory_store_providers" ],
-            subdir: "factory_store_providers_tests",
+            directory: "pkg",
+            from: "framework",
+            as: "config-data",
+            to: "#factory_store_providers",
+            subdir: "data",
         },
     ],
 }
