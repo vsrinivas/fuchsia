@@ -1,4 +1,4 @@
-# input_pipeline > Gestures > Click Recognizer
+# input_pipeline > Gestures > Primary Tap Recognizer
 
 Reviewed-on: 2022-07-06
 

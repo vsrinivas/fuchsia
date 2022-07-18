@@ -539,9 +539,9 @@ mod tests {
         );
     }
 
-    /// Tests that a MatchedContender with no button pressed yields a Mismatch.
+    /// Tests that a MatchedContender with one button pressed yields a Mismatch.
     #[fuchsia::test]
-    fn matched_contender_no_buttons() {
+    fn matched_contender_one_button() {
         assert_matches!(
             Box::new(MatchedContender {
                 finger_down_event: TouchpadEvent {
@@ -630,7 +630,7 @@ mod tests {
                     pressed_buttons: vec![0],
                 },
                 finger_up_event: TouchpadEvent {
-                    contacts: vec![create_touch_contact(0, Position::zero())],
+                    contacts: vec![],
                     timestamp: zx::Time::from_nanos(0),
                     pressed_buttons: vec![],
                 },
