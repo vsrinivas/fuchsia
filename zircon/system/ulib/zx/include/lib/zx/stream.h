@@ -59,6 +59,14 @@ class stream final : public object<stream> {
       ZX_AVAILABLE_SINCE(7) {
     return zx_stream_seek(get(), whence, offset, out_seek);
   }
+
+  zx_status_t set_prop_mode_append(uint8_t value) const ZX_AVAILABLE_SINCE(8) {
+    return set_property(ZX_PROP_STREAM_MODE_APPEND, &value, sizeof(value));
+  }
+
+  zx_status_t get_prop_mode_append(uint8_t* value) const ZX_AVAILABLE_SINCE(8) {
+    return get_property(ZX_PROP_STREAM_MODE_APPEND, value, sizeof(*value));
+  }
 } ZX_AVAILABLE_SINCE(7);
 
 using unowned_stream = unowned<stream> ZX_AVAILABLE_SINCE(7);

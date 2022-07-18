@@ -9,6 +9,7 @@
 #include <lib/counters.h>
 #include <zircon/errors.h>
 #include <zircon/rights.h>
+#include <zircon/types.h>
 
 #include <fbl/alloc_checker.h>
 #include <ktl/algorithm.h>
@@ -146,6 +147,10 @@ zx_status_t StreamDispatcher::WriteVector(VmAspace* current_aspace, user_in_iove
   canary_.Assert();
   DEBUG_ASSERT(out_actual);
   DEBUG_ASSERT(*out_actual == 0);
+
+  if (IsInAppendMode()) {
+    return AppendVector(current_aspace, user_data, out_actual);
+  }
 
   size_t total_capacity;
   zx_status_t status = user_data.GetTotalCapacity(&total_capacity);
@@ -361,11 +366,24 @@ zx_status_t StreamDispatcher::Seek(zx_stream_seek_origin_t whence, int64_t offse
   return ZX_OK;
 }
 
+zx_status_t StreamDispatcher::SetAppendMode(bool value) {
+  Guard<Mutex> guard{get_lock()};
+  options_ = (options_ & ~ZX_STREAM_MODE_APPEND) | (value ? ZX_STREAM_MODE_APPEND : 0);
+  return ZX_OK;
+}
+
+bool StreamDispatcher::IsInAppendMode() {
+  Guard<Mutex> guard{get_lock()};
+  return options_ & ZX_STREAM_MODE_APPEND;
+}
+
 void StreamDispatcher::GetInfo(zx_info_stream_t* info) const {
   canary_.Assert();
 
+  Guard<Mutex> options_guard{get_lock()};
   Guard<Mutex> seek_guard{&seek_lock_};
   Guard<Mutex> content_size_guard{vmo_->content_size_manager().lock()};
+
   info->options = options_;
   info->seek = seek_;
   info->content_size = vmo_->content_size_manager().content_size_locked();

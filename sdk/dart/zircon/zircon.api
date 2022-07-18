@@ -2172,6 +2172,14 @@
               "type": "VariableDeclarationImpl",
               "varType": "int"
             },
+            "STREAM_MODE_APPEND": {
+              "isConst": true,
+              "isFinal": false,
+              "isLate": false,
+              "name": "STREAM_MODE_APPEND",
+              "type": "VariableDeclarationImpl",
+              "varType": "int"
+            },
             "STREAM_MODE_READ": {
               "isConst": true,
               "isFinal": false,

@@ -227,7 +227,7 @@
   "include/zircon/syscalls/internal/cdecls.inc": "8626e0b09d61801774ef525069f3b467",
   "include/zircon/syscalls/iommu.h": "3e33062c3f31a4d6399841c645779eac",
   "include/zircon/syscalls/log.h": "6082501b392ada3bf2a89d6163c89d47",
-  "include/zircon/syscalls/object.h": "d60af2c534eed0bccaf26181f26dd1f5",
+  "include/zircon/syscalls/object.h": "eb7d9617b065c72fc680bd468c23b7fd",
   "include/zircon/syscalls/pci.h": "bf537d154ca7b200250434293dcdad81",
   "include/zircon/syscalls/policy.h": "fed8e523973f17f53a020bd8fc98595a",
   "include/zircon/syscalls/port.h": "a5ad0c566f529925386e88f32c6174eb",
@@ -241,6 +241,6 @@
   "include/zircon/threads.h": "26b09160d793d4669ea2fa3d10d2f150",
   "include/zircon/time.h": "61c8aac18e1c19c1b8fa58a4e67b9468",
   "include/zircon/tls.h": "1375b46d719742354e0636195789af9f",
-  "include/zircon/types.h": "1ac460dcddab155ba838918dcfc24fd2",
+  "include/zircon/types.h": "b4d6e004227bef91ccc2d45111062fc3",
   "include/zircon/utc.h": "febff051fa44aebb4ad7950d9ecd9a74"
 }

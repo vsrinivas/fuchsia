@@ -5,7 +5,10 @@
 //! Type-safe bindings for Zircon stream objects.
 
 use {
-    crate::{ok, AsHandleRef, Handle, HandleBased, HandleRef, Status, Vmo},
+    crate::{
+        object_get_property, object_set_property, ok, AsHandleRef, Handle, HandleBased, HandleRef,
+        Property, PropertyQuery, PropertyQueryGet, PropertyQuerySet, Status, Vmo,
+    },
     bitflags::bitflags,
     fuchsia_zircon_sys as sys,
     std::{convert::TryInto, io::SeekFrom},
@@ -24,6 +27,7 @@ bitflags! {
     pub struct StreamOptions: u32 {
         const MODE_READ = sys::ZX_STREAM_MODE_READ;
         const MODE_WRITE = sys::ZX_STREAM_MODE_WRITE;
+        const MODE_APPEND = sys::ZX_STREAM_MODE_APPEND;
     }
 }
 
@@ -164,6 +168,12 @@ impl Stream {
     }
 }
 
+unsafe_handle_properties!(object: Stream,
+    props: [
+        {query_ty: STREAM_MODE_APPEND, tag: StreamModeAppendTag, prop_ty: u8, get: get_mode_append, set: set_mode_append},
+    ]
+);
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -205,5 +215,27 @@ mod tests {
         let result =
             Stream::create(StreamOptions::MODE_READ, &zx::Vmo::from(zx::Handle::invalid()), 0);
         assert_eq!(result, Err(zx::Status::BAD_HANDLE));
+    }
+
+    #[test]
+    fn create_with_mode_append() {
+        let size: u64 = zx::system_get_page_size().into();
+        let vmo = zx::Vmo::create(size).unwrap();
+        let stream =
+            Stream::create(StreamOptions::MODE_WRITE | StreamOptions::MODE_APPEND, &vmo, 0)
+                .unwrap();
+        assert_eq!(stream.get_mode_append().unwrap(), 1);
+    }
+
+    #[test]
+    fn get_and_set_mode_append() {
+        let size: u64 = zx::system_get_page_size().into();
+        let vmo = zx::Vmo::create(size).unwrap();
+        let stream = Stream::create(StreamOptions::MODE_WRITE, &vmo, 0).unwrap();
+        assert_eq!(stream.get_mode_append().unwrap(), 0);
+        stream.set_mode_append(&1).unwrap();
+        assert_eq!(stream.get_mode_append().unwrap(), 1);
+        stream.set_mode_append(&0).unwrap();
+        assert_eq!(stream.get_mode_append().unwrap(), 0);
     }
 }

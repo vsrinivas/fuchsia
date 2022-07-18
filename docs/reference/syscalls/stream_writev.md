@@ -23,8 +23,9 @@ zx_status_t zx_stream_writev(zx_handle_t handle,
 current seek offset, from the buffers specified by *vector* and *num_vector*.
 If successful, the number of bytes actually written are return via *actual*.
 
-If *options* contains **ZX_STREAM_APPEND**, the seek offset of the stream is
-atomically set to the content size of the stream prior to writing the data.
+If *options* contains **ZX_STREAM_APPEND** or the stream is in append mode, the
+seek offset of the stream is atomically set to the content size of the stream
+prior to writing the data.
 
 If the write operation would write beyond the end of the stream, the function
 will attempt to increase the content size of the stream in order to receive the

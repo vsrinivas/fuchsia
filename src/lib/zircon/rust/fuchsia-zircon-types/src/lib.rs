@@ -385,6 +385,9 @@ multiconst!(u32, [
 
     // How an exception should be handled.
     ZX_PROP_EXCEPTION_STRATEGY        = 18;
+
+    // Whether the stream is in append mode or not.
+    ZX_PROP_STREAM_MODE_APPEND        = 19;
 ]);
 
 // Value for ZX_THREAD_STATE_SINGLE_STEP. The value can be 0 (not single-stepping), or 1
@@ -550,6 +553,7 @@ multiconst!(zx_stream_seek_origin_t, [
 // Stream constants
 pub const ZX_STREAM_MODE_READ: u32 = 1 << 0;
 pub const ZX_STREAM_MODE_WRITE: u32 = 1 << 1;
+pub const ZX_STREAM_MODE_APPEND: u32 = 1 << 2;
 
 pub const ZX_STREAM_APPEND: u32 = 1 << 0;
 

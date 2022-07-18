@@ -35,6 +35,10 @@ right on the created stream object.
 **ZX_ERR_ACCESS_DENIED**.  Otherwise, **ZX_RIGHT_WRITE** will be included as a
 right on the created stream object.
 
+**ZX_STREAM_MODE_APPEND**  The stream is created in append mode. A stream in
+append mode will atomically set the seek offset of the stream to the content
+size of the stream prior to writing data in `zx_stream_writev()`.
+
 ## Rights
 
 TODO(fxbug.dev/32253)
@@ -71,4 +75,3 @@ has an unsupported bit set to 1.
 [`zx_stream_seek()`]: stream_seek.md
 [`zx_stream_writev()`]: stream_writev.md
 [`zx_stream_writev_at()`]: stream_writev_at.md
-

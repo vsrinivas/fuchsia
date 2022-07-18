@@ -204,7 +204,7 @@ typedef struct zx_info_timer {
 } zx_info_timer_t;
 
 typedef struct zx_info_stream {
-    // The options passed to zx_stream_create().
+    // Bitset of ZX_STREAM_MODE_* values.
     uint32_t options;
 
     uint8_t padding1[4];
@@ -812,6 +812,14 @@ typedef struct zx_info_vcpu {
 // How an exception should be handled.
 // See //docs/concepts/kernel/exceptions.md.
 #define ZX_PROP_EXCEPTION_STRATEGY          18u
+
+// Whether the stream is in append mode or not.
+//
+// A stream in append mode will atomically set the seek offset of the stream to
+// the content size of the stream prior to writing data in `zx_stream_writev()`.
+//
+// Argument is a uint8_t.
+#define ZX_PROP_STREAM_MODE_APPEND          19u
 
 // Basic thread states, in zx_info_thread_t.state.
 #define ZX_THREAD_STATE_NEW                 ((zx_thread_state_t) 0x0000u)

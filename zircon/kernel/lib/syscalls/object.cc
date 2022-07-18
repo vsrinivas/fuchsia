@@ -1086,6 +1086,18 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
       uint64_t value = vmo->GetContentSize();
       return _value.reinterpret<uint64_t>().copy_to_user(value);
     }
+    case ZX_PROP_STREAM_MODE_APPEND: {
+      if (size < sizeof(uint8_t)) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+      }
+      auto stream = DownCastDispatcher<StreamDispatcher>(&dispatcher);
+      if (!stream) {
+        return ZX_ERR_WRONG_TYPE;
+      }
+
+      uint8_t value = stream->IsInAppendMode();
+      return _value.reinterpret<uint8_t>().copy_to_user(value);
+    }
 #if ARCH_X86
     case ZX_PROP_REGISTER_FS: {
       if (size < sizeof(uintptr_t)) {
@@ -1309,6 +1321,21 @@ zx_status_t sys_object_set_property(zx_handle_t handle_value, uint32_t property,
         return status;
       }
       return vmo->SetContentSize(value);
+    }
+    case ZX_PROP_STREAM_MODE_APPEND: {
+      if (size < sizeof(uint8_t)) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+      }
+      auto stream = DownCastDispatcher<StreamDispatcher>(&dispatcher);
+      if (!stream) {
+        return ZX_ERR_WRONG_TYPE;
+      }
+      uint8_t value = 0;
+      zx_status_t status = _value.reinterpret<const uint8_t>().copy_from_user(&value);
+      if (status != ZX_OK) {
+        return status;
+      }
+      return stream->SetAppendMode(value);
     }
   }
 

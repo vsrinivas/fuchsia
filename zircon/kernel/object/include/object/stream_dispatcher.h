@@ -33,6 +33,8 @@ class StreamDispatcher final : public SoloDispatcher<StreamDispatcher, ZX_DEFAUL
                             size_t* out_actual);
   zx_status_t AppendVector(VmAspace* current_aspace, user_in_iovec_t user_data, size_t* out_actual);
   zx_status_t Seek(zx_stream_seek_origin_t whence, int64_t offset, zx_off_t* out_seek);
+  zx_status_t SetAppendMode(bool value);
+  bool IsInAppendMode();
 
   void GetInfo(zx_info_stream_t* info) const;
 
@@ -43,7 +45,8 @@ class StreamDispatcher final : public SoloDispatcher<StreamDispatcher, ZX_DEFAUL
                                         uint64_t* out_length,
                                         ContentSizeManager::Operation* out_op);
 
-  const uint32_t options_;
+  uint32_t options_ TA_GUARDED(get_lock());
+
   const fbl::RefPtr<VmObjectDispatcher> vmo_;
 
   // The seek_lock_ is used to make vmo_ operations and updates to seek atomic.

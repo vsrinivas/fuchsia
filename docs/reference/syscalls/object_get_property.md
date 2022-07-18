@@ -214,6 +214,19 @@ This property can only be set when the handle corresponds to a debugger process
 exception channel. Attempting to set this property when the exception channel
 is any other type will result in ZX_ERR_BAD_STATE.
 
+### ZX_PROP_STREAM_MODE_APPEND
+
+*handle* type: **Stream**
+
+*value* type: `uint8_t`
+
+Allowed operations: **get**, **set**
+
+This property will have a value of `1` when the Stream is in append mode and a
+value of `0` the Stream is not in append mode. A stream in append mode will
+atomically set the seek offset of the stream to the content size of the stream
+prior to writing data in `zx_stream_writev()`.
+
 ## Rights
 
 *handle* must have **ZX_RIGHT_GET_PROPERTY**.
@@ -257,4 +270,3 @@ In a future build this error will no longer occur.
  - [`zx_object_set_property()`]
 
 [`zx_object_set_property()`]: object_set_property.md
-

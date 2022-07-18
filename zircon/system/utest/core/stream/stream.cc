@@ -14,6 +14,7 @@
 #include <zircon/system/utest/core/pager/userpager.h>
 #include <zircon/types.h>
 
+#include <numeric>
 #include <thread>
 #include <vector>
 
@@ -63,6 +64,22 @@ TEST(StreamTestCase, Create) {
   ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, vmo, 0, &stream));
   CheckRights(stream, ZX_DEFAULT_STREAM_RIGHTS | ZX_RIGHT_READ | ZX_RIGHT_WRITE,
               "ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE");
+
+  ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_APPEND, vmo, 0, &stream));
+  CheckRights(stream, ZX_DEFAULT_STREAM_RIGHTS, "ZX_STREAM_MODE_APPEND");
+
+  ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_APPEND, vmo, 0, &stream));
+  CheckRights(stream, ZX_DEFAULT_STREAM_RIGHTS | ZX_RIGHT_READ,
+              "ZX_STREAM_MODE_READ | ZX_STREAM_MODE_APPEND");
+
+  ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_WRITE | ZX_STREAM_MODE_APPEND, vmo, 0, &stream));
+  CheckRights(stream, ZX_DEFAULT_STREAM_RIGHTS | ZX_RIGHT_WRITE,
+              "ZX_STREAM_MODE_WRITE | ZX_STREAM_MODE_APPEND");
+
+  ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE | ZX_STREAM_MODE_APPEND,
+                               vmo, 0, &stream));
+  CheckRights(stream, ZX_DEFAULT_STREAM_RIGHTS | ZX_RIGHT_READ | ZX_RIGHT_WRITE,
+              "ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE | ZX_STREAM_MODE_APPEND");
 
   {
     zx::vmo read_only;
@@ -600,6 +617,164 @@ TEST(StreamTestCase, Append) {
 
   vec.capacity = UINT64_MAX;
   ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, stream.writev(ZX_STREAM_APPEND, &vec, 1, &actual));
+}
+
+TEST(StreamTestCase, WriteVectorWithStreamInAppendMode) {
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
+  ASSERT_OK(vmo.write(kAlphabet, 0u, strlen(kAlphabet)));
+  size_t content_size = 26u;
+  ASSERT_OK(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size)));
+
+  zx::stream stream;
+  char buffer[17] = "0123456789ABCDEF";
+  zx_iovec_t vec = {
+      .buffer = buffer,
+      .capacity = sizeof(buffer),
+  };
+
+  ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_WRITE | ZX_STREAM_MODE_APPEND, vmo, 0, &stream));
+  {
+    zx_info_stream_t info{};
+    ASSERT_OK(stream.get_info(ZX_INFO_STREAM, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_EQ(ZX_STREAM_MODE_WRITE | ZX_STREAM_MODE_APPEND, info.options);
+    EXPECT_EQ(0u, info.seek);
+    EXPECT_EQ(26u, info.content_size);
+  }
+
+  vec.capacity = 7u;
+  size_t actual = 42u;
+  ASSERT_OK(stream.writev(0, &vec, 1, &actual));
+  EXPECT_EQ(7u, actual);
+  EXPECT_STREQ("abcdefghijklmnopqrstuvwxyz0123456", GetData(vmo).c_str());
+
+  {
+    zx_info_stream_t info{};
+    ASSERT_OK(stream.get_info(ZX_INFO_STREAM, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_EQ(ZX_STREAM_MODE_WRITE | ZX_STREAM_MODE_APPEND, info.options);
+    EXPECT_EQ(33u, info.seek);
+    EXPECT_EQ(33u, info.content_size);
+
+    vec.capacity = 26u;
+    for (size_t size = info.content_size; size + vec.capacity < zx_system_get_page_size();
+         size += vec.capacity) {
+      ASSERT_OK(stream.writev(0, &vec, 1, &actual));
+      EXPECT_EQ(vec.capacity, actual);
+    }
+  }
+
+  {
+    zx_info_stream_t info{};
+    ASSERT_OK(stream.get_info(ZX_INFO_STREAM, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_GT(zx_system_get_page_size(), info.content_size);
+
+    ASSERT_OK(stream.writev(0, &vec, 1, &actual));
+    EXPECT_EQ(zx_system_get_page_size() - info.content_size, actual);
+  }
+
+  ASSERT_EQ(ZX_ERR_NO_SPACE, stream.writev(0, &vec, 1, nullptr));
+
+  vec.capacity = UINT64_MAX;
+  ASSERT_EQ(ZX_ERR_OUT_OF_RANGE, stream.writev(0, &vec, 1, nullptr));
+}
+
+TEST(StreamTestCase, PropertyModeAppend) {
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
+  ASSERT_OK(vmo.set_prop_content_size(0));
+
+  zx::stream stream;
+  char buffer[] = "0123456789ABCDEF";
+  zx_iovec_t vec = {
+      .buffer = buffer,
+      .capacity = 16,
+  };
+
+  // Create the stream not in append mode.
+  ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_WRITE, vmo, 0, &stream));
+  ASSERT_OK(stream.writev(0, &vec, 1, nullptr));
+
+  {
+    zx_info_stream_t info{};
+    ASSERT_OK(stream.get_info(ZX_INFO_STREAM, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_FALSE(info.options & ZX_STREAM_MODE_APPEND);
+    EXPECT_EQ(16u, info.seek);
+    EXPECT_EQ(16u, info.content_size);
+    uint8_t mode_append;
+    ASSERT_OK(stream.get_prop_mode_append(&mode_append));
+    EXPECT_FALSE(mode_append);
+  }
+
+  // Switch the stream to append mode.
+  ASSERT_OK(stream.set_prop_mode_append(true));
+  {
+    zx_info_stream_t info{};
+    ASSERT_OK(stream.get_info(ZX_INFO_STREAM, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_TRUE(info.options & ZX_STREAM_MODE_APPEND);
+    uint8_t mode_append;
+    ASSERT_OK(stream.get_prop_mode_append(&mode_append));
+    EXPECT_TRUE(mode_append);
+  }
+  ASSERT_OK(stream.seek(ZX_STREAM_SEEK_ORIGIN_START, 10, nullptr));
+  ASSERT_OK(stream.writev(0, &vec, 1, nullptr));
+  EXPECT_STREQ("0123456789ABCDEF0123456789ABCDEF", GetData(vmo).c_str());
+
+  // Take the stream out of append mode.
+  ASSERT_OK(stream.set_prop_mode_append(false));
+  {
+    zx_info_stream_t info{};
+    ASSERT_OK(stream.get_info(ZX_INFO_STREAM, &info, sizeof(info), nullptr, nullptr));
+    EXPECT_FALSE(info.options & ZX_STREAM_MODE_APPEND);
+    // The previous write appended to the stream despite the seek offset not being at the end of the
+    // stream.
+    EXPECT_EQ(32u, info.seek);
+    EXPECT_EQ(32u, info.content_size);
+    uint8_t mode_append;
+    ASSERT_OK(stream.get_prop_mode_append(&mode_append));
+    EXPECT_FALSE(mode_append);
+  }
+  ASSERT_OK(stream.seek(ZX_STREAM_SEEK_ORIGIN_START, 10, nullptr));
+  ASSERT_OK(stream.writev(0, &vec, 1, nullptr));
+  EXPECT_STREQ("01234567890123456789ABCDEFABCDEF", GetData(vmo).c_str());
+}
+
+TEST(StreamTestCase, AppendWithMultipleThreads) {
+  // kThreadCount threads collectively write the numbers 0 to kBufferSize-1 to the vmo.
+  constexpr uint64_t kThreadCount = 4;
+  constexpr uint64_t kBufferSize = 256;
+  constexpr uint64_t kIterationCount = kBufferSize / kThreadCount;
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
+  ASSERT_OK(vmo.set_prop_content_size(0));
+
+  std::vector<uint8_t> buffer(kBufferSize, 0);
+  std::iota(buffer.begin(), buffer.end(), 0);
+
+  std::vector<std::thread> threads;
+  threads.reserve(kThreadCount);
+  for (uint64_t thread = 0; thread < kThreadCount; ++thread) {
+    threads.emplace_back([&vmo, &buffer, thread]() {
+      zx::stream stream;
+      ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_WRITE | ZX_STREAM_MODE_APPEND, vmo, 0, &stream));
+      for (uint64_t i = 0; i < kIterationCount; ++i) {
+        zx_iovec_t vec = {
+            .buffer = &buffer[thread * kIterationCount + i],
+            .capacity = 1,
+        };
+        ASSERT_OK(stream.writev(0, &vec, 1, nullptr));
+      }
+    });
+  }
+  for (auto& thread : threads) {
+    thread.join();
+  }
+
+  // With several threads simultaneously appending, the data is likely out of order but none of the
+  // appends should have overwritten each other.
+  std::vector<uint8_t> vmo_data(kBufferSize, 0);
+  ASSERT_OK(vmo.read(vmo_data.data(), 0, kBufferSize));
+  std::sort(vmo_data.begin(), vmo_data.end());
+  EXPECT_BYTES_EQ(buffer.data(), vmo_data.data(), kBufferSize);
 }
 
 TEST(StreamTestCase, ExtendFillsWithZeros) {
