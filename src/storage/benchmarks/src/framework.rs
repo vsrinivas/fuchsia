@@ -54,7 +54,7 @@ impl OperationTimer {
     pub fn stop(self) -> OperationDuration {
         let end_ticks = zx::ticks_get();
         assert!(end_ticks > self.start_ticks);
-        let nanos = (end_ticks - self.start_ticks) as f64 * *TICKS_PER_NANO_SECOND;
+        let nanos = (end_ticks - self.start_ticks) as f64 / *TICKS_PER_NANO_SECOND;
         OperationDuration(nanos)
     }
 }
