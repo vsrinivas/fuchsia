@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <lib/stdcompat/array.h>
 
 #include <array>
 
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
-
-#include "lib/stdcompat/array.h"
 
 namespace {
 template <size_t N>
@@ -37,4 +36,14 @@ TEST(EarlyBootInstrumentationTest, HasPhysbootInStatic) {
   fbl::unique_fd physboot_file(open("/profraw/static/physboot.profraw", O_RDONLY));
   ASSERT_TRUE(physboot_file);
   ASSERT_TRUE(CheckContents("physboot", std::move(physboot_file)));
+}
+
+TEST(EarlyBootInstrumentationTest, HasSvcStashData) {
+  fbl::unique_fd static_file(open("/profraw/static/0-0.profraw", O_RDONLY));
+  ASSERT_TRUE(static_file);
+  ASSERT_TRUE(CheckContents("1234", std::move(static_file)));
+
+  fbl::unique_fd dynamic_file(open("/profraw/dynamic/0-1.profraw", O_RDONLY));
+  ASSERT_TRUE(dynamic_file);
+  ASSERT_TRUE(CheckContents("567890123", std::move(dynamic_file)));
 }

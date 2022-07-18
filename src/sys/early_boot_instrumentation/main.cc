@@ -4,12 +4,20 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.boot/cpp/markers.h>
+#include <fidl/fuchsia.boot/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/interface_request.h>
+#include <lib/fidl/cpp/wire/connect_service.h>
+#include <lib/fidl/llcpp/client.h>
+#include <lib/fidl/llcpp/internal/transport_channel.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/channel.h>
 #include <string.h>
+#include <zircon/status.h>
 
 #include <fbl/unique_fd.h>
 
@@ -52,6 +60,31 @@ int main(int argc, char** argv) {
   if (auto res = early_boot_instrumentation::ExposePhysbootProfileData(phys_data_dir, *static_prof);
       res.is_error()) {
     FX_LOGS(ERROR) << "Could not expose physboot profile data. " << res.status_value();
+  }
+
+  // Get the SvcStash server end.
+  zx::channel provider_client, provider_server;
+  if (auto res = zx::channel::create(0, &provider_client, &provider_server); res != ZX_OK) {
+    FX_LOGS(ERROR) << "Could not create channel for fuchsia.boot.SvcStashProvider. "
+                   << zx_status_get_string(res);
+  } else if (auto res = fdio_service_connect(
+                 fidl::DiscoverableProtocolDefaultPath<fuchsia_boot::SvcStashProvider>,
+                 provider_server.release());
+             res != ZX_OK) {
+    FX_LOGS(ERROR) << "Could not obtain handle to fuchsia.boot.SvcStashProvider. "
+                   << zx_status_get_string(res);
+  } else {  // Successfully connected to the service.
+    fidl::WireSyncClient<fuchsia_boot::SvcStashProvider> provider_fidl_client;
+    fidl::ClientEnd<fuchsia_boot::SvcStashProvider> provider_client_end(std::move(provider_client));
+    provider_fidl_client.Bind(std::move(provider_client_end));
+
+    auto get_response = provider_fidl_client->Get();
+
+    if (get_response->is_ok()) {
+      auto& stash_svc = get_response->value()->resource;
+      early_boot_instrumentation::ExposeEarlyBootStashedProfileData(stash_svc.channel().borrow(),
+                                                                    *dynamic_prof, *static_prof);
+    }
   }
 
   // outgoing/prof-data/static

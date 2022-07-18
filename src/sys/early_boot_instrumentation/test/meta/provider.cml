@@ -8,6 +8,7 @@
         binary: "bin/provider",
     },
     capabilities: [
+        { protocol: "fuchsia.boot.SvcStashProvider" },
         {
             directory: "boot",
             rights: [ "r*" ],
@@ -17,6 +18,10 @@
     expose: [
         {
             directory: "boot",
+            from: "self",
+        },
+        {
+            protocol: [ "fuchsia.boot.SvcStashProvider" ],
             from: "self",
         },
     ],

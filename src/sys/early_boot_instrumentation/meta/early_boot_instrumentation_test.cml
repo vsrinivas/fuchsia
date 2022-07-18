@@ -35,6 +35,11 @@
             rights: [ "r*" ],
         },
         {
+            protocol: [ "fuchsia.boot.SvcStashProvider" ],
+            from: "#resource-provider",
+            to: "#early-boot-instrumentation",
+        },
+        {
             protocol: [ "fuchsia.logger.LogSink" ],
             from: "parent",
             to: [

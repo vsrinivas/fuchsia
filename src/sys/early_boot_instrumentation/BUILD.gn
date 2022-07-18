@@ -38,6 +38,8 @@ executable("app") {
   sources = [ "main.cc" ]
   deps = [
     ":coverage-source",
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
+    "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
