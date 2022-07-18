@@ -52,7 +52,7 @@ rustc_binary("bin") {
     "src/fastboot/fastboot_c.rs",
     "src/main.rs",
   ]
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 # The core realm shard to be used by product integrators.

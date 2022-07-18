@@ -16,7 +16,7 @@ rustc_library("utils") {
     "//third_party/rust_crates:anyhow",
   ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 
   sources = [ "src/lib.rs" ]
 }

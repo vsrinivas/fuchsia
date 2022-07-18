@@ -43,7 +43,7 @@ rustc_library("fuchsia-audio-dai") {
     "//third_party/rust_crates:futures-test",
   ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("fuchsia-audio-dai-tests") {

@@ -30,6 +30,6 @@ rustc_test("multicast-forwarding") {
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:test-case",
   ]
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
   sources = [ "src/lib.rs" ]
 }

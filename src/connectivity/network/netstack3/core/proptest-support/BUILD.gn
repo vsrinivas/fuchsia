@@ -12,5 +12,5 @@ rustc_library("proptest-support") {
   sources = [ "src/lib.rs" ]
   deps = [ "//third_party/rust_crates:proptest" ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }

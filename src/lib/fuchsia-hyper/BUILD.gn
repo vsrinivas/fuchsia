@@ -71,7 +71,7 @@ rustc_library("fuchsia-hyper") {
     ]
   }
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_component("fuchsia-hyper-lib-test") {

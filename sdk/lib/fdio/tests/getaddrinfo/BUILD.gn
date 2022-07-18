@@ -31,7 +31,7 @@ rustc_test("getaddrinfo_test") {
     "//third_party/rust_crates:futures",
   ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_test_component("getaddrinfo_test_client_component") {

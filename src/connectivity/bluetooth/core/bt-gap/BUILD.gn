@@ -85,7 +85,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:tempfile",
   ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 resource("default-config") {

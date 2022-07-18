@@ -77,7 +77,7 @@ rustc_library("bt-test-harness") {
     "src/profile.rs",
   ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_component("test-bt-init") {

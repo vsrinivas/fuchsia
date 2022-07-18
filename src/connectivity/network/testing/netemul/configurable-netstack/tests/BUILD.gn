@@ -18,7 +18,7 @@ rustc_library("lib") {
   ]
   source_root = "src/lib.rs"
   sources = [ "src/lib.rs" ]
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 rustc_test("client") {
@@ -43,7 +43,7 @@ rustc_test("client") {
   ]
   source_root = "src/client.rs"
   sources = [ "src/client.rs" ]
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 rustc_binary("server") {
@@ -58,7 +58,7 @@ rustc_binary("server") {
   ]
   source_root = "src/server.rs"
   sources = [ "src/server.rs" ]
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_test_component("client-component") {

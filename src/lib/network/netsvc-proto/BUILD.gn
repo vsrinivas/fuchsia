@@ -30,7 +30,7 @@ rustc_library("netsvc-proto") {
 
   test_deps = [ "//third_party/rust_crates:assert_matches" ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("netsvc-proto-test") {

@@ -579,8 +579,8 @@ set_defaults("executable") {
 
 # Rustc wrapper defaults
 default_rust_configs = [
-  "//build/config/rust:deny_unused_results",
-  "//build/config/rust:allow_unused_results",
+  "//build/config/rust/lints:deny_unused_results",
+  "//build/config/rust/lints:allow_unused_results",
 ]
 
 set_defaults("rustc_binary") {

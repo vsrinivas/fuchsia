@@ -23,7 +23,7 @@ rustc_library("ping") {
     "//third_party/rust_crates:thiserror",
   ]
   test_deps = [ "//src/connectivity/lib/net-declare" ]
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("ping-tests") {

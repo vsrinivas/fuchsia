@@ -23,7 +23,7 @@ rustc_library("dns_server_watcher") {
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:futures",
   ]
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 
   sources = [
     "src/lib.rs",

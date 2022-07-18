@@ -17,5 +17,5 @@ rustc_binary("server") {
   ]
   source_root = "src/main.rs"
   sources = [ "src/main.rs" ]
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }

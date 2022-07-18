@@ -20,7 +20,7 @@ rustc_test("specialize-ip-macro_test") {
 
   sources = [ "src/lib.rs" ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("specialize-ip-macro-test-package") {

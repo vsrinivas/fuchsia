@@ -12,7 +12,7 @@ rustc_macro("version-history-macro") {
 
   sources = [ "src/lib.rs" ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 group("tests") {

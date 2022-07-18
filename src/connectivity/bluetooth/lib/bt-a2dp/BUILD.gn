@@ -64,7 +64,7 @@ rustc_library("bt-a2dp") {
     "src/stream.rs",
   ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("bt-a2dp-lib-tests") {

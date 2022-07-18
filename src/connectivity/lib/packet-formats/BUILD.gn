@@ -61,7 +61,7 @@ rustc_library("packet-formats") {
     "src/utils.rs",
   ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("packet-formats-test-package") {
@@ -87,7 +87,7 @@ rustc_fuzzer("fuzz-parse-packet") {
     "//third_party/rust_crates:arbitrary",
     "//third_party/rust_crates:log",
   ]
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
   configs -= [ "//build/config/rust:no_features" ]
   configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
 }

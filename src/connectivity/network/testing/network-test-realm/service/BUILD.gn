@@ -45,7 +45,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:thiserror",
   ]
   sources = [ "src/main.rs" ]
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 rustc_library("network_test_realm") {
@@ -59,7 +59,7 @@ rustc_library("network_test_realm") {
     "//third_party/rust_crates:anyhow",
   ]
   sources = [ "src/lib.rs" ]
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_component("hermetic_network_v2") {

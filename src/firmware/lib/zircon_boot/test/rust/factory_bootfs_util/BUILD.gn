@@ -17,5 +17,5 @@ rustc_staticlib("factory-bootfs-util") {
   sources = [ "src/lib.rs" ]
 
   # Don't allow unused result. See build/config/rust/BUILD.gn for more detail.
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }

@@ -31,7 +31,7 @@ rustc_binary("http_client") {
 
   sources = [ "src/main.rs" ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 # TODO(fxbug.dev/72870): Remove v1 component once integration tests are no

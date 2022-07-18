@@ -82,7 +82,7 @@ rustc_binary("bin") {
     "src/main.rs",
   ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_component("component-legacy") {
@@ -133,7 +133,7 @@ rustc_binary("netstack3-benchmarks") {
     "core:netstack3-core-benchmarks",
     "//src/developer/fuchsia-criterion",
   ]
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_package_with_single_component("netstack3_benchmarks") {

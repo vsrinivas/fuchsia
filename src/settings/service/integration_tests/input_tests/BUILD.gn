@@ -29,7 +29,7 @@ rustc_test("bin") {
     "//third_party/rust_crates:futures",
   ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_component("input_integration_test") {

@@ -16,6 +16,6 @@ rustc_test("sandbox-test") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures-util",
   ]
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
   sources = [ "src/lib.rs" ]
 }

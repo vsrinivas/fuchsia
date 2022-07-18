@@ -26,7 +26,7 @@ rustc_test("bt_rfcomm_smoke_test_bin") {
 
   sources = [ "src/bt_rfcomm_smoke_test.rs" ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_test_component("bt-rfcomm-smoke-test-component") {
@@ -60,7 +60,7 @@ rustc_test("bt_avrcp_smoke_test_bin") {
 
   sources = [ "src/bt_avrcp_smoke_test.rs" ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_test_component("bt-avrcp-smoke-test-component") {
@@ -96,7 +96,7 @@ rustc_test("bt_avrcp_target_smoke_test_bin") {
 
   sources = [ "src/bt_avrcp_target_smoke_test.rs" ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_test_component("bt-avrcp-target-smoke-test-component") {
@@ -136,7 +136,7 @@ rustc_test("bt_hfp_audio_gateway_smoke_test_bin") {
 
   sources = [ "src/bt_hfp_audio_gateway_smoke_test.rs" ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_test_component("bt-hfp-audio-gateway-smoke-test-component") {
@@ -194,7 +194,7 @@ rustc_binary("bt_a2dp_topology_fake_bin") {
 
   sources = [ "src/bt_a2dp_topology_fake.rs" ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_component("bt-a2dp-topology-fake") {
@@ -235,7 +235,7 @@ rustc_test("bt_a2dp_smoke_test_bin") {
 
   sources = [ "src/bt_a2dp_smoke_test.rs" ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_test_component("bt-a2dp-smoke-test-component") {
@@ -281,7 +281,7 @@ rustc_test("bt_init_smoke_test_bin") {
 
   sources = [ "src/bt_init_smoke_test.rs" ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_component("test-bt-init") {
@@ -333,7 +333,7 @@ rustc_test("bt_gap_smoke_test_bin") {
 
   sources = [ "src/bt_gap_smoke_test.rs" ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_test_component("bt-gap-smoke-test-component") {

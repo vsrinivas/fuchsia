@@ -22,7 +22,7 @@ rustc_library("tcp-stream-ext") {
 
   sources = [ "src/lib.rs" ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 rustc_test("stub-netstack-test") {
@@ -44,7 +44,7 @@ rustc_test("stub-netstack-test") {
 
   sources = [ "src/stub_netstack_test.rs" ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_unittest_component("stub-netstack-test-component") {

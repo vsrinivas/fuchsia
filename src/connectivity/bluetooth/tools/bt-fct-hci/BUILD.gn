@@ -35,7 +35,7 @@ rustc_binary("bin") {
     "src/types.rs",
   ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_shell_package("bt-fct-hci") {

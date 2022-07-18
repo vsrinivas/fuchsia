@@ -17,7 +17,7 @@ rustc_macro("specialize-ip-macro") {
 
   configs +=
       [ "//build/config/rust:allow_non_exhaustive_omitted_patterns_lint" ]
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 group("tests") {

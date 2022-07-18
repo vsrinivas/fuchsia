@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3
 # Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -6,8 +6,8 @@
 Example usage:
 $ fx set ...
 $ scripts/gn/gen_visibility_globs.py \
-     --all="//build/config/rust:deny_unused_results" \
-     --allow="//build/config/rust:allow_unused_results"
+     --all="//build/config/rust/lints:deny_unused_results" \
+     --allow="//build/config/rust/lints:allow_unused_results"
 
 The output is useful for instance if you have a visibility allowlist that you want to maintain with
 shortened glob paths.

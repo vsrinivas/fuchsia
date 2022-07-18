@@ -21,7 +21,7 @@ rustc_binary("bin") {
 
   configs += [ "//build/config/rust:bootfs" ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 
   deps = [
     "//sdk/fidl/fuchsia.acpi.chromeos:fuchsia.acpi.chromeos-rustc",

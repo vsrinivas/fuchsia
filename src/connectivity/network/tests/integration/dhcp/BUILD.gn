@@ -32,5 +32,5 @@ rustc_test("dhcp") {
     "//third_party/rust_crates:libc",
   ]
   sources = [ "src/lib.rs" ]
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }

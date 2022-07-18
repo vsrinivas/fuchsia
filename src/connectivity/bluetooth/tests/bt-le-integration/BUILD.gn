@@ -27,7 +27,7 @@ rustc_test("bt_le_integration_tests") {
     "src/peripheral.rs",
   ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_test_component("bt-le-integration-tests-component") {

@@ -66,7 +66,7 @@ rustc_library("netstack_testing_common") {
     "src/ping.rs",
     "src/realms.rs",
   ]
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 expect_includes("client_includes") {

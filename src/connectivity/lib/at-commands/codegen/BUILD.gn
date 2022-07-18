@@ -28,7 +28,7 @@ rustc_library("codegen_lib") {
     "src/parser.rs",
   ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 # Build the code generator
@@ -45,7 +45,7 @@ if (host_toolchain == current_toolchain) {
     ]
     sources = [ "src/main.rs" ]
 
-    configs -= [ "//build/config/rust:allow_unused_results" ]
+    configs -= [ "//build/config/rust/lints:allow_unused_results" ]
   }
 }
 
@@ -60,5 +60,5 @@ rustc_test("codegen_parser_tests") {
   deps = [ ":codegen_lib" ]
   sources = [ "src/parser_tests.rs" ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }

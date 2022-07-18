@@ -94,7 +94,7 @@ rustc_binary("bin") {
     "src/volume_relay.rs",
   ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_component("component") {
@@ -241,7 +241,7 @@ rustc_test("encoding_integration_bin") {
     "src/volume_relay.rs",
   ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("bt-a2dp-encoding-tests") {

@@ -27,7 +27,7 @@ rustc_binary("bin") {
 
   sources = [ "src/main.rs" ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_shell_package("bt-le-peripheral") {

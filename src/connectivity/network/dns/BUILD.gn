@@ -36,7 +36,7 @@ rustc_library("lib") {
     "src/udp.rs",
   ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_component("dns_lib_test") {
@@ -101,7 +101,7 @@ rustc_binary("bin") {
 
   name = "dns_resolver"
   with_unit_tests = true
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 rustc_binary("bin_with_fake_time") {
@@ -110,7 +110,7 @@ rustc_binary("bin_with_fake_time") {
 
   name = "dns_resolver_with_fake_time"
   testonly = true
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 
   non_rust_deps += [ "//src/lib/fake-clock/lib" ]
 }

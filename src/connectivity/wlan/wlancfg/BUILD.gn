@@ -127,7 +127,7 @@ rustc_library("lib") {
     "src/util/testing/sme_stream.rs",
   ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 
   test_deps = [ "//src/lib/test_util" ]
 }
@@ -170,7 +170,7 @@ rustc_binary("bin") {
 
   sources = [ "src/main.rs" ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_component("service") {

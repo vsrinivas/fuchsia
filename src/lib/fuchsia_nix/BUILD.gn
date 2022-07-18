@@ -9,5 +9,5 @@ rustc_library("fuchsia_nix") {
   sources = [ "src/lib.rs" ]
   deps = [ "//third_party/rust_crates/compat/nix" ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }

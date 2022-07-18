@@ -122,7 +122,7 @@ rustc_library("netstack3-core") {
   test_deps = lib_test_deps
   sources = lib_sources
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_unittest_package("netstack3-core-test-package") {
@@ -144,7 +144,7 @@ rustc_library("netstack3-core-benchmarks") {
   with_unit_tests = true
   sources = lib_sources
   deps = lib_deps + lib_test_deps + [ "//third_party/rust_crates:criterion" ]
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
   configs -= [ "//build/config/rust:no_features" ]
   configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
   configs += [ ":benchmark" ]
@@ -182,7 +182,7 @@ rustc_fuzzer("fuzz-single-device") {
     #   "log_info"
   ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
   configs -= [ "//build/config/rust:no_features" ]
   configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
   configs += [ ":fuzz" ]

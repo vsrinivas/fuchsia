@@ -24,5 +24,5 @@ rustc_library("fuzz-util") {
     "src/zerocopy.rs",
   ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }

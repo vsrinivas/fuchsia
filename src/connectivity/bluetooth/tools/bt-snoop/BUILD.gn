@@ -53,7 +53,7 @@ rustc_binary("bin") {
     "src/tests.rs",
   ]
 
-  configs -= [ "//build/config/rust:allow_unused_results" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
 fuchsia_package_with_single_component("bt-snoop") {
