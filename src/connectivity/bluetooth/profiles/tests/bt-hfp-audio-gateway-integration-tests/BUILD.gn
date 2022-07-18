@@ -16,7 +16,6 @@ rustc_test("tests_bin") {
     "//sdk/fidl/fuchsia.bluetooth.internal.a2dp:fuchsia.bluetooth.internal.a2dp-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
-    "//src/connectivity/bluetooth/lib/bt-rfcomm",
     "//src/connectivity/bluetooth/lib/fuchsia-audio-dai",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/connectivity/bluetooth/testing/mock-piconet-server:lib_v2",

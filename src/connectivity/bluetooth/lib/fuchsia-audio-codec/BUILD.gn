@@ -14,26 +14,23 @@ rustc_library("fuchsia-audio-codec") {
     "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem-rustc",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fidl_table_validation",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
-    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/media/stream_processors/fuchsia-stream-processors",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
   ]
 
   test_deps = [
     "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
     "//src/lib/mundane",
     "//src/lib/testing/fixture",
     "//src/media/stream_processors/test:stream_processor_test_lib",
+    "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:futures-test",
     "//third_party/rust_crates:hex",
   ]

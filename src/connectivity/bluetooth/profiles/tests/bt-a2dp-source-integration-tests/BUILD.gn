@@ -28,7 +28,6 @@ rustc_test("tests_bin") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component-test",
     "//src/lib/testing/fixture",
-    "//src/lib/trace/rust:trace",
     "//third_party/rust_crates:futures",
   ]
 

@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #![recursion_limit = "512"]
+// TODO(fxb/104019): Consider enabling globally.
+#![deny(unused_crate_dependencies)]
 
 use {
     anyhow::{format_err, Context as _, Error},

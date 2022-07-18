@@ -12,13 +12,15 @@ rustc_library("profile-client") {
     "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
   ]
 
-  test_deps = [ "//third_party/rust_crates:futures-test" ]
+  test_deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures-test",
+  ]
 
   sources = [
     "src/error.rs",
