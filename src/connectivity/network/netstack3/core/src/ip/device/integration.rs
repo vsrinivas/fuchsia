@@ -356,15 +356,16 @@ impl<
 impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::Ipv6DeviceContext<C>>
     Ipv6DeviceRsContext<C> for SC
 {
-    fn get_max_router_solicitations(&self, device_id: SC::DeviceId) -> Option<NonZeroU8> {
-        self.get_ip_device_state(device_id).config.max_router_solicitations
-    }
-
-    fn get_router_soliciations_remaining_mut(
+    fn with_rs_remaining_mut_and_max<
+        O,
+        F: FnOnce(&mut Option<NonZeroU8>, Option<NonZeroU8>) -> O,
+    >(
         &mut self,
-        device_id: SC::DeviceId,
-    ) -> &mut Option<NonZeroU8> {
-        &mut self.get_ip_device_state_mut(device_id).router_soliciations_remaining
+        device_id: Self::DeviceId,
+        cb: F,
+    ) -> O {
+        let state = self.get_ip_device_state_mut(device_id);
+        cb(&mut state.router_soliciations_remaining, state.config.max_router_solicitations)
     }
 
     fn get_link_layer_addr_bytes(&self, device_id: SC::DeviceId) -> Option<&[u8]> {

@@ -52,16 +52,24 @@ pub(crate) struct RsTimerId<DeviceId> {
 
 /// The IP device context provided to RS.
 pub(super) trait Ipv6DeviceRsContext<C>: IpDeviceIdContext<Ipv6> {
-    /// Gets the maximum number of router solicitations to send when
-    /// performing router solicitation.
-    fn get_max_router_solicitations(&self, device_id: Self::DeviceId) -> Option<NonZeroU8>;
-
-    /// Gets a mutable reference to the remaining number of router
-    /// solicitations.
-    fn get_router_soliciations_remaining_mut(
+    /// Calls the callback with a mutable reference to the remaining number of
+    /// router soliciations to send and the maximum number of router solications
+    /// to send.
+    fn with_rs_remaining_mut_and_max<O, F: FnOnce(&mut Option<NonZeroU8>, Option<NonZeroU8>) -> O>(
         &mut self,
         device_id: Self::DeviceId,
-    ) -> &mut Option<NonZeroU8>;
+        cb: F,
+    ) -> O;
+
+    /// Calls the callback with a mutable reference to the remaining number of
+    /// router soliciations to send.
+    fn with_rs_remaining_mut<F: FnOnce(&mut Option<NonZeroU8>)>(
+        &mut self,
+        device_id: Self::DeviceId,
+        cb: F,
+    ) {
+        self.with_rs_remaining_mut_and_max(device_id, |remaining, _max| cb(remaining))
+    }
 
     /// Gets the device's link-layer address bytes, if the device supports
     /// link-layer addressing.
@@ -121,10 +129,12 @@ pub(crate) trait RsHandler<C>: IpDeviceIdContext<Ipv6> {
 
 impl<C: RsNonSyncContext<SC::DeviceId>, SC: RsContext<C>> RsHandler<C> for SC {
     fn start_router_solicitation(&mut self, ctx: &mut C, device_id: Self::DeviceId) {
-        let max_router_solicitations = self.get_max_router_solicitations(device_id);
-        *self.get_router_soliciations_remaining_mut(device_id) = max_router_solicitations;
+        let remaining = self.with_rs_remaining_mut_and_max(device_id, |remaining, max| {
+            *remaining = max;
+            max
+        });
 
-        match max_router_solicitations {
+        match remaining {
             None => {}
             Some(_) => {
                 // As per RFC 4861 section 6.3.7, delay the first transmission for a
@@ -182,22 +192,24 @@ fn do_router_solicitation<C: RsNonSyncContext<SC::DeviceId>, SC: RsContext<C>>(
             })
         });
 
-    let remaining = sync_ctx.get_router_soliciations_remaining_mut(device_id);
-    *remaining = NonZeroU8::new(
-        remaining
-            .expect("should only send a router solicitations when at least one is remaining")
-            .get()
-            - 1,
-    );
-    match *remaining {
-        None => {}
-        Some(NonZeroU8 { .. }) => {
-            assert_eq!(
-                ctx.schedule_timer(RTR_SOLICITATION_INTERVAL, RsTimerId { device_id },),
-                None
-            );
+    sync_ctx.with_rs_remaining_mut(device_id, |remaining| {
+        *remaining = NonZeroU8::new(
+            remaining
+                .expect("should only send a router solicitations when at least one is remaining")
+                .get()
+                - 1,
+        );
+
+        match *remaining {
+            None => {}
+            Some(NonZeroU8 { .. }) => {
+                assert_eq!(
+                    ctx.schedule_timer(RTR_SOLICITATION_INTERVAL, RsTimerId { device_id },),
+                    None
+                );
+            }
         }
-    }
+    });
 }
 
 #[cfg(test)]
@@ -231,27 +243,21 @@ mod tests {
     type MockNonSyncCtx = DummyNonSyncCtx<RsTimerId<DummyDeviceId>, (), ()>;
 
     impl<'a> Ipv6DeviceRsContext<MockNonSyncCtx> for MockCtx<'a> {
-        fn get_max_router_solicitations(&self, DummyDeviceId: DummyDeviceId) -> Option<NonZeroU8> {
-            let MockRsContext {
-                max_router_solicitations,
-                router_soliciations_remaining: _,
-                source_address: _,
-                link_layer_bytes: _,
-            } = self.get_ref();
-            *max_router_solicitations
-        }
-
-        fn get_router_soliciations_remaining_mut(
+        fn with_rs_remaining_mut_and_max<
+            O,
+            F: FnOnce(&mut Option<NonZeroU8>, Option<NonZeroU8>) -> O,
+        >(
             &mut self,
             DummyDeviceId: DummyDeviceId,
-        ) -> &mut Option<NonZeroU8> {
+            cb: F,
+        ) -> O {
             let MockRsContext {
-                max_router_solicitations: _,
+                max_router_solicitations,
                 router_soliciations_remaining,
                 source_address: _,
                 link_layer_bytes: _,
             } = self.get_mut();
-            router_soliciations_remaining
+            cb(router_soliciations_remaining, *max_router_solicitations)
         }
 
         fn get_link_layer_addr_bytes(&self, DummyDeviceId: DummyDeviceId) -> Option<&[u8]> {
@@ -363,7 +369,7 @@ mod tests {
         let mut duration = MAX_RTR_SOLICITATION_DELAY;
         for i in 0..max_router_solicitations {
             assert_eq!(
-                *sync_ctx.get_router_soliciations_remaining_mut(DummyDeviceId),
+                sync_ctx.get_ref().router_soliciations_remaining,
                 NonZeroU8::new(max_router_solicitations - i)
             );
             let now = non_sync_ctx.now();
@@ -389,7 +395,7 @@ mod tests {
         }
 
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
-        assert_eq!(*sync_ctx.get_router_soliciations_remaining_mut(DummyDeviceId), None);
+        assert_eq!(sync_ctx.get_ref().router_soliciations_remaining, None);
         let frames = sync_ctx.frames();
         assert_eq!(frames.len(), usize::from(max_router_solicitations), "frames = {:?}", frames);
     }
