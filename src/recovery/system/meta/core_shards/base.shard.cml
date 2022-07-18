@@ -1,0 +1,27 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.sysmem.Allocator",
+            ],
+            from: "parent",
+            to: "#system_recovery",
+        },
+        {
+            protocol: "fuchsia.recovery.FactoryReset",
+            from: "#factory_reset",
+            to: "#system_recovery",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-sys-platform",
+            to: "#system_recovery",
+            subdir: "sys/platform",
+        },
+    ],
+}

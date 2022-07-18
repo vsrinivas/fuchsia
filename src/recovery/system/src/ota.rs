@@ -621,6 +621,7 @@ mod tests {
         }
     }
 
+    #[ignore] //TODO(fxbug.dev/102239) Move to integration test
     #[fasync::run_singlethreaded(test)]
     async fn test_run_devhost_ota() -> Result<(), Error> {
         let package = PackageBuilder::new("test-package")
