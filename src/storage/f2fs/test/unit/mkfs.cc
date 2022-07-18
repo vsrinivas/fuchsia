@@ -98,7 +98,7 @@ void ReadCheckpoint(Bcache *bc, Superblock &sb, Checkpoint *ckp) {
 void VerifyLabel(Superblock &sb, const char *label) {
   std::string vol_label(label);
   std::u16string volume_name;
-  AsciiToUnicode(vol_label, &volume_name);
+  AsciiToUnicode(vol_label, volume_name);
 
   uint16_t volume_name_arr[512];
   volume_name.copy(reinterpret_cast<char16_t *>(volume_name_arr), vol_label.size());
@@ -616,6 +616,23 @@ TEST(FormatFilesystemTest, PrepareSuperblockExceptionCase) {
   params.start_sector = 1;
   ret = MkfsTester::FormatDevice(mkfs);
   ASSERT_EQ(ret.is_error(), false);
+}
+
+TEST(FormatFilesystemTest, LabelAsciiToUnicodeConversion) {
+  // Convert empty string
+  std::string label("");
+  std::u16string out;
+  std::u16string target(u"");
+
+  AsciiToUnicode(label, out);
+  ASSERT_EQ(out, target);
+
+  // Convert non-empty string
+  label = "alphabravo";
+  target = u"alphabravo";
+
+  AsciiToUnicode(label, out);
+  ASSERT_EQ(out, target);
 }
 
 }  // namespace

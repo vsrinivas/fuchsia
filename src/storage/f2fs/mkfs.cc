@@ -5,7 +5,6 @@
 #include <getopt.h>
 
 #include <cmath>
-#include <codecvt>
 #include <iostream>
 
 #include <safemath/checked_math.h>
@@ -36,11 +35,8 @@ zx::status<std::unique_ptr<Bcache>> MkfsWorker::DoMkfs() {
   return zx::ok(std::move(bc_));
 }
 
-// String must be less than 16 characters.
-void AsciiToUnicode(const std::string &in_string, std::u16string *out_string) {
-  std::wstring_convert<std::codecvt_utf8_utf16<char16_t>, char16_t> cvt16;
-
-  out_string->assign(cvt16.from_bytes(in_string));
+void AsciiToUnicode(const std::string_view in_string, std::u16string &out_string) {
+  out_string.assign(in_string.begin(), in_string.end());
 }
 
 void MkfsWorker::InitGlobalParameters() {
@@ -369,7 +365,7 @@ zx_status_t MkfsWorker::PrepareSuperblock() {
   std::string vol_label(reinterpret_cast<char const *>(params_.vol_label));
   std::u16string volume_name;
 
-  AsciiToUnicode(vol_label, &volume_name);
+  AsciiToUnicode(vol_label, volume_name);
 
   volume_name.copy(reinterpret_cast<char16_t *>(super_block_.volume_name), vol_label.size());
   super_block_.volume_name[vol_label.size()] = '\0';

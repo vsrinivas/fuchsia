@@ -77,7 +77,7 @@ zx_status_t ParseOptions(int argc, char** argv, MkfsOptions& options);
 
 zx::status<std::unique_ptr<Bcache>> Mkfs(const MkfsOptions& options, std::unique_ptr<Bcache> bc);
 
-void AsciiToUnicode(const std::string& in_string, std::u16string* out_string);
+void AsciiToUnicode(const std::string_view in_string, std::u16string& out_string);
 
 }  // namespace f2fs
 
