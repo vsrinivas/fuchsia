@@ -47,6 +47,7 @@ use crate::{
     context::{
         CounterContext, EventContext, InstantContext, NonTestCtxMarker, RngContext, TimerHandler,
     },
+    data_structures::token_bucket::TokenBucket,
     device::{DeviceId, FrameDestination},
     error::{ExistsError, NotFoundError},
     ip::{
@@ -58,7 +59,7 @@ use crate::{
         forwarding::{AddRouteError, Destination, ForwardingTable},
         gmp::igmp::IgmpPacketHandler,
         icmp::{
-            BufferIcmpHandler, IcmpHandlerIpExt, IcmpIpExt, IcmpIpTransportContext, IcmpState,
+            BufferIcmpHandler, IcmpHandlerIpExt, IcmpIpExt, IcmpIpTransportContext, IcmpSockets,
             Icmpv4Error, Icmpv4ErrorCode, Icmpv4ErrorKind, Icmpv4State, Icmpv4StateBuilder,
             Icmpv6ErrorCode, Icmpv6ErrorKind, Icmpv6State, Icmpv6StateBuilder, InnerIcmpContext,
         },
@@ -2386,21 +2387,28 @@ impl<C: NonSyncContext> InnerIcmpContext<Ipv4, C> for SyncCtx<C> {
         );
     }
 
-    fn with_state<O, F: FnOnce(&IcmpState<Ipv4Addr, C::Instant, IpSock<Ipv4, DeviceId>>) -> O>(
+    fn with_icmp_sockets<O, F: FnOnce(&IcmpSockets<Ipv4Addr, IpSock<Ipv4, DeviceId>>) -> O>(
         &self,
         cb: F,
     ) -> O {
-        cb(&self.state.ipv4.icmp.as_ref())
+        cb(&self.state.ipv4.icmp.as_ref().sockets)
     }
 
-    fn with_state_mut<
+    fn with_icmp_sockets_mut<
         O,
-        F: FnOnce(&mut IcmpState<Ipv4Addr, C::Instant, IpSock<Ipv4, DeviceId>>) -> O,
+        F: FnOnce(&mut IcmpSockets<Ipv4Addr, IpSock<Ipv4, DeviceId>>) -> O,
     >(
         &mut self,
         cb: F,
     ) -> O {
-        cb(&mut self.state.ipv4.icmp.as_mut())
+        cb(&mut self.state.ipv4.icmp.as_mut().sockets)
+    }
+
+    fn with_error_send_bucket_mut<O, F: FnOnce(&mut TokenBucket<C::Instant>) -> O>(
+        &mut self,
+        cb: F,
+    ) -> O {
+        cb(&mut self.state.ipv4.icmp.as_mut().error_send_bucket)
     }
 }
 
@@ -2439,21 +2447,28 @@ impl<C: NonSyncContext> InnerIcmpContext<Ipv6, C> for SyncCtx<C> {
         );
     }
 
-    fn with_state<O, F: FnOnce(&IcmpState<Ipv6Addr, C::Instant, IpSock<Ipv6, DeviceId>>) -> O>(
+    fn with_icmp_sockets<O, F: FnOnce(&IcmpSockets<Ipv6Addr, IpSock<Ipv6, DeviceId>>) -> O>(
         &self,
         cb: F,
     ) -> O {
-        cb(&self.state.ipv6.icmp.as_ref())
+        cb(&self.state.ipv6.icmp.as_ref().sockets)
     }
 
-    fn with_state_mut<
+    fn with_icmp_sockets_mut<
         O,
-        F: FnOnce(&mut IcmpState<Ipv6Addr, C::Instant, IpSock<Ipv6, DeviceId>>) -> O,
+        F: FnOnce(&mut IcmpSockets<Ipv6Addr, IpSock<Ipv6, DeviceId>>) -> O,
     >(
         &mut self,
         cb: F,
     ) -> O {
-        cb(&mut self.state.ipv6.icmp.as_mut())
+        cb(&mut self.state.ipv6.icmp.as_mut().sockets)
+    }
+
+    fn with_error_send_bucket_mut<O, F: FnOnce(&mut TokenBucket<C::Instant>) -> O>(
+        &mut self,
+        cb: F,
+    ) -> O {
+        cb(&mut self.state.ipv6.icmp.as_mut().error_send_bucket)
     }
 }
 
