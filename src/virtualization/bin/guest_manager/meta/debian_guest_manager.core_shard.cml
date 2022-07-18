@@ -20,13 +20,6 @@
         {
             directory: "dev",
             from: "parent",
-            as: "dev-class-ethernet",
-            to: "#debian-guest-manager",
-            subdir: "class/ethernet",
-        },
-        {
-            directory: "dev",
-            from: "parent",
             as: "dev-gpu",
             to: "#debian-guest-manager",
             subdir: "class/gpu",

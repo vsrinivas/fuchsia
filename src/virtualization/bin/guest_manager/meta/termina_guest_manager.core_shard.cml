@@ -20,13 +20,6 @@
         {
             directory: "dev",
             from: "parent",
-            as: "dev-class-ethernet",
-            to: "#termina-guest-manager",
-            subdir: "class/ethernet",
-        },
-        {
-            directory: "dev",
-            from: "parent",
             as: "dev-gpu",
             to: "#termina-guest-manager",
             subdir: "class/gpu",

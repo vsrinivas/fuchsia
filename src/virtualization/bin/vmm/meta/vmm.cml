@@ -115,11 +115,6 @@
             to: "#virtio_gpu_devices",
         },
         {
-            directory: "dev-class-ethernet",
-            from: "parent",
-            to: "#virtio_net_devices",
-        },
-        {
             protocol: [
                 "fuchsia.media.Audio",
                 "fuchsia.scheduler.ProfileProvider",

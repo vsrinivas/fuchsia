@@ -66,10 +66,7 @@
             to: "#vmm",
         },
         {
-            directory: [
-                "dev-class-ethernet",
-                "dev-gpu",
-            ],
+            directory: "dev-gpu",
             from: "parent",
             to: "#vmm",
         },
