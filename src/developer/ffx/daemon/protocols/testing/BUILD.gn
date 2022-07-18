@@ -15,7 +15,7 @@ if (is_host) {
       "//src/developer/ffx/lib/protocols:lib",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:async-trait",
-      "//third_party/rust_crates:log",
+      "//third_party/rust_crates:tracing",
     ]
 
     sources = [ "src/lib.rs" ]

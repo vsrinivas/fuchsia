@@ -329,7 +329,7 @@ async fn get_tests<W: Write>(
     let writer = &mut write;
     let (iterator_proxy, iterator) = create_proxy().unwrap();
 
-    log::info!("launching test suite {}", cmd.test_url);
+    tracing::info!("launching test suite {}", cmd.test_url);
 
     query_proxy
         .enumerate(&cmd.test_url, iterator)

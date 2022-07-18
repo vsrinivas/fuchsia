@@ -140,13 +140,14 @@ impl ProtocolRegister {
         let name_copy = name.clone();
         let fut = svc.open(cx, server).await?;
         let new_task = async move {
-            fut.await.unwrap_or_else(|e| log::warn!("running protocol stream handler: {:#?}", e));
+            fut.await
+                .unwrap_or_else(|e| tracing::warn!("running protocol stream handler: {:#?}", e));
             if let Some(inner) = weak_inner.upgrade() {
                 if let Some(handle) = inner.remove_handle(&name_copy, &task_id) {
                     // Closes the stream's handle to make sure the task
                     // completes cleanly.
                     let r = handle.shutdown().await;
-                    log::info!(
+                    tracing::info!(
                         "protocol stream for {}-{} finished with result: {:?}",
                         name_copy,
                         task_id,
@@ -196,10 +197,10 @@ impl ProtocolRegister {
             .map(|h| async move {
                 let name = h.name.clone();
                 let id = h.id;
-                log::debug!("shutting down handle {}-{}", name, id);
-                h.shutdown()
-                    .await
-                    .unwrap_or_else(|e| log::warn!("shutdown for handle {}-{}: {:?}", name, id, e));
+                tracing::debug!("shutting down handle {}-{}", name, id);
+                h.shutdown().await.unwrap_or_else(|e| {
+                    tracing::warn!("shutdown for handle {}-{}: {:?}", name, id, e)
+                });
             })
             .collect::<Vec<_>>();
         futures::future::join_all(handler_futs).await;
@@ -208,10 +209,10 @@ impl ProtocolRegister {
             let name = name.clone();
             let cx = &cx;
             let fut = async move {
-                log::debug!("shutting down stream handler for {}", name);
-                svc.shutdown(cx)
-                    .await
-                    .unwrap_or_else(|e| log::warn!("closing stream handler for {}: {:?}", name, e));
+                tracing::debug!("shutting down stream handler for {}", name);
+                svc.shutdown(cx).await.unwrap_or_else(|e| {
+                    tracing::warn!("closing stream handler for {}: {:?}", name, e)
+                });
             };
             protocol_futs.push(fut);
         }

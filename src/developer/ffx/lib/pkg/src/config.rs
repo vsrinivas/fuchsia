@@ -154,7 +154,7 @@ pub async fn get_repositories() -> HashMap<String, RepositorySpec> {
             return HashMap::new();
         }
         Err(err) => {
-            log::warn!("failed to load repositories: {:#?}", err);
+            tracing::warn!("failed to load repositories: {:#?}", err);
             return HashMap::new();
         }
     };
@@ -162,7 +162,7 @@ pub async fn get_repositories() -> HashMap<String, RepositorySpec> {
     let entries = match value {
         Value::Object(entries) => entries,
         _ => {
-            log::warn!("expected {} to be a map, not {}", CONFIG_KEY_REPOSITORIES, value);
+            tracing::warn!("expected {} to be a map, not {}", CONFIG_KEY_REPOSITORIES, value);
             return HashMap::new();
         }
     };
@@ -173,7 +173,7 @@ pub async fn get_repositories() -> HashMap<String, RepositorySpec> {
             let repo_name = match percent_decode_str(&repo_name).decode_utf8() {
                 Ok(repo_name) => repo_name.to_string(),
                 Err(err) => {
-                    log::warn!("failed to decode repo name {:?}: {:#?}", repo_name, err);
+                    tracing::warn!("failed to decode repo name {:?}: {:#?}", repo_name, err);
                     return None;
                 }
             };
@@ -182,7 +182,7 @@ pub async fn get_repositories() -> HashMap<String, RepositorySpec> {
             match serde_json::from_value(entry) {
                 Ok(repo_spec) => Some((repo_name, repo_spec)),
                 Err(err) => {
-                    log::warn!("failed to parse repository {:#?}: {:?}", repo_name, err);
+                    tracing::warn!("failed to parse repository {:#?}: {:?}", repo_name, err);
                     None
                 }
             }
@@ -224,7 +224,7 @@ pub async fn get_registrations() -> HashMap<String, HashMap<String, RepositoryTa
             return HashMap::new();
         }
         Err(err) => {
-            log::warn!("failed to load registrations: {:#?}", err);
+            tracing::warn!("failed to load registrations: {:#?}", err);
             return HashMap::new();
         }
     };
@@ -232,7 +232,7 @@ pub async fn get_registrations() -> HashMap<String, HashMap<String, RepositoryTa
     let entries = match value {
         Value::Object(entries) => entries,
         _ => {
-            log::warn!("expected {} to be a map, not {}", CONFIG_KEY_REGISTRATIONS, value);
+            tracing::warn!("expected {} to be a map, not {}", CONFIG_KEY_REGISTRATIONS, value);
             return HashMap::new();
         }
     };
@@ -243,7 +243,7 @@ pub async fn get_registrations() -> HashMap<String, HashMap<String, RepositoryTa
             let repo_name = match percent_decode_str(&repo_name).decode_utf8() {
                 Ok(repo_name) => repo_name.to_string(),
                 Err(err) => {
-                    log::warn!("unable to decode repo name {:?}: {:#?}", repo_name, err);
+                    tracing::warn!("unable to decode repo name {:?}: {:#?}", repo_name, err);
                     return None;
                 }
             };
@@ -261,7 +261,7 @@ pub async fn get_repository_registrations(repo_name: &str) -> HashMap<String, Re
             return HashMap::new();
         }
         Err(err) => {
-            log::warn!("failed to load repository registrations: {:?} {:#?}", repo_name, err);
+            tracing::warn!("failed to load repository registrations: {:?} {:#?}", repo_name, err);
             serde_json::Map::new().into()
         }
     };
@@ -276,7 +276,7 @@ fn parse_target_registrations(
     let targets = match targets {
         Value::Object(targets) => targets,
         _ => {
-            log::warn!("repository {:?} targets should be a map, not {:?}", repo_name, targets);
+            tracing::warn!("repository {:?} targets should be a map, not {:?}", repo_name, targets);
             return HashMap::new();
         }
     };
@@ -287,7 +287,7 @@ fn parse_target_registrations(
             let target_nodename = match percent_decode_str(&target_nodename).decode_utf8() {
                 Ok(target_nodename) => target_nodename.to_string(),
                 Err(err) => {
-                    log::warn!(
+                    tracing::warn!(
                         "failed to decode target nodename: {:?}: {:#?}",
                         target_nodename,
                         err
@@ -299,7 +299,7 @@ fn parse_target_registrations(
             match serde_json::from_value(target_info) {
                 Ok(target_info) => Some((target_nodename, target_info)),
                 Err(err) => {
-                    log::warn!("failed to parse registration {:?}: {:?}", target_nodename, err);
+                    tracing::warn!("failed to parse registration {:?}: {:?}", target_nodename, err);
                     None
                 }
             }

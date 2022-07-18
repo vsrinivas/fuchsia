@@ -177,7 +177,7 @@ impl Drop for Isolate {
             cmd.stderr(Stdio::null());
             match cmd.spawn().map(|mut child| child.wait()) {
                 Ok(_) => {}
-                Err(e) => log::info!("Failure calling daemon stop: {:#?}", e),
+                Err(e) => tracing::info!("Failure calling daemon stop: {:#?}", e),
             }
         }
     }

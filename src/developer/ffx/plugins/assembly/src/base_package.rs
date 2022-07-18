@@ -9,10 +9,10 @@ use assembly_images_manifest::{Image, ImagesManifest};
 use fuchsia_hash::Hash;
 use fuchsia_merkle::MerkleTree;
 use fuchsia_pkg::PackageManifest;
-use log::info;
 use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::{Path, PathBuf};
+use tracing::info;
 
 pub struct BasePackage {
     pub merkle: Hash,

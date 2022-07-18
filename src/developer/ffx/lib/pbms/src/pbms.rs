@@ -11,7 +11,7 @@ use {
         },
         repo_info::RepoInfo,
     },
-    ::gcs::client::{ProgressResponse, ProgressResult, DirectoryProgress, FileProgress, Throttle},
+    ::gcs::client::{DirectoryProgress, FileProgress, ProgressResponse, ProgressResult, Throttle},
     anyhow::{bail, Context, Result},
     chrono::{DateTime, NaiveDateTime, Utc},
     ffx_config::sdk::SdkVersion,
@@ -40,7 +40,7 @@ pub(crate) async fn fetch_product_metadata<F>(repos: &Vec<url::Url>, progress: &
 where
     F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
-    log::info!("Getting product metadata.");
+    tracing::info!("Getting product metadata.");
     let storage_path: PathBuf =
         ffx_config::get(CONFIG_STORAGE_PATH).await.context("get CONFIG_STORAGE_PATH")?;
     async_fs::create_dir_all(&storage_path).await.context("create directory")?;
@@ -222,12 +222,12 @@ where
         .context("finding product bundle")?;
 
     let start = std::time::Instant::now();
-    log::info!("Getting product data for {:?}", product_bundle.name);
+    tracing::info!("Getting product data for {:?}", product_bundle.name);
     let local_dir = local_repo_dir.join(&product_bundle.name).join("images");
     async_fs::create_dir_all(&local_dir).await.context("creating directory")?;
 
     for image in &product_bundle.images {
-        log::debug!("    image: {:?}", image);
+        tracing::debug!("    image: {:?}", image);
         let base_url = url::Url::parse(&image.base_uri)
             .with_context(|| format!("parsing image.base_uri {:?}", image.base_uri))?;
         fetch_by_format(&image.format, &base_url, &local_dir, &mut |_d, _f| {
@@ -238,7 +238,7 @@ where
         .await
         .with_context(|| format!("fetching images for {}.", product_bundle.name))?;
     }
-    log::debug!("Total fetch images runtime {} seconds.", start.elapsed().as_secs_f32());
+    tracing::debug!("Total fetch images runtime {} seconds.", start.elapsed().as_secs_f32());
 
     let start = std::time::Instant::now();
     writeln!(writer, "\nGetting package data for {:?}", product_bundle.name)?;
@@ -252,7 +252,7 @@ where
     })
     .await?;
 
-    log::debug!("Total fetch packages runtime {} seconds.", start.elapsed().as_secs_f32());
+    tracing::debug!("Total fetch packages runtime {} seconds.", start.elapsed().as_secs_f32());
 
     writeln!(writer, "\nDownload of product data for {:?} is complete.", product_bundle.name)?;
     if verbose {
@@ -297,7 +297,7 @@ where
                 break;
             }
             Err(err) => {
-                log::warn!("Unable to fetch {:?}: {:?}", package, err);
+                tracing::warn!("Unable to fetch {:?}: {:?}", package, err);
                 if i + 1 == packages.len() {
                     return Err(err);
                 }
@@ -318,9 +318,9 @@ where
     F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
     if let Some(blob_uri) = &package.blob_uri {
-        log::debug!("    package repository: {} {}", package.repo_uri, blob_uri);
+        tracing::debug!("    package repository: {} {}", package.repo_uri, blob_uri);
     } else {
-        log::debug!("    package repository: {}", package.repo_uri);
+        tracing::debug!("    package repository: {}", package.repo_uri);
     }
 
     let mut metadata_repo_uri = url::Url::parse(&package.repo_uri)
@@ -519,7 +519,7 @@ where
                     _ => (),
                 }
             }
-            log::debug!("    package: {}", package_name.as_str());
+            tracing::debug!("    package: {}", package_name.as_str());
 
             futures.push(fetcher.fetch_package(merkle));
         }

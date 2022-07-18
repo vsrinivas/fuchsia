@@ -161,7 +161,7 @@ impl TargetHandleInner {
                     stream.stream_entries(parameters.stream_mode.unwrap(), min_timestamp).await?;
                 self.tasks.spawn(async move {
                     let _ = run_diagnostics_streaming(log_iterator, iterator).await.map_err(|e| {
-                        log::warn!("failure running diagnostics streaming: {:?}", e);
+                        tracing::warn!("failure running diagnostics streaming: {:?}", e);
                     });
                 });
                 responder
@@ -204,7 +204,7 @@ pub(crate) async fn wait_for_rcs(
         } else if let Some(err) = seen_event.borrow_mut().take() {
             break Err(host_pipe_err_to_fidl(err));
         } else {
-            log::trace!("RCS dropped after event fired. Waiting again.");
+            tracing::trace!("RCS dropped after event fired. Waiting again.");
         }
     })
 }
@@ -212,7 +212,7 @@ pub(crate) async fn wait_for_rcs(
 fn host_pipe_err_to_fidl(h: HostPipeErr) -> ffx::TargetConnectionError {
     match h {
         HostPipeErr::Unknown(s) => {
-            log::warn!("Unknown host-pipe error received: '{}'", s);
+            tracing::warn!("Unknown host-pipe error received: '{}'", s);
             ffx::TargetConnectionError::UnknownError
         }
         HostPipeErr::NetworkUnreachable => ffx::TargetConnectionError::NetworkUnreachable,

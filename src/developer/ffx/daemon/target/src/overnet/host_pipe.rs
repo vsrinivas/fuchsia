@@ -110,7 +110,7 @@ impl HostPipeChild {
         )
         .await?;
 
-        log::debug!("Spawning new ssh instance: {:?}", ssh);
+        tracing::debug!("Spawning new ssh instance: {:?}", ssh);
 
         let mut ssh = ssh
             .stdout(Stdio::piped())
@@ -142,21 +142,21 @@ impl HostPipeChild {
                 Ok(Some(addr)) => Some(HostAddr(addr)),
                 Ok(None) => None,
                 Err(e) => {
-                    log::error!("Failed to read ssh client address: {:?}", e);
+                    tracing::error!("Failed to read ssh client address: {:?}", e);
                     None
                 }
             };
 
         let copy_in = async move {
             if let Err(e) = copy_buf(stdout, &mut pipe_tx).await {
-                log::error!("SSH stdout read failure: {:?}", e);
+                tracing::error!("SSH stdout read failure: {:?}", e);
             }
         };
         let copy_out = async move {
             if let Err(e) =
                 copy_buf(BufReader::with_capacity(BUFFER_SIZE, pipe_rx), &mut stdin).await
             {
-                log::error!("SSH stdin write failure: {:?}", e);
+                tracing::error!("SSH stdin write failure: {:?}", e);
             }
         };
 
@@ -165,15 +165,15 @@ impl HostPipeChild {
             while let Some(result) = stderr_lines.next().await {
                 match result {
                     Ok(line) => {
-                        log::info!("SSH stderr: {}", line);
+                        tracing::info!("SSH stderr: {}", line);
                         stderr_buf.push_line(line.clone());
                         event_queue
                             .push(TargetEvent::SshHostPipeErr(HostPipeErr::from(line)))
                             .unwrap_or_else(|e| {
-                                log::warn!("queueing host pipe err event: {:?}", e)
+                                tracing::warn!("queueing host pipe err event: {:?}", e)
                             });
                     }
-                    Err(e) => log::error!("SSH stderr read failure: {:?}", e),
+                    Err(e) => tracing::error!("SSH stderr read failure: {:?}", e),
                 }
             }
         };
@@ -275,23 +275,25 @@ impl Drop for HostPipeChild {
     fn drop(&mut self) {
         match self.inner.try_wait() {
             Ok(Some(result)) => {
-                log::info!("HostPipeChild exited with {}", result);
+                tracing::info!("HostPipeChild exited with {}", result);
             }
             Ok(None) => {
-                let _ =
-                    self.kill().map_err(|e| log::warn!("failed to kill HostPipeChild: {:?}", e));
+                let _ = self
+                    .kill()
+                    .map_err(|e| tracing::warn!("failed to kill HostPipeChild: {:?}", e));
                 let _ = self
                     .wait()
-                    .map_err(|e| log::warn!("failed to clean up HostPipeChild: {:?}", e));
+                    .map_err(|e| tracing::warn!("failed to clean up HostPipeChild: {:?}", e));
             }
             Err(e) => {
-                log::warn!("failed to soft-wait HostPipeChild: {:?}", e);
+                tracing::warn!("failed to soft-wait HostPipeChild: {:?}", e);
                 // defensive kill & wait, both may fail.
-                let _ =
-                    self.kill().map_err(|e| log::warn!("failed to kill HostPipeChild: {:?}", e));
+                let _ = self
+                    .kill()
+                    .map_err(|e| tracing::warn!("failed to kill HostPipeChild: {:?}", e));
                 let _ = self
                     .wait()
-                    .map_err(|e| log::warn!("failed to clean up HostPipeChild: {:?}", e));
+                    .map_err(|e| tracing::warn!("failed to clean up HostPipeChild: {:?}", e));
             }
         };
 
@@ -319,7 +321,7 @@ impl HostPipeConnection {
         loop {
             let target = target.upgrade().ok_or(anyhow!("Target has gone"))?;
             let target_nodename = target.nodename();
-            log::debug!("Spawning new host-pipe instance to target {:?}", target_nodename);
+            tracing::debug!("Spawning new host-pipe instance to target {:?}", target_nodename);
             let log_buf = target.host_pipe_log_buffer();
             log_buf.clear();
 
@@ -346,7 +348,7 @@ impl HostPipeConnection {
                     e.to_string()
                 )
             });
-            log::debug!("host-pipe command res: {:?}", res);
+            tracing::debug!("host-pipe command res: {:?}", res);
 
             target.ssh_host_address.borrow_mut().take();
 
@@ -354,7 +356,7 @@ impl HostPipeConnection {
                 Ok(_) => {
                     return Ok(());
                 }
-                Err(e) => log::debug!("running cmd on {:?}: {:#?}", target_nodename, e),
+                Err(e) => tracing::debug!("running cmd on {:?}: {:#?}", target_nodename, e),
             }
 
             // TODO(fxbug.dev/52038): Want an exponential backoff that

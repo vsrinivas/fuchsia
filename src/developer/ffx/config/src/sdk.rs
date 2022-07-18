@@ -4,7 +4,6 @@
 
 use {
     anyhow::{anyhow, bail, Context, Result},
-    log::warn,
     serde::Deserialize,
     serde_json::Value,
     std::{
@@ -14,6 +13,7 @@ use {
         io::{self, BufReader},
         path::PathBuf,
     },
+    tracing::warn,
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -175,7 +175,7 @@ impl Sdk {
         match self.get_host_tool_from_manifest(name) {
             Ok(path) => Ok(path),
             Err(error) => {
-                log::warn!(
+                tracing::warn!(
                     "failed to get host tool {} from manifest. Trying local SDK dir: {}",
                     name,
                     error

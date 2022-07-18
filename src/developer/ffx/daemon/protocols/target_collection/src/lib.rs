@@ -74,7 +74,7 @@ async fn add_manual_target(
 
     let tae = TargetAddrEntry::new(addr.into(), Utc::now(), TargetAddrType::Manual(timeout));
     let _ = manual_targets.add(format!("{}", addr), expiry).await.map_err(|e| {
-        log::error!("Unable to persist manual target: {:?}", e);
+        tracing::error!("Unable to persist manual target: {:?}", e);
     });
     let target = Target::new_with_addr_entries(Option::<String>::None, Some(tae).into_iter());
     if addr.port() != 0 {
@@ -98,7 +98,7 @@ async fn remove_manual_target(
             let mut sockaddr = SocketAddr::from(addr);
             ssh_port.map(|p| sockaddr.set_port(p));
             let _ = manual_targets.remove(format!("{}", sockaddr)).await.map_err(|e| {
-                log::error!("Unable to persist target removal: {}", e);
+                tracing::error!("Unable to persist target removal: {}", e);
             });
         }
     }
@@ -113,7 +113,7 @@ impl TargetCollectionProtocol {
             let sa = match str.parse::<std::net::SocketAddr>() {
                 Ok(sa) => sa,
                 Err(e) => {
-                    log::error!("Parse of manual target config failed: {}", e);
+                    tracing::error!("Parse of manual target config failed: {}", e);
                     continue;
                 }
             };
@@ -192,7 +192,7 @@ impl FidlProtocol for TargetCollectionProtocol {
                                 e => {
                                     // This, so far, will only happen if encountering
                                     // TargetCacheError, which is highly unlikely.
-                                    log::warn!("encountered unhandled error: {:?}", e);
+                                    tracing::warn!("encountered unhandled error: {:?}", e);
                                     Err(ffx::OpenTargetError::TargetNotFound)
                                 }
                             })
@@ -347,9 +347,9 @@ impl FidlProtocol for TargetCollectionProtocol {
 
 fn handle_fastboot_target(tc: &Rc<TargetCollection>, target: ffx::FastbootTarget) {
     if let Some(ref serial) = target.serial {
-        log::trace!("Found new target via fastboot: {}", serial);
+        tracing::trace!("Found new target via fastboot: {}", serial);
     } else {
-        log::trace!("Fastboot target has no serial number. Not able to merge.");
+        tracing::trace!("Fastboot target has no serial number. Not able to merge.");
         return;
     }
     let t = TargetInfo { serial: target.serial, ..Default::default() };
@@ -381,14 +381,14 @@ fn handle_mdns_event(tc: &Rc<TargetCollection>, t: ffx::TargetInfo) {
         ..Default::default()
     };
     if t.fastboot_interface.is_some() {
-        log::trace!(
+        tracing::trace!(
             "Found new fastboot target via mdns: {}",
             t.nodename.clone().unwrap_or("<unknown>".to_string())
         );
         let target = tc.merge_insert(match Target::from_fastboot_target_info(t) {
             Ok(ret) => ret,
             Err(e) => {
-                log::trace!("Error while making target: {:?}", e);
+                tracing::trace!("Error while making target: {:?}", e);
                 return;
             }
         });
@@ -399,7 +399,7 @@ fn handle_mdns_event(tc: &Rc<TargetCollection>, t: ffx::TargetInfo) {
             _ => s,
         });
     } else {
-        log::trace!(
+        tracing::trace!(
             "Found new target via mdns: {}",
             t.nodename.clone().unwrap_or("<unknown>".to_string())
         );

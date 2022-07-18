@@ -95,7 +95,7 @@ impl<'a> TriggersWatcher<'a> {
                     return std::future::pending().await;
                 }
                 while let Ok(alert) = controller.watch_alert().await {
-                    log::trace!("alert received: {}", alert);
+                    tracing::trace!("alert received: {}", alert);
                     let lookup_item = TriggerSetItem::lookup(alert);
                     if set.contains(&lookup_item) {
                         return set.get(&lookup_item).map(|s| s.action.clone());
@@ -130,7 +130,7 @@ async fn trace_shutdown(proxy: &trace::ControllerProxy) -> Result<(), ffx::Recor
         .stop_tracing(trace::StopOptions { write_results: Some(true), ..trace::StopOptions::EMPTY })
         .await
         .map_err(|e| {
-            log::warn!("stopping tracing: {:?}", e);
+            tracing::warn!("stopping tracing: {:?}", e);
             ffx::RecordingError::RecordingStop
         })?;
     proxy
@@ -140,7 +140,7 @@ async fn trace_shutdown(proxy: &trace::ControllerProxy) -> Result<(), ffx::Recor
         })
         .await
         .map_err(|e| {
-            log::warn!("terminating tracing: {:?}", e);
+            tracing::warn!("terminating tracing: {:?}", e);
             ffx::RecordingError::RecordingStop
         })?;
     Ok(())
@@ -168,12 +168,12 @@ impl TraceTask {
         let output_file_clone = output_file.clone();
         let target_info_clone = target_info.clone();
         let pipe_fut = async move {
-            log::debug!("{:?} -> {} starting trace.", target_info_clone, output_file_clone);
+            tracing::debug!("{:?} -> {} starting trace.", target_info_clone, output_file_clone);
             let mut out_file = f;
             let res = futures::io::copy(client, &mut out_file)
                 .await
-                .map_err(|e| log::warn!("file error: {:#?}", e));
-            log::debug!(
+                .map_err(|e| tracing::warn!("file error: {:#?}", e));
+            tracing::debug!(
                 "{:?} -> {} trace complete, result: {:#?}",
                 target_info_clone,
                 output_file_clone,
@@ -182,7 +182,7 @@ impl TraceTask {
             // async_fs files don't guarantee that the file is flushed on drop, so we need to
             // explicitly flush the file after writing.
             if let Err(err) = out_file.flush().await {
-                log::warn!("file error: {:#?}", err);
+                tracing::warn!("file error: {:#?}", err);
             }
         };
         let controller = proxy.clone();
@@ -212,7 +212,7 @@ impl TraceTask {
                     let mut done = trace_shutdown_complete_clone.lock().await;
                     if !*done {
                         if let Err(e) = trace_shutdown(&shutdown_proxy).await {
-                            log::warn!("error shutting down trace: {:?}", e);
+                            tracing::warn!("error shutting down trace: {:?}", e);
                         }
                         *done = true
                     }
@@ -246,7 +246,10 @@ impl TraceTask {
                     let _ = map.output_file_to_nodename.remove(&output_file);
                     let _ =
                         map.nodename_to_task.remove(&target_info.nodename.unwrap_or_else(|| {
-                            log::warn!("trace writing to '{}' has no target nodename", output_file);
+                            tracing::warn!(
+                                "trace writing to '{}' has no target nodename",
+                                output_file
+                            );
                             String::new()
                         }));
                 }
@@ -259,12 +262,12 @@ impl TraceTask {
             let mut trace_shutdown_done = self.trace_shutdown_complete.lock().await;
             if !*trace_shutdown_done {
                 if let Err(e) = trace_shutdown(&self.proxy).await {
-                    log::warn!("error shutting down trace: {:?}", e);
+                    tracing::warn!("error shutting down trace: {:?}", e);
                 }
                 *trace_shutdown_done = true;
             }
         }
-        log::trace!(
+        tracing::trace!(
             "trace task {:?} -> {} shutdown await start",
             self.target_info,
             self.output_file
@@ -272,7 +275,7 @@ impl TraceTask {
         let target_info_clone = self.target_info.clone();
         let output_file = self.output_file.clone();
         self.await;
-        log::trace!(
+        tracing::trace!(
             "trace task {:?} -> {} shutdown await completed",
             target_info_clone,
             output_file
@@ -320,17 +323,20 @@ impl TracingProtocol {
                 .get_target_collection()
                 .await
                 .map_err(|e| {
-                    log::warn!("unable to get target collection: {:?}", e);
+                    tracing::warn!("unable to get target collection: {:?}", e);
                     ffx::RecordingError::RecordingStop
                 })?
                 .get(output_file.as_str())
                 .ok_or_else(|| {
-                    log::warn!("target query '{}' matches no targets", output_file);
+                    tracing::warn!("target query '{}' matches no targets", output_file);
                     ffx::RecordingError::NoSuchTarget
                 })?
                 .nodename()
                 .ok_or_else(|| {
-                    log::warn!("target query '{}' matches target with no nodename", output_file);
+                    tracing::warn!(
+                        "target query '{}' matches target with no nodename",
+                        output_file
+                    );
                     ffx::RecordingError::DisconnectedTarget
                 }),
         }
@@ -357,7 +363,7 @@ impl FidlProtocol for TracingProtocol {
                     match get_controller_proxy(target_query.as_ref(), cx).await {
                         Ok(p) => p,
                         Err(e) => {
-                            log::warn!("getting target controller proxy: {:?}", e);
+                            tracing::warn!("getting target controller proxy: {:?}", e);
                             return responder
                                 .send(&mut Err(ffx::RecordingError::TargetProxyOpen))
                                 .map_err(Into::into);
@@ -369,7 +375,7 @@ impl FidlProtocol for TracingProtocol {
                 let nodename = match target_info.nodename {
                     Some(ref n) => n.clone(),
                     None => {
-                        log::warn!(
+                        tracing::warn!(
                             "query does not match a valid target with nodename: {:?}",
                             target_query
                         );
@@ -397,19 +403,19 @@ impl FidlProtocol for TracingProtocol {
                         {
                             Ok(t) => t,
                             Err(e) => {
-                                log::warn!("unable to start trace: {:?}", e);
+                                tracing::warn!("unable to start trace: {:?}", e);
                                 let mut res = match e {
                                     TraceTaskStartError::TracingStartError(t) => match t {
                                         trace::StartErrorCode::AlreadyStarted => {
                                             Err(ffx::RecordingError::RecordingAlreadyStarted)
                                         }
                                         e => {
-                                            log::warn!("Start error: {:?}", e);
+                                            tracing::warn!("Start error: {:?}", e);
                                             Err(ffx::RecordingError::RecordingStart)
                                         }
                                     },
                                     e => {
-                                        log::warn!("Start error: {:?}", e);
+                                        tracing::warn!("Start error: {:?}", e);
                                         Err(ffx::RecordingError::RecordingStart)
                                     }
                                 };
@@ -436,7 +442,7 @@ impl FidlProtocol for TracingProtocol {
                         task
                     } else {
                         // TODO(fxbug.dev/86410)
-                        log::warn!("no task associated with trace file '{}'", name);
+                        tracing::warn!("no task associated with trace file '{}'", name);
                         return responder
                             .send(&mut Err(ffx::RecordingError::NoSuchTraceFile))
                             .map_err(Into::into);
@@ -480,7 +486,7 @@ impl FidlProtocol for TracingProtocol {
                                 &mut iter.by_ref().take(CHUNK_SIZE).collect::<Vec<_>>().into_iter(),
                             )
                             .map_err(|e| {
-                                log::warn!("responding to tracing status iterator: {:?}", e);
+                                tracing::warn!("responding to tracing status iterator: {:?}", e);
                             });
                     }
                 });

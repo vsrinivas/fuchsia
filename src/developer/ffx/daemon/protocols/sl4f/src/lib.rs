@@ -74,7 +74,7 @@ pub async fn route_request<B: Bridge>(
             let req = str::from_utf8(&bytes).expect("response was not valid utf-8");
             let target_query =
                 ffx::TargetQuery { string_matcher: bridge.target(), ..ffx::TargetQuery::EMPTY };
-            log::info!("  route_request() to {:?}", &target_query.string_matcher);
+            tracing::info!("  route_request() to {:?}", &target_query.string_matcher);
             let resp = bridge.execute(target_query, req).await;
             Response::new(Body::from(resp))
         }
@@ -100,7 +100,7 @@ impl FidlProtocol for Sl4fBridge {
     async fn start(&mut self, cx: &Context) -> Result<()> {
         let addr = SocketAddr::new(IpAddr::V6(Ipv6Addr::LOCALHOST), SERVER_PORT);
         let listener = TcpListener::bind(&addr).await?;
-        log::info!("host-side SL4F proxy server listening on: {:?}", addr);
+        tracing::info!("host-side SL4F proxy server listening on: {:?}", addr);
 
         let proxy = cx.open_target_proxy::<Sl4fBridgeMarker>(None, SL4F_BRIDGE_SELECTOR).await?;
         let proxy = Arc::new(proxy);

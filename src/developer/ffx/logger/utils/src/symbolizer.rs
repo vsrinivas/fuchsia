@@ -58,7 +58,7 @@ impl<'a> Symbolizer for LogSymbolizer {
         extra_args: Vec<String>,
     ) -> Result<()> {
         if let Err(e) = ensure_symbol_index_registered().await {
-            log::warn!("ensure_symbol_index_registered failed, error was: {:#?}", e);
+            tracing::warn!("ensure_symbol_index_registered failed, error was: {:#?}", e);
         }
 
         let path = get_sdk()
@@ -92,7 +92,7 @@ impl<'a> Symbolizer for LogSymbolizer {
                     let mut msg = match rx.next().await {
                         Some(s) => s,
                         None => {
-                            log::warn!("input stream is now empty");
+                            tracing::warn!("input stream is now empty");
                             break;
                         }
                     };
@@ -102,7 +102,7 @@ impl<'a> Symbolizer for LogSymbolizer {
                     match stdin.write_all(msg.as_bytes()).await {
                         Ok(_) => {},
                         Err(e) => {
-                            log::warn!("writing to symbolizer stdin failed: {}", e);
+                            tracing::warn!("writing to symbolizer stdin failed: {}", e);
                             continue;
                         }
                     }
@@ -111,7 +111,7 @@ impl<'a> Symbolizer for LogSymbolizer {
                     match stdout_reader.read_line(&mut stdout_buf).await {
                         Ok(_) => {},
                         Err(e) => {
-                            log::warn!("reading from symbolizer stdout failed: {}", e);
+                            tracing::warn!("reading from symbolizer stdout failed: {}", e);
                             continue;
                         }
                     }
@@ -127,7 +127,7 @@ impl<'a> Symbolizer for LogSymbolizer {
                         stdout_buf = String::default();
                         stdout_reader.read_line(&mut stdout_buf).map(|r| {
                             if let Err(e) = r {
-                                log::warn!("got error trying to write to symbolizer output channel: {}", e);
+                                tracing::warn!("got error trying to write to symbolizer output channel: {}", e);
                             }
                             ()
                         }).await;
@@ -135,7 +135,7 @@ impl<'a> Symbolizer for LogSymbolizer {
                     }
                     tx.send(result).map(|r| {
                         if let Err(e) = r {
-                            log::warn!("got error trying to write to symbolizer output channel: {}", e);
+                            tracing::warn!("got error trying to write to symbolizer output channel: {}", e);
                         }
                         ()
                     }).await;
@@ -150,14 +150,14 @@ impl<'a> Symbolizer for LogSymbolizer {
 impl Drop for LogSymbolizer {
     fn drop(&mut self) {
         let mut inner = self.inner.borrow_mut();
-        log::info!("LogSymbolizer dropped. Killing `symbolizer` process.");
+        tracing::info!("LogSymbolizer dropped. Killing `symbolizer` process.");
         if let Some(mut inner) = inner.take() {
             if let Err(_) = inner.child.kill() {
-                log::warn!("symbolizer process already stopped.");
+                tracing::warn!("symbolizer process already stopped.");
             }
             // Wait on the child so it doesn't hang around as a zombie process.
             let r = inner.child.wait();
-            log::info!("Symbolizer exited with result status: {:?}", r);
+            tracing::info!("Symbolizer exited with result status: {:?}", r);
         }
     }
 }

@@ -121,15 +121,15 @@ pub enum KnockRcsError {
 pub async fn knock_rcs(rcs_proxy: &RemoteControlProxy) -> Result<(), ffx::TargetConnectionError> {
     knock_rcs_impl(rcs_proxy).await.map_err(|e| match e {
         KnockRcsError::FidlError(e) => {
-            log::warn!("FIDL error: {:?}", e);
+            tracing::warn!("FIDL error: {:?}", e);
             ffx::TargetConnectionError::FidlCommunicationError
         }
         KnockRcsError::ChannelError(e) => {
-            log::warn!("RCS connect channel err: {:?}", e);
+            tracing::warn!("RCS connect channel err: {:?}", e);
             ffx::TargetConnectionError::FidlCommunicationError
         }
         KnockRcsError::RcsConnectError(c) => {
-            log::warn!("RCS failed connecting to itself for knocking: {:?}", c);
+            tracing::warn!("RCS failed connecting to itself for knocking: {:?}", c);
             ffx::TargetConnectionError::RcsConnectionError
         }
         KnockRcsError::FailedToKnock => ffx::TargetConnectionError::FailedToKnockService,

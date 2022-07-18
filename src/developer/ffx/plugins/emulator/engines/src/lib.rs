@@ -139,7 +139,7 @@ impl EngineBuilder {
                 );
             }
         }
-        log::debug!("Serialized engine file will be created at {:?}", filepath);
+        tracing::debug!("Serialized engine file will be created at {:?}", filepath);
 
         // Build and validate the engine, then pass it back to the caller.
         let engine: Box<dyn EmulatorEngine> = match self.engine_type {

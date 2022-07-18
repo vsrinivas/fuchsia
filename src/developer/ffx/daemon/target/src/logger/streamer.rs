@@ -279,7 +279,7 @@ impl TargetLogDirectory {
             let entries_to_remove = &entries[..end];
 
             for path in entries_to_remove.iter() {
-                log::info!("[logger] garbage collecting log directory: {:?}", &path);
+                tracing::info!("[logger] garbage collecting log directory: {:?}", &path);
                 remove_dir_all(path).await?;
             }
         }
@@ -368,7 +368,7 @@ impl CachedSessionStream {
                     Ok(s) => s,
                     Err(e) => {
                         // If this fails, just bail out on the optimization and continue on.
-                        log::info!(
+                        tracing::info!(
                             "non-critical failure to stream entries from log file '{}': {}",
                             file,
                             e
@@ -709,7 +709,7 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer<'_> {
                     Some(owned.into_bytes())
                 }
                 Err(e) => {
-                    log::warn!("failed to serialize LogEntry: {:?}. Log was: {:?}", e, &entry);
+                    tracing::warn!("failed to serialize LogEntry: {:?}. Log was: {:?}", e, &entry);
                     None
                 }
             })
@@ -768,7 +768,9 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer<'_> {
             inner.read_stream.send(entry.clone()).await;
         }
 
-        self.cleanup_logs(inner).await.unwrap_or_else(|e| log::warn!("log cleanup failed: {}", e));
+        self.cleanup_logs(inner)
+            .await
+            .unwrap_or_else(|e| tracing::warn!("log cleanup failed: {}", e));
         Ok(())
     }
 
@@ -790,17 +792,17 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer<'_> {
                 .last()
                 .await;
             if entry.is_some() {
-                log::trace!("read of most recent target timestamps finished with entry found");
+                tracing::trace!("read of most recent target timestamps finished with entry found");
                 return Ok(entry.map(|t| t.into()));
             }
         }
-        log::trace!("read of most recent target timestamps finished with no entry found");
+        tracing::trace!("read of most recent target timestamps finished with no entry found");
         Ok(None)
     }
 
     /// Reads the entry timestamp of the most recent log (of any type)
     async fn read_most_recent_entry_timestamp(&self) -> Result<Option<Timestamp>> {
-        log::trace!("beginning read of most recent entry timestamps");
+        tracing::trace!("beginning read of most recent entry timestamps");
         let inner = self.inner.read().await;
         let output_dir = inner.output_dir.as_ref().context("stream not setup")?;
 
@@ -814,16 +816,16 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer<'_> {
                 .last()
                 .await;
             if entry.is_some() {
-                log::trace!("read of most recent entry timestamps finished with entry found");
+                tracing::trace!("read of most recent entry timestamps finished with entry found");
                 return Ok(entry);
             }
         }
-        log::trace!("read of most recent entry timestamps finished with no entry found");
+        tracing::trace!("read of most recent entry timestamps finished with no entry found");
         Ok(None)
     }
 
     async fn clean_sessions_for_target(&self) -> Result<()> {
-        log::trace!("beginning to clean sessions for target.");
+        tracing::trace!("beginning to clean sessions for target.");
         let inner = self.inner.read().await;
         let result = inner
             .output_dir
@@ -832,7 +834,7 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer<'_> {
             .parent()
             .clean_sessions(inner.max_num_sessions)
             .await;
-        log::trace!("clean sessions for target finished.");
+        tracing::trace!("clean sessions for target finished.");
         result
     }
 
@@ -905,7 +907,7 @@ impl DiagnosticsStreamer<'_> {
         &self,
         inner: RwLockWriteGuard<'_, DiagnosticsStreamerInner<'a>>,
     ) -> Result<()> {
-        log::trace!("beginning logger clean up run");
+        tracing::trace!("beginning logger clean up run");
         let output_dir = inner.output_dir.as_ref().context("no stream setup")?;
         let mut entries = output_dir.sort_entries().await?;
 
@@ -915,11 +917,11 @@ impl DiagnosticsStreamer<'_> {
             && (entries.len() - 1) * inner.max_file_size_bytes > inner.max_session_size_bytes
         {
             let to_remove = entries.first_mut().unwrap();
-            log::info!("logger: garbage collecting log file: {:?}", to_remove);
+            tracing::info!("logger: garbage collecting log file: {:?}", to_remove);
             to_remove.remove().await.context(format!("removing log dir {:?}", to_remove))?;
         }
 
-        log::trace!("logger cleanup run finished.");
+        tracing::trace!("logger cleanup run finished.");
         Ok(())
     }
 }

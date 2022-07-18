@@ -53,7 +53,7 @@ pub trait SerializingEngine: Serialize {
         // Create the engine.json file to hold the serialized data, and write it out to disk,
         let file = File::create(&filepath)
             .context(format!("Unable to create file {:?} for serialization", filepath))?;
-        log::debug!("Writing serialized engine out to {:?}", filepath);
+        tracing::debug!("Writing serialized engine out to {:?}", filepath);
         match serde_json::to_writer(file, self) {
             Ok(_) => Ok(()),
             Err(e) => Err(anyhow!(e)),

@@ -18,7 +18,7 @@ pub async fn off(admin_proxy: AdminProxy, _cmd: OffCommand) -> Result<()> {
         Ok(Err(e)) => bail!(e),
         Err(e) => match e {
             FidlError::ClientChannelClosed { .. } => {
-                log::info!(
+                tracing::info!(
                     "Off returned a client channel closed - assuming power down succeeded: {:?}",
                     e
                 );

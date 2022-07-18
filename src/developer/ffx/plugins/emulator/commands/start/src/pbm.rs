@@ -203,7 +203,7 @@ fn parse_host_port_maps(
             }
             let mut mapping = mapping.unwrap();
             if mapping.host.is_some() {
-                log::warn!(
+                tracing::warn!(
                     "Command line attempts to set the '{}' port more than once. This may \
                     lead to unexpected behavior. The previous entry will be discarded.",
                     name
@@ -239,7 +239,7 @@ fn finalize_port_mapping(emu_config: &mut EmulatorConfiguration) -> Result<()> {
                 bail!("Host port {} was mapped to multiple guest ports.", value);
             }
         } else {
-            log::warn!(
+            tracing::warn!(
                 "No host-side port specified for '{:?}', a host port will be dynamically \
                 assigned. Check `ffx emu show {}` to see which port is assigned.",
                 name,

@@ -72,7 +72,11 @@ impl DaemonEventHandler {
         let rcs = match RcsConnection::new(&mut NodeId { id: node_id }) {
             Ok(rcs) => rcs,
             Err(e) => {
-                log::error!("Target from Overnet {} failed to connect to RCS: {:?}", node_id, e);
+                tracing::error!(
+                    "Target from Overnet {} failed to connect to RCS: {:?}",
+                    node_id,
+                    e
+                );
                 return;
             }
         };
@@ -80,12 +84,16 @@ impl DaemonEventHandler {
         let target = match Target::from_rcs_connection(rcs).await {
             Ok(target) => target,
             Err(err) => {
-                log::error!("Target from Overnet {} could not be identified: {:?}", node_id, err);
+                tracing::error!(
+                    "Target from Overnet {} could not be identified: {:?}",
+                    node_id,
+                    err
+                );
                 return;
             }
         };
 
-        log::trace!("Target from Overnet {} is {}", node_id, target.nodename_str());
+        tracing::trace!("Target from Overnet {} is {}", node_id, target.nodename_str());
         let target = self.target_collection.merge_insert(target);
         target.run_logger();
     }
@@ -103,7 +111,7 @@ impl DaemonEventHandler {
     }
 
     fn handle_fastboot(&self, t: TargetInfo) {
-        log::trace!(
+        tracing::trace!(
             "Found new target via fastboot: {}",
             t.nodename.clone().unwrap_or("<unknown>".to_string())
         );
@@ -117,7 +125,7 @@ impl DaemonEventHandler {
     }
 
     async fn handle_zedboot(&self, t: TargetInfo) {
-        log::trace!(
+        tracing::trace!(
             "Found new target via zedboot: {}",
             t.nodename.clone().unwrap_or("<unknown>".to_string())
         );
@@ -228,12 +236,12 @@ impl DaemonProtocolProvider for Daemon {
 #[async_trait(?Send)]
 impl EventHandler<DaemonEvent> for DaemonEventHandler {
     async fn on_event(&self, event: DaemonEvent) -> Result<events::Status> {
-        log::info!("! DaemonEvent::{:?}", event);
+        tracing::info!("! DaemonEvent::{:?}", event);
 
         match event {
             DaemonEvent::WireTraffic(traffic) => match traffic {
                 WireTrafficType::Mdns(t) => {
-                    log::warn!("mdns traffic fired in daemon. This is deprecated: {:?}", t);
+                    tracing::warn!("mdns traffic fired in daemon. This is deprecated: {:?}", t);
                 }
                 WireTrafficType::Fastboot(t) => {
                     self.handle_fastboot(t);
@@ -320,7 +328,7 @@ impl Daemon {
             version_info.commit_timestamp.map(|t| t.to_string()).unwrap_or("<unknown>".to_owned());
         let build_version = version_info.build_version.as_deref().unwrap_or("<unknown>");
 
-        log::info!(
+        tracing::info!(
             "Beginning daemon startup\nBuild Version: {}\nCommit Timestamp: {}\nCommit Hash: {}\nBinary Hash: {}\nPID: {}",
             build_version,
             commit_timestamp,
@@ -383,7 +391,7 @@ impl Daemon {
 
     async fn start_ascendd(&mut self) -> Result<()> {
         // Start the ascendd socket only after we have registered our protocols.
-        log::info!("Starting ascendd");
+        tracing::info!("Starting ascendd");
 
         let ascendd = Ascendd::new(
             ascendd::Opt { sockpath: Some(get_socket().await), ..Default::default() },
@@ -451,7 +459,7 @@ impl Daemon {
             .try_for_each_concurrent_while_connected(None, |r| async {
                 let debug_req_string = format!("{:?}", r);
                 if let Err(e) = self.handle_request(r).await {
-                    log::error!("error while handling request `{}`: {}", debug_req_string, e);
+                    tracing::error!("error while handling request `{}`: {}", debug_req_string, e);
                 }
                 Ok(())
             })
@@ -466,7 +474,7 @@ impl Daemon {
                 let svc = match hoist().connect_as_service_consumer() {
                     Ok(svc) => svc,
                     Err(err) => {
-                        log::info!("Overnet setup failed: {}, will retry in 1s", err);
+                        tracing::info!("Overnet setup failed: {}, will retry in 1s", err);
                         Timer::new(Duration::from_secs(1)).await;
                         continue;
                     }
@@ -478,7 +486,7 @@ impl Daemon {
                                 Self::handle_overnet_peers(&queue, known_peers, new_peers);
                         }
                         Err(err) => {
-                            log::info!("Overnet peer discovery failed: {}, will retry", err);
+                            tracing::info!("Overnet peer discovery failed: {}, will retry", err);
                             Timer::new(Duration::from_secs(1)).await;
                             // break out of the peer discovery loop on error in
                             // order to reconnect, in case the error causes the
@@ -512,7 +520,7 @@ impl Daemon {
                 .unwrap_or(false);
             if peer_has_rcs {
                 queue.push(DaemonEvent::OvernetPeer(peer.id.id)).unwrap_or_else(|err| {
-                    log::warn!(
+                    tracing::warn!(
                         "Overnet discovery failed to enqueue event {:?}: {}",
                         DaemonEvent::OvernetPeer(peer.id.id),
                         err
@@ -524,7 +532,7 @@ impl Daemon {
         for peer in known_peers.difference(&new_peers) {
             let peer = &peer.0;
             queue.push(DaemonEvent::OvernetPeerLost(peer.id.id)).unwrap_or_else(|err| {
-                log::warn!(
+                tracing::warn!(
                     "Overnet discovery failed to enqueue event {:?}: {}",
                     DaemonEvent::OvernetPeerLost(peer.id.id),
                     err
@@ -536,15 +544,15 @@ impl Daemon {
     }
 
     async fn handle_request(&self, req: DaemonRequest) -> Result<()> {
-        log::debug!("daemon received request: {:?}", req);
+        tracing::debug!("daemon received request: {:?}", req);
 
         match req {
             DaemonRequest::Quit { responder } => {
-                log::info!("Received quit request.");
+                tracing::info!("Received quit request.");
 
                 match std::fs::remove_file(get_socket().await) {
                     Ok(()) => {}
-                    Err(e) => log::error!("failed to remove socket file: {}", e),
+                    Err(e) => tracing::error!("failed to remove socket file: {}", e),
                 }
 
                 if cfg!(test) {
@@ -554,7 +562,9 @@ impl Daemon {
                 self.protocol_register
                     .shutdown(protocols::Context::new(self.clone()))
                     .await
-                    .unwrap_or_else(|e| log::error!("shutting down protocol register: {:?}", e));
+                    .unwrap_or_else(|e| {
+                        tracing::error!("shutting down protocol register: {:?}", e)
+                    });
 
                 add_daemon_metrics_event("quit").await;
 
@@ -601,7 +611,7 @@ impl Daemon {
                 {
                     Ok(()) => responder.send(&mut Ok(())).context("fidl response")?,
                     Err(e) => {
-                        log::error!("{}", e);
+                        tracing::error!("{}", e);
                         match e {
                             ProtocolError::NoProtocolFound(_) => {
                                 responder.send(&mut Err(DaemonError::ProtocolNotFound))?
@@ -631,17 +641,17 @@ impl Daemon {
         let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
         let mut stream = ServiceProviderRequestStream::from_channel(chan);
 
-        log::info!("Starting daemon overnet server");
+        tracing::info!("Starting daemon overnet server");
         hoist::hoist().publish_service(DaemonMarker::PROTOCOL_NAME, ClientEnd::new(p))?;
 
-        log::info!("Starting daemon serve loop");
+        tracing::info!("Starting daemon serve loop");
         while let Some(ServiceProviderRequest::ConnectToService {
             chan,
             info: _,
             control_handle: _control_handle,
         }) = stream.try_next().await.context("error running protocol provider server")?
         {
-            log::trace!("Received protocol request for protocol");
+            tracing::trace!("Received protocol request for protocol");
             let chan =
                 fidl::AsyncChannel::from_channel(chan).context("failed to make async channel")?;
             let daemon_clone = self.clone();

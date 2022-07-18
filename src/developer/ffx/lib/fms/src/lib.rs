@@ -76,7 +76,7 @@ impl Entries {
             let file = File::open(&path).with_context(|| format!("opening {:?}", path))?;
             let mut buf_reader = BufReader::new(file);
             self.add_json(&mut buf_reader)
-                .map_err(|e| log::warn!("unable to parse {:?} {:?}", path, e))
+                .map_err(|e| tracing::warn!("unable to parse {:?} {:?}", path, e))
                 .ok();
         }
         Ok(())

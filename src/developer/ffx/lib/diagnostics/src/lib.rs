@@ -70,7 +70,7 @@ pub async fn run_diagnostics_streaming(
                         }
                     }
                     Some(Err(e)) => {
-                        log::warn!("got error streaming diagnostics: {}", e);
+                        tracing::warn!("got error streaming diagnostics: {}", e);
                         responder.send(&mut Err(ArchiveIteratorError::DataReadFailed))?;
                     }
                     None => {
@@ -99,7 +99,7 @@ pub async fn get_streaming_min_timestamp(
         }
         Some(TimeBound::Monotonic(t)) => Some(Timestamp::from(*t as i64)),
         Some(bound) => {
-            log::error!("Got unexpected TimeBound field {:?}", bound);
+            tracing::error!("Got unexpected TimeBound field {:?}", bound);
             return Err(DiagnosticsStreamError::GenericError);
         }
         None => parameters.min_target_timestamp_nanos.map(|t| Timestamp::from(t as i64)),

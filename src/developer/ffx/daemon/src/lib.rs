@@ -114,7 +114,7 @@ pub async fn spawn_daemon() -> Result<()> {
     let mut ffx_path = env::current_exe()?;
     // when we daemonize, our path will change to /, so get the canonical path before that occurs.
     ffx_path = std::fs::canonicalize(ffx_path)?;
-    log::info!("Starting new ffx background daemon from {:?}", &ffx_path);
+    tracing::info!("Starting new ffx background daemon from {:?}", &ffx_path);
 
     let ffx: Ffx = argh::from_env();
     let mut stdout = Stdio::null();
@@ -161,11 +161,11 @@ pub fn is_daemon_running_at_path(path: String) -> bool {
     match std::fs::metadata(&path) {
         Ok(_) => {}
         Err(ref e) if e.kind() == std::io::ErrorKind::NotFound => {
-            log::info!("no daemon found at {}", &path);
+            tracing::info!("no daemon found at {}", &path);
             return false;
         }
         Err(e) => {
-            log::info!("error stating {}: {}", &path, e);
+            tracing::info!("error stating {}: {}", &path, e);
             // speculatively carry on
         }
     }
@@ -173,16 +173,16 @@ pub fn is_daemon_running_at_path(path: String) -> bool {
     match std::os::unix::net::UnixStream::connect(&path) {
         Ok(sock) => match sock.peer_addr() {
             Ok(_) => {
-                log::info!("found running daemon at {}", &path);
+                tracing::info!("found running daemon at {}", &path);
                 true
             }
             Err(err) => {
-                log::info!("found daemon socket at {} but could not see peer: {}", &path, err);
+                tracing::info!("found daemon socket at {} but could not see peer: {}", &path, err);
                 false
             }
         },
         Err(err) => {
-            log::info!("failed to connect to daemon at {}: {}", &path, err);
+            tracing::info!("failed to connect to daemon at {}: {}", &path, err);
             false
         }
     }

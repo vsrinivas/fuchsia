@@ -25,11 +25,11 @@ if (is_host) {
       "//src/lib/diagnostics/selectors",
       "//src/lib/fidl/rust/fidl",
       "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:log",
       "//third_party/rust_crates:nix",
       "//third_party/rust_crates:serial_test",
       "//third_party/rust_crates:shared_child",
       "//third_party/rust_crates:signal-hook",
+      "//third_party/rust_crates:tracing",
     ]
     test_deps = [
       "//src/lib/fuchsia-async",

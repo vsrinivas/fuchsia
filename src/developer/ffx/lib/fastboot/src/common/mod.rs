@@ -112,7 +112,7 @@ pub const UNLOCK_ERR: &str = "The product requires the target to be unlocked. \
                                      Please unlock target and try again.";
 
 pub fn map_fidl_error(e: FidlError) -> Error {
-    log::error!("FIDL Communication error: {}", e);
+    tracing::error!("FIDL Communication error: {}", e);
     anyhow!(
         "There was an error communcation with the daemon:\n{}\n\
         Try running `ffx doctor` for further diagnositcs.",
@@ -146,7 +146,7 @@ async fn handle_upload_progress_for_upload<W: Write>(
         match stream.try_next().await? {
             Some(UploadProgressListenerRequest::OnStarted { size, .. }) => {
                 start_time.replace(Utc::now());
-                log::debug!("Upload started: {}", size);
+                tracing::debug!("Upload started: {}", size);
                 write!(writer, "Uploading... ")?;
                 if size > (1 << 24) {
                     on_large();
@@ -157,7 +157,7 @@ async fn handle_upload_progress_for_upload<W: Write>(
             Some(UploadProgressListenerRequest::OnFinished { .. }) => {
                 if let Some(st) = start_time {
                     let d = Utc::now().signed_duration_since(st);
-                    log::debug!("Upload duration: {:.2}s", (d.num_milliseconds() / 1000));
+                    tracing::debug!("Upload duration: {:.2}s", (d.num_milliseconds() / 1000));
                     done_time(writer, d)?;
                 } else {
                     // Write done without the time .
@@ -166,14 +166,14 @@ async fn handle_upload_progress_for_upload<W: Write>(
                 }
                 on_finished(writer)?;
                 finish_time.replace(Utc::now());
-                log::debug!("Upload finished");
+                tracing::debug!("Upload finished");
             }
             Some(UploadProgressListenerRequest::OnError { error, .. }) => {
-                log::error!("{}", error);
+                tracing::error!("{}", error);
                 ffx_bail!("{}", error)
             }
             Some(UploadProgressListenerRequest::OnProgress { bytes_written, .. }) => {
-                log::debug!("Upload progress: {}", bytes_written);
+                tracing::debug!("Upload progress: {}", bytes_written);
             }
             None => return Ok(finish_time),
         }
@@ -253,7 +253,7 @@ pub async fn flash_partition<W: Write, F: FileResolver + Sync>(
     .and_then(|(flash, prog)| {
         if let Some(p) = prog {
             let d = Utc::now().signed_duration_since(p);
-            log::debug!("Partition duration: {:.2}s", (d.num_milliseconds() / 1000));
+            tracing::debug!("Partition duration: {:.2}s", (d.num_milliseconds() / 1000));
             done_time(writer, d)?;
         } else {
             // Write a line break otherwise
@@ -319,7 +319,7 @@ pub async fn reboot_bootloader<W: Write>(
     })
     .and_then(|(reboot, _)| {
         let d = Utc::now().signed_duration_since(start_time);
-        log::debug!("Reboot duration: {:.2}s", (d.num_milliseconds() / 1000));
+        tracing::debug!("Reboot duration: {:.2}s", (d.num_milliseconds() / 1000));
         done_time(writer, d)?;
         reboot.or_else(map_reboot_error)
     })
@@ -374,7 +374,7 @@ pub async fn prepare<W: Write>(writer: &mut W, fastboot_proxy: &FastbootProxy) -
     .and_then(|(prepare, _)| {
         if let Some(s) = start_time {
             let d = Utc::now().signed_duration_since(s);
-            log::debug!("Reboot duration: {:.2}s", (d.num_milliseconds() / 1000));
+            tracing::debug!("Reboot duration: {:.2}s", (d.num_milliseconds() / 1000));
             done_time(writer, d)?;
         }
         prepare.or_else(map_reboot_error)
@@ -508,7 +508,7 @@ where
 
 pub async fn finish<W: Write>(writer: &mut W, fastboot_proxy: &FastbootProxy) -> Result<()> {
     if fastboot_proxy.erase("misc").await?.is_err() {
-        log::debug!("Could not erase misc partition");
+        tracing::debug!("Could not erase misc partition");
     }
     fastboot_proxy.set_active("a").await?.map_err(|_| anyhow!("Could not set active slot"))?;
     fastboot_proxy.continue_boot().await?.map_err(|_| anyhow!("Could not reboot device"))?;

@@ -134,7 +134,7 @@ impl TargetCollection {
 
         let to_update = self.find_matching_target(&new_target);
 
-        log::trace!("Merging target {:?} into {:?}", new_target, to_update);
+        tracing::trace!("Merging target {:?} into {:?}", new_target, to_update);
 
         // Do not merge unscoped link-local addresses into the target
         // collection, as they are not routable and therefore not safe
@@ -168,12 +168,14 @@ impl TargetCollection {
             to_update.update_connection_state(|_| new_target.get_connection_state());
 
             to_update.events.push(TargetEvent::Rediscovered).unwrap_or_else(|err| {
-                log::warn!("unable to enqueue rediscovered event: {:#}", err)
+                tracing::warn!("unable to enqueue rediscovered event: {:#}", err)
             });
             if let Some(event_queue) = self.events.borrow().as_ref() {
                 event_queue
                     .push(DaemonEvent::UpdatedTarget(new_target.target_info()))
-                    .unwrap_or_else(|e| log::warn!("unalbe to push target update event: {}", e));
+                    .unwrap_or_else(|e| {
+                        tracing::warn!("unalbe to push target update event: {}", e)
+                    });
             }
             to_update
         } else {
@@ -182,7 +184,7 @@ impl TargetCollection {
             if let Some(event_queue) = self.events.borrow().as_ref() {
                 event_queue
                     .push(DaemonEvent::NewTarget(new_target.target_info()))
-                    .unwrap_or_else(|e| log::warn!("unable to push new target event: {}", e));
+                    .unwrap_or_else(|e| tracing::warn!("unable to push new target event: {}", e));
             }
 
             new_target
@@ -232,7 +234,7 @@ impl TargetCollection {
             })
             .await
             .map_err(|e| {
-                log::warn!("{}", e);
+                tracing::warn!("{}", e);
                 DaemonError::TargetCacheError
             })?;
 
@@ -351,7 +353,7 @@ impl From<String> for TargetQuery {
         let (addr, scope, port) = match netext::parse_address_parts(s.as_str()) {
             Ok(r) => r,
             Err(e) => {
-                log::trace!("Failed to parse address. Interpreting as nodename: {:?}", e);
+                tracing::trace!("Failed to parse address. Interpreting as nodename: {:?}", e);
                 return Self::NodenameOrSerial(s);
             }
         };

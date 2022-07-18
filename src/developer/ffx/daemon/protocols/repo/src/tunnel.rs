@@ -44,11 +44,11 @@ impl TunnelManager {
             }
         }
 
-        log::info!("creating repository tunnel for target {:?}", target_nodename);
+        tracing::info!("creating repository tunnel for target {:?}", target_nodename);
 
         let tunnel_stream = create_tunnel_stream(cx, &target_nodename, self.tunnel_addr).await?;
 
-        log::info!("created repository tunnel for target {:?}", target_nodename);
+        tracing::info!("created repository tunnel for target {:?}", target_nodename);
 
         let target_nodename_task = target_nodename.clone();
         let tunnels_task = Arc::clone(&self.tunnels);
@@ -87,7 +87,7 @@ async fn create_tunnel_stream(
     let rc = cx.open_remote_control(Some(target_nodename.to_string())).await?;
 
     for attempt in 0..TUNNEL_CONNECT_ATTEMPTS {
-        log::debug!(
+        tracing::debug!(
             "attempt {} to create repository tunnel for target {:?}",
             attempt + 1,
             target_nodename
@@ -104,7 +104,10 @@ async fn create_tunnel_stream(
                 return Ok(tunnel_stream);
             }
             Err(rcs::TunnelError::ConnectFailed) => {
-                log::warn!("failed to bind repository tunnel port on target {:?}", target_nodename);
+                tracing::warn!(
+                    "failed to bind repository tunnel port on target {:?}",
+                    target_nodename
+                );
 
                 // Another process is using the port. Sleep and retry.
                 fasync::Timer::new(TUNNEL_CONNECT_RETRY_TIMEOUT).await;
@@ -131,7 +134,11 @@ async fn run_tunnel_protocol(
         .map(|request| match request {
             Ok(rcs::ForwardCallbackRequest::Forward { socket, addr, .. }) => {
                 let addr = SocketAddressExt::from(addr);
-                log::info!("tunneling connection from target {:?} to {}", target_nodename, addr);
+                tracing::info!(
+                    "tunneling connection from target {:?} to {}",
+                    target_nodename,
+                    addr
+                );
 
                 Ok(fasync::Socket::from_socket(socket)
                     .map(|socket| ConnectionStream::Socket(socket))
@@ -144,10 +151,10 @@ async fn run_tunnel_protocol(
 
     match result {
         Ok(()) => {
-            log::info!("closed repository tunnel stream from target {:?}", target_nodename);
+            tracing::info!("closed repository tunnel stream from target {:?}", target_nodename);
         }
         Err(err) => {
-            log::error!("error forwarding tunnel from target {:?}: {}", target_nodename, err);
+            tracing::error!("error forwarding tunnel from target {:?}: {}", target_nodename, err);
         }
     }
 }

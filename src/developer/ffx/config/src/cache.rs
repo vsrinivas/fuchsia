@@ -152,7 +152,7 @@ fn init_impl(runtime: &[String], runtime_overrides: Option<String>, env: PathBuf
     *RUNTIME.lock().expect("Poisoned lock") = populated_runtime;
 
     if !env.is_file() {
-        log::debug!("initializing environment {}", env.display());
+        tracing::debug!("initializing environment {}", env.display());
         Environment::init_env_file(&env)?;
     }
     ENV_FILE.lock().unwrap().replace(env);
@@ -203,7 +203,7 @@ async fn load_config_with_instant(
                     let env = match Environment::load(&env_path) {
                         Ok(env) => env,
                         Err(err) => {
-                            log::error!(
+                            tracing::error!(
                                 "failed to load environment, reverting to default: {}",
                                 err
                             );

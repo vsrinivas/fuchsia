@@ -11,7 +11,7 @@ use ffx_net_test_realm_args as ntr_args;
 use fidl_fuchsia_developer_remotecontrol as fremotecontrol;
 use fidl_fuchsia_net_ext as fnet_ext;
 use fidl_fuchsia_net_test_realm as fntr;
-use log::error;
+use tracing::error;
 
 const NET_TEST_REALM_CONTROLLER_SELECTOR_SUFFIX: &str = ":expose:fuchsia.net.test.realm.Controller";
 

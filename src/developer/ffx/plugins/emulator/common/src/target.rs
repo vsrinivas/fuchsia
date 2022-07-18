@@ -33,7 +33,7 @@ pub async fn add_target(proxy: &ffx::TargetCollectionProxy, ssh_port: u16) -> Re
     });
 
     proxy.add_ephemeral_target(&mut addr, TARGET_LIFETIME.as_secs()).await?;
-    log::debug!("[emulator] Added target {:?}", &addr);
+    tracing::debug!("[emulator] Added target {:?}", &addr);
     Ok(())
 }
 
@@ -42,9 +42,9 @@ pub async fn add_target(proxy: &ffx::TargetCollectionProxy, ssh_port: u16) -> Re
 /// logs a warning.
 pub async fn remove_target(proxy: &ffx::TargetCollectionProxy, target_id: &str) -> Result<()> {
     if proxy.remove_target(target_id).await? {
-        log::debug!("[emulator] Removed target {:?}", target_id);
+        tracing::debug!("[emulator] Removed target {:?}", target_id);
     } else {
-        log::warn!("[emulator] No matching target found for {:?}", target_id);
+        tracing::warn!("[emulator] No matching target found for {:?}", target_id);
     }
     Ok(())
 }

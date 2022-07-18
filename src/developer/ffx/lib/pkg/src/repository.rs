@@ -463,7 +463,7 @@ impl Repository {
                 match self.get_components_for_package(&trusted_targets, &package).await {
                     Ok(components) => package.entries = components,
                     Err(e) => {
-                        log::error!(
+                        tracing::error!(
                             "failed to get components for package '{}': {}",
                             package.name.as_ref().unwrap_or(&String::from("<unknown>")),
                             e
@@ -576,7 +576,7 @@ impl Repository {
                 }
             }
             Err(e) => {
-                log::warn!("failed to read meta/contents for package {}: {}", package_name, e);
+                tracing::warn!("failed to read meta/contents for package {}: {}", package_name, e);
             }
         }
 

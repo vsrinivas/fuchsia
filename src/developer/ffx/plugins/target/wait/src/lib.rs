@@ -25,7 +25,7 @@ pub async fn wait_for_device(
         loop {
             if knock_target(&ffx, &target_collection)
                 .await
-                .map_err(|e| log::debug!("failed to knock target: {:?}", e))
+                .map_err(|e| tracing::debug!("failed to knock target: {:?}", e))
                 .is_ok()
             {
                 return;

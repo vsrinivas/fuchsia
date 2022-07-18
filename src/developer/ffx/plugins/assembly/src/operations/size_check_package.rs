@@ -335,7 +335,7 @@ fn count_blobs(
     // If a builder is provided, attempts to build blobfs and complete the blobs database.
     if !incomplete_packages.is_empty() {
         let blobs = blobfs_builder.build(&incomplete_packages).unwrap_or_else(|e| {
-            log::warn!("Failed to build the blobfs: {}", e);
+            tracing::warn!("Failed to build the blobfs: {}", e);
             Vec::default()
         });
         index_blobs_by_hash(&blobs, &mut blob_count_by_hash)?;

@@ -108,7 +108,7 @@ impl InterfaceFactory<Interface> for UsbFactory {
                 let mut in_use = SERIALS_IN_USE.lock().await;
                 let _ = in_use.insert(s.clone());
                 self.serial.replace(s.clone());
-                log::debug!("serial now in use: {}", s);
+                tracing::debug!("serial now in use: {}", s);
                 Ok(iface)
             }
             None => bail!("Could not open usb interface for target: {:?}", target),
@@ -118,7 +118,7 @@ impl InterfaceFactory<Interface> for UsbFactory {
     async fn close(&self) {
         let mut in_use = SERIALS_IN_USE.lock().await;
         if let Some(s) = &self.serial {
-            log::debug!("dropping in use serial: {}", s);
+            tracing::debug!("dropping in use serial: {}", s);
             let _ = in_use.remove(s);
         }
     }
@@ -259,7 +259,7 @@ pub async fn find_devices() -> Vec<FastbootDevice> {
                     }
                 }
             }
-            Err(e) => log::error!("error opening usb interface: {}", e),
+            Err(e) => tracing::error!("error opening usb interface: {}", e),
         }
     }
     products
@@ -301,10 +301,10 @@ pub async fn stage<T: AsyncRead + AsyncWrite + Unpin>(
     listener: &UploadProgressListener,
 ) -> Result<()> {
     let bytes = read(file)?;
-    log::debug!("uploading file size: {}", bytes.len());
+    tracing::debug!("uploading file size: {}", bytes.len());
     match upload(&bytes[..], interface, listener).await.context(format!("uploading {}", file))? {
         Reply::Okay(s) => {
-            log::debug!("Received response from download command: {}", s);
+            tracing::debug!("Received response from download command: {}", s);
             Ok(())
         }
         Reply::Fail(s) => bail!("Failed to upload {}: {}", file, s),
@@ -322,7 +322,7 @@ pub async fn flash<T: AsyncRead + AsyncWrite + Unpin>(
     let upload_reply =
         upload(&bytes[..], interface, listener).await.context(format!("uploading {}", file))?;
     match upload_reply {
-        Reply::Okay(s) => log::debug!("Received response from download command: {}", s),
+        Reply::Okay(s) => tracing::debug!("Received response from download command: {}", s),
         Reply::Fail(s) => bail!("Failed to upload {}: {}", file, s),
         _ => bail!("Unexpected reply from fastboot device for download: {:?}", upload_reply),
     };
@@ -332,7 +332,7 @@ pub async fn flash<T: AsyncRead + AsyncWrite + Unpin>(
     let megabytes = (bytes.len() / 1000000) as i64;
     let mut timeout = megabytes / timeout_rate;
     timeout = std::cmp::max(timeout, min_timeout);
-    log::debug!("Estimated timeout: {}s for {}MB", timeout, megabytes);
+    tracing::debug!("Estimated timeout: {}s for {}MB", timeout, megabytes);
     let send_reply =
         send_with_timeout(Command::Flash(name.to_string()), interface, Duration::seconds(timeout))
             .await
@@ -371,7 +371,7 @@ pub async fn erase<T: AsyncRead + AsyncWrite + Unpin>(
     let reply = send(Command::Erase(name.to_string()), interface).await.context("sending erase")?;
     match reply {
         Reply::Okay(_) => {
-            log::debug!("Successfully erased parition: {}", name);
+            tracing::debug!("Successfully erased parition: {}", name);
             Ok(())
         }
         Reply::Fail(s) => bail!("Failed to erase \"{}\": {}", name, s),
@@ -383,7 +383,7 @@ pub async fn boot<T: AsyncRead + AsyncWrite + Unpin>(interface: &mut T) -> Resul
     let reply = send(Command::Boot, interface).await.context("sending boot")?;
     match reply {
         Reply::Okay(_) => {
-            log::debug!("Successfully sent boot");
+            tracing::debug!("Successfully sent boot");
             Ok(())
         }
         Reply::Fail(s) => bail!("Failed to boot: {}", s),
@@ -395,7 +395,7 @@ pub async fn reboot<T: AsyncRead + AsyncWrite + Unpin>(interface: &mut T) -> Res
     let reply = send(Command::Reboot, interface).await.context("sending reboot")?;
     match reply {
         Reply::Okay(_) => {
-            log::debug!("Successfully sent reboot");
+            tracing::debug!("Successfully sent reboot");
             Ok(())
         }
         Reply::Fail(s) => bail!("Failed to reboot: {}", s),
@@ -406,7 +406,7 @@ pub async fn reboot<T: AsyncRead + AsyncWrite + Unpin>(interface: &mut T) -> Res
 pub async fn reboot_bootloader<T: AsyncRead + AsyncWrite + Unpin>(interface: &mut T) -> Result<()> {
     match send(Command::RebootBootLoader, interface).await.context("sending reboot bootloader")? {
         Reply::Okay(_) => {
-            log::debug!("Successfully sent reboot bootloader");
+            tracing::debug!("Successfully sent reboot bootloader");
             Ok(())
         }
         Reply::Fail(s) => bail!("Failed to reboot to bootloader: {}", s),
@@ -417,7 +417,7 @@ pub async fn reboot_bootloader<T: AsyncRead + AsyncWrite + Unpin>(interface: &mu
 pub async fn continue_boot<T: AsyncRead + AsyncWrite + Unpin>(interface: &mut T) -> Result<()> {
     match send(Command::Continue, interface).await.context("sending continue")? {
         Reply::Okay(_) => {
-            log::debug!("Successfully sent continue");
+            tracing::debug!("Successfully sent continue");
             Ok(())
         }
         Reply::Fail(s) => bail!("Failed to continue: {}", s),
@@ -434,7 +434,7 @@ pub async fn set_active<T: AsyncRead + AsyncWrite + Unpin>(
         .context("sending set_active")?
     {
         Reply::Okay(_) => {
-            log::debug!("Successfully sent set_active");
+            tracing::debug!("Successfully sent set_active");
             Ok(())
         }
         Reply::Fail(s) => bail!("Failed to set_active: {}", s),
@@ -445,7 +445,7 @@ pub async fn set_active<T: AsyncRead + AsyncWrite + Unpin>(
 pub async fn oem<T: AsyncRead + AsyncWrite + Unpin>(interface: &mut T, cmd: &String) -> Result<()> {
     match send(Command::Oem(cmd.to_string()), interface).await.context("sending oem")? {
         Reply::Okay(_) => {
-            log::debug!("Successfully sent oem command \"{}\"", cmd);
+            tracing::debug!("Successfully sent oem command \"{}\"", cmd);
             Ok(())
         }
         Reply::Fail(s) => bail!("Failed to oem \"{}\": {}", cmd, s),
@@ -459,7 +459,7 @@ pub async fn get_staged<T: AsyncRead + AsyncWrite + Unpin>(
 ) -> Result<()> {
     match download(file, interface).await.context(format!("downloading to {}", file))? {
         Reply::Okay(_) => {
-            log::debug!("Successfully downloaded to \"{}\"", file);
+            tracing::debug!("Successfully downloaded to \"{}\"", file);
             Ok(())
         }
         Reply::Fail(s) => bail!("Failed to download: {}", s),

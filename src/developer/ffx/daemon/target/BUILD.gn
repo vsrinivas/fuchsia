@@ -49,11 +49,11 @@ rustc_library("lib") {
     "//third_party/rust_crates:futures-lite",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:socket2",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:tracing",
     "//third_party/rust_crates:tracing",
   ]
 

@@ -38,6 +38,6 @@ pub async fn report_preflight_analytics(action: &str) {
     if let Err(e) =
         add_custom_event(Some(ANALYTICS_CATEGORY), Some(action), None, custom_dimensions).await
     {
-        log::error!("Preflight analytics submission failed: {}", e);
+        tracing::error!("Preflight analytics submission failed: {}", e);
     }
 }

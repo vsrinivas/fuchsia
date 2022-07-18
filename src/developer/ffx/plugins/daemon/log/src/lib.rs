@@ -8,7 +8,6 @@ use {
     ffx_config::get,
     ffx_core::ffx_plugin,
     ffx_daemon_log_args::LogCommand,
-    log::error,
     notify::Watcher,
     std::{
         collections::VecDeque,
@@ -18,6 +17,7 @@ use {
         sync::{mpsc, Arc, Mutex},
         time::Duration,
     },
+    tracing::error,
 };
 
 #[ffx_plugin()]

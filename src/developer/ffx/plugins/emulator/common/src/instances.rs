@@ -24,10 +24,10 @@ pub async fn get_instance_dir(
     let path = PathBuf::from(root_dir).join(&instance_name);
     if !path.exists() {
         if create {
-            log::debug!("Creating {:?} for {}", path, instance_name);
+            tracing::debug!("Creating {:?} for {}", path, instance_name);
             create_dir_all(&path.as_path())?;
         } else {
-            log::debug!(
+            tracing::debug!(
                 "Path {} doesn't exist. Check the spelling of the instance name.",
                 instance_name
             );
@@ -40,7 +40,7 @@ pub async fn get_instance_dir(
 /// Fails if the directory can't be removed; returns Ok(()) if the directory doesn't exist.
 pub async fn clean_up_instance_dir(path: &PathBuf) -> Result<()> {
     if path.exists() {
-        log::debug!("Removing {:?} for {:?}", path, path.as_path().file_name().unwrap());
+        tracing::debug!("Removing {:?} for {:?}", path, path.as_path().file_name().unwrap());
         std::fs::remove_dir_all(&path.as_path()).context("Request to remove directory failed")
     } else {
         // It's already gone, so just return Ok(()).

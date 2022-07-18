@@ -12,9 +12,9 @@ use assembly_images_config::{Fvm, FvmFilesystem, FvmOutput, SparseFvm};
 use assembly_images_manifest::{Image, ImagesManifest};
 use assembly_minfs::MinFSBuilder;
 use assembly_tool::ToolProvider;
-use log::info;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use tracing::info;
 
 /// Constructs up-to four FVM files. Calling this function generates
 /// a default FVM, a sparse FVM, a sparse blob-only FVM, and optionally a FVM

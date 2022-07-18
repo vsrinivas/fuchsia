@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use log::warn;
 use serde::{Deserialize, Serialize};
 use std::{
     fs::{remove_file, File, OpenOptions},
@@ -10,6 +9,7 @@ use std::{
     path::{Path, PathBuf},
     time::{Duration, Instant},
 };
+use tracing::warn;
 
 /// Opens and controls a lockfile against a specific filename using create-only
 /// file modes, deleting the file on drop. Writes the current pid to the file

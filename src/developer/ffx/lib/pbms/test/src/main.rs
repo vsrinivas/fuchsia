@@ -122,12 +122,15 @@ async fn pb_get<W: Write + Sync>(
                     .map_err(RepositoryError::from)
                     .with_context(|| format!("registering repository {}", product_name))?;
 
-                log::info!("Created repository named '{}'", product_name);
+                tracing::info!("Created repository named '{}'", product_name);
             }
         }
     }
 
-    log::debug!("Total fx product-bundle get runtime {} seconds.", start.elapsed().as_secs_f32());
+    tracing::debug!(
+        "Total fx product-bundle get runtime {} seconds.",
+        start.elapsed().as_secs_f32()
+    );
     Ok(())
 }
 

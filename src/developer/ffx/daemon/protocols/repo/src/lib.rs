@@ -66,7 +66,7 @@ struct ServerInfo {
 
 impl ServerInfo {
     async fn new(listen_addr: SocketAddr, manager: Arc<RepositoryManager>) -> Result<Self> {
-        log::info!("Starting repository server on {}", listen_addr);
+        tracing::info!("Starting repository server on {}", listen_addr);
 
         let (server_fut, sink, server) =
             RepositoryServer::builder(listen_addr, Arc::clone(&manager))
@@ -74,7 +74,7 @@ impl ServerInfo {
                 .await
                 .context("starting repository server")?;
 
-        log::info!("Started repository server on {}", server.local_addr());
+        tracing::info!("Started repository server on {}", server.local_addr());
 
         // Spawn the server future in the background to process requests from clients.
         let task = fasync::Task::local(server_fut);
@@ -107,16 +107,16 @@ impl ServerState {
             ServerState::Running(server_info) => {
                 *self = ServerState::Stopped(server_info.listen_addr);
 
-                log::info!("Stopping the repository server");
+                tracing::info!("Stopping the repository server");
 
                 server_info.server.stop();
 
                 futures::select! {
                     () = server_info.task.fuse() => {
-                        log::info!("Stopped the repository server");
+                        tracing::info!("Stopped the repository server");
                     },
                     () = fasync::Timer::new(SHUTDOWN_TIMEOUT).fuse() => {
-                        log::error!("Timed out waiting for the repository server to shut down");
+                        tracing::error!("Timed out waiting for the repository server to shut down");
                     },
                 }
             }
@@ -200,12 +200,16 @@ async fn repo_spec_to_backend(
         RepositorySpec::Pm { path } => Ok(Box::new(PmRepository::new(path.into()))),
         RepositorySpec::Http { metadata_repo_url, blob_repo_url } => {
             let metadata_repo_url = Url::parse(metadata_repo_url.as_str()).map_err(|err| {
-                log::error!("Unable to parse metadata repo url {}: {:#}", metadata_repo_url, err);
+                tracing::error!(
+                    "Unable to parse metadata repo url {}: {:#}",
+                    metadata_repo_url,
+                    err
+                );
                 ffx::RepositoryError::InvalidUrl
             })?;
 
             let blob_repo_url = Url::parse(blob_repo_url.as_str()).map_err(|err| {
-                log::error!("Unable to parse blob repo url {}: {:#}", blob_repo_url, err);
+                tracing::error!("Unable to parse blob repo url {}: {:#}", blob_repo_url, err);
                 ffx::RepositoryError::InvalidUrl
             })?;
 
@@ -215,7 +219,7 @@ async fn repo_spec_to_backend(
         }
         RepositorySpec::Gcs { .. } => {
             // FIXME(fxbug.dev/98994): Implement support for daemon-side GCS repositories.
-            log::error!("Trying to register a GCS repository, but that's not supported yet");
+            tracing::error!("Trying to register a GCS repository, but that's not supported yet");
             Err(ffx::RepositoryError::UnknownRepositorySpec)
         }
     }
@@ -227,12 +231,12 @@ async fn add_repository(
     save_config: SaveConfig,
     inner: Arc<RwLock<RepoInner>>,
 ) -> Result<(), ffx::RepositoryError> {
-    log::info!("Adding repository {} {:?}", repo_name, repo_spec);
+    tracing::info!("Adding repository {} {:?}", repo_name, repo_spec);
 
     // Create the repository.
     let backend = repo_spec_to_backend(&repo_spec, &inner).await?;
     let repo = Repository::new(repo_name, backend).await.map_err(|err| {
-        log::error!("Unable to create repository: {:#?}", err);
+        tracing::error!("Unable to create repository: {:#?}", err);
 
         match err {
             repository::Error::Tuf(tuf::Error::ExpiredMetadata(_)) => {
@@ -245,7 +249,7 @@ async fn add_repository(
     if save_config == SaveConfig::Save {
         // Save the filesystem configuration.
         pkg::config::set_repository(repo_name, &repo_spec).await.map_err(|err| {
-            log::error!("Failed to save repository: {:#?}", err);
+            tracing::error!("Failed to save repository: {:#?}", err);
             ffx::RepositoryError::IoError
         })?;
     }
@@ -269,7 +273,7 @@ async fn register_target(
     save_config: SaveConfig,
     inner: Arc<RwLock<RepoInner>>,
 ) -> Result<(), ffx::RepositoryError> {
-    log::info!(
+    tracing::info!(
         "Registering repository {:?} for target {:?}",
         target_info.repo_name,
         target_info.target_identifier
@@ -288,7 +292,7 @@ async fn register_target(
             REPOSITORY_MANAGER_SELECTOR,
         ).fuse() => {
             res.map_err(|err| {
-                log::error!(
+                tracing::error!(
                     "failed to open target proxy with target name {:?}: {:#?}",
                     target_info.target_identifier,
                     err
@@ -297,20 +301,20 @@ async fn register_target(
             })?
         }
         _ = fasync::Timer::new(TARGET_CONNECT_TIMEOUT).fuse() => {
-            log::error!("Timed out connecting to target name {:?}", target_info.target_identifier);
+            tracing::error!("Timed out connecting to target name {:?}", target_info.target_identifier);
             return Err(ffx::RepositoryError::TargetCommunicationFailure);
         }
     };
 
     let target_nodename = target.nodename.ok_or_else(|| {
-        log::error!("target {:?} does not have a nodename", target_info.target_identifier);
+        tracing::error!("target {:?} does not have a nodename", target_info.target_identifier);
         ffx::RepositoryError::InternalError
     })?;
 
     let listen_addr = match inner.read().await.server.listen_addr() {
         Some(listen_addr) => listen_addr,
         None => {
-            log::error!("repository server is not running");
+            tracing::error!("repository server is not running");
             return Err(ffx::RepositoryError::ServerNotRunning);
         }
     };
@@ -322,7 +326,10 @@ async fn register_target(
     let (should_make_tunnel, repo_host) = create_repo_host(
         listen_addr,
         target.ssh_host_address.ok_or_else(|| {
-            log::error!("target {:?} does not have a host address", target_info.target_identifier);
+            tracing::error!(
+                "target {:?} does not have a host address",
+                target_info.target_identifier
+            );
             ffx::RepositoryError::InternalError
         })?,
     );
@@ -334,18 +341,18 @@ async fn register_target(
         )
         .await
         .map_err(|e| {
-            log::error!("failed to get config: {}", e);
+            tracing::error!("failed to get config: {}", e);
             return ffx::RepositoryError::RepositoryManagerError;
         })?;
 
     match proxy.add(config.into()).await {
         Ok(Ok(())) => {}
         Ok(Err(err)) => {
-            log::error!("failed to add config: {:#?}", Status::from_raw(err));
+            tracing::error!("failed to add config: {:#?}", Status::from_raw(err));
             return Err(ffx::RepositoryError::RepositoryManagerError);
         }
         Err(err) => {
-            log::error!("failed to add config: {:#?}", err);
+            tracing::error!("failed to add config: {:#?}", err);
             return Err(ffx::RepositoryError::TargetCommunicationFailure);
         }
     }
@@ -357,7 +364,7 @@ async fn register_target(
     if should_make_tunnel {
         // Start the tunnel to the device if one isn't running already.
         start_tunnel(&cx, &inner, &target_nodename).await.map_err(|err| {
-            log::error!("Failed to start tunnel to target {:?}: {:#}", target_nodename, err);
+            tracing::error!("Failed to start tunnel to target {:?}: {:#}", target_nodename, err);
             ffx::RepositoryError::TargetCommunicationFailure
         })?;
     }
@@ -367,7 +374,7 @@ async fn register_target(
         target_info.target_identifier = Some(target_nodename.clone());
 
         pkg::config::set_registration(&target_nodename, &target_info).await.map_err(|err| {
-            log::error!("Failed to save registration to config: {:#?}", err);
+            tracing::error!("Failed to save registration to config: {:#?}", err);
             ffx::RepositoryError::InternalError
         })?;
     }
@@ -422,7 +429,7 @@ fn aliases_to_rules(
         })
         .collect::<Result<Vec<_>, _>>()
         .map_err(|err| {
-            log::warn!("failed to construct rule: {:#?}", err);
+            tracing::warn!("failed to construct rule: {:#?}", err);
             ffx::RepositoryError::RewriteEngineError
         })?;
 
@@ -446,7 +453,7 @@ async fn create_aliases(
     {
         Ok(p) => p,
         Err(err) => {
-            log::warn!(
+            tracing::warn!(
                 "Failed to open Rewrite Engine target proxy with target name {:?}: {:#?}",
                 target_nodename,
                 err
@@ -476,7 +483,7 @@ async fn create_aliases(
     })
     .await
     .map_err(|err| {
-        log::warn!("failed to create transactions: {:#?}", err);
+        tracing::warn!("failed to create transactions: {:#?}", err);
         ffx::RepositoryError::RewriteEngineError
     })?;
 
@@ -509,7 +516,7 @@ impl RepoInner {
                 Ok(Some(local_addr))
             }
             Err(err) => {
-                log::error!("failed to start server: {:#?}", err);
+                tracing::error!("failed to start server: {:#?}", err);
                 metrics::server_failed_to_start_event(&err.to_string()).await;
                 Err(err)
             }
@@ -518,25 +525,25 @@ impl RepoInner {
 
     async fn start_server_warn(&mut self) {
         if let Err(err) = self.start_server().await {
-            log::error!("Failed to start repository server: {:#?}", err);
+            tracing::error!("Failed to start repository server: {:#?}", err);
         }
     }
 
     async fn stop_server(&mut self) {
-        log::info!("Stopping repository protocol");
+        tracing::info!("Stopping repository protocol");
 
         self.server.stop().await;
 
         // Drop all repositories.
         self.manager.clear();
 
-        log::info!("Repository protocol has been stopped");
+        tracing::info!("Repository protocol has been stopped");
     }
 }
 
 impl<T: EventHandlerProvider> Repo<T> {
     async fn remove_repository(&self, cx: &Context, repo_name: &str) -> bool {
-        log::info!("Removing repository {:?}", repo_name);
+        tracing::info!("Removing repository {:?}", repo_name);
 
         // First, remove any registrations for this repository.
         for (target_nodename, _) in pkg::config::get_repository_registrations(repo_name).await {
@@ -546,7 +553,7 @@ impl<T: EventHandlerProvider> Repo<T> {
             {
                 Ok(()) => {}
                 Err(err) => {
-                    log::warn!(
+                    tracing::warn!(
                         "failed to deregister repository {:?} from target {:?}: {:#?}",
                         repo_name,
                         target_nodename,
@@ -561,17 +568,17 @@ impl<T: EventHandlerProvider> Repo<T> {
         match pkg::config::get_default_repository().await {
             Ok(Some(default_repo_name)) if repo_name == default_repo_name => {
                 if let Err(err) = pkg::config::unset_default_repository().await {
-                    log::warn!("failed to remove default repository: {:#?}", err);
+                    tracing::warn!("failed to remove default repository: {:#?}", err);
                 }
             }
             Ok(_) => {}
             Err(err) => {
-                log::warn!("failed to determine default repository name: {:#?}", err);
+                tracing::warn!("failed to determine default repository name: {:#?}", err);
             }
         }
 
         if let Err(err) = pkg::config::remove_repository(repo_name).await {
-            log::warn!("failed to remove repository from config: {:#?}", err);
+            tracing::warn!("failed to remove repository from config: {:#?}", err);
         }
 
         // Finally, stop serving the repository.
@@ -595,10 +602,14 @@ impl<T: EventHandlerProvider> Repo<T> {
         repo_name: String,
         target_identifier: Option<String>,
     ) -> Result<(), ffx::RepositoryError> {
-        log::info!("Deregistering repository {:?} from target {:?}", repo_name, target_identifier);
+        tracing::info!(
+            "Deregistering repository {:?} from target {:?}",
+            repo_name,
+            target_identifier
+        );
 
         let target = cx.get_target_info(target_identifier.clone()).await.map_err(|err| {
-            log::warn!(
+            tracing::warn!(
                 "Failed to look up target info with target name {:?}: {:#?}",
                 target_identifier,
                 err
@@ -607,7 +618,7 @@ impl<T: EventHandlerProvider> Repo<T> {
         })?;
 
         let target_nodename = target.nodename.ok_or_else(|| {
-            log::warn!("Target {:?} does not have a nodename", target_identifier);
+            tracing::warn!("Target {:?} does not have a nodename", target_identifier);
             ffx::RepositoryError::InternalError
         })?;
 
@@ -616,7 +627,7 @@ impl<T: EventHandlerProvider> Repo<T> {
         let _registration_info = pkg::config::get_registration(&repo_name, &target_nodename)
             .await
             .map_err(|err| {
-                log::warn!(
+                tracing::warn!(
                     "Failed to find registration info for repo {:?} and target {:?}: {:#?}",
                     repo_name,
                     target_nodename,
@@ -628,7 +639,7 @@ impl<T: EventHandlerProvider> Repo<T> {
 
         // Finally, remove the registration config from the ffx config.
         pkg::config::remove_registration(&repo_name, &target_nodename).await.map_err(|err| {
-            log::warn!("Failed to remove registration from config: {:#?}", err);
+            tracing::warn!("Failed to remove registration from config: {:#?}", err);
             ffx::RepositoryError::InternalError
         })?;
 
@@ -644,7 +655,7 @@ impl<T: EventHandlerProvider> Repo<T> {
         let mut stream = match iterator.into_stream() {
             Ok(s) => s,
             Err(e) => {
-                log::warn!("error converting iterator to stream: {}", e);
+                tracing::warn!("error converting iterator to stream: {}", e);
                 return Err(ffx::RepositoryError::InternalError);
             }
         };
@@ -656,7 +667,7 @@ impl<T: EventHandlerProvider> Repo<T> {
         };
 
         let values = repo.list_packages(include_fields).await.map_err(|err| {
-            log::error!("Unable to list packages: {:#?}", err);
+            tracing::error!("Unable to list packages: {:#?}", err);
 
             match err {
                 repository::Error::Tuf(tuf::Error::ExpiredMetadata(_)) => {
@@ -680,14 +691,14 @@ impl<T: EventHandlerProvider> Repo<T> {
                         pos = std::cmp::min(pos, len);
 
                         if let Err(e) = responder.send(chunk) {
-                            log::warn!(
+                            tracing::warn!(
                                 "Error responding to RepositoryPackagesIterator request: {}",
                                 e
                             );
                         }
                     }
                     Err(e) => {
-                        log::warn!("Error in RepositoryPackagesIterator request stream: {}", e)
+                        tracing::warn!("Error in RepositoryPackagesIterator request stream: {}", e)
                     }
                 }
             }
@@ -706,7 +717,7 @@ impl<T: EventHandlerProvider> Repo<T> {
         let mut stream = match iterator.into_stream() {
             Ok(s) => s,
             Err(e) => {
-                log::warn!("error converting iterator to stream: {}", e);
+                tracing::warn!("error converting iterator to stream: {}", e);
                 return Err(ffx::RepositoryError::InternalError);
             }
         };
@@ -718,7 +729,7 @@ impl<T: EventHandlerProvider> Repo<T> {
         };
 
         let values = repo.show_package(package_name.to_owned()).await.map_err(|err| {
-            log::error!("Unable to list package contents {:?}: {}", package_name, err);
+            tracing::error!("Unable to list package contents {:?}: {}", package_name, err);
             ffx::RepositoryError::IoError
         })?;
         if values.is_none() {
@@ -740,14 +751,14 @@ impl<T: EventHandlerProvider> Repo<T> {
                         pos = std::cmp::min(pos, len);
 
                         if let Err(e) = responder.send(chunk) {
-                            log::warn!(
+                            tracing::warn!(
                                 "Error responding to PackageEntryIteratorRequest request: {}",
                                 e
                             );
                         }
                     }
                     Err(e) => {
-                        log::warn!("Error in PackageEntryIteratorRequest request stream: {}", e)
+                        tracing::warn!("Error in PackageEntryIteratorRequest request stream: {}", e)
                     }
                 }
             }
@@ -778,7 +789,7 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
             ffx::RepositoryRegistryRequest::ServerStart { responder } => {
                 let mut res = async {
                     pkg_config::set_repository_server_enabled(true).await.map_err(|err| {
-                        log::error!("failed to save server enabled flag to config: {:#?}", err);
+                        tracing::error!("failed to save server enabled flag to config: {:#?}", err);
                         ffx::RepositoryError::InternalError
                     })?;
 
@@ -791,11 +802,11 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
                     match inner.start_server().await {
                         Ok(Some(addr)) => Ok(SocketAddress(addr).into()),
                         Ok(None) => {
-                            log::warn!("Not starting server because the server is disabled");
+                            tracing::warn!("Not starting server because the server is disabled");
                             Err(ffx::RepositoryError::ServerNotRunning)
                         }
                         Err(err) => {
-                            log::error!("Failed to start repository server: {:#?}", err);
+                            tracing::error!("Failed to start repository server: {:#?}", err);
                             Err(ffx::RepositoryError::ServerNotRunning)
                         }
                     }
@@ -815,7 +826,10 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
             ffx::RepositoryRegistryRequest::ServerStop { responder } => {
                 let mut res = async {
                     pkg_config::set_repository_server_enabled(false).await.map_err(|err| {
-                        log::error!("failed to save server disabled flag to config: {:#?}", err);
+                        tracing::error!(
+                            "failed to save server disabled flag to config: {:#?}",
+                            err
+                        );
                         ffx::RepositoryError::InternalError
                     })?;
 
@@ -925,14 +939,17 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
                                 pos = std::cmp::min(pos, len);
 
                                 if let Err(err) = responder.send(chunk) {
-                                    log::warn!(
+                                    tracing::warn!(
                                         "Error responding to RepositoryIterator request: {:#?}",
                                         err
                                     );
                                 }
                             }
                             Err(err) => {
-                                log::warn!("Error in RepositoryIterator request stream: {:#?}", err)
+                                tracing::warn!(
+                                    "Error in RepositoryIterator request stream: {:#?}",
+                                    err
+                                )
                             }
                         }
                     }
@@ -959,14 +976,14 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
                         match request {
                             Ok(ffx::RepositoryTargetsIteratorRequest::Next { responder }) => {
                                 if let Err(err) = responder.send(&mut values.next().unwrap_or_else(Vec::new).into_iter()) {
-                                    log::warn!(
+                                    tracing::warn!(
                                         "Error responding to RepositoryTargetsIterator request: {:#?}",
                                         err
                                     );
                                 }
                             }
                             Err(err) => {
-                                log::warn!("Error in RepositoryTargetsIterator request stream: {:#?}", err)
+                                tracing::warn!("Error in RepositoryTargetsIterator request stream: {:#?}", err)
                             }
                         }
                     }
@@ -978,7 +995,7 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
     }
 
     async fn start(&mut self, cx: &Context) -> Result<(), anyhow::Error> {
-        log::info!("Starting repository protocol");
+        tracing::info!("Starting repository protocol");
 
         // Log the server mode to get an understanding of the distribution of users between pm and
         // the ffx repository server.
@@ -987,7 +1004,7 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
                 metrics::server_mode_event(&mode).await;
             }
             Err(err) => {
-                log::warn!("Failed to determine if server is enabled from config: {:#}", err);
+                tracing::warn!("Failed to determine if server is enabled from config: {:#}", err);
             }
         }
 
@@ -997,12 +1014,14 @@ impl<T: EventHandlerProvider + Default + Unpin + 'static> FidlProtocol for Repo<
                 inner.server = ServerState::Stopped(addr);
             }
             Ok(None) => {
-                log::error!("repository.server.listen address not configured, not starting server");
+                tracing::error!(
+                    "repository.server.listen address not configured, not starting server"
+                );
 
                 metrics::server_disabled_event().await;
             }
             Err(err) => {
-                log::error!("Failed to read server address from config: {:#}", err);
+                tracing::error!("Failed to read server address from config: {:#}", err);
             }
         }
 
@@ -1029,7 +1048,7 @@ async fn load_repositories_from_config(inner: &Arc<RwLock<RepoInner>>) {
         if let Err(err) =
             add_repository(&name, &repo_spec, SaveConfig::DoNotSave, Arc::clone(inner)).await
         {
-            log::warn!("failed to add the repository {:?}: {:?}", name, err);
+            tracing::warn!("failed to add the repository {:?}: {:?}", name, err);
         }
     }
 }
@@ -1051,7 +1070,7 @@ async fn load_registrations_from_config(
             if let Err(err) =
                 register_target(&cx, target_info, SaveConfig::DoNotSave, Arc::clone(&inner)).await
             {
-                log::warn!(
+                tracing::warn!(
                     "failed to register target {:?} {:?}: {:?}",
                     repo_name,
                     target_nodename,
@@ -1059,7 +1078,7 @@ async fn load_registrations_from_config(
                 );
                 continue;
             } else {
-                log::info!(
+                tracing::info!(
                     "successfully registered repository {:?} on target {:?}",
                     repo_name,
                     target_nodename,
@@ -1146,7 +1165,7 @@ impl EventHandler<TargetEvent> for TargetEventHandler {
         let source_nodename = if let Some(n) = self.target.nodename() {
             n
         } else {
-            log::warn!("not registering target due to missing nodename {:?}", self.target);
+            tracing::warn!("not registering target due to missing nodename {:?}", self.target);
             return Ok(EventStatus::Waiting);
         };
 
@@ -1429,7 +1448,7 @@ mod tests {
             let events_closure = Arc::clone(&events);
 
             let closure = move |req: rcs::RemoteControlRequest, target: Option<String>| {
-                log::info!("got a rcs request: {:?} {:?}", req, target);
+                tracing::info!("got a rcs request: {:?} {:?}", req, target);
 
                 match (req, target.as_deref()) {
                     (

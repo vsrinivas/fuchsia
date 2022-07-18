@@ -75,7 +75,7 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + ?Sized>(
                     Some(&config)
                 }
                 Err(e) => {
-                    log::warn!(
+                    tracing::warn!(
                         "constructing symbolizer config failed. \
                                 Proactive logs will not be symbolized. Error was: {}",
                         e
@@ -99,7 +99,7 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + ?Sized>(
                 {
                     Ok(()) => Some(config.symbolizer.clone()),
                     Err(e) => {
-                        log::warn!(
+                        tracing::warn!(
                             "symbolizer failed to start. \
                                     Proactive logs will not be symbolized. Error was: {}",
                             e
@@ -108,14 +108,14 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + ?Sized>(
                     }
                 }
             } else {
-                log::info!(
+                tracing::info!(
                     "proactive log symbolization disabled. \
                             proactive logs will not be symbolized"
                 );
                 None
             }
         } else {
-            log::info!(
+            tracing::info!(
                 "no symbolizer config. \
                         proactive logs will not be symbolized"
             );
@@ -144,7 +144,7 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + ?Sized>(
                     if let Err(e) = r {
                         // TODO(jwing): consider exiting if we see a large number of successive errors
                         // from the diagnostics bridge.
-                        log::warn!("got an error from diagnostics bridge {:?}", e);
+                        tracing::warn!("got an error from diagnostics bridge {:?}", e);
                     }
                     r.ok()
                 })
@@ -231,7 +231,10 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + ?Sized>(
                                 match sender_tx.send(with_newline).await {
                                     Ok(_) => {}
                                     Err(e) => {
-                                        log::info!("writing to symbolizer channel failed: {}", e);
+                                        tracing::info!(
+                                            "writing to symbolizer channel failed: {}",
+                                            e
+                                        );
                                         new_entries.push(log);
                                         continue;
                                     }
@@ -240,7 +243,7 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + ?Sized>(
                                 let out = match reader_rx.next().await {
                                     Some(s) => s,
                                     None => {
-                                        log::info!("symbolizer stream is empty");
+                                        tracing::info!("symbolizer stream is empty");
                                         new_entries.push(log);
                                         continue;
                                     }
@@ -360,13 +363,13 @@ impl Logger {
                 None => get(ENABLED_CONFIG).await.unwrap_or(false),
             };
             if !enabled {
-                log::info!("proactive logger disabled. exiting...");
+                tracing::info!("proactive logger disabled. exiting...");
                 return Ok(());
             }
 
             self.run_logger()
                 .map_err(|e| {
-                    log::error!("error running logger: {:?}", e);
+                    tracing::error!("error running logger: {:?}", e);
                     format!("{}", e)
                 })
                 .await
@@ -376,7 +379,7 @@ impl Logger {
     async fn run_logger(&self) -> Result<()> {
         let target = self.target.upgrade().context("lost parent Arc")?;
 
-        log::info!("starting logger for {}", target.nodename_str());
+        tracing::info!("starting logger for {}", target.nodename_str());
         let remote_proxy = target.rcs().context("failed to get RCS")?.proxy;
         let nodename = target.nodename_str();
 
@@ -386,7 +389,7 @@ impl Logger {
         match remote_proxy.connect(selector, log_server_end.into_channel()).await? {
             Ok(_) => {}
             Err(e) => {
-                log::info!("attempt to connect to logger for {} failed. {:?}", nodename, e);
+                tracing::info!("attempt to connect to logger for {} failed. {:?}", nodename, e);
                 bail!("{:?}", e);
             }
         };
@@ -408,7 +411,7 @@ impl Logger {
         match streamer.clean_sessions_for_target().await {
             Ok(()) => {}
             Err(e) => {
-                log::warn!("cleaning sessions for {} failed: {}. logging will proceed anyway. \
+                tracing::warn!("cleaning sessions for {} failed: {}. logging will proceed anyway. \
                             If space usage is excessive, try restarting the ffx daemon or disabling proactive logging ('ffx config set proactive_log.enabled false').",
                             nodename, e);
             }

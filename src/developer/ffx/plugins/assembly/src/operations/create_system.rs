@@ -16,11 +16,11 @@ use assembly_tool::{SdkToolProvider, ToolProvider};
 use assembly_update_packages_manifest::UpdatePackagesManifest;
 use ffx_assembly_args::{CreateSystemArgs, PackageMode};
 use fuchsia_pkg::{PackageManifest, PackagePath};
-use log::info;
 use serde_json::ser;
 use std::collections::BTreeSet;
 use std::fs::File;
 use std::path::{Path, PathBuf};
+use tracing::info;
 
 pub fn create_system(args: CreateSystemArgs) -> Result<()> {
     let CreateSystemArgs { image_assembly_config, images, outdir, gendir, base_package_name, mode } =

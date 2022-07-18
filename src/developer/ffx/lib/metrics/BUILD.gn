@@ -16,7 +16,7 @@ if (is_host) {
       "//src/lib/analytics/rust:lib",
       "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:log",
+      "//third_party/rust_crates:tracing",
     ]
 
     sources = [ "src/lib.rs" ]

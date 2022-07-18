@@ -41,7 +41,7 @@ impl<T: EventTrait> EventSynthesizer<T> for Weak<dyn EventSynthesizer<T>> {
         let this = match self.upgrade() {
             Some(t) => t,
             None => {
-                log::info!("event synthesizer parent Rc<_> lost");
+                tracing::info!("event synthesizer parent Rc<_> lost");
                 return Vec::new();
             }
         };
@@ -122,7 +122,7 @@ impl<T: EventTrait + 'static> Dispatcher<T> {
                     .await
                     .unwrap_or_else(|e| {
                         if let Err(e) = e {
-                            log::warn!("dispatcher failed in detached task: {:#?}", e)
+                            tracing::warn!("dispatcher failed in detached task: {:#?}", e)
                         }
                     });
             }),
@@ -276,7 +276,7 @@ impl<T: 'static + EventTrait> Queue<T> {
             {
                 Ok(_) => (),
                 Err(e) => {
-                    log::warn!("{}", e);
+                    tracing::warn!("{}", e);
                     return;
                 }
             }
@@ -314,7 +314,7 @@ impl<T: 'static + EventTrait> Queue<T> {
             handler_done
                 .next()
                 .await
-                .unwrap_or_else(|| log::warn!("unable to get 'done' signal from handler."));
+                .unwrap_or_else(|| tracing::warn!("unable to get 'done' signal from handler."));
             Result::<()>::Ok(())
         };
         self.add_handler(handler).await;
@@ -345,7 +345,7 @@ where
             match dispatcher.push(event.clone()).await {
                 Ok(()) => new_handlers.push(dispatcher),
                 Err(e) => {
-                    log::info!("dispatcher closed. reason: {:#}", e);
+                    tracing::info!("dispatcher closed. reason: {:#}", e);
                 }
             }
         }
@@ -357,7 +357,7 @@ where
         if let Some(rx) = self.inner_rx.take() {
             rx.for_each(|event| self.dispatch(event)).await;
         } else {
-            log::warn!("process should only ever be called once");
+            tracing::warn!("process should only ever be called once");
         }
     }
 }

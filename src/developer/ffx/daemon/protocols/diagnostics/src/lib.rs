@@ -41,7 +41,7 @@ impl FidlProtocol for Diagnostics {
                 let stream_mode = if let Some(mode) = parameters.stream_mode {
                     mode
                 } else {
-                    log::info!("StreamDiagnostics failed: stream mode is required");
+                    tracing::info!("StreamDiagnostics failed: stream mode is required");
                     return responder
                         .send(&mut Err(ffx::DiagnosticsStreamError::MissingParameter))
                         .context("sending missing parameter response");
@@ -51,7 +51,7 @@ impl FidlProtocol for Diagnostics {
                     let target_str = if let Some(target_str) = target_str {
                         target_str
                     } else {
-                        log::warn!(
+                        tracing::warn!(
                             "StreamDiagnostics failed: Missing target string in SnapshotAll mode."
                         );
                         return responder
@@ -62,7 +62,7 @@ impl FidlProtocol for Diagnostics {
                     let session = if let Some(ref session) = parameters.session {
                         session
                     } else {
-                        log::warn!(
+                        tracing::warn!(
                             "StreamDiagnostics failed: Missing session in SnapshotAll mode."
                         );
                         return responder
@@ -170,7 +170,7 @@ impl FidlProtocol for Diagnostics {
                         ..ffx::LogSession::EMPTY
                     }))?;
                     run_diagnostics_streaming(log_iterator, iterator).await.map_err(|e| {
-                        log::error!("Failure running diagnostics streaming: {:?}", e);
+                        tracing::error!("Failure running diagnostics streaming: {:?}", e);
                         e
                     })?;
                     Ok(())
@@ -193,7 +193,7 @@ impl FidlProtocol for Diagnostics {
                         .await?
                     {
                         Err(e) => {
-                            log::error!(
+                            tracing::error!(
                                 "diagnostics encountered error while opening target {}: {:?}",
                                 target_str.as_deref().unwrap_or("<unknown>"),
                                 e

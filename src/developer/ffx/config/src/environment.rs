@@ -8,7 +8,6 @@ use {
     crate::ConfigLevel,
     anyhow::{bail, Context, Result},
     errors::ffx_error,
-    log::{error, info},
     serde::{Deserialize, Serialize},
     std::{
         collections::HashMap,
@@ -18,6 +17,7 @@ use {
         path::{Path, PathBuf},
         time::Duration,
     },
+    tracing::{error, info},
 };
 
 #[derive(Clone, Debug, Default, PartialEq, Deserialize, Serialize)]

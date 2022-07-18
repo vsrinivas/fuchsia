@@ -104,7 +104,7 @@ pub(crate) async fn discovery_loop(config: DiscoveryConfig) {
                     }
                     Err(err) => {
                         if should_log_v4_listen_error {
-                            log::error!(
+                            tracing::error!(
                                 "unable to bind IPv4 listen socket: {}. Discovery may fail.",
                                 err
                             );
@@ -126,7 +126,7 @@ pub(crate) async fn discovery_loop(config: DiscoveryConfig) {
                     }
                     Err(err) => {
                         if should_log_v6_listen_error {
-                            log::error!(
+                            tracing::error!(
                                 "unable to bind IPv6 listen socket: {}. Discovery may fail.",
                                 err
                             );
@@ -153,7 +153,7 @@ pub(crate) async fn discovery_loop(config: DiscoveryConfig) {
                         }
                     }
                     Err(err) => {
-                        log::warn!("{}", err);
+                        tracing::warn!("{}", err);
                     }
                 }
 
@@ -179,7 +179,7 @@ pub(crate) async fn discovery_loop(config: DiscoveryConfig) {
                         .map(|id| match make_sender_socket(id, addr.clone(), ttl) {
                             Ok(sock) => Some(sock),
                             Err(err) => {
-                                log::info!("mdns: failed to bind {}: {}", &addr, err);
+                                tracing::info!("mdns: failed to bind {}: {}", &addr, err);
                                 None
                             }
                         })
@@ -276,7 +276,7 @@ async fn recv_loop(sock: Rc<UdpSocket>, mdns_protocol: Weak<MdnsProtocolInner>) 
                 addr
             }
             Err(err) => {
-                log::info!("listen socket recv error: {}, mdns listener closed", err);
+                tracing::info!("listen socket recv error: {}, mdns listener closed", err);
                 return;
             }
         };
@@ -289,7 +289,7 @@ async fn recv_loop(sock: Rc<UdpSocket>, mdns_protocol: Weak<MdnsProtocolInner>) 
         let msg = match buf.parse::<dns::Message<_>>() {
             Ok(msg) => msg,
             Err(e) => {
-                log::trace!(
+                tracing::trace!(
                     "unable to parse message received on {} from {}: {:?}",
                     sock.local_addr()
                         .map(|s| format!("{}", s))
@@ -310,7 +310,7 @@ async fn recv_loop(sock: Rc<UdpSocket>, mdns_protocol: Weak<MdnsProtocolInner>) 
 
         if let Some(mdns_protocol) = mdns_protocol.upgrade() {
             if let Some((t, ttl)) = make_target(addr, msg) {
-                log::trace!(
+                tracing::trace!(
                     "packet from {} ({}) on {}",
                     addr,
                     t.nodename.as_ref().unwrap_or(&"<unknown>".to_string()),
@@ -348,14 +348,14 @@ async fn query_loop(sock: Rc<UdpSocket>, interval: Duration) {
         Ok(SocketAddr::V4(_)) => (MDNS_MCAST_V4, MDNS_PORT).into(),
         Ok(SocketAddr::V6(_)) => (MDNS_MCAST_V6, MDNS_PORT).into(),
         Err(err) => {
-            log::info!("resolving local socket addr failed with: {}", err);
+            tracing::info!("resolving local socket addr failed with: {}", err);
             return;
         }
     };
 
     loop {
         if let Err(err) = sock.send_to(&QUERY_BUF, to_addr).await {
-            log::info!(
+            tracing::info!(
                 "mdns query failed from {}: {}",
                 sock.local_addr().map(|a| a.to_string()).unwrap_or("unknown".to_string()),
                 err
@@ -381,12 +381,12 @@ async fn query_recv_loop(
     let addr = match sock.local_addr() {
         Ok(addr) => addr,
         Err(err) => {
-            log::error!("mdns: failed to shutdown: {:?}", err);
+            tracing::error!("mdns: failed to shutdown: {:?}", err);
             return;
         }
     };
 
-    log::info!("mdns: started query socket {}", &addr);
+    tracing::info!("mdns: started query socket {}", &addr);
 
     let _ = futures::select!(
         _ = recv => {},
@@ -397,7 +397,7 @@ async fn query_recv_loop(
     drop(query);
 
     tasks.lock().await.remove(&addr.ip()).map(drop);
-    log::info!("mdns: shut down query socket {}", &addr);
+    tracing::info!("mdns: shut down query socket {}", &addr);
 }
 
 // Exclude any mdns packets received where the source address of the packet does not appear in any
@@ -418,7 +418,7 @@ fn contains_source_address<B: zerocopy::ByteSlice + Clone>(
             return true;
         }
     }
-    log::info!(
+    tracing::info!(
         "Dubious mdns from: {:?} does not contain an answer that includes the source address, therefore it is ignored.",
         addr
     );

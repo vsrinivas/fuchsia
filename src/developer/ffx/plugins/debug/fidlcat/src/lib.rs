@@ -50,7 +50,7 @@ pub async fn fidlcat(
     cmd: ffx_debug_fidlcat_args::FidlcatCommand,
 ) -> Result<()> {
     if let Err(e) = symbol_index::ensure_symbol_index_registered().await {
-        log::warn!("ensure_symbol_index_registered failed, error was: {:#?}", e);
+        tracing::warn!("ensure_symbol_index_registered failed, error was: {:#?}", e);
     }
 
     let sdk = ffx_config::get_sdk().await?;

@@ -10,7 +10,6 @@ use {
     crate::ConfigLevel,
     anyhow::{bail, Context, Result},
     config_macros::include_default,
-    log::error,
     serde::de::DeserializeOwned,
     serde_json::{Map, Value},
     std::{
@@ -19,6 +18,7 @@ use {
         io::{BufReader, BufWriter, Read, Write},
         path::{Path, PathBuf},
     },
+    tracing::error,
 };
 
 /// The type of a configuration level's mapping.

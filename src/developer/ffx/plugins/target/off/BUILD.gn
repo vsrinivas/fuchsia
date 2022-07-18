@@ -10,7 +10,7 @@ ffx_plugin("ffx_off") {
   with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   args_sources = [ "src/args.rs" ]

@@ -612,13 +612,15 @@ impl Target {
 
         if self.get_connection_state().is_rcs() {
             self.events.push(TargetEvent::RcsActivated).unwrap_or_else(|err| {
-                log::warn!("unable to enqueue RCS activation event: {:#}", err)
+                tracing::warn!("unable to enqueue RCS activation event: {:#}", err)
             });
         }
 
         self.events
             .push(TargetEvent::ConnectionStateChanged(former_state, self.state.borrow().clone()))
-            .unwrap_or_else(|e| log::error!("Failed to push state change for {:?}: {:?}", self, e));
+            .unwrap_or_else(|e| {
+                tracing::error!("Failed to push state change for {:?}: {:?}", self, e)
+            });
     }
 
     pub fn rcs(&self) -> Option<RcsConnection> {
@@ -881,7 +883,7 @@ impl Target {
         self.host_pipe.borrow_mut().replace(Task::local(async move {
             let r = HostPipeConnection::new(weak_target.clone()).await;
             // XXX(raggi): decide what to do with this log data:
-            log::info!("HostPipeConnection returned: {:?}", r);
+            tracing::info!("HostPipeConnection returned: {:?}", r);
             weak_target.upgrade().and_then(|target| target.host_pipe.borrow_mut().take());
         }));
     }
@@ -897,7 +899,7 @@ impl Target {
             self.logger.replace(Some(Task::local(async move {
                 let r = Logger::new(weak_target).start().await;
                 // XXX(raggi): decide what to do with this log data:
-                log::info!("Logger returned: {:?}", r);
+                tracing::info!("Logger returned: {:?}", r);
                 logger.upgrade().and_then(|logger| logger.replace(None));
             })));
         }
@@ -913,7 +915,7 @@ impl Target {
         match self.events.wait_for(None, |e| e == TargetEvent::RcsActivated).await {
             Ok(()) => (),
             Err(e) => {
-                log::warn!("{}", e);
+                tracing::warn!("{}", e);
                 bail!("RCS connection issue")
             }
         }
@@ -958,7 +960,7 @@ impl Target {
             };
 
             if let Some(ref new_state) = new_state {
-                log::debug!(
+                tracing::debug!(
                     "Target {:?} state {:?} => {:?} due to expired state after {:?}.",
                     self,
                     &current_state,
@@ -1019,7 +1021,7 @@ impl From<&Target> for ffx::TargetInfo {
                 .num_milliseconds()
             {
                 dur if dur < 0 => {
-                    log::trace!(
+                    tracing::trace!(
                         "negative duration encountered on target '{}': {}",
                         target.nodename_str(),
                         dur

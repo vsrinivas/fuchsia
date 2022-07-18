@@ -14,7 +14,10 @@ pub fn verify_product_budgets(args: ProductSizeCheckArgs) -> Result<()> {
     let blobfs_contents = match extract_blobfs_contents(&images_manifest) {
         Some(contents) => contents,
         None => {
-            log::info!("No blobfs image was found in {}", args.assembly_manifest.to_string_lossy());
+            tracing::info!(
+                "No blobfs image was found in {}",
+                args.assembly_manifest.to_string_lossy()
+            );
             return Ok(());
         }
     };

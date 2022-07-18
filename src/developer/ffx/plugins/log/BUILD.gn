@@ -41,11 +41,11 @@ ffx_plugin("ffx_log") {
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:futures-util",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:termion",
+    "//third_party/rust_crates:tracing",
   ]
 
   args_sources = [ "src/args.rs" ]

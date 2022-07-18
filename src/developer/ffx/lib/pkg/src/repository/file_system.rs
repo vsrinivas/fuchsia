@@ -17,7 +17,6 @@ use {
         stream::{self, BoxStream},
         AsyncRead, AsyncSeekExt, Stream, StreamExt,
     },
-    log::{error, warn},
     notify::{immediate_watcher, RecursiveMode, Watcher as _},
     parking_lot::Mutex,
     std::{
@@ -29,6 +28,7 @@ use {
         task::{Context, Poll},
         time::SystemTime,
     },
+    tracing::{error, warn},
     tuf::{
         interchange::Json,
         repository::{

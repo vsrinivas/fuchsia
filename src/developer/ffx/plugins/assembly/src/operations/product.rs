@@ -9,8 +9,8 @@ use assembly_config_schema::product_config::{
     BuildType, FeatureSupportLevel, ProductAssemblyConfig,
 };
 use ffx_assembly_args::ProductArgs;
-use log::info;
 use std::path::PathBuf;
+use tracing::info;
 
 mod assembly_builder;
 

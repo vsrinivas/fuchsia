@@ -215,7 +215,7 @@ impl Injector for Injection {
         let target = self.target().await?;
         let timeout_error = self.daemon_timeout_error().await?;
         timeout(proxy_timeout().await?, self.fastboot_factory_inner()).await.map_err(|_| {
-            log::warn!("Timed out getting fastboot proxy for: {:?}", target);
+            tracing::warn!("Timed out getting fastboot proxy for: {:?}", target);
             timeout_error
         })?
     }
@@ -224,7 +224,7 @@ impl Injector for Injection {
         let target = self.target().await?;
         let timeout_error = self.daemon_timeout_error().await?;
         timeout(proxy_timeout().await?, self.target_factory_inner()).await.map_err(|_| {
-            log::warn!("Timed out getting fastboot proxy for: {:?}", target);
+            tracing::warn!("Timed out getting fastboot proxy for: {:?}", target);
             timeout_error
         })?
     }
@@ -241,7 +241,7 @@ impl Injector for Injection {
         })
         .await
         .map_err(|_| {
-            log::warn!("Timed out getting remote control proxy for: {:?}", target);
+            tracing::warn!("Timed out getting remote control proxy for: {:?}", target);
             timeout_error
         })?
     }
@@ -283,7 +283,7 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
         match build_id {
             Ok(str) => str,
             Err(err) => {
-                log::error!("BUG: ffx version information is missing! {:?}", err);
+                tracing::error!("BUG: ffx version information is missing! {:?}", err);
                 link_task.detach();
                 return Ok(proxy);
             }
@@ -305,7 +305,7 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
         link_task.detach();
 
         match daemon_version_info.exec_path {
-            None => log::warn!("Daemon version info did not contain an executable path."),
+            None => tracing::warn!("Daemon version info did not contain an executable path."),
             Some(daemon_path) => {
                 let path = std::env::current_exe().map(|x| x.to_string_lossy().to_string()).ok();
 
@@ -314,7 +314,7 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
                         eprintln!(
                             "Warning: Found a running daemon ({}) that is from a different copy of ffx.",
                         daemon_path);
-                        log::warn!(
+                        tracing::warn!(
                             "Found a running daemon that is from a different copy of ffx. \
                                 Continuing to connect...\
                                 \n\nDaemon path: {}\
@@ -324,7 +324,7 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
                         );
                     }
                 } else {
-                    log::warn!("Could not get path of ffx executable");
+                    tracing::warn!("Could not get path of ffx executable");
                 }
             }
         };
@@ -333,7 +333,7 @@ async fn init_daemon_proxy() -> Result<DaemonProxy> {
     }
 
     eprintln!("Daemon is a different version, attempting to restart");
-    log::info!("Daemon is a different version, attempting to restart");
+    tracing::info!("Daemon is a different version, attempting to restart");
 
     // Tell the daemon to quit, and wait for the link task to finish.
     // TODO(raggi): add a timeout on this, if the daemon quit fails for some
@@ -454,7 +454,7 @@ async fn run() -> Result<()> {
     let is_daemon = is_daemon(&app.subcommand);
     ffx_config::logging::init(is_daemon || app.verbose, !is_daemon).await?;
 
-    log::info!("starting command: {:?}", std::env::args().collect::<Vec<String>>());
+    tracing::info!("starting command: {:?}", std::env::args().collect::<Vec<String>>());
 
     // Since this is invoking the config, this must be run _after_ ffx_config::init.
     let log_level = app.log_level().await?;
@@ -488,14 +488,14 @@ async fn run() -> Result<()> {
     };
 
     let command_done = Instant::now();
-    log::info!("Command completed. Success: {}", res.is_ok());
+    tracing::info!("Command completed. Success: {}", res.is_ok());
     let command_duration = (command_done - command_start).as_secs_f32();
     let timing_in_millis = (command_done - command_start).as_millis().to_string();
 
     let analytics_task = fuchsia_async::Task::local(async move {
         let sanitized_args = redact_arg_values();
         if let Err(e) = add_ffx_launch_and_timing_events(sanitized_args, timing_in_millis).await {
-            log::error!("metrics submission failed: {}", e);
+            tracing::error!("metrics submission failed: {}", e);
         }
         Instant::now()
     });
@@ -503,13 +503,13 @@ async fn run() -> Result<()> {
     let analytics_done = analytics_task
         // TODO(66918): make configurable, and evaluate chosen time value.
         .on_timeout(Duration::from_secs(2), || {
-            log::error!("metrics submission timed out");
+            tracing::error!("metrics submission timed out");
             // Metrics timeouts should not impact user flows.
             Instant::now()
         })
         .await;
 
-    log::info!(
+    tracing::info!(
         "Run finished. success: {}, command time: {}, analytics time: {}",
         res.is_ok(),
         &command_duration,
@@ -538,12 +538,12 @@ async fn main() {
         // TODO(66918): make configurable, and evaluate chosen time value.
         if let Err(e) = add_crash_event(&err_msg, None)
             .on_timeout(Duration::from_secs(2), || {
-                log::error!("analytics timed out reporting crash event");
+                tracing::error!("analytics timed out reporting crash event");
                 Ok(())
             })
             .await
         {
-            log::error!("analytics failed to submit crash event: {}", e);
+            tracing::error!("analytics failed to submit crash event: {}", e);
         }
         report_log_hint(&mut stderr).await;
     }

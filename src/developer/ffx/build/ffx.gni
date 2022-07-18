@@ -89,7 +89,7 @@ template("ffx") {
              "//third_party/rust_crates:async-trait",
              "//third_party/rust_crates:async-net",
              "//third_party/rust_crates:futures",
-             "//third_party/rust_crates:log",
+             "//third_party/rust_crates:tracing",
              "//third_party/rust_crates:simplelog",
              "//third_party/rust_crates:tracing",
              "//third_party/rust_crates:tracing-log",

@@ -169,7 +169,7 @@ pub async fn exec_log_cmd<W: std::io::Write>(
         for result in get_next_results.into_iter() {
             got_disconnect = false;
             if let Err(e) = result {
-                log::warn!("got an error from the daemon {:?}", e);
+                tracing::warn!("got an error from the daemon {:?}", e);
                 log_formatter.push_log(Err(e)).await?;
                 continue;
             }
@@ -215,7 +215,7 @@ pub async fn exec_log_cmd<W: std::io::Write>(
         }
 
         if let Some(err) = terminal_err {
-            log::info!("log command got a terminal error: {}", err);
+            tracing::info!("log command got a terminal error: {}", err);
             return Ok(());
         }
     }

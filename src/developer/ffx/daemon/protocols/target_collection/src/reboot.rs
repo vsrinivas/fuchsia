@@ -89,8 +89,8 @@ impl RebootController {
         let stream = fastboot.into_stream()?;
         self.tasks.spawn(async move {
             match fastboot_manager.handle_fastboot_requests_from_stream(stream).await {
-                Ok(_) => log::trace!("Fastboot proxy finished - client disconnected"),
-                Err(e) => log::error!("Handling fastboot requests: {:?}", e),
+                Ok(_) => tracing::trace!("Fastboot proxy finished - client disconnected"),
+                Err(e) => tracing::error!("Handling fastboot requests: {:?}", e),
             }
         });
         Ok(())
@@ -107,7 +107,7 @@ impl RebootController {
                     match self.get_fastboot_proxy().await?.reboot().await? {
                         Ok(_) => responder.send(&mut Ok(())).map_err(Into::into),
                         Err(e) => {
-                            log::error!("Fastboot communication error: {:?}", e);
+                            tracing::error!("Fastboot communication error: {:?}", e);
                             responder
                                 .send(&mut Err(TargetRebootError::FastbootCommunication))
                                 .map_err(Into::into)
@@ -134,7 +134,7 @@ impl RebootController {
                     ) {
                         Ok(_) => responder.send(&mut Ok(())).map_err(Into::into),
                         Err(e) => {
-                            log::error!("Fastboot communication error: {:?}", e);
+                            tracing::error!("Fastboot communication error: {:?}", e);
                             responder
                                 .send(&mut Err(TargetRebootError::FastbootCommunication))
                                 .map_err(Into::into)
@@ -149,18 +149,18 @@ impl RebootController {
                 let mut response = if let Some(addr) = self.target.netsvc_address() {
                     match state {
                         TargetRebootState::Product => reboot(addr).await.map(|_| ()).map_err(|e| {
-                            log::error!("zedboot reboot failed {:?}", e);
+                            tracing::error!("zedboot reboot failed {:?}", e);
                             TargetRebootError::NetsvcCommunication
                         }),
                         TargetRebootState::Bootloader => {
                             reboot_to_bootloader(addr).await.map(|_| ()).map_err(|e| {
-                                log::error!("zedboot reboot to bootloader failed {:?}", e);
+                                tracing::error!("zedboot reboot to bootloader failed {:?}", e);
                                 TargetRebootError::NetsvcCommunication
                             })
                         }
                         TargetRebootState::Recovery => {
                             reboot_to_recovery(addr).await.map(|_| ()).map_err(|e| {
-                                log::error!("zedboot reboot to recovery failed {:?}", e);
+                                tracing::error!("zedboot reboot to recovery failed {:?}", e);
                                 TargetRebootError::NetsvcCommunication
                             })
                         }
@@ -175,7 +175,7 @@ impl RebootController {
                 let admin_proxy = match self
                     .get_admin_proxy()
                     .map_err(|e| {
-                        log::warn!("error getting admin proxy: {}", e);
+                        tracing::warn!("error getting admin proxy: {}", e);
                         TargetRebootError::TargetCommunication
                     })
                     .await
@@ -212,14 +212,14 @@ impl RebootController {
 pub(crate) fn handle_fidl_connection_err(e: Error, responder: TargetRebootResponder) -> Result<()> {
     match e {
         Error::ClientChannelClosed { .. } => {
-            log::warn!(
+            tracing::warn!(
                 "Reboot returned a client channel closed - assuming reboot succeeded: {:?}",
                 e
             );
             responder.send(&mut Ok(()))?;
         }
         _ => {
-            log::error!("Target communication error: {:?}", e);
+            tracing::error!("Target communication error: {:?}", e);
             responder.send(&mut Err(TargetRebootError::TargetCommunication))?;
         }
     }

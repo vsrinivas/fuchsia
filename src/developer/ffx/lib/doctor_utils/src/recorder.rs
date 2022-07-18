@@ -80,7 +80,7 @@ impl Recorder for DoctorRecorder {
             match self.copy_file(&source, &mut zip) {
                 Ok(()) => {}
                 Err(e) => {
-                    log::warn!(
+                    tracing::warn!(
                         "unable to add '{}' to report zip: {:?}",
                         source.file_name().and_then(std::ffi::OsStr::to_str).unwrap(),
                         e

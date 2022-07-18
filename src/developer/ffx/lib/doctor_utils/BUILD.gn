@@ -21,7 +21,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:chrono",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
     "//third_party/rust_crates:zip",
   ]
   test_deps = [ "//third_party/rust_crates:tempfile" ]

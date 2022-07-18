@@ -33,7 +33,7 @@ pub async fn info<W: Write>(writer: &mut W, fastboot_proxy: &FastbootProxy) -> R
     let (var_client, var_server) = create_endpoints::<VariableListenerMarker>()?;
     let _ = try_join!(
         fastboot_proxy.get_all_vars(var_client).map_err(|e| {
-            log::error!("FIDL Communication error: {}", e);
+            tracing::error!("FIDL Communication error: {}", e);
             anyhow!(
                 "There was an error communcation with the daemon. Try running\n\
                 `ffx doctor` for further diagnositcs."

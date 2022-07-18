@@ -53,7 +53,7 @@ impl Forward {
             let conn = match conn {
                 Ok(conn) => conn,
                 Err(e) => {
-                    log::error!("Error accepting connection for TCP forwarding: {:?}", e);
+                    tracing::error!("Error accepting connection for TCP forwarding: {:?}", e);
                     continue;
                 }
             };
@@ -61,7 +61,7 @@ impl Forward {
             let target = match cx.open_remote_control(Some(target.clone())).await {
                 Ok(t) => t,
                 Err(e) => {
-                    log::error!("Could not connect to proxy for TCP forwarding: {:?}", e);
+                    tracing::error!("Could not connect to proxy for TCP forwarding: {:?}", e);
                     break;
                 }
             };
@@ -69,7 +69,7 @@ impl Forward {
             let (socket, remote) = match fidl::Socket::create(fidl::SocketOpts::STREAM) {
                 Ok(x) => x,
                 Err(e) => {
-                    log::error!("Error creating socket: {:?}", e);
+                    tracing::error!("Error creating socket: {:?}", e);
                     continue;
                 }
             };
@@ -77,11 +77,11 @@ impl Forward {
             match target.forward_tcp(&mut target_address, remote).await {
                 Ok(Ok(())) => (),
                 Ok(Err(e)) => {
-                    log::error!("Error forwarding port: {:?}", e);
+                    tracing::error!("Error forwarding port: {:?}", e);
                     continue;
                 }
                 Err(e) => {
-                    log::error!("Error requesting port forward from RCS: {:?}", e);
+                    tracing::error!("Error requesting port forward from RCS: {:?}", e);
                     continue;
                 }
             }
@@ -89,7 +89,7 @@ impl Forward {
             let socket = match fuchsia_async::Socket::from_socket(socket) {
                 Ok(socket) => socket,
                 Err(e) => {
-                    log::error!("Error converting socket to async: {:?}", e);
+                    tracing::error!("Error converting socket to async: {:?}", e);
                     continue;
                 }
             };
@@ -100,7 +100,7 @@ impl Forward {
 
     async fn bind_or_log(addr: std::net::SocketAddr) -> Result<TcpListener, ()> {
         TcpListener::bind(addr).await.map_err(|e| {
-            log::error!("Could not listen on {:?}: {:?}", addr, e);
+            tracing::error!("Could not listen on {:?}: {:?}", addr, e);
         })
     }
 
@@ -139,10 +139,10 @@ impl Forward {
         tasks.spawn(async move {
             match forward.await {
                 (Err(a), Err(b)) => {
-                    log::warn!("Port forward closed with errors:\n  {:?}\n  {:?}", a, b)
+                    tracing::warn!("Port forward closed with errors:\n  {:?}\n  {:?}", a, b)
                 }
                 (Err(e), _) | (_, Err(e)) => {
-                    log::warn!("Port forward closed with error: {:?}", e)
+                    tracing::warn!("Port forward closed with error: {:?}", e)
                 }
                 _ => (),
             }
@@ -191,7 +191,7 @@ impl FidlProtocol for Forward {
 
                 let query = ffx_config::query(TUNNEL_CFG).level(Some(ConfigLevel::User));
                 if let Err(e) = query.add(cfg).await {
-                    log::warn!("Failed to persist tunnel configuration: {:?}", e);
+                    tracing::warn!("Failed to persist tunnel configuration: {:?}", e);
                 }
 
                 responder.send(&mut Ok(())).context("error sending response")?;
@@ -206,7 +206,7 @@ impl FidlProtocol for Forward {
                 let target = match cx.open_remote_control(Some(target)).await {
                     Ok(t) => t,
                     Err(e) => {
-                        log::error!("Could not connect to proxy for TCP forwarding: {:?}", e);
+                        tracing::error!("Could not connect to proxy for TCP forwarding: {:?}", e);
                         return responder
                             .send(&mut Err(ffx::TunnelError::TargetConnectFailed))
                             .context("error sending response");
@@ -218,7 +218,7 @@ impl FidlProtocol for Forward {
                 match target.reverse_tcp(&mut target_address, client).await? {
                     Ok(()) => (),
                     Err(e) => {
-                        log::error!("Could not establish reverse TCP forward: {:?}", e);
+                        tracing::error!("Could not establish reverse TCP forward: {:?}", e);
                         return responder
                             .send(&mut Err(ffx::TunnelError::CouldNotListen))
                             .context("error sending response");
@@ -233,7 +233,7 @@ impl FidlProtocol for Forward {
                         let request = match result {
                             Ok(request) => request,
                             Err(e) => {
-                                log::warn!("Error reported to forwarding callback: {:?}", e);
+                                tracing::warn!("Error reported to forwarding callback: {:?}", e);
                                 continue;
                             }
                         };
@@ -246,7 +246,7 @@ impl FidlProtocol for Forward {
                             } => {
                                 let addr: SocketAddressExt = addr.into();
                                 let addr = addr.0;
-                                log::info!(
+                                tracing::info!(
                                     "Connection from {:?} forwarding to {:?}",
                                     addr,
                                     host_address
@@ -255,7 +255,7 @@ impl FidlProtocol for Forward {
                                     match async_net::TcpStream::connect(&host_address).await {
                                         Ok(stream) => stream,
                                         Err(e) => {
-                                            log::error!(
+                                            tracing::error!(
                                                 "Could not connect to {:?}: {:?}",
                                                 host_address,
                                                 e
@@ -267,7 +267,10 @@ impl FidlProtocol for Forward {
                                 let socket = match fuchsia_async::Socket::from_socket(socket) {
                                     Ok(socket) => socket,
                                     Err(e) => {
-                                        log::error!("Error converting socket to async: {:?}", e);
+                                        tracing::error!(
+                                            "Error converting socket to async: {:?}",
+                                            e
+                                        );
                                         continue;
                                     }
                                 };
@@ -285,7 +288,7 @@ impl FidlProtocol for Forward {
     }
 
     async fn start(&mut self, cx: &Context) -> Result<()> {
-        log::info!("started port forwarding protocol");
+        tracing::info!("started port forwarding protocol");
 
         let tunnels: Vec<Value> = ffx_config::get(TUNNEL_CFG).await.unwrap_or_else(|_| Vec::new());
 
@@ -293,7 +296,7 @@ impl FidlProtocol for Forward {
             let tunnel: ForwardConfig = match serde_json::from_value(tunnel) {
                 Ok(tunnel) => tunnel,
                 Err(e) => {
-                    log::warn!("Malformed tunnel config: {:?}", e);
+                    tracing::warn!("Malformed tunnel config: {:?}", e);
                     continue;
                 }
             };
@@ -320,7 +323,7 @@ impl FidlProtocol for Forward {
     }
 
     async fn stop(&mut self, _cx: &Context) -> Result<()> {
-        log::info!("stopped port forwarding protocol");
+        tracing::info!("stopped port forwarding protocol");
         Ok(())
     }
 }

@@ -138,7 +138,10 @@ impl LogFilterCriteria {
                 None => default_log_spam_path,
             };
             if let Some(spam_list_path) = spam_list_path {
-                log::info!("Filtering Log spam based on spam definition file {:?}", spam_list_path);
+                tracing::info!(
+                    "Filtering Log spam based on spam definition file {:?}",
+                    spam_list_path
+                );
                 let contents = fs::read_to_string(spam_list_path)?;
                 let spam_list: spam_filter::LogSpamList = serde_json::from_str(&contents)?;
                 spam_filter = Some(Box::new(spam_filter::LogSpamFilterImpl::new(spam_list)))

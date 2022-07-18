@@ -74,7 +74,7 @@ pub async fn run_logging_pipeline(
         .into_iter()
         .filter_map(|r| {
             if let Err(ref e) = r {
-                log::warn!("got an error running logging pipeline {:?}", e);
+                tracing::warn!("got an error running logging pipeline {:?}", e);
             }
             r.ok()
         })

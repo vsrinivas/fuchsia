@@ -85,7 +85,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
             .ok_or(anyhow!("cannot read kernel file name '{:?}'", guest_config.kernel_image));
         let kernel_path = instance_root.join(kernel_name?);
         if kernel_path.exists() && reuse {
-            log::debug!("Using existing file for {:?}", kernel_path.file_name().unwrap());
+            tracing::debug!("Using existing file for {:?}", kernel_path.file_name().unwrap());
         } else {
             fs::copy(&guest_config.kernel_image, &kernel_path)
                 .context("cannot stage kernel file")?;
@@ -95,7 +95,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
             .join(guest_config.zbi_image.file_name().ok_or(anyhow!("cannot read zbi file name"))?);
 
         if zbi_path.exists() && reuse {
-            log::debug!("Using existing file for {:?}", zbi_path.file_name().unwrap());
+            tracing::debug!("Using existing file for {:?}", zbi_path.file_name().unwrap());
         } else {
             // Add the authorized public keys to the zbi image to enable SSH access to
             // the guest.
@@ -109,7 +109,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                 let fvm_path = instance_root
                     .join(src_fvm.file_name().ok_or(anyhow!("cannot read fvm file name"))?);
                 if fvm_path.exists() && reuse {
-                    log::debug!("Using existing file for {:?}", fvm_path.file_name().unwrap());
+                    tracing::debug!("Using existing file for {:?}", fvm_path.file_name().unwrap());
                 } else {
                     fs::copy(src_fvm, &fvm_path).context("cannot stage fvm file")?;
 
@@ -305,7 +305,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                     if let Some(stop_error) =
                         Self::stop_emulator(running, pid, &target_id, proxy).await.err()
                     {
-                        log::debug!(
+                        tracing::debug!(
                             "Error encountered in stop when handling failed launch: {:?}",
                             stop_error
                         );
@@ -317,12 +317,15 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
             // Wait until the emulator is considered "active" before returning to the user.
             let mut time_left = self.emu_config().runtime.startup_timeout.clone();
             print!("Waiting for Fuchsia to start (up to {} seconds).", &time_left.as_secs());
-            log::debug!("Waiting for Fuchsia to start (up to {} seconds)...", &time_left.as_secs());
+            tracing::debug!(
+                "Waiting for Fuchsia to start (up to {} seconds)...",
+                &time_left.as_secs()
+            );
             let name = &self.emu_config().runtime.name;
             while !time_left.is_zero() {
                 if is_active(proxy, name).await {
                     println!("\nEmulator is ready.");
-                    log::debug!("Emulator is ready.");
+                    tracing::debug!("Emulator is ready.");
                     break;
                 } else {
                     // Output a little status indicator to show we haven't gotten stuck.
@@ -334,7 +337,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                     // Perform a check to make sure the process is still alive, otherwise report
                     // failure to launch.
                     if !self.is_running() {
-                        log::error!(
+                        tracing::error!(
                             "Emulator process failed to launch, but we don't know the cause. \
                             Check the emulator log, or look for a crash log."
                         );
@@ -354,7 +357,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                                 {
                                     // A failure here probably means it was never added.
                                     // Just log the error and quit.
-                                    log::warn!(
+                                    tracing::warn!(
                                         "Couldn't remove target from ffx during shutdown: {:?}",
                                         e
                                     );
@@ -419,7 +422,9 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                             };
                         }
 
-                        log::warn!("Emulator did not respond to a health check before timing out.");
+                        tracing::warn!(
+                            "Emulator did not respond to a health check before timing out."
+                        );
                     }
                 }
             }
@@ -449,12 +454,12 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
     ) -> Result<()> {
         if let Err(e) = remove_target(proxy, target_id).await {
             // Even if we can't remove it, still continue shutting down.
-            log::warn!("Couldn't remove target from ffx during shutdown: {:?}", e);
+            tracing::warn!("Couldn't remove target from ffx during shutdown: {:?}", e);
         }
         if running {
             println!("Terminating running instance {:?}", pid);
             if let Some(terminate_error) = process::terminate(pid).err() {
-                log::warn!("Error encountered terminating process: {:?}", terminate_error);
+                tracing::warn!("Error encountered terminating process: {:?}", terminate_error);
             }
         }
         Ok(())

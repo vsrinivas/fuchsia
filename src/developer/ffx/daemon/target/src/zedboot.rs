@@ -62,7 +62,7 @@ pub async fn interface_discovery(
     let mut v6_listen_socket: Weak<UdpSocket> = Weak::new();
 
     if ffx_config::get("discovery.zedboot.enabled").await.unwrap_or(false) {
-        log::debug!("Starting Zedboot discovery loop");
+        tracing::debug!("Starting Zedboot discovery loop");
     };
 
     loop {
@@ -81,7 +81,7 @@ pub async fn interface_discovery(
                     }
                     Err(err) => {
                         if should_log_v6_listen_error {
-                            log::error!(
+                            tracing::error!(
                                 "unable to bind IPv6 listen socket: {}. Discovery may fail.",
                                 err
                             );
@@ -99,7 +99,7 @@ pub async fn interface_discovery(
                         }
                     }
                     Err(err) => {
-                        log::warn!("{}", err);
+                        tracing::warn!("{}", err);
                     }
                 }
             }
@@ -126,7 +126,7 @@ async fn recv_loop(sock: Arc<UdpSocket>, e: events::Queue<DaemonEvent>) {
                 addr
             }
             Err(err) => {
-                log::info!("listen socket recv error: {}, zedboot listener closed", err);
+                tracing::info!("listen socket recv error: {}, zedboot listener closed", err);
                 return;
             }
         };
@@ -134,7 +134,7 @@ async fn recv_loop(sock: Arc<UdpSocket>, e: events::Queue<DaemonEvent>) {
         let msg = match buf.parse::<NetbootPacket<_>>() {
             Ok(msg) => msg,
             Err(e) => {
-                log::error!("failed to parse netboot packet {:?}", e);
+                tracing::error!("failed to parse netboot packet {:?}", e);
                 continue;
             }
         };
@@ -146,17 +146,17 @@ async fn recv_loop(sock: Arc<UdpSocket>, e: events::Queue<DaemonEvent>) {
 
         match ZedbootPacket(msg).try_into_target_info(addr) {
             Ok(info) => {
-                log::trace!(
+                tracing::trace!(
                     "zedboot packet from {} ({}) on {}",
                     addr,
                     info.nodename.clone().unwrap_or("<unknown>".to_string()),
                     sock.local_addr().unwrap()
                 );
                 e.push(DaemonEvent::WireTraffic(WireTrafficType::Zedboot(info))).unwrap_or_else(
-                    |err| log::debug!("zedboot discovery was unable to publish: {}", err),
+                    |err| tracing::debug!("zedboot discovery was unable to publish: {}", err),
                 );
             }
-            Err(e) => log::error!("failed to extract zedboot target info {:?}", e),
+            Err(e) => tracing::error!("failed to extract zedboot target info {:?}", e),
         }
     }
 }
@@ -252,7 +252,7 @@ async fn send(opcode: Opcode, body: &str, to_addr: TargetAddr) -> Result<()> {
         .expect("failed to serialize");
     let mut to_sock: SocketAddr = to_addr.into();
     to_sock.set_port(SERVER_PORT.get());
-    log::info!("Sending {:?} {} to {}", opcode, body, to_sock);
+    tracing::info!("Sending {:?} {} to {}", opcode, body, to_sock);
     let sock = make_sender_socket(to_sock).await?;
     sock.send(msg.as_ref()).await.map_err(|e| anyhow!("Sending error: {}", e)).and_then(|sent| {
         if sent == msg.len() {

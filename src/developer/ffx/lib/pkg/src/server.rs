@@ -15,7 +15,6 @@ use {
     futures::{future::Shared, prelude::*, AsyncRead, AsyncWrite, TryStreamExt},
     http_sse::{Event, EventSender, SseResponseCreator},
     hyper::{body::Body, header::RANGE, service::service_fn, Request, Response, StatusCode},
-    log::{error, info, warn},
     parking_lot::{Mutex, RwLock},
     serde::{Deserialize, Serialize},
     std::{
@@ -29,6 +28,7 @@ use {
         task::{Context, Poll},
         time::Duration,
     },
+    tracing::{error, info, warn},
 };
 
 // FIXME: This value was chosen basically at random.

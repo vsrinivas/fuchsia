@@ -96,7 +96,7 @@ async fn pb_get<W: Write + Sync>(
         let repo_name = product_name.replace('_', "-");
 
         if repo_name != product_name {
-            log::info!(
+            tracing::info!(
                 "Repository names cannot contain '_'. Replacing with '-' in {}",
                 product_name
             );
@@ -130,11 +130,14 @@ async fn pb_get<W: Write + Sync>(
                 .map_err(RepositoryError::from)
                 .with_context(|| format!("registering repository {}", repo_name))?;
 
-            log::info!("Created repository named '{}'", repo_name);
+            tracing::info!("Created repository named '{}'", repo_name);
         }
     }
 
-    log::debug!("Total fx product-bundle get runtime {} seconds.", start.elapsed().as_secs_f32());
+    tracing::debug!(
+        "Total fx product-bundle get runtime {} seconds.",
+        start.elapsed().as_secs_f32()
+    );
     Ok(())
 }
 

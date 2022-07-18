@@ -25,7 +25,7 @@ ffx_plugin("ffx_version") {
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:tracing",
   ]
 
   args_sources = [ "src/args.rs" ]

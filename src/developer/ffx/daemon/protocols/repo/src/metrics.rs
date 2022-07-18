@@ -18,14 +18,14 @@ async fn add_event(action: &'static str, label: Option<String>) {
         {
             Ok(_) => {}
             Err(err) => {
-                log::error!("metrics submission failed: {}", err);
+                tracing::error!("metrics submission failed: {}", err);
             }
         }
     });
 
     analytics_task
         .on_timeout(Duration::from_secs(2), || {
-            log::error!("metrics submisson timed out");
+            tracing::error!("metrics submisson timed out");
         })
         .await;
 }

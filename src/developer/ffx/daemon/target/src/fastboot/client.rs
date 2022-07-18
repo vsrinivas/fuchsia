@@ -135,7 +135,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
             Ok(_) => self.check_for_fastboot().await,
             Err(_e @ FidlError::ClientChannelClosed { .. }) => self.check_for_fastboot().await,
             Err(e) => {
-                log::error!("FIDL Error for reboot_to_bootloader {:?}", e);
+                tracing::error!("FIDL Error for reboot_to_bootloader {:?}", e);
                 Err(RebootError::FailedToSendTargetReboot)
             }
         }
@@ -150,13 +150,13 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
     }
 
     async fn handle_fastboot_request(&mut self, req: FastbootRequest) -> Result<()> {
-        log::debug!("fastboot - received req: {:?}", req);
+        tracing::debug!("fastboot - received req: {:?}", req);
         match req {
             FastbootRequest::Prepare { listener, responder } => {
                 match self.prepare_device(&listener.into_proxy()?).await {
                     Ok(_) => responder.send(&mut Ok(()))?,
                     Err(e) => {
-                        log::error!("Error preparing device: {:?}", e);
+                        tracing::error!("Error preparing device: {:?}", e);
                         responder.send(&mut Err(e)).context("sending error response")?;
                     }
                 }
@@ -165,7 +165,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                 match get_var(self.interface().await?, &name).await {
                     Ok(value) => responder.send(&mut Ok(value))?,
                     Err(e) => {
-                        log::error!("Error getting variable '{}': {:?}", name, e);
+                        tracing::error!("Error getting variable '{}': {:?}", name, e);
                         responder
                             .send(&mut Err(FastbootError::ProtocolError))
                             .context("sending error response")?;
@@ -179,7 +179,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                         responder.send(&mut Ok(()))?;
                     }
                     Err(e) => {
-                        log::error!("Error getting all variables: {:?}", e);
+                        tracing::error!("Error getting all variables: {:?}", e);
                         responder
                             .send(&mut Err(FastbootError::ProtocolError))
                             .context("sending error response")?;
@@ -192,7 +192,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                 {
                     Ok(_) => responder.send(&mut Ok(()))?,
                     Err(e) => {
-                        log::error!(
+                        tracing::error!(
                             "Error flashing \"{}\" from {}:\n{:?}",
                             partition_name,
                             path,
@@ -209,7 +209,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                 match erase(self.interface().await?, &partition_name).await {
                     Ok(_) => responder.send(&mut Ok(()))?,
                     Err(e) => {
-                        log::error!("Error erasing \"{}\": {:?}", partition_name, e);
+                        tracing::error!("Error erasing \"{}\": {:?}", partition_name, e);
                         responder
                             .send(&mut Err(FastbootError::ProtocolError))
                             .context("sending error response")?;
@@ -219,7 +219,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
             FastbootRequest::Boot { responder } => match boot(self.interface().await?).await {
                 Ok(_) => responder.send(&mut Ok(()))?,
                 Err(e) => {
-                    log::error!("Error booting: {:?}", e);
+                    tracing::error!("Error booting: {:?}", e);
                     responder
                         .send(&mut Err(FastbootError::ProtocolError))
                         .context("sending error response")?;
@@ -228,7 +228,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
             FastbootRequest::Reboot { responder } => match reboot(self.interface().await?).await {
                 Ok(_) => responder.send(&mut Ok(()))?,
                 Err(e) => {
-                    log::error!("Error rebooting: {:?}", e);
+                    tracing::error!("Error rebooting: {:?}", e);
                     responder
                         .send(&mut Err(FastbootError::ProtocolError))
                         .context("sending error response")?;
@@ -257,16 +257,19 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                             }
                         ) {
                             Ok(_) => {
-                                log::debug!("Rediscovered reboot target");
+                                tracing::debug!("Rediscovered reboot target");
                                 responder.send(&mut Ok(()))?;
                             }
                             Err(e) => {
-                                log::error!("Error rebooting and rediscovering target: {:?}", e);
+                                tracing::error!(
+                                    "Error rebooting and rediscovering target: {:?}",
+                                    e
+                                );
                                 // Check the target and see what state it's in.  Maybe we just
                                 // missed the event.
                                 match self.check_for_fastboot().await {
                                     Ok(_) => {
-                                        log::debug!("Target in fastboot despite timeout.");
+                                        tracing::debug!("Target in fastboot despite timeout.");
                                         responder.send(&mut Ok(()))?;
                                     }
                                     _ => responder
@@ -277,7 +280,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                         }
                     }
                     Err(e) => {
-                        log::error!("Error rebooting: {:?}", e);
+                        tracing::error!("Error rebooting: {:?}", e);
                         responder.send(&mut Err(e)).context("sending error response")?;
                     }
                 }
@@ -286,7 +289,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                 match continue_boot(self.interface().await?).await {
                     Ok(_) => responder.send(&mut Ok(()))?,
                     Err(e) => {
-                        log::error!("Error continuing boot: {:?}", e);
+                        tracing::error!("Error continuing boot: {:?}", e);
                         responder
                             .send(&mut Err(FastbootError::ProtocolError))
                             .context("sending error response")?;
@@ -297,7 +300,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                 match set_active(self.interface().await?, &slot).await {
                     Ok(_) => responder.send(&mut Ok(()))?,
                     Err(e) => {
-                        log::error!("Error setting active: {:?}", e);
+                        tracing::error!("Error setting active: {:?}", e);
                         responder
                             .send(&mut Err(FastbootError::ProtocolError))
                             .context("sending error response")?;
@@ -310,7 +313,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                 {
                     Ok(_) => responder.send(&mut Ok(()))?,
                     Err(e) => {
-                        log::error!("Error setting active: {:?}", e);
+                        tracing::error!("Error setting active: {:?}", e);
                         responder
                             .send(&mut Err(FastbootError::ProtocolError))
                             .context("sending error response")?;
@@ -321,7 +324,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                 match oem(self.interface().await?, &command).await {
                     Ok(_) => responder.send(&mut Ok(()))?,
                     Err(e) => {
-                        log::error!("Error sending oem \"{}\": {:?}", command, e);
+                        tracing::error!("Error sending oem \"{}\": {:?}", command, e);
                         responder
                             .send(&mut Err(FastbootError::ProtocolError))
                             .context("sending error response")?;
@@ -332,7 +335,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                 match get_staged(self.interface().await?, &path).await {
                     Ok(_) => responder.send(&mut Ok(()))?,
                     Err(e) => {
-                        log::error!("Error getting staged file: {:?}", e);
+                        tracing::error!("Error getting staged file: {:?}", e);
                         responder
                             .send(&mut Err(FastbootError::ProtocolError))
                             .context("sending error response")?;
@@ -465,8 +468,8 @@ mod test {
         let (proxy, stream) = create_proxy_and_stream::<FastbootMarker>().unwrap();
         fuchsia_async::Task::local(async move {
             match fb.handle_fastboot_requests_from_stream(stream).await {
-                Ok(_) => log::debug!("Fastboot proxy finished - client disconnected"),
-                Err(e) => log::error!("There was an error handling fastboot requests: {:?}", e),
+                Ok(_) => tracing::debug!("Fastboot proxy finished - client disconnected"),
+                Err(e) => tracing::error!("There was an error handling fastboot requests: {:?}", e),
             }
             assert!(fb.interface.is_none());
         })
