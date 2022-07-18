@@ -5,6 +5,7 @@
 pub mod artifact;
 pub mod blobfs;
 pub mod bootfs;
+pub mod fs;
 pub mod fvm;
 pub mod golden;
 pub mod io;

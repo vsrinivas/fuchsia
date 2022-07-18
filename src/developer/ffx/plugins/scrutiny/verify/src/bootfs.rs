@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, bail, Context, Result},
     ffx_scrutiny_verify_args::bootfs::Command,
-    scrutiny_config::{Config, LoggingConfig, PluginConfig, RuntimeConfig},
+    scrutiny_config::{Config, LoggingConfig, ModelConfig, PluginConfig, RuntimeConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     scrutiny_utils::golden::{CompareResult, GoldenFile},
     serde_json,
@@ -21,7 +21,7 @@ If you are making a change in fuchsia.git that causes this, you need to perform 
 5: For each existing line you modified in 2, remove the line.
 ";
 
-pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
+pub async fn verify(cmd: &Command, tmp_dir: Option<&PathBuf>) -> Result<HashSet<PathBuf>> {
     if cmd.golden.len() == 0 {
         bail!("Must specify at least one --golden");
     }
@@ -37,6 +37,10 @@ pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
         RuntimeConfig {
             logging: LoggingConfig { silent_mode: true, ..LoggingConfig::minimal() },
             plugin: PluginConfig { plugins: vec!["ToolkitPlugin".to_string()] },
+            model: match tmp_dir {
+                Some(tmp_dir) => ModelConfig::minimal().with_temporary_directory(tmp_dir.clone()),
+                None => ModelConfig::minimal(),
+            },
             ..RuntimeConfig::minimal()
         },
     );

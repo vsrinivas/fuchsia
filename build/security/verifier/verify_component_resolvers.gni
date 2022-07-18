@@ -84,6 +84,8 @@ template("verify_component_resolvers") {
       rebase_path(depfile, root_build_dir),
       "--stamp",
       rebase_path(stamp_file, root_build_dir),
+      "--tmp-dir",
+      rebase_path(target_gen_dir, root_build_dir),
       "component-resolvers",
       "--build-path",
       rebase_path(root_build_dir, root_build_dir),

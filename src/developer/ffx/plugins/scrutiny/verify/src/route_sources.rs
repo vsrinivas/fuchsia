@@ -12,7 +12,7 @@ use {
     serde_json,
     std::{
         collections::{HashMap, HashSet},
-        convert::{TryFrom, TryInto},
+        convert::TryFrom,
         path::PathBuf,
     },
 };
@@ -22,6 +22,14 @@ struct Query {
     update_package_path: PathBuf,
     blobfs_paths: Vec<PathBuf>,
     config_path: String,
+    tmp_dir_path: Option<PathBuf>,
+}
+
+impl Query {
+    fn with_temporary_directory(mut self, tmp_dir_path: Option<&PathBuf>) -> Self {
+        self.tmp_dir_path = tmp_dir_path.map(PathBuf::clone);
+        self
+    }
 }
 
 impl TryFrom<&Command> for Query {
@@ -46,6 +54,7 @@ impl TryFrom<&Command> for Query {
             update_package_path,
             blobfs_paths,
             config_path,
+            tmp_dir_path: None,
         })
     }
 }
@@ -55,10 +64,10 @@ fn verify_route_sources(query: Query) -> Result<HashSet<PathBuf>> {
         update_package_path: query.update_package_path,
         blobfs_paths: query.blobfs_paths,
         build_path: query.build_path,
+        tmp_dir_path: query.tmp_dir_path,
         ..ModelConfig::minimal()
     };
 
-    let runtime_config = RuntimeConfig::minimal();
     let config = Config::run_command_with_runtime(
         CommandBuilder::new("verify.route_sources").param("input", query.config_path).build(),
         RuntimeConfig {
@@ -75,7 +84,7 @@ fn verify_route_sources(query: Query) -> Result<HashSet<PathBuf>> {
                 .map(String::from)
                 .collect(),
             },
-            ..runtime_config
+            ..RuntimeConfig::minimal()
         },
     );
 
@@ -102,8 +111,8 @@ fn verify_route_sources(query: Query) -> Result<HashSet<PathBuf>> {
     Ok(route_sources_results.deps)
 }
 
-pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
-    let query = cmd.try_into()?;
+pub async fn verify(cmd: &Command, tmp_dir: Option<&PathBuf>) -> Result<HashSet<PathBuf>> {
+    let query = Query::try_from(cmd)?.with_temporary_directory(tmp_dir);
     let deps = verify_route_sources(query)?;
     Ok(deps)
 }

@@ -242,6 +242,9 @@ pub struct ModelConfig {
     /// Optional path to a component tree configuration used for customizing
     /// component tree data collection.
     pub component_tree_config_path: Option<PathBuf>,
+    /// A path to a directory for temporary files. This path, if defined, should
+    /// exist for scrutiny's lifetime.
+    pub tmp_dir_path: Option<PathBuf>,
 }
 
 impl ModelConfig {
@@ -251,7 +254,7 @@ impl ModelConfig {
         Self::at_path(build_path)
     }
     /// Configure the model to be access at the supplied path.
-    pub fn at_path(build_path: PathBuf) -> ModelConfig {
+    pub fn at_path(build_path: PathBuf) -> Self {
         let update_package_path = build_path
             .join(DEFAULT_FUCHSIA_IMAGE_DIR)
             .join(DEFAULT_UPDATE_TARGET_NAME)
@@ -275,9 +278,15 @@ impl ModelConfig {
             config_data_package_url: from_package_name("config-data").unwrap(),
             devmgr_config_path: "config/devmgr".into(),
             component_tree_config_path: None,
+            tmp_dir_path: None,
         }
     }
-    pub fn minimal() -> ModelConfig {
+    /// Add `tmp_dir_path` to an existing `ModelConfig`.
+    pub fn with_temporary_directory(mut self, tmp_dir_path: PathBuf) -> Self {
+        self.tmp_dir_path = Some(tmp_dir_path);
+        self
+    }
+    pub fn minimal() -> Self {
         ModelConfig::default()
     }
     /// Model URI used to determine if the model is in memory or on disk.
@@ -304,6 +313,10 @@ impl ModelConfig {
     /// The path to the device manager configuration file in bootfs.
     pub fn devmgr_config_path(&self) -> PathBuf {
         self.devmgr_config_path.clone()
+    }
+    /// A path to a directory for temporary files.
+    pub fn tmp_dir_path(&self) -> Option<PathBuf> {
+        self.tmp_dir_path.clone()
     }
 }
 

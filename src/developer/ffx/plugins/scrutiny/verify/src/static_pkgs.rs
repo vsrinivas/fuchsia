@@ -29,6 +29,7 @@ struct Query {
     build_path: PathBuf,
     update_package_path: PathBuf,
     blobfs_paths: Vec<PathBuf>,
+    tmp_dir_path: Option<PathBuf>,
 }
 
 fn verify_static_pkgs(query: &Query, golden_file_path: PathBuf) -> Result<HashSet<PathBuf>> {
@@ -39,6 +40,7 @@ fn verify_static_pkgs(query: &Query, golden_file_path: PathBuf) -> Result<HashSe
                 build_path: query.build_path.clone(),
                 update_package_path: query.update_package_path.clone(),
                 blobfs_paths: query.blobfs_paths.clone(),
+                tmp_dir_path: query.tmp_dir_path.clone(),
                 ..ModelConfig::minimal()
             },
             logging: LoggingConfig { silent_mode: true, ..LoggingConfig::minimal() },
@@ -97,12 +99,13 @@ fn verify_static_pkgs(query: &Query, golden_file_path: PathBuf) -> Result<HashSe
     }
 }
 
-pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
+pub async fn verify(cmd: &Command, tmp_dir: Option<&PathBuf>) -> Result<HashSet<PathBuf>> {
     let build_path = cmd.build_path.clone();
     let update_package_path = join_and_canonicalize(&cmd.build_path, &cmd.update);
     let blobfs_paths =
         cmd.blobfs.iter().map(|blobfs| join_and_canonicalize(&cmd.build_path, blobfs)).collect();
-    let query = Query { build_path, update_package_path, blobfs_paths };
+    let tmp_dir_path = tmp_dir.map(PathBuf::clone);
+    let query = Query { build_path, update_package_path, blobfs_paths, tmp_dir_path };
     let mut deps = HashSet::new();
 
     for golden_file_path in cmd.golden.iter() {

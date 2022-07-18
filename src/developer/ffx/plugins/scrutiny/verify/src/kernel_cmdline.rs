@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, bail, Context, Result},
     ffx_scrutiny_verify_args::kernel_cmdline::Command,
-    scrutiny_config::{Config, LoggingConfig, PluginConfig, RuntimeConfig},
+    scrutiny_config::{Config, LoggingConfig, ModelConfig, PluginConfig, RuntimeConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     scrutiny_utils::golden::{CompareResult, GoldenFile},
     serde_json,
@@ -29,6 +29,8 @@ If you are making a change in fuchsia.git that causes this, you need to perform 
 struct Query {
     // A host filesystem path to the ZBI blob.
     zbi_path: PathBuf,
+    // A root directory for temporary files created by scrutiny.
+    tmp_dir_path: Option<PathBuf>,
 }
 
 fn verify_kernel_cmdline<P: AsRef<Path>>(query: &Query, golden_path: P) -> Result<()> {
@@ -43,6 +45,12 @@ fn verify_kernel_cmdline<P: AsRef<Path>>(query: &Query, golden_path: P) -> Resul
         RuntimeConfig {
             logging: LoggingConfig { silent_mode: true, ..LoggingConfig::minimal() },
             plugin: PluginConfig { plugins: vec!["ToolkitPlugin".to_string()] },
+            model: match &query.tmp_dir_path {
+                Some(tmp_dir_path) => {
+                    ModelConfig::minimal().with_temporary_directory(tmp_dir_path.clone())
+                }
+                None => ModelConfig::minimal(),
+            },
             ..RuntimeConfig::minimal()
         },
     );
@@ -74,14 +82,14 @@ fn verify_kernel_cmdline<P: AsRef<Path>>(query: &Query, golden_path: P) -> Resul
     }
 }
 
-pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
+pub async fn verify(cmd: &Command, tmp_dir: Option<&PathBuf>) -> Result<HashSet<PathBuf>> {
     if cmd.golden.len() == 0 {
         bail!("Must specify at least one --golden");
     }
     let mut deps = HashSet::new();
     deps.insert(cmd.zbi.clone());
 
-    let query = Query { zbi_path: cmd.zbi.clone() };
+    let query = Query { zbi_path: cmd.zbi.clone(), tmp_dir_path: tmp_dir.map(PathBuf::clone) };
     for golden_file_path in cmd.golden.iter() {
         verify_kernel_cmdline(&query, golden_file_path)?;
 

@@ -24,6 +24,14 @@ struct Query {
     blobfs_paths: Vec<PathBuf>,
     allowlist_paths: Vec<PathBuf>,
     component_tree_config_path: Option<PathBuf>,
+    tmp_dir_path: Option<PathBuf>,
+}
+
+impl Query {
+    fn with_temporary_directory(mut self, tmp_dir_path: Option<&PathBuf>) -> Self {
+        self.tmp_dir_path = tmp_dir_path.map(PathBuf::clone);
+        self
+    }
 }
 
 impl From<&Command> for Query {
@@ -61,6 +69,7 @@ impl From<&Command> for Query {
             blobfs_paths,
             allowlist_paths,
             component_tree_config_path,
+            tmp_dir_path: None,
         }
     }
 }
@@ -86,8 +95,8 @@ fn load_allowlist(allowlist_paths: &Vec<PathBuf>) -> Result<Box<dyn AllowlistFil
     Err(err.unwrap())
 }
 
-pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
-    let query: Query = cmd.into();
+pub async fn verify(cmd: &Command, tmp_dir: Option<&PathBuf>) -> Result<HashSet<PathBuf>> {
+    let query: Query = Query::from(cmd).with_temporary_directory(tmp_dir);
     let mut config = Config::run_command_with_plugins(
         CommandBuilder::new("verify.capability_routes")
             .param("capability_types", query.capability_types.join(" "))
@@ -99,6 +108,7 @@ pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
     config.runtime.model.update_package_path = query.update_package_path;
     config.runtime.model.blobfs_paths = query.blobfs_paths;
     config.runtime.model.component_tree_config_path = query.component_tree_config_path;
+    config.runtime.model.tmp_dir_path = query.tmp_dir_path;
     config.runtime.logging.silent_mode = true;
 
     let results = launcher::launch_from_config(config).context("Failed to launch scrutiny")?;

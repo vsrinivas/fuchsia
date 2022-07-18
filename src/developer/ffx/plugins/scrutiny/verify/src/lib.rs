@@ -23,13 +23,16 @@ pub async fn scrutiny_verify(cmd: Command) -> Result<()> {
         bail!("Cannot specify --depfile without --stamp");
     }
 
+    let tmp_dir = cmd.tmp_dir.as_ref();
     let deps_set = match &cmd.subcommand {
-        SubCommand::Bootfs(cmd) => bootfs::verify(cmd).await,
-        SubCommand::ComponentResolvers(cmd) => component_resolvers::verify(cmd).await,
-        SubCommand::KernelCmdline(cmd) => kernel_cmdline::verify(cmd).await,
-        SubCommand::RouteSources(cmd) => route_sources::verify(cmd).await,
-        SubCommand::Routes(cmd) => routes::verify(cmd).await,
-        SubCommand::StaticPkgs(cmd) => static_pkgs::verify(cmd).await,
+        SubCommand::Bootfs(subcommand) => bootfs::verify(subcommand, tmp_dir).await,
+        SubCommand::ComponentResolvers(subcommand) => {
+            component_resolvers::verify(subcommand, tmp_dir).await
+        }
+        SubCommand::KernelCmdline(subcommand) => kernel_cmdline::verify(subcommand, tmp_dir).await,
+        SubCommand::RouteSources(subcommand) => route_sources::verify(subcommand, tmp_dir).await,
+        SubCommand::Routes(subcommand) => routes::verify(subcommand, tmp_dir).await,
+        SubCommand::StaticPkgs(subcommand) => static_pkgs::verify(subcommand, tmp_dir).await,
     }?;
 
     if let Some(depfile_path) = cmd.depfile.as_ref() {

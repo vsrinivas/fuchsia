@@ -85,15 +85,16 @@ if (is_host) {
       "//third_party/rust_crates:hex",
       "//third_party/rust_crates:libc",
       "//third_party/rust_crates:log",
+      "//third_party/rust_crates:once_cell",
       "//third_party/rust_crates:pathdiff",
       "//third_party/rust_crates:serde",
+      "//third_party/rust_crates:tempfile",
       "//third_party/rust_crates:thiserror",
     ]
 
     test_deps = [
       "//src/lib/fuchsia",
       "//third_party/rust_crates:maplit",
-      "//third_party/rust_crates:tempfile",
     ]
 
     non_rust_deps = [
@@ -107,6 +108,7 @@ if (is_host) {
       "src/blobfs.rs",
       "src/blobfs_export.rs",
       "src/bootfs.rs",
+      "src/fs.rs",
       "src/fvm.rs",
       "src/golden.rs",
       "src/io/mod.rs",

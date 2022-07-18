@@ -29,6 +29,7 @@ pub fn fake_model_config() -> ModelConfig {
         )),
         devmgr_config_path: "config/devmgr".into(),
         component_tree_config_path: None,
+        tmp_dir_path: None,
     }
 }
 

@@ -62,6 +62,7 @@ struct ScrutinyQueryComponentResolvers {
     build_path: PathBuf,
     update_package_path: PathBuf,
     blobfs_paths: Vec<PathBuf>,
+    tmp_dir_path: Option<PathBuf>,
 }
 
 impl QueryComponentResolvers for ScrutinyQueryComponentResolvers {
@@ -84,6 +85,7 @@ impl QueryComponentResolvers for ScrutinyQueryComponentResolvers {
         config.runtime.model.build_path = self.build_path.clone();
         config.runtime.model.update_package_path = self.update_package_path.clone();
         config.runtime.model.blobfs_paths = self.blobfs_paths.clone();
+        config.runtime.model.tmp_dir_path = self.tmp_dir_path.clone();
         config.runtime.logging.silent_mode = true;
 
         let results = launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
@@ -140,7 +142,7 @@ fn verify_component_resolvers(
     }
 }
 
-pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
+pub async fn verify(cmd: &Command, tmp_dir: Option<&PathBuf>) -> Result<HashSet<PathBuf>> {
     let allowlist_path = join_and_canonicalize(&cmd.build_path, &cmd.allowlist);
     let update_package_path = join_and_canonicalize(&cmd.build_path, &cmd.update);
     let blobfs_paths =
@@ -149,6 +151,7 @@ pub async fn verify(cmd: &Command) -> Result<HashSet<PathBuf>> {
         build_path: cmd.build_path.clone(),
         update_package_path,
         blobfs_paths,
+        tmp_dir_path: tmp_dir.map(PathBuf::clone),
     };
 
     let allowlist: AllowList = serde_json5::from_str(

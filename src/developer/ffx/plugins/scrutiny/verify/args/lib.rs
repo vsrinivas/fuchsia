@@ -21,6 +21,9 @@ pub struct Command {
     /// path to stamp file to write to if and only if verification succeeds.
     #[argh(option)]
     pub stamp: Option<PathBuf>,
+    /// path to directory to use for temporary files.
+    #[argh(option)]
+    pub tmp_dir: Option<PathBuf>,
     #[argh(subcommand)]
     pub subcommand: SubCommand,
 }
