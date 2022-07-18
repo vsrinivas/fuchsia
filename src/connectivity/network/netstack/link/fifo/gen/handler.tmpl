@@ -193,6 +193,16 @@ func (h *{{ .Handler }}) ProcessWrite(pbList stack.PacketBufferList, processor f
 		case zx.ErrPeerClosed:
 			h.DetachTx()
 			return i, &tcpip.ErrClosedForSend{}
+		case zx.ErrBadHandle:
+			// We may have detached then closed the FIFO since we last unlocked before
+			// writing to the FIFO.
+			h.tx.mu.Lock()
+			detached := h.tx.mu.detached
+			h.tx.mu.Unlock()
+			if detached {
+				return i, &tcpip.ErrClosedForSend{}
+			}
+			fallthrough
 		default:
 			panic(fmt.Sprintf("FifoWrite(TX): (%v, %d)", status, count))
 		}
