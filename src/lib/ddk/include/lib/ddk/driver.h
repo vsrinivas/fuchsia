@@ -450,11 +450,27 @@ static inline zx_status_t load_firmware(zx_device_t* device, const char* path, z
   return load_firmware_from_driver(__zircon_driver_rec__.driver, device, path, fw, size);
 }
 
-// Opens a connection to specified fidl protocol on the specified device.
+// Opens a connection to the specified FIDL protocol offered by |device|.
+//
+// |device| is typically the parent of the device invoking this function.
+// |protocol_name| can be constructed with
+// fidl::DiscoverableProtocolName<my_protocol_name>.
 // |request| must be the server end of a zircon channel.
+//
+// If you are inside a C++ device class, it may be more convenient to use the
+// DdkConnectFidlProtocol wrapper method from ddktl, which supplies |device| and
+// |protocol_name| automatically.
 zx_status_t device_connect_fidl_protocol(zx_device_t* device, const char* protocol_name,
                                          zx_handle_t request);
 
+// Opens a connection to the specified FIDL protocol offered by |device|.
+//
+// |device| should be a composite device. |fragment_name| picks out the specific
+// fragment device to use; it must match the fragment name declared in the
+// composite device's bind file.
+//
+// Arguments are otherwise the same as for device_connect_fidl_protocol. The
+// ddktl equivalent is DdkConnectFragmentFidlProtocol.
 zx_status_t device_connect_fragment_fidl_protocol(zx_device_t* device, const char* fragment_name,
                                                   const char* protocol_name, zx_handle_t request);
 
