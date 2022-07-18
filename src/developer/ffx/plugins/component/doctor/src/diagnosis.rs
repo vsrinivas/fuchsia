@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Diagnosis {
     pub is_error: bool,
-    pub report_type: String,
+    pub decl_type: String,
     pub capability: String,
     pub summary: Option<String>,
 }

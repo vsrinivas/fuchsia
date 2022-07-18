@@ -21,6 +21,10 @@ pub struct DoctorCommand {
     #[argh(positional)]
     /// the component's moniker. Example: `/core/appmgr`.
     pub moniker: String,
+
+    #[argh(switch, long = "plain", short = 'p')]
+    /// whether or not to display the output without color and wrapping.
+    pub plain_output: bool,
 }
 
 #[cfg(test)]
@@ -34,7 +38,7 @@ mod tests {
         let args = &[moniker];
         assert_eq!(
             DoctorCommand::from_args(CMD_NAME, args),
-            Ok(DoctorCommand { moniker: moniker.to_string() })
+            Ok(DoctorCommand { moniker: moniker.to_string(), plain_output: false })
         )
     }
 }
