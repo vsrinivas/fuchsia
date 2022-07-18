@@ -10,7 +10,7 @@ fuchsia_unittest_component("fdio-gtest-component") {
 }
 
 fuchsia_unittest_component("fdio-zxtest-component") {
-  manifest = "meta/fdio_test.cmx"
+  manifest = "meta/fdio_test.cml"
   deps = [
     ":accept-child",
     ":chroot-child",
@@ -30,6 +30,7 @@ fuchsia_test_package("fdio-unittest-package") {
     ":fdio-gtest-component",
     ":fdio-zxtest-component",
   ]
+  deps = [ "//src/bringup/bin/ptysvc:component" ]
 }
 
 group("tests") {
@@ -105,6 +106,7 @@ test("fdio-test") {
       "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp_testing",
       "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_llcpp_testing",
       "//sdk/fidl/fuchsia.process:fuchsia.process_llcpp",
+      "//sdk/lib/driver_test_realm/simple",
       "//sdk/lib/fdio",
       "//sdk/lib/stdcompat",
       "//sdk/lib/zxio",

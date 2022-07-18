@@ -1,0 +1,41 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/elf/ambient_exec.shard.cml",
+        "driver_test_realm/meta/client.shard.cml",
+        "driver_test_realm/simple/meta/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "test/fdio-test",
+    },
+    children: [
+        {
+            name: "ptysvc",
+            url: "#meta/ptysvc.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.process.Launcher",
+            from: "parent",
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+        {
+            protocol: "fuchsia.hardware.pty.Device",
+            from: "#ptysvc",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.boot.WriteOnlyLog",
+            from: "parent",
+            to: "#ptysvc",
+        },
+    ],
+}
