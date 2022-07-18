@@ -12,9 +12,7 @@ namespace {
 
 bool ValidateFullUtf8(const char* data, uint64_t pos, const uint64_t size) {
   // Inclusive range check
-  auto is_in_range = [](uint8_t byte, uint8_t lo, uint8_t hi) constexpr {
-    return lo <= byte && byte <= hi;
-  };
+  auto is_in_range = [](uint8_t byte, uint8_t lo, uint8_t hi) { return lo <= byte && byte <= hi; };
 
   // The following comparisons rely on treating bytes as if they are unsigned 8-bit values.
   // However, both signed and unsigned char are allowed in the C++ spec, with x64 choosing signed
@@ -83,7 +81,7 @@ bool ValidateFullUtf8(const char* data, uint64_t pos, const uint64_t size) {
       // Note: don't forget about endianness here!
       uint32_t code_point;
       memcpy(&code_point, &str[pos], sizeof(code_point));
-      if constexpr (cpp20::endian::native == cpp20::endian::big) {
+      if (cpp20::endian::native == cpp20::endian::big) {
         if ((code_point & 0b11000000'11000000'11000000) != 0b10000000'10000000'10000000) {
           // Not followed by continuation characters.
           return false;
