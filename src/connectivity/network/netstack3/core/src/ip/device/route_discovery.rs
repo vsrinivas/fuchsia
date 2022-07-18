@@ -75,10 +75,11 @@ pub(crate) struct Ipv6DiscoveredRouteTimerId<DeviceId> {
 /// The state context provided to IPv6 route discovery.
 pub(super) trait Ipv6RouteDiscoveryStateContext<C>: IpDeviceIdContext<Ipv6> {
     /// Gets the route discovery state, mutably.
-    fn get_discovered_routes_mut(
+    fn with_discovered_routes_mut<F: FnOnce(&mut Ipv6RouteDiscoveryState)>(
         &mut self,
         device_id: Self::DeviceId,
-    ) -> &mut Ipv6RouteDiscoveryState;
+        cb: F,
+    );
 }
 
 /// The non-synchronized execution context for IPv6 route discovery.
@@ -135,8 +136,7 @@ impl<C: Ipv6RouteDiscoveryNonSyncContext<SC::DeviceId>, SC: Ipv6RouteDiscoveryCo
         route: Ipv6DiscoveredRoute,
         lifetime: Option<NonZeroNdpLifetime>,
     ) {
-        let Ipv6RouteDiscoveryState { routes } = self.get_discovered_routes_mut(device_id);
-
+        self.with_discovered_routes_mut(device_id, |Ipv6RouteDiscoveryState { routes }| {
         match lifetime {
             Some(lifetime) => {
                 let newly_added = routes.insert(route.clone());
@@ -165,13 +165,15 @@ impl<C: Ipv6RouteDiscoveryNonSyncContext<SC::DeviceId>, SC: Ipv6RouteDiscoveryCo
                 }
             }
         }
+        })
     }
 
     fn invalidate_routes(&mut self, ctx: &mut C, device_id: SC::DeviceId) {
-        let Ipv6RouteDiscoveryState { routes } = self.get_discovered_routes_mut(device_id);
-        for route in core::mem::take(routes).into_iter() {
-            invalidate_route(ctx, device_id, route);
-        }
+        self.with_discovered_routes_mut(device_id, |Ipv6RouteDiscoveryState { routes }| {
+            for route in core::mem::take(routes).into_iter() {
+                invalidate_route(ctx, device_id, route);
+            }
+        })
     }
 }
 
@@ -183,9 +185,10 @@ impl<C: Ipv6RouteDiscoveryNonSyncContext<SC::DeviceId>, SC: Ipv6RouteDiscoveryCo
         ctx: &mut C,
         Ipv6DiscoveredRouteTimerId { device_id, route }: Ipv6DiscoveredRouteTimerId<SC::DeviceId>,
     ) {
-        let Ipv6RouteDiscoveryState { routes } = self.get_discovered_routes_mut(device_id);
-        assert!(routes.remove(&route), "invalidated route should be discovered");
-        send_event(ctx, device_id, route, Ipv6RouteDiscoverAction::Invalidated);
+        self.with_discovered_routes_mut(device_id, |Ipv6RouteDiscoveryState { routes }| {
+            assert!(routes.remove(&route), "invalidated route should be discovered");
+            send_event(ctx, device_id, route, Ipv6RouteDiscoverAction::Invalidated);
+        })
     }
 }
 
@@ -259,12 +262,13 @@ mod tests {
     >;
 
     impl Ipv6RouteDiscoveryStateContext<MockNonSyncCtx> for MockCtx {
-        fn get_discovered_routes_mut(
+        fn with_discovered_routes_mut<F: FnOnce(&mut Ipv6RouteDiscoveryState)>(
             &mut self,
             DummyDeviceId: Self::DeviceId,
-        ) -> &mut Ipv6RouteDiscoveryState {
+            cb: F,
+        ) {
             let MockIpv6RouteDiscoveryContext { state } = self.get_mut();
-            state
+            cb(state)
         }
     }
 

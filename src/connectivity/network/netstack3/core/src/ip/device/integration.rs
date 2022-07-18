@@ -168,11 +168,12 @@ impl<
 impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::IpDeviceContext<Ipv6, C>>
     Ipv6RouteDiscoveryStateContext<C> for SC
 {
-    fn get_discovered_routes_mut(
+    fn with_discovered_routes_mut<F: FnOnce(&mut Ipv6RouteDiscoveryState)>(
         &mut self,
         device_id: SC::DeviceId,
-    ) -> &mut Ipv6RouteDiscoveryState {
-        &mut SC::get_ip_device_state_mut(self, device_id).route_discovery
+        cb: F,
+    ) {
+        cb(&mut SC::get_ip_device_state_mut(self, device_id).route_discovery)
     }
 }
 
