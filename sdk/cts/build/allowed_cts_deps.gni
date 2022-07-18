@@ -8,6 +8,7 @@ ALLOWED_CTS_DEPS = [
   "//sdk/fidl/fuchsia.sys2:fuchsia.sys2",
 
   "//sdk/lib/device-watcher/cpp:cpp",
+  "//sdk/lib/syslog/cpp:cpp",
   "//sdk/cts/tests/pkg/fidl/cpp:conformance_test_sources",
   "//src/sys/pkg/bin/pm:host",
   "//zircon/system/ulib/zxtest:zxtest",

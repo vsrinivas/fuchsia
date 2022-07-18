@@ -7,7 +7,8 @@
 #include <lib/device-watcher/cpp/device-watcher.h>
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/syslog/global.h>
+#include <lib/syslog/cpp/log_settings.h>
+#include <lib/syslog/cpp/macros.h>
 
 #include <zxtest/zxtest.h>
 
@@ -35,16 +36,17 @@ void StartDriverTestRealm() {
   fuchsia::driver::test::Realm_Start_Result result;
   auto call_result = client->Start(std::move(args), &result);
   if (call_result != ZX_OK) {
-    FX_LOGF(ERROR, "driver_test_realm_test", "Failed to call to Realm:Start: %d", call_result);
+    FX_SLOG(ERROR, "Failed to call to Realm:Start", KV("call_result", call_result));
     return;
   }
   if (result.is_err()) {
-    FX_LOGF(ERROR, "driver_test_realm_test", "Realm:Start failed: %d", result.err());
+    FX_SLOG(ERROR, "Realm:Start failed", KV("error", result.err()));
     return;
   }
 }
 
 TEST(DriverTestRealmCts, DriverWasLoaded) {
+  syslog::SetTags({"driver_test_realm_test"});
   StartDriverTestRealm();
   fbl::unique_fd out;
   ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile("/dev/sys/test", &out));
