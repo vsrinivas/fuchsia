@@ -15,5 +15,5 @@
   "pkg/vfs_cpp/include/lib/vfs/cpp/pseudo_file.h": "c019425d46d26d5125839d1446255022",
   "pkg/vfs_cpp/include/lib/vfs/cpp/remote_dir.h": "41a5489fac000ed4b78a64fbaf1240ea",
   "pkg/vfs_cpp/include/lib/vfs/cpp/service.h": "81fb56a8bdbcc302723f466a80278253",
-  "pkg/vfs_cpp/include/lib/vfs/cpp/vmo_file.h": "5262ce2d58e2547e523a85cf9e2867ea"
+  "pkg/vfs_cpp/include/lib/vfs/cpp/vmo_file.h": "45d1b81b11c6c676614f2211cadc755e"
 }

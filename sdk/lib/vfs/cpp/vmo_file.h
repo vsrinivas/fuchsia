@@ -60,13 +60,6 @@ class VmoFile final : public vfs::internal::File {
   };
 
   // Creates a file node backed by a VMO.
-  //
-  // TODO(https://fxbug.dev/104048): Remove this constructor.
-  VmoFile(zx::vmo vmo, size_t offset, size_t length,
-          WriteOption write_option = WriteOption::READ_ONLY,
-          Sharing vmo_sharing = Sharing::DUPLICATE);
-
-  // Creates a file node backed by a VMO.
   VmoFile(zx::vmo vmo, size_t length, WriteOption write_option = WriteOption::READ_ONLY,
           Sharing vmo_sharing = Sharing::DUPLICATE);
 

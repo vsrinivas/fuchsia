@@ -12,12 +12,6 @@ VmoFile::VmoFile(zx::vmo vmo, size_t length, WriteOption write_option, Sharing v
       vmo_sharing_(vmo_sharing),
       vmo_(std::move(vmo)) {}
 
-VmoFile::VmoFile(zx::vmo vmo, size_t offset, size_t length, WriteOption write_option,
-                 Sharing vmo_sharing)
-    : VmoFile(std::move(vmo), length, write_option, vmo_sharing) {
-  ZX_ASSERT_MSG(offset == 0, "nonzero offset %zu", offset);
-}
-
 VmoFile::~VmoFile() = default;
 
 zx_status_t VmoFile::GetBackingMemory(fuchsia::io::VmoFlags flags, zx::vmo* out_vmo) {

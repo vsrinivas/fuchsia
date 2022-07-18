@@ -270,7 +270,7 @@ void ExposeEarlyBootStashedProfileData(zx::unowned_channel svc_stash, vfs::Pseud
         auto& dir = IsSignalled(token, ZX_EVENTPAIR_PEER_CLOSED) ? static_dir : dynamic_dir;
         auto name = std::to_string(svc_id) + "-" + std::to_string(publish_id) + ".profraw";
 
-        dir.AddEntry(name, std::make_unique<vfs::VmoFile>(std::move(vmo), 0, content_size));
+        dir.AddEntry(name, std::make_unique<vfs::VmoFile>(std::move(vmo), content_size));
         ++publish_id;
       } else {
         FX_LOGS(INFO) << "Ignoring unhandled data sink " << sink;
