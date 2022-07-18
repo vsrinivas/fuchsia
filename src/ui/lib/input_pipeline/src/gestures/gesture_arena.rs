@@ -456,7 +456,7 @@ mod tests {
         }
 
         #[derive(Debug)]
-        pub(super) struct StubContenderInner {
+        struct StubContenderInner {
             next_result: Option<ExamineEventResult>,
             calls_received: usize,
         }
@@ -485,26 +485,24 @@ mod tests {
                     .take()
                     .expect("`contenders` has been consumed")
                     .into_iter()
-                    .map(|c| {
-                        let dyn_c: Box<dyn Contender> = Box::new(c);
-                        dyn_c
-                    })
+                    .map(std::convert::From::<StubContender>::from)
                     .collect()
             }
         }
 
         impl Contender for StubContender {
             fn examine_event(self: Box<Self>, _event: &TouchpadEvent) -> ExamineEventResult {
-                self.inner.borrow_mut().calls_received += 1;
-                self.inner.borrow_mut().next_result.take().unwrap_or_else(|| {
-                    panic!("missing `next_result` on call {}", self.inner.borrow().calls_received)
+                let mut inner = self.inner.borrow_mut();
+                inner.calls_received += 1;
+                inner.next_result.take().unwrap_or_else(|| {
+                    panic!("missing `next_result` on call {}", inner.calls_received)
                 })
             }
         }
 
         #[derive(Clone, Debug)]
         pub(super) struct StubMatchedContender {
-            pub(super) inner: Rc<RefCell<StubMatchedContenderInner>>,
+            inner: Rc<RefCell<StubMatchedContenderInner>>,
         }
 
         #[derive(Debug)]
@@ -532,14 +530,26 @@ mod tests {
                 todo!()
             }
         }
+
+        impl From<StubContender> for Box<dyn Contender> {
+            fn from(stub_contender: StubContender) -> Box<dyn Contender> {
+                Box::new(stub_contender)
+            }
+        }
+
+        impl From<StubMatchedContender> for Box<dyn MatchedContender> {
+            fn from(stub_matched_contender: StubMatchedContender) -> Box<dyn MatchedContender> {
+                Box::new(stub_matched_contender)
+            }
+        }
     }
 
     mod idle_state {
         use {
             super::{
                 super::{
-                    Contender, ExamineEventResult, MatchedContender, MutableState, TouchpadEvent,
-                    UnhandledInputHandler, _GestureArena,
+                    ExamineEventResult, MutableState, TouchpadEvent, UnhandledInputHandler,
+                    _GestureArena,
                 },
                 utils::{
                     make_touchpad_descriptor, make_unhandled_mouse_event,
@@ -598,10 +608,9 @@ mod tests {
                 ContenderFactoryOnce::new(vec![first_contender.clone(), second_contender.clone()]);
             let arena =
                 Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
-            let matched_contender: Box<dyn MatchedContender> =
-                Box::new(StubMatchedContender::new());
-            first_contender
-                .set_next_result(ExamineEventResult::MatchedContender(matched_contender));
+            first_contender.set_next_result(ExamineEventResult::MatchedContender(
+                StubMatchedContender::new().into(),
+            ));
             second_contender.set_next_result(ExamineEventResult::Mismatch);
             arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
             assert_eq!(first_contender.calls_received(), 1);
@@ -619,10 +628,9 @@ mod tests {
             // Configure `initial_contender` to return a new `StubContender` when
             // `examine_event()` is called.
             let replacement_contender = StubContender::new();
-            let dyn_replacement_contender: Box<dyn Contender> =
-                Box::new(replacement_contender.clone());
-            initial_contender
-                .set_next_result(ExamineEventResult::Contender(dyn_replacement_contender));
+            initial_contender.set_next_result(ExamineEventResult::Contender(
+                replacement_contender.clone().into(),
+            ));
 
             // Process a touchpad event. This should cause `arena` to consume the
             // `ExamineEventResult` set above.
@@ -631,8 +639,7 @@ mod tests {
             // Verify that the `ExamineEventResult` was, in fact, consumed.
             initial_contender.assert_next_result_is_none();
 
-            // Finally, verify that the `StubContenderInner` referenced by `replacement_contender`
-            // has two references.
+            // Finally, verify that `replacement_contender` has two references.
             //
             // Note that:
             // * One of the references is from `replacement_contender`.
@@ -654,10 +661,9 @@ mod tests {
             // Configure `initial_contender` to return a `StubMatchedContender` when
             // `examine_event()` is called.
             let replacement_contender = StubMatchedContender::new();
-            let dyn_replacement_contender: Box<dyn MatchedContender> =
-                Box::new(replacement_contender.clone());
-            initial_contender
-                .set_next_result(ExamineEventResult::MatchedContender(dyn_replacement_contender));
+            initial_contender.set_next_result(ExamineEventResult::MatchedContender(
+                replacement_contender.clone().into(),
+            ));
 
             // Process a touchpad event. This should cause `arena` to consume the
             // `ExamineEventResult` set above.
@@ -666,8 +672,7 @@ mod tests {
             // Verify that the `ExamineEventResult` was, in fact, consumed.
             initial_contender.assert_next_result_is_none();
 
-            // Finally, verify that the `StubMatchedContenderInner` referenced by
-            // `replacement_contender` has two references.
+            // Finally, verify that `replacement_contender` has two references.
             //
             // Note that:
             // * One of the references is from `replacement_contender`.
@@ -701,10 +706,9 @@ mod tests {
 
             // Configure `initial_contender` to return a `StubMatchedContender` when
             // `examine_event()` is called.
-            let replacement_contender: Box<dyn MatchedContender> =
-                Box::new(StubMatchedContender::new());
-            initial_contender
-                .set_next_result(ExamineEventResult::MatchedContender(replacement_contender));
+            initial_contender.set_next_result(ExamineEventResult::MatchedContender(
+                StubMatchedContender::new().into(),
+            ));
 
             // Process `touchpad_event`. Because `initial_contender` returns
             // `ExamineEventResult::MatchedContender`, the gesture arena will enter
@@ -748,8 +752,7 @@ mod tests {
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
             let arena =
                 Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
-            let replacement_contender: Box<dyn Contender> = Box::new(StubContender::new());
-            contender.set_next_result(ExamineEventResult::Contender(replacement_contender));
+            contender.set_next_result(ExamineEventResult::Contender(StubContender::new().into()));
             assert_eq!(
                 arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await,
                 vec![]
@@ -773,8 +776,7 @@ mod tests {
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
             let arena =
                 Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
-            let replacement_contender: Box<dyn Contender> = Box::new(StubContender::new());
-            contender.set_next_result(ExamineEventResult::Contender(replacement_contender));
+            contender.set_next_result(ExamineEventResult::Contender(StubContender::new().into()));
             arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Matching { .. });
         }
@@ -785,9 +787,9 @@ mod tests {
             let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
             let arena =
                 Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
-            let replacement_contender: Box<dyn MatchedContender> =
-                Box::new(StubMatchedContender::new());
-            contender.set_next_result(ExamineEventResult::MatchedContender(replacement_contender));
+            contender.set_next_result(ExamineEventResult::MatchedContender(
+                StubMatchedContender::new().into(),
+            ));
             arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Matching { .. });
         }
