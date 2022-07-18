@@ -434,16 +434,22 @@ TEST_F(DriverTest, Start) {
   ASSERT_NE(nullptr, v1_test.get());
 
   // Verify v1_test.so state after bind.
-  EXPECT_EQ(ZX_OK, v1_test->status);
-  EXPECT_TRUE(v1_test->did_bind);
-  EXPECT_FALSE(v1_test->did_create);
-  EXPECT_FALSE(v1_test->did_release);
+  {
+    const std::lock_guard<std::mutex> lock(v1_test->lock);
+    EXPECT_TRUE(v1_test->did_bind);
+    EXPECT_EQ(ZX_OK, v1_test->status);
+    EXPECT_FALSE(v1_test->did_create);
+    EXPECT_FALSE(v1_test->did_release);
+  }
 
   // Verify v1_test.so state after release.
   ShutdownDriverDispatcher();
   driver.reset();
   ASSERT_TRUE(RunLoopUntilIdle());
-  EXPECT_TRUE(v1_test->did_release);
+  {
+    const std::lock_guard<std::mutex> lock(v1_test->lock);
+    EXPECT_TRUE(v1_test->did_release);
+  }
 }
 
 TEST_F(DriverTest, Start_WithCreate) {
@@ -458,16 +464,22 @@ TEST_F(DriverTest, Start_WithCreate) {
   ASSERT_NE(nullptr, v1_test.get());
 
   // Verify v1_test.so state after bind.
-  EXPECT_EQ(ZX_OK, v1_test->status);
-  EXPECT_FALSE(v1_test->did_bind);
-  EXPECT_TRUE(v1_test->did_create);
-  EXPECT_FALSE(v1_test->did_release);
+  {
+    const std::lock_guard<std::mutex> lock(v1_test->lock);
+    EXPECT_EQ(ZX_OK, v1_test->status);
+    EXPECT_FALSE(v1_test->did_bind);
+    EXPECT_TRUE(v1_test->did_create);
+    EXPECT_FALSE(v1_test->did_release);
+  }
 
   // Verify v1_test.so state after release.
   ShutdownDriverDispatcher();
   driver.reset();
   ASSERT_TRUE(RunLoopUntilIdle());
-  EXPECT_TRUE(v1_test->did_release);
+  {
+    const std::lock_guard<std::mutex> lock(v1_test->lock);
+    EXPECT_TRUE(v1_test->did_release);
+  }
 }
 
 TEST_F(DriverTest, Start_MissingBindAndCreate) {
@@ -571,20 +583,32 @@ TEST_F(DriverTest, Start_BindFailed) {
   std::unique_ptr<V1Test> v1_test(static_cast<V1Test*>(driver->Context()));
   ASSERT_NE(nullptr, v1_test.get());
 
+  // Verify that v1_test.so has been bound.
+  while (!v1_test->did_bind) {
+    RunUntilDispatchersIdle();
+  }
+
   // Verify that v1_test.so has not added a child device.
   EXPECT_FALSE(node().HasChildren());
 
-  // Verify v1_test.so state after bind.
-  EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, v1_test->status);
-  EXPECT_TRUE(v1_test->did_bind);
-  EXPECT_FALSE(v1_test->did_create);
-  EXPECT_FALSE(v1_test->did_release);
+  {
+    const std::lock_guard<std::mutex> lock(v1_test->lock);
+    EXPECT_TRUE(v1_test->did_bind);
+    EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, v1_test->status);
+
+    EXPECT_FALSE(v1_test->did_create);
+    EXPECT_FALSE(v1_test->did_release);
+  }
 
   // Verify v1_test.so state after release.
   ShutdownDriverDispatcher();
   driver.reset();
   ASSERT_TRUE(RunLoopUntilIdle());
-  EXPECT_TRUE(v1_test->did_release);
+
+  {
+    const std::lock_guard<std::mutex> lock(v1_test->lock);
+    EXPECT_TRUE(v1_test->did_release);
+  }
 }
 
 TEST_F(DriverTest, LoadFirwmareAsync) {

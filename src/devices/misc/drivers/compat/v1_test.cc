@@ -22,6 +22,9 @@ zx_status_t v1_test_init(void** out_ctx) {
 zx_status_t v1_test_bind(void* ctx, zx_device_t* dev) {
   zxlogf(INFO, "v1_test_bind");
   auto v1_test = static_cast<V1Test*>(ctx);
+
+  const std::lock_guard<std::mutex> lock(v1_test->lock);
+
   v1_test->did_bind = true;
   v1_test->status = device_get_protocol(dev, 0, nullptr);
   if (v1_test->status != ZX_OK) {
@@ -35,7 +38,10 @@ zx_status_t v1_test_bind(void* ctx, zx_device_t* dev) {
 
 void v1_test_release(void* ctx) {
   zxlogf(INFO, "v1_test_release");
-  static_cast<V1Test*>(ctx)->did_release = true;
+
+  auto v1_test = static_cast<V1Test*>(ctx);
+  const std::lock_guard<std::mutex> lock(v1_test->lock);
+  v1_test->did_release = true;
 }
 
 constexpr zx_driver_ops_t driver_ops = [] {
