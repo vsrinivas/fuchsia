@@ -116,31 +116,6 @@ TEST_F(GuestConfigParserTest, BlockSpecJson) {
   EXPECT_THAT(paths_, testing::ElementsAre("/pkg/data/foo", "/dev/class/block/001"));
 }
 
-TEST_F(GuestConfigParserTest, InterruptSpecArg) {
-  ASSERT_EQ(ZX_OK, ParseArgs({"--interrupt=32", "--interrupt=33"}));
-  ASSERT_EQ(2ul, config_.interrupts().size());
-
-  ASSERT_EQ(32u, config_.interrupts()[0]);
-  ASSERT_EQ(33u, config_.interrupts()[1]);
-}
-
-TEST_F(GuestConfigParserTest, InterruptSpecJson) {
-  ASSERT_EQ(ZX_OK, ParseConfig(
-                       R"JSON({
-          "interrupt": [
-            "32",
-            "33"
-          ]
-        })JSON"));
-  ASSERT_EQ(2ul, config_.interrupts().size());
-
-  const uint32_t& spec0 = config_.interrupts()[0];
-  ASSERT_EQ(32u, spec0);
-
-  const uint32_t& spec1 = config_.interrupts()[1];
-  ASSERT_EQ(33u, spec1);
-}
-
 TEST_F(GuestConfigParserTest, Memory_512) {
   ASSERT_EQ(ZX_OK, ParseArgs({"--memory=512"}));  // Bytes are assumed by default.
   EXPECT_EQ(512ul, config_.guest_memory());

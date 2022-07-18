@@ -32,9 +32,6 @@ pub fn parse_vmm_args(arguments: &arguments::LaunchArgs) -> GuestConfig {
     guest_config.cpus = Some(
         arguments.cpus.unwrap_or(unsafe { u8::try_from(sys::zx_system_get_num_cpus()).unwrap() }),
     );
-    if !arguments.interrupt.is_empty() {
-        guest_config.interrupts = Some(arguments.interrupt.clone())
-    };
     guest_config.virtio_balloon = Some(arguments.virtio_balloon);
     guest_config.virtio_console = Some(arguments.virtio_console);
     guest_config.virtio_gpu = Some(arguments.virtio_gpu);

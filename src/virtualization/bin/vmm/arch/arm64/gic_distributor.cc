@@ -184,7 +184,7 @@ static uint32_t pidr2_arch_rev(uint32_t revision) { return set_bits(revision, 7,
 
 GicDistributor::GicDistributor(Guest* guest) : guest_(guest) {}
 
-zx_status_t GicDistributor::Init(uint8_t num_cpus, const std::vector<uint32_t>& interrupts) {
+zx_status_t GicDistributor::Init(uint8_t num_cpus) {
   fuchsia::sysinfo::InterruptControllerInfoPtr info;
   zx_status_t status = get_interrupt_controller_info(&info);
   if (status != ZX_OK) {
@@ -200,30 +200,6 @@ zx_status_t GicDistributor::Init(uint8_t num_cpus, const std::vector<uint32_t>& 
 
   // Initialize CPU masks, and let the guest update them.
   memset(cpu_masks_, bit_mask<uint8_t>(num_cpus), sizeof(cpu_masks_));
-
-  // Create physical interrupts, so that we can bind them to VCPUs.
-  if (!interrupts.empty()) {
-    zx::resource resource;
-    zx_status_t status = get_irq_resource(&resource);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to get root resource " << zx_status_get_string(status);
-      return status;
-    }
-    for (const uint32_t& vector : interrupts) {
-      if (vector < kSpiBase || vector >= kNumInterrupts) {
-        FX_LOGS(ERROR) << "Invalid interrupt " << vector;
-        return ZX_ERR_OUT_OF_RANGE;
-      }
-      zx::interrupt interrupt;
-      status = zx::interrupt::create(resource, vector, ZX_INTERRUPT_MODE_DEFAULT, &interrupt);
-      if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "Failed to create interrupt " << vector << " "
-                       << zx_status_get_string(status);
-        return status;
-      }
-      interrupts_.try_emplace(vector, std::move(interrupt));
-    }
-  }
 
   // Always allocate redistributors to use them for banked registers.
   redistributors_.reserve(num_cpus);
@@ -287,27 +263,6 @@ zx_status_t GicDistributor::TargetInterrupt(uint32_t vector, uint8_t cpu_mask) {
     }
   }
   return guest_->Interrupt(cpu_mask, vector);
-}
-
-zx_status_t GicDistributor::BindVcpus(uint32_t vector, uint8_t cpu_mask) {
-  auto it = interrupts_.find(vector);
-  if (it == interrupts_.end()) {
-    return ZX_OK;
-  }
-  const Guest::VcpuArray& vcpus = guest_->vcpus();
-  for (size_t i = 0; i < vcpus.size(); i++, cpu_mask >>= 1) {
-    if (!(cpu_mask & 1)) {
-      continue;
-    }
-    zx_status_t status = it->second.bind_vcpu(vcpus[i]->object(), 0);
-    if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to bind VCPU " << zx_status_get_string(status);
-      return status;
-    }
-    // Only bind the interrupt to the first valid VCPU.
-    break;
-  }
-  return ZX_OK;
 }
 
 zx_status_t GicDistributor::Read(uint64_t addr, IoValue* value) {
@@ -445,10 +400,6 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
         if (cpu_mask == 0) {
           continue;
         }
-        zx_status_t status = BindVcpus(kSpiBase + spi + i, cpu_mask);
-        if (status != ZX_OK) {
-          return status;
-        }
       }
       return ZX_OK;
     }
@@ -510,7 +461,7 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
         cpu_mask &= value.u64;
       }
       cpu_masks_[vector - kSpiBase] = cpu_mask;
-      return BindVcpus(vector, cpu_mask);
+      return ZX_OK;
     }
     case GicdRegister::ICFG1... GicdRegister::ICFG31: {
       std::lock_guard<std::mutex> lock(mutex_);

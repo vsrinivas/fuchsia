@@ -26,7 +26,6 @@
         {
             protocol: [
                 "fuchsia.kernel.HypervisorResource",
-                "fuchsia.kernel.IrqResource",
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.logger.LogSink",
                 "fuchsia.scheduler.ProfileProvider",

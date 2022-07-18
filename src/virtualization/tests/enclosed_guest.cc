@@ -139,7 +139,6 @@ zx_status_t EnclosedGuest::InstallInRealm(component_testing::RealmBuilder& realm
                           {
                               Protocol{fuchsia::logger::LogSink::Name_},
                               Protocol{fuchsia::kernel::HypervisorResource::Name_},
-                              Protocol{fuchsia::kernel::IrqResource::Name_},
                               Protocol{fuchsia::kernel::VmexResource::Name_},
                               Protocol{fuchsia::sysinfo::SysInfo::Name_},
                               Protocol{fuchsia::sysmem::Allocator::Name_},

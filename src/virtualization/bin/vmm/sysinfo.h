@@ -35,16 +35,6 @@ static inline zx_status_t get_hypervisor_resource(zx::resource* resource) {
   return svc->Get(resource);
 }
 
-static inline zx_status_t get_irq_resource(zx::resource* resource) {
-  fuchsia::kernel::IrqResourceSyncPtr svc;
-  zx_status_t status = fdio_service_connect_by_name(fuchsia::kernel::IrqResource::Name_,
-                                                    svc.NewRequest().TakeChannel().release());
-  if (status != ZX_OK) {
-    return status;
-  }
-  return svc->Get(resource);
-}
-
 static inline zx_status_t get_vmex_resource(zx::resource* resource) {
   fuchsia::kernel::VmexResourceSyncPtr svc;
   zx_status_t status = fdio_service_connect_by_name(fuchsia::kernel::VmexResource::Name_,

@@ -12,7 +12,6 @@ const MAX_BLOCK_DEVICE_ID uint8 = 20;
 const MAX_MEMORY uint8 = 32;
 const MAX_BLOCK_DEVICES uint8 = 32;
 const MAX_NET_DEVICES uint8 = 32;
-const MAX_INTERRUPTS uint8 = 128;
 
 /// Type of kernel used by a guest.
 type KernelType = strict enum {
@@ -105,34 +104,32 @@ type GuestConfig = resource table {
     /// Amount of guest memory required, in bytes. This value may be rounded up depending on
     /// the system configuration.
     8: guest_memory uint64;
-    /// A list of physical interrupts to bind to.
-    9: interrupts vector<uint32>:MAX_INTERRUPTS;
     /// A list of block devices to give a guest. Cannot be changed from the
     /// command-line.
-   10: block_devices vector<BlockSpec>:MAX_BLOCK_DEVICES;
+    9: block_devices vector<BlockSpec>:MAX_BLOCK_DEVICES;
     /// A list of specifications for network devices.
-   11: net_devices vector<NetSpec>:MAX_NET_DEVICES;
+   10: net_devices vector<NetSpec>:MAX_NET_DEVICES;
     /// Optional virtio-wl device.
-   12: wayland_device WaylandDevice;
+   11: wayland_device WaylandDevice;
     /// Optional virtio-magma device.
-   13: magma_device MagmaDevice;
+   12: magma_device MagmaDevice;
 
     /// Whether to add a default network device (assumed if absent).
-   14: default_net bool;
+   13: default_net bool;
     /// Enable virtio-balloon (assumed if absent).
-   15: virtio_balloon bool;
+   14: virtio_balloon bool;
     /// Enable virtio-console (assumed if absent).
-   16: virtio_console bool;
+   15: virtio_console bool;
     /// Enable virtio-gpu (assumed if absent).
-   17: virtio_gpu bool;
+   16: virtio_gpu bool;
     /// Enable virtio-rng (assumed if absent).
-   18: virtio_rng bool;
+   17: virtio_rng bool;
     /// Enable virtio-vsock (assumed if absent).
-   19: virtio_vsock bool;
+   18: virtio_vsock bool;
     /// Enable virtio-sound (assumed if absent).
-   20: virtio_sound bool;
+   19: virtio_sound bool;
     /// Enable input streams (capture) for virtio-sound (false if absent).
-   21: virtio_sound_input bool;
+   20: virtio_sound_input bool;
 };
 
 /// Protocol to provide a guest's configuration.

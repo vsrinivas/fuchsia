@@ -120,7 +120,7 @@ int main(int argc, char** argv) {
   // Setup interrupt controller.
   InterruptController interrupt_controller(&guest);
 #if __aarch64__
-  status = interrupt_controller.Init(cfg.cpus(), cfg.interrupts());
+  status = interrupt_controller.Init(cfg.cpus());
 #elif __x86_64__
   status = interrupt_controller.Init();
 #else

@@ -336,8 +336,6 @@ std::unordered_map<std::string, std::unique_ptr<OptionHandler>> GetCmdlineOption
   handlers.emplace(
       "cpus", std::make_unique<NumCpusOptionHandler>(
                   &GuestConfig::has_cpus, &GuestConfig::mutable_cpus, zx_system_get_num_cpus()));
-  handlers.emplace("interrupt", std::make_unique<RepeatedOptionHandler<uint32_t>>(
-                                    &GuestConfig::mutable_interrupts));
   handlers.emplace("default-net",
                    std::make_unique<BoolOptionHandler>(&GuestConfig::has_default_net,
                                                        &GuestConfig::mutable_default_net, true));
@@ -403,7 +401,6 @@ void PrintCommandLineUsage(const char* program_name) {
   std::cerr << "\t--memory=[bytes]        Allocate 'bytes' of memory for the guest.\n";
   std::cerr << "\t                        The suffixes 'k', 'M', and 'G' are accepted\n";
   std::cerr << "\t                        (default " << GetDefaultGuestMemory() << " bytes)\n";
-  std::cerr << "\t--interrupt=[spec]      Adds a hardware interrupt mapping to the guest\n";
   std::cerr << "\t--virtio-balloon        Enable virtio-balloon (default)\n";
   std::cerr << "\t--virtio-console        Enable virtio-console (default)\n";
   std::cerr << "\t--virtio-gpu            Enable virtio-gpu and virtio-input (default)\n";

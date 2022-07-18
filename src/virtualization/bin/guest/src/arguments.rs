@@ -151,7 +151,7 @@ pub struct WipeArgs {
 }
 
 #[derive(FromArgs, PartialEq, Debug)]
-/// Launch a guest image. Usage: guest launch guest_type [--cmdline-add <arg>...] [--interrupt <interrupt>...] [--default-net <bool>] [--memory <memory-size>] [--cpus <num-cpus>] [--virtio-* <bool>]
+/// Launch a guest image. Usage: guest launch guest_type [--cmdline-add <arg>...] [--default-net <bool>] [--memory <memory-size>] [--cpus <num-cpus>] [--virtio-* <bool>]
 #[argh(subcommand, name = "launch")]
 pub struct LaunchArgs {
     #[argh(positional)]
@@ -169,9 +169,6 @@ pub struct LaunchArgs {
     /// number of virtual cpus available for the guest
     #[argh(option)]
     pub cpus: Option<u8>,
-    /// add hardware interrupt mapping for the guest
-    #[argh(option)]
-    pub interrupt: Vec<u32>,
     /// enable virtio-balloon (defaults to true)
     #[argh(option, default = "true")]
     pub virtio_balloon: bool,

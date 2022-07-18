@@ -45,8 +45,7 @@ class GicDistributor : public IoHandler, public PlatformDevice {
  public:
   GicDistributor(Guest* guest);
 
-  zx_status_t Init(uint8_t num_cpus,
-                   const std::vector<uint32_t>& interrupts) __TA_NO_THREAD_SAFETY_ANALYSIS;
+  zx_status_t Init(uint8_t num_cpus) __TA_NO_THREAD_SAFETY_ANALYSIS;
 
   zx_status_t Interrupt(uint32_t vector);
 
