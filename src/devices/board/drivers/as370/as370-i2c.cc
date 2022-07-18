@@ -66,26 +66,6 @@ zx_status_t As370::I2cInit() {
       },
   };
 
-  // I2C channels for as370 synaptics
-  constexpr i2c_channel_t synaptics_i2c_channels[] = {
-      // For audio out
-      {
-          .bus_id = 0,
-          .address = 0x31,
-          .vid = 0,
-          .pid = 0,
-          .did = 0,
-      },
-      // For power regulator
-      {
-          .bus_id = 0,
-          .address = 0x66,
-          .vid = 0,
-          .pid = 0,
-          .did = 0,
-      },
-  };
-
   // I2C channels for as370 visalia
   constexpr i2c_channel_t visalia_i2c_channels[] = {
       // For audio out
@@ -96,7 +76,7 @@ zx_status_t As370::I2cInit() {
           .pid = 0,
           .did = 0,
       },
-      /* TI LP5018 LED driver */
+      // TI LP5018 LED driver
       {
           .bus_id = 0,
           .address = 0x29,
@@ -112,7 +92,7 @@ zx_status_t As370::I2cInit() {
           .pid = 0,
           .did = 0,
       },
-      /* Cypress touch sensor */
+      // Cypress touch sensor
       {
           .bus_id = 0,
           .address = 0x37,
@@ -122,27 +102,12 @@ zx_status_t As370::I2cInit() {
       },
   };
 
-  auto synaptics_i2c_channels_fidl = fidl_metadata::i2c::I2CChannelsToFidl(synaptics_i2c_channels);
-  if (synaptics_i2c_channels_fidl.is_error()) {
-    zxlogf(ERROR, "Failed to FIDL encode I2C channel metadata: %d",
-           synaptics_i2c_channels_fidl.error_value());
-    return synaptics_i2c_channels_fidl.error_value();
-  }
-
   auto visalia_i2c_channels_fidl = fidl_metadata::i2c::I2CChannelsToFidl(visalia_i2c_channels);
   if (visalia_i2c_channels_fidl.is_error()) {
     zxlogf(ERROR, "Failed to FIDL encode I2C channel metadata: %d",
            visalia_i2c_channels_fidl.error_value());
     return visalia_i2c_channels_fidl.error_value();
   }
-
-  const pbus_metadata_t synaptics_i2c_metadata[] = {
-      {
-          .type = DEVICE_METADATA_I2C_CHANNELS,
-          .data_buffer = synaptics_i2c_channels_fidl->data(),
-          .data_size = synaptics_i2c_channels_fidl->size(),
-      },
-  };
 
   const pbus_metadata_t visalia_i2c_metadata[] = {
       {
@@ -161,16 +126,8 @@ zx_status_t As370::I2cInit() {
   i2c_dev.mmio_count = std::size(i2c_mmios);
   i2c_dev.irq_list = i2c_irqs;
   i2c_dev.irq_count = std::size(i2c_irqs);
-
-  if (board_info_.vid == PDEV_VID_SYNAPTICS && board_info_.pid == PDEV_PID_SYNAPTICS_AS370) {
-    i2c_dev.metadata_list = synaptics_i2c_metadata;
-    i2c_dev.metadata_count = std::size(synaptics_i2c_metadata);
-  } else if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_VISALIA) {
-    i2c_dev.metadata_list = visalia_i2c_metadata;
-    i2c_dev.metadata_count = std::size(visalia_i2c_metadata);
-  } else {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+  i2c_dev.metadata_list = visalia_i2c_metadata;
+  i2c_dev.metadata_count = std::size(visalia_i2c_metadata);
 
   status = pbus_.DeviceAdd(&i2c_dev);
   if (status != ZX_OK) {

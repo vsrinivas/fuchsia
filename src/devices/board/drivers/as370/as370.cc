@@ -82,14 +82,12 @@ int As370::Thread() {
     // In case of error report it and keep going.
   }
 
-  if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_VISALIA) {
-    if (LightInit() != ZX_OK) {
-      zxlogf(ERROR, "%s: LightInit() failed", __func__);
-    }
+  if (LightInit() != ZX_OK) {
+    zxlogf(ERROR, "%s: LightInit() failed", __func__);
+  }
 
-    if (TouchInit() != ZX_OK) {
-      zxlogf(ERROR, "%s: TouchInit() failed", __func__);
-    }
+  if (TouchInit() != ZX_OK) {
+    zxlogf(ERROR, "%s: TouchInit() failed", __func__);
   }
 
   if (NandInit() != ZX_OK) {
