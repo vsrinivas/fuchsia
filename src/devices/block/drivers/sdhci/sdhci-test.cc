@@ -548,7 +548,7 @@ TEST_F(SdhciTest, RequestWithData) {
 
   EXPECT_TRUE(transfer_mode.ReadFrom(&mmio_).multi_block());
   EXPECT_FALSE(transfer_mode.read());
-  EXPECT_EQ(transfer_mode.auto_cmd_enable(), TransferMode::kAutoCmd12);
+  EXPECT_EQ(transfer_mode.auto_cmd_enable(), TransferMode::kAutoCmdDisable);
   EXPECT_TRUE(transfer_mode.block_count_enable());
   EXPECT_FALSE(transfer_mode.dma_enable());
 
@@ -566,7 +566,7 @@ TEST_F(SdhciTest, RequestWithData) {
 
   request = {
       .cmd_idx = SDMMC_READ_MULTIPLE_BLOCK,
-      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS,
+      .cmd_flags = SDMMC_READ_MULTIPLE_BLOCK_FLAGS | SDMMC_CMD_AUTO12,
       .arg = 0x55c1c22c,
       .blockcount = 4,
       .blocksize = 16,

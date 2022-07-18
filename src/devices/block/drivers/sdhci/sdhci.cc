@@ -566,10 +566,6 @@ zx_status_t Sdhci::StartRequestLocked(sdmmc_req_t* req) {
       }
       transfer_mode.set_dma_enable(1);
     }
-
-    if (req->cmd_flags & SDMMC_CMD_MULTI_BLK) {
-      transfer_mode.set_auto_cmd_enable(TransferMode::kAutoCmd12);
-    }
   }
 
   BlockSize::Get().FromValue(blksiz).WriteTo(&regs_mmio_buffer_);
