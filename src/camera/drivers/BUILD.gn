@@ -17,6 +17,7 @@ group("prod_drivers") {
     "controller/sherlock",
     "hw_accel",
     "sensors",
+    "usb_video",
   ]
 }
 

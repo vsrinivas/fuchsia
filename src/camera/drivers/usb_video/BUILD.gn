@@ -3,21 +3,18 @@
 # found in the LICENSE file.
 
 import("//build/bind/bind.gni")
-import("//build/config/fuchsia/rules.gni")
-import("//build/driver_package.gni")
-import("//src/sys/build/components.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//src/camera/debug.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    ":usb_video_bind_test",
-    ":uvc_format_unittest",
-  ]
+  deps = [ ":usb_video_bind_test" ]
 }
 
-bind_rules("usb_video_bind") {
+driver_bind_rules("usb_video_bind") {
   rules = "usb_video.bind"
-  output = "bind.h"
+  header_output = "bind.h"
   tests = "bind_tests.json"
   deps = [
     "//src/devices/bind/fuchsia.usb",
@@ -26,73 +23,56 @@ bind_rules("usb_video_bind") {
 }
 
 source_set("lib") {
+  defines = [ camera_debug_define ]
+
   sources = [
-    "camera_control_impl.cc",
-    "camera_control_impl.h",
-    "usb_video.cc",
-    "usb_video.h",
+    "descriptors.cc",
+    "descriptors.h",
+    "usb_state.cc",
+    "usb_state.h",
     "usb_video_stream.cc",
     "usb_video_stream.h",
-    "uvc_format.cc",
-    "uvc_format.h",
-    "video_util.c",
-    "video_util.h",
+    "video_frame.cc",
+    "video_frame.h",
   ]
   deps = [
     ":usb_video_bind",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/syslog/cpp",
-    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//sdk/lib/syslog/cpp:backend",
     "//src/devices/lib/driver",
     "//src/lib/listnode",
-    "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/safemath",
-    "//zircon/public/lib/zircon-internal",
+    "//zircon/system/ulib/affine",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/zircon-internal",
   ]
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.usb",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
     "//sdk/fidl/fuchsia.camera",
-    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_c",
+    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_llcpp",
     "//src/devices/usb/lib/usb",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/fzl",
   ]
 }
 
-driver_module("usb_video_driver") {
+fuchsia_driver("fuchsia_driver") {
   output_name = "usb_video"
   deps = [
     ":lib",
-    "//sdk/lib/syslog/cpp:backend_legacy",
+    "//sdk/lib/syslog/cpp:backend",
   ]
 }
 
-driver_package("usb_video") {
-  deps = [ ":usb_video_driver" ]
-
-  drivers = [
-    {
-      name = "usb_video.so"
-    },
-  ]
+fuchsia_driver_component("driver") {
+  component_name = "usb_video"
+  deps = [ ":fuchsia_driver" ]
+  info = "driver-info.json"
+  colocate = true
 }
 
-executable("uvc_format_unittest_bin") {
-  testonly = true
-  sources = [ "uvc_format_unittest.cc" ]
-  deps = [
-    ":lib",
-    "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/zxtest",
-  ]
-}
-
-fuchsia_unittest_package("uvc_format_unittest") {
-  deps = [ ":uvc_format_unittest_bin" ]
+fuchsia_driver_package("usb_video") {
+  driver_components = [ ":driver" ]
 }

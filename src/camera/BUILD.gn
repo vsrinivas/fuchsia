@@ -31,6 +31,7 @@ group("drivers") {
     "drivers/hw_accel/gdc:driver",
     "drivers/hw_accel/ge2d:ge2d-driver",
     "drivers/sensors/imx227:driver",
+    "drivers/usb_video:driver",
   ]
 }
 

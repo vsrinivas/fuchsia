@@ -1,0 +1,15 @@
+{
+    "short_description": "USB UVC driver",
+    "manufacturer": "",
+    "families": [
+        "generic"
+    ],
+    "models": [
+        "generic"
+    ],
+    "areas": [
+        "Media",
+        "Camera",
+        "USB"
+    ]
+}

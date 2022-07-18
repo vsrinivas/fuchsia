@@ -1,0 +1,52 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/fidl/fidl.gni")
+import("//src/sys/core/build/core_shard.gni")
+
+group("uvc-tester") {
+  testonly = true
+  deps = [ ":package" ]
+}
+
+executable("bin") {
+  output_name = "uvc-tester"
+
+  sources = [ "main.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.camera",
+    "//sdk/fidl/fuchsia.hardware.camera",
+    "//sdk/fidl/fuchsia.hardware.camera:fuchsia.hardware.camera_llcpp",
+    "//sdk/fidl/fuchsia.io",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/device-watcher/cpp",
+    "//sdk/lib/fit-promise",
+    "//sdk/lib/sys/inspect/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fsl",
+    "//zircon/system/ulib/async",
+    "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-default",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/zircon-internal",
+  ]
+}
+core_shard("camera-core-shard") {
+  shard_file = "//src/camera/meta/camera.core_shard.cml"
+}
+
+fuchsia_component("component") {
+  component_name = "uvc_tester"
+  manifest = "meta/uvc_tester.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("package") {
+  package_name = "uvc-tester"
+  deps = [ ":component" ]
+}
