@@ -5,15 +5,13 @@
 use {
     super::gesture_arena::{
         self, ExamineEventResult, ProcessBufferedEventsResult, RecognizedGesture, TouchpadEvent,
-        VerifyEventResult,
+        VerifyEventResult, PRIMARY_BUTTON,
     },
-    crate::mouse_binding::{MouseButton, MouseEvent, MouseLocation, MousePhase, RelativeLocation},
+    crate::mouse_binding::{MouseEvent, MouseLocation, MousePhase, RelativeLocation},
     crate::utils::Position,
     fuchsia_zircon as zx,
     maplit::hashset,
 };
-
-const PRIMARY_BUTTON: MouseButton = 1;
 
 /// The initial state of this recognizer, before a tap has been detected.
 #[derive(Debug)]
