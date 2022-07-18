@@ -26,15 +26,18 @@ pub(crate) struct DadTimerId<DeviceId> {
 
 /// The IP device context provided to DAD.
 pub(super) trait Ipv6DeviceDadContext<C>: IpDeviceIdContext<Ipv6> {
-    /// Returns the address's state mutably, if it exists on the interface.
-    fn get_address_state_mut(
+    /// Calls the callback function with a mutable reference to the address's
+    /// state and the NDP retransmission timer configured on the device if the
+    /// address exists on the interface.
+    fn with_address_state_and_retrans_timer<
+        O,
+        F: FnOnce(Option<(&mut AddressState, Duration)>) -> O,
+    >(
         &mut self,
         device_id: Self::DeviceId,
         addr: UnicastAddr<Ipv6Addr>,
-    ) -> Option<&mut AddressState>;
-
-    /// Returns the NDP retransmission timer configured on the device.
-    fn retrans_timer(&self, device_id: Self::DeviceId) -> Duration;
+        cb: F,
+    ) -> O;
 }
 
 /// The IP layer context provided to DAD.
@@ -127,75 +130,75 @@ impl<C: DadNonSyncContext<SC::DeviceId>, SC: DadContext<C>> DadHandler<C> for SC
         device_id: Self::DeviceId,
         addr: UnicastAddr<Ipv6Addr>,
     ) {
-        let state = self
-            .get_address_state_mut(device_id, addr)
-            .unwrap_or_else(|| panic!("expected address to exist; addr={}", addr));
+        let send_msg = self.with_address_state_and_retrans_timer(device_id, addr, |state| {
+            let (state, retrans_timer) = state.unwrap_or_else(|| panic!("expected address to exist; addr={}", addr));
 
-        let remaining = match state {
-            AddressState::Tentative { dad_transmits_remaining } => dad_transmits_remaining,
-            AddressState::Assigned => {
-                panic!("expected address to be tentative; addr={}", addr)
+            let remaining = match state {
+                AddressState::Tentative { dad_transmits_remaining } => dad_transmits_remaining,
+                AddressState::Assigned => {
+                    panic!("expected address to be tentative; addr={}", addr)
+                }
+            };
+
+            match remaining {
+                None => {
+                    *state = AddressState::Assigned;
+                    ctx.on_event(DadEvent::AddressAssigned { device: device_id, addr });
+                    false
+                }
+                Some(non_zero_remaining) => {
+                    *remaining = NonZeroU8::new(non_zero_remaining.get() - 1);
+
+                    // Per RFC 4862 section 5.1,
+                    //
+                    //   DupAddrDetectTransmits ...
+                    //      Autoconfiguration also assumes the presence of the variable
+                    //      RetransTimer as defined in [RFC4861]. For autoconfiguration
+                    //      purposes, RetransTimer specifies the delay between
+                    //      consecutive Neighbor Solicitation transmissions performed
+                    //      during Duplicate Address Detection (if
+                    //      DupAddrDetectTransmits is greater than 1), as well as the
+                    //      time a node waits after sending the last Neighbor
+                    //      Solicitation before ending the Duplicate Address Detection
+                    //      process.
+                    assert_eq!(
+                        ctx.schedule_timer(retrans_timer, DadTimerId { device_id, addr }),
+                        None,
+                        "Should not have a DAD timer set when performing DAD work; addr={}, device_id={}",
+                        addr,
+                        device_id
+                    );
+
+                    true
+                }
             }
-        };
+        });
 
-        match remaining {
-            None => {
-                *state = AddressState::Assigned;
-                ctx.on_event(DadEvent::AddressAssigned { device: device_id, addr });
-            }
-            Some(non_zero_remaining) => {
-                *remaining = NonZeroU8::new(non_zero_remaining.get() - 1);
-
-                // Per RFC 4862 section 5.1,
-                //
-                //   DupAddrDetectTransmits ...
-                //      Autoconfiguration also assumes the presence of the variable
-                //      RetransTimer as defined in [RFC4861]. For autoconfiguration
-                //      purposes, RetransTimer specifies the delay between
-                //      consecutive Neighbor Solicitation transmissions performed
-                //      during Duplicate Address Detection (if
-                //      DupAddrDetectTransmits is greater than 1), as well as the
-                //      time a node waits after sending the last Neighbor
-                //      Solicitation before ending the Duplicate Address Detection
-                //      process.
-                let retrans_timer = self.retrans_timer(device_id);
-
-                let dst_ip = addr.to_solicited_node_address();
-
-                // Do not include the source link-layer option when the NS
-                // message as DAD messages are sent with the unspecified source
-                // address which must not hold a source link-layer option.
-                //
-                // As per RFC 4861 section 4.3,
-                //
-                //   Possible options:
-                //
-                //      Source link-layer address
-                //           The link-layer address for the sender. MUST NOT be
-                //           included when the source IP address is the
-                //           unspecified address. Otherwise, on link layers
-                //           that have addresses this option MUST be included in
-                //           multicast solicitations and SHOULD be included in
-                //           unicast solicitations.
-                //
-                // TODO(https://fxbug.dev/85055): Either panic or guarantee that this error
-                // can't happen statically.
-                let _: Result<(), _> = self.send_dad_packet(
-                    ctx,
-                    device_id,
-                    dst_ip,
-                    NeighborSolicitation::new(addr.get()),
-                );
-
-                assert_eq!(
-                ctx.schedule_timer(retrans_timer, DadTimerId { device_id, addr }),
-                None,
-                "Should not have a DAD timer set when performing DAD work; addr={}, device_id={}",
-                addr,
-                device_id
-            );
-            }
+        if !send_msg {
+            return;
         }
+
+        // Do not include the source link-layer option when the NS
+        // message as DAD messages are sent with the unspecified source
+        // address which must not hold a source link-layer option.
+        //
+        // As per RFC 4861 section 4.3,
+        //
+        //   Possible options:
+        //
+        //      Source link-layer address
+        //           The link-layer address for the sender. MUST NOT be
+        //           included when the source IP address is the
+        //           unspecified address. Otherwise, on link layers
+        //           that have addresses this option MUST be included in
+        //           multicast solicitations and SHOULD be included in
+        //           unicast solicitations.
+        //
+        // TODO(https://fxbug.dev/85055): Either panic or guarantee that this error
+        // can't happen statically.
+        let dst_ip = addr.to_solicited_node_address();
+        let _: Result<(), _> =
+            self.send_dad_packet(ctx, device_id, dst_ip, NeighborSolicitation::new(addr.get()));
     }
 
     fn stop_duplicate_address_detection(
@@ -239,18 +242,17 @@ mod tests {
     type MockCtx = DummySyncCtx<MockDadContext, DadMessageMeta, DummyDeviceId>;
 
     impl Ipv6DeviceDadContext<MockNonSyncCtx> for MockCtx {
-        fn get_address_state_mut(
+        fn with_address_state_and_retrans_timer<
+            O,
+            F: FnOnce(Option<(&mut AddressState, Duration)>) -> O,
+        >(
             &mut self,
             DummyDeviceId: DummyDeviceId,
             request_addr: UnicastAddr<Ipv6Addr>,
-        ) -> Option<&mut AddressState> {
-            let MockDadContext { addr, state, retrans_timer: _ } = self.get_mut();
-            (*addr == request_addr).then(|| state)
-        }
-
-        fn retrans_timer(&self, DummyDeviceId: DummyDeviceId) -> Duration {
-            let MockDadContext { addr: _, state: _, retrans_timer } = self.get_ref();
-            *retrans_timer
+            cb: F,
+        ) -> O {
+            let MockDadContext { addr, state, retrans_timer } = self.get_mut();
+            cb((*addr == request_addr).then(|| (state, *retrans_timer)))
         }
     }
 
