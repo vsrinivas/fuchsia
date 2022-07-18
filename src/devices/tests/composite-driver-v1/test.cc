@@ -44,6 +44,13 @@ TEST_F(CompositeTest, DriversExist) {
   ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(root_fd, "composite_driver_v1", &out));
   ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(
                        root_fd, "composite_driver_v1/composite_child", &out));
+
+  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(root_fd, "sys/test/fragment_a", &out));
+  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(root_fd, "sys/test/fragment_b", &out));
+  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(root_fd, "sys/test/fragment_c", &out));
+  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(root_fd, "composite-device", &out));
+  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(root_fd, "composite-device/composite_child",
+                                                        &out));
 }
 
 TEST_F(CompositeTest, DriversExist_DFv2) {
@@ -79,4 +86,10 @@ TEST_F(CompositeTest, DriversExist_DFv2) {
   // In DFv2, the composite device is added to the topo path of the primary node.
   ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(root_fd, "sys/test/child_a/composite_child",
                                                         &out));
+
+  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(root_fd, "sys/test/fragment_a", &out));
+  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(root_fd, "sys/test/fragment_b", &out));
+  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(root_fd, "sys/test/fragment_c", &out));
+  ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(
+                       root_fd, "sys/test/fragment_a/composite_child", &out));
 }

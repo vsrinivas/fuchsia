@@ -6,16 +6,8 @@ using fuchsia.acpi;
 using fuchsia.driver.framework;
 
 if fuchsia.acpi.hid == "PNP0B00" {
-  if fuchsia.BIND_COMPOSITE == 1 {
-    true;
-  } else {
-    fuchsia.driver.framework.dfv2 == true;
-  }
+  fuchsia.BIND_COMPOSITE == 1;
 } else {
   fuchsia.acpi.first_cid == "PNP0B00";
-  if fuchsia.BIND_COMPOSITE == 1 {
-    true;
-  } else {
-    fuchsia.driver.framework.dfv2 == true;
-  }
+  fuchsia.BIND_COMPOSITE == 1;
 }

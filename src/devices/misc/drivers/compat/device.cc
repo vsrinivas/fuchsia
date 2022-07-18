@@ -4,6 +4,7 @@
 
 #include "src/devices/misc/drivers/compat/device.h"
 
+#include <fidl/fuchsia.device.composite/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire_types.h>
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/binding_priv.h>
@@ -15,6 +16,7 @@
 
 #include "driver.h"
 #include "src/devices/lib/compat/symbols.h"
+#include "src/devices/misc/drivers/compat/composite.h"
 
 namespace fdf {
 using namespace fuchsia_driver_framework;
@@ -639,6 +641,31 @@ zx_status_t Device::ConnectFragmentFidl(const char* fragment_name, const char* p
   }
   auto result = fidl::WireCall(*device)->ConnectFidl(fidl::StringView::FromExternal(protocol_name),
                                                      std::move(request));
+  if (result.status() != ZX_OK) {
+    FDF_LOG(ERROR, "Error calling connect fidl: %s", result.status_string());
+    return result.status();
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t Device::AddComposite(const char* name, const composite_device_desc_t* comp_desc) {
+  auto creator =
+      driver_->driver_namespace().Connect<fuchsia_device_composite::DeprecatedCompositeCreator>();
+  if (creator.status_value() != ZX_OK) {
+    FDF_LOG(ERROR, "Error connecting: %s", creator.status_string());
+    return creator.status_value();
+  }
+
+  fidl::Arena allocator;
+  auto composite = CreateComposite(allocator, comp_desc);
+  if (composite.is_error()) {
+    FDF_LOG(ERROR, "Error creating composite: %s", composite.status_string());
+    return composite.error_value();
+  }
+
+  auto result = fidl::WireCall(*creator)->AddCompositeDevice(fidl::StringView::FromExternal(name),
+                                                             std::move(composite.value()));
   if (result.status() != ZX_OK) {
     FDF_LOG(ERROR, "Error calling connect fidl: %s", result.status_string());
     return result.status();

@@ -44,9 +44,4 @@ accept fuchsia.BIND_PCI_DID {
   // Cofee Lake uses the same graphics and display engines as Kaby Lake.
   0x3ea5,  // CFL-U 43e
 }
-
-if fuchsia.BIND_COMPOSITE == 1 {
-  true;
-} else {
-  fuchsia.driver.framework.dfv2 == true;
-}
+fuchsia.BIND_COMPOSITE == 1;

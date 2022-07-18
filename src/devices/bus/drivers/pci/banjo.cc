@@ -73,11 +73,6 @@ zx::status<> BanjoDevice::Create(zx_device_t* parent, pci::Device* device) {
   }
 
   auto banjo_dev_unowned = banjo_dev.release();
-  // TODO(fxbug.dev/93333): Remove this once DFv2 is stabilised.
-  bool is_dfv2 = device_is_dfv2(banjo_dev_unowned->zxdev());
-  if (is_dfv2) {
-    return zx::ok();
-  }
 
   const zx_bind_inst_t pci_fragment_match[] = {
       BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
