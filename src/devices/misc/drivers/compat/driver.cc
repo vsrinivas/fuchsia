@@ -597,12 +597,12 @@ zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device
   // create the device's Node.
   auto task = child->WaitForInitToComplete()
                   .and_then([this, child]() {
-                    // TODO(fxdebug.dev/90735): When DriverDevelopment works in DFv2, don't print
-                    // this.
-                    FDF_LOG(INFO, "Created /dev/%s", child->topological_path().data());
                     return interop_.ExportChild(&child->compat_child(), child->dev_vnode());
                   })
                   .and_then([this, child]() {
+                    // TODO(fxdebug.dev/90735): When DriverDevelopment works in DFv2, don't print
+                    // this.
+                    FDF_LOG(DEBUG, "Created /dev/%s", child->topological_path().data());
                     // We have to create the node for the device after we've exported the
                     // /dev/ entry. Otherwise, we will race any child that's bound to us
                     // to see who can export to /dev/ first.
@@ -614,7 +614,8 @@ zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device
                     }
                   })
                   .or_else([this, child](const zx_status_t& status) {
-                    FDF_LOG(ERROR, "Failed Export to devfs: %s", zx_status_get_string(status));
+                    FDF_LOG(ERROR, "Failed to export /dev/%s to devfs: %s",
+                            child->topological_path().data(), zx_status_get_string(status));
                     child->Remove();
                     return ok();
                   })
