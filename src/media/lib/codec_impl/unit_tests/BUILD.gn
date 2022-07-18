@@ -66,8 +66,9 @@ executable("decryptor_adapter_tests_bin") {
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/fit",
     "//sdk/lib/inspect/testing/cpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture:gtest",
     "//src/media/lib/codec_impl",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
@@ -80,7 +81,7 @@ executable("decryptor_adapter_tests_bin") {
 }
 
 fuchsia_unittest_package("decryptor_adapter_tests") {
-  manifest = "meta/decryptor_adapter_tests.cmx"
+  manifest = "meta/decryptor_adapter_tests.cml"
   deps = [ ":decryptor_adapter_tests_bin" ]
 
   test_specs = {

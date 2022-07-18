@@ -11,6 +11,7 @@
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/testing/cpp/inspect.h>
+#include <lib/sys/cpp/component_context.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -24,7 +25,6 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include <sdk/lib/sys/cpp/testing/test_with_environment_fixture.h>
 
 #include "lib/media/codec_impl/codec_impl.h"
 #include "lib/media/codec_impl/decryptor_adapter.h"
@@ -86,10 +86,6 @@ auto CreateInputFormatDetails(const std::string& scheme, const std::vector<uint8
 
   return details;
 }
-
-const std::map<std::string, std::string> kServices = {};
-
-const std::vector<std::string> kGlobalServices = {"fuchsia.sysmem.Allocator"};
 
 class FakeDecryptorAdapter : public DecryptorAdapter {
  public:
@@ -167,26 +163,11 @@ class FakeSecureDecryptorAdapter : public FakeDecryptorAdapter {
 }  // namespace
 
 template <typename DecryptorAdapterT>
-class DecryptorAdapterTest : public gtest::TestWithEnvironmentFixture {
+class DecryptorAdapterTest : public gtest::RealLoopFixture {
  protected:
-  DecryptorAdapterTest() : random_device_(), prng_(random_device_()) {
-    std::unique_ptr<sys::testing::EnvironmentServices> services = CreateServices();
-
-    for (const auto& [service_name, url] : kServices) {
-      fuchsia::sys::LaunchInfo launch_info;
-      launch_info.url = url;
-      services->AddServiceWithLaunchInfo(std::move(launch_info), service_name);
-    }
-
-    for (const auto& service : kGlobalServices) {
-      const zx_status_t is_ok = services->AllowParentService(service);
-      EXPECT_EQ(is_ok, ZX_OK);
-    }
-
-    constexpr char kEnvironment[] = "DecryptorAdapterTest";
-    environment_ = CreateNewEnclosingEnvironment(kEnvironment, std::move(services));
-
-    environment_->ConnectToService(allocator_.NewRequest());
+  DecryptorAdapterTest()
+      : context_(sys::ComponentContext::Create()), random_device_(), prng_(random_device_()) {
+    EXPECT_EQ(ZX_OK, context_->svc()->Connect(allocator_.NewRequest()));
     allocator_->SetDebugClientInfo(fsl::GetCurrentProcessName(), fsl::GetCurrentProcessKoid());
 
     PopulateInputData();
@@ -225,7 +206,7 @@ class DecryptorAdapterTest : public gtest::TestWithEnvironmentFixture {
   void ConnectDecryptor(bool is_secure) {
     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> allocator;
 
-    environment_->ConnectToService(allocator.NewRequest());
+    ASSERT_EQ(ZX_OK, context_->svc()->Connect(allocator.NewRequest()));
     codec_impl_ =
         std::make_unique<CodecImpl>(std::move(allocator), nullptr, dispatcher(), thrd_current(),
                                     CreateDecryptorParams(is_secure), decryptor_.NewRequest());
@@ -445,7 +426,7 @@ class DecryptorAdapterTest : public gtest::TestWithEnvironmentFixture {
            input_collection_error_.has_value() || output_collection_error_.has_value();
   }
 
-  std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
+  std::unique_ptr<sys::ComponentContext> context_;
   inspect::Inspector inspector_;
   fuchsia::media::StreamProcessorPtr decryptor_;
   fuchsia::sysmem::AllocatorPtr allocator_;
