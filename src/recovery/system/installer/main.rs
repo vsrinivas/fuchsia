@@ -345,6 +345,7 @@ impl ViewAssistant for InstallerViewAssistant {
         context.request_render();
 
         if self.automated && self.menu_state_machine.get_state() != self.prev_state {
+            let old_state = self.prev_state;
             self.prev_state = self.menu_state_machine.get_state();
             match self.menu_state_machine.get_state() {
                 MenuState::SelectInstall | MenuState::SelectDisk | MenuState::Warning => {
@@ -358,7 +359,13 @@ impl ViewAssistant for InstallerViewAssistant {
                     );
                 }
                 MenuState::Progress => println!("Install in progress"),
-                MenuState::Error => println!("install failed :("),
+                MenuState::Error => {
+                    println!(
+                        "install failed :(. Old state: {:?} Error message: {}",
+                        old_state,
+                        self.menu_state_machine.get_error_msg()
+                    )
+                }
             }
         }
 
