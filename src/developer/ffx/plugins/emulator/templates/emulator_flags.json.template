@@ -50,7 +50,12 @@
         {{/if}}
         "-machine",
         {{#if (eq device.cpu.architecture "arm64")}}
-            "virt-2.12",  "-machine", "virtualization=true", "-cpu", "max",
+            "virt-2.12",
+            {{#if (eq host.architecture "arm64")}}
+                "-machine", "gic-version=host",
+            {{else}}
+                "-machine", "virtualization=true", "-cpu", "max",
+            {{/if}}
         {{else}} {{! architecture == x64 }}
             "q35",
             "-device",
@@ -71,7 +76,11 @@
             {{#if (eq host.os "linux")}}
                 "-enable-kvm",
                 "-cpu",
-                "host,migratable=no,+invtsc",
+                {{#if (eq host.architecture "arm64")}}
+                    "host",
+                {{else}}
+                    "host,migratable=no,+invtsc",
+                {{/if}}
             {{else}}
                 {{#if (eq host.os "macos")}}
                     "-enable-hvf",
