@@ -17,7 +17,7 @@ def main():
         description=
         "Verify file against golden with different goldens for eng and non-eng build types"
     )
-    params.add_argument("--eng-golden", type=Path, required=True)
+    params.add_argument("--eng-golden", type=Path, required=False)
     params.add_argument("--non-eng-golden", type=Path, required=True)
     params.add_argument("--product-config", type=Path, required=True)
     params.add_argument("--input", type=Path, required=True)
@@ -31,7 +31,8 @@ def main():
             golden = args.eng_golden
         else:
             golden = args.non_eng_golden
-        if not filecmp.cmp(golden, args.input, shallow=False):
+        if golden is not None and not filecmp.cmp(golden, args.input,
+                                                  shallow=False):
             raise Exception(
                 'Golden and input files differ:\ngolden={}\ninput={}'.format(
                     golden, args.input))
