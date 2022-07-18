@@ -32,7 +32,6 @@ test("log_binary_test") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
     "//third_party/rapidjson",
-    "//zircon/system/ulib/syslog",
   ]
 }
 
