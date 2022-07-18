@@ -20,14 +20,8 @@ group("tests") {
   testonly = true
 }
 
-cts_copy_to_sdk("build") {
-  sources = [ "BUILD.gn" ]
-  testonly = true
-}
-
 sdk_molecule("test_sdks") {
   deps = [
-    ":build_sdk",
     "hello_world:test_sdks",
     "host_tool:test_sdks($host_toolchain)",
     "rust:test_sdks",

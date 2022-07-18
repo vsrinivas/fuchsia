@@ -61,17 +61,17 @@ group("cts_no_e2e") {
   testonly = true
   assert_no_deps = e2e_test_libs
 
-  deps = [ "tests:tests_no_e2e" ]
+  deps = [
+    "build/scripts:tests",
+    "examples:tests_no_e2e",
+    "tests:tests_no_e2e",
+  ]
+}
 
-  # Prevents us from adding example tests and build scripts to the archive.
-  path = get_label_info(":${target_name}", "dir")
-  is_cts_tot = string_replace(path, "//sdk/cts", "") != path
-  if (is_cts_tot) {
-    deps += [
-      "build/scripts:tests",
-      "examples:tests_no_e2e",
-    ]
-  }
+# TODO(johnshamoon): Remove this build copy.
+cts_copy_to_sdk("build") {
+  sources = [ "BUILD.gn" ]
+  testonly = true
 }
 
 group("cts") {
@@ -81,11 +81,6 @@ group("cts") {
     "examples:tests",
     "tests",
   ]
-}
-
-cts_copy_to_sdk("build") {
-  sources = [ "BUILD.gn" ]
-  testonly = true
 }
 
 # A manifest of the plasa elements that are vended in CTS.
@@ -120,16 +115,11 @@ sdk_molecule("cts_tests") {
     ":build_sdk",
     ":cts_deps",
     ":test_manifest",
+    "examples:test_sdks",
     "tests:test_sdks",
     "//sdk/testing/fidl:test_sdks",
   ]
 
-  # Prevents us from adding example tests to the archive.
-  path = get_label_info(":${target_name}", "dir")
-  is_cts_tot = string_replace(path, "//sdk/cts", "") != path
-  if (is_cts_tot) {
-    deps += [ "examples:test_sdks" ]
-  }
   testonly = true
 }
 

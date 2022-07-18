@@ -30,11 +30,6 @@ cts_fuchsia_test_package("fuchsia_settings_test") {
   test_components = [ ":settings_test" ]
 }
 
-cts_copy_to_sdk("build") {
-  testonly = true
-  sources = [ "BUILD.gn" ]
-}
-
 group("tests") {
   testonly = true
   deps = [ ":fuchsia_settings_test" ]
@@ -43,7 +38,6 @@ group("tests") {
 sdk_molecule("test_sdks") {
   testonly = true
   deps = [
-    ":build_sdk",
     ":fuchsia_settings_test_sdk",
     ":settings_test_bin_sdk",
     ":settings_test_sdk",

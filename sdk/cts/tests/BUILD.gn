@@ -15,27 +15,14 @@ group("tests_no_e2e") {
     # Tests not under //sdk/cts/...
     # TODO: Fix the below test in the CTS release
     #"//src/sys/component_manager/tests/collections:collections_integration_test",
+    "tools:tests_no_e2e",
     "//src/sys/component_manager/tests/reboot_on_terminate:tests",
   ]
-
-  # TODO(jcecil): add back tools tests once we're able to execute them OOT.
-  path = get_label_info(":${target_name}", "dir")
-  is_cts_tot = string_replace(path, "//sdk/cts", "") != path
-  if (is_cts_tot) {
-    deps += [ "tools:tests_no_e2e" ]
-  }
 }
 
 group("e2e_tests") {
   testonly = true
-  deps = []
-
-  # TODO(jcecil): add back tools tests once we're able to execute them OOT.
-  path = get_label_info(":${target_name}", "dir")
-  is_cts_tot = string_replace(path, "//sdk/cts", "") != path
-  if (is_cts_tot) {
-    deps += [ "tools:e2e_tests" ]
-  }
+  deps = [ "tools:e2e_tests" ]
 }
 
 group("tests") {
@@ -76,14 +63,8 @@ action("fidl_mangled_to_api_mapping") {
   ]
 }
 
-cts_copy_to_sdk("build") {
-  sources = [ "BUILD.gn" ]
-  testonly = true
-}
-
 sdk_molecule("test_sdks") {
   deps = [
-    ":build_sdk",
     "fidl:test_sdks",
     "pkg:test_sdks",
 

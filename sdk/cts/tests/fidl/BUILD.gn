@@ -15,14 +15,8 @@ group("tests") {
   testonly = true
 }
 
-cts_copy_to_sdk("build") {
-  sources = [ "BUILD.gn" ]
-  testonly = true
-}
-
 sdk_molecule("test_sdks") {
   deps = [
-    ":build_sdk",
     "fuchsia.diagnostics:test_sdks",
     "fuchsia.driver.test:test_sdks",
     "fuchsia.element:test_sdks",

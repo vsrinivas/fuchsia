@@ -90,15 +90,8 @@ cts_fidl("collision_test") {
   sources = [ "collision.test.fidl" ]
 }
 
-cts_copy_to_sdk("build") {
-  sources = [ "BUILD.gn" ]
-  dest = "pkg/fidl_test_support"
-  testonly = true
-}
-
 sdk_molecule("test_sdks") {
   deps = [
-    ":build_sdk",
     ":collision_test_sdk",
     ":fidl_test_handles_sdk",
     ":fidl_test_sdk",

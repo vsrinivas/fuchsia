@@ -219,11 +219,6 @@ cts_source_set("handle_util") {
   public_deps = [ "//zircon/system/ulib/zx" ]
 }
 
-cts_copy_to_sdk("build") {
-  testonly = true
-  sources = [ "BUILD.gn" ]
-}
-
 group("tests") {
   testonly = true
   deps = [
@@ -245,7 +240,6 @@ group("tests") {
 sdk_molecule("test_sdks") {
   testonly = true
   deps = [
-    ":build_sdk",
     ":fidl_hlcpp_conformance_test_package_sdk",
     ":fidl_hlcpp_conformance_tests_bin_sdk",
     ":fidl_hlcpp_conformance_tests_sdk",

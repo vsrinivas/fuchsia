@@ -40,15 +40,9 @@ group("tests") {
   deps = [ ":my-cts-test-package" ]
 }
 
-cts_copy_to_sdk("build") {
-  testonly = true
-  sources = [ "BUILD.gn" ]
-}
-
 sdk_molecule("test_sdks") {
   testonly = true
   deps = [
-    ":build_sdk",
     ":my-cts-component_sdk",
     ":my-cts-source-set_sdk",
     ":my-cts-test-package_sdk",

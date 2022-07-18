@@ -288,17 +288,11 @@ group("tests") {
   deps = [ ":fdio-spawn-tests" ]
 }
 
-cts_copy_to_sdk("build") {
-  testonly = true
-  sources = [ "BUILD.gn" ]
-}
-
 sdk_molecule("test_sdks") {
   testonly = true
   deps = [
     ":attempt-use-shell-outside-package-component_sdk",
     ":attempt-use-shell-outside-package-script_sdk",
-    ":build_sdk",
     ":echo-arguments-bin-component_sdk",
     ":echo-arguments-bin_sdk",
     ":fake-launcher-util-bin_sdk",

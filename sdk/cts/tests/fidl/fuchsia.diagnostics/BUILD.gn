@@ -66,11 +66,6 @@ cts_fuchsia_test_package("fuchsia-diagnostics-tests") {
   deps = [ ":inspect-publisher" ]
 }
 
-cts_copy_to_sdk("build") {
-  testonly = true
-  sources = [ "BUILD.gn" ]
-}
-
 group("tests") {
   testonly = true
   deps = [ ":fuchsia-diagnostics-tests" ]
@@ -79,7 +74,6 @@ group("tests") {
 sdk_molecule("test_sdks") {
   testonly = true
   deps = [
-    ":build_sdk",
     ":diagnostics-test-bin_sdk",
     ":diagnostics-test_sdk",
     ":fuchsia-diagnostics-tests_sdk",

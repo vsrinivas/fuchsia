@@ -38,11 +38,6 @@ cts_fuchsia_test_package("fuchsia-hwinfo-tests") {
   test_components = [ ":hwinfo-test" ]
 }
 
-cts_copy_to_sdk("build") {
-  testonly = true
-  sources = [ "BUILD.gn" ]
-}
-
 group("tests") {
   testonly = true
   deps = [ ":fuchsia-hwinfo-tests" ]
@@ -51,7 +46,6 @@ group("tests") {
 sdk_molecule("test_sdks") {
   testonly = true
   deps = [
-    ":build_sdk",
     ":fuchsia-hwinfo-tests_sdk",
     ":hwinfo-test-bin_sdk",
     ":hwinfo-test_sdk",
