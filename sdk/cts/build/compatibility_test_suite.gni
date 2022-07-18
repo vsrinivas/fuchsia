@@ -22,9 +22,6 @@ import("//sdk/cts/build/prebuilt_host_test_manifest.gni")
 #  disabled_tests
 #    [list of scopes] List of scopes containing "package" and "component_name"
 #    entries to disable.
-#
-#  generate_api_tests (default = false)
-#    Whether to make targets that compile the test sources against the SDK.
 template("compatibility_test_suite") {
   assert(defined(invoker.path),
          "The path to the extracted CTS archive is required.")
@@ -48,17 +45,6 @@ template("compatibility_test_suite") {
   }
 
   test_targets += [ ":$host_tool_test_target_name($host_toolchain)" ]
-
-  # API Tests
-  if (defined(invoker.generate_api_tests) && invoker.generate_api_tests) {
-    api_test_target_name = "${target_name}_api"
-    group(api_test_target_name) {
-      testonly = true
-      deps = [ invoker.path ]
-    }
-
-    test_targets += [ ":$api_test_target_name" ]
-  }
 
   group(target_name) {
     testonly = true
