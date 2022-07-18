@@ -2032,6 +2032,16 @@ impl StatsLogger {
             payload: MetricEventPayload::Count(1),
         });
 
+        if disconnect_info.disconnect_source
+            == fidl_sme::DisconnectSource::User(fidl_sme::UserDisconnectReason::FidlConnectRequest)
+        {
+            metric_events.push(MetricEvent {
+                metric_id: metrics::MANUAL_NETWORK_CHANGE_METRIC_ID,
+                event_codes: vec![],
+                payload: MetricEventPayload::Count(1),
+            });
+        }
+
         log_cobalt_1dot1_batch!(
             self.cobalt_1dot1_proxy,
             &mut metric_events.iter_mut(),
@@ -4365,6 +4375,10 @@ mod tests {
         assert_eq!(total_connected_duration.len(), 1);
         assert_eq!(total_connected_duration[0].payload, MetricEventPayload::IntegerValue(300));
 
+        let user_network_change_counts =
+            test_helper.get_logged_metrics(metrics::MANUAL_NETWORK_CHANGE_METRIC_ID);
+        assert!(user_network_change_counts.is_empty());
+
         let roam_disconnect_counts =
             test_helper.get_logged_metrics(metrics::NETWORK_ROAMING_DISCONNECT_COUNTS_METRIC_ID);
         assert!(roam_disconnect_counts.is_empty());
@@ -4420,6 +4434,11 @@ mod tests {
         assert_eq!(total_connected_duration.len(), 1);
         assert_eq!(total_connected_duration[0].payload, MetricEventPayload::IntegerValue(DUR_MIN));
 
+        // Check that a metric count is not logged for a manual network switch.
+        let user_network_change_counts =
+            test_helper.get_logged_metrics(metrics::MANUAL_NETWORK_CHANGE_METRIC_ID);
+        assert!(user_network_change_counts.is_empty());
+
         // Check that a roam and total disconnect is logged, and not a non-roaming disconnect.
         let roam_disconnect_counts =
             test_helper.get_logged_metrics(metrics::NETWORK_ROAMING_DISCONNECT_COUNTS_METRIC_ID);
@@ -4450,7 +4469,7 @@ mod tests {
         let info = DisconnectInfo {
             connected_duration: DUR_MIN.minutes(),
             disconnect_source: fidl_sme::DisconnectSource::User(
-                fidl_sme::UserDisconnectReason::NetworkUnsaved,
+                fidl_sme::UserDisconnectReason::FidlConnectRequest,
             ),
             ..fake_disconnect_info()
         };
@@ -4458,6 +4477,12 @@ mod tests {
             .telemetry_sender
             .send(TelemetryEvent::Disconnected { track_subsequent_downtime: true, info });
         test_helper.drain_cobalt_events(&mut test_fut);
+
+        // Check that a count was logged for a disconnect from a user requested network change.
+        let user_network_change_counts =
+            test_helper.get_logged_metrics(metrics::MANUAL_NETWORK_CHANGE_METRIC_ID);
+        assert_eq!(user_network_change_counts.len(), 1);
+        assert_eq!(user_network_change_counts[0].payload, MetricEventPayload::Count(1));
 
         // Check that nothing was logged for roaming and non-roaming disconnects.
         let roam_connected_duration = test_helper
