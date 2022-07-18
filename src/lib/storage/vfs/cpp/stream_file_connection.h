@@ -10,6 +10,7 @@
 #endif
 
 #include <fidl/fuchsia.io/cpp/wire.h>
+#include <lib/zx/status.h>
 
 #include "src/lib/storage/vfs/cpp/file_connection.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
@@ -41,10 +42,19 @@ class StreamFileConnection final : public FileConnection {
   void QueryFilesystem(QueryFilesystemRequestView request,
                        QueryFilesystemCompleter::Sync& completer) final;
 
+  //
+  // |fuchsia.io/Node| operations.
+  //
+
+  void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) final;
+  void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) final;
+
   zx_status_t ReadInternal(void* data, size_t len, size_t* out_actual);
   zx_status_t ReadAtInternal(void* data, size_t len, size_t offset, size_t* out_actual);
   zx_status_t WriteInternal(const void* data, size_t len, size_t* out_actual);
   zx_status_t WriteAtInternal(const void* data, size_t len, size_t offset, size_t* out_actual);
+  zx::status<fuchsia_io::wire::OpenFlags> GetFlagsInternal();
+  zx::status<> SetFlagsInternal(fuchsia_io::wire::OpenFlags flags);
 
   zx::stream stream_;
 };

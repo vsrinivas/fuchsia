@@ -41,6 +41,13 @@ class RemoteFileConnection final : public FileConnection {
   void QueryFilesystem(QueryFilesystemRequestView request,
                        QueryFilesystemCompleter::Sync& completer) final;
 
+  //
+  // |fuchsia.io/Node| operations.
+  //
+
+  void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) final;
+  void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) final;
+
   zx_status_t ReadInternal(void* data, size_t len, size_t* out_actual);
   zx_status_t ReadAtInternal(void* data, size_t len, size_t offset, size_t* out_actual);
   zx_status_t WriteInternal(const void* data, size_t len, size_t* out_actual);

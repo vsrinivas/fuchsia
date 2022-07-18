@@ -246,6 +246,21 @@ void RemoteFileConnection::QueryFilesystem(QueryFilesystemRequestView request,
                       : nullptr);
 }
 
+void RemoteFileConnection::GetFlags(GetFlagsRequestView request,
+                                    GetFlagsCompleter::Sync& completer) {
+  zx::status result = NodeGetFlags();
+  if (result.is_error()) {
+    completer.Reply(result.status_value(), {});
+  } else {
+    completer.Reply(ZX_OK, result.value());
+  }
+}
+
+void RemoteFileConnection::SetFlags(SetFlagsRequestView request,
+                                    SetFlagsCompleter::Sync& completer) {
+  completer.Reply(NodeSetFlags(request->flags).status_value());
+}
+
 }  // namespace internal
 
 }  // namespace fs

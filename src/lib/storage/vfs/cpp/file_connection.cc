@@ -120,17 +120,6 @@ void FileConnection::Resize(ResizeRequestView request, ResizeCompleter::Sync& co
   }
 }
 
-void FileConnection::GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) {
-  fio::wire::OpenFlags flags = options().ToIoV1Flags() & (kStatusFlags | fio::wire::kOpenRights);
-  completer.Reply(ZX_OK, flags);
-}
-
-void FileConnection::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) {
-  auto options = VnodeConnectionOptions::FromIoV1Flags(request->flags);
-  set_append(options.flags.append);
-  completer.Reply(ZX_OK);
-}
-
 zx_status_t FileConnection::GetBackingMemoryInternal(fuchsia_io::wire::VmoFlags flags,
                                                      zx::vmo* out_vmo) {
   if (options().flags.node_reference) {

@@ -9,6 +9,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zx/handle.h>
+#include <lib/zx/status.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -24,6 +25,7 @@
 
 #include "src/lib/storage/vfs/cpp/debug.h"
 #include "src/lib/storage/vfs/cpp/fidl_transaction.h"
+#include "src/lib/storage/vfs/cpp/file_connection.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
@@ -120,8 +122,7 @@ zx_status_t StreamFileConnection::WriteInternal(const void* data, size_t len, si
       .buffer = const_cast<void*>(data),
       .capacity = len,
   };
-  uint32_t writev_options = options().flags.append ? ZX_STREAM_APPEND : 0;
-  zx_status_t status = stream_.writev(writev_options, &vector, 1, out_actual);
+  zx_status_t status = stream_.writev(0, &vector, 1, out_actual);
   if (status == ZX_OK) {
     ZX_DEBUG_ASSERT(*out_actual <= len);
     vnode()->DidModifyStream();
@@ -200,6 +201,49 @@ void StreamFileConnection::QueryFilesystem(QueryFilesystemRequestView request,
                   status == ZX_OK
                       ? fidl::ObjectView<fuchsia_io::wire::FilesystemInfo>::FromExternal(&info)
                       : nullptr);
+}
+
+void StreamFileConnection::GetFlags(GetFlagsRequestView request,
+                                    GetFlagsCompleter::Sync& completer) {
+  zx::status result = GetFlagsInternal();
+  if (result.is_error()) {
+    completer.Reply(result.status_value(), {});
+  } else {
+    completer.Reply(ZX_OK, result.value());
+  }
+}
+
+void StreamFileConnection::SetFlags(SetFlagsRequestView request,
+                                    SetFlagsCompleter::Sync& completer) {
+  completer.Reply(SetFlagsInternal(request->flags).status_value());
+}
+
+zx::status<fuchsia_io::wire::OpenFlags> StreamFileConnection::GetFlagsInternal() {
+  zx::status flags = NodeGetFlags();
+  if constexpr (ZX_DEBUG_ASSERT_IMPLEMENTED) {
+    // Validate that the connection's append mode and the stream's append mode match.
+    if (flags.is_ok()) {
+      uint8_t mode_append;
+      if (zx_status_t status = stream_.get_prop_mode_append(&mode_append); status != ZX_OK) {
+        return zx::error(status);
+      }
+      bool stream_append = mode_append;
+      bool flags_append = static_cast<bool>(flags.value() & fuchsia_io::wire::OpenFlags::kAppend);
+      ZX_ASSERT_MSG(stream_append == flags_append, "stream append: %d flags append: %d",
+                    stream_append, flags_append);
+    }
+  }
+  return flags;
+}
+
+zx::status<> StreamFileConnection::SetFlagsInternal(fuchsia_io::wire::OpenFlags flags) {
+  auto new_options = VnodeConnectionOptions::FromIoV1Flags(flags);
+  bool append = new_options.flags.append;
+  auto status = zx::make_status(stream_.set_prop_mode_append(append));
+  if (status.is_ok()) {
+    set_append(append);
+  }
+  return status;
 }
 
 }  // namespace internal

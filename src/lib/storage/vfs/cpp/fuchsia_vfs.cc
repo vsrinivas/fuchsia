@@ -50,6 +50,9 @@ uint32_t ToStreamOptions(const VnodeConnectionOptions& options) {
   if (options.rights.write) {
     stream_options |= ZX_STREAM_MODE_WRITE;
   }
+  if (options.flags.append) {
+    stream_options |= ZX_STREAM_MODE_APPEND;
+  }
   return stream_options;
 }
 

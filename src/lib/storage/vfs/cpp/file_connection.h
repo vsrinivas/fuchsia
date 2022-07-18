@@ -42,8 +42,6 @@ class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::Fi
   void Sync(SyncRequestView request, SyncCompleter::Sync& completer) final;
   void GetAttr(GetAttrRequestView request, GetAttrCompleter::Sync& completer) final;
   void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) final;
-  void GetFlags(GetFlagsRequestView request, GetFlagsCompleter::Sync& completer) final;
-  void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) final;
 
   //
   // |fuchsia.io/File| operations.
