@@ -22,8 +22,8 @@ class HostNameResolver : public MdnsAgent {
  public:
   // Creates a |HostNameResolver|.
   HostNameResolver(MdnsAgent::Owner* owner, const std::string& host_name, Media media,
-                   IpVersions ip_versions, zx::duration timeout,
-                   Mdns::ResolveHostNameCallback callback);
+                   IpVersions ip_versions, bool include_local, bool include_local_proxies,
+                   zx::duration timeout, Mdns::ResolveHostNameCallback callback);
 
   ~HostNameResolver() override;
 
@@ -35,6 +35,9 @@ class HostNameResolver : public MdnsAgent {
 
   void EndOfMessage() override;
 
+  void OnAddProxyHost(const std::string& host_full_name,
+                      const std::vector<HostAddress>& addresses) override;
+
   void Quit() override;
 
  private:
@@ -44,10 +47,14 @@ class HostNameResolver : public MdnsAgent {
     return result;
   }
 
+  void InvokeCallbackAndRemoveSelf();
+
   std::string host_name_;
   std::string host_full_name_;
   Media media_;
   IpVersions ip_versions_;
+  bool include_local_;
+  bool include_local_proxies_;
   zx::duration timeout_;
   Mdns::ResolveHostNameCallback callback_;
   std::unordered_set<HostAddress, HostAddress::Hash> addresses_;

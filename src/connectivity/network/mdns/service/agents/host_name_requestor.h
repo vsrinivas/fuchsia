@@ -22,7 +22,7 @@ class HostNameRequestor : public MdnsAgent {
  public:
   // Creates a |HostNameRequestor|.
   HostNameRequestor(MdnsAgent::Owner* owner, const std::string& host_name, Media media,
-                    IpVersions ip_versions);
+                    IpVersions ip_versions, bool include_local, bool include_local_proxies);
 
   ~HostNameRequestor() override;
 
@@ -39,6 +39,13 @@ class HostNameRequestor : public MdnsAgent {
                        ReplyAddress sender_address) override;
 
   void EndOfMessage() override;
+
+  void OnAddProxyHost(const std::string& host_full_name,
+                      const std::vector<HostAddress>& addresses) override;
+
+  void OnRemoveProxyHost(const std::string& host_full_name) override;
+
+  void OnLocalHostAddressesChanged() override;
 
  private:
   std::vector<HostAddress> addresses() const {
@@ -59,6 +66,9 @@ class HostNameRequestor : public MdnsAgent {
   std::string host_full_name_;
   Media media_;
   IpVersions ip_versions_;
+  bool include_local_;
+  bool include_local_proxies_;
+  std::string local_host_full_name_;
   std::unordered_set<HostAddress, HostAddress::Hash> addresses_;
   std::unordered_set<HostAddress, HostAddress::Hash> prev_addresses_;
   std::unordered_set<Mdns::HostNameSubscriber*> subscribers_;

@@ -57,7 +57,7 @@ void ServiceInstancePublisherServiceImpl::PublishServiceInstance(
                                                      : default_ip_versions_;
   bool perform_probe = options.has_perform_probe() ? options.perform_probe() : true;
 
-  auto publisher = new ResponderPublisher(publication_responder.Bind(), std::move(callback));
+  auto publisher = new ResponderPublisher(publication_responder.Bind(), callback.share());
 
   if (!mdns().PublishServiceInstance(host_name_, addresses_, service, instance, media, ip_versions,
                                      perform_probe, publisher)) {

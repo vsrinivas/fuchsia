@@ -66,6 +66,8 @@ source_set("source_set") {
     "common/mdns_names.h",
     "common/reply_address.cc",
     "common/reply_address.h",
+    "common/service_instance.cc",
+    "common/service_instance.h",
     "common/type_converters.h",
     "common/types.h",
     "config.cc",
@@ -157,6 +159,7 @@ test("mdns_test") {
     "test/responder_publisher_test.cc",
     "test/service_impl_manager_test.cc",
     "test/service_instance_publisher_service_impl_test.cc",
+    "test/service_instance_resolver_test.cc",
   ]
 
   deps = [

@@ -37,8 +37,13 @@ void ServiceInstanceResolverServiceImpl::ResolveServiceInstance(
   IpVersions ip_versions =
       options.has_ip_versions() ? fidl::To<IpVersions>(options.ip_versions()) : IpVersions::kBoth;
 
+  bool include_local = !options.has_exclude_local() || !options.exclude_local();
+  bool include_local_proxies =
+      !options.has_exclude_local_proxies() || !options.exclude_local_proxies();
+
   mdns().ResolveServiceInstance(
       service, instance, zx::clock::get_monotonic() + zx::nsec(timeout), media, ip_versions,
+      include_local, include_local_proxies,
       [callback = std::move(callback)](fuchsia::net::mdns::ServiceInstance instance) {
         callback(std::move(instance));
       });

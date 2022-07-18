@@ -28,6 +28,8 @@ class AddressResponder : public MdnsAgent {
 
   ~AddressResponder() override;
 
+  std::vector<HostAddress> addresses() const;
+
   // MdnsAgent overrides.
   void Start(const std::string& local_host_full_name) override;
 

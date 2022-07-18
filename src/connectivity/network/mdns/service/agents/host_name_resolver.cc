@@ -7,18 +7,23 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
 
+#include <iterator>
+
 #include "src/connectivity/network/mdns/service/common/mdns_names.h"
 
 namespace mdns {
 
 HostNameResolver::HostNameResolver(MdnsAgent::Owner* owner, const std::string& host_name,
-                                   Media media, IpVersions ip_versions, zx::duration timeout,
+                                   Media media, IpVersions ip_versions, bool include_local,
+                                   bool include_local_proxies, zx::duration timeout,
                                    Mdns::ResolveHostNameCallback callback)
     : MdnsAgent(owner),
       host_name_(host_name),
       host_full_name_(MdnsNames::HostFullName(host_name)),
       media_(media),
       ip_versions_(ip_versions),
+      include_local_(include_local),
+      include_local_proxies_(include_local_proxies),
       timeout_(timeout),
       callback_(std::move(callback)) {
   FX_DCHECK(callback_);
@@ -32,6 +37,13 @@ void HostNameResolver::Start(const std::string& local_host_full_name) {
 
   MdnsAgent::Start(local_host_full_name);
 
+  if (include_local_ && host_full_name_ == local_host_full_name) {
+    auto addresses = local_host_addresses();
+    std::copy(addresses.begin(), addresses.end(), std::inserter(addresses_, addresses_.end()));
+    InvokeCallbackAndRemoveSelf();
+    return;
+  }
+
   SendQuestion(std::make_shared<DnsQuestion>(host_full_name_, DnsType::kA),
                ReplyAddress::Multicast(media_, ip_versions_));
   SendQuestion(std::make_shared<DnsQuestion>(host_full_name_, DnsType::kAaaa),
@@ -40,9 +52,7 @@ void HostNameResolver::Start(const std::string& local_host_full_name) {
   PostTaskForTime(
       [this]() {
         if (callback_) {
-          callback_(host_name_, addresses());
-          callback_ = nullptr;
-          RemoveSelf();
+          InvokeCallbackAndRemoveSelf();
         }
       },
       now() + timeout_);
@@ -71,10 +81,24 @@ void HostNameResolver::EndOfMessage() {
     return;
   }
 
-  if (!addresses_.empty()) {
-    callback_(host_name_, addresses());
-    callback_ = nullptr;
-    PostTaskForTime([this]() { RemoveSelf(); }, now());
+  if (!addresses_.empty() && callback_) {
+    InvokeCallbackAndRemoveSelf();
+  }
+}
+
+void HostNameResolver::OnAddProxyHost(const std::string& host_full_name,
+                                      const std::vector<HostAddress>& host_addresses) {
+  if (!include_local_proxies_ || host_full_name != host_full_name_) {
+    return;
+  }
+
+  addresses_.clear();
+  for (auto& host_address : host_addresses) {
+    addresses_.insert(host_address);
+  }
+
+  if (callback_) {
+    InvokeCallbackAndRemoveSelf();
   }
 }
 
@@ -85,6 +109,15 @@ void HostNameResolver::Quit() {
   }
 
   MdnsAgent::Quit();
+}
+
+void HostNameResolver::InvokeCallbackAndRemoveSelf() {
+  if (callback_) {
+    callback_(host_name_, addresses());
+    callback_ = nullptr;
+  }
+
+  PostTaskForTime([this]() { RemoveSelf(); }, now());
 }
 
 }  // namespace mdns

@@ -22,14 +22,22 @@ namespace mdns {
 class InstanceResponder : public MdnsAgent {
  public:
   // Creates an |InstanceResponder|. The publisher is consulted to determine how queries are
-  // handled. If |host_full_name| is empty and |addresses| is empty, the local host name and
+  // handled. If |host_name| is empty and |addresses| is empty, the local host name and
   // local addresses will be used. Otherwise, neither parameter may be empty.
-  InstanceResponder(MdnsAgent::Owner* owner, std::string host_full_name,
+  InstanceResponder(MdnsAgent::Owner* owner, std::string host_name,
                     std::vector<inet::IpAddress> addresses, std::string service_name,
                     std::string instance_name, Media media, IpVersions ip_versions,
                     Mdns::Publisher* publisher);
 
   ~InstanceResponder() override;
+
+  // Returns a pointer to the current service instance or null if it hasn't yet been established.
+  // The returned pointer references a private member of this responder, which may be modified when
+  // code in this class has an opportunity to run and will be deleted if this responder is deleted.
+  const ServiceInstance* service_instance() const { return instance_ready_ ? &instance_ : nullptr; }
+
+  // Indicates whether the instance is published by a local proxy (true) or the local host (false).
+  bool from_proxy() const { return is_from_proxy_; }
 
   // MdnsAgent overrides.
   void Start(const std::string& local_host_full_name) override;
@@ -38,6 +46,8 @@ class InstanceResponder : public MdnsAgent {
                        const ReplyAddress& sender_address) override;
 
   void Quit() override;
+
+  void OnLocalHostAddressesChanged() override;
 
   // Sets the subtypes to publish.
   void SetSubtypes(std::vector<std::string> subtypes);
@@ -75,7 +85,7 @@ class InstanceResponder : public MdnsAgent {
 
   // Sends a publication. An empty |subtype| indicates no subtype.
   void SendPublication(const Mdns::Publication& publication, const std::string& subtype,
-                       const ReplyAddress& reply_address) const;
+                       const ReplyAddress& reply_address);
 
   // Sends a subtype PTR record for this instance.
   void SendSubtypePtrRecord(const std::string& subtype, uint32_t ttl,
@@ -83,7 +93,7 @@ class InstanceResponder : public MdnsAgent {
 
   // Sends a publication with zero ttls, indicating the service instance is
   // no longer published.
-  void SendGoodbye() const;
+  void SendGoodbye();
 
   // Frees resources associated with |subtype| if they're no longer required.
   void IdleCheck(const std::string& subtype);
@@ -100,10 +110,15 @@ class InstanceResponder : public MdnsAgent {
     return reply_address;
   }
 
+  // Updates |instance_.addresses_| using |local_host_addresses| and |port_|.
+  void UpdateInstanceAddresses();
+
   std::string host_full_name_;
-  std::vector<inet::IpAddress> addresses_;
-  std::string service_name_;
-  std::string instance_name_;
+  const std::vector<inet::IpAddress> addresses_;
+  Mdns::ServiceInstance instance_;
+  inet::IpPort port_;
+  bool is_from_proxy_;
+  bool instance_ready_ = false;
   std::string instance_full_name_;
   Media media_;
   IpVersions ip_versions_;

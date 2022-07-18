@@ -45,50 +45,50 @@ void ProxyHostPublisherServiceImpl::PublishProxyHost(
       addresses.begin(), addresses.end(), std::back_inserter(inet_addresses),
       [](const fuchsia::net::IpAddress& fidl_address) { return inet::IpAddress(fidl_address); });
 
-  host_publisher_ = std::make_unique<HostPublisher>();
+  auto host_publisher = new HostPublisher(std::move(callback), mdns(), host_name, inet_addresses,
+                                          media, ip_versions, std::move(request));
 
-  if (!mdns().PublishHost(host_name, inet_addresses, media, ip_versions, perform_probe,
-                          host_publisher_.get())) {
+  if (!mdns().PublishHost(host_name, std::move(inet_addresses), media, ip_versions, perform_probe,
+                          host_publisher)) {
     callback(fpromise::error(fuchsia::net::mdns::PublishProxyHostError::ALREADY_PUBLISHED_LOCALLY));
     return;
   }
-
-  host_publisher_->WhenSuccessReported([this, host_name = std::move(host_name),
-                                        addresses = std::move(inet_addresses), media, ip_versions,
-                                        request = std::move(request),
-                                        callback = std::move(callback)](bool success) mutable {
-    if (!success) {
-      callback(
-          fpromise::error(fuchsia::net::mdns::PublishProxyHostError::ALREADY_PUBLISHED_ON_SUBNET));
-      return;
-    }
-
-    // Create a ServiceInstancePublisher for the new host.
-    instance_publisher_service_ = std::make_unique<ServiceInstancePublisherServiceImpl>(
-        mdns(), std::move(host_name), std::move(addresses), media, ip_versions, std::move(request),
-        [this]() { instance_publisher_service_ = nullptr; });
-  });
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
 // ProxyHostPublisherServiceImpl::HostPublisher definitions
 
-void ProxyHostPublisherServiceImpl::HostPublisher::WhenSuccessReported(
-    fit::function<void(bool)> callback) {
-  if (success_.has_value()) {
-    callback(success_.value());
-  } else {
-    callback_ = std::move(callback);
-  }
-}
+ProxyHostPublisherServiceImpl::HostPublisher::HostPublisher(
+    PublishProxyHostCallback callback, Mdns& mdns, std::string host_name,
+    std::vector<inet::IpAddress> addresses, Media media, IpVersions ip_versions,
+    fidl::InterfaceRequest<fuchsia::net::mdns::ServiceInstancePublisher> request)
+    : callback_(std::move(callback)),
+      mdns_(mdns),
+      host_name_(std::move(host_name)),
+      addresses_(std::move(addresses)),
+      media_(media),
+      ip_versions_(ip_versions),
+      request_(std::move(request)) {}
 
 void ProxyHostPublisherServiceImpl::HostPublisher::ReportSuccess(bool success) {
-  success_ = success;
-
-  if (callback_) {
-    callback_(success);
-    callback_ = nullptr;
+  if (!callback_) {
+    return;
   }
+
+  if (!success) {
+    callback_(
+        fpromise::error(fuchsia::net::mdns::PublishProxyHostError::ALREADY_PUBLISHED_ON_SUBNET));
+    callback_ = nullptr;
+    delete this;
+    return;
+  }
+
+  instance_publisher_service_ = std::make_unique<ServiceInstancePublisherServiceImpl>(
+      mdns_, std::move(host_name_), std::move(addresses_), media_, ip_versions_,
+      std::move(request_), [this]() { delete this; });
+
+  callback_(fpromise::ok());
+  callback_ = nullptr;
 }
 
 }  // namespace mdns

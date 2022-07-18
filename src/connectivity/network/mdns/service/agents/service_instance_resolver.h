@@ -23,7 +23,8 @@ class ServiceInstanceResolver : public MdnsAgent {
   // Creates a |ServiceInstanceResolver|.
   ServiceInstanceResolver(MdnsAgent::Owner* owner, const std::string& service,
                           const std::string& instance, zx::time timeout, Media media,
-                          IpVersions ip_versions, Mdns::ResolveServiceInstanceCallback callback);
+                          IpVersions ip_versions, bool include_local, bool include_local_proxies,
+                          Mdns::ResolveServiceInstanceCallback callback);
 
   ~ServiceInstanceResolver() override;
 
@@ -35,6 +36,8 @@ class ServiceInstanceResolver : public MdnsAgent {
 
   void EndOfMessage() override;
 
+  void OnAddLocalServiceInstance(const Mdns::ServiceInstance& instance, bool from_proxy) override;
+
   void Quit() override;
 
  private:
@@ -45,6 +48,8 @@ class ServiceInstanceResolver : public MdnsAgent {
   zx::time timeout_;
   Media media_;
   IpVersions ip_versions_;
+  bool include_local_;
+  bool include_local_proxies_;
   Mdns::ResolveServiceInstanceCallback callback_;
   inet::IpPort port_;
 

@@ -58,17 +58,44 @@ bool VerifyAddresses(std::vector<inet::IpAddress> expected, std::vector<HostAddr
   return true;
 }
 
+bool VerifyAddresses(std::vector<HostAddress> expected, std::vector<HostAddress> value) {
+  for (const auto& host_address : value) {
+    auto iter = std::find(expected.begin(), expected.end(), host_address);
+    if (iter == expected.end()) {
+      std::cerr << "Address " << host_address.address() << " was not expected.\n";
+      return false;
+    }
+
+    expected.erase(iter);
+  }
+
+  if (!expected.empty()) {
+    std::cerr << expected.size() << " expected addresses not found.\n";
+    return false;
+  }
+
+  return true;
+}
+
 constexpr char kHostName[] = "testhostname";
 constexpr char kHostFullName[] = "testhostname.local.";
 const std::vector<inet::IpAddress> kAddresses{inet::IpAddress(192, 168, 1, 200),
                                               inet::IpAddress(0xfe80, 200)};
 const std::vector<inet::IpAddress> kOtherAddresses{inet::IpAddress(192, 168, 1, 201),
                                                    inet::IpAddress(0xfe80, 201)};
+const std::vector<HostAddress> kHostAddresses{
+    HostAddress(inet::IpAddress(192, 168, 1, 200), 1, zx::sec(450)),
+    HostAddress(inet::IpAddress(0xfe80, 200), 1, zx::sec(450))};
 constexpr uint32_t kInterfaceId = 1;
+constexpr bool kIncludeLocal = true;
+constexpr bool kExcludeLocal = false;
+constexpr bool kIncludeLocalProxies = true;
+constexpr bool kExcludeLocalProxies = false;
 
 // Tests nominal startup behavior of the requestor.
 TEST_F(HostNameRequestorTest, Nominal) {
-  HostNameRequestor under_test(this, kHostName, Media::kBoth, IpVersions::kBoth);
+  HostNameRequestor under_test(this, kHostName, Media::kBoth, IpVersions::kBoth, kExcludeLocal,
+                               kExcludeLocalProxies);
   SetAgent(under_test);
 
   under_test.Start(kLocalHostFullName);
@@ -83,7 +110,8 @@ TEST_F(HostNameRequestorTest, Nominal) {
 
 // Tests behavior of the requestor when a host responds to the initial questions.
 TEST_F(HostNameRequestorTest, Response) {
-  HostNameRequestor under_test(this, kHostName, Media::kBoth, IpVersions::kBoth);
+  HostNameRequestor under_test(this, kHostName, Media::kBoth, IpVersions::kBoth, kExcludeLocal,
+                               kExcludeLocalProxies);
   SetAgent(under_test);
 
   under_test.Start(kLocalHostFullName);
@@ -125,7 +153,8 @@ TEST_F(HostNameRequestorTest, Response) {
 
 // Tests behavior of the requestor when a host responds multiple times to the initial questions.
 TEST_F(HostNameRequestorTest, Duplicate) {
-  HostNameRequestor under_test(this, kHostName, Media::kBoth, IpVersions::kBoth);
+  HostNameRequestor under_test(this, kHostName, Media::kBoth, IpVersions::kBoth, kExcludeLocal,
+                               kExcludeLocalProxies);
   SetAgent(under_test);
 
   under_test.Start(kLocalHostFullName);
@@ -186,7 +215,8 @@ TEST_F(HostNameRequestorTest, Duplicate) {
 
 // Tests behavior of the requestor when the addresses change.
 TEST_F(HostNameRequestorTest, Change) {
-  HostNameRequestor under_test(this, kHostName, Media::kBoth, IpVersions::kBoth);
+  HostNameRequestor under_test(this, kHostName, Media::kBoth, IpVersions::kBoth, kExcludeLocal,
+                               kExcludeLocalProxies);
   SetAgent(under_test);
 
   under_test.Start(kLocalHostFullName);
@@ -244,7 +274,8 @@ TEST_F(HostNameRequestorTest, Change) {
 
 // Tests behavior of the requestor when host address records expire.
 TEST_F(HostNameRequestorTest, Expired) {
-  HostNameRequestor under_test(this, kHostName, Media::kBoth, IpVersions::kBoth);
+  HostNameRequestor under_test(this, kHostName, Media::kBoth, IpVersions::kBoth, kExcludeLocal,
+                               kExcludeLocalProxies);
   SetAgent(under_test);
 
   under_test.Start(kLocalHostFullName);
@@ -297,8 +328,8 @@ TEST_F(HostNameRequestorTest, Expired) {
 // Tests the the requestor quits after the last subscriber is removed.
 TEST_F(HostNameRequestorTest, Quit) {
   // Need to |make_shared|, because |RemoveSelf| calls |shared_from_this|.
-  auto under_test =
-      std::make_shared<HostNameRequestor>(this, kHostName, Media::kBoth, IpVersions::kBoth);
+  auto under_test = std::make_shared<HostNameRequestor>(
+      this, kHostName, Media::kBoth, IpVersions::kBoth, kExcludeLocal, kExcludeLocalProxies);
   SetAgent(*under_test);
 
   under_test->Start(kLocalHostFullName);
@@ -323,7 +354,8 @@ TEST_F(HostNameRequestorTest, Quit) {
 
 // Tests behavior of the requestor when configured for wireless operation only.
 TEST_F(HostNameRequestorTest, WirelessOnly) {
-  HostNameRequestor under_test(this, kHostName, Media::kWireless, IpVersions::kBoth);
+  HostNameRequestor under_test(this, kHostName, Media::kWireless, IpVersions::kBoth, kExcludeLocal,
+                               kExcludeLocalProxies);
   SetAgent(under_test);
 
   under_test.Start(kLocalHostFullName);
@@ -380,7 +412,8 @@ TEST_F(HostNameRequestorTest, WirelessOnly) {
 
 // Tests behavior of the requestor when configured for wired operation only.
 TEST_F(HostNameRequestorTest, WiredOnly) {
-  HostNameRequestor under_test(this, kHostName, Media::kWired, IpVersions::kBoth);
+  HostNameRequestor under_test(this, kHostName, Media::kWired, IpVersions::kBoth, kExcludeLocal,
+                               kExcludeLocalProxies);
   SetAgent(under_test);
 
   under_test.Start(kLocalHostFullName);
@@ -436,7 +469,8 @@ TEST_F(HostNameRequestorTest, WiredOnly) {
 
 // Tests behavior of the requestor when configured for IPv4 operation only.
 TEST_F(HostNameRequestorTest, V4Only) {
-  HostNameRequestor under_test(this, kHostName, Media::kBoth, IpVersions::kV4);
+  HostNameRequestor under_test(this, kHostName, Media::kBoth, IpVersions::kV4, kExcludeLocal,
+                               kExcludeLocalProxies);
   SetAgent(under_test);
 
   under_test.Start(kLocalHostFullName);
@@ -492,7 +526,8 @@ TEST_F(HostNameRequestorTest, V4Only) {
 
 // Tests behavior of the requestor when configured for IPv6 operation only.
 TEST_F(HostNameRequestorTest, V6Only) {
-  HostNameRequestor under_test(this, kHostName, Media::kBoth, IpVersions::kV6);
+  HostNameRequestor under_test(this, kHostName, Media::kBoth, IpVersions::kV6, kExcludeLocal,
+                               kExcludeLocalProxies);
   SetAgent(under_test);
 
   under_test.Start(kLocalHostFullName);
@@ -544,6 +579,75 @@ TEST_F(HostNameRequestorTest, V6Only) {
   }
 
   ExpectNoOther();
+}
+
+// Tests discovery of the local host.
+TEST_F(HostNameRequestorTest, LocalHost) {
+  HostNameRequestor under_test(this, kLocalHostName, Media::kBoth, IpVersions::kBoth, kIncludeLocal,
+                               kExcludeLocalProxies);
+  SetAgent(under_test);
+  SetLocalHostAddresses(kHostAddresses);
+
+  under_test.Start(kLocalHostFullName);
+
+  // Expect no questions, because we're requesting the local host.
+  ExpectNoOther();
+
+  Subscriber subscriber;
+  under_test.AddSubscriber(&subscriber);
+  EXPECT_TRUE(subscriber.addresses_changed_called());
+  EXPECT_TRUE(VerifyAddresses(kHostAddresses, subscriber.addresses()));
+}
+
+// Tests discovery of a local proxy host.
+TEST_F(HostNameRequestorTest, LocalProxyHost) {
+  HostNameRequestor under_test(this, kHostName, Media::kBoth, IpVersions::kBoth, kExcludeLocal,
+                               kIncludeLocalProxies);
+  SetAgent(under_test);
+
+  under_test.Start(kLocalHostFullName);
+
+  // Expect A and AAAA questions on start.
+  auto message = ExpectOutboundMessage(ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
+  ExpectQuestion(message.get(), kHostFullName, DnsType::kA);
+  ExpectQuestion(message.get(), kHostFullName, DnsType::kAaaa);
+  ExpectNoOtherQuestionOrResource(message.get());
+  ExpectNoOther();
+
+  Subscriber subscriber;
+  under_test.AddSubscriber(&subscriber);
+  EXPECT_FALSE(subscriber.addresses_changed_called());
+
+  under_test.OnAddProxyHost(kHostFullName, kHostAddresses);
+  EXPECT_TRUE(subscriber.addresses_changed_called());
+  EXPECT_TRUE(VerifyAddresses(kHostAddresses, subscriber.addresses()));
+
+  under_test.OnRemoveProxyHost(kHostFullName);
+  EXPECT_TRUE(subscriber.addresses_changed_called());
+  EXPECT_TRUE(VerifyAddresses(std::vector<HostAddress>(), subscriber.addresses()));
+}
+
+// Tests that a local proxy host is not discovered if that feature is off.
+TEST_F(HostNameRequestorTest, NoLocalProxyHost) {
+  HostNameRequestor under_test(this, kHostName, Media::kBoth, IpVersions::kBoth, kExcludeLocal,
+                               kExcludeLocalProxies);
+  SetAgent(under_test);
+
+  under_test.Start(kLocalHostFullName);
+
+  // Expect A and AAAA questions on start.
+  auto message = ExpectOutboundMessage(ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth));
+  ExpectQuestion(message.get(), kHostFullName, DnsType::kA);
+  ExpectQuestion(message.get(), kHostFullName, DnsType::kAaaa);
+  ExpectNoOtherQuestionOrResource(message.get());
+  ExpectNoOther();
+
+  Subscriber subscriber;
+  under_test.AddSubscriber(&subscriber);
+  EXPECT_FALSE(subscriber.addresses_changed_called());
+
+  under_test.OnAddProxyHost(kHostFullName, kHostAddresses);
+  EXPECT_FALSE(subscriber.addresses_changed_called());
 }
 
 }  // namespace test

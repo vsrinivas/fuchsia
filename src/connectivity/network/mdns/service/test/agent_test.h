@@ -23,11 +23,17 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Owner {
 
  protected:
   static constexpr zx::time kInitialTime = zx::time(1000);
+  static const std::string kLocalHostName;
   static const std::string kLocalHostFullName;
 
   // Sets the agent under test. This must be called before the test gets underway, and the agent
   // must survive until the end of the test.
   void SetAgent(const MdnsAgent& agent) { agent_ = &agent; }
+
+  // Sets the host addresses returned by LocalHostAddresses.
+  void SetLocalHostAddresses(std::vector<HostAddress> local_host_addresses) {
+    local_host_addresses_ = std::move(local_host_addresses);
+  }
 
   // Advances the current time (as returned by |now()|) to |time|. |time| must be greater than
   // or equal to the time currently returned by |now()|.
@@ -75,7 +81,36 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Owner {
   void ExpectNoFlushSentItemsCall() { EXPECT_FALSE(flush_sent_items_called_); }
 
   // Expects that the agent has called |FlushSentItems|.
-  void ExpectFlushSentItemsCall() { EXPECT_TRUE(flush_sent_items_called_); }
+  void ExpectFlushSentItemsCall() {
+    EXPECT_TRUE(flush_sent_items_called_);
+    flush_sent_items_called_ = false;
+  }
+
+  // Expects that the agent has not called |AddLocalServiceInstance|.
+  void ExpectNoAddLocalServiceInstanceCall() const {
+    EXPECT_FALSE(add_local_service_instance_called_);
+  }
+
+  // Expects that the agent has called |AddLocalServiceInstance|.
+  void ExpectAddLocalServiceInstanceCall(const ServiceInstance& instance, bool from_proxy) {
+    EXPECT_TRUE(add_local_service_instance_called_);
+    EXPECT_EQ(instance, add_local_service_instance_instance_);
+    EXPECT_EQ(from_proxy, add_local_service_instance_from_proxy_);
+    add_local_service_instance_called_ = false;
+  }
+
+  // Expects that the agent has not called |ChangeLocalServiceInstance|.
+  void ExpectNoChangeLocalServiceInstanceCall() const {
+    EXPECT_FALSE(change_local_service_instance_called_);
+  }
+
+  // Expects that the agent has called |ChangeLocalServiceInstance|.
+  void ExpectChangeLocalServiceInstanceCall(const ServiceInstance& instance, bool from_proxy) {
+    EXPECT_TRUE(change_local_service_instance_called_);
+    EXPECT_EQ(instance, change_local_service_instance_instance_);
+    EXPECT_EQ(from_proxy, change_local_service_instance_from_proxy_);
+    change_local_service_instance_called_ = false;
+  }
 
   // Expects that nothing else has happened. Subclasses can override this to ensure that nothing
   // specific to a particular agent type has happened. Overrides should call this implementation.
@@ -154,7 +189,14 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Owner {
 
   void FlushSentItems() override;
 
+  void AddLocalServiceInstance(const ServiceInstance& instance, bool from_proxy) override;
+
+  void ChangeLocalServiceInstance(const ServiceInstance& instance, bool from_proxy) override;
+
+  std::vector<HostAddress> LocalHostAddresses() override { return local_host_addresses_; }
+
   const MdnsAgent* agent_;
+  std::vector<HostAddress> local_host_addresses_;
   std::shared_ptr<DnsResource> address_placeholder_ =
       std::make_shared<DnsResource>(kLocalHostFullName, DnsType::kA);
 
@@ -167,6 +209,12 @@ class AgentTest : public ::testing::Test, public MdnsAgent::Owner {
   std::vector<DnsResource> expirations_;
   bool remove_agent_called_ = false;
   bool flush_sent_items_called_ = false;
+  bool add_local_service_instance_called_ = false;
+  ServiceInstance add_local_service_instance_instance_;
+  bool add_local_service_instance_from_proxy_;
+  bool change_local_service_instance_called_ = false;
+  ServiceInstance change_local_service_instance_instance_;
+  bool change_local_service_instance_from_proxy_;
 };
 
 }  // namespace test

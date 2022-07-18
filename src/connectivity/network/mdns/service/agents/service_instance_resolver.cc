@@ -17,6 +17,7 @@ ServiceInstanceResolver::ServiceInstanceResolver(MdnsAgent::Owner* owner,
                                                  const std::string& service,
                                                  const std::string& instance, zx::time timeout,
                                                  Media media, IpVersions ip_versions,
+                                                 bool include_local, bool include_local_proxies,
                                                  Mdns::ResolveServiceInstanceCallback callback)
     : MdnsAgent(owner),
       service_(service),
@@ -24,6 +25,8 @@ ServiceInstanceResolver::ServiceInstanceResolver(MdnsAgent::Owner* owner,
       timeout_(timeout),
       media_(media),
       ip_versions_(ip_versions),
+      include_local_(include_local),
+      include_local_proxies_(include_local_proxies),
       callback_(std::move(callback)) {
   FX_DCHECK(callback_);
 }
@@ -90,24 +93,58 @@ void ServiceInstanceResolver::ReceiveResource(const DnsResource& resource,
       break;
     case DnsType::kA:
       if (instance_.has_target() && (resource.name_.dotted_string_ == instance_.target())) {
-        instance_.set_ipv4_endpoint(MdnsFidlUtil::CreateSocketAddressV4(
-            inet::SocketAddress(resource.a_.address_.address_, port_)));
+        auto address = MdnsFidlUtil::CreateSocketAddressV4(
+            inet::SocketAddress(resource.a_.address_.address_, port_));
+        instance_.set_ipv4_endpoint(address);
+        if (!instance_.has_addresses()) {
+          instance_.set_addresses(std::vector<fuchsia::net::SocketAddress>());
+        }
+
+        instance_.mutable_addresses()->push_back(
+            fuchsia::net::SocketAddress::WithIpv4(std::move(address)));
       }
       break;
     case DnsType::kAaaa:
       if (instance_.has_target() && (resource.name_.dotted_string_ == instance_.target())) {
-        instance_.set_ipv6_endpoint(MdnsFidlUtil::CreateSocketAddressV6(
-            inet::SocketAddress(resource.aaaa_.address_.address_, port_)));
+        auto address = MdnsFidlUtil::CreateSocketAddressV6(
+            inet::SocketAddress(resource.aaaa_.address_.address_, port_));
+        instance_.set_ipv6_endpoint(address);
+        if (!instance_.has_addresses()) {
+          instance_.set_addresses(std::vector<fuchsia::net::SocketAddress>());
+        }
+
+        instance_.mutable_addresses()->push_back(
+            fuchsia::net::SocketAddress::WithIpv6(std::move(address)));
       }
       break;
     case DnsType::kTxt:
       if (instance_.has_target() && (resource.name_.dotted_string_ == instance_.target())) {
         instance_.set_text(fidl::To<std::vector<std::string>>(resource.txt_.strings_));
+        instance_.set_text_strings(fidl::Clone(resource.txt_.strings_));
       }
       break;
     default:
       break;
   }
+}
+
+void ServiceInstanceResolver::OnAddLocalServiceInstance(const Mdns::ServiceInstance& instance,
+                                                        bool from_proxy) {
+  if (!callback_) {
+    return;
+  }
+
+  if (from_proxy ? !include_local_proxies_ : !include_local_) {
+    return;
+  }
+
+  if (instance.service_name_ != service_) {
+    return;
+  }
+
+  callback_(fidl::To<fuchsia::net::mdns::ServiceInstance>(instance));
+  callback_ = nullptr;
+  PostTaskForTime([this]() { RemoveSelf(); }, now());
 }
 
 }  // namespace mdns

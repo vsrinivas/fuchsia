@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 
 #include "src/connectivity/network/mdns/service/common/mdns_names.h"
+#include "src/connectivity/network/mdns/service/common/service_instance.h"
 #include "src/connectivity/network/mdns/service/test/agent_test.h"
 
 namespace mdns {
@@ -18,9 +19,15 @@ const inet::IpPort kPort = inet::IpPort::From_uint16_t(2525);
 constexpr char kServiceName[] = "_test._tcp.";
 constexpr char kOtherServiceName[] = "_other._tcp.";
 constexpr char kInstanceName[] = "testinstance";
+constexpr char kHostName[] = "test2host";
 constexpr char kHostFullName[] = "test2host.local.";
 const std::vector<inet::IpAddress> kAddresses{inet::IpAddress(192, 168, 1, 200),
                                               inet::IpAddress(192, 168, 1, 201)};
+const std::vector<inet::SocketAddress> kSocketAddresses{
+    inet::SocketAddress(192, 168, 1, 200, kPort), inet::SocketAddress(192, 168, 1, 201, kPort)};
+const std::vector<HostAddress> kHostAddresses{
+    HostAddress(inet::IpAddress(192, 168, 1, 200), 1, zx::sec(450)),
+    HostAddress(inet::IpAddress(192, 168, 1, 201), 1, zx::sec(450))};
 static constexpr size_t kMaxSenderAddresses = 64;
 constexpr uint32_t kInterfaceId = 1;
 
@@ -566,7 +573,7 @@ TEST_F(InstanceResponderTest, Subtype) {
 
 // Tests that a responder for an alternate host announces and responds correctly.
 TEST_F(InstanceResponderTest, HostAndAddresses) {
-  InstanceResponder under_test(this, kHostFullName, kAddresses, kServiceName, kInstanceName,
+  InstanceResponder under_test(this, kHostName, kAddresses, kServiceName, kInstanceName,
                                Media::kBoth, IpVersions::kBoth, this);
   SetAgent(under_test);
 
@@ -586,6 +593,34 @@ TEST_F(InstanceResponderTest, HostAndAddresses) {
   ExpectPublication(Media::kBoth, IpVersions::kBoth, kHostFullName, kAddresses);
   ExpectPostTaskForTime(zx::sec(60), zx::sec(60));  // idle cleanup
   ExpectNoOther();
+}
+
+// Tests that local service instance notifications are properly generated.
+TEST_F(InstanceResponderTest, LocalServiceInstanceNotifications) {
+  InstanceResponder under_test(this, "", {}, kServiceName, kInstanceName, Media::kBoth,
+                               IpVersions::kBoth, this);
+  SetAgent(under_test);
+  SetLocalHostAddresses(kHostAddresses);
+
+  // Normal startup.
+  under_test.Start(kLocalHostFullName);
+  ExpectAnnouncements();
+
+  ReplyAddress sender_address(
+      inet::SocketAddress(192, 168, 1, 1, inet::IpPort::From_uint16_t(5353)),
+      inet::IpAddress(192, 168, 1, 100), kInterfaceId, Media::kWired, IpVersions::kBoth);
+
+  under_test.ReceiveQuestion(DnsQuestion(service_full_name(), DnsType::kPtr),
+                             ReplyAddress::Multicast(Media::kBoth, IpVersions::kBoth),
+                             sender_address);
+  ExpectGetPublicationCall(PublicationCause::kQueryMulticastResponse, "",
+                           {sender_address.socket_address()})(Mdns::Publication::Create(kPort));
+  ExpectPublication();
+  ExpectPostTaskForTime(zx::sec(60), zx::sec(60));  // idle cleanup
+  ExpectNoOther();
+
+  ExpectAddLocalServiceInstanceCall(
+      ServiceInstance(kServiceName, kInstanceName, kLocalHostFullName, kSocketAddresses), false);
 }
 
 }  // namespace test

@@ -52,6 +52,8 @@ class MdnsUnitTests : public gtest::RealLoopFixture, public Mdns::Transceiver {
 
   void LogTraffic() override {}
 
+  std::vector<HostAddress> LocalHostAddresses() override { return std::vector<HostAddress>(); }
+
  protected:
   // The |Mdns| instance under test.
   Mdns& under_test() { return under_test_; }
@@ -388,7 +390,8 @@ TEST_F(MdnsUnitTests, Subscribe) {
   Subscriber subscriber;
 
   // Subscribe.
-  under_test().SubscribeToService(kServiceName, Media::kBoth, IpVersions::kBoth, &subscriber);
+  under_test().SubscribeToService(kServiceName, Media::kBoth, IpVersions::kBoth, false, false,
+                                  &subscriber);
   RunLoopUntilIdle();
   EXPECT_FALSE(subscriber.InstanceDiscoveredCalled());
 
@@ -412,7 +415,8 @@ TEST_F(MdnsUnitTests, Regression55116) {
   Subscriber subscriber;
 
   // Subscribe.
-  under_test().SubscribeToService(kServiceName, Media::kBoth, IpVersions::kBoth, &subscriber);
+  under_test().SubscribeToService(kServiceName, Media::kBoth, IpVersions::kBoth, false, false,
+                                  &subscriber);
   RunLoopUntilIdle();
   EXPECT_FALSE(subscriber.InstanceDiscoveredCalled());
 
@@ -421,7 +425,8 @@ TEST_F(MdnsUnitTests, Regression55116) {
   RunLoopUntilIdle();
 
   // Subscribe again.
-  under_test().SubscribeToService(kServiceName, Media::kBoth, IpVersions::kBoth, &subscriber);
+  under_test().SubscribeToService(kServiceName, Media::kBoth, IpVersions::kBoth, false, false,
+                                  &subscriber);
   RunLoopUntilIdle();
   EXPECT_FALSE(subscriber.InstanceDiscoveredCalled());
 

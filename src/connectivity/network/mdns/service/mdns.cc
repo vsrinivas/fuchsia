@@ -71,6 +71,12 @@ void Mdns::Start(fuchsia::net::interfaces::WatcherPtr interfaces_watcher,
         if (state_ == State::kWaitingForInterfaces && transceiver_.HasInterfaces()) {
           OnInterfacesStarted(original_local_host_name_, perform_address_probe);
         }
+
+        if (state_ == State::kActive) {
+          for (const auto& agent : agents_) {
+            agent->OnLocalHostAddressesChanged();
+          }
+        }
       },
       [this](std::unique_ptr<DnsMessage> message, const ReplyAddress& reply_address) {
 #ifdef MDNS_TRACE
@@ -133,16 +139,20 @@ void Mdns::Stop() {
 }
 
 void Mdns::ResolveHostName(const std::string& host_name, zx::duration timeout, Media media,
-                           IpVersions ip_versions, ResolveHostNameCallback callback) {
+                           IpVersions ip_versions, bool include_local, bool include_local_proxies,
+                           ResolveHostNameCallback callback) {
   FX_DCHECK(MdnsNames::IsValidHostName(host_name));
   FX_DCHECK(callback);
   FX_DCHECK(state_ == State::kActive);
 
-  AddAgent(std::make_shared<HostNameResolver>(this, host_name, media, ip_versions, timeout,
-                                              std::move(callback)));
+  auto agent =
+      std::make_shared<HostNameResolver>(this, host_name, media, ip_versions, include_local,
+                                         include_local_proxies, timeout, std::move(callback));
+  AddAgent(agent);
 }
 
 void Mdns::SubscribeToHostName(const std::string& host_name, Media media, IpVersions ip_versions,
+                               bool include_local, bool include_local_proxies,
                                HostNameSubscriber* subscriber) {
   FX_DCHECK(MdnsNames::IsValidHostName(host_name));
   FX_DCHECK(subscriber);
@@ -153,7 +163,8 @@ void Mdns::SubscribeToHostName(const std::string& host_name, Media media, IpVers
 
   auto iter = host_name_requestors_by_key_.find(key);
   if (iter == host_name_requestors_by_key_.end()) {
-    agent = std::make_shared<HostNameRequestor>(this, host_name, media, ip_versions);
+    agent = std::make_shared<HostNameRequestor>(this, host_name, media, ip_versions, include_local,
+                                                include_local_proxies);
 
     host_name_requestors_by_key_.emplace(key, agent);
     agent->SetOnQuitCallback([this, key]() { host_name_requestors_by_key_.erase(key); });
@@ -172,6 +183,7 @@ void Mdns::SubscribeToHostName(const std::string& host_name, Media media, IpVers
 
 void Mdns::ResolveServiceInstance(const std::string& service, const std::string& instance,
                                   zx::time timeout, Media media, IpVersions ip_versions,
+                                  bool include_local, bool include_local_proxies,
                                   ResolveServiceInstanceCallback callback) {
   FX_DCHECK(!service.empty());
   FX_DCHECK(!instance.empty());
@@ -179,10 +191,12 @@ void Mdns::ResolveServiceInstance(const std::string& service, const std::string&
   FX_DCHECK(state_ == State::kActive);
 
   AddAgent(std::make_shared<ServiceInstanceResolver>(this, service, instance, timeout, media,
-                                                     ip_versions, std::move(callback)));
+                                                     ip_versions, include_local,
+                                                     include_local_proxies, std::move(callback)));
 }
 
 void Mdns::SubscribeToService(const std::string& service_name, Media media, IpVersions ip_versions,
+                              bool include_local, bool include_local_proxies,
                               Subscriber* subscriber) {
   FX_DCHECK(MdnsNames::IsValidServiceName(service_name));
   FX_DCHECK(subscriber);
@@ -193,7 +207,8 @@ void Mdns::SubscribeToService(const std::string& service_name, Media media, IpVe
 
   auto iter = instance_requestors_by_key_.find(key);
   if (iter == instance_requestors_by_key_.end()) {
-    agent = std::make_shared<InstanceRequestor>(this, service_name, media, ip_versions);
+    agent = std::make_shared<InstanceRequestor>(this, service_name, media, ip_versions,
+                                                include_local, include_local_proxies);
 
     instance_requestors_by_key_.emplace(key, agent);
     agent->SetOnQuitCallback([this, key]() { instance_requestors_by_key_.erase(key); });
@@ -229,15 +244,15 @@ bool Mdns::PublishServiceInstance(std::string host_name, std::vector<inet::IpAdd
     return false;
   }
 
-  std::string host_full_name = host_name.empty() ? host_name : MdnsNames::HostFullName(host_name);
-
-  auto agent = std::make_shared<InstanceResponder>(this, host_full_name, addresses, service_name,
+  auto agent = std::make_shared<InstanceResponder>(this, host_name, addresses, service_name,
                                                    instance_name, media, ip_versions, publisher);
 
   instance_responders_by_instance_full_name_.emplace(instance_full_name, agent);
-  agent->SetOnQuitCallback([this, instance_full_name]() {
-    instance_responders_by_instance_full_name_.erase(instance_full_name);
-  });
+  agent->SetOnQuitCallback(
+      [this, instance_full_name, service_name, instance_name, from_proxy = !host_name.empty()]() {
+        instance_responders_by_instance_full_name_.erase(instance_full_name);
+        OnRemoveLocalServiceInstance(service_name, instance_name, from_proxy);
+      });
 
   publisher->Connect(agent);
 
@@ -246,9 +261,10 @@ bool Mdns::PublishServiceInstance(std::string host_name, std::vector<inet::IpAdd
     // resource created from it is only used for collision resolution.
     auto prober = std::make_shared<InstanceProber>(
         this, service_name, instance_name,
-        host_full_name.empty() ? local_host_full_name_ : host_full_name,
+        host_name.empty() ? local_host_full_name_ : MdnsNames::HostFullName(host_name),
         inet::IpPort::From_uint16_t(0), media, ip_versions,
-        [this, instance_full_name, agent, publisher](bool successful) {
+        [this, instance_full_name, agent, publisher,
+         from_proxy = !host_name.empty()](bool successful) {
           publisher->DisconnectProber();
 
           if (!successful) {
@@ -259,6 +275,12 @@ bool Mdns::PublishServiceInstance(std::string host_name, std::vector<inet::IpAdd
 
           publisher->ReportSuccess(true);
           AddAgent(agent);
+          if (state_ == State::kActive) {
+            auto service_instance = agent->service_instance();
+            if (service_instance) {
+              OnAddLocalServiceInstance(*service_instance, from_proxy);
+            }
+          }
         });
 
     AddAgent(prober);
@@ -295,8 +317,10 @@ bool Mdns::PublishHost(std::string host_name, std::vector<inet::IpAddress> addre
       std::make_shared<AddressResponder>(this, host_full_name, addresses, media, ip_versions);
 
   address_responders_by_host_full_name_.emplace(host_full_name, agent);
-  agent->SetOnQuitCallback(
-      [this, host_full_name]() { address_responders_by_host_full_name_.erase(host_full_name); });
+  agent->SetOnQuitCallback([this, host_full_name]() {
+    address_responders_by_host_full_name_.erase(host_full_name);
+    OnRemoveProxyHost(host_full_name);
+  });
 
   publisher->Connect(agent);
 
@@ -314,6 +338,9 @@ bool Mdns::PublishHost(std::string host_name, std::vector<inet::IpAddress> addre
 
           publisher->ReportSuccess(true);
           AddAgent(agent);
+          if (state_ == State::kActive) {
+            OnAddProxyHost(host_full_name, agent->addresses());
+          }
         });
 
     AddAgent(prober);
@@ -392,6 +419,38 @@ void Mdns::OnReady() {
   FX_DCHECK(ready_callback_);
   ready_callback_();
   ready_callback_ = nullptr;
+}
+
+void Mdns::OnAddProxyHost(const std::string& host_full_name,
+                          const std::vector<HostAddress>& addresses) {
+  for (const auto& agent : agents_) {
+    agent->OnAddProxyHost(host_full_name, addresses);
+  }
+}
+
+void Mdns::OnRemoveProxyHost(const std::string& host_full_name) {
+  for (const auto& agent : agents_) {
+    agent->OnRemoveProxyHost(host_full_name);
+  }
+}
+
+void Mdns::OnAddLocalServiceInstance(const ServiceInstance& service_instance, bool from_proxy) {
+  for (const auto& agent : agents_) {
+    agent->OnAddLocalServiceInstance(service_instance, from_proxy);
+  }
+}
+
+void Mdns::OnChangeLocalServiceInstance(const ServiceInstance& service_instance, bool from_proxy) {
+  for (const auto& agent : agents_) {
+    agent->OnChangeLocalServiceInstance(service_instance, from_proxy);
+  }
+}
+
+void Mdns::OnRemoveLocalServiceInstance(const std::string& service_name,
+                                        const std::string& instance_name, bool from_proxy) {
+  for (const auto& agent : agents_) {
+    agent->OnRemoveLocalServiceInstance(service_name, instance_name, from_proxy);
+  }
 }
 
 void Mdns::OnHostNameConflict() {
@@ -479,11 +538,36 @@ void Mdns::FlushSentItems() {
   SendMessages();
 }
 
+void Mdns::AddLocalServiceInstance(const ServiceInstance& instance, bool from_proxy) {
+  OnAddLocalServiceInstance(instance, from_proxy);
+}
+
+void Mdns::ChangeLocalServiceInstance(const ServiceInstance& instance, bool from_proxy) {
+  OnChangeLocalServiceInstance(instance, from_proxy);
+}
+
+std::vector<HostAddress> Mdns::LocalHostAddresses() { return transceiver_.LocalHostAddresses(); }
+
 void Mdns::AddAgent(std::shared_ptr<MdnsAgent> agent) {
   if (state_ == State::kActive) {
     agents_.emplace(agent);
     FX_DCHECK(!local_host_full_name_.empty());
     agent->Start(local_host_full_name_);
+
+    // Notify the agent of all current local proxies.
+    for (auto& pair : address_responders_by_host_full_name_) {
+      agent->OnAddProxyHost(pair.first, pair.second->addresses());
+    }
+
+    // Notify the agent of all current local instances.
+    for (auto& pair : instance_responders_by_instance_full_name_) {
+      auto service_instance = pair.second->service_instance();
+      if (service_instance) {
+        auto from_proxy = pair.second->from_proxy();
+        agent->OnAddLocalServiceInstance(*service_instance, from_proxy);
+      }
+    }
+
     SendMessages();
   } else {
     agents_awaiting_start_.push_back(agent);
@@ -617,7 +701,7 @@ std::unique_ptr<Mdns::Publication> Mdns::Publication::Create(
   return publication;
 }
 
-std::unique_ptr<Mdns::Publication> Mdns::Publication::Clone() {
+std::unique_ptr<Mdns::Publication> Mdns::Publication::Clone() const {
   auto result = Create(port_, text_, srv_priority_, srv_weight_);
   result->ptr_ttl_seconds_ = ptr_ttl_seconds_;
   result->srv_ttl_seconds_ = srv_ttl_seconds_;
