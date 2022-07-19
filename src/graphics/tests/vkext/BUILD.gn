@@ -99,7 +99,7 @@ fuchsia_unittest_package("vkext_buffer_collection") {
   test_specs = {
     # TODO(fxbug.dev/91062): Add other environments once their driver supports
     # the new upstream FUCHSIA_buffer_collection extension.
-    environments = intel_gpu_envs
+    environments = magma_libvulkan_hardware_envs
     log_settings = {
       max_severity = "ERROR"
     }

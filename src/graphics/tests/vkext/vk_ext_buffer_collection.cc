@@ -1916,6 +1916,10 @@ TEST_P(VulkanFormatTest, FastClear) {
 
     fuchsia::sysmem::BufferCollectionConstraints constraints;
     constraints.usage.cpu = fuchsia::sysmem::cpuUsageRead;
+    constraints.has_buffer_memory_constraints = true;
+    constraints.buffer_memory_constraints.cpu_domain_supported = true;
+    constraints.buffer_memory_constraints.ram_domain_supported = true;
+
     constraints.image_format_constraints_count = 2;
     {
       // Intel needs Y or YF tiling to do a fast clear.
