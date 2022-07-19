@@ -268,7 +268,8 @@ class VirtioVsockTest : public TestWithDevice {
 
   void HostListenOnPort(uint32_t host_port, TestListener* listener) {
     host_endpoint_->Listen(host_port, listener->NewBinding(), listener->ListenCallback());
-    RunLoopWithTimeoutOrUntil([&] { return listener->SeenListenCallback(); }, zx::sec(5));
+    ASSERT_TRUE(
+        RunLoopWithTimeoutOrUntil([&] { return listener->SeenListenCallback(); }, zx::sec(5)));
   }
 
   void HostExpectShutdown(const TestConnection& conn, uint32_t flags) {
@@ -395,7 +396,8 @@ class VirtioVsockTest : public TestWithDevice {
     ASSERT_NO_FATAL_FAILURE(connection.RecordRequestHeaderPorts(*header));
 
     SendHeaderOnlyPacket(header->src_port, header->dst_port, VIRTIO_VSOCK_OP_RESPONSE);
-    RunLoopWithTimeoutOrUntil([&] { return connection.SeenNumCallbacks(/*count=*/1); }, zx::sec(5));
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return connection.SeenNumCallbacks(/*count=*/1); },
+                                          zx::sec(5)));
 
     // Fetch and discard the initial credit update the device always sends.
     ASSERT_NO_FATAL_FAILURE(GetNextHeaderOnlyPacketOfType(&header, VIRTIO_VSOCK_OP_CREDIT_UPDATE));
@@ -420,7 +422,7 @@ class VirtioVsockTest : public TestWithDevice {
 
   void GuestWriteClientRead(const std::vector<uint8_t>& data, TestConnection& conn) {
     SendPacket(conn.host_port(), conn.guest_port(), data);
-    RunLoopWithTimeoutOrUntil(
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
         [&] {
           zx_info_socket_t info;
           if (conn.socket().get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr) !=
@@ -430,7 +432,7 @@ class VirtioVsockTest : public TestWithDevice {
 
           return info.rx_buf_available == data.size();
         },
-        zx::sec(5));
+        zx::sec(5)));
 
     size_t actual;
     std::vector<uint8_t> actual_data(data.size(), 0);
@@ -471,7 +473,8 @@ TEST_F(VirtioVsockTest, ClientInitiatedConnect) {
 
   SendHeaderOnlyPacket(kVirtioVsockFirstEphemeralPort, kVirtioVsockGuestPort,
                        VIRTIO_VSOCK_OP_RESPONSE);
-  RunLoopWithTimeoutOrUntil([&] { return connection.SeenNumCallbacks(/*count=*/1); }, zx::sec(5));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return connection.SeenNumCallbacks(/*count=*/1); },
+                                        zx::sec(5)));
 
   ASSERT_NO_FATAL_FAILURE(connection.AssertSocketValid());
 }
@@ -490,7 +493,8 @@ TEST_F(VirtioVsockTest, ClientConnectMultipleTimesSequentially) {
 
   SendHeaderOnlyPacket(kVirtioVsockFirstEphemeralPort, kVirtioVsockGuestPort,
                        VIRTIO_VSOCK_OP_RESPONSE);
-  RunLoopWithTimeoutOrUntil([&] { return connection.SeenNumCallbacks(/*count=*/1); }, zx::sec(5));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return connection.SeenNumCallbacks(/*count=*/1); },
+                                        zx::sec(5)));
   ASSERT_NO_FATAL_FAILURE(connection.AssertSocketValid());
 
   // Guest initiated shutdown.
@@ -514,7 +518,8 @@ TEST_F(VirtioVsockTest, ClientConnectMultipleTimesSequentially) {
 
   SendHeaderOnlyPacket(kVirtioVsockFirstEphemeralPort + 1, kVirtioVsockGuestPort,
                        VIRTIO_VSOCK_OP_RESPONSE);
-  RunLoopWithTimeoutOrUntil([&] { return connection.SeenNumCallbacks(/*count=*/2); }, zx::sec(5));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return connection.SeenNumCallbacks(/*count=*/2); },
+                                        zx::sec(5)));
 
   ASSERT_NO_FATAL_FAILURE(connection.AssertSocketValid());
 }
@@ -543,8 +548,10 @@ TEST_F(VirtioVsockTest, ClientConnectMultipleTimesParallel) {
   SendHeaderOnlyPacket(kVirtioVsockFirstEphemeralPort + 1, kVirtioVsockGuestPort,
                        VIRTIO_VSOCK_OP_RESPONSE);
 
-  RunLoopWithTimeoutOrUntil([&] { return connection1.SeenNumCallbacks(/*count=*/1); }, zx::sec(5));
-  RunLoopWithTimeoutOrUntil([&] { return connection2.SeenNumCallbacks(/*count=*/1); }, zx::sec(5));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return connection1.SeenNumCallbacks(/*count=*/1); },
+                                        zx::sec(5)));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return connection2.SeenNumCallbacks(/*count=*/1); },
+                                        zx::sec(5)));
 
   ASSERT_NO_FATAL_FAILURE(connection1.AssertSocketValid());
   ASSERT_NO_FATAL_FAILURE(connection2.AssertSocketValid());
@@ -565,7 +572,8 @@ TEST_F(VirtioVsockTest, ClientConnectionRefused) {
   // Guest rejected connection.
   SendHeaderOnlyPacket(kVirtioVsockFirstEphemeralPort, kVirtioVsockGuestPort, VIRTIO_VSOCK_OP_RST);
 
-  RunLoopWithTimeoutOrUntil([&] { return connection.SeenNumCallbacks(/*count=*/1); }, zx::sec(5));
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return connection.SeenNumCallbacks(/*count=*/1); },
+                                        zx::sec(5)));
   ASSERT_EQ(connection.status(), ZX_ERR_CONNECTION_REFUSED);
 }
 
@@ -576,7 +584,8 @@ TEST_F(VirtioVsockTest, Listen) {
 
   SendHeaderOnlyPacket(kVirtioVsockHostPort, kVirtioVsockGuestPort, VIRTIO_VSOCK_OP_REQUEST);
 
-  RunLoopWithTimeoutOrUntil([&] { return listener.ConnectionCountEquals(1); }, zx::sec(5));
+  ASSERT_TRUE(
+      RunLoopWithTimeoutOrUntil([&] { return listener.ConnectionCountEquals(1); }, zx::sec(5)));
   ASSERT_EQ(listener.requests_.size(), 1ul);
   listener.RespondToGuestRequests();
 
@@ -611,7 +620,8 @@ TEST_F(VirtioVsockTest, ListenMultipleTimesDifferentHostPorts) {
   SendHeaderOnlyPacket(kVirtioVsockHostPort, kVirtioVsockGuestPort, VIRTIO_VSOCK_OP_REQUEST);
   SendHeaderOnlyPacket(kVirtioVsockHostPort + 1, kVirtioVsockGuestPort, VIRTIO_VSOCK_OP_REQUEST);
 
-  RunLoopWithTimeoutOrUntil([&] { return listener1.ConnectionCountEquals(1); }, zx::sec(5));
+  ASSERT_TRUE(
+      RunLoopWithTimeoutOrUntil([&] { return listener1.ConnectionCountEquals(1); }, zx::sec(5)));
   ASSERT_EQ(listener1.requests_.size(), 1ul);
   listener1.RespondToGuestRequests();
 
@@ -622,7 +632,8 @@ TEST_F(VirtioVsockTest, ListenMultipleTimesDifferentHostPorts) {
   EXPECT_EQ(header->src_port, kVirtioVsockHostPort);
   EXPECT_EQ(header->dst_port, kVirtioVsockGuestPort);
 
-  RunLoopWithTimeoutOrUntil([&] { return listener2.ConnectionCountEquals(1); }, zx::sec(5));
+  ASSERT_TRUE(
+      RunLoopWithTimeoutOrUntil([&] { return listener2.ConnectionCountEquals(1); }, zx::sec(5)));
   ASSERT_EQ(listener2.requests_.size(), 1ul);
   listener2.RespondToGuestRequests();
 
@@ -659,7 +670,8 @@ TEST_F(VirtioVsockTest, GuestInitiatedTwoIdenticalConnections) {
 
   SendHeaderOnlyPacket(kVirtioVsockHostPort, kVirtioVsockGuestPort, VIRTIO_VSOCK_OP_REQUEST);
 
-  RunLoopWithTimeoutOrUntil([&] { return listener.ConnectionCountEquals(1); }, zx::sec(5));
+  ASSERT_TRUE(
+      RunLoopWithTimeoutOrUntil([&] { return listener.ConnectionCountEquals(1); }, zx::sec(5)));
   ASSERT_EQ(listener.requests_.size(), 1ul);
   listener.RespondToGuestRequests();
 
@@ -687,7 +699,8 @@ TEST_F(VirtioVsockTest, GuestInitiatedReuseSamePortAfterCleanShutdown) {
 
   SendHeaderOnlyPacket(kVirtioVsockHostPort, kVirtioVsockGuestPort, VIRTIO_VSOCK_OP_REQUEST);
 
-  RunLoopWithTimeoutOrUntil([&] { return listener.ConnectionCountEquals(1); }, zx::sec(5));
+  ASSERT_TRUE(
+      RunLoopWithTimeoutOrUntil([&] { return listener.ConnectionCountEquals(1); }, zx::sec(5)));
   ASSERT_EQ(listener.requests_.size(), 1ul);
   listener.RespondToGuestRequests();
 
@@ -729,7 +742,8 @@ TEST_F(VirtioVsockTest, GuestInitiatedMultiplexOverOneHostPort) {
   SendHeaderOnlyPacket(kVirtioVsockHostPort, kVirtioVsockGuestPort, VIRTIO_VSOCK_OP_REQUEST);
   SendHeaderOnlyPacket(kVirtioVsockHostPort, kVirtioVsockGuestPort + 1, VIRTIO_VSOCK_OP_REQUEST);
 
-  RunLoopWithTimeoutOrUntil([&] { return listener.ConnectionCountEquals(2); }, zx::sec(5));
+  ASSERT_TRUE(
+      RunLoopWithTimeoutOrUntil([&] { return listener.ConnectionCountEquals(2); }, zx::sec(5)));
   ASSERT_EQ(listener.requests_.size(), 2ul);
   listener.RespondToGuestRequests();
 
@@ -753,7 +767,8 @@ TEST_F(VirtioVsockTest, GuestInitiatedConnectionRefused) {
 
   SendHeaderOnlyPacket(kVirtioVsockHostPort, kVirtioVsockGuestPort, VIRTIO_VSOCK_OP_REQUEST);
 
-  RunLoopWithTimeoutOrUntil([&] { return listener.ConnectionCountEquals(1); }, zx::sec(5));
+  ASSERT_TRUE(
+      RunLoopWithTimeoutOrUntil([&] { return listener.ConnectionCountEquals(1); }, zx::sec(5)));
   ASSERT_EQ(listener.requests_.size(), 1ul);
   listener.RejectGuestRequests();
 
@@ -926,7 +941,7 @@ TEST_F(VirtioVsockTest, WriteMultiple) {
   SendPacket(conn.host_port(), conn.guest_port(), {'b'});
 
   // Wait for the two bytes to appear on the client socket (or a 5s timeout).
-  RunLoopWithTimeoutOrUntil(
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
       [&] {
         zx_info_socket_t info;
         if (conn.socket().get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr) !=
@@ -936,7 +951,7 @@ TEST_F(VirtioVsockTest, WriteMultiple) {
 
         return info.rx_buf_available == 2;
       },
-      zx::sec(5));
+      zx::sec(5)));
 
   size_t actual;
   std::vector<uint8_t> actual_data(2, 0);
@@ -1031,7 +1046,7 @@ TEST_F(VirtioVsockTest, WriteSocketFullReset) {
   EXPECT_EQ(header->dst_port, conn.guest_port());
 }
 
-TEST_F(VirtioVsockTest, DISABLED_SendCreditUpdateWhenSocketIsDrained) {
+TEST_F(VirtioVsockTest, SendCreditUpdateWhenSocketIsDrained) {
   TestConnection conn;
   ASSERT_NO_FATAL_FAILURE(ClientConnectOnPort(kVirtioVsockGuestPort, conn));
   ASSERT_NO_FATAL_FAILURE(conn.AssertSocketValid());
@@ -1045,6 +1060,19 @@ TEST_F(VirtioVsockTest, DISABLED_SendCreditUpdateWhenSocketIsDrained) {
   // Fill socket buffer completely.
   std::vector<uint8_t> buffer(header->buf_alloc, 'a');
   SendPacket(conn.host_port(), conn.guest_port(), buffer);
+
+  // Wait for the out of process device to process the packet and write it to the socket.
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&] {
+        zx_info_socket_t info;
+        if (conn.socket().get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr) !=
+            ZX_OK) {
+          return false;
+        }
+
+        return info.rx_buf_available == buffer.size();
+      },
+      zx::sec(5)));
 
   // Read a single byte from socket to free up space in the socket buffer and
   // make the socket writable again.
