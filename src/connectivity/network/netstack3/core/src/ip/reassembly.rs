@@ -533,8 +533,7 @@ impl<I: Ip, Instant> IpPacketFragmentCache<I, Instant> {
             };
 
         // Get (or create) the fragment cache data.
-        let (fragment_data, needs_timer) = self.get_or_create(key);
-        let timer_id = needs_timer.then(|| key);
+        let (fragment_data, timer_not_yet_scheduled) = self.get_or_create(key);
 
         // Find the gap where `packet` belongs.
         let found_gap = match fragment_data.find_gap(fragment_blocks_range) {
@@ -571,13 +570,13 @@ impl<I: Ip, Instant> IpPacketFragmentCache<I, Instant> {
 
                 return (
                     FragmentProcessingState::InvalidFragment,
-                    timer_id.map(CacheTimerAction::CancelExistingTimer),
+                    (!timer_not_yet_scheduled).then(|| CacheTimerAction::CancelExistingTimer(key)),
                 );
             }
             Some(f) => f,
         };
 
-        let timer_id = timer_id.map(CacheTimerAction::CreateNewTimer);
+        let timer_id = timer_not_yet_scheduled.then(|| CacheTimerAction::CreateNewTimer(key));
 
         // Remove `found_gap` since the gap as it exists will no longer be
         // valid.
@@ -842,8 +841,11 @@ mod tests {
 
     use super::*;
     use crate::{
-        context::testutil::{DummyCtx, DummyInstant, DummySyncCtx, DummyTimerCtxExt},
-        testutil::{assert_empty, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6},
+        context::{
+            testutil::{DummyCtx, DummyInstant, DummySyncCtx, DummyTimerCtxExt},
+            InstantContext as _,
+        },
+        testutil::{assert_empty, DummyEventDispatcherConfig, DUMMY_CONFIG_V4, DUMMY_CONFIG_V6},
     };
 
     #[derive(Default)]
@@ -1826,5 +1828,51 @@ mod tests {
             false,
             ExpectedResult::Invalid,
         );
+    }
+
+    #[ip_test]
+    fn test_cancel_timer_on_overlap<I: Ip + TestIpExt>() {
+        const FRAGMENT_ID: u16 = 1;
+        const FRAGMENT_OFFSET: u16 = 0;
+        const M_FLAG: bool = true;
+
+        let MockCtx { mut sync_ctx, mut non_sync_ctx } =
+            MockCtx::<I>::with_sync_ctx(MockSyncCtx::<I>::default());
+
+        let DummyEventDispatcherConfig {
+            subnet: _,
+            local_ip,
+            local_mac: _,
+            remote_ip,
+            remote_mac: _,
+        } = I::DUMMY_CONFIG;
+        let key = FragmentCacheKey::new(remote_ip.get(), local_ip.get(), FRAGMENT_ID.into());
+
+        // Do this a couple times to make sure that new packets matching the
+        // invalid packet's fragment cache key create a new entry.
+        for _ in 0..=2 {
+            process_ip_fragment(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                FRAGMENT_ID,
+                FRAGMENT_OFFSET,
+                M_FLAG,
+                ExpectedResult::NeedMore,
+            );
+            assert_eq!(
+                non_sync_ctx.timer_ctx().timers(),
+                [(non_sync_ctx.now() + REASSEMBLY_TIMEOUT, key)]
+            );
+
+            process_ip_fragment(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                FRAGMENT_ID,
+                FRAGMENT_OFFSET,
+                M_FLAG,
+                ExpectedResult::Invalid,
+            );
+            assert_eq!(non_sync_ctx.timer_ctx().timers(), [],);
+        }
     }
 }
