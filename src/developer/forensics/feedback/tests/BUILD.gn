@@ -480,6 +480,7 @@ executable("ui_state_provider_unittest_exe") {
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
     "//src/developer/forensics/testing:unit_test_fixture",
+    "//src/developer/forensics/testing/stubs:ui_state_provider",
     "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
