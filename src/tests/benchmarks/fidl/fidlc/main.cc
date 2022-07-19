@@ -28,7 +28,6 @@ bool RunBenchmark(perftest::RepeatState* state, const char* fidl) {
     fidl::SourceFile source_file("example.test.fidl", fidl);
     fidl::Reporter reporter;
     fidl::ExperimentalFlags experimental_flags;
-    experimental_flags.EnableFlag(fidl::ExperimentalFlags::Flag::kNewSyntaxOnly);
     fidl::Lexer lexer(source_file, &reporter);
     fidl::Parser parser(&lexer, &reporter, experimental_flags);
     fidl::flat::Libraries all_libraries(&reporter);

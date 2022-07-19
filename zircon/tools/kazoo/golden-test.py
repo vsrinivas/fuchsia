@@ -64,10 +64,8 @@ def generate_fidlc_json(fidlc_binary, syscall_dir, output_fidlc_json_path):
                 fidl_files.append(os.path.join(syscall_dir, entry.name))
 
     subprocess.check_call(
-        [
-            fidlc_binary, '--experimental', 'new_syntax_only', '--json',
-            output_fidlc_json_path, '--files'
-        ] + sorted(fidl_files))
+        [fidlc_binary, '--json', output_fidlc_json_path, '--files'] +
+        sorted(fidl_files))
 
 
 def build_golden(input_files, output_combined):
@@ -148,8 +146,10 @@ def main():
     files = generate_kazoo_outputs(kazoo, tmp_json, all_styles, tmp_kazoo_dir)
 
     build_golden(files, args.new_golden)
-    result = subprocess.run(['diff', '-u', GOLDEN, args.new_golden], stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT)
+    result = subprocess.run(
+        ['diff', '-u', GOLDEN, args.new_golden],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT)
     if result.returncode != 0:
         print('CHANGES DETECTED IN SYSCALL OUTPUT')
         print()
@@ -168,7 +168,7 @@ def main():
         # buildbot if the output is long.
         print('Diff:')
         # Need to decode the stdout binary data to a string to write newlines properly.
-        print(result.stdout.decode('ascii'));
+        print(result.stdout.decode('ascii'))
     else:
         with open(args.output_touch, 'w') as f:
             f.write(str(datetime.datetime.utcnow()))
