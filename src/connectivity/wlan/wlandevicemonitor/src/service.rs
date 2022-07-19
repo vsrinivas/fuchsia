@@ -78,16 +78,24 @@ pub(crate) async fn serve_monitor_requests(
                 let status = into_status_and_opt(result).0;
                 responder.send(status.into_raw())
             }
-            DeviceMonitorRequest::GetClientSme { iface_id, responder } => {
-                let result = get_client_sme(&ifaces, iface_id).await;
+            DeviceMonitorRequest::GetClientSme { iface_id, sme_server, responder } => {
+                let result = get_client_sme(&ifaces, iface_id, sme_server).await;
                 responder.send(&mut result.map_err(|e| e.into_raw()))
             }
-            DeviceMonitorRequest::GetApSme { iface_id, responder } => {
-                let result = get_ap_sme(&ifaces, iface_id).await;
+            DeviceMonitorRequest::GetApSme { iface_id, sme_server, responder } => {
+                let result = get_ap_sme(&ifaces, iface_id, sme_server).await;
                 responder.send(&mut result.map_err(|e| e.into_raw()))
             }
-            DeviceMonitorRequest::GetSmeTelemetry { iface_id, responder } => {
-                let result = get_sme_telemetry(&ifaces, iface_id).await;
+            DeviceMonitorRequest::GetSmeTelemetry { iface_id, telemetry_server, responder } => {
+                let result = get_sme_telemetry(&ifaces, iface_id, telemetry_server).await;
+                responder.send(&mut result.map_err(|e| e.into_raw()))
+            }
+            DeviceMonitorRequest::GetFeatureSupport {
+                iface_id,
+                feature_support_server,
+                responder,
+            } => {
+                let result = get_feature_support(&ifaces, iface_id, feature_support_server).await;
                 responder.send(&mut result.map_err(|e| e.into_raw()))
             }
         }?;
@@ -310,10 +318,11 @@ async fn destroy_iface(phys: &PhyMap, ifaces: &IfaceMap, id: u16) -> Result<(), 
 async fn get_client_sme(
     ifaces: &IfaceMap,
     id: u16,
-) -> Result<fidl::endpoints::ClientEnd<fidl_sme::ClientSmeMarker>, zx::Status> {
+    sme_server: fidl::endpoints::ServerEnd<fidl_sme::ClientSmeMarker>,
+) -> Result<(), zx::Status> {
     info!("get_client_sme(id = {})", id);
     let iface = ifaces.get(&id).ok_or(zx::Status::NOT_FOUND)?;
-    let result = iface.generic_sme.get_client_sme().await.map_err(|e| {
+    let result = iface.generic_sme.get_client_sme(sme_server).await.map_err(|e| {
         error!("Failed to request client SME: {}", e);
         zx::Status::INTERNAL
     })?;
@@ -323,10 +332,11 @@ async fn get_client_sme(
 async fn get_ap_sme(
     ifaces: &IfaceMap,
     id: u16,
-) -> Result<fidl::endpoints::ClientEnd<fidl_sme::ApSmeMarker>, zx::Status> {
+    sme_server: fidl::endpoints::ServerEnd<fidl_sme::ApSmeMarker>,
+) -> Result<(), zx::Status> {
     info!("get_ap_sme(id = {})", id);
     let iface = ifaces.get(&id).ok_or(zx::Status::NOT_FOUND)?;
-    let result = iface.generic_sme.get_ap_sme().await.map_err(|e| {
+    let result = iface.generic_sme.get_ap_sme(sme_server).await.map_err(|e| {
         error!("Failed to request AP SME: {}", e);
         zx::Status::INTERNAL
     })?;
@@ -336,13 +346,29 @@ async fn get_ap_sme(
 async fn get_sme_telemetry(
     ifaces: &IfaceMap,
     id: u16,
-) -> Result<fidl::endpoints::ClientEnd<fidl_sme::TelemetryMarker>, zx::Status> {
+    telemetry_server: fidl::endpoints::ServerEnd<fidl_sme::TelemetryMarker>,
+) -> Result<(), zx::Status> {
     info!("get_sme_telemetry(id = {})", id);
     let iface = ifaces.get(&id).ok_or(zx::Status::NOT_FOUND)?;
-    let result = iface.generic_sme.get_sme_telemetry().await.map_err(|e| {
+    let result = iface.generic_sme.get_sme_telemetry(telemetry_server).await.map_err(|e| {
         error!("Failed to request SME telemetry: {}", e);
         zx::Status::INTERNAL
     })?;
+    result.map_err(|e| zx::Status::from_raw(e))
+}
+
+async fn get_feature_support(
+    ifaces: &IfaceMap,
+    id: u16,
+    feature_support_server: fidl::endpoints::ServerEnd<fidl_sme::FeatureSupportMarker>,
+) -> Result<(), zx::Status> {
+    info!("get_feature_support(id = {})", id);
+    let iface = ifaces.get(&id).ok_or(zx::Status::NOT_FOUND)?;
+    let result =
+        iface.generic_sme.get_feature_support(feature_support_server).await.map_err(|e| {
+            error!("Failed to request feature support: {}", e);
+            zx::Status::INTERNAL
+        })?;
     result.map_err(|e| zx::Status::from_raw(e))
 }
 
@@ -1423,29 +1449,28 @@ mod tests {
             },
         );
 
-        let req_fut = super::get_client_sme(&test_values.ifaces, 42);
+        let (client_sme_proxy, client_sme_server) =
+            create_proxy::<fidl_sme::ClientSmeMarker>().expect("Failed to create client SME");
+
+        let req_fut = super::get_client_sme(&test_values.ifaces, 42, client_sme_server);
         pin_mut!(req_fut);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
 
-        let (client_sme_client, client_sme_server) =
-            create_endpoints::<fidl_sme::ClientSmeMarker>().expect("Failed to create client SME");
-
         // Respond to a client SME request with a client endpoint.
-        assert_variant!(exec.run_until_stalled(&mut generic_sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::GenericSmeRequest::GetClientSme { responder }))) => {
-                responder.send(&mut Ok(client_sme_client)).expect("Failed to send response");
+        let sme_server = assert_variant!(exec.run_until_stalled(&mut generic_sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::GenericSmeRequest::GetClientSme { sme_server, responder }))) => {
+                responder.send(&mut Ok(())).expect("Failed to send response");
+                sme_server
             }
         );
-        let client_sme = assert_variant!(exec.run_until_stalled(&mut req_fut), Poll::Ready(Ok(client_sme)) => client_sme);
+        assert_variant!(exec.run_until_stalled(&mut req_fut), Poll::Ready(Ok(())));
 
-        // Verify that the correct endpoint was returned.
-        let client_sme_proxy = client_sme.into_proxy().expect("Failed to get client SME proxy");
+        // Verify that the correct endpoint is served.
         let _status_req = client_sme_proxy.status();
 
-        let mut client_sme_stream =
-            client_sme_server.into_stream().expect("Failed to get client SME stream");
+        let mut sme_stream = sme_server.into_stream().expect("Failed to get client SME stream");
         assert_variant!(
-            exec.run_until_stalled(&mut client_sme_stream.next()),
+            exec.run_until_stalled(&mut sme_stream.next()),
             Poll::Ready(Some(Ok(fidl_sme::ClientSmeRequest::Status { .. })))
         );
     }
@@ -1468,7 +1493,10 @@ mod tests {
             },
         );
 
-        let req_fut = super::get_client_sme(&test_values.ifaces, 42);
+        let (_client_sme_proxy, client_sme_server) =
+            create_proxy::<fidl_sme::ClientSmeMarker>().expect("Failed to create client SME");
+
+        let req_fut = super::get_client_sme(&test_values.ifaces, 42, client_sme_server);
         pin_mut!(req_fut);
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
 
@@ -1476,7 +1504,7 @@ mod tests {
         let mut generic_sme_stream =
             generic_sme_server.into_stream().expect("Failed to create generic SME stream");
         assert_variant!(exec.run_until_stalled(&mut generic_sme_stream.next()),
-            Poll::Ready(Some(Ok(fidl_sme::GenericSmeRequest::GetClientSme { responder }))) => {
+            Poll::Ready(Some(Ok(fidl_sme::GenericSmeRequest::GetClientSme { responder, .. }))) => {
                 responder.send(&mut Err(1)).expect("Failed to send response");
             }
         );
@@ -1501,8 +1529,46 @@ mod tests {
             },
         );
 
-        let req_fut = super::get_client_sme(&test_values.ifaces, 1337);
+        let (_client_sme_proxy, client_sme_server) =
+            create_proxy::<fidl_sme::ClientSmeMarker>().expect("Failed to create client SME");
+
+        let req_fut = super::get_client_sme(&test_values.ifaces, 1337, client_sme_server);
         pin_mut!(req_fut);
         assert_variant!(exec.run_until_stalled(&mut req_fut), Poll::Ready(Err(_)));
+    }
+
+    #[test]
+    fn get_feature_support() {
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
+        let test_values = test_setup();
+        let (phy, _phy_stream) = fake_phy();
+        let phy_id = 10u16;
+        test_values.phys.insert(phy_id, phy);
+        let (generic_sme_proxy, mut generic_sme_stream) =
+            create_proxy_and_stream::<fidl_sme::GenericSmeMarker>()
+                .expect("Failed to create generic SME proxy and stream");
+
+        let (_feature_support_proxy, feature_support_server) =
+            create_proxy::<fidl_sme::FeatureSupportMarker>().expect("Failed to create client SME");
+
+        test_values.ifaces.insert(
+            42,
+            device::IfaceDevice {
+                phy_ownership: PhyOwnership { phy_id: 10, phy_assigned_id: 0 },
+                generic_sme: generic_sme_proxy,
+            },
+        );
+
+        let req_fut = super::get_feature_support(&test_values.ifaces, 42, feature_support_server);
+        pin_mut!(req_fut);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
+
+        // Respond to a feature support request with a feature support endpoint.
+        assert_variant!(exec.run_until_stalled(&mut generic_sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::GenericSmeRequest::GetFeatureSupport { responder, .. }))) => {
+                responder.send(&mut Ok(())).expect("Failed to send response");
+            }
+        );
+        assert_variant!(exec.run_until_stalled(&mut req_fut), Poll::Ready(Ok(_)));
     }
 }

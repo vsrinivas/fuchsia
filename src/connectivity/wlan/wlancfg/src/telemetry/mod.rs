@@ -947,18 +947,22 @@ impl Telemetry {
                             .log_reconnect_cobalt_metrics(total_downtime, disconnect_source)
                             .await;
                     }
-                    let telemetry_proxy = match self
-                        .monitor_svc_proxy
-                        .get_sme_telemetry(iface_id)
-                        .await
-                    {
-                        Ok(Ok(svc)) => svc.into_proxy().ok(),
-                        Ok(Err(e)) => {
-                            error!("Request for SME telemetry for iface {} completed with error {}. No telemetry will be captured.", iface_id, e);
-                            None
+                    let telemetry_proxy = match fidl::endpoints::create_proxy() {
+                        Ok((proxy, server)) => {
+                            match self.monitor_svc_proxy.get_sme_telemetry(iface_id, server).await {
+                                Ok(Ok(())) => Some(proxy),
+                                Ok(Err(e)) => {
+                                    error!("Request for SME telemetry for iface {} completed with error {}. No telemetry will be captured.", iface_id, e);
+                                    None
+                                }
+                                Err(e) => {
+                                    error!("Failed to request SME telemetry for iface {} with error {}. No telemetry will be captured.", iface_id, e);
+                                    None
+                                }
+                            }
                         }
                         Err(e) => {
-                            error!("Failed to request SME telemetry for iface {} with error {}. No telemetry will be captured.", iface_id, e);
+                            error!("Failed to create SME telemetry channel with error {}. No telemetry will be captured.", e);
                             None
                         }
                     };
@@ -5693,16 +5697,15 @@ mod tests {
                 match req {
                     fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetSmeTelemetry {
                         iface_id,
+                        telemetry_server,
                         responder,
                     } => {
                         assert_eq!(iface_id, IFACE_ID);
-                        let (telemetry_client, telemetry_stream) =
-                            fidl::endpoints::create_request_stream::<
-                                fidl_fuchsia_wlan_sme::TelemetryMarker,
-                            >()
-                            .expect("Failed to create telemetry proxy and stream");
+                        let telemetry_stream = telemetry_server
+                            .into_stream()
+                            .expect("Failed to create telemetry stream");
                         responder
-                            .send(&mut Ok(telemetry_client))
+                            .send(&mut Ok(()))
                             .expect("Failed to respond to telemetry request");
                         self.telemetry_svc_stream = Some(telemetry_stream);
                         self.exec.run_until_stalled(test_fut)

@@ -307,14 +307,69 @@ protocol Telemetry {
     }) error zx.status;
 };
 
+protocol FeatureSupport {
+    /// Return support for features related to discovery of potential BSSs.
+    /// * see [`fuchsia.wlan.common/DiscoverySupport`]
+    QueryDiscoverySupport() -> (struct {
+        resp fuchsia.wlan.common.DiscoverySupport;
+    }) error zx.status;
+
+    /// Return support for features related to the MAC sublayer.
+    /// * see [`fuchsia.wlan.common/MacSublayerSupport`]
+    QueryMacSublayerSupport() -> (struct {
+        resp fuchsia.wlan.common.MacSublayerSupport;
+    }) error zx.status;
+
+    /// Return support for features related to security/access control
+    /// and data confidentiality.
+    /// * see [`fuchsia.wlan.common/SecuritySupport`]
+    QuerySecuritySupport() -> (struct {
+        resp fuchsia.wlan.common.SecuritySupport;
+    }) error zx.status;
+
+    /// Return support for features related to spectrum management.
+    /// * see [`fuchsia.wlan.common/SpectrumManagementSupport`]
+    QuerySpectrumManagementSupport() -> (struct {
+        resp fuchsia.wlan.common.SpectrumManagementSupport;
+    }) error zx.status;
+};
+
 protocol GenericSme {
-    GetClientSme() -> (resource struct {
-        sme client_end:ClientSme;
-    }) error zx.status;
-    GetApSme() -> (resource struct {
-        sme client_end:ApSme;
-    }) error zx.status;
-    GetSmeTelemetry() -> (resource struct {
-        sme client_end:Telemetry;
-    }) error zx.status;
+    /// Attempt to establish a new connection to an underlying Client SME.
+    /// Connections may be established for the whole lifetime of the SME,
+    /// but concurrent connections might lead to unexpected behavior.
+    /// Likely errors include:
+    ///     * NOT_SUPPORTED: The underlying SME is not a Client SME.
+    ///     * PEER_CLOSED: The underlying SME is shutting down.
+    GetClientSme(resource struct {
+        sme_server server_end:ClientSme;
+    }) -> (struct {}) error zx.status;
+    /// Attempt to establish a new connection to an underlying AP SME.
+    /// Connections may be established for the whole lifetime of the SME,
+    /// but concurrent connections might lead to unexpected behavior.
+    /// Likely errors include:
+    ///     * NOT_SUPPORTED: The underlying SME is not an AP SME.
+    ///     * PEER_CLOSED: The underlying SME is shutting down.
+    GetApSme(resource struct {
+        sme_server server_end:ApSme;
+    }) -> (struct {}) error zx.status;
+    /// Attempt to establish a new connection to telemetry information for the
+    /// underlying SME.
+    /// Connections may be established for the whole lifetime of the SME, and
+    /// concurrent connections are safe since this is a read-only API.
+    /// Likely errors include:
+    ///     * NOT_SUPPORTED: The underlying SME does not support telemetry.
+    ///     * PEER_CLOSED: The underlying SME is shutting down.
+    GetSmeTelemetry(resource struct {
+        telemetry_server server_end:Telemetry;
+    }) -> (struct {}) error zx.status;
+    /// Attempt to establish a new connection to feature support information for
+    /// the underlying SME.
+    /// Connections may be established for the whole lifetime of the SME, and
+    /// concurrent connections are safe since this is a read-only API.
+    /// Likely errors include:
+    ///     * PEER_CLOSED: The underlying SME is shutting down.
+    GetFeatureSupport(resource struct {
+        feature_support_server server_end:FeatureSupport;
+    }) -> (struct {}) error zx.status;
 };

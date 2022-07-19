@@ -291,19 +291,48 @@ protocol DeviceMonitor {
     });
 
     // SME methods
-    GetClientSme(struct {
+
+    /// Attempt to establish a new connection to a Client SME.
+    /// Connections may be established for the whole lifetime of the SME,
+    /// but concurrent connections might lead to unexpected behavior.
+    /// Likely errors include:
+    ///     * NOT_FOUND: The given iface_id does not exist.
+    ///     * NOT_SUPPORTED: The underlying SME is not a Client SME.
+    ///     * PEER_CLOSED: The underlying SME is shutting down.
+    GetClientSme(resource struct {
         iface_id uint16;
-    }) -> (resource struct {
-        sme client_end:fuchsia.wlan.sme.ClientSme;
-    }) error zx.status;
-    GetApSme(struct {
+        sme_server server_end:fuchsia.wlan.sme.ClientSme;
+    }) -> (struct {}) error zx.status;
+    /// Attempt to establish a new connection to an AP SME.
+    /// Connections may be established for the whole lifetime of the SME,
+    /// but concurrent connections might lead to unexpected behavior.
+    /// Likely errors include:
+    ///     * NOT_FOUND: The given iface_id does not exist.
+    ///     * NOT_SUPPORTED: The underlying SME is not a Client SME.
+    ///     * PEER_CLOSED: The underlying SME is shutting down.
+    GetApSme(resource struct {
         iface_id uint16;
-    }) -> (resource struct {
-        sme client_end:fuchsia.wlan.sme.ApSme;
-    }) error zx.status;
-    GetSmeTelemetry(struct {
+        sme_server server_end:fuchsia.wlan.sme.ApSme;
+    }) -> (struct {}) error zx.status;
+    /// Attempt to establish a new connection to telemetry for an SME.
+    /// Connections may be established for the whole lifetime of the SME, and
+    /// concurrent connections are safe since this is a read-only API.
+    /// Likely errors include:
+    ///     * NOT_FOUND: The given iface_id does not exist.
+    ///     * NOT_SUPPORTED: The underlying SME is not a Client SME.
+    ///     * PEER_CLOSED: The underlying SME is shutting down.
+    GetSmeTelemetry(resource struct {
         iface_id uint16;
-    }) -> (resource struct {
-        sme client_end:fuchsia.wlan.sme.Telemetry;
-    }) error zx.status;
+        telemetry_server server_end:fuchsia.wlan.sme.Telemetry;
+    }) -> (struct {}) error zx.status;
+    /// Attempt to establish a new connection to feature queries for an SME.
+    /// Connections may be established for the whole lifetime of the SME, and
+    /// concurrent connections are safe since this is a read-only API.
+    /// Likely errors include:
+    ///     * NOT_FOUND: The given iface_id does not exist.
+    ///     * PEER_CLOSED: The underlying SME is shutting down.
+    GetFeatureSupport(resource struct {
+        iface_id uint16;
+        feature_support_server server_end:fuchsia.wlan.sme.FeatureSupport;
+    }) -> (struct {}) error zx.status;
 };
