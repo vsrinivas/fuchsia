@@ -13,7 +13,7 @@ This is to ensure we use consistent versions of our dependencies across multiple
 builds.
 
 Likewise, no build output is placed in the source tree as everything goes under
-`out/`. That includes `.packages` files, which are generated as part of the build
+`out/`. That includes `package_config.json` files, which are generated as part of the build
 based on a target's dependency.
 
 ## Exiting Dart programs
