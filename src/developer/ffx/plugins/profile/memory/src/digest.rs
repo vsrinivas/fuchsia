@@ -177,12 +177,13 @@ pub mod raw {
 /// suitable for user-facing consumption.
 pub mod processed {
     use crate::digest::raw;
+    use serde::Serialize;
 
     use std::collections::{HashMap, HashSet};
     use std::iter::FromIterator;
 
     /// Per process memory attribution.
-    #[derive(PartialEq, Debug)]
+    #[derive(Serialize, PartialEq, Debug)]
     pub struct RetainedMemory {
         /// Total size, in bytes, of VMOs exclusively retained
         /// (directly, or indirectly via children VMOs) by the
@@ -200,7 +201,7 @@ pub mod processed {
     }
 
     /// Summary of memory-related data for a given process.
-    #[derive(PartialEq, Debug)]
+    #[derive(Serialize, PartialEq, Debug)]
     pub struct Process {
         /// Kernel Object ID. See related Fuchsia Kernel concept.
         pub koid: u64,
@@ -216,7 +217,7 @@ pub mod processed {
     pub type Kernel = raw::Kernel;
 
     /// Aggregated, processed digest of memory use in a system.
-    #[derive(PartialEq, Debug)]
+    #[derive(Serialize, PartialEq, Debug)]
     pub struct Digest {
         /// A monotonic time (in ns).
         pub time: u64,

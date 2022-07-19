@@ -10,6 +10,8 @@ ffx_plugin("ffx_profile_memory") {
 
   deps = [
     "//sdk/fidl/fuchsia.memory:fuchsia.memory-rustc",
+    "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext",
+    "//src/developer/ffx/lib/writer:lib",
     "//src/lib/fuchsia",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//third_party/rust_crates:humansize",

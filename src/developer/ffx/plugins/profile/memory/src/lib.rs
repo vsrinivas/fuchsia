@@ -11,6 +11,7 @@ use {
     digest::{processed, raw},
     ffx_core::ffx_plugin,
     ffx_profile_memory_args::MemoryCommand,
+    ffx_writer::Writer,
     fidl_fuchsia_memory::MonitorProxy,
     futures::AsyncReadExt,
     humansize::{file_size_opts::BINARY, FileSize},
@@ -19,15 +20,24 @@ use {
 
 #[ffx_plugin("ffx_memory", MonitorProxy = "core/appmgr:out:fuchsia.memory.Monitor")]
 /// Prints a memory digest to stdout.
-pub async fn print_memory_digest(monitor_proxy: MonitorProxy, cmd: MemoryCommand) -> Result<()> {
+pub async fn print_memory_digest(
+    monitor_proxy: MonitorProxy,
+    cmd: MemoryCommand,
+    #[ffx(machine = processed::Digest)] mut writer: Writer,
+) -> Result<()> {
     if cmd.print_json_from_memory_monitor {
         let raw_data = get_raw_data(monitor_proxy).await?;
-        println!("{}", String::from_utf8(raw_data)?);
+        writeln!(writer, "{}", String::from_utf8(raw_data)?)?;
         Ok(())
     } else {
-        let digest = get_digest(monitor_proxy).await?;
-        // TODO(b/231425139): Print a JSON when "--machine json" is passed.
-        pretty_print_full_digest(processed::Digest::from(digest))
+        if writer.is_machine() {
+            let digest = get_digest(monitor_proxy).await?;
+            writer.machine(&processed::Digest::from(digest))?;
+            Ok(())
+        } else {
+            let digest = get_digest(monitor_proxy).await?;
+            pretty_print_full_digest(writer, processed::Digest::from(digest))
+        }
     }
 }
 
@@ -57,11 +67,8 @@ async fn get_digest(
     Ok(serde_json::from_slice(&buffer)?)
 }
 
-/// Print to stdout a human-readable presentation of `digest`.
-fn pretty_print_full_digest<'a>(digest: processed::Digest) -> Result<()> {
-    let stdout = std::io::stdout().lock();
-    let mut w = std::io::BufWriter::new(stdout);
-
+/// Print to `w` a human-readable presentation of `digest`.
+fn pretty_print_full_digest<'a>(mut w: Writer, digest: processed::Digest) -> Result<()> {
     writeln!(w, "Time:  {}", digest.time)?;
     writeln!(w, "VMO:   {}", digest.kernel.vmo.file_size(BINARY).unwrap())?;
     writeln!(w, "Free:  {}", digest.kernel.free.file_size(BINARY).unwrap())?;
