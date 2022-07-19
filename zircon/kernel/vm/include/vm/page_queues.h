@@ -100,53 +100,42 @@ class PageQueues {
     page_queue_counts_[target_queue].fetch_add(1, ktl::memory_order_relaxed);
   }
 
-  // Place page in the wired queue. Must not already be in a page queue.
-  void SetWired(vm_page_t* page);
-  // Moves page from whichever queue it is currently in, to the wired queue.
-  void MoveToWired(vm_page_t* page);
-  // Moves page from whichever queue it is currently in, to the wired queue, and also sets the
-  // backlink information.
-  void MoveToWired(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
-  // Place page in the unswappable queue. Must not already be in a page queue.
-  void SetUnswappable(vm_page_t* page);
-  // Moves page from whichever queue it is currently in, to the unswappable queue.
-  void MoveToUnswappable(vm_page_t* page);
-  // Place page in the pager backed queue. Must not already be in a page queue. Sets the back
-  // reference information. If the page is removed from the referenced object (especially if it's
-  // due to the object being destroyed) then this back reference *must* be updated, either by
-  // calling Remove or calling MoveToPagerBacked with the new object information.
+  // All Set operations places a page, which must not currently be in a page queue, into the
+  // specified queue. The backlink information of |object| and |page_offset| must be specified and
+  // valid. If the page is either removed from the referenced object, or moved to a different
+  // offset, the backlink information must be updated either by calling ChangeObjectOffsetLocked, or
+  // removing the page completely from the queues.
+
+  void SetWired(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
+  void SetUnswappable(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
   void SetPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
-  // Moves page from whichever queue it is currently in, to the pager backed queue. Same rules on
-  // keeping the back reference up to date as given in SetPagerBacked apply.
-  void MoveToPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
-  // Moves page from whichever queue it is currently in, to the DontNeed pager backed queue. The
-  // object back reference information must have already been set by a previous call to
-  // SetPagerBacked or MoveToPagerBacked. Same rules on keeping the back reference up to date as
-  // given in SetPagerBacked apply.
-  void MoveToPagerBackedDontNeed(vm_page_t* page);
-  // Place page in the Dirty pager backed queue. Must not already be in a page queue. Sets the back
-  // reference information. Same rules on keeping the back reference up to date as given in
-  // SetPagerBacked apply.
   void SetPagerBackedDirty(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
-  // Moves page from whichever queue it is currently in, to the Dirty pager backed queue. The
-  // object back reference information must have already been set by a previous call to
-  // SetPagerBacked or MoveToPagerBacked. Same rules on keeping the back reference up to date as
-  // given in SetPagerBacked apply.
-  void MoveToPagerBackedDirty(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
-  // Place page in the unswappable zero forked queue. Must not already be in a page queue. Same
-  // rules for back pointers apply as for SetPagerBacked.
   void SetUnswappableZeroFork(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
-  // Moves page from whichever queue it is currently in, to the unswappable zero forked queue. Same
-  // rules for back pointers apply as for SetPagerBacked.
-  void MoveToUnswappableZeroFork(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
+
+  // All Move operations change the queue that a page is considered to be in, but do not change the
+  // object or offset backlink information. The page must currently be in a valid page queue.
+
+  void MoveToWired(vm_page_t* page);
+  void MoveToUnswappable(vm_page_t* page);
+  void MoveToPagerBacked(vm_page_t* page);
+  void MoveToPagerBackedDontNeed(vm_page_t* page);
+  void MoveToPagerBackedDirty(vm_page_t* page);
+  void MoveToUnswappableZeroFork(vm_page_t* page);
+
+  // Changes the backlink information for a page and should only be called by the page owner under
+  // its lock (that is the VMO lock). The page must currently be in a valid page queue.
+  void ChangeObjectOffset(vm_page_t* page, VmCowPages* object, uint64_t page_offset);
+
+  // Externally locked variant of CHangeObjectOffset that can be used for more efficient batch
+  // operations. In addition to the annotated lock_, the VMO lock of the owner is also required to
+  // be held.
+  void ChangeObjectOffsetLocked(vm_page_t* page, VmCowPages* object, uint64_t page_offset)
+      TA_REQ(lock_);
 
   // Removes the page from any page list and returns ownership of the queue_node.
   void Remove(vm_page_t* page);
   // Batched version of Remove that also places all the pages in the specified list
   void RemoveArrayIntoList(vm_page_t** page, size_t count, list_node_t* out_list);
-
-  // Variation on MoveToUnswappable that allows for already holding the lock.
-  void MoveToUnswappableLocked(vm_page_t* page) TA_REQ(lock_);
 
   // Tells the page queue this page has been accessed, and it should have its position in the queues
   // updated. This method will take the internal page queues lock and should not be used for
@@ -465,12 +454,9 @@ class PageQueues {
   // Helpers for adding and removing to the queues. All of the public Set/Move/Remove operations
   // are convenience wrappers around these.
   void RemoveLocked(vm_page_t* page) TA_REQ(lock_);
-  void SetQueueLocked(vm_page_t* page, PageQueue queue) TA_REQ(lock_);
-  void MoveToQueueLocked(vm_page_t* page, PageQueue queue) TA_REQ(lock_);
   void SetQueueBacklinkLocked(vm_page_t* page, void* object, uintptr_t page_offset, PageQueue queue)
       TA_REQ(lock_);
-  void MoveToQueueBacklinkLocked(vm_page_t* page, void* object, uintptr_t page_offset,
-                                 PageQueue queue) TA_REQ(lock_);
+  void MoveToQueueLocked(vm_page_t* page, PageQueue queue) TA_REQ(lock_);
 
   // Updates the active/inactive counts assuming a single page has moved from |old_queue| to
   // |new_queue|. Either of these can be PageQueueNone to simulate pages being added or removed.

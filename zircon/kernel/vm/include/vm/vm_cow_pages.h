@@ -166,12 +166,6 @@ class VmCowPages final
     return result;
   }
 
-  bool has_pager_backlinks_locked() const TA_REQ(lock_) {
-    bool result = can_evict_locked();
-    DEBUG_ASSERT(result == debug_is_user_pager_backed_locked());
-    return result;
-  }
-
   // Returns whether this cow pages node is dirty tracked.
   bool is_dirty_tracked_locked() const TA_REQ(lock_) {
     // Pager-backed VMOs require dirty tracking either if:

@@ -852,10 +852,10 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
   const uint64_t merge_start_offset = child.parent_offset_;
   const uint64_t merge_end_offset = child.parent_offset_ + child.parent_limit_;
 
-  // Hidden parents are not supposed to have page sources, but we assert it here anyway because a
-  // page source would make the way we move pages between objects incorrect, as we would break any
-  // potential back links.
-  DEBUG_ASSERT(!has_pager_backlinks_locked());
+  // There's no technical reason why this merging code cannot be run if there is a page source,
+  // however a bi-directional clone will never have a page source and so in case there are any
+  // consequence that have no been considered, ensure we are not in this case.
+  DEBUG_ASSERT(!is_source_preserving_page_content_locked());
 
   page_list_.RemovePages(page_remover.RemovePagesCallback(), 0, visibility_start_offset);
   page_list_.RemovePages(page_remover.RemovePagesCallback(), merge_end_offset,
@@ -899,26 +899,6 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
   } else {
     // non-hidden vmos should always have zero parent_start_limit_
     DEBUG_ASSERT(child.parent_start_limit_ == 0);
-  }
-
-  // As we are moving pages between objects we need to make sure no backlinks are broken. We know
-  // there's no page_source_ and hence no pages will be in the pager_backed queue, but we could
-  // have pages in the unswappable_zero_forked queue. We do know that pages in this queue cannot
-  // have been pinned, so we can just move (or re-move potentially) any page that is not pinned
-  // into the unswappable queue.
-  {
-    PageQueues* pq = pmm_page_queues();
-    Guard<CriticalMutex> guard{pq->get_lock()};
-    page_list_.ForEveryPage([pq](auto* p, uint64_t off) {
-      if (p->IsPage()) {
-        vm_page_t* page = p->Page();
-        if (page->object.pin_count == 0) {
-          AssertHeld<Lock<CriticalMutex>>(*pq->get_lock());
-          pq->MoveToUnswappableLocked(page);
-        }
-      }
-      return ZX_ERR_NEXT;
-    });
   }
 
   // At this point, we need to merge |this|'s page list and |child|'s page list.
@@ -972,6 +952,21 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
     list_initialize(&covered_pages);
     __UNINITIALIZED BatchPQRemove covered_remover(&covered_pages);
 
+    // Although not all pages in page_list_ will end up existing in child, we don't know which ones
+    // will get replaced, so we must update all of the backlinks.
+    {
+      PageQueues* pq = pmm_page_queues();
+      Guard<CriticalMutex> guard{pq->get_lock()};
+      page_list_.ForEveryPage([pq, &child](auto* p, uint64_t off) {
+        if (p->IsPage()) {
+          AssertHeld<Lock<CriticalMutex>>(*pq->get_lock());
+          vm_page_t* page = p->Page();
+          pq->ChangeObjectOffsetLocked(page, &child, off);
+        }
+        return ZX_ERR_NEXT;
+      });
+    }
+
     // Now merge |child|'s pages into |this|, overwriting any pages present in |this|, and
     // then move that list to |child|.
     child.page_list_.MergeOnto(page_list_,
@@ -989,24 +984,32 @@ void VmCowPages::MergeContentWithChildLocked(VmCowPages* removed, bool removed_l
     list_splice_after(&covered_pages, &freed_pages);
   } else {
     // Merge our page list into the child page list and update all the necessary metadata.
+    struct {
+      PageQueues* pq;
+      bool removed_left;
+      uint64_t merge_start_offset;
+      VmCowPages* child;
+      BatchPQRemove* page_remover;
+    } state = {pmm_page_queues(), removed_left, merge_start_offset, &child, &page_remover};
     child.page_list_.MergeFrom(
         page_list_, merge_start_offset, merge_end_offset,
         [&page_remover](vm_page* page, uint64_t offset) { page_remover.Push(page); },
-        [&page_remover, removed_left](VmPageOrMarker* page_or_marker, uint64_t offset) {
+        [&state](VmPageOrMarker* page_or_marker, uint64_t offset) {
           DEBUG_ASSERT(page_or_marker->IsPage());
           vm_page_t* page = page_or_marker->Page();
           DEBUG_ASSERT(page->object.pin_count == 0);
 
-          if (removed_left ? page->object.cow_right_split : page->object.cow_left_split) {
+          if (state.removed_left ? page->object.cow_right_split : page->object.cow_left_split) {
             // This happens when the pages was already migrated into child but then
             // was migrated further into child's descendants. The page can be freed.
             page = page_or_marker->ReleasePage();
-            page_remover.Push(page);
+            state.page_remover->Push(page);
           } else {
             // Since we recursively fork on write, if the child doesn't have the
             // page, then neither of its children do.
             page->object.cow_left_split = 0;
             page->object.cow_right_split = 0;
+            state.pq->ChangeObjectOffset(page, state.child, offset - state.merge_start_offset);
           }
         });
   }
@@ -1397,7 +1400,7 @@ zx_status_t VmCowPages::AddNewPageLocked(uint64_t offset, vm_page_t* page,
   // Pages being added to pager backed VMOs should have a valid dirty_state before being added to
   // the page list, so that they can be inserted in the correct page queue. New pages start off
   // clean.
-  if (has_pager_backlinks_locked()) {
+  if (is_source_preserving_page_content_locked()) {
     // Only zero pages can be added as new pages to pager backed VMOs.
     DEBUG_ASSERT(zero || IsZeroPage(page));
     UpdateDirtyStateLocked(page, offset, DirtyState::Clean, /*is_pending_add=*/true);
@@ -1729,7 +1732,6 @@ const VmPageOrMarker* VmCowPages::FindInitialPageContentLocked(uint64_t offset,
 void VmCowPages::UpdateDirtyStateLocked(vm_page_t* page, uint64_t offset, DirtyState dirty_state,
                                         bool is_pending_add) {
   ASSERT(page);
-  ASSERT(has_pager_backlinks_locked());
   ASSERT(is_source_preserving_page_content_locked());
 
   // If the page is not pending being added to the page list, it should have valid object info.
@@ -1751,7 +1753,7 @@ void VmCowPages::UpdateDirtyStateLocked(vm_page_t* page, uint64_t offset, DirtyS
       // If we are expecting a pending Add[New]PageLocked, we can defer updating the page queue.
       if (!is_pending_add) {
         // Move to evictable pager backed queue to start tracking age information.
-        pmm_page_queues()->MoveToPagerBacked(page, this, offset);
+        pmm_page_queues()->MoveToPagerBacked(page);
       }
       break;
     case DirtyState::Dirty:
@@ -1771,7 +1773,7 @@ void VmCowPages::UpdateDirtyStateLocked(vm_page_t* page, uint64_t offset, DirtyS
         // pager backed queue and will age as normal.
         // TODO(rashaeqbal): We might want age tracking for the Dirty queue in the future when the
         // kernel generates writeback pager requests.
-        pmm_page_queues()->MoveToPagerBackedDirty(page, this, offset);
+        pmm_page_queues()->MoveToPagerBackedDirty(page);
       }
 
       // We might need to trim the AwaitingClean zero range [supply_zero_offset_,
@@ -2438,9 +2440,9 @@ zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags,
     //
     // We don't need to scan for zeroes if on finding zeroes we wouldn't be able to remove the page
     // anyway.
-    if (p == vm_get_zero_page() && !has_pager_backlinks_locked() &&
+    if (p == vm_get_zero_page() && !is_source_preserving_page_content_locked() &&
         can_decommit_zero_pages_locked() && !(pf_flags & VMM_PF_FLAG_SW_FAULT)) {
-      pmm_page_queues()->MoveToUnswappableZeroFork(res_page, this, offset);
+      pmm_page_queues()->MoveToUnswappableZeroFork(res_page);
     }
 
     // This is the only path where we can allocate a new page without being a clone (clones are
@@ -3195,27 +3197,20 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
 }
 
 void VmCowPages::MoveToWiredLocked(vm_page_t* page, uint64_t offset) {
-  // If pager backlinks are supported, retain the backlink information when moving to the wired
-  // queue. The backlink information should be valid as long as the page is owned by this object,
-  // irrespective of the page queue the page gets moved to.
-  if (has_pager_backlinks_locked()) {
-    pmm_page_queues()->MoveToWired(page, this, offset);
-  } else {
-    pmm_page_queues()->MoveToWired(page);
-  }
+  pmm_page_queues()->MoveToWired(page);
 }
 
 void VmCowPages::MoveToNotWiredLocked(vm_page_t* page, uint64_t offset) {
-  if (has_pager_backlinks_locked()) {
+  if (is_source_preserving_page_content_locked()) {
     DEBUG_ASSERT(is_page_dirty_tracked(page));
     // We can only move Clean pages to the pager backed queues as they track age information for
     // eviction; only Clean pages can be evicted. Pages in AwaitingClean and Dirty are protected
     // from eviction in the Dirty queue.
     if (is_page_clean(page)) {
-      pmm_page_queues()->MoveToPagerBacked(page, this, offset);
+      pmm_page_queues()->MoveToPagerBacked(page);
     } else {
       DEBUG_ASSERT(!pmm_is_loaned(page));
-      pmm_page_queues()->MoveToPagerBackedDirty(page, this, offset);
+      pmm_page_queues()->MoveToPagerBackedDirty(page);
     }
   } else {
     pmm_page_queues()->MoveToUnswappable(page);
@@ -3223,7 +3218,7 @@ void VmCowPages::MoveToNotWiredLocked(vm_page_t* page, uint64_t offset) {
 }
 
 void VmCowPages::SetNotWiredLocked(vm_page_t* page, uint64_t offset) {
-  if (has_pager_backlinks_locked()) {
+  if (is_source_preserving_page_content_locked()) {
     DEBUG_ASSERT(is_page_dirty_tracked(page));
     // We can only move Clean pages to the pager backed queues as they track age information for
     // eviction; only Clean pages can be evicted. Pages in AwaitingClean and Dirty are protected
@@ -3235,7 +3230,7 @@ void VmCowPages::SetNotWiredLocked(vm_page_t* page, uint64_t offset) {
       pmm_page_queues()->SetPagerBackedDirty(page, this, offset);
     }
   } else {
-    pmm_page_queues()->SetUnswappable(page);
+    pmm_page_queues()->SetUnswappable(page, this, offset);
   }
 }
 
@@ -4077,7 +4072,7 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
     }
 
     // A newly supplied page starts off as Clean.
-    if (src_page.IsPage() && has_pager_backlinks_locked()) {
+    if (src_page.IsPage() && is_source_preserving_page_content_locked()) {
       UpdateDirtyStateLocked(src_page.Page(), offset, DirtyState::Clean,
                              /*is_pending_add=*/true);
     }
@@ -5389,10 +5384,6 @@ bool VmCowPages::DebugValidatePageSplitsLocked() const {
 
 bool VmCowPages::DebugValidateBacklinksLocked() const {
   canary_.Assert();
-  if (!has_pager_backlinks_locked()) {
-    // If not directly user pager backed, we don't need valid backlinks (for now).
-    return true;
-  }
   bool result = true;
   page_list_.ForEveryPage([this, &result](const auto* p, uint64_t offset) {
     DEBUG_ASSERT(p->IsPage() || p->IsMarker());

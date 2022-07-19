@@ -725,27 +725,18 @@ void PageQueues::MarkAccessed(vm_page_t* page) {
   }
 }
 
-void PageQueues::SetQueueLocked(vm_page_t* page, PageQueue queue) {
-  SetQueueBacklinkLocked(page, nullptr, 0, queue);
-}
-
 void PageQueues::SetQueueBacklinkLocked(vm_page_t* page, void* object, uintptr_t page_offset,
                                         PageQueue queue) {
   DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
   DEBUG_ASSERT(!page->is_free());
   DEBUG_ASSERT(!list_in_list(&page->queue_node));
-  if (object) {
-    DEBUG_ASSERT(!page->object.get_object() || page->object.get_object() == object);
-    DEBUG_ASSERT(!page->object.get_object() || page->object.get_page_offset() == page_offset);
-    page->object.set_object(object);
-    page->object.set_page_offset(page_offset);
-  } else {
-    // Currently SetQueueBacklinkLocked() can be used to clear the backlink in cases where the page
-    // isn't being removed from a VmCowPages.  This won't work for loaned pages, but we don't have
-    // any loaned pages yet.
-    page->object.clear_object();
-    page->object.set_page_offset(0);
-  }
+  DEBUG_ASSERT(object);
+  DEBUG_ASSERT(!page->object.get_object());
+  DEBUG_ASSERT(page->object.get_page_offset() == 0);
+
+  page->object.set_object(object);
+  page->object.set_page_offset(page_offset);
+
   DEBUG_ASSERT(page->object.get_page_queue_ref().load(ktl::memory_order_relaxed) == PageQueueNone);
   page->object.get_page_queue_ref().store(queue, ktl::memory_order_relaxed);
   list_add_head(&page_queues_[queue], &page->queue_node);
@@ -754,38 +745,24 @@ void PageQueues::SetQueueBacklinkLocked(vm_page_t* page, void* object, uintptr_t
 }
 
 void PageQueues::MoveToQueueLocked(vm_page_t* page, PageQueue queue) {
-  MoveToQueueBacklinkLocked(page, nullptr, 0, queue);
-}
-
-void PageQueues::MoveToQueueBacklinkLocked(vm_page_t* page, void* object, uintptr_t page_offset,
-                                           PageQueue queue) {
   DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
   DEBUG_ASSERT(!page->is_free());
   DEBUG_ASSERT(list_in_list(&page->queue_node));
+  DEBUG_ASSERT(page->object.get_object());
   uint32_t old_queue = page->object.get_page_queue_ref().exchange(queue, ktl::memory_order_relaxed);
   DEBUG_ASSERT(old_queue != PageQueueNone);
-  if (object) {
-    DEBUG_ASSERT(!page->object.get_object() || page->object.get_object() == object);
-    DEBUG_ASSERT(!page->object.get_object() || page->object.get_page_offset() == page_offset);
-    page->object.set_object(object);
-    page->object.set_page_offset(page_offset);
-  } else {
-    // Currently MoveToQueueBacklinkLocked() can be used to clear the backlink in cases where the
-    // page isn't being removed from a VmCowPages.  This won't work for loaned pages, but we don't
-    // have any loaned pages yet.
-    page->object.clear_object();
-    page->object.set_page_offset(0);
-  }
+
   list_delete(&page->queue_node);
   list_add_head(&page_queues_[queue], &page->queue_node);
   page_queue_counts_[old_queue].fetch_sub(1, ktl::memory_order_relaxed);
   page_queue_counts_[queue].fetch_add(1, ktl::memory_order_relaxed);
-  UpdateActiveInactiveLocked((PageQueue)old_queue, queue);
+  UpdateActiveInactiveLocked(static_cast<PageQueue>(old_queue), queue);
 }
 
-void PageQueues::SetWired(vm_page_t* page) {
+void PageQueues::SetWired(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
   Guard<CriticalMutex> guard{&lock_};
-  SetQueueLocked(page, PageQueueWired);
+  DEBUG_ASSERT(object);
+  SetQueueBacklinkLocked(page, object, page_offset, PageQueueWired);
 }
 
 void PageQueues::MoveToWired(vm_page_t* page) {
@@ -793,24 +770,15 @@ void PageQueues::MoveToWired(vm_page_t* page) {
   MoveToQueueLocked(page, PageQueueWired);
 }
 
-void PageQueues::MoveToWired(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
+void PageQueues::SetUnswappable(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
   Guard<CriticalMutex> guard{&lock_};
   DEBUG_ASSERT(object);
-  MoveToQueueBacklinkLocked(page, object, page_offset, PageQueueWired);
-}
-
-void PageQueues::SetUnswappable(vm_page_t* page) {
-  Guard<CriticalMutex> guard{&lock_};
-  SetQueueLocked(page, PageQueueUnswappable);
-}
-
-void PageQueues::MoveToUnswappableLocked(vm_page_t* page) {
-  MoveToQueueLocked(page, PageQueueUnswappable);
+  SetQueueBacklinkLocked(page, object, page_offset, PageQueueUnswappable);
 }
 
 void PageQueues::MoveToUnswappable(vm_page_t* page) {
   Guard<CriticalMutex> guard{&lock_};
-  MoveToUnswappableLocked(page);
+  MoveToQueueLocked(page, PageQueueUnswappable);
 }
 
 void PageQueues::SetPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
@@ -819,16 +787,14 @@ void PageQueues::SetPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t pa
   SetQueueBacklinkLocked(page, object, page_offset, mru_gen_to_queue());
 }
 
-void PageQueues::MoveToPagerBacked(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
+void PageQueues::MoveToPagerBacked(vm_page_t* page) {
   Guard<CriticalMutex> guard{&lock_};
-  DEBUG_ASSERT(object);
-  MoveToQueueBacklinkLocked(page, object, page_offset, mru_gen_to_queue());
+  MoveToQueueLocked(page, mru_gen_to_queue());
 }
 
 void PageQueues::MoveToPagerBackedDontNeed(vm_page_t* page) {
   Guard<CriticalMutex> guard{&lock_};
-  MoveToQueueBacklinkLocked(page, page->object.get_object(), page->object.get_page_offset(),
-                            PageQueuePagerBackedDontNeed);
+  MoveToQueueLocked(page, PageQueuePagerBackedDontNeed);
 }
 
 void PageQueues::SetPagerBackedDirty(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
@@ -837,10 +803,9 @@ void PageQueues::SetPagerBackedDirty(vm_page_t* page, VmCowPages* object, uint64
   SetQueueBacklinkLocked(page, object, page_offset, PageQueuePagerBackedDirty);
 }
 
-void PageQueues::MoveToPagerBackedDirty(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
+void PageQueues::MoveToPagerBackedDirty(vm_page_t* page) {
   Guard<CriticalMutex> guard{&lock_};
-  DEBUG_ASSERT(object);
-  MoveToQueueBacklinkLocked(page, object, page_offset, PageQueuePagerBackedDirty);
+  MoveToQueueLocked(page, PageQueuePagerBackedDirty);
 }
 
 void PageQueues::SetUnswappableZeroFork(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
@@ -848,11 +813,25 @@ void PageQueues::SetUnswappableZeroFork(vm_page_t* page, VmCowPages* object, uin
   SetQueueBacklinkLocked(page, object, page_offset, PageQueueUnswappableZeroFork);
 }
 
-void PageQueues::MoveToUnswappableZeroFork(vm_page_t* page, VmCowPages* object,
-                                           uint64_t page_offset) {
+void PageQueues::MoveToUnswappableZeroFork(vm_page_t* page) {
   Guard<CriticalMutex> guard{&lock_};
+  MoveToQueueLocked(page, PageQueueUnswappableZeroFork);
+}
+
+void PageQueues::ChangeObjectOffset(vm_page_t* page, VmCowPages* object, uint64_t page_offset) {
+  Guard<CriticalMutex> guard{&lock_};
+  ChangeObjectOffsetLocked(page, object, page_offset);
+}
+
+void PageQueues::ChangeObjectOffsetLocked(vm_page_t* page, VmCowPages* object,
+                                          uint64_t page_offset) {
+  DEBUG_ASSERT(page->state() == vm_page_state::OBJECT);
+  DEBUG_ASSERT(!page->is_free());
+  DEBUG_ASSERT(list_in_list(&page->queue_node));
   DEBUG_ASSERT(object);
-  MoveToQueueBacklinkLocked(page, object, page_offset, PageQueueUnswappableZeroFork);
+  DEBUG_ASSERT(page->object.get_object());
+  page->object.set_object(object);
+  page->object.set_page_offset(page_offset);
 }
 
 void PageQueues::RemoveLocked(vm_page_t* page) {
