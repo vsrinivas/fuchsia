@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_SYS_INSPECT_LLCPP_SERVICE_H_
-#define LIB_SYS_INSPECT_LLCPP_SERVICE_H_
+#ifndef LIB_INSPECT_COMPONENT_CPP_SERVICE_H_
+#define LIB_INSPECT_COMPONENT_CPP_SERVICE_H_
 
 #include <fidl/fuchsia.inspect/cpp/wire.h>
 #include <lib/async/cpp/executor.h>
@@ -53,4 +53,4 @@ class TreeServer final : public fidl::WireServer<fuchsia_inspect::Tree> {
 
 }  // namespace inspect
 
-#endif  // LIB_SYS_INSPECT_LLCPP_SERVICE_H_
+#endif  // LIB_INSPECT_COMPONENT_CPP_SERVICE_H_

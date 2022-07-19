@@ -4,7 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/sys/inspect/llcpp/component.h>
+#include <lib/inspect/component/cpp/component.h>
 
 #include "lib/sys/component/cpp/outgoing_directory.h"
 

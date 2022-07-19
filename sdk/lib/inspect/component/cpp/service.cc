@@ -9,7 +9,7 @@
 #include <lib/fidl/llcpp/string_view.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fidl/llcpp/wire_types.h>
-#include <lib/sys/inspect/llcpp/service.h>
+#include <lib/inspect/component/cpp/service.h>
 #include <zircon/types.h>
 
 #include <vector>

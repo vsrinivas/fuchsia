@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_SYS_INSPECT_LLCPP_TESTING_H_
-#define LIB_SYS_INSPECT_LLCPP_TESTING_H_
+#ifndef LIB_INSPECT_COMPONENT_CPP_TESTING_H_
+#define LIB_INSPECT_COMPONENT_CPP_TESTING_H_
 
 #include <fidl/fuchsia.inspect/cpp/wire.h>
 #include <lib/fpromise/promise.h>
@@ -28,4 +28,4 @@ fpromise::promise<Hierarchy> ReadFromTree(TreeClient& tree, async_dispatcher_t* 
 }  // namespace testing
 }  // namespace inspect
 
-#endif  // LIB_SYS_INSPECT_LLCPP_TESTING_H_
+#endif  // LIB_INSPECT_COMPONENT_CPP_TESTING_H_

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.inspect/cpp/wire.h>
-#include <lib/sys/inspect/llcpp/component.h>
-#include <lib/sys/inspect/llcpp/service.h>
+#include <lib/inspect/component/cpp/component.h>
+#include <lib/inspect/component/cpp/service.h>
 
 namespace inspect {
 ComponentInspector::ComponentInspector(component::OutgoingDirectory& out,

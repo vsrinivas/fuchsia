@@ -4,8 +4,8 @@
 
 #include <fidl/fuchsia.inspect/cpp/markers.h>
 #include <lib/fpromise/bridge.h>
+#include <lib/inspect/component/cpp/testing.h>
 #include <lib/inspect/cpp/reader.h>
-#include <lib/sys/inspect/llcpp/testing.h>
 
 #include <utility>
 

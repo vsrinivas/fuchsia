@@ -15,6 +15,7 @@ group("tests") {
     "fit-promise:tests",
     "fuchsia-mem-ext:tests",
     "input_report_reader:test",
+    "inspect:tests",
     "stdcompat:tests",
     "sys/component:tests",
     "sys/inspect:tests",

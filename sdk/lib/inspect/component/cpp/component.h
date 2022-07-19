@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_SYS_INSPECT_LLCPP_COMPONENT_H_
-#define LIB_SYS_INSPECT_LLCPP_COMPONENT_H_
+#ifndef LIB_INSPECT_COMPONENT_CPP_COMPONENT_H_
+#define LIB_INSPECT_COMPONENT_CPP_COMPONENT_H_
 
 #include <lib/async/cpp/executor.h>
 #include <lib/inspect/cpp/health.h>
@@ -45,4 +45,4 @@ class ComponentInspector final {
 };
 }  // namespace inspect
 
-#endif  // LIB_SYS_INSPECT_LLCPP_COMPONENT_H_
+#endif  // LIB_INSPECT_COMPONENT_CPP_COMPONENT_H_

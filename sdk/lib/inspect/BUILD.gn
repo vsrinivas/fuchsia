@@ -16,3 +16,12 @@ sdk_component_manifests("inspect") {
 expect_includes("client_includes") {
   includes = [ "client.shard.cml" ]
 }
+
+group("tests") {
+  testonly = true
+  deps = [
+    "component:tests",
+    "contrib/cpp:tests",
+    "service/cpp:tests",
+  ]
+}

@@ -8,14 +8,14 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fuchsia/diagnostics/cpp/fidl.h>
 #include <lib/fpromise/promise.h>
+#include <lib/inspect/component/cpp/service.h>
+#include <lib/inspect/component/cpp/testing.h>
 #include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/sys/inspect/llcpp/service.h>
-#include <lib/sys/inspect/llcpp/testing.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <gmock/gmock.h>
