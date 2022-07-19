@@ -1878,7 +1878,7 @@ non-SDK buildroots.
 From //build/fuchsia/sdk.gni:17
 
 ### fuchsia_static_pkgs_goldens
-An optional lit of golden files for fuchsia.zbi static pkgs list. If
+An optional list of golden files for fuchsia.zbi static pkgs list. If
 specified, they would be compared against fuchsia.zbi static pkgs list
 during build time. At least one of the golden files must match.
 In normal case, there should only be one golden file in this list.
@@ -1935,7 +1935,7 @@ product-specific configuration.
 From //build/security.gni:100
 
 ### fuchsia_zbi_bootfs_filelist_goldens
-An optional lit of golden files for fuchsia.zbi bootFS file list. If
+An optional list of golden files for fuchsia.zbi bootFS file list. If
 specified, they would be compared against fuchsia.zbi bootFS file list
 during build time. At least one of the golden files must match.
 In normal case, there should only be one golden file in this list.
