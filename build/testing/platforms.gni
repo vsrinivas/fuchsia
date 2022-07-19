@@ -48,6 +48,10 @@ test_platforms = [
     cpu = "x64"
   },
   {
+    device_type = "Intel NUC Kit NUC11TNHv5"
+    cpu = "x64"
+  },
+  {
     device_type = "Astro"
     cpu = "arm64"
   },

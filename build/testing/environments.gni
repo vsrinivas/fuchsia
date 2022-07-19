@@ -105,6 +105,18 @@ _all_named_fuchsia_envs += [
   },
 ]
 
+nuc11_env = {
+  dimensions = {
+    device_type = "Intel NUC Kit NUC11TNHv5"
+  }
+}
+_all_named_fuchsia_envs += [
+  {
+    name = "nuc11"
+    env = nuc11_env
+  },
+]
+
 qemu_env = {
   dimensions = {
     device_type = "QEMU"
