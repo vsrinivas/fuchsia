@@ -150,7 +150,13 @@ zx_status_t SdioControllerDevice::ProbeSdio() {
     }
   }
 
-  SdioUpdateBlockSizeLocked(0, 0, true);
+  // This effectively excludes cards that don't report the mandatory FUNCE tuple, as the max block
+  // size would still be set to zero.
+  if ((st = SdioUpdateBlockSizeLocked(0, 0, true)) != ZX_OK) {
+    zxlogf(ERROR, "Failed to update function 0 block size, retcode = %d", st);
+    return st;
+  }
+
   // 0 is the common function. Already initialized
   for (size_t i = 1; i < hw_info_.num_funcs; i++) {
     if ((st = InitFunc(static_cast<uint8_t>(i))) != ZX_OK) {
@@ -411,7 +417,8 @@ zx_status_t SdioControllerDevice::SdioUpdateBlockSizeLocked(uint8_t fn_idx, uint
     blk_sz = static_cast<uint16_t>(func->hw_info.max_blk_size);
   }
 
-  if (blk_sz > func->hw_info.max_blk_size) {
+  // The minimum block size is 1 for all functions, as per the CCCR and FBR sections of the spec.
+  if (blk_sz > func->hw_info.max_blk_size || blk_sz == 0) {
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -419,26 +426,35 @@ zx_status_t SdioControllerDevice::SdioUpdateBlockSizeLocked(uint8_t fn_idx, uint
     return ZX_OK;
   }
 
-  zx_status_t st =
-      WriteData16(0, SDIO_CIA_FBR_BASE_ADDR(fn_idx) + SDIO_CIA_FBR_BLK_SIZE_ADDR, blk_sz);
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "Error setting blk size.fn: %d blk_sz: %d ret: %d", fn_idx, blk_sz, st);
-    return st;
+  // This register is read-only if SMB is not set. DoRwTxn will use byte mode instead of block mode
+  // in that case, so the register write can be skipped.
+  if (hw_info_.caps & SDIO_CARD_MULTI_BLOCK) {
+    zx_status_t st =
+        WriteData16(0, SDIO_CIA_FBR_BASE_ADDR(fn_idx) + SDIO_CIA_FBR_BLK_SIZE_ADDR, blk_sz);
+    if (st != ZX_OK) {
+      zxlogf(ERROR, "Error setting blk size.fn: %d blk_sz: %d ret: %d", fn_idx, blk_sz, st);
+      return st;
+    }
   }
 
   func->cur_blk_size = blk_sz;
-  return st;
+  return ZX_OK;
 }
 
 zx_status_t SdioControllerDevice::SdioGetBlockSize(uint8_t fn_idx, uint16_t* out_cur_blk_size) {
   fbl::AutoLock lock(&lock_);
 
-  zx_status_t st =
-      ReadData16(0, SDIO_CIA_FBR_BASE_ADDR(fn_idx) + SDIO_CIA_FBR_BLK_SIZE_ADDR, out_cur_blk_size);
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "Failed to get block size for fn: %d ret: %d", fn_idx, st);
+  if (hw_info_.caps & SDIO_CARD_MULTI_BLOCK) {
+    zx_status_t st = ReadData16(0, SDIO_CIA_FBR_BASE_ADDR(fn_idx) + SDIO_CIA_FBR_BLK_SIZE_ADDR,
+                                out_cur_blk_size);
+    if (st != ZX_OK) {
+      zxlogf(ERROR, "Failed to get block size for fn: %d ret: %d", fn_idx, st);
+    }
+    return st;
   }
-  return st;
+
+  *out_cur_blk_size = funcs_[fn_idx].cur_blk_size;
+  return ZX_OK;
 }
 
 zx_status_t SdioControllerDevice::SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn) {
@@ -503,7 +519,7 @@ zx_status_t SdioControllerDevice::SdioDoRwTxn(uint8_t fn_idx, sdio_rw_txn_t* txn
   }
 
   bool mbs = hw_info_.caps & SDIO_CARD_MULTI_BLOCK;
-  uint32_t rem_blocks = (func_blk_size == 0) ? 0 : (data_size / func_blk_size);
+  uint32_t rem_blocks = data_size / func_blk_size;
   uint32_t data_processed = 0;
   while (rem_blocks > 0) {
     uint32_t num_blocks = 1;
@@ -960,7 +976,10 @@ zx_status_t SdioControllerDevice::ProcessCis(uint8_t fn_idx) {
         return st;
       }
     }
-    ParseFnTuple(fn_idx, cur_tup);
+
+    if ((st = ParseFnTuple(fn_idx, cur_tup)) != ZX_OK) {
+      break;
+    }
   }
   return st;
 }
@@ -990,6 +1009,12 @@ zx_status_t SdioControllerDevice::ParseFuncExtTuple(uint8_t fn_idx, const SdioFu
         SdioReadTupleBody(tup.tuple_body, SDIO_CIS_TPL_FUNCE_FUNC0_MAX_BLK_SIZE_LOC, 2);
     func->hw_info.max_blk_size = static_cast<uint32_t>(
         std::min<uint64_t>(sdmmc_.host_info().max_transfer_size, func->hw_info.max_blk_size));
+
+    if (func->hw_info.max_blk_size == 0) {
+      zxlogf(ERROR, "Invalid max block size for function 0");
+      return ZX_ERR_IO_INVALID;
+    }
+
     uint8_t speed_val = GetBitsU8(tup.tuple_body[3], SDIO_CIS_TPL_FUNCE_MAX_TRAN_SPEED_VAL_MASK,
                                   SDIO_CIS_TPL_FUNCE_MAX_TRAN_SPEED_VAL_LOC);
     uint8_t speed_unit = GetBitsU8(tup.tuple_body[3], SDIO_CIS_TPL_FUNCE_MAX_TRAN_SPEED_UNIT_MASK,
@@ -1003,8 +1028,14 @@ zx_status_t SdioControllerDevice::ParseFuncExtTuple(uint8_t fn_idx, const SdioFu
     zxlogf(ERROR, "Invalid body size: %d for func_ext tuple", tup.tuple_body_size);
     return ZX_ERR_IO;
   }
+
   func->hw_info.max_blk_size =
       SdioReadTupleBody(tup.tuple_body, SDIO_CIS_TPL_FUNCE_FUNCx_MAX_BLK_SIZE_LOC, 2);
+  if (func->hw_info.max_blk_size == 0) {
+    zxlogf(ERROR, "Invalid max block size for function %u", fn_idx);
+    return ZX_ERR_IO_INVALID;
+  }
+
   return ZX_OK;
 }
 

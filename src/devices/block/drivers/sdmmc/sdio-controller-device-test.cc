@@ -34,7 +34,43 @@ class SdioControllerDeviceTest : public zxtest::Test {
     dut_ = std::make_unique<SdioControllerDevice>(parent_.get(), SdmmcDevice(sdmmc_.GetClient()));
   }
 
-  void SetUp() override { sdmmc_.Reset(); }
+  void SetUp() override {
+    sdmmc_.Reset();
+
+    // Set all function block sizes (and the host max transfer size) to 1 so that the initialization
+    // checks pass. Individual test cases can override these by overwriting the CIS or creating a
+    // new one and overwriting the CIS pointer.
+    sdmmc_.Write(0x0009, std::vector<uint8_t>{0x00, 0x20, 0x00}, 0);
+
+    sdmmc_.Write(0x2000,
+                 std::vector<uint8_t>{
+                     0x22,        // Function extensions tuple.
+                     0x04,        // Function extensions tuple size.
+                     0x00,        // Type of extended data.
+                     0x01, 0x00,  // Function 0 block size.
+                 },
+                 0);
+
+    sdmmc_.Write(0x1000, std::vector<uint8_t>{0x22, 0x2a, 0x01}, 0);
+    sdmmc_.Write(0x100e, std::vector<uint8_t>{0x01, 0x00}, 0);
+
+    sdmmc_.Write(0x0109, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
+    sdmmc_.Write(0x0209, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
+    sdmmc_.Write(0x0309, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
+    sdmmc_.Write(0x0409, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
+    sdmmc_.Write(0x0509, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
+    sdmmc_.Write(0x0609, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
+    sdmmc_.Write(0x0709, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
+
+    sdmmc_.set_host_info({
+        .caps = 0,
+        .max_transfer_size = 1,
+        .max_transfer_size_non_dma = 1,
+        .prefs = 0,
+    });
+
+    dut_->Init();
+  }
 
  protected:
   std::shared_ptr<MockDevice> parent_ = MockDevice::FakeRootParent();
@@ -56,6 +92,9 @@ class SdioScatterGatherTest : public zxtest::Test {
     sdmmc_.Write(
         SDIO_CIA_CCCR_CARD_CAPS_ADDR,
         std::vector<uint8_t>{static_cast<uint8_t>(multiblock ? SDIO_CIA_CCCR_CARD_CAP_SMB : 0)}, 0);
+
+    sdmmc_.Write(0x0009, std::vector<uint8_t>{0x00, 0x20, 0x00}, 0);
+    sdmmc_.Write(0x2000, std::vector<uint8_t>{0x22, 0x04, 0x00, 0x00, 0x02}, 0);
 
     // Set the maximum block size for function 1-5 to eight bytes.
     sdmmc_.Write(0x0109, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
@@ -234,9 +273,9 @@ TEST_F(SdioControllerDeviceTest, SdioDoRwTxn) {
   sdmmc_.Write(SDIO_CIA_CCCR_CARD_CAPS_ADDR, std::vector<uint8_t>{0x00}, 0);
 
   // Set the maximum block size for function three to eight bytes.
-  sdmmc_.Write(0x0309, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
-  sdmmc_.Write(0x1000, std::vector<uint8_t>{0x22, 0x2a, 0x01}, 0);
-  sdmmc_.Write(0x100e, std::vector<uint8_t>{0x08, 0x00}, 0);
+  sdmmc_.Write(0x0309, std::vector<uint8_t>{0x00, 0x30, 0x00}, 0);
+  sdmmc_.Write(0x3000, std::vector<uint8_t>{0x22, 0x2a, 0x01}, 0);
+  sdmmc_.Write(0x300e, std::vector<uint8_t>{0x08, 0x00}, 0);
 
   sdmmc_.set_host_info({
       .caps = 0,
@@ -318,9 +357,9 @@ TEST_F(SdioControllerDeviceTest, SdioDoRwTxnMultiBlock) {
   sdmmc_.Write(SDIO_CIA_CCCR_CARD_CAPS_ADDR, std::vector<uint8_t>{SDIO_CIA_CCCR_CARD_CAP_SMB}, 0);
 
   // Set the maximum block size for function seven to eight bytes.
-  sdmmc_.Write(0x709, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
-  sdmmc_.Write(0x1000, std::vector<uint8_t>{0x22, 0x2a, 0x01}, 0);
-  sdmmc_.Write(0x100e, std::vector<uint8_t>{0x08, 0x00}, 0);
+  sdmmc_.Write(0x709, std::vector<uint8_t>{0x00, 0x30, 0x00}, 0);
+  sdmmc_.Write(0x3000, std::vector<uint8_t>{0x22, 0x2a, 0x01}, 0);
+  sdmmc_.Write(0x300e, std::vector<uint8_t>{0x08, 0x00}, 0);
 
   sdmmc_.set_host_info({
       .caps = 0,
@@ -604,10 +643,13 @@ TEST_F(SdioControllerDeviceTest, SmallHostTransferSize) {
   });
   EXPECT_OK(dut_->Init());
 
-  // Set the maximum block size for function three to 128 bytes.
-  sdmmc_.Write(0x0309, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
+  // Set the maximum block size for all functions to 128 bytes.
   sdmmc_.Write(0x1000, std::vector<uint8_t>{0x22, 0x2a, 0x01}, 0);
   sdmmc_.Write(0x100e, std::vector<uint8_t>{0x80, 0x00}, 0);
+
+  sdmmc_.Write(0x0109, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
+  sdmmc_.Write(0x0209, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
+  sdmmc_.Write(0x0309, std::vector<uint8_t>{0x00, 0x10, 0x00}, 0);
 
   EXPECT_OK(dut_->ProbeSdio());
   EXPECT_OK(dut_->SdioUpdateBlockSize(3, 0, true));
@@ -851,8 +893,11 @@ TEST_F(SdioControllerDeviceTest, DifferentManufacturerProductIds) {
   sdmmc_.Write(0x0000'0309, std::vector<uint8_t>{0xb7, 0x6e, 0x01}, 0);
   sdmmc_.Write(0x0000'0409, std::vector<uint8_t>{0x86, 0xb7, 0x00}, 0);
 
+  // clang-format off
   sdmmc_.Write(0x0001'61f5,
                std::vector<uint8_t>{
+                   0x22, 0x04,
+                   0x00, 0x01, 0x00, 32,
                    0x20,        // Manufacturer ID tuple.
                    0x04,        // Manufacturer ID tuple size.
                    0xef, 0xbe,  // Manufacturer code.
@@ -863,51 +908,52 @@ TEST_F(SdioControllerDeviceTest, DifferentManufacturerProductIds) {
 
   sdmmc_.Write(0x0000'56a0,
                std::vector<uint8_t>{
-                   0x20,
-                   0x04,
-                   0x7b,
-                   0x31,
-                   0x8f,
-                   0xa8,
-                   0xff,
+                   0x20, 0x04,            // Manufacturer ID tuple.
+                   0x7b, 0x31,
+                   0x8f, 0xa8,
+                   0x22, 0x2a,            // Function extensions tuple.
+                   0x01,
+                   0, 0, 0, 0,0, 0, 0, 0, // Padding to max block size field.
+                   0x01, 0x00,            // Max block size.
                },
                0);
 
   sdmmc_.Write(0x0000'c3e9,
                std::vector<uint8_t>{
-                   0x20,
-                   0x04,
-                   0xbd,
-                   0x6d,
-                   0x0d,
-                   0x24,
-                   0xff,
+                   0x20, 0x04,
+                   0xbd, 0x6d,
+                   0x0d, 0x24,
+                   0x22, 0x2a,
+                   0x01,
+                   0, 0, 0, 0,0, 0, 0, 0,
+                   0x01, 0x00,
                },
                0);
 
   sdmmc_.Write(0x0001'6eb7,
                std::vector<uint8_t>{
-                   0x20,
-                   0x04,
-                   0xca,
-                   0xb8,
-                   0x52,
-                   0x98,
-                   0xff,
+                   0x20, 0x04,
+                   0xca, 0xb8,
+                   0x52, 0x98,
+                   0x22, 0x2a,
+                   0x01,
+                   0, 0, 0, 0,0, 0, 0, 0,
+                   0x01, 0x00,
                },
                0);
 
   sdmmc_.Write(0x0000'b786,
                std::vector<uint8_t>{
-                   0x20,
-                   0x04,
-                   0xee,
-                   0xf5,
-                   0xde,
-                   0x30,
-                   0xff,
+                   0x20, 0x04,
+                   0xee, 0xf5,
+                   0xde, 0x30,
+                   0x22, 0x2a,
+                   0x01,
+                   0, 0, 0, 0,0, 0, 0, 0,
+                   0x01, 0x00,
                },
                0);
+  // clang-format on
 
   EXPECT_OK(dut_->ProbeSdio());
 
@@ -981,6 +1027,158 @@ TEST_F(SdioControllerDeviceTest, RunDiagnostics) {
   EXPECT_OK(dut_->ProbeSdio());
 
   dut_->SdioRunDiagnostics();
+}
+
+TEST_F(SdioControllerDeviceTest, FunctionZeroInvalidBlockSize) {
+  sdmmc_.set_command_callback(
+      SDIO_SEND_OP_COND, [](sdmmc_req_t* req) -> void { req->response[0] = OpCondFunctions(4); });
+
+  sdmmc_.Write(0x2000, std::vector<uint8_t>{0x22, 0x04, 0x00, 0x00, 0x00}, 0);
+
+  sdmmc_.Write(0x0009, std::vector<uint8_t>{0x00, 0x20, 0x00}, 0);
+
+  EXPECT_NOT_OK(dut_->ProbeSdio());
+}
+
+TEST_F(SdioControllerDeviceTest, IOFunctionInvalidBlockSize) {
+  sdmmc_.set_command_callback(
+      SDIO_SEND_OP_COND, [](sdmmc_req_t* req) -> void { req->response[0] = OpCondFunctions(4); });
+
+  sdmmc_.Write(0x3000, std::vector<uint8_t>{0x22, 0x2a, 0x01}, 0);
+  sdmmc_.Write(0x300e, std::vector<uint8_t>{0x00, 0x00}, 0);
+
+  sdmmc_.Write(0x0209, std::vector<uint8_t>{0x00, 0x30, 0x00}, 0);
+
+  EXPECT_NOT_OK(dut_->ProbeSdio());
+}
+
+TEST_F(SdioControllerDeviceTest, FunctionZeroNoBlockSize) {
+  sdmmc_.set_command_callback(
+      SDIO_SEND_OP_COND, [](sdmmc_req_t* req) -> void { req->response[0] = OpCondFunctions(4); });
+
+  sdmmc_.Write(0x3000, std::vector<uint8_t>{0xff}, 0);
+
+  sdmmc_.Write(0x0009, std::vector<uint8_t>{0x00, 0x30, 0x00}, 0);
+
+  EXPECT_NOT_OK(dut_->ProbeSdio());
+}
+
+TEST_F(SdioControllerDeviceTest, IOFunctionNoBlockSize) {
+  sdmmc_.set_command_callback(
+      SDIO_SEND_OP_COND, [](sdmmc_req_t* req) -> void { req->response[0] = OpCondFunctions(4); });
+
+  sdmmc_.Write(0x3000, std::vector<uint8_t>{0xff}, 0);
+
+  sdmmc_.Write(0x0209, std::vector<uint8_t>{0x00, 0x30, 0x00}, 0);
+
+  EXPECT_NOT_OK(dut_->ProbeSdio());
+}
+
+TEST_F(SdioControllerDeviceTest, UpdateBlockSizeMultiBlock) {
+  sdmmc_.set_command_callback(
+      SDIO_SEND_OP_COND, [](sdmmc_req_t* req) -> void { req->response[0] = OpCondFunctions(4); });
+  sdmmc_.Write(SDIO_CIA_CCCR_CARD_CAPS_ADDR, std::vector<uint8_t>{SDIO_CIA_CCCR_CARD_CAP_SMB}, 0);
+
+  sdmmc_.Write(0x3000, std::vector<uint8_t>{0x22, 0x2a, 0x01}, 0);
+  sdmmc_.Write(0x300e, std::vector<uint8_t>{0x00, 0x02}, 0);
+
+  sdmmc_.Write(0x0209, std::vector<uint8_t>{0x00, 0x30, 0x00}, 0);
+
+  sdmmc_.set_host_info({
+      .caps = 0,
+      .max_transfer_size = 2048,
+      .max_transfer_size_non_dma = 2048,
+      .prefs = 0,
+  });
+
+  dut_->Init();
+
+  sdmmc_.Write(0x210, std::vector<uint8_t>{0x00, 0x00}, 0);
+
+  EXPECT_OK(dut_->ProbeSdio());
+  EXPECT_EQ(sdmmc_.Read(0x210, 2)[0], 0x00);
+  EXPECT_EQ(sdmmc_.Read(0x210, 2)[1], 0x02);
+
+  uint16_t block_size = 0;
+  EXPECT_OK(dut_->SdioGetBlockSize(2, &block_size));
+  EXPECT_EQ(block_size, 512);
+
+  EXPECT_OK(dut_->SdioUpdateBlockSize(2, 128, false));
+  EXPECT_EQ(sdmmc_.Read(0x210, 2)[0], 0x80);
+  EXPECT_EQ(sdmmc_.Read(0x210, 2)[1], 0x00);
+
+  EXPECT_OK(dut_->SdioGetBlockSize(2, &block_size));
+  EXPECT_EQ(block_size, 128);
+
+  EXPECT_OK(dut_->SdioUpdateBlockSize(2, 0, true));
+  EXPECT_EQ(sdmmc_.Read(0x210, 2)[0], 0x00);
+  EXPECT_EQ(sdmmc_.Read(0x210, 2)[1], 0x02);
+
+  EXPECT_OK(dut_->SdioGetBlockSize(2, &block_size));
+  EXPECT_EQ(block_size, 512);
+
+  EXPECT_NOT_OK(dut_->SdioUpdateBlockSize(2, 0, false));
+  EXPECT_EQ(sdmmc_.Read(0x210, 2)[0], 0x00);
+  EXPECT_EQ(sdmmc_.Read(0x210, 2)[1], 0x02);
+
+  EXPECT_OK(dut_->SdioGetBlockSize(2, &block_size));
+  EXPECT_EQ(block_size, 512);
+
+  EXPECT_NOT_OK(dut_->SdioUpdateBlockSize(2, 1024, false));
+}
+
+TEST_F(SdioControllerDeviceTest, UpdateBlockSizeNoMultiBlock) {
+  sdmmc_.set_command_callback(
+      SDIO_SEND_OP_COND, [](sdmmc_req_t* req) -> void { req->response[0] = OpCondFunctions(4); });
+  sdmmc_.Write(SDIO_CIA_CCCR_CARD_CAPS_ADDR, std::vector<uint8_t>{0}, 0);
+
+  sdmmc_.Write(0x3000, std::vector<uint8_t>{0x22, 0x2a, 0x01}, 0);
+  sdmmc_.Write(0x300e, std::vector<uint8_t>{0x00, 0x02}, 0);
+
+  sdmmc_.Write(0x0209, std::vector<uint8_t>{0x00, 0x30, 0x00}, 0);
+
+  sdmmc_.set_host_info({
+      .caps = 0,
+      .max_transfer_size = 2048,
+      .max_transfer_size_non_dma = 2048,
+      .prefs = 0,
+  });
+
+  dut_->Init();
+
+  // Dummy value that should not get written or returned.
+  sdmmc_.Write(0x210, std::vector<uint8_t>{0xa5, 0xa5}, 0);
+
+  EXPECT_OK(dut_->ProbeSdio());
+  EXPECT_EQ(sdmmc_.Read(0x210, 2)[0], 0xa5);
+  EXPECT_EQ(sdmmc_.Read(0x210, 2)[1], 0xa5);
+
+  uint16_t block_size = 0;
+  EXPECT_OK(dut_->SdioGetBlockSize(2, &block_size));
+  EXPECT_EQ(block_size, 512);
+
+  EXPECT_OK(dut_->SdioUpdateBlockSize(2, 128, false));
+  EXPECT_EQ(sdmmc_.Read(0x210, 2)[0], 0xa5);
+  EXPECT_EQ(sdmmc_.Read(0x210, 2)[1], 0xa5);
+
+  EXPECT_OK(dut_->SdioGetBlockSize(2, &block_size));
+  EXPECT_EQ(block_size, 128);
+
+  EXPECT_OK(dut_->SdioUpdateBlockSize(2, 0, true));
+  EXPECT_EQ(sdmmc_.Read(0x210, 2)[0], 0xa5);
+  EXPECT_EQ(sdmmc_.Read(0x210, 2)[1], 0xa5);
+
+  EXPECT_OK(dut_->SdioGetBlockSize(2, &block_size));
+  EXPECT_EQ(block_size, 512);
+
+  EXPECT_NOT_OK(dut_->SdioUpdateBlockSize(2, 0, false));
+  EXPECT_EQ(sdmmc_.Read(0x210, 2)[0], 0xa5);
+  EXPECT_EQ(sdmmc_.Read(0x210, 2)[1], 0xa5);
+
+  EXPECT_OK(dut_->SdioGetBlockSize(2, &block_size));
+  EXPECT_EQ(block_size, 512);
+
+  EXPECT_NOT_OK(dut_->SdioUpdateBlockSize(2, 1024, false));
 }
 
 TEST_F(SdioScatterGatherTest, ScatterGatherByteMode) {
