@@ -566,6 +566,10 @@ void SemanticTree::FillInspectTree(inspect::Node inspect_node,
     if (node->has_transform()) {
       inspect_node.CreateString("transform", mat4ToString(node->transform()), inspector);
     }
+    if (node->has_node_to_container_transform()) {
+      inspect_node.CreateString("node_to_container_transform",
+                                mat4ToString(node->node_to_container_transform()), inspector);
+    }
     if (node->has_role()) {
       inspect_node.CreateString("role", roleToString(node->role()), inspector);
     }
