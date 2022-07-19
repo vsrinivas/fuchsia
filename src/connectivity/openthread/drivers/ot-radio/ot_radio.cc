@@ -55,7 +55,7 @@ void OtRadioDevice::ResetFrameInspectData() {
   bool invalid_state = false;
   for (size_t i = 0; i < pending_tid_->size(); i++) {
     if (pending_tid_->at(i)) {
-      zxlogf(ERROR, "ot-radio: pending tid %zu while resetting the radio", i);
+      zxlogf(WARNING, "ot-radio: pending tid %zu while resetting the radio", i);
       pending_tid_->at(i) = false;
       invalid_state = true;
     }
