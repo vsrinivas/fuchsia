@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/zircon_boot/zircon_boot.h>
+#include "phys/efi/main.h"
+
 #include <stdio.h>
 
+#include "gigaboot/src/netifc.h"
+#include "xefi.h"
 #include "zircon_boot_ops.h"
 
 // TODO(b/236039205): We need a better solution for allocating buffer for
@@ -21,6 +24,19 @@ uint8_t kernel_load_buffer[128 * 1024 * 1024];
 int main(int argc, char** argv) {
   printf("Gigaboot main\n");
 
+  // TODO(b/235489025): We reuse some legacy C gigaboot code for stuff like network stack.
+  // This initializes the global variables the legacy code needs. Once these needed features are
+  // re-implemented, remove these dependencies.
+  xefi_init(gEfiImageHandle, gEfiSystemTable);
+
+  // The following check/initialize network interface and generate ip6 address.
+  if (netifc_open()) {
+    printf("netifc: Failed to open network interface\n");
+    return 1;
+  }
+
+  printf("netifc: network interface opened\n");
+
   // TODO(b/235489025): Implement mechanism for setting force recovery. The C gigaboot
   // uses bootbyte (a non-volatile memory), which can be device specific. Consider using
   // the abr one-shot-recovery mechanism.
@@ -35,5 +51,6 @@ int main(int argc, char** argv) {
     printf("Failed to boot zircon\n");
     return 1;
   }
+
   return 0;
 }

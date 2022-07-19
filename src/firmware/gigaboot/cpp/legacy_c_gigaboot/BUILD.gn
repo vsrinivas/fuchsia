@@ -1,0 +1,98 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+dir_gigaboot = "//src/firmware/gigaboot"
+
+config("includes") {
+  include_dirs = [ "." ]
+
+  # sys/types.h
+  configs = [ "//zircon/kernel:headers" ]
+}
+
+config("legacy_includes") {
+  # All legacy c gigaboot headers will be included like
+  # <gigaboot/src/...>
+  include_dirs = [ "../../.." ]
+  configs = [ "$dir_gigaboot/lib:shared_config" ]
+}
+
+# A target for building legacy c gigaboot in ../src with the physboot efi
+# toolchain
+source_set("legacy_c_gigaboot") {
+  sources = [
+    "$dir_gigaboot/lib/cmdline.c",
+    "$dir_gigaboot/lib/console-printf.c",
+    "$dir_gigaboot/lib/inet.c",
+    "$dir_gigaboot/lib/loadfile.c",
+    "$dir_gigaboot/lib/printf.c",
+    "$dir_gigaboot/lib/stdlib.c",
+    "$dir_gigaboot/lib/string.c",
+    "$dir_gigaboot/lib/strings.c",
+    "$dir_gigaboot/lib/xefi.c",
+    "$dir_gigaboot/src/abr.c",
+    "$dir_gigaboot/src/acpi.c",
+    "$dir_gigaboot/src/avb.c",
+    "$dir_gigaboot/src/bootimg.c",
+    "$dir_gigaboot/src/cmdline.c",
+    "$dir_gigaboot/src/device_id.c",
+    "$dir_gigaboot/src/diskio.c",
+    "$dir_gigaboot/src/fastboot.c",
+    "$dir_gigaboot/src/framebuffer.c",
+    "$dir_gigaboot/src/inet6.c",
+    "$dir_gigaboot/src/logo.c",
+    "$dir_gigaboot/src/mdns.c",
+    "$dir_gigaboot/src/misc.c",
+    "$dir_gigaboot/src/netboot.c",
+    "$dir_gigaboot/src/netifc.c",
+    "$dir_gigaboot/src/osboot.c",
+    "$dir_gigaboot/src/pci.c",
+    "$dir_gigaboot/src/tcp.c",
+    "$dir_gigaboot/src/utf_conversion.c",
+    "$dir_gigaboot/src/util.c",
+    "$dir_gigaboot/src/variable.c",
+    "$dir_gigaboot/src/zircon.c",
+  ]
+  configs += [ "$dir_gigaboot/src:config" ]
+
+  deps = [
+    "//src/firmware/lib/abr:in_tree",
+    "//src/firmware/lib/zbi:in_tree",
+    "//third_party/android/platform/external/avb:lib",
+    "//zircon/kernel/lib/efi",
+    "//zircon/system/public",
+    "//zircon/system/ulib/ddk-platform-defs",
+    "//zircon/system/ulib/gfx-font",
+    "//zircon/system/ulib/tftp",
+    "//zircon/third_party/ulib/cksum",
+  ]
+
+  public_configs = [
+    ":includes",
+    ":legacy_includes",
+  ]
+
+  # For the missing c std headers provided in this folder.
+  include_dirs = [
+    ".",
+    "../../src",
+  ]
+
+  public_deps = []
+  if (is_kernel) {
+    public_deps += [
+      "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc",
+    ]
+  }
+
+  # TODO(b/238334864): Fix the compiling warning if code that has the
+  # problem needs to be used long term.
+  cflags_c = [
+    "-Wno-error",
+    "-Wno-implicit-int-conversion",
+    "-Wno-missing-prototypes",
+    "-Wno-implicit-function-declaration",
+  ]
+}

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_ULIB_TFTP_INTERNAL_H_
+#define ZIRCON_SYSTEM_ULIB_TFTP_INTERNAL_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -232,9 +233,14 @@ tftp_status tftp_handle_oack(tftp_session* session, tftp_msg* oack, size_t oack_
 tftp_status tftp_handle_oerror(tftp_session* session, tftp_msg* oerr, size_t oerr_len,
                                tftp_msg* resp, size_t* resp_len, uint32_t* timeout_ms,
                                void* cookie);
+tftp_status tftp_handle_request(tftp_session* session, tftp_file_direction direction, tftp_msg* req,
+                                size_t req_len, tftp_msg* resp, size_t* resp_len,
+                                uint32_t* timeout_ms, void* cookie);
 
 void print_hex(uint8_t* buf, size_t len);
 
 #ifdef __cplusplus
 }  // extern "C"
 #endif
+
+#endif  // ZIRCON_SYSTEM_ULIB_TFTP_INTERNAL_H_

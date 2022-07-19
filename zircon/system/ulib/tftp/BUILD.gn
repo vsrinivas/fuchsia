@@ -11,6 +11,17 @@ zx_library("tftp") {
   sources = [ "tftp.c" ]
   if (is_efi_toolchain) {
     defines = [ "TFTP_EFILIB" ]
+
+    # If we are compiling with the physboot efi toolchain, we need to specify
+    # the c std library explicitly. In addition, there are a few other missing
+    # headers i.e. strings.h, arpa/inet.h. Since in the case of efi toolchain,
+    # the library is only used by gigaboot, we'll use the headers provided from
+    # the gigaboot.
+    if (current_toolchain ==
+        "//zircon/kernel/phys/efi:kernel.efi_$target_cpu") {
+      public_deps = [ "//zircon/kernel/lib/libc" ]  # c std headers
+      configs += [ "//src/firmware/gigaboot/cpp/legacy_c_gigaboot:includes" ]
+    }
   } else if (is_host) {
     defines = [ "TFTP_HOSTLIB" ]
   }

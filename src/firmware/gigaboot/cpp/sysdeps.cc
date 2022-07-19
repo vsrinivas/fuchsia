@@ -10,17 +10,6 @@
 
 #include "libavb/avb_sysdeps.h"
 
-// avb_atx_validate_vbmeta_public_key() allocate large size local variables
-// on stack, which triggers "undefined symbol: __chkstk" error (the call is
-// added by compiler to check stack). The following adds a dummy definition
-// as a workaround.
-extern "C" void __chkstk(void) {}
-
-// Crc implementation for abr
-extern "C" uint32_t AbrCrc32(const void* buf, size_t buf_size) {
-  return crc32(0, reinterpret_cast<const uint8_t*>(buf), buf_size);
-}
-
 // The following are sysdeps implementation for avb library
 
 int avb_memcmp(const void* src1, const void* src2, size_t n) { return memcmp(src1, src2, n); }
