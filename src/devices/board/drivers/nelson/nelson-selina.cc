@@ -30,6 +30,15 @@ static composite_device_desc_t composite_dev = []() {
   return desc;
 }();
 
-zx_status_t Nelson::SelinaInit() { return DdkAddComposite("selina", &composite_dev); }
+zx_status_t Nelson::SelinaInit() {
+  // Enable the clock to the Selina sensor on proto boards. This pin is not connected to anything on
+  // DVT2.
+  if (GetBoardRev() == BOARD_REV_P1) {
+    gpio_impl_.SetAltFunction(GPIO_SOC_SELINA_OSC_EN, 0);
+    gpio_impl_.ConfigOut(GPIO_SOC_SELINA_OSC_EN, 1);
+  }
+
+  return DdkAddComposite("selina", &composite_dev);
+}
 
 }  // namespace nelson
