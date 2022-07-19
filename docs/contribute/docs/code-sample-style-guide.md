@@ -1,6 +1,6 @@
 # Code sample style guidelines {#overview}
 
-This document describes how to incorportate code samples in documentation,
+This document describes how to incorporate code samples in documentation,
 and specific style guidelines for code samples. This includes:
 
   *  [Code sample best practices](#code-sample-best-practices)
