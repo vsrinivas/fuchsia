@@ -40,6 +40,7 @@ pub mod error;
 mod fuzz;
 mod ip;
 mod socket;
+mod sync;
 #[cfg(test)]
 mod testutil;
 mod transport;

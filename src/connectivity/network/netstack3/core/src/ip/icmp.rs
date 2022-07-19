@@ -60,6 +60,7 @@ use crate::{
         IpTransportContext, SendIpPacketMeta, TransportReceiveError, IPV6_DEFAULT_SUBNET,
     },
     socket::{ConnSocketEntry, ConnSocketMap},
+    sync::{Mutex, RwLock},
     BufferNonSyncContext, NonSyncContext, SyncCtx,
 };
 
@@ -104,8 +105,8 @@ pub(crate) struct IcmpSockets<A: IpAddress, S> {
 }
 
 pub(crate) struct IcmpState<A: IpAddress, Instant, S> {
-    pub(crate) sockets: IcmpSockets<A, S>,
-    pub(crate) error_send_bucket: TokenBucket<Instant>,
+    pub(crate) sockets: RwLock<IcmpSockets<A, S>>,
+    pub(crate) error_send_bucket: Mutex<TokenBucket<Instant>>,
 }
 
 /// A builder for ICMPv4 state.
@@ -151,7 +152,7 @@ impl Icmpv4StateBuilder {
         Icmpv4State {
             inner: IcmpState {
                 sockets: Default::default(),
-                error_send_bucket: TokenBucket::new(self.errors_per_second),
+                error_send_bucket: Mutex::new(TokenBucket::new(self.errors_per_second)),
             },
             send_timestamp_reply: self.send_timestamp_reply,
         }
@@ -210,7 +211,7 @@ impl Icmpv6StateBuilder {
         Icmpv6State {
             inner: IcmpState {
                 sockets: Default::default(),
-                error_send_bucket: TokenBucket::new(self.errors_per_second),
+                error_send_bucket: Mutex::new(TokenBucket::new(self.errors_per_second)),
             },
         }
     }
@@ -3705,19 +3706,22 @@ mod tests {
 
     struct DummyIcmpv4Ctx {
         inner: DummyIcmpCtx<Ipv4, DummyDeviceId>,
-        icmp_state: Icmpv4State<DummyInstant, IpSock<Ipv4, DummyDeviceId>>,
+        sockets: IcmpSockets<Ipv4Addr, IpSock<Ipv4, DummyDeviceId>>,
+        error_send_bucket: TokenBucket<DummyInstant>,
     }
 
     struct DummyIcmpv6Ctx {
         inner: DummyIcmpCtx<Ipv6, DummyDeviceId>,
-        icmp_state: Icmpv6State<DummyInstant, IpSock<Ipv6, DummyDeviceId>>,
+        sockets: IcmpSockets<Ipv6Addr, IpSock<Ipv6, DummyDeviceId>>,
+        error_send_bucket: TokenBucket<DummyInstant>,
     }
 
     impl Default for DummyIcmpv4Ctx {
         fn default() -> DummyIcmpv4Ctx {
             DummyIcmpv4Ctx {
                 inner: DummyIcmpCtx::default(),
-                icmp_state: Icmpv4StateBuilder::default().build(),
+                sockets: Default::default(),
+                error_send_bucket: TokenBucket::new(DEFAULT_ERRORS_PER_SECOND),
             }
         }
     }
@@ -3726,7 +3730,8 @@ mod tests {
         fn default() -> DummyIcmpv6Ctx {
             DummyIcmpv6Ctx {
                 inner: DummyIcmpCtx::default(),
-                icmp_state: Icmpv6StateBuilder::default().build(),
+                sockets: Default::default(),
+                error_send_bucket: TokenBucket::new(DEFAULT_ERRORS_PER_SECOND),
             }
         }
     }
@@ -3761,7 +3766,7 @@ mod tests {
             impl $inner {
                 fn with_errors_per_second(errors_per_second: u64) -> $inner {
                     let mut ctx = $inner::default();
-                    ctx.icmp_state.inner.error_send_bucket = TokenBucket::new(errors_per_second);
+                    ctx.error_send_bucket = TokenBucket::new(errors_per_second);
                     ctx
                 }
             }
@@ -3850,7 +3855,7 @@ mod tests {
                     &self,
                     cb: F,
                 ) -> O {
-                    cb(&self.get_ref().icmp_state.inner.sockets)
+                    cb(&self.get_ref().sockets)
                 }
 
                 fn with_icmp_sockets_mut<
@@ -3860,14 +3865,14 @@ mod tests {
                     &mut self,
                     cb: F,
                 ) -> O {
-                    cb(&mut self.get_mut().icmp_state.inner.sockets)
+                    cb(&mut self.get_mut().sockets)
                 }
 
                 fn with_error_send_bucket_mut<O, F: FnOnce(&mut TokenBucket<DummyInstant>) -> O>(
                     &mut self,
                     cb: F,
                 ) -> O {
-                    cb(&mut self.get_mut().icmp_state.inner.error_send_bucket)
+                    cb(&mut self.get_mut().error_send_bucket)
                 }
             }
         };
@@ -3884,7 +3889,7 @@ mod tests {
 
     impl InnerIcmpv4Context<Dummyv4NonSyncCtx> for Dummyv4SyncCtx {
         fn should_send_timestamp_reply(&self) -> bool {
-            self.get_ref().icmp_state.send_timestamp_reply
+            false
         }
     }
 

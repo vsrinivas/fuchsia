@@ -27,8 +27,10 @@ use core::{
     fmt::{self, Debug, Display, Formatter},
     hash::Hash,
     num::NonZeroU8,
+    sync::atomic::{AtomicU16, Ordering},
 };
 
+use derivative::Derivative;
 use log::{debug, trace};
 use net_types::{
     ip::{Ip, IpAddress, IpVersion, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Ipv6SourceAddr, Subnet},
@@ -73,6 +75,7 @@ use crate::{
             IpSocketContext, IpSocketHandler,
         },
     },
+    sync::{Mutex, RwLock},
     BufferNonSyncContext, Instant, NonSyncContext, SyncCtx,
 };
 
@@ -902,13 +905,9 @@ impl Ipv4StateBuilder {
         let Ipv4StateBuilder { icmp } = self;
 
         Ipv4State {
-            inner: IpStateInner {
-                table: ForwardingTable::default(),
-                fragment_cache: IpPacketFragmentCache::default(),
-                pmtu_cache: PmtuCache::default(),
-            },
+            inner: Default::default(),
             icmp: icmp.build(),
-            next_packet_id: 0,
+            next_packet_id: Default::default(),
         }
     }
 }
@@ -928,21 +927,14 @@ impl Ipv6StateBuilder {
     pub(crate) fn build<Instant: crate::Instant, D>(self) -> Ipv6State<Instant, D> {
         let Ipv6StateBuilder { icmp } = self;
 
-        Ipv6State {
-            inner: IpStateInner {
-                table: ForwardingTable::default(),
-                fragment_cache: IpPacketFragmentCache::default(),
-                pmtu_cache: PmtuCache::default(),
-            },
-            icmp: icmp.build(),
-        }
+        Ipv6State { inner: Default::default(), icmp: icmp.build() }
     }
 }
 
 pub(crate) struct Ipv4State<Instant: crate::Instant, D> {
     inner: IpStateInner<Ipv4, Instant, D>,
     icmp: Icmpv4State<Instant, IpSock<Ipv4, D>>,
-    next_packet_id: u16,
+    next_packet_id: AtomicU16,
 }
 
 impl<I: Instant, DeviceId> AsRef<IpStateInner<Ipv4, I, DeviceId>> for Ipv4State<I, DeviceId> {
@@ -958,11 +950,12 @@ impl<I: Instant, DeviceId> AsMut<IpStateInner<Ipv4, I, DeviceId>> for Ipv4State<
 }
 
 fn gen_ipv4_packet_id<I: Instant, C: IpStateContext<Ipv4, I>>(sync_ctx: &mut C) -> u16 {
+    // Relaxed ordering as we only need atomicity without synchronization. See
+    // https://en.cppreference.com/w/cpp/atomic/memory_order#Relaxed_ordering
+    // for more details.
+    //
     // TODO(https://fxbug.dev/87588): Generate IPv4 IDs unpredictably
-    sync_ctx.with_ip_layer_state_mut(|state| {
-        state.next_packet_id = state.next_packet_id.wrapping_add(1);
-        state.next_packet_id
-    })
+    sync_ctx.with_ip_layer_state_mut(|state| state.next_packet_id.fetch_add(1, Ordering::Relaxed))
 }
 
 pub(crate) struct Ipv6State<Instant: crate::Instant, D> {
@@ -982,10 +975,12 @@ impl<I: Instant, DeviceId> AsMut<IpStateInner<Ipv6, I, DeviceId>> for Ipv6State<
     }
 }
 
+#[derive(Derivative)]
+#[derivative(Default(bound = ""))]
 pub(crate) struct IpStateInner<I: Ip, Instant: crate::Instant, DeviceId> {
-    table: ForwardingTable<I, DeviceId>,
-    fragment_cache: IpPacketFragmentCache<I, Instant>,
-    pmtu_cache: PmtuCache<I, Instant>,
+    table: RwLock<ForwardingTable<I, DeviceId>>,
+    fragment_cache: Mutex<IpPacketFragmentCache<I, Instant>>,
+    pmtu_cache: Mutex<PmtuCache<I, Instant>>,
 }
 
 /// The identifier for timer events in the IP layer.
@@ -2087,7 +2082,7 @@ fn lookup_route<
     dst_ip: SpecifiedAddr<I::Addr>,
 ) -> Option<Destination<I::Addr, SC::DeviceId>> {
     sync_ctx.with_ip_layer_state(|state| {
-        AsRef::<IpStateInner<_, _, _>>::as_ref(state).table.lookup(device, dst_ip)
+        AsRef::<IpStateInner<_, _, _>>::as_ref(state).table.read().lookup(device, dst_ip)
     })
 }
 
@@ -2117,7 +2112,7 @@ pub(crate) fn add_route<
     subnet: Subnet<I::Addr>,
     next_hop: SpecifiedAddr<I::Addr>,
 ) -> Result<(), AddRouteError> {
-    with_ip_layer_state_inner_mut(sync_ctx, |state| state.table.add_route(subnet, next_hop))
+    with_ip_layer_state_inner_mut(sync_ctx, |state| state.table.write().add_route(subnet, next_hop))
 }
 
 /// Add a device route to the forwarding table, returning `Err` if the
@@ -2133,7 +2128,7 @@ pub(crate) fn add_device_route<
     device: SC::DeviceId,
 ) -> Result<(), ExistsError> {
     with_ip_layer_state_inner_mut(sync_ctx, |state| {
-        state.table.add_device_route(subnet, device).map(|()| {
+        state.table.write().add_device_route(subnet, device).map(|()| {
             ctx.on_event(IpLayerEvent::DeviceRouteAdded { device, subnet });
         })
     })
@@ -2151,7 +2146,7 @@ pub(crate) fn del_route<
     subnet: Subnet<I::Addr>,
 ) -> Result<(), NotFoundError> {
     with_ip_layer_state_inner_mut(sync_ctx, |state| {
-        state.table.del_route(subnet).map(|removed| {
+        state.table.write().del_route(subnet).map(|removed| {
             removed.into_iter().for_each(|Entry { subnet, device, gateway }| match gateway {
                 None => ctx.on_event(IpLayerEvent::DeviceRouteRemoved { device, subnet }),
                 Some(SpecifiedAddr { .. }) => (),
@@ -2170,23 +2165,36 @@ pub(crate) fn del_device_routes<
     to_delete: &SC::DeviceId,
 ) {
     with_ip_layer_state_inner_mut(sync_ctx, |state| {
-        state.table.retain(|Entry { subnet: _, device, gateway: _ }| device != to_delete)
+        state.table.write().retain(|Entry { subnet: _, device, gateway: _ }| device != to_delete)
     })
+}
+
+/// Calls the function with an immutable reference to the IPv4 & IPv6 routing
+/// table.
+///
+/// Helper function to enforce lock ordering in a single place.
+fn with_ipv4_and_ipv6_routing_tables<
+    C: NonSyncContext,
+    O,
+    F: FnOnce(&ForwardingTable<Ipv4, DeviceId>, &ForwardingTable<Ipv6, DeviceId>) -> O,
+>(
+    sync_ctx: &SyncCtx<C>,
+    cb: F,
+) -> O {
+    cb(&sync_ctx.state.ipv4.inner.table.read(), &sync_ctx.state.ipv6.inner.table.read())
 }
 
 /// Get all the routes.
 pub fn get_all_routes<NonSyncCtx: NonSyncContext>(
-    ctx: &SyncCtx<NonSyncCtx>,
+    sync_ctx: &SyncCtx<NonSyncCtx>,
 ) -> Vec<EntryEither<DeviceId>> {
-    ctx.state
-        .ipv4
-        .inner
-        .table
-        .iter_table()
-        .cloned()
-        .map(From::from)
-        .chain(ctx.state.ipv6.inner.table.iter_table().cloned().map(From::from))
-        .collect()
+    with_ipv4_and_ipv6_routing_tables(sync_ctx, |ipv4, ipv6| {
+        ipv4.iter_table()
+            .cloned()
+            .map(From::from)
+            .chain(ipv6.iter_table().cloned().map(From::from))
+            .collect()
+    })
 }
 
 /// The metadata associated with an outgoing IP packet.
@@ -2391,7 +2399,7 @@ impl<C: NonSyncContext> InnerIcmpContext<Ipv4, C> for SyncCtx<C> {
         &self,
         cb: F,
     ) -> O {
-        cb(&self.state.ipv4.icmp.as_ref().sockets)
+        cb(&self.state.ipv4.icmp.as_ref().sockets.read())
     }
 
     fn with_icmp_sockets_mut<
@@ -2401,14 +2409,14 @@ impl<C: NonSyncContext> InnerIcmpContext<Ipv4, C> for SyncCtx<C> {
         &mut self,
         cb: F,
     ) -> O {
-        cb(&mut self.state.ipv4.icmp.as_mut().sockets)
+        cb(&mut self.state.ipv4.icmp.as_mut().sockets.write())
     }
 
     fn with_error_send_bucket_mut<O, F: FnOnce(&mut TokenBucket<C::Instant>) -> O>(
         &mut self,
         cb: F,
     ) -> O {
-        cb(&mut self.state.ipv4.icmp.as_mut().error_send_bucket)
+        cb(&mut self.state.ipv4.icmp.as_mut().error_send_bucket.lock())
     }
 }
 
@@ -2451,7 +2459,7 @@ impl<C: NonSyncContext> InnerIcmpContext<Ipv6, C> for SyncCtx<C> {
         &self,
         cb: F,
     ) -> O {
-        cb(&self.state.ipv6.icmp.as_ref().sockets)
+        cb(&self.state.ipv6.icmp.as_ref().sockets.read())
     }
 
     fn with_icmp_sockets_mut<
@@ -2461,14 +2469,14 @@ impl<C: NonSyncContext> InnerIcmpContext<Ipv6, C> for SyncCtx<C> {
         &mut self,
         cb: F,
     ) -> O {
-        cb(&mut self.state.ipv6.icmp.as_mut().sockets)
+        cb(&mut self.state.ipv6.icmp.as_mut().sockets.write())
     }
 
     fn with_error_send_bucket_mut<O, F: FnOnce(&mut TokenBucket<C::Instant>) -> O>(
         &mut self,
         cb: F,
     ) -> O {
-        cb(&mut self.state.ipv6.icmp.as_mut().error_send_bucket)
+        cb(&mut self.state.ipv6.icmp.as_mut().error_send_bucket.lock())
     }
 }
 
@@ -3254,44 +3262,36 @@ mod tests {
         .into_inner()
     }
 
-    trait GetStateIpExt: Ip {
-        fn get_state_inner<C: NonSyncContext>(
+    trait GetPmtuIpExt: Ip {
+        fn get_pmtu<C: NonSyncContext>(
             state: &StackState<C>,
-        ) -> &IpStateInner<Self, C::Instant, DeviceId>;
-
-        fn get_state_inner_mut<C: NonSyncContext>(
-            state: &mut StackState<C>,
-        ) -> &mut IpStateInner<Self, C::Instant, DeviceId>;
+            local_ip: Self::Addr,
+            remote_ip: Self::Addr,
+        ) -> Option<u32>;
     }
 
-    impl GetStateIpExt for Ipv4 {
-        fn get_state_inner<C: NonSyncContext>(
+    impl GetPmtuIpExt for Ipv4 {
+        fn get_pmtu<C: NonSyncContext>(
             state: &StackState<C>,
-        ) -> &IpStateInner<Self, C::Instant, DeviceId> {
-            return &state.ipv4.inner;
-        }
-        fn get_state_inner_mut<C: NonSyncContext>(
-            state: &mut StackState<C>,
-        ) -> &mut IpStateInner<Self, C::Instant, DeviceId> {
-            return &mut state.ipv4.inner;
+            local_ip: Ipv4Addr,
+            remote_ip: Ipv4Addr,
+        ) -> Option<u32> {
+            state.ipv4.inner.pmtu_cache.lock().get_pmtu(local_ip, remote_ip)
         }
     }
 
-    impl GetStateIpExt for Ipv6 {
-        fn get_state_inner<C: NonSyncContext>(
+    impl GetPmtuIpExt for Ipv6 {
+        fn get_pmtu<C: NonSyncContext>(
             state: &StackState<C>,
-        ) -> &IpStateInner<Self, C::Instant, DeviceId> {
-            return &state.ipv6.inner;
-        }
-        fn get_state_inner_mut<C: NonSyncContext>(
-            state: &mut StackState<C>,
-        ) -> &mut IpStateInner<Self, C::Instant, DeviceId> {
-            return &mut state.ipv6.inner;
+            local_ip: Ipv6Addr,
+            remote_ip: Ipv6Addr,
+        ) -> Option<u32> {
+            state.ipv6.inner.pmtu_cache.lock().get_pmtu(local_ip, remote_ip)
         }
     }
 
     #[ip_test]
-    fn test_ip_update_pmtu<I: Ip + TestIpExt + GetStateIpExt>() {
+    fn test_ip_update_pmtu<I: Ip + TestIpExt + GetPmtuIpExt>() {
         // Test receiving a Packet Too Big (IPv6) or Dest Unreachable
         // Fragmentation Required (IPv4) which should update the PMTU if it is
         // less than the current value.
@@ -3327,9 +3327,7 @@ mod tests {
         assert_eq!(get_counter_val(&non_sync_ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         assert_eq!(
-            I::get_state_inner(&sync_ctx.state)
-                .pmtu_cache
-                .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
+            I::get_pmtu(&sync_ctx.state, dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
             new_mtu1
         );
@@ -3361,9 +3359,7 @@ mod tests {
 
         // The PMTU should not have updated to `new_mtu2`
         assert_eq!(
-            I::get_state_inner(&sync_ctx.state)
-                .pmtu_cache
-                .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
+            I::get_pmtu(&sync_ctx.state, dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
             new_mtu1
         );
@@ -3395,16 +3391,14 @@ mod tests {
 
         // The PMTU should have updated to 1900.
         assert_eq!(
-            I::get_state_inner(&sync_ctx.state)
-                .pmtu_cache
-                .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
+            I::get_pmtu(&sync_ctx.state, dummy_config.local_ip.get(), dummy_config.remote_ip.get())
                 .unwrap(),
             new_mtu3
         );
     }
 
     #[ip_test]
-    fn test_ip_update_pmtu_too_low<I: Ip + TestIpExt + GetStateIpExt>() {
+    fn test_ip_update_pmtu_too_low<I: Ip + TestIpExt + GetPmtuIpExt>() {
         // Test receiving a Packet Too Big (IPv6) or Dest Unreachable
         // Fragmentation Required (IPv4) which should not update the PMTU if it
         // is less than the min MTU.
@@ -3440,9 +3434,7 @@ mod tests {
         assert_eq!(get_counter_val(&non_sync_ctx, dispatch_receive_ip_packet_name::<I>()), 1);
 
         assert_eq!(
-            I::get_state_inner(&sync_ctx.state)
-                .pmtu_cache
-                .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get()),
+            I::get_pmtu(&sync_ctx.state, dummy_config.local_ip.get(), dummy_config.remote_ip.get()),
             None
         );
     }
@@ -3490,10 +3482,12 @@ mod tests {
         // Should have decreased PMTU value to the next lower PMTU
         // plateau from `crate::ip::path_mtu::PMTU_PLATEAUS`.
         assert_eq!(
-            Ipv4::get_state_inner(&sync_ctx.state)
-                .pmtu_cache
-                .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
-                .unwrap(),
+            Ipv4::get_pmtu(
+                &sync_ctx.state,
+                dummy_config.local_ip.get(),
+                dummy_config.remote_ip.get()
+            )
+            .unwrap(),
             508
         );
 
@@ -3517,10 +3511,12 @@ mod tests {
         // Should not have updated PMTU as there is no other valid
         // lower PMTU value.
         assert_eq!(
-            Ipv4::get_state_inner(&sync_ctx.state)
-                .pmtu_cache
-                .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
-                .unwrap(),
+            Ipv4::get_pmtu(
+                &sync_ctx.state,
+                dummy_config.local_ip.get(),
+                dummy_config.remote_ip.get()
+            )
+            .unwrap(),
             508
         );
 
@@ -3544,10 +3540,12 @@ mod tests {
         // Should have decreased PMTU value to the next lower PMTU
         // plateau from `crate::ip::path_mtu::PMTU_PLATEAUS`.
         assert_eq!(
-            Ipv4::get_state_inner(&sync_ctx.state)
-                .pmtu_cache
-                .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
-                .unwrap(),
+            Ipv4::get_pmtu(
+                &sync_ctx.state,
+                dummy_config.local_ip.get(),
+                dummy_config.remote_ip.get()
+            )
+            .unwrap(),
             68
         );
 
@@ -3573,10 +3571,12 @@ mod tests {
 
         // Should not have updated the PMTU as the current PMTU is lower.
         assert_eq!(
-            Ipv4::get_state_inner(&sync_ctx.state)
-                .pmtu_cache
-                .get_pmtu(dummy_config.local_ip.get(), dummy_config.remote_ip.get())
-                .unwrap(),
+            Ipv4::get_pmtu(
+                &sync_ctx.state,
+                dummy_config.local_ip.get(),
+                dummy_config.remote_ip.get()
+            )
+            .unwrap(),
             68
         );
     }

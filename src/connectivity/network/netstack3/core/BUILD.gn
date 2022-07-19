@@ -50,6 +50,7 @@ lib_sources = [
   "src/socket/address.rs",
   "src/socket/mod.rs",
   "src/socket/posix.rs",
+  "src/sync.rs",
   "src/testutil.rs",
   "src/transport/integration.rs",
   "src/transport/mod.rs",
