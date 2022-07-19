@@ -12,14 +12,10 @@ rustc_binary("bin") {
 
   deps = [
     "//src/experiences/session_shells/ermine/fidl:ermine.tools-rustc",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/sys/component_manager/tests/fidl:components-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:thiserror",
   ]
 
   sources = [ "src/main.rs" ]
