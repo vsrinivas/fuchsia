@@ -86,6 +86,11 @@ class Config {
 
   static std::string StatusToString(Status status);
 
+  Config() = default;
+  ~Config() = default;
+
+  // Use the default default copy/move constructors.
+
   // Remove existing contents.
   void Reset();
 
