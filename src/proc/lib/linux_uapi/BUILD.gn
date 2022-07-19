@@ -13,4 +13,6 @@ rustc_library("linux_uapi") {
   ]
 
   deps = [ "//src/lib/zerocopy" ]
+
+  disable_clippy = true
 }

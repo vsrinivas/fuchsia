@@ -20,6 +20,7 @@
 #include <linux/capability.h>
 #include <linux/errno.h>
 #include <linux/eventpoll.h>
+#include <linux/fb.h>
 #include <linux/fcntl.h>
 #include <linux/fs.h>
 #include <linux/futex.h>
