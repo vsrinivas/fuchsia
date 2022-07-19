@@ -47,8 +47,6 @@ group("all") {
     "//src/developer/memory/mem",
     "//src/fonts",
     "//src/power:battery",
-    "//src/ui:runtime_with_root_presenter",
-    "//src/ui/a11y:a11y",
     "//src/zircon/bin/hwstress",
     "//third_party/sbase",
   ]

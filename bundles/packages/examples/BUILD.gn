@@ -25,7 +25,6 @@ group("all") {
     ":fidl",
     ":rust",
     "//examples/benchmark",
-    "//src/ui:runtime_with_root_presenter",
     "//src/ui/examples",
   ]
 }
