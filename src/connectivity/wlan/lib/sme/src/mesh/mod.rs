@@ -305,11 +305,14 @@ fn create_peering_params(
 }
 
 impl MeshSme {
-    pub fn new(device_info: DeviceInfo) -> (Self, crate::MlmeStream) {
+    pub fn new(device_info: DeviceInfo) -> (Self, crate::MlmeSink, crate::MlmeStream) {
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
-        let sme =
-            MeshSme { mlme_sink: MlmeSink::new(mlme_sink), state: Some(State::Idle), device_info };
-        (sme, mlme_stream)
+        let sme = MeshSme {
+            mlme_sink: MlmeSink::new(mlme_sink.clone()),
+            state: Some(State::Idle),
+            device_info,
+        };
+        (sme, MlmeSink::new(mlme_sink.clone()), mlme_stream)
     }
 }
 

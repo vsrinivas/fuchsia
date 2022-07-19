@@ -121,7 +121,7 @@ impl ApSme {
     pub fn new(
         device_info: DeviceInfo,
         mac_sublayer_support: fidl_common::MacSublayerSupport,
-    ) -> (Self, crate::MlmeStream, TimeStream) {
+    ) -> (Self, crate::MlmeSink, crate::MlmeStream, TimeStream) {
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (timer, time_stream) = timer::create_timer();
         let sme = ApSme {
@@ -129,12 +129,12 @@ impl ApSme {
                 ctx: Context {
                     device_info,
                     mac_sublayer_support,
-                    mlme_sink: MlmeSink::new(mlme_sink),
+                    mlme_sink: MlmeSink::new(mlme_sink.clone()),
                     timer,
                 },
             }),
         };
-        (sme, mlme_stream, time_stream)
+        (sme, MlmeSink::new(mlme_sink), mlme_stream, time_stream)
     }
 
     pub fn on_start_command(&mut self, config: Config) -> oneshot::Receiver<StartResult> {
@@ -1634,6 +1634,8 @@ mod tests {
     }
 
     fn create_sme(_exec: &fasync::TestExecutor) -> (ApSme, MlmeStream, TimeStream) {
-        ApSme::new(fake_device_info(AP_ADDR), fake_mac_sublayer_support())
+        let (ap_sme, _mlme_sink, mlme_stream, time_stream) =
+            ApSme::new(fake_device_info(AP_ADDR), fake_mac_sublayer_support());
+        (ap_sme, mlme_stream, time_stream)
     }
 }

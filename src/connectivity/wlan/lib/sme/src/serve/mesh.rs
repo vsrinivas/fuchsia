@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{mesh as mesh_sme, MlmeEventStream, MlmeStream},
+    crate::{mesh as mesh_sme, MlmeEventStream, MlmeSink, MlmeStream},
     anyhow::format_err,
     fidl_fuchsia_wlan_mesh as fidl_mesh, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fidl_fuchsia_wlan_sme as fidl_sme,
@@ -30,8 +30,8 @@ pub fn serve(
     device_info: fidl_mlme::DeviceInfo,
     event_stream: MlmeEventStream,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
-) -> (MlmeStream, impl Future<Output = Result<(), anyhow::Error>>) {
-    let (sme, mlme_stream) = Sme::new(device_info);
+) -> (MlmeSink, MlmeStream, impl Future<Output = Result<(), anyhow::Error>>) {
+    let (sme, mlme_sink, mlme_stream) = Sme::new(device_info);
     let fut = async move {
         let sme = Arc::new(Mutex::new(sme));
         let time_stream = stream::poll_fn::<TimeEntry<()>, _>(|_| Poll::Pending);
@@ -45,7 +45,7 @@ pub fn serve(
         }
         Ok(())
     };
-    (mlme_stream, fut)
+    (mlme_sink, mlme_stream, fut)
 }
 
 async fn serve_fidl<'a>(

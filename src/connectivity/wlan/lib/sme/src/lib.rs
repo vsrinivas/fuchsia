@@ -9,6 +9,7 @@ pub mod serve;
 #[cfg(test)]
 pub mod test_utils;
 
+use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent};
 use futures::channel::mpsc;
 use thiserror::Error;
@@ -54,6 +55,10 @@ pub enum MlmeRequest {
     SaeFrameTx(fidl_mlme::SaeFrame),
     WmmStatusReq,
     FinalizeAssociation(fidl_mlme::NegotiatedCapabilities),
+    QueryDiscoverySupport(responder::Responder<fidl_common::DiscoverySupport>),
+    QueryMacSublayerSupport(responder::Responder<fidl_common::MacSublayerSupport>),
+    QuerySecuritySupport(responder::Responder<fidl_common::SecuritySupport>),
+    QuerySpectrumManagementSupport(responder::Responder<fidl_common::SpectrumManagementSupport>),
 }
 
 pub trait Station {

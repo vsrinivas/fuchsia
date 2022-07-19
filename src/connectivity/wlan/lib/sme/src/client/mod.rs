@@ -454,7 +454,7 @@ impl ClientSme {
         mac_sublayer_support: fidl_common::MacSublayerSupport,
         security_support: fidl_common::SecuritySupport,
         spectrum_management_support: fidl_common::SpectrumManagementSupport,
-    ) -> (Self, MlmeStream, TimeStream) {
+    ) -> (Self, MlmeSink, MlmeStream, TimeStream) {
         let device_info = Arc::new(info);
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (mut timer, time_stream) = timer::create_timer();
@@ -481,7 +481,7 @@ impl ClientSme {
                 wmm_status_responders: vec![],
                 auto_persist_last_pulse,
                 context: Context {
-                    mlme_sink: MlmeSink::new(mlme_sink),
+                    mlme_sink: MlmeSink::new(mlme_sink.clone()),
                     device_info,
                     timer,
                     att_id: 0,
@@ -490,6 +490,7 @@ impl ClientSme {
                     security_support,
                 },
             },
+            MlmeSink::new(mlme_sink),
             mlme_stream,
             time_stream,
         )
@@ -1154,7 +1155,7 @@ mod tests {
         //                         necessary.
         mac_sublayer_support.device.mac_implementation_type =
             fidl_common::MacImplementationType::Fullmac;
-        let (mut sme, mut mlme_stream, _time_stream) = ClientSme::new(
+        let (mut sme, _mlme_sink, mut mlme_stream, _time_stream) = ClientSme::new(
             ClientConfig::from_config(SmeConfig::default().with_wep(), false),
             test_utils::fake_device_info(CLIENT_ADDR),
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
@@ -1671,7 +1672,7 @@ mod tests {
         let sme_root_node = inspector.root().create_child("sme");
         let (persistence_req_sender, mut persistence_receiver) =
             test_utils::create_inspect_persistence_channel();
-        let (mut sme, _mlme_stream, mut time_stream) = ClientSme::new(
+        let (mut sme, _mlme_sink, _mlme_stream, mut time_stream) = ClientSme::new(
             ClientConfig::from_config(SmeConfig::default().with_wep(), false),
             test_utils::fake_device_info(CLIENT_ADDR),
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
@@ -1752,7 +1753,7 @@ mod tests {
         //                         necessary.
         mac_sublayer_support.device.mac_implementation_type =
             fidl_common::MacImplementationType::Fullmac;
-        ClientSme::new(
+        let (client_sme, _mlme_sink, mlme_stream, time_stream) = ClientSme::new(
             ClientConfig::default(),
             test_utils::fake_device_info(CLIENT_ADDR),
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
@@ -1761,6 +1762,7 @@ mod tests {
             mac_sublayer_support,
             fake_security_support(),
             fake_spectrum_management_support_empty(),
-        )
+        );
+        (client_sme, mlme_stream, time_stream)
     }
 }

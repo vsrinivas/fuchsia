@@ -9,6 +9,14 @@ pub struct UnboundedSink<T> {
     sink: mpsc::UnboundedSender<T>,
 }
 
+// Manually impl clone to allow non-Clone values of T.
+// https://github.com/rust-lang/rust/issues/26925
+impl<T> Clone for UnboundedSink<T> {
+    fn clone(&self) -> Self {
+        Self { sink: self.sink.clone() }
+    }
+}
+
 impl<T> UnboundedSink<T> {
     pub fn new(sink: mpsc::UnboundedSender<T>) -> Self {
         UnboundedSink { sink }

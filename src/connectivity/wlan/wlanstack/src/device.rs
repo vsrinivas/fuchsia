@@ -218,6 +218,18 @@ async fn forward_mlme_request(
         MlmeRequest::SaeFrameTx(mut frame) => proxy.sae_frame_tx(&mut frame),
         MlmeRequest::WmmStatusReq => proxy.wmm_status_req(),
         MlmeRequest::FinalizeAssociation(mut cap) => proxy.finalize_association_req(&mut cap),
+        MlmeRequest::QueryDiscoverySupport(responder) => {
+            proxy.query_discovery_support().await.map(|resp| responder.respond(resp))
+        }
+        MlmeRequest::QueryMacSublayerSupport(responder) => {
+            proxy.query_mac_sublayer_support().await.map(|resp| responder.respond(resp))
+        }
+        MlmeRequest::QuerySecuritySupport(responder) => {
+            proxy.query_security_support().await.map(|resp| responder.respond(resp))
+        }
+        MlmeRequest::QuerySpectrumManagementSupport(responder) => {
+            proxy.query_spectrum_management_support().await.map(|resp| responder.respond(resp))
+        }
     }
 }
 

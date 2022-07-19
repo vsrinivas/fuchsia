@@ -6,9 +6,8 @@ use crate::{
     client::{
         self as client_sme, ConnectResult, ConnectTransactionEvent, ConnectTransactionStream,
     },
-    MlmeEventStream, MlmeStream,
+    MlmeEventStream, MlmeSink, MlmeStream,
 };
-use anyhow::format_err;
 use fidl::{endpoints::RequestStream, endpoints::ServerEnd};
 use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211;
@@ -17,12 +16,11 @@ use fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeRequest, TelemetryRequest
 use fuchsia_inspect_contrib::auto_persist;
 use fuchsia_zircon as zx;
 use futures::channel::mpsc;
-use futures::{prelude::*, select, stream::FuturesUnordered};
+use futures::{prelude::*, select};
 use itertools::Itertools;
 use log::{error, info};
 use pin_utils::pin_mut;
 use std::sync::{Arc, Mutex};
-use void::Void;
 use wlan_common::hasher::WlanHasher;
 use wlan_inspect;
 
@@ -43,12 +41,12 @@ pub fn serve(
     iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
     hasher: WlanHasher,
     persistence_req_sender: auto_persist::PersistenceReqSender,
-) -> (MlmeStream, impl Future<Output = Result<(), anyhow::Error>>) {
+) -> (MlmeSink, MlmeStream, impl Future<Output = Result<(), anyhow::Error>>) {
     let wpa3_supported = security_support.mfp.supported
         && (security_support.sae.driver_handler_supported
             || security_support.sae.sme_handler_supported);
     let cfg = client_sme::ClientConfig::from_config(cfg, wpa3_supported);
-    let (sme, mlme_stream, time_stream) = Sme::new(
+    let (sme, mlme_sink, mlme_stream, time_stream) = Sme::new(
         cfg,
         device_info,
         iface_tree_holder,
@@ -61,9 +59,9 @@ pub fn serve(
     let fut = async move {
         let sme = Arc::new(Mutex::new(sme));
         let mlme_sme = super::serve_mlme_sme(event_stream, Arc::clone(&sme), time_stream);
-        let sme_fidl = serve_fidl(&sme, new_fidl_clients, handle_fidl_request);
+        let sme_fidl = super::serve_fidl(&*sme, new_fidl_clients, handle_fidl_request);
         let telemetry_fidl =
-            serve_fidl(&sme, new_telemetry_fidl_clients, handle_telemetry_fidl_request);
+            super::serve_fidl(&*sme, new_telemetry_fidl_clients, handle_telemetry_fidl_request);
         pin_mut!(mlme_sme);
         pin_mut!(sme_fidl);
         select! {
@@ -73,56 +71,7 @@ pub fn serve(
         }
         Ok(())
     };
-    (mlme_stream, fut)
-}
-
-async fn serve_fidl<
-    'a,
-    T: fidl::endpoints::ProtocolMarker,
-    Fut: futures::Future<Output = Result<(), fidl::Error>>,
->(
-    sme: &'a Mutex<Sme>,
-    new_fidl_clients: mpsc::UnboundedReceiver<ServerEnd<T>>,
-    event_handler: impl Fn(&'a Mutex<Sme>, fidl::endpoints::Request<T>) -> Fut + Copy,
-) -> Result<Void, anyhow::Error> {
-    let mut new_fidl_clients = new_fidl_clients.fuse();
-    let mut fidl_clients = FuturesUnordered::new();
-    loop {
-        select! {
-            new_fidl_client = new_fidl_clients.next() => match new_fidl_client {
-                Some(c) => fidl_clients.push(serve_fidl_endpoint(&sme, c, event_handler)),
-                None => return Err(format_err!("New FIDL client stream unexpectedly ended")),
-            },
-            () = fidl_clients.select_next_some() => {},
-        }
-    }
-}
-
-async fn serve_fidl_endpoint<
-    'a,
-    T: fidl::endpoints::ProtocolMarker,
-    Fut: futures::Future<Output = Result<(), fidl::Error>>,
->(
-    sme: &'a Mutex<Sme>,
-    endpoint: ServerEnd<T>,
-    event_handler: impl Fn(&'a Mutex<Sme>, fidl::endpoints::Request<T>) -> Fut + Copy,
-) {
-    let stream = match endpoint.into_stream() {
-        Ok(s) => s,
-        Err(e) => {
-            error!("Failed to create a stream from a zircon channel: {}", e);
-            return;
-        }
-    };
-    const MAX_CONCURRENT_REQUESTS: usize = 1000;
-    let handler = &event_handler;
-    let r = stream
-        .try_for_each_concurrent(MAX_CONCURRENT_REQUESTS, move |request| (*handler)(sme, request))
-        .await;
-    if let Err(e) = r {
-        error!("Error serving FIDL: {}", e);
-        return;
-    }
+    (mlme_sink, mlme_stream, fut)
 }
 
 async fn handle_fidl_request(
