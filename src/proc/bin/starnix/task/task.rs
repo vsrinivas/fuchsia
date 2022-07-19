@@ -82,6 +82,26 @@ impl ExitStatus {
             ExitStatus::Stop(siginfo) => 0x7f + ((siginfo.signal.number() as i32) << 8),
         }
     }
+
+    pub fn signal_info_code(&self) -> u32 {
+        match self {
+            ExitStatus::Exit(_) => CLD_EXITED,
+            ExitStatus::Kill(_) => CLD_KILLED,
+            ExitStatus::CoreDump(_) => CLD_DUMPED,
+            ExitStatus::Stop(_) => CLD_STOPPED,
+            ExitStatus::Continue(_) => CLD_CONTINUED,
+        }
+    }
+
+    pub fn signal_info_status(&self) -> i32 {
+        match self {
+            ExitStatus::Exit(status) => (*status as i32),
+            ExitStatus::Kill(siginfo)
+            | ExitStatus::CoreDump(siginfo)
+            | ExitStatus::Continue(siginfo)
+            | ExitStatus::Stop(siginfo) => siginfo.signal.number() as i32,
+        }
+    }
 }
 
 pub struct TaskMutableState {

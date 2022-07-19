@@ -5,6 +5,6 @@
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
         binary: "data/tests/wait_test",
-        args: [ "--gunit_filter=WaitTest.WaitidOptions" ],
+        args: [ "--gunit_filter=-WaitTest.KillZombie:WaitTest.Wait4Rusage:WaitTest.WaitidRusage:WaitTest.TraceeWALL:Waiters/WaitAnyChildTest.CloneSIGCHLD/*:Waiters/WaitAnyChildTest.ForkAndClone/*:Waiters/WaitAnyChildTest.WaitedChildRusage/*:Waiters/WaitAnyChildTest.IgnoredChildRusage/*:Waiters/WaitSpecificChildTest.CloneSIGCHLD/*:Waiters/WaitSpecificChildTest.CloneNoSIGCHLD/*:Waiters/WaitSpecificChildTest.CloneAfterExit/*:Waiters/WaitSpecificChildTest.CloneWCLONE/*:Waiters/WaitSpecificChildTest.ForkWCLONE/*:Waiters/WaitSpecificChildTest.WALL/*:Waiters/WaitSpecificChildTest.SiblingChildrenWNOTHREAD/*:Waiters/WaitSpecificChildTest.AfterChildExecve/*" ],
     },
 }

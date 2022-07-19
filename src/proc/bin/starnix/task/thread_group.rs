@@ -145,20 +145,13 @@ impl ZombieProcess {
     }
 
     pub fn as_signal_info(&self) -> SignalInfo {
-        let code = match &self.exit_status {
-            ExitStatus::Exit(_) => CLD_EXITED,
-            ExitStatus::Kill(_) => CLD_KILLED,
-            ExitStatus::CoreDump(_) => CLD_DUMPED,
-            ExitStatus::Stop(_) => CLD_STOPPED,
-            ExitStatus::Continue(_) => CLD_CONTINUED,
-        };
         SignalInfo::new(
             SIGCHLD,
-            code,
+            self.exit_status.signal_info_code(),
             SignalDetail::SigChld {
                 pid: self.pid,
                 uid: self.uid,
-                status: self.exit_status.wait_status(),
+                status: self.exit_status.signal_info_status(),
             },
         )
     }
