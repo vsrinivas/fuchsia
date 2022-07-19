@@ -44,18 +44,18 @@ struct BlobfsCheckerboard;
 #[async_trait]
 impl Test for BlobfsCheckerboard {
     async fn setup(&self, block_device: String, seed: u64) -> Result<()> {
-        log::info!("provided block device: {}", block_device);
+        tracing::info!("provided block device: {}", block_device);
         let dev = blackout_target::find_dev(&block_device).await?;
-        log::info!("using equivalent block device: {}", dev);
+        tracing::info!("using equivalent block device: {}", dev);
         let mut blobfs = Blobfs::new(&dev)?;
 
         let mut rng = StdRng::seed_from_u64(seed);
 
-        log::info!("formatting provided block device with blobfs");
+        tracing::info!("formatting provided block device with blobfs");
         blobfs.format().context("failed to format blobfs")?;
 
         let root = format!("/test-fs-root-{}", rng.gen::<u16>());
-        log::info!("mounting blobfs into default namespace at {}", root);
+        tracing::info!("mounting blobfs into default namespace at {}", root);
         blobfs.mount(&root).context("failed to mount blobfs")?;
 
         // Normally these tests just format in the setup, but I want a pile of files that I'm never
@@ -64,34 +64,34 @@ impl Test for BlobfsCheckerboard {
         // up one block at most). We want to stay within the bounds of the provided partition, so
         // query the size of the filesystem, and fill about 3/4ths of it with blobs.
         let q = blobfs.query_filesystem()?;
-        log::info!("got query results - {:#?}", q);
+        tracing::info!("got query results - {:#?}", q);
         let num_blobs = (((q.total_bytes - q.used_bytes) / q.block_size as u64) * 3) / 4;
         let num_blobs = num_blobs - (num_blobs % 2);
-        log::info!("just kidding - creating {} blobs on disk for setup", num_blobs);
+        tracing::info!("just kidding - creating {} blobs on disk for setup", num_blobs);
 
         for i in 0..num_blobs {
             let _ = write_blob(&mut rng, &root, i)?;
         }
 
-        log::info!("unmounting blobfs");
+        tracing::info!("unmounting blobfs");
         blobfs.unmount().context("failed to unmount blobfs")?;
 
         Ok(())
     }
 
     async fn test(&self, block_device: String, seed: u64) -> Result<()> {
-        log::info!("provided block device: {}", block_device);
+        tracing::info!("provided block device: {}", block_device);
         let dev = blackout_target::find_dev(&block_device).await?;
-        log::info!("using equivalent block device: {}", dev);
+        tracing::info!("using equivalent block device: {}", dev);
         let mut blobfs = Blobfs::new(&dev)?;
 
         let mut rng = StdRng::seed_from_u64(seed);
         let root = format!("/test-fs-root-{}", rng.gen::<u16>());
 
-        log::info!("mounting blobfs into default namespace at {}", root);
+        tracing::info!("mounting blobfs into default namespace at {}", root);
         blobfs.mount(&root).context("failed to mount blobfs")?;
 
-        log::info!("some prep work...");
+        tracing::info!("some prep work...");
         // Get a list of all the blobs on the partition so we can generate our load gen state. We
         // have exclusive access to this block device, so they were either made by us in setup or
         // made by us in a previous iteration of the test. This test is designed to be run multiple
@@ -122,7 +122,7 @@ impl Test for BlobfsCheckerboard {
             debug_assert!(!blobs.contains_key(&slot_num));
             blobs.insert(slot_num, Slot::Blob { path });
         }
-        log::info!("found {} blobs", blobs.len());
+        tracing::info!("found {} blobs", blobs.len());
 
         // What is the max slot number we found? If it's even, it's the number of slots, if it's
         // odd, then it's the number of slots - 1. There should always be at least one slot filled
@@ -136,7 +136,7 @@ impl Test for BlobfsCheckerboard {
         let max_slots = max_found + (max_found % 2);
         debug_assert!(max_slots % 2 == 0);
         let half_slots = max_slots / 2;
-        log::info!(
+        tracing::info!(
             "max_found = {}. assuming max_slots = {} (half_slots = {})",
             max_found,
             max_slots,
@@ -148,7 +148,7 @@ impl Test for BlobfsCheckerboard {
             slots[k as usize] = v;
         }
 
-        log::info!("generating load");
+        tracing::info!("generating load");
         loop {
             // Get a random, even numbered slot and do the "next thing" to it.
             //   1. if the slot is empty, create a blob and write random data to it
@@ -183,15 +183,15 @@ impl Test for BlobfsCheckerboard {
     }
 
     async fn verify(&self, block_device: String, _seed: u64) -> Result<()> {
-        log::info!("provided block device: {}", block_device);
+        tracing::info!("provided block device: {}", block_device);
         let dev = blackout_target::find_dev(&block_device).await?;
-        log::info!("using equivalent block device: {}", dev);
+        tracing::info!("using equivalent block device: {}", dev);
         let mut blobfs = Blobfs::new(&dev)?;
 
-        log::info!("verifying disk with fsck");
+        tracing::info!("verifying disk with fsck");
         blobfs.fsck().context("fsck failed")?;
 
-        log::info!("verification successful");
+        tracing::info!("verification successful");
         Ok(())
     }
 }

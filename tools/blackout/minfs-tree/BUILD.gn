@@ -24,8 +24,8 @@ rustc_binary("blackout-minfs-tree-target-bin") {
     "//src/lib/storage/fs_management/rust:fs_management",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:rand",
+    "//third_party/rust_crates:tracing",
     "//tools/blackout/blackout-target",
   ]
   data_deps = [ "//src/storage/bin/minfs" ]

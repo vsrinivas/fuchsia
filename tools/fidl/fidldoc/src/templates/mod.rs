@@ -9,10 +9,10 @@ use crate::fidljson::to_lower_snake_case;
 use anyhow::Error;
 use handlebars::{Context, Handlebars, Helper, JsonRender, Output, RenderContext, RenderError};
 use lazy_static::lazy_static;
-use log::debug;
 use pulldown_cmark::{html as pulldown_html, Parser};
 use regex::{Captures, Regex};
 use serde_json::Value;
+use tracing::debug;
 
 pub fn lower_snake_case(
     h: &Helper<'_, '_>,

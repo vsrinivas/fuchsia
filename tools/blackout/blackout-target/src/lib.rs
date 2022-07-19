@@ -62,7 +62,7 @@ where
         let test = self.test;
         self.fs
             .for_each_concurrent(MAX_CONCURRENT, move |stream| {
-                handle_request(test, stream).unwrap_or_else(|e| log::error!("{}", e))
+                handle_request(test, stream).unwrap_or_else(|e| tracing::error!("{}", e))
             })
             .await;
     }
@@ -83,7 +83,7 @@ async fn handle_controller<T: Test + Copy>(test: T, request: ControllerRequest) 
     match request {
         ControllerRequest::Setup { responder, device_path, seed } => {
             let mut res = test.setup(device_path, seed).await.map_err(|e| {
-                log::error!("{}", e);
+                tracing::error!("{}", e);
                 zx::Status::INTERNAL.into_raw()
             });
             responder.send(&mut res)?;
@@ -92,7 +92,7 @@ async fn handle_controller<T: Test + Copy>(test: T, request: ControllerRequest) 
         ControllerRequest::Verify { responder, device_path, seed } => {
             let mut res = test.verify(device_path, seed).await.map_err(|e| {
                 // The test tries failing on purpose, so only print errors as warnings.
-                log::warn!("{}", e);
+                tracing::warn!("{}", e);
                 zx::Status::BAD_STATE.into_raw()
             });
             responder.send(&mut res)?;

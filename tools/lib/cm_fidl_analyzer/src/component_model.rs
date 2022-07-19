@@ -457,7 +457,11 @@ impl ModelBuilderForAnalyzer {
             return Ok(None);
         } else if decl_url_matches.len() == 1 {
             if decl_url_matches[0].1 == PkgUrlMatch::WeakMatch {
-                log::warn!("Weak component URL match: {} matches {}", url, decl_url_matches[0].0);
+                tracing::warn!(
+                    "Weak component URL match: {} matches {}",
+                    url,
+                    decl_url_matches[0].0
+                );
             }
             return Ok(decls_by_url.get(decl_url_matches[0].0));
         } else {
@@ -470,7 +474,7 @@ impl ModelBuilderForAnalyzer {
                 .collect::<Vec<&Url>>();
 
             if strong_decl_url_matches.len() == 0 {
-                log::warn!(
+                tracing::warn!(
                     "Multiple weak component URL matches for {}; matching to first: {}",
                     url,
                     decl_url_matches[0].0
@@ -478,7 +482,7 @@ impl ModelBuilderForAnalyzer {
                 return Ok(decls_by_url.get(decl_url_matches[0].0));
             } else {
                 if strong_decl_url_matches.len() > 1 {
-                    log::error!(
+                    tracing::error!(
                         "Multiple strong package URL matches for {}; matching to first: {}",
                         url,
                         strong_decl_url_matches[0]

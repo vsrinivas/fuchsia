@@ -17,17 +17,17 @@ struct IntegrationTest;
 #[async_trait]
 impl Test for IntegrationTest {
     async fn setup(&self, _block_device: String, _seed: u64) -> Result<()> {
-        log::info!("setup called");
+        tracing::info!("setup called");
         Ok(())
     }
 
     async fn test(&self, _block_device: String, _seed: u64) -> Result<()> {
-        log::info!("test called");
+        tracing::info!("test called");
         loop {}
     }
 
     async fn verify(&self, block_device: String, _seed: u64) -> Result<()> {
-        log::info!("verify called with {}", block_device);
+        tracing::info!("verify called with {}", block_device);
 
         // We use the block device path to pass an indicator to fail verification, to test the
         // error propagation.

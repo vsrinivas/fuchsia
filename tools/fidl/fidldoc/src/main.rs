@@ -4,11 +4,11 @@
 
 use anyhow::{anyhow, bail, Context, Error};
 use argh::FromArgs;
-use log::{error, info, LevelFilter};
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::process;
+use tracing::{error, info};
 
 use rayon::prelude::*;
 
@@ -16,8 +16,6 @@ use serde_json::{json, Value};
 
 mod fidljson;
 use fidljson::{to_lower_snake_case, FidlJson, FidlJsonPackageData, TableOfContentsItem};
-
-use simplelog::{Config, SimpleLogger};
 
 mod templates;
 use templates::markdown::MarkdownTemplate;
@@ -106,9 +104,9 @@ fn run(opt: Opt) -> Result<(), Error> {
     }
 
     if opt.verbose {
-        SimpleLogger::init(LevelFilter::Info, Config::default())?;
+        tracing_subscriber::fmt().compact().with_max_level(tracing::Level::INFO).init();
     } else {
-        SimpleLogger::init(LevelFilter::Error, Config::default())?;
+        tracing_subscriber::fmt().compact().with_max_level(tracing::Level::ERROR).init();
     }
 
     // Read in fidldoc.config.json

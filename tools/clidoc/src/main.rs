@@ -8,7 +8,6 @@ use {
     argh::FromArgs,
     flate2::{write::GzEncoder, Compression},
     lazy_static::lazy_static,
-    log::{debug, info, LevelFilter},
     std::{
         collections::HashSet,
         env,
@@ -20,9 +19,8 @@ use {
         sync::Once,
     },
     tar::Builder,
+    tracing::{debug, info},
 };
-
-use simplelog::{Config, SimpleLogger};
 
 enum HelpError {
     Ignore,
@@ -141,15 +139,12 @@ static INIT_LOGGER: Once = Once::new();
 fn set_up_logger(opt: &Opt) {
     INIT_LOGGER.call_once(|| {
         if opt.verbose {
-            SimpleLogger::init(LevelFilter::Debug, Config::default())
-                .expect("Set logger to debug level");
+            tracing_subscriber::fmt().compact().with_max_level(tracing::Level::DEBUG).init();
             debug!("Debug logging enabled.");
         } else if opt.quiet {
-            SimpleLogger::init(LevelFilter::Warn, Config::default())
-                .expect("Set logger to warn level");
+            tracing_subscriber::fmt().compact().with_max_level(tracing::Level::WARN).init();
         } else {
-            SimpleLogger::init(LevelFilter::Info, Config::default())
-                .expect("Set logger to info level");
+            tracing_subscriber::fmt().compact().with_max_level(tracing::Level::INFO).init();
         }
     });
 }

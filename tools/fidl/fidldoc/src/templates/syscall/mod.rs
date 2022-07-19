@@ -4,11 +4,11 @@
 
 use anyhow::{Context as _, Error};
 use handlebars::{Context, Handlebars, Helper, Output, RenderContext, RenderError};
-use log::info;
 use serde_json::{json, Value};
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
+use tracing::info;
 
 use crate::templates::{FidldocTemplate, HandlebarsHelper};
 

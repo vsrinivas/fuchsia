@@ -13,7 +13,6 @@ rustc_binary("pretty_serial") {
   deps = [
     "//third_party/rust_crates:ansi_term",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:regex",
   ]
 
