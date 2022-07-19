@@ -42,6 +42,7 @@ all_syscall_fidl_files = [
   "process.fidl",
   "profile.fidl",
   "resource.fidl",
+  "restricted.fidl",
   "rights.fidl",
   "smc.fidl",
   "socket.fidl",

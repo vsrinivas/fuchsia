@@ -1,0 +1,202 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library zx;
+
+@transport("Syscall")
+protocol restricted {
+    /// ## Summary
+    ///
+    /// Enter restricted mode
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls-next.h>
+    ///
+    /// zx_status_t zx_restricted_enter(uint32_t options,
+    ///                                 uintptr_t vector_table_ptr,
+    ///                                 uintptr_t context);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// Enters restricted mode from normal thread state. If successful, the current
+    /// thread will return to normal mode via an entry point passed in
+    /// *vector_table_ptr*.
+    ///
+    /// *vector_table_ptr* must be within the current user address space.
+    /// *context* may be any value. It is used as a value to pass back to normal
+    /// mode when returning from restricted mode.
+    ///
+    /// *options* must be zero.
+    ///
+    /// Arguments to the function at *vector_table_ptr* are architecturally specific:
+    ///
+    /// On x64, *context* is placed in *rdi* and an exception code is played in *rsi*.
+    /// All other registers are currently undefined, including the stack pointer.
+    ///
+    /// ARM64 support is currently unimplemented.
+    ///
+    /// Currently, the *exception code* passed back to normal mode is always 0.
+    ///
+    /// ## Rights
+    ///
+    /// None (currently)
+    ///
+    /// ## Return value
+    ///
+    /// No return value on success, since the current thread indirectly returns via
+    /// *vector_table_ptr*. In the event of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_INVALID_ARGS** *vector_table_ptr* is not a valid user address or *options*
+    /// is non-zero.
+    ///
+    /// **ZX_ERR_BAD_STATE** restricted mode register state is invalid. See
+    /// [`zx_restricted_write_state()`] for details.
+    ///
+    /// ## See also
+    ///
+    /// - [`zx_restricted_write_state()`]
+    /// - [`zx_restricted_read_state()`]
+    ///
+    /// [`zx_restricted_write_state()`]: restricted_write_state.md
+    /// [`zx_restricted_read_state()`]: restricted_read_state.md
+    @next
+    restricted_enter(struct {
+        options uint32;
+        vector_table_ptr uintptr;
+        context uintptr;
+    }) -> (struct {
+        status status;
+    });
+
+    /// ## Summary
+    ///
+    /// Set restricted mode state on the current thread.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls-next.h>
+    ///
+    /// zx_status_t zx_restricted_write(const void *state,
+    ///                                 size_t state_size);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// Sets the restricted mode register state on the current thread according
+    /// to the structure passed.
+    ///
+    /// The state structure is defined below (and in syscalls-next.h)
+    /// ```c
+    ///    typedef struct zx_restricted_state {
+    /// #if __aarch64__
+    ///      uint64_t x[31];
+    ///      uint64_t sp;
+    ///      // Contains only the user-controllable upper 4-bits (NZCV).
+    ///      uint32_t cpsr;
+    ///      uint8_t padding1[4];
+    /// #elif __x86_64__
+    ///      // User space active registers
+    ///      uint64_t rdi, rsi, rbp, rbx, rdx, rcx, rax, rsp;
+    ///      uint64_t r8, r9, r10, r11, r12, r13, r14, r15;
+    ///      uint64_t ip, flags;
+    ///
+    ///      uint64_t fs_base, gs_base;
+    /// #endif
+    ///    } zx_restricted_state_t;
+    /// ```
+    ///
+    /// ## Rights
+    ///
+    /// None
+    ///
+    /// ## Return value
+    ///
+    /// In the event of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_INVALID_ARGS** Invalid pointer to state or length is incorrect.
+    ///
+    /// ## See also
+    ///
+    /// - [`zx_restricted_enter()`]
+    /// - [`zx_restricted_read_state()`]
+    ///
+    /// [`zx_restricted_enter()`]: restricted_enter.md
+    /// [`zx_restricted_read_state()`]: restricted_read_state.md
+    @next
+    restricted_write_state(struct {
+        buffer vector_void;
+    }) -> (struct {
+        status status;
+    });
+
+    /// ## Summary
+    ///
+    /// Set restricted mode state on the current thread.
+    ///
+    /// ## Declaration
+    ///
+    /// ```c
+    /// #include <zircon/syscalls-next.h>
+    ///
+    /// zx_status_t zx_restricted_read(void *state,
+    ///                                size_t state_size);
+    /// ```
+    ///
+    /// ## Description
+    ///
+    /// Sets the restricted mode register state on the current thread according
+    /// to the structure passed.
+    ///
+    /// The state structure is defined below (and in syscalls-next.h)
+    /// ```c
+    ///    typedef struct zx_restricted_state {
+    /// #if __aarch64__
+    ///      uint64_t x[31];
+    ///      uint64_t sp;
+    ///      // Contains only the user-controllable upper 4-bits (NZCV).
+    ///      uint32_t cpsr;
+    ///      uint8_t padding1[4];
+    /// #elif __x86_64__
+    ///      // User space active registers
+    ///      uint64_t rdi, rsi, rbp, rbx, rdx, rcx, rax, rsp;
+    ///      uint64_t r8, r9, r10, r11, r12, r13, r14, r15;
+    ///      uint64_t ip, flags;
+    ///
+    ///      uint64_t fs_base, gs_base;
+    /// #endif
+    ///    } zx_restricted_state_t;
+    /// ```
+    ///
+    /// ## Rights
+    ///
+    /// None
+    ///
+    /// ## Return value
+    ///
+    /// In the event of failure, a negative error value is returned.
+    ///
+    /// ## Errors
+    ///
+    /// **ZX_ERR_INVALID_ARGS** Invalid pointer to state or length is incorrect.
+    ///
+    /// ## See also
+    ///
+    /// - [`zx_restricted_enter()`]
+    /// - [`zx_restricted_write_state()`]
+    ///
+    /// [`zx_restricted_enter()`]: restricted_enter.md
+    /// [`zx_restricted_write_state()`]: restricted_write_state.md
+    @next
+    restricted_read_state() -> (struct {
+        status status;
+        buffer vector_void;
+    });
+};

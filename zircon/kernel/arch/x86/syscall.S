@@ -286,6 +286,10 @@ FUNCTION_LABEL(x86_syscall)
     // Any changes to the stack here need to be reflected in
     // pre_push and post_pop macros above to maintain alignment.
 
+    // check to see if we're in restricted mode
+    cmpl    $0, %gs:PERCPU_IN_RESTRICTED_MODE
+    jne     .Lrestricted_syscall
+
     // Bounds-check system call number and jump to handler.
     xorq    %r11, %r11
     cmp     $ZX_SYS_COUNT, %rax
@@ -304,6 +308,13 @@ FUNCTION_LABEL(x86_syscall)
     mov     %rcx, %rsi // pc into arg 1
     call    unknown_syscall
     jmp     x86_syscall_cleanup_and_return
+
+.Lrestricted_syscall:
+    mov     %rsp, %rdi
+    call     syscall_from_restricted
+    // There is no path that returns from this call, but if it did, trap.
+    ud2
+
 END_FUNCTION(x86_syscall)
 
 .balign 16

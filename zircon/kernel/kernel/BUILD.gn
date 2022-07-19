@@ -18,6 +18,7 @@ source_set("kernel") {
     "mutex.cc",
     "owned_wait_queue.cc",
     "percpu.cc",
+    "restricted.cc",
     "scheduler.cc",
     "semaphore.cc",
     "task_runtime_stats.cc",

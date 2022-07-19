@@ -380,6 +380,14 @@ toc:
     path: /docs/reference/syscalls/ktrace_write.md
   - title: "zx_mtrace_control"
     path: /docs/reference/syscalls/mtrace_control.md
+- title: "Restricted Mode"
+  section:
+  - title: "zx_restricted_enter"
+    path: /docs/reference/syscalls/restricted_enter.md
+  - title: "zx_restricted_read_state"
+    path: /docs/reference/syscalls/restricted_read_state.md
+  - title: "zx_restricted_write_state"
+    path: /docs/reference/syscalls/restricted_write_state.md
 - title: "Others"
   section:
   - title: "zx_ioports_release"

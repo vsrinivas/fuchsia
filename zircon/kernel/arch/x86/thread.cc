@@ -271,6 +271,9 @@ void arch_context_switch(Thread* oldthread, Thread* newthread) {
   // inside the new thread as far as the high level kernel is concerned.
   arch_set_current_thread(newthread);
 
+  // set the GS:in_restricted_mode pointer to the state of the new thread
+  arch_set_restricted_flag(newthread->restricted_state().in_restricted());
+
   x86_64_context_switch(&oldthread->arch().sp, newthread->arch().sp
 #if __has_feature(safe_stack)
                         ,

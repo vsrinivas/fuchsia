@@ -141,6 +141,7 @@ zx_library("x86") {
     "proc_trace.cc",
     "pv.cc",
     "registers.cc",
+    "restricted.cc",
     "smp.cc",
     "spinlock.cc",
     "start.S",

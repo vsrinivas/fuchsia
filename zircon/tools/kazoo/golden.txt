@@ -149,6 +149,9 @@ SYSCALL_CATEGORY_END(const)
 SYSCALL_CATEGORY_BEGIN(next)
     SYSCALL_IN_CATEGORY(pager_query_dirty_ranges)
     SYSCALL_IN_CATEGORY(pager_query_vmo_stats)
+    SYSCALL_IN_CATEGORY(restricted_enter)
+    SYSCALL_IN_CATEGORY(restricted_write_state)
+    SYSCALL_IN_CATEGORY(restricted_read_state)
     SYSCALL_IN_CATEGORY(syscall_next_1)
 SYSCALL_CATEGORY_END(next)
 
@@ -220,6 +223,22 @@ _ZX_SYSCALL_DECL(pager_query_vmo_stats, zx_status_t, /* no attributes */, 5,
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t pager,
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t pager_vmo,
     uint32_t options,
+    void* buffer,
+    size_t buffer_size))
+
+_ZX_SYSCALL_DECL(restricted_enter, zx_status_t, /* no attributes */, 3,
+    (options, vector_table_ptr, context), (
+    uint32_t options,
+    uintptr_t vector_table_ptr,
+    uintptr_t context))
+
+_ZX_SYSCALL_DECL(restricted_write_state, zx_status_t, /* no attributes */, 2,
+    (buffer, buffer_size), (
+    const void* buffer,
+    size_t buffer_size))
+
+_ZX_SYSCALL_DECL(restricted_read_state, zx_status_t, /* no attributes */, 2,
+    (buffer, buffer_size), (
     void* buffer,
     size_t buffer_size))
 
@@ -714,6 +733,18 @@ TEXT ·Sys_profile_create(SB),NOSPLIT,$0
 // func Sys_resource_create(parent_rsrc Handle, options uint32, base uint64, size uint, name *uint8, name_size uint, resource_out *Handle) Status
 TEXT ·Sys_resource_create(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_resource_create(SB)
+
+// func Sys_restricted_enter(options uint32, vector_table_ptr uintptr, context uintptr) Status
+TEXT ·Sys_restricted_enter(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_restricted_enter(SB)
+
+// func Sys_restricted_write_state(buffer unsafe.Pointer, buffer_size uint) Status
+TEXT ·Sys_restricted_write_state(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_restricted_write_state(SB)
+
+// func Sys_restricted_read_state(buffer unsafe.Pointer, buffer_size uint) Status
+TEXT ·Sys_restricted_read_state(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_restricted_read_state(SB)
 
 // func Sys_smc_call(handle Handle, parameters *SMCParameters, out_smc_result *SMCResult) Status
 TEXT ·Sys_smc_call(SB),NOSPLIT,$0
@@ -1507,6 +1538,18 @@ func Sys_resource_create(parent_rsrc Handle, options uint32, base uint64, size u
 
 //go:noescape
 //go:nosplit
+func Sys_restricted_enter(options uint32, vector_table_ptr uintptr, context uintptr) Status
+
+//go:noescape
+//go:nosplit
+func Sys_restricted_write_state(buffer unsafe.Pointer, buffer_size uint) Status
+
+//go:noescape
+//go:nosplit
+func Sys_restricted_read_state(buffer unsafe.Pointer, buffer_size uint) Status
+
+//go:noescape
+//go:nosplit
 func Sys_smc_call(handle Handle, parameters *SMCParameters, out_smc_result *SMCResult) Status
 
 //go:noescape
@@ -2292,6 +2335,18 @@ TEXT ·Sys_profile_create(SB),NOSPLIT,$0
 // func Sys_resource_create(parent_rsrc Handle, options uint32, base uint64, size uint, name *uint8, name_size uint, resource_out *Handle) Status
 TEXT ·Sys_resource_create(SB),NOSPLIT,$0
 	JMP runtime·vdsoCall_zx_resource_create(SB)
+
+// func Sys_restricted_enter(options uint32, vector_table_ptr uintptr, context uintptr) Status
+TEXT ·Sys_restricted_enter(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_restricted_enter(SB)
+
+// func Sys_restricted_write_state(buffer unsafe.Pointer, buffer_size uint) Status
+TEXT ·Sys_restricted_write_state(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_restricted_write_state(SB)
+
+// func Sys_restricted_read_state(buffer unsafe.Pointer, buffer_size uint) Status
+TEXT ·Sys_restricted_read_state(SB),NOSPLIT,$0
+	JMP runtime·vdsoCall_zx_restricted_read_state(SB)
 
 // func Sys_smc_call(handle Handle, parameters *SMCParameters, out_smc_result *SMCResult) Status
 TEXT ·Sys_smc_call(SB),NOSPLIT,$0
@@ -4837,6 +4892,58 @@ TEXT runtime·vdsoCall_zx_resource_create(SB),NOSPLIT,$0-52
 	MOVD $0, m_vdsoSP(R21)
 	RET
 
+// func vdsoCall_zx_restricted_enter(options uint32, vector_table_ptr uintptr, context uintptr) int32
+TEXT runtime·vdsoCall_zx_restricted_enter(SB),NOSPLIT,$0-28
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	MOVD g_m(g), R21
+	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
+	MOVD RSP, R20
+	MOVD R20, m_vdsoSP(R21)
+	MOVW options+0(FP), R0
+	MOVD vector_table_ptr+8(FP), R1
+	MOVD context+16(FP), R2
+	BL vdso_zx_restricted_enter(SB)
+	MOVW R0, ret+24(FP)
+	MOVD g_m(g), R21
+	MOVD $0, m_vdsoSP(R21)
+	RET
+
+// func vdsoCall_zx_restricted_write_state(buffer unsafe.Pointer, buffer_size uint) int32
+TEXT runtime·vdsoCall_zx_restricted_write_state(SB),NOSPLIT,$0-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	MOVD g_m(g), R21
+	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
+	MOVD RSP, R20
+	MOVD R20, m_vdsoSP(R21)
+	MOVD buffer+0(FP), R0
+	MOVD buffer_size+8(FP), R1
+	BL vdso_zx_restricted_write_state(SB)
+	MOVW R0, ret+16(FP)
+	MOVD g_m(g), R21
+	MOVD $0, m_vdsoSP(R21)
+	RET
+
+// func vdsoCall_zx_restricted_read_state(buffer unsafe.Pointer, buffer_size uint) int32
+TEXT runtime·vdsoCall_zx_restricted_read_state(SB),NOSPLIT,$0-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	MOVD g_m(g), R21
+	MOVD LR, m_vdsoPC(R21)
+	DMB $0xe
+	MOVD RSP, R20
+	MOVD R20, m_vdsoSP(R21)
+	MOVD buffer+0(FP), R0
+	MOVD buffer_size+8(FP), R1
+	BL vdso_zx_restricted_read_state(SB)
+	MOVW R0, ret+16(FP)
+	MOVD g_m(g), R21
+	MOVD $0, m_vdsoSP(R21)
+	RET
+
 // func vdsoCall_zx_smc_call(handle uint32, parameters unsafe.Pointer, out_smc_result unsafe.Pointer) int32
 TEXT runtime·vdsoCall_zx_smc_call(SB),NOSPLIT,$0-28
 	GO_ARGS
@@ -6364,6 +6471,9 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 	{"_zx_process_write_memory", 0x18162116, &vdso_zx_process_write_memory},
 	{"_zx_profile_create", 0x28e1bf39, &vdso_zx_profile_create},
 	{"_zx_resource_create", 0x22a0d150, &vdso_zx_resource_create},
+	{"_zx_restricted_enter", 0x3dfea9eb, &vdso_zx_restricted_enter},
+	{"_zx_restricted_write_state", 0x64c81738, &vdso_zx_restricted_write_state},
+	{"_zx_restricted_read_state", 0x2b1936e9, &vdso_zx_restricted_read_state},
 	{"_zx_smc_call", 0x63f0533, &vdso_zx_smc_call},
 	{"_zx_socket_create", 0xf536e851, &vdso_zx_socket_create},
 	{"_zx_socket_write", 0x5e2d97e8, &vdso_zx_socket_write},
@@ -6560,6 +6670,9 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 //go:cgo_import_dynamic vdso_zx_process_write_memory zx_process_write_memory
 //go:cgo_import_dynamic vdso_zx_profile_create zx_profile_create
 //go:cgo_import_dynamic vdso_zx_resource_create zx_resource_create
+//go:cgo_import_dynamic vdso_zx_restricted_enter zx_restricted_enter
+//go:cgo_import_dynamic vdso_zx_restricted_write_state zx_restricted_write_state
+//go:cgo_import_dynamic vdso_zx_restricted_read_state zx_restricted_read_state
 //go:cgo_import_dynamic vdso_zx_smc_call zx_smc_call
 //go:cgo_import_dynamic vdso_zx_socket_create zx_socket_create
 //go:cgo_import_dynamic vdso_zx_socket_write zx_socket_write
@@ -6755,6 +6868,9 @@ var vdsoSymbolKeys = []vdsoSymbolKey{
 //go:linkname vdso_zx_process_write_memory vdso_zx_process_write_memory
 //go:linkname vdso_zx_profile_create vdso_zx_profile_create
 //go:linkname vdso_zx_resource_create vdso_zx_resource_create
+//go:linkname vdso_zx_restricted_enter vdso_zx_restricted_enter
+//go:linkname vdso_zx_restricted_write_state vdso_zx_restricted_write_state
+//go:linkname vdso_zx_restricted_read_state vdso_zx_restricted_read_state
 //go:linkname vdso_zx_smc_call vdso_zx_smc_call
 //go:linkname vdso_zx_socket_create vdso_zx_socket_create
 //go:linkname vdso_zx_socket_write vdso_zx_socket_write
@@ -7309,6 +7425,18 @@ func vdsoCall_zx_resource_create(parent_rsrc uint32, options uint32, base uint64
 
 //go:noescape
 //go:nosplit
+func vdsoCall_zx_restricted_enter(options uint32, vector_table_ptr uintptr, context uintptr) int32
+
+//go:noescape
+//go:nosplit
+func vdsoCall_zx_restricted_write_state(buffer unsafe.Pointer, buffer_size uint) int32
+
+//go:noescape
+//go:nosplit
+func vdsoCall_zx_restricted_read_state(buffer unsafe.Pointer, buffer_size uint) int32
+
+//go:noescape
+//go:nosplit
 func vdsoCall_zx_smc_call(handle uint32, parameters unsafe.Pointer, out_smc_result unsafe.Pointer) int32
 
 //go:noescape
@@ -7727,6 +7855,9 @@ var (
 	vdso_zx_process_write_memory uintptr
 	vdso_zx_profile_create uintptr
 	vdso_zx_resource_create uintptr
+	vdso_zx_restricted_enter uintptr
+	vdso_zx_restricted_write_state uintptr
+	vdso_zx_restricted_read_state uintptr
 	vdso_zx_smc_call uintptr
 	vdso_zx_socket_create uintptr
 	vdso_zx_socket_write uintptr
@@ -10564,6 +10695,70 @@ TEXT runtime·vdsoCall_zx_resource_create(SB),NOSPLIT,$32-52
 	POPQ R12
 	MOVQ BP, SP
 	MOVL AX, ret+48(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_restricted_enter(options uint32, vector_table_ptr uintptr, context uintptr) int32
+TEXT runtime·vdsoCall_zx_restricted_enter(SB),NOSPLIT,$8-28
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	MOVQ 24(SP), DX
+	MOVQ DX, m_vdsoPC(R14)
+	LEAQ 24(SP), DX
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL options+0(FP), DI
+	MOVQ vector_table_ptr+8(FP), SI
+	MOVQ context+16(FP), DX
+	MOVQ vdso_zx_restricted_enter(SB), AX
+	CALL AX
+	MOVL AX, ret+24(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_restricted_write_state(buffer unsafe.Pointer, buffer_size uint) int32
+TEXT runtime·vdsoCall_zx_restricted_write_state(SB),NOSPLIT,$8-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	MOVQ 24(SP), DX
+	MOVQ DX, m_vdsoPC(R14)
+	LEAQ 24(SP), DX
+	MOVQ DX, m_vdsoSP(R14)
+	MOVQ buffer+0(FP), DI
+	MOVQ buffer_size+8(FP), SI
+	MOVQ vdso_zx_restricted_write_state(SB), AX
+	CALL AX
+	MOVL AX, ret+16(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_restricted_read_state(buffer unsafe.Pointer, buffer_size uint) int32
+TEXT runtime·vdsoCall_zx_restricted_read_state(SB),NOSPLIT,$8-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	MOVQ 24(SP), DX
+	MOVQ DX, m_vdsoPC(R14)
+	LEAQ 24(SP), DX
+	MOVQ DX, m_vdsoSP(R14)
+	MOVQ buffer+0(FP), DI
+	MOVQ buffer_size+8(FP), SI
+	MOVQ vdso_zx_restricted_read_state(SB), AX
+	CALL AX
+	MOVL AX, ret+16(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -16459,6 +16654,86 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
       "return_type": "zx_status_t"
     },
     {
+      "name": "restricted_enter",
+      "attributes": [
+        "*",
+        "next"
+      ],
+      "arguments": [
+        {
+          "name": "options",
+          "type": "uint32_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "vector_table_ptr",
+          "type": "uintptr_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "context",
+          "type": "uintptr_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        }
+      ],
+      "return_type": "zx_status_t"
+    },
+    {
+      "name": "restricted_write_state",
+      "attributes": [
+        "*",
+        "next"
+      ],
+      "arguments": [
+        {
+          "name": "buffer",
+          "type": "any",
+          "is_array": true,
+          "attributes": [
+            "IN"
+          ]
+        },
+        {
+          "name": "buffer_size",
+          "type": "size_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        }
+      ],
+      "return_type": "zx_status_t"
+    },
+    {
+      "name": "restricted_read_state",
+      "attributes": [
+        "*",
+        "next"
+      ],
+      "arguments": [
+        {
+          "name": "buffer",
+          "type": "any",
+          "is_array": true,
+          "attributes": [
+          ]
+        },
+        {
+          "name": "buffer_size",
+          "type": "size_t",
+          "is_array": false,
+          "attributes": [
+          ]
+        }
+      ],
+      "return_type": "zx_status_t"
+    },
+    {
       "name": "smc_call",
       "attributes": [
         "*"
@@ -19715,6 +19990,22 @@ KERNEL_SYSCALL(resource_create, zx_status_t, /* no attributes */, 7,
     size_t name_size,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) user_out_handle* resource_out))
 
+KERNEL_SYSCALL(restricted_enter, zx_status_t, /* no attributes */, 3,
+    (options, vector_table_ptr, context), (
+    uint32_t options,
+    uintptr_t vector_table_ptr,
+    uintptr_t context))
+
+KERNEL_SYSCALL(restricted_write_state, zx_status_t, /* no attributes */, 2,
+    (buffer, buffer_size), (
+    user_in_ptr<const void> buffer,
+    size_t buffer_size))
+
+KERNEL_SYSCALL(restricted_read_state, zx_status_t, /* no attributes */, 2,
+    (buffer, buffer_size), (
+    user_out_ptr<void> buffer,
+    size_t buffer_size))
+
 KERNEL_SYSCALL(smc_call, zx_status_t, /* no attributes */, 3,
     (handle, parameters, out_smc_result), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
@@ -21293,6 +21584,30 @@ syscall_result wrapper_resource_create(SafeSyscallArgument<zx_handle_t>::RawType
     });
 }
 
+syscall_result wrapper_restricted_enter(SafeSyscallArgument<uint32_t>::RawType options, SafeSyscallArgument<uintptr_t>::RawType vector_table_ptr, SafeSyscallArgument<uintptr_t>::RawType context, uint64_t pc);
+syscall_result wrapper_restricted_enter(SafeSyscallArgument<uint32_t>::RawType options, SafeSyscallArgument<uintptr_t>::RawType vector_table_ptr, SafeSyscallArgument<uintptr_t>::RawType context, uint64_t pc) {
+    return do_syscall(ZX_SYS_restricted_enter, pc, &VDso::ValidSyscallPC::restricted_enter, [&](ProcessDispatcher* current_process) -> uint64_t {
+        auto result = sys_restricted_enter(SafeSyscallArgument<uint32_t>::Sanitize(options), SafeSyscallArgument<uintptr_t>::Sanitize(vector_table_ptr), SafeSyscallArgument<uintptr_t>::Sanitize(context));
+        return result;
+    });
+}
+
+syscall_result wrapper_restricted_write_state(SafeSyscallArgument<const void*>::RawType buffer, SafeSyscallArgument<size_t>::RawType buffer_size, uint64_t pc);
+syscall_result wrapper_restricted_write_state(SafeSyscallArgument<const void*>::RawType buffer, SafeSyscallArgument<size_t>::RawType buffer_size, uint64_t pc) {
+    return do_syscall(ZX_SYS_restricted_write_state, pc, &VDso::ValidSyscallPC::restricted_write_state, [&](ProcessDispatcher* current_process) -> uint64_t {
+        auto result = sys_restricted_write_state(make_user_in_ptr(SafeSyscallArgument<const void*>::Sanitize(buffer)), SafeSyscallArgument<size_t>::Sanitize(buffer_size));
+        return result;
+    });
+}
+
+syscall_result wrapper_restricted_read_state(SafeSyscallArgument<void*>::RawType buffer, SafeSyscallArgument<size_t>::RawType buffer_size, uint64_t pc);
+syscall_result wrapper_restricted_read_state(SafeSyscallArgument<void*>::RawType buffer, SafeSyscallArgument<size_t>::RawType buffer_size, uint64_t pc) {
+    return do_syscall(ZX_SYS_restricted_read_state, pc, &VDso::ValidSyscallPC::restricted_read_state, [&](ProcessDispatcher* current_process) -> uint64_t {
+        auto result = sys_restricted_read_state(make_user_out_ptr(SafeSyscallArgument<void*>::Sanitize(buffer)), SafeSyscallArgument<size_t>::Sanitize(buffer_size));
+        return result;
+    });
+}
+
 syscall_result wrapper_smc_call(SafeSyscallArgument<zx_handle_t>::RawType handle, SafeSyscallArgument<const zx_smc_parameters_t*>::RawType parameters, SafeSyscallArgument<zx_smc_result_t*>::RawType out_smc_result, uint64_t pc);
 syscall_result wrapper_smc_call(SafeSyscallArgument<zx_handle_t>::RawType handle, SafeSyscallArgument<const zx_smc_parameters_t*>::RawType parameters, SafeSyscallArgument<zx_smc_result_t*>::RawType out_smc_result, uint64_t pc) {
     return do_syscall(ZX_SYS_smc_call, pc, &VDso::ValidSyscallPC::smc_call, [&](ProcessDispatcher* current_process) -> uint64_t {
@@ -22765,6 +23080,22 @@ KERNEL_SYSCALL(resource_create, zx_status_t, /* no attributes */, 7,
     const char* name,
     size_t name_size,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* resource_out))
+
+KERNEL_SYSCALL(restricted_enter, zx_status_t, /* no attributes */, 3,
+    (options, vector_table_ptr, context), (
+    uint32_t options,
+    uintptr_t vector_table_ptr,
+    uintptr_t context))
+
+KERNEL_SYSCALL(restricted_write_state, zx_status_t, /* no attributes */, 2,
+    (buffer, buffer_size), (
+    const void* buffer,
+    size_t buffer_size))
+
+KERNEL_SYSCALL(restricted_read_state, zx_status_t, /* no attributes */, 2,
+    (buffer, buffer_size), (
+    void* buffer,
+    size_t buffer_size))
 
 KERNEL_SYSCALL(smc_call, zx_status_t, /* no attributes */, 3,
     (handle, parameters, out_smc_result), (
@@ -25113,6 +25444,22 @@ extern {
         resource_out: *mut zx_handle_t
         ) -> zx_status_t;
 
+    pub fn zx_restricted_enter(
+        options: u32,
+        vector_table_ptr: usize,
+        context: usize
+        ) -> zx_status_t;
+
+    pub fn zx_restricted_write_state(
+        buffer: *const u8,
+        buffer_size: usize
+        ) -> zx_status_t;
+
+    pub fn zx_restricted_read_state(
+        buffer: *mut u8,
+        buffer_size: usize
+        ) -> zx_status_t;
+
     pub fn zx_smc_call(
         handle: zx_handle_t,
         parameters: *const zx_smc_parameters_t,
@@ -25705,76 +26052,79 @@ extern {
 #define ZX_SYS_process_write_memory 106
 #define ZX_SYS_profile_create 107
 #define ZX_SYS_resource_create 108
-#define ZX_SYS_smc_call 109
-#define ZX_SYS_socket_create 110
-#define ZX_SYS_socket_write 111
-#define ZX_SYS_socket_read 112
-#define ZX_SYS_socket_set_disposition 113
-#define ZX_SYS_stream_create 114
-#define ZX_SYS_stream_writev 115
-#define ZX_SYS_stream_writev_at 116
-#define ZX_SYS_stream_readv 117
-#define ZX_SYS_stream_readv_at 118
-#define ZX_SYS_stream_seek 119
-#define ZX_SYS_syscall_test_0 120
-#define ZX_SYS_syscall_test_1 121
-#define ZX_SYS_syscall_test_2 122
-#define ZX_SYS_syscall_test_3 123
-#define ZX_SYS_syscall_test_4 124
-#define ZX_SYS_syscall_test_5 125
-#define ZX_SYS_syscall_test_6 126
-#define ZX_SYS_syscall_test_7 127
-#define ZX_SYS_syscall_test_8 128
-#define ZX_SYS_syscall_next_1 129
-#define ZX_SYS_syscall_test_wrapper 130
-#define ZX_SYS_syscall_test_handle_create 131
-#define ZX_SYS_syscall_test_widening_unsigned_narrow 132
-#define ZX_SYS_syscall_test_widening_signed_narrow 133
-#define ZX_SYS_syscall_test_widening_unsigned_wide 134
-#define ZX_SYS_syscall_test_widening_signed_wide 135
-#define ZX_SYS_system_get_event 136
-#define ZX_SYS_system_set_performance_info 137
-#define ZX_SYS_system_get_performance_info 138
-#define ZX_SYS_system_mexec 139
-#define ZX_SYS_system_mexec_payload_get 140
-#define ZX_SYS_system_powerctl 141
-#define ZX_SYS_task_suspend 142
-#define ZX_SYS_task_suspend_token 143
-#define ZX_SYS_task_create_exception_channel 144
-#define ZX_SYS_task_kill 145
-#define ZX_SYS_thread_exit 146
-#define ZX_SYS_thread_create 147
-#define ZX_SYS_thread_start 148
-#define ZX_SYS_thread_read_state 149
-#define ZX_SYS_thread_write_state 150
-#define ZX_SYS_thread_legacy_yield 151
-#define ZX_SYS_timer_create 152
-#define ZX_SYS_timer_set 153
-#define ZX_SYS_timer_cancel 154
-#define ZX_SYS_vcpu_create 155
-#define ZX_SYS_vcpu_enter 156
-#define ZX_SYS_vcpu_kick 157
-#define ZX_SYS_vcpu_interrupt 158
-#define ZX_SYS_vcpu_read_state 159
-#define ZX_SYS_vcpu_write_state 160
-#define ZX_SYS_vmar_allocate 161
-#define ZX_SYS_vmar_destroy 162
-#define ZX_SYS_vmar_map 163
-#define ZX_SYS_vmar_unmap 164
-#define ZX_SYS_vmar_protect 165
-#define ZX_SYS_vmar_op_range 166
-#define ZX_SYS_vmo_create 167
-#define ZX_SYS_vmo_read 168
-#define ZX_SYS_vmo_write 169
-#define ZX_SYS_vmo_get_size 170
-#define ZX_SYS_vmo_set_size 171
-#define ZX_SYS_vmo_op_range 172
-#define ZX_SYS_vmo_create_child 173
-#define ZX_SYS_vmo_set_cache_policy 174
-#define ZX_SYS_vmo_replace_as_executable 175
-#define ZX_SYS_vmo_create_contiguous 176
-#define ZX_SYS_vmo_create_physical 177
-#define ZX_SYS_COUNT 178
+#define ZX_SYS_restricted_enter 109
+#define ZX_SYS_restricted_write_state 110
+#define ZX_SYS_restricted_read_state 111
+#define ZX_SYS_smc_call 112
+#define ZX_SYS_socket_create 113
+#define ZX_SYS_socket_write 114
+#define ZX_SYS_socket_read 115
+#define ZX_SYS_socket_set_disposition 116
+#define ZX_SYS_stream_create 117
+#define ZX_SYS_stream_writev 118
+#define ZX_SYS_stream_writev_at 119
+#define ZX_SYS_stream_readv 120
+#define ZX_SYS_stream_readv_at 121
+#define ZX_SYS_stream_seek 122
+#define ZX_SYS_syscall_test_0 123
+#define ZX_SYS_syscall_test_1 124
+#define ZX_SYS_syscall_test_2 125
+#define ZX_SYS_syscall_test_3 126
+#define ZX_SYS_syscall_test_4 127
+#define ZX_SYS_syscall_test_5 128
+#define ZX_SYS_syscall_test_6 129
+#define ZX_SYS_syscall_test_7 130
+#define ZX_SYS_syscall_test_8 131
+#define ZX_SYS_syscall_next_1 132
+#define ZX_SYS_syscall_test_wrapper 133
+#define ZX_SYS_syscall_test_handle_create 134
+#define ZX_SYS_syscall_test_widening_unsigned_narrow 135
+#define ZX_SYS_syscall_test_widening_signed_narrow 136
+#define ZX_SYS_syscall_test_widening_unsigned_wide 137
+#define ZX_SYS_syscall_test_widening_signed_wide 138
+#define ZX_SYS_system_get_event 139
+#define ZX_SYS_system_set_performance_info 140
+#define ZX_SYS_system_get_performance_info 141
+#define ZX_SYS_system_mexec 142
+#define ZX_SYS_system_mexec_payload_get 143
+#define ZX_SYS_system_powerctl 144
+#define ZX_SYS_task_suspend 145
+#define ZX_SYS_task_suspend_token 146
+#define ZX_SYS_task_create_exception_channel 147
+#define ZX_SYS_task_kill 148
+#define ZX_SYS_thread_exit 149
+#define ZX_SYS_thread_create 150
+#define ZX_SYS_thread_start 151
+#define ZX_SYS_thread_read_state 152
+#define ZX_SYS_thread_write_state 153
+#define ZX_SYS_thread_legacy_yield 154
+#define ZX_SYS_timer_create 155
+#define ZX_SYS_timer_set 156
+#define ZX_SYS_timer_cancel 157
+#define ZX_SYS_vcpu_create 158
+#define ZX_SYS_vcpu_enter 159
+#define ZX_SYS_vcpu_kick 160
+#define ZX_SYS_vcpu_interrupt 161
+#define ZX_SYS_vcpu_read_state 162
+#define ZX_SYS_vcpu_write_state 163
+#define ZX_SYS_vmar_allocate 164
+#define ZX_SYS_vmar_destroy 165
+#define ZX_SYS_vmar_map 166
+#define ZX_SYS_vmar_unmap 167
+#define ZX_SYS_vmar_protect 168
+#define ZX_SYS_vmar_op_range 169
+#define ZX_SYS_vmo_create 170
+#define ZX_SYS_vmo_read 171
+#define ZX_SYS_vmo_write 172
+#define ZX_SYS_vmo_get_size 173
+#define ZX_SYS_vmo_set_size 174
+#define ZX_SYS_vmo_op_range 175
+#define ZX_SYS_vmo_create_child 176
+#define ZX_SYS_vmo_set_cache_policy 177
+#define ZX_SYS_vmo_replace_as_executable 178
+#define ZX_SYS_vmo_create_contiguous 179
+#define ZX_SYS_vmo_create_physical 180
+#define ZX_SYS_COUNT 181
 ----- syscall-numbers.h END -----
 
 

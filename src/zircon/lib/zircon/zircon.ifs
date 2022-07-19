@@ -112,6 +112,9 @@ Symbols:
   - { Name: _zx_process_write_memory, Type: Func }
   - { Name: _zx_profile_create, Type: Func }
   - { Name: _zx_resource_create, Type: Func }
+  - { Name: _zx_restricted_enter, Type: Func }
+  - { Name: _zx_restricted_read_state, Type: Func }
+  - { Name: _zx_restricted_write_state, Type: Func }
   - { Name: _zx_smc_call, Type: Func }
   - { Name: _zx_socket_create, Type: Func }
   - { Name: _zx_socket_read, Type: Func }
@@ -302,6 +305,9 @@ Symbols:
   - { Name: zx_process_write_memory, Type: Func, Weak: true }
   - { Name: zx_profile_create, Type: Func, Weak: true }
   - { Name: zx_resource_create, Type: Func, Weak: true }
+  - { Name: zx_restricted_enter, Type: Func, Weak: true }
+  - { Name: zx_restricted_read_state, Type: Func, Weak: true }
+  - { Name: zx_restricted_write_state, Type: Func, Weak: true }
   - { Name: zx_smc_call, Type: Func, Weak: true }
   - { Name: zx_socket_create, Type: Func, Weak: true }
   - { Name: zx_socket_read, Type: Func, Weak: true }

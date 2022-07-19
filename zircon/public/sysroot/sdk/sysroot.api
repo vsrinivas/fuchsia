@@ -218,7 +218,7 @@
   "include/zircon/sanitizer.h": "b7c33e026916780e24880cf0dba9867c",
   "include/zircon/status.h": "dd933b11e68e1c297bc781074bae511a",
   "include/zircon/string_view.h": "a143924409072ee53142d61494e09c1c",
-  "include/zircon/syscalls-next.h": "dd091c3163982c77dad56acb01683885",
+  "include/zircon/syscalls-next.h": "cafa851e057949fa6182d034862a18fc",
   "include/zircon/syscalls.h": "dc7e8379ef6fa3a2969ff90d08a64143",
   "include/zircon/syscalls/clock.h": "5df7b36bb718402d9c5c9fa482d4e1eb",
   "include/zircon/syscalls/debug.h": "f57f586b395aaca99a83d549e72143cc",

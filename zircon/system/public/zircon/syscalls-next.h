@@ -34,8 +34,6 @@ __END_CDECLS
 #include <stdint.h>
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS
-
 // ====== Pager writeback support ====== //
 //
 // Make sure the constants defined here do not overlap with VMO / pager constants defined in
@@ -81,6 +79,29 @@ typedef struct zx_pager_vmo_stats {
 
 // ====== End of pager writeback support ====== //
 
-__END_CDECLS
+// ====== Restricted mode support ====== //
+// Structures used for the experimental restricted mode syscalls.
+// Declared here in the next syscall header since it is not published
+// in the SDK.
+
+// Structure to read and write restricted mode state
+typedef struct zx_restricted_state {
+#if __aarch64__
+  uint64_t x[31];
+  uint64_t sp;
+  // Contains only the user-controllable upper 4-bits (NZCV).
+  uint32_t cpsr;
+  uint8_t padding1[4];
+#elif __x86_64__
+  // User space active registers
+  uint64_t rdi, rsi, rbp, rbx, rdx, rcx, rax, rsp;
+  uint64_t r8, r9, r10, r11, r12, r13, r14, r15;
+  uint64_t ip, flags;
+
+  uint64_t fs_base, gs_base;
+#endif
+} zx_restricted_state_t;
+
+// ====== End of restricted mode support ====== //
 
 #endif  // SYSROOT_ZIRCON_SYSCALLS_NEXT_H_

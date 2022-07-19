@@ -32,6 +32,7 @@
 #include <kernel/cpu.h>
 #include <kernel/deadline.h>
 #include <kernel/koid.h>
+#include <kernel/restricted_state.h>
 #include <kernel/scheduler_state.h>
 #include <kernel/spinlock.h>
 #include <kernel/task_runtime_stats.h>
@@ -954,6 +955,8 @@ struct Thread {
       return Thread::Current::Get()->memory_allocation_state_;
     }
 
+    static RestrictedState& restricted_state() { return Thread::Current::Get()->restricted_state_; }
+
     // Generate a backtrace for the calling thread.
     //
     // |out_bt| will be reset() prior to be filled in and if a backtrace cannot
@@ -1161,6 +1164,9 @@ struct Thread {
   const lockdep::ThreadLockState& lock_state() const { return lock_state_; }
 #endif
 
+  RestrictedState& restricted_state() { return restricted_state_; }
+  const RestrictedState& restricted_state() const { return restricted_state_; }
+
   arch_thread& arch() { return arch_; }
   const arch_thread& arch() const { return arch_; }
 
@@ -1264,6 +1270,7 @@ struct Thread {
   TaskState task_state_;
   PreemptionState preemption_state_;
   MemoryAllocationState memory_allocation_state_;
+  RestrictedState restricted_state_;
   // This is part of ensuring that all stack ownership of loaned pages can be boosted in priority
   // via priority inheritance if a higher priority thread is trying to reclaim the loaned pages.
   StackOwnedLoanedPagesInterval* stack_owned_loaned_pages_interval_ = nullptr;
