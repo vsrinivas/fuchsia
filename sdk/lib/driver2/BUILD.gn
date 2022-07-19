@@ -32,19 +32,6 @@ source_set("devfs_exporter") {
   public_deps = [ "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_llcpp" ]
 }
 
-source_set("inspect") {
-  sources = [
-    "inspect.cc",
-    "inspect.h",
-  ]
-
-  public_deps = [
-    "//sdk/lib/sys/component/cpp",
-    "//src/lib/storage/vfs/cpp",
-    "//zircon/system/ulib/inspect",
-  ]
-}
-
 sdk_source_set("llcpp") {
   category = "experimental"
   sdk_name = "driver2-llcpp"

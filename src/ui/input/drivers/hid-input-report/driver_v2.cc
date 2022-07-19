@@ -7,8 +7,8 @@
 #include <lib/ddk/debug.h>
 #include <lib/driver2/devfs_exporter.h>
 #include <lib/driver2/driver2.h>
-#include <lib/driver2/inspect.h>
 #include <lib/fpromise/scope.h>
+#include <lib/inspect/component/cpp/component.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
 #include <zircon/errors.h>
 
@@ -90,14 +90,8 @@ class InputReportDriver {
 
   zx::status<> Run(fidl::ServerEnd<fio::Directory> outgoing_dir) {
     // Expose the driver's inspect data.
-    auto exposed_inspector =
-        driver::ExposedInspector::Create(dispatcher_, input_report_->Inspector(), outgoing_);
-    if (exposed_inspector.is_error()) {
-      FDF_SLOG(ERROR, "Failed to expose inspector",
-               KV("error_string", exposed_inspector.status_string()));
-      return exposed_inspector.take_error();
-    }
-    exposed_inspector_ = std::move(exposed_inspector.value());
+    exposed_inspector_.emplace(
+        inspect::ComponentInspector(outgoing_, dispatcher_, input_report_->Inspector()));
 
     input_report_->Start();
 
@@ -174,11 +168,9 @@ class InputReportDriver {
   fidl::WireSharedClient<fdf2::Node> node_;
   driver::Namespace ns_;
   driver::Logger logger_;
-  inspect::Inspector inspector_;
-  zx::vmo inspect_vmo_;
   async::Executor executor_;
 
-  std::optional<driver::ExposedInspector> exposed_inspector_;
+  std::optional<inspect::ComponentInspector> exposed_inspector_;
 
   std::optional<compat::Child> child_;
   std::string parent_topo_path_;

@@ -8,16 +8,15 @@
 #include <fidl/test.structuredconfig.receiver/cpp/wire.h>
 #include <fidl/test.structuredconfig.receiver/cpp/wire_types.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/driver2/inspect.h>
 #include <lib/driver2/logger.h>
 #include <lib/driver2/namespace.h>
 #include <lib/driver2/record_cpp.h>
 #include <lib/fpromise/bridge.h>
 #include <lib/fpromise/scope.h>
+#include <lib/inspect/component/cpp/component.h>
 #include <lib/sys/component/cpp/handlers.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/sys/inspect/cpp/component.h>
 #include <zircon/assert.h>
 
 #include <memory>
@@ -111,9 +110,7 @@ class ReceiverDriver : public fidl::WireServer<scr::ConfigReceiverPuppet> {
     auto config_node = inspector_.GetRoot().CreateChild("config");
     config_.RecordInspect(&config_node);
     inspector_.emplace(std::move(config_node));
-    auto exposed_inspector = driver::ExposedInspector::Create(dispatcher_, inspector_, outgoing_);
-    ZX_ASSERT(exposed_inspector.is_ok());
-    exposed_inspector_ = std::move(exposed_inspector.value());
+    exposed_inspector_.emplace(inspect::ComponentInspector(outgoing_, dispatcher_, inspector_));
 
     return outgoing_.Serve(std::move(outgoing_dir));
   }
@@ -173,7 +170,7 @@ class ReceiverDriver : public fidl::WireServer<scr::ConfigReceiverPuppet> {
   driver::Logger logger_;
   receiver_config::Config config_;
   inspect::Inspector inspector_;
-  std::optional<driver::ExposedInspector> exposed_inspector_ = std::nullopt;
+  std::optional<inspect::ComponentInspector> exposed_inspector_ = std::nullopt;
 
   // NOTE: Must be the last member.
   fpromise::scope scope_;

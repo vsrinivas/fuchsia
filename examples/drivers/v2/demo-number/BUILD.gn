@@ -25,7 +25,6 @@ fuchsia_driver("driver") {
     ":fuchsia.hardware.demo_llcpp",
     "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_llcpp",
     "//sdk/lib/driver2:devfs_exporter",
-    "//sdk/lib/driver2:inspect",
     "//sdk/lib/driver2:llcpp",
     "//sdk/lib/sys/component/cpp",
     "//src/devices/lib/driver:driver_runtime",

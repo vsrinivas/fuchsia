@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
-#include <lib/driver2/inspect.h>
 #include <lib/driver2/namespace.h>
 #include <lib/driver2/record_cpp.h>
 #include <lib/driver2/structured_logger.h>
+#include <lib/inspect/component/cpp/component.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include <optional>
@@ -46,16 +46,9 @@ class PackagedDriver {
 
  private:
   zx::status<> Run(async_dispatcher* dispatcher, fidl::ServerEnd<fio::Directory> outgoing_dir) {
-    auto exposed_inspector = driver::ExposedInspector::Create(dispatcher, inspector_, outgoing_);
-    if (exposed_inspector.is_error()) {
-      FDF_SLOG(ERROR, "Failed to expose inspector",
-               KV("error_string", exposed_inspector.status_string()));
-      return exposed_inspector.take_error();
-    }
-
-    exposed_inspector_ = std::move(exposed_inspector.value());
-    auto& root = inspector_.GetRoot();
-    root.CreateString("hello", "world", &inspector_);
+    exposed_inspector_.emplace(inspect::ComponentInspector(outgoing_, dispatcher));
+    auto& root = exposed_inspector_->root();
+    root.RecordString("hello", "world");
 
     FDF_SLOG(DEBUG, "Debug world");
     FDF_SLOG(INFO, "Hello world", KV("The answer is", 42));
@@ -66,8 +59,7 @@ class PackagedDriver {
   fidl::WireSharedClient<fdf::Node> node_;
   driver::Namespace ns_;
   driver::Logger logger_;
-  inspect::Inspector inspector_;
-  std::optional<driver::ExposedInspector> exposed_inspector_ = std::nullopt;
+  std::optional<inspect::ComponentInspector> exposed_inspector_ = std::nullopt;
 };
 
 }  // namespace
