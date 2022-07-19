@@ -492,7 +492,11 @@ fn select_best_connection_candidate<'a>(
     ignore_list: &Vec<types::NetworkIdentifier>,
     inspect_node: &mut AutoPersist<InspectBoundedListNode>,
 ) -> Option<(types::ConnectionCandidate, types::WlanChan, types::Bssid)> {
-    info!("Selecting from {} BSSs found for saved networks", bss_list.len());
+    if bss_list.is_empty() {
+        info!("No saved networks to connect to");
+    } else {
+        info!("Selecting from {} BSSs found for saved networks", bss_list.len());
+    }
 
     let selected = bss_list
         .iter()

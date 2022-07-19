@@ -996,7 +996,6 @@ async fn handle_network_selection_results(
             }
         }
     } else {
-        info!("No saved networks available to reconnect to");
         *reconnect_monitor_interval =
             (2 * (*reconnect_monitor_interval)).min(MAX_AUTO_CONNECT_RETRY_SECONDS);
     }
