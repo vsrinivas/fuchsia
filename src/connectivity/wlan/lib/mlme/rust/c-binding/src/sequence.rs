@@ -20,7 +20,7 @@ pub extern "C" fn mlme_sequence_manager_new() -> *mut SequenceManager {
 #[no_mangle]
 pub unsafe extern "C" fn mlme_sequence_manager_delete(mgr: *mut SequenceManager) {
     if !mgr.is_null() {
-        Box::from_raw(mgr);
+        drop(Box::from_raw(mgr));
     }
 }
 
