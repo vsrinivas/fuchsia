@@ -4,15 +4,18 @@
 
 use {
     crate::{base_packages::BasePackages, index::PackageIndex},
-    anyhow::{anyhow, Context as _, Error},
+    anyhow::{anyhow, format_err, Context as _, Error},
     argh::FromArgs,
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::DiscoverableProtocolMarker as _,
+    fidl_contrib::{protocol_connector::ConnectedProtocol, ProtocolConnector},
     fidl_fuchsia_io as fio,
+    fidl_fuchsia_metrics::{
+        MetricEvent, MetricEventLoggerFactoryMarker, MetricEventLoggerProxy, ProjectSpec,
+    },
     fidl_fuchsia_update::CommitStatusProviderMarker,
     fuchsia_async as fasync,
     fuchsia_async::Task,
-    fuchsia_cobalt::{CobaltConnector, ConnectionType},
     fuchsia_component::client::connect_to_protocol,
     fuchsia_inspect as finspect,
     fuchsia_syslog::{self, fx_log_err, fx_log_info},
@@ -40,6 +43,49 @@ pub struct Args {
     /// whether to ignore the system image when starting pkg-cache.
     #[argh(switch)]
     ignore_system_image: bool,
+}
+
+struct CobaltConnectedService;
+impl ConnectedProtocol for CobaltConnectedService {
+    type Protocol = MetricEventLoggerProxy;
+    type ConnectError = Error;
+    type Message = MetricEvent;
+    type SendError = Error;
+
+    fn get_protocol<'a>(
+        &'a mut self,
+    ) -> future::BoxFuture<'a, Result<MetricEventLoggerProxy, Error>> {
+        async {
+            let (logger_proxy, server_end) =
+                fidl::endpoints::create_proxy().context("failed to create proxy endpoints")?;
+            let metric_event_logger_factory =
+                connect_to_protocol::<MetricEventLoggerFactoryMarker>()
+                    .context("Failed to connect to fuchsia::metrics::MetricEventLoggerFactory")?;
+
+            metric_event_logger_factory
+                .create_metric_event_logger(
+                    ProjectSpec { project_id: Some(metrics::PROJECT_ID), ..ProjectSpec::EMPTY },
+                    server_end,
+                )
+                .await?
+                .map_err(|e| format_err!("Connection to MetricEventLogger refused {e:?}"))?;
+            Ok(logger_proxy)
+        }
+        .boxed()
+    }
+
+    fn send_message<'a>(
+        &'a mut self,
+        protocol: &'a MetricEventLoggerProxy,
+        mut msg: MetricEvent,
+    ) -> future::BoxFuture<'a, Result<(), Error>> {
+        async move {
+            let fut = protocol.log_metric_events(&mut std::iter::once(&mut msg));
+            fut.await?.map_err(|e| format_err!("Failed to log metric {e:?}"))?;
+            Ok(())
+        }
+        .boxed()
+    }
 }
 
 // pkg-cache is conceptually a binary, but is linked together as a library with other SWD binaries
@@ -134,8 +180,11 @@ async fn main_inner() -> Result<(), Error> {
     let non_static_allow_list = Arc::new(non_static_allow_list);
     let package_index = Arc::new(async_lock::RwLock::new(package_index));
     let scope = vfs::execution_scope::ExecutionScope::new();
-    let (cobalt_sender, cobalt_fut) = CobaltConnector { buffer_size: COBALT_CONNECTOR_BUFFER_SIZE }
-        .serve(ConnectionType::project_id(metrics::PROJECT_ID));
+    let (cobalt_sender, cobalt_fut) = ProtocolConnector::new_with_buffer_size(
+        CobaltConnectedService,
+        COBALT_CONNECTOR_BUFFER_SIZE,
+    )
+    .serve_and_log_errors();
     let cobalt_fut = Task::spawn(cobalt_fut);
 
     // Use VFS to serve the out dir because ServiceFs does not support OPEN_RIGHT_EXECUTABLE and

@@ -8,7 +8,7 @@ use {
     assert_matches::assert_matches,
     cobalt_client::traits::AsEventCodes,
     cobalt_sw_delivery_registry as metrics,
-    fidl_fuchsia_cobalt::{CobaltEvent, CountEvent, EventPayload},
+    fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
     fuchsia_async as fasync,
     fuchsia_pkg_testing::SystemImageBuilder,
     fuchsia_zircon as zx,
@@ -36,14 +36,10 @@ async fn assert_count_events(
     {
         assert_matches!(
             event,
-            CobaltEvent {
+            MetricEvent {
                 metric_id,
                 event_codes,
-                component: None,
-                payload: EventPayload::EventCount(CountEvent {
-                    period_duration_micros: 0,
-                    count: 1
-                }),
+                payload: MetricEventPayload::Count(1),
             } if metric_id == expected_metric_id && event_codes == expected_codes
         )
     }
@@ -61,8 +57,8 @@ async fn pkg_cache_open_failure() {
     );
     assert_count_events(
         &env,
-        metrics::PKG_CACHE_OPEN_METRIC_ID,
-        vec![metrics::PkgCacheOpenMetricDimensionResult::NotFound],
+        metrics::PKG_CACHE_OPEN_MIGRATED_METRIC_ID,
+        vec![metrics::PkgCacheOpenMigratedMetricDimensionResult::NotFound],
     )
     .await;
 }
@@ -81,8 +77,8 @@ async fn pkg_cache_open_success() {
     );
     assert_count_events(
         &env,
-        metrics::PKG_CACHE_OPEN_METRIC_ID,
-        vec![metrics::PkgCacheOpenMetricDimensionResult::Success],
+        metrics::PKG_CACHE_OPEN_MIGRATED_METRIC_ID,
+        vec![metrics::PkgCacheOpenMigratedMetricDimensionResult::Success],
     )
     .await;
 }

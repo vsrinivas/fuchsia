@@ -1037,7 +1037,10 @@
             from: "#session-manager",
         },
         {
-            protocol: [ "fuchsia.cobalt.LoggerFactory" ],
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.metrics.MetricEventLoggerFactory",
+            ],
             from: "#cobalt",
         },
         {

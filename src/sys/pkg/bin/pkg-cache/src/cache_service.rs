@@ -11,7 +11,9 @@ use {
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::ServerEnd,
     fidl::prelude::*,
+    fidl_contrib::protocol_connector::ProtocolSender,
     fidl_fuchsia_io as fio,
+    fidl_fuchsia_metrics::MetricEvent,
     fidl_fuchsia_pkg::{
         self as fpkg, BlobInfoIteratorRequestStream, NeededBlobsMarker, NeededBlobsRequest,
         NeededBlobsRequestStream, PackageCacheRequest, PackageCacheRequestStream,
@@ -19,7 +21,7 @@ use {
     },
     fidl_fuchsia_pkg_ext::{serve_fidl_iterator, BlobId, BlobInfo},
     fuchsia_async::Task,
-    fuchsia_cobalt::CobaltSender,
+    fuchsia_cobalt_builders::MetricEventExt,
     fuchsia_hash::Hash,
     fuchsia_inspect::{self as finspect, NumericProperty, Property, StringProperty},
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
@@ -45,7 +47,7 @@ pub async fn serve(
     non_static_allow_list: Arc<system_image::NonStaticAllowList>,
     scope: package_directory::ExecutionScope,
     stream: PackageCacheRequestStream,
-    cobalt_sender: CobaltSender,
+    cobalt_sender: ProtocolSender<MetricEvent>,
     serve_id: Arc<AtomicU32>,
     get_node: Arc<finspect::Node>,
 ) -> Result<(), Error> {
@@ -203,7 +205,7 @@ async fn get(
     meta_far_blob: BlobInfo,
     needed_blobs: ServerEnd<NeededBlobsMarker>,
     dir_and_scope: Option<(ServerEnd<fio::DirectoryMarker>, package_directory::ExecutionScope)>,
-    mut cobalt_sender: CobaltSender,
+    mut cobalt_sender: ProtocolSender<MetricEvent>,
     node: &finspect::Node,
     trace_id: ftrace::Id,
 ) -> Result<(), Status> {
@@ -237,11 +239,12 @@ async fn get(
                         meta_far_blob.blob_id,
                         anyhow!(e)
                     );
-                    cobalt_sender.log_event_count(
-                        metrics::PKG_CACHE_OPEN_METRIC_ID,
-                        metrics::PkgCacheOpenMetricDimensionResult::Io,
-                        0,
-                        1,
+                    cobalt_sender.send(
+                        MetricEvent::builder(metrics::PKG_CACHE_OPEN_MIGRATED_METRIC_ID)
+                            .with_event_codes(
+                                metrics::PkgCacheOpenMigratedMetricDimensionResult::Io,
+                            )
+                            .as_occurrence(1),
                     );
                     Status::UNAVAILABLE
                 })?;
@@ -266,11 +269,12 @@ async fn get(
                         meta_far_blob.blob_id,
                         anyhow!(e)
                     );
-                    cobalt_sender.log_event_count(
-                        metrics::PKG_CACHE_OPEN_METRIC_ID,
-                        metrics::PkgCacheOpenMetricDimensionResult::Io,
-                        0,
-                        1,
+                    cobalt_sender.send(
+                        MetricEvent::builder(metrics::PKG_CACHE_OPEN_MIGRATED_METRIC_ID)
+                            .with_event_codes(
+                                metrics::PkgCacheOpenMigratedMetricDimensionResult::Io,
+                            )
+                            .as_occurrence(1),
                     );
                     Status::INTERNAL
                 })?
@@ -288,11 +292,10 @@ async fn get(
         );
     }
 
-    cobalt_sender.log_event_count(
-        metrics::PKG_CACHE_OPEN_METRIC_ID,
-        metrics::PkgCacheOpenMetricDimensionResult::Success,
-        0,
-        1,
+    cobalt_sender.send(
+        MetricEvent::builder(metrics::PKG_CACHE_OPEN_MIGRATED_METRIC_ID)
+            .with_event_codes(metrics::PkgCacheOpenMigratedMetricDimensionResult::Success)
+            .as_occurrence(1),
     );
     Ok(())
 }
@@ -307,15 +310,14 @@ async fn open(
     blobfs: &blobfs::Client,
     meta_far: Hash,
     dir_request: ServerEnd<fio::DirectoryMarker>,
-    mut cobalt_sender: CobaltSender,
+    mut cobalt_sender: ProtocolSender<MetricEvent>,
 ) -> Result<(), Status> {
     let package_status = match get_package_status(base_packages, package_index, &meta_far).await {
         PackageStatus::Other => {
-            cobalt_sender.log_event_count(
-                metrics::PKG_CACHE_OPEN_METRIC_ID,
-                metrics::PkgCacheOpenMetricDimensionResult::NotFound,
-                0,
-                1,
+            cobalt_sender.send(
+                MetricEvent::builder(metrics::PKG_CACHE_OPEN_MIGRATED_METRIC_ID)
+                    .with_event_codes(metrics::PkgCacheOpenMigratedMetricDimensionResult::NotFound)
+                    .as_occurrence(1),
             );
             return Err(Status::NOT_FOUND);
         }
@@ -335,21 +337,19 @@ async fn open(
     )
     .map_err(|e| {
         fx_log_err!("open: error serving package {}: {:#}", meta_far, anyhow!(e));
-        cobalt_sender.log_event_count(
-            metrics::PKG_CACHE_OPEN_METRIC_ID,
-            metrics::PkgCacheOpenMetricDimensionResult::Io,
-            0,
-            1,
+        cobalt_sender.send(
+            MetricEvent::builder(metrics::PKG_CACHE_OPEN_MIGRATED_METRIC_ID)
+                .with_event_codes(metrics::PkgCacheOpenMigratedMetricDimensionResult::Io)
+                .as_occurrence(1),
         );
         Status::INTERNAL
     })
     .await?;
 
-    cobalt_sender.log_event_count(
-        metrics::PKG_CACHE_OPEN_METRIC_ID,
-        metrics::PkgCacheOpenMetricDimensionResult::Success,
-        0,
-        1,
+    cobalt_sender.send(
+        MetricEvent::builder(metrics::PKG_CACHE_OPEN_MIGRATED_METRIC_ID)
+            .with_event_codes(metrics::PkgCacheOpenMigratedMetricDimensionResult::Success)
+            .as_occurrence(1),
     );
     Ok(())
 }
@@ -2286,6 +2286,7 @@ mod serve_needed_blobs_tests {
 #[cfg(test)]
 mod get_handler_tests {
     use super::*;
+    use crate::{CobaltConnectedService, ProtocolConnector, COBALT_CONNECTOR_BUFFER_SIZE};
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn everything_closed() {
@@ -2307,9 +2308,12 @@ mod get_handler_tests {
                 meta_blob_info,
                 stream,
                 None,
-                fuchsia_cobalt::CobaltConnector::default()
-                    .serve(fuchsia_cobalt::ConnectionType::project_id(metrics::PROJECT_ID))
-                    .0,
+                ProtocolConnector::new_with_buffer_size(
+                    CobaltConnectedService,
+                    COBALT_CONNECTOR_BUFFER_SIZE,
+                )
+                .serve_and_log_errors()
+                .0,
                 &inspector.root().create_child("get"),
                 0.into()
             )

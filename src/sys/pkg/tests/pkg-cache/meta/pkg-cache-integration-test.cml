@@ -33,7 +33,7 @@
     offer: [
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.process.Launcher",
                 "fuchsia.sys.Environment",
             ],

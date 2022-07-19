@@ -9,8 +9,8 @@ use {
     assert_matches::assert_matches,
     blobfs_ramdisk::BlobfsRamdisk,
     fidl::endpoints::DiscoverableProtocolMarker as _,
-    fidl_fuchsia_cobalt::CobaltEvent,
     fidl_fuchsia_io as fio,
+    fidl_fuchsia_metrics::MetricEvent,
     fidl_fuchsia_pkg::{
         BlobIdIteratorMarker, BlobInfo, BlobInfoIteratorMarker, NeededBlobsMarker,
         NeededBlobsProxy, PackageCacheMarker, PackageCacheProxy, RetainedPackagesMarker,
@@ -322,12 +322,12 @@ where
         let local_child_svc_dir = vfs::pseudo_directory! {};
 
         // Cobalt mocks so we can assert that we emit the correct events
-        let logger_factory = Arc::new(MockLoggerFactory::new());
+        let logger_factory = Arc::new(MockMetricEventLoggerFactory::new());
         {
             let logger_factory = Arc::clone(&logger_factory);
             local_child_svc_dir
                 .add_entry(
-                    fidl_fuchsia_cobalt::LoggerFactoryMarker::PROTOCOL_NAME,
+                    fidl_fuchsia_metrics::MetricEventLoggerFactoryMarker::PROTOCOL_NAME,
                     vfs::service::host(move |stream| {
                         Arc::clone(&logger_factory).run_logger_factory(stream)
                     }),
@@ -441,7 +441,9 @@ where
         builder
             .add_route(
                 Route::new()
-                    .capability(Capability::protocol_by_name("fuchsia.cobalt.LoggerFactory"))
+                    .capability(Capability::protocol_by_name(
+                        "fuchsia.metrics.MetricEventLoggerFactory",
+                    ))
                     .capability(Capability::protocol_by_name("fuchsia.boot.Arguments"))
                     .capability(Capability::protocol_by_name("fuchsia.tracing.provider.Registry"))
                     .capability(
@@ -559,7 +561,7 @@ struct Proxies {
 }
 
 pub struct Mocks {
-    pub logger_factory: Arc<MockLoggerFactory>,
+    pub logger_factory: Arc<MockMetricEventLoggerFactory>,
     _paver_service: Arc<MockPaverService>,
     _verifier_service: Arc<MockVerifierService>,
 }
@@ -666,21 +668,27 @@ impl<B: Blobfs> TestEnv<B> {
     }
 }
 
-struct MockLogger {
-    cobalt_events: Mutex<Vec<CobaltEvent>>,
+struct MockMetricEventLogger {
+    cobalt_events: Mutex<Vec<MetricEvent>>,
 }
 
-impl MockLogger {
+impl MockMetricEventLogger {
     fn new() -> Self {
         Self { cobalt_events: Mutex::new(vec![]) }
     }
 
-    async fn run_logger(self: Arc<Self>, mut stream: fidl_fuchsia_cobalt::LoggerRequestStream) {
+    async fn run_logger(
+        self: Arc<Self>,
+        mut stream: fidl_fuchsia_metrics::MetricEventLoggerRequestStream,
+    ) {
         while let Some(event) = stream.try_next().await.unwrap() {
             match event {
-                fidl_fuchsia_cobalt::LoggerRequest::LogCobaltEvent { event, responder } => {
-                    self.cobalt_events.lock().push(event);
-                    let _ = responder.send(fidl_fuchsia_cobalt::Status::Ok);
+                fidl_fuchsia_metrics::MetricEventLoggerRequest::LogMetricEvents {
+                    events,
+                    responder,
+                } => {
+                    self.cobalt_events.lock().extend(events.into_iter());
+                    let _ = responder.send(&mut Ok(()));
                 }
                 _ => {
                     panic!("unhandled Logger method {:?}", event);
@@ -690,32 +698,32 @@ impl MockLogger {
     }
 }
 
-pub struct MockLoggerFactory {
-    loggers: Mutex<Vec<Arc<MockLogger>>>,
+pub struct MockMetricEventLoggerFactory {
+    loggers: Mutex<Vec<Arc<MockMetricEventLogger>>>,
 }
 
-impl MockLoggerFactory {
+impl MockMetricEventLoggerFactory {
     fn new() -> Self {
         Self { loggers: Mutex::new(vec![]) }
     }
 
     async fn run_logger_factory(
         self: Arc<Self>,
-        mut stream: fidl_fuchsia_cobalt::LoggerFactoryRequestStream,
+        mut stream: fidl_fuchsia_metrics::MetricEventLoggerFactoryRequestStream,
     ) {
         while let Some(event) = stream.try_next().await.unwrap() {
             match event {
-                fidl_fuchsia_cobalt::LoggerFactoryRequest::CreateLoggerFromProjectId {
-                    project_id,
+                fidl_fuchsia_metrics::MetricEventLoggerFactoryRequest::CreateMetricEventLogger {
+                    project_spec,
                     logger,
                     responder,
                 } => {
-                    assert_eq!(project_id, cobalt_sw_delivery_registry::PROJECT_ID);
-                    let mock_logger = Arc::new(MockLogger::new());
+                    assert_eq!(project_spec.project_id, Some(cobalt_sw_delivery_registry::PROJECT_ID));
+                    let mock_logger = Arc::new(MockMetricEventLogger::new());
                     self.loggers.lock().push(mock_logger.clone());
                     fasync::Task::spawn(mock_logger.run_logger(logger.into_stream().unwrap()))
                         .detach();
-                    let _ = responder.send(fidl_fuchsia_cobalt::Status::Ok);
+                    let _ = responder.send(&mut Ok(()));
                 }
                 _ => {
                     panic!("unhandled LoggerFactory method: {:?}", event);
@@ -728,14 +736,14 @@ impl MockLoggerFactory {
         &self,
         n: usize,
         id: u32,
-    ) -> Vec<CobaltEvent> {
+    ) -> Vec<MetricEvent> {
         loop {
-            let events: Vec<CobaltEvent> = self
+            let events: Vec<MetricEvent> = self
                 .loggers
                 .lock()
                 .iter()
                 .flat_map(|logger| logger.cobalt_events.lock().clone().into_iter())
-                .filter(|CobaltEvent { metric_id, .. }| *metric_id == id)
+                .filter(|MetricEvent { metric_id, .. }| *metric_id == id)
                 .collect();
             if events.len() >= n {
                 return events;

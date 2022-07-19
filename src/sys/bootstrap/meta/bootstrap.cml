@@ -1003,7 +1003,7 @@
         },
         {
             protocol: [
-                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.update.CommitStatusProvider",
             ],
             from: "parent",
