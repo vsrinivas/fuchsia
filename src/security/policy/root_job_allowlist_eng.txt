@@ -12,6 +12,4 @@ fuchsia-pkg://fuchsia.com/debugger_utils_tests#meta/debugger_utils_tests.cmx
 fuchsia-pkg://fuchsia.com/driver-manager-tests#meta/driver-manager-test.cmx
 fuchsia-pkg://fuchsia.com/garnet_input_latency_benchmarks#meta/run_simplest_app_benchmark.cmx
 fuchsia-pkg://fuchsia.com/josh-tests#meta/josh_tests_bin.cmx
-fuchsia-pkg://fuchsia.com/trace_tests#meta/nested_environment_test.cmx
-fuchsia-pkg://fuchsia.com/trace_tests#meta/trace_integration_tests.cmx
 fuchsia-pkg://fuchsia.com/policy-integration-tests#meta/root_job_allowed.cmx

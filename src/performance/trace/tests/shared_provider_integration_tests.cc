@@ -16,7 +16,7 @@ namespace test {
 
 namespace {
 
-const char kAppUrl[] = "fuchsia-pkg://fuchsia.com/trace_tests#meta/shared_provider_app.cmx";
+const char kChildPath[] = "/pkg/bin/shared_provider_app";
 
 // We don't enable all categories, we just need a kernel category we know we'll
 // receive. Syscalls are a good choice. We also need the sched category to get
@@ -30,7 +30,8 @@ TEST(SharedProvider, IntegrationTest) {
   zx::job job{};  // -> default job
   std::vector<std::string> args{
       "record", kCategoriesArg,
-      std::string("--output-file=") + kSpawnedTestTmpPath + "/" + kRelativeOutputFilePath, kAppUrl};
+      std::string("--output-file=") + kSpawnedTestTmpPath + "/" + kRelativeOutputFilePath,
+      "--spawn", kChildPath};
   ASSERT_TRUE(RunTraceAndWait(job, args));
 
   size_t num_events;

@@ -29,15 +29,10 @@ namespace test {
 
 namespace {
 
-// The URL of the basic integration test app (for fill-buffer, fill-buffer-and-alert, and simple).
-const char kBasicIntegrationTestUrl[] =
-    "fuchsia-pkg://fuchsia.com/trace_tests#meta/basic_integration_test_app.cmx";
-// The URL of the nested environment integration test app.
-const char kNestedEnvironmentTestUrl[] =
-    "fuchsia-pkg://fuchsia.com/trace_tests#meta/nested_environment_test.cmx";
-// The URL of the two-providers-two-engines integration test app.
-const char kTwoProvidersTwoEnginesTestUrl[] =
-    "fuchsia-pkg://fuchsia.com/trace_tests#meta/two_providers_two_engines_test_app.cmx";
+// Path to basic integration test binary (for fill-buffer, fill-buffer-and-alert, and simple).
+const char kBasicIntegrationTestPath[] = "/pkg/bin/basic_integration_test_app";
+// Path to two-providers-two-engines integration test binary.
+const char kTwoProvidersTwoEnginesTestPath[] = "/pkg/bin/two_providers_two_engines_test_app";
 
 void RunAndVerify(const std::string& app_path, const std::string& test_name,
                   const std::string& categories, size_t buffer_size_in_mb,
@@ -50,25 +45,20 @@ void RunAndVerify(const std::string& app_path, const std::string& test_name,
 }
 
 TEST(Oneshot, FillBuffer) {
-  RunAndVerify(kBasicIntegrationTestUrl, "fill-buffer", "trace:test", 1, "oneshot");
+  RunAndVerify(kBasicIntegrationTestPath, "fill-buffer", "trace:test", 1, "oneshot");
 }
 
 TEST(Circular, FillBuffer) {
-  RunAndVerify(kBasicIntegrationTestUrl, "fill-buffer", "trace:test", 1, "circular");
+  RunAndVerify(kBasicIntegrationTestPath, "fill-buffer", "trace:test", 1, "circular");
 }
 
 TEST(CircularWithTrigger, FillBufferAndAlert) {
-  RunAndVerify(kBasicIntegrationTestUrl, "fill-buffer-and-alert", "trace:test", 1, "circular",
+  RunAndVerify(kBasicIntegrationTestPath, "fill-buffer-and-alert", "trace:test", 1, "circular",
                {"--trigger=alert:stop"});
 }
 
 TEST(Streaming, FillBuffer) {
-  RunAndVerify(kBasicIntegrationTestUrl, "fill-buffer", "trace:test", 1, "streaming");
-}
-
-TEST(NestedTestEnvironment, Test) {
-  RunAndVerify(kNestedEnvironmentTestUrl, "nested-environment-test", "trace:test", 1, "oneshot",
-               {"--environment-name=environment_name"});
+  RunAndVerify(kBasicIntegrationTestPath, "fill-buffer", "trace:test", 1, "streaming");
 }
 
 // A class for adding an extra provider to the test.
@@ -150,16 +140,16 @@ class TwoProvidersOneEngine : public ExtraProvider {
 TEST_F(TwoProvidersOneEngine, ErrorHandling) {
   ASSERT_TRUE(provider_process().is_valid());
 
-  RunAndVerify(kBasicIntegrationTestUrl, "simple", "trace:test", 1, "oneshot");
+  RunAndVerify(kBasicIntegrationTestPath, "simple", "trace:test", 1, "oneshot");
 
   // Running this test twice should work.
   // fxbug.dev/22912: Providers didn't properly reset themselves after a previous
   // trace was prematurely aborted.
-  RunAndVerify(kBasicIntegrationTestUrl, "simple", "trace:test", 1, "oneshot");
+  RunAndVerify(kBasicIntegrationTestPath, "simple", "trace:test", 1, "oneshot");
 }
 
 TEST(TwoProvidersTwoEngines, Test) {
-  RunAndVerify(kTwoProvidersTwoEnginesTestUrl, "two-providers-two-engines", "trace:test", 1,
+  RunAndVerify(kTwoProvidersTwoEnginesTestPath, "two-providers-two-engines", "trace:test", 1,
                "oneshot");
 }
 

@@ -37,6 +37,7 @@ bool RunSimpleTest(size_t buffer_size_in_mb, const std::string& buffering_mode) 
 
 bool VerifySimpleTest(size_t buffer_size_in_mb, const std::string& buffering_mode,
                       const std::string& test_output_file) {
+  FX_LOGS(INFO) << "VerifySimpleTest called";
   size_t num_events;
   if (!VerifyTestEventsFromJson(test_output_file, &num_events)) {
     return false;

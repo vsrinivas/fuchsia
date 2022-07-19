@@ -1,0 +1,37 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/shared_provider_integration_tests",
+    },
+    children: [
+        {
+            name: "trace_manager",
+            url: "#meta/trace_manager.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.tracing.controller.Controller",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "#trace_manager",
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+        {
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.process.Resolver",
+            ],
+        },
+    ],
+}

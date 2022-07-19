@@ -34,10 +34,12 @@
 namespace tracing {
 namespace test {
 
-// The "path" of the trace program from outside the trace package.
-const char kTraceProgramUrl[] = "fuchsia-pkg://fuchsia.com/trace#meta/trace.cmx";
 // The path of the trace program as a shell command.
 const char kTraceProgramPath[] = "/pkg/bin/trace";
+
+static bool AppIsComponent(const std::string& app_path) {
+  return app_path.rfind("fuchsia-pkg://", 0) != std::string::npos;
+}
 
 static bool BuildTraceProgramArgs(const std::string& app_path, const std::string& test_name,
                                   const std::string& categories, size_t buffer_size_in_mb,
@@ -46,7 +48,7 @@ static bool BuildTraceProgramArgs(const std::string& app_path, const std::string
                                   const std::string& relative_output_file_path,
                                   const syslog::LogSettings& log_settings,
                                   std::vector<std::string>* args) {
-  AppendLoggingArgs(args, "", log_settings);
+  // AppendLoggingArgs(args, "", log_settings);
   args->push_back("record");
 
   args->push_back(fxl::StringPrintf("--buffer-size=%zu", buffer_size_in_mb));
@@ -58,10 +60,13 @@ static bool BuildTraceProgramArgs(const std::string& app_path, const std::string
       (std::string(kSpawnedTestTmpPath) + "/" + relative_output_file_path).c_str()));
   args->insert(args->end(), additional_arguments);
 
-  AppendLoggingArgs(args, "--append-args=", log_settings);
+  // AppendLoggingArgs(args, "--append-args=", log_settings);
   args->push_back(fxl::StringPrintf("--append-args=run,%s,%zu,%s", test_name.c_str(),
                                     buffer_size_in_mb, buffering_mode.c_str()));
 
+  if (!AppIsComponent(app_path)) {
+    args->push_back("--spawn");
+  }
   args->push_back(app_path);
 
   return true;
@@ -72,7 +77,7 @@ static bool BuildVerificationProgramArgs(const std::string& test_name, size_t bu
                                          const std::string& output_file_path,
                                          const syslog::LogSettings& log_settings,
                                          std::vector<std::string>* args) {
-  AppendLoggingArgs(args, "", log_settings);
+  // AppendLoggingArgs(args, "", log_settings);
   args->push_back("verify");
   args->push_back(test_name);
   args->push_back(fxl::StringPrintf("%zu", buffer_size_in_mb));
@@ -142,52 +147,13 @@ bool RunTraceAndWait(const zx::job& job, const std::vector<std::string>& args) {
   if (!WaitAndGetReturnCode("trace", subprocess, &return_code)) {
     return false;
   }
+
   if (return_code != 0) {
     FX_LOGS(ERROR) << "trace exited with return code " << return_code;
     return false;
   }
 
   return true;
-}
-
-static bool AddAuxDirToLaunchInfo(const char* local_path, const char* remote_path,
-                                  fuchsia::sys::FlatNamespace* flat_namespace) {
-  zx::channel dir, server;
-
-  zx_status_t status = zx::channel::create(0, &dir, &server);
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Could not create channel aux directory";
-    return false;
-  }
-
-  status = fdio_open(local_path,
-                     static_cast<uint32_t>(fuchsia::io::OpenFlags::RIGHT_READABLE |
-                                           fuchsia::io::OpenFlags::RIGHT_WRITABLE),
-                     server.release());
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Could not open " << local_path;
-    return false;
-  }
-
-  flat_namespace->paths.push_back(remote_path);
-  flat_namespace->directories.push_back(std::move(dir));
-  return true;
-}
-
-static bool RunTraceComponentAndWait(const std::string& app, const std::vector<std::string>& args) {
-  auto flat_namespace = std::make_unique<fuchsia::sys::FlatNamespace>();
-  // Add a path to our /pkg so trace can read tspec files.
-  if (!AddAuxDirToLaunchInfo(kTestPackagePath, kSpawnedTestPackagePath, flat_namespace.get())) {
-    return false;
-  }
-  // Add a path to our /tmp so trace can write trace files there.
-  if (!AddAuxDirToLaunchInfo(kTestTmpPath, kSpawnedTestTmpPath, flat_namespace.get())) {
-    return false;
-  }
-
-  async::Loop loop{&kAsyncLoopConfigAttachToCurrentThread};
-  sys::ComponentContext* context = tracing::test::GetComponentContext();
-  return RunComponentAndWait(&loop, context, app, args, std::move(flat_namespace));
 }
 
 bool RunIntegrationTest(const std::string& app_path, const std::string& test_name,
@@ -204,14 +170,18 @@ bool RunIntegrationTest(const std::string& app_path, const std::string& test_nam
                 << buffering_mode << " buffer, tracing categories " << categories
                 << ", output file " << relative_output_file_path;
 
-  return RunTraceComponentAndWait(kTraceProgramUrl, args);
+  zx::job job{};
+  if (zx::job::create(*zx::job::default_job(), 0, &job) != ZX_OK) {
+    return false;
+  }
+  return RunTraceAndWait(job, args);
 }
 
 bool VerifyIntegrationTest(const std::string& app_path, const std::string& test_name,
                            size_t buffer_size_in_mb, const std::string& buffering_mode,
                            const std::string& relative_output_file_path,
                            const syslog::LogSettings& log_settings) {
-  std::vector<std::string> args;
+  std::vector<std::string> args{app_path};
   BuildVerificationProgramArgs(test_name, buffer_size_in_mb, buffering_mode,
                                std::string(kSpawnedTestTmpPath) + "/" + relative_output_file_path,
                                log_settings, &args);
@@ -219,7 +189,39 @@ bool VerifyIntegrationTest(const std::string& app_path, const std::string& test_
   FX_LOGS(INFO) << "Verifying test " << test_name << " with " << buffer_size_in_mb << " MB "
                 << buffering_mode << " buffer, output file " << relative_output_file_path;
 
-  return RunTraceComponentAndWait(app_path, args);
+  zx::job job{};
+  if (zx::job::create(*zx::job::default_job(), 0, &job) != ZX_OK) {
+    return false;
+  }
+  zx::process subprocess;
+
+  size_t num_actions = 0;
+  fdio_spawn_action_t spawn_actions[2];
+
+  // Add a path to our /pkg so trace can read, e.g., tspec files.
+  zx_status_t status = AddAuxDirToSpawnAction(kTestPackagePath, kSpawnedTestPackagePath,
+                                              &spawn_actions[num_actions++]);
+  if (status != ZX_OK) {
+    return false;
+  }
+  // Add a path to our /tmp so trace can write, e.g., trace files there.
+  status = AddAuxDirToSpawnAction(kTestTmpPath, kSpawnedTestTmpPath, &spawn_actions[num_actions++]);
+  if (status != ZX_OK) {
+    return false;
+  }
+
+  if (RunProgram(job, args, num_actions, spawn_actions, &subprocess) != ZX_OK) {
+    return false;
+  }
+  int64_t return_code;
+  if (!WaitAndGetReturnCode(args[0], subprocess, &return_code)) {
+    return false;
+  }
+  if (return_code != 0) {
+    FX_LOGS(ERROR) << args[0] << " exited with return code " << return_code;
+    return false;
+  }
+  return true;
 }
 
 }  // namespace test

@@ -10,7 +10,6 @@ group("tests") {
     ":basic_integration_test_app",
     ":integration_test_utils",
     ":integration_test_utils_with_trace_with_static_engine",
-    ":nested_environment_test",
     ":run_test",
     ":self_contained_provider",
     ":trace_integration_tests",
@@ -248,22 +247,6 @@ executable("two_providers_two_engines_test_app") {
   ]
 }
 
-executable("nested_environment_test") {
-  testonly = true
-
-  sources = [
-    "integration_test_main.cc",
-    "nested_environment_test.cc",
-  ]
-
-  deps = [
-    ":integration_test_utils",
-    "//src/lib/fxl",
-    "//zircon/system/ulib/task-utils",
-    "//zircon/system/ulib/zx",
-  ]
-}
-
 executable("return_1234") {
   testonly = true
 
@@ -302,22 +285,6 @@ executable("detach_tests") {
     ":integration_test_utils",
     ":run_test",
     "//third_party/googletest:gtest",
-    "//zircon/system/ulib/zx",
-  ]
-}
-
-executable("ktrace_integration_tests") {
-  testonly = true
-
-  sources = [ "ktrace_integration_tests.cc" ]
-
-  deps = [
-    ":gtest_main",
-    ":integration_test_utils",
-    ":run_test",
-    "//src/performance/lib/test_utils",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/trace-reader",
     "//zircon/system/ulib/zx",
   ]
 }
@@ -384,86 +351,6 @@ executable("provider_destruction_tests") {
   ]
 }
 
-fuchsia_test_component("detach_tests_component") {
-  component_name = "detach_tests"
-  manifest = "meta/detach_tests.cmx"
-  deps = [ ":detach_tests" ]
-}
-
-fuchsia_test_component("ktrace_integration_tests_component") {
-  component_name = "ktrace_integration_tests"
-  manifest = "meta/ktrace_integration_tests.cmx"
-  deps = [
-    ":ktrace_integration_tests",
-    "//src/performance/trace:bin",
-  ]
-}
-
-fuchsia_test_component("provider_destruction_tests_component") {
-  component_name = "provider_destruction_tests"
-  manifest = "meta/provider_destruction_tests.cmx"
-  deps = [ ":provider_destruction_tests" ]
-}
-
-fuchsia_test_component("return_child_result_tests_component") {
-  component_name = "return_child_result_tests"
-  manifest = "meta/return_child_result_tests.cmx"
-  deps = [ ":return_child_result_tests" ]
-}
-
-fuchsia_test_component("shared_provider_integration_tests_component") {
-  component_name = "shared_provider_integration_tests"
-  manifest = "meta/shared_provider_integration_tests.cmx"
-  deps = [ ":shared_provider_integration_tests" ]
-}
-
-fuchsia_test_component("trace_integration_tests_component") {
-  component_name = "trace_integration_tests"
-  manifest = "meta/trace_integration_tests.cmx"
-  deps = [ ":trace_integration_tests" ]
-}
-
-fuchsia_test_component("trace_tests_component") {
-  component_name = "trace_tests"
-  manifest = "meta/trace_tests.cmx"
-  deps = [ ":trace_tests_bin" ]
-}
-
-fuchsia_component("basic_integration_test_app_component") {
-  testonly = true
-  component_name = "basic_integration_test_app"
-  manifest = "meta/basic_integration_test_app.cmx"
-  deps = [ ":basic_integration_test_app" ]
-}
-
-fuchsia_component("nested_environment_test_component") {
-  testonly = true
-  component_name = "nested_environment_test"
-  manifest = "meta/nested_environment_test.cmx"
-  deps = [ ":nested_environment_test" ]
-}
-
-fuchsia_component("provider_destruction_app_component") {
-  testonly = true
-  component_name = "provider_destruction_app"
-  manifest = "meta/provider_destruction_app.cmx"
-  deps = [ ":provider_destruction_app" ]
-}
-
-fuchsia_component("shared_provider_app_component") {
-  testonly = true
-  component_name = "shared_provider_app"
-  manifest = "meta/shared_provider_app.cmx"
-  deps = [ ":shared_provider_app" ]
-}
-
-fuchsia_component("two_providers_two_engines_test_app_component") {
-  testonly = true
-  component_name = "two_providers_two_engines_test_app"
-  manifest = "meta/two_providers_two_engines_test_app.cmx"
-  deps = [ ":two_providers_two_engines_test_app" ]
-}
-
 # TODO(fxbug.dev/90444): This group target is to ensure that the v1
 # trace_manager component is included with these tests. These tests should be
 # updated to use the v2 component instead.
@@ -475,11 +362,53 @@ group("trace_tests") {
   ]
 }
 
+fuchsia_component("trace_tests_component") {
+  testonly = true
+  component_name = "trace_tests"
+  manifest = "meta/trace_tests.cml"
+  deps = [ ":trace_tests_bin" ]
+}
+
+fuchsia_component("detach_tests_component") {
+  testonly = true
+  component_name = "detach_tests"
+  manifest = "meta/detach_tests.cml"
+  deps = [ ":detach_tests" ]
+}
+
+fuchsia_component("provider_destruction_tests_component") {
+  testonly = true
+  component_name = "provider_destruction_tests"
+  manifest = "meta/provider_destruction_tests.cml"
+  deps = [ ":provider_destruction_tests" ]
+}
+
+fuchsia_test_component("return_child_result_tests_component") {
+  component_name = "return_child_result_tests"
+  manifest = "meta/return_child_result_tests.cml"
+  deps = [ ":return_child_result_tests" ]
+}
+
+fuchsia_test_component("shared_provider_integration_tests_component") {
+  component_name = "shared_provider_integration_tests"
+  manifest = "meta/shared_provider_integration_tests.cml"
+  deps = [ ":shared_provider_integration_tests" ]
+}
+
+fuchsia_test_component("trace_integration_tests_component") {
+  component_name = "trace_integration_tests"
+  manifest = "meta/trace_integration_tests.cml"
+  deps = [
+    ":basic_integration_test_app",
+    ":trace_integration_tests",
+    ":two_providers_two_engines_test_app",
+  ]
+}
+
 fuchsia_test_package("trace_tests_package") {
   package_name = "trace_tests"
   test_components = [
     ":detach_tests_component",
-    ":ktrace_integration_tests_component",
     ":provider_destruction_tests_component",
     ":return_child_result_tests_component",
     ":shared_provider_integration_tests_component",
@@ -487,14 +416,13 @@ fuchsia_test_package("trace_tests_package") {
     ":trace_tests_component",
   ]
   deps = [
-    ":basic_integration_test_app_component",
-    ":nested_environment_test_component",
-    ":provider_destruction_app_component",
+    ":provider_destruction_app",
     ":return_1234",
     ":run_awhile",
-    ":shared_provider_app_component",
+    ":shared_provider_app",
     ":two_providers_one_engine",
-    ":two_providers_two_engines_test_app_component",
+    "//src/performance/trace:bin",
+    "//src/performance/trace_manager:component_cfv2",
   ]
   test_specs = {
     log_settings = {

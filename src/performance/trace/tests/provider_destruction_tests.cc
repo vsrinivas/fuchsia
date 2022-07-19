@@ -17,7 +17,7 @@ namespace test {
 
 namespace {
 
-const char kAppUrl[] = "fuchsia-pkg://fuchsia.com/trace_tests#meta/provider_destruction_app.cmx";
+const char kChildPath[] = "/pkg/bin/provider_destruction_app";
 
 // We don't enable all categories, we just need a kernel category we know we'll
 // receive. Syscalls are a good choice. We also need the sched category to get
@@ -37,7 +37,7 @@ TEST(ProviderDestruction, StressTest) {
     std::vector<std::string> args{
         "record", kCategoriesArg,
         std::string("--output-file=") + kSpawnedTestTmpPath + "/" + kRelativeOutputFilePath,
-        kAppUrl};
+        "--spawn", kChildPath};
     ASSERT_TRUE(RunTraceAndWait(job, args));
 
     size_t num_events;
