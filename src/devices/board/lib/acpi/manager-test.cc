@@ -114,7 +114,7 @@ TEST_F(AcpiManagerTest, TestEnumerateSystemBus) {
   ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\", std::make_unique<Device>("_SB_")));
   ASSERT_NO_FATAL_FAILURE(DiscoverConfigurePublish());
 
-  ASSERT_EQ(mock_root_->descendant_count(), 1);
+  ASSERT_EQ(mock_root_->descendant_count(), 2);
 }
 
 TEST_F(AcpiManagerTest, TestDevicesOnPciBus) {
@@ -128,7 +128,7 @@ TEST_F(AcpiManagerTest, TestDevicesOnPciBus) {
   ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\_SB_.PCI0", std::move(device)));
 
   ASSERT_NO_FATAL_FAILURE(DiscoverConfigurePublish());
-  ASSERT_EQ(mock_root_->descendant_count(), 3);
+  ASSERT_EQ(mock_root_->descendant_count(), 6);
 
   Device* pci_bus = acpi_.GetDeviceRoot()->FindByPath("\\_SB_.PCI0");
   // Check the PCI bus's type was set correctly.
@@ -155,7 +155,8 @@ TEST_F(AcpiManagerTest, TestDeviceOnPciBusWithNoAdr) {
   ASSERT_NO_FATAL_FAILURE(InsertDeviceBelow("\\_SB_.PCI0", std::move(device)));
 
   ASSERT_NO_FATAL_FAILURE(DiscoverConfigurePublish());
-  ASSERT_EQ(mock_root_->descendant_count(), 3);
+  // We added 3 devices, and then each device gets a corresponding passthrough device.
+  ASSERT_EQ(mock_root_->descendant_count(), 6);
 
   ASSERT_TRUE(acpi::test::GetAcpiBdfs().empty());
 }
@@ -404,9 +405,8 @@ TEST_F(AcpiManagerTest, TestDeviceNotPresentButFunctioning) {
 
   ASSERT_NO_FATAL_FAILURE(DiscoverConfigurePublish());
 
-  // Both devices should have been enumerated.
-  // TODO(simonshields): check that _SB_ was added with the NON_BINDABLE flag set.
-  ASSERT_EQ(mock_root_->descendant_count(), 2);
+  // Both devices should have been enumerated, but only I2C0 will have a passthrough device.
+  ASSERT_EQ(mock_root_->descendant_count(), 3);
 }
 
 TEST_F(AcpiManagerTest, TestDeviceNotEnabled) {

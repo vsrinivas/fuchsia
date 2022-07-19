@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/metadata.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fit/defer.h>
@@ -172,6 +173,17 @@ zx_status_t Device::ReportCurrentResources() {
 }
 
 void Device::DdkInit(ddk::InitTxn txn) {
+  auto finish = fit::defer([this]() {
+    // TODO(fxbug.dev/104710): remove this once compat shim accurately emulates DFv1.
+    std::scoped_lock lock(passthrough_init_lock_);
+    parent_init_called_ = true;
+    if (passthrough_init_called_) {
+      // If the passthrough device has had its init hook called, reply to it so that it gets added
+      // to devfs.
+      device_init_reply_args_t args;
+      device_init_reply(passthrough_dev_, ZX_OK, &args);
+    }
+  });
   auto use_global_lock = acpi_->EvaluateObject(acpi_handle_, "_GLK", std::nullopt);
   if (use_global_lock.is_ok()) {
     if (use_global_lock->Type == ACPI_TYPE_INTEGER && use_global_lock->Integer.Value == 1) {
@@ -671,13 +683,68 @@ zx::status<> Device::AddDevice(const char* name, cpp20::span<zx_device_prop_t> p
     return outgoing.take_error();
   }
 
-  return zx::make_status(DdkAdd(ddk::DeviceAddArgs(name)
-                                    .set_props(props)
-                                    .set_str_props(str_props)
-                                    .set_proto_id(ZX_PROTOCOL_ACPI)
-                                    .set_flags(flags | DEVICE_ADD_MUST_ISOLATE)
-                                    .set_fidl_protocol_offers(offers)
-                                    .set_outgoing_dir(std::move(outgoing.value()))));
+  // A node can either have children manually added to it, or have drivers bound to it. To make this
+  // work and preserve the tree topology of ACPI we create a passthrough node called
+  // 'passthrough-device' which is what drivers bind to.
+  bool needs_passthrough = false;
+  if (!(flags & DEVICE_ADD_NON_BINDABLE)) {
+    needs_passthrough = true;
+  }
+
+  zx_status_t status = DdkAdd(ddk::DeviceAddArgs(name).set_flags(DEVICE_ADD_NON_BINDABLE));
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  if (!needs_passthrough) {
+    return zx::ok();
+  }
+
+  static const zx_protocol_device_t passthrough_proto = {
+      .version = DEVICE_OPS_VERSION,
+      // TODO(fxbug.dev/104710): remove this once compat shim accurately emulates DFv1.
+      .init =
+          [](void* dev) {
+            Device* d = static_cast<Device*>(dev);
+            std::scoped_lock lock(d->passthrough_init_lock_);
+            d->passthrough_init_called_ = true;
+            if (d->parent_init_called_) {
+              // Only add the device to devfs if our parent has been added.
+              device_init_reply_args_t args;
+              device_init_reply(d->passthrough_dev_, ZX_OK, &args);
+            }
+          },
+
+      .release = [](void* dev) {},
+  };
+
+  // TODO(fxbug.dev/104709): once the compat shim is fixed, we should give this a very short name
+  // like 'pt' or something.
+  auto passthrough_name = fbl::StringPrintf("%s-passthrough", name);
+
+  device_add_args_t passthrough_args{
+      .version = DEVICE_ADD_ARGS_VERSION,
+      .name = passthrough_name.data(),
+      .ctx = this,
+      .ops = &passthrough_proto,
+      .props = props.data(),
+      .prop_count = static_cast<uint32_t>(props.size()),
+      .str_props = str_props.data(),
+      .str_prop_count = static_cast<uint32_t>(str_props.size()),
+      .proto_id = ZX_PROTOCOL_ACPI,
+      .fidl_protocol_offers = offers.data(),
+      .fidl_protocol_offer_count = offers.size(),
+      .flags = flags | DEVICE_ADD_MUST_ISOLATE,
+      .outgoing_dir_channel = outgoing->release(),
+  };
+
+  status = device_add(zxdev(), &passthrough_args, &passthrough_dev_);
+  if (status != ZX_OK) {
+    zxlogf(WARNING, "Failed to add passthrough device for '%s': %s", name,
+           zx_status_get_string(status));
+    // Do not fail here so that child devices can still get added.
+  }
+
+  return zx::ok();
 }
 
 void Device::GetBusId(GetBusIdRequestView request, GetBusIdCompleter::Sync& completer) {

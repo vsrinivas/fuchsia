@@ -170,7 +170,7 @@ zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Manager* manager) {
     zxlogf(ERROR, "This device (%s) has already been built!", name());
     return zx::error(ZX_ERR_BAD_STATE);
   }
-  DeviceArgs device_args(manager->acpi_root(), manager, handle_);
+  DeviceArgs device_args(parent_->zx_device_, manager, handle_);
   if (HasBusId() && bus_type_ != BusType::kPci) {
     zx::status<std::vector<uint8_t>> metadata = FidlEncodeMetadata();
     if (metadata.is_error()) {
