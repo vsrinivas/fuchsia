@@ -437,7 +437,6 @@ impl Actor {
                     }
                 };
             }
-            Action::ApplyNoOp(ApplyNoOp {}) => {}
             unexpected => {
                 // "Illegal" is the appropriate response here, not "Unimplemented".
                 // Known-Unimplemented actions should be matched explicitly.

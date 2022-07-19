@@ -37,6 +37,7 @@ rustc_binary("validator_bin") {
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/diagnostics/validator/inspect/fidl:validate-rustc",
     "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/diagnostics/inspect/format/rust",
@@ -62,16 +63,6 @@ rustc_binary("validator_bin") {
   ]
 }
 
-fuchsia_component("validator") {
-  manifest = "meta/validator.cmx"
-  deps = [ ":validator_bin" ]
-}
-
-fuchsia_package("inspect-validator") {
-  deps = [ ":validator" ]
-}
-
 fuchsia_unittest_package("inspect-validator-test") {
-  manifest = "meta/validator-test.cmx"
   deps = [ ":validator_bin_test" ]
 }

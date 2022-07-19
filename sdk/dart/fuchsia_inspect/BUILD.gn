@@ -107,5 +107,6 @@ group("tests") {
     ":dart-archive-reader-test",
     ":fuchsia_inspect_package_unittests($host_toolchain)",
     "test/integration:tests",
+    "test/validator_puppet:tests",
   ]
 }

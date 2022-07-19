@@ -30,12 +30,16 @@ go_binary("puppet_bin") {
 
 fuchsia_unittest_component("puppet") {
   deps = [ ":puppet_bin" ]
-  manifest = "meta/puppet.cmx"
+
+  # This must be named puppet.cml or have `component_name = "puppet"` so
+  # `children: url: "#meta/puppet.cm"` in
+  # //src/diagnostics/validator/inspect/meta/validator.shard.cml can find it.
+  manifest = "meta/puppet.cml"
 }
 
 fuchsia_unittest_component("validator-component") {
   deps = [ "//src/diagnostics/validator/inspect:validator_bin" ]
-  manifest = "meta/validator.cmx"
+  manifest = "meta/validator.cml"
 }
 
 fuchsia_test_package("inspect-validator-tests-go") {

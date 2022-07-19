@@ -169,8 +169,6 @@ class _ValidateImpl extends fidl_validate.Validate {
         BoolProperty p = _properties[action.setBool.id];
         p.setValue(action.setBool.value);
         break;
-      case fidl_validate.ActionTag.applyNoOp:
-        break;
       default:
         return fidl_validate.TestResult.unimplemented;
     }

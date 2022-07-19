@@ -32,13 +32,16 @@ rustc_binary("bin") {
 }
 
 fuchsia_component("inspect-validator-rust-puppet") {
+  # `component_name` must be "puppet" so `children: url: "#meta/puppet.cm"` in
+  # //src/diagnostics/validator/inspect/meta/validator.shard.cml can find it.
+  component_name = "puppet"
   testonly = true
-  manifest = "meta/inspect-validator-rust-puppet.cmx"
+  manifest = "meta/inspect-validator-rust-puppet.cml"
   deps = [ ":bin" ]
 }
 
 fuchsia_unittest_package("inspect-validator-test-rust") {
-  manifest = "meta/validator.cmx"
+  manifest = "meta/validator.cml"
   deps = [
     ":inspect-validator-rust-puppet",
     "//src/diagnostics/validator/inspect:validator_bin",

@@ -667,7 +667,6 @@ impl Data {
                     ));
                 }
             }
-            validate::Action::ApplyNoOp(validate::ApplyNoOp {}) => Ok(()),
             _ => return Err(format_err!("Unknown action {:?}", action)),
         }
     }
@@ -1116,6 +1115,26 @@ impl Data {
             self.apply(&action)?;
         }
         Ok(())
+    }
+
+    /// Removes a top-level tree if present (if not, does nothing)
+    pub fn remove_tree(&mut self, name: &str) {
+        if self.is_empty() {
+            return;
+        }
+        let mut target_node_id = None;
+        let root = &self.nodes[&0];
+        for child_id in &root.children {
+            if let Some(node) = self.nodes.get(&child_id) {
+                if node.name == name {
+                    target_node_id = Some(*child_id);
+                    break;
+                }
+            }
+        }
+        if let Some(id) = target_node_id {
+            self.delete_node(id).unwrap();
+        }
     }
 
     /// Return true if this data is not just an empty root node.

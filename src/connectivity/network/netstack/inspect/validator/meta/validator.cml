@@ -1,0 +1,16 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "//src/diagnostics/validator/inspect/meta/validator.shard.cml" ],
+    program: {
+        binary: "bin/validator",
+        args: [
+            "--printable-name",
+            "golang-puppet",
+            "--output",
+            "text",
+            "--test-archive",
+        ],
+    },
+}

@@ -17,6 +17,9 @@ use {
     std::str::FromStr,
 };
 
+/// meta/validator.shard.cml must use this name in `children: name:`.
+const PUPPET_MONIKER: &str = "puppet";
+
 /// Validate Inspect VMO formats written by 'puppet' programs controlled by
 /// this Validator program and exercising Inspect library implementations.
 //#[derive(StructOpt, Debug)]
@@ -31,28 +34,33 @@ struct Opt {
     #[argh(option, long = "difftype", default = "DiffType::Full")]
     diff_type: DiffType,
 
-    /// required arg(s): The URL(s) of the puppet(s).
-    #[argh(option, long = "url")]
-    puppet_urls: Vec<String>,
+    /// required arg(s): A printable name to describe the test output.
+    #[argh(option, long = "printable-name")]
+    printable_name: String,
 
     /// has no effect.
-    #[argh(switch, long = "quiet")]
     // TODO(fxbug.dev/84729)
+    #[argh(switch, long = "quiet")]
     #[allow(unused)]
     quiet: bool,
 
-    #[argh(switch, long = "verbose")]
     /// has no effect.
     // TODO(fxbug.dev/84729)
+    #[argh(switch, long = "verbose")]
     #[allow(unused)]
     verbose: bool,
 
-    #[argh(switch, long = "version", short = 'v')]
     /// prints the version information and exits.
+    #[argh(switch, long = "version", short = 'v')]
     version: bool,
 
-    #[argh(switch)]
+    /// because the Dart runner adds a "runner" node to the hierarchy
+    /// that needs to be removed before comparison.
+    #[argh(switch, long = "is-dart", short = 'v')]
+    is_dart: bool,
+
     /// tests that the Archive FIDL service output matches the expected values.
+    #[argh(switch)]
     test_archive: bool,
 }
 
@@ -99,7 +107,8 @@ impl FromStr for DiffType {
 #[fuchsia::main]
 async fn main() -> Result<(), Error> {
     let mut results = results::Results::new();
-    let Opt { output, puppet_urls, version, diff_type, test_archive, .. } = argh::from_env();
+    let Opt { output, printable_name, version, is_dart, diff_type, test_archive, .. } =
+        argh::from_env();
     if version {
         println!("Inspect Validator version 0.9. See README.md for more information.");
         return Ok(());
@@ -107,7 +116,7 @@ async fn main() -> Result<(), Error> {
     results.diff_type = diff_type;
     results.test_archive = test_archive;
 
-    run_all_puppets(puppet_urls, &mut results).await;
+    runner::run_all_trials(&printable_name, is_dart, &mut results).await;
     match output {
         OutputType::Text => results.print_pretty_text(),
         OutputType::Json => println!("{}", results.to_json()),
@@ -119,44 +128,6 @@ async fn main() -> Result<(), Error> {
     }
 }
 
-async fn run_all_puppets(urls: Vec<String>, results: &mut results::Results) {
-    if urls.len() == 0 {
-        results.error("At least one component URL is required.".to_string());
-    }
-    for url in urls {
-        runner::run_all_trials(&url, results).await;
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[fuchsia::test]
-    async fn url_is_required() {
-        let mut results = results::Results::new();
-        run_all_puppets(vec![], &mut results).await;
-        assert!(results.failed());
-        assert!(results.to_json().contains("At least one"));
-    }
-
-    #[fuchsia::test]
-    async fn bad_url_fails() {
-        let mut results = results::Results::new();
-        run_all_puppets(vec!["a".to_owned()], &mut results).await;
-        assert!(results.failed());
-        assert!(results.to_json().contains("URL may be invalid"), "{}", results.to_json());
-    }
-
-    #[fuchsia::test]
-    async fn all_urls_are_tried() {
-        let mut results = results::Results::new();
-        run_all_puppets(vec!["a".to_owned(), "b".to_owned()], &mut results).await;
-        assert!(results.to_json().contains("invalid: a"));
-        assert!(results.to_json().contains("invalid: b"));
-    }
-
-    // The only way to test success is to actually start a component, and that's
-    // not suitable for unit tests. Failure on a valid URL will be caught in integration
-    // tests.
-}
+// The only way to test this file is to actually start a component, and that's
+// not suitable for unit tests. Failures will be caught in integration
+// tests.

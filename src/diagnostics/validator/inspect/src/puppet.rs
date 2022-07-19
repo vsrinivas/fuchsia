@@ -6,32 +6,25 @@ use {
     super::{
         data::{self, Data, LazyNode},
         metrics::Metrics,
+        PUPPET_MONIKER,
     },
-    anyhow::{format_err, Context as _, Error},
-    fidl_fuchsia_inspect as fidl_inspect,
-    fidl_fuchsia_sys::{EnvironmentControllerProxy, EnvironmentMarker, EnvironmentOptions},
-    fidl_test_inspect_validate as validate,
+    anyhow::{format_err, Error},
+    fidl_fuchsia_inspect as fidl_inspect, fidl_test_inspect_validate as validate,
     fuchsia_component::client as fclient,
-    fuchsia_url::AbsoluteComponentUrl,
     fuchsia_zircon::{self as zx, Vmo},
-    std::sync::atomic::{AtomicU64, Ordering},
-    std::{convert::TryFrom, path::Path},
+    std::convert::TryFrom,
 };
 
 pub const VMO_SIZE: u64 = 4096;
-
-/// Create a unique environment name with the given prefix.
-fn make_environment_name(prefix: impl AsRef<str>) -> String {
-    static NEXT_ENVIRONMENT_SUFFIX: AtomicU64 = AtomicU64::new(0);
-    let v = NEXT_ENVIRONMENT_SUFFIX.fetch_add(1, Ordering::Relaxed);
-    format!("{}_{}", prefix.as_ref(), v)
-}
 
 pub struct Puppet {
     pub vmo: Vmo,
     // Need to remember the connection to avoid dropping the VMO
     connection: Connection,
-    name: String,
+    // A printable name for output to the user.
+    pub printable_name: String,
+    // Keep track of whether it's a Dart puppet (the Dart runner adds fields to Inspect data)
+    pub is_dart: bool,
 }
 
 impl Puppet {
@@ -60,54 +53,43 @@ impl Puppet {
         Ok(self.connection.fidl.unpublish().await?)
     }
 
-    pub fn name<'a>(&'a self) -> &'a str {
-        &self.name
+    pub async fn connect(printable_name: &str, is_dart: bool) -> Result<Self, Error> {
+        Puppet::initialize_with_connection(Connection::connect().await?, printable_name, is_dart)
+            .await
     }
 
-    pub fn component_name(&self) -> String {
-        format!("{}.cmx", self.name())
+    pub(crate) async fn shutdown(self) {
+        let lifecycle_controller =
+            fclient::connect_to_protocol::<fidl_fuchsia_sys2::LifecycleControllerMarker>().unwrap();
+        lifecycle_controller.stop(&format!("./{}", PUPPET_MONIKER), false).await.unwrap().unwrap();
     }
 
-    // Extracts the .cmx file basename for output to the user.
-    fn derive_my_name(url: &str) -> Result<String, Error> {
-        let url_parse = AbsoluteComponentUrl::parse(url)?;
-        let cmx_name = url_parse.resource();
-        let cmx_path = Path::new(cmx_name);
-        if let Some(s) = cmx_path.file_stem() {
-            if let Some(s) = s.to_str() {
-                return Ok(s.to_owned());
-            }
-        }
-        return Err(format_err!("Bad path {} from url {}", cmx_name, url));
-    }
-
-    pub async fn connect(server_url: &str) -> Result<Self, Error> {
-        Puppet::initialize_with_connection(
-            Connection::start_and_connect(server_url).await?,
-            Self::derive_my_name(server_url)?,
-        )
-        .await
-    }
-
-    /// Get the environment name the puppet was run in.
-    pub fn environment_name<'a>(&'a self) -> &'a str {
-        &self.connection.environment_name
+    /// Get the printable name associated with this puppet/test
+    pub fn printable_name(&self) -> &str {
+        &self.printable_name
     }
 
     #[cfg(test)]
     pub async fn connect_local(local_fidl: validate::ValidateProxy) -> Result<Puppet, Error> {
         Puppet::initialize_with_connection(
-            Connection::new(local_fidl, None, None, "".to_owned()),
-            "*Local*".to_owned(),
+            Connection::new(local_fidl),
+            "*Local*",
+            false, /* is_dart */
         )
         .await
     }
 
     async fn initialize_with_connection(
         mut connection: Connection,
-        name: String,
+        printable_name: &str,
+        is_dart: bool,
     ) -> Result<Puppet, Error> {
-        Ok(Puppet { vmo: connection.initialize_vmo().await?, connection, name })
+        Ok(Puppet {
+            vmo: connection.initialize_vmo().await?,
+            connection,
+            printable_name: printable_name.to_string(),
+            is_dart,
+        })
     }
 
     pub async fn read_data(&self) -> Result<Data, Error> {
@@ -130,53 +112,12 @@ struct Connection {
     // Connection to Tree FIDL if Puppet supports it.
     // Puppets can add support by implementing InitializeTree method.
     root_link_channel: Option<fidl_inspect::TreeProxy>,
-    // We need to keep the 'app' un-dropped on non-local connections so the
-    // remote program doesn't go away. But we never use it once we have the
-    // FIDL connection.
-    _app: Option<fuchsia_component::client::App>,
-
-    // The nested environment we are starting the puppet in.
-    _env: Option<EnvironmentControllerProxy>,
-
-    // The name of the environment we started the component in.
-    pub environment_name: String,
 }
 
 impl Connection {
-    // Note! In v1, the launch() and connect_to_protocol() functions do not return errors
-    // when given a bad URL. There's no way to detect bad URLs until we actually make a
-    // FIDL call that the server is supposed to serve, in initialize_vmo().
-    async fn start_and_connect(server_url: impl Into<String>) -> Result<Self, Error> {
-        let server_url = server_url.into();
-        let (new_env, new_env_server_end) = fidl::endpoints::create_proxy()?;
-        let (controller, controller_server_end) = fidl::endpoints::create_proxy()?;
-        let (launcher, launcher_server_end) = fidl::endpoints::create_proxy()?;
-
-        let env = fclient::connect_to_protocol::<EnvironmentMarker>()?;
-        let environment_name = make_environment_name("puppet");
-        env.create_nested_environment(
-            new_env_server_end,
-            controller_server_end,
-            &environment_name,
-            None,
-            &mut EnvironmentOptions {
-                inherit_parent_services: true,
-                use_parent_runners: false,
-                kill_on_oom: false,
-                delete_storage_on_death: false,
-            },
-        )
-        .context("creating isolated environment")?;
-
-        new_env.get_launcher(launcher_server_end).context("getting nested environment launcher")?;
-        let app = fclient::launch(&launcher, server_url.clone(), None)
-            .context(format!("Failed to launch Validator puppet {}", server_url))?;
-
-        let puppet_fidl = app
-            .connect_to_protocol::<validate::ValidateMarker>()
-            .context("Failed to connect to validate puppet")?;
-
-        Ok(Self::new(puppet_fidl, Some(app), Some(controller), environment_name))
+    async fn connect() -> Result<Self, Error> {
+        let puppet_fidl = fclient::connect_to_protocol::<validate::ValidateMarker>().unwrap();
+        Ok(Self::new(puppet_fidl))
     }
 
     async fn fetch_link_channel(fidl: &validate::ValidateProxy) -> Option<fidl_inspect::TreeProxy> {
@@ -198,13 +139,8 @@ impl Connection {
         Ok(buffer.vmo)
     }
 
-    fn new(
-        fidl: validate::ValidateProxy,
-        app: Option<fuchsia_component::client::App>,
-        env: Option<EnvironmentControllerProxy>,
-        environment_name: String,
-    ) -> Self {
-        Self { fidl, root_link_channel: None, _app: app, _env: env, environment_name }
+    fn new(fidl: validate::ValidateProxy) -> Self {
+        Self { fidl, root_link_channel: None }
     }
 
     async fn initialize_vmo(&mut self) -> Result<Vmo, Error> {
@@ -239,7 +175,7 @@ pub(crate) mod tests {
     use {
         super::*,
         crate::{create_node, DiffType},
-        //anyhow::format_err,
+        anyhow::Context as _,
         fidl::endpoints::{create_proxy, RequestStream, ServerEnd},
         fidl_test_inspect_validate::*,
         fuchsia_async as fasync,
@@ -249,15 +185,6 @@ pub(crate) mod tests {
         std::collections::HashMap,
         tracing::info,
     };
-
-    #[fuchsia::test]
-    fn puppet_name_derivation() -> Result<(), Error> {
-        assert_eq!(
-            Puppet::derive_my_name("fuchsia-pkg://path.com/name#meta/my_name.cmx")?,
-            "my_name".to_string()
-        );
-        Ok(())
-    }
 
     #[fuchsia::test]
     async fn test_fidl_loopback() -> Result<(), Error> {

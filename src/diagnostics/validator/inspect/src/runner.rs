@@ -4,24 +4,20 @@
 
 use {
     super::{
-        create_node, create_string_property,
         data::Data,
         puppet, results,
         trials::{self, Step},
-        validate::{self, ROOT_ID, RUNNER_ID, VM_SERVICE_PORT_ID},
+        validate, PUPPET_MONIKER,
     },
     anyhow::{bail, Error},
     diagnostics_reader::{ArchiveReader, ComponentSelector, Inspect},
     fidl_test_inspect_validate::TestResult,
 };
 
-pub async fn run_all_trials(url: &str, results: &mut results::Results) {
+pub async fn run_all_trials(printable_name: &str, is_dart: bool, results: &mut results::Results) {
     let mut trial_set = trials::real_trials();
     for trial in trial_set.iter_mut() {
-        if trial.name == "VM SERVICE NODE" && !url.contains("dart") {
-            continue;
-        }
-        match puppet::Puppet::connect(url).await {
+        match puppet::Puppet::connect(printable_name, is_dart).await {
             Ok(mut puppet) => {
                 if results.test_archive {
                     match puppet.publish().await {
@@ -37,20 +33,6 @@ pub async fn run_all_trials(url: &str, results: &mut results::Results) {
                     }
                 }
                 let mut data = Data::new();
-                if url.contains("dart") {
-                    // The vm_service_port string property is attached to the runner node and made a child of the root on startup.
-                    if let Err(e) =
-                        data.apply(&create_node!(parent: ROOT_ID, id: RUNNER_ID, name: "runner"))
-                    {
-                        results.error(format!(
-                            "Running trial {}, got failure creating the runner child node:\n{}",
-                            trial.name, e
-                        ));
-                    }
-                    if let Err(e) = data.apply(&create_string_property!(parent: RUNNER_ID, id: VM_SERVICE_PORT_ID, name: "vm_service_port", value: "")) {
-                        results.error(format!("Running trial {}, got failure creating the vm service port property:\n{}", trial.name, e));
-                    }
-                }
                 if let Err(e) = run_trial(&mut puppet, &mut data, trial, results).await {
                     results.error(format!("Running trial {}, got failure:\n{}", trial.name, e));
                 } else {
@@ -69,12 +51,13 @@ pub async fn run_all_trials(url: &str, results: &mut results::Results) {
                         }
                     }
                 }
+                // The puppet has to be shut down (it will restart) so the VMO fetch will succeed
+                // on the next trial. This also makes sure the puppet is in a clean state for
+                // each trial.
+                puppet.shutdown().await;
             }
             Err(e) => {
-                results.error(format!(
-                    "Failed to form Puppet - error {:?} - URL may be invalid: {}.",
-                    e, url
-                ));
+                results.error(format!("Failed to form Puppet {} - error {:?}.", printable_name, e));
             }
         }
     }
@@ -95,9 +78,9 @@ async fn run_trial(
     trial: &mut trials::Trial,
     results: &mut results::Results,
 ) -> Result<(), Error> {
-    let trial_name = format!("{}:{}", puppet.name(), trial.name);
+    let trial_name = format!("{}:{}", puppet.printable_name(), trial.name);
     // We have to give explicit type here because compiler can't deduce it from None option value.
-    try_compare::<validate::Action>(data, puppet, &trial_name, -1, None, -1, &results).await?;
+    try_compare::<validate::Action>(data, puppet, &trial_name, -1, None, -1, results).await?;
     for (step_index, step) in trial.steps.iter_mut().enumerate() {
         let step_result = match step {
             Step::Actions(actions) => {
@@ -150,14 +133,14 @@ async fn run_actions(
             }
             Ok(validate::TestResult::Ok) => {}
             Ok(validate::TestResult::Unimplemented) => {
-                results.unimplemented(puppet.name(), action);
+                results.unimplemented(puppet.printable_name(), action);
                 return Ok(StepResult::Stop);
             }
             Ok(bad_result) => {
                 bail!(
                     "In trial {}, puppet {} reported action {:?} was {:?}",
                     trial_name,
-                    puppet.name(),
+                    puppet.printable_name(),
                     action,
                     bad_result
                 );
@@ -170,7 +153,7 @@ async fn run_actions(
             step_index as i32,
             Some(action),
             action_number as i32,
-            &results,
+            results,
         )
         .await?;
     }
@@ -207,14 +190,14 @@ async fn run_lazy_actions(
             }
             Ok(validate::TestResult::Ok) => {}
             Ok(validate::TestResult::Unimplemented) => {
-                results.unimplemented(puppet.name(), action);
+                results.unimplemented(puppet.printable_name(), action);
                 return Ok(StepResult::Stop);
             }
             Ok(bad_result) => {
                 bail!(
                     "In trial {}, puppet {} reported action {:?} was {:?}",
                     trial_name,
-                    puppet.name(),
+                    puppet.printable_name(),
                     action,
                     bad_result
                 );
@@ -227,7 +210,7 @@ async fn run_lazy_actions(
             step_index as i32,
             Some(action),
             action_number as i32,
-            &results,
+            results,
         )
         .await?;
     }
@@ -235,7 +218,7 @@ async fn run_lazy_actions(
 }
 
 async fn try_compare<ActionType: std::fmt::Debug>(
-    data: &Data,
+    data: &mut Data,
     puppet: &puppet::Puppet,
     trial_name: &str,
     step_index: i32,
@@ -255,7 +238,10 @@ async fn try_compare<ActionType: std::fmt::Debug>(
                     e
                 );
             }
-            Ok(puppet_data) => {
+            Ok(mut puppet_data) => {
+                if puppet.is_dart {
+                    puppet_data.remove_tree("runner");
+                }
                 if let Err(e) = data.compare(&puppet_data, results.diff_type) {
                     bail!(
                         "Compare error in trial {}, step {}, action {}:\n{:?}:\n{} ",
@@ -270,16 +256,10 @@ async fn try_compare<ActionType: std::fmt::Debug>(
         }
         if results.test_archive {
             let archive_data = match ArchiveReader::new()
-                .add_selector(ComponentSelector::new(vec![
-                    puppet.environment_name().to_string(),
-                    puppet.component_name(),
-                ]))
+                .add_selector(ComponentSelector::new(vec![PUPPET_MONIKER.to_string()]))
                 .add_selector(
-                    ComponentSelector::new(vec![
-                        puppet.environment_name().to_string(),
-                        puppet.component_name(),
-                    ])
-                    .with_tree_selector("root:DUMMY"),
+                    ComponentSelector::new(vec![puppet.printable_name().to_string()])
+                        .with_tree_selector("root:DUMMY"),
                 )
                 .snapshot::<Inspect>()
                 .await
@@ -296,7 +276,6 @@ async fn try_compare<ActionType: std::fmt::Debug>(
                     );
                 }
             };
-
             if archive_data.len() != 1 {
                 bail!(
                     "Expected 1 component in trial {}, step {}, action {}:\n{:?}:\nfound {} ",
@@ -308,8 +287,11 @@ async fn try_compare<ActionType: std::fmt::Debug>(
                 );
             }
 
-            let hierarchy = archive_data[0].payload.as_ref().unwrap();
-            if let Err(e) = data.compare_to_json(&hierarchy.clone().into(), results.diff_type) {
+            let mut hierarchy_data: Data = archive_data[0].payload.as_ref().unwrap().clone().into();
+            if puppet.is_dart {
+                hierarchy_data.remove_tree("runner");
+            }
+            if let Err(e) = data.compare_to_json(&hierarchy_data, results.diff_type) {
                 bail!(
                     "Archive compare error in trial {}, step {}, action {}:\n{:?}:\n{} ",
                     trial_name,
@@ -372,8 +354,12 @@ mod tests {
             let mut data = Data::new();
             run_trial(&mut puppet, &mut data, &mut uint_create_delete, &mut results).await?;
         }
-        assert!(!results.to_json().contains(&format!("{}: CreateProperty(Int)", puppet.name())));
-        assert!(results.to_json().contains(&format!("{}: CreateProperty(Uint)", puppet.name())));
+        assert!(!results
+            .to_json()
+            .contains(&format!("{}: CreateProperty(Int)", puppet.printable_name())));
+        assert!(results
+            .to_json()
+            .contains(&format!("{}: CreateProperty(Uint)", puppet.printable_name())));
         Ok(())
     }
 }

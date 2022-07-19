@@ -1,0 +1,38 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "sys/testing/elf_test_runner.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    children: [
+        {
+            // `name` must be the same as PUPPET_MONIKER in //src/diagnostics/validator/src/main.rs
+            name: "puppet",
+
+            // `url` must match puppet's CML file name and/or puppet component's `component_name`
+            url: "#meta/puppet.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
+        },
+        {
+            protocol: [ "test.inspect.validate.Validate" ],
+            from: "#puppet",
+        },
+        {
+            protocol: "fuchsia.sys2.LifecycleController",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#puppet",
+        },
+    ],
+}
