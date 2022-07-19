@@ -283,3 +283,17 @@ source_set("timezone_provider") {
     "//zircon/system/ulib/async:async-cpp",
   ]
 }
+
+source_set("ui_state_provider") {
+  testonly = true
+
+  sources = [
+    "ui_state_provider.cc",
+    "ui_state_provider.h",
+  ]
+
+  public_deps = [
+    ":fidl_server",
+    "//sdk/fidl/fuchsia.ui.activity",
+  ]
+}
