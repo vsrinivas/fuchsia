@@ -8,7 +8,7 @@ use net_types::{
 };
 
 use crate::{
-    transport::udp::{UdpState, UdpStateContext},
+    transport::udp::{UdpSockets, UdpStateContext},
     DeviceId, NonSyncContext, SyncCtx,
 };
 
@@ -31,12 +31,16 @@ impl<C: NonSyncContext> UdpStateContext<Ipv4, C> for SyncCtx<C> {
         crate::ip::device::leave_ip_multicast::<Ipv4, _, _>(self, ctx, device, addr);
     }
 
-    fn with_state<O, F: FnOnce(&UdpState<Ipv4, DeviceId>) -> O>(&self, cb: F) -> O {
-        cb(&self.state.transport.udpv4)
+    fn with_sockets<O, F: FnOnce(&UdpSockets<Ipv4, DeviceId>) -> O>(&self, cb: F) -> O {
+        cb(&self.state.transport.udpv4.sockets)
     }
 
-    fn with_state_mut<O, F: FnOnce(&mut UdpState<Ipv4, DeviceId>) -> O>(&mut self, cb: F) -> O {
-        cb(&mut self.state.transport.udpv4)
+    fn with_sockets_mut<O, F: FnOnce(&mut UdpSockets<Ipv4, DeviceId>) -> O>(&mut self, cb: F) -> O {
+        cb(&mut self.state.transport.udpv4.sockets)
+    }
+
+    fn should_send_port_unreachable(&self) -> bool {
+        self.state.transport.udpv4.send_port_unreachable
     }
 }
 
@@ -59,11 +63,15 @@ impl<C: NonSyncContext> UdpStateContext<Ipv6, C> for SyncCtx<C> {
         crate::ip::device::leave_ip_multicast::<Ipv6, _, _>(self, ctx, device, addr);
     }
 
-    fn with_state<O, F: FnOnce(&UdpState<Ipv6, DeviceId>) -> O>(&self, cb: F) -> O {
-        cb(&self.state.transport.udpv6)
+    fn with_sockets<O, F: FnOnce(&UdpSockets<Ipv6, DeviceId>) -> O>(&self, cb: F) -> O {
+        cb(&self.state.transport.udpv6.sockets)
     }
 
-    fn with_state_mut<O, F: FnOnce(&mut UdpState<Ipv6, DeviceId>) -> O>(&mut self, cb: F) -> O {
-        cb(&mut self.state.transport.udpv6)
+    fn with_sockets_mut<O, F: FnOnce(&mut UdpSockets<Ipv6, DeviceId>) -> O>(&mut self, cb: F) -> O {
+        cb(&mut self.state.transport.udpv6.sockets)
+    }
+
+    fn should_send_port_unreachable(&self) -> bool {
+        self.state.transport.udpv6.send_port_unreachable
     }
 }
