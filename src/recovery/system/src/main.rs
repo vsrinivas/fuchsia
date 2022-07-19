@@ -1138,6 +1138,7 @@ mod tests {
     use super::make_app_assistant;
     use carnelian::App;
 
+    #[ignore] //TODO(fxbug.dev/102239) Move to integration test
     #[test]
     fn test_ui() -> std::result::Result<(), anyhow::Error> {
         let assistant = make_app_assistant();

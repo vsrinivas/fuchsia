@@ -1,0 +1,36 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This shard provides UI support for recovering devices with screens.
+{
+    capabilities: [
+        {
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+        },
+    ],
+    use: [
+        {
+            directory: "dev-class-display-controller",
+            rights: [ "rw*" ],
+            path: "/dev/class/display-controller",
+        },
+        {
+            directory: "dev-class-input",
+            rights: [ "r*" ],
+            path: "/dev/class/input",
+        },
+        {
+            directory: "dev-class-input-report",
+            rights: [ "r*" ],
+            path: "/dev/class/input-report",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.ui.app.ViewProvider" ],
+            from: "self",
+            to: "parent",
+        },
+    ],
+}

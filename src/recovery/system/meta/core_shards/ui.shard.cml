@@ -1,0 +1,26 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    offer: [
+        {
+            protocol: "fuchsia.vulkan.loader.Loader",
+            from: "#vulkan_loader",
+            to: "#system_recovery",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-class-display-controller",
+            to: "#system_recovery",
+            subdir: "class/display-controller",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-class-input-report",
+            to: "#system_recovery",
+            subdir: "class/input-report",
+        },
+    ],
+}
