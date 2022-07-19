@@ -182,6 +182,7 @@ struct PointerInjectorConfigTestData {
   float expected_x;
   float expected_y;
 };
+
 using PointerInjectorConfigTestParams =
     std::tuple<ui_testing::UITestRealm::SceneOwnerType, PointerInjectorConfigTestData>;
 

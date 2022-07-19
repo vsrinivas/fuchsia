@@ -334,9 +334,11 @@ class ResponseListenerServer : public ResponseListener, public LocalComponent {
   fit::function<void(test::touch::PointerData)> respond_callback_;
 };
 
-class TouchInputBase : public gtest::RealLoopFixture {
+template <typename... Ts>
+class TouchInputBase : public gtest::RealLoopFixture,
+                       public testing::WithParamInterface<
+                           std::tuple<ui_testing::UITestRealm::SceneOwnerType, Ts...>> {
  protected:
-  TouchInputBase(ui_testing::UITestRealm::SceneOwnerType scene_owner) : scene_owner_(scene_owner) {}
   ~TouchInputBase() override {
     FX_CHECK(injection_count_ > 0) << "injection expected but didn't happen.";
   }
@@ -349,7 +351,7 @@ class TouchInputBase : public gtest::RealLoopFixture {
         kTimeout);
 
     ui_testing::UITestRealm::Config config;
-    config.scene_owner = scene_owner_;
+    config.scene_owner = std::get<0>(this->GetParam());
     config.display_rotation = 90;
     config.use_input = true;
     config.accessibility_owner = ui_testing::UITestRealm::AccessibilityOwnerType::FAKE;
@@ -363,7 +365,7 @@ class TouchInputBase : public gtest::RealLoopFixture {
 
     // Get the display dimensions.
     FX_LOGS(INFO) << "Waiting for scenic display info";
-    scenic_ = realm_exposed_services()->Connect<fuchsia::ui::scenic::Scenic>();
+    scenic_ = realm_exposed_services()->template Connect<fuchsia::ui::scenic::Scenic>();
     scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
       display_width_ = display_info.width_in_px;
       display_height_ = display_info.height_in_px;
@@ -406,7 +408,8 @@ class TouchInputBase : public gtest::RealLoopFixture {
     session_->SetDebugName("empty-session-for-synchronization");
 
     // Launch the embedded app.
-    auto test_app_launcher = realm_exposed_services()->Connect<test::touch::TestAppLauncher>();
+    auto test_app_launcher =
+        realm_exposed_services()->template Connect<test::touch::TestAppLauncher>();
     bool child_launched = false;
     test_app_launcher->Launch(std::move(debug_name), [&child_launched] { child_launched = true; });
     RunLoopUntil([&child_launched] { return child_launched; });
@@ -449,7 +452,8 @@ class TouchInputBase : public gtest::RealLoopFixture {
   }
 
   void RegisterInjectionDevice() {
-    registry_ = realm_exposed_services()->Connect<fuchsia::input::injection::InputDeviceRegistry>();
+    registry_ = realm_exposed_services()
+                    ->template Connect<fuchsia::input::injection::InputDeviceRegistry>();
     registry_.set_error_handler([](zx_status_t status) {
       FX_LOGS(ERROR) << "Input device registry error: " << zx_status_get_string(status);
     });
@@ -686,24 +690,12 @@ class TouchInputBase : public gtest::RealLoopFixture {
   uint32_t display_width_ = 0;
   uint32_t display_height_ = 0;
 
-  ui_testing::UITestRealm::SceneOwnerType scene_owner_ =
-      ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
-
   fuchsia::sys::ComponentControllerPtr client_component_;
 };
 
-class TouchInputBaseParameterized
-    : public TouchInputBase,
-      public testing::WithParamInterface<ui_testing::UITestRealm::SceneOwnerType> {
+template <typename... Ts>
+class FlutterInputTestBase : public TouchInputBase<Ts...> {
  protected:
-  TouchInputBaseParameterized()
-      : TouchInputBase(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER) {}
-};
-
-class FlutterInputTestIp : public TouchInputBase {
- protected:
-  FlutterInputTestIp() : TouchInputBase(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER) {}
-
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
     return {
         std::make_pair(kFlutterRealm, kFlutterRealmUrl),
@@ -752,7 +744,13 @@ class FlutterInputTestIp : public TouchInputBase {
   static constexpr auto kNetstackUrl = "#meta/netstack.cm";
 };
 
-TEST_F(FlutterInputTestIp, FlutterTap) {
+class FlutterInputTestIp : public FlutterInputTestBase<> {};
+
+INSTANTIATE_TEST_SUITE_P(FlutterInputTestIpParameterized, FlutterInputTestIp,
+                         testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
+                                         ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER));
+
+TEST_P(FlutterInputTestIp, FlutterTap) {
   // Use `ZX_CLOCK_MONOTONIC` to avoid complications due to wall-clock time changes.
   zx::basic_time<ZX_CLOCK_MONOTONIC> input_injection_time(0);
 
@@ -766,11 +764,18 @@ TEST_F(FlutterInputTestIp, FlutterTap) {
   RunLoopUntil([&injection_complete] { return injection_complete; });
 }
 
-class FlutterSwipeTestParameterized : public FlutterInputTestIp,
-                                      public testing::WithParamInterface<InjectSwipeParams> {};
+class FlutterSwipeTest : public FlutterInputTestBase<InjectSwipeParams> {};
 
-TEST_P(FlutterSwipeTestParameterized, FlutterSwipeTest) {
-  const auto& [direction, swipe_length, begin_x, begin_y, expected_events] = GetParam();
+INSTANTIATE_TEST_SUITE_P(
+    FlutterSwipeTestParameterized, FlutterSwipeTest,
+    testing::Combine(testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
+                                     ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER),
+                     testing::Values(GetRightSwipeParams(), GetDownwardSwipeParams(),
+                                     GetLeftSwipeParams(), GetUpwardSwipeParams())));
+
+TEST_P(FlutterSwipeTest, SwipeTest) {
+  const auto& [direction, swipe_length, begin_x, begin_y, expected_events] =
+      std::get<1>(GetParam());
   std::vector<test::touch::PointerData> actual_events;
   response_listener()->SetRespondCallback(
       [&actual_events](auto touch) { actual_events.push_back(std::move(touch)); });
@@ -790,14 +795,9 @@ TEST_P(FlutterSwipeTestParameterized, FlutterSwipeTest) {
   AssertSwipeEvents(actual_events, expected_events, injection_times);
 }
 
-INSTANTIATE_TEST_SUITE_P(FlutterSwipeTest, FlutterSwipeTestParameterized,
-                         testing::Values(GetRightSwipeParams(), GetDownwardSwipeParams(),
-                                         GetLeftSwipeParams(), GetUpwardSwipeParams()));
-
-class GfxInputTestIp : public TouchInputBase {
+template <typename... Ts>
+class GfxInputTestIpBase : public TouchInputBase<Ts...> {
  protected:
-  GfxInputTestIp() : TouchInputBase(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER) {}
-
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestV2Components() override {
     return {std::make_pair(kCppGfxClient, kCppGfxClientUrl)};
   }
@@ -821,7 +821,12 @@ class GfxInputTestIp : public TouchInputBase {
   static constexpr auto kCppGfxClientUrl = "#meta/touch-gfx-client.cm";
 };
 
-TEST_F(GfxInputTestIp, CppGfxClientTap) {
+class GfxInputTestIp : public GfxInputTestIpBase<> {};
+INSTANTIATE_TEST_SUITE_P(GfxInputTestIpParametized, GfxInputTestIp,
+                         testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
+                                         ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER));
+
+TEST_P(GfxInputTestIp, CppGfxClientTap) {
   // Use `ZX_CLOCK_MONOTONIC` to avoid complications due to wall-clock time changes.
   zx::basic_time<ZX_CLOCK_MONOTONIC> input_injection_time(0);
 
@@ -835,11 +840,18 @@ TEST_F(GfxInputTestIp, CppGfxClientTap) {
   RunLoopUntil([&injection_complete] { return injection_complete; });
 }
 
-class GfxSwipeTestParameterized : public GfxInputTestIp,
-                                  public testing::WithParamInterface<InjectSwipeParams> {};
+class GfxSwipeTest : public GfxInputTestIpBase<InjectSwipeParams> {};
 
-TEST_P(GfxSwipeTestParameterized, CppGFXClientSwipeTest) {
-  const auto& [direction, swipe_length, begin_x, begin_y, expected_events] = GetParam();
+INSTANTIATE_TEST_SUITE_P(
+    GfxSwipeTestParameterized, GfxSwipeTest,
+    testing::Combine(testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
+                                     ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER),
+                     testing::Values(GetRightSwipeParams(), GetDownwardSwipeParams(),
+                                     GetLeftSwipeParams(), GetUpwardSwipeParams())));
+
+TEST_P(GfxSwipeTest, CppGFXClientSwipeTest) {
+  const auto& [direction, swipe_length, begin_x, begin_y, expected_events] =
+      std::get<1>(GetParam());
   std::vector<test::touch::PointerData> actual_events;
   response_listener()->SetRespondCallback(
       [&actual_events](auto touch) { actual_events.push_back(std::move(touch)); });
@@ -876,11 +888,7 @@ TEST_P(GfxSwipeTestParameterized, CppGFXClientSwipeTest) {
   AssertSwipeEvents(actual_events, mutable_expected_events, injection_times);
 }
 
-INSTANTIATE_TEST_SUITE_P(CppGFXClientSwipeTest, GfxSwipeTestParameterized,
-                         testing::Values(GetRightSwipeParams(), GetDownwardSwipeParams(),
-                                         GetLeftSwipeParams(), GetUpwardSwipeParams()));
-
-class WebEngineTestIp : public TouchInputBaseParameterized {
+class WebEngineTestIp : public TouchInputBase<> {
  protected:
   std::vector<std::pair<ChildName, LegacyUrl>> GetTestComponents() override {
     return {
@@ -1071,7 +1079,11 @@ class WebEngineTestIp : public TouchInputBaseParameterized {
   static constexpr auto kTapRetryInterval = zx::sec(1);
 };
 
-TEST_F(WebEngineTestIp, ChromiumTap) {
+INSTANTIATE_TEST_SUITE_P(WebEngineTestIpParameterized, WebEngineTestIp,
+                         testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
+                                         ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER));
+
+TEST_P(WebEngineTestIp, ChromiumTap) {
   // Use a UTC time for compatibility with the time reported by `Date.now()` in web-engine.
   time_utc input_injection_time(0);
 
@@ -1159,7 +1171,11 @@ class FlutterInFlutterTestIp : public FlutterInputTestIp, public EmbeddingFlutte
   }
 };
 
-TEST_F(FlutterInFlutterTestIp, FlutterInFlutterTap) {
+INSTANTIATE_TEST_SUITE_P(FlutterInFlutterTestIpParameterized, FlutterInFlutterTestIp,
+                         testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
+                                         ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER));
+
+TEST_P(FlutterInFlutterTestIp, FlutterInFlutterTap) {
   // Use `ZX_CLOCK_MONOTONIC` to avoid complications due to wall-clock time changes.
   zx::basic_time<ZX_CLOCK_MONOTONIC> input_injection_time(0);
 
@@ -1218,7 +1234,11 @@ class WebInFlutterTestIp : public WebEngineTestIp, public EmbeddingFlutterTestIp
   }
 };
 
-TEST_F(WebInFlutterTestIp, WebInFlutterTap) {
+INSTANTIATE_TEST_SUITE_P(WebInFlutterTestIpParameterized, WebInFlutterTestIp,
+                         testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
+                                         ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER));
+
+TEST_P(WebInFlutterTestIp, WebInFlutterTap) {
   // Launch the embedded app.
   LaunchEmbeddedClient("one-chromium");
 
