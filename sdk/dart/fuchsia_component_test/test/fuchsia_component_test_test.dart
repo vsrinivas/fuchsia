@@ -62,7 +62,7 @@ void checkCommonExceptions(Exception err, StackTrace stacktrace) {
 }
 
 void main() {
-  setupLogger(name: 'fuchsia-component-test-dart-tests');
+  setupLogger(name: 'fuchsia-component-test-test');
 
   group('realm builder tests', () {
     group('RealmBuilder with CFv2 child', () {
