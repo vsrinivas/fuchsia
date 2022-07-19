@@ -16,7 +16,7 @@ const _timeout = Timeout(Duration(minutes: 1));
 
 void printErrorHelp() {
   print('If this test fails, see '
-      'https://fuchsia.googlesource.com/a/fuchsia/+/HEAD/src/tests/end_to_end/copy_tests/README.md'
+      'https://fuchsia.googlesource.com/a/fuchsia/+/HEAD/src/tests/end_to_end/copy_files/README.md'
       ' for details!');
 }
 
@@ -44,18 +44,32 @@ void main() {
     printErrorHelp();
   });
 
-  List<String> makeCopyToArgs(String source, String destination) =>
-      sl4fDriver.ssh.defaultArguments +
-      [source, '[${sl4fDriver.ssh.target}]:$destination'];
+  List<String> makeCopyToArgs(String source, String destination) {
+    List<String> args = sl4fDriver.ssh.defaultArguments +
+        [source, '[${sl4fDriver.ssh.target}]:$destination'];
+    // scp uses `-P` instead of `-p` to set the port number.
+    int index = args.indexOf('-p');
+    args.replaceRange(index, index + 1, ['-P']);
+    return args;
+  }
 
-  List<String> makeCopyFromArgs(String source, String destination) =>
-      sl4fDriver.ssh.defaultArguments +
-      ['[${sl4fDriver.ssh.target}]:$source', destination];
+  List<String> makeCopyFromArgs(String source, String destination) {
+    List<String> args = sl4fDriver.ssh.defaultArguments +
+        ['[${sl4fDriver.ssh.target}]:$source', destination];
+    // scp uses `-P` instead of `-p` to set the port number.
+    int index = args.indexOf('-p');
+    args.replaceRange(index, index + 1, ['-P']);
+    return args;
+  }
 
-  ProcessResult runCopyProcess(List<String> args) =>
-      Process.runSync('scp', args,
-          // If not run in a shell it doesn't seem like the PATH is searched.
-          runInShell: true);
+  void runCopyProcess(List<String> args) {
+    final result = Process.runSync('scp', args,
+        // If not run in a shell it doesn't seem like the PATH is searched.
+        runInShell: true);
+    expect(result.exitCode, equals(0),
+        reason:
+            '`scp ${args.join(' ')}` returned a non-zero integer: ${result.exitCode}.\nstdout of scp: "${result.stdout}"\nstderr of scp: "${result.stderr}"');
+  }
 
   group('Copy files', () {
     test('copy from device', () async {
@@ -63,10 +77,7 @@ void main() {
           'copy-from-device-test-${DateTime.now().millisecondsSinceEpoch}';
       await storage.putBytes('/tmp/$timestampName', 'h3ll0 w0r1d!'.codeUnits);
 
-      final result =
-          runCopyProcess(makeCopyFromArgs('/tmp/$timestampName', tempDir.path));
-      expect(result.exitCode, equals(0));
-
+      runCopyProcess(makeCopyFromArgs('/tmp/$timestampName', tempDir.path));
       String data =
           await File(p.join(tempDir.path, '$timestampName')).readAsString();
       expect(data, equals('h3ll0 w0r1d!'));
@@ -78,9 +89,7 @@ void main() {
       String filePath = p.join(tempDir.path, '$timestampName');
       await File(filePath).writeAsString('!d1r3w 0ll3h');
 
-      final result = runCopyProcess(makeCopyToArgs(filePath, '/tmp/'));
-      expect(result.exitCode, equals(0));
-
+      runCopyProcess(makeCopyToArgs(filePath, '/tmp/'));
       List<int> data =
           await sl4f.Storage(sl4fDriver).readFile('/tmp/$timestampName');
       expect(String.fromCharCodes(data), '!d1r3w 0ll3h');
