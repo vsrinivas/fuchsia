@@ -280,17 +280,19 @@ Add the following code to implement the `greeting()` function:
 
 * {C++}
 
+  Replace `echo-args/echo_args.h` and `echo-args/echo_args.cc` with the following code:
+
   `echo-args/echo_args.h`:
 
   ```cpp
-  #include "vendor/fuchsia-codelab/echo-args/echo_args.h"
-
   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/cpp/echo_component.h" region_tag="greeting" adjust_indentation="auto" %}
   ```
 
   `echo-args/echo_args.cc`:
 
   ```cpp
+  #include "vendor/fuchsia-codelab/echo-args/echo_args.h"
+
   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/echo/cpp/echo_component.cc" region_tag="greeting" adjust_indentation="auto" %}
   ```
 
