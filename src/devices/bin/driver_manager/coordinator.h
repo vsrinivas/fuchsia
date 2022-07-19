@@ -10,7 +10,6 @@
 #include <fidl/fuchsia.driver.development/cpp/wire.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fidl/fuchsia.driver.index/cpp/wire.h>
-#include <fidl/fuchsia.driver.registrar/cpp/wire.h>
 #include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <fidl/fuchsia.hardware.power.statecontrol/cpp/wire.h>
 #include <fidl/fuchsia.power.manager/cpp/wire.h>
@@ -109,8 +108,6 @@ struct CoordinatorConfig {
   bool log_to_debuglog = false;
   // Whether to enable verbose logging.
   bool verbose = false;
-  // Whether to allow loading drivers ephemerally. This should only be enabled on eng builds.
-  bool enable_ephemeral = false;
   // Timeout for system wide suspend
   zx::duration suspend_timeout = kDefaultSuspendTimeout;
   // Timeout for system wide resume
@@ -128,8 +125,7 @@ struct CoordinatorConfig {
 };
 
 class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDevelopment>,
-                    public fidl::WireServer<fuchsia_device_manager::Administrator>,
-                    public fidl::WireServer<fuchsia_driver_registrar::DriverRegistrar> {
+                    public fidl::WireServer<fuchsia_device_manager::Administrator> {
  public:
   Coordinator(const Coordinator&) = delete;
   Coordinator& operator=(const Coordinator&) = delete;
@@ -142,7 +138,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
 
   zx_status_t InitOutgoingServices(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
   zx::status<> PublishDriverDevelopmentService(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
-  zx::status<> PublishDriverRegistrarService(const fbl::RefPtr<fs::PseudoDir>& svc_dir);
 
   // Initialization functions for DFv1. InitCoreDevices() is public for testing only.
   void LoadV1Drivers(std::string_view sys_device_driver,
@@ -220,10 +215,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   // for testing.
   zx_status_t AttemptBind(const Driver* drv, const fbl::RefPtr<Device>& dev);
 
-  // This method is public only for the LoadDriverPackageTest.
-  zx_status_t LoadEphemeralDriver(internal::PackageResolverInterface* resolver,
-                                  const std::string& package_url);
-
   // These methods are used by the DriverHost class to register in the coordinator's bookkeeping
   void RegisterDriverHost(DriverHost* dh) { driver_hosts_.push_back(dh); }
   void UnregisterDriverHost(DriverHost* dh) { driver_hosts_.erase(*dh); }
@@ -279,9 +270,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
       UnregisterSystemStorageForShutdownRequestView request,
       UnregisterSystemStorageForShutdownCompleter::Sync& completer) override;
 
-  // Driver registrar interface
-  void Register(RegisterRequestView request, RegisterCompleter::Sync& completer) override;
-
   zx_status_t NewDriverHost(const char* name, fbl::RefPtr<DriverHost>* out);
 
   CoordinatorConfig config_;
@@ -310,8 +298,6 @@ class Coordinator : public fidl::WireServer<fuchsia_driver_development::DriverDe
   std::unique_ptr<SystemStateManager> system_state_manager_;
   SystemPowerState shutdown_system_state_;
 
-  cpp17::optional<fidl::ServerBindingRef<fuchsia_driver_registrar::DriverRegistrar>>
-      driver_registrar_binding_;
   internal::PackageResolver package_resolver_;
   DriverLoader driver_loader_;
 

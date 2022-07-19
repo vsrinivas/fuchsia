@@ -17,7 +17,6 @@
                 "fuchsia.device.manager.DebugDumper",
                 "fuchsia.device.manager.SystemStateTransition",
                 "fuchsia.driver.development.DriverDevelopment",
-                "fuchsia.driver.registrar.DriverRegistrar",
                 "fuchsia.hardware.pci.DeviceWatcher",
                 "fuchsia.hardware.usb.DeviceWatcher",
             ],
@@ -53,7 +52,6 @@
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.driver.development.DriverIndex",
                 "fuchsia.driver.index.DriverIndex",
-                "fuchsia.driver.registrar.DriverRegistrar",
                 "fuchsia.kernel.RootJob",
 
                 // This is only used when the kernel commandline flag devmgr.enable-ephemeral
@@ -92,7 +90,6 @@
                 "fuchsia.device.manager.DebugDumper",
                 "fuchsia.device.manager.SystemStateTransition",
                 "fuchsia.driver.development.DriverDevelopment",
-                "fuchsia.driver.registrar.DriverRegistrar",
                 "fuchsia.hardware.pci.DeviceWatcher",
                 "fuchsia.hardware.usb.DeviceWatcher",
             ],

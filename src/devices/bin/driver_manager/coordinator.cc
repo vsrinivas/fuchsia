@@ -73,7 +73,6 @@ namespace {
 
 namespace fdd = fuchsia_driver_development;
 namespace fdm = fuchsia_device_manager;
-namespace fdr = fuchsia_driver_registrar;
 namespace fpm = fuchsia_power_manager;
 
 constexpr char kDriverHostPath[] = "/pkg/bin/driver_host";
@@ -971,35 +970,6 @@ void Coordinator::GetDriverInfo(GetDriverInfoRequestView request,
   fidl::BindServer(dispatcher(), std::move(request->iterator), std::move(iterator));
 }
 
-void Coordinator::Register(RegisterRequestView request, RegisterCompleter::Sync& completer) {
-  std::string driver_url_str(request->package_url.url.data(), request->package_url.url.size());
-  zx_status_t status = LoadEphemeralDriver(&package_resolver_, driver_url_str);
-  if (status != ZX_OK) {
-    LOGF(ERROR, "Could not load '%s'", driver_url_str.c_str());
-    completer.ReplyError(status);
-    return;
-  }
-  LOGF(INFO, "Loaded driver '%s'", driver_url_str.c_str());
-  completer.ReplySuccess();
-}
-
-zx_status_t Coordinator::LoadEphemeralDriver(internal::PackageResolverInterface* resolver,
-                                             const std::string& package_url) {
-  ZX_ASSERT(config_.enable_ephemeral);
-
-  auto result = resolver->FetchDriver(package_url);
-  if (!result.is_ok()) {
-    return result.status_value();
-  }
-  fbl::DoublyLinkedList<std::unique_ptr<Driver>> driver_list;
-  driver_list.push_back(std::move(result.value()));
-  async::PostTask(dispatcher_, [this, driver_list = std::move(driver_list)]() mutable {
-    AddAndBindDrivers(std::move(driver_list));
-  });
-
-  return ZX_OK;
-}
-
 void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,
                                 GetDeviceInfoCompleter::Sync& completer) {
   std::vector<fbl::RefPtr<Device>> device_list;
@@ -1072,17 +1042,6 @@ zx::status<> Coordinator::PublishDriverDevelopmentService(
   };
   zx_status_t status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdd::DriverDevelopment>,
                                          fbl::MakeRefCounted<fs::Service>(driver_dev));
-  return zx::make_status(status);
-}
-
-zx::status<> Coordinator::PublishDriverRegistrarService(const fbl::RefPtr<fs::PseudoDir>& svc_dir) {
-  const auto driver_registrar = [this](fidl::ServerEnd<fdr::DriverRegistrar> request) {
-    driver_registrar_binding_ = fidl::BindServer<fidl::WireServer<fdr::DriverRegistrar>>(
-        dispatcher_, std::move(request), this);
-    return ZX_OK;
-  };
-  zx_status_t status = svc_dir->AddEntry(fidl::DiscoverableProtocolName<fdr::DriverRegistrar>,
-                                         fbl::MakeRefCounted<fs::Service>(driver_registrar));
   return zx::make_status(status);
 }
 

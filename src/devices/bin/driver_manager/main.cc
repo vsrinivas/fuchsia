@@ -60,7 +60,6 @@ namespace {
 
 // These are helpers for getting sets of parameters over FIDL
 struct DriverManagerParams {
-  bool enable_ephemeral;
   bool log_to_debuglog;
   bool require_system;
   bool suspend_timeout_fallback;
@@ -72,9 +71,11 @@ struct DriverManagerParams {
 
 DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Arguments>& client) {
   fuchsia_boot::wire::BoolPair bool_req[]{
-      {"devmgr.enable-ephemeral", false}, {"devmgr.log-to-debuglog", false},
-      {"devmgr.require-system", false},   {"devmgr.suspend-timeout-fallback", true},
-      {"devmgr.verbose", false},          {"driver_manager.use_driver_framework_v2", false},
+      {"devmgr.log-to-debuglog", false},
+      {"devmgr.require-system", false},
+      {"devmgr.suspend-timeout-fallback", true},
+      {"devmgr.verbose", false},
+      {"driver_manager.use_driver_framework_v2", false},
   };
   auto bool_resp =
       client->GetBools(fidl::VectorView<fuchsia_boot::wire::BoolPair>::FromExternal(bool_req));
@@ -107,14 +108,13 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
   }
 
   return {
-      .enable_ephemeral = bool_resp.value().values[0],
-      .log_to_debuglog = bool_resp.value().values[1],
-      .require_system = bool_resp.value().values[2],
-      .suspend_timeout_fallback = bool_resp.value().values[3],
-      .verbose = bool_resp.value().values[4],
+      .log_to_debuglog = bool_resp.value().values[0],
+      .require_system = bool_resp.value().values[1],
+      .suspend_timeout_fallback = bool_resp.value().values[2],
+      .verbose = bool_resp.value().values[3],
       .crash_policy = crash_policy,
       .root_driver = std::move(root_driver),
-      .use_dfv2 = bool_resp.value().values[5],
+      .use_dfv2 = bool_resp.value().values[4],
   };
 }
 
@@ -303,7 +303,6 @@ int main(int argc, char** argv) {
   config.verbose = driver_manager_params.verbose;
   config.fs_provider = &system_instance;
   config.path_prefix = driver_manager_args.path_prefix;
-  config.enable_ephemeral = driver_manager_params.enable_ephemeral;
   config.crash_policy = driver_manager_params.crash_policy;
 
   // Waiting an infinite amount of time before falling back is effectively not
@@ -382,15 +381,6 @@ int main(int argc, char** argv) {
       LOGF(ERROR, "Failed to publish Driver Development service in DFv1: %s",
            publish.status_string());
       return publish.error_value();
-    }
-
-    if (config.enable_ephemeral) {
-      auto publish = coordinator.PublishDriverRegistrarService(outgoing.svc_dir());
-      if (publish.is_error()) {
-        LOGF(ERROR, "Failed to publish Driver Registrar service in DFv1: %s",
-             publish.status_string());
-        return publish.error_value();
-      }
     }
 
     // V1 Drivers.

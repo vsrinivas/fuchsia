@@ -172,17 +172,15 @@ class MultipleDeviceTestCase : public zxtest::Test {
  public:
   static CoordinatorConfig CreateConfig(async_dispatcher_t* bootargs_dispatcher,
                                         mock_boot_arguments::Server* boot_args,
-                                        fidl::WireSyncClient<fuchsia_boot::Arguments>* client,
-                                        bool enable_ephemeral) {
+                                        fidl::WireSyncClient<fuchsia_boot::Arguments>* client) {
     auto config = DefaultConfig(bootargs_dispatcher, boot_args, client);
-    config.enable_ephemeral = enable_ephemeral;
     return config;
   }
 
-  explicit MultipleDeviceTestCase(bool enable_ephemeral = false)
-      : coordinator_for_test_(CreateConfig(mock_server_loop_.dispatcher(), &boot_args_,
-                                           &args_client_, enable_ephemeral),
-                              coordinator_loop_.dispatcher()) {}
+  explicit MultipleDeviceTestCase()
+      : coordinator_for_test_(
+            CreateConfig(mock_server_loop_.dispatcher(), &boot_args_, &args_client_),
+            coordinator_loop_.dispatcher()) {}
 
   ~MultipleDeviceTestCase() override = default;
 
