@@ -23,7 +23,6 @@ use crate::mm::MemoryManager;
 use crate::signals::*;
 use crate::syscalls::decls::{Syscall, SyscallDecl};
 use crate::syscalls::table::dispatch_syscall;
-use crate::task::ExitStatus::Exit;
 use crate::task::*;
 use crate::types::*;
 
@@ -133,6 +132,7 @@ fn run_exception_loop(
     let mut buffer = zx::MessageBuf::new();
     // This tracks the last failing system call to aid in debugging task failures.
     let mut error_context = None;
+
     loop {
         match read_channel_sync(&exceptions, &mut buffer) {
             Err(zx::Status::PEER_CLOSED) => {
@@ -212,9 +212,9 @@ fn run_exception_loop(
             ZX_EXCP_FATAL_PAGE_FAULT => {
                 #[cfg(target_arch = "x86_64")]
                 let fault_addr = unsafe { report.context.arch.x86_64.cr2 };
-                strace!(
+                tracing::debug!(
+                    "{:?} page fault, ip={:#x}, sp={:#x}, fault={:#x}",
                     current_task,
-                    "page fault, ip={:#x}, sp={:#x}, fault={:#x}",
                     current_task.registers.rip,
                     current_task.registers.rsp,
                     fault_addr
@@ -231,17 +231,29 @@ fn run_exception_loop(
 
         block_while_stopped(current_task);
 
+        // Checking for a signal might cause the task to exit, so check before processing exit
+        if current_task.read().exit_status.is_none() {
+            dequeue_signal(current_task);
+        }
+
         {
             let task_state = current_task.read();
             if let Some(exit_status) = task_state.exit_status.as_ref() {
                 let exit_status = exit_status.clone();
+                match exit_status {
+                    ExitStatus::CoreDump(_) => {
+                        exception.set_exception_state(&ZX_EXCEPTION_STATE_TRY_NEXT)?
+                    }
+                    _ => exception.set_exception_state(&ZX_EXCEPTION_STATE_THREAD_EXIT)?,
+                }
+
                 // `strace!` acquires a read lock on `current_task`'s state, so drop the lock to
                 // avoid re-entrancy.
                 drop(task_state);
-                strace!(current_task, "exiting with status {:?}", exit_status);
+                tracing::debug!("{:?} exiting with status {:?}", current_task, exit_status);
                 if let Some(error_context) = error_context {
                     match exit_status {
-                        Exit(value) if value == 0 => {}
+                        ExitStatus::Exit(value) if value == 0 => {}
                         _ => {
                             tracing::debug!(
                                 "{:?} last failing syscall before exit: {:?}, failed with {:?}",
@@ -252,12 +264,9 @@ fn run_exception_loop(
                         }
                     };
                 }
-                exception.set_exception_state(&ZX_EXCEPTION_STATE_THREAD_EXIT)?;
                 return Ok(exit_status);
             }
         }
-
-        dequeue_signal(current_task);
 
         // Handle the debug address after the thread is set up to continue, because
         // `set_process_debug_addr` expects the register state to be in a post-syscall state (most
