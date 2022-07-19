@@ -117,11 +117,6 @@
             ],
         },
         {
-            protocol: [ "fuchsia.net.neighbor.Controller" ],
-            from: "#netstack",
-            to: [ "#dhcpd" ],
-        },
-        {
             protocol: [ "fuchsia.net.routes.State" ],
             from: "#netstack",
             to: [ "#dns-resolver" ],
@@ -136,6 +131,11 @@
                 "#http-client",
                 "#reachability",
             ],
+        },
+        {
+            protocol: [ "fuchsia.posix.socket.packet.Provider" ],
+            from: "#netstack",
+            to: [ "#dhcpd" ],
         },
         {
             directory: "dev-class-ethernet",

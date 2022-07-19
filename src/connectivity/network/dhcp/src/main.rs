@@ -17,9 +17,12 @@ use {
     fuchsia_component::server::{ServiceFs, ServiceFsDir},
     futures::{Future, SinkExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _},
     net_types::ethernet::Mac,
+    packet::{serialize::InnerPacketBuilder, Serializer},
+    packet_formats::{ipv4::Ipv4PacketBuilder, udp::UdpPacketBuilder},
     std::{
         cell::RefCell,
         collections::HashMap,
+        convert::TryInto as _,
         net::{IpAddr, Ipv4Addr, SocketAddr},
     },
     tracing::{debug, error, info, warn},
@@ -417,9 +420,6 @@ async fn define_msg_handling_loop_future<DS: DataStore>(
     sock: SocketWithId<<Server<DS> as SocketServerDispatcher>::Socket>,
     server: &RefCell<ServerDispatcherRuntime<Server<DS>>>,
 ) -> Result<Void, Error> {
-    let proxy = fuchsia_component::client::connect_to_protocol::<
-        fidl_fuchsia_net_neighbor::ControllerMarker,
-    >()?;
     let SocketWithId { socket, iface_id } = sock;
     let mut handler = MessageHandler::new(server);
     let mut buf = vec![0u8; BUF_SZ];
@@ -439,47 +439,94 @@ async fn define_msg_handling_loop_future<DS: DataStore>(
             .handle_from_sender(&buf[..received], sender)
             .context("failed to handle buffer")?
         {
-            let cleanup = match chaddr {
-                Some(chaddr) => {
-                    let mut fidl_ip =
-                        fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
-                            addr: dst.ip().octets(),
-                        });
-                    let () = proxy
-                        .add_entry(
-                            iface_id,
-                            &mut fidl_ip,
-                            &mut fidl_fuchsia_net::MacAddress { octets: chaddr.bytes() },
-                        )
-                        .await
-                        .context("controller.add_entry() failed")?
-                        .map_err(|e| fuchsia_zircon::Status::from_raw(e))
-                        .context("failed to add static link resolution entry")?;
-                    let proxy = &proxy;
-                    Some(move || async move {
-                        proxy
-                            .remove_entry(iface_id, &mut fidl_ip)
-                            .await
-                            .context("controller.remove_entry() failed")?
-                            .map_err(|e| fuchsia_zircon::Status::from_raw(e))
-                            .or_else(|e| match e {
-                                // If the entry no longer exists, we're content with that result.
-                                fuchsia_zircon::Status::NOT_FOUND => Ok(()),
-                                e => Err(e),
-                            })
-                            .context("failed to remove static link resolution entry")
-                    })
+            let chaddr = if let Some(chaddr) = chaddr {
+                chaddr
+            } else {
+                let sent = socket
+                    .send_to(&response, SocketAddr::V4(dst))
+                    .await
+                    .context("unable to send response")?;
+                if sent != response.len() {
+                    return Err(anyhow::anyhow!(
+                        "sent {} bytes for a message of size {}",
+                        sent,
+                        response.len()
+                    ));
                 }
-                None => None,
+                info!("response sent to {}: {} bytes", dst, sent);
+                continue;
             };
-            let sent = socket
-                .send_to(&response, SocketAddr::V4(dst))
-                .await
-                .context("unable to send response");
-            if let Some(cleanup) = cleanup {
-                let () = cleanup().await?;
+            // Packet sockets are necessary here because the on-device Netstack does
+            // not yet have a relation linking the `chaddr` MAC address to an IP address.
+            let src_ip = net_types::ip::Ipv4Addr::from(sender.ip().octets());
+            let dst_ip = *net_types::ip::Ipv4::LIMITED_BROADCAST_ADDRESS;
+            const SERVER_PORT: std::num::NonZeroU16 =
+                nonzero_ext::nonzero!(dhcp::protocol::SERVER_PORT);
+            const CLIENT_PORT: std::num::NonZeroU16 =
+                nonzero_ext::nonzero!(dhcp::protocol::CLIENT_PORT);
+            let udp_builder = UdpPacketBuilder::new(src_ip, dst_ip, Some(SERVER_PORT), CLIENT_PORT);
+            // Use the default TTL shared across UNIX systems.
+            const TTL: u8 = 64;
+            let ipv4_builder = Ipv4PacketBuilder::new(
+                src_ip,
+                dst_ip,
+                TTL,
+                packet_formats::ip::Ipv4Proto::Proto(packet_formats::ip::IpProto::Udp),
+            );
+            let packet = response
+                .into_serializer()
+                .encapsulate(udp_builder)
+                .encapsulate(ipv4_builder)
+                .serialize_vec_outer()
+                .expect("serialize packet failed")
+                .unwrap_b();
+
+            let mut sll_addr = [0; 8];
+            (&mut sll_addr[..chaddr.bytes().len()]).copy_from_slice(&chaddr.bytes());
+            // TODO(https://fxbug.dev/104557): Add `ETH_P_IP` upstream in the `libc` crate.
+            const ETH_P_IP: u16 = 0x0800;
+            let sockaddr_ll = libc::sockaddr_ll {
+                sll_family: libc::AF_PACKET.try_into().expect("convert sll_family failed"),
+                sll_ifindex: iface_id.try_into().expect("convert sll_ifindex failed"),
+                // Network order is big endian.
+                sll_protocol: ETH_P_IP.to_be(),
+                sll_halen: chaddr.bytes().len().try_into().expect("convert chaddr size failed"),
+                sll_addr: sll_addr,
+                sll_hatype: 0,
+                sll_pkttype: 0,
+            };
+
+            // TODO(https://fxbug.dev/104559): Move this unsafe code upstream into `socket2`.
+            let (_, sock_addr) = unsafe {
+                socket2::SockAddr::init(|sockaddr_storage, len_ptr| {
+                    (sockaddr_storage as *mut libc::sockaddr_ll).write(sockaddr_ll);
+                    len_ptr.write(
+                        // Should not panic: libc guarantees that `socklen_t` (which is a `u32`)
+                        // can fit the size of any socket address.
+                        std::mem::size_of::<libc::sockaddr_ll>()
+                            .try_into()
+                            .expect("convert sockaddr_ll length failed"),
+                    );
+                    Ok(())
+                })
             }
-            let sent = sent?;
+            .context("initialize socket address failed")?;
+
+            let socket = socket2::Socket::new(
+                socket2::Domain::PACKET,
+                socket2::Type::DGRAM,
+                Some(socket2::Protocol::UDP),
+            )
+            .context("create packet socket failed")?;
+            let sent =
+                socket.send_to(packet.as_ref(), &sock_addr).context("unable to send response")?;
+            if sent != packet.as_ref().len() {
+                return Err(anyhow::anyhow!(
+                    "sent {} bytes for a packet of size {}",
+                    sent,
+                    packet.as_ref().len()
+                ));
+            }
             info!("response sent to {}: {} bytes", dst, sent);
         }
     }

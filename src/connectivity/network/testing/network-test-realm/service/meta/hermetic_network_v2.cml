@@ -73,6 +73,11 @@
             ],
         },
         {
+            protocol: [ "fuchsia.posix.socket.packet.Provider" ],
+            from: "#netstack",
+            to: [ "#dhcpd" ],
+        },
+        {
             protocol: [ "fuchsia.netstack.Netstack" ],
             from: "#netstack",
             to: [ "#stubs" ],

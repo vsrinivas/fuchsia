@@ -45,6 +45,7 @@
                 "fuchsia.net.debug.Interfaces",
                 "fuchsia.net.interfaces.State",
                 "fuchsia.net.stack.Stack",
+                "fuchsia.posix.socket.packet.Provider",
                 "fuchsia.posix.socket.Provider",
             ],
             from: "#netstack",

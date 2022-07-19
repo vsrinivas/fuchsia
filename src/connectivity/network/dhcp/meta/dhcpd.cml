@@ -16,7 +16,7 @@
         {
             protocol: [
                 "fuchsia.net.name.Lookup",
-                "fuchsia.net.neighbor.Controller",
+                "fuchsia.posix.socket.packet.Provider",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.stash.SecureStore",
             ],

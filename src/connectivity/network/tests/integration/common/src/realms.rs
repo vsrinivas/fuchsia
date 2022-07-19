@@ -423,6 +423,11 @@ impl<'a> From<&'a KnownServiceProvider> for fnetemul::ChildDef {
                     fnetemul::Capability::ChildDep(protocol_dep::<fposix_socket::ProviderMarker>(
                         constants::netstack::COMPONENT_NAME,
                     )),
+                    fnetemul::Capability::ChildDep(protocol_dep::<
+                        fposix_socket_packet::ProviderMarker,
+                    >(
+                        constants::netstack::COMPONENT_NAME
+                    )),
                     // TODO(https://fxbug.dev/82890): only include SecureStash as a dependency of
                     // DhcpServer if it is started in persistent mode.
                     fnetemul::Capability::ChildDep(protocol_dep::<fstash::SecureStoreMarker>(
