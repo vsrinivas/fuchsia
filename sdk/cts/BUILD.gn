@@ -4,6 +4,7 @@
 
 import("//build/config/build_api_module.gni")
 import("//sdk/cts/build/cts.gni")
+import("//sdk/cts/build/verify_sdk_compatibility.gni")
 
 # TODO(fxb/82775): Remove this target once infra points to //sdk:cts.
 group("cts_artifacts") {
@@ -77,7 +78,9 @@ cts_copy_to_sdk("build") {
 group("cts") {
   testonly = true
   deps = [
+    ":core_sdk_layout",
     ":cts_no_e2e",
+    ":sdk_layout_golden_file_copy",
     "examples:tests",
     "tests",
   ]
@@ -127,4 +130,17 @@ sdk_molecule("cts_deps") {
   category = "cts"
   deps = [ "//zircon/public/sysroot/sdk:sysroot_sdk" ]
   testonly = true
+}
+
+# Generate SDK directory layout golden file.
+generate_sdk_layout_golden_file("core_sdk_layout") {
+  sdk_archive = "$root_out_dir/sdk/archive/core.tar.gz"
+  deps = [ "//sdk:core_archive" ]
+}
+
+copy("sdk_layout_golden_file_copy") {
+  testonly = true
+  sources = get_target_outputs(":core_sdk_layout")
+  outputs = [ "$root_build_dir/cts/sdk_directory_layout.json.golden" ]
+  deps = [ ":core_sdk_layout" ]
 }

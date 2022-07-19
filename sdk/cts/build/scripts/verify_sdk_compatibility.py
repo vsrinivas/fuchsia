@@ -8,7 +8,6 @@ by instability of the Fuchsia SDK package directory.
 
 import argparse
 import json
-import os
 import sys
 import tarfile
 from enum import Enum
@@ -56,6 +55,23 @@ class GoldenLayoutMismatchError(Exception):
             f"If you have approval to make this change, please update the"
             f" golden file and rerun with `--policy update_golden`.\n")
         return return_str
+
+
+class GoldenFileGenerationError(Exception):
+    """Exception raised when the SDK Tarball input
+    contains a file which is not a regular file or directory."""
+
+    def __init__(self, tarfile, invalid):
+        self.tarfile = tarfile
+        self.invalid = invalid
+
+    def __str__(self):
+        return (
+            f"Detected invalid file within the SDK archive "
+            f"tarfile:\n{self.invalid}.\n"
+            f"Golden file will not be generated if "
+            f"the tarfile contains this file type. Please update\n"
+            f"{self.tarfile}\naccordingly.\n")
 
 
 class InvalidJsonError(Exception):
@@ -129,29 +145,40 @@ def main():
         type=Policy,
         default=Policy.no_breaking_changes,
         choices=list(Policy))
+    parser.add_argument('--api-level', help='The API level being tested')
+    parser.add_argument('--golden', help='Path to the golden file')
     parser.add_argument(
-        '--api-level', help='The API level being tested', required=True)
-    parser.add_argument(
-        '--golden', help='Path to the golden file', required=True)
-    parser.add_argument(
-        '--current',
-        help='Path to the local SDK archive tarball',
-        required=True)
-    parser.add_argument(
-        '--stamp', help='Verification output file path', required=True)
+        '--current', help='Path to the SDK archive tarball', required=True)
+    parser.add_argument('--stamp', help='Verification output file path')
     parser.add_argument(
         '--warn_on_changes',
         help='Treat compatibility violations as warnings',
         action='store_true')
+    parser.add_argument(
+        '--generate_golden',
+        help='Generate SDK directory layout golden file.',
+        action='store_true')
+    parser.add_argument(
+        '--gen_golden_path',
+        help='Generated SDK directory layout golden file path.')
     args = parser.parse_args()
 
     err = None
-    if args.policy == Policy.update_golden:
+    if args.generate_golden:
+        try:
+            golden_sdk_layout = generate_sdk_layout_golden_file(args.current)
+        except (MissingInputError, GoldenFileGenerationError) as e:
+            print("ERROR: ", e)
+            return 1
+        with open(args.gen_golden_path, 'w') as golden_sdk_layout_file:
+            json.dump(golden_sdk_layout, golden_sdk_layout_file)
+        return 0
+    elif args.policy == Policy.update_golden:
         try:
             fail_on_changes(args.current, args.golden, args.api_level)
         except (GoldenLayoutMismatchError, MissingInputError,
-                InvalidJsonError) as err:
-            print("WARNING: ", err)
+                InvalidJsonError) as e:
+            print("WARNING: ", e)
     elif args.policy == Policy.no_breaking_changes:
         try:
             fail_on_breaking_changes(args.current, args.golden, args.api_level)
@@ -295,6 +322,31 @@ def file_preparation(current_a, golden_a, api_level_a, changes_ok):
 
     gold_paths = golden_layout.get("paths")
     return gold_paths, curr_layout
+
+
+def generate_sdk_layout_golden_file(current_a):
+    try:
+        sdk_file = tarfile.open(current_a, "r:gz")
+    except tarfile.ReadError:
+        raise MissingInputError(missing=current_a, is_tar=True)
+
+    layout = sdk_file.getmembers()
+    sdk_file.close()
+
+    sorted_layout = sorted(layout, key=lambda m: m.name)
+
+    golden_json = {"paths": []}
+    for path in sorted_layout:
+        if path.isfile():
+            type_var = "file"
+        elif path.isdir():
+            type_var = "directory"
+        else:
+            return GoldenFileGenerationError(tarfile=current_a, invalid=path)
+        golden_path = {"name": path.name, "type": type_var}
+        golden_json['paths'].append(golden_path)
+
+    return golden_json
 
 
 if __name__ == '__main__':

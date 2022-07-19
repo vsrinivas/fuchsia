@@ -1,0 +1,36 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Generate golden file of the Fuchsia SDK directory layout.
+#
+# Parameters
+#
+#   sdk_archive (required)
+#     A generated tarball of the SDK archive.
+#
+template("generate_sdk_layout_golden_file") {
+  assert(defined(invoker.sdk_archive), "SDK archive tarball is required")
+
+  # Run the test.
+  action(target_name) {
+    forward_variables_from(invoker, "*", [ "policy" ])
+
+    script = "//sdk/cts/build/scripts/verify_sdk_compatibility.py"
+    gold_file = "$target_gen_dir/sdk_directory_layout.json.golden"
+
+    tarfile = sdk_archive
+
+    inputs = [ sdk_archive ]
+
+    outputs = [ gold_file ]
+
+    args = [
+      "--current",
+      rebase_path(tarfile, root_build_dir),
+      "--generate_golden",
+      "--gen_golden_path",
+      rebase_path(gold_file, root_build_dir),
+    ]
+  }
+}

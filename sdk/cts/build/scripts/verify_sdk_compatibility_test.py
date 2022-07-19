@@ -13,7 +13,7 @@ import unittest
 from tempfile import TemporaryDirectory
 from verify_sdk_compatibility import (
     fail_on_changes, fail_on_breaking_changes, GoldenLayoutMismatchError,
-    SdkCompatibilityError, MissingInputError)
+    SdkCompatibilityError, MissingInputError, generate_sdk_layout_golden_file)
 
 
 class VerifySdkCompatibilityTests(unittest.TestCase):
@@ -193,6 +193,39 @@ class VerifySdkCompatibilityTests(unittest.TestCase):
                 # Assert that an empty tar file will not pass.
                 with self.assertRaises(MissingInputError):
                     fail_on_breaking_changes(f3.name, golden, 0)
+
+    def test_generate_sdk_layout_golden_file(self):
+        with TemporaryDirectory() as root_build_dir:
+            file1 = os.path.join(root_build_dir, "test_file1")
+            with open(file1, 'w') as f:
+                f.write("file_content")
+
+            file2 = os.path.join(root_build_dir, "test_file2")
+            with open(file2, 'w') as f:
+                f.write("file_content")
+
+            start = "/"
+            json_layout = {
+                "paths":
+                    [
+                        {
+                            "name": os.path.relpath(file1, start),
+                            "type": "file"
+                        }, {
+                            "name": os.path.relpath(file2, start),
+                            "type": "file"
+                        }
+                    ]
+            }
+
+            with tempfile.NamedTemporaryFile('wb', suffix='.tar.gz',
+                                             delete=False) as f:
+                with tarfile.open(f.name, mode='w:gz') as tar_curr:
+                    tar_curr.add(file1)
+                    tar_curr.add(file2)
+                self.assertTrue(
+                    str(generate_sdk_layout_golden_file(f.name)) == str(
+                        json_layout))
 
 
 if __name__ == '__main__':
