@@ -2,14 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::inspect::utils::inspect_writable_map::InspectWritableMap;
-
-use std::sync::Arc;
-
-use fuchsia_inspect::{self as inspect, component, NumericProperty, Property};
-use fuchsia_inspect_derive::{Inspect, WithInspect};
+use crate::inspect::utils::managed_inspect_map::ManagedInspectMap;
+use fuchsia_inspect::{self as inspect, component, NumericProperty};
+use fuchsia_inspect_derive::Inspect;
 use futures::lock::Mutex;
 use lazy_static::lazy_static;
+use std::sync::Arc;
 
 const STASH_INSPECT_NODE_NAME: &str = "stash_failures";
 
@@ -17,11 +15,8 @@ pub struct StashInspectLogger {
     /// The inspector, stored for access in tests.
     pub inspector: &'static inspect::Inspector,
 
-    /// The saved inspect node under which failure counts are written.
-    inspect_node: inspect::Node,
-
     /// Map from a setting's device storage key to its inspect data.
-    flush_failure_counts: InspectWritableMap<StashInspectInfo>,
+    flush_failure_counts: ManagedInspectMap<StashInspectInfo>,
 }
 
 /// Contains the node and property used to record the number of stash failures for a given
@@ -38,16 +33,6 @@ struct StashInspectInfo {
     count: inspect::UintProperty,
 }
 
-impl StashInspectInfo {
-    fn new(node: &inspect::Node, key: &str) -> Self {
-        let info = Self::default()
-            .with_inspect(node, key)
-            .expect("Failed to create StashInspectInfo node");
-        info.count.set(1);
-        info
-    }
-}
-
 lazy_static! {
     // TODO(fxb/93842): replace with a dependency injected value instead of a static.
     pub(crate) static ref STASH_LOGGER: Arc<Mutex<StashInspectLogger>> =
@@ -58,22 +43,17 @@ impl StashInspectLogger {
     fn new() -> Self {
         let inspector = component::inspector();
         let inspect_node = inspector.root().create_child(STASH_INSPECT_NODE_NAME);
-        Self { inspector, inspect_node, flush_failure_counts: InspectWritableMap::new() }
+        Self {
+            inspector,
+            flush_failure_counts: ManagedInspectMap::<StashInspectInfo>::with_node(inspect_node),
+        }
     }
 
     /// Records a write failure for the given setting.
-    // TODO(fxb/97284): Change to take String.
     pub fn record_flush_failure(&mut self, key: String) {
-        match self.flush_failure_counts.get_mut(&key) {
-            Some(stash_inspect_info) => {
-                stash_inspect_info.count.add(1u64);
-            }
-            None => {
-                let _ = self
-                    .flush_failure_counts
-                    .set(key.clone(), StashInspectInfo::new(&self.inspect_node, &key));
-            }
-        }
+        let stash_inspect_info =
+            self.flush_failure_counts.get_or_insert_with(key, StashInspectInfo::default);
+        stash_inspect_info.count.add(1u64);
     }
 }
 
@@ -91,5 +71,32 @@ impl StashInspectLoggerHandle {
 impl Default for StashInspectLoggerHandle {
     fn default() -> Self {
         StashInspectLoggerHandle::new()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fuchsia_inspect::assert_data_tree;
+
+    // Verify that the StashInspectLogger accumulates failure counts to inspect.
+    #[test]
+    fn test_stash_logger() {
+        let mut logger = StashInspectLogger::new();
+
+        logger.record_flush_failure("test_key".to_string());
+        logger.record_flush_failure("test_key2".to_string());
+        logger.record_flush_failure("test_key2".to_string());
+
+        assert_data_tree!(logger.inspector, root: {
+            stash_failures: {
+                "test_key": {
+                    "count": 1u64,
+                },
+                "test_key2": {
+                    "count": 2u64,
+                }
+            }
+        });
     }
 }
