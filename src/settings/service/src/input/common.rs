@@ -19,7 +19,6 @@ use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon::Duration;
 use futures::future::Fuse;
 use futures::{self, FutureExt, StreamExt};
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
 /// The amount of time in milliseconds to wait for a camera device to be detected.
@@ -73,13 +72,6 @@ impl MediaButtonsEventBuilder {
         self.camera_disable = camera_disable;
         self
     }
-}
-/// The possible types of input to monitor.
-#[derive(Eq, PartialEq, Debug, Clone, Copy, Hash, Serialize, Deserialize)]
-pub enum InputType {
-    Camera,
-    Microphone,
-    VolumeButtons,
 }
 
 /// Setting service internal representation of hw media buttons. Used to send
