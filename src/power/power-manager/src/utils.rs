@@ -30,6 +30,54 @@ macro_rules! log_if_false_and_debug_assert {
     };
 }
 
+pub mod result_debug_panic {
+    /// Convenience wrapper to cause a debug panic if a Result is Err.
+    ///
+    /// Example:
+    ///     let ok_val = result.or_debug_panic()?;
+    ///
+    /// In the example, the try operator is used to unwrap an Ok value or return if it is Err, while
+    /// also debug panicking if it is Err.
+    pub trait ResultDebugPanic<T, E> {
+        fn or_debug_panic(self) -> Result<T, E>;
+    }
+
+    impl<T, E> ResultDebugPanic<T, E> for Result<T, E> {
+        fn or_debug_panic(self) -> Result<T, E> {
+            self.or_else(|e| {
+                debug_assert!(false);
+                Err(e)
+            })
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::ResultDebugPanic;
+
+        #[test]
+        fn test_ok_result() {
+            let res: Result<(), ()> = Ok(());
+            assert_eq!(res.or_debug_panic(), Ok(()));
+        }
+
+        #[test]
+        #[should_panic]
+        #[cfg(debug_assertions)]
+        fn test_err_debug() {
+            let res: Result<(), ()> = Err(());
+            let _ = res.or_debug_panic(); // panics
+        }
+
+        #[test]
+        #[cfg(not(debug_assertions))]
+        fn test_err_nondebug() {
+            let res: Result<(), ()> = Err(());
+            assert_eq!(res.or_debug_panic(), Err(()));
+        }
+    }
+}
+
 #[cfg(test)]
 mod log_err_with_debug_assert_tests {
     use crate::log_if_false_and_debug_assert;

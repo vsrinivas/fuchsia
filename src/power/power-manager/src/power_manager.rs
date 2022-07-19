@@ -212,14 +212,11 @@ impl PowerManager {
                 service_fs,
             )
             .build()?,
-            "TemperatureHandler" => {
-                temperature_handler::TemperatureHandlerBuilder::new_from_json(
-                    json_data,
-                    &self.nodes,
-                )
-                .build()
-                .await?
-            }
+            "TemperatureHandler" => temperature_handler::TemperatureHandlerBuilder::new_from_json(
+                json_data,
+                &self.nodes,
+            )
+            .build()?,
             "ThermalLoadDriver" => {
                 thermal_load_driver::ThermalLoadDriverBuilder::new_from_json(json_data, &self.nodes)
                     .build()?

@@ -8,9 +8,10 @@ use crate::message::{Message, MessageReturn};
 use crate::node::Node;
 use crate::ok_or_default_err;
 use crate::types::{Celsius, Nanoseconds, Seconds};
-use crate::utils::connect_to_driver;
+use crate::utils::{connect_to_driver, result_debug_panic::ResultDebugPanic};
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
+use async_utils::event::Event as AsyncEvent;
 use fidl_fuchsia_hardware_thermal as fthermal;
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, NumericProperty, Property};
@@ -97,27 +98,25 @@ impl<'a> TemperatureHandlerBuilder<'a> {
         }
     }
 
-    pub async fn build(self) -> Result<Rc<TemperatureHandler>, Error> {
-        let driver_path = ok_or_default_err!(self.driver_path)?;
+    pub fn build(self) -> Result<Rc<TemperatureHandler>, Error> {
+        let driver_path = ok_or_default_err!(self.driver_path).or_debug_panic()?;
 
         // Default `cache_duration`: 0
         let cache_duration = self.cache_duration.unwrap_or(zx::Duration::from_millis(0));
 
-        // Optionally use the default proxy
-        let driver_proxy = if self.driver_proxy.is_none() {
-            connect_to_driver::<fthermal::DeviceMarker>(&driver_path).await?
-        } else {
-            self.driver_proxy.unwrap()
+        let mutable_inner = MutableInner {
+            last_temperature: Celsius(std::f64::NAN),
+            last_poll_time: fasync::Time::INFINITE_PAST,
+            driver_proxy: self.driver_proxy,
         };
 
         // Optionally use the default inspect root node
         let inspect_root = self.inspect_root.unwrap_or(inspect::component::inspector().root());
 
         Ok(Rc::new(TemperatureHandler {
+            init_done: AsyncEvent::new(),
             driver_path: driver_path.clone(),
-            driver_proxy,
-            last_temperature: RefCell::new(Celsius(std::f64::NAN)),
-            last_poll_time: RefCell::new(fasync::Time::INFINITE_PAST),
+            mutable_inner: RefCell::new(mutable_inner),
             cache_duration,
             inspect: InspectData::new(
                 inspect_root,
@@ -125,17 +124,25 @@ impl<'a> TemperatureHandlerBuilder<'a> {
             ),
         }))
     }
+
+    #[cfg(test)]
+    pub async fn build_and_init(self) -> Rc<TemperatureHandler> {
+        let node = self.build().unwrap();
+        node.init().await.unwrap();
+        node
+    }
 }
 
 pub struct TemperatureHandler {
+    /// Signalled after `init()` has completed. Used to ensure node doesn't process messages until
+    /// its `init()` has completed.
+    init_done: AsyncEvent,
+
+    /// Path to the temperature driver that this node reads from.
     driver_path: String,
-    driver_proxy: fthermal::DeviceProxy,
 
-    /// Last temperature returned by the handler.
-    last_temperature: RefCell<Celsius>,
-
-    /// Time of the last temperature poll, for determining cache freshness.
-    last_poll_time: RefCell<fasync::Time>,
+    /// Mutable inner state.
+    mutable_inner: RefCell<MutableInner>,
 
     /// Duration for which a polled temperature is cached. This prevents excessive polling of the
     /// sensor.
@@ -157,11 +164,16 @@ impl TemperatureHandler {
             "driver" => self.driver_path.as_str()
         );
 
+        self.init_done.wait().await;
+
+        let last_poll_time = self.mutable_inner.borrow().last_poll_time;
+        let last_temperature = self.mutable_inner.borrow().last_temperature;
+
         // If the last temperature value is sufficiently fresh, return it instead of polling.
         // Note that if the previous poll generated an error, `last_poll_time` was not updated,
         // and (barring clock glitches) a new poll will occur.
-        if fasync::Time::now() <= *self.last_poll_time.borrow() + self.cache_duration {
-            return Ok(MessageReturn::ReadTemperature(*self.last_temperature.borrow()));
+        if fasync::Time::now() <= last_poll_time + self.cache_duration {
+            return Ok(MessageReturn::ReadTemperature(last_temperature));
         }
 
         let result = self.read_temperature().await;
@@ -179,8 +191,9 @@ impl TemperatureHandler {
 
         match result {
             Ok(temperature) => {
-                *self.last_temperature.borrow_mut() = temperature;
-                *self.last_poll_time.borrow_mut() = fasync::Time::now();
+                let mut inner = self.mutable_inner.borrow_mut();
+                inner.last_temperature = temperature;
+                inner.last_poll_time = fasync::Time::now();
                 self.inspect.log_temperature_reading(temperature);
                 Ok(MessageReturn::ReadTemperature(temperature))
             }
@@ -198,10 +211,21 @@ impl TemperatureHandler {
             "TemperatureHandler::read_temperature",
             "driver" => self.driver_path.as_str()
         );
-        let (status, temperature) =
-            self.driver_proxy.get_temperature_celsius().await.map_err(|e| {
-                format_err!("{}: get_temperature_celsius IPC failed: {}", self.name(), e)
-            })?;
+
+        // Extract `driver_proxy` from `mutable_inner`, returning an error (or asserting in debug)
+        // if the proxy is missing
+        let driver_proxy = self
+            .mutable_inner
+            .borrow()
+            .driver_proxy
+            .as_ref()
+            .ok_or(format_err!("Missing driver_proxy"))
+            .or_debug_panic()?
+            .clone();
+
+        let (status, temperature) = driver_proxy.get_temperature_celsius().await.map_err(|e| {
+            format_err!("{}: get_temperature_celsius IPC failed: {}", self.name(), e)
+        })?;
         zx::Status::ok(status).map_err(|e| {
             format_err!("{}: get_temperature_celsius driver returned error: {}", self.name(), e)
         })?;
@@ -209,10 +233,38 @@ impl TemperatureHandler {
     }
 }
 
+struct MutableInner {
+    /// Last temperature returned by the handler.
+    last_temperature: Celsius,
+
+    /// Time of the last temperature poll, for determining cache freshness.
+    last_poll_time: fasync::Time,
+
+    /// Proxy to the temperature driver. Populated during `init()` unless previously supplied (in a
+    /// test).
+    driver_proxy: Option<fthermal::DeviceProxy>,
+}
+
 #[async_trait(?Send)]
 impl Node for TemperatureHandler {
     fn name(&self) -> String {
         format!("TemperatureHandler ({})", self.driver_path)
+    }
+
+    /// Initializes internal state.
+    ///
+    /// Connects to the temperature driver unless a proxy was already provided (in a test).
+    async fn init(&self) -> Result<(), Error> {
+        // Connect to the temperature driver. Typically this is None, but it may be set by tests.
+        let driver_proxy = match &self.mutable_inner.borrow().driver_proxy {
+            Some(p) => p.clone(),
+            None => connect_to_driver::<fthermal::DeviceMarker>(&self.driver_path).await?,
+        };
+
+        self.mutable_inner.borrow_mut().driver_proxy = Some(driver_proxy);
+        self.init_done.signal();
+
+        Ok(())
     }
 
     async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, PowerManagerError> {
@@ -259,8 +311,10 @@ impl InspectData {
 #[cfg(test)]
 pub mod tests {
     use super::*;
+    use assert_matches::assert_matches;
     use async_utils::PollExt as _;
     use fuchsia_inspect::testing::TreeAssertion;
+    use futures::poll;
     use futures::TryStreamExt;
     use inspect::assert_data_tree;
     use std::task::Poll;
@@ -311,9 +365,8 @@ pub mod tests {
         };
         let node = TemperatureHandlerBuilder::new()
             .driver_proxy(fake_temperature_driver(get_temperature))
-            .build()
-            .await
-            .unwrap();
+            .build_and_init()
+            .await;
 
         // Send ReadTemperature message and check for expected value.
         for expected_reading in expected_readings {
@@ -341,9 +394,8 @@ pub mod tests {
                 TemperatureHandlerBuilder::new()
                     .driver_proxy(fake_temperature_driver(get_temperature))
                     .cache_duration(zx::Duration::from_millis(500))
-                    .build(),
+                    .build_and_init(),
             ))
-            .unwrap()
             .unwrap();
 
         let run = move |executor: &mut fasync::TestExecutor, duration_ms: i64| {
@@ -378,9 +430,8 @@ pub mod tests {
     async fn test_unsupported_msg() {
         let node = TemperatureHandlerBuilder::new()
             .driver_proxy(fake_temperature_driver(|| Celsius(0.0)))
-            .build()
-            .await
-            .unwrap();
+            .build_and_init()
+            .await;
         match node.handle_message(&Message::GetCpuLoads).await {
             Err(PowerManagerError::Unsupported) => {}
             e => panic!("Unexpected return value: {:?}", e),
@@ -395,9 +446,8 @@ pub mod tests {
         let node = TemperatureHandlerBuilder::new()
             .driver_proxy(fake_temperature_driver(|| Celsius(30.0)))
             .inspect_root(inspector.root())
-            .build()
-            .await
-            .unwrap();
+            .build_and_init()
+            .await;
 
         // The node will read the current temperature and log the sample into Inspect. Read enough
         // samples to test that the correct number of samples are logged and older ones are dropped.
@@ -441,9 +491,8 @@ pub mod tests {
     async fn test_get_driver_path() {
         let node = TemperatureHandlerBuilder::new()
             .driver_proxy(fake_temperature_driver(|| Celsius(0.0)))
-            .build()
-            .await
-            .unwrap();
+            .build_and_init()
+            .await;
 
         let driver_path = match node.handle_message(&Message::GetDriverPath).await.unwrap() {
             MessageReturn::GetDriverPath(driver_path) => driver_path,
@@ -453,6 +502,24 @@ pub mod tests {
         // "TestTemperatureHandler" is the driver path assigned in
         // `TemperatureHandlerBuilder::new()`
         assert_eq!(driver_path, "/test/driver/path".to_string());
+    }
+
+    /// Tests that messages sent to the node are asynchronously blocked until the node's `init()`
+    /// has completed.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_require_init() {
+        // Create the node without `init()`
+        let node = TemperatureHandlerBuilder::new()
+            .driver_proxy(fake_temperature_driver(|| Celsius(0.0)))
+            .build()
+            .unwrap();
+
+        // Future to send the node a message
+        let mut message_future = node.handle_message(&Message::ReadTemperature);
+
+        assert!(poll!(&mut message_future).is_pending());
+        assert_matches!(node.init().await, Ok(()));
+        assert_matches!(message_future.await, Ok(MessageReturn::ReadTemperature(Celsius(_))));
     }
 }
 
@@ -562,6 +629,7 @@ mod temperature_filter_tests {
         let y_1 = Celsius(10.0);
         let time_delta = Seconds(1.0);
         let time_constant = Seconds(10.0);
+
         assert_eq!(
             TemperatureFilter::low_pass_filter(y_1, y_0, time_delta, time_constant),
             Celsius(1.0)
