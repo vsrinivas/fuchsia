@@ -190,8 +190,21 @@ mod tests {
     use futures::StreamExt;
     use pretty_assertions::assert_eq;
 
+    async fn collect_until_eq<S: Stream<Item = String> + Unpin>(mut stream: S, target: &str) {
+        let mut accumulator = "".to_string();
+        while accumulator.len() < target.len() {
+            match stream.next().await {
+                Some(string) => accumulator.push_str(&string),
+                None => panic!(
+                    "Expected string '{}' but stream terminated after '{}'",
+                    target, accumulator
+                ),
+            }
+        }
+        assert_eq!(target, accumulator);
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
-    #[ignore] // TODO(fxbug.dev/104006) re-enable this test when de-flaked
     async fn collect_test_stdout() {
         let (sock_server, sock_client) =
             fidl::Socket::create(fidl::SocketOpts::STREAM).expect("Failed while creating socket");
@@ -205,27 +218,20 @@ mod tests {
         sock_server.write(b"test message 2").expect("Can't write msg to socket");
         sock_server.write(b"test message 3").expect("Can't write msg to socket");
 
-        let mut msg = recv.next().await;
-
-        assert_eq!(msg, Some("test message 1test message 2test message 3".into()));
+        collect_until_eq(&mut recv, "test message 1test message 2test message 3").await;
 
         // can receive messages multiple times
         sock_server.write(b"test message 4").expect("Can't write msg to socket");
-        msg = recv.next().await;
-
-        assert_eq!(msg, Some("test message 4".into()));
+        collect_until_eq(&mut recv, "test message 4").await;
 
         // messages can be read after socket server is closed.
         sock_server.write(b"test message 5").expect("Can't write msg to socket");
         sock_server.into_handle(); // this will drop this handle and close it.
         fut.await.expect("log collection should not fail");
-
-        msg = recv.next().await;
-
-        assert_eq!(msg, Some("test message 5".into()));
+        collect_until_eq(&mut recv, "test message 5").await;
 
         // socket was closed, this should return None
-        msg = recv.next().await;
+        let msg = recv.next().await;
         assert_eq!(msg, None);
     }
 
