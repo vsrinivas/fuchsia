@@ -84,7 +84,7 @@ pub struct StateMachineMetadata {
 async fn create_client_state_machine(
     iface_id: u16,
     has_wpa3_support: bool,
-    dev_svc_proxy: &mut fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
+    dev_monitor_proxy: &mut fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
     client_update_sender: listener::ClientListenerMessageSender,
     saved_networks: Arc<dyn SavedNetworksManagerApi>,
     network_selector: Arc<NetworkSelector>,
@@ -111,8 +111,7 @@ async fn create_client_state_machine(
     // take the event stream from the SME proxy.  A subsequent attempt to take the event stream
     // would cause wlancfg to panic.
     let (sme_proxy, remote) = create_proxy()?;
-    let status = dev_svc_proxy.get_client_sme(iface_id, remote).await?;
-    fuchsia_zircon::ok(status)?;
+    dev_monitor_proxy.get_client_sme(iface_id, remote).await?.map_err(zx::Status::from_raw)?;
     let event_stream = sme_proxy.take_event_stream();
 
     let fut = client_fsm::serve(
@@ -143,7 +142,7 @@ pub(crate) struct IfaceManagerService {
     phy_manager: Arc<Mutex<dyn PhyManagerApi + Send>>,
     client_update_sender: listener::ClientListenerMessageSender,
     ap_update_sender: listener::ApListenerMessageSender,
-    dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
+    dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
     clients: Vec<ClientIfaceContainer>,
     aps: Vec<ApIfaceContainer>,
     saved_networks: Arc<dyn SavedNetworksManagerApi>,
@@ -162,7 +161,7 @@ impl IfaceManagerService {
         phy_manager: Arc<Mutex<dyn PhyManagerApi + Send>>,
         client_update_sender: listener::ClientListenerMessageSender,
         ap_update_sender: listener::ApListenerMessageSender,
-        dev_svc_proxy: fidl_fuchsia_wlan_device_service::DeviceServiceProxy,
+        dev_monitor_proxy: fidl_fuchsia_wlan_device_service::DeviceMonitorProxy,
         saved_networks: Arc<dyn SavedNetworksManagerApi>,
         network_selector: Arc<NetworkSelector>,
         cobalt_api: CobaltSender,
@@ -173,7 +172,7 @@ impl IfaceManagerService {
             phy_manager: phy_manager.clone(),
             client_update_sender,
             ap_update_sender,
-            dev_svc_proxy,
+            dev_monitor_proxy,
             clients: Vec::new(),
             aps: Vec::new(),
             saved_networks: saved_networks,
@@ -263,16 +262,19 @@ impl IfaceManagerService {
 
         // If the iface ID is not among configured clients, create a new ClientIfaceContainer for
         // the iface ID.
-        let (sme_proxy, remote) = create_proxy()?;
-        let status = self.dev_svc_proxy.get_client_sme(iface_id, remote).await?;
-        fuchsia_zircon::ok(status)?;
+        let (sme_proxy, sme_server) = create_proxy()?;
+        self.dev_monitor_proxy
+            .get_client_sme(iface_id, sme_server)
+            .await?
+            .map_err(zx::Status::from_raw)?;
+        let (features_proxy, features_server) = create_proxy()?;
+        self.dev_monitor_proxy.get_feature_support(iface_id, features_server).await?.map_err(
+            |e| format_err!("Error occurred getting iface's features support proxy: {}", e),
+        )?;
 
         // Get the security support for this iface.
-        let (status, security_support) =
-            self.dev_svc_proxy.query_security_support(iface_id).await?;
-        fuchsia_zircon::ok(status)?;
-        let security_support = *security_support
-            .ok_or_else(|| format_err!("Error occurred getting iface's security support"))?;
+        let security_support =
+            features_proxy.query_security_support().await?.map_err(zx::Status::from_raw)?;
         Ok(ClientIfaceContainer {
             iface_id: iface_id,
             sme_proxy,
@@ -314,9 +316,11 @@ impl IfaceManagerService {
         }
 
         // If this iface ID is not yet accounted for, create a new ApIfaceContainer.
-        let (sme_proxy, remote) = create_proxy()?;
-        let status = self.dev_svc_proxy.get_ap_sme(iface_id, remote).await?;
-        fuchsia_zircon::ok(status)?;
+        let (sme_proxy, sme_server) = create_proxy()?;
+        self.dev_monitor_proxy
+            .get_ap_sme(iface_id, sme_server)
+            .await?
+            .map_err(zx::Status::from_raw)?;
 
         // Spawn the AP state machine.
         let (sender, receiver) = mpsc::channel(1);
@@ -455,7 +459,7 @@ impl IfaceManagerService {
                 let (new_client, fut) = create_client_state_machine(
                     client_iface.iface_id,
                     wpa3_supported(client_iface.security_support),
-                    &mut self.dev_svc_proxy,
+                    &mut self.dev_monitor_proxy,
                     self.client_update_sender.clone(),
                     self.saved_networks.clone(),
                     self.network_selector.clone(),
@@ -545,7 +549,7 @@ impl IfaceManagerService {
                 let (new_client, fut) = create_client_state_machine(
                     client.iface_id,
                     wpa3_supported(client.security_support),
-                    &mut self.dev_svc_proxy,
+                    &mut self.dev_monitor_proxy,
                     self.client_update_sender.clone(),
                     self.saved_networks.clone(),
                     self.network_selector.clone(),
@@ -568,12 +572,8 @@ impl IfaceManagerService {
     }
 
     async fn handle_added_iface(&mut self, iface_id: u16) -> Result<(), Error> {
-        let (status, iface_info) = self.dev_svc_proxy.query_iface(iface_id).await?;
-        fuchsia_zircon::ok(status)?;
-        let iface_info = match iface_info {
-            Some(iface_info) => iface_info,
-            None => return Err(format_err!("no iface information available for {:?}", iface_id)),
-        };
+        let iface_info =
+            self.dev_monitor_proxy.query_iface(iface_id).await?.map_err(zx::Status::from_raw)?;
 
         match iface_info.role {
             fidl_fuchsia_wlan_common::WlanMacRole::Client => {
@@ -592,7 +592,7 @@ impl IfaceManagerService {
                 let (new_client, fut) = create_client_state_machine(
                     client_iface.iface_id,
                     wpa3_supported(client_iface.security_support),
-                    &mut self.dev_svc_proxy,
+                    &mut self.dev_monitor_proxy,
                     self.client_update_sender.clone(),
                     self.saved_networks.clone(),
                     self.network_selector.clone(),
@@ -1736,7 +1736,7 @@ mod tests {
             Arc::new(Mutex::new(phy_manager)),
             test_values.client_update_sender.clone(),
             test_values.ap_update_sender.clone(),
-            test_values.device_service_proxy.clone(),
+            test_values.monitor_service_proxy.clone(),
             test_values.saved_networks.clone(),
             test_values.network_selector.clone(),
             test_values.cobalt_api.clone(),
@@ -1793,7 +1793,7 @@ mod tests {
             Arc::new(Mutex::new(phy_manager)),
             test_values.client_update_sender.clone(),
             test_values.ap_update_sender.clone(),
-            test_values.device_service_proxy.clone(),
+            test_values.monitor_service_proxy.clone(),
             test_values.saved_networks.clone(),
             test_values.network_selector.clone(),
             test_values.cobalt_api.clone(),
@@ -1870,7 +1870,7 @@ mod tests {
             phy_manager,
             test_values.client_update_sender,
             test_values.ap_update_sender,
-            test_values.device_service_proxy,
+            test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
@@ -1922,7 +1922,7 @@ mod tests {
 
         // Drop the serving end of our device service proxy so that the request to create an SME
         // proxy fails.
-        drop(test_values.device_service_stream);
+        drop(test_values.monitor_service_stream);
 
         // Scan and ensure that an error is returned.
         let scan_fut = iface_manager.scan(fidl_fuchsia_wlan_sme::ScanRequest::Passive(
@@ -2063,16 +2063,16 @@ mod tests {
                 // Expect that we have requested a client SME proxy.
                 assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Pending);
 
-                let mut device_service_fut = test_values.device_service_stream.into_future();
+                let mut monitor_service_fut = test_values.monitor_service_stream.into_future();
                 let sme_server = assert_variant!(
-                    poll_device_service_req(&mut exec, &mut device_service_fut),
-                    Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
-                        iface_id: TEST_CLIENT_IFACE_ID, sme, responder
+                    poll_service_req(&mut exec, &mut monitor_service_fut),
+                    Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetClientSme {
+                        iface_id: TEST_CLIENT_IFACE_ID, sme_server, responder
                     }) => {
                         // Send back a positive acknowledgement.
-                        assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
+                        assert!(responder.send(&mut Ok(())).is_ok());
 
-                        sme
+                        sme_server
                     }
                 );
                 _sme_stream = sme_server.into_stream().unwrap().into_future();
@@ -2226,16 +2226,16 @@ mod tests {
                 // Expect that we have requested a client SME proxy.
                 assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Pending);
 
-                let mut device_service_fut = test_values.device_service_stream.into_future();
+                let mut monitor_service_fut = test_values.monitor_service_stream.into_future();
                 let sme_server = assert_variant!(
-                    poll_device_service_req(&mut exec, &mut device_service_fut),
-                    Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
-                        iface_id: TEST_CLIENT_IFACE_ID, sme, responder
+                    poll_service_req(&mut exec, &mut monitor_service_fut),
+                    Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetClientSme {
+                        iface_id: TEST_CLIENT_IFACE_ID, sme_server, responder
                     }) => {
                         // Send back a positive acknowledgement.
-                        assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
+                        assert!(responder.send(&mut Ok(())).is_ok());
 
-                        sme
+                        sme_server
                     }
                 );
                 _sme_stream = sme_server.into_stream().unwrap().into_future();
@@ -2419,7 +2419,7 @@ mod tests {
             phy_manager,
             test_values.client_update_sender,
             test_values.ap_update_sender,
-            test_values.device_service_proxy,
+            test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
@@ -2449,7 +2449,7 @@ mod tests {
 
         // Drop the serving end of our device service proxy so that the request to create an SME
         // proxy fails.
-        drop(test_values.device_service_stream);
+        drop(test_values.monitor_service_stream);
 
         // Update the saved networks with knowledge of the test SSID and credentials.
         let network_id = NetworkIdentifier::new(TEST_SSID.clone(), SecurityType::Wpa);
@@ -2555,7 +2555,7 @@ mod tests {
             Arc::new(Mutex::new(phy_manager)),
             test_values.client_update_sender,
             test_values.ap_update_sender,
-            test_values.device_service_proxy,
+            test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
@@ -2705,7 +2705,7 @@ mod tests {
             Arc::new(Mutex::new(phy_manager)),
             test_values.client_update_sender,
             test_values.ap_update_sender,
-            test_values.device_service_proxy,
+            test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
@@ -2840,7 +2840,7 @@ mod tests {
             Arc::new(Mutex::new(phy_manager)),
             test_values.client_update_sender,
             test_values.ap_update_sender,
-            test_values.device_service_proxy,
+            test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
@@ -2977,7 +2977,7 @@ mod tests {
             Arc::new(Mutex::new(phy_manager)),
             test_values.client_update_sender,
             test_values.ap_update_sender,
-            test_values.device_service_proxy,
+            test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
@@ -3057,11 +3057,11 @@ mod tests {
             // The IfaceManager will first query to determine the type of interface.
             assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Pending);
             assert_variant!(
-                exec.run_until_stalled(&mut test_values.device_service_stream.next()),
-                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QueryIface {
+                exec.run_until_stalled(&mut test_values.monitor_service_stream.next()),
+                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::QueryIface {
                     iface_id: TEST_CLIENT_IFACE_ID, responder
                 }))) => {
-                    let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
+                    let response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
                         role: fidl_fuchsia_wlan_common::WlanMacRole::Client,
                         id: TEST_CLIENT_IFACE_ID,
                         phy_id: 0,
@@ -3069,7 +3069,7 @@ mod tests {
                         sta_addr: [0; 6],
                     };
                     responder
-                        .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
+                        .send(&mut Ok(response))
                         .expect("Failed to send iface response");
                 }
             );
@@ -3077,25 +3077,37 @@ mod tests {
             // The request should stall out while attempting to get a client interface.
             assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Pending);
             assert_variant!(
-                exec.run_until_stalled(&mut test_values.device_service_stream.next()),
-                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
-                    iface_id: TEST_CLIENT_IFACE_ID, sme: _, responder
+                exec.run_until_stalled(&mut test_values.monitor_service_stream.next()),
+                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetClientSme {
+                    iface_id: TEST_CLIENT_IFACE_ID, sme_server: _, responder
                 }))) => {
                     // Send back a positive acknowledgement.
-                    assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
+                    assert!(responder.send(&mut Ok(())).is_ok());
                 }
             );
 
             // There will be a security support query.
             assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Pending);
-            assert_variant!(
-                exec.run_until_stalled(&mut test_values.device_service_stream.next()),
-                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QuerySecuritySupport {
-                    iface_id: TEST_CLIENT_IFACE_ID, responder
+            let features_server = assert_variant!(
+                exec.run_until_stalled(&mut test_values.monitor_service_stream.next()),
+                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetFeatureSupport {
+                    iface_id: TEST_CLIENT_IFACE_ID, feature_support_server, responder
                 }))) => {
+                    assert!(responder.send(&mut Ok(())).is_ok());
+                    feature_support_server
+                }
+            );
+            assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Pending);
+            let mut features_req_fut = features_server
+                .into_stream()
+                .expect("Failed to create features req stream")
+                .into_future();
+            assert_variant!(
+                poll_service_req(&mut exec, &mut features_req_fut),
+                Poll::Ready(fidl_fuchsia_wlan_sme::FeatureSupportRequest::QuerySecuritySupport {
                     responder
-                        .send(fuchsia_zircon::sys::ZX_OK, Some(&mut fake_security_support()))
-                        .expect("Failed to send security support response");
+                }) => {
+                    responder.send(&mut Ok(fake_security_support())).expect("Failed to send security support response");
                 }
             );
 
@@ -3103,12 +3115,12 @@ mod tests {
             // machine.
             assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Pending);
             assert_variant!(
-                exec.run_until_stalled(&mut test_values.device_service_stream.next()),
-                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
-                    iface_id: TEST_CLIENT_IFACE_ID, sme: _, responder
+                exec.run_until_stalled(&mut test_values.monitor_service_stream.next()),
+                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetClientSme {
+                    iface_id: TEST_CLIENT_IFACE_ID, sme_server: _, responder
                 }))) => {
                     // Send back a positive acknowledgement.
-                    assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
+                    assert!(responder.send(&mut Ok(())).is_ok());
                 }
             );
 
@@ -3174,7 +3186,7 @@ mod tests {
             Arc::new(Mutex::new(phy_manager)),
             test_values.client_update_sender,
             test_values.ap_update_sender,
-            test_values.device_service_proxy,
+            test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
@@ -3300,7 +3312,7 @@ mod tests {
             Arc::new(Mutex::new(phy_manager)),
             test_values.client_update_sender,
             test_values.ap_update_sender,
-            test_values.device_service_proxy,
+            test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
@@ -3431,7 +3443,7 @@ mod tests {
             Arc::new(Mutex::new(phy_manager)),
             test_values.client_update_sender,
             test_values.ap_update_sender,
-            test_values.device_service_proxy,
+            test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
@@ -3528,26 +3540,38 @@ mod tests {
             // Expect a DeviceService request an SME proxy.
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
             assert_variant!(
-                exec.run_until_stalled(&mut test_values.device_service_stream.next()),
-                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
-                    iface_id: TEST_CLIENT_IFACE_ID, sme: _, responder
+                exec.run_until_stalled(&mut test_values.monitor_service_stream.next()),
+                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetClientSme {
+                    iface_id: TEST_CLIENT_IFACE_ID, sme_server: _, responder
                 }))) => {
                     responder
-                        .send(fuchsia_zircon::sys::ZX_OK)
+                        .send(&mut Ok(()))
                         .expect("failed to send AP SME response.");
                 }
             );
 
             // Expected a DeviceService request to get iface info.
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-            assert_variant!(
-                exec.run_until_stalled(&mut test_values.device_service_stream.next()),
-                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QuerySecuritySupport {
-                    iface_id: TEST_CLIENT_IFACE_ID, responder
+            let features_server = assert_variant!(
+                exec.run_until_stalled(&mut test_values.monitor_service_stream.next()),
+                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetFeatureSupport {
+                    iface_id: TEST_CLIENT_IFACE_ID, feature_support_server, responder
                 }))) => {
+                    assert!(responder.send(&mut Ok(())).is_ok());
+                    feature_support_server
+                }
+            );
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+            let mut features_req_fut = features_server
+                .into_stream()
+                .expect("Failed to create features req stream")
+                .into_future();
+            assert_variant!(
+                poll_service_req(&mut exec, &mut features_req_fut),
+                Poll::Ready(fidl_fuchsia_wlan_sme::FeatureSupportRequest::QuerySecuritySupport {
                     responder
-                        .send(fuchsia_zircon::sys::ZX_OK, Some(&mut fake_security_support()))
-                        .expect("Failed to send security support response");
+                }) => {
+                    responder.send(&mut Ok(fake_security_support())).expect("Failed to send security support response");
                 }
             );
 
@@ -3592,13 +3616,13 @@ mod tests {
             // Expect a DeviceService request an SME proxy.
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
             assert_variant!(
-                exec.run_until_stalled(&mut test_values.device_service_stream.next()),
-                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
-                    iface_id: TEST_CLIENT_IFACE_ID, sme: _, responder
+                exec.run_until_stalled(&mut test_values.monitor_service_stream.next()),
+                Poll::Ready(Some(Ok(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetClientSme {
+                    iface_id: TEST_CLIENT_IFACE_ID, sme_server: _, responder
                 }))) => {
                     responder
-                        .send(fuchsia_zircon::sys::ZX_ERR_NOT_FOUND)
-                        .expect("failed to send AP SME response.");
+                        .send(&mut Err(fuchsia_zircon::sys::ZX_ERR_NOT_FOUND))
+                        .expect("failed to send client SME response.");
                 }
             );
 
@@ -3694,10 +3718,16 @@ mod tests {
         assert!(!iface_manager.aps.is_empty());
     }
 
-    fn poll_device_service_req(
+    fn poll_service_req<
+        T,
+        E: std::fmt::Debug,
+        R: fidl::endpoints::RequestStream
+            + futures::Stream<Item = Result<T, E>>
+            + futures::TryStream<Ok = T>,
+    >(
         exec: &mut fuchsia_async::TestExecutor,
-        next_req: &mut StreamFuture<fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream>,
-    ) -> Poll<fidl_fuchsia_wlan_device_service::DeviceServiceRequest> {
+        next_req: &mut StreamFuture<R>,
+    ) -> Poll<fidl::endpoints::Request<R::Protocol>> {
         exec.run_until_stalled(next_req).map(|(req, stream)| {
             *next_req = stream.into_future();
             req.expect("did not expect the SME request stream to end")
@@ -3720,7 +3750,7 @@ mod tests {
             Arc::new(Mutex::new(phy_manager)),
             test_values.client_update_sender,
             test_values.ap_update_sender,
-            test_values.device_service_proxy,
+            test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
@@ -3735,13 +3765,13 @@ mod tests {
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
             // Expect and interface query and notify that this is a client interface.
-            let mut device_service_fut = test_values.device_service_stream.into_future();
+            let mut monitor_service_fut = test_values.monitor_service_stream.into_future();
             assert_variant!(
-                poll_device_service_req(&mut exec, &mut device_service_fut),
-                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QueryIface {
+                poll_service_req(&mut exec, &mut monitor_service_fut),
+                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::QueryIface {
                     iface_id: TEST_CLIENT_IFACE_ID, responder
                 }) => {
-                    let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
+                    let response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
                         role: fidl_fuchsia_wlan_common::WlanMacRole::Client,
                         id: TEST_CLIENT_IFACE_ID,
                         phy_id: 0,
@@ -3749,7 +3779,7 @@ mod tests {
                         sta_addr: [0; 6],
                     };
                     responder
-                        .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
+                        .send(&mut Ok(response))
                         .expect("Sending iface response");
                 }
             );
@@ -3757,24 +3787,36 @@ mod tests {
             // Expect that we have requested a client SME proxy from get_client.
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
             assert_variant!(
-                poll_device_service_req(&mut exec, &mut device_service_fut),
-                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
-                    iface_id: TEST_CLIENT_IFACE_ID, sme: _, responder
+                poll_service_req(&mut exec, &mut monitor_service_fut),
+                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetClientSme {
+                    iface_id: TEST_CLIENT_IFACE_ID, sme_server: _, responder
                 }) => {
                     // Send back a positive acknowledgement.
-                    assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
+                    assert!(responder.send(&mut Ok(())).is_ok());
                 }
             );
 
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-            assert_variant!(
-                poll_device_service_req(&mut exec, &mut device_service_fut),
-                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QuerySecuritySupport {
-                    iface_id: TEST_CLIENT_IFACE_ID, responder
+            let features_server = assert_variant!(
+                poll_service_req(&mut exec, &mut monitor_service_fut),
+                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetFeatureSupport {
+                    iface_id: TEST_CLIENT_IFACE_ID, feature_support_server, responder
                 }) => {
+                    assert!(responder.send(&mut Ok(())).is_ok());
+                    feature_support_server
+                }
+            );
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
+            let mut features_req_fut = features_server
+                .into_stream()
+                .expect("Failed to create features req stream")
+                .into_future();
+            assert_variant!(
+                poll_service_req(&mut exec, &mut features_req_fut),
+                Poll::Ready(fidl_fuchsia_wlan_sme::FeatureSupportRequest::QuerySecuritySupport {
                     responder
-                        .send(fuchsia_zircon::sys::ZX_OK, Some(&mut fake_security_support()))
-                        .expect("Failed to send security support response");
+                }) => {
+                    responder.send(&mut Ok(fake_security_support())).expect("Failed to send security support response");
                 }
             );
 
@@ -3782,12 +3824,12 @@ mod tests {
             // machine.
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
             assert_variant!(
-                poll_device_service_req(&mut exec, &mut device_service_fut),
-                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
-                    iface_id: TEST_CLIENT_IFACE_ID, sme: _, responder
+                poll_service_req(&mut exec, &mut monitor_service_fut),
+                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetClientSme {
+                    iface_id: TEST_CLIENT_IFACE_ID, sme_server: _, responder
                 }) => {
                     // Send back a positive acknowledgement.
-                    assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
+                    assert!(responder.send(&mut Ok(())).is_ok());
                 }
             );
 
@@ -3815,7 +3857,7 @@ mod tests {
             Arc::new(Mutex::new(phy_manager)),
             test_values.client_update_sender,
             test_values.ap_update_sender,
-            test_values.device_service_proxy,
+            test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
@@ -3830,13 +3872,13 @@ mod tests {
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
             // Expect that the interface properties are queried and notify that it is an AP iface.
-            let mut device_service_fut = test_values.device_service_stream.into_future();
+            let mut monitor_service_fut = test_values.monitor_service_stream.into_future();
             assert_variant!(
-                poll_device_service_req(&mut exec, &mut device_service_fut),
-                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QueryIface {
+                poll_service_req(&mut exec, &mut monitor_service_fut),
+                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::QueryIface {
                     iface_id: TEST_AP_IFACE_ID, responder
                 }) => {
-                    let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
+                    let response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
                         role: fidl_fuchsia_wlan_common::WlanMacRole::Ap,
                         id: TEST_AP_IFACE_ID,
                         phy_id: 0,
@@ -3844,7 +3886,7 @@ mod tests {
                         sta_addr: [0; 6],
                     };
                     responder
-                        .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
+                        .send(&mut Ok(response))
                         .expect("Sending iface response");
                 }
             );
@@ -3853,14 +3895,14 @@ mod tests {
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
             let responder = assert_variant!(
-                poll_device_service_req(&mut exec, &mut device_service_fut),
-                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetApSme {
-                    iface_id: TEST_AP_IFACE_ID, sme: _, responder
+                poll_service_req(&mut exec, &mut monitor_service_fut),
+                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetApSme {
+                    iface_id: TEST_AP_IFACE_ID, sme_server: _, responder
                 }) => responder
             );
 
             // Send back a positive acknowledgement.
-            assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
+            assert!(responder.send(&mut Ok(())).is_ok());
 
             // Run the future to completion.
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
@@ -3886,7 +3928,7 @@ mod tests {
             Arc::new(Mutex::new(phy_manager)),
             test_values.client_update_sender,
             test_values.ap_update_sender,
-            test_values.device_service_proxy,
+            test_values.monitor_service_proxy,
             test_values.saved_networks,
             test_values.network_selector,
             test_values.cobalt_api,
@@ -3901,14 +3943,14 @@ mod tests {
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
             // Expect an iface query and send back an error
-            let mut device_service_fut = test_values.device_service_stream.into_future();
+            let mut monitor_service_fut = test_values.monitor_service_stream.into_future();
             assert_variant!(
-                poll_device_service_req(&mut exec, &mut device_service_fut),
-                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QueryIface {
+                poll_service_req(&mut exec, &mut monitor_service_fut),
+                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::QueryIface {
                     iface_id: TEST_AP_IFACE_ID, responder
                 }) => {
                     responder
-                        .send(fuchsia_zircon::sys::ZX_ERR_NOT_FOUND, None)
+                        .send(&mut Err(fuchsia_zircon::sys::ZX_ERR_NOT_FOUND))
                         .expect("Sending iface response");
                 }
             );
@@ -3938,13 +3980,13 @@ mod tests {
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
             // Expect an interface query and notify that it is a client.
-            let mut device_service_fut = test_values.device_service_stream.into_future();
+            let mut monitor_service_fut = test_values.monitor_service_stream.into_future();
             assert_variant!(
-                poll_device_service_req(&mut exec, &mut device_service_fut),
-                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QueryIface {
+                poll_service_req(&mut exec, &mut monitor_service_fut),
+                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::QueryIface {
                     iface_id: TEST_CLIENT_IFACE_ID, responder
                 }) => {
-                    let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
+                    let response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
                         role: fidl_fuchsia_wlan_common::WlanMacRole::Client,
                         id: TEST_CLIENT_IFACE_ID,
                         phy_id: 0,
@@ -3952,7 +3994,7 @@ mod tests {
                         sta_addr: [0; 6],
                     };
                     responder
-                        .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
+                        .send(&mut Ok(response))
                         .expect("Sending iface response");
                 }
             );
@@ -3982,13 +4024,13 @@ mod tests {
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
 
             // Expect an interface query and notify that it is a client.
-            let mut device_service_fut = test_values.device_service_stream.into_future();
+            let mut monitor_service_fut = test_values.monitor_service_stream.into_future();
             assert_variant!(
-                poll_device_service_req(&mut exec, &mut device_service_fut),
-                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QueryIface {
+                poll_service_req(&mut exec, &mut monitor_service_fut),
+                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::QueryIface {
                     iface_id: TEST_AP_IFACE_ID, responder
                 }) => {
-                    let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
+                    let response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
                         role: fidl_fuchsia_wlan_common::WlanMacRole::Ap,
                         id: TEST_AP_IFACE_ID,
                         phy_id: 0,
@@ -3996,7 +4038,7 @@ mod tests {
                         sta_addr: [0; 6],
                     };
                     responder
-                        .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
+                        .send(&mut Ok(response))
                         .expect("Sending iface response");
                 }
             );
@@ -4022,7 +4064,7 @@ mod tests {
         iface_manager: IfaceManagerService,
         req: IfaceManagerRequest,
         mut req_receiver: oneshot::Receiver<Result<T, Error>>,
-        device_service_stream: fidl_fuchsia_wlan_device_service::DeviceServiceRequestStream,
+        monitor_service_stream: fidl_fuchsia_wlan_device_service::DeviceMonitorRequestStream,
         test_type: TestType,
     ) {
         // Create other components to run the service.
@@ -4045,24 +4087,24 @@ mod tests {
 
         // Service any device service requests in the event that a new client SME proxy is required
         // for the operation under test.
-        let mut device_service_fut = device_service_stream.into_future();
+        let mut monitor_service_fut = monitor_service_stream.into_future();
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        match poll_device_service_req(exec, &mut device_service_fut) {
-            Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
+        match poll_service_req(exec, &mut monitor_service_fut) {
+            Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetClientSme {
                 iface_id: TEST_CLIENT_IFACE_ID,
-                sme: _,
+                sme_server: _,
                 responder,
             }) => {
                 // Send back a positive acknowledgement.
-                assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
+                assert!(responder.send(&mut Ok(())).is_ok());
             }
-            Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetApSme {
+            Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetApSme {
                 iface_id: TEST_AP_IFACE_ID,
-                sme: _,
+                sme_server: _,
                 responder,
             }) => {
                 // Send back a positive acknowledgement.
-                assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
+                assert!(responder.send(&mut Ok(())).is_ok());
             }
             _ => {}
         }
@@ -4176,7 +4218,7 @@ mod tests {
             iface_manager,
             req,
             ack_receiver,
-            test_values.device_service_stream,
+            test_values.monitor_service_stream,
             test_type,
         );
     }
@@ -4206,7 +4248,7 @@ mod tests {
             iface_manager,
             req,
             ack_receiver,
-            test_values.device_service_stream,
+            test_values.monitor_service_stream,
             test_type,
         );
     }
@@ -4486,7 +4528,7 @@ mod tests {
             Arc::new(Mutex::new(phy_manager)),
             test_values.client_update_sender,
             test_values.ap_update_sender,
-            test_values.device_service_proxy,
+            test_values.monitor_service_proxy,
             test_values.saved_networks.clone(),
             test_values.network_selector,
             test_values.cobalt_api,
@@ -4528,13 +4570,13 @@ mod tests {
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
 
         // Expect and interface query and notify that this is a client interface.
-        let mut device_service_fut = test_values.device_service_stream.into_future();
+        let mut monitor_service_fut = test_values.monitor_service_stream.into_future();
         assert_variant!(
-            poll_device_service_req(&mut exec, &mut device_service_fut),
-            Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QueryIface {
+            poll_service_req(&mut exec, &mut monitor_service_fut),
+            Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::QueryIface {
                 iface_id: TEST_CLIENT_IFACE_ID, responder
             }) => {
-                let mut response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
+                let response = fidl_fuchsia_wlan_device_service::QueryIfaceResponse {
                     role: fidl_fuchsia_wlan_common::WlanMacRole::Client,
                     id: TEST_CLIENT_IFACE_ID,
                     phy_id: 0,
@@ -4542,7 +4584,7 @@ mod tests {
                     sta_addr: [0; 6],
                 };
                 responder
-                    .send(fuchsia_zircon::sys::ZX_OK, Some(&mut response))
+                    .send(&mut Ok(response))
                     .expect("Sending iface response");
             }
         );
@@ -4550,37 +4592,49 @@ mod tests {
         // Expect that we have requested a client SME proxy from get_client.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(
-            poll_device_service_req(&mut exec, &mut device_service_fut),
-            Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
-                iface_id: TEST_CLIENT_IFACE_ID, sme: _, responder
+            poll_service_req(&mut exec, &mut monitor_service_fut),
+            Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetClientSme {
+                iface_id: TEST_CLIENT_IFACE_ID, sme_server: _, responder
             }) => {
                 // Send back a positive acknowledgement.
-                assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
+                assert!(responder.send(&mut Ok(())).is_ok());
             }
         );
 
         // Expect that we have queried an iface from get_client creating a new IfaceContainer.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        assert_variant!(
-            poll_device_service_req(&mut exec, &mut device_service_fut),
-            Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::QuerySecuritySupport {
-                iface_id: TEST_CLIENT_IFACE_ID, responder
+        let features_server = assert_variant!(
+            poll_service_req(&mut exec, &mut monitor_service_fut),
+            Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetFeatureSupport {
+                iface_id: TEST_CLIENT_IFACE_ID, feature_support_server, responder
             }) => {
+                assert!(responder.send(&mut Ok(())).is_ok());
+                feature_support_server
+            }
+        );
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        let mut features_req_fut = features_server
+            .into_stream()
+            .expect("Failed to create features req stream")
+            .into_future();
+        assert_variant!(
+            poll_service_req(&mut exec, &mut features_req_fut),
+            Poll::Ready(fidl_fuchsia_wlan_sme::FeatureSupportRequest::QuerySecuritySupport {
                 responder
-                    .send(fuchsia_zircon::sys::ZX_OK, Some(&mut fake_security_support()))
-                    .expect("Failed to send security support response");
+            }) => {
+                responder.send(&mut Ok(fake_security_support())).expect("Failed to send security support response");
             }
         );
 
         // Expect that we have requested a client SME proxy from creating the client state machine.
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         assert_variant!(
-            poll_device_service_req(&mut exec, &mut device_service_fut),
-            Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
-                iface_id: TEST_CLIENT_IFACE_ID, sme: _, responder
+            poll_service_req(&mut exec, &mut monitor_service_fut),
+            Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetClientSme {
+                iface_id: TEST_CLIENT_IFACE_ID, sme_server: _, responder
             }) => {
                 // Send back a positive acknowledgement.
-                assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
+                assert!(responder.send(&mut Ok(())).is_ok());
             }
         );
 
@@ -4608,7 +4662,7 @@ mod tests {
             Arc::new(Mutex::new(phy_manager)),
             test_values.client_update_sender,
             test_values.ap_update_sender,
-            test_values.device_service_proxy,
+            test_values.monitor_service_proxy,
             test_values.saved_networks.clone(),
             test_values.network_selector.clone(),
             test_values.cobalt_api,
@@ -4621,8 +4675,8 @@ mod tests {
         let req = AddIfaceRequest { iface_id: TEST_CLIENT_IFACE_ID, responder: new_iface_sender };
         let req = IfaceManagerRequest::AddIface(req);
 
-        // Drop the device stream so that querying the interface properties will fail.
-        drop(test_values.device_service_stream);
+        // Drop the device monitor stream so that querying the interface properties will fail.
+        drop(test_values.monitor_service_stream);
 
         run_service_test_with_unit_return(
             &mut exec,
@@ -4683,7 +4737,7 @@ mod tests {
                     Arc::new(Mutex::new(phy_manager)),
                     test_values.client_update_sender,
                     test_values.ap_update_sender,
-                    test_values.device_service_proxy,
+                    test_values.monitor_service_proxy,
                     test_values.saved_networks.clone(),
                     test_values.network_selector.clone(),
                     test_values.cobalt_api,
@@ -4710,7 +4764,7 @@ mod tests {
             iface_manager,
             req,
             scan_receiver,
-            test_values.device_service_stream,
+            test_values.monitor_service_stream,
             test_type,
         );
     }
@@ -4766,7 +4820,7 @@ mod tests {
             Arc::new(Mutex::new(phy_manager)),
             test_values.client_update_sender,
             test_values.ap_update_sender,
-            test_values.device_service_proxy,
+            test_values.monitor_service_proxy,
             test_values.saved_networks.clone(),
             test_values.network_selector.clone(),
             test_values.cobalt_api,
@@ -4785,7 +4839,7 @@ mod tests {
             iface_manager,
             req,
             start_receiver,
-            test_values.device_service_stream,
+            test_values.monitor_service_stream,
             test_type,
         );
     }
@@ -4841,7 +4895,7 @@ mod tests {
             Arc::new(Mutex::new(phy_manager)),
             test_values.client_update_sender,
             test_values.ap_update_sender,
-            test_values.device_service_proxy,
+            test_values.monitor_service_proxy,
             test_values.saved_networks.clone(),
             test_values.network_selector.clone(),
             test_values.cobalt_api,
@@ -4863,7 +4917,7 @@ mod tests {
             iface_manager,
             req,
             stop_receiver,
-            test_values.device_service_stream,
+            test_values.monitor_service_stream,
             test_type,
         );
     }
@@ -4893,7 +4947,7 @@ mod tests {
             iface_manager,
             req,
             start_receiver,
-            test_values.device_service_stream,
+            test_values.monitor_service_stream,
             test_type,
         );
     }
@@ -4926,7 +4980,7 @@ mod tests {
             iface_manager,
             req,
             stop_receiver,
-            test_values.device_service_stream,
+            test_values.monitor_service_stream,
             test_type,
         );
     }
@@ -4953,7 +5007,7 @@ mod tests {
             iface_manager,
             req,
             stop_receiver,
-            test_values.device_service_stream,
+            test_values.monitor_service_stream,
             test_type,
         );
     }
@@ -4997,14 +5051,14 @@ mod tests {
             assert_variant!(exec.run_until_stalled(&mut reconnect_fut), Poll::Pending);
 
             // There should be a request for a client SME proxy.
-            let mut device_service_fut = test_values.device_service_stream.into_future();
+            let mut monitor_service_fut = test_values.monitor_service_stream.into_future();
             let sme_server = assert_variant!(
-                poll_device_service_req(&mut exec, &mut device_service_fut),
-                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
-                    iface_id: TEST_CLIENT_IFACE_ID, sme, responder
+                poll_service_req(&mut exec, &mut monitor_service_fut),
+                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetClientSme {
+                    iface_id: TEST_CLIENT_IFACE_ID, sme_server, responder
                 }) => {
-                    assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
-                    sme
+                    assert!(responder.send(&mut Ok(())).is_ok());
+                    sme_server
                 }
             );
 
@@ -5071,7 +5125,7 @@ mod tests {
             phy_manager,
             test_values.client_update_sender,
             test_values.ap_update_sender,
-            test_values.device_service_proxy,
+            test_values.monitor_service_proxy,
             test_values.saved_networks.clone(),
             test_values.network_selector,
             test_values.cobalt_api,
@@ -5367,16 +5421,16 @@ mod tests {
 
             // Expect a client SME proxy request
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
-            let mut device_service_fut = test_values.device_service_stream.into_future();
+            let mut monitor_service_fut = test_values.monitor_service_stream.into_future();
             assert_variant!(
-                poll_device_service_req(&mut exec, &mut device_service_fut),
-                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
-                    iface_id: TEST_CLIENT_IFACE_ID, sme, responder
+                poll_service_req(&mut exec, &mut monitor_service_fut),
+                Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceMonitorRequest::GetClientSme {
+                    iface_id: TEST_CLIENT_IFACE_ID, sme_server, responder
                 }) => {
                     // Send back a positive acknowledgement.
-                    assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
+                    assert!(responder.send(&mut Ok(())).is_ok());
 
-                    sme
+                    sme_server
                 }
             );
 
@@ -5438,7 +5492,7 @@ mod tests {
             pin_mut!(fut);
 
             // Drop the device service stream so that the SME request fails.
-            drop(test_values.device_service_stream);
+            drop(test_values.monitor_service_stream);
 
             // The future should then complete.
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
@@ -5677,7 +5731,7 @@ mod tests {
             phy_manager.clone(),
             test_values.client_update_sender.clone(),
             test_values.ap_update_sender.clone(),
-            test_values.device_service_proxy.clone(),
+            test_values.monitor_service_proxy.clone(),
             test_values.saved_networks.clone(),
             test_values.network_selector.clone(),
             test_values.cobalt_api.clone(),
@@ -5709,7 +5763,7 @@ mod tests {
             iface_manager,
             req,
             set_country_receiver,
-            test_values.device_service_stream,
+            test_values.monitor_service_stream,
             test_type,
         );
 

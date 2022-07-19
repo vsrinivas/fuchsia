@@ -366,7 +366,7 @@ async fn run_all_futures() -> Result<(), Error> {
         phy_manager.clone(),
         client_sender.clone(),
         ap_sender.clone(),
-        wlan_svc.clone(),
+        monitor_svc.clone(),
         saved_networks.clone(),
         network_selector.clone(),
         cobalt_api.clone(),
