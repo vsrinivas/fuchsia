@@ -19,6 +19,10 @@
             name: "ptysvc",
             url: "#meta/ptysvc.cm",
         },
+        {
+            name: "mock-resolver",
+            url: "#meta/mock_resolver.cm",
+        },
     ],
     use: [
         {
@@ -27,6 +31,21 @@
         },
     ],
     offer: [
+        {
+            protocol: "fuchsia.pkg.PackageResolver",
+            from: "#mock-resolver",
+            to: "#debug-dash-launcher",
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#mock-resolver",
+        },
+        {
+            storage: "tmp",
+            from: "parent",
+            to: "#mock-resolver",
+        },
         {
             protocol: [
                 "fuchsia.logger.LogSink",

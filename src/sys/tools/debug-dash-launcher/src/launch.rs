@@ -11,6 +11,7 @@ use fidl_fuchsia_component as fcomp;
 use fidl_fuchsia_dash::LauncherError;
 use fidl_fuchsia_hardware_pty as pty;
 use fidl_fuchsia_io as fio;
+use fidl_fuchsia_pkg as fpkg;
 use fidl_fuchsia_process::{HandleInfo, LaunchInfo, LauncherMarker, NameInfo};
 use fidl_fuchsia_sys2 as fsys;
 use fuchsia_async as fasync;
@@ -26,17 +27,19 @@ use tracing::*;
 pub async fn launch_with_socket(
     moniker: &str,
     socket: zx::Socket,
+    tools_url: Option<String>,
 ) -> Result<zx::Process, LauncherError> {
     let pty = socket::spawn_pty_forwarder(socket).await?;
-    launch_with_pty(moniker, pty).await
+    launch_with_pty(moniker, pty, tools_url).await
 }
 
 pub async fn launch_with_pty(
     moniker: &str,
     pty: ClientEnd<pty::DeviceMarker>,
+    tools_url: Option<String>,
 ) -> Result<zx::Process, LauncherError> {
     let (stdin, stdout, stderr) = split_pty_into_handles(pty)?;
-    launch_with_handles(moniker, stdin, stdout, stderr).await
+    launch_with_handles(moniker, stdin, stdout, stderr, tools_url).await
 }
 
 pub async fn launch_with_handles(
@@ -44,6 +47,7 @@ pub async fn launch_with_handles(
     stdin: zx::Handle,
     stdout: zx::Handle,
     stderr: zx::Handle,
+    tools_url: Option<String>,
 ) -> Result<zx::Process, LauncherError> {
     // Process moniker.
     let moniker = RelativeMoniker::parse(&moniker).map_err(|_| LauncherError::BadMoniker)?;
@@ -66,15 +70,49 @@ pub async fn launch_with_handles(
     let job =
         fuchsia_runtime::job_default().create_child_job().map_err(|_| LauncherError::Internal)?;
 
-    let mut ns = create_dash_namespace(instance_scope.ns)?;
-    let mut handles = create_dash_handles(&job, stdin, stdout, stderr, instance_scope.lib_dir)?;
+    let mut lib_dirs = vec![];
+
+    // Add the dash-launcher's /pkg/lib dir to the library loader.
+    let launcher_lib_dir = get_lib_from_launcher_namespace()?;
+    lib_dirs.push(Arc::new(launcher_lib_dir));
+
+    // Add the instance's /pkg/lib dir to the library loader.
+    if let Some(dir) = instance_scope.lib_dir {
+        info!("Using /pkg/lib dir of {} for loading libraries", moniker);
+        lib_dirs.push(Arc::new(dir));
+    }
+
+    // If a tools package URL is provided, open the corresponding package directory.
+    let tools_pkg_dir = if let Some(tools_url) = &tools_url {
+        let pkg_dir = get_tools_pkg_dir_from_url(&tools_url).await?;
+
+        // Add the tool's /pkg/lib dir to the library loader.
+        if let Some(dir) = get_lib_dir_from_pkg_dir(&pkg_dir).await {
+            info!("Using /pkg/lib dir of {} for loading libraries", tools_url);
+            lib_dirs.push(Arc::new(dir));
+        }
+
+        let pkg_dir = pkg_dir.into_channel().unwrap().into_zx_channel();
+        let pkg_dir = ClientEnd::new(pkg_dir);
+        Some(pkg_dir)
+    } else {
+        None
+    };
+
+    let mut ns = create_dash_namespace(instance_scope.ns, tools_pkg_dir)?;
+    let mut handles = create_dash_handles(&job, stdin, stdout, stderr, lib_dirs)?;
 
     // -s: force input from stdin
     // -i: force interactive
     let args = vec!["-i".as_bytes(), "-s".as_bytes()];
 
-    // Set PATH to generic command-line tools and package-specific command-line tools.
-    let env = vec!["PATH=/bin:/ns/pkg/bin".as_bytes()];
+    // PATH must contain the three possible sources of binaries:
+    // * binaries packaged with dash-launcher.
+    // * binaries packaged with the component being explored.
+    // * binaries packaged with the given tools package dir.
+    // Note that dash can handle paths that do not exist.
+    let path_envvar = "PATH=/bin:/ns/pkg/bin:/tools/bin";
+    let env = vec![path_envvar.as_bytes()];
 
     let mut info = create_launch_info(&moniker, &job).await?;
 
@@ -152,18 +190,26 @@ fn serve_dash_svc_dir() -> Result<ClientEnd<fio::DirectoryMarker>, LauncherError
     Ok(svc_dir)
 }
 
-fn create_dash_namespace(instance_ns: Vec<NameInfo>) -> Result<Vec<NameInfo>, LauncherError> {
-    let mut ns = instance_ns;
+fn create_dash_namespace(
+    instance_ns: Vec<NameInfo>,
+    tools_pkg_dir: Option<ClientEnd<fio::DirectoryMarker>>,
+) -> Result<Vec<NameInfo>, LauncherError> {
+    let mut namespace = instance_ns;
 
     // Add the dash-launcher `/pkg/bin` to dash as `/bin`.
     let bin_dir = get_bin_from_launcher_namespace()?;
-    ns.push(NameInfo { path: "/bin".to_string(), directory: bin_dir });
+    namespace.push(NameInfo { path: "/bin".to_string(), directory: bin_dir });
 
     // Add a custom `/svc` directory to dash.
     let svc_dir = serve_dash_svc_dir()?;
-    ns.push(NameInfo { path: "/svc".to_string(), directory: svc_dir });
+    namespace.push(NameInfo { path: "/svc".to_string(), directory: svc_dir });
 
-    Ok(ns)
+    // Add the tools package to dash as `/tools`.
+    if let Some(tools_pkg_dir) = tools_pkg_dir {
+        namespace.push(NameInfo { path: "/tools".to_string(), directory: tools_pkg_dir });
+    }
+
+    Ok(namespace)
 }
 
 fn split_pty_into_handles(
@@ -207,7 +253,7 @@ fn create_dash_handles(
     stdin: zx::Handle,
     stdout: zx::Handle,
     stderr: zx::Handle,
-    lib_dir: Option<fio::DirectoryProxy>,
+    lib_dirs: Vec<Arc<fio::DirectoryProxy>>,
 ) -> Result<Vec<HandleInfo>, LauncherError> {
     let stdin_handle = HandleInfo {
         handle: stdin.into_handle(),
@@ -231,16 +277,6 @@ fn create_dash_handles(
         id: HandleId::new(HandleType::DefaultJob, 0).as_raw(),
     };
 
-    // Create a library loader that uses the component's /pkg/lib dir first and
-    // falls back to the launcher's /pkg/lib dir if needed.
-    let mut lib_dirs = vec![];
-    if let Some(lib_dir) = lib_dir {
-        lib_dirs.push(Arc::new(lib_dir));
-    }
-
-    let launcher_lib_dir = get_lib_from_launcher_namespace()?;
-    lib_dirs.push(Arc::new(launcher_lib_dir));
-
     let (ldsvc, server_end) = zx::Channel::create().map_err(|_| LauncherError::Internal)?;
     let ldsvc = ldsvc.into_handle();
     library_loader::start_with_multiple_dirs(lib_dirs, server_end);
@@ -257,6 +293,28 @@ fn create_dash_handles(
         HandleInfo { handle: utc_clock, id: HandleId::new(HandleType::ClockUtc, 0).as_raw() };
 
     Ok(vec![stdin_handle, stdout_handle, stderr_handle, job_handle, ldsvc_handle, utc_clock_handle])
+}
+
+async fn get_tools_pkg_dir_from_url(tools_url: &str) -> Result<fio::DirectoryProxy, LauncherError> {
+    let resolver = connect_to_protocol::<fpkg::PackageResolverMarker>()
+        .map_err(|_| LauncherError::PackageResolver)?;
+    let (tools_pkg_dir, server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+    let _subpackage_context = resolver
+        .resolve(tools_url, server)
+        .await
+        .map_err(|_| LauncherError::PackageResolver)?
+        .map_err(|_| LauncherError::ToolsCannotResolve)?;
+    Ok(tools_pkg_dir)
+}
+
+async fn get_lib_dir_from_pkg_dir(pkg_dir: &fio::DirectoryProxy) -> Option<fio::DirectoryProxy> {
+    fuchsia_fs::directory::open_directory(
+        pkg_dir,
+        "lib",
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
+    )
+    .await
+    .ok()
 }
 
 #[derive(Debug)]
@@ -302,16 +360,7 @@ impl InstanceScope {
         // If available, use the component's /pkg/lib dir to load libraries.
         if let Some(pkg_dir) = resolved.pkg_dir {
             let pkg_dir = pkg_dir.into_proxy().map_err(|_| LauncherError::Internal)?;
-            if let Ok(dir) = fuchsia_fs::directory::open_directory(
-                &pkg_dir,
-                "lib",
-                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
-            )
-            .await
-            {
-                info!("Using /pkg/lib dir of {} for loading libraries", moniker);
-                lib_dir.replace(dir);
-            }
+            lib_dir = get_lib_dir_from_pkg_dir(&pkg_dir).await;
         }
         Ok(Self { ns, lib_dir })
     }
@@ -320,6 +369,21 @@ impl InstanceScope {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::TempDir;
+
+    fn create_temp_dir(file_name: &str) -> ClientEnd<fio::DirectoryMarker> {
+        // Create a temp directory and put a file with name `file_name` inside it.
+        let temp_dir = TempDir::new().unwrap();
+        let temp_dir_path = temp_dir.into_path();
+        let file_path = temp_dir_path.join(file_name);
+        std::fs::write(&file_path, "Hippos Rule!").unwrap();
+        let temp_dir_path = temp_dir_path.display().to_string();
+        let dir_proxy =
+            fuchsia_fs::open_directory_in_namespace(&temp_dir_path, fio::OpenFlags::RIGHT_READABLE)
+                .unwrap();
+        let channel = dir_proxy.into_channel().unwrap().into_zx_channel();
+        channel.into()
+    }
 
     fn serve_realm_query(
         instance_info: fsys::InstanceInfo,
@@ -339,7 +403,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn check_namespace_started() {
+    async fn check_namespace_started_with_tools() {
         let instance_info = fsys::InstanceInfo {
             moniker: ".".to_string(),
             url: "test://foo.com#meta/bar.cm".to_string(),
@@ -347,14 +411,11 @@ mod tests {
             state: fsys::InstanceState::Started,
         };
 
-        let (exposed_dir, _exposed_dir_server) =
-            fidl::endpoints::create_endpoints::<fio::DirectoryMarker>().unwrap();
-        let (ns_dir, _ns_dir_server) =
-            fidl::endpoints::create_endpoints::<fio::DirectoryMarker>().unwrap();
-        let (out_dir, _ns_dir_server) =
-            fidl::endpoints::create_endpoints::<fio::DirectoryMarker>().unwrap();
-        let (runtime_dir, _ns_dir_server) =
-            fidl::endpoints::create_endpoints::<fio::DirectoryMarker>().unwrap();
+        let tools_dir = create_temp_dir("tools");
+        let exposed_dir = create_temp_dir("exposed");
+        let ns_dir = create_temp_dir("ns");
+        let out_dir = create_temp_dir("out");
+        let runtime_dir = create_temp_dir("runtime");
 
         let started = Some(Box::new(fsys::StartedState {
             out_dir: Some(out_dir),
@@ -375,13 +436,115 @@ mod tests {
         let query = serve_realm_query(instance_info, resolved);
 
         let instance_scope = InstanceScope::new(&query, ".").await.unwrap();
-        let ns = create_dash_namespace(instance_scope.ns).unwrap();
+        let ns = create_dash_namespace(instance_scope.ns, Some(tools_dir)).unwrap();
+
+        assert_eq!(ns.len(), 7);
+
+        // Make sure that the correct directories were mapped to the correct paths.
+        for entry in ns {
+            let dir = entry.directory.into_proxy().unwrap();
+            let entries = fuchsia_fs::directory::readdir(&dir).await.unwrap();
+            match entry.path.as_str() {
+                "/bin" => {
+                    // The contents of this directory are /pkg/bin of the test.
+                    // We cannot assert much here.
+                    assert!(entries.len() > 0);
+                }
+                "/exposed" | "/ns" | "/out" | "/runtime" | "/tools" => {
+                    // These directories must contain a file with the same name
+                    let expected_file_name = entry.path[1..].to_string();
+                    assert_eq!(
+                        entries,
+                        vec![fuchsia_fs::directory::DirEntry {
+                            name: expected_file_name,
+                            kind: fuchsia_fs::directory::DirentKind::File
+                        }]
+                    )
+                }
+                "/svc" => {
+                    assert_eq!(
+                        entries,
+                        vec![fuchsia_fs::directory::DirEntry {
+                            name: "fuchsia.process.Launcher".to_string(),
+                            kind: fuchsia_fs::directory::DirentKind::Service
+                        }]
+                    )
+                }
+                path => panic!("Unexpected namespace entry: {}", path),
+            }
+        }
+    }
+
+    #[fuchsia::test]
+    async fn check_namespace_started() {
+        let instance_info = fsys::InstanceInfo {
+            moniker: ".".to_string(),
+            url: "test://foo.com#meta/bar.cm".to_string(),
+            instance_id: None,
+            state: fsys::InstanceState::Started,
+        };
+
+        let exposed_dir = create_temp_dir("exposed");
+        let ns_dir = create_temp_dir("ns");
+        let out_dir = create_temp_dir("out");
+        let runtime_dir = create_temp_dir("runtime");
+
+        let started = Some(Box::new(fsys::StartedState {
+            out_dir: Some(out_dir),
+            runtime_dir: Some(runtime_dir),
+            start_reason: "Debug".to_string(),
+        }));
+
+        let resolved = Some(Box::new(fsys::ResolvedState {
+            uses: vec![],
+            exposes: vec![],
+            config: None,
+            pkg_dir: None,
+            started,
+            exposed_dir,
+            ns_dir,
+        }));
+
+        let query = serve_realm_query(instance_info, resolved);
+
+        let instance_scope = InstanceScope::new(&query, ".").await.unwrap();
+        let ns = create_dash_namespace(instance_scope.ns, None).unwrap();
 
         assert_eq!(ns.len(), 6);
-        let mut paths: Vec<String> = ns.into_iter().map(|e| e.path).collect();
-        paths.sort();
 
-        assert_eq!(paths, vec!["/bin", "/exposed", "/ns", "/out", "/runtime", "/svc"]);
+        // Make sure that the correct directories were mapped to the correct paths.
+        for entry in ns {
+            let dir = entry.directory.into_proxy().unwrap();
+            let entries = fuchsia_fs::directory::readdir(&dir).await.unwrap();
+            match entry.path.as_str() {
+                "/bin" => {
+                    // The contents of this directory are /pkg/bin of the test.
+                    // We cannot assert much here.
+                    assert!(entries.len() > 0);
+                }
+                "/exposed" | "/ns" | "/out" | "/runtime" => {
+                    // These directories must contain a file with the same name
+                    let expected_file_name = entry.path[1..].to_string();
+                    assert_eq!(
+                        entries,
+                        vec![fuchsia_fs::directory::DirEntry {
+                            name: expected_file_name,
+                            kind: fuchsia_fs::directory::DirentKind::File
+                        }]
+                    )
+                }
+                "/svc" => {
+                    assert_eq!(
+                        entries,
+                        vec![fuchsia_fs::directory::DirEntry {
+                            name: "fuchsia.process.Launcher".to_string(),
+                            kind: fuchsia_fs::directory::DirentKind::Service
+                        }]
+                    )
+                }
+                path => panic!("Unexpected namespace entry: {}", path),
+            }
+        }
     }
 
     #[fuchsia::test]
@@ -393,10 +556,8 @@ mod tests {
             state: fsys::InstanceState::Resolved,
         };
 
-        let (exposed_dir, _exposed_dir_server) =
-            fidl::endpoints::create_endpoints::<fio::DirectoryMarker>().unwrap();
-        let (ns_dir, _ns_dir_server) =
-            fidl::endpoints::create_endpoints::<fio::DirectoryMarker>().unwrap();
+        let exposed_dir = create_temp_dir("exposed");
+        let ns_dir = create_temp_dir("ns");
 
         let resolved = Some(Box::new(fsys::ResolvedState {
             uses: vec![],
@@ -411,13 +572,43 @@ mod tests {
         let query = serve_realm_query(instance_info, resolved);
 
         let instance_scope = InstanceScope::new(&query, ".").await.unwrap();
-        let ns = create_dash_namespace(instance_scope.ns).unwrap();
+        let ns = create_dash_namespace(instance_scope.ns, None).unwrap();
 
         assert_eq!(ns.len(), 4);
-        let mut paths: Vec<String> = ns.into_iter().map(|e| e.path).collect();
-        paths.sort();
 
-        assert_eq!(paths, vec!["/bin", "/exposed", "/ns", "/svc"]);
+        // Make sure that the correct directories were mapped to the correct paths.
+        for entry in ns {
+            let dir = entry.directory.into_proxy().unwrap();
+            let entries = fuchsia_fs::directory::readdir(&dir).await.unwrap();
+            match entry.path.as_str() {
+                "/bin" => {
+                    // The contents of this directory are /pkg/bin of the test.
+                    // We cannot assert much here.
+                    assert!(entries.len() > 0);
+                }
+                "/exposed" | "/ns" => {
+                    // These directories must contain a file with the same name
+                    let expected_file_name = entry.path[1..].to_string();
+                    assert_eq!(
+                        entries,
+                        vec![fuchsia_fs::directory::DirEntry {
+                            name: expected_file_name,
+                            kind: fuchsia_fs::directory::DirentKind::File
+                        }]
+                    )
+                }
+                "/svc" => {
+                    assert_eq!(
+                        entries,
+                        vec![fuchsia_fs::directory::DirEntry {
+                            name: "fuchsia.process.Launcher".to_string(),
+                            kind: fuchsia_fs::directory::DirentKind::Service
+                        }]
+                    )
+                }
+                path => panic!("Unexpected namespace entry: {}", path),
+            }
+        }
     }
 
     #[fuchsia::test]

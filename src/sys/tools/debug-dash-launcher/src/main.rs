@@ -38,18 +38,19 @@ async fn main() -> Result<(), anyhow::Error> {
         .for_each_concurrent(None, |IncomingRequest::Launcher(mut stream)| async move {
             while let Some(Ok(request)) = stream.next().await {
                 match request {
-                    LauncherRequest::LaunchWithPty { moniker, pty, responder } => {
-                        let mut result = launch_with_pty(&moniker, pty).await.map(|p| {
+                    LauncherRequest::LaunchWithPty { moniker, pty, tools_url, responder } => {
+                        let mut result = launch_with_pty(&moniker, pty, tools_url).await.map(|p| {
                             info!("Launched dash for instance {}", moniker);
                             log_on_process_exit(p);
                         });
                         let _ = responder.send(&mut result);
                     }
-                    LauncherRequest::LaunchWithSocket { moniker, socket, responder } => {
-                        let mut result = launch_with_socket(&moniker, socket).await.map(|p| {
-                            info!("Launched dash for instance {}", moniker);
-                            log_on_process_exit(p);
-                        });
+                    LauncherRequest::LaunchWithSocket { moniker, socket, tools_url, responder } => {
+                        let mut result =
+                            launch_with_socket(&moniker, socket, tools_url).await.map(|p| {
+                                info!("Launched dash for instance {}", moniker);
+                                log_on_process_exit(p);
+                            });
                         let _ = responder.send(&mut result);
                     }
                 }

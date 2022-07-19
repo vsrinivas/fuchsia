@@ -23,11 +23,12 @@ pub async fn explore(launcher_proxy: LauncherProxy, cmd: ExploreComponentCommand
 
     // LifecycleController accepts RelativeMonikers only
     let relative_moniker = format!(".{}", moniker.to_string());
+    let tools_url = cmd.tools.as_deref();
 
     // Launch dash with the given moniker and stdio handles
     let (pty, pty_server) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
     launcher_proxy
-        .launch_with_socket(&relative_moniker, pty_server)
+        .launch_with_socket(&relative_moniker, pty_server, tools_url)
         .await
         .map_err(|e| ffx_error!("fidl error launching dash: {}", e))?
         .map_err(|e| match e {

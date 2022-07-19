@@ -445,6 +445,11 @@
             to: "#debug-dash-launcher",
         },
         {
+            protocol: "fuchsia.pkg.PackageResolver",
+            from: "#pkg-resolver",
+            to: "#debug-dash-launcher",
+        },
+        {
             protocol: [ "fuchsia.kernel.Counter" ],
             from: "parent",
             to: "#diagnostics-kcounter",

@@ -26,6 +26,7 @@ fuchsia_unittest_package("debug-dash-launcher-test") {
   manifest = "meta/test.cml"
   deps = [
     ":test_bin",
+    "mock_resolver",
     "//src/bringup/bin/ptysvc:component",
     "//src/sys/tools/debug-dash-launcher:component",
     "//zircon/third_party/uapp/dash",

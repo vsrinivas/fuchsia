@@ -37,4 +37,8 @@ pub struct ExploreComponentCommand {
     #[argh(positional)]
     /// moniker of a component instance
     pub moniker: String,
+
+    #[argh(option)]
+    /// URL of a tools package to include
+    pub tools: Option<String>,
 }

@@ -21,6 +21,10 @@
             protocol: "fuchsia.hardware.pty.Device",
             from: "#ptysvc",
         },
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
     ],
     offer: [
         {

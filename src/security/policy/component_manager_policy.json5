@@ -324,6 +324,11 @@
                     "/bootstrap/full_resolver",
                     "/bootstrap/netsvc",
 
+                    // debug-dash-launcher is used in engineering builds to launch
+                    // dash shells. It uses PackageResolver to add tool package directories
+                    // into the dash environment.
+                    "/core/debug-dash-launcher",
+
                     // system-updater still runs as a v1 component and is a
                     // valid client of PackageResolver.  appmgr has its own
                     // allowlist for v1 components accessing pkg-resolver.

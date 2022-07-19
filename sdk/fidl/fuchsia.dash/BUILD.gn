@@ -11,6 +11,7 @@ fidl("fuchsia.dash") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.pty",
+    "//sdk/fidl/fuchsia.url",
     "//zircon/vdso/zx",
   ]
 }
