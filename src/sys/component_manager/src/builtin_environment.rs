@@ -43,7 +43,7 @@ use {
             vmex_resource::VmexResource,
         },
         collection::CollectionCapabilityHost,
-        diagnostics::{cpu::ComponentTreeStats, startup::ComponentStartupTimeStats},
+        diagnostics::{cpu::ComponentTreeStats, startup::ComponentEarlyStartupTimeStats},
         directory_ready_notifier::DirectoryReadyNotifier,
         elf_runner::ElfRunner,
         framework::RealmCapabilityHost,
@@ -427,7 +427,7 @@ pub struct BuiltinEnvironment {
     pub event_stream_provider: Arc<EventStreamProvider>,
     pub event_logger: Option<Arc<EventLogger>>,
     pub component_tree_stats: Arc<ComponentTreeStats<DiagnosticsTask>>,
-    pub component_startup_time_stats: Arc<ComponentStartupTimeStats>,
+    pub component_startup_time_stats: Arc<ComponentEarlyStartupTimeStats>,
     pub execution_mode: ExecutionMode,
     pub num_threads: usize,
     pub out_dir_contents: OutDirContents,
@@ -859,8 +859,10 @@ impl BuiltinEnvironment {
         component_tree_stats.start_measuring().await;
         model.root().hooks.install(component_tree_stats.hooks()).await;
 
-        let component_startup_time_stats =
-            Arc::new(ComponentStartupTimeStats::new(inspector.root().create_child("start_times")));
+        let component_startup_time_stats = Arc::new(ComponentEarlyStartupTimeStats::new(
+            inspector.root().create_child("early_start_times"),
+            zx::Time::get_monotonic(),
+        ));
         model.root().hooks.install(component_startup_time_stats.hooks()).await;
 
         // Serve stats about inspect in a lazy node.
