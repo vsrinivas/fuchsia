@@ -27,9 +27,6 @@ def update_platform_version(fuchsia_api_level):
         with open(PLATFORM_VERSION_PATH, "r+") as f:
             platform_version = json.load(f)
             platform_version["current_fuchsia_api_level"] = fuchsia_api_level
-            platform_version["supported_fuchsia_api_levels"] += [
-                fuchsia_api_level
-            ]
             f.seek(0)
             json.dump(platform_version, f)
             f.truncate()

@@ -29,7 +29,9 @@ OLD_API_LEVEL = 1
 OLD_SUPPORTED_API_LEVELS = [1]
 
 NEW_API_LEVEL = 2
-NEW_SUPPORTED_API_LEVELS = [1, 2]
+# This script doesn't update the set of supported API levels, this only happen
+# when freezing an API level.
+NEW_SUPPORTED_API_LEVELS = OLD_SUPPORTED_API_LEVELS
 
 
 class TestUpdatePlatformVersionMethods(unittest.TestCase):
@@ -78,8 +80,6 @@ class TestUpdatePlatformVersionMethods(unittest.TestCase):
     def test_update_platform_version(self):
         pv = self._get_platform_version()
         self.assertNotEqual(NEW_API_LEVEL, pv['current_fuchsia_api_level'])
-        self.assertNotEqual(
-            NEW_SUPPORTED_API_LEVELS, pv['supported_fuchsia_api_levels'])
 
         self.assertTrue(
             update_platform_version.update_platform_version(NEW_API_LEVEL))
