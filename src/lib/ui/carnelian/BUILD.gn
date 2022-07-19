@@ -572,19 +572,8 @@ template("carnelian_example") {
     manifest_deps = invoker.manifest_deps
   }
 
-  example_v1_component_target = "$target_name" + "_v1"
-  fuchsia_component(example_v1_component_target) {
-    component_name = component_name
-    manifest = invoker.v1_manifest
-    deps = example_deps
-    manifest_deps = invoker.v1_manifest_deps
-  }
-
   fuchsia_package(target_name) {
-    deps = [
-      ":$example_component_target",
-      ":$example_v1_component_target",
-    ]
+    deps = [ ":$example_component_target" ]
   }
 }
 
@@ -657,25 +646,15 @@ carnelian_examples_deps = []
 carnelian_example_manifest_include =
     "//" + rebase_path("meta/example.shard.cml", "//")
 
-# Temporarily generate v1 and v2 components until workstation is migrated
-# to using the v2 examples exclusively.
-# TODO(http://fxbug.dev/100933): Remove this.
-carnelian_example_v1_manifest_include =
-    "//" + rebase_path("meta/example.shard.cmx", "//")
-
 foreach(carnelian_example_details, carnelian_examples) {
   carnelian_example_package_name =
       string_replace(carnelian_example_details.name, "_", "-") + "-rs"
 
   carnelian_example_manifest_label =
       "generate_${carnelian_example_details.name}_cml"
-  carnelian_example_v1_manifest_label =
-      "generate_${carnelian_example_details.name}_cmx"
 
   carnelian_example_manifest_path =
       "${target_gen_dir}/${carnelian_example_package_name}.cml"
-  carnelian_example_v1_manifest_path =
-      "${target_gen_dir}/${carnelian_example_package_name}.cmx"
 
   # Generate a manifest file for the example
   # that has the name of the binary but otherwise
@@ -695,28 +674,13 @@ foreach(carnelian_example_details, carnelian_examples) {
     }
   }
 
-  generated_file(carnelian_example_v1_manifest_label) {
-    visibility = [ ":*" ]
-
-    outputs = [ carnelian_example_v1_manifest_path ]
-    output_conversion = "json"
-    contents = {
-      include = [ carnelian_example_v1_manifest_include ]
-      program = {
-        binary = "bin/${carnelian_example_details.name}"
-      }
-    }
-  }
-
   # Use the carnelian_example template to create a target
   # for the example
   carnelian_example(carnelian_example_package_name) {
     manifest = rebase_path(carnelian_example_manifest_path)
-    v1_manifest = rebase_path(carnelian_example_v1_manifest_path)
 
     deps = [ ":" + carnelian_example_details.name ]
     manifest_deps = [ ":${carnelian_example_manifest_label}" ]
-    v1_manifest_deps = [ ":${carnelian_example_v1_manifest_label}" ]
     if (defined(carnelian_example_details.additional_deps)) {
       deps += carnelian_example_details.additional_deps
     }
