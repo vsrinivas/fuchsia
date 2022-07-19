@@ -145,7 +145,7 @@ group("chacha20") {
 }
 
 group("chrono") {
-  public_deps = [ ":chrono-v0_4_11" ]
+  public_deps = [ ":chrono-v0_4_19" ]
 }
 
 group("chrono-english") {
@@ -2291,30 +2291,37 @@ rust_library("chacha20-v0_8_1") {
   visibility = [ ":*" ]
 }
 
-rust_library("chrono-v0_4_11") {
+rust_library("chrono-v0_4_19") {
   crate_name = "chrono"
   crate_root = "//third_party/rust_crates/vendor/chrono/src/lib.rs"
-  output_name = "chrono-17ee6ee5e9d39f92"
+  output_name = "chrono-5f4599162f3bf073"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
+  deps += [ ":libc-v0_2_116" ]
   deps += [ ":num-integer-v0_1_44" ]
   deps += [ ":num-traits-v0_2_14" ]
   deps += [ ":serde-v1_0_116" ]
   deps += [ ":time-v0_1_43" ]
+  if (false) {
+    deps += [ ":winapi-v0_3_9" ]
+  }
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=17ee6ee5e9d39f92",
-    "-Cextra-filename=-17ee6ee5e9d39f92",
+    "-Cmetadata=5f4599162f3bf073",
+    "-Cextra-filename=-5f4599162f3bf073",
     "--cfg=feature=\"clock\"",
     "--cfg=feature=\"default\"",
+    "--cfg=feature=\"libc\"",
+    "--cfg=feature=\"oldtime\"",
     "--cfg=feature=\"serde\"",
     "--cfg=feature=\"std\"",
     "--cfg=feature=\"time\"",
+    "--cfg=feature=\"winapi\"",
   ]
 
   visibility = [ ":*" ]
@@ -2327,7 +2334,7 @@ rust_library("chrono-english-v0_1_4") {
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":chrono-v0_4_11" ]
+  deps += [ ":chrono-v0_4_19" ]
   deps += [ ":scanlex-v0_1_4" ]
   deps += [ ":time-v0_1_43" ]
 
@@ -3213,7 +3220,7 @@ rust_library("deepsize-v0_2_0") {
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":chrono-v0_4_11" ]
+  deps += [ ":chrono-v0_4_19" ]
   deps += [ ":deepsize_derive-v0_1_1($host_toolchain)" ]
   deps += [ ":slab-v0_4_2" ]
   deps += [ ":smallvec-v1_8_0" ]
@@ -3828,7 +3835,7 @@ rust_library("fatfs-v0_4_0") {
   deps = []
   deps += [ ":bitflags-v1_3_2" ]
   deps += [ ":byteorder-v1_3_1" ]
-  deps += [ ":chrono-v0_4_11" ]
+  deps += [ ":chrono-v0_4_19" ]
   deps += [ ":log-v0_4_11" ]
 
   rustenv = []
@@ -8910,7 +8917,7 @@ rust_library("schemars-v0_8_10") {
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":chrono-v0_4_11" ]
+  deps += [ ":chrono-v0_4_19" ]
   deps += [ ":dyn-clone-v1_0_5" ]
   deps += [ ":indexmap-v1_7_0" ]
   deps += [ ":schemars_derive-v0_8_10($host_toolchain)" ]
@@ -9582,7 +9589,7 @@ rust_library("simplelog-v0_10_2") {
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":chrono-v0_4_11" ]
+  deps += [ ":chrono-v0_4_19" ]
   deps += [ ":log-v0_4_11" ]
   deps += [ ":termcolor-v1_1_2" ]
 
@@ -10462,7 +10469,7 @@ rust_library("toml_edit-v0_2_1") {
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":chrono-v0_4_11" ]
+  deps += [ ":chrono-v0_4_19" ]
   deps += [ ":combine-v4_6_2" ]
   deps += [ ":linked-hash-map-v0_5_3" ]
 
@@ -10823,7 +10830,7 @@ rust_library("tuf-v0_3_0-beta7") {
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":chrono-v0_4_11" ]
+  deps += [ ":chrono-v0_4_19" ]
   deps += [ ":data-encoding-v2_3_2" ]
   deps += [ ":derp-v0_0_14" ]
   deps += [ ":futures-io-v0_3_19" ]
@@ -11465,7 +11472,7 @@ rust_library("valico-v2_4_2") {
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":chrono-v0_4_11" ]
+  deps += [ ":chrono-v0_4_19" ]
   deps += [ ":jsonway-v2_0_0" ]
   deps += [ ":phf-v0_7_24" ]
   deps += [ ":publicsuffix-v1_5_2" ]
