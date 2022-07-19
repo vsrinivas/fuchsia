@@ -27,7 +27,6 @@ constexpr float kEpsilon = std::numeric_limits<float>::epsilon() * 1000;
 
 using InputCommand = fuchsia::ui::input::Command;
 using ScenicEvent = fuchsia::ui::scenic::Event;
-using escher::impl::CommandBufferSequencer;
 using fuchsia::ui::input::InputEvent;
 using fuchsia::ui::input::PointerEvent;
 using fuchsia::ui::input::PointerEventPhase;
@@ -77,7 +76,7 @@ void SessionWrapper::OnEvent(std::vector<ScenicEvent> events) {
   }
 }
 
-ResourceGraph::ResourceGraph(scenic::Session* session)
+GfxResourceGraph::GfxResourceGraph(scenic::Session* session)
     : scene(session),
       camera(scene),
       renderer(session),
@@ -95,9 +94,9 @@ void InputSystemTest::RequestToPresent(scenic::Session* session) {
   RunLoopFor(zx::msec(20));  // Run until the next frame should have been scheduled.
 }
 
-std::pair<SessionWrapper, ResourceGraph> InputSystemTest::CreateScene() {
+std::pair<SessionWrapper, GfxResourceGraph> InputSystemTest::CreateScene() {
   SessionWrapper root_session(scenic());
-  ResourceGraph root_resources(root_session.session());
+  GfxResourceGraph root_resources(root_session.session());
   root_resources.layer.SetSize(static_cast<float>(test_display_width_px()),
                                static_cast<float>(test_display_height_px()));
   {
@@ -118,6 +117,66 @@ std::pair<SessionWrapper, ResourceGraph> InputSystemTest::CreateScene() {
     root_resources.scene.AddChild(view_holder);
   }
   return {std::move(root_session), std::move(root_resources)};
+}
+
+GfxResourceGraphWithTargetView::GfxResourceGraphWithTargetView(scenic_impl::Scenic* scenic,
+                                                               const float display_width,
+                                                               const float display_height)
+    : root_session(scenic),
+      scene(root_session.session()),
+      camera(scene),
+      renderer(root_session.session()),
+      layer(root_session.session()),
+      layer_stack(root_session.session()),
+      compositor(root_session.session()),
+      injection_target_session(scenic) {
+  renderer.SetCamera(camera);
+  layer.SetRenderer(renderer);
+  layer.SetSize(display_width, display_height);
+  layer_stack.AddLayer(layer);
+  compositor.SetLayerStack(layer_stack);
+
+  {  // Create root view.
+    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+    auto root_view_holder = scenic::ViewHolder(root_session.session(), std::move(view_holder_token),
+                                               "root_view_holder");
+    // Make view really big to avoid unnecessary collisions.
+    root_view_holder.SetViewProperties({.bounding_box = {.max = {1000, 1000, 1000}}});
+    scene.AddChild(root_view_holder);
+
+    auto [control_ref, view_ref] = scenic::ViewRefPair::New();
+    fuchsia::ui::views::ViewRef clone;
+    view_ref.Clone(&clone);
+    root_session.SetViewRef(std::move(clone));
+    root_session.SetView(
+        std::make_unique<scenic::View>(root_session.session(), std::move(view_token),
+                                       std::move(control_ref), std::move(view_ref), "root_view"));
+  }
+
+  {  // Create injection target view.
+    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+    auto injector_target_view_holder = scenic::ViewHolder(
+        root_session.session(), std::move(view_holder_token), "root_view_holder");
+    // Make view really big to avoid unnecessary collisions.
+    injector_target_view_holder.SetViewProperties({.bounding_box = {.max = {1000, 1000, 1000}}});
+    root_session.view()->AddChild(injector_target_view_holder);
+
+    auto [control_ref, view_ref] = scenic::ViewRefPair::New();
+    fuchsia::ui::views::ViewRef clone;
+    view_ref.Clone(&clone);
+    injection_target_session.SetViewRef(std::move(clone));
+    injection_target_session.SetView(std::make_unique<scenic::View>(
+        injection_target_session.session(), std::move(view_token), std::move(control_ref),
+        std::move(view_ref), "injector_target_view"));
+  }
+}
+
+GfxResourceGraphWithTargetView InputSystemTest::CreateScene2() {
+  auto graph = GfxResourceGraphWithTargetView(scenic(), static_cast<float>(test_display_width_px()),
+                                              static_cast<float>(test_display_height_px()));
+  RequestToPresent(graph.root_session.session());
+  RequestToPresent(graph.injection_target_session.session());
+  return graph;
 }
 
 void InputSystemTest::SetUpTestView(scenic::View* view) {

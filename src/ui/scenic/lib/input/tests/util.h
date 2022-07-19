@@ -14,7 +14,6 @@
 #include <memory>
 #include <string>
 
-#include "src/ui/lib/escher/impl/command_buffer_sequencer.h"
 #include "src/ui/scenic/lib/display/display.h"
 #include "src/ui/scenic/lib/focus/focus_manager.h"
 #include "src/ui/scenic/lib/gfx/tests/gfx_test.h"
@@ -74,9 +73,8 @@ class SessionWrapper {
   std::vector<fuchsia::ui::input::InputEvent> events_;
 };
 
-// https://fuchsia.dev/fuchsia-src/concepts/graphics/ui/scenic#scenic_resource_graph
-struct ResourceGraph {
-  ResourceGraph(scenic::Session* session);
+struct GfxResourceGraph {
+  GfxResourceGraph(scenic::Session* session);
 
   scenic::Scene scene;
   scenic::Camera camera;
@@ -84,6 +82,23 @@ struct ResourceGraph {
   scenic::Layer layer;
   scenic::LayerStack layer_stack;
   scenic::Compositor compositor;
+};
+
+struct GfxResourceGraphWithTargetView {
+  GfxResourceGraphWithTargetView(scenic_impl::Scenic* scenic, float display_width,
+                                 float display_height);
+
+  // Root.
+  SessionWrapper root_session;
+  scenic::Scene scene;
+  scenic::Camera camera;
+  scenic::Renderer renderer;
+  scenic::Layer layer;
+  scenic::LayerStack layer_stack;
+  scenic::Compositor compositor;
+
+  // Injection target view.
+  SessionWrapper injection_target_session;
 };
 
 // Test fixture for exercising the input subsystem.
@@ -121,7 +136,9 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   virtual uint32_t test_display_height_px() const = 0;
 
   // Creates a root session and empty scene, sizing the layer to display dimensions.
-  std::pair<SessionWrapper, ResourceGraph> CreateScene();
+  std::pair<SessionWrapper, GfxResourceGraph> CreateScene();
+
+  GfxResourceGraphWithTargetView CreateScene2();
 
   // Sets up a view containing a 5x5 rectangle centered at (2, 2).
   void SetUpTestView(scenic::View* view);
