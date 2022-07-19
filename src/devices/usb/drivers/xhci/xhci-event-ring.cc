@@ -6,6 +6,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/fit/defer.h>
 #include <lib/fpromise/promise.h>
 #include <lib/zx/clock.h>
 
@@ -582,19 +583,23 @@ zx_status_t EventRing::HandleIRQ() {
             trb = ring->PhysToVirt(erdp_virt_->ptr);
           }
           if (completion->CompletionCode() == CommandCompletionEvent::MissedServiceError) {
-            // Resynchronize (4.11.2.5.2)
-            // Advance until resynchronized or ring is exhausted
-            auto completions = ring->Resynchronize(hci_->UsbHciGetCurrentFrame());
-            l.release();
-            for (auto& completion : completions) {
-              completion.request->Complete(ZX_ERR_IO, 0);
-            }
+            ring->CompleteTRB(nullptr, &context);
+            context->request->Complete(ZX_ERR_IO_MISSED_DEADLINE, 0);
+
+            // set resynchronize_ to wait for next successful transfer.
+            resynchronize_ = true;
             break;
           }
 
           zx_status_t status = ZX_ERR_IO;
           size_t short_transfer_len = 0;
           TRB* first_trb = trb;
+          fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> resynchronize_completions;
+          auto cleanup = fit::defer([&resynchronize_completions]() {
+            for (auto& completion : resynchronize_completions) {
+              completion.request->Complete(ZX_ERR_IO_MISSED_DEADLINE, 0);
+            }
+          });
           if (trb) {
             if (completion->CompletionCode() == CommandCompletionEvent::ShortPacket) {
               ring->HandleShortPacket(trb, &short_transfer_len, &first_trb,
@@ -604,6 +609,11 @@ zx_status_t EventRing::HandleIRQ() {
                 // was a short transfer.
                 break;
               }
+            }
+            if (resynchronize_) {
+              resynchronize_ = false;
+              // Resynchronize (4.11.2.5.2). Just find the next successful TRB.
+              resynchronize_completions = ring->TakePendingTRBsUntil(trb);
             }
             status = ring->CompleteTRB(first_trb, &context);
           }

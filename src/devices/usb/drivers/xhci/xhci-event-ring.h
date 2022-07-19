@@ -201,6 +201,7 @@ class EventRing {
 
   uint16_t interrupter_;
   bool reevaluate_ = false;
+  bool resynchronize_ = false;
 };
 }  // namespace usb_xhci
 

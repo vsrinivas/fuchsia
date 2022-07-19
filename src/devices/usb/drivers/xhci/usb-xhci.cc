@@ -36,8 +36,12 @@ namespace usb_xhci {
 
 namespace {
 
+uint32_t kMicroframesPerFrame = 8;  // Per 3.2 spec, 1 frame is 1 ms, 1 microframe is 125 us.
+
 // Obtains the slot index for a specified endpoint.
 uint32_t Log2(uint32_t value) { return 31 - __builtin_clz(value); }
+
+uint32_t RoundUp(uint32_t dividend, uint32_t divisor) { return 1 + (dividend - 1) / divisor; }
 
 // Computes the interval value for a specified endpoint.
 int ComputeInterval(const usb_endpoint_descriptor_t* ep, usb_speed_t speed) {
@@ -669,24 +673,22 @@ void UsbXhci::UsbHciRequestQueue(usb_request_t* usb_request_,
 }
 
 void UsbXhci::WaitForIsochronousReady(UsbRequestState* state) {
-  // Cannot schedule more than 895 microseconds into the future per section 4.11.2.5
+  // Cannot schedule more than 895 ms into the future per section 4.11.2.5
   // in the xHCI specification (revision 1.2)
   constexpr int kMaxSchedulingInterval = 895;
   if (state->context->request->request()->header.frame) {
     uint64_t frame = UsbHciGetCurrentFrame();
-    while (static_cast<int32_t>(state->context->request->request()->header.frame - frame) >=
+    while (static_cast<int32_t>(state->context->request->request()->header.frame - frame) >
            kMaxSchedulingInterval) {
-      uint32_t time =
-          static_cast<uint32_t>((state->context->request->request()->header.frame - frame) -
-                                kMaxSchedulingInterval) *
-          1000;
+      uint32_t time = static_cast<uint32_t>(
+          (state->context->request->request()->header.frame - frame) - kMaxSchedulingInterval);
       zx::nanosleep(zx::deadline_after(zx::msec(time)));
       frame = UsbHciGetCurrentFrame();
     }
 
     if (state->context->request->request()->header.frame < frame) {
       state->complete = true;
-      state->status = ZX_ERR_IO;
+      state->status = ZX_ERR_IO_MISSED_DEADLINE;
       state->bytes_transferred = 0;
     }
   }
@@ -1336,8 +1338,9 @@ uint64_t UsbXhci::UsbHciGetCurrentFrame() {
 
   last_mfindex_ = mfindex;
   uint64_t wrap_count = wrap_count_;
+  // add IST + 1 to get next valid frame. spec 4.11.2.5
   // shift three to convert from 125us microframes to 1ms frames
-  return ((wrap_count * (1 << 14)) + mfindex) >> 3;
+  return (((wrap_count * (1 << 14)) + mfindex) >> 3) + ist_frames_ + 1;
 }
 
 zx_status_t UsbXhci::UsbHciConfigureHub(uint32_t device_id, usb_speed_t speed,
@@ -1889,6 +1892,9 @@ zx_status_t UsbXhci::HciFinalize() {
   dcbaa_ = static_cast<uint64_t*>(dcbaa_buffer_->virt());
   fbl::AllocChecker ac;
   HCSPARAMS2 hcsparams2 = HCSPARAMS2::Get().ReadFrom(&mmio_.value());
+  auto ist = hcsparams2.IST();
+  ist_frames_ = (ist & 0x8) ? /* frames */ (ist & 0x7)
+                            : /* microframes */ RoundUp(ist & 0x7, kMicroframesPerFrame);
   RuntimeRegisterOffset offset = RuntimeRegisterOffset::Get().ReadFrom(&mmio_.value());
   runtime_offset_ = offset;
   uint32_t buffers = hcsparams2.MAX_SCRATCHPAD_BUFFERS_LOW() |

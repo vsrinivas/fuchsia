@@ -862,18 +862,7 @@ void UsbAudioStream::Start(StartRequestView request, StartCompleter::Sync& compl
   ring_buffer_pos_ = 0;
 
   // Schedule the frame number which the first transaction will go out on.
-  //
-  // TODO(johngro): This cannot be the current frame number, that train
-  // has already left the station.  It probably should not be the next frame
-  // number either as that train might be just about to leave the station.
-  //
-  // For now, set this to be the current frame number +2 and use the first
-  // transaction complete callback to estimate the DMA start time.  Moving
-  // forward, when the USB bus driver can tell us which frame a transaction
-  // went out on, schedule the transaction using the special "on the next USB
-  // isochronous frame" sentinel value and figure out which frame that was
-  // during the callback.
-  usb_frame_num_ = usb_get_current_frame(&parent_.usb_proto()) + 2;
+  usb_frame_num_ = usb_get_current_frame(&parent_.usb_proto());
 
   // Flag ourselves as being in the starting state, then queue up all of our
   // transactions.
@@ -1118,7 +1107,10 @@ void UsbAudioStream::QueueRequestLocked() {
     }
   }
 
-  req->header.frame = usb_frame_num_++;
+  // Should send this out on the next frame number available. This is either sequentially the next
+  // frame number or if we've missed a few frames, the value of the next valid frame.
+  usb_frame_num_ = std::max(usb_frame_num_++, usb_get_current_frame(&parent_.usb_proto()));
+  req->header.frame = usb_frame_num_;
   req->header.length = todo;
   usb_request_complete_callback_t complete = {
       .callback = UsbAudioStream::RequestCompleteCallback,

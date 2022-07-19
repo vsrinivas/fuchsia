@@ -442,6 +442,9 @@ class UsbXhci : public UsbXhciType, public ddk::UsbHciProtocol<UsbXhci, ddk::bas
   // Number of times the MFINDEX has wrapped
   std::atomic_uint64_t wrap_count_ = 0;
 
+  // Isochronous scheduling threshold in units of frames.
+  uint32_t ist_frames_;
+
   // USB bus protocol client
   ddk::UsbBusInterfaceProtocolClient bus_;
 

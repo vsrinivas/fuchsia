@@ -370,30 +370,10 @@ fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> TransferRing::TakePendingTRBs
   dequeue_trb_ = end;
   fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> retval;
   while (!pending_trbs_.is_empty()) {
-    auto trb = pending_trbs_.pop_front();
-    bool is_end = trb->trb == end;
-    retval.push_back(std::move(trb));
-    if (is_end) {
-      break;
-    }
-  }
-  return retval;
-}
-
-fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> TransferRing::Resynchronize(uint64_t frame_id) {
-  fbl::DoublyLinkedList<std::unique_ptr<TRBContext>> retval;
-  if (!IsIsochronous()) {
-    zxlogf(ERROR, "Resynchronize should only be callled for Isochronous");
-    return retval;
-  }
-
-  fbl::AutoLock l(&mutex_);
-  while (!pending_trbs_.is_empty()) {
-    if (static_cast<Isoch*>(pending_trbs_.front().trb)->FrameID() >= frame_id) {
+    if (pending_trbs_.front().trb == end) {
       break;
     }
     auto trb = pending_trbs_.pop_front();
-    dequeue_trb_ = trb->trb;
     retval.push_back(std::move(trb));
   }
   return retval;

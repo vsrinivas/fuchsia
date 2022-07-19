@@ -366,6 +366,7 @@ class HCSPARAMS2 : public hwreg::RegisterBase<HCSPARAMS2, uint32_t> {
   DEF_FIELD(31, 27, MAX_SCRATCHPAD_BUFFERS_LOW);
   DEF_FIELD(25, 21, MAX_SCRATCHPAD_BUFFERS_HIGH);
   DEF_FIELD(7, 4, ERST_MAX);
+  DEF_FIELD(3, 0, IST);  // Isochronous Scheduling Threshold
   static auto Get() { return hwreg::RegisterAddr<HCSPARAMS2>(0x8); }
 };
 
