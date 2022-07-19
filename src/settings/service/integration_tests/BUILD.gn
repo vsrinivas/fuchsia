@@ -5,6 +5,7 @@
 group("integration_tests") {
   testonly = true
   public_deps = [
+    "accessibility_tests",
     "input_tests",
     "privacy_tests",
   ]
