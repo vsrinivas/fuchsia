@@ -435,11 +435,6 @@
             ],
         },
         {
-            protocol: "fuchsia.diagnostics.LoWPANArchiveAccessor",
-            from: "parent",
-            to: "#session-manager",
-        },
-        {
             protocol: "fuchsia.hardware.pty.Device",
             from: "parent",
             to: "#debug-dash-launcher",

@@ -84,6 +84,7 @@
             protocol: [
                 "fuchsia.device.NameProvider",
                 "fuchsia.diagnostics.LegacyMetricsArchiveAccessor",
+                "fuchsia.diagnostics.LoWPANArchiveAccessor",
                 "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister",
                 "fuchsia.paver.Paver",
                 "fuchsia.power.profile.Watcher",
