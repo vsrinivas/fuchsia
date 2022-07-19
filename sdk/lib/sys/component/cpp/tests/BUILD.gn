@@ -207,13 +207,6 @@ fuchsia_component("echo_service_server") {
   manifest = "meta/echo_service_server.cml"
 }
 
-fuchsia_component("echo_server_legacy") {
-  component_name = "echo_server"
-  deps = [ ":echo_server_bin" ]
-  manifest = "meta/echo_server.cmx"
-  testonly = true
-}
-
 fuchsia_component("realm_builder_test") {
   testonly = true
   deps = [ ":realm_builder_test_bin" ]
@@ -237,7 +230,6 @@ fuchsia_test_package("component_cpp_testing_realm_builder_tests") {
   deps = [
     ":echo_server",
     ":echo_server_default_config",
-    ":echo_server_legacy",
     ":echo_server_sc",
     ":echo_service_server",
     ":pre_populated_realm",

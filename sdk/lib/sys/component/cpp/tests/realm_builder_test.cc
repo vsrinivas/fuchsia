@@ -48,8 +48,6 @@ namespace fdecl = fuchsia::component::decl;
 constexpr char kEchoServerUrl[] =
     "fuchsia-pkg://fuchsia.com/component_cpp_testing_realm_builder_tests#meta/echo_server.cm";
 constexpr char kEchoServerScUrl[] = "#meta/echo_server_sc.cm";
-constexpr char kEchoServerLegacyUrl[] =
-    "fuchsia-pkg://fuchsia.com/component_cpp_testing_realm_builder_tests#meta/echo_server.cmx";
 constexpr char kEchoServerRelativeUrl[] = "#meta/echo_server.cm";
 constexpr char kEchoServiceServerUrl[] = "#meta/echo_service_server.cm";
 
@@ -175,21 +173,6 @@ TEST_F(RealmBuilderTest, SetConfigValueFails) {
                                      std::vector<std::string>{"abcdefghijklmnopqrstuvwxyz", "abc"});
       },
       "");
-}
-
-TEST_F(RealmBuilderTest, RoutesProtocolFromLegacyChild) {
-  static constexpr char kEchoServer[] = "echo_server";
-
-  auto realm_builder = RealmBuilder::Create();
-  realm_builder.AddLegacyChild(kEchoServer, kEchoServerLegacyUrl);
-  realm_builder.AddRoute(Route{.capabilities = {Protocol{test::placeholders::Echo::Name_}},
-                               .source = ChildRef{kEchoServer},
-                               .targets = {ParentRef()}});
-  auto realm = realm_builder.Build(dispatcher());
-  auto echo = realm.ConnectSync<test::placeholders::Echo>();
-  fidl::StringPtr response;
-  ASSERT_EQ(echo->EchoString("hello", &response), ZX_OK);
-  EXPECT_EQ(response, fidl::StringPtr("hello"));
 }
 
 TEST_F(RealmBuilderTest, RoutesProtocolFromRelativeChild) {
@@ -452,30 +435,6 @@ TEST_F(RealmBuilderTest, RealmDeclCanBeReplaced) {
   fidl::StringPtr response;
   ASSERT_EQ(echo->EchoString("hello", &response), ZX_OK);
   EXPECT_EQ(response, fidl::StringPtr("hello"));
-}
-
-TEST_F(RealmBuilderTest, ForwardsArgsToLegacyComponent) {
-  static constexpr char kEchoServer[] = "echo_server";
-  static constexpr char kExpectedReply[] = "test";
-
-  auto realm_builder = RealmBuilder::Create();
-  realm_builder.AddLegacyChild(kEchoServer, kEchoServerLegacyUrl);
-  realm_builder.AddRoute(Route{.capabilities = {Protocol{test::placeholders::Echo::Name_}},
-                               .source = ChildRef{kEchoServer},
-                               .targets = {ParentRef()}});
-  auto decl = realm_builder.GetComponentDecl(kEchoServer);
-  fuchsia::data::DictionaryEntry args;
-  auto value = std::make_unique<fuchsia::data::DictionaryValue>(
-      fuchsia::data::DictionaryValue::WithStrVec({kExpectedReply}));
-  args.key = "args", args.value = std::move(value);
-  decl.mutable_program()->mutable_info()->mutable_entries()->emplace_back(std::move(args));
-  realm_builder.ReplaceComponentDecl(kEchoServer, std::move(decl));
-
-  auto realm = realm_builder.Build(dispatcher());
-  auto echo = realm.ConnectSync<test::placeholders::Echo>();
-  fidl::StringPtr response;
-  ASSERT_EQ(echo->EchoString(cpp17::nullopt, &response), ZX_OK);
-  EXPECT_EQ(response, fidl::StringPtr(kExpectedReply));
 }
 
 // This test is similar to RealmBuilderTest.RoutesProtocolFromChild except
