@@ -1,0 +1,31 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/getaddrinfo_test",
+    },
+    children: [
+        {
+            name: "lookup_server",
+            url: "#meta/lookup_server.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.net.name.Lookup",
+            from: "#lookup_server",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#lookup_server",
+        },
+    ],
+}

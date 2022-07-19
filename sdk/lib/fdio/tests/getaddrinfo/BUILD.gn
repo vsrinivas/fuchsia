@@ -3,12 +3,12 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
-import("//build/rust/rustc_test.gni")
+import("//build/rust/rustc_binary.gni")
 
-executable("getaddrinfo_test_client") {
+executable("getaddrinfo_test") {
   testonly = true
 
-  sources = [ "getaddrinfo_test_client.cc" ]
+  sources = [ "getaddrinfo_test.cc" ]
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
@@ -17,15 +17,16 @@ executable("getaddrinfo_test_client") {
   ]
 }
 
-rustc_test("getaddrinfo_test") {
+rustc_binary("lookup_server") {
   edition = "2021"
 
-  sources = [ "src/lib.rs" ]
+  sources = [ "src/main.rs" ]
 
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
     "//src/connectivity/lib/net-declare",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:futures",
@@ -34,20 +35,21 @@ rustc_test("getaddrinfo_test") {
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
-fuchsia_test_component("getaddrinfo_test_client_component") {
-  component_name = "getaddrinfo_test_client"
-  deps = [ ":getaddrinfo_test_client" ]
-  manifest = "meta/getaddrinfo_test_client.cmx"
+fuchsia_test_component("getaddrinfo_test_component") {
+  component_name = "getaddrinfo_test"
+  deps = [ ":getaddrinfo_test" ]
+  manifest = "meta/getaddrinfo_test.cml"
 }
 
-fuchsia_test_component("getaddrinfo_test_component") {
-  deps = [ ":getaddrinfo_test" ]
-  manifest = "meta/getaddrinfo_test.cmx"
+fuchsia_component("lookup_server_component") {
+  component_name = "lookup_server"
+  deps = [ ":lookup_server" ]
+  manifest = "meta/lookup_server.cml"
 }
 
 fuchsia_test_package("getaddrinfo_tests") {
-  deps = [ ":getaddrinfo_test_client_component" ]
   test_components = [ ":getaddrinfo_test_component" ]
+  deps = [ ":lookup_server_component" ]
 }
 
 group("tests") {
