@@ -19,7 +19,8 @@
 
 namespace cpp20 {
 
-#if __cpp_lib_bit_cast >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_bit_cast) && __cpp_lib_bit_cast >= 201806L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::bit_cast;
 
@@ -55,7 +56,8 @@ bit_cast(const From& from) {
 
 #endif  //  __cpp_lib_bit_cast >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-#if __cpp_lib_bitops >= 201907L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_bitops) && __cpp_lib_bitops >= 201907L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::countl_one;
 using std::countl_zero;
@@ -114,7 +116,8 @@ constexpr int popcount(T x) noexcept {
 
 #endif
 
-#if __cpp_lib_int_pow2 >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_int_pow2) && __cpp_lib_int_pow2 >= 202002L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::bit_ceil;
 using std::bit_floor;
@@ -151,7 +154,8 @@ constexpr std::enable_if_t<std::is_unsigned<T>::value, T> bit_floor(T value) {
 
 #endif  // __cpp_lib_int_pow2 >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-#if __cpp_lib_endian >= 201907L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_endian) && __cpp_lib_endian >= 201907L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::endian;
 

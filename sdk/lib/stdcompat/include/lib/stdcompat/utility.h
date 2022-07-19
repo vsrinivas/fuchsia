@@ -44,7 +44,8 @@ struct in_place_index_t final {
 };
 
 // Use inline variables if available.
-#if __cpp_inline_variables >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_inline_variables) && __cpp_inline_variables >= 201606L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 constexpr in_place_t in_place{};
 
@@ -71,7 +72,8 @@ static constexpr const in_place_index_t<Index>& in_place_index =
 
 #endif  // __cplusplus >= 201411L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-#if __cpp_lib_as_const >= 201510L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_as_const) && __cpp_lib_as_const >= 201510L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::as_const;
 
@@ -91,7 +93,8 @@ void as_const(T&&) = delete;
 
 namespace cpp20 {
 
-#if __cpp_lib_constexpr_algorithms >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_constexpr_algorithms) && __cpp_lib_constexpr_algorithms >= 201806L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::exchange;
 

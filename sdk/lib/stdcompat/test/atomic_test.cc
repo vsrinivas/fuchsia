@@ -14,7 +14,7 @@
 #include <type_traits>
 #include <utility>
 
-#include <gtest/gtest.h>
+#include "gtest.h"
 
 namespace {
 
@@ -473,7 +473,8 @@ TEST(AtomicRefTest, ConstFromNonConst) {
   EXPECT_EQ(b.load(), a);
 }
 
-#if __cpp_lib_atomic_ref < 201806L || defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_atomic_ref) && __cpp_lib_atomic_ref < 201806L || \
+    defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(AtomicRefTest, InvalidFailOrderAborts) {
   ASSERT_DEATH(
@@ -515,7 +516,8 @@ TEST(AtomicRefTest, InvalidFailOrderAborts) {
 
 #endif
 
-#if __cpp_lib_atomic_ref >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_atomic_ref) && __cpp_lib_atomic_ref >= 201806L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(AtomicRefTest, IsAliasForStd) {
   static_assert(

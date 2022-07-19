@@ -4,7 +4,7 @@
 
 #include <lib/stdcompat/version.h>
 
-#include <gtest/gtest.h>
+#include "gtest.h"
 
 namespace {
 

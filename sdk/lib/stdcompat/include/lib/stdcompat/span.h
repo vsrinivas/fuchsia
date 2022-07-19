@@ -14,7 +14,7 @@
 #include "memory.h"
 #include "version.h"
 
-#if __cpp_lib_span >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_span) && __cpp_lib_span >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 #include <span>
 
@@ -226,7 +226,7 @@ class span {
   internal::extent<element_type, Extent> extent_;
 };
 
-#if __cpp_deduction_guides >= 201703L
+#if defined(__cpp_deduction_guides) && __cpp_deduction_guides >= 201703L
 
 template <class It, class EndOrSize>
 span(It, EndOrSize) -> span<std::remove_reference_t<decltype(*std::declval<It&>())>>;

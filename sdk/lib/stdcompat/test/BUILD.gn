@@ -56,6 +56,7 @@ test("stdcompat-polyfills-no-inline-variables-unit-test") {
   configs += [
     ":stdcompat-select-polyfills",
     ":stdcompat-no-inline-variables",
+    ":stdcompat-Wundef",
   ]
 }
 
@@ -63,13 +64,17 @@ test("stdcompat-polyfills-no-inline-variables-unit-test") {
 test("stdcompat-polyfills-unit-test") {
   sources = stdcompat_test_sources
   deps = [ ":stdcompat-test-deps" ]
-  configs += [ ":stdcompat-select-polyfills" ]
+  configs += [
+    ":stdcompat-select-polyfills",
+    ":stdcompat-Wundef",
+  ]
 }
 
 # This target will let the feature-test macro pick std implementation if available.
 test("stdcompat-unit-test") {
   sources = stdcompat_test_sources
   deps = [ ":stdcompat-test-deps" ]
+  configs += [ ":stdcompat-Wundef" ]
 }
 
 fuchsia_component("stdcompat-test") {
@@ -96,6 +101,11 @@ fuchsia_test_package("stdcompat-tests") {
     ":stdcompat-polyfills-test",
     ":stdcompat-polyfills-no-inline-variables-test",
   ]
+}
+
+config("stdcompat-Wundef") {
+  visibility = [ ":*" ]
+  cflags = [ "-Wundef" ]
 }
 
 config("stdcompat-select-polyfills") {

@@ -9,7 +9,7 @@
 #include <memory>
 #include <type_traits>
 
-#include <gtest/gtest.h>
+#include "gtest.h"
 
 struct arrow {
   struct inner {

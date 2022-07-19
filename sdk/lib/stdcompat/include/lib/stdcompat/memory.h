@@ -11,7 +11,8 @@
 
 namespace cpp17 {
 
-#if __cpp_lib_addressof_constexpr >= 201603L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_addressof_constexpr) && __cpp_lib_addressof_constexpr >= 201603L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::addressof;
 
@@ -31,7 +32,8 @@ const T* addressof(const T&&) = delete;
 
 namespace cpp20 {
 
-#if __cpp_lib_to_address >= 201711L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_to_address) && __cpp_lib_to_address >= 201711L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::to_address;
 

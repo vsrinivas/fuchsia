@@ -14,8 +14,7 @@
 #include <iostream>
 #include <vector>
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
+#include "gtest.h"
 
 namespace {
 
@@ -183,7 +182,8 @@ TEST(RemoveTest, IsAliasWhenStdIsAvailable) {
   check(std::array<int, 4>());
 }
 
-#if __cpp_lib_constexpr_algorithms >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_constexpr_algorithms) && __cpp_lib_constexpr_algorithms >= 201806L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(SortTest, IsAliasWhenStdIsAvailable) {
   {

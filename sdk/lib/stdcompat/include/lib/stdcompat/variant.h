@@ -12,7 +12,8 @@
 #include "utility.h"
 #include "version.h"
 
-#if __cpp_lib_variant >= 2016L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_variant) && __cpp_lib_variant >= 2016L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 #include <variant>
 
@@ -112,7 +113,8 @@ struct variant_size<volatile T> : variant_size<T> {};
 template <typename T>
 struct variant_size<const volatile T> : variant_size<T> {};
 
-#if __cpp_inline_variables >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_inline_variables) && __cpp_inline_variables >= 201606L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 template <typename T>
 inline constexpr size_t variant_size_v = variant_size<T>::value;

@@ -7,11 +7,12 @@
 #include <functional>
 #include <type_traits>
 
-#include <gtest/gtest.h>
+#include "gtest.h"
 
 namespace {
 
-#if __cpp_lib_void_t >= 201411L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_void_t) && __cpp_lib_void_t >= 201411L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(VoidTraitsTest, IsAliasForStd) {
   static_assert(std::is_same_v<cpp17::void_t<>, std::void_t<>>);
@@ -50,7 +51,8 @@ TEST(LogicalTraitsTest, NegationIsOk) {
   static_assert(cpp17::negation_v<std::true_type> == false, "");
 }
 
-#if __cpp_lib_logical_traits >= 201510L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_logical_traits) && __cpp_lib_logical_traits >= 201510L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(LogicalTraitsTest, IsAliasForStd) {
   static_assert(
@@ -85,7 +87,8 @@ TEST(LogicalTraitsTest, IsAliasForStd) {
 
 #endif  // __cpp_lib_logical_traits >= 201510L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-#if __cpp_lib_type_trait_variable_templates >= 201510L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_type_trait_variable_templates) && \
+    __cpp_lib_type_trait_variable_templates >= 201510L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 template <typename T>
 static constexpr bool my_is_array_v = std::is_array<T>::value;
@@ -220,7 +223,8 @@ TEST(ArrayTraitsTest, BoundedUnboundedArrayIsOk) {
   static_assert(cpp20::is_unbounded_array_v<int[]> == true, "");
 }
 
-#if __cpp_lib_bounded_array_traits >= 201902L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_bounded_array_traits) && __cpp_lib_bounded_array_traits >= 201902L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(ArrayTraitsTest, IsAliasForStd) {
   static_assert(std::is_same_v<cpp20::is_bounded_array<void>, std::is_bounded_array<void>>);
@@ -250,7 +254,8 @@ TEST(RemoveCvrefTest, RemoveCvrefIsOk) {
   static_assert(std::is_same_v<cpp20::remove_cvref_t<const volatile int&&>, int>, "");
 }
 
-#if __cpp_lib_remove_cvref >= 201711L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_remove_cvref) && __cpp_lib_remove_cvref >= 201711L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(RemoveCvrefTest, IsAliasForStd) {
   static_assert(std::is_same_v<cpp20::remove_cvref<void>, std::remove_cvref<void>>, "");
@@ -284,7 +289,8 @@ TEST(TypeIdentityTest, TypeIdentityIsOk) {
                 "");
 }
 
-#if __cpp_lib_type_identity >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_type_identity) && __cpp_lib_type_identity >= 201806L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(TypeIdentityTest, IsAliasForStd) {
   static_assert(std::is_same_v<cpp20::type_identity_t<void>, std::type_identity_t<void>>, "");
@@ -325,7 +331,8 @@ TEST(ScopedEnumTest, ScopedEnumIsOk) {
   static_assert(cpp23::is_scoped_enum_v<scoped_color_char> == true, "");
 }
 
-#if __cpp_lib_is_scoped_enum >= 202011L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_is_scoped_enum) && __cpp_lib_is_scoped_enum >= 202011L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(ScopedEnumTest, IsAliasForStd) {
   static_assert(std::is_same_v<cpp23::is_scoped_enum<void>, std::is_scoped_enum<void>>, "");
@@ -372,7 +379,8 @@ TEST(IsAggregateTest, AggregateIsOk) {
   static_assert(cpp17::is_aggregate_v<user_defined_constructor> == false, "");
 }
 
-#if __cpp_lib_is_aggregate >= 201703L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_is_aggregate) && __cpp_lib_is_aggregate >= 201703L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(IsAggregateTest, IsAliasForStd) {
   static_assert(std::is_same_v<cpp17::is_aggregate<void>, std::is_aggregate<void>>, "");
@@ -631,7 +639,8 @@ TEST(ContextTraits, IsConstantEvaluated) {
 #endif
 }
 
-#if __cpp_lib_is_constant_evaluated >= 201811L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_is_constant_evaluated) && __cpp_lib_is_constant_evaluated >= 201811L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 TEST(ContextTraits, IsConstantEvaluatedIsAliasForStdWhenAvailable) {
   static_assert(&cpp20::is_constant_evaluated == &std::is_constant_evaluated, "");
 }

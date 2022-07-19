@@ -19,7 +19,7 @@ namespace internal {
 template <typename T,
           typename std::enable_if<std::is_base_of<std::exception, T>::value, bool>::type = true>
 [[noreturn]] inline constexpr void throw_or_abort([[gnu::unused]] const char* reason) {
-#if __cpp_exceptions >= 199711L
+#if defined(__cpp_exceptions) && __cpp_exceptions >= 199711L
   throw T(reason);
 #else
   __builtin_abort();

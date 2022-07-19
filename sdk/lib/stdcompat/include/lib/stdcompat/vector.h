@@ -11,12 +11,14 @@
 
 namespace cpp20 {
 
-#if __cpp_lib_erase_if >= 202002 && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_erase_if) && __cpp_lib_erase_if >= 202002 && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::erase;
 using std::erase_if;
 
-#elif __cpp_lib_constexpr_vector >= 201907  // Use constexpr polyfill
+#elif defined(__cpp_lib_constexpr_vector) && \
+    __cpp_lib_constexpr_vector >= 201907  // Use constexpr polyfill
 
 template <typename T, typename Alloc, typename U>
 constexpr typename std::vector<T, Alloc>::size_type erase(std::vector<T, Alloc>& c,

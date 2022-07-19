@@ -8,7 +8,8 @@
 #include "utility.h"
 #include "version.h"
 
-#if __cpp_lib_optional >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_optional) && __cpp_lib_optional >= 201606L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 #include <optional>
 

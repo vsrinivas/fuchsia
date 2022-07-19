@@ -5,7 +5,7 @@
 #include <lib/stdcompat/functional.h>
 #include <lib/stdcompat/tuple.h>
 
-#include <gtest/gtest.h>
+#include "gtest.h"
 
 namespace {
 

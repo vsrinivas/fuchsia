@@ -6,7 +6,7 @@
 #include <lib/stdcompat/string_view.h>
 #include <lib/stdcompat/utility.h>
 
-#include <gtest/gtest.h>
+#include "gtest.h"
 
 namespace {
 TEST(InplaceTagTest, InplaceTagsSwitchToStdProvidedOnStd17) {
@@ -69,7 +69,8 @@ TEST(ExchangeTest, IsConstexpr) {
 
 TEST(ExchangeTest, Runtime) { ASSERT_TRUE(ExchangeCheck3()); }
 
-#if __cpp_lib_constexpr_algorithms >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_constexpr_algorithms) && __cpp_lib_constexpr_algorithms >= 201806L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(ExchangeTest, IsAliasWhenAvailable) {
   constexpr int (*cpp20_exchange)(int&, int&&) = &cpp20::exchange<int>;
@@ -116,7 +117,8 @@ TEST(AsConstTest, DeniesRvalueReferences) {
 }
 
 // TODO(fxbug.dev/98561)
-// #if __cpp_lib_as_const >= 201510L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+// #if defined(__cpp_lib_as_const) && __cpp_lib_as_const >= 201510L &&
+// !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 // TEST(AsConstTest, IsAliasWhenAvailable) {
 // constexpr const int& (*cpp17_as_const)(int&) = &cpp17::as_const<int>;

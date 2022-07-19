@@ -7,9 +7,9 @@
 #include <string>
 #include <type_traits>
 
-#include <gtest/gtest.h>
-
+#include "gtest.h"
 #include "test_helper.h"
+
 namespace {
 
 struct no_copy {
@@ -491,7 +491,8 @@ TEST(VariantTest, GetWrongTypeAbortsComplex) { get_wrong_type<complex_traits>();
 TEST(VariantTest, GetWrongIndexAbortsLiteral) { get_wrong_index<literal_traits>(); }
 TEST(VariantTest, GetWrongIndexAbortsComplex) { get_wrong_index<complex_traits>(); }
 
-#if __cpp_lib_variant >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_variant) && __cpp_lib_variant >= 201606L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 // Sanity check that the template switches correctly.
 TEST(VariantTest, PolyfillIsAliasWhenVariantIsAvailable) {

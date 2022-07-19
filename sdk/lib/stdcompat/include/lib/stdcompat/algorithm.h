@@ -11,7 +11,8 @@
 
 namespace cpp20 {
 
-#if __cpp_lib_constexpr_algorithms >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_constexpr_algorithms) && __cpp_lib_constexpr_algorithms >= 201806L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::is_sorted;
 using std::sort;

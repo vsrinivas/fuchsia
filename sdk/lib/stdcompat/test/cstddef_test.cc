@@ -6,7 +6,7 @@
 #include <cstddef>
 #include <type_traits>
 
-#include <gtest/gtest.h>
+#include "gtest.h"
 
 namespace {
 
@@ -130,7 +130,7 @@ TEST(ByteTest, BitwiseNotOperatesOnUnderlyingType) {
       "~static_cast<cpp17::byte>(val) must be equivalent to static_cast<cpp17::byte>(~val).");
 }
 
-#if ___cpp_lib_byte >= 201603L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(___cpp_lib_byte) && ___cpp_lib_byte >= 201603L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(ByteTest, IsAliasForStdWhenAvailable) {
   static_assert(std::is_same<std::byte, cpp17::byte>::value, "");

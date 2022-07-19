@@ -9,7 +9,7 @@
 #include <limits>
 #include <type_traits>
 
-#if __cpp_lib_span >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_span) && __cpp_lib_span >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 #include <span>
 #endif  // __cpp_lib_span >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
@@ -20,7 +20,8 @@
 namespace cpp20 {
 namespace internal {
 
-#if __cpp_inline_variables >= 201606L && !defined(LIB_STDCOMPAT_NO_INLINE_VARIABLES)
+#if defined(__cpp_inline_variables) && __cpp_inline_variables >= 201606L && \
+    !defined(LIB_STDCOMPAT_NO_INLINE_VARIABLES)
 
 static constexpr inline size_t dynamic_extent = std::numeric_limits<size_t>::max();
 
@@ -61,7 +62,7 @@ class extent<T, dynamic_extent> {
 
 }  // namespace internal
 
-#if __cpp_lib_span >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_span) && __cpp_lib_span >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::span;
 

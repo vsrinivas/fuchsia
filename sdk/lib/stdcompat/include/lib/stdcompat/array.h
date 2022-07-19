@@ -14,7 +14,8 @@
 
 namespace cpp20 {
 
-#if __cpp_lib_to_array >= 201907L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_to_array) && __cpp_lib_to_array >= 201907L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::to_array;
 
@@ -30,7 +31,7 @@ constexpr std::array<std::remove_cv_t<T>, N> to_array(T (&a)[N]) {
 template <class T, std::size_t N,
           typename std::enable_if_t<!cpp17::is_array_v<T> && cpp17::is_move_constructible_v<T>,
                                     bool> = true>
-constexpr std::array<std::remove_cv_t<T>, N> to_array(T(&&a)[N]) {
+constexpr std::array<std::remove_cv_t<T>, N> to_array(T (&&a)[N]) {
   return internal::to_array(std::move(a), std::make_index_sequence<N>());
 }
 

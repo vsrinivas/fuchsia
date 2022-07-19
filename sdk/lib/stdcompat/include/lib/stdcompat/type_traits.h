@@ -13,14 +13,16 @@
 
 namespace cpp17 {
 
-#if __cpp_lib_void_t >= 201411L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_void_t) && __cpp_lib_void_t >= 201411L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 using std::void_t;
 #else   // Provide std::void_t polyfill.
 template <typename... T>
 using void_t = void;
 #endif  // __cpp_lib_void_t >= 201411L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-#if __cpp_lib_logical_traits >= 201510L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_logical_traits) && __cpp_lib_logical_traits >= 201510L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::conjunction;
 using std::conjunction_v;
@@ -62,7 +64,8 @@ static constexpr bool negation_v = negation<T>::value;
 
 #endif  // __cpp_lib_logical_traits >= 201510L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-#if __cpp_lib_bool_constant >= 201505L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_bool_constant) && __cpp_lib_bool_constant >= 201505L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::bool_constant;
 
@@ -73,7 +76,8 @@ using bool_constant = std::integral_constant<bool, B>;
 
 #endif  // __cpp_lib_bool_constant >= 201505L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-#if __cpp_lib_type_trait_variable_templates >= 201510L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_type_trait_variable_templates) && \
+    __cpp_lib_type_trait_variable_templates >= 201510L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::is_array_v;
 using std::is_class_v;
@@ -307,7 +311,8 @@ static constexpr bool is_convertible_v = std::is_convertible<T, U>::value;
 #endif  // __cpp_lib_type_trait_variable_templates >= 201510L &&
         // !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-#if __cpp_lib_is_aggregate >= 201703L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_is_aggregate) && __cpp_lib_is_aggregate >= 201703L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::is_aggregate;
 using std::is_aggregate_v;
@@ -322,7 +327,8 @@ static constexpr bool is_aggregate_v = is_aggregate<T>::value;
 
 #endif  // __cpp_lib_is_aggregate >= 201703L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-#if __cpp_lib_is_invocable >= 201703L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_is_invocable) && __cpp_lib_is_invocable >= 201703L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::is_invocable;
 using std::is_invocable_r;
@@ -355,17 +361,17 @@ template <typename F, typename... Args>
 static constexpr bool is_invocable_v = is_invocable<F, Args...>::value;
 
 template <typename F, typename... Args>
-struct is_nothrow_invocable
-    : bool_constant<is_invocable_v<F, Args...>&& noexcept(
-          ::cpp17::internal::invoke(std::declval<F>(), std::declval<Args>()...))> {};
+struct is_nothrow_invocable : bool_constant<is_invocable_v<F, Args...> &&
+                                            noexcept(::cpp17::internal::invoke(
+                                                std::declval<F>(), std::declval<Args>()...))> {};
 
 template <typename F, typename... Args>
 static constexpr bool is_nothrow_invocable_v = is_nothrow_invocable<F, Args...>::value;
 
 template <typename R, typename F, typename... Args>
-struct is_nothrow_invocable_r
-    : bool_constant<is_invocable_r_v<R, F, Args...>&& noexcept(
-          ::cpp17::internal::invoke_r<R>(std::declval<F>(), std::declval<Args>()...))> {};
+struct is_nothrow_invocable_r : bool_constant<is_invocable_r_v<R, F, Args...> &&
+                                              noexcept(::cpp17::internal::invoke_r<R>(
+                                                  std::declval<F>(), std::declval<Args>()...))> {};
 
 template <typename R, typename F, typename... Args>
 static constexpr bool is_nothrow_invocable_r_v = is_nothrow_invocable_r<R, F, Args...>::value;
@@ -382,7 +388,8 @@ using invoke_result_t = typename invoke_result<F, Args...>::type;
 
 namespace cpp20 {
 
-#if __cpp_lib_bounded_array_traits >= 201902L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_bounded_array_traits) && __cpp_lib_bounded_array_traits >= 201902L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::is_bounded_array;
 using std::is_bounded_array_v;
@@ -410,7 +417,8 @@ static constexpr bool is_unbounded_array_v = is_unbounded_array<T>::value;
 
 #endif  // __cpp_lib_bounded_array_traits >= 201902L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-#if __cpp_lib_remove_cvref >= 201711L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_remove_cvref) && __cpp_lib_remove_cvref >= 201711L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::remove_cvref;
 using std::remove_cvref_t;
@@ -427,7 +435,8 @@ using remove_cvref_t = typename remove_cvref<T>::type;
 
 #endif  // __cpp_lib_remove_cvref >= 201711L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-#if __cpp_lib_type_identity >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_type_identity) && __cpp_lib_type_identity >= 201806L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::type_identity;
 using std::type_identity_t;
@@ -444,7 +453,8 @@ using type_identity_t = typename type_identity<T>::type;
 
 #endif  // __cpp_lib_type_identity >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-#if __cpp_lib_is_constant_evaluated >= 201811L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_is_constant_evaluated) && __cpp_lib_is_constant_evaluated >= 201811L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 #define LIB_STDCOMPAT_CONSTEVAL_SUPPORT 1
 using std::is_constant_evaluated;
@@ -469,7 +479,8 @@ inline constexpr bool is_constant_evaluated() noexcept { return false; }
 
 namespace cpp23 {
 
-#if __cpp_lib_is_scoped_enum >= 202011L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_is_scoped_enum) && __cpp_lib_is_scoped_enum >= 202011L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::is_scoped_enum;
 using std::is_scoped_enum_v;

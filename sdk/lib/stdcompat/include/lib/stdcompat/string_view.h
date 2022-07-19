@@ -9,7 +9,8 @@
 
 #include "version.h"
 
-#if __cpp_lib_string_view >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_string_view) && __cpp_lib_string_view >= 201606L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 #include <string_view>
 
@@ -534,7 +535,8 @@ std::basic_ostream<CharT, Traits>& operator<<(std::basic_ostream<CharT, Traits>&
 // define the same functions, though as thin wrappers around these methods.
 namespace cpp20 {
 
-#if __cpp_lib_string_view >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_string_view) && __cpp_lib_string_view >= 202002L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 template <class CharT, class Traits = std::char_traits<CharT>, typename PrefixType>
 constexpr bool starts_with(cpp17::basic_string_view<CharT, Traits> s,

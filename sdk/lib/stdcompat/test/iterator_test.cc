@@ -7,7 +7,7 @@
 #include <initializer_list>
 #include <vector>
 
-#include <gtest/gtest.h>
+#include "gtest.h"
 
 namespace {
 
@@ -59,7 +59,8 @@ TEST(SizeTest, ObtainsPointersinitializerList) {
   EXPECT_EQ(cpp17::size(b), b.size());
 }
 
-#if __cpp_lib_nonmember_container_access >= 201411L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_nonmember_container_access) && \
+    __cpp_lib_nonmember_container_access >= 201411L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(DataTest, AliasWhenStdIsAvailable) {
   {

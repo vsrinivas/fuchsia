@@ -3,7 +3,7 @@
 
 #include <lib/stdcompat/source_location.h>
 
-#include <gtest/gtest.h>
+#include "gtest.h"
 
 namespace {
 
@@ -46,7 +46,8 @@ TEST(SourceLocationTest, DefaultParameterValue) {
   EXPECT_EQ(location.column(), column);
 }
 
-#if __cpp_lib_source_location >= 201907L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_source_location) && __cpp_lib_source_location >= 201907L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 TEST(SourceLocationTest, IsAliasOfStdInStd20) {
   static_assert(std::is_same_v<cpp20::source_location, std::source_location>);
 }

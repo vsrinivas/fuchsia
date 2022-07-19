@@ -11,7 +11,8 @@ namespace cpp20 {
 
 // This version is always constexpr-qualified, with no other changes from C++17.
 
-#if __cpp_lib_invoke >= 201411L && __cpp_lib_constexpr_functional >= 201907L && \
+#if defined(__cpp_lib_invoke) && defined(__cpp_lib_constexpr_functional) &&     \
+    __cpp_lib_invoke >= 201411L && __cpp_lib_constexpr_functional >= 201907L && \
     !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::invoke;
@@ -27,7 +28,8 @@ constexpr cpp17::invoke_result_t<F, Args...> invoke(F&& f, Args&&... args) noexc
 #endif  // __cpp_lib_invoke >= 201411L && __cpp_lib_constexpr_functional >= 201907L &&
         // !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-#if __cpp_lib_bind_front >= 201907L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_bind_front) && __cpp_lib_bind_front >= 201907L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::bind_front;
 

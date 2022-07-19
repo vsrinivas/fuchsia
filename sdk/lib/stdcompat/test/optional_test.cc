@@ -9,8 +9,7 @@
 #include <utility>
 #include <vector>
 
-#include <gtest/gtest.h>
-
+#include "gtest.h"
 #include "test_helper.h"
 
 namespace {
@@ -663,7 +662,8 @@ TEST(OptionalTest, ConstRvalueValueAccessorWhenEmptyIsBadOptionalAccess4) {
       cpp17::bad_optional_access);
 }
 
-#if __cpp_lib_optional >= 201606L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_optional) && __cpp_lib_optional >= 201606L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 // Sanity check that the template switches correctly.
 TEST(OptionalTest, PolyfillIsAliasWhenOptionaIsAvailable) {

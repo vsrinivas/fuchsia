@@ -4,8 +4,7 @@
 
 #include <lib/stdcompat/vector.h>
 
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
+#include "gtest.h"
 
 namespace {
 
@@ -42,7 +41,8 @@ TEST(VectorTest, EraseIfWithNoEntries) {
   EXPECT_THAT(v, testing::ElementsAreArray({1, 2, 1, 2, 1, 3, 4, 5}));
 }
 
-#if __cpp_lib_erase_if >= 202002 && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_erase_if) && __cpp_lib_erase_if >= 202002 && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(VectorTest, EraseVariantsAreAliasForStdWhenAvailable) {
   using size_type = std::vector<int>::size_type;

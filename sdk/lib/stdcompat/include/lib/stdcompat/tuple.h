@@ -11,7 +11,8 @@
 
 namespace cpp17 {
 
-#if __cpp_lib_type_trait_variable_templates >= 201510L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_type_trait_variable_templates) && \
+    __cpp_lib_type_trait_variable_templates >= 201510L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::tuple_size_v;
 
@@ -23,7 +24,7 @@ static constexpr size_t tuple_size_v = std::tuple_size<T>::value;
 #endif  // __cpp_lib_type_trait_variable_templates >= 201510L &&
         // !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-#if __cpp_lib_apply >= 201603L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_apply) && __cpp_lib_apply >= 201603L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::apply;
 

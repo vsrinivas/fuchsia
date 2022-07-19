@@ -12,7 +12,7 @@
 
 namespace cpp17 {
 
-#if __cpp_lib_byte >= 201603L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_byte) && __cpp_lib_byte >= 201603L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 using std::byte;
 using std::operator<<=;

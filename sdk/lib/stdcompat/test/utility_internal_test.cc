@@ -5,7 +5,7 @@
 #include <lib/stdcompat/type_traits.h>
 #include <lib/stdcompat/utility.h>
 
-#include <gtest/gtest.h>
+#include "gtest.h"
 
 namespace {
 

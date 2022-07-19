@@ -6,7 +6,7 @@
 
 #include <array>
 
-#include <gtest/gtest.h>
+#include "gtest.h"
 
 namespace {
 struct silent {};
@@ -53,7 +53,8 @@ TEST(TupleTest, TupleSizeVMatchesStd) {
   test_tuple_size_v<std::array<std::vector<std::string>, 42>>();
 }
 
-#if __cpp_lib_type_trait_variable_templates >= 201510L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_type_trait_variable_templates) && \
+    __cpp_lib_type_trait_variable_templates >= 201510L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 template <typename T>
 constexpr void tuple_size_v_is_alias() {
@@ -111,7 +112,7 @@ TEST(TupleTest, Apply) {
             5.75);
 }
 
-#if __cpp_lib_apply >= 201603L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_apply) && __cpp_lib_apply >= 201603L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 template <typename R, typename F, typename T>
 constexpr void check_apply_alias() {

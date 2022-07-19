@@ -9,7 +9,7 @@
 #include <limits>
 #include <type_traits>
 
-#include <gtest/gtest.h>
+#include "gtest.h"
 
 namespace {
 #if __SIZEOF_INT128__ == 16
@@ -94,7 +94,8 @@ TEST(BitCastTest, WorksInConstexprContext) {
 
 #endif
 
-#if __cpp_lib_bit_cast >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_bit_cast) && __cpp_lib_bit_cast >= 201806L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(BitCastTest, IsAliasForStdBitCastIfAvailable) {
   constexpr unsigned (*cpp20_bit_cast)(const int&) = &cpp20::bit_cast<unsigned, int>;
@@ -428,7 +429,8 @@ TEST(BitOpsTest, PopCountIsOk) {
   static_assert(CheckPopCount<uint_fast64_t>(), "cpp20::popcount check failed for uint_fast64_t.");
 }
 
-#if __cpp_lib_bitops >= 201907L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_bitops) && __cpp_lib_bitops >= 201907L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 template <typename T>
 constexpr void CheckAlias() {
@@ -592,7 +594,8 @@ TEST(IntPow2Test, BitCeiIsCorrect) {
   static_assert(CheckBitCeil<uint_fast64_t>(), "bit_ceil failed for uint_least64_t.");
 
 // Check that the polfill provides UB checks.
-#if __cpp_lib_int_pow2 < 202002L || defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_int_pow2) && __cpp_lib_int_pow2 < 202002L || \
+    defined(LIB_STDCOMPAT_USE_POLYFILLS)
   ASSERT_DEATH({ cpp20::bit_ceil<uint64_t>(1 + (uint64_t(1) << 63)); }, ".*");
 #endif
 }
@@ -642,7 +645,8 @@ TEST(IntPow2Test, BitFloorIsCorrect) {
   static_assert(CheckBitFloor<uint_fast64_t>(), "bit_ceil failed for uint_least64_t.");
 }
 
-#if __cpp_lib_int_pow2 >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_int_pow2) && __cpp_lib_int_pow2 >= 202002L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 template <typename T>
 constexpr void CheckIntPow2Alias() {
@@ -692,7 +696,8 @@ TEST(EndianTest, FuchsiaIsLittleEndian) {
 }
 #endif
 
-#if __cpp_lib_endian >= 201907L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_endian) && __cpp_lib_endian >= 201907L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(EndianTest, IsAliasOfStdWhenAvailable) {
   static_assert(std::is_same<cpp20::endian, std::endian>::value,

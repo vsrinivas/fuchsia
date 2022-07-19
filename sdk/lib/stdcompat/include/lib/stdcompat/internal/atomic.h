@@ -18,7 +18,7 @@ namespace cpp20 {
 namespace atomic_internal {
 
 // Maps |std::memory_order| to builtin |__ATOMIC_XXXX| values.
-STDCOMPAT_INLINE_LINKAGE constexpr int to_builtin_memory_order(std::memory_order order) {
+LIB_STDCOMPAT_INLINE_LINKAGE constexpr int to_builtin_memory_order(std::memory_order order) {
   switch (order) {
     case std::memory_order_relaxed:
       return __ATOMIC_RELAXED;
@@ -38,7 +38,7 @@ STDCOMPAT_INLINE_LINKAGE constexpr int to_builtin_memory_order(std::memory_order
 }
 
 // Applies corrections to |order| on |compare_exchange|'s load operations.
-STDCOMPAT_INLINE_LINKAGE constexpr std::memory_order compare_exchange_load_memory_order(
+LIB_STDCOMPAT_INLINE_LINKAGE constexpr std::memory_order compare_exchange_load_memory_order(
     std::memory_order order) {
   if (order == std::memory_order_acq_rel) {
     return std::memory_order_acquire;
@@ -74,10 +74,11 @@ template <typename T>
 static constexpr bool unqualified = cpp17::is_same_v<T, std::remove_cv_t<T>>;
 
 template <typename T>
-STDCOMPAT_INLINE_LINKAGE inline bool compare_exchange(T* ptr, std::remove_volatile_t<T>& expected,
-                                                      std::remove_volatile_t<T> desired,
-                                                      bool is_weak, std::memory_order success,
-                                                      std::memory_order failure) {
+LIB_STDCOMPAT_INLINE_LINKAGE inline bool compare_exchange(T* ptr,
+                                                          std::remove_volatile_t<T>& expected,
+                                                          std::remove_volatile_t<T> desired,
+                                                          bool is_weak, std::memory_order success,
+                                                          std::memory_order failure) {
   return __atomic_compare_exchange(ptr, cpp17::addressof(expected), cpp17::addressof(desired),
                                    is_weak, to_builtin_memory_order(success),
                                    to_builtin_memory_order(failure));
@@ -94,12 +95,12 @@ class atomic_ops {
   using storage_t = std::aligned_storage_t<sizeof(T), alignof(T)>;
 
  public:
-  STDCOMPAT_INLINE_LINKAGE void store(
+  LIB_STDCOMPAT_INLINE_LINKAGE void store(
       value_t desired, std::memory_order order = std::memory_order_seq_cst) const noexcept {
     __atomic_store(ptr(), cpp17::addressof(desired), to_builtin_memory_order(order));
   }
 
-  STDCOMPAT_INLINE_LINKAGE value_t
+  LIB_STDCOMPAT_INLINE_LINKAGE value_t
   load(std::memory_order order = std::memory_order_seq_cst) const noexcept {
     storage_t store;
     value_t* ret = reinterpret_cast<value_t*>(&store);
@@ -107,9 +108,9 @@ class atomic_ops {
     return *ret;
   }
 
-  STDCOMPAT_INLINE_LINKAGE operator value_t() const noexcept { return this->load(); }
+  LIB_STDCOMPAT_INLINE_LINKAGE operator value_t() const noexcept { return this->load(); }
 
-  STDCOMPAT_INLINE_LINKAGE value_t
+  LIB_STDCOMPAT_INLINE_LINKAGE value_t
   exchange(value_t desired, std::memory_order order = std::memory_order_seq_cst) const noexcept {
     storage_t store;
     value_t* ret = reinterpret_cast<value_t*>(&store);
@@ -118,31 +119,31 @@ class atomic_ops {
     return *ret;
   }
 
-  STDCOMPAT_INLINE_LINKAGE bool compare_exchange_weak(
+  LIB_STDCOMPAT_INLINE_LINKAGE bool compare_exchange_weak(
       T& expected, value_t desired,
       std::memory_order success = std::memory_order_seq_cst) const noexcept {
     return compare_exchange_weak(expected, desired, success,
                                  compare_exchange_load_memory_order(success));
   }
 
-  STDCOMPAT_INLINE_LINKAGE bool compare_exchange_weak(T& expected, value_t desired,
-                                                      std::memory_order success,
-                                                      std::memory_order failure) const noexcept {
+  LIB_STDCOMPAT_INLINE_LINKAGE bool compare_exchange_weak(
+      T& expected, value_t desired, std::memory_order success,
+      std::memory_order failure) const noexcept {
     check_failure_memory_order(failure);
     return compare_exchange(ptr(), expected, desired,
                             /*is_weak=*/true, success, failure);
   }
 
-  STDCOMPAT_INLINE_LINKAGE bool compare_exchange_strong(
+  LIB_STDCOMPAT_INLINE_LINKAGE bool compare_exchange_strong(
       T& expected, value_t desired,
       std::memory_order success = std::memory_order_seq_cst) const noexcept {
     return compare_exchange_strong(expected, desired, success,
                                    compare_exchange_load_memory_order(success));
   }
 
-  STDCOMPAT_INLINE_LINKAGE bool compare_exchange_strong(T& expected, value_t desired,
-                                                        std::memory_order success,
-                                                        std::memory_order failure) const noexcept {
+  LIB_STDCOMPAT_INLINE_LINKAGE bool compare_exchange_strong(
+      T& expected, value_t desired, std::memory_order success,
+      std::memory_order failure) const noexcept {
     check_failure_memory_order(failure);
     return compare_exchange(ptr(), expected, desired,
                             /*is_weak=*/false, success, failure);
@@ -151,7 +152,7 @@ class atomic_ops {
  private:
   // |failure| memory order may not be |std::memory_order_release| or
   // |std::memory_order_acq_release|.
-  STDCOMPAT_INLINE_LINKAGE constexpr void check_failure_memory_order(
+  LIB_STDCOMPAT_INLINE_LINKAGE constexpr void check_failure_memory_order(
       std::memory_order failure) const {
     if (failure == std::memory_order_acq_rel || failure == std::memory_order_release) {
       __builtin_abort();
@@ -217,29 +218,29 @@ class arithmetic_ops<Derived, T,
   static constexpr auto modifier = arithmetic_ops_helper<T>::modifier;
 
  public:
-  STDCOMPAT_INLINE_LINKAGE return_t
+  LIB_STDCOMPAT_INLINE_LINKAGE return_t
   fetch_add(operand_t operand, std::memory_order order = std::memory_order_seq_cst) const noexcept {
     return __atomic_fetch_add(ptr(), operand * modifier, to_builtin_memory_order(order));
   }
 
-  STDCOMPAT_INLINE_LINKAGE return_t
+  LIB_STDCOMPAT_INLINE_LINKAGE return_t
   fetch_sub(operand_t operand, std::memory_order order = std::memory_order_seq_cst) const noexcept {
     return __atomic_fetch_sub(ptr(), operand * modifier, to_builtin_memory_order(order));
   }
 
-  STDCOMPAT_INLINE_LINKAGE return_t operator++(int) const noexcept { return fetch_add(1); }
-  STDCOMPAT_INLINE_LINKAGE return_t operator--(int) const noexcept { return fetch_sub(1); }
-  STDCOMPAT_INLINE_LINKAGE return_t operator++() const noexcept { return fetch_add(1) + 1; }
-  STDCOMPAT_INLINE_LINKAGE return_t operator--() const noexcept { return fetch_sub(1) - 1; }
-  STDCOMPAT_INLINE_LINKAGE return_t operator+=(operand_t operand) const noexcept {
+  LIB_STDCOMPAT_INLINE_LINKAGE return_t operator++(int) const noexcept { return fetch_add(1); }
+  LIB_STDCOMPAT_INLINE_LINKAGE return_t operator--(int) const noexcept { return fetch_sub(1); }
+  LIB_STDCOMPAT_INLINE_LINKAGE return_t operator++() const noexcept { return fetch_add(1) + 1; }
+  LIB_STDCOMPAT_INLINE_LINKAGE return_t operator--() const noexcept { return fetch_sub(1) - 1; }
+  LIB_STDCOMPAT_INLINE_LINKAGE return_t operator+=(operand_t operand) const noexcept {
     return fetch_add(operand) + operand;
   }
-  STDCOMPAT_INLINE_LINKAGE return_t operator-=(operand_t operand) const noexcept {
+  LIB_STDCOMPAT_INLINE_LINKAGE return_t operator-=(operand_t operand) const noexcept {
     return fetch_sub(operand) - operand;
   }
 
  private:
-  STDCOMPAT_INLINE_LINKAGE constexpr ptr_t ptr() const {
+  LIB_STDCOMPAT_INLINE_LINKAGE constexpr ptr_t ptr() const {
     return static_cast<const Derived*>(this)->ptr_;
   }
 };
@@ -252,7 +253,7 @@ class arithmetic_ops<Derived, T, std::enable_if_t<cpp17::is_floating_point_v<T>>
   using value_t = std::remove_volatile_t<T>;
 
  public:
-  STDCOMPAT_INLINE_LINKAGE value_t
+  LIB_STDCOMPAT_INLINE_LINKAGE value_t
   fetch_add(value_t operand, std::memory_order order = std::memory_order_seq_cst) const noexcept {
     value_t old_value = derived()->load(std::memory_order_relaxed);
     value_t new_value = old_value + operand;
@@ -263,7 +264,7 @@ class arithmetic_ops<Derived, T, std::enable_if_t<cpp17::is_floating_point_v<T>>
     return old_value;
   }
 
-  STDCOMPAT_INLINE_LINKAGE value_t
+  LIB_STDCOMPAT_INLINE_LINKAGE value_t
   fetch_sub(value_t operand, std::memory_order order = std::memory_order_seq_cst) const noexcept {
     value_t old_value = derived()->load(std::memory_order_relaxed);
     value_t new_value = old_value - operand;
@@ -274,18 +275,18 @@ class arithmetic_ops<Derived, T, std::enable_if_t<cpp17::is_floating_point_v<T>>
     return old_value;
   }
 
-  STDCOMPAT_INLINE_LINKAGE value_t operator+=(value_t operand) const noexcept {
+  LIB_STDCOMPAT_INLINE_LINKAGE value_t operator+=(value_t operand) const noexcept {
     return fetch_add(operand) + operand;
   }
-  STDCOMPAT_INLINE_LINKAGE value_t operator-=(value_t operand) const noexcept {
+  LIB_STDCOMPAT_INLINE_LINKAGE value_t operator-=(value_t operand) const noexcept {
     return fetch_sub(operand) - operand;
   }
 
  private:
-  STDCOMPAT_INLINE_LINKAGE constexpr T* ptr() const {
+  LIB_STDCOMPAT_INLINE_LINKAGE constexpr T* ptr() const {
     return static_cast<const Derived*>(this)->ptr_;
   }
-  STDCOMPAT_INLINE_LINKAGE constexpr const Derived* derived() const {
+  LIB_STDCOMPAT_INLINE_LINKAGE constexpr const Derived* derived() const {
     return static_cast<const Derived*>(this);
   }
 };
@@ -309,33 +310,33 @@ class bitwise_ops<Derived, T, std::enable_if_t<cpp17::is_integral_v<T>>> {
   using value_t = std::remove_cv_t<T>;
 
  public:
-  STDCOMPAT_INLINE_LINKAGE value_t
+  LIB_STDCOMPAT_INLINE_LINKAGE value_t
   fetch_and(value_t operand, std::memory_order order = std::memory_order_seq_cst) const noexcept {
     return __atomic_fetch_and(ptr(), operand, to_builtin_memory_order(order));
   }
 
-  STDCOMPAT_INLINE_LINKAGE value_t
+  LIB_STDCOMPAT_INLINE_LINKAGE value_t
   fetch_or(value_t operand, std::memory_order order = std::memory_order_seq_cst) const noexcept {
     return __atomic_fetch_or(ptr(), operand, to_builtin_memory_order(order));
   }
 
-  STDCOMPAT_INLINE_LINKAGE value_t
+  LIB_STDCOMPAT_INLINE_LINKAGE value_t
   fetch_xor(value_t operand, std::memory_order order = std::memory_order_seq_cst) const noexcept {
     return __atomic_fetch_xor(ptr(), operand, to_builtin_memory_order(order));
   }
 
-  STDCOMPAT_INLINE_LINKAGE value_t operator&=(value_t operand) const noexcept {
+  LIB_STDCOMPAT_INLINE_LINKAGE value_t operator&=(value_t operand) const noexcept {
     return fetch_and(operand) & operand;
   }
-  STDCOMPAT_INLINE_LINKAGE value_t operator|=(value_t operand) const noexcept {
+  LIB_STDCOMPAT_INLINE_LINKAGE value_t operator|=(value_t operand) const noexcept {
     return fetch_or(operand) | operand;
   }
-  STDCOMPAT_INLINE_LINKAGE value_t operator^=(value_t operand) const noexcept {
+  LIB_STDCOMPAT_INLINE_LINKAGE value_t operator^=(value_t operand) const noexcept {
     return fetch_xor(operand) ^ operand;
   }
 
  private:
-  STDCOMPAT_INLINE_LINKAGE constexpr T* ptr() const {
+  LIB_STDCOMPAT_INLINE_LINKAGE constexpr T* ptr() const {
     return static_cast<const Derived*>(this)->ptr_;
   }
 };

@@ -6,7 +6,8 @@
 
 #include "version.h"
 
-#if __cpp_lib_source_location >= 201907L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_source_location) && __cpp_lib_source_location >= 201907L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 #include <source_location>
 

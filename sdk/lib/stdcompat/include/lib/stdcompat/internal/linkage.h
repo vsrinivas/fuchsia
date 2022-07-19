@@ -18,14 +18,14 @@
 #if defined(_LIBCPP_HIDE_FROM_ABI_PER_TU) && _LIBCPP_HIDE_FROM_ABI_PER_TU
 
 #if defined(__has_attribute) && __has_attribute(internal_linkage)
-#define STDCOMPAT_INLINE_LINKAGE __attribute__((__internal_linkage__))
+#define LIB_STDCOMPAT_INLINE_LINKAGE __attribute__((__internal_linkage__))
 #else
-#define STDCOMPAT_INLINE_LINKAGE __attribute__((__always_inline__, __visibility__("hidden")))
+#define LIB_STDCOMPAT_INLINE_LINKAGE __attribute__((__always_inline__, __visibility__("hidden")))
 #endif
 
 #else
 
-#define STDCOMPAT_INLINE_LINKAGE
+#define LIB_STDCOMPAT_INLINE_LINKAGE
 
 #endif  // _LIBCPP_HIDE_FROM_ABI_PER_TU
 

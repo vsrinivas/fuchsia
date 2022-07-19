@@ -7,7 +7,7 @@
 
 #include <array>
 
-#include <gtest/gtest.h>
+#include "gtest.h"
 
 namespace {
 
@@ -47,7 +47,8 @@ TEST(ToArrayTest, InitializesFromInitializerList) {
   static_assert(cpp17::is_same_v<decltype(typed_array), std::array<int, 4>>, "");
 }
 
-#if __cpp_lib_to_array >= 201907L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_to_array) && __cpp_lib_to_array >= 201907L && \
+    !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(ToArrayTest, IsAliasWhenStdIsAvailable) {
   {

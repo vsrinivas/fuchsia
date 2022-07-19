@@ -13,7 +13,7 @@
 #include <type_traits>
 #include <vector>
 
-#include <gtest/gtest.h>
+#include "gtest.h"
 
 namespace {
 
@@ -851,7 +851,7 @@ TEST(SpanTest, AsBytesWithStaticExtent) {
   EXPECT_EQ(byte_view.size(), view.size_bytes());
 }
 
-#if __cpp_lib_span >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#if defined(__cpp_lib_span) && __cpp_lib_span >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 TEST(SpanTest, IsAliasWhenStdIsAvailable) {
   static_assert(std::is_same_v<cpp20::span<int>, std::span<int>>,
@@ -888,7 +888,7 @@ TEST(SpanTest, IsAliasWhenStdIsAvailable) {
 
 #endif
 
-#if __cpp_deduction_guides >= 201703L
+#if defined(__cpp_lib_source_location) && __cpp_deduction_guides >= 201703L
 
 TEST(SpanTest, DeductionGuideCheck) {
   std::vector<int> a = {1, 2, 3, 4};
