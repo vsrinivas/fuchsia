@@ -96,7 +96,8 @@ protocol Light {
     /// when the value changes.
     ///
     /// If this call fails, it is considered a fatal error and the channel
-    /// will be closed.
+    /// will be closed. If the failure is due to an invalid light group name,
+    /// the channel will be closed with a NOT_FOUND epitaph.
     WatchLightGroup(struct {
         name string:MAX_LIGHT_NAME_LENGTH;
     }) -> (struct {
