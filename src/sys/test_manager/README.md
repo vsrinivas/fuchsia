@@ -1,28 +1,37 @@
 # test manager
 
-Reviewed on: 2019-11-06
+Reviewed on: 2022-07-19
 
-Test Manager runs v2 tests natively and returns result. This would eventually run directly under component manager and host side will talk to this tool to run v2 tests on device.
+Test Manager runs v2 tests natively and returns result. [`run-test-suite`][rts]
+and [`ffx test`][ffx-test] invoke Test Manager to run tests.
 
 ## Building
 
-Test Executor should be included test build of Fuchsia, but if missing
+Test Manager should be included in eng builds of Fuchsia, but if missing
 can be added to builds by including `--with //src/sys/test_manager` to the
 `fx set` invocation.
 
 ## Running
 
-Current implementation run echo v2 tests. In future we will extend it to run any test.
-```
-$ fx shell run fuchsia-pkg://fuchsia.com/component_manager#meta/component_manager.cmx fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm
-```
+Test Manager is invoked by either [`run-test-suite`][rts] or [`ffx test`][ffx-test]
+when these tools are used to run tests. Test Manager should not be run directly.
 
 ## Testing
 
 Tests for this project are available in the `tests` folder.
+To run them include the test to your build by adding
+`--with //src/sys/test_manager:tests` to the `fx set` invocation.
+
+The full set of unit tests and integration tests can be run with
 
 ```
-$ fx test test_manager_tests
+$ fx test //src/sys/test_manager
+```
+
+To run the integration tests only, run
+
+```
+$ fx test test_manager_test
 ```
 
 ## Source layout
@@ -75,5 +84,5 @@ fx test <test_url>
 
 
 [test-manager-cml]: meta/common.shard.cml
-
-
+[rts]: src/sys/run_test_suite
+[ffx-test]: src/developer/ffx/plugins/test
