@@ -25,6 +25,10 @@ const char kOutputFile[] = "/tmp/test-trace.fxt";
 const char kCategoriesArg[] = "--categories=cpu:fixed:instructions_retired,cpu:tally";
 const char kCategoryName[] = "cpu:perf";
 const char kTestEventName[] = "instructions_retired";
+#elif defined(__aarch64__)
+const char kCategoriesArg[] = "--categories=cpu:fixed:cycle_counter,cpu:tally";
+const char kCategoryName[] = "cpu:perf";
+const char kTestEventName[] = "cycle_counter";
 #else
 #error "unsupported architecture"
 #endif
@@ -44,14 +48,14 @@ TEST(CpuperfProvider, IntegrationTest) {
   EXPECT_EQ(return_code, 0);
 
   size_t record_count = 0;
-  size_t instructions_retired_count = 0;
-  auto record_consumer = [&record_count, &instructions_retired_count](trace::Record record) {
+  size_t event_count = 0;
+  auto record_consumer = [&record_count, &event_count](trace::Record record) {
     ++record_count;
     if (record.type() == trace::RecordType::kEvent) {
       const trace::Record::Event& event = record.GetEvent();
       if (event.type() == trace::EventType::kCounter && event.category == kCategoryName &&
           event.name == kTestEventName) {
-        ++instructions_retired_count;
+        ++event_count;
       }
     }
   };
@@ -68,10 +72,9 @@ TEST(CpuperfProvider, IntegrationTest) {
   reader->ReadFile();
   ASSERT_FALSE(got_error);
 
-  FX_LOGS(INFO) << "Got " << record_count << " records, " << instructions_retired_count
-                << " instructions";
+  FX_LOGS(INFO) << "Got " << record_count << " records, " << event_count << " instructions";
 
-  ASSERT_GT(instructions_retired_count, 0u);
+  ASSERT_GT(event_count, 0u);
 }
 
 // Provide our own main so that --verbose,etc. are recognized.

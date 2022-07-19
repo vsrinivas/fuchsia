@@ -89,30 +89,28 @@ executable("cpuperf_provider_tests_bin") {
   ]
 }
 
-if (current_cpu == "x64") {
-  executable("cpuperf_provider_integration_tests_bin") {
-    testonly = true
-    output_name = "cpuperf_provider_integration_tests"
+executable("cpuperf_provider_integration_tests_bin") {
+  testonly = true
+  output_name = "cpuperf_provider_integration_tests"
 
-    sources = [ "cpuperf_provider_integration_tests.cc" ]
+  sources = [ "cpuperf_provider_integration_tests.cc" ]
 
-    deps = [
-      "//src/lib/fxl",
-      "//src/lib/fxl/test:test_settings",
-      "//src/performance/lib/perfmon",
-      "//src/performance/lib/test_utils",
-      "//src/performance/trace:bin",
-      "//third_party/googletest:gtest",
-      "//zircon/system/ulib/trace-reader",
-      "//zircon/system/ulib/zx",
-    ]
-  }
+  deps = [
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
+    "//src/performance/lib/perfmon",
+    "//src/performance/lib/test_utils",
+    "//src/performance/trace:bin",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/trace-reader",
+    "//zircon/system/ulib/zx",
+  ]
+}
 
-  fuchsia_test_component("cpuperf_provider_integration_tests_component") {
-    component_name = "cpuperf_provider_integration_tests"
-    manifest = "meta/cpuperf_provider_integration_tests.cmx"
-    deps = [ ":cpuperf_provider_integration_tests_bin" ]
-  }
+fuchsia_test_component("cpuperf_provider_integration_tests_component") {
+  component_name = "cpuperf_provider_integration_tests"
+  manifest = "meta/cpuperf_provider_integration_tests.cmx"
+  deps = [ ":cpuperf_provider_integration_tests_bin" ]
 }
 
 fuchsia_unittest_component("cpuperf_provider_tests_component") {
@@ -121,10 +119,10 @@ fuchsia_unittest_component("cpuperf_provider_tests_component") {
 }
 
 fuchsia_test_package("cpuperf_provider_tests") {
-  test_components = [ ":cpuperf_provider_tests_component" ]
-  if (current_cpu == "x64") {
-    test_components += [ ":cpuperf_provider_integration_tests_component" ]
-  }
+  test_components = [
+    ":cpuperf_provider_tests_component",
+    ":cpuperf_provider_integration_tests_component",
+  ]
   test_specs = {
     environments = basic_envs
   }
