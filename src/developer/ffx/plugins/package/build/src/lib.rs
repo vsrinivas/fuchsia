@@ -198,7 +198,7 @@ mod test {
         let cmd = BuildCommand {
             creation_manifest_path: root.join("invalid path"),
             out: PathBuf::from("out"),
-            api_level: None,
+            api_level: Some(8),
             abi_revision: None,
             repository: None,
             published_name: None,
@@ -223,7 +223,7 @@ mod test {
         let cmd = BuildCommand {
             creation_manifest_path,
             out: out,
-            api_level: None,
+            api_level: Some(8),
             abi_revision: None,
             repository: None,
             published_name: None,
@@ -238,6 +238,87 @@ mod test {
 
     #[test]
     fn test_generate_empty_package_manifest() {
+        let tempdir = tempfile::tempdir().unwrap();
+        let root = tempdir.path();
+        let out = root.join("out");
+
+        let meta_package_path = root.join("package");
+        let meta_package_file = File::create(&meta_package_path).unwrap();
+        let meta_package = MetaPackage::from_name("my-package".parse().unwrap());
+        meta_package.serialize(meta_package_file).unwrap();
+
+        let creation_manifest_path = root.join("creation.manifest");
+        let mut creation_manifest = File::create(&creation_manifest_path).unwrap();
+
+        creation_manifest
+            .write_all(format!("meta/package={}", meta_package_path.display()).as_bytes())
+            .unwrap();
+
+        cmd_package_build(BuildCommand {
+            creation_manifest_path,
+            out: out.clone(),
+            api_level: Some(8),
+            abi_revision: None,
+            repository: None,
+            published_name: None,
+            depfile: false,
+            meta_far_merkle: false,
+            blobs_json: false,
+            blobs_manifest: false,
+        })
+        .unwrap();
+
+        let meta_far_path = out.join(META_FAR_NAME);
+        let package_manifest_path = out.join(PACKAGE_MANIFEST_NAME);
+
+        // Make sure we only generated what we expected.
+        let mut paths = read_dir(&out).unwrap().map(|e| e.unwrap().path()).collect::<Vec<_>>();
+        paths.sort();
+
+        assert_eq!(paths, vec![meta_far_path.clone(), package_manifest_path.clone(),],);
+
+        assert_eq!(
+            serde_json::from_reader::<_, serde_json::Value>(
+                File::open(&package_manifest_path).unwrap()
+            )
+            .unwrap(),
+            serde_json::json!({
+                "version": "1",
+                "package": {
+                    "name": "my-package",
+                    "version": "0",
+                },
+                "blobs": [
+                    {
+                        "source_path": meta_far_path,
+                        "path": "meta/",
+                        "merkle": "436eb4b5943bc74f97d95dc81b2de9acddf6691453a536588a86280cac55222e",
+                        "size": 12288,
+                    }
+                ],
+            }),
+        );
+
+        assert_eq!(
+            read_far_contents(&out.join(META_FAR_NAME)),
+            BTreeMap::from([
+                ("meta/contents".into(), "".into()),
+                ("meta/package".into(), r#"{"name":"my-package","version":"0"}"#.into()),
+                (
+                    "meta/fuchsia.abi/abi-revision".into(),
+                    version_history::VERSION_HISTORY
+                        .iter()
+                        .find(|v| v.api_level == 8)
+                        .unwrap()
+                        .abi_revision
+                        .to_string(),
+                ),
+            ]),
+        );
+    }
+
+    #[test]
+    fn test_generate_empty_package_manifest_latest_version() {
         let tempdir = tempfile::tempdir().unwrap();
         let root = tempdir.path();
         let out = root.join("out");
@@ -277,6 +358,12 @@ mod test {
 
         assert_eq!(paths, vec![meta_far_path.clone(), package_manifest_path.clone(),],);
 
+        // Since we're generating a file with the latest ABI revision, the meta.far merkle might
+        // change when we roll the ABI. So compute the merkle of the file.
+        let mut meta_far_merkle_file = File::open(&meta_far_path).unwrap();
+        let meta_far_size = meta_far_merkle_file.metadata().unwrap().len();
+        let meta_far_merkle = fuchsia_merkle::from_read(&mut meta_far_merkle_file).unwrap().root();
+
         assert_eq!(
             serde_json::from_reader::<_, serde_json::Value>(
                 File::open(&package_manifest_path).unwrap()
@@ -292,8 +379,8 @@ mod test {
                     {
                         "source_path": meta_far_path,
                         "path": "meta/",
-                        "merkle": "436eb4b5943bc74f97d95dc81b2de9acddf6691453a536588a86280cac55222e",
-                        "size": 12288,
+                        "merkle": meta_far_merkle.to_string(),
+                        "size": meta_far_size,
                     }
                 ],
             }),
@@ -377,7 +464,7 @@ mod test {
         cmd_package_build(BuildCommand {
             creation_manifest_path,
             out: out.clone(),
-            api_level: None,
+            api_level: Some(8),
             abi_revision: None,
             repository: Some("my-repository".into()),
             published_name: None,
@@ -437,7 +524,12 @@ mod test {
                 ("meta/package".into(), r#"{"name":"my-package","version":"0"}"#.into()),
                 (
                     "meta/fuchsia.abi/abi-revision".into(),
-                    version_history::LATEST_VERSION.abi_revision.to_string(),
+                    version_history::VERSION_HISTORY
+                        .iter()
+                        .find(|v| v.api_level == 8)
+                        .unwrap()
+                        .abi_revision
+                        .to_string(),
                 ),
             ]),
         );

@@ -18,6 +18,7 @@ ffx_plugin("ffx_package_build") {
 
   test_deps = [
     "//src/sys/pkg/lib/far/rust:fuchsia-archive",
+    "//src/sys/pkg/lib/fuchsia-merkle",
     "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:tempfile",
   ]
