@@ -7,6 +7,8 @@
 #include <functional>
 #include <string_view>
 
+#include "zircon/system/ulib/ftl/ndm/ndmp.h"
+
 namespace {
 
 struct KnownIssue {
@@ -90,6 +92,21 @@ bool LostMapBlock(FTLN ftl) {
   return false;
 }
 
+// Checks to see if the total bad blocks on the volume equal the maximum bad blocks, and will
+// thus fail to progress if one more is found. Since that additional bad block will never be
+// recorded it is possible that this is the cause of failure for a disk image when run on the
+// original device.
+bool OutOfSpareBlocks(FTLN ftl) {
+  ndm* n = reinterpret_cast<ndm*>(ftl->ndm);
+  if (n->num_bad_blks >= n->max_bad_blks) {
+    uint32_t initial_bad_blocks = n->num_bad_blks - n->num_rbb;
+    fprintf(stderr, "Maximum %u bad blocks. Found %u bad blocks. %u initial and %u running.\n",
+            n->max_bad_blks, n->num_bad_blks, initial_bad_blocks, n->num_rbb);
+    return true;
+  }
+  return false;
+}
+
 }  // namespace
 
 namespace ftl {
@@ -113,7 +130,10 @@ std::string FtlnDiagnoseIssues(FTLN ftl) {
           &LostMapBlock,
           "Unmapped map pages. An in-use map block may have been deleted. fxbug.dev/88465\n",
       },
-  };
+      {
+          &OutOfSpareBlocks,
+          "No more spare blocks available in ndm.\n",
+      }};
 
   std::string analysis_result;
 
