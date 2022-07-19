@@ -162,7 +162,7 @@ mod tests {
             "storage":{"quantity":2,"units":"gigabytes"}},"flags":{"args":[],"envs":{},"features":[],
             "kernel_args":[],"options":[]},"guest":{"fvm_image":"/path/to/fvm.blk","kernel_image":
             "/path/to/multiboot.bin","zbi_image":"/path/to/fuchsia.zbi"},"host":{"acceleration":
-            "hyper","architecture":"x86_64","gpu":"auto","log":"/path/to/emulator.log","networking"
+            "hyper","architecture":"x64","gpu":"auto","log":"/path/to/emulator.log","networking"
             :"tap","os":"linux","port_map":{}},"runtime":{"console":"none","debugger":false,
             "dry_run":false,"headless":true,"hidpi_scaling":false,"instance_directory":"/some/dir",
             "log_level":"info","mac_address":"52:54:47:5e:82:ef","name":"fuchsia-emulator",

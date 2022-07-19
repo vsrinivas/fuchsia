@@ -15,7 +15,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use fidl_fuchsia_developer_ffx as ffx;
 use sdk_metadata::{AudioDevice, CpuArchitecture, DataAmount, PointingDevice, Screen};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf, process::Command, time::Duration};
 
 #[async_trait]
@@ -152,7 +152,6 @@ pub struct HostConfig {
     pub acceleration: AccelerationMode,
 
     /// Indicates the CPU architecture of the host system.
-    #[serde(deserialize_with = "parse_cpu_architecture")]
     pub architecture: CpuArchitecture,
 
     /// Determines the type of graphics acceleration, to improve rendering in the guest OS.
@@ -227,19 +226,4 @@ pub struct RuntimeConfig {
     /// Engine type name. Added here to be accessible in the configuration template processing.
     #[serde(default)]
     pub engine_type: EngineType,
-}
-
-// TODO(fxbug.dev/99291): The following is a temporary measure to ensure older emulators can still
-// be deserialized with the new data model change. The deserializer below will take both the old
-// env::consts::ARCH strings and the new CpuArchitecture serialized strings as valid input and
-// produce the CpuArchitecture enum as output. This can be removed after a few weeks, to give
-// pre-existing emulators time to be recycled.
-fn parse_cpu_architecture<'de, D>(d: D) -> Result<CpuArchitecture, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    Deserialize::deserialize(d).map(|x: Option<String>| match x {
-        Some(val) => CpuArchitecture::from(val),
-        None => CpuArchitecture::Unsupported,
-    })
 }
