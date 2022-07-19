@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #[cfg(target_os = "fuchsia")]
-use log::{error, warn};
+use tracing::{error, warn};
 
 use {
     super::{

@@ -4,8 +4,8 @@
 
 use {
     anyhow::Error,
-    log::*,
     structopt::StructOpt,
+    tracing::*,
     triage_app_lib::{app::App, Options},
 };
 
