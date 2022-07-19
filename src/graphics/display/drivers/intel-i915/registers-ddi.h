@@ -24,9 +24,25 @@ enum Ddi {
   DDI_TC_6,
 };
 
-// South Display Engine Interrupt Bit Definition + SINTERRUPT
+// Interrupt registers for the south (in the PCH) display engine.
+//
+// SINTERRUPT is made up of the interrupt registers below.
+// - ISR (Interrupt Status Register), also abbreviated to SDE_ISR
+// - IMR (Interrupt Mask Register), also abbreviated to SDE_IMR
+// - IIR (Interrupt Identity Register), also abbreviated to SDE_IIR
+// - IER (Interrupt Enable Register), also abbreviated to SDE_IER
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 2 pages 820-821
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 2 pages 800-801
+//
+// The individual bits in each register are covered in the South Display Engine
+// Interrupt Bit Definition, or SDE_INTERRUPT.
+// DG1: IHD-OS-DG1-Vol 2c-2.21 Part 2 pages 1328-1329
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 2 pages 874-875
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 2 pages 854-855
 class SdeInterruptBase : public hwreg::RegisterBase<SdeInterruptBase, uint32_t> {
  public:
+  // SDE_INTERRUPT documents the base MMIO offset. SINTERRUPT documents the
+  // individual register offsets.
   static constexpr uint32_t kSdeIntMask = 0xc4004;
   static constexpr uint32_t kSdeIntIdentity = 0xc4008;
   static constexpr uint32_t kSdeIntEnable = 0xc400c;
@@ -101,6 +117,8 @@ class HotplugCtrl : public hwreg::RegisterBase<HotplugCtrl, uint32_t> {
 };
 
 // SFUSE_STRAP
+// Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 2 page 811
+// Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 2 page 791
 class SouthFuseStrap : public hwreg::RegisterBase<SouthFuseStrap, uint32_t> {
  public:
   DEF_BIT(2, port_b_present);
