@@ -47,7 +47,7 @@
     <!-- Spoken message that the user has entered a list of elements. -->
     <string name="entered_list">Entered list</string>
     <!-- Spoken message that describes when the user has entered a list of elements. -->
-    <string name="entered_list_detail">{{num_items, plural,
+    <string name="entered_list_detail">{num_items, plural,
       =0{Entered list with no items}
       =1{Entered list with one item}
       other{Entered list with <xliff:g id="num" example="2">#</xliff:g> items}
