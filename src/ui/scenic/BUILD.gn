@@ -55,10 +55,7 @@ group("tests") {
 
 group("fuzzers") {
   testonly = true
-  public_deps = [
-    "lib/input/tests/fuzzers",
-    "lib/scheduling/tests/fuzzers",
-  ]
+  public_deps = [ "lib/scheduling/tests/fuzzers" ]
 }
 
 scenic_test_deps = [ "//src/lib/vulkan:vulkan_validation_layers" ]
