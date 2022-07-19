@@ -395,6 +395,13 @@ where
 {
     match (metadata_repo_uri.scheme(), blob_repo_uri.scheme()) {
         (GS_SCHEME, GS_SCHEME) => {
+            // FIXME(fxbug.dev/103331): we are reproducing the gcs library's authentication flow,
+            // where we will prompt for an oauth token if we get a permission denied error. This
+            // was done because the pbms library is written to be used a frontend that can prompt
+            // for an oauth token, but the `pkg` library is written to be used on the server side,
+            // which cannot do the prompt. We should eventually restructure things such that we can
+            // deduplicate this logic.
+
             // First try to fetch with the public client.
             let client = get_gcs_client_without_auth();
             let backend = Box::new(GcsRepository::new(
