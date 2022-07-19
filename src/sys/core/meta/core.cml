@@ -15,8 +15,8 @@
             url: "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/device_settings_manager.cm",
         },
         {
-            name: "dash-launcher",
-            url: "fuchsia-pkg://fuchsia.com/dash-launcher#meta/dash_launcher.cm",
+            name: "debug-dash-launcher",
+            url: "fuchsia-pkg://fuchsia.com/debug-dash-launcher#meta/debug_dash_launcher.cm",
         },
         {
             name: "session-manager",
@@ -400,7 +400,7 @@
                 "#brightness_manager",
                 "#cobalt",
                 "#cobalt_system_metrics",
-                "#dash-launcher",
+                "#debug-dash-launcher",
                 "#debug_serial",
                 "#detect",
                 "#device_settings",
@@ -442,7 +442,7 @@
         {
             protocol: "fuchsia.hardware.pty.Device",
             from: "parent",
-            to: "#dash-launcher",
+            to: "#debug-dash-launcher",
         },
         {
             protocol: [ "fuchsia.kernel.Counter" ],
@@ -579,7 +579,7 @@
             protocol: "fuchsia.process.Launcher",
             from: "parent",
             to: [
-                "#dash-launcher",
+                "#debug-dash-launcher",
                 "#session-manager",
             ],
         },
@@ -587,7 +587,7 @@
             protocol: "fuchsia.sys2.RealmQuery.root",
             from: "parent",
             as: "fuchsia.sys2.RealmQuery",
-            to: "#dash-launcher",
+            to: "#debug-dash-launcher",
         },
         {
             storage: "data",

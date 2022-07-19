@@ -8,7 +8,7 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/dash_launcher_bin_test",
+        binary: "bin/debug_dash_launcher_bin_test",
     },
     children: [
         {

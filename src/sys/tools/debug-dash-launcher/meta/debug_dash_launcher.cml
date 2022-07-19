@@ -13,7 +13,7 @@
         runner: "elf",
 
         // The binary to run for this component.
-        binary: "bin/dash-launcher",
+        binary: "bin/debug-dash-launcher",
     },
     capabilities: [
         { protocol: "fuchsia.dash.Launcher" },

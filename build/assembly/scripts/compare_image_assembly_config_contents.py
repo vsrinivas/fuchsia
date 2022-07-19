@@ -22,7 +22,7 @@ MISMATCH_PACKAGE_EXCEPTIONS = [
     "config-data", "password_authenticator", "session_manager"
 ]
 ADDITIONAL_PACKAGE_EXCEPTIONS = [
-    "build-info-service", "dash-launcher", "hwinfo", "pkg-cache",
+    "build-info-service", "debug-dash-launcher", "hwinfo", "pkg-cache",
     "pkg-resolver", "system-updater", "system-update-committer"
 ]
 MISMATCH_FILE_EXCEPTIONS = ["meta/console.cvf"]

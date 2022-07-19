@@ -6,7 +6,7 @@ group("tests") {
   testonly = true
   deps = [
     "chroot:tests",
-    "dash-launcher:tests",
+    "debug-dash-launcher:tests",
     "log:tests",
   ]
 }

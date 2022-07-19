@@ -21,7 +21,7 @@ rustc_library("moniker") {
     "//src/sys/lib/moniker/*",
     "//src/sys/lib/routing/*",
     "//src/sys/test_manager/*",
-    "//src/sys/tools/dash-launcher/*",
+    "//src/sys/tools/debug-dash-launcher/*",
     "//src/testing/sl4f/*",
     "//tools/component_id_index/*",
     "//tools/lib/cm_fidl_analyzer/*",

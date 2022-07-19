@@ -51,7 +51,7 @@ assembly_input_bundle("common_minimal_eng") {
     # moving packages into it (the next CL)
 
     # Dash launcher should be available in every engineering-mode product.
-    "//src/sys/tools/dash-launcher",
+    "//src/sys/tools/debug-dash-launcher",
   ]
 }
 

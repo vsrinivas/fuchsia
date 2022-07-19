@@ -6,7 +6,7 @@ import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
 
 rustc_test("test_bin") {
-  output_name = "dash_launcher_test"
+  output_name = "debug_dash_launcher_test"
   edition = "2018"
 
   deps = [
@@ -22,17 +22,17 @@ rustc_test("test_bin") {
   sources = [ "src/lib.rs" ]
 }
 
-fuchsia_unittest_package("dash-launcher-test") {
+fuchsia_unittest_package("debug-dash-launcher-test") {
   manifest = "meta/test.cml"
   deps = [
     ":test_bin",
     "//src/bringup/bin/ptysvc:component",
-    "//src/sys/tools/dash-launcher:component",
+    "//src/sys/tools/debug-dash-launcher:component",
     "//zircon/third_party/uapp/dash",
   ]
 }
 
 group("integration_test") {
   testonly = true
-  deps = [ ":dash-launcher-test" ]
+  deps = [ ":debug-dash-launcher-test" ]
 }

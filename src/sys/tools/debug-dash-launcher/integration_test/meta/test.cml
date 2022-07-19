@@ -8,12 +8,12 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/dash_launcher_test",
+        binary: "bin/debug_dash_launcher_test",
     },
     children: [
         {
-            name: "dash-launcher",
-            url: "#meta/dash_launcher.cm",
+            name: "debug-dash-launcher",
+            url: "#meta/debug_dash_launcher.cm",
         },
         {
             name: "ptysvc",
@@ -23,7 +23,7 @@
     use: [
         {
             protocol: "fuchsia.dash.Launcher",
-            from: "#dash-launcher",
+            from: "#debug-dash-launcher",
         },
     ],
     offer: [
@@ -33,7 +33,7 @@
                 "fuchsia.process.Launcher",
             ],
             from: "parent",
-            to: "#dash-launcher",
+            to: "#debug-dash-launcher",
         },
         {
             protocol: "fuchsia.boot.WriteOnlyLog",
@@ -43,12 +43,12 @@
         {
             protocol: "fuchsia.hardware.pty.Device",
             from: "#ptysvc",
-            to: "#dash-launcher",
+            to: "#debug-dash-launcher",
         },
         {
             protocol: "fuchsia.sys2.RealmQuery",
             from: "framework",
-            to: "#dash-launcher",
+            to: "#debug-dash-launcher",
         },
     ],
 }
