@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_driver_test::DriverTestRealmBuilder;
-use futures::FutureExt;
-use vfs::directory::entry::DirectoryEntry;
 use {
     anyhow::Error,
     fidl::endpoints::{Proxy, ServerEnd},
@@ -12,12 +9,86 @@ use {
     fuchsia_component_test::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, Ref, Route,
     },
-    fuchsia_driver_test::DriverTestRealmInstance,
+    fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
+    futures::{Future, FutureExt},
+    std::sync::Arc,
+    vfs::{
+        directory::entry::{DirectoryEntry, EntryInfo},
+        execution_scope::ExecutionScope,
+        file::vmo::asynchronous::{InitVmoResult, VmoFile},
+    },
 };
 
-type Directory = std::sync::Arc<
+type Directory = Arc<
     vfs::directory::simple::Simple<vfs::directory::immutable::connection::io1::ImmutableConnection>,
 >;
+
+struct FakePackageVariant<InitVmo, InitVmoFuture>
+where
+    InitVmo: Fn() -> InitVmoFuture + Send + Sync + 'static,
+    InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
+{
+    dir: Directory,
+    meta_file: Arc<VmoFile<InitVmo, InitVmoFuture>>,
+}
+
+impl<InitVmo, InitVmoFuture> FakePackageVariant<InitVmo, InitVmoFuture>
+where
+    InitVmo: Fn() -> InitVmoFuture + Send + Sync + 'static,
+    InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
+{
+    /// Creates a new struct that acts a directory serving `dir`. If the "meta"
+    /// node within the directory is read as a file then `meta_file` is served
+    /// as the contents of the file.
+    pub fn new(dir: Directory, meta_file: Arc<VmoFile<InitVmo, InitVmoFuture>>) -> Self {
+        Self { dir, meta_file }
+    }
+}
+
+impl<InitVmo, InitVmoFuture> DirectoryEntry for FakePackageVariant<InitVmo, InitVmoFuture>
+where
+    InitVmo: Fn() -> InitVmoFuture + Send + Sync + 'static,
+    InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
+{
+    fn open(
+        self: Arc<Self>,
+        scope: ExecutionScope,
+        flags: fio::OpenFlags,
+        mode: u32,
+        path: vfs::path::Path,
+        server_end: ServerEnd<fio::NodeMarker>,
+    ) {
+        fn open_as_file(flags: fio::OpenFlags, mode: u32) -> bool {
+            let mode_type = mode & fio::MODE_TYPE_MASK;
+            let open_as_file = mode_type == fio::MODE_TYPE_FILE;
+            let open_as_dir = mode_type == fio::MODE_TYPE_DIRECTORY
+                || flags.intersects(fio::OpenFlags::DIRECTORY | fio::OpenFlags::NODE_REFERENCE);
+            open_as_file || !open_as_dir
+        }
+
+        // vfs::path::Path::as_str() is an object relative path expression [1],
+        // except that it may:
+        //   1. have a trailing "/"
+        //   2. be exactly "."
+        //   3. be longer than 4,095 bytes
+        // The .is_empty() check above rules out "." and the following line
+        // removes the possible trailing "/".
+        // [1] https://fuchsia.dev/fuchsia-src/concepts/process/namespaces?hl=en#object_relative_path_expressions
+        let canonical_path = path.as_ref().strip_suffix("/").unwrap_or_else(|| path.as_ref());
+
+        if canonical_path == "meta" && open_as_file(flags, mode) {
+            let meta_file = Arc::clone(&self.meta_file);
+            meta_file.open(scope, flags, mode, vfs::path::Path::dot(), server_end);
+        } else {
+            let dir = Arc::clone(&self.dir);
+            dir.open(scope, flags, mode, path, server_end);
+        }
+    }
+
+    fn entry_info(&self) -> EntryInfo {
+        EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory)
+    }
+}
 
 async fn serve_fake_filesystem(
     system: Directory,
@@ -136,6 +207,23 @@ async fn load_package_firmware_test() -> Result<(), Error> {
     let base_manifest = vfs::file::vmo::asynchronous::read_only_static(
         r#"[{"driver_url": "fuchsia-pkg://fuchsia.com/my-package#meta/ddk-firmware-test-driver.cm"}]"#,
     );
+    let my_package = FakePackageVariant::new(
+        vfs::pseudo_directory! {
+            "driver" => driver_dir,
+            "meta" => meta_dir,
+            "bind" => bind_dir,
+                "lib" => vfs::pseudo_directory! {
+                    "firmware" => vfs::pseudo_directory! {
+                        "package-firmware" => firmware_file,
+                    },
+                },
+        },
+        // Hash is arbitrary and is not read in tests, however, some value needs
+        // to be provided, otherwise, the driver will fail to load.
+        vfs::file::vmo::asynchronous::read_only_static(
+            "0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20",
+        ),
+    );
     let pkgfs = vfs::pseudo_directory! {
         "packages" => vfs::pseudo_directory! {
             "driver-manager-base-config" => vfs::pseudo_directory! {
@@ -145,19 +233,10 @@ async fn load_package_firmware_test() -> Result<(), Error> {
                     },
                 },
             },
-            "my-package" => vfs::pseudo_directory! {
-                "0" => vfs::pseudo_directory! {
-                    "driver" => driver_dir,
-                    "meta" => meta_dir,
-                    "bind" => bind_dir,
-                        "lib" => vfs::pseudo_directory! {
-                            "firmware" => vfs::pseudo_directory! {
-                                "package-firmware" => firmware_file,
-                            },
-                        },
-                    },
-                },
+            "my-package" =>  vfs::pseudo_directory! {
+                "0" => Arc::new(my_package),
             },
+        },
     };
 
     let instance = create_realm(system, pkgfs).await?;
@@ -168,9 +247,11 @@ async fn load_package_firmware_test() -> Result<(), Error> {
         .connect_to_protocol_at_exposed_dir::<fidl_fuchsia_device_manager::AdministratorMarker>()?;
 
     let out_dir = instance.root.get_exposed_dir();
-    let driver_service =
-        device_watcher::recursive_wait_and_open_node(&out_dir, "dev/sys/test/ddk-firmware-test-device-0")
-            .await?;
+    let driver_service = device_watcher::recursive_wait_and_open_node(
+        &out_dir,
+        "dev/sys/test/ddk-firmware-test-device-0",
+    )
+    .await?;
     let driver_proxy = fidl_fuchsia_device_firmware_test::TestDeviceProxy::from_channel(
         driver_service.into_channel().unwrap(),
     );
@@ -222,7 +303,8 @@ async fn load_package_firmware_test_dfv2() -> Result<(), Error> {
     // Connect to our driver.
     let dev = instance.driver_test_realm_connect_to_dev()?;
     let driver_service =
-        device_watcher::recursive_wait_and_open_node(&dev, "sys/test/ddk-firmware-test-device-0").await?;
+        device_watcher::recursive_wait_and_open_node(&dev, "sys/test/ddk-firmware-test-device-0")
+            .await?;
     let driver_proxy = fidl_fuchsia_device_firmware_test::TestDeviceProxy::from_channel(
         driver_service.into_channel().unwrap(),
     );
@@ -279,9 +361,11 @@ async fn load_system_firmware_test() -> Result<(), Error> {
         .connect_to_protocol_at_exposed_dir::<fidl_fuchsia_device_manager::AdministratorMarker>()?;
 
     let out_dir = instance.root.get_exposed_dir();
-    let driver_service =
-        device_watcher::recursive_wait_and_open_node(&out_dir, "dev/sys/test/ddk-firmware-test-device-0")
-            .await?;
+    let driver_service = device_watcher::recursive_wait_and_open_node(
+        &out_dir,
+        "dev/sys/test/ddk-firmware-test-device-0",
+    )
+    .await?;
     let driver_proxy = fidl_fuchsia_device_firmware_test::TestDeviceProxy::from_channel(
         driver_service.into_channel().unwrap(),
     );

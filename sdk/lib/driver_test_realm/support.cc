@@ -35,7 +35,10 @@
 #include <zircon/boot/image.h>
 #include <zircon/status.h>
 
+#include <charconv>
+#include <fstream>
 #include <memory>
+#include <sstream>
 #include <vector>
 
 #include <ddk/metadata/test.h>
@@ -337,7 +340,39 @@ class FakePackageResolver final : public fidl::WireServer<fuchsia_pkg::PackageRe
   }
 
   void GetHash(GetHashRequestView request, GetHashCompleter::Sync& completer) override {
-    completer.ReplyError(ZX_ERR_PROTOCOL_NOT_SUPPORTED);
+    constexpr size_t kHexadecimalBase = 16;
+    constexpr size_t kNumBytesInMerkleRoot = 32;
+    constexpr size_t kNumBytesInMerkleRootString = 64;
+
+    std::ifstream meta_file("/pkg/meta");
+    if (!meta_file.is_open()) {
+      FX_LOGF(ERROR, nullptr, "Failed to open \"/pkg/meta\"");
+      completer.ReplyError(ZX_ERR_INTERNAL);
+    }
+    std::stringstream buffer;
+    buffer << meta_file.rdbuf();
+    auto meta_contents = buffer.str();
+    if (meta_contents.length() != kNumBytesInMerkleRootString) {
+      FX_LOGF(ERROR, nullptr,
+              "Expected contents of \"/pkg/meta\" to be %zu bytes but was %lu bytes",
+              kNumBytesInMerkleRootString, meta_contents.length());
+      completer.ReplyError(ZX_ERR_INTERNAL);
+    }
+
+    fidl::Array<uint8_t, kNumBytesInMerkleRoot> merkle_root;
+    for (unsigned int i = 0; i < kNumBytesInMerkleRoot; ++i) {
+      auto byte_str = meta_contents.substr(i * 2, 2);
+      uint8_t byte;
+      auto result = std::from_chars(byte_str.data(), byte_str.data() + byte_str.size(), byte,
+                                    kHexadecimalBase);
+      if (result.ec == std::errc::invalid_argument) {
+        FX_LOGF(ERROR, nullptr, "Failed to convert contents \"/pkg/meta\" into a merkleroot");
+        completer.ReplyError(ZX_ERR_INTERNAL);
+      }
+      merkle_root[i] = byte;
+    }
+
+    completer.ReplySuccess(fuchsia_pkg::wire::BlobId{merkle_root});
   }
 };
 

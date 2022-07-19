@@ -6,16 +6,17 @@ pub mod args;
 
 use {
     crate::common::{self, Device},
-    anyhow::Result,
+    anyhow::{Context, Result},
     args::ListCommand,
     bind::debugger::debug_dump::dump_bind_rules,
     fidl_fuchsia_driver_development as fdd,
     futures::join,
-    std::{collections::HashSet, iter::FromIterator},
+    std::{collections::HashSet, fmt::Write as OtherWrite, io::Write, iter::FromIterator},
 };
 
 pub async fn list(
     cmd: ListCommand,
+    writer: &mut impl Write,
     driver_development_proxy: fdd::DriverDevelopmentProxy,
 ) -> Result<()> {
     let empty: [String; 0] = [];
@@ -70,43 +71,191 @@ pub async fn list(
     if cmd.verbose {
         for driver in driver_info {
             if let Some(name) = driver.name {
-                println!("{0: <10}: {1}", "Name", name);
+                writeln!(writer, "{0: <10}: {1}", "Name", name)
+                    .context("Failed to write to writer")?;
             }
             if let Some(url) = driver.url {
-                println!("{0: <10}: {1}", "URL", url);
+                writeln!(writer, "{0: <10}: {1}", "URL", url)
+                    .context("Failed to write to writer")?;
             }
             if let Some(libname) = driver.libname {
-                println!("{0: <10}: {1}", "Driver", libname);
+                writeln!(writer, "{0: <10}: {1}", "Driver", libname)
+                    .context("Failed to write to writer")?;
+            }
+            if let Some(package_hash) = driver.package_hash {
+                let mut merkle_root = String::with_capacity(package_hash.merkle_root.len() * 2);
+                for byte in package_hash.merkle_root.iter() {
+                    write!(merkle_root, "{:02x}", byte).context("Failed to write to string")?;
+                }
+                writeln!(writer, "{0: <10}: {1}", "Merkle Root", &merkle_root)
+                    .context("Failed to write to writer")?;
             }
             match driver.bind_rules {
                 Some(fdd::BindRulesBytecode::BytecodeV1(bytecode)) => {
-                    println!("{0: <10}: {1}", "Bytecode Version", 1);
-                    println!("{0: <10}({1} bytes): {2:?}", "Bytecode:", bytecode.len(), bytecode);
+                    writeln!(writer, "{0: <10}: {1}", "Bytecode Version", 1)
+                        .context("Failed to write to writer")?;
+                    writeln!(
+                        writer,
+                        "{0: <10}({1} bytes): {2:?}",
+                        "Bytecode:",
+                        bytecode.len(),
+                        bytecode
+                    )
+                    .context("Failed to write to writer")?;
                 }
                 Some(fdd::BindRulesBytecode::BytecodeV2(bytecode)) => {
-                    println!("{0: <10}: {1}", "Bytecode Version", 2);
-                    println!("{0: <10}({1} bytes): ", "Bytecode:", bytecode.len());
+                    writeln!(writer, "{0: <10}: {1}", "Bytecode Version", 2)
+                        .context("Failed to write to writer")?;
+                    writeln!(writer, "{0: <10}({1} bytes): ", "Bytecode:", bytecode.len())
+                        .context("Failed to write to writer")?;
                     match dump_bind_rules(bytecode.clone()) {
-                        Ok(bytecode_dump) => println!("{}", bytecode_dump),
+                        Ok(bytecode_dump) => writeln!(writer, "{}", bytecode_dump)
+                            .context("Failed to write to writer")?,
                         Err(err) => {
-                            println!("  Issue parsing bytecode \"{}\": {:?}", err, bytecode);
+                            writeln!(
+                                writer,
+                                "  Issue parsing bytecode \"{}\": {:?}",
+                                err, bytecode
+                            )
+                            .context("Failed to write to writer")?;
                         }
                     }
                 }
-                _ => println!("{0: <10}: {1}", "Bytecode Version", "Unknown"),
+                _ => writeln!(writer, "{0: <10}: {1}", "Bytecode Version", "Unknown")
+                    .context("Failed to write to writer")?,
             }
-            println!();
+            writeln!(writer).context("Failed to write to writer")?;
         }
     } else {
         for driver in driver_info {
             if let Some(name) = driver.name {
                 let libname_or_url = driver.libname.or(driver.url).unwrap_or("".to_string());
-                println!("{:<20}: {}", name, libname_or_url);
+                writeln!(writer, "{:<20}: {}", name, libname_or_url)
+                    .context("Failed to write to writer")?;
             } else {
                 let url_or_libname = driver.url.or(driver.libname).unwrap_or("".to_string());
-                println!("{}", url_or_libname);
+                writeln!(writer, "{}", url_or_libname).context("Failed to write to writer")?;
             }
         }
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        argh::FromArgs,
+        fidl::endpoints::ServerEnd,
+        fidl_fuchsia_driver_index as fdi, fidl_fuchsia_pkg as fpkg, fuchsia_async as fasync,
+        futures::{
+            future::{Future, FutureExt},
+            stream::StreamExt,
+        },
+    };
+
+    /// Invokes `list` with `cmd` and runs a mock driver development server that
+    /// invokes `on_driver_development_request` whenever it receives a request.
+    /// The output of `list` that is normally written to its `writer` parameter
+    /// is returned.
+    async fn test_list<F, Fut>(cmd: ListCommand, on_driver_development_request: F) -> Result<String>
+    where
+        F: Fn(fdd::DriverDevelopmentRequest) -> Fut + Send + Sync + 'static,
+        Fut: Future<Output = Result<()>> + Send + Sync,
+    {
+        let (driver_development_proxy, mut driver_development_requests) =
+            fidl::endpoints::create_proxy_and_stream::<fdd::DriverDevelopmentMarker>()
+                .context("Failed to create FIDL proxy")?;
+
+        // Run the command and mock driver development server.
+        let mut writer = Vec::new();
+        let request_handler_task = fasync::Task::spawn(async move {
+            while let Some(res) = driver_development_requests.next().await {
+                let request = res.context("Failed to get next request")?;
+                on_driver_development_request(request).await.context("Failed to handle request")?;
+            }
+            anyhow::bail!("Driver development request stream unexpectedly closed");
+        });
+        futures::select! {
+            res = request_handler_task.fuse() => {
+                res?;
+                anyhow::bail!("Request handler task unexpectedly finished");
+            }
+            res = list(cmd, &mut writer, driver_development_proxy).fuse() => res.context("List command failed")?,
+        }
+
+        String::from_utf8(writer).context("Failed to convert list output to a string")
+    }
+
+    async fn run_driver_info_iterator_server(
+        mut driver_infos: Vec<fdd::DriverInfo>,
+        iterator: ServerEnd<fdd::DriverInfoIteratorMarker>,
+    ) -> Result<()> {
+        let mut iterator =
+            iterator.into_stream().context("Failed to convert iterator into a stream")?;
+        while let Some(res) = iterator.next().await {
+            let request = res.context("Failed to get request")?;
+            match request {
+                fdd::DriverInfoIteratorRequest::GetNext { responder } => {
+                    responder
+                        .send(
+                            &mut driver_infos
+                                .drain(..)
+                                .collect::<Vec<fdd::DriverInfo>>()
+                                .into_iter(),
+                        )
+                        .context("Failed to send driver infos to responder")?;
+                }
+            }
+        }
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_verbose() {
+        let cmd = ListCommand::from_args(&["list"], &["--verbose"]).unwrap();
+
+        let output = test_list(cmd, |request: fdd::DriverDevelopmentRequest| async move {
+            match request {
+                fdd::DriverDevelopmentRequest::GetDriverInfo {
+                    driver_filter: _,
+                    iterator,
+                    control_handle: _,
+                } => run_driver_info_iterator_server(
+                    vec![fdd::DriverInfo {
+                        libname: Some("foo.so".to_owned()),
+                        name: Some("foo".to_owned()),
+                        url: Some("fuchsia-pkg://fuchsia.com/foo-package#meta/foo.cm".to_owned()),
+                        bind_rules: None,
+                        package_type: Some(fdi::DriverPackageType::Base),
+                        package_hash: Some(fpkg::BlobId {
+                            merkle_root: [
+                                1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19,
+                                20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+                            ],
+                        }),
+                        ..fdd::DriverInfo::EMPTY
+                    }],
+                    iterator,
+                )
+                .await
+                .context("Failed to run driver info iterator server")?,
+                _ => {}
+            }
+            Ok(())
+        })
+        .await
+        .unwrap();
+
+        assert_eq!(
+            output,
+            r#"Name      : foo
+URL       : fuchsia-pkg://fuchsia.com/foo-package#meta/foo.cm
+Driver    : foo.so
+Merkle Root: 0102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f20
+Bytecode Version: Unknown
+
+"#
+        );
+    }
 }

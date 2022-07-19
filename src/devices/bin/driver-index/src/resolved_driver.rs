@@ -11,7 +11,7 @@ use {
     },
     cm_rust::FidlIntoNative,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_driver_development as fdd,
-    fidl_fuchsia_driver_index as fdi, fidl_fuchsia_io as fio,
+    fidl_fuchsia_driver_index as fdi, fidl_fuchsia_io as fio, fidl_fuchsia_pkg as fpkg,
     futures::TryFutureExt,
 };
 
@@ -35,6 +35,7 @@ pub struct ResolvedDriver {
     pub colocate: bool,
     pub fallback: bool,
     pub package_type: DriverPackageType,
+    pub package_hash: Option<fpkg::BlobId>,
 }
 
 impl std::fmt::Display for ResolvedDriver {
@@ -75,8 +76,19 @@ impl ResolvedDriver {
             log::warn!("{}: Failed to resolve package: {:?}", component_url.as_str(), e);
             map_resolve_err_to_zx_status(e)
         })?;
+        let package_hash = resolver
+            .get_hash(&mut fpkg::PackageUrl { url: base_url.into_string() })
+            .map_err(|e| {
+                log::warn!("Failed to send GetHash request: {}", e);
+                fuchsia_zircon::Status::INTERNAL
+            })
+            .await?
+            .map_err(|e| {
+                log::warn!("GetHash call failed: {}", e);
+                fuchsia_zircon::Status::INTERNAL
+            })?;
 
-        let driver = load_driver(&dir, component_url.clone(), package_type)
+        let driver = load_driver(&dir, component_url.clone(), package_type, Some(package_hash))
             .map_err(|e| {
                 log::warn!("Could not load driver: {}", e);
                 fuchsia_zircon::Status::INTERNAL
@@ -178,6 +190,7 @@ impl ResolvedDriver {
             libname: Some(self.get_libname()),
             bind_rules: bind_rules,
             package_type: fdi::DriverPackageType::from_primitive(self.package_type as u8),
+            package_hash: self.package_hash,
             ..fdd::DriverInfo::EMPTY
         }
     }
@@ -211,13 +224,15 @@ fn matches_composite_device(
     Ok(None)
 }
 
-// Load the `component_url` driver out of `dir` which should be the root directory
-// of that component. Will return Ok(None) if `component_url` is a valid component
-// but it's not a driver component.
+// Load the `component_url` driver out of `dir` which should be the root
+// directory of that component. Will return Ok(None) if `component_url` is a
+// valid component but it's not a driver component. Set the driver's package
+// hash to `package_hash`.
 pub async fn load_driver(
     dir: &fio::DirectoryProxy,
     component_url: url::Url,
     package_type: DriverPackageType,
+    package_hash: Option<fpkg::BlobId>,
 ) -> Result<Option<ResolvedDriver>, Error> {
     let component = fuchsia_fs::open_file(
         &dir,
@@ -280,6 +295,7 @@ pub async fn load_driver(
         colocate: colocate,
         fallback,
         package_type,
+        package_hash,
     }))
 }
 

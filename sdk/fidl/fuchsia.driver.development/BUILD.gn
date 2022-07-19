@@ -10,6 +10,7 @@ fidl("fuchsia.driver.development") {
     "//sdk/fidl/fuchsia.device.manager",
     "//sdk/fidl/fuchsia.driver.framework",
     "//sdk/fidl/fuchsia.driver.index",
+    "//sdk/fidl/fuchsia.pkg",
     "//sdk/fidl/fuchsia.url",
     "//zircon/vdso/zx",
   ]

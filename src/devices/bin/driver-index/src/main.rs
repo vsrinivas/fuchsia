@@ -81,7 +81,7 @@ async fn load_boot_drivers(
     {
         let url_string = "fuchsia-boot:///#meta/".to_string() + &entry.name;
         let url = url::Url::parse(&url_string)?;
-        let driver = load_driver(&dir, url, DriverPackageType::Boot).await;
+        let driver = load_driver(&dir, url, DriverPackageType::Boot, None).await;
         if let Err(e) = driver {
             log::error!("Failed to load boot driver: {}: {}", url_string, e);
             continue;
@@ -678,6 +678,7 @@ mod tests {
             interpreter::decode_bind_rules::DecodedRules,
             parser::bind_library::ValueType,
         },
+        fidl_fuchsia_pkg as fpkg,
         std::collections::HashMap,
     };
 
@@ -757,8 +758,17 @@ mod tests {
                         package_url: _,
                         responder,
                     } => {
+                        // This package hash is arbitrary and is not tested for
+                        // driver index's tests, however, `GetHash` must return
+                        // something in order to avoid failing to load
+                        // driver packages.
                         responder
-                            .send(&mut Err(fuchsia_zircon::sys::ZX_ERR_UNAVAILABLE))
+                            .send(&mut Ok(fpkg::BlobId {
+                                merkle_root: [
+                                    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18,
+                                    19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+                                ],
+                            }))
                             .context("error sending response")?;
                     }
                 }
@@ -934,6 +944,7 @@ mod tests {
             colocate: false,
             fallback: false,
             package_type: DriverPackageType::Base,
+            package_hash: None,
         },]);
 
         let (proxy, stream) =
@@ -1004,6 +1015,7 @@ mod tests {
             colocate: false,
             fallback: false,
             package_type: DriverPackageType::Base,
+            package_hash: None,
         },]);
 
         let (proxy, stream) =
@@ -1071,6 +1083,7 @@ mod tests {
                 colocate: false,
                 fallback: false,
                 package_type: DriverPackageType::Base,
+                package_hash: None,
             },
             ResolvedDriver {
                 component_url: url::Url::parse(
@@ -1083,6 +1096,7 @@ mod tests {
                 colocate: false,
                 fallback: false,
                 package_type: DriverPackageType::Base,
+                package_hash: None,
             }
         ]);
 
@@ -1165,6 +1179,7 @@ mod tests {
                 colocate: false,
                 fallback: false,
                 package_type: DriverPackageType::Boot,
+                package_hash: None,
             },
             ResolvedDriver {
                 component_url: url::Url::parse("fuchsia-boot:///#meta/driver-2.cm").unwrap(),
@@ -1174,6 +1189,7 @@ mod tests {
                 colocate: false,
                 fallback: false,
                 package_type: DriverPackageType::Boot,
+                package_hash: None,
             },
         ];
 
@@ -1237,6 +1253,7 @@ mod tests {
                 colocate: false,
                 fallback: true,
                 package_type: DriverPackageType::Boot,
+                package_hash: None,
             },
             ResolvedDriver {
                 component_url: url::Url::parse(NON_FALLBACK_BOOT_DRIVER_COMPONENT_URL).unwrap(),
@@ -1246,6 +1263,7 @@ mod tests {
                 colocate: false,
                 fallback: false,
                 package_type: DriverPackageType::Boot,
+                package_hash: None,
             },
         ];
 
@@ -1324,6 +1342,7 @@ mod tests {
             colocate: false,
             fallback: true,
             package_type: DriverPackageType::Boot,
+            package_hash: None,
         }];
 
         let base_repo = BaseRepo::Resolved(std::vec![
@@ -1335,6 +1354,7 @@ mod tests {
                 colocate: false,
                 fallback: true,
                 package_type: DriverPackageType::Base,
+                package_hash: None,
             },
             ResolvedDriver {
                 component_url: url::Url::parse(NON_FALLBACK_BASE_DRIVER_COMPONENT_URL).unwrap(),
@@ -1344,6 +1364,7 @@ mod tests {
                 colocate: false,
                 fallback: false,
                 package_type: DriverPackageType::Base,
+                package_hash: None,
             },
         ]);
 
@@ -1420,6 +1441,7 @@ mod tests {
                 colocate: false,
                 fallback: true,
                 package_type: DriverPackageType::Boot,
+                package_hash: None,
             },
             ResolvedDriver {
                 component_url: url::Url::parse(NON_FALLBACK_BOOT_DRIVER_COMPONENT_URL).unwrap(),
@@ -1429,6 +1451,7 @@ mod tests {
                 colocate: false,
                 fallback: false,
                 package_type: DriverPackageType::Boot,
+                package_hash: None,
             },
         ];
 
@@ -1512,6 +1535,7 @@ mod tests {
             colocate: false,
             fallback: true,
             package_type: DriverPackageType::Boot,
+            package_hash: None,
         }];
 
         let base_repo = BaseRepo::Resolved(std::vec![
@@ -1523,6 +1547,7 @@ mod tests {
                 colocate: false,
                 fallback: true,
                 package_type: DriverPackageType::Base,
+                package_hash: None,
             },
             ResolvedDriver {
                 component_url: url::Url::parse(NON_FALLBACK_BASE_DRIVER_COMPONENT_URL).unwrap(),
@@ -1532,6 +1557,7 @@ mod tests {
                 colocate: false,
                 fallback: false,
                 package_type: DriverPackageType::Base,
+                package_hash: None,
             },
         ]);
 
@@ -1605,7 +1631,7 @@ mod tests {
         let pkg = fuchsia_fs::open_directory_in_namespace("/pkg", fio::OpenFlags::RIGHT_READABLE)
             .context("Failed to open /pkg")
             .unwrap();
-        let fallback_driver = load_driver(&pkg, driver_url, DriverPackageType::Boot)
+        let fallback_driver = load_driver(&pkg, driver_url, DriverPackageType::Boot, None)
             .await
             .unwrap()
             .expect("Fallback driver was not loaded");
@@ -1759,6 +1785,7 @@ mod tests {
             colocate: false,
             fallback: true,
             package_type: DriverPackageType::Boot,
+            package_hash: None,
         }];
         let index = Indexer::new(boot_repo, BaseRepo::NotResolved(vec![]), true);
         let (proxy, stream) =
@@ -1793,6 +1820,7 @@ mod tests {
             colocate: false,
             fallback: true,
             package_type: DriverPackageType::Boot,
+            package_hash: None,
         }];
         let index = Indexer::new(boot_repo, BaseRepo::NotResolved(vec![]), false);
         let (proxy, stream) =
@@ -1831,6 +1859,7 @@ mod tests {
             colocate: false,
             fallback: true,
             package_type: DriverPackageType::Boot,
+            package_hash: None,
         }];
         let index = Indexer::new(boot_repo, BaseRepo::NotResolved(vec![]), true);
         let (proxy, stream) =
@@ -1865,6 +1894,7 @@ mod tests {
             colocate: false,
             fallback: true,
             package_type: DriverPackageType::Boot,
+            package_hash: None,
         }];
         let index = Indexer::new(boot_repo, BaseRepo::NotResolved(vec![]), false);
         let (proxy, stream) =
@@ -2027,6 +2057,7 @@ mod tests {
             colocate: false,
             fallback: false,
             package_type: DriverPackageType::Base,
+            package_hash: None,
         },]);
 
         let (proxy, stream) =
@@ -2235,6 +2266,7 @@ mod tests {
             colocate: false,
             fallback: false,
             package_type: DriverPackageType::Base,
+            package_hash: None,
         },]);
 
         let (proxy, stream) =
@@ -2380,6 +2412,7 @@ mod tests {
             colocate: false,
             fallback: false,
             package_type: DriverPackageType::Base,
+            package_hash: None,
         },]);
 
         let (proxy, stream) =
@@ -2471,6 +2504,7 @@ mod tests {
             colocate: false,
             fallback: false,
             package_type: DriverPackageType::Base,
+            package_hash: None,
         },]);
 
         let (proxy, stream) =
@@ -2705,6 +2739,7 @@ mod tests {
             colocate: false,
             fallback: false,
             package_type: DriverPackageType::Base,
+            package_hash: None,
         }]);
 
         let index = Rc::new(Indexer::new(boot_repo, base_repo, false));
@@ -2768,6 +2803,7 @@ mod tests {
             colocate: false,
             fallback: false,
             package_type: DriverPackageType::Boot,
+            package_hash: None,
         }];
 
         let base_repo = BaseRepo::Resolved(std::vec![]);

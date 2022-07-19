@@ -70,11 +70,12 @@ pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) 
                 .context("I2C subcommand failed")?;
         }
         DriverSubCommand::List(subcmd) => {
+            let mut writer = io::stdout();
             let driver_development_proxy = driver_connector
                 .get_driver_development_proxy(subcmd.select)
                 .await
                 .context("Failed to get driver development proxy")?;
-            subcommands::list::list(subcmd, driver_development_proxy)
+            subcommands::list::list(subcmd, &mut writer, driver_development_proxy)
                 .await
                 .context("List subcommand failed")?;
         }

@@ -6,6 +6,7 @@ library fuchsia.driver.development;
 using fuchsia.device.manager;
 using fuchsia.driver.framework;
 using fuchsia.driver.index;
+using fuchsia.pkg;
 using fuchsia.url;
 using zx;
 
@@ -39,6 +40,9 @@ type DriverInfo = table {
 
     /// Which type of package this driver is in.
     5: package_type fuchsia.driver.index.DriverPackageType;
+
+    /// Hash of the package the driver belongs to.
+    6: package_hash fuchsia.pkg.BlobId;
 };
 
 type DeviceFlags = strict bits : uint32 {
