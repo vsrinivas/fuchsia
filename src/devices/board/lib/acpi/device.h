@@ -137,14 +137,18 @@ class Device : public DeviceType,
   void GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& completer) override;
   void InstallNotifyHandler(InstallNotifyHandlerRequestView request,
                             InstallNotifyHandlerCompleter::Sync& completer) override;
+  void RemoveNotifyHandler(RemoveNotifyHandlerRequestView request,
+                           RemoveNotifyHandlerCompleter::Sync& completer) override;
   void AcquireGlobalLock(AcquireGlobalLockRequestView request,
                          AcquireGlobalLockCompleter::Sync& completer) override;
   void InstallAddressSpaceHandler(InstallAddressSpaceHandlerRequestView request,
                                   InstallAddressSpaceHandlerCompleter::Sync& completer) override;
+  void SetWakeDevice(SetWakeDeviceRequestView request,
+                     SetWakeDeviceCompleter::Sync& completer) override;
 
   std::vector<pci_bdf_t>& pci_bdfs() { return pci_bdfs_; }
 
-  void RemoveNotifyHandler();
+  ACPI_STATUS RemoveNotifyHandler();
 
   // Returns a map containing information on D states supported by this device.
   std::unordered_map<uint8_t, DevicePowerState> GetSupportedPowerStates();

@@ -63,8 +63,8 @@ TEST(AcpiInitTests, TestDiscoverWakeGpesFadt) {
   ASSERT_EQ(1, gpes.size());
 
   auto& entry = gpes[0];
-  ASSERT_EQ(nullptr, entry.first);
-  ASSERT_EQ(24, entry.second);
+  ASSERT_EQ(nullptr, entry.gpe_dev);
+  ASSERT_EQ(24, entry.gpe_num);
 }
 
 TEST(AcpiInitTests, TestDiscoverWakeGpesBlockDevice) {
@@ -102,8 +102,8 @@ TEST(AcpiInitTests, TestDiscoverWakeGpesBlockDevice) {
   ASSERT_EQ(1, gpes.size());
 
   auto& entry = gpes[0];
-  ASSERT_EQ(gpe_handle, entry.first);
-  ASSERT_EQ(77, entry.second);
+  ASSERT_EQ(gpe_handle, entry.gpe_dev);
+  ASSERT_EQ(77, entry.gpe_num);
 }
 
 TEST(AcpiInitTests, TestDiscoverWakeGpesNotGpe) {
@@ -136,4 +136,87 @@ TEST(AcpiInitTests, TestDiscoverWakeGpesNotGpe) {
   ASSERT_EQ(AE_OK, acpi.DiscoverWakeGpes().status_value());
   auto& gpes = acpi.GetWakeGpes();
   ASSERT_TRUE(gpes.empty());
+}
+
+TEST(AcpiInitTests, TestSetGpeWakeMask) {
+  auto root = std::make_unique<acpi::test::Device>("\\");
+
+  // Create a device with a wake resource that doesn't have a handle.
+  auto fadt_gpe = std::make_unique<acpi::test::Device>("FGPE");
+  fadt_gpe->AddMethodCallback("_PRW", [](std::optional<std::vector<ACPI_OBJECT>>) {
+    static std::array<ACPI_OBJECT, 2> objects = {
+        ACPI_OBJECT{.Integer = {.Type = ACPI_TYPE_INTEGER, .Value = 24}}, {}};
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->Package.Type = ACPI_TYPE_PACKAGE;
+    retval->Package.Count = objects.size();
+    retval->Package.Elements = objects.data();
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
+  root->AddChild(std::move(fadt_gpe));
+
+  // Create a device with wake resource that has a handle.
+  auto gpe_dev = std::make_unique<acpi::test::Device>("GPEH");
+  gpe_dev->SetHid("ACPI0006");
+  ACPI_HANDLE gpe_handle = gpe_dev.get();
+  root->AddChild(std::move(gpe_dev));
+
+  auto reference_gpe = std::make_unique<acpi::test::Device>("RGPE");
+  reference_gpe->AddMethodCallback("_PRW", [gpe_handle](std::optional<std::vector<ACPI_OBJECT>>) {
+    static std::array<ACPI_OBJECT, 2> gpe_objects{
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_DEVICE,
+                                  .Handle = gpe_handle}},
+        ACPI_OBJECT{.Integer = {.Type = ACPI_TYPE_INTEGER, .Value = 77}}};
+    static std::array<ACPI_OBJECT, 2> prw_objects{
+        ACPI_OBJECT{.Package = {.Type = ACPI_TYPE_PACKAGE,
+                                .Count = gpe_objects.size(),
+                                .Elements = gpe_objects.data()}},
+        {}};
+
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->Package.Type = ACPI_TYPE_PACKAGE;
+    retval->Package.Count = prw_objects.size();
+    retval->Package.Elements = prw_objects.data();
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
+  root->AddChild(std::move(reference_gpe));
+
+  acpi::test::MockAcpi acpi;
+  acpi.SetDeviceRoot(std::move(root));
+  ASSERT_EQ(AE_OK, acpi.DiscoverWakeGpes().status_value());
+
+  auto& gpes = acpi.GetWakeGpes();
+  ASSERT_EQ(2, gpes.size());
+  for (acpi::test::WakeGpe gpe : gpes) {
+    ASSERT_FALSE(gpe.enabled);
+  }
+
+  // Set the wake mask to true on the wake device with the handle
+  ASSERT_EQ(AE_OK, acpi.SetGpeWakeMask(gpe_handle, 77, true).status_value());
+
+  for (acpi::test::WakeGpe gpe : gpes) {
+    if ((gpe.gpe_dev == gpe_handle) && (gpe.gpe_num == 77)) {
+      ASSERT_TRUE(gpe.enabled);
+    } else {
+      ASSERT_FALSE(gpe.enabled);
+    }
+  }
+
+  // Set the wake mask back to false
+  ASSERT_EQ(AE_OK, acpi.SetGpeWakeMask(gpe_handle, 77, false).status_value());
+
+  for (acpi::test::WakeGpe gpe : gpes) {
+    ASSERT_FALSE(gpe.enabled);
+  }
+
+  // Set the wake mask to true on the wake device without a handle
+  ASSERT_EQ(AE_OK, acpi.SetGpeWakeMask(nullptr, 24, true).status_value());
+
+  for (acpi::test::WakeGpe gpe : gpes) {
+    if ((gpe.gpe_dev == nullptr) && (gpe.gpe_num == 24)) {
+      ASSERT_TRUE(gpe.enabled);
+    } else {
+      ASSERT_FALSE(gpe.enabled);
+    }
+  }
 }

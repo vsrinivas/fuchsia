@@ -231,4 +231,16 @@ void MockAcpi::FireGpe(uint32_t gpe) {
   }
 }
 
+acpi::status<> MockAcpi::SetGpeWakeMask(ACPI_HANDLE gpe_dev, uint32_t gpe_num, bool set_wake_dev) {
+  auto gpe_to_set = std::find_if(
+      wake_gpes_.begin(), wake_gpes_.end(), [gpe_dev, gpe_num](const WakeGpe& wake_gpe) {
+        return wake_gpe.gpe_dev == gpe_dev && wake_gpe.gpe_num == gpe_num;
+      });
+  if (gpe_to_set != wake_gpes_.end()) {
+    gpe_to_set->enabled = set_wake_dev;
+    return acpi::ok();
+  }
+  return acpi::error(AE_TYPE);
+}
+
 }  // namespace acpi::test

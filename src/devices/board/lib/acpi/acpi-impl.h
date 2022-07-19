@@ -61,6 +61,7 @@ class AcpiImpl : public Acpi {
 
   acpi::status<> SetupGpeForWake(ACPI_HANDLE wake_dev, ACPI_HANDLE gpe_dev,
                                  uint32_t gpe_num) override;
+  acpi::status<> SetGpeWakeMask(ACPI_HANDLE gpe_dev, uint32_t gpe_num, bool set_wake_dev) override;
 };
 }  // namespace acpi
 

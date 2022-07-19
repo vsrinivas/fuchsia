@@ -102,6 +102,8 @@ class Acpi {
   // Set up the given GPE for wake.
   virtual acpi::status<> SetupGpeForWake(ACPI_HANDLE wake_dev, ACPI_HANDLE gpe_dev,
                                          uint32_t gpe_num) = 0;
+  virtual acpi::status<> SetGpeWakeMask(ACPI_HANDLE gpe_dev, uint32_t gpe_num,
+                                        bool set_wake_dev) = 0;
 
   // These methods are called from InitialiseAcpi.
   // We define them in the common "acpi" base class so that we can

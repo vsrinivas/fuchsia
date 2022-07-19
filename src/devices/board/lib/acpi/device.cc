@@ -34,6 +34,7 @@
 #include "src/devices/board/lib/acpi/manager.h"
 #include "src/devices/board/lib/acpi/power-resource.h"
 #include "src/devices/lib/iommu/iommu.h"
+#include "third_party/acpica/source/include/actypes.h"
 
 namespace acpi {
 namespace {
@@ -949,7 +950,17 @@ void Device::DeviceObjectNotificationHandler(ACPI_HANDLE object, uint32_t value,
   }
 }
 
-void Device::RemoveNotifyHandler() {
+void Device::RemoveNotifyHandler(RemoveNotifyHandlerRequestView request,
+                                 RemoveNotifyHandlerCompleter::Sync& completer) {
+  auto status = RemoveNotifyHandler();
+  if (status != AE_OK) {
+    completer.ReplyError(fuchsia_hardware_acpi::wire::Status(status));
+    return;
+  }
+  completer.ReplySuccess();
+}
+
+ACPI_STATUS Device::RemoveNotifyHandler() {
   // Try and mark the notify handler as inactive. If this fails, then someone else marked it as
   // inactive.
   // If this succeeds, then we're going to tear down the notify handler.
@@ -957,16 +968,17 @@ void Device::RemoveNotifyHandler() {
   notify_handler_active_.compare_exchange_strong(is_active, false, std::memory_order_acq_rel,
                                                  std::memory_order_acquire);
   if (!is_active) {
-    return;
+    return AE_OK;
   }
   auto status = acpi_->RemoveNotifyHandler(acpi_handle_, notify_handler_type_,
                                            Device::DeviceObjectNotificationHandler);
   if (status.is_error()) {
     zxlogf(ERROR, "Failed to remove notification handler from '%s': %d", name(),
            status.error_value());
-    return;
+    return status.error_value();
   }
   notify_handler_->AsyncTeardown();
+  return AE_OK;
 }
 
 void Device::AcquireGlobalLock(AcquireGlobalLockRequestView request,
@@ -1074,6 +1086,86 @@ void Device::InstallAddressSpaceHandler(InstallAddressSpaceHandlerRequestView re
   address_handler_teardown_finished_.emplace_back(bridge.consumer.promise());
   address_handlers_.emplace(space, std::move(client));
 
+  completer.ReplySuccess();
+}
+
+void Device::SetWakeDevice(SetWakeDeviceRequestView request,
+                           SetWakeDeviceCompleter::Sync& completer) {
+  // Get the GPE device and GPE number associated with the device's Power Resource for Wake
+  auto prw_result = acpi_->EvaluateObject(acpi_handle_, "_PRW", std::nullopt);
+  if (prw_result.is_error()) {
+    zxlogf(ERROR, "EvaluateObject failed: %d", int(prw_result.error_value()));
+    completer.ReplyError(fuchsia_hardware_acpi::wire::Status(prw_result.error_value()));
+    return;
+  }
+
+  if (prw_result->Type != ACPI_TYPE_PACKAGE || prw_result->Package.Count < 2) {
+    zxlogf(ERROR, "Unexpected response from EvaluateObject");
+    completer.ReplyError(fuchsia_hardware_acpi::wire::Status::kBadData);
+    return;
+  }
+
+  ACPI_HANDLE gpe_dev = nullptr;
+  uint32_t gpe_num;
+  // See ACPI v6.3 Section 7.3.13
+  // The first object within the _PRW object is the information about the _GPE object
+  // associated with the device. This evaluates to either an integer or a package.
+  // The integer specifies the bit in the FADT GPEx_STS blocks to use.
+  // The package contains the reference to the device and the index in that device where the
+  // event is.
+  auto& gpe_info = prw_result->Package.Elements[0];
+  if (gpe_info.Type == ACPI_TYPE_INTEGER) {
+    gpe_num = static_cast<uint32_t>(gpe_info.Integer.Value);
+  } else if (gpe_info.Type == ACPI_TYPE_PACKAGE) {
+    if (gpe_info.Package.Count != 2 ||
+        gpe_info.Package.Elements[0].Type != ACPI_TYPE_LOCAL_REFERENCE ||
+        gpe_info.Package.Elements[1].Type != ACPI_TYPE_INTEGER) {
+      zxlogf(ERROR, "Unexpected response from EvaluateObject");
+      completer.ReplyError(fuchsia_hardware_acpi::wire::Status::kBadData);
+      return;
+    }
+    gpe_dev = gpe_info.Package.Elements[0].Reference.Handle;
+    gpe_num = static_cast<uint32_t>(gpe_info.Package.Elements[1].Integer.Value);
+  } else {
+    zxlogf(ERROR, "Unexpected response from EvaluateObject");
+    completer.ReplyError(fuchsia_hardware_acpi::wire::Status::kBadData);
+    return;
+  }
+
+  auto status = acpi_->SetGpeWakeMask(gpe_dev, gpe_num, true);
+  if (status.is_error()) {
+    completer.ReplyError(fuchsia_hardware_acpi::wire::Status(status.error_value()));
+    return;
+  }
+
+  zxlogf(INFO, "Lowest sleep state that device can wake system from: %llu",
+         prw_result->Package.Elements[1].Integer.Value);
+
+  // Get the power resources associated with the _PRW object and turn them all on.
+  std::vector<ACPI_HANDLE> power_resources;
+  // The first two elements of the _PRW object are the event info, and the lowest sleep state the
+  // device can wake from. The rest of the elements are power resources.
+  uint64_t pwr_res_count = prw_result->Package.Count - 2;
+  for (uint64_t i = 0; i < pwr_res_count; i++) {
+    ACPI_OBJECT power_resource_reference = prw_result->Package.Elements[i + 2];
+    const PowerResource* power_resource =
+        manager_->AddPowerResource(power_resource_reference.Reference.Handle);
+
+    if (power_resource == nullptr) {
+      zxlogf(ERROR, "Failed to add power resource");
+    }
+
+    if (power_resource && !power_resource->is_on()) {
+      power_resources.push_back(power_resource->handle());
+    }
+  }
+
+  zx_status_t zx_status = manager_->ReferencePowerResources(power_resources);
+  if (zx_status != ZX_OK) {
+    zxlogf(ERROR, "Failed to reference power resources for ACPI device: %s",
+           zx_status_get_string(zx_status));
+    completer.ReplyError(fuchsia_hardware_acpi::wire::Status::kError);
+  }
   completer.ReplySuccess();
 }
 }  // namespace acpi

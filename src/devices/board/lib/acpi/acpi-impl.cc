@@ -258,4 +258,9 @@ acpi::status<> AcpiImpl::SetupGpeForWake(ACPI_HANDLE wake_dev, ACPI_HANDLE gpe_d
   return acpi::make_status(AcpiSetupGpeForWake(wake_dev, gpe_dev, gpe_num));
 }
 
+acpi::status<> AcpiImpl::SetGpeWakeMask(ACPI_HANDLE gpe_dev, uint32_t gpe_num, bool set_wake_dev) {
+  uint8_t action = set_wake_dev ? ACPI_GPE_ENABLE : ACPI_GPE_DISABLE;
+  return acpi::make_status(AcpiSetGpeWakeMask(gpe_dev, gpe_num, action));
+}
+
 }  // namespace acpi

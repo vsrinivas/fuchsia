@@ -426,6 +426,34 @@ TEST_F(AcpiDeviceTest, ReceiveEventAfterUnbind) {
   ASSERT_FALSE(hnd->HasNotifyHandler());
 }
 
+TEST_F(AcpiDeviceTest, TestRemoveNotifyHandler) {
+  auto test_dev = std::make_unique<acpi::test::Device>("TEST");
+  acpi::test::Device* hnd = test_dev.get();
+  acpi_.GetDeviceRoot()->AddChild(std::move(test_dev));
+  auto device = std::make_unique<acpi::Device>(Args(hnd));
+  async::Loop server_loop(&kAsyncLoopConfigNeverAttachToThread);
+
+  SetUpFidlServer(std::move(device));
+  sync_completion_t done;
+  std::unique_ptr<NotifyHandlerServer> server;
+  auto client = NotifyHandlerServer::CreateAndServe(
+      [&](uint32_t type, NotifyHandlerServer::HandleCompleter::Sync& completer) {
+        ASSERT_EQ(type, 32);
+        completer.Reply();
+        sync_completion_signal(&done);
+      },
+      manager_.fidl_dispatcher(), &server);
+
+  auto result = fidl_client_->InstallNotifyHandler(
+      fuchsia_hardware_acpi::wire::NotificationMode::kSystem, std::move(client));
+  ASSERT_OK(result.status());
+  ASSERT_FALSE(result->is_error());
+  ASSERT_TRUE(hnd->HasNotifyHandler());
+
+  (void)fidl_client_->RemoveNotifyHandler();
+  ASSERT_FALSE(hnd->HasNotifyHandler());
+}
+
 TEST_F(AcpiDeviceTest, TestAddressHandlerInstall) {
   auto test_dev = std::make_unique<acpi::test::Device>("TEST");
   acpi::test::Device* hnd = test_dev.get();
@@ -1379,4 +1407,234 @@ TEST_F(AcpiDeviceTest, TestSharedPowerResources) {
   // TST1 and TST2 are using these power resources now.
   ASSERT_EQ(mock_power_device1->sta(), 1);
   ASSERT_EQ(mock_power_device2->sta(), 1);
+}
+
+TEST_F(AcpiDeviceTest, TestSetWakeDeviceFadt) {
+  auto wake_dev1 = std::make_unique<acpi::test::Device>("WAK1");
+  auto wake_dev2 = std::make_unique<acpi::test::Device>("WAK2");
+
+  ACPI_HANDLE hnd2 = wake_dev2.get();
+
+  wake_dev1->AddMethodCallback("_PRW", [](std::optional<std::vector<ACPI_OBJECT>>) {
+    static std::array<ACPI_OBJECT, 2> objects = {
+        ACPI_OBJECT{.Integer = {.Type = ACPI_TYPE_INTEGER, .Value = 24}}, {}};
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->Package.Type = ACPI_TYPE_PACKAGE;
+    retval->Package.Count = objects.size();
+    retval->Package.Elements = objects.data();
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
+
+  wake_dev2->AddMethodCallback("_PRW", [](std::optional<std::vector<ACPI_OBJECT>>) {
+    static std::array<ACPI_OBJECT, 2> objects = {
+        ACPI_OBJECT{.Integer = {.Type = ACPI_TYPE_INTEGER, .Value = 25}}, {}};
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->Package.Type = ACPI_TYPE_PACKAGE;
+    retval->Package.Count = objects.size();
+    retval->Package.Elements = objects.data();
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
+
+  acpi_.GetDeviceRoot()->AddChild(std::move(wake_dev1));
+  acpi_.GetDeviceRoot()->AddChild(std::move(wake_dev2));
+
+  // Wake device 2 is the one we will set as a wake source
+  SetUpFidlServer(std::make_unique<acpi::Device>(Args(hnd2)));
+
+  // Check that both devices are recognised as potential wake sources, but that none are
+  // currently set.
+  ASSERT_EQ(AE_OK, acpi_.DiscoverWakeGpes().status_value());
+  auto& wake_gpes = acpi_.GetWakeGpes();
+  ASSERT_EQ(2, wake_gpes.size());
+  for (acpi::test::WakeGpe gpe : wake_gpes) {
+    ASSERT_FALSE(gpe.enabled);
+  }
+
+  auto result = fidl_client_->SetWakeDevice();
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->is_ok());
+
+  // Check that only device 2 is set as a wake source.
+  for (acpi::test::WakeGpe gpe : wake_gpes) {
+    if ((gpe.gpe_dev == nullptr) && (gpe.gpe_num == 25)) {
+      ASSERT_TRUE(gpe.enabled);
+    } else {
+      ASSERT_FALSE(gpe.enabled);
+    }
+  }
+}
+
+TEST_F(AcpiDeviceTest, TestSetWakeDeviceBlockDevice) {
+  auto wake_dev1 = std::make_unique<acpi::test::Device>("WAK1");
+  wake_dev1->SetHid("ACPI0006");
+  auto wake_dev2 = std::make_unique<acpi::test::Device>("WAK2");
+  wake_dev2->SetHid("ACPI0006");
+
+  ACPI_HANDLE hnd1 = wake_dev1.get();
+  ACPI_HANDLE hnd2 = wake_dev2.get();
+
+  auto wake_dev1_ref_gpe = std::make_unique<acpi::test::Device>("RWG1");
+  ACPI_HANDLE wake_dev1_ref_hnd = wake_dev1_ref_gpe.get();
+  wake_dev1_ref_gpe->AddMethodCallback("_PRW", [hnd1](std::optional<std::vector<ACPI_OBJECT>>) {
+    static std::array<ACPI_OBJECT, 2> gpe_objects{
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_DEVICE,
+                                  .Handle = hnd1}},
+        ACPI_OBJECT{.Integer = {.Type = ACPI_TYPE_INTEGER, .Value = 76}}};
+    static std::array<ACPI_OBJECT, 2> prw_objects{
+        ACPI_OBJECT{.Package = {.Type = ACPI_TYPE_PACKAGE,
+                                .Count = gpe_objects.size(),
+                                .Elements = gpe_objects.data()}},
+        {}};
+
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->Package.Type = ACPI_TYPE_PACKAGE;
+    retval->Package.Count = prw_objects.size();
+    retval->Package.Elements = prw_objects.data();
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
+
+  auto wake_dev2_ref_gpe = std::make_unique<acpi::test::Device>("RWG2");
+  wake_dev2_ref_gpe->AddMethodCallback("_PRW", [hnd2](std::optional<std::vector<ACPI_OBJECT>>) {
+    static std::array<ACPI_OBJECT, 2> gpe_objects{
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_DEVICE,
+                                  .Handle = hnd2}},
+        ACPI_OBJECT{.Integer = {.Type = ACPI_TYPE_INTEGER, .Value = 77}}};
+    static std::array<ACPI_OBJECT, 2> prw_objects{
+        ACPI_OBJECT{.Package = {.Type = ACPI_TYPE_PACKAGE,
+                                .Count = gpe_objects.size(),
+                                .Elements = gpe_objects.data()}},
+        {}};
+
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->Package.Type = ACPI_TYPE_PACKAGE;
+    retval->Package.Count = prw_objects.size();
+    retval->Package.Elements = prw_objects.data();
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
+
+  acpi_.GetDeviceRoot()->AddChild(std::move(wake_dev1));
+  acpi_.GetDeviceRoot()->AddChild(std::move(wake_dev1_ref_gpe));
+  acpi_.GetDeviceRoot()->AddChild(std::move(wake_dev2));
+  acpi_.GetDeviceRoot()->AddChild(std::move(wake_dev2_ref_gpe));
+
+  // Wake device 1 is the one we will set as a wake source
+  SetUpFidlServer(std::make_unique<acpi::Device>(Args(wake_dev1_ref_hnd)));
+
+  // Check that both devices are recognised as potential wake sources, but that none are
+  // currently set.
+  ASSERT_EQ(AE_OK, acpi_.DiscoverWakeGpes().status_value());
+  auto& wake_gpes = acpi_.GetWakeGpes();
+  ASSERT_EQ(2, wake_gpes.size());
+  for (acpi::test::WakeGpe gpe : wake_gpes) {
+    ASSERT_FALSE(gpe.enabled);
+  }
+
+  auto result = fidl_client_->SetWakeDevice();
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result->is_ok(), "ACPI error %d", int(result->error_value()));
+
+  // Check that only device 1 is set as a wake source.
+  for (acpi::test::WakeGpe gpe : wake_gpes) {
+    if ((gpe.gpe_dev == hnd1) && (gpe.gpe_num == 76)) {
+      ASSERT_TRUE(gpe.enabled);
+    } else {
+      ASSERT_FALSE(gpe.enabled);
+    }
+  }
+}
+
+TEST_F(AcpiDeviceTest, TestSetWakeDeviceWrongObjectSize) {
+  auto non_wake_dev = std::make_unique<acpi::test::Device>("NWDV");
+
+  ACPI_HANDLE hnd = non_wake_dev.get();
+
+  non_wake_dev->AddMethodCallback("_PRW", [hnd](std::optional<std::vector<ACPI_OBJECT>>) {
+    static std::array<ACPI_OBJECT, 1> prw_objects{ACPI_OBJECT{
+        .Reference = {
+            .Type = ACPI_TYPE_LOCAL_REFERENCE, .ActualType = ACPI_TYPE_POWER, .Handle = hnd}}};
+
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->Package.Type = ACPI_TYPE_PACKAGE;
+    retval->Package.Count = prw_objects.size();
+    retval->Package.Elements = prw_objects.data();
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
+
+  acpi_.GetDeviceRoot()->AddChild(std::move(non_wake_dev));
+
+  // Wake device 1 is the one we will set as a wake source
+  SetUpFidlServer(std::make_unique<acpi::Device>(Args(hnd)));
+
+  auto result = fidl_client_->SetWakeDevice();
+  ASSERT_TRUE(result.ok());
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), fuchsia_hardware_acpi::wire::Status::kBadData);
+}
+
+TEST_F(AcpiDeviceTest, TestSetWakeDeviceWrongEventInfo) {
+  auto non_wake_dev = std::make_unique<acpi::test::Device>("NWD1");
+  non_wake_dev->SetHid("ACPI0006");
+
+  ACPI_HANDLE hnd = non_wake_dev.get();
+
+  auto dev_ref_gpe = std::make_unique<acpi::test::Device>("RWG1");
+  ACPI_HANDLE wake_dev_ref_hnd = dev_ref_gpe.get();
+  dev_ref_gpe->AddMethodCallback("_PRW", [hnd](std::optional<std::vector<ACPI_OBJECT>>) {
+    static std::array<ACPI_OBJECT, 1> gpe_objects{ACPI_OBJECT{
+        .Reference = {
+            .Type = ACPI_TYPE_LOCAL_REFERENCE, .ActualType = ACPI_TYPE_DEVICE, .Handle = hnd}}};
+    static std::array<ACPI_OBJECT, 2> prw_objects{
+        ACPI_OBJECT{.Package = {.Type = ACPI_TYPE_PACKAGE,
+                                .Count = gpe_objects.size(),
+                                .Elements = gpe_objects.data()}},
+        {}};
+
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->Package.Type = ACPI_TYPE_PACKAGE;
+    retval->Package.Count = prw_objects.size();
+    retval->Package.Elements = prw_objects.data();
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
+
+  acpi_.GetDeviceRoot()->AddChild(std::move(non_wake_dev));
+  acpi_.GetDeviceRoot()->AddChild(std::move(dev_ref_gpe));
+
+  // Wake device 1 is the one we will set as a wake source
+  SetUpFidlServer(std::make_unique<acpi::Device>(Args(wake_dev_ref_hnd)));
+
+  auto result = fidl_client_->SetWakeDevice();
+  ASSERT_TRUE(result.ok());
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), fuchsia_hardware_acpi::wire::Status::kBadData);
+}
+
+TEST_F(AcpiDeviceTest, TestSetWakeDeviceWrongEventInfoType) {
+  auto non_wake_dev = std::make_unique<acpi::test::Device>("NWDV");
+
+  ACPI_HANDLE hnd = non_wake_dev.get();
+
+  non_wake_dev->AddMethodCallback("_PRW", [hnd](std::optional<std::vector<ACPI_OBJECT>>) {
+    static std::array<ACPI_OBJECT, 2> objects = {
+        ACPI_OBJECT{.Reference = {.Type = ACPI_TYPE_LOCAL_REFERENCE,
+                                  .ActualType = ACPI_TYPE_DEVICE,
+                                  .Handle = hnd}},
+        {}};
+    ACPI_OBJECT* retval = static_cast<ACPI_OBJECT*>(AcpiOsAllocate(sizeof(*retval)));
+    retval->Package.Type = ACPI_TYPE_PACKAGE;
+    retval->Package.Count = objects.size();
+    retval->Package.Elements = objects.data();
+    return acpi::ok(acpi::UniquePtr<ACPI_OBJECT>(retval));
+  });
+
+  acpi_.GetDeviceRoot()->AddChild(std::move(non_wake_dev));
+
+  // Wake device 1 is the one we will set as a wake source
+  SetUpFidlServer(std::make_unique<acpi::Device>(Args(hnd)));
+
+  auto result = fidl_client_->SetWakeDevice();
+  ASSERT_TRUE(result.ok());
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), fuchsia_hardware_acpi::wire::Status::kBadData);
 }
