@@ -589,19 +589,9 @@
         "name": "fuchsia.settings/Input.Set"
     },
     {
-        "declaration": "(vector<fuchsia.settings/InputState> input_states) -> (fuchsia.settings/Input_SetStates_Result result)",
-        "kind": "protocol/member",
-        "name": "fuchsia.settings/Input.SetStates"
-    },
-    {
         "declaration": "() -> (fuchsia.settings/InputSettings settings)",
         "kind": "protocol/member",
         "name": "fuchsia.settings/Input.Watch"
-    },
-    {
-        "declaration": "() -> (fuchsia.settings/InputSettings settings)",
-        "kind": "protocol/member",
-        "name": "fuchsia.settings/Input.Watch2"
     },
     {
         "kind": "protocol",
@@ -663,25 +653,6 @@
     {
         "kind": "table",
         "name": "fuchsia.settings/InputState"
-    },
-    {
-        "kind": "struct",
-        "name": "fuchsia.settings/Input_SetStates_Response"
-    },
-    {
-        "declaration": "fuchsia.settings/Error",
-        "kind": "union/member",
-        "name": "fuchsia.settings/Input_SetStates_Result.err"
-    },
-    {
-        "declaration": "fuchsia.settings/Input_SetStates_Response",
-        "kind": "union/member",
-        "name": "fuchsia.settings/Input_SetStates_Result.response"
-    },
-    {
-        "kind": "union",
-        "name": "fuchsia.settings/Input_SetStates_Result",
-        "strictness": "strict"
     },
     {
         "kind": "struct",

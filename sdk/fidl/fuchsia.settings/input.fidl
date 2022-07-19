@@ -25,7 +25,6 @@ protocol Input {
     ///
     /// If this call fails, it is considered a fatal error and the channel
     /// will be closed.
-    @transitional("Future replacement for Watch2")
     Watch() -> (struct {
         settings InputSettings;
     });
@@ -34,41 +33,18 @@ protocol Input {
     /// not necessarily change the overall state of the device, depending on
     /// the hardware state. Will modify the software state of the existing
     /// device if a known device_name and device_type are passed. Otherwise
-    /// it will add a new input device. Devices not included in the SetStates
-    /// call will not be modified.
-    @transitional("Future replacement for SetStates")
+    /// it will add a new input device. Devices not included in input_states
+    /// will not be modified.
     Set(struct {
         input_states vector<InputState>:MAX;
     }) -> (struct {}) error Error;
 
-    /// Gets the current |InputSettings|. Returns immediately on first call;
-    /// subsequent calls return when the value changes.
-    ///
-    /// When any of the input devices' states change, this will return the
-    /// full [InputSettings] object, containing the states for all the
-    /// available input devices on the target device.
-    ///
-    /// To find the state of a specific input device, the devices vector
-    /// contained in settings can be iterated through to find a specific
-    /// [DeviceType]. If there are multiple devices of the same [DeviceType],
-    /// the [InputDevice]'s device_name can be examined in conjunction with
-    /// the [DeviceType] to find the desired input device. Together, the
-    /// device_name and [DeviceType] uniquely identify an [InputDevice].
-    ///
-    /// If this call fails, it is considered a fatal error and the channel
-    /// will be closed.
-    @transitional("Will be deprecated in favor of Watch")
+    @available(deprecated=7, removed=9)
     Watch2() -> (struct {
         settings InputSettings;
     });
 
-    /// Requests software input devices to set their software state. May
-    /// not necessarily change the overall state of the device, depending on
-    /// the hardware state. Will modify the software state of the existing
-    /// device if a known device_name and device_type are passed. Otherwise
-    /// it will add a new input device. Devices not included in the SetStates
-    /// call will not be modified.
-    @transitional("Will be deprecated in favor of Set")
+    @available(deprecated=7, removed=9)
     SetStates(struct {
         input_states vector<InputState>:MAX;
     }) -> (struct {}) error Error;

@@ -15,7 +15,6 @@ ffx_plugin("ffx_setui") {
     "do_not_disturb:ffx_setui_do_not_disturb",
     "factory_reset:ffx_setui_factory_reset",
     "input:ffx_setui_input",
-    "input2:ffx_setui_input2",
     "intl:ffx_setui_intl",
     "keyboard:ffx_setui_keyboard",
     "light:ffx_setui_light",

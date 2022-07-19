@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// Used to interact with the input interface.
+// TODO(fxbug.dev/66186): Support multiple devices.
+
 use anyhow::format_err;
 use anyhow::Result;
 use ffx_core::ffx_plugin;
@@ -99,12 +102,6 @@ mod test {
             InputRequest::Watch { .. } => {
                 panic!("Unexpected call to watch");
             }
-            InputRequest::Watch2 { .. } => {
-                panic!("Unexpected call to watch watch2");
-            }
-            InputRequest::SetStates { .. } => {
-                panic!("Unexpected call to watch set states");
-            }
         });
 
         let input = Input {
@@ -150,12 +147,6 @@ mod test {
             InputRequest::Watch { .. } => {
                 panic!("Unexpected call to watch");
             }
-            InputRequest::Watch2 { .. } => {
-                panic!("Unexpected call to watch watch2");
-            }
-            InputRequest::SetStates { .. } => {
-                panic!("Unexpected call to watch set states");
-            }
         });
 
         let output = utils::assert_set!(command(proxy, InputState::from(expected_input.clone())));
@@ -188,12 +179,6 @@ mod test {
                     devices: Some(create_input_devices(DeviceType::Camera, "camera", 1)),
                     ..InputSettings::EMPTY
                 });
-            }
-            InputRequest::Watch2 { .. } => {
-                panic!("Unexpected call to watch2");
-            }
-            InputRequest::SetStates { .. } => {
-                panic!("Unexpected call to watch set states");
             }
         });
 

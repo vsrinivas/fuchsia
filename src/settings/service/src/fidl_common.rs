@@ -134,31 +134,6 @@ macro_rules! fidl_process {
     };
 }
 
-// Fully custom named inputs for when there are multiple simultaneous interfaces
-// that do not have one specific pattern to conform to.
-// TODO(fxbug.dev/65686): Remove once clients are migrated to input2.
-#[macro_export]
-macro_rules! fidl_process_custom {
-    ($interface:ident, $setting_type:expr, $fidl_responder:ty, $fidl_settings:ident, $handle_func:ident
-            $(, $item_setting_type:expr, $item_fidl_responder:ty, $item_fidl_settings:ident, $item_handle_func:ident)*$(,)*) => {
-        paste::paste! {
-            $crate::fidl_process_full!(
-                $interface,
-                $setting_type,
-                $fidl_settings,
-                $fidl_responder,
-                String,
-                $handle_func
-                $(, $item_setting_type,
-                $item_fidl_settings,
-                $item_fidl_responder,
-                String,
-                $item_handle_func)*
-            );
-        }
-    };
-}
-
 pub(crate) fn convert_to_epitaph(error: &anyhow::Error) -> fuchsia_zircon::Status {
     match error.root_cause().downcast_ref::<Error>() {
         Some(Error::UnhandledType(_)) => fuchsia_zircon::Status::UNAVAILABLE,
