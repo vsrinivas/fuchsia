@@ -225,3 +225,20 @@ group("maybe_scudo_default_options") {
 
 sanitizer_default_options("scudo_default_options") {
 }
+
+# TODO(fxbug.dev/98632): This works around a toolchain issue in LTO builds
+# where code generation results in a dependency on a Zircon vDSO call but
+# doesn't link -lzircon to supply it at link time.  This is added to deps of
+# the few targets where this has caused link failures to just explicitly link
+# it in.  As soon as the toolchain issues are resolved, this and the deps on it
+# will all be removed.
+group("uses-outline-atomics-fxbug98632") {
+  visibility = [
+    "//src/developer/debug/debug_agent/test_data:*",
+    "//third_party/ffmpeg:*",
+    "//third_party/icu:*",
+  ]
+  if (current_cpu == "arm64" && is_fuchsia) {
+    deps = [ "//src/zircon/lib/zircon" ]
+  }
+}

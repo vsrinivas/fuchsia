@@ -25,6 +25,9 @@ source_set("debug_agent_test_so_lib") {
   if (current_cpu == "x64") {
     sources += [ "x64_write_register_test_so.cc" ]
   }
+
+  # TODO(fxbug.dev/98632): workaround for toolchain issues, see bug
+  deps = [ "//build/config/fuchsia:uses-outline-atomics-fxbug98632" ]
 }
 
 shared_library("debug_agent_test_so") {
