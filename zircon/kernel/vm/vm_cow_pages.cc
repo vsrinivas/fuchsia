@@ -2862,7 +2862,15 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
     // Unmap any page that is touched by this range in any of our, or our childrens, mapping
     // regions. We do this on the assumption we are going to be able to free pages either completely
     // or by turning them into markers and it's more efficient to unmap once in bulk here.
-    RangeChangeUpdateLocked(page_start_base, page_end_base - page_start_base, RangeChangeOp::Unmap);
+    //
+    // The only exception here is if the page source is preserving content, in which case we will
+    // not be freeing pages (which represents absent content) or inserting markers (which represents
+    // clean zero content). We are creating dirty zero content here. So for this case do not perform
+    // the unmap.
+    if (!is_source_preserving_page_content_locked()) {
+      RangeChangeUpdateLocked(page_start_base, page_end_base - page_start_base,
+                              RangeChangeOp::Unmap);
+    }
   }
 
   // We stack-own loaned pages from when they're removed until they're freed.
@@ -3166,6 +3174,8 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
           }
 
           AssertHeld(this->lock_);
+          RangeChangeUpdateLocked(off, PAGE_SIZE, RangeChangeOp::Unmap);
+
           vm_page_t* released_page = p->ReleasePage();
           DEBUG_ASSERT(released_page == page);
           DEBUG_ASSERT(page->object.pin_count == 0);
@@ -4787,7 +4797,9 @@ void VmCowPages::DetachSourceLocked() {
   DEBUG_ASSERT(!parent_);
 
   // Even though we might end up removing only a subset of the pages, unmap them all at once as an
-  // optimization.
+  // optimization. Only the userpager is expected to access (dirty) pages beyond this point, in
+  // order to write back their contents, where the cost of the writeback is presumably much larger
+  // than page faults to update hardware page table mappings for resident pages.
   RangeChangeUpdateLocked(0, size_, RangeChangeOp::Unmap);
 
   __UNINITIALIZED BatchPQRemove page_remover(&freed_list);
