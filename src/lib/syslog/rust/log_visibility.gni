@@ -95,7 +95,6 @@ third_party_rust_crate_log_visibility = [
   "//src/connectivity/wlan/wlancfg:*",
   "//src/connectivity/wlan/wlandevicemonitor:*",
   "//src/connectivity/wlan/wlanstack:*",
-  "//src/developer/fastboot:*",
   "//src/developer/remote-control/runner:*",
   "//src/devices/bin/driver_tools:*",
   "//src/devices/bin/driver-index:*",

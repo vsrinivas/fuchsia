@@ -38,7 +38,7 @@ pub enum SendError {
 
 pub trait InfoListener {
     fn on_info(&self, info: String) -> Result<()> {
-        log::info!("Fastboot Info: \"{}\"", info);
+        tracing::info!("Fastboot Info: \"{}\"", info);
         Ok(())
     }
 }
@@ -84,10 +84,10 @@ async fn read_with_timeout<T: AsyncRead + Unpin>(
                 Reply::Info(msg) => listener.on_info(msg)?,
                 _ => return Ok(reply),
             },
-            Err(e) => {
+            Err(err) => {
                 let elapsed_time = Utc::now().signed_duration_since(start);
                 if elapsed_time >= timeout {
-                    log::error!("timed out reading reply: {:?}", e);
+                    tracing::error!(?err, "timed out reading reply");
                     bail!(SendError::Timeout);
                 } else {
                     let d = Duration::milliseconds(READ_INTERVAL_MS);
@@ -146,7 +146,7 @@ pub async fn upload<T: AsyncRead + AsyncWrite + Unpin>(
                     s,
                     data.len()
                 );
-                log::error!("{}", err);
+                tracing::error!(%err);
                 listener.on_error(&err)?;
                 bail!(err);
             }
@@ -154,7 +154,7 @@ pub async fn upload<T: AsyncRead + AsyncWrite + Unpin>(
             match interface.write(&data).await {
                 Err(e) => {
                     let err = format!("Could not write to usb interface: {:?}", e);
-                    log::error!("{}", err);
+                    tracing::error!(%err);
                     listener.on_error(&err)?;
                     bail!(err);
                 }
@@ -167,7 +167,7 @@ pub async fn upload<T: AsyncRead + AsyncWrite + Unpin>(
                 }
                 Err(e) => {
                     let err = format!("Could not verify upload: {:?}", e);
-                    log::error!("{}", err);
+                    tracing::error!(%err);
                     listener.on_error(&err)?;
                     bail!(err);
                 }
@@ -183,7 +183,7 @@ pub async fn download<T: AsyncRead + AsyncWrite + Unpin>(
 ) -> Result<Reply> {
     let _lock = TRANSFER_LOCK.lock().await;
     let reply = send(Command::Upload, interface).await?;
-    log::debug!("got reply from upload command: {:?}", reply);
+    tracing::debug!("got reply from upload command: {:?}", reply);
     match reply {
         Reply::Data(s) => {
             let size = usize::try_from(s)?;
