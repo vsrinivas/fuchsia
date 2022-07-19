@@ -172,9 +172,9 @@ zx_status_t GetNhltBlob(const Nhlt& nhlt, uint8_t bus_id, uint8_t direction, uin
   return ZX_ERR_NOT_FOUND;
 }
 
-StatusOr<std::vector<uint8_t>> GetModuleConfig(const Nhlt& nhlt, uint8_t i2s_instance_id,
-                                               uint8_t direction, uint8_t link_type,
-                                               const CopierCfg& base_cfg) {
+zx::status<std::vector<uint8_t>> GetModuleConfig(const Nhlt& nhlt, uint8_t i2s_instance_id,
+                                                 uint8_t direction, uint8_t link_type,
+                                                 const CopierCfg& base_cfg) {
   const void* blob;
   size_t blob_size;
   zx_status_t st = GetNhltBlob(
@@ -182,7 +182,7 @@ StatusOr<std::vector<uint8_t>> GetModuleConfig(const Nhlt& nhlt, uint8_t i2s_ins
       (direction == NHLT_DIRECTION_RENDER) ? base_cfg.out_fmt : base_cfg.base_cfg.audio_fmt, &blob,
       &blob_size);
   if (st != ZX_OK) {
-    return Status(st);
+    return zx::error(st);
   }
 
   // Copy the I2S config blob
@@ -192,8 +192,8 @@ StatusOr<std::vector<uint8_t>> GetModuleConfig(const Nhlt& nhlt, uint8_t i2s_ins
   fbl::AllocChecker ac;
   std::unique_ptr<uint8_t[]> cfg_buf(new (&ac) uint8_t[cfg_size]);
   if (!ac.check()) {
-    return Status(ZX_ERR_NO_MEMORY,
-                  "out of memory while attempting to allocate copier config buffer");
+    GLOBAL_LOG(ERROR, "out of memory while attempting to allocate copier config buffer");
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
 
   // Copy the copier config.
@@ -210,75 +210,73 @@ StatusOr<std::vector<uint8_t>> GetModuleConfig(const Nhlt& nhlt, uint8_t i2s_ins
   // Space is reserved in CopierGatewayCfg config_data.
   memset(cfg_buf.get() + offset_to_data + blob_size, 0, 4);
 
-  return RawBytesOf(cfg_buf.get(), cfg_size);
+  return zx::ok(RawBytesOf(cfg_buf.get(), cfg_size));
 }
 
 // Create a pieline transferring data from the host to an I2S bus.
 //
 // The I2S device must be present in the given NHLT table.
-StatusOr<DspPipelineId> ConnectHostToI2S(const Nhlt& nhlt, DspModuleController* controller,
-                                         uint16_t copier_module_id, uint32_t host_gateway_id,
-                                         uint32_t i2s_gateway_id, uint8_t i2s_bus,
-                                         const AudioDataFormat& i2s_format) {
+zx::status<DspPipelineId> ConnectHostToI2S(const Nhlt& nhlt, DspModuleController* controller,
+                                           uint16_t copier_module_id, uint32_t host_gateway_id,
+                                           uint32_t i2s_gateway_id, uint8_t i2s_bus,
+                                           const AudioDataFormat& i2s_format) {
   CopierCfg host_out_copier =
       CreateGatewayCopierCfg(kHostI2sFormat, kDspI2sFormat, host_gateway_id);
   CopierCfg i2s_out_copier = CreateGatewayCopierCfg(kDspI2sFormat, i2s_format, i2s_gateway_id);
-  StatusOr<std::vector<uint8_t>> i2s_out_gateway_cfg =
+  zx::status<std::vector<uint8_t>> i2s_out_gateway_cfg =
       GetModuleConfig(nhlt, i2s_bus, NHLT_DIRECTION_RENDER, NHLT_LINK_TYPE_SSP, i2s_out_copier);
-  if (!i2s_out_gateway_cfg.ok()) {
-    return i2s_out_gateway_cfg.status();
+  if (!i2s_out_gateway_cfg.is_ok()) {
+    return zx::error(i2s_out_gateway_cfg.status_value());
   }
 
-  return CreateSimplePipeline(controller,
-                              {
-                                  // Copy from host DMA.
-                                  {copier_module_id, RawBytesOf(&host_out_copier)},
-                                  // Copy to I2S.
-                                  {copier_module_id, i2s_out_gateway_cfg.ConsumeValueOrDie()},
-                              });
+  return CreateSimplePipeline(controller, {
+                                              // Copy from host DMA.
+                                              {copier_module_id, RawBytesOf(&host_out_copier)},
+                                              // Copy to I2S.
+                                              {copier_module_id, i2s_out_gateway_cfg.value()},
+                                          });
 }
 
 // Create a pieline transferring data from the I2S bus to the host.
 //
 // The I2S device must be present in the given NHLT table.
-StatusOr<DspPipelineId> ConnectI2SToHost(const Nhlt& nhlt, DspModuleController* controller,
-                                         uint16_t copier_module_id, uint32_t i2s_gateway_id,
-                                         uint8_t i2s_bus, uint32_t host_gateway_id,
-                                         const AudioDataFormat& i2s_format) {
+zx::status<DspPipelineId> ConnectI2SToHost(const Nhlt& nhlt, DspModuleController* controller,
+                                           uint16_t copier_module_id, uint32_t i2s_gateway_id,
+                                           uint8_t i2s_bus, uint32_t host_gateway_id,
+                                           const AudioDataFormat& i2s_format) {
   CopierCfg i2s_in_copier = CreateGatewayCopierCfg(i2s_format, kDspI2sFormat, i2s_gateway_id);
   CopierCfg host_in_copier = CreateGatewayCopierCfg(kDspI2sFormat, kHostI2sFormat, host_gateway_id);
-  StatusOr<std::vector<uint8_t>> i2s_in_gateway_cfg =
+  zx::status<std::vector<uint8_t>> i2s_in_gateway_cfg =
       GetModuleConfig(nhlt, i2s_bus, NHLT_DIRECTION_CAPTURE, NHLT_LINK_TYPE_SSP, i2s_in_copier);
-  if (!i2s_in_gateway_cfg.ok()) {
-    return i2s_in_gateway_cfg.status();
+  if (!i2s_in_gateway_cfg.is_ok()) {
+    return zx::error(i2s_in_gateway_cfg.status_value());
   }
 
-  return CreateSimplePipeline(controller,
-                              {
-                                  // Copy from I2S.
-                                  {copier_module_id, i2s_in_gateway_cfg.ConsumeValueOrDie()},
-                                  // Copy to host DMA.
-                                  {copier_module_id, RawBytesOf(&host_in_copier)},
-                              });
+  return CreateSimplePipeline(controller, {
+                                              // Copy from I2S.
+                                              {copier_module_id, i2s_in_gateway_cfg.value()},
+                                              // Copy to host DMA.
+                                              {copier_module_id, RawBytesOf(&host_in_copier)},
+                                          });
 }
 
 // Get the module ID corresponding of the given module name.
-StatusOr<uint16_t> GetModuleId(DspModuleController* controller, const char* name) {
+zx::status<uint16_t> GetModuleId(DspModuleController* controller, const char* name) {
   // Read available modules.
-  StatusOr<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> modules_or_err =
+  zx::status<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> module_list =
       controller->ReadModuleDetails();
-  if (!modules_or_err.ok()) {
-    return modules_or_err.status();
+  if (!module_list.is_ok()) {
+    return zx::error(module_list.status_value());
   }
-  auto& modules = modules_or_err.ValueOrDie();
+  auto& modules = module_list.value();
 
   // Fetch out the copier module.
   auto copier_it = modules.find(name);
   if (copier_it == modules.end()) {
-    return Status(ZX_ERR_NOT_FOUND,
-                  fbl::StringPrintf("DSP doesn't have support for module '%s'", name));
+    GLOBAL_LOG(ERROR, "DSP doesn't have support for module '%s'", name);
+    return zx::error(ZX_ERR_NOT_FOUND);
   }
-  return copier_it->second->module_id;
+  return zx::ok(std::move(copier_it->second->module_id));
 }
 
 // Eve module config parameters extracted from kbl_i2s_chrome.conf
@@ -296,62 +294,65 @@ constexpr AudioDataFormat kEveFormatAlc5663 = {
     .reserved = 0,
 };
 
-StatusOr<std::vector<DspStream>> SetUpPixelbookEvePipelines(const Nhlt& nhlt,
-                                                            DspModuleController* controller) {
+zx::status<std::vector<DspStream>> SetUpPixelbookEvePipelines(const Nhlt& nhlt,
+                                                              DspModuleController* controller) {
   // Get the ID of the "COPIER" module.
-  StatusOr<uint16_t> copier_module_id_or_err = GetModuleId(controller, "COPIER");
-  if (!copier_module_id_or_err.ok()) {
-    return copier_module_id_or_err.status();
+  zx::status<uint16_t> copier_module = GetModuleId(controller, "COPIER");
+  if (!copier_module.is_ok()) {
+    return zx::error(copier_module.status_value());
   }
-  uint16_t copier_module_id = copier_module_id_or_err.ValueOrDie();
+  uint16_t copier_module_id = copier_module.value();
 
   // Create output pipeline to MAX98927 codec.
   constexpr AudioDataFormat kFormatMax98927 = kFormatI2S0Bus;
-  StatusOr<DspPipelineId> speakers_id = ConnectHostToI2S(
+  zx::status<DspPipelineId> speakers_id = ConnectHostToI2S(
       nhlt, controller, copier_module_id, HDA_GATEWAY_CFG_NODE_ID(DMA_TYPE_HDA_HOST_OUTPUT, 0),
       I2S_GATEWAY_CFG_NODE_ID(DMA_TYPE_I2S_LINK_OUTPUT, I2S0_BUS, 0), I2S0_BUS, kFormatMax98927);
-  if (!speakers_id.ok()) {
-    return PrependMessage("Could not set up route to MAX98927 codec", speakers_id.status());
+  if (!speakers_id.is_ok()) {
+    GLOBAL_LOG(ERROR, "Could not set up route to MAX98927 codec");
+    return zx::error(speakers_id.status_value());
   }
 
   // Create output pipeline to ALC5663 codec.
-  StatusOr<DspPipelineId> headphones_id = ConnectHostToI2S(
+  zx::status<DspPipelineId> headphones_id = ConnectHostToI2S(
       nhlt, controller, copier_module_id, HDA_GATEWAY_CFG_NODE_ID(DMA_TYPE_HDA_HOST_OUTPUT, 1),
       I2S_GATEWAY_CFG_NODE_ID(DMA_TYPE_I2S_LINK_OUTPUT, I2S1_BUS, 0), I2S1_BUS, kEveFormatAlc5663);
-  if (!headphones_id.ok()) {
-    return PrependMessage("Could not set up route to ALC5663 codec", headphones_id.status());
+  if (!headphones_id.is_ok()) {
+    GLOBAL_LOG(ERROR, "Could not set up route to ALC5663 codec");
+    return zx::error(headphones_id.status_value());
   }
 
   // Create input pipeline from DMIC.
   constexpr AudioDataFormat kFormatDmics = kFormatI2S0Bus;
-  StatusOr<DspPipelineId> microphones_id =
+  zx::status<DspPipelineId> microphones_id =
       ConnectI2SToHost(nhlt, controller, copier_module_id,
                        I2S_GATEWAY_CFG_NODE_ID(DMA_TYPE_I2S_LINK_INPUT, I2S0_BUS, 0), I2S0_BUS,
                        HDA_GATEWAY_CFG_NODE_ID(DMA_TYPE_HDA_HOST_INPUT, 0), kFormatDmics);
-  if (!microphones_id.ok()) {
-    return PrependMessage("Could not set up route from DMIC", microphones_id.status());
+  if (!microphones_id.is_ok()) {
+    GLOBAL_LOG(ERROR, "Could not set up route from DMIC");
+    return zx::error(microphones_id.status_value());
   }
 
   std::vector<DspStream> pipelines;
-  pipelines.push_back({.id = speakers_id.ValueOrDie(),
+  pipelines.push_back({.id = speakers_id.value(),
                        .host_format = kHostI2sFormat,
                        .stream_id = 1,
                        .is_input = false,
                        .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS,
                        .name = "Builtin Speakers"});
-  pipelines.push_back({.id = microphones_id.ValueOrDie(),
+  pipelines.push_back({.id = microphones_id.value(),
                        .host_format = kFormatDmics,
                        .stream_id = 2,
                        .is_input = true,
                        .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE,
                        .name = "Builtin Microphones"});
-  pipelines.push_back({.id = headphones_id.ValueOrDie(),
+  pipelines.push_back({.id = headphones_id.value(),
                        .host_format = kHostI2sFormat,
                        .stream_id = 3,
                        .is_input = false,
                        .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_HEADPHONE_JACK,
                        .name = "Builtin Headphone Jack"});
-  return pipelines;
+  return zx::ok(std::move(pipelines));
 }
 
 constexpr AudioDataFormat kAtlasFormatDmics = {
@@ -388,80 +389,81 @@ constexpr AudioDataFormat kAtlasHostFormatInput = {
     .reserved = 0,
 };
 
-StatusOr<DspPipelineId> ConnectAtlasDmicToHost(const Nhlt& nhlt, DspModuleController* controller,
-                                               uint16_t copier_module_id, uint32_t host_gateway_id,
-                                               uint32_t dmic_gateway_id, uint8_t dmic_bus) {
+zx::status<DspPipelineId> ConnectAtlasDmicToHost(const Nhlt& nhlt, DspModuleController* controller,
+                                                 uint16_t copier_module_id,
+                                                 uint32_t host_gateway_id, uint32_t dmic_gateway_id,
+                                                 uint8_t dmic_bus) {
   CopierCfg dmic_in_copier =
       CreateGatewayCopierCfg(kAtlasFormatDmics, kAtlasDspFormatInput, dmic_gateway_id);
   CopierCfg host_in_copier =
       CreateGatewayCopierCfg(kAtlasDspFormatInput, kAtlasHostFormatInput, host_gateway_id);
-  StatusOr<std::vector<uint8_t>> dmic_in_gateway_cfg =
+  zx::status<std::vector<uint8_t>> dmic_in_gateway_cfg =
       GetModuleConfig(nhlt, dmic_bus, NHLT_DIRECTION_CAPTURE, NHLT_LINK_TYPE_PDM, dmic_in_copier);
-  if (!dmic_in_gateway_cfg.ok()) {
-    return dmic_in_gateway_cfg.status();
+  if (!dmic_in_gateway_cfg.is_ok()) {
+    return zx::error(dmic_in_gateway_cfg.status_value());
   }
 
-  return CreateSimplePipeline(controller,
-                              {
-                                  // Copy from DMIC.
-                                  {copier_module_id, dmic_in_gateway_cfg.ConsumeValueOrDie()},
-                                  // Copy to host DMA.
-                                  {copier_module_id, RawBytesOf(&host_in_copier)},
-                              });
+  return CreateSimplePipeline(controller, {
+                                              // Copy from DMIC.
+                                              {copier_module_id, dmic_in_gateway_cfg.value()},
+                                              // Copy to host DMA.
+                                              {copier_module_id, RawBytesOf(&host_in_copier)},
+                                          });
 }
 
-StatusOr<std::vector<DspStream>> SetUpPixelbookAtlasPipelines(const Nhlt& nhlt,
-                                                              DspModuleController* controller) {
+zx::status<std::vector<DspStream>> SetUpPixelbookAtlasPipelines(const Nhlt& nhlt,
+                                                                DspModuleController* controller) {
   // Get the ID of the "COPIER" module.
-  StatusOr<uint16_t> copier_module_id_or_err = GetModuleId(controller, "COPIER");
-  if (!copier_module_id_or_err.ok()) {
-    return copier_module_id_or_err.status();
+  zx::status<uint16_t> copier_module = GetModuleId(controller, "COPIER");
+  if (!copier_module.is_ok()) {
+    return zx::error(copier_module.status_value());
   }
-  uint16_t copier_module_id = copier_module_id_or_err.ValueOrDie();
+  uint16_t copier_module_id = copier_module.value();
 
   // Create output pipeline to Maxim98373 codec.
   constexpr AudioDataFormat kFormatMax98373 = kFormatI2S0Bus;
-  StatusOr<DspPipelineId> speakers_id = ConnectHostToI2S(
+  zx::status<DspPipelineId> speakers_id = ConnectHostToI2S(
       nhlt, controller, copier_module_id, HDA_GATEWAY_CFG_NODE_ID(DMA_TYPE_HDA_HOST_OUTPUT, 0),
       I2S_GATEWAY_CFG_NODE_ID(DMA_TYPE_I2S_LINK_OUTPUT, I2S0_BUS, 0), I2S0_BUS, kFormatMax98373);
-  if (!speakers_id.ok()) {
-    return PrependMessage("Could not set up route to Max98373 codec", speakers_id.status());
+  if (!speakers_id.is_ok()) {
+    GLOBAL_LOG(ERROR, "Could not set up route to Max98373 codec");
+    return zx::error(speakers_id.status_value());
   }
 
   constexpr AudioDataFormat kFormatDa7219 = kFormatI2S1Bus;
 
   // Create output pipeline to DA7219 codec.
-  StatusOr<DspPipelineId> headset_output_id = ConnectHostToI2S(
+  zx::status<DspPipelineId> headset_output_id = ConnectHostToI2S(
       nhlt, controller, copier_module_id, HDA_GATEWAY_CFG_NODE_ID(DMA_TYPE_HDA_HOST_OUTPUT, 1),
       I2S_GATEWAY_CFG_NODE_ID(DMA_TYPE_I2S_LINK_OUTPUT, I2S1_BUS, 0), I2S1_BUS, kFormatDa7219);
-  if (!headset_output_id.ok()) {
-    return PrependMessage("Could not set up route to output from DA7219 codec",
-                          headset_output_id.status());
+  if (!headset_output_id.is_ok()) {
+    GLOBAL_LOG(ERROR, "Could not set up route to output from DA7219 codec");
+    return zx::error(headset_output_id.status_value());
   }
 
   // Create input pipeline to DA7219 codec.
-  StatusOr<DspPipelineId> headset_input_id =
+  zx::status<DspPipelineId> headset_input_id =
       ConnectI2SToHost(nhlt, controller, copier_module_id,
                        I2S_GATEWAY_CFG_NODE_ID(DMA_TYPE_I2S_LINK_INPUT, I2S1_BUS, 0), I2S1_BUS,
                        HDA_GATEWAY_CFG_NODE_ID(DMA_TYPE_HDA_HOST_INPUT, 1), kFormatDa7219);
-  if (!headset_input_id.ok()) {
-    return PrependMessage("Could not set up route to input into DA7219 codec",
-                          headset_input_id.status());
+  if (!headset_input_id.is_ok()) {
+    GLOBAL_LOG(ERROR, "Could not set up route to input into DA7219 codec");
+    return zx::error(headset_input_id.status_value());
   }
 
   // Create input pipeline from DMICs.
   // PDM bus must be zero, only one PDM link from SW/FW point of view.
   constexpr uint8_t kDmicBus = 0;
-  StatusOr<DspPipelineId> microphones_id = ConnectAtlasDmicToHost(
+  zx::status<DspPipelineId> microphones_id = ConnectAtlasDmicToHost(
       nhlt, controller, copier_module_id, HDA_GATEWAY_CFG_NODE_ID(DMA_TYPE_HDA_HOST_INPUT, 0),
       DMIC_GATEWAY_CFG_NODE_ID(DMA_TYPE_DMIC_LINK_INPUT, kDmicBus, 0), kDmicBus);
-  if (!microphones_id.ok()) {
-    printf("Could not set up route from DMICs");
-    return PrependMessage("Could not set up route from DMICs", microphones_id.status());
+  if (!microphones_id.is_ok()) {
+    GLOBAL_LOG(ERROR, "Could not set up route from DMICs");
+    return zx::error(microphones_id.status_value());
   }
 
   std::vector<DspStream> streams;
-  streams.push_back({.id = speakers_id.ValueOrDie(),
+  streams.push_back({.id = speakers_id.value(),
                      .host_format = kHostI2sFormat,
                      .dai_format = kFormatI2S0Bus,
                      .is_i2s = false,
@@ -469,7 +471,7 @@ StatusOr<std::vector<DspStream>> SetUpPixelbookAtlasPipelines(const Nhlt& nhlt,
                      .is_input = false,
                      .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_SPEAKERS,
                      .name = "Builtin Speakers"});
-  streams.push_back({.id = microphones_id.ValueOrDie(),
+  streams.push_back({.id = microphones_id.value(),
                      .host_format = kAtlasHostFormatInput,
                      .dai_format = kFormatI2S0Bus,
                      .is_i2s = false,
@@ -477,7 +479,7 @@ StatusOr<std::vector<DspStream>> SetUpPixelbookAtlasPipelines(const Nhlt& nhlt,
                      .is_input = true,
                      .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_MICROPHONE,
                      .name = "Builtin Microphones"});
-  streams.push_back({.id = headset_output_id.ValueOrDie(),
+  streams.push_back({.id = headset_output_id.value(),
                      .host_format = kHostI2sFormat,
                      .dai_format = kFormatI2S1Bus,
                      .is_i2s = true,
@@ -485,7 +487,7 @@ StatusOr<std::vector<DspStream>> SetUpPixelbookAtlasPipelines(const Nhlt& nhlt,
                      .is_input = false,
                      .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_HEADPHONE_JACK,
                      .name = "Builtin Headphone Jack Output"});
-  streams.push_back({.id = headset_input_id.ValueOrDie(),
+  streams.push_back({.id = headset_input_id.value(),
                      .host_format = kHostI2sFormat,
                      .dai_format = kFormatI2S1Bus,
                      .is_i2s = true,
@@ -493,73 +495,73 @@ StatusOr<std::vector<DspStream>> SetUpPixelbookAtlasPipelines(const Nhlt& nhlt,
                      .is_input = true,
                      .uid = AUDIO_STREAM_UNIQUE_ID_BUILTIN_HEADPHONE_JACK,
                      .name = "Builtin Headphone Jack Input"});
-  return streams;
+  return zx::ok(std::move(streams));
 }
 
-Status IntelDsp::StartPipeline(DspPipelineId id) {
+zx::status<> IntelDsp::StartPipeline(DspPipelineId id) {
   // Pipeline must be paused before starting.
-  if (Status status = module_controller_->SetPipelineState(id, PipelineState::PAUSED, true);
-      !status.ok()) {
-    return status;
+  if (zx::status status = module_controller_->SetPipelineState(id, PipelineState::PAUSED, true);
+      !status.is_ok()) {
+    return zx::error(status.status_value());
   }
 
   // Start the pipeline.
-  if (Status status = module_controller_->SetPipelineState(id, PipelineState::RUNNING, true);
-      !status.ok()) {
-    return status;
+  if (zx::status status = module_controller_->SetPipelineState(id, PipelineState::RUNNING, true);
+      !status.is_ok()) {
+    return zx::error(status.status_value());
   }
 
-  return OkStatus();
+  return zx::ok();
 }
 
-Status IntelDsp::PausePipeline(DspPipelineId id) {
-  if (Status status = module_controller_->SetPipelineState(id, PipelineState::PAUSED, true);
-      !status.ok()) {
-    return status;
+zx::status<> IntelDsp::PausePipeline(DspPipelineId id) {
+  if (zx::status status = module_controller_->SetPipelineState(id, PipelineState::PAUSED, true);
+      !status.is_ok()) {
+    return zx::error(status.status_value());
   }
 
-  if (Status status = module_controller_->SetPipelineState(id, PipelineState::RESET, true);
-      !status.ok()) {
-    return status;
+  if (zx::status status = module_controller_->SetPipelineState(id, PipelineState::RESET, true);
+      !status.is_ok()) {
+    return zx::error(status.status_value());
   }
 
-  return OkStatus();
+  return zx::ok();
 }
 
-Status IntelDsp::CreateAndStartStreams() {
+zx::status<> IntelDsp::CreateAndStartStreams() {
   zx_status_t res = ZX_OK;
 
   // Setup the pipelines.
-  StatusOr<std::vector<DspStream>> streams;
+  zx::status<std::vector<DspStream>> streams;
   // TODO(fxbug.dev/84323): Remove this hardcoded topology decisions for Atlas or Eve and add a
   // topology loading infrastructure that would render this unnecessary.
   if (nhlt_->IsOemMatch("GOOGLE", "ATLASMAX")) {
     streams = SetUpPixelbookAtlasPipelines(*nhlt_, module_controller_.get());
-    if (!streams.ok()) {
-      LOG(ERROR, "Failed to set up DSP pipelines: %s", streams.status().ToString().c_str());
-      return streams.status();
+    if (!streams.is_ok()) {
+      GLOBAL_LOG(ERROR, "Failed to set up DSP pipelines: %s", streams.status_string());
+      return zx::error(streams.status_value());
     }
   } else if (nhlt_->IsOemMatch("GOOGLE", "EVEMAX")) {
     streams = SetUpPixelbookEvePipelines(*nhlt_, module_controller_.get());
-    if (!streams.ok()) {
-      LOG(ERROR, "Failed to set up DSP pipelines: %s", streams.status().ToString().c_str());
-      return streams.status();
+    if (!streams.is_ok()) {
+      GLOBAL_LOG(ERROR, "Failed to set up DSP pipelines: %s", streams.status_string());
+      return zx::error(streams.status_value());
     }
   } else {
     LOG(ERROR, "Board not supported to set up DSP pipelines");
   }
-  for (const auto& stream_def : streams.ValueOrDie()) {
+  for (const auto& stream_def : streams.value()) {
     auto stream = fbl::AdoptRef(new IntelDspStream(stream_def));
 
     res = ActivateStream(stream);
     if (res != ZX_OK) {
       LOG(ERROR, "Failed to activate %s stream id #%u (res %d)!",
           stream_def.is_input ? "input" : "output", stream_def.stream_id, res);
-      return Status(res);
+      return zx::error(res);
     }
   }
 
-  return OkStatus();
+  return zx::ok();
 }
 
 }  // namespace intel_hda

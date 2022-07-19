@@ -9,17 +9,22 @@
 #include <lib/stdcompat/span.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
+#include <lib/zx/status.h>
 #include <lib/zx/time.h>
+#include <zircon/types.h>
 
+#include <cstdint>
 #include <functional>
+#include <map>
 #include <optional>
+#include <unordered_map>
+#include <vector>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/string.h>
 #include <intel-hda/utils/intel-audio-dsp-ipc.h>
 #include <intel-hda/utils/intel-hda-registers.h>
-#include <intel-hda/utils/status.h>
 #include <refcount/blocking_refcount.h>
 
 namespace audio {
@@ -51,10 +56,10 @@ class DspChannel {
   // be sent or received, and both the send and receive spans may point to the
   // same underlying memory if the same buffer should be used for both reading
   // and writing.
-  virtual Status Send(uint32_t primary, uint32_t extension) = 0;
-  virtual Status SendWithData(uint32_t primary, uint32_t extension,
-                              cpp20::span<const uint8_t> payload, cpp20::span<uint8_t> recv_buffer,
-                              size_t* bytes_received) = 0;
+  virtual zx::status<> Send(uint32_t primary, uint32_t extension) = 0;
+  virtual zx::status<> SendWithData(uint32_t primary, uint32_t extension,
+                                    cpp20::span<const uint8_t> payload,
+                                    cpp20::span<uint8_t> recv_buffer, size_t* bytes_received) = 0;
 
   // Return true if at least one operation is pending.
   virtual bool IsOperationPending() const = 0;

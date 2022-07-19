@@ -42,9 +42,9 @@ using audio::utils::AudioOutput;
 void CheckBasicStreamInfo(AudioDeviceStream* stream) {
   // Fetch manufacturer information, and ensure it is something other than
   // the empty string.
-  StatusOr<fbl::String> result = GetStreamConfigString(stream, AUDIO_STREAM_STR_ID_MANUFACTURER);
-  ASSERT_TRUE(result.ok());
-  auto& manufacturer = result.ValueOrDie();
+  zx::status<fbl::String> result = GetStreamConfigString(stream, AUDIO_STREAM_STR_ID_MANUFACTURER);
+  ASSERT_TRUE(result.is_ok());
+  auto& manufacturer = result.value();
   EXPECT_GT(manufacturer.length(), 0);
 
   // Fetch supported audio formats, and ensure it is non-empty with some number of channels.

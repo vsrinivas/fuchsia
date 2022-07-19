@@ -24,7 +24,7 @@ zx_status_t HdmiCodec::Create(void* ctx, zx_device_t* parent) {
 }
 
 zx_status_t HdmiCodec::Init(zx_device_t* codec_dev) {
-  zx_status_t res = Bind(codec_dev, "hdmi-codec").code();
+  zx_status_t res = Bind(codec_dev, "hdmi-codec").status_value();
   if (res != ZX_OK) {
     return res;
   }

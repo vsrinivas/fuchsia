@@ -17,8 +17,8 @@ namespace audio::intel_hda {
 namespace {
 
 TEST(DspTopology, GetI2sBlob) {
-  StatusOr<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(kExampleNhtl);
-  ASSERT_TRUE(nhlt.ok());
+  zx::status<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(kExampleNhtl);
+  ASSERT_TRUE(nhlt.is_ok());
 
   AudioDataFormat format = {
       .sampling_frequency = SamplingFrequency::FS_48000HZ,
@@ -35,13 +35,13 @@ TEST(DspTopology, GetI2sBlob) {
   const void* data;
   size_t data_size = 0;
   constexpr uint8_t kBusId = 0;
-  ASSERT_OK(GetNhltBlob(*nhlt.ValueOrDie().get(), kBusId, NHLT_DIRECTION_RENDER, NHLT_LINK_TYPE_SSP,
+  ASSERT_OK(GetNhltBlob(*nhlt.value().get(), kBusId, NHLT_DIRECTION_RENDER, NHLT_LINK_TYPE_SSP,
                         format, &data, &data_size));
 }
 
 TEST(DspTopology, GetPdmBlob) {
-  StatusOr<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(kExampleNhtl);
-  ASSERT_TRUE(nhlt.ok());
+  zx::status<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(kExampleNhtl);
+  ASSERT_TRUE(nhlt.is_ok());
 
   AudioDataFormat format = {
       .sampling_frequency = SamplingFrequency::FS_48000HZ,
@@ -58,13 +58,13 @@ TEST(DspTopology, GetPdmBlob) {
   const void* data;
   size_t data_size = 0;
   constexpr uint8_t kBusId = 0;
-  ASSERT_OK(GetNhltBlob(*nhlt.ValueOrDie().get(), kBusId, NHLT_DIRECTION_CAPTURE,
-                        NHLT_LINK_TYPE_PDM, format, &data, &data_size));
+  ASSERT_OK(GetNhltBlob(*nhlt.value().get(), kBusId, NHLT_DIRECTION_CAPTURE, NHLT_LINK_TYPE_PDM,
+                        format, &data, &data_size));
 }
 
 TEST(DspTopology, GetI2sModuleConfig) {
-  StatusOr<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(kExampleNhtl);
-  ASSERT_TRUE(nhlt.ok());
+  zx::status<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(kExampleNhtl);
+  ASSERT_TRUE(nhlt.is_ok());
 
   AudioDataFormat format = {
       .sampling_frequency = SamplingFrequency::FS_48000HZ,
@@ -82,11 +82,11 @@ TEST(DspTopology, GetI2sModuleConfig) {
   uint32_t i2s_gateway_id = I2S_GATEWAY_CFG_NODE_ID(DMA_TYPE_I2S_LINK_OUTPUT, kBusId, 0);
   // Use same format for input and output in this test.
   CopierCfg i2s_out_copier = CreateGatewayCopierCfg(format, format, i2s_gateway_id);
-  StatusOr<std::vector<uint8_t>> i2s_config = GetModuleConfig(
-      *nhlt.ValueOrDie().get(), kBusId, NHLT_DIRECTION_RENDER, NHLT_LINK_TYPE_SSP, i2s_out_copier);
-  ASSERT_TRUE(i2s_config.ok());
+  zx::status<std::vector<uint8_t>> i2s_config = GetModuleConfig(
+      *nhlt.value().get(), kBusId, NHLT_DIRECTION_RENDER, NHLT_LINK_TYPE_SSP, i2s_out_copier);
+  ASSERT_TRUE(i2s_config.is_ok());
 
-  auto* copier = reinterpret_cast<const CopierCfg*>(i2s_config.ValueOrDie().data());
+  auto* copier = reinterpret_cast<const CopierCfg*>(i2s_config.value().data());
   // Input format.
   EXPECT_EQ(copier->base_cfg.audio_fmt.number_of_channels, 2);
   EXPECT_EQ(copier->base_cfg.audio_fmt.bit_depth, BitDepth::DEPTH_16BIT);
@@ -109,11 +109,11 @@ TEST(DspTopology, GetI2sModuleConfig) {
     0xFF, 0x0F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x40, 0x00, 0x00, 0x00,
     0x7D, 0x00, 0x00, 0x00};
   // clang-format on.
-  EXPECT_EQ(sizeof(expected_config), i2s_config.ValueOrDie().size() - sizeof(CopierCfg));
-  EXPECT_BYTES_EQ(i2s_config.ValueOrDie().data() + sizeof(CopierCfg) - 4, expected_config,
+  EXPECT_EQ(sizeof(expected_config), i2s_config.value().size() - sizeof(CopierCfg));
+  EXPECT_BYTES_EQ(i2s_config.value().data() + sizeof(CopierCfg) - 4, expected_config,
                   sizeof(expected_config));
   uint32_t expected_zero_word = 0;
-  EXPECT_BYTES_EQ(i2s_config.ValueOrDie().data() + sizeof(CopierCfg) - 4 + sizeof(expected_config),
+  EXPECT_BYTES_EQ(i2s_config.value().data() + sizeof(CopierCfg) - 4 + sizeof(expected_config),
                   &expected_zero_word, sizeof(expected_zero_word));
 }
 
