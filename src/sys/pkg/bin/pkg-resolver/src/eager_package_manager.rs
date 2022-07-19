@@ -169,14 +169,18 @@ impl<T: Resolver> EagerPackageManager<T> {
                 .iter()
                 .find_map(|app| {
                     app.update_check.as_ref().and_then(|uc| {
-                        uc.get_all_full_urls().find(|u| u.starts_with(&url.to_string()))
+                        uc.get_all_full_urls().find_map(|u| {
+                            PinnedAbsolutePackageUrl::parse(&u)
+                                .ok()
+                                .and_then(|u| (u.path() == url.path()).then_some(u))
+                        })
                     })
                 })
                 .ok_or_else(|| {
                     anyhow!("could not find pinned url in CUP omaha response for {}", url)
                 })?;
 
-            Some(pinned_url.parse().with_context(|| format!("while parsing {}", url))?)
+            Some(pinned_url)
         } else {
             // The config includes an eager package, but no CUP is persisted, try to load it
             // from cache packages.
@@ -298,7 +302,9 @@ impl<T: Resolver> EagerPackageManager<T> {
         let mut packages = self.packages.clone();
         // Make sure the url is an eager package before trying to resolve it.
         let package = packages
-            .get_mut(pinned_url.as_unpinned())
+            .iter_mut()
+            .find(|(url, _package)| url.path() == pinned_url.path())
+            .map(|(_url, package)| package)
             .ok_or_else(|| CupWriteError::UnknownURL(pinned_url.as_unpinned().clone()))?;
         let (pkg_dir, _resolution_context) =
             Self::resolve_pinned(&self.package_resolver, pinned_url).await?;
@@ -564,9 +570,9 @@ mod tests {
         (package_resolver, dir)
     }
     fn get_default_cup_response() -> Vec<u8> {
-        get_cup_response_with_name(&format!("package?hash={TEST_HASH}"))
+        get_cup_response("fuchsia-pkg://example.com/", format!("package?hash={TEST_HASH}"))
     }
-    fn get_cup_response_with_name(package_name: &str) -> Vec<u8> {
+    fn get_cup_response(url_codebase: impl AsRef<str>, package_name: impl AsRef<str>) -> Vec<u8> {
         let response = serde_json::json!({"response":{
           "server": "prod",
           "protocol": "3.0",
@@ -578,7 +584,7 @@ mod tests {
               "status": "ok",
               "urls":{
                 "url":[
-                  {"codebase": "fuchsia-pkg://example.com/"},
+                  {"codebase": url_codebase.as_ref()},
                 ]
               },
               "manifest": {
@@ -589,7 +595,7 @@ mod tests {
                 "packages": {
                   "package": [
                     {
-                     "name": package_name,
+                     "name": package_name.as_ref(),
                      "required": true,
                      "fp": "",
                     }
@@ -790,8 +796,10 @@ mod tests {
 
         let cup1_response: Vec<u8> = get_default_cup_response();
         let cup1: CupData = make_cup_data(&cup1_response);
-        let cup2_response =
-            get_cup_response_with_name(&format!("package2?hash={}", "1".repeat(64)));
+        let cup2_response = get_cup_response(
+            "fuchsia-pkg://example.com/",
+            format!("package2?hash={}", "1".repeat(64)),
+        );
         // this will fail to resolve because hash doesn't match
         let cup2: CupData = make_cup_data(&cup2_response);
         write_persistent_fidl(
@@ -833,6 +841,51 @@ mod tests {
         assert_matches!(manager.get_package_dir(&url2.clone().into()), Err(_));
         // cup is still loaded even if resolve fails
         assert_eq!(manager.packages[&url2].cup, Some(cup2));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_load_persistent_eager_packages_with_different_host_name_in_cup() {
+        let url = UnpinnedAbsolutePackageUrl::parse(TEST_URL).unwrap();
+        let config = EagerPackageConfigs {
+            packages: vec![EagerPackageConfig {
+                url: url.clone(),
+                executable: true,
+                public_keys: make_default_public_keys_for_test(),
+            }],
+        };
+        let package_resolver = get_test_package_resolver();
+        let (pkg_cache, pkg_cache_stream) = get_mock_pkg_cache();
+
+        let data_dir = tempfile::tempdir().unwrap();
+        let data_proxy = fuchsia_fs::open_directory_in_namespace(
+            data_dir.path().to_str().unwrap(),
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        )
+        .unwrap();
+
+        let cup_response =
+            get_cup_response("fuchsia-pkg://real.host.name/", format!("package?hash={TEST_HASH}"));
+        let cup: CupData = make_cup_data(&cup_response);
+        write_persistent_fidl(&data_proxy, [(url.clone(), cup.clone())]).await;
+        let (manager, ()) = future::join(
+            EagerPackageManager::from_config(
+                config,
+                package_resolver,
+                pkg_cache,
+                Some(data_proxy),
+                &CachePackages::from_entries(vec![]),
+            ),
+            handle_pkg_cache(pkg_cache_stream),
+        )
+        .await;
+        assert!(manager.packages[&url].package_directory.is_some());
+        assert!(manager.get_package_dir(&url.clone().into()).unwrap().is_some());
+        assert_eq!(manager.packages[&url].cup, Some(cup));
+        // `get_package_dir` still only accept non-rewritten url.
+        assert_matches!(
+            manager.get_package_dir(&"fuchsia-pkg://real.host.name/package".parse().unwrap()),
+            Ok(None)
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1029,7 +1082,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_cup_write_omaha_response_different_url() {
+    async fn test_cup_write_omaha_response_different_url_hash() {
         let url = UnpinnedAbsolutePackageUrl::parse(TEST_URL).unwrap();
         let config = EagerPackageConfigs {
             packages: vec![EagerPackageConfig {
@@ -1058,6 +1111,50 @@ mod tests {
         );
         assert!(manager.packages[&url].package_directory.is_none());
         assert!(manager.packages[&url].cup.is_none());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_cup_write_omaha_response_different_url_host() {
+        let url = UnpinnedAbsolutePackageUrl::parse(TEST_URL).unwrap();
+        let config = EagerPackageConfigs {
+            packages: vec![EagerPackageConfig {
+                url: url.clone(),
+                executable: true,
+                public_keys: make_default_public_keys_for_test(),
+            }],
+        };
+        let (package_resolver, _test_dir) = get_test_package_resolver_with_hash(TEST_HASH);
+        let (pkg_cache, _) = get_mock_pkg_cache();
+
+        let data_dir = tempfile::tempdir().unwrap();
+        let data_proxy = fuchsia_fs::open_directory_in_namespace(
+            data_dir.path().to_str().unwrap(),
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+        )
+        .unwrap();
+        let mut manager = EagerPackageManager::from_config(
+            config,
+            package_resolver,
+            pkg_cache,
+            Some(data_proxy),
+            &CachePackages::from_entries(vec![]),
+        )
+        .await;
+        let cup_response =
+            get_cup_response("fuchsia-pkg://real.host.name/", format!("package?hash={TEST_HASH}"));
+        let cup: CupData = make_cup_data(&cup_response);
+
+        manager
+            .cup_write(
+                &fpkg::PackageUrl {
+                    url: format!("fuchsia-pkg://real.host.name/package?hash={TEST_HASH}"),
+                },
+                cup.clone().into(),
+            )
+            .await
+            .unwrap();
+        assert!(manager.packages[&url].package_directory.is_some());
+        assert_eq!(manager.packages[&url].cup, Some(cup));
     }
 
     #[fasync::run_singlethreaded(test)]
