@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1758
+From //build/config/BUILDCONFIG.gn:1759
 
 ### allow_legacy_data_partition_names
 Set to true to enable legacy data partition names.
@@ -1580,7 +1580,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1505
+From //build/config/BUILDCONFIG.gn:1506
 
 ### extra_vbmeta_descriptors
 Additional VBMeta Descriptors to add to the vbmeta image during assembly.
@@ -2604,7 +2604,7 @@ Each element of the list is one variant, which is a scope defining:
   tags = ["instrumentation-runtime", "instrumented", "kernel-excluded", "tsan"]
 }, {
   configs = ["//build/config/sanitizers:hwasan"]
-  tags = ["hwasan", "instrumentation-runtime", "instrumented", "kernel-excluded"]
+  tags = ["hwasan", "instrumentation-runtime", "instrumented", "kernel-excluded", "replaces-allocator"]
 }, {
   configs = ["//build/config/sanitizers:ubsan"]
   remove_common_configs = ["//build/config:no_rtti"]
@@ -4207,7 +4207,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1748
+From //build/config/BUILDCONFIG.gn:1749
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -4216,7 +4216,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1753
+From //build/config/BUILDCONFIG.gn:1754
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -4266,7 +4266,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1551
+From //build/config/BUILDCONFIG.gn:1552
 
 ### size_checker_input
 The input to the size checker.
@@ -4591,7 +4591,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1535
+From //build/config/BUILDCONFIG.gn:1536
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
