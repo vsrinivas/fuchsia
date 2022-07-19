@@ -737,7 +737,8 @@ impl CurrentTask {
         }
 
         // Mode only applies to future accesses of newly created files.
-        if !flags.contains(OpenFlags::CREAT) {
+        // Also, O_PATH doesn't require permissions.
+        if !flags.intersects(OpenFlags::CREAT | OpenFlags::PATH) {
             name.entry.node.check_access(self, Access::from_open_flags(flags))?;
         }
 
