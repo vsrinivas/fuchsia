@@ -17,6 +17,12 @@
 static syslog::LogSettings g_log_settings;
 
 static void RunAndVerify(const char* spec_path) {
+  // Early exit if there is no perfmon device. We could be running on QEMU.
+  if (!perfmon::Controller::IsSupported()) {
+    FX_LOGS(INFO) << "Perfmon device not supported";
+    return;
+  }
+
   ASSERT_TRUE(RunSpec(spec_path, g_log_settings));
   VerifySpec(spec_path);
 }
@@ -36,6 +42,11 @@ TEST(Cpuperf, UserFlag) { RunAndVerify("/pkg/data/user_flag.cpspec"); }
 TEST(Cpuperf, DISABLED_ValueRecords) { RunAndVerify("/pkg/data/value_records.cpspec"); }
 
 TEST(Cpuperf, LastBranchRecord) {
+  // Early exit if there is no perfmon device. We could be running on QEMU.
+  if (!perfmon::Controller::IsSupported()) {
+    FX_LOGS(INFO) << "Perfmon device not supported";
+    return;
+  }
   perfmon::Properties properties;
   ASSERT_TRUE(perfmon::Controller::GetProperties(&properties));
   if (!(properties.flags & perfmon::Properties::kFlagHasLastBranch)) {
@@ -58,16 +69,6 @@ int main(int argc, char** argv) {
   if (!fxl::SetTestSettings(cl))
     return EXIT_FAILURE;
   fxl::ParseLogSettings(cl, &g_log_settings);
-
-  // Early exit if there is no perfmon device. We could be running on QEMU.
-  bool is_supported = false;
-  is_supported = perfmon::Controller::IsSupported();
-  if (!is_supported) {
-    FX_LOGS(INFO) << "Perfmon device not supported";
-    return EXIT_SUCCESS;
-  }
-
   testing::InitGoogleTest(&argc, argv);
-
   return RUN_ALL_TESTS();
 }

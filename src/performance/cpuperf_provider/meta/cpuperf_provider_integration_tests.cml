@@ -8,12 +8,12 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "bin/detach_tests",
+        binary: "bin/cpuperf_provider_integration_tests",
     },
     children: [
         {
             name: "trace_manager",
-            url: "#meta/trace_manager.cm",
+            url: "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cm",
         },
     ],
     use: [
@@ -25,14 +25,19 @@
             from: "#trace_manager",
         },
         {
-            storage: "tmp",
-            path: "/tmp",
-        },
-        {
             protocol: [
                 "fuchsia.process.Launcher",
                 "fuchsia.process.Resolver",
             ],
+        },
+        {
+            directory: "sys",
+            rights: [ "r*" ],
+            path: "/dev/sys",
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
         },
     ],
     offer: [

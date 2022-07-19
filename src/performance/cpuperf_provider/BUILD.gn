@@ -69,7 +69,7 @@ executable("bin") {
 }
 
 fuchsia_package_with_single_component("cpuperf_provider") {
-  manifest = "meta/cpuperf_provider.cmx"
+  manifest = "meta/cpuperf_provider.cml"
   deps = [ ":bin" ]
 }
 
@@ -109,7 +109,7 @@ executable("cpuperf_provider_integration_tests_bin") {
 
 fuchsia_test_component("cpuperf_provider_integration_tests_component") {
   component_name = "cpuperf_provider_integration_tests"
-  manifest = "meta/cpuperf_provider_integration_tests.cmx"
+  manifest = "meta/cpuperf_provider_integration_tests.cml"
   deps = [ ":cpuperf_provider_integration_tests_bin" ]
 }
 

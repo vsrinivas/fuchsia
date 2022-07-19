@@ -36,14 +36,8 @@ uint32_t ConstrainBufferSize(uint32_t buffer_size_megabytes) {
 
 }  // namespace
 
-TraceManager::TraceManager(TraceManagerApp* app, sys::ComponentContext* context, Config config)
-    : app_(app), context_(context), config_(std::move(config)) {
-  // TODO(jeffbrown): We should do this in InitializeTracing() and take care
-  // to restart any crashed providers.  We should also wait briefly to ensure
-  // that these providers have registered themselves before replying that
-  // tracing has started.
-  LaunchConfiguredProviders();
-}
+TraceManager::TraceManager(TraceManagerApp* app, Config config)
+    : app_(app), config_(std::move(config)) {}
 
 TraceManager::~TraceManager() = default;
 
@@ -310,7 +304,7 @@ void TraceManager::WatchAlert(WatchAlertCallback cb) {
 
 void TraceManager::RegisterProviderWorker(fidl::InterfaceHandle<provider::Provider> provider,
                                           uint64_t pid, fidl::StringPtr name) {
-  FX_VLOGS(2) << "Registering provider {" << pid << ":" << name.value_or("") << "}";
+  FX_LOGS(INFO) << "Registering provider {" << pid << ":" << name.value_or("") << "}";
   auto it = providers_.emplace(providers_.end(), provider.Bind(), next_provider_id_++, pid,
                                name.value_or(""));
 
@@ -363,36 +357,6 @@ controller::SessionState TraceManager::TranslateSessionState(TraceSession::State
       return controller::SessionState::STOPPED;
     case TraceSession::State::kTerminating:
       return controller::SessionState::TERMINATING;
-  }
-}
-
-void TraceManager::LaunchConfiguredProviders() {
-  if (config_.providers().empty())
-    return;
-
-  fuchsia::sys::LauncherPtr launcher;
-  context_->svc()->Connect(launcher.NewRequest());
-
-  for (const auto& pair : config_.providers()) {
-    // TODO(jeffbrown): Only do this if the provider isn't already running.
-    // Also keep track of the provider so we can kill it when the trace
-    // manager exits or restart it if needed.
-    FX_VLOGS(1) << "Starting configured provider: " << pair.first;
-    FX_VLOGS(2) << "URL: " << pair.second->url;
-    if (FX_VLOG_IS_ON(2)) {
-      std::string args;
-      if (pair.second->arguments.has_value()) {
-        for (const auto& arg : *pair.second->arguments) {
-          args += " ";
-          args += arg;
-        }
-      }
-      FX_VLOGS(2) << "Args:" << args;
-    }
-    fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = pair.second->url;
-    fidl::Clone(pair.second->arguments, &launch_info.arguments);
-    launcher->CreateComponent(std::move(launch_info), nullptr);
   }
 }
 

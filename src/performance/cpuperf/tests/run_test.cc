@@ -19,10 +19,8 @@
 #include "src/lib/fxl/strings/join_strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
-// The path of the trace program.
-// cpuperf is a "shell=true" program, and thus has a stub for it in /bin
-// that resolves to the component path.
-const char kCpuperfProgramPath[] = "/bin/cpuperf";
+// The path of the trace program that's packaged with the test
+const char kCpuperfProgramPath[] = "/pkg/bin/cpuperf";
 
 static void AppendLoggingArgs(std::vector<std::string>* argv,
                               const syslog::LogSettings& log_settings) {

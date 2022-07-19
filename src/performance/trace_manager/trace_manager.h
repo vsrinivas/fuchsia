@@ -30,7 +30,7 @@ class TraceManagerApp;
 
 class TraceManager : public controller::Controller, public provider::Registry {
  public:
-  TraceManager(TraceManagerApp* app, sys::ComponentContext* context, Config config);
+  TraceManager(TraceManagerApp* app, Config config);
   ~TraceManager() override;
 
   // For testing.
@@ -59,15 +59,10 @@ class TraceManager : public controller::Controller, public provider::Registry {
 
   void SendSessionStateEvent(controller::SessionState state);
   controller::SessionState TranslateSessionState(TraceSession::State state);
-  void LaunchConfiguredProviders();
 
   void OnAlert(const std::string& alert_name);
 
   TraceManagerApp* const app_;
-
-  // Non-owning copy of component context. |TraceManagerApp| has the owning
-  // copy, but we need it too. This works out ok as |TraceManagerApp| owns us.
-  sys::ComponentContext* const context_;
 
   const Config config_;
 

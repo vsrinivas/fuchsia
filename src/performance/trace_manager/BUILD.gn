@@ -84,6 +84,11 @@ fuchsia_package("trace_manager") {
   deps = [
     ":component_cfv1",
     ":component_cfv2",
+
+    # TODO(fxbug.dev/104206) Package the trace providers with trace_manager
+    # using subpackages.
+    "//src/performance/cpuperf_provider",
+    "//src/performance/ktrace_provider",
   ]
 }
 

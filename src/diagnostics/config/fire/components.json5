@@ -182,7 +182,7 @@
     {
         id: 137,
         label: "CPU Perf Provider",
-        moniker: "cpuperf_provider.cmx",
+        moniker: "core/trace_manager/cpuperf_provider",
     },
     {
         id: 138,
@@ -192,7 +192,7 @@
     {
         id: 139,
         label: "KTrace Provider",
-        moniker: "ktrace_provider.cmx",
+        moniker: "core/trace_manager/ktrace_provider",
     },
     {
         id: 140,

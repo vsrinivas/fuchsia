@@ -20,10 +20,8 @@ namespace {
 
 using ControllerSyncPtr = ::fuchsia::hardware::cpu::insntrace::ControllerSyncPtr;
 
-const char kInsntraceDevicePath[] = "/dev/sys/cpu-trace/insntrace";
-
 #ifdef __x86_64__
-
+const char kInsntraceDevicePath[] = "/dev/sys/cpu-trace/insntrace";
 const char kInsntracePath[] = "/pkg/bin/insntrace";
 
 // These files should be created when running insntrace.
@@ -33,7 +31,45 @@ const char* const kResultFileList[] = {
     "/tmp/ptout.ptlist",
 };
 
+ControllerSyncPtr OpenDevice() {
+  ControllerSyncPtr controller_ptr;
+  zx_status_t status = fdio_service_connect(kInsntraceDevicePath,
+                                            controller_ptr.NewRequest().TakeChannel().release());
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Error connecting to " << kInsntraceDevicePath << ": " << status;
+    return ControllerSyncPtr();
+  }
+  return controller_ptr;
+}
+
+bool IsSupported() {
+  ControllerSyncPtr ipt{OpenDevice()};
+  if (!ipt) {
+    return false;
+  }
+  // TODO(https://fxbug.dev/104569): Need fidl interface to query device properties.
+  ::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result result;
+  zx_status_t status = ipt->Terminate(&result);
+  if (status != ZX_OK) {
+    FX_VLOGS(1) << "Is-supported proxy(terminate) failed: " << status;
+    return false;
+  }
+  FX_DCHECK(result.is_err());
+  if (result.is_err()) {
+    FX_VLOGS(1) << "Is-supported proxy(terminate) received: " << result.err();
+    return result.err() == ZX_ERR_BAD_STATE;
+  }
+  FX_VLOGS(1) << "Is-supported proxy(terminate) failed";
+  return false;
+}
+
 TEST(Insntrace, Control) {
+  // Early exit if there is no insntrace device.
+  if (!IsSupported()) {
+    FX_LOGS(INFO) << "Insntrace device not supported";
+    return;
+  }
+
   zx::job job{};  // -> default job
 
   // A note on file sizes:
@@ -70,38 +106,6 @@ TEST(Insntrace, Control) {
 
 #endif  // __x86_64__
 
-ControllerSyncPtr OpenDevice() {
-  ControllerSyncPtr controller_ptr;
-  zx_status_t status = fdio_service_connect(kInsntraceDevicePath,
-                                            controller_ptr.NewRequest().TakeChannel().release());
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Error connecting to " << kInsntraceDevicePath << ": " << status;
-    return ControllerSyncPtr();
-  }
-  return controller_ptr;
-}
-
-bool IsSupported() {
-  ControllerSyncPtr ipt{OpenDevice()};
-  if (!ipt) {
-    return false;
-  }
-  // TODO(dje): Need fidl interface to query device properties.
-  ::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result result;
-  zx_status_t status = ipt->Terminate(&result);
-  if (status != ZX_OK) {
-    FX_VLOGS(1) << "Is-supported proxy(terminate) failed: " << status;
-    return false;
-  }
-  FX_DCHECK(result.is_err());
-  if (result.is_err()) {
-    FX_VLOGS(1) << "Is-supported proxy(terminate) received: " << result.err();
-    return result.err() == ZX_ERR_BAD_STATE;
-  }
-  FX_VLOGS(1) << "Is-supported proxy(terminate) failed";
-  return false;
-}
-
 }  // namespace
 
 // Provide our own main so that we can do an early-exit if instruction
@@ -111,13 +115,6 @@ int main(int argc, char** argv) {
   if (!fxl::SetTestSettings(cl))
     return EXIT_FAILURE;
 
-  // Early exit if there is no insntrace device.
-  if (!IsSupported()) {
-    FX_LOGS(INFO) << "Insntrace device not supported";
-    return EXIT_SUCCESS;
-  }
-
   testing::InitGoogleTest(&argc, argv);
-
   return RUN_ALL_TESTS();
 }

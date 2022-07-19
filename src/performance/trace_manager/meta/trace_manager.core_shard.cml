@@ -33,23 +33,26 @@
     ],
     offer: [
         {
-            protocol: [ "fuchsia.logger.LogSink" ],
+            protocol: [
+                "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.logger.LogSink",
+                "fuchsia.tracing.kernel.Controller",
+                "fuchsia.tracing.kernel.Reader",
+            ],
             from: "parent",
             to: "#trace_manager",
-        },
-
-        // TODO(fxbug.dev/101097): Remove the need to use this to launch v1
-        // components.
-        {
-            protocol: [ "fuchsia.sys.Launcher" ],
-            from: "self",
-            to: "#trace_manager",
-            dependency: "weak_for_migration",
         },
         {
             protocol: "fuchsia.tracing.provider.Registry",
             from: "#trace_manager",
             to: "#appmgr",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "sys",
+            to: "#trace_manager",
+            subdir: "sys",
         },
     ],
     expose: [

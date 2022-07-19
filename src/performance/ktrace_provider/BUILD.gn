@@ -56,7 +56,7 @@ executable("bin") {
 }
 
 fuchsia_package_with_single_component("ktrace_provider") {
-  manifest = "meta/ktrace_provider.cmx"
+  manifest = "meta/ktrace_provider.cml"
   deps = [ ":bin" ]
 }
 

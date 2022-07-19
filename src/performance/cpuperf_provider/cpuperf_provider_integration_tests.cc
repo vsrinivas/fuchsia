@@ -34,6 +34,11 @@ const char kTestEventName[] = "cycle_counter";
 #endif
 
 TEST(CpuperfProvider, IntegrationTest) {
+  if (!perfmon::Controller::IsSupported()) {
+    FX_LOGS(INFO) << "Exiting, perfmon device not supported";
+    return;
+  }
+
   zx::job job;
   ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0, &job), ZX_OK);
 
@@ -82,12 +87,6 @@ int main(int argc, char** argv) {
   fxl::CommandLine cl = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetTestSettings(cl))
     return EXIT_FAILURE;
-
-  if (!perfmon::Controller::IsSupported()) {
-    FX_LOGS(INFO) << "Exiting, perfmon device not supported";
-    return 0;
-  }
-
   testing::InitGoogleTest(&argc, argv);
 
   return RUN_ALL_TESTS();
