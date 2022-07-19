@@ -1,0 +1,28 @@
+{
+    "include": [
+        "syslog/client.shard.cmx",
+        "//src/lib/fuchsia-hyper/hyper.shard.cmx"
+    ],
+    "program": {
+        "args": [
+            "--rotation",
+            "90"
+        ],
+        "binary": "bin/system_recovery_fdr"
+    },
+    "sandbox": {
+        "dev": [
+            "class/display-controller",
+            "class/input",
+            "class/input-report",
+            "sys/platform"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.recovery.FactoryReset",
+            "fuchsia.recovery.policy.FactoryReset",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sysmem.Allocator"
+        ]
+    }
+}
