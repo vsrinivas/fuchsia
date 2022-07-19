@@ -6,6 +6,8 @@
 
 #![deny(missing_docs)]
 #![allow(elided_lifetimes_in_paths)]
+// TODO(fxbug.dev/104019): Consider enabling globally.
+#![deny(unused_crate_dependencies)]
 
 #[macro_use]
 pub mod encoding;

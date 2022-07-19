@@ -12,7 +12,6 @@ fidl_rust_deps = [
   "//src/lib/fuchsia-async",
   "//src/lib/zerocopy",
   "//src/lib/zircon/rust:fuchsia-zircon-status",
-  "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:bitflags",
   "//third_party/rust_crates:futures",
   "//third_party/rust_crates:log",
@@ -59,10 +58,13 @@ rustc_library("fidl") {
 rustc_test("fidl_rust_lib_tests_bin") {
   output_name = "fidl_rust_lib_tests"
   edition = "2021"
-  deps = fidl_rust_deps + [
-           "//third_party/rust_crates:assert_matches",
-           "//third_party/rust_crates:futures-test",
-         ]
+  deps = fidl_rust_deps + [ "//third_party/rust_crates:assert_matches" ]
+  if (is_fuchsia) {
+    deps += [
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:futures-test",
+    ]
+  }
   sources = fidl_rust_sources
 }
 
