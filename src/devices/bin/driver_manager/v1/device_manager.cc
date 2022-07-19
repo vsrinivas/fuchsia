@@ -44,6 +44,16 @@ zx_status_t DeviceManager::AddDevice(
     return ZX_ERR_BAD_STATE;
   }
 
+  // Prevent the addition of a device with the same name as another one of the
+  // parent's children.
+  for (auto& child : parent->children()) {
+    if (child.name() == name.data()) {
+      LOGF(ERROR, "Device name '%.*s' conflicts with existing sibling device",
+           static_cast<int>(name.size()), name.data());
+      return ZX_ERR_BAD_STATE;
+    }
+  }
+
   // Convert the device properties and string properties.
   fbl::Array<zx_device_prop_t> props(new zx_device_prop_t[props_count], props_count);
   if (!props) {

@@ -219,6 +219,7 @@
 //src/devices/tests/device-group-test/drivers:root-driver
 //src/devices/tests/device-watcher:test-driver-driver
 //src/devices/tests/driver-inspect-test:fuchsia_driver
+//src/devices/tests/driver-multiname-test:parent_device
 //src/devices/tests/driver-runtime:child-driver
 //src/devices/tests/driver-runtime:parent-driver
 //src/devices/tests/driver-transport:child-drv

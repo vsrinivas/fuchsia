@@ -566,7 +566,7 @@ TEST_F(CompositeTestCase, SharedFragmentUnbinds) {
 
   // Add the device back and verify the composite gets created again
   ASSERT_NO_FATAL_FAILURE(
-      AddDevice(platform_bus()->device, "device-0", protocol_id[0], "", &device_indexes[0]));
+      AddDevice(platform_bus()->device, "device-0a", protocol_id[0], "", &device_indexes[0]));
   {
     auto device_state = device(device_indexes[0]);
     // Wait for the fragments to get bound
@@ -668,7 +668,7 @@ TEST_F(CompositeTestCase, FragmentUnbinds) {
 
   // Add the device back and verify the composite gets created again
   ASSERT_NO_FATAL_FAILURE(
-      AddDevice(platform_bus()->device, "device-0", protocol_id[0], "", &device_indexes[0]));
+      AddDevice(platform_bus()->device, "device-0b", protocol_id[0], "", &device_indexes[0]));
   {
     auto device_state = device(device_indexes[0]);
     // Wait for the fragments to get bound
@@ -1121,7 +1121,7 @@ TEST_F(CompositeMetadataTestCase, GetMetadataAfterCompositeReassemble) {
 
   // Add the device back and verify the composite gets created again
   ASSERT_NO_FATAL_FAILURE(
-      AddDevice(platform_bus()->device, "device-0", protocol_id[0], "", &device_indexes[0]));
+      AddDevice(platform_bus()->device, "device-0c", protocol_id[0], "", &device_indexes[0]));
   {
     auto device_state = device(device_indexes[0]);
     // Wait for the fragments to get bound

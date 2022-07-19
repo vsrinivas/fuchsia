@@ -62,6 +62,7 @@ group("drivers") {
     "device-group-test/drivers:drivers",
     "device-watcher:test-driver",
     "driver-inspect-test:driver",
+    "driver-multiname-test:parent_device_component",
     "driver-runtime:child",
     "driver-runtime:parent",
     "driver-transport:child",
