@@ -10,21 +10,22 @@
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 
+#include <memory>
+
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/performance/lib/perfmon/controller.h"
 #include "src/performance/lib/perfmon/properties.h"
 #include "src/performance/lib/perfmon/reader.h"
 
-namespace perfmon {
-namespace internal {
+namespace perfmon::internal {
 
 class DeviceReader final : public Reader {
  public:
-  static bool Create(fxl::WeakPtr<Controller> controller, uint32_t buffer_size_in_pages,
-                     std::unique_ptr<Reader>* out_reader);
+  static zx::status<std::unique_ptr<Reader>> Create(fxl::WeakPtr<Controller> controller,
+                                                    uint32_t buffer_size_in_pages);
 
-  ~DeviceReader();
+  ~DeviceReader() override;
 
  private:
   DeviceReader(fxl::WeakPtr<Controller> controller, uint32_t buffer_size_in_pages, zx::vmar vmar);
@@ -42,7 +43,6 @@ class DeviceReader final : public Reader {
   FXL_DISALLOW_COPY_AND_ASSIGN(DeviceReader);
 };
 
-}  // namespace internal
-}  // namespace perfmon
+}  // namespace perfmon::internal
 
 #endif  // SRC_PERFORMANCE_LIB_PERFMON_DEVICE_READER_H_

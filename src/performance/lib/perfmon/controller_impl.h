@@ -6,12 +6,12 @@
 #define SRC_PERFORMANCE_LIB_PERFMON_CONTROLLER_IMPL_H_
 
 #include <fuchsia/perfmon/cpu/cpp/fidl.h>
+#include <lib/zx/status.h>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/performance/lib/perfmon/controller.h"
 
-namespace perfmon {
-namespace internal {
+namespace perfmon::internal {
 
 using ::fuchsia::perfmon::cpu::ControllerSyncPtr;
 
@@ -21,9 +21,9 @@ class ControllerImpl final : public Controller {
                  uint32_t buffer_size_in_pages, Config config);
   ~ControllerImpl() override;
 
-  bool Start() override;
+  zx::status<> Start() override;
   // It is ok to call this while stopped.
-  void Stop() override;
+  zx::status<> Stop() override;
 
   bool started() const override { return started_; }
 
@@ -31,14 +31,14 @@ class ControllerImpl final : public Controller {
 
   const Config& config() const override { return config_; }
 
-  bool GetBufferHandle(const std::string& name, uint32_t trace_num, zx::vmo* out_vmo) override;
+  zx::status<zx::vmo> GetBufferHandle(const std::string& name, uint32_t trace_num) override;
 
-  std::unique_ptr<Reader> GetReader() override;
+  zx::status<std::unique_ptr<Reader>> GetReader() override;
 
  private:
-  bool Stage();
-  void Terminate();
-  void Reset();
+  zx::status<> Stage();
+  zx::status<> Terminate();
+  zx::status<> Reset();
 
   ControllerSyncPtr controller_ptr_;
   // The number of traces we will collect (== #cpus for now).
@@ -53,7 +53,6 @@ class ControllerImpl final : public Controller {
   fxl::WeakPtrFactory<Controller> weak_ptr_factory_;
 };
 
-}  // namespace internal
-}  // namespace perfmon
+}  // namespace perfmon::internal
 
 #endif  // SRC_PERFORMANCE_LIB_PERFMON_CONTROLLER_IMPL_H_

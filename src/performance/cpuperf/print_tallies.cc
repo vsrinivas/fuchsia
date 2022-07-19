@@ -148,8 +148,8 @@ void PrintTallyResults(FILE* f, const cpuperf::SessionSpec& spec,
                        const cpuperf::SessionResultSpec& result_spec,
                        const perfmon::ModelEventManager* model_event_manager,
                        perfmon::Controller* controller) {
-  std::unique_ptr<perfmon::Reader> reader = controller->GetReader();
-  if (!reader) {
+  auto reader = controller->GetReader();
+  if (reader.is_error()) {
     return;
   }
 

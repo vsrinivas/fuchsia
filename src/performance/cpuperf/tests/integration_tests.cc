@@ -36,9 +36,9 @@ TEST(Cpuperf, UserFlag) { RunAndVerify("/pkg/data/user_flag.cpspec"); }
 TEST(Cpuperf, DISABLED_ValueRecords) { RunAndVerify("/pkg/data/value_records.cpspec"); }
 
 TEST(Cpuperf, LastBranchRecord) {
-  perfmon::Properties properties;
-  ASSERT_TRUE(perfmon::Controller::GetProperties(&properties));
-  if (!(properties.flags & perfmon::Properties::kFlagHasLastBranch)) {
+  auto properties = perfmon::Controller::GetProperties();
+  ASSERT_TRUE(properties.is_ok());
+  if (!(properties->flags & perfmon::Properties::kFlagHasLastBranch)) {
     // Not supported on this h/w. Punt.
     FX_LOGS(INFO) << "Last Branch Records not supported, skipping test";
     return;

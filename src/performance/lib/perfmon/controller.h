@@ -6,6 +6,7 @@
 #define SRC_PERFORMANCE_LIB_PERFMON_CONTROLLER_H_
 
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
 
 #include <cstdint>
@@ -31,20 +32,20 @@ class Controller {
   static bool IsSupported();
 
   // Fetch the properties of this device.
-  static bool GetProperties(Properties* props);
+  static zx::status<Properties> GetProperties();
 
-  static bool Create(uint32_t buffer_size_in_pages, const Config config,
-                     std::unique_ptr<Controller>* out_controller);
+  static zx::status<std::unique_ptr<Controller>> Create(uint32_t buffer_size_in_pages,
+                                                        Config config);
 
   // Note: Virtual methods are used here to hide the implementation.
   // There is no intent to provide polymorphism here.
 
   virtual ~Controller() = default;
 
-  virtual bool Start() = 0;
+  virtual zx::status<> Start() = 0;
 
   // It is ok to call this while stopped.
-  virtual void Stop() = 0;
+  virtual zx::status<> Stop() = 0;
 
   virtual bool started() const = 0;
 
@@ -52,9 +53,9 @@ class Controller {
 
   virtual const Config& config() const = 0;
 
-  virtual bool GetBufferHandle(const std::string& name, uint32_t trace_num, zx::vmo* out_vmo) = 0;
+  virtual zx::status<zx::vmo> GetBufferHandle(const std::string& name, uint32_t trace_num) = 0;
 
-  virtual std::unique_ptr<Reader> GetReader() = 0;
+  virtual zx::status<std::unique_ptr<Reader>> GetReader() = 0;
 
  protected:
   Controller() = default;

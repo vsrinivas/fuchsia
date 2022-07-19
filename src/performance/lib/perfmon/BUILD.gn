@@ -61,17 +61,15 @@ static_library("perfmon") {
 
     public_deps += [
       "//sdk/fidl/fuchsia.perfmon.cpu",
+      "//zircon/system/public",
       "//zircon/system/ulib/zx",
+      "//zircon/system/ulib/zxc",
     ]
   } else {
     sources += [
       "arm64-events.cc",
       "intel-events.cc",
     ]
-  }
-
-  if (!is_fuchsia) {
-    public_deps += [ "//zircon/system/public" ]
   }
 
   public_configs = [
@@ -102,7 +100,46 @@ fuchsia_unittest_package("perfmon_tests") {
   deps = [ ":perfmon_tests_app" ]
 }
 
+executable("perfmon_integration_tests_bin") {
+  testonly = true
+  output_name = "perfmon_integration_tests"
+
+  sources = [ "perfmon_integration_tests.cc" ]
+
+  deps = [
+    "//src/lib/fxl/test:gtest_main",
+    "//src/performance/lib/perfmon",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuchsia_test_component("perfmon_integration_tests_component") {
+  manifest = "meta/perfmon_integration_tests.cml"
+  deps = [ ":perfmon_integration_tests_bin" ]
+}
+
+fuchsia_test_package("perfmon_integration_tests") {
+  test_components = [ ":perfmon_integration_tests_component" ]
+  test_specs = {
+    # Each tests needs full pmu ownership.
+    parallel = 1
+
+    # Run this both on real hardware to make sure it works and emus to make
+    # sure we fail gracefully.
+    environments = all_fuchsia_envs
+
+    # On devices that don't have a pmu, we check that starting perfmon fails
+    # gracefully.
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
 group("tests") {
   testonly = true
-  public_deps = [ ":perfmon_tests" ]
+  public_deps = [
+    ":perfmon_integration_tests",
+    ":perfmon_tests",
+  ]
 }

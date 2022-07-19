@@ -16,7 +16,7 @@ using FidlPerfmonProperties = fuchsia::perfmon::cpu::Properties;
 
 namespace internal {
 
-void FidlToPerfmonProperties(const FidlPerfmonProperties& props, Properties* out_props);
+Properties FidlToPerfmonProperties(const FidlPerfmonProperties& props);
 
 }  // namespace internal
 

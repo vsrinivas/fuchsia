@@ -112,8 +112,8 @@ static void PrintEventList(FILE* f, perfmon::ModelEventManager* model_event_mana
 
 static void SaveTrace(const cpuperf::SessionResultSpec& result_spec,
                       perfmon::Controller* controller, size_t iter) {
-  std::unique_ptr<perfmon::Reader> reader = controller->GetReader();
-  if (!reader) {
+  auto reader = controller->GetReader();
+  if (reader.is_error()) {
     return;
   }
 
@@ -160,13 +160,15 @@ static bool RunSession(const cpuperf::SessionSpec& spec,
                                          controller->num_traces(), spec.output_path_prefix};
 
   for (size_t iter = 0; iter < spec.num_iterations; ++iter) {
-    if (!controller->Start()) {
+    if (controller->Start().is_error()) {
       return false;
     }
 
     zx::nanosleep(zx::deadline_after(spec.duration));
 
-    controller->Stop();
+    if (controller->Stop().is_error()) {
+      return false;
+    }
 
     // Save the trace, even if printing results, for testing purposes.
     if (result_spec.save_results()) {
@@ -247,8 +249,8 @@ int main(int argc, char* argv[]) {
     exit(EXIT_FAILURE);
   }
 
-  std::unique_ptr<perfmon::Controller> controller;
-  if (!perfmon::Controller::Create(buffer_size_in_pages, spec.perfmon_config, &controller)) {
+  auto controller = perfmon::Controller::Create(buffer_size_in_pages, spec.perfmon_config);
+  if (controller.is_error()) {
     return EXIT_FAILURE;
   }
 
@@ -256,7 +258,7 @@ int main(int argc, char* argv[]) {
   FX_LOGS(INFO) << spec.num_iterations << " iteration(s), " << spec.duration.to_secs()
                 << " second(s) per iteration";
 
-  bool success = RunSession(spec, spec.model_event_manager.get(), controller.get());
+  bool success = RunSession(spec, spec.model_event_manager.get(), (*controller).get());
 
   if (!success) {
     FX_LOGS(INFO) << "cpuperf exiting with error";

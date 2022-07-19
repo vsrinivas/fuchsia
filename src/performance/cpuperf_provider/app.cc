@@ -10,6 +10,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <utility>
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
@@ -85,7 +86,7 @@ App::App(const fxl::CommandLine& command_line)
   trace_observer_.Start(async_get_default_dispatcher(), [this] { UpdateState(); });
 }
 
-App::~App() {}
+App::~App() = default;
 
 void App::PrintHelp() {
   std::cout << "cpuperf_provider [options]" << std::endl;
@@ -118,8 +119,8 @@ void App::StartTracing(std::unique_ptr<TraceConfig> trace_config) {
     return;
   }
 
-  std::unique_ptr<perfmon::Controller> controller;
-  if (!perfmon::Controller::Create(buffer_size_in_pages_, device_config, &controller)) {
+  auto controller = perfmon::Controller::Create(buffer_size_in_pages_, device_config);
+  if (controller.is_error()) {
     FX_LOGS(ERROR) << "Perfmon controller failed to initialize";
     return;
   }
@@ -133,12 +134,12 @@ void App::StartTracing(std::unique_ptr<TraceConfig> trace_config) {
   FX_VLOGS(1) << "Starting trace, config = " << trace_config->ToString();
 
   start_time_ = zx_ticks_get();
-  if (!controller->Start())
+  if (controller->Start().is_error())
     goto Fail;
 
   FX_LOGS(INFO) << "Started tracing";
   trace_config_ = std::move(trace_config);
-  controller_.reset(controller.release());
+  controller_ = std::move(*controller);
   return;
 
 Fail:
@@ -154,7 +155,11 @@ void App::StopTracing() {
 
   FX_LOGS(INFO) << "Stopping trace";
 
-  controller_->Stop();
+  auto status = controller_->Stop();
+  if (status.is_error()) {
+    FX_LOGS(ERROR) << "Failed to stop trace: " << status.status_string();
+    return;
+  }
 
   stop_time_ = zx_ticks_get();
 
@@ -162,10 +167,10 @@ void App::StopTracing() {
   auto buffer_context = trace_acquire_context();
 
   auto reader = controller_->GetReader();
-  if (reader) {
+  if (reader.is_ok()) {
     Importer importer(buffer_context, trace_config_.get(), start_time_, stop_time_);
     const perfmon::Config& config = controller_->config();
-    if (!importer.Import(*reader, config)) {
+    if (!importer.Import(**reader, config)) {
       FX_LOGS(ERROR) << "Errors encountered while importing perfmon data";
     }
   } else {

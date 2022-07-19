@@ -9,6 +9,8 @@
 #include <lib/syslog/cpp/macros.h>
 #include <sys/stat.h>
 
+#include <memory>
+
 #include <fbl/algorithm.h>
 
 #include "src/lib/fxl/strings/string_printf.h"
@@ -16,6 +18,7 @@
 #include "src/performance/lib/perfmon/controller_impl.h"
 #include "src/performance/lib/perfmon/device_reader.h"
 #include "src/performance/lib/perfmon/properties_impl.h"
+#include "zircon/system/public/zircon/errors.h"
 
 namespace perfmon {
 
@@ -54,28 +57,27 @@ bool Controller::IsSupported() {
   return S_ISCHR(stat_buffer.st_mode);
 }
 
-bool Controller::GetProperties(Properties* props) {
+zx::status<Properties> Controller::GetProperties() {
   ::fuchsia::perfmon::cpu::ControllerSyncPtr controller_ptr;
   zx_status_t status =
       fdio_service_connect(kPerfMonDev, controller_ptr.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Error connecting to " << kPerfMonDev << ": " << status;
-    return false;
+    return zx::error(status);
   }
 
   FidlPerfmonProperties properties;
   status = controller_ptr->GetProperties(&properties);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to get properties: " << status;
-    return false;
+    return zx::error(status);
   }
 
-  internal::FidlToPerfmonProperties(properties, props);
-  return true;
+  return zx::ok(internal::FidlToPerfmonProperties(properties));
 }
 
-static bool Initialize(::fuchsia::perfmon::cpu::ControllerSyncPtr* controller_ptr,
-                       uint32_t num_traces, uint32_t buffer_size_in_pages) {
+static zx::status<> Initialize(::fuchsia::perfmon::cpu::ControllerSyncPtr* controller_ptr,
+                               uint32_t num_traces, uint32_t buffer_size_in_pages) {
   FidlPerfmonAllocation allocation;
   allocation.num_buffers = num_traces;
   allocation.buffer_size_in_pages = buffer_size_in_pages;
@@ -86,11 +88,11 @@ static bool Initialize(::fuchsia::perfmon::cpu::ControllerSyncPtr* controller_pt
   zx_status_t status = (*controller_ptr)->Initialize(allocation, &result);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Initialize failed: status=" << status;
-    return false;
+    return zx::error(status);
   }
   if (result.is_err() && result.err() != ZX_ERR_BAD_STATE) {
     FX_LOGS(ERROR) << "Initialize failed: error=" << result.err();
-    return false;
+    return zx::error(result.err());
   }
 
   // TODO(dje): If we get BAD_STATE, a previous run may have crashed without
@@ -102,41 +104,41 @@ static bool Initialize(::fuchsia::perfmon::cpu::ControllerSyncPtr* controller_pt
     status = (*controller_ptr)->Stop();
     if (status != ZX_OK) {
       FX_VLOGS(2) << "Stopping device failed: status=" << status;
-      return false;
+      return zx::error(status);
     }
     status = (*controller_ptr)->Terminate();
     if (status != ZX_OK) {
       FX_VLOGS(2) << "Terminating previous trace failed: status=" << status;
-      return false;
+      return zx::error(status);
     }
     status = (*controller_ptr)->Initialize(allocation, &result);
     if (status != ZX_OK) {
       FX_LOGS(ERROR) << "Initialize try #2 failed: status=" << status;
-      return false;
+      return zx::error(status);
     }
     if (result.is_err()) {
       FX_LOGS(ERROR) << "Initialize try #2 failed: error=" << result.err();
-      return false;
+      return zx::error(status);
     }
     FX_VLOGS(2) << "Second Initialize attempt succeeded";
   }
 
-  return true;
+  return zx::ok();
 }
 
-bool Controller::Create(uint32_t buffer_size_in_pages, const Config config,
-                        std::unique_ptr<Controller>* out_controller) {
+zx::status<std::unique_ptr<Controller>> Controller::Create(uint32_t buffer_size_in_pages,
+                                                           Config config) {
   if (buffer_size_in_pages > kMaxBufferSizeInPages) {
     FX_LOGS(ERROR) << "Buffer size is too large, max " << kMaxBufferSizeInPages << " pages";
-    return false;
+    return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
   ::fuchsia::perfmon::cpu::ControllerSyncPtr controller_ptr;
-  zx_status_t status =
-      fdio_service_connect(kPerfMonDev, controller_ptr.NewRequest().TakeChannel().release());
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Error connecting to " << kPerfMonDev << ": " << status;
-    return false;
+  auto status = zx::make_status(
+      fdio_service_connect(kPerfMonDev, controller_ptr.NewRequest().TakeChannel().release()));
+  if (status.is_error()) {
+    FX_LOGS(ERROR) << "Error connecting to " << kPerfMonDev << ": " << status.status_string();
+    return status.take_error();
   }
 
   CollectionMode mode = config.GetMode();
@@ -145,13 +147,13 @@ bool Controller::Create(uint32_t buffer_size_in_pages, const Config config,
   // caller provided and use our own value.
   uint32_t actual_buffer_size_in_pages = GetBufferSizeInPages(mode, buffer_size_in_pages);
 
-  if (!Initialize(&controller_ptr, num_traces, actual_buffer_size_in_pages)) {
-    return false;
+  auto init_status = Initialize(&controller_ptr, num_traces, actual_buffer_size_in_pages);
+  if (init_status.is_error()) {
+    return init_status.take_error();
   }
 
-  out_controller->reset(new internal::ControllerImpl(std::move(controller_ptr), num_traces,
-                                                     buffer_size_in_pages, std::move(config)));
-  return true;
+  return zx::ok(std::make_unique<internal::ControllerImpl>(
+      std::move(controller_ptr), num_traces, buffer_size_in_pages, std::move(config)));
 }
 
 }  // namespace perfmon
