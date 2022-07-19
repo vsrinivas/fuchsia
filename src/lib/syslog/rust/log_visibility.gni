@@ -99,7 +99,6 @@ third_party_rust_crate_log_visibility = [
   "//src/devices/bin/driver_tools:*",
   "//src/devices/bin/driver-index:*",
   "//src/diagnostics/archivist:*",
-  "//src/diagnostics/archivist/tests/stress-test:*",
   "//src/diagnostics/lib/triage:*",
   "//src/diagnostics/triage:*",
   "//src/fonts:*",
