@@ -30,12 +30,12 @@ use {
         future::{select, Either},
         prelude::*,
     },
-    parking_lot::RwLock,
+    parking_lot::{Mutex, RwLock},
     selectors::{self, FastError},
     serde::Serialize,
     std::collections::HashMap,
     std::convert::TryFrom,
-    std::sync::{Arc, Mutex},
+    std::sync::Arc,
     tracing::warn,
 };
 
@@ -345,7 +345,7 @@ impl BatchIterator {
         let stream_owned_counter = truncation_counter.clone();
 
         let data = data.map(move |d| {
-            let mut unlocked_counter = stream_owned_counter.lock().unwrap();
+            let mut unlocked_counter = stream_owned_counter.lock();
             unlocked_counter.total_schemas += 1;
             if D::has_errors(&d.metadata) {
                 result_stats.add_result_error();
@@ -447,7 +447,7 @@ impl BatchIterator {
             self.stats.add_response();
             if batch.is_empty() {
                 if let Some(truncation_count) = &self.truncation_counter {
-                    let unlocked_count = truncation_count.lock().unwrap();
+                    let unlocked_count = truncation_count.lock();
                     if unlocked_count.total_schemas > 0 {
                         self.stats.global_stats().record_percent_truncated_schemas(
                             ((unlocked_count.truncated_schemas as f32
