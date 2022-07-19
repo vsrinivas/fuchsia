@@ -5,6 +5,72 @@
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
 
+# Define a target that expects the lsan runtime to be provided. If the lsan
+# runtime is provided, this will create the target type normally and append
+# various deps to the targets current deps. See below for what extra deps
+# can be defined. The lsan runtime is provided if either the target is built
+# using a toolchain with the "lsan" variant tag (meaning the lsan runtime is
+# already provided), or both the "lsan" and "replaces-allocator" tags are not
+# in the toolchain variant tags (meaning the lsan isn't present, but this lsan
+# can be explicitly added as a config).
+#
+# Parameters:
+#
+#   target_type:
+#     Required: Name of the GN template that will be invoked to instantiate
+#     this target ("test", "executable", etc.).
+#
+template("lsan_target") {
+  # These are the deps that will be forwarded if lsan can be used.
+  _extra_deps = [
+    "data_deps",
+    "sources",
+  ]
+  _configs = []
+
+  if (toolchain_variant.tags + [ "lsan" ] - [ "lsan" ] !=
+      toolchain_variant.tags) {
+    # The variant has lsan.
+    using_lsan = true
+  } else if (toolchain_variant.tags + [ "replaces-allocator" ] -
+             [ "replaces-allocator" ] != toolchain_variant.tags) {
+    # The variant does not have lsan but replaces C/C++ memory allocation APIs.
+    # HWASan falls under this case.
+    using_lsan = false
+  } else {
+    # Neither replaces-allocator not lsan is defined. We can just add the lsan
+    # config and build the test normally.
+    _configs += [ "//build/config/sanitizers:lsan" ]
+    using_lsan = true
+  }
+
+  # LSan requires frame pointers.  First make sure that none of the related
+  # configs is in the list, then add the one enabling frame pointers.
+  if (using_lsan) {
+    fp_configs = [
+      "//build/config:default_frame_pointers",
+      "//build/config:frame_pointers",
+      "//build/config:no_frame_pointers",
+    ]
+    _configs += fp_configs
+    _configs -= fp_configs
+    _configs += [ "//build/config:frame_pointers" ]
+  }
+
+  target(invoker.target_type, target_name) {
+    forward_variables_from(invoker, "*", [ "target_type" ] + _extra_deps)
+    if (using_lsan) {
+      forward_variables_from(invoker, _extra_deps)
+    }
+
+    if (defined(configs)) {
+      configs += _configs
+    } else {
+      configs = _configs
+    }
+  }
+}
+
 group("sanitizer") {
   testonly = true
   deps = [
@@ -71,50 +137,20 @@ shared_library("sanitizer-memory-snapshot-test-dlopen-dso") {
   sources = [ "sanitizer-memory-snapshot-test-dlopen-dso.cc" ]
 }
 
-test("lsan-test") {
+lsan_target("lsan-test") {
+  target_type = "test"
+  deps = [ "//zircon/system/ulib/zxtest" ]
+
+  # Note that if lsan is not available, this will result in an empty test where
+  # main is provided by zxtest.
   sources = [ "lsan-test.cc" ]
-  deps = [
-    ":lsan-thread-race-test",
-    "//zircon/system/ulib/zxtest",
-  ]
-
-  # Add the lsan config whether or not the current variant already includes it.
-  lsan_config = [ "//build/config/sanitizers:lsan" ]
-  configs += lsan_config
-  configs -= lsan_config
-  configs += lsan_config
-
-  # LSan requires frame pointers.  First make sure that none of the related
-  # configs is in the list, then add the one enabling frame pointers.
-  fp_configs = [
-    "//build/config:default_frame_pointers",
-    "//build/config:frame_pointers",
-    "//build/config:no_frame_pointers",
-  ]
-  configs += fp_configs
-  configs -= fp_configs
-  configs += [ "//build/config:frame_pointers" ]
+  data_deps = [ ":lsan-thread-race-test" ]
 }
 
-executable("lsan-thread-race-test") {
+lsan_target("lsan-thread-race-test") {
+  target_type = "executable"
+  testonly = true
   sources = [ "lsan-thread-race-test.cc" ]
-
-  # Add the lsan config whether or not the current variant already includes it.
-  lsan_config = [ "//build/config/sanitizers:lsan" ]
-  configs += lsan_config
-  configs -= lsan_config
-  configs += lsan_config
-
-  # LSan requires frame pointers.  First make sure that none of the related
-  # configs is in the list, then add the one enabling frame pointers.
-  fp_configs = [
-    "//build/config:default_frame_pointers",
-    "//build/config:frame_pointers",
-    "//build/config:no_frame_pointers",
-  ]
-  configs += fp_configs
-  configs -= fp_configs
-  configs += [ "//build/config:frame_pointers" ]
 }
 
 bootfs_test("sanitizer-utils-bootfs-test") {

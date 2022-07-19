@@ -1392,6 +1392,7 @@ declare_args() {
         "instrumentation-runtime",
         "instrumented",
         "kernel-excluded",
+        "replaces-allocator",
       ]
     },
 
