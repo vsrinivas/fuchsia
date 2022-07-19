@@ -98,7 +98,10 @@ group("rust") {
 
 group("tests") {
   testonly = true
-  deps = [ ":fuchsia-inspect-tests" ]
+  deps = [
+    ":fuchsia-inspect-tests",
+    "bench:tests",
+  ]
 }
 
 group("benchmarks") {

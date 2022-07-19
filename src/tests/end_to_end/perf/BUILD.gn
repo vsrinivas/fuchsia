@@ -32,6 +32,7 @@ test_list = [
   "storage_benchmarks_test",
   "rust_inspect_benchmarks_test",
   "rust_inspect_reader_benchmarks_test",
+  "rust_inspect_selectors_benchmarks_test",
 ]
 foreach(target_name, test_list) {
   dart_test(target_name) {
