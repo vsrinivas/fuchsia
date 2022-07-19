@@ -6,7 +6,8 @@
 // used very generically, e.g., all the different kinds of h/w based trace
 // and performance data capturing one can do.
 
-#pragma once
+#ifndef LIB_ZIRCON_INTERNAL_MTRACE_H_
+#define LIB_ZIRCON_INTERNAL_MTRACE_H_
 
 __BEGIN_CDECLS
 
@@ -77,4 +78,12 @@ __BEGIN_CDECLS
 
 #define MTRACE_PERFMON_OPTIONS_CPU(options) ((options)&MTRACE_PERFMON_OPTIONS_CPU_MASK)
 
+// The minimum version of the Intel Performance Monitoring Unit supported by the kernel.
+#define MTRACE_X86_INTEL_PMU_MIN_SUPPORTED_VERSION ((uint8_t)2)
+
+// The maximum version of the Intel Performance Monitoring Unit supported by the kernel.
+#define MTRACE_X86_INTEL_PMU_MAX_SUPPORTED_VERSION ((uint8_t)4)
+
 __END_CDECLS
+
+#endif  // LIB_ZIRCON_INTERNAL_MTRACE_H_

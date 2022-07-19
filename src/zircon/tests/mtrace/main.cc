@@ -45,10 +45,10 @@ std::optional<uint8_t> IntelArchitecturalPMUVersion() {
 }
 
 bool IsIntelPMUSupported() {
-  static constexpr uint8_t kMinimumSupportedArchitecturalPMUVersion = 2;
   std::optional<uint8_t> version = IntelArchitecturalPMUVersion();
   if (version) {
-    return *version >= kMinimumSupportedArchitecturalPMUVersion;
+    return *version >= MTRACE_X86_INTEL_PMU_MIN_SUPPORTED_VERSION &&
+           *version <= MTRACE_X86_INTEL_PMU_MAX_SUPPORTED_VERSION;
   }
   return false;
 }

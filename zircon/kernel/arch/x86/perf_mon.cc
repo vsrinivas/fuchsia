@@ -98,8 +98,6 @@ typedef enum {
 // This is here for experimentation purposes.
 #define TRY_FREEZE_ON_PMI 0
 
-// At a minimum we require Performance Monitoring version 2
-#define MINIMUM_INTEL_PERFMON_VERSION 2
 #define PERFMON_VERSION_OVERFLOW_INDICATOR_SUPPORTED (4)
 
 // MSRs
@@ -491,7 +489,8 @@ static void x86_perfmon_init_once(uint level) {
     perfmon_max_fixed_counter_value = (1ul << perfmon_fixed_counter_width) - 1;
   }
 
-  perfmon_supported = perfmon_version >= MINIMUM_INTEL_PERFMON_VERSION;
+  perfmon_supported = perfmon_version >= MTRACE_X86_INTEL_PMU_MIN_SUPPORTED_VERSION &&
+                      perfmon_version <= MTRACE_X86_INTEL_PMU_MAX_SUPPORTED_VERSION;
 
   if (arch::BootCpuid<arch::CpuidFeatureFlagsC>().pdcm()) {
     perfmon_capabilities = static_cast<uint32_t>(read_msr(IA32_PERF_CAPABILITIES));
