@@ -4,6 +4,7 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
+#include "asan_impl.h"
 #include "libc.h"
 #include "threads_impl.h"
 #include "zircon_impl.h"
@@ -13,10 +14,8 @@
 // in and of itself at this point (unlike in dynlink.c).  But they might also
 // use ShadowCallStack, which is not set up yet.  So make sure references here
 // only use the libc-internal symbols, which don't have any setup requirements.
-#if __has_feature(address_sanitizer)
-__asm__(".weakref __asan_memcpy,__libc_memcpy");
-__asm__(".weakref __asan_memset,__libc_memset");
-#endif
+__asan_weak_ref("memcpy")
+__asan_weak_ref("memset")
 
 #ifdef __aarch64__
 // Clang's <arm_acle.h> has __yield() but GCC doesn't (nor the intrinsic).
@@ -215,9 +214,7 @@ __NO_SAFESTACK static bool map_block(zx_handle_t parent_vmar, zx_handle_t vmo, s
 // ShadowCallStack that aren't ready yet. So redirect this symbol to libc's own
 // memcpy implementation, which is always a leaf function that doesn't require
 // the ShadowCallStack ABI.
-#if __has_feature(address_sanitizer)
-__asm__(".weakref __asan_memcpy, __unsanitized_memcpy");
-#endif
+__asan_weak_ref("memcpy")
 
 __NO_SAFESTACK thrd_t __allocate_thread(size_t requested_guard_size, size_t requested_stack_size,
                                         const char* thread_name, char vmo_name[ZX_MAX_NAME_LEN]) {

@@ -356,10 +356,8 @@ __NO_SAFESTACK NO_ASAN static inline void dso_set_prev(struct dso* p, struct dso
 // is a PLT call that uses ShadowCallStack.
 __asm__(".weakref memcpy,__libc_memcpy");
 __asm__(".weakref memset,__libc_memset");
-#if __has_feature(address_sanitizer)
-__asm__(".weakref __asan_memcpy,__libc_memcpy");
-__asm__(".weakref __asan_memset,__libc_memset");
-#endif
+__asan_weak_ref("memcpy")
+__asan_weak_ref("memset")
 
 __NO_SAFESTACK NO_ASAN static void decode_vec(ElfW(Dyn) * v, size_t* a, size_t cnt) {
   size_t i;

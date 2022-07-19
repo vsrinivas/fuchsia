@@ -9,6 +9,7 @@
 
 #include <runtime/thread.h>
 
+#include "asan_impl.h"
 #include "libc.h"
 #include "setjmp_impl.h"
 #include "threads_impl.h"
@@ -30,10 +31,8 @@ struct start_params {
 // in and of itself at this point (unlike in dynlink.c).  But they might also
 // use ShadowCallStack, which is not set up yet.  So make sure references here
 // only use the libc-internal symbols, which don't have any setup requirements.
-#if __has_feature(address_sanitizer)
-__asm__(".weakref __asan_memcpy,__libc_memcpy");
-__asm__(".weakref __asan_memset,__libc_memset");
-#endif
+__asan_weak_ref("memcpy")
+__asan_weak_ref("memset")
 
 // This gets called via inline assembly below, after switching onto
 // the newly-allocated (safe) stack.
