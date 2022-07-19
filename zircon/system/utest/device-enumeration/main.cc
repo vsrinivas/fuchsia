@@ -105,6 +105,8 @@ fbl::String GetTestFilter() {
     return "*Sherlock*";
   } else if (!strcmp(board_name, "msm8x53-som")) {
     return "*Msm8x53Som*";
+  } else if (!strcmp(board_name, "as370") || !strcmp(board_name, "visalia")) {
+    return "*Visalia*";
   } else if (!strcmp(board_name, "Nocturne")) {
     return "*Nocturne*";
   } else if (!strcmp(board_name, "nelson")) {
@@ -591,6 +593,45 @@ TEST_F(DeviceEnumerationTest, NucTest) {
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+}
+
+TEST_F(DeviceEnumerationTest, VisaliaTest) {
+  static const char* kDevicePaths[] = {
+      "sys/platform/14:01:1",
+      "sys/platform/14:01:1/as370-gpio",
+      "sys/platform/00:00:9",
+      "sys/platform/00:00:9/dw-i2c",
+      "sys/platform/14:01:2/as370-usb-phy",
+      "sys/platform/14:01:a/as370-sdhci/sdhci/sdmmc/sdmmc-sdio/sdmmc-sdio-1",
+      "sys/platform/14:01:a/as370-sdhci/sdhci/sdmmc/sdmmc-sdio/sdmmc-sdio-2",
+      "dwc2-usb",
+      // TODO(fxbug.dev/94099): Add back when audio has been restored.
+      // "audio-max98373",
+      // "as370-audio-out",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/fvm/ftl/block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/tzk_normal/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/tzk_normalB/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/bl_normal/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/bl_normalB/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/boot/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/recovery/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/fts/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/factory_store/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/key_1st/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/key_2nd/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/fastboot_1st/skip-block",
+      "sys/platform/00:00:22/cadence-hpnfc/nand/fastboot_2nd/skip-block",
+      "power/as370-power",
+      "power/as370-power/fragment-0",
+      "class/thermal/000",
+      "lp5018-light",
+      "lp5018-light/lp50xx-light",
+      "as370-touch",
+      "as370-touch/cy8cmbr3108",
+  };
+
+  ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+  EXPECT_EQ(zx_system_get_num_cpus(), 4);
 }
 
 TEST_F(DeviceEnumerationTest, AtlasTest) {
