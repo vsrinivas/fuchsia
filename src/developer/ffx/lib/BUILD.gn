@@ -26,6 +26,7 @@ if (is_host) {
     "stream_util",
     "symbol-index",
     "tasks",
+    "testing",
     "timeout",
     "version",
     "writer",

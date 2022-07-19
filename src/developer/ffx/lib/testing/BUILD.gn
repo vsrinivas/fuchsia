@@ -1,0 +1,45 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("lib") {
+  name = "testing_lib"
+  version = "0.1.0"
+  edition = "2021"
+  with_unit_tests = true
+
+  visibility = [
+    ":*",
+    "//src/developer/ffx/plugins/test/*",
+  ]
+
+  sources = [ "src/lib.rs" ]
+  deps = [
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
+    "//src/lib/diagnostics/selectors",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/sys/run_test_suite:lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+  test_deps = [ "//third_party//rust_crates:async-channel" ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":lib_test" ]
+}
+
+group("testing") {
+  testonly = true
+
+  deps = [
+    ":lib",
+    ":tests",
+  ]
+}

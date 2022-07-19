@@ -15,6 +15,7 @@ rustc_library("lib") {
   visibility = [
     ":*",
     "tests/*",
+    "//src/developer/ffx/lib/testing/*",
     "//src/developer/ffx/plugins/test/*",
     "//src/sys/test_runners/rust/tests/*",
   ]

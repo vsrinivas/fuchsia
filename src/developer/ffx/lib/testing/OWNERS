@@ -1,0 +1,3 @@
+include /src/sys/run_test_suite/OWNERS
+
+# COMPONENT: TestArchitecture>ffx

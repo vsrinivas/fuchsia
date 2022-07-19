@@ -16,14 +16,11 @@ use {
         ShowResultCommand, TestCommand, TestSubCommand,
     },
     fidl::endpoints::create_proxy,
-    fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_developer_remotecontrol as fremotecontrol,
     fidl_fuchsia_test_manager as ftest_manager,
-    ftest_manager::{RunBuilderMarker, RunBuilderProxy},
     futures::FutureExt,
     lazy_static::lazy_static,
     output_directory::{DirectoryError, DirectoryId, DirectoryManager},
-    selectors::{self, VerboseError},
     signal_hook::{
         consts::signal::{SIGINT, SIGTERM},
         iterator::Signals,
@@ -32,42 +29,11 @@ use {
     std::path::PathBuf,
 };
 
-const RUN_BUILDER_SELECTOR: &str = "core/test_manager:expose:fuchsia.test.manager.RunBuilder";
-
 lazy_static! {
     /// Error code returned if connecting to Test Manager fails.
     static ref SETUP_FAILED_CODE: i32 = -fidl::Status::UNAVAILABLE.into_raw();
     /// Error code returned if tests time out.
     static ref TIMED_OUT_CODE: i32 = -fidl::Status::TIMED_OUT.into_raw();
-}
-
-struct RunBuilderConnector {
-    remote_control: fremotecontrol::RemoteControlProxy,
-}
-
-impl RunBuilderConnector {
-    async fn connect(&self) -> RunBuilderProxy {
-        let (proxy, server_end) = fidl::endpoints::create_proxy::<RunBuilderMarker>()
-            .expect(&format!("failed to create proxy to {}", RunBuilderMarker::DEBUG_NAME));
-        self.remote_control
-            .connect(
-                selectors::parse_selector::<VerboseError>(RUN_BUILDER_SELECTOR)
-                    .expect("cannot parse run builder selector"),
-                server_end.into_channel(),
-            )
-            .await
-            .expect("Failed to send connect request")
-            .expect(&format!(
-                "failed to connect to {} as {}",
-                RunBuilderMarker::DEBUG_NAME,
-                RUN_BUILDER_SELECTOR
-            ));
-        proxy
-    }
-
-    fn new(remote_control: fremotecontrol::RemoteControlProxy) -> Box<Self> {
-        Box::new(Self { remote_control })
-    }
 }
 
 #[ffx_plugin()]
@@ -90,7 +56,7 @@ pub async fn test(
     .map_err(|e| ffx_error_with_code!(*SETUP_FAILED_CODE, "{:?}", e))?;
     match cmd.subcommand {
         TestSubCommand::Run(run) => {
-            run_test(RunBuilderConnector::new(remote_control), writer, run).await
+            run_test(testing_lib::RunBuilderConnector::new(remote_control), writer, run).await
         }
         TestSubCommand::List(list) => get_tests(query_proxy, writer, list).await,
         TestSubCommand::Result(result) => result_command(result, writer).await,
@@ -110,7 +76,7 @@ async fn get_directory_manager() -> Result<DirectoryManager> {
 }
 
 async fn run_test<W: 'static + Write + Send + Sync>(
-    builder_connector: Box<RunBuilderConnector>,
+    builder_connector: Box<testing_lib::RunBuilderConnector>,
     writer: W,
     cmd: RunCommand,
 ) -> Result<()> {
@@ -199,7 +165,7 @@ async fn run_test<W: 'static + Write + Send + Sync>(
             }
         }
     });
-    let reporter = create_reporter(filter_ansi, output_directory, writer)?;
+    let reporter = testing_lib::create_reporter(filter_ansi, output_directory, writer)?;
     match run_test_suite_lib::run_tests_and_get_outcome(
         builder_connector.connect().await,
         test_definitions,
@@ -298,27 +264,6 @@ where
             ])
         }
     }
-}
-
-fn create_reporter<W: 'static + Write + Send + Sync>(
-    filter_ansi: bool,
-    dir: Option<PathBuf>,
-    writer: W,
-) -> Result<run_test_suite_lib::output::RunReporter> {
-    let stdout_reporter = run_test_suite_lib::output::ShellReporter::new(writer);
-    let dir_reporter =
-        dir.map(run_test_suite_lib::output::DirectoryWithStdoutReporter::new).transpose()?;
-    let reporter = match (dir_reporter, filter_ansi) {
-        (Some(dir_reporter), false) => run_test_suite_lib::output::RunReporter::new(
-            run_test_suite_lib::output::MultiplexedReporter::new(stdout_reporter, dir_reporter),
-        ),
-        (Some(dir_reporter), true) => run_test_suite_lib::output::RunReporter::new_ansi_filtered(
-            run_test_suite_lib::output::MultiplexedReporter::new(stdout_reporter, dir_reporter),
-        ),
-        (None, false) => run_test_suite_lib::output::RunReporter::new(stdout_reporter),
-        (None, true) => run_test_suite_lib::output::RunReporter::new_ansi_filtered(stdout_reporter),
-    };
-    Ok(reporter)
 }
 
 async fn get_tests<W: Write>(
