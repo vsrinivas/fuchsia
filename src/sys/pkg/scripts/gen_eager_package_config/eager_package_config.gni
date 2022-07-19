@@ -64,7 +64,7 @@ import("//build/config.gni")
 #           app_id:  The Omaha App ID for the realm
 #           channels: [list of strings] The list of channels for the realm.
 #
-#       service_url (optional)
+#       service_url (required)
 #         [string] url of the Omaha server.
 #
 #   data_deps (optional)

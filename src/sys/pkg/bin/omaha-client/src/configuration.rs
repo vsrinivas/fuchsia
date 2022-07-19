@@ -174,10 +174,8 @@ impl ClientConfiguration {
         eager_package_configs: EagerPackageConfigs,
         cup: Option<CupProxy>,
     ) {
-        if let Some(server) = eager_package_configs.server {
-            platform_config.service_url = server.service_url;
-            platform_config.omaha_public_keys = Some(server.public_keys);
-        }
+        platform_config.service_url = eager_package_configs.server.service_url;
+        platform_config.omaha_public_keys = Some(eager_package_configs.server.public_keys);
         for package in eager_package_configs.packages {
             let (version, channel_config) =
                 Self::get_eager_package_version_and_channel(&package, &cup).await;
@@ -570,10 +568,10 @@ mod tests {
 
         assert!(platform_config.omaha_public_keys.is_none());
         let config = EagerPackageConfigs {
-            server: Some(OmahaServer {
+            server: OmahaServer {
                 service_url: "https://example.com".into(),
                 public_keys: public_keys.clone(),
-            }),
+            },
             packages: vec![
                 EagerPackageConfig {
                     url: UnpinnedAbsolutePackageUrl::parse("fuchsia-pkg://example.com/package")

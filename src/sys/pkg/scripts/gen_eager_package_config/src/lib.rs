@@ -14,7 +14,7 @@ use {
     fuchsia_url::UnpinnedAbsolutePackageUrl,
     omaha_client::cup_ecdsa::{PublicKeyAndId, PublicKeys},
     serde::{Deserialize, Serialize},
-    std::collections::HashMap,
+    std::collections::BTreeMap,
 };
 
 #[derive(Debug, Eq, FromArgs, PartialEq)]
@@ -36,7 +36,9 @@ pub struct Args {
     pub eager_package_config_files: Vec<String>,
 }
 
-pub type PublicKeysByServiceUrl = HashMap<String, PublicKeys>;
+// Prefer a BTreeMap so that the deserialized map has a consistent ordering when
+// printed as a list of key, value pairs.
+pub type PublicKeysByServiceUrl = BTreeMap<String, PublicKeys>;
 
 #[derive(Serialize, Deserialize)]
 struct Realm {
@@ -60,7 +62,7 @@ pub struct InputConfig {
     /// List of realms.
     realms: Vec<Realm>,
     /// The URL of the Omaha server.
-    pub service_url: Option<String>,
+    service_url: String,
 }
 
 fn make_public_keys(service_url: &str, key_config: &PublicKeysByServiceUrl) -> PublicKeys {
@@ -81,8 +83,7 @@ pub fn generate_omaha_client_config(
     input_configs: &Vec<InputConfig>,
     key_config: &PublicKeysByServiceUrl,
 ) -> OmahaConfigsJson {
-    let mut default_packages: Vec<OmahaConfig> = vec![];
-    let mut packages_by_service_url = HashMap::<String, Vec<OmahaConfig>>::new();
+    let mut packages_by_service_url = BTreeMap::<String, Vec<OmahaConfig>>::new();
 
     for input_config in input_configs {
         let mut channel_configs = ChannelConfigs {
@@ -113,28 +114,21 @@ pub fn generate_omaha_client_config(
             channel_config: channel_configs,
         };
 
-        if let Some(service_url) = input_config.service_url.as_ref() {
-            packages_by_service_url.entry(service_url.clone()).or_default().push(package);
-        } else {
-            default_packages.push(package);
-        }
+        packages_by_service_url.entry(input_config.service_url.clone()).or_default().push(package);
     }
 
-    let mut eager_package_configs = vec![];
-    if !default_packages.is_empty() {
-        eager_package_configs.push(OmahaConfigs { server: None, packages: default_packages });
+    OmahaConfigsJson {
+        eager_package_configs: packages_by_service_url
+            .into_iter()
+            .map(|(service_url, packages)| OmahaConfigs {
+                server: OmahaServer {
+                    service_url: service_url.clone(),
+                    public_keys: make_public_keys(&service_url, key_config),
+                },
+                packages,
+            })
+            .collect(),
     }
-    for (k, v) in packages_by_service_url {
-        eager_package_configs.push(OmahaConfigs {
-            server: Some(OmahaServer {
-                service_url: k.clone(),
-                public_keys: make_public_keys(&k, key_config),
-            }),
-            packages: v,
-        });
-    }
-
-    OmahaConfigsJson { eager_package_configs }
 }
 
 pub fn generate_pkg_resolver_config(
@@ -147,10 +141,7 @@ pub fn generate_pkg_resolver_config(
             .map(|i| ResolverConfig {
                 url: i.url.clone(),
                 executable: i.executable.unwrap_or(false),
-                public_keys: make_public_keys(
-                    i.service_url.as_ref().expect("config has no service_url."),
-                    key_config,
-                ),
+                public_keys: make_public_keys(&i.service_url, key_config),
             })
             .collect(),
     }
@@ -162,11 +153,18 @@ pub mod test_support {
 
     pub fn make_key_config_for_test() -> PublicKeysByServiceUrl {
         let (_, public_key) = test_support::make_keys_for_test();
-        let public_key_id: PublicKeyId = 42.try_into().unwrap();
-        HashMap::from([(
-            "https://example.com".to_string(),
-            test_support::make_public_keys_for_test(public_key_id, public_key),
-        )])
+        let public_key_id_a: PublicKeyId = 42.try_into().unwrap();
+        let public_key_id_b: PublicKeyId = 43.try_into().unwrap();
+        BTreeMap::from([
+            (
+                "https://example.com".to_string(),
+                test_support::make_public_keys_for_test(public_key_id_a, public_key),
+            ),
+            (
+                "https://other_example.com".to_string(),
+                test_support::make_public_keys_for_test(public_key_id_b, public_key),
+            ),
+        ])
     }
 
     pub fn make_configs_for_test() -> Vec<InputConfig> {
@@ -187,7 +185,7 @@ pub mod test_support {
                     },
                     Realm { app_id: "2b3c4d5e".to_string(), channels: vec!["test".to_string()] },
                 ],
-                service_url: Some("https://example.com".to_string()),
+                service_url: "https://example.com".to_string(),
             },
             InputConfig {
                 url: "fuchsia-pkg://example.com/package_service_2".parse().unwrap(),
@@ -198,10 +196,10 @@ pub mod test_support {
                     app_id: "5c6d7e8f".to_string(),
                     channels: vec!["stable".to_string()],
                 }],
-                service_url: Some("https://example.com".to_string()),
+                service_url: "https://example.com".to_string(),
             },
             InputConfig {
-                url: "fuchsia-pkg://example.com/package_noservice_1".parse().unwrap(),
+                url: "fuchsia-pkg://example.com/package_otherservice_1".parse().unwrap(),
                 default_channel: None,
                 flavor: None,
                 executable: None,
@@ -209,10 +207,10 @@ pub mod test_support {
                     app_id: "3c4d5e6f".to_string(),
                     channels: vec!["stable".to_string()],
                 }],
-                service_url: None,
+                service_url: "https://other_example.com".to_string(),
             },
             InputConfig {
-                url: "fuchsia-pkg://example.com/package_noservice_2".parse().unwrap(),
+                url: "fuchsia-pkg://example.com/package_otherservice_2".parse().unwrap(),
                 default_channel: None,
                 flavor: None,
                 executable: None,
@@ -220,7 +218,7 @@ pub mod test_support {
                     app_id: "4c5d6e7f".to_string(),
                     channels: vec!["stable".to_string()],
                 }],
-                service_url: None,
+                service_url: "https://other_example.com".to_string(),
             },
         ]
     }
@@ -245,41 +243,6 @@ mod tests {
         let omaha_client_config = generate_omaha_client_config(&configs, &key_config);
         let expected = r#"{
             "eager_package_configs": [
-              {
-                "server": null,
-                "packages": [
-                  {
-                    "url": "fuchsia-pkg://example.com/package_noservice_1",
-                    "flavor": null,
-                    "channel_config": {
-                      "default_channel": null,
-                      "channels": [
-                        {
-                          "name": "stable",
-                          "repo": "stable",
-                          "appid": "3c4d5e6f",
-                          "check_interval_secs": null
-                        }
-                      ]
-                    }
-                  },
-                  {
-                    "url": "fuchsia-pkg://example.com/package_noservice_2",
-                    "flavor": null,
-                    "channel_config": {
-                      "default_channel": null,
-                      "channels": [
-                        {
-                          "name": "stable",
-                          "repo": "stable",
-                          "appid": "4c5d6e7f",
-                          "check_interval_secs": null
-                        }
-                      ]
-                    }
-                  }
-                ]
-              },
               {
                 "server": {
                   "service_url": "https://example.com",
@@ -341,12 +304,56 @@ mod tests {
                     }
                   }
                 ]
+              },
+              {
+                "server": {
+                  "service_url": "https://other_example.com",
+                  "public_keys": {
+                    "latest": {
+                      "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----\n",
+                      "id": 43
+                    },
+                    "historical": []
+                  }
+                },
+                "packages": [
+                  {
+                    "url": "fuchsia-pkg://example.com/package_otherservice_1",
+                    "flavor": null,
+                    "channel_config": {
+                      "default_channel": null,
+                      "channels": [
+                        {
+                          "name": "stable",
+                          "repo": "stable",
+                          "appid": "3c4d5e6f",
+                          "check_interval_secs": null
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "url": "fuchsia-pkg://example.com/package_otherservice_2",
+                    "flavor": null,
+                    "channel_config": {
+                      "default_channel": null,
+                      "channels": [
+                        {
+                          "name": "stable",
+                          "repo": "stable",
+                          "appid": "4c5d6e7f",
+                          "check_interval_secs": null
+                        }
+                      ]
+                    }
+                  }
+                ]
               }
             ]
         }"#;
-        test_support::compare_ignoring_whitespace(
-            &serde_json::to_string_pretty(&omaha_client_config).unwrap(),
-            &expected,
+        assert_eq!(
+            omaha_client_config,
+            serde_json::from_str::<OmahaConfigsJson>(&expected).unwrap()
         );
     }
 
@@ -363,85 +370,9 @@ mod tests {
                 app_id: "1a2b3c4d".to_string(),
                 channels: vec!["stable".to_string(), "beta".to_string(), "alpha".to_string()],
             }],
-            service_url: None,
+            service_url: "https://example.com".to_string(),
         }];
         let _omaha_client_config = generate_omaha_client_config(&configs, &key_config);
-    }
-
-    #[test]
-    fn test_generate_omaha_client_config_no_default() {
-        // If there is no default package, we should not create an empty config.
-        // Here, a default package is any package without a service URL.
-        let key_config = test_support::make_key_config_for_test();
-        let configs = vec![InputConfig {
-            url: "fuchsia-pkg://example.com/package_service_1".parse().unwrap(),
-            default_channel: Some("stable".to_string()),
-            flavor: Some("debug".to_string()),
-            executable: Some(true),
-            realms: vec![
-                Realm {
-                    app_id: "1a2b3c4d".to_string(),
-                    channels: vec!["stable".to_string(), "beta".to_string(), "alpha".to_string()],
-                },
-                Realm { app_id: "2b3c4d5e".to_string(), channels: vec!["test".to_string()] },
-            ],
-            service_url: Some("https://example.com".to_string()),
-        }];
-        let omaha_client_config = generate_omaha_client_config(&configs, &key_config);
-        let expected = r#"{
-            "eager_package_configs": [
-                {
-                    "server": {
-                        "service_url": "https://example.com",
-                        "public_keys": {
-                            "latest": {
-                                "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----\n",
-                                "id": 42
-                            },
-                            "historical": []
-                        }
-                    },
-                    "packages": [
-                        {
-                            "url": "fuchsia-pkg://example.com/package_service_1",
-                            "flavor": "debug",
-                            "channel_config": {
-                                "default_channel": "stable",
-                                "channels": [
-                                    {
-                                        "name": "stable",
-                                        "repo": "stable",
-                                        "appid": "1a2b3c4d",
-                                        "check_interval_secs": null
-                                    },
-                                    {
-                                        "name": "beta",
-                                        "repo": "beta",
-                                        "appid": "1a2b3c4d",
-                                        "check_interval_secs": null
-                                    },
-                                    {
-                                        "name": "alpha",
-                                        "repo": "alpha",
-                                        "appid": "1a2b3c4d",
-                                        "check_interval_secs": null
-                                    },
-                                    {
-                                        "name": "test",
-                                        "repo": "test",
-                                        "appid": "2b3c4d5e",
-                                        "check_interval_secs": null
-                                    }
-                                ]
-                            }
-                        }
-                    ]
-            }
-        ]}"#;
-        test_support::compare_ignoring_whitespace(
-            &serde_json::to_string_pretty(&omaha_client_config).unwrap(),
-            &expected,
-        );
     }
 
     #[test]
@@ -456,7 +387,7 @@ mod tests {
                 app_id: "1a2b3c4d".to_string(),
                 channels: vec!["stable".to_string(), "beta".to_string(), "alpha".to_string()],
             }],
-            service_url: Some("https://example.com".to_string()),
+            service_url: "https://example.com".to_string(),
         }];
         let pkg_resolver_config = generate_pkg_resolver_config(&configs, &key_config);
         let expected = r#"{

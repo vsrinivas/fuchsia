@@ -26,7 +26,7 @@ pub struct EagerPackageConfig {
 
 #[derive(Clone, Debug, PartialEq, Eq, Deserialize, Serialize)]
 pub struct EagerPackageConfigs {
-    pub server: Option<OmahaServer>,
+    pub server: OmahaServer,
     pub packages: Vec<EagerPackageConfig>,
 }
 
@@ -148,7 +148,7 @@ mod tests {
         assert_eq!(
             EagerPackageConfigs::from_reader(json.to_string().as_bytes()).unwrap(),
             EagerPackageConfigs {
-                server: Some(OmahaServer {
+                server: OmahaServer {
                     service_url: "https://example.com".into(),
                     public_keys: PublicKeys {
                         latest: PublicKeyAndId {
@@ -157,7 +157,7 @@ mod tests {
                         },
                         historical: vec![],
                     }
-                }),
+                },
                 packages: vec![
                     EagerPackageConfig {
                         url: UnpinnedAbsolutePackageUrl::parse("fuchsia-pkg://example.com/package")

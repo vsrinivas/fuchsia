@@ -54,7 +54,6 @@ mod tests {
 
         let input_files: Vec<NamedTempFile> = test_support::make_configs_for_test()
             .iter()
-            .filter(|input_config| input_config.service_url.is_some())
             .map(|config| {
                 let tempfile = NamedTempFile::new().unwrap();
                 serde_json::to_writer(&tempfile, &config).unwrap();
