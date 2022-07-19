@@ -47,6 +47,7 @@ class SegmentWriteBuffer {
   zx::status<size_t> ReserveOperation(storage::Operation &operation, LockedPage &page)
       __TA_EXCLUDES(mutex_);
   void ReleaseBuffers(const PageOperations &operation) __TA_EXCLUDES(mutex_);
+  bool IsEmpty() __TA_EXCLUDES(mutex_);
 
  private:
   static constexpr std::string_view kVmoBufferLabels[static_cast<uint32_t>(PageType::kNrPageType)] =
@@ -55,14 +56,14 @@ class SegmentWriteBuffer {
   fs::BufferedOperationsBuilder builder_ __TA_GUARDED(mutex_);
   std::vector<fbl::RefPtr<Page>> pages_ __TA_GUARDED(mutex_);
 #ifdef __Fuchsia__
-  storage::VmoBuffer buffer_;
+  storage::VmoBuffer buffer_ __TA_GUARDED(mutex_);
 #else
-  storage::ArrayBuffer buffer_;
+  storage::ArrayBuffer buffer_ __TA_GUARDED(mutex_);
 #endif  // __Fuchsia__
   size_t start_index_ __TA_GUARDED(mutex_) = 0;
   size_t count_ __TA_GUARDED(mutex_) = 0;
   std::condition_variable_any cvar_;
-  std::mutex mutex_;
+  fs::SharedMutex mutex_;
 };
 
 using PageOperationCallback = fit::function<void(const PageOperations &)>;
@@ -115,7 +116,7 @@ class Writer {
   Writer &operator=(const Writer &&) = delete;
   ~Writer();
 
-  void ScheduleTask(fpromise::pending_task task);
+  void ScheduleTask(fpromise::promise<> task);
   // It schedules SubmitPages().
   // If |completion| is set, it notifies the caller of the operation completion.
   void ScheduleSubmitPages(sync_completion_t *completion = nullptr,
@@ -133,6 +134,7 @@ class Writer {
       write_buffer_;
   fs::TransactionHandler *transaction_handler_ = nullptr;
 #ifdef __Fuchsia__
+  fpromise::sequencer sequencer_;
   fs::BackgroundExecutor executor_;
 #endif  // __Fuchsia__
 };

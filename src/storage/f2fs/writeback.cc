@@ -60,6 +60,11 @@ zx::status<size_t> SegmentWriteBuffer::ReserveOperation(storage::Operation &oper
   return zx::ok(pages_.size());
 }
 
+bool SegmentWriteBuffer::IsEmpty() {
+  fs::SharedLock lock(mutex_);
+  return pages_.empty();
+}
+
 SegmentWriteBuffer::~SegmentWriteBuffer() { ZX_DEBUG_ASSERT(pages_.size() == 0); }
 
 Writer::Writer(Bcache *bc) : transaction_handler_(bc) {
@@ -88,46 +93,47 @@ void Writer::EnqueuePage(storage::Operation &operation, LockedPage &page, PageTy
 }
 
 fpromise::promise<> Writer::SubmitPages(sync_completion_t *completion, PageType type) {
-  auto operations = write_buffer_[static_cast<uint32_t>(type)]->TakeOperations();
-  if (operations.Empty()) {
+  if (write_buffer_[static_cast<uint32_t>(type)]->IsEmpty()) {
     if (completion) {
       return fpromise::make_promise([completion]() { sync_completion_signal(completion); });
     }
     return fpromise::make_ok_promise();
   }
-  return fpromise::make_promise(
-      [this, completion, type, operations = std::move(operations)]() mutable {
-        zx_status_t ret = ZX_OK;
-        if (ret = transaction_handler_->RunRequests(operations.TakeOperations()); ret != ZX_OK) {
-          FX_LOGS(WARNING) << "[f2fs] RunRequest fails with " << ret;
-        }
-        operations.Completion([ret, type](fbl::RefPtr<Page> page) {
-          if (ret != ZX_OK && page->IsUptodate()) {
-            if (type == PageType::kMeta || ret == ZX_ERR_UNAVAILABLE) {
-              // When it fails to write metadata or the block device is not available,
-              // set kCpErrorFlag to enter read-only mode.
-              page->GetVnode().Vfs()->GetSuperblockInfo().SetCpFlags(CpFlag::kCpErrorFlag);
-            } else {
-              // When IO errors occur with node and data Pages, just set a dirty flag
-              // to retry it with another LBA.
-              LockedPage locked_page(page);
-              locked_page->SetDirty();
-            }
+  return fpromise::make_promise([this, completion, type]() mutable {
+    zx_status_t ret = ZX_OK;
+    auto operations = write_buffer_[static_cast<uint32_t>(type)]->TakeOperations();
+    if (!operations.Empty()) {
+      if (ret = transaction_handler_->RunRequests(operations.TakeOperations()); ret != ZX_OK) {
+        FX_LOGS(WARNING) << "[f2fs] RunRequest fails with " << ret;
+      }
+      operations.Completion([ret, type](fbl::RefPtr<Page> page) {
+        if (ret != ZX_OK && page->IsUptodate()) {
+          if (type == PageType::kMeta || ret == ZX_ERR_UNAVAILABLE) {
+            // When it fails to write metadata or the block device is not available,
+            // set kCpErrorFlag to enter read-only mode.
+            page->GetVnode().Vfs()->GetSuperblockInfo().SetCpFlags(CpFlag::kCpErrorFlag);
+          } else {
+            // When IO errors occur with node and data Pages, just set a dirty flag
+            // to retry it with another LBA.
+            LockedPage locked_page(page);
+            locked_page->SetDirty();
           }
-          page->ClearWriteback();
-          return ret;
-        });
-        if (completion) {
-          sync_completion_signal(completion);
         }
+        page->ClearWriteback();
+        return ret;
       });
+    }
+    if (completion) {
+      sync_completion_signal(completion);
+    }
+  });
 }
 
-void Writer::ScheduleTask(fpromise::pending_task task) {
+void Writer::ScheduleTask(fpromise::promise<> task) {
 #ifdef __Fuchsia__
-  executor_.schedule_task(std::move(task));
+  executor_.schedule_task(sequencer_.wrap(std::move(task)));
 #else   // __Fuchsia__
-  auto result = fpromise::run_single_threaded(task.take_promise());
+  auto result = fpromise::run_single_threaded(std::move(task));
   assert(result.is_ok());
 #endif  // __Fuchsia__
 }
