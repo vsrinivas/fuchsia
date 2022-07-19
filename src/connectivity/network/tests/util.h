@@ -20,6 +20,8 @@
 
 constexpr std::chrono::duration kTimeout = std::chrono::seconds(10);
 
+constexpr char kFastUdpEnvVar[] = "FAST_UDP";
+
 struct SocketDomain {
   // Should only be used when switching on the return value of which(), because
   // enum classes don't guarantee type-safe construction.
@@ -76,6 +78,25 @@ struct ShutdownType {
 
 // Returns a `sockaddr_in6` address mapped from the provided `sockaddr_in`.
 sockaddr_in6 MapIpv4SockaddrToIpv6Sockaddr(const sockaddr_in& addr4);
+
+#if defined(__Fuchsia__)
+#include <zircon/syscalls/object.h>
+// Returns the socket info associated with the provided `fd`, backed by a
+// `fposix_socket::StreamSocket`.
+void ZxSocketInfoStream(int fd, zx_info_socket_t& out_info);
+
+// Returns the socket info associated with the provided `fd`, backed by a
+// `fposix_socket::DatagramSocket`.
+void ZxSocketInfoDgram(int fd, zx_info_socket_t& out_info);
+#endif
+
+// Returns the Tx capacity of the provided `fd`. NOTE: On Fuchsia, this accounts for
+// buffer space available within kernel primitives.
+void TxCapacity(int fd, size_t& out_capacity);
+
+// Returns the Rx capacity of the provided `fd`. NOTE: On Fuchsia, this accounts for
+// buffer space available within kernel primitives.
+void RxCapacity(int fd, size_t& out_capacity);
 
 template <typename T>
 void AssertBlocked(const std::future<T>& fut) {

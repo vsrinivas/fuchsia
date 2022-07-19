@@ -13,6 +13,103 @@
 
 #include <gtest/gtest.h>
 
+#if defined(__Fuchsia__)
+#include <fidl/fuchsia.posix.socket/cpp/wire.h>
+#include <lib/fdio/fd.h>
+
+#include "src/lib/testing/predicates/status.h"
+
+void ZxSocketInfoStream(int fd, zx_info_socket_t& out_info) {
+  fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client_end;
+  ASSERT_OK(fdio_fd_clone(fd, client_end.channel().reset_and_get_address()));
+  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end));
+
+  auto response = client->Describe();
+  ASSERT_OK(response.status());
+  const fuchsia_io::wire::NodeInfo& node_info = response.value().info;
+  ASSERT_EQ(node_info.Which(), fuchsia_io::wire::NodeInfo::Tag::kStreamSocket);
+
+  ASSERT_OK(node_info.stream_socket().socket.get_info(ZX_INFO_SOCKET, &out_info, sizeof(out_info),
+                                                      nullptr, nullptr));
+}
+
+void ZxSocketInfoDgram(int fd, zx_info_socket_t& out_info) {
+  fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client_end;
+  ASSERT_OK(fdio_fd_clone(fd, client_end.channel().reset_and_get_address()));
+  fidl::WireSyncClient client = fidl::BindSyncClient(std::move(client_end));
+
+  auto response = client->Describe();
+  ASSERT_OK(response.status());
+  const fuchsia_io::wire::NodeInfo& node_info = response.value().info;
+  ASSERT_EQ(node_info.Which(), fuchsia_io::wire::NodeInfo::Tag::kDatagramSocket);
+
+  ASSERT_OK(node_info.datagram_socket().socket.get_info(ZX_INFO_SOCKET, &out_info, sizeof(out_info),
+                                                        nullptr, nullptr));
+}
+
+#endif
+
+void GetSocketType(int fd, uint32_t& sock_type) {
+  socklen_t socktype_optlen = sizeof(sock_type);
+  ASSERT_EQ(getsockopt(fd, SOL_SOCKET, SO_TYPE, &sock_type, &socktype_optlen), 0)
+      << strerror(errno);
+  ASSERT_EQ(socktype_optlen, sizeof(sock_type));
+}
+
+void TxCapacity(int fd, size_t& out_capacity) {
+  uint32_t sndbuf_opt;
+  socklen_t sndbuf_optlen = sizeof(sndbuf_opt);
+  ASSERT_EQ(getsockopt(fd, SOL_SOCKET, SO_SNDBUF, &sndbuf_opt, &sndbuf_optlen), 0)
+      << strerror(errno);
+  ASSERT_EQ(sndbuf_optlen, sizeof(sndbuf_opt));
+
+  // SO_SNDBUF lies and reports double the real value.
+  out_capacity = sndbuf_opt >> 1;
+
+  uint32_t sock_type;
+  ASSERT_NO_FATAL_FAILURE(GetSocketType(fd, sock_type));
+
+#if defined(__Fuchsia__)
+  zx_info_socket_t zx_socket_info;
+  // TODO(https://fxbug.dev/60337): We can avoid this additional space once zircon sockets are
+  // not artificially increasing the buffer sizes.
+  if (sock_type == SOCK_STREAM) {
+    ASSERT_NO_FATAL_FAILURE(ZxSocketInfoStream(fd, zx_socket_info));
+    out_capacity += zx_socket_info.tx_buf_max;
+  } else if (sock_type == SOCK_DGRAM && std::getenv(kFastUdpEnvVar)) {
+    ASSERT_NO_FATAL_FAILURE(ZxSocketInfoDgram(fd, zx_socket_info));
+    out_capacity += zx_socket_info.tx_buf_max;
+  }
+#endif
+}
+
+void RxCapacity(int fd, size_t& out_capacity) {
+  uint32_t rcvbuf_opt;
+  socklen_t rcvbuf_optlen = sizeof(rcvbuf_opt);
+  ASSERT_EQ(getsockopt(fd, SOL_SOCKET, SO_RCVBUF, &rcvbuf_opt, &rcvbuf_optlen), 0)
+      << strerror(errno);
+  ASSERT_EQ(rcvbuf_optlen, sizeof(rcvbuf_opt));
+
+  // SO_RCVBUF lies and reports double the real value.
+  out_capacity = rcvbuf_opt >> 1;
+
+  uint32_t sock_type;
+  ASSERT_NO_FATAL_FAILURE(GetSocketType(fd, sock_type));
+
+#if defined(__Fuchsia__)
+  zx_info_socket_t zx_socket_info;
+  // TODO(https://fxbug.dev/60337): We can avoid this additional space once zircon sockets are
+  // not artificially increasing the buffer sizes.
+  if (sock_type == SOCK_STREAM) {
+    ASSERT_NO_FATAL_FAILURE(ZxSocketInfoStream(fd, zx_socket_info));
+    out_capacity += zx_socket_info.rx_buf_max;
+  } else if (sock_type == SOCK_DGRAM && std::getenv(kFastUdpEnvVar)) {
+    ASSERT_NO_FATAL_FAILURE(ZxSocketInfoDgram(fd, zx_socket_info));
+    out_capacity += zx_socket_info.rx_buf_max;
+  }
+#endif
+}
+
 sockaddr_in6 MapIpv4SockaddrToIpv6Sockaddr(const sockaddr_in& addr4) {
   sockaddr_in6 addr6 = {
       .sin6_family = AF_INET6,

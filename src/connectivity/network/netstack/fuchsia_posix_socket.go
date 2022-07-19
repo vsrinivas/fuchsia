@@ -1679,11 +1679,12 @@ func (eps *endpointWithSocket) handleZxSocketWriteError(err zx.Error) bool {
 			panic(err)
 		}
 		switch {
+		case obs&localSignalClosing != 0:
+			// Should always be checked first so loop routines can terminate when
+			// the socket is closed.
+			return true
 		case obs&zx.SignalSocketWritable != 0:
 			return false
-		case obs&localSignalClosing != 0:
-			// We're shutting down.
-			return true
 		case obs&zx.SignalSocketWriteDisabled != 0:
 			// Fallthrough.
 		default:
@@ -2084,6 +2085,9 @@ func (s *datagramSocketImpl) loopWrite(ch chan<- struct{}) {
 			case *tcpip.ErrWouldBlock:
 				// TODO(https://fxbug.dev/101570): Handle tcpip.ErrWouldBlock.
 				panic(fmt.Sprintf("can't handle tcpip.ErrWouldBlock"))
+			case *tcpip.ErrConnectionRefused:
+				// TODO(https://fxbug.dev/104640): Propagate ErrConnectionRefused to client.
+				_ = syslog.Warnf("UDP Endpoint.Write(): %s", err)
 			default:
 				if s.handleEndpointWriteError(writeErr, udp.ProtocolNumber) {
 					return

@@ -30,7 +30,44 @@ void PrintTo(const std::chrono::duration<Rep, Period>& duration, std::ostream* o
 
 namespace {
 
-constexpr char kFastUdpEnvVar[] = "FAST_UDP";
+std::pair<sockaddr_storage, socklen_t> GetLoopbackSockaddrAndSocklenForDomain(
+    const SocketDomain& domain) {
+  sockaddr_storage addr{
+      .ss_family = domain.Get(),
+  };
+  switch (domain.which()) {
+    case SocketDomain::Which::IPv4: {
+      auto& sin = *reinterpret_cast<sockaddr_in*>(&addr);
+      sin.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+      return std::make_pair(addr, sizeof(sin));
+    }
+    case SocketDomain::Which::IPv6: {
+      auto& sin6 = *reinterpret_cast<sockaddr_in6*>(&addr);
+      sin6.sin6_addr = IN6ADDR_LOOPBACK_INIT;
+      return std::make_pair(addr, sizeof(sin6));
+    }
+  }
+}
+
+void SetUpBoundAndConnectedDatagramSockets(const SocketDomain& domain, fbl::unique_fd& bindfd,
+                                           fbl::unique_fd& connectfd) {
+  ASSERT_TRUE(bindfd = fbl::unique_fd(socket(domain.Get(), SOCK_DGRAM, 0))) << strerror(errno);
+
+  auto [addr, addrlen] = GetLoopbackSockaddrAndSocklenForDomain(domain);
+  ASSERT_EQ(bind(bindfd.get(), reinterpret_cast<const sockaddr*>(&addr), addrlen), 0)
+      << strerror(errno);
+
+  {
+    socklen_t bound_addrlen = addrlen;
+    ASSERT_EQ(getsockname(bindfd.get(), reinterpret_cast<sockaddr*>(&addr), &bound_addrlen), 0)
+        << strerror(errno);
+    ASSERT_EQ(addrlen, bound_addrlen);
+  }
+
+  ASSERT_TRUE(connectfd = fbl::unique_fd(socket(domain.Get(), SOCK_DGRAM, 0))) << strerror(errno);
+  ASSERT_EQ(connect(connectfd.get(), reinterpret_cast<sockaddr*>(&addr), addrlen), 0)
+      << strerror(errno);
+}
 
 #if defined(__linux__)
 void ExpectNoPollin(int fd) {
@@ -1317,46 +1354,121 @@ TEST(NetDatagramTest, PingIpv4LoopbackAddresses) {
   }
 }
 
-class NetDatagramSocketsTestBase {
- protected:
-  std::pair<sockaddr_storage, uint32_t> GetSockaddrAndSocklenForDomain(const SocketDomain& domain) {
-    sockaddr_storage addr{
-        .ss_family = domain.Get(),
-    };
-    switch (domain.which()) {
-      case SocketDomain::Which::IPv4: {
-        auto sin = reinterpret_cast<sockaddr_in*>(&addr);
-        sin->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-        sin->sin_port = 0;  // Automatically pick a port.
-        return std::make_pair(addr, sizeof(sockaddr_in));
+using DomainAndIOMethod = std::tuple<SocketDomain, IOMethod>;
+
+std::string DomainAndIOMethodToString(const testing::TestParamInfo<DomainAndIOMethod>& info) {
+  auto const& [domain, io_method] = info.param;
+  std::ostringstream oss;
+  oss << socketDomainToString(domain);
+  oss << '_' << io_method.IOMethodToString();
+  return oss.str();
+}
+
+class IOSendingMethodTest : public testing::TestWithParam<DomainAndIOMethod> {};
+
+TEST_P(IOSendingMethodTest, CloseTerminatesWithRxBufferRemainder) {
+  // Fast datagram sockets on Fuchsia use multiple buffers to store inbound payloads,
+  // some of which are in Netstack memory and some of which are in kernel memory.
+  // Bytes are shuttled between these buffers using routines that spin until
+  // the socket is closed. Furthermore, `close()`ing a socket blocks until all
+  // of these routines exit.
+  //
+  // One edge case arises when the kernel buffers have free space, but not so much
+  // space that they can accept the next datagram payload. In this case, the netstack
+  // routines need to be smart enough to terminate rather than continually trying to
+  // enqueue the next payload in an infinite loop.
+  //
+  // This test verifies that behavior.
+  auto const& [domain, io_method] = GetParam();
+  fbl::unique_fd recvfd;
+  fbl::unique_fd sendfd;
+  ASSERT_NO_FATAL_FAILURE(SetUpBoundAndConnectedDatagramSockets(domain, recvfd, sendfd));
+  size_t bound_rx_capacity;
+  ASSERT_NO_FATAL_FAILURE(RxCapacity(recvfd.get(), bound_rx_capacity));
+
+  size_t payload_size = 1000;  // Picked arbitrarily.
+#if defined(__Fuchsia__)
+  if (std::getenv(kFastUdpEnvVar)) {
+    // Pick a payload size that can't be precisely packed into the zircon socket.
+    zx_info_socket_t zx_socket_info;
+    ASSERT_NO_FATAL_FAILURE(ZxSocketInfoDgram(recvfd.get(), zx_socket_info));
+
+    // Derived as 65535 bytes (max IP packet size) - 20 bytes (IPv4 header) - 8 bytes (UDP header).
+    constexpr size_t kMaxDatagramPayloadSize = 65507;
+
+    bool found_unaligned_payload_size = false;
+    while (payload_size < std::min(zx_socket_info.rx_buf_max, kMaxDatagramPayloadSize)) {
+      if (zx_socket_info.rx_buf_max % payload_size != 0) {
+        found_unaligned_payload_size = true;
+        break;
       }
-      case SocketDomain::Which::IPv6: {
-        auto sin6 = reinterpret_cast<sockaddr_in6*>(&addr);
-        sin6->sin6_addr = IN6ADDR_LOOPBACK_INIT;
-        sin6->sin6_port = 0;  // Automatically pick a port.
-        return std::make_pair(addr, sizeof(sockaddr_in6));
-      }
+      ++payload_size;
+    }
+    if (!found_unaligned_payload_size) {
+      FAIL() << "couldn't find valid UDP payload size for which (sizeof(zircon_socket) % "
+                "payload_size) != 0";
     }
   }
+#endif
 
+  // It's possible that the receiver's instack buffer will fill up even when its kernel buffers
+  // still have space (because the shuttling routines have lagged). When this happens, the receiver
+  // will drop inbound packets; if enough packets are dropped, we might fail to fill up the kernel
+  // buffers. To avoid this scenario, send significantly more than the receiver's total Rx capacity.
+  size_t bytes_to_send = bound_rx_capacity * 2;
+
+  std::vector<char> buf;
+  buf.resize(payload_size);
+  size_t bytes_sent = 0;
+  while (bytes_sent < bytes_to_send) {
+    ASSERT_EQ(io_method.ExecuteIO(sendfd.get(), buf.data(), payload_size), ssize_t(payload_size))
+        << strerror(errno);
+    bytes_sent += payload_size;
+  }
+
+  struct close_task {
+    const std::string name;
+    fbl::unique_fd fd;
+    std::optional<int> result;
+    std::thread action;
+  } close_tasks[] = {
+      {.name = "recvfd", .fd = std::move(recvfd)},
+      {.name = "sendfd", .fd = std::move(sendfd)},
+  };
+
+  std::latch done{std::size(close_tasks)};
+
+  for (close_task& task : close_tasks) {
+    task.action = std::thread([&task, &done]() {
+      task.result = close(task.fd.release());
+      done.count_down();
+    });
+  }
+
+  // Expect that both calls to `close()` return without blocking indefinitely.
+  const auto close_both = std::async(std::launch::async, [&done]() { done.wait(); });
+  ASSERT_EQ(close_both.wait_for(kTimeout), std::future_status::ready);
+
+  for (close_task& task : close_tasks) {
+    ASSERT_TRUE(task.result.has_value()) << " close(" << task.name << ") failed to terminate";
+    ASSERT_EQ(task.result.value(), 0) << " close(" << task.name << ") returned error";
+  }
+
+  for (close_task& task : close_tasks) {
+    task.action.join();
+  }
+}
+
+INSTANTIATE_TEST_SUITE_P(IOSendingMethodTests, IOSendingMethodTest,
+                         testing::Combine(testing::Values(SocketDomain::IPv4(),
+                                                          SocketDomain::IPv6()),
+                                          testing::ValuesIn(kSendIOMethods)),
+                         DomainAndIOMethodToString);
+
+class NetDatagramSocketsTestBase {
+ protected:
   void SetUpDatagramSockets(const SocketDomain& domain) {
-    ASSERT_TRUE(bound_ = fbl::unique_fd(socket(domain.Get(), SOCK_DGRAM, 0))) << strerror(errno);
-
-    auto [addr, addrlen] = GetSockaddrAndSocklenForDomain(domain);
-    ASSERT_EQ(bind(bound_.get(), reinterpret_cast<const sockaddr*>(&addr), addrlen), 0)
-        << strerror(errno);
-
-    {
-      socklen_t bound_addrlen = addrlen;
-      ASSERT_EQ(getsockname(bound_.get(), reinterpret_cast<sockaddr*>(&addr), &bound_addrlen), 0)
-          << strerror(errno);
-      ASSERT_EQ(addrlen, bound_addrlen);
-    }
-
-    ASSERT_TRUE(connected_ = fbl::unique_fd(socket(domain.Get(), SOCK_DGRAM, 0)))
-        << strerror(errno);
-    ASSERT_EQ(connect(connected_.get(), reinterpret_cast<sockaddr*>(&addr), addrlen), 0)
-        << strerror(errno);
+    ASSERT_NO_FATAL_FAILURE(SetUpBoundAndConnectedDatagramSockets(domain, bound_, connected_));
   }
 
   void TearDownDatagramSockets() {
@@ -1398,7 +1510,7 @@ std::string DomainAndIOMethodAndSendZeroBytesTestCaseToString(
   return oss.str();
 }
 
-class IOSendingMethodTest
+class IOSendingZeroBytesMethodTest
     : public NetDatagramSocketsTestBase,
       public testing::TestWithParam<DomainAndIOMethodAndSendZeroBytesTestCase> {
   void SetUp() override {
@@ -1413,7 +1525,7 @@ class IOSendingMethodTest
   }
 };
 
-TEST_P(IOSendingMethodTest, ZeroLengthPayload) {
+TEST_P(IOSendingZeroBytesMethodTest, ZeroLengthPayload) {
   const auto& [domain, io_method, test_case] = GetParam();
   char buf[1];
   char* data;
@@ -1439,7 +1551,7 @@ TEST_P(IOSendingMethodTest, ZeroLengthPayload) {
   EXPECT_EQ(read(bound().get(), buf, sizeof(buf)), 0);
 }
 
-INSTANTIATE_TEST_SUITE_P(IOSendingMethodTests, IOSendingMethodTest,
+INSTANTIATE_TEST_SUITE_P(IOSendingZeroBytesMethodTests, IOSendingZeroBytesMethodTest,
                          testing::Combine(testing::Values(SocketDomain::IPv4(),
                                                           SocketDomain::IPv6()),
                                           testing::ValuesIn(kSendIOMethods),
@@ -1473,7 +1585,7 @@ std::string DomainAndVectorizedIOMethodAndSendZeroBytesVectorizedTestCaseToStrin
   return oss.str();
 }
 
-class VectorizedIOMethodTest
+class VectorizedIOSendingZeroBytesMethodTest
     : public NetDatagramSocketsTestBase,
       public testing::TestWithParam<DomainAndVectorizedIOMethodAndSendZeroBytesVectorizedTestCase> {
   void SetUp() override {
@@ -1488,7 +1600,7 @@ class VectorizedIOMethodTest
   }
 };
 
-TEST_P(VectorizedIOMethodTest, ZeroLengthPayload) {
+TEST_P(VectorizedIOSendingZeroBytesMethodTest, ZeroLengthPayload) {
   const auto& [domain, io_method, test_case] = GetParam();
   char buf[1];
   iovec* iov_ptr;
@@ -1525,7 +1637,7 @@ TEST_P(VectorizedIOMethodTest, ZeroLengthPayload) {
 }
 
 INSTANTIATE_TEST_SUITE_P(
-    VectorizedIOMethodTests, VectorizedIOMethodTest,
+    VectorizedIOSendingZeroBytesMethodTests, VectorizedIOSendingZeroBytesMethodTest,
     testing::Combine(testing::Values(SocketDomain::IPv4(), SocketDomain::IPv6()),
                      testing::Values(VectorizedIOMethod::Op::WRITEV,
                                      VectorizedIOMethod::Op::SENDMSG),
@@ -3118,7 +3230,7 @@ class DatagramLinearizedSendSemanticsConnectInstance
 
   void SetUpInstance() override {
     DatagramLinearizedSendSemanticsTestInstance::SetUpInstance();
-    const auto [addr, addrlen] = GetSockaddrAndSocklenForDomain(domain_);
+    const auto [addr, addrlen] = GetLoopbackSockaddrAndSocklenForDomain(domain_);
     addrlen_ = addrlen;
 
     // Create a third socket on the system with a distinct bound address. We alternate
@@ -3178,7 +3290,7 @@ class DatagramLinearizedSendSemanticsCloseInstance
 
   void SetUpInstance() override {
     DatagramLinearizedSendSemanticsTestInstance::SetUpInstance();
-    const auto [addr, addrlen] = GetSockaddrAndSocklenForDomain(domain_);
+    const auto [addr, addrlen] = GetLoopbackSockaddrAndSocklenForDomain(domain_);
     addrlen_ = addrlen;
   }
 
