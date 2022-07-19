@@ -5,7 +5,6 @@
 use crate::pbm::make_configs;
 use anyhow::Result;
 use errors::ffx_bail;
-use ffx_config::sdk::SdkVersion;
 use ffx_core::ffx_plugin;
 use ffx_emulator_common::config::FfxConfigWrapper;
 use ffx_emulator_config::EngineType;
@@ -16,34 +15,13 @@ use std::str::FromStr;
 
 mod pbm;
 
-const OOT_BUNDLE_ERROR: &'static str =
-    "Encountered a problem reading the emulator configuration. This may mean you\n\
-don't have an appropriate Product Bundle available. Try `ffx product-bundle`\n\
-to list and download available bundles.";
-
-const IT_CONFIG_ERROR: &'static str =
-    "Encountered a problem reading the emulator configuration. This may mean the\n\
-currently selected board configuration isn't supported for emulation. Try\n\
-using 'qemu-x64' or 'qemu-arm64' in your `fx set <PRODUCT>.<BOARD>` command\n\
-then rebuild to enable emulation.";
-
 #[ffx_plugin(TargetCollectionProxy = "daemon::protocol")]
 pub async fn start(cmd: StartCommand, proxy: TargetCollectionProxy) -> Result<()> {
     let config = FfxConfigWrapper::new();
-    let in_tree = match ffx_config::get_sdk().await {
-        Ok(sdk) => match sdk.get_version() {
-            SdkVersion::InTree => true,
-            _ => false,
-        },
-        Err(e) => {
-            ffx_bail!("{:?}", e.context("Couldn't find version information from ffx config."))
-        }
-    };
-
     let emulator_configuration = match make_configs(&cmd, &config).await {
         Ok(config) => config,
         Err(e) => {
-            ffx_bail!("{:?}", e.context(if in_tree { IT_CONFIG_ERROR } else { OOT_BUNDLE_ERROR }));
+            ffx_bail!("{:?}", e);
         }
     };
 

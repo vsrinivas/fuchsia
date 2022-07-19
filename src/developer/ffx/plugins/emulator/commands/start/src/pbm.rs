@@ -25,9 +25,9 @@ pub(crate) async fn make_configs(
     cmd: &StartCommand,
     ffx_config: &FfxConfigWrapper,
 ) -> Result<EmulatorConfiguration> {
-    let product_url =
-        pbms::select_product_bundle(&cmd.product_bundle).await.context("select product bundle")?;
-    let name = product_url.fragment().expect("product name is required");
+    // This function already provides a more useful error message than we can. No context needed.
+    let product_url = pbms::select_product_bundle(&cmd.product_bundle).await?;
+    let name = product_url.fragment().expect("Product name is required.");
 
     let fms_entries = pbms::fms_entries_from(&product_url).await.context("get fms entries")?;
     let product_bundle = fms::find_product_bundle(&fms_entries, &Some(name.to_string()))
