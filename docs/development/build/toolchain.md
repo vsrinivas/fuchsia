@@ -15,9 +15,11 @@ Both should be present in your Fuchsia checkout as prebuilts. The commands below
 assume that `cmake` and `ninja` are in your `PATH`:
 
 ```
-export PATH=${FUCHSIA}/prebuilt/third_party/cmake/${platform}/bin:${PATH}
-export PATH=${FUCHSIA}/prebuilt/third_party/ninja/${platform}/bin:${PATH}
+export PATH=${FUCHSIA_DIR}/prebuilt/third_party/cmake/${platform}/bin:${PATH}
+export PATH=${FUCHSIA_DIR}/prebuilt/third_party/ninja/${platform}/bin:${PATH}
 ```
+
+Where `${FUCHSIA_DIR}` refers to the root directory of your Fuchsia source tree.
 
 ### Getting Source
 
@@ -87,17 +89,8 @@ cipd install fuchsia/third_party/sysroot/linux latest -root ${SYSROOT_DIR}
 
 Goma is a service for accelerating builds by distributing compilations across
 many machines. Googlers should ensure Goma is installed on your machine for faster
-builds. If you have Goma installed in `${GOMA_DIR}` (which should be provided in
-`//prebuilt/third_party/goma/${platform}`),
-you can enable Goma by adding these extra CMake flags to your CMake invocation:
-
-```bash
-  -DCMAKE_C_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
-  -DCMAKE_CXX_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
-```
-
-Then you can take advantage of Goma by allowing multiple `ninja` jobs to run in
-parallel:
+builds. It will become available as part of your normal Fuchsia checkout. Then you
+can take advantage of Goma by allowing multiple `ninja` jobs to run in parallel:
 
 ```bash
 ninja -j1000
@@ -135,16 +128,6 @@ configuration the Fuchsia Clang build settings are contained in CMake
 cache files, which are part of the Clang codebase (`Fuchsia.cmake` and
 `Fuchsia-stage2.cmake`).
 
-In the following CMake invocations, `${CLANG_TOOLCHAIN_PREFIX}` refers to the directory
-of binaries from a previous Clang toolchain. Normally, this refers to the
-current toolchain shipped with Fuchsia, but any references to binaries
-from this directory could theoretically be replaced with one's own binaries.
-
-```bash
-# FUCHSIA_SRCDIR refers to the root directory of your Fuchsia source tree
-CLANG_TOOLCHAIN_PREFIX=${FUCHSIA_SRCDIR}/prebuilt/third_party/clang/linux-x64/bin/
-```
-
 Note: Clang must be built in a separate build directory. The directory itself
 can be a subdirectory or in a whole other path.
 
@@ -164,12 +147,8 @@ incremental development, without having to manually specify all options:
 
 ```bash
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Debug \
-  -DCMAKE_C_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang \
-  -DCMAKE_CXX_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang++ \
-  -DCMAKE_ASM_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang \
-  -DCMAKE_C_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
-  -DCMAKE_CXX_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
-  -DCMAKE_ASM_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
+  -DCMAKE_TOOLCHAIN_FILE=${FUCHSIA_DIR}/scripts/clang/ToolChain.cmake \
+  -DUSE_GOMA=ON \
   -DLLVM_ENABLE_LTO=OFF \
   -DLINUX_x86_64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR} \
   -DLINUX_aarch64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR} \
@@ -182,7 +161,7 @@ ninja distribution  -j1000  # Build the distribution
 
 If the above fails with an error related to Ninja, then you may need to add
 `ninja` to your PATH. You can find the prebuilt executable at
-`//prebuilt/third_party/ninja/${platform}/bin`.
+`${FUCHSIA_DIR}//prebuilt/third_party/ninja/${platform}/bin`.
 
 `ninja distribution` should be enough for building all binaries, but the Fuchsia
 build assumes some libraries are stripped so `ninja
@@ -201,12 +180,8 @@ a toolchain that Fuchsia ships to users.
 
 ```bash
 cmake -GNinja \
-  -DCMAKE_C_COMPILER=${CLANG_TOOLCHAIN_PREFIX}/clang \
-  -DCMAKE_CXX_COMPILER=${CLANG_TOOLCHAIN_PREFIX}/clang++ \
-  -DCMAKE_ASM_COMPILER=${CLANG_TOOLCHAIN_PREFIX}/clang \
-  -DCMAKE_C_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
-  -DCMAKE_CXX_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
-  -DCMAKE_ASM_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
+  -DCMAKE_TOOLCHAIN_FILE=${FUCHSIA_DIR}/scripts/clang/ToolChain.cmake \
+  -DUSE_GOMA=ON \
   -DCMAKE_INSTALL_PREFIX= \
   -DSTAGE2_LINUX_aarch64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR} \
   -DSTAGE2_LINUX_x86_64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR} \
@@ -227,7 +202,7 @@ be very practical for day-to-day development.
 If the Fuchsia build fails due to a missing `runtime.json` file, you must generate a new `runtime.json` file by running the following command:
 
 ```bash
-python3 ${FUCHSIA_SRCDIR}/scripts/clang/generate_runtimes.py  \
+python3 ${FUCHSIA_DIR}/scripts/clang/generate_runtimes.py  \
   --clang-prefix ${INSTALL_DIR} --sdk-dir ${IDK_DIR}          \
   --build-id-dir ${INSTALL_DIR}/lib/.build-id > ${INSTALL_DIR}/lib/runtime.json
 ```
@@ -244,12 +219,12 @@ from inside your LLVM build directory and assumes a linux environment.
 cd ${LLVM_BUILD_DIR}  # The directory your toolchain will be installed in
 
 # Environment setup
-FUCHSIA_SRCDIR=${HOME}/fuchsia/  # Replace with wherever Fuchsia lives
+FUCHSIA_DIR=${HOME}/fuchsia/  # Replace with wherever Fuchsia lives
 LLVM_SRCDIR=${HOME}/llvm/llvm-project  # Replace with wherever llvm-project lives
 IDK_DIR=${HOME}/fuchsia-idk/
 SYSROOT_DIR=${HOME}/fuchsia-sysroot/
-CLANG_TOOLCHAIN_PREFIX=${FUCHSIA_SRCDIR}/prebuilt/third_party/clang/linux-x64/bin/
-GOMA_DIR=${FUCHSIA_SRCDIR}/prebuilt/third_party/goma/linux-x64/
+CLANG_TOOLCHAIN_PREFIX=${FUCHSIA_DIR}/prebuilt/third_party/clang/linux-x64/bin/
+GOMA_DIR=${FUCHSIA_DIR}/prebuilt/third_party/goma/linux-x64/
 
 # Download necessary dependencies
 cipd install fuchsia/sdk/core/linux-amd64 latest -root ${IDK_DIR}
@@ -257,10 +232,8 @@ cipd install fuchsia/third_party/sysroot/linux latest -root ${SYSROOT_DIR}
 
 # CMake invocation
 cmake -G Ninja -DCMAKE_BUILD_TYPE=Release \
-  -DCMAKE_C_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang \
-  -DCMAKE_CXX_COMPILER=${CLANG_TOOLCHAIN_PREFIX}clang++ \
-  -DCMAKE_C_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
-  -DCMAKE_CXX_COMPILER_LAUNCHER=${GOMA_DIR}/gomacc \
+  -DCMAKE_TOOLCHAIN_FILE=${FUCHSIA_DIR}/scripts/clang/ToolChain.cmake \
+  -DUSE_GOMA=ON \
   -DLLVM_ENABLE_LTO=OFF \
   -DLINUX_x86_64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR} \
   -DLINUX_aarch64-unknown-linux-gnu_SYSROOT=${SYSROOT_DIR} \
@@ -275,7 +248,7 @@ DESTDIR=${INSTALL_DIR} ninja install-distribution-stripped -j1000
 
 # Generate runtime.json
 
-python3 ${FUCHSIA_SRCDIR}/scripts/clang/generate_runtimes.py    \
+python3 ${FUCHSIA_DIR}/scripts/clang/generate_runtimes.py    \
   --clang-prefix ${INSTALL_DIR} --sdk-dir ${IDK_DIR}            \
   --build-id-dir ${INSTALL_DIR}/lib/.build-id > ${INSTALL_DIR}/lib/runtime.json
 ```
@@ -354,7 +327,7 @@ in the Zircon build). For example, to use the compiler from your Fuchsia
 checkout (on Linux):
 
 ```bash
-CLANG_TOOLCHAIN_PREFIX=${FUCHSIA}/prebuilt/third_party/clang/linux-x64/bin/
+CLANG_TOOLCHAIN_PREFIX=${FUCHSIA_DIR}/prebuilt/third_party/clang/linux-x64/bin/
 ```
 
 Note: To build Fuchsia, you need a stripped version of the toolchain runtime
