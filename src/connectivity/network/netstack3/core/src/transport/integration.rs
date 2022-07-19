@@ -32,11 +32,11 @@ impl<C: NonSyncContext> UdpStateContext<Ipv4, C> for SyncCtx<C> {
     }
 
     fn with_sockets<O, F: FnOnce(&UdpSockets<Ipv4, DeviceId>) -> O>(&self, cb: F) -> O {
-        cb(&self.state.transport.udpv4.sockets)
+        cb(&self.state.transport.udpv4.sockets.read())
     }
 
     fn with_sockets_mut<O, F: FnOnce(&mut UdpSockets<Ipv4, DeviceId>) -> O>(&mut self, cb: F) -> O {
-        cb(&mut self.state.transport.udpv4.sockets)
+        cb(&mut self.state.transport.udpv4.sockets.write())
     }
 
     fn should_send_port_unreachable(&self) -> bool {
@@ -64,11 +64,11 @@ impl<C: NonSyncContext> UdpStateContext<Ipv6, C> for SyncCtx<C> {
     }
 
     fn with_sockets<O, F: FnOnce(&UdpSockets<Ipv6, DeviceId>) -> O>(&self, cb: F) -> O {
-        cb(&self.state.transport.udpv6.sockets)
+        cb(&self.state.transport.udpv6.sockets.read())
     }
 
     fn with_sockets_mut<O, F: FnOnce(&mut UdpSockets<Ipv6, DeviceId>) -> O>(&mut self, cb: F) -> O {
-        cb(&mut self.state.transport.udpv6.sockets)
+        cb(&mut self.state.transport.udpv6.sockets.write())
     }
 
     fn should_send_port_unreachable(&self) -> bool {

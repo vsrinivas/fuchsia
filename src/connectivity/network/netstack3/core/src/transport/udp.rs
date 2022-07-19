@@ -59,6 +59,7 @@ use crate::{
         AddrVec, Bound, BoundSocketMap, InsertError, SocketAddrType, SocketMapAddrSpec,
         SocketTypeState as _, SocketTypeStateMut as _,
     },
+    sync::RwLock,
 };
 
 /// A builder for UDP layer state.
@@ -131,7 +132,7 @@ impl<I: IpExt, D: IpDeviceId> UdpSockets<I, D> {
 ///
 /// `D` is the device ID type.
 pub(crate) struct UdpState<I: IpExt, D: IpDeviceId> {
-    pub(crate) sockets: UdpSockets<I, D>,
+    pub(crate) sockets: RwLock<UdpSockets<I, D>>,
     pub(crate) send_port_unreachable: bool,
 }
 
