@@ -363,3 +363,19 @@ impl TryFrom<OperationalDatasetTlvs> for OperationalDataset {
         value.try_to_dataset()
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_operational_dataset() {
+        let dataset_bytes = hex::decode("0e08000062cc8de70000000300001635060004001fffe0020830b02192978a444f0708fd70a9fb17d60000030d4e4553542d50414e2d3043454401020ced0410f73d3809ffd94b329fdab33ba781ba910c0402a0f778").unwrap();
+
+        let dataset_tlvs = OperationalDatasetTlvs::try_from_slice(&dataset_bytes).unwrap();
+
+        let dataset = dataset_tlvs.try_to_dataset().unwrap();
+
+        println!("dataset = {:#?}", dataset);
+    }
+}
