@@ -3,13 +3,14 @@
 // found in the LICENSE file.
 
 use crate::node::Node;
-use anyhow::{Context, Error};
+use anyhow::{format_err, Context, Error};
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use fuchsia_inspect::component;
 use futures::{
-    future::LocalBoxFuture,
+    future::{join_all, LocalBoxFuture},
     stream::{FuturesUnordered, StreamExt},
 };
+use log::*;
 use serde_json as json;
 use std::collections::HashMap;
 use std::rc::Rc;
@@ -52,6 +53,18 @@ impl PowerManager {
         let node_futures = FuturesUnordered::new();
         self.create_nodes_from_config(&mut fs, &node_futures).await?;
 
+        // Technically these two tasks could be merged into a single `fuchsia_async::Task`. However,
+        // without a clear benefit to do so, it reads nicer to keep the two buckets of futures
+        // separated. Looking forward, we may try to get rid of the concept of `node_futures` anyway
+        // (opting instead for nodes to own their own `fuchsia_async::Task` which polls any
+        // long-running futures they may require).
+        let node_futures_task = fuchsia_async::Task::local(node_futures.collect::<()>());
+        let service_fs_task = fuchsia_async::Task::local(fs.collect::<()>());
+
+        self.init_nodes().await?;
+
+        info!("Setup complete");
+
         // TODO (https://fxbug.dev/98138) Remove this is a load-bearing print
         // used in the OOM test E2E test when this bug is resolved.
         fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_boot::WriteOnlyLogMarker>()?
@@ -61,9 +74,9 @@ impl PowerManager {
 
         // Run the ServiceFs (handles incoming request streams) and node futures. This future never
         // completes.
-        futures::stream::select(fs, node_futures).collect::<()>().await;
+        futures::join!(service_fs_task, node_futures_task);
 
-        Ok(())
+        Err(format_err!("Tasks completed unexpectedly"))
     }
 
     /// Create the nodes by reading and parsing the node config JSON file.
@@ -75,6 +88,8 @@ impl PowerManager {
         let contents = std::fs::read_to_string(NODE_CONFIG_PATH)?;
         let json_data: json::Value = serde_json5::from_str(&contents)
             .context(format!("Failed to parse file {}", NODE_CONFIG_PATH))?;
+
+        info!("Creating nodes from config file: {}", NODE_CONFIG_PATH);
         self.create_nodes(json_data, service_fs, node_futures).await
     }
 
@@ -229,6 +244,18 @@ impl PowerManager {
             unknown => panic!("Unknown node type: {}", unknown),
         })
     }
+
+    async fn init_nodes(&self) -> Result<(), Error> {
+        info!("Initializing nodes");
+
+        join_all(self.nodes.iter().map(|node| async move {
+            node.1.init().await.context(format!("Failed to init node: {}", node.0))
+        }))
+        .await
+        .into_iter()
+        .collect::<Result<Vec<_>, _>>()
+        .map(|_| ())
+    }
 }
 
 #[cfg(test)]
@@ -341,5 +368,43 @@ mod tests {
 
             Ok(())
         })
+    }
+
+    /// Tests that if any node's init() fails, then the `init_nodes()` function returns an error.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_init_failure() {
+        use async_trait::async_trait;
+
+        struct InitSuccessNode;
+        #[async_trait(?Send)]
+        impl Node for InitSuccessNode {
+            fn name(&self) -> String {
+                "InitSuccessNode".to_string()
+            }
+        }
+
+        struct InitFailureNode;
+        #[async_trait(?Send)]
+        impl Node for InitFailureNode {
+            fn name(&self) -> String {
+                "InitFailureNode".to_string()
+            }
+
+            async fn init(&self) -> Result<(), Error> {
+                Err(format_err!("Init failure"))
+            }
+        }
+
+        let success_node = Rc::new(InitSuccessNode {});
+        let failure_node = Rc::new(InitFailureNode {});
+
+        let power_manager = PowerManager {
+            nodes: HashMap::from([
+                ("init_success_node".into(), success_node as Rc<dyn Node>),
+                ("init_failure_node".into(), failure_node as Rc<dyn Node>),
+            ]),
+        };
+
+        assert!(power_manager.init_nodes().await.is_err());
     }
 }

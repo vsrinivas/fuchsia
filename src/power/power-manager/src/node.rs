@@ -4,7 +4,7 @@
 
 use crate::error::PowerManagerError;
 use crate::message::{Message, MessageReturn};
-use anyhow::format_err;
+use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use futures::future::join_all;
 use std::rc::Rc;
@@ -17,6 +17,15 @@ pub trait Node {
     /// Each node should use this function to indicate a meaningful name. The name may be used for
     /// logging and/or debugging purposes.
     fn name(&self) -> String;
+
+    /// Initialize any internal state or data that requires drivers or other async behavior.
+    ///
+    /// This function is called on every node after all nodes have been initially created. All
+    /// nodes' `init()` functions are polled together asynchronously. Returning an error here will
+    /// cause the Power Manager to fail to start.
+    async fn init(&self) -> Result<(), Error> {
+        Ok(())
+    }
 
     /// Handle a new message
     ///
