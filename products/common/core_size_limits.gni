@@ -158,7 +158,10 @@ size_checker_input = {
     },
     {
       component = "I18N"
-      src = [ "packages/base/intl-services-small" ]
+      src = [
+        "packages/base/intl-services-small",
+        "packages/base/tzdata-provider",
+      ]
       limit = 2505009  # 2.389 MiB
       creep_limit = 32768  # 32.0 KiB
     },
