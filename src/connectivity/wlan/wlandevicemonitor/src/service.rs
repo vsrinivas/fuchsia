@@ -73,6 +73,10 @@ pub(crate) async fn serve_monitor_requests(
                     Err(status) => responder.send(status.into_raw(), None),
                 }
             }
+            DeviceMonitorRequest::QueryIface { iface_id, responder } => {
+                let result = query_iface(&ifaces, iface_id).await;
+                responder.send(&mut result.map_err(|e| e.into_raw()))
+            }
             DeviceMonitorRequest::DestroyIface { req, responder } => {
                 let result = destroy_iface(&phys, &ifaces, req.iface_id).await;
                 let status = into_status_and_opt(result).0;
@@ -276,6 +280,23 @@ async fn create_iface(
         id: added_iface.iface_id,
         phy_ownership: device::PhyOwnership { phy_id, phy_assigned_id: assigned_iface_id },
         generic_sme: generic_sme_proxy,
+    })
+}
+
+async fn query_iface(
+    ifaces: &IfaceMap,
+    id: u16,
+) -> Result<fidl_svc::QueryIfaceResponse, zx::Status> {
+    info!("query_iface(id = {})", id);
+    let iface = ifaces.get(&id).ok_or(zx::Status::NOT_FOUND)?;
+    let iface_query_info = iface.generic_sme.query().await.map_err(|_| zx::Status::CANCELED)?;
+    let phy_ownership = &iface.phy_ownership;
+    Ok(fidl_svc::QueryIfaceResponse {
+        role: iface_query_info.role,
+        id,
+        phy_id: phy_ownership.phy_id,
+        phy_assigned_id: phy_ownership.phy_assigned_id,
+        sta_addr: iface_query_info.sta_addr,
     })
 }
 
@@ -1570,5 +1591,52 @@ mod tests {
             }
         );
         assert_variant!(exec.run_until_stalled(&mut req_fut), Poll::Ready(Ok(_)));
+    }
+
+    #[test]
+    fn query_iface() {
+        let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
+        let test_values = test_setup();
+        let (phy, _phy_stream) = fake_phy();
+        let phy_id = 10u16;
+        test_values.phys.insert(phy_id, phy);
+        let (generic_sme_proxy, mut generic_sme_stream) =
+            create_proxy_and_stream::<fidl_sme::GenericSmeMarker>()
+                .expect("Failed to create generic SME proxy and stream");
+
+        test_values.ifaces.insert(
+            42,
+            device::IfaceDevice {
+                phy_ownership: PhyOwnership { phy_id: 10, phy_assigned_id: 0 },
+                generic_sme: generic_sme_proxy,
+            },
+        );
+
+        let req_fut = super::query_iface(&test_values.ifaces, 42);
+        pin_mut!(req_fut);
+        assert_eq!(Poll::Pending, exec.run_until_stalled(&mut req_fut));
+
+        // Respond to a query with appropriate info.
+        assert_variant!(
+            exec.run_until_stalled(&mut generic_sme_stream.next()),
+            Poll::Ready(Some(Ok(fidl_sme::GenericSmeRequest::Query { responder, .. }))) => {
+                responder.send(&mut fidl_sme::GenericSmeQuery {
+                    role: fidl_common::WlanMacRole::Client,
+                    sta_addr: [2; 6],
+                }).expect("Failed to send query response");
+            }
+        );
+        let resp =
+            assert_variant!(exec.run_until_stalled(&mut req_fut), Poll::Ready(Ok(resp)) => resp);
+        assert_eq!(
+            resp,
+            fidl_svc::QueryIfaceResponse {
+                role: fidl_fuchsia_wlan_common::WlanMacRole::Client,
+                id: 42,
+                phy_id: 10,
+                phy_assigned_id: 0,
+                sta_addr: [2; 6],
+            }
+        );
     }
 }

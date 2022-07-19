@@ -38,6 +38,7 @@ pub enum SmeServer {
 
 async fn serve_generic_sme(
     generic_sme: fidl::endpoints::ServerEnd<fidl_sme::GenericSmeMarker>,
+    mlme_sink: crate::MlmeSink,
     mut sme_server_sender: SmeServer,
     mut telemetry_server_sender: Option<
         mpsc::UnboundedSender<fidl::endpoints::ServerEnd<fidl_sme::TelemetryMarker>>,
@@ -54,6 +55,15 @@ async fn serve_generic_sme(
         match generic_sme_stream.next().await {
             Some(Ok(req)) => {
                 let result = match req {
+                    fidl_sme::GenericSmeRequest::Query { responder } => {
+                        let (info_responder, info_receiver) = crate::responder::Responder::new();
+                        mlme_sink.send(crate::MlmeRequest::QueryDeviceInfo(info_responder));
+                        let info = info_receiver.await?;
+                        responder.send(&mut fidl_sme::GenericSmeQuery {
+                            role: info.role,
+                            sta_addr: info.sta_addr,
+                        })
+                    }
                     fidl_sme::GenericSmeRequest::GetClientSme { sme_server, responder } => {
                         let mut response =
                             if let SmeServer::Client(server_sender) = &mut sme_server_sender {
@@ -185,10 +195,15 @@ pub fn create_sme(
     };
     let (feature_support_sender, feature_support_receiver) = mpsc::unbounded();
     let feature_support_fut =
-        serve_fidl(mlme_req_sink, feature_support_receiver, handle_feature_support_query)
+        serve_fidl(mlme_req_sink.clone(), feature_support_receiver, handle_feature_support_query)
             .map(|result| result.map(|_| ()));
-    let generic_sme_fut =
-        serve_generic_sme(generic_sme, server.clone(), telemetry_sender, feature_support_sender);
+    let generic_sme_fut = serve_generic_sme(
+        generic_sme,
+        mlme_req_sink,
+        server.clone(),
+        telemetry_sender,
+        feature_support_sender,
+    );
     let sme_fut_with_shutdown = async move {
         select! {
             sme_fut = sme_fut.fuse() => sme_fut,
@@ -721,5 +736,30 @@ mod tests {
         assert_variant!(helper.exec.run_until_stalled(&mut serve_fut), Poll::Pending);
         let discovery_support = assert_variant!(helper.exec.run_until_stalled(&mut discovery_support_fut), Poll::Ready(Ok(support)) => support);
         assert_eq!(discovery_support, Err(zx::Status::CANCELED.into_raw()));
+    }
+
+    #[test_case(fidl_common::WlanMacRole::Client)]
+    #[test_case(fidl_common::WlanMacRole::Ap)]
+    fn generic_sme_query(mac_role: fidl_common::WlanMacRole) {
+        let (mut helper, mut serve_fut) = start_generic_sme_test(mac_role);
+
+        let mut query_fut = helper.proxy.query();
+        assert_variant!(helper.exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        let query_req = assert_variant!(helper.exec.run_until_stalled(&mut helper.mlme_req_stream.next()), Poll::Ready(Some(req)) => req);
+        let query_responder =
+            assert_variant!(query_req, crate::MlmeRequest::QueryDeviceInfo(responder) => responder);
+        query_responder.respond(fidl_mlme::DeviceInfo {
+            role: mac_role,
+            sta_addr: [2; 6],
+            bands: vec![],
+            softmac_hardware_capability: 0,
+            qos_capable: false,
+        });
+
+        assert_variant!(helper.exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+        let query_result = assert_variant!(helper.exec.run_until_stalled(&mut query_fut), Poll::Ready(Ok(result)) => result);
+        assert_eq!(query_result.role, mac_role);
+        assert_eq!(query_result.sta_addr, [2; 6]);
     }
 }

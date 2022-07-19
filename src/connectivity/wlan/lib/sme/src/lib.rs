@@ -55,6 +55,7 @@ pub enum MlmeRequest {
     SaeFrameTx(fidl_mlme::SaeFrame),
     WmmStatusReq,
     FinalizeAssociation(fidl_mlme::NegotiatedCapabilities),
+    QueryDeviceInfo(responder::Responder<fidl_mlme::DeviceInfo>),
     QueryDiscoverySupport(responder::Responder<fidl_common::DiscoverySupport>),
     QueryMacSublayerSupport(responder::Responder<fidl_common::MacSublayerSupport>),
     QuerySecuritySupport(responder::Responder<fidl_common::SecuritySupport>),

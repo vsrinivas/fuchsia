@@ -334,7 +334,19 @@ protocol FeatureSupport {
     }) error zx.status;
 };
 
+// High level SME info independent of the current MAC role.
+type GenericSmeQuery = struct {
+    role fuchsia.wlan.common.WlanMacRole;
+    sta_addr ieee80211.MacAddr;
+};
+
 protocol GenericSme {
+    /// Query the underlying SME to determine basic properties. This should
+    /// generally be called first to determine which SME protocol to request
+    /// for the SME.
+    Query() -> (resource struct {
+        resp GenericSmeQuery;
+    });
     /// Attempt to establish a new connection to an underlying Client SME.
     /// Connections may be established for the whole lifetime of the SME,
     /// but concurrent connections might lead to unexpected behavior.

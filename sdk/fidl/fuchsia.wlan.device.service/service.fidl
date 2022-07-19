@@ -284,6 +284,11 @@ protocol DeviceMonitor {
         status int32;
         resp box<CreateIfaceResponse>;
     });
+    QueryIface(struct {
+        iface_id uint16;
+    }) -> (struct {
+        resp QueryIfaceResponse;
+    }) error zx.status;
     DestroyIface(struct {
         req DestroyIfaceRequest;
     }) -> (struct {

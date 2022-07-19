@@ -218,6 +218,9 @@ async fn forward_mlme_request(
         MlmeRequest::SaeFrameTx(mut frame) => proxy.sae_frame_tx(&mut frame),
         MlmeRequest::WmmStatusReq => proxy.wmm_status_req(),
         MlmeRequest::FinalizeAssociation(mut cap) => proxy.finalize_association_req(&mut cap),
+        MlmeRequest::QueryDeviceInfo(responder) => {
+            proxy.query_device_info().await.map(|resp| responder.respond(resp))
+        }
         MlmeRequest::QueryDiscoverySupport(responder) => {
             proxy.query_discovery_support().await.map(|resp| responder.respond(resp))
         }
