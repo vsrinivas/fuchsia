@@ -232,6 +232,10 @@ group("archivist-for-embedding-v2") {
 }
 
 fuchsia_package("archivist-for-embedding") {
+  visibility = [
+    "//bundles/buildbot:*",
+    "//src/sys/run_test_component:*",
+  ]
   deps = [
     ":archivist-for-embedding-v1",
     ":archivist-for-embedding-v2",
@@ -272,7 +276,6 @@ fuchsia_test_package("archivist-tests") {
 group("archivist") {
   testonly = true
   deps = [
-    ":archivist-for-embedding",
     ":bootfs",
     ":tests",
   ]
