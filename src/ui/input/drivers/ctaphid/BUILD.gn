@@ -31,7 +31,11 @@ source_set("driver-internals") {
     "//sdk/fidl/fuchsia.fido.report:fuchsia.fido.report_llcpp",
     "//src/lib/ddk",
     "//src/lib/ddktl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hid",
+    "//zircon/system/ulib/hid-parser",
   ]
 }
 
@@ -54,6 +58,13 @@ test("ctaphid-test-bin") {
   sources = [ "test.cc" ]
   deps = [
     ":driver-internals",
+    "//sdk/fidl/fuchsia.fido.report",
+    "//sdk/lib/sys/cpp",
+    "//sdk/testing/fidl:fidl_test",
+    "//src/devices/testing/mock-ddk",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/hid",
     "//zircon/system/ulib/zxtest",
   ]
 }

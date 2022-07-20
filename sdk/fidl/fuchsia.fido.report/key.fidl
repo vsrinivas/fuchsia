@@ -29,33 +29,24 @@ type CtapHidCommand = flexible enum {
     VENDOR_LAST = 0x7F;
 };
 
-/// Fields in Response and Request are based on the packet tables in the CTAP specification.
-type Request = table {
+/// Fields in Message are a combination of the packet tables in the CTAP specification.
+type Message = table {
     1: channel_id uint32;
     2: command_id CtapHidCommand;
     3: payload_len uint16;
     4: data vector<uint8>:MAX_DATA_LENGTH;
 };
 
-type Response = table {
-    1: channel_id uint32;
-    2: data vector<uint8>:MAX_DATA_LENGTH;
-};
-
 /// All defined values and fields for this protocol come from the CTAP specification at
 /// https://fidoalliance.org/specs/fido-v2.1-ps-20210615/fido-client-to-authenticator-protocol-v2.1-ps-20210615.html#usb-message-and-packet-structure
 protocol SecurityKeyDevice {
     /// Send a message (request) to a FIDO key.
-    SendMessage(struct {
-        request Request;
-    }) -> (struct {}) error zx.status;
+    SendMessage(Message) -> (struct {}) error zx.status;
 
     /// Wait for and receive a message (response) from a FIDO key.
     /// Returns ZX_ERR_ACCESS_DENIED if `channel_id` does not match the
     /// channel_id in `response`.
     GetMessage(struct {
         channel_id uint32;
-    }) -> (struct {
-        response Response;
-    }) error zx.status;
+    }) -> (Message) error zx.status;
 };
