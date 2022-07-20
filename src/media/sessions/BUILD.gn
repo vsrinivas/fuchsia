@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/config.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 group("sessions") {
   testonly = true
@@ -49,6 +50,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//src/lib/diagnostics/reader/rust",
+    "//src/lib/fuchsia-component-test",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures-test",
   ]
@@ -72,14 +74,37 @@ rustc_binary("bin") {
 }
 
 fuchsia_unittest_package("mediasession_tests") {
-  manifest = "meta/mediasession_bin_test.cmx"
-  deps = [ ":bin_test" ]
+  manifest = "meta/mediasession_bin_test.cml"
+  deps = [
+    ":bin_test",
+    ":component",
+    "//src/diagnostics/archivist:archivist-for-embedding-v2",
+    "//src/lib/fuchsia-component-test/realm_builder_server:realm_builder_server_component",
+  ]
 }
 
-# TODO(fxbug.dev/83213) Retain v1 component while out of tree tests depend on it
-fuchsia_package_with_single_component("mediasession") {
+fuchsia_component("component") {
+  component_name = "mediasession"
+  manifest = "meta/mediasession.cml"
+  deps = [ ":bin" ]
+}
+
+# TODO(fxbug.dev/83213) Retain v1 component while there are external
+# references
+fuchsia_component("legacy_component") {
   manifest = "meta/mediasession.cmx"
   deps = [ ":bin" ]
+}
+
+fuchsia_package("mediasession") {
+  deps = [
+    ":component",
+    ":legacy_component",
+  ]
+}
+
+core_shard("mediasession_core_shard") {
+  shard_file = "meta/mediasession.core_shard.cml"
 }
 
 config_data("mediasession_config") {

@@ -13,22 +13,22 @@ use fidl_fuchsia_logger::LogSinkMarker;
 use fidl_fuchsia_media::*;
 use fidl_fuchsia_media_sessions2::*;
 use fuchsia_async as fasync;
-use fuchsia_component as comp;
 use fuchsia_component::server::*;
+use fuchsia_component_test::{
+    Capability, ChildOptions, Event, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
+};
 use fuchsia_inspect as inspect;
 use futures::{
     self,
     channel::mpsc,
-    future,
     sink::SinkExt,
     stream::{StreamExt, TryStreamExt},
 };
 use std::collections::HashMap;
 
-const MEDIASESSION_URL: &str = "fuchsia-pkg://fuchsia.com/mediasession#meta/mediasession.cmx";
-const MEDIASESSION_CMX: &str = "mediasession.cmx";
-const ARCHIVIST_URL: &str =
-    "fuchsia-pkg://fuchsia.com/archivist-for-embedding#meta/archivist-for-embedding.cmx";
+const MEDIASESSION_URL: &str = "#meta/mediasession.cm";
+const MEDIASESSION_SELECTOR: &str = "mediasession";
+const ARCHIVIST_URL: &str = "#meta/archivist-for-embedding.cm";
 
 fn init_logger() {
     static LOGGER: std::sync::Once = std::sync::Once::new();
@@ -39,13 +39,8 @@ fn init_logger() {
 }
 
 struct TestService {
-    // This needs to stay alive to keep the service running.
-    app: comp::client::App,
-    // This needs to stay alive to keep the service running.
     #[allow(unused)]
-    archivist: comp::client::App,
-    #[allow(unused)]
-    env: NestedEnvironment,
+    realm: RealmInstance,
     publisher: PublisherProxy,
     discovery: DiscoveryProxy,
     archive: ArchiveAccessorProxy,
@@ -55,68 +50,132 @@ struct TestService {
 }
 
 impl TestService {
-    fn new() -> Result<Self> {
-        let mut fs = ServiceFs::new();
-        fs.add_proxy_service::<LogSinkMarker, ()>();
-
+    async fn new() -> Result<Self> {
+        let builder = RealmBuilder::new().await.unwrap();
+        let mediasession =
+            builder.add_child("mediasession", MEDIASESSION_URL, ChildOptions::new()).await.unwrap();
+        let archivist = builder
+            .add_child("archivist", ARCHIVIST_URL, ChildOptions::new().eager())
+            .await
+            .unwrap();
         let (new_usage_watchers_sink, new_usage_watchers) = mpsc::channel(10);
-        fs.add_fidl_service::<_, UsageReporterRequestStream>(move |mut request_stream| {
-            let mut new_usage_watchers_sink = new_usage_watchers_sink.clone();
-            fasync::Task::spawn(async move {
-                while let Some(Ok(UsageReporterRequest::Watch { usage, usage_watcher, .. })) =
-                    request_stream.next().await
-                {
-                    match (usage, usage_watcher.into_proxy()) {
-                        (Usage::RenderUsage(usage), Ok(usage_watcher)) => {
-                            new_usage_watchers_sink
-                                .send((usage, usage_watcher))
-                                .await
-                                .expect("Forwarding new UsageWatcher from service under test");
-                        }
-                        (_, Ok(_)) => println!("Service under test tried to watch a capture usage"),
-                        (_, Err(e)) => println!("Service under test sent bad request: {:?}", e),
-                    }
-                }
-            })
-            .detach()
-        });
+        let usage_reporter = builder
+            .add_local_child(
+                "usage_reporter",
+                move |handles: LocalComponentHandles| {
+                    let new_usage_watchers_sink = new_usage_watchers_sink.clone();
+                    Box::pin(Self::usage_reporter_mock(handles, new_usage_watchers_sink))
+                },
+                ChildOptions::new(),
+            )
+            .await
+            .unwrap();
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<PublisherMarker>())
+                    .from(&mediasession)
+                    .to(Ref::parent()),
+            )
+            .await
+            .unwrap();
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<DiscoveryMarker>())
+                    .from(&mediasession)
+                    .to(Ref::parent()),
+            )
+            .await
+            .unwrap();
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<ObserverDiscoveryMarker>())
+                    .from(&mediasession)
+                    .to(Ref::parent()),
+            )
+            .await
+            .unwrap();
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<ActiveSessionMarker>())
+                    .from(&mediasession)
+                    .to(Ref::parent()),
+            )
+            .await
+            .unwrap();
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<ArchiveAccessorMarker>())
+                    .from(&archivist)
+                    .to(Ref::parent()),
+            )
+            .await
+            .unwrap();
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<LogSinkMarker>())
+                    .from(Ref::parent())
+                    .to(&mediasession)
+                    .to(&archivist),
+            )
+            .await?;
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol::<UsageReporterMarker>())
+                    .from(&usage_reporter)
+                    .to(&mediasession),
+            )
+            .await?;
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
+                    .from(Ref::parent())
+                    .to(&archivist),
+            )
+            .await?;
+        builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::event(Event::Started))
+                    .capability(Capability::event(Event::Stopped))
+                    .capability(Capability::event(Event::Running))
+                    .capability(Capability::event(Event::directory_ready("diagnostics")))
+                    .capability(Capability::event(Event::capability_requested(
+                        "fuchsia.logger.LogSink",
+                    )))
+                    .from(Ref::framework())
+                    .to(&archivist),
+            )
+            .await?;
 
-        let env = fs.create_salted_nested_environment("environment")?;
+        let realm = builder.build().await.unwrap();
 
-        fasync::Task::spawn(fs.for_each(|_| future::ready(()))).detach();
-
-        let mediasession = comp::client::launch(
-            env.launcher(),
-            String::from(MEDIASESSION_URL),
-            /*arguments=*/ None,
-        )
-        .context("Launching mediasession")?;
-
-        let archivist = comp::client::launch(
-            env.launcher(),
-            String::from(ARCHIVIST_URL),
-            /*arguments=*/ None,
-        )
-        .context("Launching archivist")?;
-
-        let publisher = mediasession
-            .connect_to_protocol::<PublisherMarker>()
+        let publisher = realm
+            .root
+            .connect_to_protocol_at_exposed_dir::<PublisherMarker>()
             .context("Connecting to Publisher")?;
-        let discovery = mediasession
-            .connect_to_protocol::<DiscoveryMarker>()
+        let discovery = realm
+            .root
+            .connect_to_protocol_at_exposed_dir::<DiscoveryMarker>()
             .context("Connecting to Discovery")?;
-        let observer_discovery = mediasession
-            .connect_to_protocol::<ObserverDiscoveryMarker>()
+        let observer_discovery = realm
+            .root
+            .connect_to_protocol_at_exposed_dir::<ObserverDiscoveryMarker>()
             .context("Connecting to ObserverDiscovery")?;
-
-        let archive = archivist
-            .connect_to_protocol::<ArchiveAccessorMarker>()
+        let archive = realm
+            .root
+            .connect_to_protocol_at_exposed_dir::<ArchiveAccessorMarker>()
             .context("Connecting to archivist")?;
 
         Ok(Self {
-            app: mediasession,
-            archivist,
-            env,
+            realm,
             publisher,
             discovery,
             archive,
@@ -124,6 +183,44 @@ impl TestService {
             new_usage_watchers,
             usage_watchers: HashMap::new(),
         })
+    }
+
+    async fn usage_reporter_mock(
+        handles: LocalComponentHandles,
+        new_usage_watchers_sink: mpsc::Sender<(AudioRenderUsage, UsageWatcherProxy)>,
+    ) -> Result<()> {
+        let mut fs = ServiceFs::new();
+        let mut tasks = vec![];
+
+        fs.dir("svc").add_fidl_service::<_, UsageReporterRequestStream>(
+            move |mut request_stream| {
+                let mut new_usage_watchers_sink = new_usage_watchers_sink.clone();
+                tasks.push(fasync::Task::local(async move {
+                    while let Some(Ok(UsageReporterRequest::Watch {
+                        usage, usage_watcher, ..
+                    })) = request_stream.next().await
+                    {
+                        match (usage, usage_watcher.into_proxy()) {
+                            (Usage::RenderUsage(usage), Ok(usage_watcher)) => {
+                                new_usage_watchers_sink
+                                    .send((usage, usage_watcher))
+                                    .await
+                                    .expect("Forwarding new UsageWatcher from service under test");
+                            }
+                            (_, Ok(_)) => {
+                                println!("Service under test tried to watch a capture usage")
+                            }
+                            (_, Err(e)) => println!("Service under test sent bad request: {:?}", e),
+                        }
+                    }
+                }));
+            },
+        );
+
+        fs.serve_connection(handles.outgoing_dir.into_channel())?;
+        fs.collect::<()>().await;
+
+        Ok(())
     }
 
     fn new_watcher(&self, watch_options: WatchOptions) -> Result<TestWatcher> {
@@ -185,7 +282,7 @@ impl TestService {
     async fn inspect_tree(&mut self) -> inspect::hierarchy::DiagnosticsHierarchy {
         ArchiveReader::new()
             .with_archive(self.archive.clone())
-            .add_selector(ComponentSelector::new(vec![MEDIASESSION_CMX.to_string()]))
+            .add_selector(ComponentSelector::new(vec![MEDIASESSION_SELECTOR.to_string()]))
             .snapshot::<Inspect>()
             .await
             .expect("Got batch")
@@ -310,7 +407,7 @@ fn delta_with_interruption(
 #[fasync::run_singlethreaded(test)]
 async fn can_publish_players() -> Result<()> {
     init_logger();
-    let service = TestService::new()?;
+    let service = TestService::new().await?;
 
     let mut player = TestPlayer::new(&service).await?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
@@ -327,7 +424,7 @@ async fn can_publish_players() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn can_receive_deltas() -> Result<()> {
     init_logger();
-    let service = TestService::new()?;
+    let service = TestService::new().await?;
 
     let mut player1 = TestPlayer::new(&service).await?;
     let mut player2 = TestPlayer::new(&service).await?;
@@ -381,7 +478,7 @@ async fn can_receive_deltas() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn active_status() -> Result<()> {
     init_logger();
-    let service = TestService::new()?;
+    let service = TestService::new().await?;
 
     let mut player = TestPlayer::new(&service).await?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
@@ -440,7 +537,7 @@ async fn active_status() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn player_controls_are_proxied() -> Result<()> {
     init_logger();
-    let service = TestService::new()?;
+    let service = TestService::new().await?;
 
     let mut player = TestPlayer::new(&service).await?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
@@ -478,7 +575,7 @@ async fn player_controls_are_proxied() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn player_disconnection_propagates() -> Result<()> {
     init_logger();
-    let service = TestService::new()?;
+    let service = TestService::new().await?;
 
     let mut player = TestPlayer::new(&service).await?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
@@ -502,7 +599,7 @@ async fn player_disconnection_propagates() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn watch_filter_active() -> Result<()> {
     init_logger();
-    let service = TestService::new()?;
+    let service = TestService::new().await?;
 
     let mut player1 = TestPlayer::new(&service).await?;
     let mut player2 = TestPlayer::new(&service).await?;
@@ -530,7 +627,7 @@ async fn watch_filter_active() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn disconnected_player_results_in_removal_event() -> Result<()> {
     init_logger();
-    let service = TestService::new()?;
+    let service = TestService::new().await?;
 
     let mut player1 = TestPlayer::new(&service).await?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
@@ -549,7 +646,7 @@ async fn disconnected_player_results_in_removal_event() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn player_status() -> Result<()> {
     init_logger();
-    let service = TestService::new()?;
+    let service = TestService::new().await?;
 
     let mut player = TestPlayer::new(&service).await?;
 
@@ -590,7 +687,7 @@ async fn player_status() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn player_capabilities() -> Result<()> {
     init_logger();
-    let service = TestService::new()?;
+    let service = TestService::new().await?;
 
     let mut player = TestPlayer::new(&service).await?;
 
@@ -620,7 +717,7 @@ async fn player_capabilities() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn media_images() -> Result<()> {
     init_logger();
-    let service = TestService::new()?;
+    let service = TestService::new().await?;
 
     let mut player = TestPlayer::new(&service).await?;
 
@@ -667,7 +764,7 @@ async fn media_images() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn players_get_ids() -> Result<()> {
     init_logger();
-    let service = TestService::new()?;
+    let service = TestService::new().await?;
 
     let player1 = TestPlayer::new(&service).await?;
     let player2 = TestPlayer::new(&service).await?;
@@ -680,7 +777,7 @@ async fn players_get_ids() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn session_controllers_can_watch_session_status() -> Result<()> {
     init_logger();
-    let service = TestService::new()?;
+    let service = TestService::new().await?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
 
     let mut player1 = TestPlayer::new(&service).await?;
@@ -712,7 +809,7 @@ async fn session_controllers_can_watch_session_status() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn session_observers_can_watch_session_status() -> Result<()> {
     init_logger();
-    let service = TestService::new()?;
+    let service = TestService::new().await?;
     let mut watcher = service.new_observer_watcher(Decodable::new_empty())?;
 
     let mut player1 = TestPlayer::new(&service).await?;
@@ -744,7 +841,7 @@ async fn session_observers_can_watch_session_status() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn player_disconnection_disconects_observers() -> Result<()> {
     init_logger();
-    let service = TestService::new()?;
+    let service = TestService::new().await?;
     let mut watcher = service.new_observer_watcher(Decodable::new_empty())?;
 
     let mut player = TestPlayer::new(&service).await?;
@@ -767,7 +864,7 @@ async fn player_disconnection_disconects_observers() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn observers_caught_up_with_state_of_session() -> Result<()> {
     init_logger();
-    let service = TestService::new()?;
+    let service = TestService::new().await?;
     let mut watcher = service.new_observer_watcher(Decodable::new_empty())?;
 
     let mut player = TestPlayer::new(&service).await?;
@@ -797,7 +894,7 @@ async fn observers_caught_up_with_state_of_session() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn player_is_interrupted() -> Result<()> {
     init_logger();
-    let mut service = TestService::new()?;
+    let mut service = TestService::new().await?;
     let mut player = TestPlayer::new(&service).await?;
 
     player
@@ -827,7 +924,7 @@ async fn player_is_interrupted() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn unenrolled_player_is_not_paused_when_interrupted() -> Result<()> {
     init_logger();
-    let mut service = TestService::new()?;
+    let mut service = TestService::new().await?;
     let mut player1 = TestPlayer::new(&service).await?;
     let mut player2 = TestPlayer::new(&service).await?;
 
@@ -858,7 +955,7 @@ async fn unenrolled_player_is_not_paused_when_interrupted() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn player_paused_before_interruption_is_not_resumed_by_its_end() -> Result<()> {
     init_logger();
-    let mut service = TestService::new()?;
+    let mut service = TestService::new().await?;
     let mut player1 = TestPlayer::new(&service).await?;
     let mut player2 = TestPlayer::new(&service).await?;
 
@@ -897,7 +994,7 @@ async fn player_paused_before_interruption_is_not_resumed_by_its_end() -> Result
 #[fasync::run_singlethreaded(test)]
 async fn player_paused_during_interruption_is_not_resumed_by_its_end() -> Result<()> {
     init_logger();
-    let mut service = TestService::new()?;
+    let mut service = TestService::new().await?;
     let mut player = TestPlayer::new(&service).await?;
     let (session, session_server) = create_proxy()?;
     service.discovery.connect_to_session(player.id, session_server)?;
@@ -935,10 +1032,11 @@ async fn player_paused_during_interruption_is_not_resumed_by_its_end() -> Result
 #[fasync::run_singlethreaded(test)]
 async fn active_session_initializes_clients_without_player() -> Result<()> {
     init_logger();
-    let service = TestService::new()?;
+    let service = TestService::new().await?;
     let active_session_discovery = service
-        .app
-        .connect_to_protocol::<ActiveSessionMarker>()
+        .realm
+        .root
+        .connect_to_protocol_at_exposed_dir::<ActiveSessionMarker>()
         .context("Connecting to Active Session service")?;
 
     let session = active_session_discovery
@@ -953,12 +1051,13 @@ async fn active_session_initializes_clients_without_player() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn active_session_initializes_clients_with_idle_player() -> Result<()> {
     init_logger();
-    let service = TestService::new()?;
+    let service = TestService::new().await?;
     let mut player = TestPlayer::new(&service).await?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
     let active_session_discovery = service
-        .app
-        .connect_to_protocol::<ActiveSessionMarker>()
+        .realm
+        .root
+        .connect_to_protocol_at_exposed_dir::<ActiveSessionMarker>()
         .context("Connecting to Active Session service")?;
 
     player.emit_delta(delta_with_state(PlayerState::Idle)).await?;
@@ -976,12 +1075,13 @@ async fn active_session_initializes_clients_with_idle_player() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn active_session_initializes_clients_with_active_player() -> Result<()> {
     init_logger();
-    let service = TestService::new()?;
+    let service = TestService::new().await?;
     let mut player = TestPlayer::new(&service).await?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
     let active_session_discovery = service
-        .app
-        .connect_to_protocol::<ActiveSessionMarker>()
+        .realm
+        .root
+        .connect_to_protocol_at_exposed_dir::<ActiveSessionMarker>()
         .context("Connecting to Active Session service")?;
 
     player.emit_delta(delta_with_state(PlayerState::Playing)).await?;
@@ -1010,11 +1110,12 @@ async fn active_session_initializes_clients_with_active_player() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn active_session_falls_back_when_session_removed() -> Result<()> {
     init_logger();
-    let service = TestService::new()?;
+    let service = TestService::new().await?;
     let mut watcher = service.new_watcher(Decodable::new_empty())?;
     let active_session_discovery = service
-        .app
-        .connect_to_protocol::<ActiveSessionMarker>()
+        .realm
+        .root
+        .connect_to_protocol_at_exposed_dir::<ActiveSessionMarker>()
         .context("Connecting to Active Session service")?;
 
     let mut player1 = TestPlayer::new(&service).await?;
@@ -1065,7 +1166,7 @@ async fn active_session_falls_back_when_session_removed() -> Result<()> {
 #[fasync::run_singlethreaded(test)]
 async fn inspect_tree_correct() -> Result<()> {
     init_logger();
-    let mut service = TestService::new()?;
+    let mut service = TestService::new().await?;
     let player1 = TestPlayer::new(&service).await?;
     let player2 = TestPlayer::new(&service).await?;
     let ids = vec![format!("{}", player1.id), format!("{}", player2.id)];

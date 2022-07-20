@@ -1,0 +1,29 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+
+    use: [
+        {
+            protocol: [
+                "fuchsia.media.sessions2.ActiveSession",
+                "fuchsia.media.sessions2.Discovery",
+                "fuchsia.media.sessions2.Publisher",
+            ],
+            from: "#mediasession",
+        },
+    ],
+    children: [
+        {
+            name: "mediasession",
+            url: "fuchsia-pkg://fuchsia.com/mediasession#meta/mediasession.cm",
+        },
+        offer: [
+            {
+                protocol: "fuchsia.media.UsageReporter",
+                from: "#audio_core",
+                to: "#mediasession",
+            },
+        ],
+    ],
+}
