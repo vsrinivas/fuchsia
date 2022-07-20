@@ -164,6 +164,9 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
       "sys/platform/05:07:2e/aml-rtc",
       "av400-i2s-audio-out",
       "sys/platform/05:07:13/av400-audio-pdm-in",
+
+      // USB
+      "aml-usb-crg-phy-v2",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));

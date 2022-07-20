@@ -162,6 +162,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_AMLOGIC_A5_CLK      0x2C
 #define PDEV_DID_VIM3_USB_PHY        0x2D
 #define PDEV_DID_AMLOGIC_RTC         0x2E
+#define PDEV_DID_AML_USB_CRG_PHY_V2  0x2F
 
 // Broadcom
 #define PDEV_VID_BROADCOM           0x06

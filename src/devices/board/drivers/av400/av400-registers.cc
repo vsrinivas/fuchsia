@@ -61,6 +61,32 @@ zx_status_t Av400::RegistersInit() {
           .masks(built_masks)
           .Build();
 
+  fidl::VectorView<fuchsia_hardware_registers::wire::MaskEntry> usb_masks(allocator, 2);
+  auto mask_item1 =
+      fuchsia_hardware_registers::wire::Mask::WithR32(aml_registers::A5_USB_RESET0_MASK);
+  usb_masks[0] = fuchsia_hardware_registers::wire::MaskEntry::Builder(allocator)
+                     .mask(mask_item1)
+                     .mmio_offset(A5_RESET0_REGISTER)
+                     .count(1)
+                     .overlap_check_on(true)
+                     .Build();
+
+  auto mask_item2 =
+      fuchsia_hardware_registers::wire::Mask::WithR32(aml_registers::A5_USB_RESET0_LEVEL_MASK);
+  usb_masks[1] = fuchsia_hardware_registers::wire::MaskEntry::Builder(allocator)
+                     .mask(mask_item2)
+                     .mmio_offset(A5_RESET0_LEVEL)
+                     .count(1)
+                     .overlap_check_on(true)
+                     .Build();
+
+  register_entries[aml_registers::REGISTER_USB_PHY_V2_RESET] =
+      fuchsia_hardware_registers::wire::RegistersMetadataEntry::Builder(allocator)
+          .bind_id(aml_registers::REGISTER_USB_PHY_V2_RESET)
+          .mmio_id(RESET_MMIO)
+          .masks(usb_masks)
+          .Build();
+
   auto metadata = fuchsia_hardware_registers::wire::Metadata::Builder(allocator)
                       .mmio(mmio_entries)
                       .registers(register_entries)

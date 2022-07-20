@@ -109,6 +109,9 @@
 #define A5_AUDIO_FRDDR_B 69  // 37+32
 #define A5_AUDIO_FRDDR_C 70  // 38+32
 
+#define A5_USB_IDDIG_IRQ 161  // 129+32
+#define A5_USB2DRD_IRQ 162    // 130+32
+
 #define A5_I2C_C_IRQ 194  // 162+32
 #define A5_I2C_D_IRQ 195  // 163+32
 
@@ -192,6 +195,18 @@
 #define A5_EE_AUDIO2_CLK_GATE_EN0 (0xc00 + (0x0003 << 2))
 
 // USB
+#define A5_USB_BASE 0xfdd00000
+#define A5_USB_LENGTH 0x100000
+
+#define A5_USBCOMB_BASE 0xfe03a000
+#define A5_USBCOMB_LENGTH 0x2000
+
+#define A5_USBPHY_BASE 0xfe03c000
+#define A5_USBPHY_LENGTH 0x2000
+
+// sys_ctrl
+#define A5_SYS_CTRL_BASE 0xfe010000
+#define A5_SYS_CTRL_LENGTH 0x2000
 
 // Temperature
 

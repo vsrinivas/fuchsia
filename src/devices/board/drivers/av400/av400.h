@@ -80,6 +80,7 @@ class Av400 : public Av400Type {
   zx_status_t EthInit();
   zx_status_t RtcInit();
   zx_status_t AudioInit();
+  zx_status_t UsbInit();
 
   int Thread();
 

@@ -1,0 +1,108 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/test.gni")
+
+driver_bind_rules("aml_usb_crg_phy_bind") {
+  rules = "aml_usb_crg_phy.bind"
+  header_output = "aml_usb_crg_phy_bind.h"
+  bind_output = "aml-usb-crg-phy-v2.bindbc"
+  tests = "test_bind.json"
+  deps = [ "//src/devices/bind/fuchsia.amlogic.platform" ]
+}
+
+fuchsia_driver("aml-usb-crg-phy-v2-driver") {
+  output_name = "aml-usb-crg-phy-v2"
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  sources = [ "aml-usb-crg-phy.cc" ]
+  deps = [
+    ":aml_usb_crg_phy_bind",
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.registers:fuchsia.hardware.registers_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb.modeswitch:fuchsia.hardware.usb.modeswitch_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb.phy:fuchsia.hardware.usb.phy_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.registers:fuchsia.hardware.registers_llcpp",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/lib/amlogic",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/mmio",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/zx",
+  ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+fuchsia_driver_component("aml-usb-crg-phy-v2") {
+  info = "aml-usb-crg-phy-v2-info.json"
+  component_name = "aml-usb-crg-phy-v2"
+  deps = [ ":aml-usb-crg-phy-v2-driver" ]
+  colocate = true
+}
+
+test("aml-usb-crg-phy-test-bin") {
+  configs += [ "//build/config:all_source" ]
+  sources = [
+    "aml-usb-crg-phy-test.cc",
+    "aml-usb-crg-phy.cc",
+  ]
+  output_name = "aml-usb-crg-phy-test"
+  deps = [
+    ":aml_usb_crg_phy_bind",
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.registers:fuchsia.hardware.registers_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb:fuchsia.hardware.usb_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb.modeswitch:fuchsia.hardware.usb.modeswitch_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb.phy:fuchsia.hardware.usb.phy_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.registers:fuchsia.hardware.registers_llcpp",
+    "//src/devices/bus/lib/device-protocol-pdev",
+    "//src/devices/lib/amlogic",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/mmio",
+    "//src/devices/registers/testing/mock-registers",
+    "//src/devices/testing/fake-mmio-reg",
+    "//src/devices/testing/fake_ddk",
+    "//src/devices/usb/lib/usb",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/pretty",
+    "//zircon/system/ulib/sync",
+    "//zircon/system/ulib/zxtest",
+  ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+fuchsia_unittest_package("aml-usb-crg-phy-test") {
+  deps = [ ":aml-usb-crg-phy-test-bin" ]
+  test_specs = {
+    environments = basic_envs
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":aml-usb-crg-phy-test",
+    ":aml_usb_crg_phy_bind_test",
+  ]
+}

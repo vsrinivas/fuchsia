@@ -90,6 +90,8 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/devices/thermal/drivers/as370-thermal:as370-thermal-test-bin",
     "//src/devices/usb/bin/usb-fwloader",
     "//src/devices/usb/bin/usbctl",
+    "//src/devices/usb/drivers/aml-usb-crg-phy-v2:aml-usb-crg-phy-test-bin",
+    "//src/devices/usb/drivers/aml-usb-crg-phy-v2:aml-usb-crg-phy-v2-driver",
     "//src/devices/usb/drivers/aml-usb-phy-v2:aml-usb-phy-test-bin",
     "//src/devices/usb/drivers/aml-usb-phy-v2:aml-usb-phy-v2-driver",
     "//src/devices/usb/drivers/usb-bus:usb-device",
