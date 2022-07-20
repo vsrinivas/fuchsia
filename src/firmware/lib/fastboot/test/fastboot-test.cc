@@ -202,6 +202,10 @@ TEST_F(FastbootDownloadTest, DownloadCompleteResetState) {
   // Test the download command twice. The second time is to test that Fastboot re-enter
   // the command waiting state after a complete download.
   ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
+  // Make sure that all states are reset.
+  ASSERT_EQ(fastboot.remaining_download_size(), 0ULL);
+  ASSERT_EQ(fastboot.state(), FastbootBase::State::kCommand);
+
   ASSERT_NO_FATAL_FAILURE(DownloadData(fastboot, download_content));
 }
 
@@ -235,6 +239,10 @@ TEST(FastbootTest, DownloadFailsOnUnexpectedAmountOfData) {
   // Check that the last packet is a FAIL response
   ASSERT_EQ(transport.GetOutPackets().size(), 2ULL);
   ASSERT_EQ(transport.GetOutPackets().back().compare(0, 4, "FAIL"), 0);
+
+  ASSERT_EQ(fastboot.total_download_size(), 0ULL);
+  ASSERT_EQ(fastboot.remaining_download_size(), 0ULL);
+  ASSERT_EQ(fastboot.state(), FastbootBase::State::kCommand);
 }
 
 TEST(FastbootTest, DownloadFailsOnZeroSizeDownload) {
@@ -247,6 +255,10 @@ TEST(FastbootTest, DownloadFailsOnZeroSizeDownload) {
   const std::vector<std::string>& sent_packets = transport.GetOutPackets();
   ASSERT_EQ(sent_packets.size(), 1ULL);
   ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+
+  ASSERT_EQ(fastboot.total_download_size(), 0ULL);
+  ASSERT_EQ(fastboot.remaining_download_size(), 0ULL);
+  ASSERT_EQ(fastboot.state(), FastbootBase::State::kCommand);
 }
 
 TEST(FastbootTest, DownloadFailsOnNotEnoughArgument) {
@@ -259,6 +271,45 @@ TEST(FastbootTest, DownloadFailsOnNotEnoughArgument) {
   const std::vector<std::string>& sent_packets = transport.GetOutPackets();
   ASSERT_EQ(sent_packets.size(), 1ULL);
   ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+
+  ASSERT_EQ(fastboot.total_download_size(), 0ULL);
+  ASSERT_EQ(fastboot.remaining_download_size(), 0ULL);
+  ASSERT_EQ(fastboot.state(), FastbootBase::State::kCommand);
+}
+
+class FastbootFailGetDownloadBuffer : public Fastboot {
+ public:
+  using Fastboot::Fastboot;
+
+ private:
+  zx::status<void*> GetDownloadBuffer(size_t total_download_size) override {
+    return zx::error(ZX_ERR_UNAVAILABLE);
+  }
+};
+
+TEST(FastbootTest, DownloadFailsOnetDownloadBuffer) {
+  FastbootFailGetDownloadBuffer fastboot(0x40000);
+
+  std::vector<uint8_t> download_content;
+  for (size_t i = 0; i <= std::numeric_limits<uint8_t>::max(); i++) {
+    download_content.push_back(static_cast<uint8_t>(i));
+  }
+
+  std::string size_hex_str = fxl::StringPrintf("%08zx", download_content.size());
+
+  std::string command = "download:" + size_hex_str;
+  TestTransport transport;
+  transport.AddInPacket(command);
+  zx::status<> ret = fastboot.ProcessPacket(&transport);
+  ASSERT_TRUE(ret.is_error());
+
+  // Check that the last packet is a FAIL response
+  ASSERT_EQ(transport.GetOutPackets().size(), 1ULL);
+  ASSERT_EQ(transport.GetOutPackets().back().compare(0, 4, "FAIL"), 0);
+
+  ASSERT_EQ(fastboot.total_download_size(), 0ULL);
+  ASSERT_EQ(fastboot.remaining_download_size(), 0ULL);
+  ASSERT_EQ(fastboot.state(), FastbootBase::State::kCommand);
 }
 
 class FastbootFlashTest : public FastbootDownloadTest {
@@ -834,6 +885,57 @@ TEST_F(FastbootFlashTest, AndroidSparseImageNotSupported) {
   const std::vector<std::string>& sent_packets = transport.GetOutPackets();
   ASSERT_EQ(sent_packets.size(), 1ULL);
   ASSERT_EQ(sent_packets[0].compare(0, 4, "FAIL"), 0);
+}
+
+TEST(FastbootBase, ExtractCommandArgsMultipleArgs) {
+  FastbootBase::CommandArgs args;
+  FastbootBase::ExtractCommandArgs("cmd:arg1:arg2:arg3", ":", args);
+
+  EXPECT_EQ(args.num_args, 4);
+  EXPECT_EQ(args.args[0], "cmd");
+  EXPECT_EQ(args.args[1], "arg1");
+  EXPECT_EQ(args.args[2], "arg2");
+  EXPECT_EQ(args.args[3], "arg3");
+  EXPECT_EQ(args.args[4], "");
+}
+
+TEST(FastbootBase, ExtractCommandArgsNoArgs) {
+  FastbootBase::CommandArgs args;
+  FastbootBase::ExtractCommandArgs("cmd", ":", args);
+
+  EXPECT_EQ(args.num_args, 1);
+  EXPECT_EQ(args.args[0], "cmd");
+  EXPECT_EQ(args.args[1], "");
+}
+
+TEST(FastbootBase, ExtractCommandArgsMiddleEmptyArgs) {
+  FastbootBase::CommandArgs args;
+  FastbootBase::ExtractCommandArgs("cmd::arg2", ":", args);
+
+  EXPECT_EQ(args.num_args, 2);
+  EXPECT_EQ(args.args[0], "cmd");
+  EXPECT_EQ(args.args[1], "arg2");
+}
+
+TEST(FastbootBase, ExtractCommandArgsEndEmptyArgs) {
+  FastbootBase::CommandArgs args;
+  FastbootBase::ExtractCommandArgs("cmd:arg1:", ":", args);
+
+  EXPECT_EQ(args.num_args, 2);
+  EXPECT_EQ(args.args[0], "cmd");
+  EXPECT_EQ(args.args[1], "arg1");
+}
+
+TEST(FastbootBase, ExtractCommandArgsMultipleBySpace) {
+  FastbootBase::CommandArgs args;
+  FastbootBase::ExtractCommandArgs("cmd arg1 arg2 arg3", " ", args);
+
+  EXPECT_EQ(args.num_args, 4);
+  EXPECT_EQ(args.args[0], "cmd");
+  EXPECT_EQ(args.args[1], "arg1");
+  EXPECT_EQ(args.args[2], "arg2");
+  EXPECT_EQ(args.args[3], "arg3");
+  EXPECT_EQ(args.args[4], "");
 }
 
 }  // namespace

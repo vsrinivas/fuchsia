@@ -10,6 +10,16 @@ config("include") {
   include_dirs = [ "include" ]
 }
 
+source_set("fastboot-base") {
+  sources = [ "fastboot_base.cc" ]
+  public_configs = [ ":include" ]
+  public_deps = [ "//zircon/system/ulib/zxc" ]
+
+  if (is_kernel) {
+    public_deps += [ "//zircon/kernel/lib/libc" ]
+  }
+}
+
 source_set("lib") {
   sources = [
     "fastboot.cc",
@@ -18,6 +28,7 @@ source_set("lib") {
   ]
   public_configs = [ ":include" ]
   public_deps = [
+    ":fastboot-base",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_llcpp",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_llcpp",
     "//src/developer/sshd-host:sshd_constants",

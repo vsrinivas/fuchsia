@@ -11,6 +11,8 @@ source_set("lib") {
     "boot_zbi_items.h",
     "device_path.cc",
     "device_path.h",
+    "fastboot.cc",
+    "fastboot.h",
     "gpt.cc",
     "gpt.h",
     "utils.cc",
@@ -19,6 +21,7 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/lib/fit",
+    "//src/firmware/lib/fastboot:fastboot-base",
     "//src/firmware/lib/zbi:in_tree",
     "//src/lib/utf_conversion",
     "//zircon/kernel/lib/efi",
