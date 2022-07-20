@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_PIPELINE_STAGE_H_
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 
 #include <atomic>
 #include <optional>
@@ -133,6 +134,22 @@ class PipelineStage {
   // `start_frame` that is not lesser than the last advanced frame.
   [[nodiscard]] std::optional<Packet> Read(MixJobContext& ctx, Fixed start_frame,
                                            int64_t frame_count);
+
+  // Returns corresponding frame for a given `presentation_time`.
+  //
+  // Required: caller must verify that `presentation_time_to_frac_frame` is valid.
+  [[nodiscard]] Fixed FrameFromPresentationTime(zx::time presentation_time) const {
+    FX_CHECK(presentation_time_to_frac_frame_.has_value());
+    return Fixed::FromRaw(presentation_time_to_frac_frame_->Apply(presentation_time.get()));
+  }
+
+  // Returns corresponding presentation time for a given `frame`.
+  //
+  // Required: caller must verify that `presentation_time_to_frac_frame` is valid.
+  [[nodiscard]] zx::time PresentationTimeFromFrame(Fixed frame) const {
+    FX_CHECK(presentation_time_to_frac_frame_.has_value());
+    return zx::time(presentation_time_to_frac_frame_->ApplyInverse(frame.raw_value()));
+  }
 
   // Returns the stage's name. This is used for diagnostics only.
   // The name may not be a unique identifier.
