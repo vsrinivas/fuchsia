@@ -2326,3 +2326,16 @@
   consulted: ['johngro@google.com']
   submitted: '2022-06-08'
   reviewed: '2022-07-12'
+
+- name: 'RFC-0179'
+  title: 'Basic clipboard service'
+  short_description: 'Proposal for a basic clipboard service to allow users to securely copy and paste text content between components, regardless of runner.'
+  authors: ['kpozin@google.com']
+  file: '0179_basic_clipboard_service.md'
+  area: ['HCI']
+  issue: ['97874']
+  gerrit_change_id: ['672676']
+  status: 'Accepted'
+  reviewers: ['enoharemaien@google.com', 'jmccandless@google.com', 'neelsa@google.com', 'palmer@google.com', 'quiche@google.com', 'wez@google.com']
+  submitted: '2022-05-16'
+  reviewed: '2020-07-18'

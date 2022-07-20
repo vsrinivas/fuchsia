@@ -372,3 +372,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0177_focus_observer_parent_views.md
   - title: "RFC-0178: Multiple debug exception channels per job"
     path: /docs/contribute/governance/rfcs/0178_multiple_debug_job_exception_channel.md
+  - title: "RFC-0179: Basic clipboard service"
+    path: /docs/contribute/governance/rfcs/0179_basic_clipboard_service.md
