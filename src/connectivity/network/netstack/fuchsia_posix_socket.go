@@ -1992,15 +1992,15 @@ func (s *datagramSocketImpl) loopRead(ch chan<- struct{}) {
 
 		v := buf[:udpRxPreludeSize+uint32(res.Count)]
 		for {
-			n, sockErr := s.local.Write(v[:], 0)
-			if sockErr != nil {
-				if sockErr, ok := sockErr.(*zx.Error); ok {
-					if s.handleZxSocketWriteError(*sockErr) {
+			n, err := s.local.Write(v[:], 0)
+			if err != nil {
+				if err, ok := err.(*zx.Error); ok {
+					if s.handleZxSocketWriteError(*err) {
 						return
 					}
 					continue
 				}
-				panic(sockErr)
+				panic(err)
 			}
 			if n < len(v) {
 				panic(fmt.Sprintf("unexpected short write on zx socket: %d/%d", n, len(v)))
