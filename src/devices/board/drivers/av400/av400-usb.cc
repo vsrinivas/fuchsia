@@ -10,6 +10,7 @@
 #include <lib/mmio/mmio.h>
 #include <zircon/status.h>
 
+#include <soc/aml-a5/a5-gpio.h>
 #include <soc/aml-common/aml-registers.h>
 
 #include "src/devices/board/drivers/av400/av400.h"
@@ -92,13 +93,66 @@ static const device_fragment_t usb_phy_fragments[] = {
     {"register-reset", std::size(reset_register_fragment), reset_register_fragment},
 };
 
+static const pbus_mmio_t xhci_mmios[] = {
+    {
+        .base = A5_USB_BASE,
+        .length = A5_USB_LENGTH,
+    },
+};
+
+static const pbus_irq_t xhci_irqs[] = {
+    {
+        .irq = A5_USB2DRD_IRQ,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
+    },
+};
+
+static const pbus_dev_t xhci_dev = []() {
+  pbus_dev_t dev = {};
+  dev.name = "xhci";
+  dev.vid = PDEV_VID_GENERIC;
+  dev.pid = PDEV_PID_GENERIC;
+  dev.did = PDEV_DID_USB_XHCI;
+  dev.mmio_list = xhci_mmios;
+  dev.mmio_count = std::size(xhci_mmios);
+  dev.irq_list = xhci_irqs;
+  dev.irq_count = std::size(xhci_irqs);
+  dev.bti_list = usb_btis;
+  dev.bti_count = std::size(usb_btis);
+  return dev;
+}();
+
+static const zx_bind_inst_t xhci_phy_match[] = {
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_PHY),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_GENERIC),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_USB_XHCI_COMPOSITE),
+};
+static const device_fragment_part_t xhci_phy_fragment[] = {
+    {std::size(xhci_phy_match), xhci_phy_match},
+};
+static const device_fragment_t xhci_fragments[] = {
+    {"xhci-phy", std::size(xhci_phy_fragment), xhci_phy_fragment},
+};
+
 zx_status_t Av400::UsbInit() {
+  // Power on USB.
+  gpio_impl_.ConfigOut(A5_GPIOD(10), 1);
+
   // Create USB Phy Device
   zx_status_t status =
       pbus_.CompositeDeviceAdd(&usb_phy_dev, reinterpret_cast<uint64_t>(usb_phy_fragments),
                                std::size(usb_phy_fragments), nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "DeviceAdd(usb_phy) failed %s", zx_status_get_string(status));
+    return status;
+  }
+
+  // Create XHCI device.
+  status = pbus_.CompositeDeviceAdd(&xhci_dev, reinterpret_cast<uint64_t>(xhci_fragments),
+                                    std::size(xhci_fragments), "xhci-phy");
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: CompositeDeviceAdd(xhci) failed %d", __func__, status);
     return status;
   }
 

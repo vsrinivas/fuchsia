@@ -167,6 +167,7 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
 
       // USB
       "aml-usb-crg-phy-v2",
+      "xhci/xhci",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
