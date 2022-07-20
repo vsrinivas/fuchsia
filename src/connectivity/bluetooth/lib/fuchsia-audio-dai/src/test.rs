@@ -8,6 +8,7 @@ use fidl_fuchsia_hardware_audio::*;
 use fuchsia_async as fasync;
 use futures::{Future, StreamExt};
 use std::sync::{Arc, Mutex};
+use tracing::warn;
 use vfs::{directory::entry::DirectoryEntry, mut_pseudo_directory, service};
 
 use crate::driver::{ensure_dai_format_is_supported, ensure_pcm_format_is_supported};
@@ -84,7 +85,7 @@ impl TestHandle {
 macro_rules! log_error {
     ($result:expr, $tag:expr) => {
         if let Err(e) = $result {
-            log::warn!("Error sending {}: {:?}", $tag, e);
+            warn!("Error sending {}: {:?}", $tag, e);
             break;
         }
     };
@@ -93,14 +94,14 @@ macro_rules! log_error {
 async fn handle_ring_buffer(mut requests: RingBufferRequestStream, handle: TestHandle) {
     while let Some(req) = requests.next().await {
         if let Err(e) = req {
-            log::warn!("Error processing RingBuffer request stream: {:?}", e);
+            warn!("Error processing RingBuffer request stream: {:?}", e);
             break;
         }
         match req.unwrap() {
             RingBufferRequest::Start { responder } => match handle.start() {
                 Ok(()) => log_error!(responder.send(0), "ring buffer start response"),
                 Err(()) => {
-                    log::warn!("Started when we couldn't expect it, shutting down");
+                    warn!("Started when we couldn't expect it, shutting down");
                 }
             },
             RingBufferRequest::Stop { responder } => {
@@ -129,7 +130,7 @@ async fn test_handle_dai_requests(
     let mut _rb_task = None;
     while let Some(req) = requests.next().await {
         if let Err(e) = req {
-            log::warn!("Error processing DAI request stream: {:?}", e);
+            warn!("Error processing DAI request stream: {:?}", e);
             break;
         }
         match req.unwrap() {
@@ -147,11 +148,11 @@ async fn test_handle_dai_requests(
             } => {
                 let shutdown_bad_args =
                     |server: fidl::endpoints::ServerEnd<RingBufferMarker>, err: anyhow::Error| {
-                        log::warn!("CreateRingBuffer: {:?}", err);
+                        warn!("CreateRingBuffer: {:?}", err);
                         if let Err(e) =
                             server.close_with_epitaph(fuchsia_zircon::Status::INVALID_ARGS)
                         {
-                            log::warn!("Couldn't send ring buffer epitaph: {:?}", e);
+                            warn!("Couldn't send ring buffer epitaph: {:?}", e);
                         }
                     };
                 if let Err(e) = ensure_dai_format_is_supported(from_ref(&dai_formats), &dai_format)

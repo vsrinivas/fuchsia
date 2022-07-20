@@ -12,7 +12,7 @@ use {
     },
     fuchsia_async as fasync,
     futures::StreamExt,
-    log::error,
+    tracing::error,
 };
 
 /// `ComponentLifecycleServer` handles a single, hanging-get based request, `GetState` for the

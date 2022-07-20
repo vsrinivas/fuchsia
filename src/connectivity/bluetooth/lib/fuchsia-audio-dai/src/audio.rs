@@ -9,8 +9,8 @@ use fidl_fuchsia_media as media;
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx};
 use futures::{future::MaybeDone, StreamExt};
-use log::info;
 use std::sync::Arc;
+use tracing::info;
 
 use crate::driver::{ensure_dai_format_is_supported, ensure_pcm_format_is_supported};
 use crate::DigitalAudioInterface;

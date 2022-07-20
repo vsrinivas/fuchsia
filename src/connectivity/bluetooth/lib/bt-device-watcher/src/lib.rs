@@ -13,11 +13,11 @@ use {
     fuchsia_vfs_watcher::{WatchEvent, Watcher as VfsWatcher},
     fuchsia_zircon as zx,
     futures::{Future, TryStreamExt},
-    log::{error, info},
     std::{
         fs::File,
         path::{Path, PathBuf},
     },
+    tracing::{error, info},
 };
 
 /// A representation of an open device file, as constructed by a DeviceWatcher. A DeviceFile is
