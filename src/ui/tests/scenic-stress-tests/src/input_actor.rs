@@ -5,31 +5,28 @@
 use {
     crate::pointer_state::PointerState,
     async_trait::async_trait,
-    fuchsia_scenic as scenic,
-    rand::rngs::SmallRng,
+    fidl_fuchsia_ui_pointerinjector as pointerinjector,
     stress_test::actor::{Actor, ActorError},
 };
 
 pub struct InputActor {
-    session: scenic::SessionPtr,
+    injector: pointerinjector::DeviceProxy,
     state: PointerState,
-    rng: SmallRng,
 }
 
 impl InputActor {
-    pub fn new(rng: SmallRng, session: scenic::SessionPtr, compositor_id: u32) -> Self {
-        let state = PointerState::new(compositor_id);
-        Self { rng, state, session }
+    pub fn new(injector: pointerinjector::DeviceProxy) -> Self {
+        let state = PointerState::new();
+        Self { injector, state }
     }
 }
 
 #[async_trait]
 impl Actor for InputActor {
     async fn perform(&mut self) -> Result<(), ActorError> {
-        self.state.next_phase();
-        let command = self.state.command(&mut self.rng);
-        let mut session = self.session.lock();
-        session.enqueue(command);
+        let event = self.state.next_event();
+        let fut = self.injector.inject(&mut std::iter::once(event));
+        fut.await.expect("Injection failed");
         Ok(())
     }
 }

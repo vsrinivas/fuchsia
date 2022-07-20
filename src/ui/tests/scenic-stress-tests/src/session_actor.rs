@@ -34,7 +34,7 @@ impl Actor for SessionActor {
                 break;
             } else {
                 // Create a new session
-                cur_session.add_child(&mut self.rng);
+                cur_session.add_child(&mut self.rng).await;
                 break;
             }
         }

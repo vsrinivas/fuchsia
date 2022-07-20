@@ -15,6 +15,10 @@ pub const DISPLAY_HEIGHT: u16 = 600;
 pub const MIN_CIRCLE_RADIUS: u16 = 5;
 pub const MAX_CIRCLE_RADIUS: u16 = 100;
 
+pub fn clone_view_ref(view_ref: &fviews::ViewRef) -> fviews::ViewRef {
+    scenic::duplicate_view_ref(&view_ref).expect("valid view_ref")
+}
+
 fn create_view_holder(
     session: scenic::SessionPtr,
     view_holder_token: fviews::ViewHolderToken,
@@ -36,29 +40,22 @@ fn create_view_holder(
     view_holder
 }
 
-// In a new task, indefinitely call Session::Present2() for a given session
-fn autopresent(session: scenic::SessionPtr) -> fasync::Task<()> {
+async fn safe_present(session: &scenic::SessionPtr, stream: &mut fscenic::SessionEventStream) {
+    let fut = session.lock().present2(0, 0);
+    fut.await.unwrap();
+    // This stream can only return OnFramePresented(), so we wait until it does.
+    let ofp = stream.next().await.unwrap().unwrap().into_on_frame_presented();
+    assert!(ofp.is_some());
+}
+
+// In a new task, indefinitely call Session::Present2() for a given session.
+fn autopresent(
+    session: scenic::SessionPtr,
+    mut stream: fscenic::SessionEventStream,
+) -> fasync::Task<()> {
     fasync::Task::spawn(async move {
-        let mut stream = {
-            let session = session.lock();
-            session.take_event_stream()
-        };
-
-        // Call present for the first time
-        let future = {
-            let mut session = session.lock();
-            session.present2(0, 0)
-        };
-        future.await.unwrap();
-
-        // Wait for a frame to be presented
-        while let Some(Ok(_)) = stream.next().await {
-            // Then call present
-            let future = {
-                let mut session = session.lock();
-                session.present2(0, 0)
-            };
-            future.await.unwrap();
+        loop {
+            safe_present(&session, &mut stream).await
         }
     })
 }
@@ -86,20 +83,30 @@ fn autolisten(listener: ServerEnd<fscenic::SessionListenerMarker>) -> fasync::Ta
     })
 }
 
-fn create_session(
+async fn create_session(
     scenic: Arc<fscenic::ScenicProxy>,
-) -> (scenic::SessionPtr, fasync::Task<()>, fasync::Task<()>) {
+) -> (scenic::SessionPtr, fasync::Task<()>) {
     let (session_proxy, session_server) = create_proxy::<fscenic::SessionMarker>().unwrap();
     let (listener_client, listener_server) =
         create_endpoints::<fscenic::SessionListenerMarker>().unwrap();
+
+    let endpoints = fscenic::SessionEndpoints {
+        session: Some(session_server),
+        session_listener: Some(listener_client),
+        ..fscenic::SessionEndpoints::EMPTY
+    };
+
     scenic
-        .create_session2(session_server, Some(listener_client), None)
-        .expect("Could not create new session");
+        .create_session_t(endpoints)
+        .check()
+        .expect("Error creating session")
+        .await
+        .expect("Error creating session");
+
     let session = scenic::Session::new(session_proxy);
-    let present_task = autopresent(session.clone());
     let listener_task = autolisten(listener_server);
 
-    (session, present_task, listener_task)
+    (session, listener_task)
 }
 
 /// Contains all scenic elements needed to render a simple circle.
@@ -136,7 +143,8 @@ impl Circle {
 pub enum Session {
     Root {
         scenic: Arc<fscenic::ScenicProxy>,
-        session: scenic::SessionPtr,
+        root_session: scenic::SessionPtr,
+        target_session: scenic::SessionPtr,
         compositor: scenic::DisplayCompositor,
         layer_stack: scenic::LayerStack,
         layer: scenic::Layer,
@@ -144,10 +152,16 @@ pub enum Session {
         camera: scenic::Camera,
         light: scenic::AmbientLight,
         scene: scenic::Scene,
+        context_view_holder: scenic::ViewHolder,
+        context_view: scenic::View,
+        target_view_holder: scenic::ViewHolder,
+        target_view: scenic::View,
         circle: Circle,
         child_sessions: Vec<(Session, scenic::ViewHolder)>,
-        _present_task: fasync::Task<()>,
-        _listener_task: fasync::Task<()>,
+        _root_present_task: fasync::Task<()>,
+        _root_listener_task: fasync::Task<()>,
+        _target_present_task: fasync::Task<()>,
+        _target_listener_task: fasync::Task<()>,
     },
     Child {
         scenic: Arc<fscenic::ScenicProxy>,
@@ -162,41 +176,98 @@ pub enum Session {
 
 impl Session {
     // Setup the root session, including all elements needed to properly render the scene.
-    pub fn initialize_as_root(
+    // This is the resulting the view tree:
+    //
+    //         root view
+    //             |
+    //    input injection view
+    //             |
+    // [subtree will be placed here]
+    //
+    pub async fn initialize_as_root(
         rng: &mut SmallRng,
         scenic: Arc<fscenic::ScenicProxy>,
-    ) -> (Self, u32, scenic::SessionPtr) {
-        let (session, _present_task, _listener_task) = create_session(scenic.clone());
-        let scene = scenic::Scene::new(session.clone());
+    ) -> (Self, fviews::ViewRef, fviews::ViewRef) {
+        let (root_session, _root_listener_task) = create_session(scenic.clone()).await;
+        let scene = scenic::Scene::new(root_session.clone());
 
-        let light = scenic::AmbientLight::new(session.clone());
+        let light = scenic::AmbientLight::new(root_session.clone());
         light.set_color(fgfx::ColorRgb { red: 0.0, green: 0.0, blue: 0.0 });
         scene.add_ambient_light(&light);
 
-        let camera = scenic::Camera::new(session.clone(), &scene);
+        let camera = scenic::Camera::new(root_session.clone(), &scene);
 
-        let renderer = scenic::Renderer::new(session.clone());
+        let renderer = scenic::Renderer::new(root_session.clone());
         renderer.set_camera(&camera);
 
-        let layer = scenic::Layer::new(session.clone());
+        let layer = scenic::Layer::new(root_session.clone());
         layer.set_size(DISPLAY_WIDTH as f32, DISPLAY_HEIGHT as f32);
         layer.set_renderer(&renderer);
 
-        let layer_stack = scenic::LayerStack::new(session.clone());
+        let layer_stack = scenic::LayerStack::new(root_session.clone());
         layer_stack.add_layer(&layer);
 
-        let compositor = scenic::DisplayCompositor::new(session.clone());
+        let compositor = scenic::DisplayCompositor::new(root_session.clone());
         compositor.set_layer_stack(&layer_stack);
-        let compositor_id = compositor.id();
 
-        let circle = Circle::new(rng, session.clone());
-        scene.add_child(&circle.shape_node);
+        // Set up the input injection context view.
+        let scenic::ViewTokenPair { view_token, view_holder_token } =
+            scenic::ViewTokenPair::new().unwrap();
+        let scenic::ViewRefPair { control_ref, view_ref: context_view_ref } =
+            scenic::ViewRefPair::new().unwrap();
+        let context_view_holder = create_view_holder(root_session.clone(), view_holder_token);
+        scene.add_child(&context_view_holder);
 
-        let session_clone = session.clone();
+        let context_view = scenic::View::new3(
+            root_session.clone(),
+            view_token,
+            control_ref,
+            clone_view_ref(&context_view_ref),
+            None,
+        );
+
+        // Set up the input injection target view.
+        let (target_session, _target_listener_task) = create_session(scenic.clone()).await;
+        let scenic::ViewTokenPair { view_token, view_holder_token } =
+            scenic::ViewTokenPair::new().unwrap();
+        let target_view_holder = create_view_holder(root_session.clone(), view_holder_token);
+        context_view.add_child(&target_view_holder);
+
+        let scenic::ViewRefPair { control_ref, view_ref: target_view_ref } =
+            scenic::ViewRefPair::new().unwrap();
+        let target_view = scenic::View::new3(
+            target_session.clone(),
+            view_token,
+            control_ref,
+            clone_view_ref(&target_view_ref),
+            None,
+        );
+
+        let circle = Circle::new(rng, target_session.clone());
+        target_view.add_child(&circle.shape_node);
+
+        let _root_present_task = {
+            let mut root_stream = root_session.lock().take_event_stream();
+            safe_present(&root_session, &mut root_stream).await;
+
+            let fut = root_session.lock().present2(0, 0);
+            fut.await.unwrap();
+            autopresent(root_session.clone(), root_stream)
+        };
+
+        let _target_present_task = {
+            let mut target_stream = target_session.lock().take_event_stream();
+            safe_present(&target_session, &mut target_stream).await;
+
+            let fut = target_session.lock().present2(0, 0);
+            fut.await.unwrap();
+            autopresent(target_session.clone(), target_stream)
+        };
 
         let root = Self::Root {
             scenic,
-            session,
+            root_session,
+            target_session,
             compositor,
             layer_stack,
             layer,
@@ -204,36 +275,44 @@ impl Session {
             camera,
             light,
             scene,
+            context_view_holder,
+            context_view,
+            target_view_holder,
+            target_view,
             circle,
             child_sessions: vec![],
-            _present_task,
-            _listener_task,
+            _root_present_task,
+            _root_listener_task,
+            _target_present_task,
+            _target_listener_task,
         };
 
-        (root, compositor_id, session_clone)
+        (root, context_view_ref, target_view_ref)
     }
 
     // Create the child session. Also return the viewholder token that can be used
     // to connect this session's view to a parent's viewholder.
-    fn initialize_as_child(
+    async fn initialize_as_child(
         rng: &mut SmallRng,
         scenic: Arc<fscenic::ScenicProxy>,
     ) -> (Self, fviews::ViewHolderToken) {
-        let (session, _present_task, _listener_task) = create_session(scenic.clone());
+        let (session, _listener_task) = create_session(scenic.clone()).await;
 
         let token_pair = scenic::ViewTokenPair::new().unwrap();
-        let ref_pair = scenic::ViewRefPair::new().unwrap();
+        let scenic::ViewRefPair { control_ref, view_ref } = scenic::ViewRefPair::new().unwrap();
 
-        let view = scenic::View::new3(
-            session.clone(),
-            token_pair.view_token,
-            ref_pair.control_ref,
-            ref_pair.view_ref,
-            None,
-        );
+        let view =
+            scenic::View::new3(session.clone(), token_pair.view_token, control_ref, view_ref, None);
 
         let circle = Circle::new(rng, session.clone());
         view.add_child(&circle.shape_node);
+
+        let _present_task = {
+            let stream = session.lock().take_event_stream();
+            let fut = session.lock().present2(0, 0);
+            fut.await.unwrap();
+            autopresent(session.clone(), stream)
+        };
 
         let child = Self::Child {
             scenic,
@@ -249,19 +328,19 @@ impl Session {
     }
 
     // Add a child session + viewholder to this session
-    pub fn add_child(&mut self, rng: &mut SmallRng) {
+    pub async fn add_child(&mut self, rng: &mut SmallRng) {
         let scenic = match self {
             Self::Root { scenic, .. } => scenic.clone(),
             Self::Child { scenic, .. } => scenic.clone(),
         };
 
-        let (child, view_holder_token) = Self::initialize_as_child(rng, scenic);
+        let (child, view_holder_token) = Self::initialize_as_child(rng, scenic).await;
 
         // Create the view holder and attach it to the parent
         match self {
-            Self::Root { session, scene, child_sessions, .. } => {
-                let view_holder = create_view_holder(session.clone(), view_holder_token);
-                scene.add_child(&view_holder);
+            Self::Root { target_session, target_view, child_sessions, .. } => {
+                let view_holder = create_view_holder(target_session.clone(), view_holder_token);
+                target_view.add_child(&view_holder);
                 child_sessions.push((child, view_holder));
             }
             Self::Child { session, view, child_sessions, .. } => {

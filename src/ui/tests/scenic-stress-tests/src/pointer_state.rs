@@ -4,10 +4,8 @@
 
 use {
     crate::session::{DISPLAY_HEIGHT, DISPLAY_WIDTH},
-    fidl_fuchsia_ui_input as finput, fidl_fuchsia_ui_scenic as fscenic,
+    fidl_fuchsia_ui_pointerinjector as pointerinjector,
     fuchsia_zircon::Time,
-    rand::rngs::SmallRng,
-    rand::Rng,
 };
 
 /// State tracking for touch events. Touch events follow a cycle of states:
@@ -17,57 +15,47 @@ use {
 /// Note that when a touch event hits an object on the scene graph, a pointer event is sent to the
 /// corresponding session's listener.
 pub struct PointerState {
-    phase: finput::PointerEventPhase,
-    compositor_id: u32,
-    device_id: u32,
+    phase: pointerinjector::EventPhase,
     pointer_id: u32,
+    x: u16,
+    y: u16,
 }
 
 impl PointerState {
-    pub fn new(compositor_id: u32) -> Self {
-        Self {
-            phase: finput::PointerEventPhase::Remove,
-            compositor_id,
-            device_id: 1,
-            pointer_id: 1,
-        }
+    pub fn new() -> Self {
+        Self { phase: pointerinjector::EventPhase::Remove, pointer_id: 1, x: 0, y: 0 }
     }
 
     /// Transition from one phase to the next.
-    pub fn next_phase(&mut self) {
+    fn next_phase(&mut self) {
         self.phase = match self.phase {
-            finput::PointerEventPhase::Add => finput::PointerEventPhase::Down,
-            finput::PointerEventPhase::Down => finput::PointerEventPhase::Move,
-            finput::PointerEventPhase::Move => finput::PointerEventPhase::Up,
-            finput::PointerEventPhase::Up => finput::PointerEventPhase::Remove,
-            finput::PointerEventPhase::Remove => finput::PointerEventPhase::Add,
+            pointerinjector::EventPhase::Add => pointerinjector::EventPhase::Change,
+            pointerinjector::EventPhase::Change => pointerinjector::EventPhase::Remove,
+            pointerinjector::EventPhase::Remove => pointerinjector::EventPhase::Add,
             _ => unreachable!("Unsupported event phase"),
         }
     }
 
-    /// Generate a pointer event command for the current state.
+    /// Generate a pointer event for the current state.
     /// The pointer is placed at random coordinates on the display.
-    pub fn command(&mut self, rng: &mut SmallRng) -> fscenic::Command {
-        let event_time = Time::get_monotonic().into_nanos().unsigned_abs();
+    pub fn next_event(&mut self) -> pointerinjector::Event {
+        self.next_phase();
 
-        // TODO(xbhatnag): Migrate to the fuchsia.ui.pointerinjector protocol
-        // instead of using this code path. This path will be deprecated soon.
-        let pointer_event = finput::PointerEvent {
-            event_time,
-            device_id: self.device_id,
-            pointer_id: self.pointer_id,
-            type_: finput::PointerEventType::Touch,
-            phase: self.phase,
-            x: rng.gen_range(0..DISPLAY_WIDTH) as f32,
-            y: rng.gen_range(0..DISPLAY_HEIGHT) as f32,
-            radius_major: 0.0,
-            radius_minor: 0.0,
-            buttons: 0,
+        let pointer_sample = pointerinjector::PointerSample {
+            pointer_id: Some(self.pointer_id),
+            phase: Some(self.phase),
+            position_in_viewport: Some([self.x as f32, self.y as f32]),
+            ..pointerinjector::PointerSample::EMPTY
         };
 
-        fscenic::Command::Input(finput::Command::SendPointerInput(finput::SendPointerInputCmd {
-            compositor_id: self.compositor_id,
-            pointer_event,
-        }))
+        // Update coordinates.
+        self.y = (self.y + (self.x == DISPLAY_WIDTH) as u16) % (DISPLAY_HEIGHT + 1);
+        self.x = (self.x + 1) % (DISPLAY_WIDTH + 1);
+
+        pointerinjector::Event {
+            timestamp: Some(Time::get_monotonic().into_nanos()),
+            data: Some(pointerinjector::Data::PointerSample(pointer_sample)),
+            ..pointerinjector::Event::EMPTY
+        }
     }
 }
