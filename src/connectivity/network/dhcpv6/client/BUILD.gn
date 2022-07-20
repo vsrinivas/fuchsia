@@ -12,7 +12,6 @@ rustc_binary("dhcpv6_client") {
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.dhcpv6:fuchsia.net.dhcpv6-rustc",
     "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
-    "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/packet-formats-dhcp",
     "//src/connectivity/network/dhcpv6/core",
     "//src/connectivity/network/lib/dns_server_watcher",
@@ -32,6 +31,7 @@ rustc_binary("dhcpv6_client") {
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
   ]
+  test_deps = [ "//src/connectivity/lib/net-declare" ]
 
   sources = [
     "src/client.rs",

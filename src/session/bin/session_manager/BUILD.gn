@@ -40,11 +40,7 @@ rustc_library("lib") {
   deps = [
     ":session_framework_metrics_registry_rustlib",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.element:fuchsia.element-rustc",
-    "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",
-    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics-rustc",
     "//sdk/fidl/fuchsia.session:fuchsia.session-rustc",
     "//src/lib/fdio/rust:fdio",
@@ -61,9 +57,9 @@ rustc_library("lib") {
   ]
 
   test_deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fuchsia",
     "//src/lib/test_util",
-    "//src/lib/ui/fuchsia-scenic",
     "//src/session/testing",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:lazy_static",

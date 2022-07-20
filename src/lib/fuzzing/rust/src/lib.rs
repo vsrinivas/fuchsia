@@ -128,7 +128,7 @@ pub fn fuzz(_attr: TokenStream, item: TokenStream) -> TokenStream {
     } else {
         // Automatic fuzz target function: variable Arbitrary inputs.
         let input_tys_clone = input_tys.clone();
-        let min_size = quote! { #(<#input_tys_clone as Arbitrary>::size_hint(0).0)+* };
+        let min_size = quote! { #(<#input_tys_clone as arbitrary::Arbitrary>::size_hint(0).0)+* };
 
         let input_pats_clone = input_pats.clone();
         let arbitrary_pats = quote! { #(Ok(#input_pats_clone)),* };
@@ -142,22 +142,22 @@ pub fn fuzz(_attr: TokenStream, item: TokenStream) -> TokenStream {
         let input_tys_clone = input_tys.clone();
         for (i, input_ty) in input_tys_clone.enumerate() {
             if i != num_inputs - 1 {
-                arbitrary_tys
-                    .extend(quote! { <#input_ty as Arbitrary>::arbitrary(&mut unstructured), });
+                arbitrary_tys.extend(
+                    quote! { <#input_ty as arbitrary::Arbitrary>::arbitrary(&mut unstructured), },
+                );
             } else {
                 arbitrary_tys
-                    .extend(quote! { <#input_ty as Arbitrary>::arbitrary_take_rest(unstructured) });
+                    .extend(quote! { <#input_ty as arbitrary::Arbitrary>::arbitrary_take_rest(unstructured) });
             }
         }
         quote! {
-            use arbitrary::{Arbitrary, Unstructured};
             // Data must not be modified; make an immutable slice.
             let data = unsafe { std::slice::from_raw_parts(data, size) };
             // Early exit if not enough input bytes.
             if data.len() < #min_size {
                 return 0;
             }
-            let mut unstructured = Unstructured::new(data);
+            let mut unstructured = arbitrary::Unstructured::new(data);
             if let ( #arbitrary_pats ) = ( #arbitrary_tys ) {
                 let _ = #sig_ident(#invocation);
             }

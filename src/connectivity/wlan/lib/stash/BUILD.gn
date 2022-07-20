@@ -14,15 +14,15 @@ rustc_library("wlan-stash") {
   deps = [
     ":wlan-stash-constants",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
-    "//src/connectivity/wlan/lib/ieee80211",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+  ]
+  test_deps = [
+    "//src/connectivity/wlan/lib/ieee80211",
+    "//src/lib/fuchsia-async",
   ]
 
   sources = [
@@ -37,10 +37,7 @@ rustc_library("wlan-stash-constants") {
   edition = "2021"
   source_root = "src/constants.rs"
 
-  deps = [
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
-  ]
+  deps = [ "//third_party/rust_crates:serde" ]
 
   sources = [ "src/constants.rs" ]
 }

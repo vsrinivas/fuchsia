@@ -15,10 +15,10 @@ if (is_host) {
 
     deps = [
       "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:nix",
-      "//third_party/rust_crates:serial_test",
       "//third_party/rust_crates:tempfile",
     ]
+
+    test_deps = [ "//third_party/rust_crates:serial_test" ]
 
     sources = [
       "src/lib.rs",

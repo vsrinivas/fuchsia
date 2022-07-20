@@ -4,9 +4,6 @@
 
 //! Async wrapper around QUIC
 
-// TODO(fxb/104019): Consider enabling globally.
-#![deny(unused_crate_dependencies)]
-
 use anyhow::{format_err, Context as _, Error};
 use async_utils::mutex_ticket::MutexTicket;
 use fuchsia_async::{Task, Timer};

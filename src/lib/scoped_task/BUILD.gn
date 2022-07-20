@@ -29,7 +29,6 @@ rustc_test("scoped_task_test") {
   edition = "2021"
   source_root = "test/main.rs"
   deps = [
-    ":scoped_task",
     "//src/lib/cstr",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-runtime",

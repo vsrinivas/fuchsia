@@ -16,12 +16,6 @@ rustc_library("onet_test_util") {
     "//third_party/rust_crates:tracing",
   ]
 
-  if (is_fuchsia) {
-    deps += []
-  } else {
-    deps += [ "//third_party/rust_crates:async-fs" ]
-  }
-
   sources = [ "src/lib.rs" ]
   inputs = [
     "//third_party/rust_crates/mirrors/quiche/quiche/examples/cert.crt",

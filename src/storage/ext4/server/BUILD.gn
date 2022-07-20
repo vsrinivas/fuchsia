@@ -20,7 +20,6 @@ rustc_binary("bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-fs",
     "//src/lib/fuchsia-runtime",
     "//src/lib/storage/vfs/rust:vfs",
     "//src/lib/syslog/rust:syslog",
@@ -30,7 +29,6 @@ rustc_binary("bin") {
     "//src/storage/ext4/server/fidl:ext4_readonly-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:thiserror",
   ]
 
   sources = [ "src/main.rs" ]

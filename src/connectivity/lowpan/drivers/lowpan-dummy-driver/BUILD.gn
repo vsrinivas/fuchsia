@@ -11,23 +11,13 @@ rustc_binary("bin") {
   edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.factory.lowpan:fuchsia.factory.lowpan-rustc",
-    "//sdk/fidl/fuchsia.lowpan:fuchsia.lowpan-rustc",
-    "//sdk/fidl/fuchsia.lowpan.device:fuchsia.lowpan.device-rustc",
     "//sdk/fidl/fuchsia.lowpan.driver:fuchsia.lowpan.driver-rustc",
-    "//sdk/fidl/fuchsia.lowpan.test:fuchsia.lowpan.test-rustc",
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/connectivity/lowpan/lib/lowpan_driver_common",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
-    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:thiserror",
   ]
 
   sources = [ "src/main.rs" ]

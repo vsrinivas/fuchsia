@@ -28,12 +28,11 @@ if (is_host) {
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:pathdiff",
       "//third_party/rust_crates:serde",
-      "//third_party/rust_crates:serde_json",
     ]
 
     test_deps = [
-      "//src/lib/assembly/test_util",
       "//src/lib/assembly/util",
+      "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:tempfile",
     ]
   }

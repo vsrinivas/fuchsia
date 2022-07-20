@@ -15,8 +15,10 @@ rustc_library("keymaps") {
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
     "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:lazy_static",
+  ]
+  test_deps = [
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:test-case",
   ]
 

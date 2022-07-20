@@ -20,10 +20,7 @@ rustc_test("test") {
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
     "//src/session/bin/session_manager:lib",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:thiserror",
   ]
 
   sources = [ "src/main.rs" ]

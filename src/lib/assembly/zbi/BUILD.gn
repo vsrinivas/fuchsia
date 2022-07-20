@@ -15,7 +15,6 @@ if (is_host) {
       "//src/lib/assembly/util",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:log",
-      "//third_party/rust_crates:tempfile",
     ]
     sources = [
       "src/lib.rs",

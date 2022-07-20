@@ -17,14 +17,15 @@ rustc_library("icu_data") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:rust_icu_common",
-    "//third_party/rust_crates:rust_icu_sys",
     "//third_party/rust_crates:rust_icu_ucal",
     "//third_party/rust_crates:rust_icu_udata",
-    "//third_party/rust_crates:rust_icu_uenum",
     "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [ "//third_party/rust_crates:assert_matches" ]
+  test_deps = [
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:rust_icu_uenum",
+  ]
 
   non_rust_deps = [
     "../../cpp:icu_data_cpp",

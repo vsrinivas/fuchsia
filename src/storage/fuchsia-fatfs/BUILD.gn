@@ -21,10 +21,8 @@ fatfs_deps = [
   "//third_party/rust_crates:async-trait",
   "//third_party/rust_crates:chrono",
   "//third_party/rust_crates:fatfs",
-  "//third_party/rust_crates:futures",
   "//third_party/rust_crates:libc",
   "//third_party/rust_crates:scopeguard",
-  "//third_party/rust_crates:static_assertions",
 ]
 
 fatfs_sources = [
@@ -44,6 +42,7 @@ rustc_library("lib") {
   name = "fuchsia_fatfs"
 
   deps = fatfs_deps
+  test_deps = [ "//third_party/rust_crates:futures" ]
   sources = fatfs_sources
 }
 
@@ -71,7 +70,7 @@ rustc_fuzzer("fat-fuzzer") {
   ]
 
   sources = [ "src/fuzzer.rs" ] + fatfs_sources
-  deps = fatfs_deps
+  deps = fatfs_deps + [ "//third_party/rust_crates:futures" ]
 }
 
 fuzzers_package("fuchsia-fatfs-fuzzer") {

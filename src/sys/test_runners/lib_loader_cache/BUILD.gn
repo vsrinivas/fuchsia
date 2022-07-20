@@ -18,7 +18,6 @@ rustc_binary("bin") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-fs",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/library_loader:library_loader",
     "//src/sys/test_runners/fidl/fuchsia.test.runner:fuchsia.test.runner-rustc",

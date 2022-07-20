@@ -27,10 +27,8 @@ if (is_host) {
 
     source_root = "src/impl.rs"
     deps = [
-      "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
       "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
       "//src/lib/diagnostics/selectors",
-      "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:proc-macro2",
       "//third_party/rust_crates:quote",

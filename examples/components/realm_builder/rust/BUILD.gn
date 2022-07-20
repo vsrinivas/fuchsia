@@ -14,7 +14,6 @@ rustc_test("bin") {
 
     # [START_EXCLUDE]
     "//examples/components/routing/fidl:echo-rustc",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

@@ -13,10 +13,8 @@ if (is_host) {
     deps = [
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
-      "//third_party/rust_crates:pretty_assertions",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_yaml",
-      "//third_party/rust_crates:tempfile",
     ]
     sources = [ "src/main.rs" ]
     inputs = [
@@ -29,7 +27,10 @@ if (is_host) {
       "test_data/toc.before.yaml",
     ]
 
-    test_deps = [ "//src/lib/fuchsia" ]
+    test_deps = [
+      "//third_party/rust_crates:pretty_assertions",
+      "//third_party/rust_crates:tempfile",
+    ]
   }
 }
 

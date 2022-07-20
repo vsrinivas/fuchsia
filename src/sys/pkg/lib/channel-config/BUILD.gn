@@ -13,9 +13,7 @@ rustc_library("channel-config") {
 
   deps = [
     "//src/sys/pkg/lib/omaha-client",
-    "//src/sys/pkg/lib/version",
     "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
   ]
 
   test_deps = [ "//third_party/rust_crates:pretty_assertions" ]

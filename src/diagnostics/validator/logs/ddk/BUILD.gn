@@ -15,7 +15,6 @@ rustc_library("ddk-log-lib") {
     "//src/diagnostics/validator/logs/sink/fidl:sink-puppet-rustc",
     "//src/lib/diagnostics/log/encoding/rust",
     "//src/lib/diagnostics/reader/rust",
-    "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
@@ -27,8 +26,6 @@ rustc_library("ddk-log-lib") {
   test_deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/lib/driver_test_realm/realm_builder/rust",
     "//src/lib/fuchsia",
   ]

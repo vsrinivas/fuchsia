@@ -86,19 +86,17 @@ group("test_data") {
 }
 
 lib_deps = [
-  "//src/diagnostics/lib/triage",
   "//third_party/rust_crates:anyhow",
-  "//third_party/rust_crates:serde",
-  "//third_party/rust_crates:serde_derive",
-  "//third_party/rust_crates:serde_json",
   "//third_party/rust_crates:structopt",
-  "//third_party/rust_crates:tracing",
 ]
 
 rustc_library("triage_app_lib") {
   edition = "2021"
 
-  deps = lib_deps
+  deps = lib_deps + [
+           "//src/diagnostics/lib/triage",
+           "//third_party/rust_crates:serde_json",
+         ]
 
   sources = [
     "src/app.rs",
@@ -113,8 +111,9 @@ rustc_test("triage_lib_test") {
 
   deps = lib_deps + [
            ":test_data",
-           ":triage_app_lib",
+           "//src/diagnostics/lib/triage",
            "//src/lib/fuchsia",
+           "//third_party/rust_crates:serde_json",
          ]
 
   # we need to take a dependency on our bin because our integration tests invoke it
@@ -134,7 +133,10 @@ rustc_binary("triage_bin") {
   name = "triage"
   edition = "2021"
 
-  deps = lib_deps + [ ":triage_app_lib" ]
+  deps = lib_deps + [
+           ":triage_app_lib",
+           "//third_party/rust_crates:tracing",
+         ]
 
   sources = [ "src/main.rs" ]
 

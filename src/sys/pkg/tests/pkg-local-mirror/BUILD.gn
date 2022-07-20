@@ -11,7 +11,6 @@ rustc_test("driver") {
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",

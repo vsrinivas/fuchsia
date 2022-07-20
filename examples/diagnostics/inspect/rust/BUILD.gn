@@ -33,12 +33,15 @@ rustc_binary("server_bin") {
     "//src/lib/diagnostics/inspect/rust",
 
     # [END inspect_libs]
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+  ]
+
+  test_deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
   ]
 
   sources = [ "src/echo_server.rs" ]

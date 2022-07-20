@@ -13,7 +13,6 @@ rustc_library("stress-test-actor") {
     "//sdk/fidl/fuchsia.stresstest:fuchsia.stresstest-rustc",
     "//sdk/fidl/fuchsia.stresstest:rust_measure_tape_for_action",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",

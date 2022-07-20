@@ -12,7 +12,6 @@ rustc_binary("server_suite_under_test_rust") {
   deps = [
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/tests/fidl/server_suite/fidl:fidl.serversuite-rustc",
     "//third_party/rust_crates:anyhow",

@@ -11,7 +11,6 @@ rustc_library("bt-device-watcher") {
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -26,9 +25,6 @@ rustc_library("bt-device-watcher") {
   test_deps = [
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test-rustc",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test-rustc",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
-    "//sdk/fidl/fuchsia.process:fuchsia.process-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/lib/device-watcher/rust",
     "//sdk/lib/driver_test_realm/realm_builder/rust",
     "//src/lib/fuchsia",

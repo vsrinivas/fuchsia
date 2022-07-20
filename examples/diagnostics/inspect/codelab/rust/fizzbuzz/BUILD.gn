@@ -13,7 +13,6 @@ rustc_binary("bin") {
     "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect-rustc",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
-    "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

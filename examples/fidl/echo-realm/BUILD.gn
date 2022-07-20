@@ -17,7 +17,6 @@ rustc_test("bin") {
 
   deps = [
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",

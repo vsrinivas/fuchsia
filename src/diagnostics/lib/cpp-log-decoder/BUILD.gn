@@ -26,10 +26,12 @@ rustc_staticlib("lib") {
   sources = [ "src/lib.rs" ]
   public = [ "log_decoder.h" ]
   deps = [
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//src/lib/diagnostics/log/message/rust",
-    "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+  ]
+  test_deps = [
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//third_party/rust_crates:serde",
   ]
   testonly = true
 }

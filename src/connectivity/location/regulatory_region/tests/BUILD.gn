@@ -9,18 +9,12 @@ rustc_test("test") {
   name = "regulatory_region_integration_test"
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.location.namedplace:fuchsia.location.namedplace-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
-    "//src/lib/syslog/rust:syslog",
-    "//src/sys/lib/cm_rust",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:thiserror",
   ]
 
   sources = [ "src/lib.rs" ]

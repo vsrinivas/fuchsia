@@ -36,7 +36,6 @@ lib_deps = [
   "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:num-traits",
   "//third_party/rust_crates:serde_json5",
-  "//third_party/rust_crates:wasm-bindgen",
 ]
 
 if (current_toolchain == unknown_wasm32_toolchain) {
@@ -49,7 +48,7 @@ if (current_toolchain == unknown_wasm32_toolchain) {
       "//build/config/lto:thinlto",
     ]
 
-    deps = lib_deps
+    deps = lib_deps + [ "//third_party/rust_crates:wasm-bindgen" ]
 
     sources = [
       "src/lib.rs",

@@ -7,13 +7,10 @@ import("//build/rust/rustc_test.gni")
 rustc_test("reconnect_to_wpa2_network") {
   edition = "2021"
   deps = [
-    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211-rustc",
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
     "//sdk/fidl/fuchsia.wlan.tap:fuchsia.wlan.tap-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
-    "//src/connectivity/wlan/lib/eapol",
-    "//src/connectivity/wlan/lib/frame_writer:wlan-frame-writer",
     "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/lib/rsn:wlan-rsn",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",
@@ -22,7 +19,6 @@ rustc_test("reconnect_to_wpa2_network") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:pin-utils",
-    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "src/lib.rs" ]

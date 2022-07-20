@@ -26,7 +26,6 @@ rustc_library("logger") {
     "//src/lib/fuchsia-fs",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:tracing",
     "//third_party/rust_crates:tracing-log",
     "//third_party/rust_crates:tracing-subscriber",

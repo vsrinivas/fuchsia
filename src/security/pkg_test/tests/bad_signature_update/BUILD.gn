@@ -33,8 +33,6 @@ rustc_test("bad_signature_update-test") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:openat",
-    "//third_party/rust_crates:regex",
   ]
   sources = [ "//src/security/pkg_test/tests/bad_signature_update/src/main.rs" ]
 }

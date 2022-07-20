@@ -27,7 +27,6 @@ rustc_binary("bin") {
     "//src/lib/ui/fuchsia-scenic",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
   ]
 
   # source_root = "src/main.rs"

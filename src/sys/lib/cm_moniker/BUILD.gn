@@ -27,8 +27,6 @@ rustc_library("cm_moniker") {
     "//src/sys/lib/moniker",
   ]
 
-  test_deps = [ "//third_party/rust_crates:anyhow" ]
-
   sources = [
     "src//lib.rs",
     "src/instanced_abs_moniker.rs",

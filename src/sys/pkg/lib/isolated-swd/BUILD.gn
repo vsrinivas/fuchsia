@@ -26,9 +26,7 @@ rustc_library("isolated-swd") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-hyper",
-    "//src/lib/fuchsia-runtime",
     "//src/lib/fuchsia-url",
-    "//src/lib/scoped_task",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
@@ -41,7 +39,6 @@ rustc_library("isolated-swd") {
     "//src/sys/pkg/testing/blobfs-ramdisk",
     "//src/sys/pkg/testing/mock-paver",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:hyper-rustls",
@@ -53,9 +50,8 @@ rustc_library("isolated-swd") {
 
   test_deps = [
     "//sdk/fidl/fuchsia.space:fuchsia.space-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:hyper",
-    "//third_party/rust_crates:openat",
   ]
 
   sources = [

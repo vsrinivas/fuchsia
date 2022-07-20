@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #![warn(clippy::all)]
-// TODO(fxb/104019): Consider enabling globally.
-#![deny(unused_crate_dependencies)]
 
 pub mod accessor;
 pub mod archivist;

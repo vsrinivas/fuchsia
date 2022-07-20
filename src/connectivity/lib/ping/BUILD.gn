@@ -13,15 +13,18 @@ rustc_library("ping") {
     "src/lib.rs",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
-    "//src/connectivity/lib/net-types",
-    "//src/lib/fuchsia-async",
     "//src/lib/zerocopy",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:socket2",
     "//third_party/rust_crates:thiserror",
   ]
+  if (is_fuchsia) {
+    deps += [
+      "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket-rustc",
+      "//src/lib/fuchsia-async",
+    ]
+  }
   test_deps = [ "//src/connectivity/lib/net-declare" ]
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }

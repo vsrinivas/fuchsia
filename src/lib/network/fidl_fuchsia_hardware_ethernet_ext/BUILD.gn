@@ -10,12 +10,10 @@ rustc_library("fidl_fuchsia_hardware_ethernet_ext") {
   edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:thiserror",
   ]
+  test_deps = [ "//third_party/rust_crates:serde_json" ]
 
   sources = [ "src/lib.rs" ]
 

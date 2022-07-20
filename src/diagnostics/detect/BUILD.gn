@@ -24,35 +24,32 @@ rustc_library("lib") {
 
   deps = [
     ":triage-detect-config",
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//src/diagnostics/lib/inspect-fetcher",
     "//src/diagnostics/lib/triage",
     "//src/lib/diagnostics/inspect/derive",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
-    "//src/lib/diagnostics/reader/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia",
-    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/injectable-time",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:assert_matches",
-    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:glob",
-    "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json5",
-    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
+  ]
+
+  test_deps = [
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:maplit",
   ]
 
   sources = [
@@ -62,8 +59,6 @@ rustc_library("lib") {
     "src/snapshot.rs",
     "src/triage_shim.rs",
   ]
-
-  test_deps = []
 }
 
 fuchsia_component_manifest("triage-detect-manifest") {

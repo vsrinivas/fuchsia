@@ -16,14 +16,12 @@ if (is_host) {
       "//src/lib/mundane",
       "//src/lib/zerocopy",
       "//third_party/modinv",
-      "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:byteorder",
       "//third_party/rust_crates:hex",
       "//third_party/rust_crates:num",
       "//third_party/rust_crates:pem",
       "//third_party/rust_crates:ring",
       "//third_party/rust_crates:serde",
-      "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:thiserror",
     ]
 

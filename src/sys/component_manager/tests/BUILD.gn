@@ -51,11 +51,9 @@ cts_rustc_binary("trigger_bin") {
   source_root = "trigger.rs"
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
-    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/sys/component_manager/tests/fidl:components-rustc",
-    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
 

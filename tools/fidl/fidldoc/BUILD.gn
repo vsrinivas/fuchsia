@@ -18,6 +18,8 @@ if (is_host) {
     "src/templates/syscall/mod.rs",
   ]
 
+  common_source_root = "src/main.rs"
+
   common_inputs = [
     "src/templates/markdown/partials/header.hbs",
     "src/templates/markdown/partials/types/filename.hbs",
@@ -40,10 +42,26 @@ if (is_host) {
     "src/templates/syscall/syscall.hbs",
   ]
 
+  common_deps = [
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:handlebars",
+    "//third_party/rust_crates:heck",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:pulldown-cmark",
+    "//third_party/rust_crates:rayon",
+    "//third_party/rust_crates:regex",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:tracing",
+    "//third_party/rust_crates:tracing-subscriber",
+  ]
+
   rustc_binary("fidldoc_bin") {
     name = "fidldoc"
     edition = "2021"
-    deps = [ ":rust_crates" ]
+    source_root = common_source_root
+    deps = common_deps
     sources = common_sources
     inputs = common_inputs
   }
@@ -55,36 +73,14 @@ if (is_host) {
 
   rustc_test("fidldoc_bin_test") {
     edition = "2021"
-    source_root = "src/main.rs"
-    deps = [
-      ":fidldoc_bin",
-      ":rust_crates",
-    ]
+    source_root = common_source_root
+    deps = common_deps + [ "//third_party/rust_crates:tempfile" ]
     sources = common_sources
     inputs = common_inputs + [
                "src/templates/markdown/testdata/README.md",
                "src/templates/markdown/testdata/_toc.yaml",
                "src/fidldoc.config.json",
              ]
-  }
-
-  group("rust_crates") {
-    public_deps = [
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:argh",
-      "//third_party/rust_crates:glob",
-      "//third_party/rust_crates:handlebars",
-      "//third_party/rust_crates:heck",
-      "//third_party/rust_crates:lazy_static",
-      "//third_party/rust_crates:pulldown-cmark",
-      "//third_party/rust_crates:rayon",
-      "//third_party/rust_crates:regex",
-      "//third_party/rust_crates:serde",
-      "//third_party/rust_crates:serde_json",
-      "//third_party/rust_crates:tempfile",
-      "//third_party/rust_crates:tracing",
-      "//third_party/rust_crates:tracing-subscriber",
-    ]
   }
 
   fidl_testdata_info_filtered = []

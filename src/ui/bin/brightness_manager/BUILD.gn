@@ -29,14 +29,12 @@ rustc_library("lib") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:derivative",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:futures-util",
-    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:num-traits",
   ]
   test_deps = [
     ":test-helpers",
-    "//src/lib/fuchsia",
     "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:futures-util",
   ]
 }
 
@@ -59,37 +57,22 @@ rustc_binary("bin") {
     ":brightness_manager_config",
     ":lib",
     "//sdk/fidl/fuchsia.ui.brightness:fuchsia.ui.brightness-rustc",
-    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
-    "//src/lib/fdio/rust:fdio",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-runtime",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/watch_handler:watch_handler",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:derivative",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:futures-core",
-    "//third_party/rust_crates:futures-util",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:splines",
-    "//third_party/rust_crates:thiserror",
-  ]
-
-  test_deps = [
-    ":test-helpers",
-    "//src/lib/fuchsia",
-    "//third_party/rust_crates:assert_matches",
   ]
 
   sources = [
@@ -114,20 +97,13 @@ rustc_binary("auto-brightness_bin") {
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:derivative",
-    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:num-traits",
   ]
-  test_deps = [
-    ":test-helpers",
-    "//src/lib/fuchsia",
-    "//third_party/rust_crates:assert_matches",
-  ]
+  test_deps = [ "//third_party/rust_crates:futures" ]
 }
 
 core_shard("auto-brightness_core_shard") {

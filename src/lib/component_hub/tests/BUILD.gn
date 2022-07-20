@@ -17,8 +17,6 @@ rustc_test("integration_test_bin") {
     "//src/sys/lib/moniker",
   ]
 
-  test_deps = [ "//third_party/rust_crates:regex" ]
-
   sources = [ "src/lib.rs" ]
 }
 

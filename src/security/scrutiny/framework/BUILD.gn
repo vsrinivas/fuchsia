@@ -14,9 +14,7 @@ if (is_host) {
     deps = [
       "//src/security/scrutiny/config",
       "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:log",
-      "//third_party/rust_crates:regex",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_cbor",
       "//third_party/rust_crates:serde_json",
@@ -24,10 +22,7 @@ if (is_host) {
       "//third_party/rust_crates:uuid",
     ]
     non_rust_deps = [ "//src/lib/chunked-compression" ]
-    test_deps = [
-      "//src/security/scrutiny/testing",
-      "//third_party/rust_crates:tempfile",
-    ]
+    test_deps = [ "//src/security/scrutiny/testing" ]
     sources = [
       "src/engine/dispatcher.rs",
       "src/engine/hook.rs",

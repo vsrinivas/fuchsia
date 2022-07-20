@@ -38,8 +38,6 @@ rustc_binary("virtio_sound_bin") {
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
     "//src/lib/mapped-vmo",
-    "//src/lib/shared-buffer",
-    "//src/lib/syslog/rust:syslog",
     "//src/lib/zerocopy",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/virtualization/lib/machina-virtio-device",
@@ -50,11 +48,12 @@ rustc_binary("virtio_sound_bin") {
     "//third_party/rust_crates:iota",
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:once_cell",
-    "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:scopeguard",
     "//third_party/rust_crates:tokio",
     "//third_party/rust_crates:tracing",
   ]
+
+  test_deps = [ "//third_party/rust_crates:pretty_assertions" ]
 }
 
 fuchsia_unittest_package("virtio_sound_unittests") {

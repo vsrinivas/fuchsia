@@ -11,8 +11,6 @@ rustc_library("netsvc-proto") {
   with_unit_tests = true
 
   deps = [
-    "//src/connectivity/lib/net-declare",
-    "//src/connectivity/lib/net-types",
     "//src/lib/const-unwrap",
     "//src/lib/network/packet",
     "//src/lib/zerocopy",

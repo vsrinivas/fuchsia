@@ -11,20 +11,19 @@ rustc_library("cm_fidl_validator") {
   deps = [
     "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
-    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/directed_graph",
     "//src/sys/lib/cm_types",
     "//third_party/rust_crates:itertools",
-    "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:paste",
     "//third_party/rust_crates:thiserror",
-    "//third_party/rust_crates:url",
   ]
   test_deps = [
+    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:test-case",
+    "//third_party/rust_crates:url",
   ]
 
   sources = [

@@ -10,7 +10,6 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio-rustc",
     "//src/lib/diagnostics/log/rust",
@@ -18,7 +17,6 @@ rustc_binary("bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-hyper",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/testing/sl4f/fidl:fuchsia.test.audio.recording-rustc",
     "//third_party/rust_crates:anyhow",

@@ -11,11 +11,7 @@ rustc_library("mundane") {
   with_unit_tests = true
   edition = "2015"
 
-  deps = [
-    "//third_party/boringssl/rust/boringssl-sys",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:thiserror",
-  ]
+  deps = [ "//third_party/boringssl/rust/boringssl-sys" ]
 
   features = [
     "bytes",

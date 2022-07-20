@@ -66,6 +66,10 @@ template("_rust_compat") {
     ]
     sources = [ invoker.source ]
     source_root = invoker.source
+
+    # TODO(https://fxbug.dev/104019): Avoid this suppression. At the time of
+    # writing it is needed because not all tests use all these dependencies.
+    configs += [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
   }
 }
 

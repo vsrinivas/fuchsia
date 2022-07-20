@@ -9,7 +9,7 @@
 
 use crate::prelude_internal::*;
 pub use fuchsia_syslog::macros::*;
-use fuchsia_zircon::Status as ZxStatus;
+use fuchsia_zircon_status::Status as ZxStatus;
 
 impl From<ot::Error> for ZxStatus {
     fn from(err: ot::Error) -> Self {

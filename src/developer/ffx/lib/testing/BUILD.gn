@@ -21,12 +21,9 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
     "//src/lib/diagnostics/selectors",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
     "//src/sys/run_test_suite:lib",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
   ]
-  test_deps = [ "//third_party//rust_crates:async-channel" ]
 }
 
 group("tests") {

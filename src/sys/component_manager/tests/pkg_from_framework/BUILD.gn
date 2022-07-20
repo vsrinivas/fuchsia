@@ -11,8 +11,6 @@ rustc_test("pkg_from_framework_bin") {
   source_root = "pkg_from_framework.rs"
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component-test",
     "//src/lib/fuchsia-fs",

@@ -11,28 +11,26 @@ import("//build/testing/host_test_data.gni")
 rustc_library("font_info") {
   edition = "2021"
 
-  deps = [
-    "//src/fonts/char_set",
-    "//src/fonts/freetype_ffi",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:libc",
-    "//third_party/rust_crates:thiserror",
-  ]
-
-  if (is_fuchsia) {
-    deps += [
-      "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-      "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
-      "//src/lib/zircon/rust:fuchsia-zircon",
-    ]
-  }
-
   sources = [
     "src/lib.rs",
     "src/sources.rs",
     "src/vmo_stream.rs",
   ]
+
+  deps = [
+    "//src/fonts/char_set",
+    "//src/fonts/freetype_ffi",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:byteorder",
+  ]
+
+  if (is_fuchsia) {
+    deps += [
+      "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
+      "//src/lib/zircon/rust:fuchsia-zircon",
+      "//third_party/rust_crates:libc",
+    ]
+  }
 }
 
 rustc_test("font_info_test_bin") {
@@ -42,7 +40,6 @@ rustc_test("font_info_test_bin") {
     ":font_info",
     "//src/fonts/char_set",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:thiserror",
   ]
   source_root = "tests/tests.rs"
   non_rust_deps = []

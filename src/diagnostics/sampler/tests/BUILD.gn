@@ -14,11 +14,7 @@ rustc_test("config-validation") {
   name = "config_validation_test"
   deps = [
     "//src/diagnostics/lib/sampler-config",
-    "//src/diagnostics/sampler:lib",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
-    "//third_party/rust_crates:glob",
-    "//third_party/rust_crates:serde_json",
   ]
 
   source_root = "config_validation.rs"
@@ -47,10 +43,8 @@ rustc_test("integration-bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
-    "//src/sys/lib/cm_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:serde_json",
   ]
 
   source_root = "lib.rs"

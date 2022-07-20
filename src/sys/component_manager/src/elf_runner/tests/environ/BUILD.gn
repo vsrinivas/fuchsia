@@ -16,11 +16,9 @@ rustc_binary("context-bin") {
   output_name = "context"
   deps = [
     "fidl:fuchsia.elf.test-rustc",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
 
@@ -42,7 +40,6 @@ rustc_test("test") {
     "fidl:fuchsia.elf.test-rustc",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
-    "//third_party/rust_crates:futures",
   ]
 
   sources = [ "src/lib.rs" ]

@@ -11,11 +11,7 @@ rustc_library("lib") {
   edition = "2021"
   name = "configurable_netstack_test"
   testonly = true
-  deps = [
-    "//src/connectivity/lib/net-declare",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-component",
-  ]
+  deps = [ "//src/connectivity/lib/net-declare" ]
   source_root = "src/lib.rs"
   sources = [ "src/lib.rs" ]
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]

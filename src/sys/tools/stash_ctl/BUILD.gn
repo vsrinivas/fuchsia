@@ -14,21 +14,22 @@ rustc_binary("bin") {
     "//build/validate:non_production_tag",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
-    "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:bytes",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:tempfile",
-    "//third_party/rust_crates:thiserror",
   ]
 
   sources = [ "src/main.rs" ]
+}
+
+fuchsia_unittest_package("stash_ctl_tests") {
+  deps = [ ":bin_test" ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":stash_ctl_tests" ]
 }

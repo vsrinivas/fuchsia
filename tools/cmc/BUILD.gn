@@ -22,29 +22,23 @@ rustc_binary("cmc") {
     "//src/sys/lib/cm_rust",
     "//src/sys/lib/cm_types",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:clap",
-    "//third_party/rust_crates:json5format",
-    "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:serde_json5",
     "//third_party/rust_crates:strsim",
     "//third_party/rust_crates:structopt",
-    "//third_party/rust_crates:tempfile",
-    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:valico",
     "//tools/lib/cml",
     "//tools/lib/reference_doc",
-
-    # TODO: Obfuscated deps, move back to test_deps to re-obfuscate before uploading
-    "//third_party/rust_crates:assert_matches",
   ]
 
   non_rust_deps = [ ":cmc_test_schemas" ]
 
-  test_deps = []
+  test_deps = [
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:tempfile",
+  ]
 
   sources = [
     "src/compile.rs",
@@ -88,7 +82,6 @@ rustc_test("cmc_integration_test_bin") {
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:thiserror",
   ]
 
   sources = [ "tests/integration_test.rs" ]

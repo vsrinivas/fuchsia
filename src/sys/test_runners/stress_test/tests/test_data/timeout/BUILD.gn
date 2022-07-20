@@ -16,7 +16,6 @@ rustc_binary("timeout_actor_bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "actor/main.rs" ]

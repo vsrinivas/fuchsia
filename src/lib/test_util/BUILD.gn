@@ -10,7 +10,7 @@ rustc_library("test_util") {
   edition = "2021"
   testonly = true
 
-  deps = [ "//third_party/rust_crates:lazy_static" ]
+  test_deps = [ "//third_party/rust_crates:lazy_static" ]
 
   sources = [ "src/lib.rs" ]
 }

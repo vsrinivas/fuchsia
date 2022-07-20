@@ -42,7 +42,6 @@ rustc_binary("bin") {
   deps = [
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//sdk/fidl/fuchsia.fonts.experimental:fuchsia.fonts.experimental-rustc",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
@@ -65,7 +64,6 @@ rustc_test("test-bin") {
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:assert_matches",
-    "//third_party/rust_crates:futures",
   ]
 
   source_root = "src/test.rs"

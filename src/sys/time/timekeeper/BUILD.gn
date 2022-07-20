@@ -10,9 +10,7 @@ timekeeper_deps = [
   "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc-rustc",
   "//sdk/fidl/fuchsia.time:fuchsia.time-rustc",
   "//sdk/fidl/fuchsia.time.external:fuchsia.time.external-rustc",
-  "//src/lib/async-utils",
   "//src/lib/cobalt/rust:fuchsia-cobalt",
-  "//src/lib/diagnostics/inspect/derive",
   "//src/lib/diagnostics/inspect/runtime/rust",
   "//src/lib/diagnostics/inspect/rust",
   "//src/lib/fdio/rust:fdio",
@@ -29,7 +27,6 @@ timekeeper_deps = [
   "//third_party/rust_crates:async-trait",
   "//third_party/rust_crates:chrono",
   "//third_party/rust_crates:futures",
-  "//third_party/rust_crates:itertools",
   "//third_party/rust_crates:lazy_static",
   "//third_party/rust_crates:parking_lot",
   "//third_party/rust_crates:thiserror",
@@ -64,9 +61,6 @@ rustc_binary("bin") {
 
   test_deps = [
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
-    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
-    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//src/connectivity/lib/net-declare",
     "//src/lib/fuchsia",
     "//src/lib/test_util",
   ]

@@ -12,18 +12,15 @@ rustc_library("system-image") {
 
   deps = [
     "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-url",
-    "//src/lib/storage/vfs/rust:vfs",
     "//src/lib/syslog/rust:syslog",
     "//src/sys/pkg/lib/blobfs",
     "//src/sys/pkg/lib/fuchsia-hash",
     "//src/sys/pkg/lib/fuchsia-pkg",
     "//src/sys/pkg/lib/package-directory",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:proptest",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
@@ -31,11 +28,11 @@ rustc_library("system-image") {
 
   test_deps = [
     "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-fs",
     "//src/sys/pkg/lib/fuchsia-pkg-testing",
     "//src/sys/pkg/testing/blobfs-ramdisk",
     "//src/sys/pkg/testing/mock-boot-arguments:lib",
     "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:proptest",
   ]
 
   sources = [

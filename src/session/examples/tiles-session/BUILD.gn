@@ -31,7 +31,6 @@ rustc_binary("bin") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.element:fuchsia.element-rustc",
     "//sdk/fidl/fuchsia.session.scene:fuchsia.session.scene-rustc",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",

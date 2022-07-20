@@ -16,16 +16,16 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.wlan.product.deprecatedconfiguration:fuchsia.wlan.product.deprecatedconfiguration-rustc",
     "//src/connectivity/wlan/wlancfg/tool/policy:donut-lib",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:clap",
     "//third_party/rust_crates:eui48",
-    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:structopt",
   ]
+
+  test_deps = [ "//src/lib/fuchsia" ]
 
   sources = [
     "src/main.rs",

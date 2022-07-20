@@ -29,8 +29,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.net.virtualization:fuchsia.net.virtualization-rustc",
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
-    "//src/connectivity/bluetooth/lib/async-helpers",
-    "//src/connectivity/lib/fidl_fuchsia_net_stack_ext",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/network/dhcp:lib",
     "//src/connectivity/network/lib/dns_server_watcher",
@@ -50,20 +48,19 @@ rustc_library("lib") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:derivative",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:tempfile",
-    "//third_party/rust_crates:test-case",
-    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
   ]
 
-  test_deps = [ "//src/lib/testing/fixture" ]
+  test_deps = [
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:test-case",
+  ]
 
   sources = [
     "src/devices.rs",
@@ -87,7 +84,6 @@ rustc_binary("bin-basic") {
   deps = [
     ":lib",
     "//src/lib/fuchsia-async",
-    "//third_party/rust_crates:anyhow",
   ]
 
   sources = [ "src/bin/basic.rs" ]
@@ -103,7 +99,6 @@ rustc_binary("bin-advanced") {
   deps = [
     ":lib",
     "//src/lib/fuchsia-async",
-    "//third_party/rust_crates:anyhow",
   ]
 
   sources = [ "src/bin/advanced.rs" ]

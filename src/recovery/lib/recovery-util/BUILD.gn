@@ -11,13 +11,10 @@ rustc_library("recovery-util") {
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block-rustc",
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume-rustc",
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/ui/carnelian",
@@ -29,10 +26,7 @@ rustc_library("recovery-util") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:num-traits",
   ]
-  test_deps = [
-    "//third_party/rust_crates:assert_matches",
-    "//third_party/rust_crates:pin-utils",
-  ]
+  test_deps = [ "//third_party/rust_crates:assert_matches" ]
   sources = [
     "src/block.rs",
     "src/lib.rs",

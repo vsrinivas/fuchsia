@@ -15,7 +15,6 @@ if (is_host) {
       "//src/sys/lib/cm_fidl_validator",
       "//src/sys/lib/cm_rust",
       "//src/sys/lib/config_encoder",
-      "//src/sys/pkg/lib/far/rust:fuchsia-archive",
       "//src/sys/pkg/lib/fuchsia-pkg",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:serde_json",

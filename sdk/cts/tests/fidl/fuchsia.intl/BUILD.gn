@@ -15,7 +15,6 @@ cts_rustc_test("intl-services-system-test-bin") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
   ]
 }

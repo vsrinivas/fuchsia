@@ -27,7 +27,6 @@ rustc_test("driver_test_realm_test") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
     "//src/lib/fuchsia-fs",
-    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
   ]
 }

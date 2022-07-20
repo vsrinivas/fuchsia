@@ -18,7 +18,6 @@ rustc_library("dns_server_watcher") {
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
-    "//src/connectivity/lib/fidl_fuchsia_net_name_ext",
     "//src/lib/async-utils",
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:futures",

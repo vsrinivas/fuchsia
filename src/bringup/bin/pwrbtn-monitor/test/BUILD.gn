@@ -38,7 +38,6 @@ rustc_test("test_driver") {
   deps = [
     "fidl:fuchsia.test.pwrbtn-rustc",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:tracing",

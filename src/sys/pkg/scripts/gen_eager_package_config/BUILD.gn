@@ -18,15 +18,14 @@ if (is_host) {
       "//src/sys/pkg/lib/channel-config",
       "//src/sys/pkg/lib/eager-package-config",
       "//src/sys/pkg/lib/omaha-client",
-      "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
-      "//third_party/rust_crates:http",
       "//third_party/rust_crates:serde",
-      "//third_party/rust_crates:serde_json",
-      "//third_party/rust_crates:sha2",
     ]
 
-    test_deps = [ ":test_config" ]
+    test_deps = [
+      ":test_config",
+      "//third_party/rust_crates:serde_json",
+    ]
 
     sources = [ "src/lib.rs" ]
   }

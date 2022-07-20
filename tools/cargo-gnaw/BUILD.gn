@@ -15,7 +15,6 @@ if (is_host) {
     deps = [
       ":cargo-gnaw-lib",
       "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:camino",
     ]
 
     sources = [ "src/main.rs" ]

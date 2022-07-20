@@ -4,6 +4,7 @@
 
 //! Encoding contains functions and traits for FIDL encoding and decoding.
 
+pub use static_assertions::const_assert_eq;
 use {
     crate::endpoints::ProtocolMarker,
     crate::handle::{
@@ -2496,13 +2497,13 @@ macro_rules! fidl_struct_copy {
         align_v1: $align_v1:expr,
         align_v2: $align_v2:expr,
     ) => {
-        static_assertions::const_assert_eq!(std::mem::size_of::<$name>(), $size_v1);
-        static_assertions::const_assert_eq!($size_v1, $size_v2);
-        static_assertions::const_assert_eq!(std::mem::align_of::<$name>(), $align_v1);
-        static_assertions::const_assert_eq!($align_v1, $align_v2);
+        $crate::encoding::const_assert_eq!(std::mem::size_of::<$name>(), $size_v1);
+        $crate::encoding::const_assert_eq!($size_v1, $size_v2);
+        $crate::encoding::const_assert_eq!(std::mem::align_of::<$name>(), $align_v1);
+        $crate::encoding::const_assert_eq!($align_v1, $align_v2);
         $(
-            static_assertions::const_assert_eq!($padding_offset_v1, $padding_offset_v2);
-            static_assertions::const_assert_eq!($padding_mask_v1, $padding_mask_v2);
+            $crate::encoding::const_assert_eq!($padding_offset_v1, $padding_offset_v2);
+            $crate::encoding::const_assert_eq!($padding_mask_v1, $padding_mask_v2);
         )*
 
         impl $crate::encoding::Layout for $name {

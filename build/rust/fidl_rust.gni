@@ -99,18 +99,27 @@ template("fidl_rust") {
 
       deps = [
         "//src/lib/fidl/rust/fidl",
-        "//src/lib/zerocopy",
         "//src/lib/zircon/rust:fuchsia-zircon-status",
         "//third_party/rust_crates:bitflags",
         "//third_party/rust_crates:futures",
-        "//third_party/rust_crates:static_assertions",
+
+        # Used iff fidl_struct_copy is used instead of fidl_struct.
+        "//src/lib/zerocopy",
       ]
 
+      # TODO(https://fxbug.dev/104019): Avoid this suppression. At the time of
+      # writing it is needed because:
+      #
+      # - zerocopy is used only sometimes; see fidl_struct_copy.
+      #
+      # - this target might depend on another FIDL library *only* for type
+      # aliases; the generated Rust code will not reference this external
+      # alias, producing an unused crate dependency. We cannot know here
+      # whether that's the case or not, so we just suppress the warning.
+      configs += [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
+
       if (is_fuchsia) {
-        deps += [
-          "//src/lib/fuchsia-async",
-          "//src/lib/zircon/rust:fuchsia-zircon",
-        ]
+        deps += [ "//src/lib/zircon/rust:fuchsia-zircon" ]
       }
 
       if (defined(invoker.public_deps)) {

@@ -13,13 +13,14 @@ rustc_library("fuchsia-bootfs") {
   deps = [
     "//src/lib/zerocopy",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
-    "//third_party/rust_crates:num",
     "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [ "//third_party/rust_crates:lazy_static" ]
+  test_deps = [
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:lazy_static",
+  ]
 
   sources = [
     "src/bootfs.rs",

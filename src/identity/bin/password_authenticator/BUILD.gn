@@ -22,9 +22,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
     "//src/identity/lib/identity_common",
-    "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
@@ -39,7 +37,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:hmac",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:rand",
     "//third_party/rust_crates:scrypt",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
@@ -49,6 +46,7 @@ rustc_binary("bin") {
 
   test_deps = [
     ":test.identity-rustc",
+    "//src/lib/fuchsia",
     "//src/lib/storage/vfs/rust:vfs",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:tempfile",

@@ -50,7 +50,6 @@ wayland_protocol("test_protocol") {
 rustc_test("wayland_scanner_back_end_test") {
   edition = "2021"
   deps = [
-    ":lib",
     ":test_protocol_server_protocol",
     "//src/lib/ui/wayland/core",
     "//src/lib/zerocopy",

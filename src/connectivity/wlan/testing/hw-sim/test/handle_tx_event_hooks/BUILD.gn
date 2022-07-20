@@ -18,7 +18,6 @@ rustc_test("handle_tx_event_hooks") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:pin-utils",
-    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "src/lib.rs" ]

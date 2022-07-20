@@ -14,7 +14,6 @@ rustc_binary("bin") {
   deps = [
     "//src/connectivity/overnet/lib/onet_tool",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
   ]

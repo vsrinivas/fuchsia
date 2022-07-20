@@ -15,9 +15,11 @@ if (is_host) {
       "//src/lib/assembly/package_utils",
       "//src/lib/assembly/util",
       "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:assert_matches",
       "//third_party/rust_crates:camino",
       "//third_party/rust_crates:serde",
+    ]
+    test_deps = [
+      "//third_party/rust_crates:assert_matches",
       "//third_party/rust_crates:serde_json",
     ]
     sources = [

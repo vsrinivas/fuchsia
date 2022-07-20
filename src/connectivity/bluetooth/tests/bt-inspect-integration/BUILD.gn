@@ -13,7 +13,6 @@ rustc_test("bt_inspect_integration_tests") {
     "//src/connectivity/bluetooth/testing/bt-test-harness",
     "//src/connectivity/bluetooth/testing/test-harness",
     "//src/lib/diagnostics/reader/rust",
-    "//third_party/rust_crates:anyhow",
   ]
 
   sources = [ "src/lib.rs" ]

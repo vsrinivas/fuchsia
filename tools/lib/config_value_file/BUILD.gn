@@ -14,10 +14,10 @@ if (is_host) {
     ]
     deps = [
       "//src/sys/lib/cm_rust",
-      "//src/sys/lib/fidl_fuchsia_component_config_ext",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:thiserror",
     ]
+    test_deps = [ "//src/sys/lib/fidl_fuchsia_component_config_ext" ]
   }
 }
 

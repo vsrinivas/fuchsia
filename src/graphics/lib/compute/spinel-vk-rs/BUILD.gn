@@ -45,7 +45,6 @@ rustc_library("spinel-vk-rs") {
   with_unit_tests = true
   version = "0.1.0"
   edition = "2021"
-  deps = [ "//third_party/rust_crates:vk-sys" ]
   sources = [ "src/lib.rs" ]
 }
 

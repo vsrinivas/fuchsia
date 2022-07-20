@@ -14,20 +14,15 @@ handle_test_sources = [
 
 handle_test_deps = [
   "//src/lib/fidl/rust/fidl",
-  "//src/lib/fuchsia-async",
   "//third_party/rust_crates:async-trait",
   "//third_party/rust_crates:futures",
 ]
-
-if (is_fuchsia) {
-  handle_test_deps += [ "//src/lib/zircon/rust:fuchsia-zircon" ]
-}
 
 rustc_test("fidl_rust_handle_tests_bin") {
   output_name = "fidl_rust_handle_tests"
   edition = "2021"
   sources = handle_test_sources
-  deps = handle_test_deps
+  deps = handle_test_deps + [ "//src/lib/fuchsia-async" ]
 }
 
 fuchsia_unittest_package("fidl_rust_handle_tests") {

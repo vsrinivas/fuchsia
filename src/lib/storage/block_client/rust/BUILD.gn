@@ -12,10 +12,8 @@ rustc_library("remote-block-device") {
   edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block-rustc",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-runtime",
-    "//src/lib/storage/ramdevice_client",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/trace/rust:trace",
     "//src/lib/zerocopy",
@@ -25,6 +23,10 @@ rustc_library("remote-block-device") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:linked-hash-map",
+  ]
+  test_deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/storage/ramdevice_client",
   ]
 
   sources = [

@@ -30,12 +30,9 @@ if (is_host) {
     with_unit_tests = true
     edition = "2021"
     deps = [
-      "//src/lib/intl/model:lib",
       "//src/lib/intl/strings:lib",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:structopt",
-      "//third_party/rust_crates:thiserror",
-      "//third_party/rust_crates:xml-rs",
     ]
 
     test_deps = [ "//third_party/rust_crates:tempfile" ]

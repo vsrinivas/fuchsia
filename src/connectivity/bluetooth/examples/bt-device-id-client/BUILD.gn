@@ -11,8 +11,6 @@ rustc_binary("bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.deviceid:fuchsia.bluetooth.deviceid-rustc",
-    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
-    "//src/lib/async-utils",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

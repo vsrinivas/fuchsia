@@ -15,13 +15,10 @@ lib_srcs = [
 ]
 
 lib_deps = [
-  "//src/lib/fuchsia-async",
   "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:async-trait",
-  "//third_party/rust_crates:futures",
   "//third_party/rust_crates:log",
   "//third_party/rust_crates:num",
-  "//third_party/rust_crates:rand",
 ]
 
 if (is_fuchsia) {
@@ -37,6 +34,11 @@ rustc_library("storage_device") {
   with_unit_tests = true
   edition = "2021"
   deps = lib_deps
+  test_deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:rand",
+  ]
   sources = lib_srcs
 }
 

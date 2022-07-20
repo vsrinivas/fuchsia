@@ -5,8 +5,6 @@
 //! Overnet daemon for Fuchsia
 
 #![deny(missing_docs)]
-// TODO(fxb/104019): Consider enabling globally.
-#![deny(unused_crate_dependencies)]
 
 mod mdns;
 mod serial;

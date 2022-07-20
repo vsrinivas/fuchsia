@@ -12,21 +12,10 @@ rustc_staticlib("wlan-mlme-c") {
   edition = "2021"
 
   deps = [
-    "//sdk/banjo/fuchsia.hardware.wlan.associnfo:fuchsia.hardware.wlan.associnfo_banjo_rust",
-    "//sdk/banjo/fuchsia.hardware.wlan.softmac:fuchsia.hardware.wlan.softmac_banjo_rust",
-    "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal_banjo_rust",
-    "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
-    "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/lib/mlme/rust:wlan-mlme",
     "//src/connectivity/wlan/lib/span:wlan-span",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/zerocopy",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:num-traits",
-    "//third_party/rust_crates:thiserror",
   ]
 
   public = [ "bindings.h" ]

@@ -12,7 +12,6 @@ rustc_binary("cmx2cml") {
     "//src/lib/fuchsia",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:json5format",
     "//third_party/rust_crates:once_cell",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",

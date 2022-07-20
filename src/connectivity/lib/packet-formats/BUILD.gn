@@ -15,6 +15,10 @@ rustc_library("packet-formats") {
   configs -= [ "//build/config/rust:no_features" ]
   configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
 
+  # TODO(https://fxbug.dev/104019): `fakestd` is only used in not(test), which
+  # can't express when `with_unit_tests = true` is present.
+  configs += [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
+
   deps = [
     # TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
     "//src/connectivity/lib/internet-checksum",
@@ -24,13 +28,15 @@ rustc_library("packet-formats") {
     "//src/lib/network/packet",
     "//src/lib/zerocopy",
     "//third_party/rust_crates:arrayvec",
-    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:nonzero_ext",
     "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [ "//third_party/rust_crates:test-case" ]
+  test_deps = [
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:test-case",
+  ]
 
   sources = [
     "src/arp.rs",

@@ -33,7 +33,6 @@ config("env") {
 }
 
 lib_sources = [ "src/lib.rs" ]
-lib_deps = [ "//third_party/rust_crates:wasm-bindgen" ]
 
 if (current_toolchain == unknown_wasm32_toolchain) {
   rustc_wasm_library("lib") {
@@ -42,7 +41,7 @@ if (current_toolchain == unknown_wasm32_toolchain) {
 
     configs += [ ":env" ]
 
-    deps = lib_deps
+    deps = [ "//third_party/rust_crates:wasm-bindgen" ]
 
     sources = lib_sources
   }
@@ -51,8 +50,6 @@ if (current_toolchain == unknown_wasm32_toolchain) {
     edition = "2018"
 
     configs += [ ":env" ]
-
-    deps = lib_deps
 
     sources = lib_sources
   }

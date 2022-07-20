@@ -25,11 +25,9 @@ rustc_binary("virtio_input_bin") {
   deps = [
     "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3-rustc",
-    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization-rustc",
     "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zerocopy",
     "//src/virtualization/lib/machina-virtio-device",

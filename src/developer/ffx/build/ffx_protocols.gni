@@ -50,6 +50,11 @@ template("ffx_protocols") {
              "//third_party/rust_crates:quote",
              "//third_party/rust_crates:syn",
            ]
+
+    # TODO(https://fxbug.dev/104019): Avoid this suppression. At the time of
+    # writing it is needed because not all dependencies above are used by all
+    # plugins.
+    configs += [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
   }
 
   rustc_library(output_name + "_lib") {

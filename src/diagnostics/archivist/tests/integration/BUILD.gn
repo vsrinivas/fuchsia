@@ -36,7 +36,6 @@ rustc_test("integration_tests_bin") {
     "//src/lib/fuchsia-fs",
     "//src/lib/syslog/rust:syslog-listener",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/lib/cm_rust",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:difference",

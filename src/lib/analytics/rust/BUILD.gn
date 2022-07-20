@@ -14,7 +14,6 @@ if (is_host) {
     with_unit_tests = true
 
     deps = [
-      "//src/lib/fuchsia-async",
       "//src/lib/fuchsia-hyper:fuchsia-hyper",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:futures",
@@ -22,10 +21,13 @@ if (is_host) {
       "//third_party/rust_crates:hyper",
       "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:log",
-      "//third_party/rust_crates:nix",
-      "//third_party/rust_crates:tempfile",
       "//third_party/rust_crates:url",
       "//third_party/rust_crates:uuid",
+    ]
+
+    test_deps = [
+      "//src/lib/fuchsia-async",
+      "//third_party/rust_crates:tempfile",
     ]
 
     sources = [

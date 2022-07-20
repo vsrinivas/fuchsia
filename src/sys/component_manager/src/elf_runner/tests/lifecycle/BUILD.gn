@@ -17,18 +17,9 @@ rustc_test("lifecycle_test") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
-    "//src/lib/fuchsia-runtime",
-    "//src/lib/syslog/rust:syslog",
-    "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/component-events",
-    "//third_party/rust_crates:futures-util",
-    "//third_party/rust_crates:regex",
   ]
 
   sources = [ "lifecycle.rs" ]
@@ -61,8 +52,6 @@ rustc_binary("rendezvous_exit") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/sys/component_manager/tests/fidl:components-rustc",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:tracing",
   ]
 
@@ -81,8 +70,6 @@ rustc_test("component_exit") {
     "//src/sys/component_manager/tests/fidl:components-rustc",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:futures-util",
     "//third_party/rust_crates:tracing",
   ]
@@ -96,18 +83,9 @@ rustc_test("lifecycle_timeout") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
-    "//src/lib/fuchsia-runtime",
-    "//src/lib/syslog/rust:syslog",
-    "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/component-events",
-    "//third_party/rust_crates:futures-util",
-    "//third_party/rust_crates:regex",
   ]
 
   sources = [ "lifecycle_timeout.rs" ]
@@ -119,18 +97,9 @@ rustc_test("lifecycle_timeout_unresponsive") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
-    "//src/lib/fuchsia-runtime",
-    "//src/lib/syslog/rust:syslog",
-    "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/component-events",
-    "//third_party/rust_crates:futures-util",
-    "//third_party/rust_crates:regex",
   ]
 
   sources = [ "lifecycle_timeout_unresponsive.rs" ]
@@ -143,12 +112,10 @@ rustc_test("debug_started") {
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
     "//src/lib/fuchsia-fs",
-    "//src/lib/syslog/rust:syslog",
     "//src/sys/lib/component-events",
   ]
 

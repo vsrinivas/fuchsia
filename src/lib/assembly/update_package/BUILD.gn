@@ -22,12 +22,8 @@ if (is_host) {
       "//src/sys/pkg/lib/epoch",
       "//src/sys/pkg/lib/fuchsia-pkg",
       "//src/sys/pkg/lib/update-package",
-      "//src/sys/pkg/lib/version",
       "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
-      "//third_party/rust_crates:serde_json5",
-      "//third_party/rust_crates:tempfile",
     ]
     sources = [
       "src/lib.rs",
@@ -37,6 +33,7 @@ if (is_host) {
       "//src/lib/fuchsia-url",
       "//src/sys/pkg/lib/far/rust:fuchsia-archive",
       "//src/sys/pkg/lib/fuchsia-hash",
+      "//third_party/rust_crates:tempfile",
     ]
   }
 

@@ -23,7 +23,6 @@ rustc_binary("server") {
   testonly = true
   deps = [
     "//src/connectivity/network/testing/netemul/sync-manager/rust:lib",
-    "//src/lib/diagnostics/log/rust",
     "//src/lib/fuchsia",
     "//third_party/rust_crates:log",
   ]

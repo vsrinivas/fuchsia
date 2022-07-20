@@ -87,7 +87,6 @@ if (is_host) {
       "//src/sys/pkg/lib/far/rust:fuchsia-archive",
       "//src/sys/pkg/lib/fuchsia-pkg",
       "//third_party/rust_crates:maplit",
-      "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:tempfile",
     ]
     non_rust_deps = [ ":test_asset_data" ]

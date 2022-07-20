@@ -305,19 +305,19 @@ template("_fidl_banjo_rust") {
 
       non_rust_deps = [ ":$rust_fidlgen_target_name($fidl_toolchain)" ]
 
-      deps = [
-        "//src/lib/fuchsia-async",
-        "//src/lib/zircon/rust:fuchsia-zircon-types",
-        "//third_party/rust_crates:futures",
-      ]
+      deps = []
 
       configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 
       if (defined(invoker.public_deps)) {
         foreach(dep, invoker.public_deps) {
-          _name = get_label_info(dep, "name")
-          _dir = get_label_info(dep, "dir")
-          deps += [ "$_dir:${_name}_banjo_rust" ]
+          if (dep == "//zircon/vdso/zx") {
+            deps += [ "//src/lib/zircon/rust:fuchsia-zircon-types" ]
+          } else {
+            _name = get_label_info(dep, "name")
+            _dir = get_label_info(dep, "dir")
+            deps += [ "$_dir:${_name}_banjo_rust" ]
+          }
         }
       }
     }

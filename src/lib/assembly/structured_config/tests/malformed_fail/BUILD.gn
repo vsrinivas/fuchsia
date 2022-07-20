@@ -54,7 +54,6 @@ if (is_host) {
     deps = [
       "//src/lib/assembly/structured_config",
       "//src/sys/pkg/lib/far/rust:fuchsia-archive",
-      "//third_party/rust_crates:serde_json",
     ]
     non_rust_deps = [ ":test_asset_data" ]
     configs += [ ":test_asset_paths" ]

@@ -13,7 +13,6 @@ rustc_binary("bin") {
     "//examples/components/routing/fidl:echo-rustc",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
-    "//third_party/rust_crates:anyhow",
   ]
 
   sources = [ "src/main.rs" ]

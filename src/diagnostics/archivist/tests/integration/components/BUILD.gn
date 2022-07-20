@@ -37,7 +37,6 @@ rustc_binary("hanging_inspect_component_bin") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:tracing",
   ]
 
   sources = [ "src/hanging_inspect_component.rs" ]

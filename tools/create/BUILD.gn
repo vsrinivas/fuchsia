@@ -16,7 +16,6 @@ if (is_host) {
       "//third_party/rust_crates:handlebars",
       "//third_party/rust_crates:heck",
       "//third_party/rust_crates:serde",
-      "//third_party/rust_crates:serde_derive",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:termion",
     ]

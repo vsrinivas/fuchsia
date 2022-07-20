@@ -51,13 +51,16 @@ if (is_host) {
     test_environments = [ host_env ]
 
     deps = [
-      ":ir_importer",
       "//src/devices/lib/bind:lib",
       "//src/devices/lib/fidl-ir:lib",
       "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:assert_matches",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:structopt",
+    ]
+
+    test_deps = [
+      ":ir_importer",
+      "//third_party/rust_crates:assert_matches",
     ]
 
     sources = [

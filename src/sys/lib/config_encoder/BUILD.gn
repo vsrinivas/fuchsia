@@ -13,9 +13,9 @@ rustc_library("config_encoder") {
     "//sdk/fidl/fuchsia.component.config:fuchsia.component.config-rustc",
     "//src/lib/dynfidl/rust",
     "//src/sys/lib/cm_rust",
-    "//src/sys/lib/fidl_fuchsia_component_config_ext",
     "//third_party/rust_crates:thiserror",
   ]
+  test_deps = [ "//src/sys/lib/fidl_fuchsia_component_config_ext" ]
 }
 
 fuchsia_unittest_package("config_encoder_tests") {

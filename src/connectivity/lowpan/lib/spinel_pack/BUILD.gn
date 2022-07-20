@@ -12,10 +12,10 @@ rustc_library("spinel_pack") {
     "spinel_pack_macros",
     "//src/lib/zerocopy",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:thiserror",
   ]
+  test_deps = [ "//third_party/rust_crates:assert_matches" ]
 
   sources = [
     "src/eui.rs",

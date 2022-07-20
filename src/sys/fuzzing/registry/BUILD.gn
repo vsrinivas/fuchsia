@@ -19,8 +19,6 @@ rustc_binary("bin") {
   edition = "2021"
   with_unit_tests = true
   deps = [
-    "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
-    "//src/lib/async-utils",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -29,7 +27,6 @@ rustc_binary("bin") {
     "//src/sys/fuzzing/fidl:fuchsia.fuzzer-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
   ]
   sources = [
     "src/main.rs",

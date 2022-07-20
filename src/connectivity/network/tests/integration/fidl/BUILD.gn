@@ -8,7 +8,6 @@ rustc_test("fidl") {
   edition = "2021"
   output_name = "netstack_fidl_integration_test"
   deps = [
-    "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet-rustc",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.debug:fuchsia.net.debug-rustc",
@@ -27,9 +26,7 @@ rustc_test("fidl") {
     "//src/connectivity/network/tests/integration/macros:netstack_testing_macros",
     "//src/lib/async-utils",
     "//src/lib/diagnostics/reader/rust",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//src/lib/network/fidl_fuchsia_net_interfaces_ext",
     "//src/lib/network/packet",
@@ -37,7 +34,6 @@ rustc_test("fidl") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:test-case",
   ]
   sources = [ "src/lib.rs" ]

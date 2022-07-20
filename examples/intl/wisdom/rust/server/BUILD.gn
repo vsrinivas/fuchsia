@@ -16,7 +16,6 @@ rustc_binary("intl_wisdom_server_rust") {
   deps = [
     "//examples/intl/wisdom/fidl:wisdom-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/icu_data/rust/icu_data",
@@ -26,8 +25,6 @@ rustc_binary("intl_wisdom_server_rust") {
     "//third_party/rust_crates:rust_icu_sys",
     "//third_party/rust_crates:rust_icu_ucal",
     "//third_party/rust_crates:rust_icu_udat",
-    "//third_party/rust_crates:rust_icu_udata",
-    "//third_party/rust_crates:rust_icu_uenum",
     "//third_party/rust_crates:rust_icu_uloc",
     "//third_party/rust_crates:rust_icu_ustring",
     "//third_party/rust_crates:thiserror",

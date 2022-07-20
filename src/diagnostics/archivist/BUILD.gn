@@ -144,14 +144,8 @@ archivist_optimized_binary("bin") {
   deps = [
     ":archivist-config",
     ":lib",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
-    "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/diagnostics/inspect/rust",
-    "//src/lib/diagnostics/selectors",
     "//src/lib/fdio/rust:fdio",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-runtime",
@@ -160,10 +154,19 @@ archivist_optimized_binary("bin") {
     "//src/sys/lib/stdout-to-debuglog/rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
-    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
+  ]
+
+  test_deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
+    "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/diagnostics/selectors",
+    "//src/lib/fidl/rust/fidl",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:thiserror",
   ]
 
   sources = [ "src/main.rs" ]

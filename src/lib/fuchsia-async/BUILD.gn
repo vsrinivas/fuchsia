@@ -25,16 +25,8 @@ rustc_library("fuchsia-async") {
   }
   deps = [
     "//src/lib/fuchsia-async-macro",
-    "//src/lib/fuchsia-system-alloc",
-    "//src/lib/zircon/rust:fuchsia-zircon-status",
-    "//third_party/rust_crates:bitflags",
-    "//third_party/rust_crates:crossbeam",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:libc",
-    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:pin-utils",
-    "//third_party/rust_crates:smallvec",
-    "//third_party/rust_crates:tracing",
   ]
   sources = [
     "src/atomic_future.rs",
@@ -49,8 +41,16 @@ rustc_library("fuchsia-async") {
     deps += [
       "//src/lib/zerocopy",
       "//src/lib/zircon/rust:fuchsia-zircon",
+      "//third_party/rust_crates:crossbeam",
+      "//third_party/rust_crates:libc",
+      "//third_party/rust_crates:parking_lot",
+      "//third_party/rust_crates:smallvec",
       "//third_party/rust_crates:socket2",
     ]
+    if (fuchsia_async_trace_level_logging) {
+      configs += [ ":trace_level_logging" ]
+      deps += [ "//third_party/rust_crates:tracing" ]
+    }
     sources += [
       "src/handle/zircon/channel.rs",
       "src/handle/zircon/fifo.rs",
@@ -74,6 +74,8 @@ rustc_library("fuchsia-async") {
     ]
   } else {
     deps += [
+      "//src/lib/zircon/rust:fuchsia-zircon-status",
+      "//third_party/rust_crates:bitflags",
       "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:slab",
     ]
@@ -98,10 +100,6 @@ rustc_library("fuchsia-async") {
     ]
   }
   test_deps = [ "//third_party/rust_crates:futures-test" ]
-
-  if (fuchsia_async_trace_level_logging) {
-    configs += [ ":trace_level_logging" ]
-  }
 }
 
 rustc_staticlib("fuchsia-async-staticlib") {

@@ -31,7 +31,6 @@ rustc_test("branch-bin") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
-    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:tracing",
   ]
   sources = [ "src/branch.rs" ]

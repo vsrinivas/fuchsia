@@ -148,6 +148,10 @@ template("ffx_plugin") {
                                  "with_unit_tests",
                                  "original_target_name",
                                ])
+
+        # TODO(https://fxbug.dev/104019): Avoid this suppression.
+        configs +=
+            [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
       }
 
       args_deps += [ ":" + sub_cmd ]
@@ -191,9 +195,15 @@ template("ffx_plugin") {
                "//src/developer/ffx/core:lib",
                "//third_party/rust_crates:argh",
 
-               # TODO: remove the implicit anyhow dependency, have args_deps declare it instead.
+               # TODO(https://fxbug.dev/104019): remove the implicit anyhow
+               # dependency, have args_deps declare it instead.
                "//third_party/rust_crates:anyhow",
              ]
+
+      # TODO(https://fxbug.dev/104019): Avoid this suppression. At the time of
+      # writing it is needed because not all dependencies above are used by all
+      # plugins.
+      configs += [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
 
       assert(
           defined(invoker.args_sources),
@@ -296,6 +306,13 @@ template("ffx_plugin") {
     if (includes_execution) {
       rustc_library(output_name) {
         deps = lib_deps
+
+        # TODO(https://fxbug.dev/104019): Avoid this suppression. At the time
+        # of writing it is needed because not all dependencies above are used
+        # by all plugins.
+        configs +=
+            [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
+
         non_rust_deps = [ "//third_party/boringssl" ]
         forward_variables_from(invoker,
                                "*",
@@ -320,10 +337,15 @@ template("ffx_plugin") {
     rustc_library(suite_name) {
       source_root = "$target_gen_dir/plugins.rs"
       edition = "2018"
-
       with_unit_tests = false
       sources = [ "$target_gen_dir/plugins.rs" ]
       deps = suite_deps
+
+      # TODO(https://fxbug.dev/104019): Avoid this suppression. At the time of
+      # writing it is needed because not all dependencies above are used by all
+      # plugins.
+      configs += [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
+
       non_rust_deps = [ "//third_party/boringssl" ]
       forward_variables_from(invoker,
                              "*",

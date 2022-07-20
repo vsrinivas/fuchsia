@@ -10,20 +10,14 @@ rustc_library("openthread") {
   with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//src/connectivity/lib/fidl_fuchsia_net_stack_ext",
     "//src/connectivity/lowpan/lib/openthread_sys",
-    "//src/lib/fuchsia-async",
     "//src/lib/syslog/rust:syslog",
-    "//src/lib/zerocopy",
-    "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hex",
-    "//third_party/rust_crates:libc",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:num",
     "//third_party/rust_crates:num-derive",
@@ -32,6 +26,7 @@ rustc_library("openthread") {
     "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:thiserror",
   ]
+  test_deps = [ "//third_party/rust_crates:assert_matches" ]
 
   sources = [
     "src/lib.rs",

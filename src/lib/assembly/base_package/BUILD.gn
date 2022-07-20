@@ -13,21 +13,18 @@ if (is_host) {
     with_unit_tests = true
     deps = [
       "//src/lib/assembly/package_list",
-      "//src/lib/assembly/util",
-      "//src/lib/fuchsia-url",
-      "//src/sys/pkg/lib/fuchsia-hash",
       "//src/sys/pkg/lib/fuchsia-pkg",
       "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:serde_json",
+    ]
+    test_deps = [
+      "//src/lib/fuchsia-url",
+      "//src/sys/pkg/lib/far/rust:fuchsia-archive",
+      "//src/sys/pkg/lib/fuchsia-hash",
       "//third_party/rust_crates:tempfile",
     ]
     sources = [
       "src/base_package.rs",
       "src/lib.rs",
-    ]
-    test_deps = [
-      "//src/sys/pkg/lib/far/rust:fuchsia-archive",
-      "//third_party/rust_crates:serde_json",
     ]
   }
 

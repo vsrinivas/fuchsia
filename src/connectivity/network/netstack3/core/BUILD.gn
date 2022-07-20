@@ -74,26 +74,21 @@ lib_deps = [
 
   # TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
   "fakestd",
-  "//src/connectivity/lib/internet-checksum",
   "//src/connectivity/lib/net-declare",
   "//src/connectivity/lib/net-types",
   "//src/connectivity/lib/packet-formats",
   "//src/connectivity/network/lib/explicit",
   "//src/connectivity/network/lib/todo_unused",
-  "//src/connectivity/network/netstack3/core/specialize-ip-macro",
   "//src/lib/const-unwrap",
   "//src/lib/mundane",
   "//src/lib/network/packet",
   "//src/lib/zerocopy",
-  "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:assert_matches",
   "//third_party/rust_crates:derivative",
   "//third_party/rust_crates:either",
   "//third_party/rust_crates:log",
   "//third_party/rust_crates:nonzero_ext",
-  "//third_party/rust_crates:num",
   "//third_party/rust_crates:rand",
-  "//third_party/rust_crates:rand_xorshift",
   "//third_party/rust_crates:siphasher",
   "//third_party/rust_crates:smallvec",
   "//third_party/rust_crates:thiserror",
@@ -101,11 +96,13 @@ lib_deps = [
 
 lib_test_deps = [
   "proptest-support",
+  "specialize-ip-macro",
   "teststd",
   "//src/connectivity/lib/net-declare",
   "//third_party/rust_crates:assert_matches",
   "//third_party/rust_crates:itertools",
   "//third_party/rust_crates:proptest",
+  "//third_party/rust_crates:rand_xorshift",
   "//third_party/rust_crates:test-case",
 ]
 
@@ -117,6 +114,10 @@ rustc_library("netstack3-core") {
 
   configs -= [ "//build/config/rust:no_features" ]
   configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
+
+  # TODO(https://fxbug.dev/104019): `fakestd` is only used in not(test), which
+  # can't express when `with_unit_tests = true` is present.
+  configs += [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
 
   deps = lib_deps
 

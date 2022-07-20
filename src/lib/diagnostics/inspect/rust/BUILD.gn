@@ -13,32 +13,26 @@ rustc_library("fuchsia-inspect") {
 
   deps = [
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
-    "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/diagnostics/inspect/format/rust",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-fs",
     "//src/lib/mapped-vmo",
-    "//src/lib/shared-buffer",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:bitfield",
-    "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:derivative",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:num-derive",
     "//third_party/rust_crates:num-traits",
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:paste",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
   ]
+
+  test_deps = [ "//src/lib/fuchsia" ]
 
   sources = [
     "src/component.rs",

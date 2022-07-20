@@ -18,10 +18,7 @@ rustc_binary("fshost-binary") {
   ]
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//src/lib/fdio/rust:fdio",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
@@ -34,7 +31,6 @@ rustc_binary("fshost-binary") {
     "//src/storage/bin/blobfs",
     "//src/storage/testing/rust:storage-isolated-driver-manager",
     "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:log",
 
     # Storage utilities in library assumes access to
     # `storage_driver_test_realm` in test environment from

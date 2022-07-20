@@ -8,5 +8,6 @@ group("tests") {
     "chroot:tests",
     "debug-dash-launcher:tests",
     "log:tests",
+    "stash_ctl:tests",
   ]
 }

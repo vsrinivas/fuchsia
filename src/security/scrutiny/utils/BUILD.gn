@@ -80,7 +80,6 @@ if (is_host) {
       "//src/sys/pkg/lib/fuchsia-hash",
       "//src/sys/pkg/lib/fuchsia-merkle",
       "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:bincode",
       "//third_party/rust_crates:byteorder",
       "//third_party/rust_crates:hex",
       "//third_party/rust_crates:libc",
@@ -94,6 +93,7 @@ if (is_host) {
 
     test_deps = [
       "//src/lib/fuchsia",
+      "//third_party/rust_crates:bincode",
       "//third_party/rust_crates:maplit",
     ]
 

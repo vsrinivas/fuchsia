@@ -2,6 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+config("deny_unused_crate_dependencies") {
+  rustflags = [ "-Dunused_crate_dependencies" ]
+}
+
+# TODO(https://fxbug.dev/104019): Delete this config when all unused
+# dependencies are removed.
+#
+# PLEASE DO NOT USE.
+config("allow_unused_crate_dependencies") {
+  rustflags = [ "-Aunused_crate_dependencies" ]
+
+  # Please do not add to this list.
+  visibility = [
+    "//examples/*",
+    "//sdk/*",
+    "//src/*",
+    "//tools/*",
+    "//vendor/*",
+    "//zircon/*",
+  ]
+}
+
 config("deny_unused_results") {
   rustflags = [ "-Dunused_results" ]
 }

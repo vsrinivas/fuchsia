@@ -19,7 +19,6 @@ rustc_library("sampler-config") {
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/selectors",
-    "//src/lib/fuchsia",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:glob",
     "//third_party/rust_crates:lazy_static",
@@ -29,6 +28,7 @@ rustc_library("sampler-config") {
   ]
 
   test_deps = [
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia",
     "//third_party/rust_crates:tempfile",
   ]

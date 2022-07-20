@@ -19,19 +19,18 @@ rustc_library("cm_rust") {
     "//src/lib/from-enum",
     "//src/sys/lib/cm_fidl_validator",
     "//src/sys/lib/cm_types",
-    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:thiserror",
   ]
   sources = [ "src/lib.rs" ]
+
+  features = []
+  test_deps = [ "//third_party/rust_crates:maplit" ]
 
   # Some host tools use serde to serialize/deserialize cm_rust types. This
   # dependency is guarded in code via #[cfg(feature = "serde")] and
   # #[cfg_attr(feature = "serde", ...)] to prevent serde dependencies in
   # non-host builds.
-  features = []
-  test_deps = []
   if (is_host) {
     features += [ "serde" ]
     deps += [ "//third_party/rust_crates:serde" ]

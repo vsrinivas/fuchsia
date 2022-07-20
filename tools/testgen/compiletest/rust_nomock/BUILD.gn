@@ -16,13 +16,9 @@ rustc_test("bin") {
   ]
   deps = [
     "//examples/components/routing/fidl:echo-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
   ]
 }
 

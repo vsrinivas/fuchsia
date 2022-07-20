@@ -57,7 +57,6 @@ rustc_binary("font_provider") {
   deps = [
     "char_set",
     "font_info",
-    "freetype_ffi",
     "manifest",
     "//sdk/fidl/fuchsia.fonts:fuchsia.fonts-rustc",
     "//sdk/fidl/fuchsia.fonts.experimental:fuchsia.fonts.experimental-rustc",
@@ -85,9 +84,6 @@ rustc_binary("font_provider") {
     "//third_party/rust_crates:heck",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:libc",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:unicase",
   ]

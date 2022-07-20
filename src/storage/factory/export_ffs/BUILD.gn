@@ -31,7 +31,6 @@ rustc_library("export_ffs") {
   edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-fs",
     "//src/lib/storage/block_client/rust:remote-block-device",
@@ -39,7 +38,6 @@ rustc_library("export_ffs") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:thiserror",
   ]
   test_deps = [
     "//src/lib/fuchsia-async",

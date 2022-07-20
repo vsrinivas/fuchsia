@@ -13,8 +13,6 @@ rustc_library("interval_tree") {
 
   deps = [ "//third_party/rust_crates:thiserror" ]
 
-  test_deps = [ "//third_party/rust_crates:tempfile" ]
-
   sources = [
     "src/error.rs",
     "src/interval.rs",

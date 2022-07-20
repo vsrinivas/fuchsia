@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #![warn(clippy::all)]
-// TODO(fxb/104019): Consider enabling globally.
-#![deny(unused_crate_dependencies)]
 
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::AtomicU64;

@@ -20,7 +20,6 @@ rustc_library("lib") {
   deps = [
     ":test.componentmanager.stresstests-rustc",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
     "//third_party/rust_crates:anyhow",
   ]
@@ -42,7 +41,6 @@ rustc_test("realm_with_many_children_bin") {
     ":lib",
     ":test.componentmanager.stresstests-rustc",
     "//src/lib/fuchsia-async",
-    "//src/lib/syslog/rust:syslog",
     "//third_party/rust_crates:futures",
   ]
 
@@ -57,7 +55,6 @@ rustc_test("deep_tree_stress_test_bin") {
   deps = [
     ":lib",
     "//src/lib/fuchsia-async",
-    "//src/lib/syslog/rust:syslog",
   ]
 
   sources = [ "deep_tree_stress_test.rs" ]

@@ -13,7 +13,6 @@ rustc_library("eager-package-config") {
   deps = [
     "//src/lib/fuchsia-url",
     "//src/sys/pkg/lib/channel-config",
-    "//src/sys/pkg/lib/fuchsia-pkg",
     "//src/sys/pkg/lib/omaha-client",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:log",

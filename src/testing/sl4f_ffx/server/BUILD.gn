@@ -19,16 +19,12 @@ rustc_binary("bin") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hyper",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_json",
   ]
 
   test_deps = [
-    "//examples/components/routing/fidl:echo-rustc",
     "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
-    "//src/lib/testing/fuchsia-hyper-test-support",
   ]
 
   sources = [ "src/main.rs" ]

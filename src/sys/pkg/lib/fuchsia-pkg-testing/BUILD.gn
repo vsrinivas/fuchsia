@@ -12,16 +12,13 @@ rustc_library("fuchsia-pkg-testing") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.inspect:fuchsia.inspect-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
     "//src/lib/fuchsia-hyper",
     "//src/lib/fuchsia-runtime",
@@ -41,11 +38,9 @@ rustc_library("fuchsia-pkg-testing") {
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:glob",
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:http",
     "//third_party/rust_crates:hyper",
-    "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:maybe-owned",
     "//third_party/rust_crates:openat",

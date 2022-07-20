@@ -8,37 +8,33 @@ import("//build/rust/rustc_test.gni")
 import("//build/testing/host_test_data.gni")
 
 if (is_host) {
-  common_sources = [ "src/main.rs" ]
+  crate_source_root = "src/main.rs"
+  crate_sources = [ crate_source_root ]
+
+  crate_deps = [
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:flate2",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:tar",
+    "//third_party/rust_crates:tracing",
+    "//third_party/rust_crates:tracing-subscriber",
+  ]
 
   rustc_binary("clidoc_bin") {
     edition = "2021"
     name = "clidoc"
-    sources = common_sources
-    deps = [ ":rust_crates" ]
+    source_root = crate_source_root
+    sources = crate_sources
+    deps = crate_deps
   }
 
   rustc_test("clidoc_bin_test") {
     edition = "2021"
-    source_root = "src/main.rs"
-    deps = [
-      ":clidoc_bin",
-      ":rust_crates",
-    ]
+    source_root = crate_source_root
+    sources = crate_sources
+    deps = crate_deps + [ "//third_party/rust_crates:tempfile" ]
     non_rust_deps = [ ":clidoc_test_scripts($host_toolchain)" ]
-    sources = common_sources
-  }
-
-  group("rust_crates") {
-    public_deps = [
-      "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:argh",
-      "//third_party/rust_crates:flate2",
-      "//third_party/rust_crates:lazy_static",
-      "//third_party/rust_crates:tar",
-      "//third_party/rust_crates:tempfile",
-      "//third_party/rust_crates:tracing",
-      "//third_party/rust_crates:tracing-subscriber",
-    ]
   }
 
   # Test data for generating reference docs.

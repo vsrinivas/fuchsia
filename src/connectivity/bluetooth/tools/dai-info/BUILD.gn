@@ -14,7 +14,6 @@ rustc_binary("bin") {
     "//src/connectivity/bluetooth/lib/fuchsia-audio-dai",
     "//src/lib/fuchsia",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:log",
   ]
 
   sources = [ "src/main.rs" ]

@@ -11,16 +11,11 @@ if (is_host) {
     with_unit_tests = true
     edition = "2021"
     deps = [
-      "//src/lib/fuchsia-async",
       "//src/security/scrutiny/config",
       "//src/security/scrutiny/framework",
       "//src/security/scrutiny/plugins",
-      "//src/security/scrutiny/utils",
       "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:bytes",
-      "//third_party/rust_crates:futures",
       "//third_party/rust_crates:log",
-      "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:simplelog",
       "//third_party/rust_crates:termion",
@@ -32,7 +27,6 @@ if (is_host) {
 
     test_deps = [
       "//src/security/scrutiny/testing",
-      "//third_party/rust_crates:tempfile",
       "//third_party/rust_crates:uuid",
     ]
 

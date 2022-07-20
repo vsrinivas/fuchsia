@@ -17,6 +17,9 @@ rustc_binary("bin") {
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+  ]
+
+  test_deps = [
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:thiserror",
   ]

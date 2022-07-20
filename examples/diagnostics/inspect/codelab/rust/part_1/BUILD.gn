@@ -15,7 +15,6 @@ rustc_binary("bin") {
     "//examples/diagnostics/inspect/codelab/fidl:fuchsia.examples.inspect-rustc",
 
     # CODELAB: Include inspect dependency.
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
@@ -24,6 +23,8 @@ rustc_binary("bin") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:tracing",
   ]
+
+  test_deps = [ "//src/lib/fidl/rust/fidl" ]
 
   sources = [
     "src/main.rs",

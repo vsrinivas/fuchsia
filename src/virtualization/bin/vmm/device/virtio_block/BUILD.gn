@@ -36,7 +36,6 @@ rustc_binary("virtio_block_bin") {
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/storage/block_client/rust:remote-block-device",
     "//src/lib/syslog/rust:syslog",
@@ -51,11 +50,11 @@ rustc_binary("virtio_block_bin") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:libc",
-    "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
   ]
 
   test_deps = [
+    "//src/lib/fuchsia-async",
     "//src/lib/storage/ramdevice_client/rust",
     "//third_party/rust_crates:tempfile",
   ]

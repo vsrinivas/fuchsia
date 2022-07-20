@@ -13,7 +13,6 @@ rustc_test("specialize-ip-macro_test") {
   configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
 
   deps = [
-    "//src/connectivity/lib/net-types",
     "//src/connectivity/network/netstack3/core/specialize-ip-macro",
     "//third_party/rust_crates:test-case",
   ]

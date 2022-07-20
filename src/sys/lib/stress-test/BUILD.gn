@@ -9,7 +9,6 @@ rustc_library("stress-test") {
   edition = "2021"
 
   deps = [
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",

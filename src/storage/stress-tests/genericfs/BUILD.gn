@@ -23,7 +23,6 @@ rustc_test("stressor-bin") {
     "//src/storage/fxfs:fuchsia.fxfs-rustc",
     "//src/storage/stress-tests/utils",
     "//src/sys/lib/stress-test",
-    "//src/sys/pkg/lib/fuchsia-merkle",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",

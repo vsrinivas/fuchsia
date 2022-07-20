@@ -43,15 +43,12 @@ rustc_test("binder_integration_test_bin") {
   deps = [
     "fidl:fuchsia.component.tests-rustc",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//src/lib/diagnostics/data/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
   ]
 
   sources = [ "src/binder_integration_test.rs" ]

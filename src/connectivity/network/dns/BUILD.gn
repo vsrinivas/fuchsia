@@ -12,20 +12,16 @@ rustc_library("lib") {
   edition = "2021"
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
-    "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
-    "//src/connectivity/lib/net-declare",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:socket2",
     "//third_party/rust_crates:trust-dns-proto",
     "//third_party/rust_crates:trust-dns-resolver",
   ]
-  test_deps = [ "//third_party/rust_crates:assert_matches" ]
+  test_deps = [ "//src/connectivity/lib/net-declare" ]
 
   sources = [
     "src/async_resolver.rs",
@@ -58,10 +54,8 @@ bin_base = {
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.net.name:fuchsia.net.name-rustc",
     "//sdk/fidl/fuchsia.net.routes:fuchsia.net.routes-rustc",
-    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/lib/net-types",
-    "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
@@ -71,13 +65,10 @@ bin_base = {
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:libc",
     "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
     "//third_party/rust_crates:trust-dns-proto",
     "//third_party/rust_crates:trust-dns-resolver",
@@ -87,6 +78,7 @@ bin_base = {
   test_deps = [
     "//src/connectivity/lib/net-declare",
     "//src/lib/const-unwrap",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:itertools",
   ]
 

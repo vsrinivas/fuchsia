@@ -484,8 +484,7 @@ impl<T: 'static + File> FileConnection<T> {
 mod tests {
     use {
         super::*, assert_matches::assert_matches, async_trait::async_trait,
-        fuchsia_async as fasync, fuchsia_zircon as zx, futures::prelude::*,
-        lazy_static::lazy_static, std::sync::Mutex,
+        fuchsia_async as fasync, fuchsia_zircon as zx, futures::prelude::*, std::sync::Mutex,
     };
 
     #[derive(Debug, PartialEq)]
@@ -514,9 +513,7 @@ mod tests {
         file_size: u64,
     }
 
-    lazy_static! {
-        pub static ref MOCK_FILE_SIZE: u64 = 256;
-    }
+    const MOCK_FILE_SIZE: u64 = 256;
     const MOCK_FILE_ID: u64 = 10;
     const MOCK_FILE_LINKS: u64 = 2;
     const MOCK_FILE_CREATION_TIME: u64 = 10;
@@ -526,7 +523,7 @@ mod tests {
             Arc::new(MockFile {
                 operations: Mutex::new(Vec::new()),
                 callback,
-                file_size: *MOCK_FILE_SIZE,
+                file_size: MOCK_FILE_SIZE,
             })
         }
 
@@ -812,8 +809,8 @@ mod tests {
             fio::NodeAttributes {
                 mode: fio::MODE_TYPE_FILE,
                 id: MOCK_FILE_ID,
-                content_size: *MOCK_FILE_SIZE,
-                storage_size: 2 * *MOCK_FILE_SIZE,
+                content_size: MOCK_FILE_SIZE,
+                storage_size: 2 * MOCK_FILE_SIZE,
                 link_count: MOCK_FILE_LINKS,
                 creation_time: MOCK_FILE_CREATION_TIME,
                 modification_time: MOCK_FILE_MODIFICATION_TIME,
@@ -1069,7 +1066,7 @@ mod tests {
             .unwrap()
             .map_err(zx::Status::from_raw)
             .unwrap();
-        assert_eq!(offset, *MOCK_FILE_SIZE - 4);
+        assert_eq!(offset, MOCK_FILE_SIZE - 4);
 
         let data = env.proxy.read(1).await.unwrap().map_err(zx::Status::from_raw).unwrap();
         assert_eq!(data, vec![(offset % 256) as u8]);
@@ -1232,7 +1229,7 @@ mod tests {
             .unwrap()
             .map_err(zx::Status::from_raw)
             .unwrap();
-        assert_eq!(offset, *MOCK_FILE_SIZE + data.len() as u64);
+        assert_eq!(offset, MOCK_FILE_SIZE + data.len() as u64);
         let events = env.file.operations.lock().unwrap();
         const INIT_FLAGS: fio::OpenFlags = fio::OpenFlags::empty()
             .union(fio::OpenFlags::RIGHT_WRITABLE)

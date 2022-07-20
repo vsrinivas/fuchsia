@@ -15,7 +15,6 @@ rustc_test("intl_wisdom_test_bin") {
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

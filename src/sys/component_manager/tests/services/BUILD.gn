@@ -17,10 +17,7 @@ rustc_binary("service-routing-branch-bin") {
   deps = [
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -40,20 +37,16 @@ rustc_test("service-routing-test-bin") {
   edition = "2021"
   deps = [
     "//examples/components/services:fuchsia.examples.services-rustc",
-    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
     "//src/lib/fuchsia-fs",
-    "//src/sys/lib/cm_rust",
     "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:tracing",
   ]
 
@@ -72,18 +65,11 @@ rustc_test("filtered-service-routing-test-bin") {
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
     "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-component-test",
     "//src/lib/fuchsia-fs",
     "//src/sys/component_manager/tests/services/src/fidl:fuchsia.examples-rustc",
-    "//src/sys/lib/cm_rust",
-    "//src/sys/lib/component-events",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:tracing",
   ]
@@ -102,18 +88,11 @@ rustc_binary("service-routing-client-bin") {
   edition = "2021"
   output_name = "service_routing_client_bin"
   deps = [
-    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
-    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
-    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-fs",
     "//src/sys/component_manager/tests/services/src/fidl:fuchsia.examples-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:tracing",
   ]
 
   source_root = "src/service_client.rs"
@@ -129,10 +108,8 @@ rustc_binary("multi_instance_echo_service_bin") {
   edition = "2021"
   output_name = "multi_instance_echo_service_bin"
   deps = [
-    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
-    "//src/lib/fuchsia-runtime",
     "//src/sys/component_manager/tests/services/src/fidl:fuchsia.examples-rustc",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

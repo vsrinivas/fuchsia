@@ -13,10 +13,8 @@ rustc_library("account_common") {
     "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
     "//sdk/fidl/fuchsia.identity.authentication:fuchsia.identity.authentication-rustc",
-    "//src/identity/lib/identity_common",
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:thiserror",
   ]

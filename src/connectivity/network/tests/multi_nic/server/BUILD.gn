@@ -10,7 +10,6 @@ rustc_binary("server") {
   edition = "2018"
   deps = [
     "//src/connectivity/network/testing/netemul/sync-manager/rust:lib",
-    "//src/lib/diagnostics/log/rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:tracing",

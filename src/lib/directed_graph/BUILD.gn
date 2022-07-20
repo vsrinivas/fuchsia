@@ -9,9 +9,6 @@ rustc_library("directed_graph") {
   with_unit_tests = true
   edition = "2021"
 
-  deps = [ "//third_party/rust_crates:thiserror" ]
-  test_deps = [ "//third_party/rust_crates:assert_matches" ]
-
   sources = [ "src/lib.rs" ]
 }
 

@@ -49,6 +49,8 @@ def get_out_dir():
 def target_to_dir(target):
     """Returns likely directory path for a target's BUILD.gn file."""
     m = TARGET_EXP.match(target)
+    if m is None:
+        raise Exception(f"{TARGET_EXP} did not match {target}")
     return m.group(1)
 
 

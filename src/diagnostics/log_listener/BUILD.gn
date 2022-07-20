@@ -29,11 +29,12 @@ rustc_binary("bin") {
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:regex",
-    "//third_party/rust_crates:tempfile",
-    "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [ "//src/lib/fuchsia" ]
+  test_deps = [
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:tempfile",
+  ]
 
   sources = [ "src/main.rs" ]
 }

@@ -13,10 +13,8 @@ rustc_binary("element_manager_bin") {
   deps = [
     ":element_config",
     "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
-    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.element:fuchsia.element-rustc",
     "//sdk/fidl/fuchsia.element:fuchsia.element-rustc",
-    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",

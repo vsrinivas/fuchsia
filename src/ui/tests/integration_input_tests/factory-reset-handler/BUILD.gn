@@ -20,9 +20,6 @@ rustc_test("factory_reset_handler_test") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
-    "//sdk/fidl/fuchsia.component.test:fuchsia.component.test-rustc",
-    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display-rustc",
     "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.media.sounds:fuchsia.media.sounds-rustc",
@@ -36,10 +33,8 @@ rustc_test("factory_reset_handler_test") {
     "//sdk/fidl/fuchsia.vulkan.loader:fuchsia.vulkan.loader-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
-    "//src/lib/syslog/rust:syslog",
     "//src/lib/ui/fuchsia-scenic",
     "//src/lib/ui/input-synthesis",
     "//src/lib/zircon/rust:fuchsia-zircon",

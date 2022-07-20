@@ -48,6 +48,9 @@ template("ffx") {
     # Use up to 16 threads for codegen
     configs += [ "//build/config/rust:codegen_units_16" ]
 
+    # TODO(https://fxbug.dev/104019): Avoid this suppression.
+    configs += [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
+
     if (is_debug) {
       # Disable lto for debug builds, as the additional codegen units imply the
       # use of thin-local lto

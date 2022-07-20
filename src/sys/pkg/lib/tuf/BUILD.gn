@@ -22,13 +22,10 @@ rustc_test("tuf_lib_test") {
     "//third_party/rust_crates:futures-io",
     "//third_party/rust_crates:futures-util",
     "//third_party/rust_crates:http",
-    "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:itoa",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:percent-encoding",
     "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:ring",
     "//third_party/rust_crates:serde",
@@ -37,7 +34,6 @@ rustc_test("tuf_lib_test") {
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:untrusted",
-    "//third_party/rust_crates:url",
   ]
 
   sources = [

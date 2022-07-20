@@ -14,9 +14,7 @@ rustc_test("destruction_integration_test_bin") {
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
-    "//src/lib/fuchsia-fs",
     "//src/sys/lib/component-events",
-    "//third_party/rust_crates:anyhow",
   ]
 
   sources = [ "integration_test.rs" ]
@@ -74,7 +72,6 @@ rustc_binary("destruction_trigger_bin") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/sys/component_manager/tests/fidl:components-rustc",
-    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
   ]
 

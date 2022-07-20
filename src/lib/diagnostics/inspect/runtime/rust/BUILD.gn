@@ -19,7 +19,6 @@ rustc_library("lib") {
     "//sdk/lib/inspect:client_includes",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/storage/vfs/rust:vfs",
@@ -31,6 +30,7 @@ rustc_library("lib") {
 
   test_deps = [
     "//src/lib/fdio/rust:fdio",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-component-test",
 
     # TODO(https://fxbug.dev/81400): Remove this dep during post-migration cleanup.

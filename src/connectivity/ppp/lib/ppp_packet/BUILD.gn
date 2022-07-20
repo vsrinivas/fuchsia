@@ -14,7 +14,6 @@ rustc_library("ppp_packet") {
     "//src/lib/network/packet",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zerocopy",
-    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:thiserror",
   ]
@@ -35,7 +34,6 @@ rustc_test("ppp_packet_test_bin") {
     "//src/lib/network/packet",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zerocopy",
-    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:thiserror",
   ]

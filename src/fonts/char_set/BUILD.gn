@@ -10,11 +10,7 @@ rustc_library("char_set") {
   edition = "2021"
   with_unit_tests = true
 
-  deps = [
-    "//src/lib/intl/unicode_utils/char_collection",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:thiserror",
-  ]
+  deps = [ "//src/lib/intl/unicode_utils/char_collection" ]
 
   sources = [ "src/lib.rs" ]
 }
