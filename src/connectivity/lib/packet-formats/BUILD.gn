@@ -5,67 +5,80 @@
 import("//build/components.gni")
 import("//build/rust/rustc_fuzzer.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
+
+_common_deps = [
+  "//src/connectivity/lib/internet-checksum",
+  "//src/connectivity/lib/net-types",
+  "//src/connectivity/network/lib/explicit",
+  "//src/lib/network/packet",
+  "//src/lib/zerocopy",
+  "//third_party/rust_crates:arrayvec",
+  "//third_party/rust_crates:log",
+  "//third_party/rust_crates:nonzero_ext",
+  "//third_party/rust_crates:thiserror",
+]
+
+_common_sources = [
+  "src/arp.rs",
+  "src/error.rs",
+  "src/ethernet.rs",
+  "src/icmp/common.rs",
+  "src/icmp/icmpv4.rs",
+  "src/icmp/icmpv6.rs",
+  "src/icmp/macros.rs",
+  "src/icmp/mld.rs",
+  "src/icmp/mod.rs",
+  "src/icmp/ndp.rs",
+  "src/icmp/testdata.rs",
+  "src/igmp/messages.rs",
+  "src/igmp/mod.rs",
+  "src/igmp/testdata.rs",
+  "src/igmp/types.rs",
+  "src/ip.rs",
+  "src/ipv4.rs",
+  "src/ipv6/ext_hdrs.rs",
+  "src/ipv6/mod.rs",
+  "src/lib.rs",
+  "src/macros.rs",
+  "src/tcp.rs",
+  "src/testdata.rs",
+  "src/testutil.rs",
+  "src/udp.rs",
+  "src/utils.rs",
+]
 
 rustc_library("packet-formats") {
   name = "packet_formats"
   version = "0.1.0"
   edition = "2021"
-  with_unit_tests = true
 
   configs -= [ "//build/config/rust:no_features" ]
   configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
 
-  # TODO(https://fxbug.dev/104019): `fakestd` is only used in not(test), which
-  # can't express when `with_unit_tests = true` is present.
-  configs += [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
+  deps = _common_deps + [
+           # TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
+           "//src/connectivity/network/netstack3/core/fakestd",
+         ]
 
-  deps = [
-    # TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
-    "//src/connectivity/lib/internet-checksum",
-    "//src/connectivity/lib/net-types",
-    "//src/connectivity/network/lib/explicit",
-    "//src/connectivity/network/netstack3/core/fakestd",
-    "//src/lib/network/packet",
-    "//src/lib/zerocopy",
-    "//third_party/rust_crates:arrayvec",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:nonzero_ext",
-    "//third_party/rust_crates:thiserror",
-  ]
+  sources = _common_sources
 
-  test_deps = [
-    "//third_party/rust_crates:assert_matches",
-    "//third_party/rust_crates:test-case",
-  ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
 
-  sources = [
-    "src/arp.rs",
-    "src/error.rs",
-    "src/ethernet.rs",
-    "src/icmp/common.rs",
-    "src/icmp/icmpv4.rs",
-    "src/icmp/icmpv6.rs",
-    "src/icmp/macros.rs",
-    "src/icmp/mld.rs",
-    "src/icmp/mod.rs",
-    "src/icmp/ndp.rs",
-    "src/icmp/testdata.rs",
-    "src/igmp/messages.rs",
-    "src/igmp/mod.rs",
-    "src/igmp/testdata.rs",
-    "src/igmp/types.rs",
-    "src/ip.rs",
-    "src/ipv4.rs",
-    "src/ipv6/ext_hdrs.rs",
-    "src/ipv6/mod.rs",
-    "src/lib.rs",
-    "src/macros.rs",
-    "src/tcp.rs",
-    "src/testdata.rs",
-    "src/testutil.rs",
-    "src/udp.rs",
-    "src/utils.rs",
-  ]
+rustc_test("packet-formats_test") {
+  name = "packet_formats_lib_test"
+  edition = "2021"
+
+  configs -= [ "//build/config/rust:no_features" ]
+  configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
+
+  deps = _common_deps + [
+           "//third_party/rust_crates:assert_matches",
+           "//third_party/rust_crates:test-case",
+         ]
+
+  sources = _common_sources
 
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }

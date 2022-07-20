@@ -5,6 +5,7 @@
 import("//build/components.gni")
 import("//build/rust/rustc_fuzzer.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
 
 lib_sources = [
   "src/algorithm/mod.rs",
@@ -71,9 +72,6 @@ lib_deps = [
   # TODO(https://github.com/rust-lang-nursery/portability-wg/issues/11):
   # remove this module.
   "fakealloc",
-
-  # TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
-  "fakestd",
   "//src/connectivity/lib/net-declare",
   "//src/connectivity/lib/net-types",
   "//src/connectivity/lib/packet-formats",
@@ -106,22 +104,35 @@ lib_test_deps = [
   "//third_party/rust_crates:test-case",
 ]
 
+lib_not_fuzz_deps = [
+  # TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
+  "fakestd",
+]
+
 rustc_library("netstack3-core") {
   name = "netstack3_core"
   version = "0.1.0"
   edition = "2021"
-  with_unit_tests = true
 
   configs -= [ "//build/config/rust:no_features" ]
   configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
 
-  # TODO(https://fxbug.dev/104019): `fakestd` is only used in not(test), which
-  # can't express when `with_unit_tests = true` is present.
-  configs += [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
+  deps = lib_deps + lib_not_fuzz_deps
 
-  deps = lib_deps
+  sources = lib_sources
 
-  test_deps = lib_test_deps
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
+
+rustc_test("netstack3-core_test") {
+  name = "netstack3_core_lib_test"
+  edition = "2021"
+
+  configs -= [ "//build/config/rust:no_features" ]
+  configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
+
+  deps = lib_deps + lib_test_deps + lib_not_fuzz_deps
+
   sources = lib_sources
 
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
@@ -145,7 +156,8 @@ rustc_library("netstack3-core-benchmarks") {
   testonly = true
   with_unit_tests = true
   sources = lib_sources
-  deps = lib_deps + lib_test_deps + [ "//third_party/rust_crates:criterion" ]
+  deps = lib_deps + lib_test_deps + lib_not_fuzz_deps +
+         [ "//third_party/rust_crates:criterion" ]
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
   configs -= [ "//build/config/rust:no_features" ]
   configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
