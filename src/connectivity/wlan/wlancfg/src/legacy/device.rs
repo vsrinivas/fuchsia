@@ -11,7 +11,7 @@ use {
     anyhow::format_err,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_wlan_common as wlan_common,
-    fidl_fuchsia_wlan_device_service::{DeviceServiceProxy, DeviceWatcherEvent},
+    fidl_fuchsia_wlan_device_service::{DeviceMonitorProxy, DeviceWatcherEvent},
     fuchsia_zircon as zx,
     futures::lock::Mutex,
     log::{error, info},
@@ -19,7 +19,7 @@ use {
 };
 
 pub struct Listener {
-    proxy: DeviceServiceProxy,
+    proxy: DeviceMonitorProxy,
     legacy_shim: IfaceRef,
     phy_manager: Arc<Mutex<dyn PhyManagerApi + Send>>,
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
@@ -81,17 +81,13 @@ async fn on_phy_added(listener: &Listener, phy_id: u16) {
 
 /// Configured the interface that is used to service the legacy WLAN API.
 async fn on_iface_added_legacy(listener: &Listener, iface_id: u16) -> Result<(), anyhow::Error> {
-    let (status, response) = listener.proxy.query_iface(iface_id).await?;
-    match status {
-        fuchsia_zircon::sys::ZX_OK => {}
-        fuchsia_zircon::sys::ZX_ERR_NOT_FOUND => {
+    let response = match listener.proxy.query_iface(iface_id).await? {
+        Ok(response) => response,
+        Err(fuchsia_zircon::sys::ZX_ERR_NOT_FOUND) => {
             return Err(format_err!("Could not find iface: {}", iface_id));
         }
-        ref status => return Err(format_err!("Could not query iface information: {}", status)),
-    }
-
-    let response =
-        response.ok_or_else(|| format_err!("Iface information is missing: {}", iface_id))?;
+        Err(status) => return Err(format_err!("Could not query iface information: {}", status)),
+    };
 
     let service = listener.proxy.clone();
 
@@ -101,13 +97,13 @@ async fn on_iface_added_legacy(listener: &Listener, iface_id: u16) -> Result<(),
             let (sme, remote) = create_proxy()
                 .map_err(|e| format_err!("Failed to create a FIDL channel: {}", e))?;
 
-            let status = service
+            let result = service
                 .get_client_sme(iface_id, remote)
                 .await
                 .map_err(|e| format_err!("Failed to get client SME: {}", e))?;
-
-            zx::Status::ok(status)
-                .map_err(|e| format_err!("GetClientSme returned an error: {}", e))?;
+            result.map_err(|e| {
+                format_err!("GetClientSme returned an error: {}", zx::Status::from_raw(e))
+            })?;
 
             let lc = Iface { sme: sme.clone(), iface_id };
             legacy_shim.set_if_empty(lc);
@@ -125,7 +121,7 @@ async fn on_iface_added_legacy(listener: &Listener, iface_id: u16) -> Result<(),
 
 impl Listener {
     pub fn new(
-        proxy: DeviceServiceProxy,
+        proxy: DeviceMonitorProxy,
         legacy_shim: IfaceRef,
         phy_manager: Arc<Mutex<dyn PhyManagerApi + Send>>,
         iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,

@@ -140,7 +140,6 @@ pub trait PhyManagerApi {
 /// Maintains a record of all PHYs that are present and their associated interfaces.
 pub struct PhyManager {
     phys: HashMap<u16, PhyContainer>,
-    device_service: fidl_service::DeviceServiceProxy,
     device_monitor: fidl_service::DeviceMonitorProxy,
     client_connections_enabled: bool,
     power_state: fidl_common::PowerSaveType,
@@ -168,15 +167,10 @@ impl PhyContainer {
 impl PhyManager {
     /// Internally stores a DeviceMonitorProxy to query PHY and interface properties and create and
     /// destroy interfaces as requested.
-    pub fn new(
-        device_service: fidl_service::DeviceServiceProxy,
-        device_monitor: fidl_service::DeviceMonitorProxy,
-        node: inspect::Node,
-    ) -> Self {
+    pub fn new(device_monitor: fidl_service::DeviceMonitorProxy, node: inspect::Node) -> Self {
         let phy_add_fail_count = node.create_uint("phy_add_fail_count", 0);
         PhyManager {
             phys: HashMap::new(),
-            device_service,
             device_monitor,
             client_connections_enabled: false,
             power_state: fidl_common::PowerSaveType::PsModePerformance,
@@ -202,16 +196,10 @@ impl PhyManager {
         &self,
         iface_id: u16,
     ) -> Result<Option<fidl_service::QueryIfaceResponse>, PhyManagerError> {
-        match self.device_service.query_iface(iface_id).await {
-            Ok((status, response)) => match status {
-                fuchsia_zircon::sys::ZX_OK => match response {
-                    Some(response) => Ok(Some(*response)),
-                    None => Ok(None),
-                },
-                fuchsia_zircon::sys::ZX_ERR_NOT_FOUND => Ok(None),
-                _ => Err(PhyManagerError::IfaceQueryFailure),
-            },
-            Err(_) => Err(PhyManagerError::IfaceQueryFailure),
+        match self.device_monitor.query_iface(iface_id).await {
+            Ok(Ok(response)) => Ok(Some(response)),
+            Ok(Err(fuchsia_zircon::sys::ZX_ERR_NOT_FOUND)) => Ok(None),
+            _ => Err(PhyManagerError::IfaceQueryFailure),
         }
     }
 
@@ -226,21 +214,6 @@ impl PhyManager {
                 None
             })
             .collect()
-    }
-
-    async fn get_iface_security_support(
-        &self,
-        iface_id: u16,
-    ) -> Result<fidl_common::SecuritySupport, PhyManagerError> {
-        let (status, security_support) = self
-            .device_service
-            .query_security_support(iface_id)
-            .await
-            .map_err(|_| PhyManagerError::IfaceQueryFailure)?;
-        fuchsia_zircon::ok(status).map_err(|_| PhyManagerError::IfaceQueryFailure)?;
-        let security_support =
-            security_support.ok_or_else(|| PhyManagerError::IfaceQueryFailure)?;
-        Ok(*security_support)
     }
 }
 
@@ -289,7 +262,7 @@ impl PhyManagerApi for PhyManager {
                 NULL_MAC_ADDR,
             )
             .await?;
-            let security_support = self.get_iface_security_support(iface_id).await?;
+            let security_support = query_security_support(&self.device_monitor, iface_id).await?;
             if let Some(_) = phy_container.client_ifaces.insert(iface_id, security_support) {
                 warn!("Unexpectedly replaced existing iface security support for id {}", iface_id);
             };
@@ -318,7 +291,7 @@ impl PhyManagerApi for PhyManager {
     async fn on_iface_added(&mut self, iface_id: u16) -> Result<(), PhyManagerError> {
         if let Some(query_iface_response) = self.query_iface(iface_id).await? {
             let iface_id = query_iface_response.id;
-            let security_support = query_security_support(&self.device_service, iface_id).await?;
+            let security_support = query_security_support(&self.device_monitor, iface_id).await?;
             let phy = self.ensure_phy(query_iface_response.phy_id).await?;
 
             match query_iface_response.role {
@@ -402,7 +375,7 @@ impl PhyManagerApi for PhyManager {
                             continue;
                         }
                     };
-                    let security_support = query_security_support(&self.device_service, iface_id)
+                    let security_support = query_security_support(&self.device_monitor, iface_id)
                         .await
                         .unwrap_or_else(|e| {
                             error!("Error occurred getting iface security support: {}", e);
@@ -688,21 +661,30 @@ async fn destroy_iface(
 }
 
 async fn query_security_support(
-    proxy: &fidl_service::DeviceServiceProxy,
+    proxy: &fidl_service::DeviceMonitorProxy,
     iface_id: u16,
 ) -> Result<fidl_common::SecuritySupport, PhyManagerError> {
-    let (status, security_support) = proxy
-        .query_security_support(iface_id)
+    let (feature_support_proxy, feature_support_server) =
+        fidl::endpoints::create_proxy().map_err(|_| PhyManagerError::IfaceQueryFailure)?;
+    proxy
+        .get_feature_support(iface_id, feature_support_server)
         .await
-        .map_err(|_| PhyManagerError::IfaceQueryFailure)?;
-    fuchsia_zircon::ok(status).map_err(|_| PhyManagerError::IfaceQueryFailure)?;
-    match security_support {
-        Some(security_support) => Ok(*security_support),
-        None => {
-            warn!("Security support unavailable for iface {}", iface_id);
-            Err(PhyManagerError::IfaceQueryFailure)
-        }
-    }
+        .map_err(|_| {
+            warn!("Feature support request failed for iface {}", iface_id);
+            PhyManagerError::IfaceQueryFailure
+        })?
+        .map_err(|_| {
+            warn!("Feature support queries unavailable for iface {}", iface_id);
+            PhyManagerError::IfaceQueryFailure
+        })?;
+    let result = feature_support_proxy.query_security_support().await.map_err(|_| {
+        warn!("Security support query failed for iface {}", iface_id);
+        PhyManagerError::IfaceQueryFailure
+    })?;
+    result.map_err(|_| {
+        warn!("Security support unavailable for iface {}", iface_id);
+        PhyManagerError::IfaceQueryFailure
+    })
 }
 
 async fn set_phy_country_code(
@@ -756,7 +738,7 @@ mod tests {
     use {
         super::*,
         fidl::endpoints,
-        fidl_fuchsia_wlan_device_service as fidl_service,
+        fidl_fuchsia_wlan_device_service as fidl_service, fidl_fuchsia_wlan_sme as fidl_sme,
         fuchsia_async::{run_singlethreaded, TestExecutor},
         fuchsia_inspect::{self as inspect, assert_data_tree},
         fuchsia_zircon::sys::{ZX_ERR_NOT_FOUND, ZX_OK},
@@ -770,8 +752,6 @@ mod tests {
     /// Hold the client and service ends for DeviceMonitor to allow mocking DeviceMonitor responses
     /// for unit tests.
     struct TestValues {
-        dev_svc_proxy: fidl_service::DeviceServiceProxy,
-        dev_svc_stream: fidl_service::DeviceServiceRequestStream,
         monitor_proxy: fidl_service::DeviceMonitorProxy,
         monitor_stream: fidl_service::DeviceMonitorRequestStream,
         inspector: inspect::Inspector,
@@ -780,11 +760,6 @@ mod tests {
 
     /// Create a TestValues for a unit test.
     fn test_setup() -> TestValues {
-        let (dev_svc_proxy, dev_svc_requests) =
-            endpoints::create_proxy::<fidl_service::DeviceServiceMarker>()
-                .expect("failed to create DeviceService proxy");
-        let dev_svc_stream = dev_svc_requests.into_stream().expect("failed to create stream");
-
         let (monitor_proxy, monitor_requests) =
             endpoints::create_proxy::<fidl_service::DeviceMonitorMarker>()
                 .expect("failed to create DeviceMonitor proxy");
@@ -793,7 +768,7 @@ mod tests {
         let inspector = inspect::Inspector::new();
         let node = inspector.root().create_child("phy_manager");
 
-        TestValues { dev_svc_proxy, dev_svc_stream, monitor_proxy, monitor_stream, inspector, node }
+        TestValues { monitor_proxy, monitor_stream, inspector, node }
     }
 
     /// Take in the service side of a DeviceMonitor::GetSupportedMacRoles request and respond with
@@ -822,38 +797,61 @@ mod tests {
     #[track_caller]
     fn send_query_iface_response(
         exec: &mut TestExecutor,
-        server: &mut fidl_service::DeviceServiceRequestStream,
-        iface_info: Option<&mut fidl_service::QueryIfaceResponse>,
+        server: &mut fidl_service::DeviceMonitorRequestStream,
+        iface_info: Option<fidl_service::QueryIfaceResponse>,
     ) {
+        let mut response = iface_info.ok_or(ZX_ERR_NOT_FOUND);
         assert_variant!(
             exec.run_until_stalled(&mut server.next()),
             Poll::Ready(Some(Ok(
-                fidl_service::DeviceServiceRequest::QueryIface {
+                fidl_service::DeviceMonitorRequest::QueryIface {
                     iface_id: _,
                     responder,
                 }
             ))) => {
-                responder.send(ZX_OK, iface_info).expect("sending fake iface info");
+                responder.send(&mut response).expect("sending fake iface info");
             }
         );
+    }
+
+    /// Serve a request for feature support for unit testing.
+    #[track_caller]
+    fn serve_feature_support(
+        exec: &mut TestExecutor,
+        server: &mut fidl_service::DeviceMonitorRequestStream,
+    ) -> fidl_sme::FeatureSupportRequestStream {
+        let feature_support_server = assert_variant!(
+            exec.run_until_stalled(&mut server.next()),
+            Poll::Ready(Some(Ok(
+                fidl_service::DeviceMonitorRequest::GetFeatureSupport {
+                    iface_id: _,
+                    feature_support_server,
+                    responder,
+                }
+            ))) => {
+                responder.send(&mut Ok(())).expect("sending feature support response");
+                feature_support_server
+            }
+        );
+        feature_support_server.into_stream().expect("extracting feature support request stream")
     }
 
     /// Serve the given security support for unit testing.
     #[track_caller]
     fn send_security_support(
         exec: &mut TestExecutor,
-        server: &mut fidl_service::DeviceServiceRequestStream,
-        security_support: Option<&mut fidl_common::SecuritySupport>,
+        stream: &mut fidl_sme::FeatureSupportRequestStream,
+        security_support: Option<fidl_common::SecuritySupport>,
     ) {
+        let mut response = security_support.ok_or(ZX_ERR_NOT_FOUND);
         assert_variant!(
-            exec.run_until_stalled(&mut server.next()),
+            exec.run_until_stalled(&mut stream.next()),
             Poll::Ready(Some(Ok(
-                fidl_service::DeviceServiceRequest::QuerySecuritySupport {
-                    iface_id: _,
+                fidl_sme::FeatureSupportRequest::QuerySecuritySupport {
                     responder,
                 }
             ))) => {
-                responder.send(ZX_OK, security_support).expect("sending fake security support");
+                responder.send(&mut response).expect("sending fake security support");
             }
         );
     }
@@ -950,8 +948,7 @@ mod tests {
         let fake_phy_id = 0;
         let fake_mac_roles = vec![];
 
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
         {
             let add_phy_fut = phy_manager.add_phy(0);
             pin_mut!(add_phy_fut);
@@ -980,8 +977,7 @@ mod tests {
     fn add_invalid_phy() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         {
             let add_phy_fut = phy_manager.add_phy(1);
@@ -1006,8 +1002,7 @@ mod tests {
     fn add_duplicate_phy() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         let fake_phy_id = 0;
         let fake_mac_roles = vec![];
@@ -1063,8 +1058,7 @@ mod tests {
     fn add_phy_after_create_all_client_ifaces() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         let fake_iface_id = 1;
         let fake_phy_id = 1;
@@ -1100,10 +1094,15 @@ mod tests {
 
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
 
+            let mut feature_support_stream =
+                serve_feature_support(&mut exec, &mut test_values.monitor_stream);
+
+            assert!(exec.run_until_stalled(&mut add_phy_fut).is_pending());
+
             send_security_support(
                 &mut exec,
-                &mut test_values.dev_svc_stream,
-                Some(&mut fake_security_support()),
+                &mut feature_support_stream,
+                Some(fake_security_support()),
             );
 
             assert!(exec.run_until_stalled(&mut add_phy_fut).is_ready());
@@ -1124,8 +1123,7 @@ mod tests {
         let fake_phy_id = 1;
         let fake_mac_roles = vec![];
 
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         {
             let set_country_fut = phy_manager.set_country_code(Some([0, 1]));
@@ -1174,8 +1172,7 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn remove_valid_phy() {
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         let fake_phy_id = 1;
         let fake_mac_roles = vec![];
@@ -1193,8 +1190,7 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn remove_nonexistent_phy() {
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         let fake_phy_id = 1;
         let fake_mac_roles = vec![];
@@ -1212,8 +1208,7 @@ mod tests {
     fn on_iface_added() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1227,7 +1222,7 @@ mod tests {
         let fake_iface_id = 1;
         let fake_phy_assigned_id = 1;
         let fake_sta_addr = [0, 1, 2, 3, 4, 5];
-        let mut iface_response = create_iface_response(
+        let iface_response = create_iface_response(
             fake_role,
             fake_iface_id,
             fake_phy_id,
@@ -1246,16 +1241,21 @@ mod tests {
 
             send_query_iface_response(
                 &mut exec,
-                &mut test_values.dev_svc_stream,
-                Some(&mut iface_response),
+                &mut test_values.monitor_stream,
+                Some(iface_response),
             );
+
+            assert!(exec.run_until_stalled(&mut on_iface_added_fut).is_pending());
+
+            let mut feature_support_stream =
+                serve_feature_support(&mut exec, &mut test_values.monitor_stream);
 
             assert!(exec.run_until_stalled(&mut on_iface_added_fut).is_pending());
 
             send_security_support(
                 &mut exec,
-                &mut test_values.dev_svc_stream,
-                Some(&mut fake_security_support()),
+                &mut feature_support_stream,
+                Some(fake_security_support()),
             );
 
             // Wait for the PhyManager to finish processing the received iface information
@@ -1276,8 +1276,7 @@ mod tests {
     fn on_iface_added_missing_phy() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1289,7 +1288,7 @@ mod tests {
         let fake_iface_id = 1;
         let fake_phy_assigned_id = 1;
         let fake_sta_addr = [0, 1, 2, 3, 4, 5];
-        let mut iface_response = create_iface_response(
+        let iface_response = create_iface_response(
             fake_role,
             fake_iface_id,
             fake_phy_id,
@@ -1310,16 +1309,21 @@ mod tests {
 
             send_query_iface_response(
                 &mut exec,
-                &mut test_values.dev_svc_stream,
-                Some(&mut iface_response),
+                &mut test_values.monitor_stream,
+                Some(iface_response),
             );
+
+            assert!(exec.run_until_stalled(&mut on_iface_added_fut).is_pending());
+
+            let mut feature_support_stream =
+                serve_feature_support(&mut exec, &mut test_values.monitor_stream);
 
             assert!(exec.run_until_stalled(&mut on_iface_added_fut).is_pending());
 
             send_security_support(
                 &mut exec,
-                &mut test_values.dev_svc_stream,
-                Some(&mut fake_security_support()),
+                &mut feature_support_stream,
+                Some(fake_security_support()),
             );
 
             // And then the PHY information is queried.
@@ -1350,8 +1354,7 @@ mod tests {
     fn add_duplicate_iface() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1367,7 +1370,7 @@ mod tests {
         let fake_iface_id = 1;
         let fake_phy_assigned_id = 1;
         let fake_sta_addr = [0, 1, 2, 3, 4, 5];
-        let mut iface_response = create_iface_response(
+        let iface_response = create_iface_response(
             fake_role,
             fake_iface_id,
             fake_phy_id,
@@ -1384,16 +1387,21 @@ mod tests {
 
             send_query_iface_response(
                 &mut exec,
-                &mut test_values.dev_svc_stream,
-                Some(&mut iface_response),
+                &mut test_values.monitor_stream,
+                Some(iface_response),
             );
+
+            assert!(exec.run_until_stalled(&mut on_iface_added_fut).is_pending());
+
+            let mut feature_support_stream =
+                serve_feature_support(&mut exec, &mut test_values.monitor_stream);
 
             assert!(exec.run_until_stalled(&mut on_iface_added_fut).is_pending());
 
             send_security_support(
                 &mut exec,
-                &mut test_values.dev_svc_stream,
-                Some(&mut fake_security_support()),
+                &mut feature_support_stream,
+                Some(fake_security_support()),
             );
 
             // Wait for the PhyManager to finish processing the received iface information
@@ -1414,8 +1422,7 @@ mod tests {
     fn add_nonexistent_iface() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         {
             // Add the non-existent iface
@@ -1423,7 +1430,7 @@ mod tests {
             pin_mut!(on_iface_added_fut);
             assert!(exec.run_until_stalled(&mut on_iface_added_fut).is_pending());
 
-            send_query_iface_response(&mut exec, &mut test_values.dev_svc_stream, None);
+            send_query_iface_response(&mut exec, &mut test_values.monitor_stream, None);
 
             // Wait for the PhyManager to finish processing the received iface information
             assert!(exec.run_until_stalled(&mut on_iface_added_fut).is_ready());
@@ -1440,8 +1447,7 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn test_on_iface_removed() {
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1468,8 +1474,7 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn remove_missing_iface() {
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1497,8 +1502,7 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn get_client_no_phys() {
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         let client = phy_manager.get_client();
         assert!(client.is_none());
@@ -1510,8 +1514,7 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn get_unconfigured_client() {
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1532,8 +1535,7 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn get_configured_client() {
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
         phy_manager.client_connections_enabled = true;
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
@@ -1560,8 +1562,7 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn get_client_no_compatible_phys() {
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1583,8 +1584,7 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn get_wpa3_client_no_compatible_client_phys() {
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1623,8 +1623,7 @@ mod tests {
         security_support.sae.sme_handler_supported = sae_sme_handler_supported;
         let _exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create an initial PhyContainer with WPA3 support to be inserted into the test
         // PhyManager
@@ -1651,8 +1650,7 @@ mod tests {
         let test_values = test_setup();
 
         // Create a new PhyManager.  On construction, client connections are disabled.
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
         assert!(!phy_manager.client_connections_enabled);
 
         // Add a PHY with a lingering client interface.
@@ -1674,8 +1672,7 @@ mod tests {
     fn destroy_all_client_ifaces() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1718,8 +1715,7 @@ mod tests {
     fn destroy_all_client_ifaces_no_clients() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1756,8 +1752,7 @@ mod tests {
     fn get_ap_no_phys() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         let get_ap_future = phy_manager.create_or_get_ap_iface();
 
@@ -1772,8 +1767,7 @@ mod tests {
     fn get_unconfigured_ap() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1812,8 +1806,7 @@ mod tests {
     fn get_configured_ap() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1843,8 +1836,7 @@ mod tests {
     fn get_ap_no_compatible_phys() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1866,8 +1858,7 @@ mod tests {
     fn stop_valid_ap_iface() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1905,8 +1896,7 @@ mod tests {
     fn stop_invalid_ap_iface() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -1945,8 +1935,7 @@ mod tests {
     fn stop_all_ap_ifaces() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // ifaces are added.
@@ -1989,8 +1978,7 @@ mod tests {
     fn stop_all_ap_ifaces_with_client() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -2026,8 +2014,7 @@ mod tests {
     fn test_suggest_ap_mac() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -2073,8 +2060,7 @@ mod tests {
     fn test_suggested_mac_does_not_apply_to_client() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create an initial PhyContainer to be inserted into the test PhyManager before the fake
         // iface is added.
@@ -2113,10 +2099,15 @@ mod tests {
         // Expect an iface security support query, and send back a response
         assert_variant!(exec.run_until_stalled(&mut start_client_future), Poll::Pending);
 
+        let mut feature_support_stream =
+            serve_feature_support(&mut exec, &mut test_values.monitor_stream);
+
+        assert!(exec.run_until_stalled(&mut start_client_future).is_pending());
+
         send_security_support(
             &mut exec,
-            &mut test_values.dev_svc_stream,
-            Some(&mut fake_security_support()),
+            &mut feature_support_stream,
+            Some(fake_security_support()),
         );
 
         assert_variant!(exec.run_until_stalled(&mut start_client_future), Poll::Ready(_));
@@ -2127,8 +2118,7 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn get_phy_ids_no_phys() {
         let test_values = test_setup();
-        let phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
         assert_eq!(phy_manager.get_phy_ids(), Vec::<u16>::new());
     }
 
@@ -2138,8 +2128,7 @@ mod tests {
     fn get_phy_ids_single_phy() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         {
             let add_phy_fut = phy_manager.add_phy(1);
@@ -2162,8 +2151,7 @@ mod tests {
     fn get_phy_ids_two_phys() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         {
             let add_phy_fut = phy_manager.add_phy(1);
@@ -2198,8 +2186,7 @@ mod tests {
     #[run_singlethreaded(test)]
     async fn log_phy_add_failure() {
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         assert_data_tree!(test_values.inspector, root: {
             phy_manager: {
@@ -2221,8 +2208,7 @@ mod tests {
     fn test_set_country_code() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Insert a couple fake PHYs.
         let _ = phy_manager.phys.insert(
@@ -2307,8 +2293,7 @@ mod tests {
     fn test_setting_country_code_fails() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Insert a fake PHY.
         let _ = phy_manager.phys.insert(
@@ -2360,8 +2345,7 @@ mod tests {
     fn test_recover_client_interfaces_succeeds() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
         let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
 
         // Make it look like client connections have been enabled.
@@ -2420,10 +2404,15 @@ mod tests {
 
                     assert_variant!(exec.run_until_stalled(&mut recovery_fut), Poll::Pending);
 
+                    let mut feature_support_stream =
+                        serve_feature_support(&mut exec, &mut test_values.monitor_stream);
+
+                    assert!(exec.run_until_stalled(&mut recovery_fut).is_pending());
+
                     send_security_support(
                         &mut exec,
-                        &mut test_values.dev_svc_stream,
-                        Some(&mut fake_security_support()),
+                        &mut feature_support_stream,
+                        Some(fake_security_support()),
                     );
                 });
             }
@@ -2442,8 +2431,7 @@ mod tests {
     fn test_recover_client_interfaces_fails() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
         let fake_mac_roles = vec![fidl_common::WlanMacRole::Client];
 
         // Make it look like client connections have been enabled.
@@ -2510,10 +2498,15 @@ mod tests {
                 if let Some(_iface_id) = created_iface_id {
                     assert_variant!(exec.run_until_stalled(&mut recovery_fut), Poll::Pending);
 
+                    let mut feature_support_stream =
+                        serve_feature_support(&mut exec, &mut test_values.monitor_stream);
+
+                    assert!(exec.run_until_stalled(&mut recovery_fut).is_pending());
+
                     send_security_support(
                         &mut exec,
-                        &mut test_values.dev_svc_stream,
-                        Some(&mut fake_security_support()),
+                        &mut feature_support_stream,
+                        Some(fake_security_support()),
                     );
                 }
             }
@@ -2537,8 +2530,7 @@ mod tests {
     fn test_recover_client_interfaces_while_disabled() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Create a fake PHY entry without client interfaces.  Note that client connections have
         // not been set to enabled.
@@ -2571,8 +2563,7 @@ mod tests {
     fn test_start_after_unsuccessful_stop() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Verify that client connections are initially stopped.
         assert!(!phy_manager.client_connections_enabled);
@@ -2628,8 +2619,7 @@ mod tests {
         security_support.sae.sme_handler_supported = sme_handler_supported;
         let fake_phy_id = 0;
 
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
         let mut phy_container = PhyContainer::new(vec![]);
         let _ = phy_container.client_ifaces.insert(0, security_support);
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
@@ -2655,8 +2645,7 @@ mod tests {
         let mut phy_container = PhyContainer::new(vec![]);
         let _ = phy_container.client_ifaces.insert(0, fake_security_support());
 
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
         let _ = phy_manager.phys.insert(fake_phy_id, phy_container);
 
         assert_eq!(phy_manager.has_wpa3_client_iface(), false);
@@ -2667,8 +2656,7 @@ mod tests {
     fn test_client_connections_enabled_when_enabled() {
         let _exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         phy_manager.client_connections_enabled = true;
         assert!(phy_manager.client_connections_enabled());
@@ -2679,8 +2667,7 @@ mod tests {
     fn test_client_connections_enabled_when_disabled() {
         let _exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         phy_manager.client_connections_enabled = false;
         assert!(!phy_manager.client_connections_enabled());
@@ -2691,8 +2678,7 @@ mod tests {
     fn test_succeed_in_setting_power_state() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsModePerformance);
 
@@ -2743,8 +2729,7 @@ mod tests {
     fn test_fail_to_set_power_state() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsModePerformance);
 
@@ -2805,8 +2790,7 @@ mod tests {
     fn test_fail_to_request_low_power_mode() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         // Drop the receiving end of the device monitor channel.
         drop(test_values.monitor_stream);
@@ -2834,8 +2818,7 @@ mod tests {
     fn test_add_phy_after_low_power_enabled() {
         let mut exec = TestExecutor::new().expect("failed to create an executor");
         let mut test_values = test_setup();
-        let mut phy_manager =
-            PhyManager::new(test_values.dev_svc_proxy, test_values.monitor_proxy, test_values.node);
+        let mut phy_manager = PhyManager::new(test_values.monitor_proxy, test_values.node);
 
         assert_eq!(phy_manager.power_state, fidl_common::PowerSaveType::PsModePerformance);
 

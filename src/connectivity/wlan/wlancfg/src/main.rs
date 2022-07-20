@@ -8,7 +8,7 @@ use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherMarker,
     fidl_fuchsia_power_clientlevel as fidl_lp, fidl_fuchsia_wlan_common as fidl_common,
-    fidl_fuchsia_wlan_device_service::{DeviceMonitorMarker, DeviceServiceMarker},
+    fidl_fuchsia_wlan_device_service::DeviceMonitorMarker,
     fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync,
     fuchsia_async::DurationExt,
     fuchsia_cobalt::{CobaltConnector, ConnectionType},
@@ -276,8 +276,6 @@ async fn run_low_power_manager(
 }
 
 async fn run_all_futures() -> Result<(), Error> {
-    let wlan_svc = fuchsia_component::client::connect_to_protocol::<DeviceServiceMarker>()
-        .context("failed to connect to device service")?;
     let monitor_svc = fuchsia_component::client::connect_to_protocol::<DeviceMonitorMarker>()
         .context("failed to connect to device monitor")?;
     let (cobalt_api, cobalt_fut) =
@@ -350,7 +348,6 @@ async fn run_all_futures() -> Result<(), Error> {
     ));
 
     let phy_manager = Arc::new(Mutex::new(PhyManager::new(
-        wlan_svc.clone(),
         monitor_svc.clone(),
         component::inspector().root().create_child("phy_manager"),
     )));
@@ -375,7 +372,7 @@ async fn run_all_futures() -> Result<(), Error> {
 
     let legacy_client = IfaceRef::new();
     let listener = device::Listener::new(
-        wlan_svc.clone(),
+        monitor_svc.clone(),
         legacy_client.clone(),
         phy_manager.clone(),
         iface_manager.clone(),
