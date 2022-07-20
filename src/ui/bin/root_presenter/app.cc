@@ -38,7 +38,6 @@ App::App(sys::ComponentContext* component_context, fit::closure quit_callback)
       inspector_(component_context),
       input_report_inspector_(inspector_.root().CreateChild("input_reports")),
       input_reader_(this),
-      fdr_manager_(*component_context, std::make_shared<MediaRetriever>()),
       media_buttons_handler_(),
       virtual_keyboard_coordinator_(component_context),
       focus_dispatcher_(component_context->svc(), virtual_keyboard_coordinator_.GetWeakPtr()) {
@@ -161,7 +160,6 @@ void App::OnReport(ui_input::InputDeviceImpl* input_device,
   report.Clone(&cloned_report);
 
   if (cloned_report.media_buttons) {
-    fdr_manager_.OnMediaButtonReport(*(cloned_report.media_buttons.get()));
     media_buttons_handler_.OnReport(input_device->id(), std::move(cloned_report));
     return;
   }

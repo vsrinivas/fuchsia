@@ -25,7 +25,6 @@
 #include "src/lib/fxl/macros.h"
 #include "src/lib/ui/input/input_device_impl.h"
 #include "src/ui/bin/root_presenter/constants.h"
-#include "src/ui/bin/root_presenter/factory_reset_manager.h"
 #include "src/ui/bin/root_presenter/focus_dispatcher.h"
 #include "src/ui/bin/root_presenter/inspect.h"
 #include "src/ui/bin/root_presenter/media_buttons_handler.h"
@@ -78,7 +77,6 @@ class App : public fuchsia::ui::policy::DeviceListenerRegistry,
   fidl::BindingSet<fuchsia::ui::policy::DeviceListenerRegistry> device_listener_bindings_;
   fidl::BindingSet<fuchsia::ui::input::InputDeviceRegistry> input_receiver_bindings_;
   ui_input::InputReader input_reader_;
-  FactoryResetManager fdr_manager_;
 
   fuchsia::ui::scenic::ScenicPtr scenic_;
 

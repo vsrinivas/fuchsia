@@ -13,8 +13,6 @@
         "services": [
             "fuchsia.accessibility.ColorTransform",
             "fuchsia.accessibility.Magnifier",
-            "fuchsia.media.sounds.Player",
-            "fuchsia.recovery.FactoryReset",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.ui.focus.FocusChainListenerRegistry",
             "fuchsia.ui.keyboard.focus.Controller",
