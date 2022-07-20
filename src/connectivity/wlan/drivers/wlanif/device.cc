@@ -59,6 +59,8 @@ static wlan_fullmac_impl_ifc_protocol_ops_t wlan_fullmac_impl_ifc_ops = {
         [](void* cookie, const wlan_fullmac_connect_confirm_t* resp) {
           DEV(cookie)->ConnectConf(resp);
         },
+    .auth_ind = [](void* cookie,
+                   const wlan_fullmac_auth_ind_t* ind) { DEV(cookie)->AuthenticateInd(ind); },
     .deauth_conf =
         [](void* cookie, const wlan_fullmac_deauth_confirm_t* resp) {
           DEV(cookie)->DeauthenticateConf(resp);
@@ -149,12 +151,20 @@ zx_status_t Device::AddDevice() {
   return device_add(parent_, &args, &device_);
 }
 
-#define VERIFY_PROTO_OP(fn)                                   \
-  do {                                                        \
-    if (wlan_fullmac_impl_.ops->fn == nullptr) {              \
-      lerror("required protocol function %s missing\n", #fn); \
-      return ZX_ERR_INVALID_ARGS;                             \
-    }                                                         \
+#define VERIFY_IMPL_PROTO_OP(fn)                                \
+  do {                                                          \
+    if (wlan_fullmac_impl_.ops->fn == nullptr) {                \
+      lerror("required impl proto function %s missing\n", #fn); \
+      return ZX_ERR_INVALID_ARGS;                               \
+    }                                                           \
+  } while (0)
+
+#define VERIFY_IMPL_IFC_PROTO_OP(fn)                                   \
+  do {                                                                 \
+    if (wlan_fullmac_impl_ifc_ops.fn == nullptr) {                     \
+      lerror("required impl ifc protocol function %s missing\n", #fn); \
+      return ZX_ERR_INVALID_ARGS;                                      \
+    }                                                                  \
   } while (0)
 
 zx_status_t Device::Bind() {
@@ -165,24 +175,47 @@ zx_status_t Device::Bind() {
     lerror("no wlan_fullmac_impl protocol ops provided\n");
     return ZX_ERR_INVALID_ARGS;
   }
-  VERIFY_PROTO_OP(start);
-  VERIFY_PROTO_OP(query);
-  VERIFY_PROTO_OP(query_mac_sublayer_support);
-  VERIFY_PROTO_OP(query_security_support);
-  VERIFY_PROTO_OP(query_spectrum_management_support);
-  VERIFY_PROTO_OP(start_scan);
-  VERIFY_PROTO_OP(connect_req);
-  VERIFY_PROTO_OP(reconnect_req);
-  VERIFY_PROTO_OP(auth_resp);
-  VERIFY_PROTO_OP(deauth_req);
-  VERIFY_PROTO_OP(assoc_resp);
-  VERIFY_PROTO_OP(disassoc_req);
-  VERIFY_PROTO_OP(reset_req);
-  VERIFY_PROTO_OP(start_req);
-  VERIFY_PROTO_OP(stop_req);
-  VERIFY_PROTO_OP(set_keys_req);
-  VERIFY_PROTO_OP(del_keys_req);
-  VERIFY_PROTO_OP(eapol_req);
+
+  VERIFY_IMPL_PROTO_OP(start);
+  VERIFY_IMPL_PROTO_OP(query);
+  VERIFY_IMPL_PROTO_OP(query_mac_sublayer_support);
+  VERIFY_IMPL_PROTO_OP(query_security_support);
+  VERIFY_IMPL_PROTO_OP(query_spectrum_management_support);
+  VERIFY_IMPL_PROTO_OP(start_scan);
+  VERIFY_IMPL_PROTO_OP(connect_req);
+  VERIFY_IMPL_PROTO_OP(reconnect_req);
+  VERIFY_IMPL_PROTO_OP(auth_resp);
+  VERIFY_IMPL_PROTO_OP(deauth_req);
+  VERIFY_IMPL_PROTO_OP(assoc_resp);
+  VERIFY_IMPL_PROTO_OP(disassoc_req);
+  VERIFY_IMPL_PROTO_OP(reset_req);
+  VERIFY_IMPL_PROTO_OP(start_req);
+  VERIFY_IMPL_PROTO_OP(stop_req);
+  VERIFY_IMPL_PROTO_OP(set_keys_req);
+  VERIFY_IMPL_PROTO_OP(del_keys_req);
+  VERIFY_IMPL_PROTO_OP(eapol_req);
+
+  VERIFY_IMPL_IFC_PROTO_OP(on_scan_result);
+  VERIFY_IMPL_IFC_PROTO_OP(on_scan_end);
+  VERIFY_IMPL_IFC_PROTO_OP(connect_conf);
+  VERIFY_IMPL_IFC_PROTO_OP(auth_ind);
+  VERIFY_IMPL_IFC_PROTO_OP(deauth_conf);
+  VERIFY_IMPL_IFC_PROTO_OP(deauth_ind);
+  VERIFY_IMPL_IFC_PROTO_OP(assoc_ind);
+  VERIFY_IMPL_IFC_PROTO_OP(disassoc_conf);
+  VERIFY_IMPL_IFC_PROTO_OP(disassoc_ind);
+  VERIFY_IMPL_IFC_PROTO_OP(start_conf);
+  VERIFY_IMPL_IFC_PROTO_OP(stop_conf);
+  VERIFY_IMPL_IFC_PROTO_OP(eapol_conf);
+  VERIFY_IMPL_IFC_PROTO_OP(on_channel_switch);
+  VERIFY_IMPL_IFC_PROTO_OP(signal_report);
+  VERIFY_IMPL_IFC_PROTO_OP(eapol_ind);
+  VERIFY_IMPL_IFC_PROTO_OP(relay_captured_frame);
+  VERIFY_IMPL_IFC_PROTO_OP(on_pmk_available);
+  VERIFY_IMPL_IFC_PROTO_OP(sae_handshake_ind);
+  VERIFY_IMPL_IFC_PROTO_OP(sae_frame_rx);
+  VERIFY_IMPL_IFC_PROTO_OP(on_wmm_status_resp);
+  VERIFY_IMPL_IFC_PROTO_OP(data_recv);
 
   // The MLME interface has no start/stop commands, so we will start the wlan_fullmac_impl
   // device immediately
@@ -231,7 +264,8 @@ zx_status_t Device::Bind() {
   }
   return status;
 }
-#undef VERIFY_PROTO_OP
+#undef VERIFY_IMPL_PROTO_OP
+#undef VERIFY_IMPL_IFC_PROTO_OP
 
 void Device::Unbind() {
   ltrace_fn();
