@@ -40,6 +40,10 @@ assembly_input_bundle("common_minimal") {
     # Hardware Information
     "//src/hwinfo:hwinfo",
   ]
+
+  # Create package and archive for use OOT.
+  create_aib_package = true
+  create_aib_archive = true
 }
 
 # This is common across all eng-mode products, at the minimal or higher service
@@ -53,6 +57,10 @@ assembly_input_bundle("common_minimal_eng") {
     # Dash launcher should be available in every engineering-mode product.
     "//src/sys/tools/debug-dash-launcher",
   ]
+
+  # Create package and archive for use OOT.
+  create_aib_package = true
+  create_aib_archive = true
 }
 
 # This is the "emulator support" bundle, which provides the kernel that can be
