@@ -18,12 +18,15 @@ using zx;
 // `Interaction`.
 type Mechanism = flexible enum {
     PASSWORD = 1;
+    TEST = 2;
 };
 
 /// A union of server_end types for each authentication interaction protocol.
-type InterationProtocolServerEnd = flexible resource union {
+type InteractionProtocolServerEnd = flexible resource union {
     1: password server_end:PasswordInteraction;
+    2: test server_end:TestInteraction;
 };
+
 
 /// A protocol for a password user interface (the client) to interact with a
 /// password authenticator (the server), both during enrollment and during
@@ -92,4 +95,33 @@ type PasswordError = flexible union {
     /// the caller must wait for the `wait_until` condition before any other
     /// response will be returned.
     4: must_wait Empty;
+};
+
+
+/// A protocol for a user interface (the client) to interact with a fake
+/// authenticator (the server) for testing, both during enrollment and during
+/// authentication. The server will close the channel when enrollment or
+/// authentication is complete.
+///
+/// Enrollment always completes immediately and successfully without any action
+/// from the client. Authentication either successfully when the client calls
+/// `SetSuccess` or fails when the client calls `SetFailure`.
+protocol TestInteraction {
+    /// (authentication) Causes this test authenticator to immediately succeed.
+    SetSuccess();
+
+    /// Wait for a change in the state of the server. This method follows the
+    /// "hanging get" interface pattern, returning immediately on the first call
+    /// and hanging until a change in state on subsequent calls.
+    WatchState() -> (strict union {
+        /// The server is waiting for the supplied set of conditions.
+        1: waiting vector<TestAuthenticatorCondition>:8;
+    });
+};
+
+/// The set of conditions that a test authenticator may need to wait for during
+/// enrollment or authentication.
+type TestAuthenticatorCondition = flexible union {
+    /// (authentication) The client may call `SetSucceess`.
+    1: set_success Empty;
 };
