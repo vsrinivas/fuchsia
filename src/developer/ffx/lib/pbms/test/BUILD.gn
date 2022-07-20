@@ -14,33 +14,15 @@ if (is_host) {
     with_unit_tests = true
 
     deps = [
-      "//build/sdk/meta:rust",
-      "//src/developer/ffx/config:lib",
-      "//src/developer/ffx/lib/errors:lib",
-      "//src/developer/ffx/lib/fms",
       "//src/developer/ffx/lib/pbms:lib",
       "//src/lib/fuchsia-async",
-      "//src/lib/gcs",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
-      "//third_party/rust_crates:async-fs",
-      "//third_party/rust_crates:flate2",
-      "//third_party/rust_crates:futures",
-      "//third_party/rust_crates:futures-lite",
-      "//third_party/rust_crates:serde",
-      "//third_party/rust_crates:serde_json",
-      "//third_party/rust_crates:tar",
-      "//third_party/rust_crates:tempfile",
       "//third_party/rust_crates:thiserror",
       "//third_party/rust_crates:tracing",
-      "//third_party/rust_crates:url",
-      "//third_party/rust_crates:walkdir",
     ]
 
-    test_deps = [
-      "//third_party/rust_crates:serial_test",
-      "//third_party/rust_crates:tempfile",
-    ]
+    test_deps = []
 
     inputs = [
       "../test_data/test_core.json",
