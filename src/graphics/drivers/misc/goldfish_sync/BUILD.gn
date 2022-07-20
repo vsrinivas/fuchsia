@@ -56,6 +56,7 @@ fuchsia_driver_component("goldfish_sync_driver") {
   deps = [ ":goldfish_sync_driver-driver" ]
   info = "goldfish_sync_driver-info.json"
   colocate = true
+  default_dispatcher_opts = [ "allow_sync_calls" ]
 }
 
 test("goldfish-sync-device-test") {

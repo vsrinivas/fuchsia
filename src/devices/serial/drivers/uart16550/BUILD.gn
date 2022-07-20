@@ -94,6 +94,7 @@ fuchsia_driver_component("uart16550") {
   info = "uart16550-info.json"
   component_name = "uart16550"
   deps = [ ":uart16550-driver" ]
+  default_dispatcher_opts = [ "allow_sync_calls" ]
   colocate = true
 }
 
