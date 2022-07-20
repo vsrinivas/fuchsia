@@ -17,7 +17,6 @@ rustc_binary("bin") {
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:tracing",
   ]
 
@@ -31,7 +30,7 @@ fuchsia_unittest_package("encoding-validator-tests") {
 ### C++ ###
 
 fuchsia_component("encoding-validator-for-cpp") {
-  manifest = "meta/validator-cpp.cmx"
+  manifest = "meta/validator.cml"
   deps = [ ":bin" ]
 }
 
@@ -43,18 +42,19 @@ fuchsia_test_package("log-encoding-validator-cpp") {
 ### Dart ###
 
 fuchsia_component("encoding-validator-for-dart") {
-  manifest = "meta/validator-dart.cmx"
+  manifest = "meta/validator.cml"
   deps = [ ":bin" ]
 }
 
 fuchsia_test_package("log-encoding-validator-dart") {
+  deps = [ "puppet/dart:component" ]
   test_components = [ ":encoding-validator-for-dart" ]
 }
 
 ### Rust ###
 
 fuchsia_component("encoding-validator-for-rust") {
-  manifest = "meta/validator-rust.cmx"
+  manifest = "meta/validator.cml"
   deps = [ ":bin" ]
 }
 
@@ -71,8 +71,5 @@ group("tests") {
     ":log-encoding-validator-cpp",
     ":log-encoding-validator-dart",
     ":log-encoding-validator-rust",
-
-    # TODO(fxbug.dev/62620) migrate dart puppet to new component templates and move to package deps
-    "puppet/dart:log-validator-dart-puppet",
   ]
 }

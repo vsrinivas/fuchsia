@@ -3,28 +3,15 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
-use argh::FromArgs;
 use fidl_fuchsia_diagnostics::Severity;
 use fidl_fuchsia_diagnostics_stream::{Argument, Record, Value};
 use fidl_fuchsia_validate_logs::EncodingPuppetMarker;
-use fuchsia_component::client::{launch, launcher};
-use std::convert::TryInto;
+use fuchsia_component::client;
 use tracing::*;
-
-/// Validate Log VMO formats written by 'puppet' programs controlled by
-/// this Validator program.
-#[derive(Debug, FromArgs)]
-struct Opt {
-    /// required arg: The URL of the puppet
-    #[argh(option, long = "url")]
-    puppet_url: String,
-}
 
 #[fuchsia::main]
 async fn main() -> Result<(), Error> {
-    let Opt { puppet_url } = argh::from_env();
-    let app = launch(&launcher().unwrap(), puppet_url.to_string(), None)?;
-    let proxy = app.connect_to_protocol::<EncodingPuppetMarker>()?;
+    let proxy = client::connect_to_protocol::<EncodingPuppetMarker>().unwrap();
 
     info!("Testing encoding.");
     let arr: Vec<&dyn Fn() -> TestCase> = vec![

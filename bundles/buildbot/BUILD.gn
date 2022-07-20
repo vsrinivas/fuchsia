@@ -110,7 +110,6 @@ group("core_base_packages") {
     "//src/developer/debug/debug_agent",
     "//src/developer/shell/interpreter:shell_server",
     "//src/diagnostics/archivist:archivist-for-embedding",
-    "//src/diagnostics/validator/logs/encoding/puppet/dart:log-validator-dart-puppet",
     "//src/factory/fake_factory_store_providers",
     "//src/fonts:pkg",
     "//src/hwinfo:fake_legacy_hwinfo",

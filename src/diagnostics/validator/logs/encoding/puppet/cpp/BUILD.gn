@@ -25,8 +25,8 @@ executable("puppet") {
 }
 
 fuchsia_component("component") {
-  component_name = "log-validator-cpp-puppet"
+  component_name = "puppet"
   testonly = true
-  manifest = "meta/puppet.cmx"
+  manifest = "meta/puppet.cml"
   deps = [ ":puppet" ]
 }

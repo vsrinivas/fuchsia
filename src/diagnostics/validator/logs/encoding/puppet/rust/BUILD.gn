@@ -26,8 +26,8 @@ rustc_binary("puppet") {
 }
 
 fuchsia_component("component") {
-  component_name = "log-validator-rust-puppet"
+  component_name = "puppet"
   testonly = true
-  manifest = "meta/puppet.cmx"
+  manifest = "meta/puppet.cml"
   deps = [ ":puppet" ]
 }
