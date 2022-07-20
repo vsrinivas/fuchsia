@@ -67,10 +67,8 @@ async fn link(a: Arc<Router>, b: Arc<Router>) {
 
 #[derive(Clone, Copy, Debug)]
 enum Target {
-    #[allow(unused)]
     A,
     B,
-    #[allow(unused)]
     C,
 }
 
