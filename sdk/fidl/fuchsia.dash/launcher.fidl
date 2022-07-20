@@ -21,7 +21,7 @@ type LauncherError = strict enum {
     PROCESS_LAUNCHER = 5;
     /// Error loading dash binary
     DASH_BINARY = 6;
-    /// Error occured involving the PTY
+    /// Error occurred involving the PTY
     PTY = 7;
     /// Instance is not in a resolved state, so there is nothing to explore
     INSTANCE_NOT_RESOLVED = 8;
@@ -41,6 +41,8 @@ protocol Launcher {
         pty client_end:fuchsia.hardware.pty.Device;
         /// A package URL whose directory will also be loaded into the dash namespace
         tools_url fuchsia.url.Url:optional;
+        /// A optional inline command to run
+        command string:<MAX, optional>;
     }) -> (struct {}) error LauncherError;
 
     /// Launch a dash process scoped to the given moniker, forwarding the given stdio socket.
@@ -54,5 +56,7 @@ protocol Launcher {
         socket zx.handle:SOCKET;
         /// A package URL whose directory will also be loaded into the dash namespace
         tools_url fuchsia.url.Url:optional;
+        /// A optional inline command to run
+        command string:<MAX, optional>;
     }) -> (struct {}) error LauncherError;
 };

@@ -25,7 +25,11 @@ use std::sync::Arc;
 
 // -s: force input from stdin
 // -i: force interactive
-const DASH_ARGS: [&[u8]; 2] = ["-i".as_bytes(), "-s".as_bytes()];
+const DASH_ARGS_FOR_INTERACTIVE: [&[u8]; 2] = ["-i".as_bytes(), "-s".as_bytes()];
+// TODO(fxbug.dev/104634): Verbose (-v) or write-commands-to-stderr (-x) is required if a
+// command is given, else it errors with `Can't open <cmd>`.
+// -c: execute command
+const DASH_ARGS_FOR_COMMAND: [&[u8]; 2] = ["-v".as_bytes(), "-c".as_bytes()];
 
 // PATH must contain the three possible sources of binaries:
 // * binaries in dash-launcher's package.
@@ -38,18 +42,20 @@ pub async fn launch_with_socket(
     moniker: &str,
     socket: zx::Socket,
     tools_url: Option<String>,
+    command: Option<String>,
 ) -> Result<zx::Process, LauncherError> {
     let pty = socket::spawn_pty_forwarder(socket).await?;
-    launch_with_pty(moniker, pty, tools_url).await
+    launch_with_pty(moniker, pty, tools_url, command).await
 }
 
 pub async fn launch_with_pty(
     moniker: &str,
     pty: ClientEnd<pty::DeviceMarker>,
     tools_url: Option<String>,
+    command: Option<String>,
 ) -> Result<zx::Process, LauncherError> {
     let (stdin, stdout, stderr) = split_pty_into_handles(pty)?;
-    launch_with_handles(moniker, stdin, stdout, stderr, tools_url).await
+    launch_with_handles(moniker, stdin, stdout, stderr, tools_url, command).await
 }
 
 pub async fn launch_with_handles(
@@ -58,6 +64,7 @@ pub async fn launch_with_handles(
     stdout: zx::Handle,
     stderr: zx::Handle,
     tools_url: Option<String>,
+    command: Option<String>,
 ) -> Result<zx::Process, LauncherError> {
     // Get all directories needed to launch dash successfully
     let query =
@@ -135,14 +142,22 @@ pub async fn launch_with_handles(
     let launcher = connect_to_protocol::<fproc::LauncherMarker>()
         .map_err(|_| LauncherError::ProcessLauncher)?;
 
+    let opt_cmd: Option<Vec<&[u8]>> = command.as_ref().map(|s| vec![s.as_bytes()]);
+    let mut args = Vec::new();
+    if let Some(cmd) = opt_cmd {
+        args.extend_from_slice(&DASH_ARGS_FOR_COMMAND);
+        args.extend_from_slice(&cmd);
+    } else {
+        args.extend_from_slice(&DASH_ARGS_FOR_INTERACTIVE);
+    };
+
     // Spawn the dash process.
     let mut info = create_launch_info(process_name, &job).await?;
     launcher.add_names(&mut name_infos.iter_mut()).map_err(|_| LauncherError::ProcessLauncher)?;
     launcher
         .add_handles(&mut handle_infos.iter_mut())
         .map_err(|_| LauncherError::ProcessLauncher)?;
-
-    launcher.add_args(&mut DASH_ARGS.into_iter()).map_err(|_| LauncherError::ProcessLauncher)?;
+    launcher.add_args(&mut args.into_iter()).map_err(|_| LauncherError::ProcessLauncher)?;
     launcher.add_environs(&mut env_vars.into_iter()).map_err(|_| LauncherError::ProcessLauncher)?;
     let (status, process) =
         launcher.launch(&mut info).await.map_err(|_| LauncherError::ProcessLauncher)?;

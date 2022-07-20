@@ -21,14 +21,14 @@ pub async fn explore(launcher_proxy: LauncherProxy, cmd: ExploreComponentCommand
     let moniker = AbsoluteMoniker::parse_str(&cmd.moniker)
         .map_err(|e| ffx_error!("Moniker could not be parsed: {}", e))?;
 
-    // LifecycleController accepts RelativeMonikers only
+    // LifecycleController accepts RelativeMonikers only.
     let relative_moniker = format!(".{}", moniker.to_string());
     let tools_url = cmd.tools.as_deref();
 
-    // Launch dash with the given moniker and stdio handles
+    // Launch dash with the given moniker and stdio handles.
     let (pty, pty_server) = fidl::Socket::create(fidl::SocketOpts::STREAM).unwrap();
     launcher_proxy
-        .launch_with_socket(&relative_moniker, pty_server, tools_url)
+        .launch_with_socket(&relative_moniker, pty_server, tools_url, cmd.command.as_deref())
         .await
         .map_err(|e| ffx_error!("fidl error launching dash: {}", e))?
         .map_err(|e| match e {
@@ -79,6 +79,8 @@ pub async fn explore(launcher_proxy: LauncherProxy, cmd: ExploreComponentCommand
     }
 
     drop(term_out);
-    eprintln!("Connection to terminal closed");
+    if cmd.command.is_none() {
+        eprintln!("Connection to terminal closed");
+    }
     Ok(())
 }
