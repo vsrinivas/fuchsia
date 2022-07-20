@@ -35,8 +35,8 @@ use crate::{
     ip::{
         gmp::{
             gmp_handle_timer, handle_query_message, handle_report_message, GmpContext,
-            GmpDelayedReportTimerId, GmpMessage, GmpMessageType, GmpStateMachine,
-            MulticastGroupSet, ProtocolSpecific, QueryTarget,
+            GmpDelayedReportTimerId, GmpMessage, GmpMessageType, GmpState, GmpStateLayout,
+            GmpStateMachine, MulticastGroupSet, ProtocolSpecific, QueryTarget,
         },
         IpDeviceIdContext,
     },
@@ -78,25 +78,17 @@ pub(crate) trait IgmpContext<C: IgmpNonSyncContext<Self::DeviceId>>:
     /// Gets an IP address and subnet associated with this device.
     fn get_ip_addr_subnet(&self, device: Self::DeviceId) -> Option<AddrSubnet<Ipv4Addr>>;
 
-    /// Is IGMP enabled for `device`?
-    ///
-    /// If `igmp_enabled` returns false, then [`GmpHandler::gmp_join_group`] and
-    /// [`GmpHandler::gmp_leave_group`] will still join/leave multicast groups
-    /// locally, and inbound IGMP packets will still be processed, but no timers
-    /// will be installed, and no outbound IGMP traffic will be generated.
-    fn igmp_enabled(&self, device: Self::DeviceId) -> bool;
-
-    /// Gets mutable access to the device's IGMP state.
-    fn get_state_mut(
-        &mut self,
+    /// Gets mutable access to the device's IGMP state and whether or not IGMP
+    /// is enabled for the `device`.
+    fn with_groups_mut_and_enabled<
+        'a,
+        O,
+        F: FnOnce(&'a mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<C::Instant>>, bool) -> O,
+    >(
+        &'a mut self,
         device: Self::DeviceId,
-    ) -> &mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<C::Instant>>;
-
-    /// Gets immutable access to the device's IGMP state.
-    fn get_state(
-        &self,
-        device: Self::DeviceId,
-    ) -> &MulticastGroupSet<Ipv4Addr, IgmpGroupState<C::Instant>>;
+        cb: F,
+    ) -> O;
 }
 
 /// A handler for incoming IGMP packets.
@@ -114,8 +106,18 @@ pub(crate) trait IgmpPacketHandler<C, DeviceId, B: BufferMut> {
     );
 }
 
-impl<C: IgmpNonSyncContext<SC::DeviceId>, SC: IgmpContext<C>, B: BufferMut>
-    IgmpPacketHandler<C, SC::DeviceId, B> for SC
+impl<
+        C: IgmpNonSyncContext<SC::DeviceId>,
+        SC: IgmpContext<C>
+            + for<'a> GmpStateLayout<
+                'a,
+                Ipv4,
+                C,
+                IgmpGroupState<C::Instant>,
+                GmpState = GmpStateImpl<'a, C::Instant>,
+            >,
+        B: BufferMut,
+    > IgmpPacketHandler<C, SC::DeviceId, B> for SC
 {
     fn receive_igmp_packet(
         &mut self,
@@ -184,14 +186,49 @@ impl<B: ByteSlice, M: MessageType<B, FixedHeader = Ipv4Addr>> GmpMessage<Ipv4>
     }
 }
 
-impl<C: IgmpNonSyncContext<SC::DeviceId>, SC: IgmpContext<C>> GmpContext<Ipv4, C> for SC {
+pub(super) struct GmpStateImpl<'a, I: Instant> {
+    igmp_enabled: bool,
+    state: &'a mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<I>>,
+}
+
+impl<'a, I: Instant> GmpState<Ipv4, IgmpGroupState<I>> for GmpStateImpl<'a, I> {
+    fn disabled(&self, _group_addr: MulticastAddr<Ipv4Addr>) -> bool {
+        let GmpStateImpl { igmp_enabled, state: _ } = self;
+        !igmp_enabled
+    }
+
+    fn state(&self) -> &MulticastGroupSet<Ipv4Addr, IgmpGroupState<I>> {
+        let GmpStateImpl { igmp_enabled: _, state } = self;
+        *state
+    }
+
+    fn state_mut(&mut self) -> &mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<I>> {
+        let GmpStateImpl { igmp_enabled: _, state } = self;
+        *state
+    }
+}
+
+impl<'a, C: IgmpNonSyncContext<SC::DeviceId>, SC: IgmpContext<C> + 'a>
+    GmpStateLayout<'a, Ipv4, C, IgmpGroupState<C::Instant>> for SC
+{
+    type GmpState = GmpStateImpl<'a, C::Instant>;
+}
+
+impl<
+        C: IgmpNonSyncContext<SC::DeviceId>,
+        SC: IgmpContext<C>
+            + for<'a> GmpStateLayout<
+                'a,
+                Ipv4,
+                C,
+                IgmpGroupState<C::Instant>,
+                GmpState = GmpStateImpl<'a, C::Instant>,
+            >,
+    > GmpContext<Ipv4, C> for SC
+{
     type ProtocolSpecific = Igmpv2ProtocolSpecific;
     type Err = IgmpError;
     type GroupState = IgmpGroupState<C::Instant>;
-
-    fn gmp_disabled(&self, device: Self::DeviceId, _addr: MulticastAddr<Ipv4Addr>) -> bool {
-        !self.igmp_enabled(device)
-    }
 
     fn send_message(
         &mut self,
@@ -254,15 +291,18 @@ impl<C: IgmpNonSyncContext<SC::DeviceId>, SC: IgmpContext<C>> GmpContext<Ipv4, C
         Self::Err::NotAMember { addr }
     }
 
-    fn get_state_mut(
-        &mut self,
-        device: SC::DeviceId,
-    ) -> &mut MulticastGroupSet<Ipv4Addr, Self::GroupState> {
-        self.get_state_mut(device)
-    }
-
-    fn get_state(&self, device: SC::DeviceId) -> &MulticastGroupSet<Ipv4Addr, Self::GroupState> {
-        self.get_state(device)
+    fn with_state_mut<
+        'a,
+        O,
+        F: FnOnce(&mut <Self as GmpStateLayout<'a, Ipv4, C, Self::GroupState>>::GmpState) -> O,
+    >(
+        &'a mut self,
+        device: Self::DeviceId,
+        cb: F,
+    ) -> O {
+        self.with_groups_mut_and_enabled(device, |state, igmp_enabled| {
+            cb(&mut GmpStateImpl { igmp_enabled, state })
+        })
     }
 }
 
@@ -309,16 +349,27 @@ impl<DeviceId> IgmpTimerId<DeviceId> {
     }
 }
 
-impl<C: IgmpNonSyncContext<SC::DeviceId>, SC: IgmpContext<C>>
-    TimerHandler<C, IgmpTimerId<SC::DeviceId>> for SC
+impl<
+        C: IgmpNonSyncContext<SC::DeviceId>,
+        SC: IgmpContext<C>
+            + for<'a> GmpStateLayout<
+                'a,
+                Ipv4,
+                C,
+                IgmpGroupState<C::Instant>,
+                GmpState = GmpStateImpl<'a, C::Instant>,
+            >,
+    > TimerHandler<C, IgmpTimerId<SC::DeviceId>> for SC
 {
     fn handle_timer(&mut self, ctx: &mut C, timer: IgmpTimerId<SC::DeviceId>) {
         match timer {
             IgmpTimerId::Gmp(id) => gmp_handle_timer(self, ctx, id),
             IgmpTimerId::V1RouterPresent { device } => {
-                for (_, IgmpGroupState(state)) in self.get_state_mut(device).iter_mut() {
-                    state.v1_router_present_timer_expired();
-                }
+                IgmpContext::with_groups_mut_and_enabled(self, device, |state, _igmp_enabled| {
+                    for (_, IgmpGroupState(state)) in state.iter_mut() {
+                        state.v1_router_present_timer_expired();
+                    }
+                })
             }
         }
     }
@@ -577,22 +628,17 @@ mod tests {
             self.get_ref().addr_subnet
         }
 
-        fn igmp_enabled(&self, _device: DummyDeviceId) -> bool {
-            self.get_ref().igmp_enabled
-        }
-
-        fn get_state_mut(
-            &mut self,
+        fn with_groups_mut_and_enabled<
+            'a,
+            O,
+            F: FnOnce(&'a mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<DummyInstant>>, bool) -> O,
+        >(
+            &'a mut self,
             DummyDeviceId: DummyDeviceId,
-        ) -> &mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<DummyInstant>> {
-            &mut self.get_mut().groups
-        }
-
-        fn get_state(
-            &self,
-            DummyDeviceId: DummyDeviceId,
-        ) -> &MulticastGroupSet<Ipv4Addr, IgmpGroupState<DummyInstant>> {
-            &self.get_ref().groups
+            cb: F,
+        ) -> O {
+            let DummyIgmpCtx { groups, igmp_enabled, addr_subnet: _ } = self.get_mut();
+            cb(groups, *igmp_enabled)
         }
     }
 
@@ -814,8 +860,7 @@ mod tests {
 
             // We have received a query, hence we are falling back to Delay
             // Member state.
-            let IgmpGroupState(group_state) =
-                IgmpContext::get_state_mut(&mut sync_ctx, DummyDeviceId).get(&GROUP_ADDR).unwrap();
+            let IgmpGroupState(group_state) = sync_ctx.get_ref().groups.get(&GROUP_ADDR).unwrap();
             match group_state.get_inner() {
                 MemberState::Delaying(_) => {}
                 _ => panic!("Wrong State!"),
@@ -851,8 +896,7 @@ mod tests {
 
             // Since we have heard from the v1 router, we should have set our
             // flag.
-            let IgmpGroupState(group_state) =
-                IgmpContext::get_state_mut(&mut sync_ctx, DummyDeviceId).get(&GROUP_ADDR).unwrap();
+            let IgmpGroupState(group_state) = sync_ctx.get_ref().groups.get(&GROUP_ADDR).unwrap();
             match group_state.get_inner() {
                 MemberState::Delaying(state) => {
                     assert!(state.get_protocol_specific().v1_router_present)
@@ -888,8 +932,7 @@ mod tests {
                 Some(V1_ROUTER_PRESENT_TIMER_ID)
             );
             // After the second timer, we should reset our flag for v1 routers.
-            let IgmpGroupState(group_state) =
-                IgmpContext::get_state_mut(&mut sync_ctx, DummyDeviceId).get(&GROUP_ADDR).unwrap();
+            let IgmpGroupState(group_state) = sync_ctx.get_ref().groups.get(&GROUP_ADDR).unwrap();
             match group_state.get_inner() {
                 MemberState::Idle(state) => {
                     assert!(!state.get_protocol_specific().v1_router_present)

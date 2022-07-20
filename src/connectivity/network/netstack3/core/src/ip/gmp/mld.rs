@@ -39,8 +39,8 @@ use crate::{
     ip::{
         gmp::{
             gmp_handle_timer, handle_query_message, handle_report_message, GmpContext,
-            GmpDelayedReportTimerId, GmpMessage, GmpMessageType, GmpStateMachine,
-            MulticastGroupSet, ProtocolSpecific, QueryTarget,
+            GmpDelayedReportTimerId, GmpMessage, GmpMessageType, GmpState, GmpStateLayout,
+            GmpStateMachine, MulticastGroupSet, ProtocolSpecific, QueryTarget,
         },
         IpDeviceIdContext,
     },
@@ -86,25 +86,17 @@ pub(crate) trait MldContext<C: MldNonSyncContext<Self::DeviceId>>:
         device: Self::DeviceId,
     ) -> Option<LinkLocalUnicastAddr<Ipv6Addr>>;
 
-    /// Is MLD enabled for `device`?
-    ///
-    /// If `mld_enabled` returns false, then [`GmpHandler::gmp_join_group`] and
-    /// [`GmpHandler::gmp_leave_group`] will still join/leave multicast groups
-    /// locally, and inbound MLD packets will still be processed, but no timers
-    /// will be installed, and no outbound MLD traffic will be generated.
-    fn mld_enabled(&self, device: Self::DeviceId) -> bool;
-
-    /// Gets mutable access to the device's MLD state.
-    fn get_state_mut(
-        &mut self,
+    /// Gets mutable access to the device's MLD state and whether or not MLD
+    /// is enabled for the `device`.
+    fn with_groups_mut_and_enabled<
+        'a,
+        O,
+        F: FnOnce(&'a mut MulticastGroupSet<Ipv6Addr, MldGroupState<C::Instant>>, bool) -> O,
+    >(
+        &'a mut self,
         device: Self::DeviceId,
-    ) -> &mut MulticastGroupSet<Ipv6Addr, MldGroupState<C::Instant>>;
-
-    /// Gets immutable access to the device's MLD state.
-    fn get_state(
-        &self,
-        device: Self::DeviceId,
-    ) -> &MulticastGroupSet<Ipv6Addr, MldGroupState<C::Instant>>;
+        cb: F,
+    ) -> O;
 }
 
 /// A handler for incoming MLD packets.
@@ -122,8 +114,17 @@ pub(crate) trait MldPacketHandler<C, DeviceId> {
     );
 }
 
-impl<C: MldNonSyncContext<SC::DeviceId>, SC: MldContext<C>> MldPacketHandler<C, SC::DeviceId>
-    for SC
+impl<
+        C: MldNonSyncContext<SC::DeviceId>,
+        SC: MldContext<C>
+            + for<'a> GmpStateLayout<
+                'a,
+                Ipv6,
+                C,
+                MldGroupState<C::Instant>,
+                GmpState = GmpStateImpl<'a, C::Instant>,
+            >,
+    > MldPacketHandler<C, SC::DeviceId> for SC
 {
     fn receive_mld_packet<B: ByteSlice>(
         &mut self,
@@ -174,12 +175,14 @@ impl<B: ByteSlice> GmpMessage<Ipv6> for Mldv1Body<B> {
     }
 }
 
-impl<C: MldNonSyncContext<SC::DeviceId>, SC: MldContext<C>> GmpContext<Ipv6, C> for SC {
-    type ProtocolSpecific = MldProtocolSpecific;
-    type Err = MldError;
-    type GroupState = MldGroupState<C::Instant>;
+pub(super) struct GmpStateImpl<'a, I: Instant> {
+    mld_enabled: bool,
+    state: &'a mut MulticastGroupSet<Ipv6Addr, MldGroupState<I>>,
+}
 
-    fn gmp_disabled(&self, device: Self::DeviceId, group_addr: MulticastAddr<Ipv6Addr>) -> bool {
+impl<'a, I: Instant> GmpState<Ipv6, MldGroupState<I>> for GmpStateImpl<'a, I> {
+    fn disabled(&self, group_addr: MulticastAddr<Ipv6Addr>) -> bool {
+        let GmpStateImpl { mld_enabled, state: _ } = self;
         // Per [RFC 3810 Section 6]:
         //
         // > No MLD messages are ever sent regarding neither the link-scope
@@ -192,11 +195,44 @@ impl<C: MldNonSyncContext<SC::DeviceId>, SC: MldContext<C>> GmpContext<Ipv6, C> 
         // machines.
         //
         // [RFC 3810 Section 6]: https://tools.ietf.org/html/rfc3810#section-6
-        !self.mld_enabled(device)
+        !mld_enabled
             || group_addr == Ipv6::ALL_NODES_LINK_LOCAL_MULTICAST_ADDRESS
             || [Ipv6Scope::Reserved(Ipv6ReservedScope::Scope0), Ipv6Scope::InterfaceLocal]
                 .contains(&group_addr.scope())
     }
+
+    fn state(&self) -> &MulticastGroupSet<Ipv6Addr, MldGroupState<I>> {
+        let GmpStateImpl { mld_enabled: _, state } = self;
+        *state
+    }
+
+    fn state_mut(&mut self) -> &mut MulticastGroupSet<Ipv6Addr, MldGroupState<I>> {
+        let GmpStateImpl { mld_enabled: _, state } = self;
+        *state
+    }
+}
+
+impl<'a, C: MldNonSyncContext<SC::DeviceId>, SC: MldContext<C> + 'a>
+    GmpStateLayout<'a, Ipv6, C, MldGroupState<C::Instant>> for SC
+{
+    type GmpState = GmpStateImpl<'a, C::Instant>;
+}
+
+impl<
+        C: MldNonSyncContext<SC::DeviceId>,
+        SC: MldContext<C>
+            + for<'a> GmpStateLayout<
+                'a,
+                Ipv6,
+                C,
+                MldGroupState<C::Instant>,
+                GmpState = GmpStateImpl<'a, C::Instant>,
+            >,
+    > GmpContext<Ipv6, C> for SC
+{
+    type ProtocolSpecific = MldProtocolSpecific;
+    type Err = MldError;
+    type GroupState = MldGroupState<C::Instant>;
 
     fn send_message(
         &mut self,
@@ -243,15 +279,18 @@ impl<C: MldNonSyncContext<SC::DeviceId>, SC: MldContext<C>> GmpContext<Ipv6, C> 
         Self::Err::NotAMember { addr }
     }
 
-    fn get_state_mut(
-        &mut self,
+    fn with_state_mut<
+        'a,
+        O,
+        F: FnOnce(&mut <Self as GmpStateLayout<'a, Ipv6, C, Self::GroupState>>::GmpState) -> O,
+    >(
+        &'a mut self,
         device: SC::DeviceId,
-    ) -> &mut MulticastGroupSet<Ipv6Addr, Self::GroupState> {
-        self.get_state_mut(device)
-    }
-
-    fn get_state(&self, device: SC::DeviceId) -> &MulticastGroupSet<Ipv6Addr, Self::GroupState> {
-        self.get_state(device)
+        cb: F,
+    ) -> O {
+        self.with_groups_mut_and_enabled(device, |state, mld_enabled| {
+            cb(&mut GmpStateImpl { mld_enabled, state })
+        })
     }
 }
 
@@ -364,8 +403,17 @@ impl_timer_context!(
     id
 );
 
-impl<C: MldNonSyncContext<SC::DeviceId>, SC: MldContext<C>>
-    TimerHandler<C, MldDelayedReportTimerId<SC::DeviceId>> for SC
+impl<
+        C: MldNonSyncContext<SC::DeviceId>,
+        SC: MldContext<C>
+            + for<'a> GmpStateLayout<
+                'a,
+                Ipv6,
+                C,
+                MldGroupState<C::Instant>,
+                GmpState = GmpStateImpl<'a, C::Instant>,
+            >,
+    > TimerHandler<C, MldDelayedReportTimerId<SC::DeviceId>> for SC
 {
     fn handle_timer(&mut self, ctx: &mut C, timer: MldDelayedReportTimerId<SC::DeviceId>) {
         let MldDelayedReportTimerId(id) = timer;
@@ -497,22 +545,17 @@ mod tests {
             self.get_ref().ipv6_link_local
         }
 
-        fn mld_enabled(&self, _device: DummyDeviceId) -> bool {
-            self.get_ref().mld_enabled
-        }
-
-        fn get_state_mut(
-            &mut self,
+        fn with_groups_mut_and_enabled<
+            'a,
+            O,
+            F: FnOnce(&'a mut MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>>, bool) -> O,
+        >(
+            &'a mut self,
             DummyDeviceId: DummyDeviceId,
-        ) -> &mut MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>> {
-            &mut self.get_mut().groups
-        }
-
-        fn get_state(
-            &self,
-            DummyDeviceId: DummyDeviceId,
-        ) -> &MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>> {
-            &self.get_ref().groups
+            cb: F,
+        ) -> O {
+            let DummyMldCtx { groups, mld_enabled, ipv6_link_local: _ } = self.get_mut();
+            cb(groups, *mld_enabled)
         }
     }
 
@@ -758,8 +801,7 @@ mod tests {
 
             // We have received a query, hence we are falling back to Delay
             // Member state.
-            let MldGroupState(group_state) =
-                MldContext::get_state_mut(&mut sync_ctx, DummyDeviceId).get(&GROUP_ADDR).unwrap();
+            let MldGroupState(group_state) = sync_ctx.get_ref().groups.get(&GROUP_ADDR).unwrap();
             match group_state.get_inner() {
                 MemberState::Delaying(_) => {}
                 _ => panic!("Wrong State!"),
@@ -801,8 +843,7 @@ mod tests {
 
             // Since it is an immediate query, we will send a report immediately
             // and turn into Idle state again.
-            let MldGroupState(group_state) =
-                MldContext::get_state_mut(&mut sync_ctx, DummyDeviceId).get(&GROUP_ADDR).unwrap();
+            let MldGroupState(group_state) = sync_ctx.get_ref().groups.get(&GROUP_ADDR).unwrap();
             match group_state.get_inner() {
                 MemberState::Idle(_) => {}
                 _ => panic!("Wrong State!"),

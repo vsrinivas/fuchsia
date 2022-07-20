@@ -74,7 +74,7 @@ impl_timer_context!(
 /// Handle an IPv4 device timer firing.
 pub(crate) fn handle_ipv4_timer<
     C: IpDeviceNonSyncContext<Ipv4, SC::DeviceId>,
-    SC: BufferIpDeviceContext<Ipv4, C, EmptyBuf>,
+    SC: BufferIpDeviceContext<Ipv4, C, EmptyBuf> + TimerHandler<C, IgmpTimerId<SC::DeviceId>>,
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,

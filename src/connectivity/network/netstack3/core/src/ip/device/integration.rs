@@ -40,8 +40,8 @@ use crate::{
             },
             state::{
                 AddrConfig, AddressState, DelIpv6AddrReason, IpDeviceConfiguration,
-                Ipv4DeviceConfiguration, Ipv6AddressEntry, Ipv6DeviceConfiguration,
-                Ipv6DeviceState, SlaacConfig,
+                Ipv4DeviceConfiguration, Ipv4DeviceState, Ipv6AddressEntry,
+                Ipv6DeviceConfiguration, Ipv6DeviceState, SlaacConfig,
             },
             IpDeviceIpExt, IpDeviceNonSyncContext,
         },
@@ -241,26 +241,23 @@ impl<
         get_ipv4_addr_subnet(self, device)
     }
 
-    fn igmp_enabled(&self, device: SC::DeviceId) -> bool {
-        let Ipv4DeviceConfiguration {
-            ip_config: IpDeviceConfiguration { ip_enabled, gmp_enabled },
-        } = SC::get_ip_device_state(self, device).config;
+    fn with_groups_mut_and_enabled<
+        'a,
+        O,
+        F: FnOnce(&'a mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<C::Instant>>, bool) -> O,
+    >(
+        &'a mut self,
+        device: Self::DeviceId,
+        cb: F,
+    ) -> O {
+        let Ipv4DeviceState {
+            ip_state,
+            config:
+                Ipv4DeviceConfiguration { ip_config: IpDeviceConfiguration { ip_enabled, gmp_enabled } },
+        } = SC::get_ip_device_state_mut(self, device);
 
-        ip_enabled && gmp_enabled
-    }
-
-    fn get_state_mut(
-        &mut self,
-        device: SC::DeviceId,
-    ) -> &mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<C::Instant>> {
-        &mut self.get_ip_device_state_mut(device).ip_state.multicast_groups
-    }
-
-    fn get_state(
-        &self,
-        device: SC::DeviceId,
-    ) -> &MulticastGroupSet<Ipv4Addr, IgmpGroupState<C::Instant>> {
-        &self.get_ip_device_state(device).ip_state.multicast_groups
+        let igmp_enabled = *ip_enabled && *gmp_enabled;
+        cb(&mut ip_state.multicast_groups, igmp_enabled)
     }
 }
 
@@ -297,29 +294,31 @@ impl<
         })
     }
 
-    fn mld_enabled(&self, device: SC::DeviceId) -> bool {
-        let Ipv6DeviceConfiguration {
-            dad_transmits: _,
-            max_router_solicitations: _,
-            slaac_config: _,
-            ip_config: IpDeviceConfiguration { ip_enabled, gmp_enabled },
-        } = SC::get_ip_device_state(self, device).config;
+    fn with_groups_mut_and_enabled<
+        'a,
+        O,
+        F: FnOnce(&'a mut MulticastGroupSet<Ipv6Addr, MldGroupState<C::Instant>>, bool) -> O,
+    >(
+        &'a mut self,
+        device: Self::DeviceId,
+        cb: F,
+    ) -> O {
+        let Ipv6DeviceState {
+            retrans_timer: _,
+            route_discovery: _,
+            router_soliciations_remaining: _,
+            ip_state,
+            config:
+                Ipv6DeviceConfiguration {
+                    dad_transmits: _,
+                    max_router_solicitations: _,
+                    slaac_config: _,
+                    ip_config: IpDeviceConfiguration { ip_enabled, gmp_enabled },
+                },
+        } = SC::get_ip_device_state_mut(self, device);
 
-        ip_enabled && gmp_enabled
-    }
-
-    fn get_state_mut(
-        &mut self,
-        device: SC::DeviceId,
-    ) -> &mut MulticastGroupSet<Ipv6Addr, MldGroupState<C::Instant>> {
-        &mut self.get_ip_device_state_mut(device).ip_state.multicast_groups
-    }
-
-    fn get_state(
-        &self,
-        device: SC::DeviceId,
-    ) -> &MulticastGroupSet<Ipv6Addr, MldGroupState<C::Instant>> {
-        &self.get_ip_device_state(device).ip_state.multicast_groups
+        let mld_enabled = *ip_enabled && *gmp_enabled;
+        cb(&mut ip_state.multicast_groups, mld_enabled)
     }
 }
 
