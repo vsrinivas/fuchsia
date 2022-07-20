@@ -1,0 +1,40 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.net.name.Lookup": "fuchsia-pkg://fuchsia.com/system_recovery_tests#meta/dns-resolver.cmx",
+                "fuchsia.net.routes.State": "fuchsia-pkg://fuchsia.com/system_recovery_tests#meta/netstack.cmx",
+                "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/system_recovery_tests#meta/netstack.cmx",
+                "fuchsia.test.IsolatedDevmgr": "fuchsia-pkg://fuchsia.com/ramdisk-isolated-devmgr#meta/ramdisk-isolated-devmgr.cmx"
+            },
+            "system-services": [
+                "fuchsia.sysmem.Allocator"
+            ]
+        }
+    },
+    "include": [
+        "//src/lib/fuchsia-hyper/hyper.shard.cmx",
+        "syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/system_recovery_bin_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/block",
+            "class/display-controller"
+        ],
+        "features": [
+            "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.test.IsolatedDevmgr",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}
