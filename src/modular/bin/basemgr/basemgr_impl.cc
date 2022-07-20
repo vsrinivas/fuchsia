@@ -4,20 +4,23 @@
 
 #include "src/modular/bin/basemgr/basemgr_impl.h"
 
+#include <fuchsia/session/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fpromise/bridge.h>
+#include <lib/fpromise/promise.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/view_creation_tokens.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <lib/zx/handle.h>
 #include <zircon/status.h>
 #include <zircon/time.h>
 #include <zircon/types.h>
 #include <zircon/utc.h>
 
-#include "fuchsia/session/cpp/fidl.h"
-#include "lib/fpromise/promise.h"
-#include "lib/zx/handle.h"
+#include <variant>
+
 #include "src/lib/files/directory.h"
 #include "src/lib/fostr/fidl/fuchsia/session/formatting.h"
 #include "src/lib/fsl/vmo/strings.h"
@@ -75,8 +78,8 @@ class LauncherImpl : public fuchsia::modular::session::Launcher {
 
 BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
                          std::shared_ptr<sys::OutgoingDirectory> outgoing_services,
-                         BasemgrInspector* inspector, fuchsia::sys::LauncherPtr launcher,
-                         fuchsia::ui::policy::PresenterPtr presenter,
+                         BasemgrInspector* inspector, bool use_flatland,
+                         fuchsia::sys::LauncherPtr launcher, SceneOwnerPtr scene_owner,
                          fuchsia::hardware::power::statecontrol::AdminPtr device_administrator,
                          fuchsia::session::RestarterPtr session_restarter,
                          std::unique_ptr<ChildListener> child_listener,
@@ -85,13 +88,14 @@ BasemgrImpl::BasemgrImpl(modular::ModularConfigAccessor config_accessor,
       outgoing_services_(std::move(outgoing_services)),
       inspector_(inspector),
       launcher_(std::move(launcher)),
-      presenter_(std::move(presenter)),
+      scene_owner_(std::move(scene_owner)),
       child_listener_(std::move(child_listener)),
       device_administrator_(std::move(device_administrator)),
       session_restarter_(std::move(session_restarter)),
       on_shutdown_(std::move(on_shutdown)),
       session_provider_("SessionProvider"),
       executor_(async_get_default_dispatcher()),
+      use_flatland_(use_flatland),
       weak_factory_(this) {
   outgoing_services_->AddPublicService<fuchsia::modular::Lifecycle>(
       lifecycle_bindings_.GetHandler(this));
@@ -186,20 +190,20 @@ void BasemgrImpl::CreateSessionProvider(const ModularConfigAccessor* const confi
     FX_LOGS(INFO) << "No svc_for_v1_sessionmgr from v2";
   }
 
-  session_provider_.reset(new SessionProvider(
-      /*delegate=*/this, launcher_.get(), device_administrator_.get(), config_accessor,
-      std::move(svc_for_v1_sessionmgr), outgoing_services_->root_dir(),
-      /*on_zero_sessions=*/[this] {
-        if (state_ == State::SHUTTING_DOWN || state_ == State::RESTARTING) {
-          return;
-        }
-        FX_DLOGS(INFO) << "Restarting session due to sessionmgr shutdown.";
-        RestartSession([weak_this = weak_factory_.GetWeakPtr()]() {
-          if (weak_this) {
-            weak_this->state_ = State::RUNNING;
-          }
-        });
-      }));
+  session_provider_.reset(
+      new SessionProvider(launcher_.get(), device_administrator_.get(), config_accessor,
+                          std::move(svc_for_v1_sessionmgr), outgoing_services_->root_dir(),
+                          /*on_zero_sessions=*/[this] {
+                            if (state_ == State::SHUTTING_DOWN || state_ == State::RESTARTING) {
+                              return;
+                            }
+                            FX_DLOGS(INFO) << "Restarting session due to sessionmgr shutdown.";
+                            RestartSession([weak_this = weak_factory_.GetWeakPtr()]() {
+                              if (weak_this) {
+                                weak_this->state_ = State::RUNNING;
+                              }
+                            });
+                          }));
 
   FX_LOGS(INFO) << "Waiting for clock started signal.";
   auto fp =
@@ -222,21 +226,53 @@ BasemgrImpl::StartSessionResult BasemgrImpl::StartSession() {
     return fpromise::error(ZX_ERR_BAD_STATE);
   }
 
-  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-  scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();
-  auto view_ref_clone = fidl::Clone(view_ref_pair.view_ref);
-  auto start_session_result =
-      session_provider_->StartSession(std::move(view_token), std::move(view_ref_pair));
-  FX_CHECK(start_session_result.is_ok());
+  if (use_flatland_) {
+    fuchsia::session::scene::ManagerPtr* scene_manager =
+        std::get_if<fuchsia::session::scene::ManagerPtr>(&scene_owner_);
+    FX_CHECK(scene_manager != nullptr);
 
-  inspector_->AddSessionStartedAt(zx_clock_get_monotonic());
+    auto [view_creation_token, viewport_creation_token] = scenic::ViewCreationTokenPair::New();
 
-  // TODO(fxbug.dev/56132): Ownership of the Presenter should be moved to the session shell.
-  if (presenter_) {
-    presentation_container_ = std::make_unique<PresentationContainer>(
-        presenter_.get(), std::move(view_holder_token), std::move(view_ref_clone));
-    presenter_.set_error_handler(
-        [this](zx_status_t /* unused */) { presentation_container_.reset(); });
+    auto start_session_result = session_provider_->StartSession(
+        std::nullopt, std::move(view_creation_token), scenic::ViewRefPair{});
+    FX_CHECK(start_session_result.is_ok());
+    inspector_->AddSessionStartedAt(zx_clock_get_monotonic());
+
+    // TODO(fxbug.dev/56132): Ownership of the Presenter should be moved to the session shell.
+    scene_manager->set_error_handler([](zx_status_t error) {
+      FX_PLOGS(ERROR, error) << "Error on fuchsia.session.scene.Manager.";
+    });
+    (*scene_manager)->PresentRootView(std::move(viewport_creation_token), [](auto) {});
+  } else {
+    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+    scenic::ViewRefPair view_ref_pair = scenic::ViewRefPair::New();
+    auto view_ref_clone = fidl::Clone(view_ref_pair.view_ref);
+
+    auto start_session_result = session_provider_->StartSession(std::move(view_token), std::nullopt,
+                                                                std::move(view_ref_pair));
+    FX_CHECK(start_session_result.is_ok());
+    inspector_->AddSessionStartedAt(zx_clock_get_monotonic());
+
+    fuchsia::session::scene::ManagerPtr* scene_manager =
+        std::get_if<fuchsia::session::scene::ManagerPtr>(&scene_owner_);
+    fuchsia::ui::policy::PresenterPtr* root_presenter =
+        std::get_if<fuchsia::ui::policy::PresenterPtr>(&scene_owner_);
+    // TODO(fxbug.dev/56132): Ownership of the Presenter should be moved to the session shell.
+    if (scene_manager) {
+      scene_manager->set_error_handler([](zx_status_t error) {
+        FX_PLOGS(ERROR, error) << "Error on fuchsia.session.scene.Manager.";
+      });
+      (*scene_manager)
+          ->PresentRootViewLegacy(std::move(view_holder_token), std::move(view_ref_clone), [](auto) {});
+    } else if (root_presenter) {
+      root_presenter->set_error_handler([this](zx_status_t error) {
+        FX_LOGS(ERROR) << "Error on fuchsia.ui.policy.Presenter: " << zx_status_get_string(error);
+        presentation_.Unbind();
+      });
+      (*root_presenter)
+          ->PresentOrReplaceView2(std::move(view_holder_token), std::move(view_ref_clone),
+                                  presentation_.NewRequest());
+    }
   }
 
   return fpromise::ok();
@@ -300,15 +336,6 @@ void BasemgrImpl::StartSessionWithRandomId() {
   FX_CHECK(!session_provider_.get());
 
   Start();
-}
-
-void BasemgrImpl::GetPresentation(
-    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
-  if (!presentation_container_) {
-    request.Close(ZX_ERR_NOT_FOUND);
-    return;
-  }
-  presentation_container_->GetPresentation(std::move(request));
 }
 
 void BasemgrImpl::LaunchSessionmgr(fuchsia::modular::session::ModularConfig config) {

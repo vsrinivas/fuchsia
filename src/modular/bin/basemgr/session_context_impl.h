@@ -9,7 +9,6 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
-#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fit/function.h>
@@ -45,17 +44,14 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   // SessionProvider*, which seems a little specific and overscoped).
   using OnSessionShutdownCallback = fit::function<void(ShutDownReason shutdown_reason)>;
 
-  // Called when sessionmgr requests to acquire the presentation.
-  using GetPresentationCallback =
-      fit::function<void(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request)>;
-
   SessionContextImpl(fuchsia::sys::Launcher* launcher,
                      fuchsia::modular::session::AppConfig sessionmgr_app_config,
                      const modular::ModularConfigAccessor* config_accessor,
-                     fuchsia::ui::views::ViewToken view_token, scenic::ViewRefPair view_ref_pair,
+                     std::optional<fuchsia::ui::views::ViewToken> view_token,
+                     std::optional<fuchsia::ui::views::ViewCreationToken> view_creation_token,
+                     scenic::ViewRefPair view_ref_pair,
                      fuchsia::sys::ServiceList v2_services_for_sessionmgr,
                      fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr,
-                     GetPresentationCallback get_presentation,
                      OnSessionShutdownCallback on_session_shutdown);
 
   ~SessionContextImpl() override = default;
@@ -78,15 +74,11 @@ class SessionContextImpl : fuchsia::modular::internal::SessionContext {
   // |fuchsia::modular::internal::SessionContext|
   void RestartDueToCriticalFailure() override;
 
-  // |fuchsia::modular::internal::SessionContext|
-  void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
-
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> sessionmgr_app_;
   fuchsia::modular::internal::SessionmgrPtr sessionmgr_;
 
   fidl::Binding<fuchsia::modular::internal::SessionContext> session_context_binding_;
 
-  GetPresentationCallback get_presentation_;
   OnSessionShutdownCallback on_session_shutdown_;
 
   std::vector<fit::function<void()>> shutdown_callbacks_;

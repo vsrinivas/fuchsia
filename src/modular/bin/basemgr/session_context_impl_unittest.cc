@@ -9,6 +9,8 @@
 #include <lib/sys/cpp/testing/fake_launcher.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
+#include <optional>
+
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/modular/bin/basemgr/sessions.h"
 #include "src/modular/lib/modular_config/modular_config.h"
@@ -40,12 +42,10 @@ TEST_F(SessionContextImplTest, StartSessionmgr) {
   auto modular_config_accessor = modular::ModularConfigAccessor(modular::DefaultConfig());
 
   modular::SessionContextImpl impl(
-      &launcher, std::move(sessionmgr_app_config), &modular_config_accessor, std::move(view_token),
-      std::move(view_ref_pair),
+      &launcher, std::move(sessionmgr_app_config), &modular_config_accessor,
+      std::make_optional(std::move(view_token)), std::nullopt, std::move(view_ref_pair),
       /*v2_services_for_sessionmgr=*/fuchsia::sys::ServiceList(),
       /*svc_from_v1_sessionmgr=*/nullptr,
-      /*get_presentation=*/
-      [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> /* unused */) {},
       /*on_session_shutdown=*/[](modular::SessionContextImpl::ShutDownReason /* unused */) {});
 
   EXPECT_TRUE(callback_called);
@@ -71,12 +71,10 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesOnSessionShutdown) {
 
   bool on_session_shutdown_called = false;
   modular::SessionContextImpl impl(
-      &launcher, std::move(sessionmgr_app_config), &modular_config_accessor, std::move(view_token),
-      std::move(view_ref_pair),
+      &launcher, std::move(sessionmgr_app_config), &modular_config_accessor,
+      std::make_optional(std::move(view_token)), std::nullopt, std::move(view_ref_pair),
       /*v2_services_for_sessionmgr=*/fuchsia::sys::ServiceList(),
       /*svc_from_v1_sessionmgr=*/nullptr,
-      /*get_presentation=*/
-      [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> /* unused */) {},
       /*on_session_shutdown=*/
       [&on_session_shutdown_called](modular::SessionContextImpl::ShutDownReason /* unused */) {
         on_session_shutdown_called = true;

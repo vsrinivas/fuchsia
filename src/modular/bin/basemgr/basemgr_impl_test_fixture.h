@@ -63,11 +63,20 @@ class FakeSessionmgr : public fuchsia::modular::internal::testing::Sessionmgr_Te
 
   void NotImplemented_(const std::string& name) override {}
 
-  void Initialize(
+  void Initialize(std::string session_id,
+                  fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
+                  fuchsia::sys::ServiceList v2_services_for_sessionmgr,
+                  fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr,
+                  fuchsia::ui::views::ViewCreationToken view_creation_token) override {
+    v2_services_for_sessionmgr_ = std::move(v2_services_for_sessionmgr);
+    initialized_ = true;
+  }
+
+  void InitializeLegacy(
       std::string session_id,
-      fidl::InterfaceHandle<::fuchsia::modular::internal::SessionContext> session_context,
+      fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
       fuchsia::sys::ServiceList v2_services_for_sessionmgr,
-      fidl::InterfaceRequest<::fuchsia::io::Directory> svc_from_v1_sessionmgr,
+      fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr,
       fuchsia::ui::views::ViewToken view_token, fuchsia::ui::views::ViewRefControl control_ref,
       fuchsia::ui::views::ViewRef view_ref) override {
     v2_services_for_sessionmgr_ = std::move(v2_services_for_sessionmgr);
@@ -95,8 +104,9 @@ class BasemgrImplTestFixture : public gtest::RealLoopFixture {
 
   void CreateBasemgrImpl(fuchsia::modular::session::ModularConfig config) {
     basemgr_impl_ = std::make_unique<BasemgrImpl>(
-        ModularConfigAccessor(std::move(config)), outgoing_directory_, &basemgr_inspector_,
-        GetLauncher(), std::move(presenter_), std::move(device_administrator_),
+        ModularConfigAccessor(std::move(config)), outgoing_directory_, &basemgr_inspector_, false,
+        GetLauncher(), std::move(presenter_),
+        std::move(device_administrator_),
         /*session_restarter_=*/nullptr,
         /*child_listener=*/nullptr, std::move(on_shutdown_));
   }

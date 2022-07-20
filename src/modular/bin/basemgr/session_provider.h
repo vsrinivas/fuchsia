@@ -8,7 +8,6 @@
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/modular/session/cpp/fidl.h>
-#include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -28,23 +27,13 @@ constexpr char kRebootTrackerFilePath[] = "/data/modular-reboot-tracker.txt";
 
 class SessionProvider {
  public:
-  // Users of SessionProvider must register a Delegate object, which provides
-  // functionality to SessionProvider that's outside the scope of this class.
-  class Delegate {
-   public:
-    // Called when a session provided by SessionProvider wants to acquire
-    // presentation.
-    virtual void GetPresentation(
-        fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) = 0;
-  };
-
   using StartSessionResult = fpromise::result<void, zx_status_t>;
 
   // Target constructor.
   //
   // |on_zero_sessions| is invoked when all sessions have been deleted. This is
   // meant to be a callback for BasemgrImpl to start a new session.
-  SessionProvider(Delegate* delegate, fuchsia::sys::Launcher* launcher,
+  SessionProvider(fuchsia::sys::Launcher* launcher,
                   fuchsia::hardware::power::statecontrol::Admin* administrator,
                   const modular::ModularConfigAccessor* config_accessor,
                   fuchsia::sys::ServiceList v2_services_for_sessionmgr,
@@ -57,8 +46,10 @@ class SessionProvider {
   // start a new session.
   //
   // Returns fpromise::ok if a new session was started successfully.
-  StartSessionResult StartSession(fuchsia::ui::views::ViewToken view_token,
-                                  scenic::ViewRefPair view_ref_pair);
+  StartSessionResult StartSession(
+      std::optional<fuchsia::ui::views::ViewToken> view_token,
+      std::optional<fuchsia::ui::views::ViewCreationToken> view_creation_token,
+      scenic::ViewRefPair view_ref_pair);
 
   // |AsyncHolder|
   // Asynchronously tears down the sessionmgr process. |callback| is invoked
@@ -92,7 +83,6 @@ class SessionProvider {
 
   void TriggerReboot();
 
-  Delegate* const delegate_;                                            // Neither owned nor copied.
   fuchsia::sys::Launcher* const launcher_;                              // Not owned.
   fuchsia::hardware::power::statecontrol::Admin* const administrator_;  // Not owned.
   const modular::ModularConfigAccessor* const config_accessor_;         // Not owned.

@@ -18,16 +18,17 @@ SessionContextImpl::SessionContextImpl(
     fuchsia::sys::Launcher* const launcher,
     fuchsia::modular::session::AppConfig sessionmgr_app_config,
     const modular::ModularConfigAccessor* const config_accessor,
-    fuchsia::ui::views::ViewToken view_token, scenic::ViewRefPair view_ref_pair,
-    fuchsia::sys::ServiceList v2_services_for_sessionmgr,
+    std::optional<fuchsia::ui::views::ViewToken> view_token,
+    std::optional<fuchsia::ui::views::ViewCreationToken> view_creation_token,
+    scenic::ViewRefPair view_ref_pair, fuchsia::sys::ServiceList v2_services_for_sessionmgr,
     fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr_request,
-    GetPresentationCallback get_presentation, OnSessionShutdownCallback on_session_shutdown)
+    OnSessionShutdownCallback on_session_shutdown)
     : session_context_binding_(this),
-      get_presentation_(std::move(get_presentation)),
       on_session_shutdown_(std::move(on_session_shutdown)),
       weak_factory_(this) {
-  FX_CHECK(get_presentation_);
-  FX_CHECK(on_session_shutdown_);
+  // Exactly one of the tokens must be present.
+  // If view_token is present, use Gfx.  Otherwise, use Flatland.
+  FX_CHECK(view_token.has_value() != view_creation_token.has_value());
 
   sessions::ReportNewSessionToCobalt();
 
@@ -42,10 +43,18 @@ SessionContextImpl::SessionContextImpl(
 
   // Initialize the Sessionmgr service.
   sessionmgr_app_->services().ConnectToService(sessionmgr_.NewRequest());
-  sessionmgr_->Initialize(sessions::kSessionId, session_context_binding_.NewBinding(),
-                          std::move(v2_services_for_sessionmgr),
-                          std::move(svc_from_v1_sessionmgr_request), std::move(view_token),
-                          std::move(view_ref_pair.control_ref), std::move(view_ref_pair.view_ref));
+  if (view_creation_token.has_value()) {
+    sessionmgr_->Initialize(sessions::kSessionId, session_context_binding_.NewBinding(),
+                            std::move(v2_services_for_sessionmgr),
+                            std::move(svc_from_v1_sessionmgr_request),
+                            std::move(*view_creation_token));
+  } else {
+    sessionmgr_->InitializeLegacy(sessions::kSessionId, session_context_binding_.NewBinding(),
+                                  std::move(v2_services_for_sessionmgr),
+                                  std::move(svc_from_v1_sessionmgr_request), std::move(*view_token),
+                                  std::move(view_ref_pair.control_ref),
+                                  std::move(view_ref_pair.view_ref));
+  }
 
   sessionmgr_app_->SetAppErrorHandler([weak_this = weak_factory_.GetWeakPtr()] {
     if (!weak_this) {
@@ -103,11 +112,6 @@ void SessionContextImpl::Shutdown(ShutDownReason reason, fit::function<void()> c
       callback();
     }
   });
-}
-
-void SessionContextImpl::GetPresentation(
-    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
-  get_presentation_(std::move(request));
 }
 
 void SessionContextImpl::Restart() {

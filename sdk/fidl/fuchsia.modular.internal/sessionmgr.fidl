@@ -5,7 +5,6 @@ library fuchsia.modular.internal;
 
 using fuchsia.io;
 using fuchsia.sys;
-using fuchsia.ui.policy;
 using fuchsia.ui.views;
 
 /// The basemgr application (there is no `Basemgr` service) requests
@@ -37,6 +36,13 @@ protocol Sessionmgr {
         session_context client_end:SessionContext;
         additional_services_for_agents fuchsia.sys.ServiceList;
         services_from_sessionmgr server_end:fuchsia.io.Directory;
+        view_creation_token fuchsia.ui.views.ViewCreationToken;
+    });
+    InitializeLegacy(resource struct {
+        session_id string;
+        session_context client_end:SessionContext;
+        additional_services_for_agents fuchsia.sys.ServiceList;
+        services_from_sessionmgr server_end:fuchsia.io.Directory;
         view_token fuchsia.ui.views.ViewToken;
         control_ref fuchsia.ui.views.ViewRefControl;
         view_ref fuchsia.ui.views.ViewRef;
@@ -51,8 +57,4 @@ protocol SessionContext {
     /// Restarts the session due to an unrecoverable error. This may reboot the
     /// device.
     RestartDueToCriticalFailure();
-
-    GetPresentation(resource struct {
-        presentation server_end:fuchsia.ui.policy.Presentation;
-    });
 };

@@ -5,11 +5,16 @@
 #include "src/modular/bin/sessionmgr/sessionmgr_impl.h"
 
 #include <fuchsia/element/cpp/fidl.h>
+#include <fuchsia/intl/cpp/fidl.h>
 #include <fuchsia/session/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <fuchsia/ui/scenic/cpp/fidl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fidl/cpp/interface_request.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
+#include <lib/vfs/cpp/pseudo_dir.h>
 #include <lib/zx/eventpair.h>
 #include <zircon/status.h>
 
@@ -17,10 +22,6 @@
 
 #include <fbl/unique_fd.h>
 
-#include "fuchsia/intl/cpp/fidl.h"
-#include "lib/fdio/directory.h"
-#include "lib/fidl/cpp/interface_request.h"
-#include "lib/vfs/cpp/pseudo_dir.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fsl/types/type_converters.h"
@@ -111,9 +112,41 @@ void SessionmgrImpl::Initialize(
     fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
     fuchsia::sys::ServiceList v2_services_for_sessionmgr,
     fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr,
+    fuchsia::ui::views::ViewCreationToken view_creation_token) {
+  FX_LOGS(INFO) << "SessionmgrImpl::Initialize() called.";
+
+  InitializeInternal(std::move(session_id), std::move(session_context),
+                     std::move(v2_services_for_sessionmgr), std::move(svc_from_v1_sessionmgr),
+                     std::nullopt, std::move(view_creation_token), scenic::ViewRefPair{});
+}
+
+void SessionmgrImpl::InitializeLegacy(
+    std::string session_id,
+    fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
+    fuchsia::sys::ServiceList v2_services_for_sessionmgr,
+    fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr,
     fuchsia::ui::views::ViewToken view_token, fuchsia::ui::views::ViewRefControl control_ref,
     fuchsia::ui::views::ViewRef view_ref) {
-  FX_LOGS(INFO) << "SessionmgrImpl::Initialize() called.";
+  FX_LOGS(INFO) << "SessionmgrImpl::InitializeLegacy() called.";
+
+  InitializeInternal(std::move(session_id), std::move(session_context),
+                     std::move(v2_services_for_sessionmgr), std::move(svc_from_v1_sessionmgr),
+                     std::move(view_token), std::nullopt,
+                     scenic::ViewRefPair{.control_ref = {std::move(control_ref.reference)},
+                                         .view_ref = {std::move(view_ref.reference)}});
+}
+
+void SessionmgrImpl::InitializeInternal(
+    std::string session_id,
+    fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
+    fuchsia::sys::ServiceList v2_services_for_sessionmgr,
+    fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr,
+    std::optional<fuchsia::ui::views::ViewToken> view_token,
+    std::optional<fuchsia::ui::views::ViewCreationToken> view_creation_token,
+    scenic::ViewRefPair view_ref_pair) {
+  // Exactly one of the tokens must be present.
+  // If view_token is present, use Gfx.  Otherwise, use Flatland.
+  FX_CHECK(view_token.has_value() != view_creation_token.has_value());
 
   session_context_ = session_context.Bind();
   OnTerminate(Reset(&session_context_));
@@ -131,12 +164,9 @@ void SessionmgrImpl::Initialize(
   InitializeAgentRunner(config_accessor_.session_shell_app_config().url());
   InitializeStartupAgents();
 
-  scenic::ViewRefPair view_ref_pair =
-      scenic::ViewRefPair{.control_ref = {std::move(control_ref.reference)},
-                          .view_ref = {std::move(view_ref.reference)}};
-
   InitializeSessionShell(CloneStruct(config_accessor_.session_shell_app_config()),
-                         std::move(view_token), std::move(view_ref_pair));
+                         std::move(view_token), std::move(view_creation_token),
+                         std::move(view_ref_pair));
 
   // We create |story_provider_impl_| after |agent_runner_| so
   // story_provider_impl_ is terminated before agent_runner_, which will cause
@@ -396,7 +426,9 @@ void SessionmgrImpl::ServeSvcFromV1SessionmgrDir(
 
 void SessionmgrImpl::InitializeSessionShell(
     fuchsia::modular::session::AppConfig session_shell_config,
-    fuchsia::ui::views::ViewToken view_token, scenic::ViewRefPair view_ref_pair) {
+    std::optional<fuchsia::ui::views::ViewToken> view_token,
+    std::optional<fuchsia::ui::views::ViewCreationToken> view_creation_token,
+    scenic::ViewRefPair view_ref_pair) {
   FX_DCHECK(session_environment_);
   FX_DCHECK(agent_runner_.get());
   FX_DCHECK(puppet_master_impl_);
@@ -486,9 +518,15 @@ void SessionmgrImpl::InitializeSessionShell(
 
   fuchsia::ui::app::ViewProviderPtr view_provider;
   session_shell_app->services().ConnectToService(view_provider.NewRequest());
-  view_provider->CreateViewWithViewRef(std::move(view_token.value),
-                                       std::move(view_ref_pair.control_ref),
-                                       std::move(view_ref_pair.view_ref));
+  if (view_creation_token.has_value()) {
+    fuchsia::ui::app::CreateView2Args create_view_args;
+    create_view_args.set_view_creation_token(std::move(*view_creation_token));
+    view_provider->CreateView2(std::move(create_view_args));
+  } else {
+    view_provider->CreateViewWithViewRef(std::move((*view_token).value),
+                                         std::move(view_ref_pair.control_ref),
+                                         std::move(view_ref_pair.view_ref));
+  }
 
   agent_runner_->AddRunningAgent(session_shell_url_, std::move(session_shell_app));
 }
@@ -508,7 +546,7 @@ void SessionmgrImpl::GetComponentContext(
 
 void SessionmgrImpl::GetPresentation(
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
-  session_context_->GetPresentation(std::move(request));
+  FX_NOTIMPLEMENTED();
 }
 
 void SessionmgrImpl::GetStoryProvider(

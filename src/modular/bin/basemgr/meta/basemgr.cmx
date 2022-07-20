@@ -13,9 +13,11 @@
         "services": [
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.hardware.power.statecontrol.Admin",
+            "fuchsia.session.scene.Manager",
             "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry",
-            "fuchsia.ui.policy.Presenter"
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.scenic.Scenic"
         ]
     }
 }

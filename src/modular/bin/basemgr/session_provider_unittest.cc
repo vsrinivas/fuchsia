@@ -61,7 +61,7 @@ class SessionProviderTest : public gtest::RealLoopFixture {
 
   SessionProvider CreateSessionProvider(const std::string& reboot_tracker_file_path) {
     return SessionProvider(
-        /*delegate=*/nullptr, /*launcher=*/nullptr,
+        /*launcher=*/nullptr,
         /*administrator=*/admin_proxy_.get(),
         /*config_accessor=*/nullptr,
         /*v2_services_for_sessionmgr=*/fuchsia::sys::ServiceList(),

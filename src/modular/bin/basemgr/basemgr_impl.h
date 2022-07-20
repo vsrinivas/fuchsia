@@ -10,10 +10,13 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/process/lifecycle/cpp/fidl.h>
+#include <fuchsia/session/cpp/fidl.h>
+#include <fuchsia/session/scene/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/fpromise/promise.h>
 #include <lib/inspect/cpp/inspect.h>
@@ -21,12 +24,11 @@
 
 #include <memory>
 #include <optional>
+#include <variant>
 
-#include "fuchsia/session/cpp/fidl.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/basemgr/child_listener.h"
 #include "src/modular/bin/basemgr/inspector.h"
-#include "src/modular/bin/basemgr/presentation_container.h"
 #include "src/modular/bin/basemgr/session_provider.h"
 #include "src/modular/lib/async/cpp/future.h"
 #include "src/modular/lib/modular_config/modular_config_accessor.h"
@@ -43,12 +45,13 @@ class LauncherImpl;
 // 2) Manages the lifecycle of sessions, represented as |sessionmgr| processes.
 class BasemgrImpl : public fuchsia::modular::Lifecycle,
                     public fuchsia::process::lifecycle::Lifecycle,
-                    fuchsia::modular::internal::BasemgrDebug,
-                    modular::SessionProvider::Delegate {
+                    fuchsia::modular::internal::BasemgrDebug {
  public:
+  using SceneOwnerPtr =
+      std::variant<fuchsia::ui::policy::PresenterPtr, fuchsia::session::scene::ManagerPtr>;
+
   using LauncherBinding =
       fidl::Binding<fuchsia::modular::session::Launcher, std::unique_ptr<LauncherImpl>>;
-
   using LauncherBindingSet =
       fidl::BindingSet<fuchsia::modular::session::Launcher, std::unique_ptr<LauncherImpl>>;
 
@@ -68,17 +71,16 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // |outgoing| The component's outgoing directory for publishing protocols.
   // |inspector| Inspect tree for publishing diagnostics.
   // |launcher| Environment service for creating component instances.
-  // |presenter| Service to initialize the presentation.
+  // |presenter| Legacy Service to initialize the presentation.
+  // |graphical_presenter| Service to initialize the presentation.
   // |child_listener| Active connections to child components.
   // |on_shutdown| Callback invoked when this basemgr instance is shutdown.
-  explicit BasemgrImpl(modular::ModularConfigAccessor config_accessor,
-                       std::shared_ptr<sys::OutgoingDirectory> outgoing,
-                       BasemgrInspector* inspector, fuchsia::sys::LauncherPtr launcher,
-                       fuchsia::ui::policy::PresenterPtr presenter,
-                       fuchsia::hardware::power::statecontrol::AdminPtr device_administrator,
-                       fuchsia::session::RestarterPtr session_restarter_,
-                       std::unique_ptr<ChildListener> child_listener,
-                       fit::function<void()> on_shutdown);
+  BasemgrImpl(modular::ModularConfigAccessor config_accessor,
+              std::shared_ptr<sys::OutgoingDirectory> outgoing, BasemgrInspector* inspector,
+              bool use_flatland, fuchsia::sys::LauncherPtr launcher, SceneOwnerPtr presenter,
+              fuchsia::hardware::power::statecontrol::AdminPtr device_administrator,
+              fuchsia::session::RestarterPtr session_restarter_,
+              std::unique_ptr<ChildListener> child_listener, fit::function<void()> on_shutdown);
 
   ~BasemgrImpl() override;
 
@@ -123,9 +125,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // |BasemgrDebug|
   void StartSessionWithRandomId() override;
 
-  // |SessionProvider::Delegate|
-  void GetPresentation(fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) override;
-
   // Creates a |session_provider_| that uses the given config.
   //
   // |config_accessor| must live for the duration of the session, outliving |session_provider_|.
@@ -145,8 +144,13 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   // Used to launch component instances.
   fuchsia::sys::LauncherPtr launcher_;
-  // Used to connect the |presentation_container_| to scenic.
-  fuchsia::ui::policy::PresenterPtr presenter_;
+
+  // Used to connect the session's view to the scene owner.
+  SceneOwnerPtr scene_owner_;
+  fuchsia::ui::policy::PresentationPtr presentation_;
+
+  // Used to connect the session's view to scene_manager.
+  fuchsia::session::scene::ManagerPtr scene_manager_;
 
   // Used to listen to child components and restart on crashes.
   std::unique_ptr<ChildListener> child_listener_;
@@ -159,9 +163,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   fit::function<void()> on_shutdown_;
 
-  // Holds the presentation service.
-  std::unique_ptr<PresentationContainer> presentation_container_;
-
   LauncherBindingSet session_launcher_bindings_;
   fidl::BindingSet<fuchsia::modular::Lifecycle> lifecycle_bindings_;
   fidl::BindingSet<fuchsia::modular::internal::BasemgrDebug> basemgr_debug_bindings_;
@@ -172,6 +173,8 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   async::Executor executor_;
 
   State state_ = State::RUNNING;
+
+  const bool use_flatland_;
 
   fxl::WeakPtrFactory<BasemgrImpl> weak_factory_;
 

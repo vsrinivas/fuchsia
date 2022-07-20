@@ -24,15 +24,14 @@ static constexpr auto kMaxCrashRecoveryLimit = 3;
 
 static constexpr auto kMaxCrashRecoveryDuration = zx::hour(1);
 
-SessionProvider::SessionProvider(Delegate* const delegate, fuchsia::sys::Launcher* const launcher,
+SessionProvider::SessionProvider(fuchsia::sys::Launcher* const launcher,
                                  fuchsia::hardware::power::statecontrol::Admin* const administrator,
                                  const modular::ModularConfigAccessor* const config_accessor,
                                  fuchsia::sys::ServiceList v2_services_for_sessionmgr,
                                  vfs::PseudoDir* outgoing_dir_root,
                                  fit::function<void()> on_zero_sessions,
                                  std::string reboot_tracker_file_path)
-    : delegate_(delegate),
-      launcher_(launcher),
+    : launcher_(launcher),
       administrator_(administrator),
       config_accessor_(config_accessor),
       on_zero_sessions_(std::move(on_zero_sessions)),
@@ -44,7 +43,9 @@ SessionProvider::SessionProvider(Delegate* const delegate, fuchsia::sys::Launche
 }
 
 SessionProvider::StartSessionResult SessionProvider::StartSession(
-    fuchsia::ui::views::ViewToken view_token, scenic::ViewRefPair view_ref_pair) {
+    std::optional<fuchsia::ui::views::ViewToken> view_token,
+    std::optional<fuchsia::ui::views::ViewCreationToken> view_creation_token,
+    scenic::ViewRefPair view_ref_pair) {
   if (is_session_running()) {
     FX_LOGS(WARNING) << "StartSession() called when session context already "
                         "exists. Try calling SessionProvider::Teardown()";
@@ -81,12 +82,8 @@ SessionProvider::StartSessionResult SessionProvider::StartSession(
 
   session_context_ = std::make_unique<SessionContextImpl>(
       launcher_, std::move(sessionmgr_app_config), config_accessor_, std::move(view_token),
-      std::move(view_ref_pair), std::move(v2_services_for_sessionmgr),
-      std::move(svc_from_v1_sessionmgr_dir_request),
-      /*get_presentation=*/
-      [this](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> request) {
-        delegate_->GetPresentation(std::move(request));
-      },
+      std::move(view_creation_token), std::move(view_ref_pair),
+      std::move(v2_services_for_sessionmgr), std::move(svc_from_v1_sessionmgr_dir_request),
       /*on_session_shutdown=*/
       [this](SessionContextImpl::ShutDownReason shutdown_reason) {
         OnSessionShutdown(shutdown_reason);

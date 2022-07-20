@@ -3,10 +3,15 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//src/ui/build_args.gni")
 
 executable("basemgr_bin") {
   output_name = "basemgr"
   sources = [ "main.cc" ]
+
+  if (use_scene_manager_as_scene_owner) {
+    defines = [ "USE_SCENE_MANAGER" ]
+  }
 
   deps = [
     ":basemgr_impl",
@@ -14,6 +19,7 @@ executable("basemgr_bin") {
     "//sdk/fidl/fuchsia.hardware.power.statecontrol",
     "//sdk/fidl/fuchsia.modular.internal",
     "//sdk/fidl/fuchsia.session",
+    "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
@@ -41,6 +47,7 @@ source_set("basemgr_impl") {
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.process.lifecycle",
     "//sdk/fidl/fuchsia.session",
+    "//sdk/fidl/fuchsia.session.scene",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/fit",
@@ -100,8 +107,6 @@ source_set("lib") {
     "child_listener.h",
     "inspector.cc",
     "inspector.h",
-    "presentation_container.cc",
-    "presentation_container.h",
     "reboot_rate_limiter.cc",
     "reboot_rate_limiter.h",
     "session_context_impl.cc",

@@ -4,10 +4,13 @@
 
 #include <fuchsia/hardware/power/statecontrol/cpp/fidl.h>
 #include <fuchsia/modular/internal/cpp/fidl.h>
+#include <fuchsia/session/cpp/fidl.h>
+#include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
+#include <lib/stdcompat/string_view.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/inspect/cpp/component.h>
 #include <lib/syslog/cpp/log_settings.h>
@@ -20,8 +23,6 @@
 #include <memory>
 #include <string>
 
-#include "fuchsia/session/cpp/fidl.h"
-#include "lib/stdcompat/string_view.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/command_line.h"
@@ -97,7 +98,7 @@ class LifecycleHandler : public fuchsia::process::lifecycle::Lifecycle {
 
 std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
     modular::ModularConfigAccessor config_accessor, std::vector<modular::Child> children,
-    size_t backoff_base, sys::ComponentContext* component_context,
+    size_t backoff_base, bool use_flatland, sys::ComponentContext* component_context,
     modular::BasemgrInspector* inspector, async::Loop* loop) {
   fit::deferred_action<fit::closure> cobalt_cleanup = SetupCobalt(
       config_accessor.basemgr_config().enable_cobalt(), loop->dispatcher(), component_context);
@@ -106,10 +107,17 @@ std::unique_ptr<modular::BasemgrImpl> CreateBasemgrImpl(
       component_context->svc().get(), loop->dispatcher(), std::move(children), backoff_base,
       inspector->CreateChildRestartTrackerNode());
 
+#ifndef USE_SCENE_MANAGER
+  FX_CHECK(!use_flatland);
+#endif
   return std::make_unique<modular::BasemgrImpl>(
-      std::move(config_accessor), component_context->outgoing(), inspector,
+      std::move(config_accessor), component_context->outgoing(), inspector, use_flatland,
       component_context->svc()->Connect<fuchsia::sys::Launcher>(),
+#ifdef USE_SCENE_MANAGER
+      component_context->svc()->Connect<fuchsia::session::scene::Manager>(),
+#else
       component_context->svc()->Connect<fuchsia::ui::policy::Presenter>(),
+#endif
       component_context->svc()->Connect<fuchsia::hardware::power::statecontrol::Admin>(),
       component_context->svc()->Connect<fuchsia::session::Restarter>(), std::move(child_listener),
       /*on_shutdown=*/
@@ -225,9 +233,25 @@ int main(int argc, const char** argv) {
     return EXIT_FAILURE;
   }
 
-  auto basemgr_impl =
-      CreateBasemgrImpl(modular::ModularConfigAccessor(config_reader.GetConfig()), children,
-                        backoff_base, component_context.get(), inspector.get(), &loop);
+  // Query scenic for the composition API to use.
+  // The scenic service may not always be routed to us in all product configurations, so allow the
+  // query to fail with ZX_ERR_PEER_CLOSED.
+  fuchsia::ui::scenic::ScenicSyncPtr scenic;
+  bool use_flatland = false;
+  zx_status_t connect_status =
+      component_context->svc()->Connect<fuchsia::ui::scenic::Scenic>(scenic.NewRequest());
+  FX_CHECK(connect_status == ZX_OK) << "Error connection to fuchsia::ui::scenic::Scenic: "
+                                    << zx_status_get_string(connect_status);
+  zx_status_t use_flatland_status = scenic->UsesFlatland(&use_flatland);
+  FX_CHECK(use_flatland_status == ZX_OK || use_flatland_status == ZX_ERR_PEER_CLOSED)
+      << "Error querying Scenic for flatland status: " << zx_status_get_string(use_flatland_status);
+  if (use_flatland_status == ZX_ERR_PEER_CLOSED) {
+    FX_LOGS(WARNING) << "fuchsia::ui::scenic::Scenic not present when querying for flatland status";
+  }
+
+  auto basemgr_impl = CreateBasemgrImpl(modular::ModularConfigAccessor(config_reader.GetConfig()),
+                                        children, backoff_base, use_flatland,
+                                        component_context.get(), inspector.get(), &loop);
 
   LifecycleHandler lifecycle_handler{basemgr_impl.get(), &loop};
 
