@@ -16,7 +16,6 @@ use fidl_fuchsia_bluetooth_bredr::{
 use fuchsia_async as fasync;
 use fuchsia_bluetooth::types::{PeerId, Uuid};
 use fuchsia_component as component;
-use fuchsia_syslog::macros::*;
 use futures::channel::oneshot;
 use futures::select;
 use futures::stream::StreamExt;
@@ -24,6 +23,7 @@ use futures::FutureExt;
 use parking_lot::RwLock;
 use serde_json::value::Value;
 use std::{collections::HashMap, convert::TryFrom};
+use tracing::*;
 
 #[derive(Debug)]
 struct ProfileServerFacadeInner {
@@ -65,15 +65,14 @@ impl ProfileServerFacade {
         let tag = "ProfileServerFacade::create_profile_server_proxy";
         match self.inner.read().profile_server_proxy.clone() {
             Some(profile_server_proxy) => {
-                fx_log_info!(
-                    tag: &with_line!(tag),
-                    "Current profile server proxy: {:?}",
-                    profile_server_proxy
+                info!(
+                    tag = &with_line!(tag),
+                    "Current profile server proxy: {:?}", profile_server_proxy
                 );
                 Ok(profile_server_proxy)
             }
             None => {
-                fx_log_info!(tag: &with_line!(tag), "Setting new profile server proxy");
+                info!(tag = &with_line!(tag), "Setting new profile server proxy");
                 let profile_server_proxy =
                     component::client::connect_to_protocol::<ProfileMarker>();
                 if let Err(err) = profile_server_proxy {
@@ -374,7 +373,7 @@ impl ProfileServerFacade {
         loop {
             select! {
                 _ = fused_end_signal => {
-                    fx_log_info!("Ending advertisement on signal..");
+                    info!("Ending advertisement on signal..");
                     return Ok(());
                 },
                 request = requests.next() => {
@@ -391,8 +390,8 @@ impl ProfileServerFacade {
                     };
                     let ConnectionReceiverRequest::Connected { peer_id, channel, .. } = request;
                     let peer_id: PeerId = peer_id.into();
-                    fx_log_info!(
-                        tag: &with_line!(tag),
+                    info!(
+                        tag = &with_line!(tag),
                         "Connection from {}: {:?}!",
                         peer_id,
                         channel
@@ -418,12 +417,9 @@ impl ProfileServerFacade {
             let SearchResultsRequest::ServiceFound { peer_id, protocol, attributes, responder } =
                 request;
             let peer_id: PeerId = peer_id.into();
-            fx_log_info!(
-                tag: &with_line!(tag),
-                "Search Result: Peer {} with protocol {:?}: {:?}",
-                peer_id,
-                protocol,
-                attributes
+            info!(
+                tag = &with_line!(tag),
+                "Search Result: Peer {} with protocol {:?}: {:?}", peer_id, protocol, attributes
             );
             responder.send()?;
         }
@@ -482,7 +478,7 @@ impl ProfileServerFacade {
     ///}
     pub async fn add_service(&self, args: Value) -> Result<usize, Error> {
         let tag = "ProfileServerFacade::write_sdp_record";
-        fx_log_info!(tag: &with_line!(tag), "Writing SDP record");
+        info!(tag = &with_line!(tag), "Writing SDP record");
 
         let record_description = if let Some(r) = args.get("record") {
             r
@@ -598,8 +594,8 @@ impl ProfileServerFacade {
         let request_handler_fut =
             Self::monitor_connection_receiver(connect_requests, end_ad_receiver);
         fasync::Task::spawn(async move {
-            if let Err(e) = request_handler_fut.await {
-                fx_log_err!("Connection receiver handler ended with error: {:?}", e);
+            if let Err(err) = request_handler_fut.await {
+                error!(?err, "Connection receiver handler ended with error");
             }
         })
         .detach();
@@ -641,7 +637,7 @@ impl ProfileServerFacade {
 
     pub async fn add_search(&self, args: Value) -> Result<(), Error> {
         let tag = "ProfileServerFacade::add_search";
-        fx_log_info!(tag: &with_line!(tag), "Adding Search");
+        info!(tag = &with_line!(tag), "Adding Search");
 
         let raw_attribute_list = if let Some(v) = args.get("attribute_list") {
             if let Some(r) = v.as_array() {
@@ -683,8 +679,8 @@ impl ProfileServerFacade {
 
         let search_fut = Self::monitor_search_results(result_requests);
         fasync::Task::spawn(async move {
-            if let Err(e) = search_fut.await {
-                fx_log_err!("Search result handler ended with error: {:?}", e);
+            if let Err(err) = search_fut.await {
+                error!(?err, "Search result handler ended with error");
             }
         })
         .detach();

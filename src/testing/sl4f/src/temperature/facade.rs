@@ -8,7 +8,6 @@ use anyhow::Error;
 use fidl_fuchsia_hardware_temperature::{DeviceMarker, DeviceProxy};
 use fidl_fuchsia_thermal_test::{TemperatureLoggerMarker, TemperatureLoggerProxy};
 use fuchsia_component::client::connect_to_protocol;
-use fuchsia_syslog::macros::fx_log_err;
 use fuchsia_zircon as zx;
 use serde_json::Value;
 use std::path::Path;

@@ -16,8 +16,8 @@ use fidl_fuchsia_bluetooth_sys::{
 use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
 use fuchsia_bluetooth::types::Address;
 use fuchsia_component as component;
-use fuchsia_syslog::macros::{fx_log_err, fx_log_info};
 use fuchsia_zircon::{self as zx, DurationNum};
+use tracing::{error, info};
 
 use parking_lot::RwLock;
 use std::collections::HashMap;
@@ -110,11 +110,11 @@ impl BluetoothSysFacade {
         let mut inner = self.inner.write();
         let access_proxy = match inner.access_proxy.clone() {
             Some(proxy) => {
-                fx_log_info!(tag: &with_line!(tag), "Current access proxy: {:?}", proxy);
+                info!(tag = &with_line!(tag), "Current access proxy: {:?}", proxy);
                 Ok(proxy)
             }
             None => {
-                fx_log_info!(tag: &with_line!(tag), "Setting new access proxy");
+                info!(tag = &with_line!(tag), "Setting new access proxy");
                 let proxy = component::client::connect_to_protocol::<AccessMarker>();
                 if let Err(err) = proxy {
                     fx_err_and_bail!(
@@ -133,7 +133,7 @@ impl BluetoothSysFacade {
             Some(HangingGetStream::new_with_fn_ptr(access_proxy, AccessProxy::watch_peers));
 
         if inner.pairing_proxy.as_ref().map_or(true, |p| p.is_closed()) {
-            fx_log_info!(tag: &with_line!(tag), "Setting new Pairing proxy");
+            info!(tag = &with_line!(tag), "Setting new Pairing proxy");
             let proxy = component::client::connect_to_protocol::<PairingMarker>();
             if let Err(err) = proxy {
                 fx_err_and_bail!(
@@ -183,14 +183,15 @@ impl BluetoothSysFacade {
                         success,
                         control_handle: _,
                     } => {
-                        fx_log_info!(
-                            tag: &with_line!(tag),
-                            "Pairing complete for peer (id: {}, status: {})",
-                            id.value,
-                            match success {
-                                true => "Success",
-                                false => "Failure",
-                            }
+                        let status = match success {
+                            true => "Success",
+                            false => "Failure",
+                        };
+                        info!(
+                            tag = &with_line!(tag),
+                            id = id.value,
+                            status,
+                            "Pairing complete for peer",
                         );
                     }
                     PairingDelegateRequest::OnPairingRequest {
@@ -205,12 +206,12 @@ impl BluetoothSysFacade {
                             Some(address) => Address::from(address).to_string(),
                             None => "Unknown Address".to_string(),
                         };
-                        fx_log_info!(
-                            tag: &with_line!(tag),
+                        info!(
+                            tag = &with_line!(tag),
                             "Pairing request from peer: {}",
                             match &peer.name {
                                 Some(name) => format!("{} ({})", name, address),
-                                None => address,
+                                None => address.clone(),
                             }
                         );
                         let consent = true;
@@ -219,7 +220,7 @@ impl BluetoothSysFacade {
                             PairingMethod::Consent => (consent, None),
                             PairingMethod::PasskeyComparison => (consent, None),
                             PairingMethod::PasskeyDisplay => {
-                                fx_log_info!(
+                                info!(
                                     "Passkey {:?} provided for 'Passkey Display`.",
                                     displayed_passkey
                                 );
@@ -234,8 +235,8 @@ impl BluetoothSysFacade {
                                 {
                                     Some(p) => p,
                                     _ => {
-                                        fx_log_err!(
-                                            tag: &with_line!(tag),
+                                        error!(
+                                            tag = &with_line!(tag),
                                             "No pairing pin found from remote host."
                                         );
                                         default_passkey
@@ -258,11 +259,11 @@ impl BluetoothSysFacade {
                         keypress,
                         control_handle: _,
                     } => {
-                        fx_log_info!(
-                            tag: &with_line!(tag),
-                            "Unhandled OnRemoteKeypress for Device: {} | {:?}",
-                            id.value,
-                            keypress
+                        info!(
+                            tag = &with_line!(tag),
+                            id = id.value,
+                            ?keypress,
+                            "Unhandled OnRemoteKeypress for Device"
                         );
                     }
                 },
@@ -298,7 +299,7 @@ impl BluetoothSysFacade {
             ),
         };
 
-        fx_log_info!(tag: &with_line!(tag), "Accepting pairing");
+        info!(tag = &with_line!(tag), "Accepting pairing");
         let (delegate_local, delegate_remote) = zx::Channel::create()?;
         let delegate_local = fasync::Channel::from_channel(delegate_local)?;
         let delegate_ptr =
@@ -322,11 +323,11 @@ impl BluetoothSysFacade {
 
         let fut = async {
             let result = pairing_delegate_fut.await;
-            if let Err(err) = result {
-                fx_log_err!(
-                    tag: &with_line!("BluetoothSysFacade::accept_pairing"),
-                    "Failed to create or monitor the pairing service delegate: {:?}",
-                    err
+            if let Err(error) = result {
+                error!(
+                    tag = &with_line!("BluetoothSysFacade::accept_pairing"),
+                    ?error,
+                    "Failed to create or monitor the pairing service delegate",
                 );
             }
         };
@@ -367,7 +368,7 @@ impl BluetoothSysFacade {
             },
             None => {
                 let err_str = "No receiever setup for pairing delegate.".to_string();
-                fx_log_err!(tag: &with_line!(tag), "{}", err_str);
+                error!(tag = &with_line!(tag), "{}", err_str);
                 bail!(err_str)
             }
         };
@@ -489,7 +490,7 @@ impl BluetoothSysFacade {
         let mut known_devices = self.inner.write().discovered_device_list.clone();
         for peer_id in removed_peers {
             if known_devices.contains_key(&peer_id.value) {
-                fx_log_info!(tag: tag, "Peer {:?} removed.", peer_id);
+                info!(tag, "Peer {:?} removed.", peer_id);
                 known_devices.remove(&peer_id.value);
             }
         }
@@ -616,11 +617,7 @@ impl BluetoothSysFacade {
         let fut = async move {
             let result = proxy.pair(&mut PeerId { value: id }, pairing_options).await;
             if let Err(err) = result {
-                fx_log_err!(
-                    tag: &with_line!("BluetoothSysFacade::pair"),
-                    "Failed to pair with: {:?}",
-                    err
-                );
+                error!(tag = &with_line!("BluetoothSysFacade::pair"), ?err, "Failed to pair with",);
             }
         };
         fasync::Task::spawn(fut).detach();
@@ -658,7 +655,7 @@ impl BluetoothSysFacade {
         match &self.inner.read().config_proxy {
             Some(proxy) => {
                 let new_settings = proxy.update(settings).await?;
-                fx_log_info!("new core stack settings: {:?}", new_settings);
+                info!("new core stack settings: {:?}", new_settings);
                 Ok(())
             }
             None => {
@@ -731,12 +728,12 @@ impl BluetoothSysFacade {
     /// Prints useful information.
     pub fn print(&self) {
         let tag = "BluetoothSysFacade::print:";
-        fx_log_info!(tag: &with_line!(tag), "Access: {:?}", self.inner.read().access_proxy);
-        fx_log_info!(tag: &with_line!(tag), "Pairing: {:?}", self.inner.read().pairing_proxy);
-        fx_log_info!(
-            tag: &with_line!(tag),
-            "discovered_device_list: {:?}",
-            self.inner.read().discovered_device_list
+        let guard = self.inner.read();
+        info!(
+            tag = &with_line!(tag),
+            access = ?guard.access_proxy,
+            pairing = ?guard.pairing_proxy,
+            discovered_device_list = ?self.inner.read().discovered_device_list
         );
     }
 }

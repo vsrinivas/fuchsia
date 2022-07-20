@@ -6,8 +6,8 @@ use crate::common_utils::common::get_proxy_or_connect;
 use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
 use anyhow::Error;
 use fidl_fuchsia_recovery::{FactoryResetMarker, FactoryResetProxy};
-use fuchsia_syslog::macros::{fx_log_err, fx_log_info};
 use parking_lot::RwLock;
+use tracing::info;
 
 /// Perform factory reset fidl operations.
 ///
@@ -31,7 +31,7 @@ impl FactoryResetFacade {
     /// Returns the pairing code from the FactoryDataManager proxy service.
     pub async fn factory_reset(&self) -> Result<(), Error> {
         let tag = "FactoryResetFacade::factory_reset";
-        fx_log_info!("Executing factory reset");
+        info!("Executing factory reset");
         match self.factory_reset_manager()?.reset().await {
             Ok(_) => Ok(()),
             Err(e) => fx_err_and_bail!(

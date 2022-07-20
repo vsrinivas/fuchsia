@@ -10,10 +10,10 @@ use async_trait::async_trait;
 use fidl_fuchsia_testing_sl4f::{
     FacadeIteratorRequest, FacadeProviderRequest, FacadeProviderRequestStream,
 };
-use fuchsia_syslog::macros::{fx_log_err, fx_log_info, fx_log_warn};
 use futures::stream::{StreamExt, TryStreamExt};
 use serde_json::Value;
 use std::sync::Arc;
+use tracing::{error, info, warn};
 
 /// Trait for the implementation of the FacadeProvider protocol.
 #[async_trait(?Send)]
@@ -57,7 +57,7 @@ pub trait FacadeProvider {
             Ok::<(), Error>(())
         };
         if let Err(error) = get_facades_fut.await {
-            fx_log_err!("Failed to handle GetFacades() with: {}", error);
+            error!(%error, "Failed to handle GetFacades()");
         }
     }
 
@@ -79,9 +79,9 @@ pub trait FacadeProvider {
             f
         } else {
             let err_str = format!("Could not find facade: {}", facade);
-            fx_log_err!("{}", err_str);
+            error!("{}", err_str);
             if let Err(send_error) = responder.send(None, Some(&err_str)) {
-                fx_log_err!("Failed to send response with: {}", send_error);
+                error!("Failed to send response with: {}", send_error);
             }
             return;
         };
@@ -93,7 +93,7 @@ pub trait FacadeProvider {
                 if let Err(send_error) =
                     responder.send(None, Some(&format!("Failed to extract params: {}", error)))
                 {
-                    fx_log_err!("Failed to send response with: {}", send_error);
+                    error!(error = %send_error, "Failed to send response");
                 }
                 return;
             }
@@ -102,15 +102,15 @@ pub trait FacadeProvider {
         // Execute the command on the facade. On error or empty result, send the response.
         let result = match facade.handle_request(command, params).await {
             Ok(Value::Null) => {
-                if let Err(send_error) = responder.send(None, None) {
-                    fx_log_err!("Failed to send response with: {}", send_error);
+                if let Err(error) = responder.send(None, None) {
+                    error!(%error, "Failed to send response");
                 }
                 return;
             }
             Ok(result) => result,
             Err(error) => {
-                if let Err(send_error) = responder.send(None, Some(&error.to_string())) {
-                    fx_log_err!("Failed to send response with: {}", send_error);
+                if let Err(error) = responder.send(None, Some(&error.to_string())) {
+                    error!(%error, "Failed to send response");
                 }
                 return;
             }
@@ -121,7 +121,7 @@ pub trait FacadeProvider {
             Ok(()) => responder.send(Some(params_blob), None),
             Err(error) => responder.send(None, Some(&format!("Failed to write result: {}", error))),
         } {
-            fx_log_err!("Failed to send response with: {}", send_error);
+            error!(error = %send_error, "Failed to send response");
         }
     }
 
@@ -152,7 +152,7 @@ pub trait FacadeProvider {
                 .await;
             }
             FacadeProviderRequest::Execute { facade, command, params_blob, responder } => {
-                fx_log_info!("Received command {}.{}", facade, command);
+                info!("Received command {}.{}", facade, command);
                 self.execute_impl(FacadeProviderRequest::Execute {
                     facade,
                     command,
@@ -164,13 +164,13 @@ pub trait FacadeProvider {
             FacadeProviderRequest::Cleanup { responder } => {
                 self.cleanup_impl();
                 if let Err(error) = responder.send() {
-                    fx_log_warn!("Failed to notify completion of Cleanup() with: {}", error);
+                    warn!(%error, "Failed to notify completion of Cleanup()");
                 }
             }
             FacadeProviderRequest::Print { responder } => {
                 self.print_impl();
                 if let Err(error) = responder.send() {
-                    fx_log_err!("Failed to notify completion of Print() with: {}", error);
+                    error!(%error, "Failed to notify completion of Print()");
                 }
             }
         }

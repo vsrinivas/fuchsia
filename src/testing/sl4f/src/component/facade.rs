@@ -14,10 +14,9 @@ use component_hub::{
 use fidl_fuchsia_sys::ComponentControllerEvent;
 use fidl_fuchsia_sys2 as fsys;
 use fuchsia_component::client;
-use fuchsia_syslog::macros::fx_log_info;
-use fuchsia_syslog::macros::*;
 use futures::StreamExt;
 use serde_json::{from_value, Value};
+use tracing::info;
 
 /// Perform operations related to Component.
 ///
@@ -45,10 +44,9 @@ impl ComponentFacade {
                 if !x.starts_with("fuchsia-pkg") {
                     return Err(format_err!("Need full component url to launch"));
                 }
-                fx_log_info!(
+                info!(
                     "Executing Launch {} in Component Facade with arguments {:?}.",
-                    x,
-                    req.arguments
+                    x, req.arguments
                 );
                 x
             }
@@ -92,10 +90,9 @@ impl ComponentFacade {
             ComponentControllerEvent::OnTerminated { return_code, termination_reason } => {
                 code = return_code;
                 if return_code != 0 {
-                    fx_log_info!(
+                    info!(
                         "Component terminated unexpectedly. Code: {}. Reason: {:?}",
-                        return_code,
-                        termination_reason
+                        return_code, termination_reason
                     );
                 }
             }
@@ -115,7 +112,7 @@ impl ComponentFacade {
         let req: ComponentSearchRequest = from_value(args)?;
         let name = match req.name {
             Some(x) => {
-                fx_log_info!("Searching Component {} in ComponentSearch Facade", x,);
+                info!("Searching Component {} in ComponentSearch Facade", x,);
                 x
             }
             None => return Err(format_err!("Need name of the component to search.")),
@@ -137,7 +134,7 @@ impl ComponentFacade {
 
     /// List running components, returns a vector containing component full URL.
     pub async fn list(&self) -> Result<Vec<String>, Error> {
-        fx_log_info!("List running Component under appmgr in ComponentSearch Facade",);
+        info!("List running Component under appmgr in ComponentSearch Facade",);
         let query = client::connect_to_protocol::<fsys::RealmQueryMarker>()?;
         let explorer = client::connect_to_protocol::<fsys::RealmExplorerMarker>()?;
         let instances = get_all_instances(&explorer, &query, Some(ListFilter::Running)).await?;

@@ -11,10 +11,10 @@ use fidl_fuchsia_media::{AudioRenderUsage, AudioSampleFormat, AudioStreamType};
 use fidl_fuchsia_media_sounds::{PlayerMarker, PlayerProxy};
 use fidl_fuchsia_test_audio_recording::{AudioRecordingControlMarker, AudioRecordingControlProxy};
 use fuchsia_component::client::connect_to_protocol;
-use fuchsia_syslog::macros::fx_log_info;
 use futures::lock::Mutex;
 use serde_json::{to_value, Value};
 use std::convert::TryInto;
+use tracing::info;
 
 #[async_trait(?Send)]
 impl Facade for AudioFacade {
@@ -40,7 +40,7 @@ pub struct AudioFacade {
 
 impl AudioFacade {
     pub fn new() -> Result<AudioFacade, Error> {
-        fx_log_info!("Launching audio_recording component");
+        info!("Launching audio_recording component");
         let audio_proxy = connect_to_protocol::<AudioRecordingControlMarker>()?;
         let player_proxy = connect_to_protocol::<PlayerMarker>()?;
         let sound_buffer_id = Mutex::new(0u32);

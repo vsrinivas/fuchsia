@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
-use fuchsia_syslog::macros::*;
+use tracing::*;
 
 /// Perform Logging operations.
 ///
@@ -18,17 +18,17 @@ impl LoggingFacade {
     }
 
     pub async fn log_err(&self, message: String) -> Result<(), Error> {
-        fx_log_err!("{:?}", message);
+        error!("{:?}", message);
         Ok(())
     }
 
     pub async fn log_info(&self, message: String) -> Result<(), Error> {
-        fx_log_info!("{:?}", message);
+        info!("{:?}", message);
         Ok(())
     }
 
     pub async fn log_warn(&self, message: String) -> Result<(), Error> {
-        fx_log_warn!("{:?}", message);
+        warn!("{:?}", message);
         Ok(())
     }
 }

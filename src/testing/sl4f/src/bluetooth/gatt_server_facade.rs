@@ -13,12 +13,12 @@ use fidl_fuchsia_bluetooth_gatt::{
 };
 use fuchsia_async as fasync;
 use fuchsia_component as app;
-use fuchsia_syslog::{self, fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
 use futures::stream::TryStreamExt;
 use parking_lot::RwLock;
 use serde_json::value::Value;
 use std::collections::HashMap;
+use tracing::{error, info};
 
 use crate::bluetooth::constants::{
     GATT_MAX_ATTRIBUTE_VALUE_LENGTH, PERMISSION_READ_ENCRYPTED, PERMISSION_READ_ENCRYPTED_MITM,
@@ -89,14 +89,24 @@ impl GattServerFacade {
         let tag = "GattServerFacade::create_server_proxy:";
         match self.inner.read().server_proxy.clone() {
             Some(service) => {
-                fx_log_info!(tag: &[tag, &line!().to_string()].join(""), "Current service proxy: {:?}", service);
+                info!(
+                    tag = &[tag, &line!().to_string()].join("").as_str(),
+                    "Current service proxy: {:?}", service
+                );
                 Ok(service)
             }
             None => {
-                fx_log_info!(tag: &[tag, &line!().to_string()].join(""), "Setting new server proxy");
+                info!(
+                    tag = &[tag, &line!().to_string()].join("").as_str(),
+                    "Setting new server proxy"
+                );
                 let service = app::client::connect_to_protocol::<Server_Marker>();
                 if let Err(err) = service {
-                    fx_log_err!(tag: &[tag, &line!().to_string()].join(""), "Failed to create server proxy: {:?}", err);
+                    error!(
+                        tag = &[tag, &line!().to_string()].join("").as_str(),
+                        ?err,
+                        "Failed to create server proxy"
+                    );
                     return Err(format_err!("Failed to create server proxy: {:?}", err));
                 }
                 service
@@ -129,12 +139,12 @@ impl GattServerFacade {
         service_proxy: &LocalServiceProxy,
     ) {
         let tag = "GattServerFacade::on_characteristic_configuration:";
-        fx_log_info!(
-            tag: &[tag, &line!().to_string()].join(""),
-            "OnCharacteristicConfiguration: (notify: {}, indicate: {}, id: {})",
-            notify,
-            indicate,
-            peer_id
+        info!(
+            tag = &[tag, &line!().to_string()].join("").as_str(),
+            %notify,
+            %indicate,
+            id = %peer_id,
+            "OnCharacteristicConfiguration"
         );
         control_handle.shutdown();
         let value: [u8; 2] = if indicate {
@@ -155,11 +165,11 @@ impl GattServerFacade {
         value_in_mapping: Option<&(Vec<u8>, bool)>,
     ) {
         let tag = "GattServerFacade::on_read_value:";
-        fx_log_info!(
-            tag: &[tag, &line!().to_string()].join(""),
-            "OnReadValue request at id: {:?}, with offset: {:?}",
-            id,
-            offset
+        info!(
+            tag = &[tag, &line!().to_string()].join("").as_str(),
+            at_id = ?id,
+            offset = ?offset,
+            "OnReadValue request",
         );
         match value_in_mapping {
             Some(v) => {
@@ -194,12 +204,12 @@ impl GattServerFacade {
         value_in_mapping: Option<&mut (Vec<u8>, bool)>,
     ) {
         let tag = "GattServerFacade::on_write_value:";
-        fx_log_info!(
-            tag: &[tag, &line!().to_string()].join(""),
-            "OnWriteValue request at id: {:?}, with offset: {:?}, with value: {:?}",
-            id,
-            offset,
-            value_to_write
+        info!(
+            tag = &[tag, &line!().to_string()].join("").as_str(),
+            at_id = id,
+            offset = offset,
+            value = ?value_to_write,
+            "OnWriteValue request",
         );
 
         match value_in_mapping {
@@ -232,12 +242,12 @@ impl GattServerFacade {
         value_in_mapping: Option<&mut (Vec<u8>, bool)>,
     ) {
         let tag = "GattServerFacade::on_write_without_response:";
-        fx_log_info!(
-            tag: &[tag, &line!().to_string()].join(""),
-            "OnWriteWithoutResponse request at id: {:?}, with offset: {:?}, with value: {:?}",
-            id,
-            offset,
-            value_to_write
+        info!(
+            tag = &[tag, &line!().to_string()].join("").as_str(),
+            at_id = id,
+            offset = offset,
+            value = ?value_to_write,
+            "OnWriteWithoutResponse request",
         );
         if let Some(v) = value_in_mapping {
             let (value, _enforce_initial_attribute_length) = v;
@@ -597,9 +607,10 @@ impl GattServerFacade {
                     .publish_service(&mut service_info, delegate_client, service_server)
                     .await?;
                 match status.error {
-                    None => fx_log_info!( tag: &[tag, &line!().to_string()].join(""),
-                        "Successfully published GATT service with uuid {:?}",
-                        service_uuid
+                    None => info!(
+                        tag = &[tag, &line!().to_string()].join("").as_str(),
+                        uuid = ?service_uuid,
+                        "Successfully published GATT service",
                     ),
                     Some(e) => {
                         return Err(format_err!(
@@ -619,8 +630,11 @@ impl GattServerFacade {
         let fut = async {
             let result = monitor_delegate_fut.await;
             if let Err(err) = result {
-                fx_log_err!(tag: "publish_service",
-                    "Failed to create or monitor the gatt service delegate: {:?}", err);
+                error!(
+                    tag = "publish_service",
+                    ?err,
+                    "Failed to create or monitor the gatt service delegate"
+                );
             }
         };
         fasync::Task::spawn(fut).detach();
@@ -695,7 +709,7 @@ impl GattServerFacade {
     /// }
     pub async fn publish_server(&self, args: Value) -> Result<(), Error> {
         let tag = "GattServerFacade::publish_server:";
-        fx_log_info!(tag: &[tag, &line!().to_string()].join(""), "Publishing service");
+        info!(tag = &[tag, &line!().to_string()].join("").as_str(), "Publishing service");
         let server_proxy = self.create_server_proxy()?;
         self.inner.write().server_proxy = Some(server_proxy);
         let database = args.get("database");
@@ -730,7 +744,7 @@ impl GattServerFacade {
     // GattServerFacade for cleaning up objects in use.
     pub fn cleanup(&self) {
         let tag = "GattServerFacade::cleanup:";
-        fx_log_info!(tag: &[tag, &line!().to_string()].join(""), "Cleanup GATT server objects");
+        info!(tag = &[tag, &line!().to_string()].join("").as_str(), "Cleanup GATT server objects");
         let mut inner = self.inner.write();
         inner.server_proxy = None;
         inner.service_proxies.clear();
@@ -740,6 +754,6 @@ impl GattServerFacade {
     // debug purposes.
     pub fn print(&self) {
         let tag = "GattServerFacade::print:";
-        fx_log_info!(tag: &[tag, &line!().to_string()].join(""), "Unimplemented print function");
+        info!(tag = &[tag, &line!().to_string()].join("").as_str(), "Unimplemented print function");
     }
 }

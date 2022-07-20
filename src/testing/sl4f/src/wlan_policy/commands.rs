@@ -10,8 +10,8 @@ use {
     anyhow::{format_err, Error},
     async_trait::async_trait,
     fidl_fuchsia_wlan_policy as fidl_policy,
-    fuchsia_syslog::macros::*,
     serde_json::{to_value, Value},
+    tracing::*,
 };
 
 #[async_trait(?Send)]
@@ -19,7 +19,7 @@ impl Facade for WlanPolicyFacade {
     async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
         match method.as_ref() {
             "scan_for_networks" => {
-                fx_log_info!(tag: "WlanPolicyFacade", "performing scan for networks");
+                info!(tag = "WlanPolicyFacade", "performing scan for networks");
                 let result = self.scan_for_networks().await?;
                 to_value(result).map_err(|e| format_err!("error handling scan result: {}", e))
             }
@@ -27,7 +27,10 @@ impl Facade for WlanPolicyFacade {
                 let target_ssid = parse_target_ssid(&args)?;
                 let security_type = parse_security_type(&args)?;
 
-                fx_log_info!(tag: "WlanPolicyFacade", "performing wlan connect to SSID: {:?}", target_ssid);
+                info!(
+                    tag = "WlanPolicyFacade",
+                    "performing wlan connect to SSID: {:?}", target_ssid
+                );
                 let result = self.connect(target_ssid, security_type).await?;
                 to_value(result).map_err(|e| format_err!("error parsing connection result: {}", e))
             }
@@ -36,20 +39,20 @@ impl Facade for WlanPolicyFacade {
                 let security_type = parse_security_type(&args)?;
                 let target_pwd = parse_target_pwd(&args)?;
 
-                fx_log_info!(tag: "WlanPolicyFacade", "removing network with SSID: {:?}", target_ssid);
+                info!(tag = "WlanPolicyFacade", "removing network with SSID: {:?}", target_ssid);
                 let result = self.remove_network(target_ssid, security_type, target_pwd).await?;
                 to_value(result)
                     .map_err(|e| format_err!("error parsing remove network result: {}", e))
             }
             "start_client_connections" => {
-                fx_log_info!(tag: "WlanPolicyFacade", "attempting to start client connections");
+                info!(tag = "WlanPolicyFacade", "attempting to start client connections");
                 let result = self.start_client_connections().await?;
                 to_value(result).map_err(|e| {
                     format_err!("error handling start client connections result: {}", e)
                 })
             }
             "stop_client_connections" => {
-                fx_log_info!(tag: "WlanPolicyFacade", "attempting to stop client connections");
+                info!(tag = "WlanPolicyFacade", "attempting to stop client connections");
                 let result = self.stop_client_connections().await?;
                 to_value(result).map_err(|e| {
                     format_err!("error handling stop client connections result: {}", e)
@@ -60,41 +63,41 @@ impl Facade for WlanPolicyFacade {
                 let security_type = parse_security_type(&args)?;
                 let target_pwd = parse_target_pwd(&args)?;
 
-                fx_log_info!(tag: "WlanPolicyFacade", "saving network with SSID: {:?}", target_ssid);
+                info!(tag = "WlanPolicyFacade", "saving network with SSID: {:?}", target_ssid);
                 let result = self.save_network(target_ssid, security_type, target_pwd).await?;
                 to_value(result)
                     .map_err(|e| format_err!("error parsing save network result: {}", e))
             }
             "get_saved_networks" => {
-                fx_log_info!(tag: "WlanPolicyFacade", "attempting to get saved networks");
+                info!(tag = "WlanPolicyFacade", "attempting to get saved networks");
                 let result = self.get_saved_networks_json().await?;
                 to_value(result)
                     .map_err(|e| format_err!("error handling get saved networks result: {}", e))
             }
             "create_client_controller" => {
-                fx_log_info!(tag: "WlanPolicyFacade", "initializing client controller");
+                info!(tag = "WlanPolicyFacade", "initializing client controller");
                 let result = self.create_client_controller().await?;
                 to_value(result)
                     .map_err(|e| format_err!("error initializing client controller: {}", e))
             }
             "drop_client_controller" => {
-                fx_log_info!(tag: "WlanPolicyFacade", "dropping client controller");
+                info!(tag = "WlanPolicyFacade", "dropping client controller");
                 let result = self.drop_client_controller();
                 to_value(result).map_err(|e| format_err!("error dropping client controller: {}", e))
             }
             "remove_all_networks" => {
-                fx_log_info!(tag: "WlanPolicyFacade", "Removing all saved client network configs");
+                info!(tag = "WlanPolicyFacade", "Removing all saved client network configs");
                 let result = self.remove_all_networks().await?;
                 to_value(result)
                     .map_err(|e| format_err!("error removing all saved networks: {}", e))
             }
             "get_update" => {
-                fx_log_info!(tag: "WlanPolicyFacade", "getting client update");
+                info!(tag = "WlanPolicyFacade", "getting client update");
                 let result = self.get_update().await?;
                 to_value(result).map_err(|e| format_err!("error handling listener update: {}", e))
             }
             "set_new_update_listener" => {
-                fx_log_info!(tag: "WlanPolicyFacade", "initializing new update listener");
+                info!(tag = "WlanPolicyFacade", "initializing new update listener");
                 let result = self.set_new_listener()?;
                 to_value(result)
                     .map_err(|e| format_err!("error initializing new update listener: {}", e))
@@ -116,11 +119,11 @@ fn parse_security_type(args: &Value) -> Result<fidl_policy::SecurityType, Error>
     let security_type = match args.get("security_type") {
         Some(Value::String(security)) => security.as_bytes().to_vec(),
         Some(value) => {
-            fx_log_info!(tag: "WlanFacade", "Please check provided security type, must be String");
+            info!(tag = "WlanFacade", "Please check provided security type, must be String");
             bail!("provided security type arg is not a string, cannot parse {}", value);
         }
         None => {
-            fx_log_info!(tag: "WlanFacade", "Please check provided security type, none found");
+            info!(tag = "WlanFacade", "Please check provided security type, none found");
             bail!("no security type is provided");
         }
     };
@@ -146,11 +149,11 @@ fn parse_target_pwd(args: &Value) -> Result<fidl_policy::Credential, Error> {
     let target_pwd = match args.get("target_pwd") {
         Some(Value::String(pwd)) => pwd.as_bytes().to_vec(),
         Some(value) => {
-            fx_log_info!(tag: "WlanFacade", "Please check provided credential, must be String");
+            info!(tag = "WlanFacade", "Please check provided credential, must be String");
             bail!("provided credential is not a string, cannot parse {}", value);
         }
         None => {
-            fx_log_info!(tag: "WlanFacade", "Please check provided credential, none provided");
+            info!(tag = "WlanFacade", "Please check provided credential, none provided");
             bail!("no credential argument provided");
         }
     };
@@ -160,8 +163,8 @@ fn parse_target_pwd(args: &Value) -> Result<fidl_policy::Credential, Error> {
         0 => fidl_policy::Credential::None(fidl_policy::Empty),
         PSK_LEN => {
             let psk = hex::decode(target_pwd).map_err(|e| {
-                fx_log_info!(
-                    tag: "WlanFacade",
+                info!(
+                    tag = "WlanFacade",
                     "Please check provided credential, PSK must be valid hexadecimal string"
                 );
                 format_err!("provided credential length matches PSK, failed to decode: {:?}", e)
@@ -237,12 +240,12 @@ impl Facade for WlanApPolicyFacade {
                 return Ok(Value::Bool(true));
             }
             "get_update" => {
-                fx_log_info!(tag: "WlanApPolicyFacade", "getting AP update");
+                info!(tag = "WlanApPolicyFacade", "getting AP update");
                 let result = self.get_update().await?;
                 to_value(result).map_err(|e| format_err!("error handling listener update: {}", e))
             }
             "set_new_update_listener" => {
-                fx_log_info!(tag: "WlanApPolicyFacade", "initializing new update listener");
+                info!(tag = "WlanApPolicyFacade", "initializing new update listener");
                 let result = self.set_new_listener()?;
                 to_value(result)
                     .map_err(|e| format_err!("error initializing new update listener: {}", e))

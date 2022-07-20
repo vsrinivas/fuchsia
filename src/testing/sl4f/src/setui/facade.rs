@@ -14,7 +14,7 @@ use fidl_fuchsia_settings::{
     IntlMarker, SetupMarker, SetupSettings, Volume,
 };
 use fuchsia_component::client::connect_to_protocol;
-use fuchsia_syslog::macros::fx_log_info;
+use tracing::info;
 
 /// Facade providing access to SetUi interfaces.
 #[derive(Debug)]
@@ -41,7 +41,7 @@ impl SetUiFacade {
     /// args: accepted args are "ethernet" or "wifi". ex: {"params": "ethernet"}
     pub async fn set_network(&self, args: Value) -> Result<Value, Error> {
         let network_type: NetworkType = from_value(args)?;
-        fx_log_info!("set_network input {:?}", network_type);
+        info!("set_network input {:?}", network_type);
         let setup_service_proxy = match connect_to_protocol::<SetupMarker>() {
             Ok(proxy) => proxy,
             Err(e) => bail!("Failed to connect to Setup service {:?}.", e),
@@ -94,7 +94,7 @@ impl SetUiFacade {
     /// }
     pub async fn set_intl_setting(&self, args: Value) -> Result<Value, Error> {
         let intl_info: IntlInfo = from_value(args)?;
-        fx_log_info!("Received Intl Settings Request {:?}", intl_info);
+        info!("Received Intl Settings Request {:?}", intl_info);
 
         let intl_service_proxy = match connect_to_protocol::<IntlMarker>() {
             Ok(proxy) => proxy,
@@ -209,7 +209,7 @@ impl SetUiFacade {
             ..fsettings::AudioSettings::EMPTY
         };
 
-        fx_log_info!("Setting audio settings {:?}", settings);
+        info!("Setting audio settings {:?}", settings);
         match audio_proxy.set(settings).await? {
             Ok(_) => Ok(to_value(SetUiResult::Success)?),
             Err(e) => Err(format_err!("SetVolume failed with err {:?}", e)),
@@ -270,7 +270,7 @@ impl SetUiFacade {
             });
         }
 
-        fx_log_info!("SetMicMute: setting input state {:?}", input_states);
+        info!("SetMicMute: setting input state {:?}", input_states);
         match input_proxy.set(&mut vec![input_states].into_iter()).await? {
             Ok(_) => Ok(to_value(SetUiResult::Success)?),
             Err(e) => Err(format_err!("SetMicMute failed with err {:?}", e)),

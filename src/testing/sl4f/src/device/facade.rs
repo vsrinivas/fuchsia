@@ -7,7 +7,6 @@ use anyhow::Error;
 use fidl_fuchsia_buildinfo::ProviderMarker;
 use fidl_fuchsia_device::{NameProviderMarker, DEFAULT_DEVICE_NAME};
 use fuchsia_component::client;
-use fuchsia_syslog::macros::*;
 
 /// Perform Fuchsia Device fidl operations.
 ///

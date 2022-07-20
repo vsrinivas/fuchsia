@@ -13,7 +13,6 @@ use fidl_fuchsia_bluetooth_le::{
 };
 use fuchsia_async as fasync;
 use fuchsia_component as app;
-use fuchsia_syslog::macros::*;
 use futures::future::{Future, TryFutureExt};
 use futures::stream::TryStreamExt;
 use futures::task::Waker;
@@ -22,6 +21,7 @@ use slab::Slab;
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::sync::Arc;
+use tracing::*;
 
 use fidl_fuchsia_bluetooth;
 use fuchsia_bluetooth::types::Uuid;
@@ -110,7 +110,7 @@ impl GattClientFacade {
                 Ok(())
             }
             None => {
-                fx_log_err!(tag: &with_line!(tag), "Unable to connect to service.");
+                error!(tag = &with_line!(tag), "Unable to connect to service.");
                 return Err(format_err!("No peripheral proxy created."));
             }
         }
@@ -411,7 +411,7 @@ impl GattClientFacade {
                 let (status, services) = c.list_services(None).await?;
                 match status.error {
                     None => {
-                        fx_log_info!(tag: &with_line!(tag), "Found services: {:?}", services);
+                        info!(tag = &with_line!(tag), "Found services: {:?}", services);
                         Ok(services)
                     }
                     Some(e) => {
@@ -438,25 +438,21 @@ impl GattClientFacade {
     pub fn update_peripheral_id(&self, id: &String, client: ClientProxy) {
         let tag = "GattClientFacade::update_peripheral_id";
         if self.inner.read().peripheral_ids.contains_key(id) {
-            fx_log_warn!(tag: &with_line!(tag), "Overwriting existing id: {}", id);
+            warn!(tag = &with_line!(tag), "Overwriting existing id: {}", id);
             self.inner.write().peripheral_ids.insert(id.clone(), client);
         } else {
-            fx_log_info!(tag: &with_line!(tag), "Added {:?} to peripheral ids", id);
+            info!(tag = &with_line!(tag), "Added {:?} to peripheral ids", id);
             self.inner.write().peripheral_ids.insert(id.clone(), client);
         }
 
-        fx_log_info!(
-            tag: &with_line!(tag),
-            "Peripheral ids: {:?}",
-            self.inner.read().peripheral_ids
-        );
+        info!(tag = &with_line!(tag), "Peripheral ids: {:?}", self.inner.read().peripheral_ids);
     }
 
     pub fn remove_peripheral_id(&self, id: &String) {
         let tag = "GattClientFacade::remove_peripheral_id";
         self.inner.write().peripheral_ids.remove(id);
-        fx_log_info!(
-            tag: &with_line!(tag),
+        info!(
+            tagx = &with_line!(tag),
             "After removing peripheral id: {:?}",
             self.inner.read().peripheral_ids
         );
@@ -470,7 +466,7 @@ impl GattClientFacade {
         let mut central_modified = false;
         let new_central = match inner.read().central.clone() {
             Some(c) => {
-                fx_log_warn!(tag: &with_line!(tag), "Current central: {:?}.", c);
+                warn!(tag = &with_line!(tag), "Current central: {:?}.", c);
                 central_modified = true;
                 Some(c)
             }
@@ -498,7 +494,7 @@ impl GattClientFacade {
     ) {
         let tag = "GattClientFacade::update_devices";
         if inner.read().devices.contains_key(&id) {
-            fx_log_warn!(tag: &with_line!(tag), "Already discovered: {:?}", id);
+            warn!(tag = &with_line!(tag), "Already discovered: {:?}", id);
         } else {
             inner.write().devices.insert(id, device);
         }
@@ -517,17 +513,15 @@ impl GattClientFacade {
             .map_ok(move |evt| {
                 match evt {
                     CentralEvent::OnScanStateChanged { scanning } => {
-                        fx_log_info!(tag: &with_line!(tag), "Scan state changed: {:?}", scanning);
+                        info!(tag = &with_line!(tag), "Scan state changed: {:?}", scanning);
                     }
                     CentralEvent::OnDeviceDiscovered { device } => {
                         let id = device.identifier.clone();
                         let name = device.advertising_data.as_ref().map(|adv| &adv.name);
                         // Update the device discovered list
-                        fx_log_info!(
-                            tag: &with_line!(tag),
-                            "Device discovered: id: {:?}, name: {:?}",
-                            id,
-                            name
+                        info!(
+                            tag = &with_line!(tag),
+                            "Device discovered: id: {:?}, name: {:?}", id, name
                         );
                         GattClientFacade::update_devices(&inner, id, device);
 
@@ -538,16 +532,15 @@ impl GattClientFacade {
                         }
                     }
                     CentralEvent::OnPeripheralDisconnected { identifier } => {
-                        fx_log_info!(tag: &with_line!(tag), "Peer disconnected: {:?}", identifier);
+                        info!(tag = &with_line!(tag), "Peer disconnected: {:?}", identifier);
                     }
                 }
             })
             .try_collect::<()>()
             .unwrap_or_else(|e| {
-                fx_log_err!(
-                    tag: &with_line!("GattClientFacade::listen_central_events"),
-                    "Failed to subscribe to BLE Central events: {:?}",
-                    e
+                error!(
+                    tag = &with_line!("GattClientFacade::listen_central_events"),
+                    "Failed to subscribe to BLE Central events: {:?}", e
                 )
             })
     }
@@ -598,7 +591,7 @@ impl GattClientFacade {
                 match status.error {
                     None => {}
                     Some(e) => {
-                        fx_log_err!(tag: &with_line!(tag), "Failed to disconnect: {:?}", e);
+                        error!(tag = &with_line!(tag), "Failed to disconnect: {:?}", e);
                         bail!("Failed to disconnect: {:?}", e)
                     }
                 }
@@ -656,8 +649,8 @@ impl GattClientFacade {
 
     pub fn print(&self) {
         let tag = "GattClientFacade::print";
-        fx_log_info!(
-            tag: &with_line!(tag),
+        info!(
+            tag = &with_line!(tag),
             "BluetoothFacade: Central: {:?}, Devices: {:?}, Periph_ids: {:?}",
             self.get_central_proxy(),
             self.get_devices(),

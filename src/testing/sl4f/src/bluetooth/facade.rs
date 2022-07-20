@@ -10,7 +10,6 @@ use fidl_fuchsia_bluetooth_gatt::{
 };
 use fuchsia_async::{self as fasync};
 use fuchsia_component as app;
-use fuchsia_syslog::macros::*;
 use fuchsia_zircon as zx;
 use futures::future::{
     ready as fready,
@@ -19,6 +18,7 @@ use futures::future::{
 };
 use parking_lot::RwLock;
 use std::collections::HashMap;
+use tracing::*;
 
 use crate::common_utils::error::Sl4fError;
 
@@ -54,11 +54,11 @@ impl BluetoothFacade {
     pub fn set_server_proxy(bt_facade: &RwLock<BluetoothFacade>) {
         let new_server = match bt_facade.read().server_proxy.clone() {
             Some(s) => {
-                fx_log_info!(tag: "set_server_proxy", "Current service proxy: {:?}", s);
+                info!(tag = "set_server_proxy", "Current service proxy: {:?}", s);
                 Some(s)
             }
             None => {
-                fx_log_info!(tag: "set_server_proxy", "Setting new server proxy");
+                info!(tag = "set_server_proxy", "Setting new server proxy");
                 Some(
                     app::client::connect_to_protocol::<Server_Marker>()
                         .context("Failed to connect to service.")
@@ -97,10 +97,11 @@ impl BluetoothFacade {
     }
 
     pub fn print(&self) {
-        fx_log_info!(tag: "print",
-            "BluetoothFacade: Server Proxy: {:?}, Services: {:?}",
-            self.get_server_proxy(),
-            self.get_service_proxies(),
+        info!(
+            tag = "print",
+            server_proxy = ?{self.get_server_proxy()},
+            services = ?{self.get_service_proxies()},
+            "BluetoothFacade",
         );
     }
 
@@ -114,7 +115,11 @@ impl BluetoothFacade {
 
         // If the unique service_proxy id already exists, reject publishing of service
         if bt_facade.read().service_proxies.contains_key(&local_service_id) {
-            fx_log_err!(tag: "publish_service", "Attempted to create service proxy for existing key. {:?}", local_service_id.clone());
+            error!(
+                tag = "publish_service",
+                ?local_service_id,
+                "Attempted to create service proxy for existing key"
+            );
             return Left(fready(Err(Sl4fError::new("Proxy key already exists, aborting.").into())));
         }
 

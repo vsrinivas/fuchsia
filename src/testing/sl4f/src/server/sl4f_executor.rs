@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
-use fuchsia_syslog::macros::*;
 use futures::StreamExt;
 use serde_json::Value;
 use std::sync::Arc;
+use tracing::*;
 
 // Sl4f related inclusions
 use crate::common_utils::error::Sl4fError;
@@ -29,9 +29,7 @@ async fn handle_request(sl4f: Arc<Sl4f>, request: AsyncRequest) {
             done.send(()).unwrap();
         }
         AsyncRequest::Command(AsyncCommandRequest { tx, method_id, params }) => {
-            fx_log_info!(tag: "run_fidl_loop",
-                         "Received synchronous request: {:?}, {:?}, {:?}",
-                         tx, method_id, params);
+            info!(tag = "run_fidl_loop", ?tx, ?method_id, ?params, "Received synchronous request");
             match method_to_fidl(method_id, params, Arc::clone(&sl4f)).await {
                 Ok(response) => {
                     let async_response = AsyncResponse::new(Ok(response));
@@ -40,9 +38,9 @@ async fn handle_request(sl4f: Arc<Sl4f>, request: AsyncRequest) {
                     // connection to the test server may be broken.
                     let _ = tx.send(async_response);
                 }
-                Err(e) => {
-                    fx_log_err!("Error returned from calling method_to_fidl: {:?}", e);
-                    let async_response = AsyncResponse::new(Err(e));
+                Err(err) => {
+                    error!(?err, "Error returned from calling method_to_fidl");
+                    let async_response = AsyncResponse::new(Err(err));
 
                     // Ignore any tx sending errors since there is not a recovery path.  The
                     // connection to the test server may be broken.

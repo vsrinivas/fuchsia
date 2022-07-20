@@ -6,7 +6,7 @@ use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
 use anyhow::Error;
 use fidl_fuchsia_hardware_power_statecontrol::{AdminMarker, AdminProxy, RebootReason};
 use fuchsia_component as app;
-use fuchsia_syslog::macros::{fx_log_err, fx_log_info};
+use tracing::info;
 
 /// Perform Fuchsia Device Manager fidl operations.
 ///
@@ -34,7 +34,7 @@ impl HardwarePowerStatecontrolFacade {
     /// Reboot the Fuchsia device
     pub async fn suspend_reboot(&self) -> Result<(), Error> {
         let tag = "HardwarePowerStatecontrolFacade::suspend_reboot";
-        fx_log_info!("Executing Suspend: REBOOT");
+        info!("Executing Suspend: REBOOT");
         if let Err(err) = self.get_admin_proxy()?.reboot(RebootReason::UserRequest).await? {
             fx_err_and_bail!(
                 &with_line!(tag),
@@ -47,7 +47,7 @@ impl HardwarePowerStatecontrolFacade {
     /// Reboot the Fuchsia device into the bootloader
     pub async fn suspend_reboot_bootloader(&self) -> Result<(), Error> {
         let tag = "HardwarePowerStatecontrolFacade::suspend_reboot_bootloader";
-        fx_log_info!("Executing Suspend: REBOOT_BOOTLOADER");
+        info!("Executing Suspend: REBOOT_BOOTLOADER");
 
         if let Err(err) = self.get_admin_proxy()?.reboot_to_bootloader().await? {
             fx_err_and_bail!(
@@ -61,7 +61,7 @@ impl HardwarePowerStatecontrolFacade {
     /// Reboot the Fuchsia device into recovery
     pub async fn suspend_reboot_recovery(&self) -> Result<(), Error> {
         let tag = "HardwarePowerStatecontrolFacade::suspend_reboot_recovery";
-        fx_log_info!("Executing Suspend: REBOOT_RECOVERY");
+        info!("Executing Suspend: REBOOT_RECOVERY");
         if let Err(err) = self.get_admin_proxy()?.reboot_to_recovery().await? {
             fx_err_and_bail!(
                 &with_line!(tag),
@@ -74,7 +74,7 @@ impl HardwarePowerStatecontrolFacade {
     /// Power off the Fuchsia device
     pub async fn suspend_poweroff(&self) -> Result<(), Error> {
         let tag = "HardwarePowerStatecontrolFacade::suspend_poweroff";
-        fx_log_info!("Executing Suspend: POWEROFF");
+        info!("Executing Suspend: POWEROFF");
 
         if let Err(err) = self.get_admin_proxy()?.poweroff().await? {
             fx_err_and_bail!(
@@ -95,7 +95,7 @@ impl HardwarePowerStatecontrolFacade {
     /// RSuspend RAM on the Fuchsia device
     pub async fn suspend_ram(&self) -> Result<(), Error> {
         let tag = "HardwarePowerStatecontrolFacade::suspend_ram";
-        fx_log_info!("Executing Suspend: SUSPEND_RAM");
+        info!("Executing Suspend: SUSPEND_RAM");
         if let Err(err) = self.get_admin_proxy()?.suspend_to_ram().await? {
             fx_err_and_bail!(
                 &with_line!(tag),

@@ -6,10 +6,10 @@ use anyhow::Error;
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_testing_proxy::{TcpProxyControlMarker, TcpProxyControlProxy, TcpProxy_Marker};
 use fuchsia_component::client::connect_to_protocol;
-use fuchsia_syslog::macros::fx_log_info;
 use futures::lock::Mutex;
 use std::collections::HashMap;
 use std::fmt::{self, Debug};
+use tracing::info;
 
 #[derive(Debug)]
 pub struct ProxyFacade {
@@ -80,7 +80,7 @@ impl Debug for ProxyFacadeInternal {
 
 impl ProxyFacadeInternal {
     fn new() -> Result<Self, Error> {
-        fx_log_info!("Launching proxy component as V2");
+        info!("Launching proxy component as V2");
         let proxy_control = connect_to_protocol::<TcpProxyControlMarker>()?;
         Ok(Self { proxy_control, open_proxies: HashMap::new() })
     }

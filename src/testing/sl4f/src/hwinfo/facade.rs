@@ -9,7 +9,7 @@ use crate::{
 use anyhow::Error;
 use fidl_fuchsia_hwinfo::{BoardMarker, DeviceMarker, ProductMarker};
 use fuchsia_component as app;
-use fuchsia_syslog::macros::{fx_log_err, fx_log_info};
+use tracing::info;
 
 /// Perform HwInfo fidl operations.
 ///
@@ -34,7 +34,7 @@ impl HwinfoFacade {
             Ok(p) => {
                 let device_info = p.get_info().await?;
                 let device_info_string = format!("Device info found: {:?}", device_info);
-                fx_log_info!(tag: &with_line!(tag), "{}", device_info_string);
+                info!(tag = &with_line!(tag), "{}", device_info_string);
                 Ok(SerializableDeviceInfo::new(&device_info))
             }
             Err(err) => fx_err_and_bail!(
@@ -54,7 +54,7 @@ impl HwinfoFacade {
             Ok(p) => {
                 let product_info = p.get_info().await?;
                 let product_info_string = format!("Product info found: {:?}", product_info);
-                fx_log_info!(tag: &with_line!(tag), "{}", product_info_string);
+                info!(tag = &with_line!(tag), "{}", product_info_string);
                 Ok(SerializableProductInfo::new(&product_info))
             }
             Err(err) => fx_err_and_bail!(
@@ -72,7 +72,7 @@ impl HwinfoFacade {
             Ok(p) => {
                 let board_info = p.get_info().await?;
                 let board_info_string = format!("Board info found: {:?}", board_info);
-                fx_log_info!(tag: &with_line!(tag), "{}", board_info_string);
+                info!(tag = &with_line!(tag), "{}", board_info_string);
                 Ok(SerializableBoardInfo::new(&board_info))
             }
             Err(err) => fx_err_and_bail!(

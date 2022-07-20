@@ -16,7 +16,6 @@ use fidl_fuchsia_web::{
 };
 use fuchsia_async as fasync;
 use fuchsia_component as app;
-use fuchsia_syslog::macros::*;
 use fuchsia_zircon as zx;
 use futures::channel::mpsc;
 use futures::prelude::*;
@@ -25,6 +24,7 @@ use parking_lot::Mutex;
 use std::collections::HashSet;
 use std::iter::FromIterator;
 use std::ops::DerefMut;
+use tracing::*;
 
 /// Facade providing access to WebDriver debug services.  Supports enabling
 /// DevTools ports on Chrome contexts, and retrieving the set of open ports.
@@ -228,7 +228,7 @@ impl DevToolsListener {
         &self,
         listener: ServerEnd<DevToolsPerContextListenerMarker>,
     ) -> Result<(), Error> {
-        fx_log_info!("Chrome context created");
+        info!("Chrome context created");
         let listener_request_stream = listener.into_stream()?;
         let port_update_sender = mpsc::UnboundedSender::clone(&self.port_update_sender);
         fasync::Task::spawn(async move {
@@ -236,7 +236,7 @@ impl DevToolsListener {
             per_context_listener
                 .handle_requests_from_stream(listener_request_stream)
                 .await
-                .unwrap_or_else(|_| fx_log_warn!("Error handling DevToolsListener channel!"));
+                .unwrap_or_else(|_| warn!("Error handling DevToolsListener channel!"));
         })
         .detach();
         Ok(())
@@ -280,7 +280,7 @@ impl DevToolsPerContextListener {
 
     /// Send a port open event.
     fn on_port_open(&mut self, port: u16) -> Result<(), Error> {
-        fx_log_info!("DevTools port {:?} opened", port);
+        info!("DevTools port {:?} opened", port);
         self.port_update_sender
             .unbounded_send(PortUpdateMessage::PortOpened(port))
             .map_err(|_| format_err!("Error sending port open message"))
@@ -288,7 +288,7 @@ impl DevToolsPerContextListener {
 
     /// Send a port close event.
     fn on_port_closed(&mut self, port: u16) -> Result<(), Error> {
-        fx_log_info!("DevTools port {:?} closed", port);
+        info!("DevTools port {:?} closed", port);
         self.port_update_sender
             .unbounded_send(PortUpdateMessage::PortClosed(port))
             .map_err(|_| format_err!("Error sending port closed message"))

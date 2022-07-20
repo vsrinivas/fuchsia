@@ -14,8 +14,8 @@ use fidl_fuchsia_bluetooth_avrcp::{
     ControllerMarker, ControllerProxy, Notifications, PeerManagerMarker, PeerManagerProxy,
 };
 use fuchsia_component::client;
-use fuchsia_syslog::{fx_log_err, fx_log_info};
 use parking_lot::RwLock;
+use tracing::info;
 /// AvrcpFacadeInner contains the proxies used by the AvrcpFacade.
 #[derive(Debug)]
 struct AvrcpFacadeInner {
@@ -45,10 +45,9 @@ impl AvrcpFacade {
         let tag = "AvrcpFacade::create_avrcp_service_proxy";
         match self.inner.read().avrcp_service_proxy.clone() {
             Some(avrcp_service_proxy) => {
-                fx_log_info!(
-                    tag: &with_line!(tag),
-                    "Current AVRCP service proxy: {:?}",
-                    avrcp_service_proxy
+                info!(
+                    tag = &with_line!(tag),
+                    "Current AVRCP service proxy: {:?}", avrcp_service_proxy
                 );
                 Ok(avrcp_service_proxy)
             }

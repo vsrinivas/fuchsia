@@ -9,9 +9,9 @@ use crate::tiles::types::{
 };
 use fidl_fuchsia_developer_tiles::ControllerMarker;
 use fuchsia_component::client::{launch, launcher, App};
-use fuchsia_syslog::macros::fx_log_info;
 use serde_json::{from_value, to_value, Value};
 use std::cell::RefCell;
+use tracing::info;
 
 /// Facade providing access to fuchsia.developer.tiles interfaces.
 pub struct TilesFacade {
@@ -39,7 +39,7 @@ impl TilesFacade {
             ) {
                 Ok(a) => {
                     self.tiles.replace(Some(a));
-                    fx_log_info!("start_tile");
+                    info!("start_tile");
                     return Ok(to_value(TileOutput::Success)?);
                 }
                 Err(err) => {
@@ -60,7 +60,7 @@ impl TilesFacade {
             ) {
                 Ok(a) => {
                     self.tiles.replace(Some(a));
-                    fx_log_info!("start_flatland_tile");
+                    info!("start_flatland_tile");
                     return Ok(to_value(TileOutput::Success)?);
                 }
                 Err(err) => {
@@ -96,7 +96,7 @@ impl TilesFacade {
     /// }
     pub async fn add_from_url(&self, args: Value) -> Result<Value, Error> {
         let add_request: AddTileInput = from_value(args)?;
-        fx_log_info!("Add tile request received {:?}", add_request);
+        info!("Add tile request received {:?}", add_request);
         self.start_tile()?;
         let controller_proxy =
             self.tiles.borrow().as_ref().unwrap().connect_to_protocol::<ControllerMarker>()?;
@@ -133,7 +133,7 @@ impl TilesFacade {
     /// }
     pub async fn remove(&self, args: Value) -> Result<Value, Error> {
         let remove_request: RemoveTileInput = from_value(args)?;
-        fx_log_info!("Remove tile request received {:?}", remove_request);
+        info!("Remove tile request received {:?}", remove_request);
         self.start_tile()?;
         let controller_proxy =
             self.tiles.borrow().as_ref().unwrap().connect_to_protocol::<ControllerMarker>()?;

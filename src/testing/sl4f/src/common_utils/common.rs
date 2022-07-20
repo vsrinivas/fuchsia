@@ -36,14 +36,14 @@ macro_rules! parse_arg {
 #[macro_export]
 macro_rules! with_line {
     ($tag:expr) => {
-        format!("{}:{}", $tag, line!())
+        format!("{}:{}", $tag, line!()).as_str()
     };
 }
 
 #[macro_export]
 macro_rules! fx_err_and_bail {
     ($tag:expr, $msg:expr) => {{
-        fx_log_err!(tag: $tag, "{}", $msg);
+        tracing::error!(tag = $tag, "{}", $msg);
         return Err(format_err!($msg));
     }};
 }

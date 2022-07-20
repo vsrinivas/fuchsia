@@ -21,7 +21,6 @@ use {
         client, client::connect_to_protocol, client::connect_to_protocol_at_path,
         fuchsia_single_component_package_url,
     },
-    fuchsia_syslog::macros::*,
     fuchsia_zircon as zx,
     fuchsia_zircon::HandleBased,
     futures::future,
@@ -30,6 +29,7 @@ use {
     lazy_static::lazy_static,
     serde_json::{from_value, Value},
     std::path::PathBuf,
+    tracing::*,
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
         file::vmo::read_only_const, pseudo_directory,
@@ -267,8 +267,8 @@ impl ModularFacade {
                     scope.wait().await;
                     Ok::<(), Error>(())
                 }
-                .unwrap_or_else(|e: anyhow::Error| {
-                    fx_log_err!("basemgr config pseudo dir stopped serving: {:?}", e)
+                .unwrap_or_else(|error: anyhow::Error| {
+                    error!(?error, "basemgr config pseudo dir stopped serving");
                 }),
             )
             .detach();
@@ -277,7 +277,7 @@ impl ModularFacade {
                 dir2_client.into_handle(),
             );
         } else {
-            fx_log_warn!("Launching basemgr with default configuration");
+            warn!("Launching basemgr with default configuration");
         }
 
         // Launch basemgr.
@@ -326,7 +326,7 @@ impl ModularFacade {
                     Some(_y) => x.to_string(),
                     None => format!("fuchsia-pkg://fuchsia.com/{}#meta/{}.cmx", x, x).to_string(),
                 };
-                fx_log_info!("Launching mod: {}", url);
+                info!("Launching mod: {}", url);
                 url
             }
             None => return Err(format_err!("Missing MOD_URL to launch")),
@@ -335,7 +335,7 @@ impl ModularFacade {
         let mod_name = match req.mod_name {
             Some(x) => x.to_string(),
             None => {
-                fx_log_info!("No mod_name specified, using auto-generated mod_name: {}", &mod_url);
+                info!("No mod_name specified, using auto-generated mod_name: {}", &mod_url);
                 mod_url.clone()
             }
         };
@@ -343,10 +343,7 @@ impl ModularFacade {
         let story_name = match req.story_name {
             Some(x) => x.to_string(),
             None => {
-                fx_log_info!(
-                    "No story_name specified, using auto-generated story_name: {}",
-                    &mod_url
-                );
+                info!("No story_name specified, using auto-generated story_name: {}", &mod_url);
                 mod_url.clone()
             }
         };

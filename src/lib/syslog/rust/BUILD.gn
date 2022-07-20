@@ -186,8 +186,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/sys/universe-resolver:*",
   "//src/testing/fidl/intl_property_manager:*",
   "//src/testing/metrics-logger:*",
-  "//src/testing/sl4f:*",
-  "//src/testing/sl4f/proxy:*",
   "//src/testing/system-metrics-logger:*",
   "//src/tests/intl/timezone:*",
   "//src/ui/bin/brightness_manager:*",

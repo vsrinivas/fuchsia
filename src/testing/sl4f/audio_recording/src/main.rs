@@ -96,9 +96,8 @@ async fn handle_audio_request(
         .await
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main]
 async fn main() -> Result<(), Error> {
-    diagnostics_log::init!();
     let mut fs = ServiceFs::new_local();
     let audio_facade = Arc::new(AudioFacade::new()?);
 

@@ -12,7 +12,6 @@ use {
     fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_policy as fidl_policy,
     fuchsia_async::{self as fasync, DurationExt as _},
     fuchsia_component::client::connect_to_protocol,
-    fuchsia_syslog::macros::*,
     fuchsia_zircon as zx,
     futures::TryStreamExt,
     parking_lot::RwLock,
@@ -21,6 +20,7 @@ use {
         collections::HashSet,
         fmt::{self, Debug},
     },
+    tracing::*,
 };
 
 pub struct WlanPolicyFacade {
@@ -67,7 +67,7 @@ impl WlanPolicyFacade {
         controller_guard.inner = None;
 
         let (controller, update_stream) = Self::init_client_controller().await.map_err(|e| {
-            fx_log_info!(tag: &with_line!(tag), "Error getting client controller: {}", e);
+            info!(tag = &with_line!(tag), "Error getting client controller: {}", e);
             format_err!("Error getting client controller: {}", e)
         })?;
         controller_guard.inner = Some(controller);
@@ -221,8 +221,8 @@ impl WlanPolicyFacade {
             .inner
             .as_ref()
             .ok_or(format_err!("client controller has not been initialized"))?;
-        fx_log_info!(
-            tag: &with_line!("WlanPolicyFacade::remove_network"),
+        info!(
+            tag = &with_line!("WlanPolicyFacade::remove_network"),
             "Removing network: ({}{:?})",
             String::from_utf8_lossy(&target_ssid),
             type_

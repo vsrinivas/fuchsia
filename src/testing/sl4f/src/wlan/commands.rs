@@ -5,10 +5,10 @@
 use crate::server::Facade;
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
-use fuchsia_syslog::macros::*;
 use ieee80211::Ssid;
 use serde_json::{to_value, Value};
 use std::convert::TryFrom;
+use tracing::*;
 
 // Testing helper methods
 use crate::wlan::{facade::WlanFacade, types};
@@ -20,15 +20,15 @@ impl Facade for WlanFacade {
     async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
         match method.as_ref() {
             "scan" => {
-                fx_log_info!(tag: "WlanFacade", "performing wlan scan");
+                info!(tag = "WlanFacade", "performing wlan scan");
                 let results = self.scan().await?;
-                fx_log_info!(tag: "WlanFacade", "received {:?} scan results", results.len());
+                info!(tag = "WlanFacade", "received {:?} scan results", results.len());
                 to_value(results).map_err(|e| format_err!("error handling scan results: {}", e))
             }
             "scan_for_bss_info" => {
-                fx_log_info!(tag: "WlanFacade", "performing wlan scan");
+                info!(tag = "WlanFacade", "performing wlan scan");
                 let results = self.scan_for_bss_info().await?;
-                fx_log_info!(tag: "WlanFacade", "received {:?} scan results", results.len());
+                info!(tag = "WlanFacade", "received {:?} scan results", results.len());
                 to_value(results).map_err(|e| format_err!("error handling scan results: {}", e))
             }
             "connect" => {
@@ -49,7 +49,7 @@ impl Facade for WlanFacade {
                     Some(pwd) => match pwd.clone().as_str() {
                         Some(pwd) => pwd.as_bytes().to_vec(),
                         None => {
-                            fx_log_info!(tag: "WlanFacade", "Please check provided password");
+                            info!(tag = "WlanFacade", "Please check provided password");
                             vec![0; 0]
                         }
                     },
@@ -63,29 +63,29 @@ impl Facade for WlanFacade {
                     None => return Err(format_err!("Please provide a target BSS description")),
                 };
 
-                fx_log_info!(tag: "WlanFacade", "performing wlan connect to SSID: {:?}", target_ssid);
+                info!(tag = "WlanFacade", "performing wlan connect to SSID: {:?}", target_ssid);
                 let results = self.connect(target_ssid, target_pwd, target_bss_desc).await?;
                 to_value(results)
                     .map_err(|e| format_err!("error handling connection result: {}", e))
             }
             "get_iface_id_list" => {
-                fx_log_info!(tag: "WlanFacade", "Getting the interface id list.");
+                info!(tag = "WlanFacade", "Getting the interface id list.");
                 let result = self.get_iface_id_list().await?;
                 to_value(result).map_err(|e| format_err!("error handling get_iface_id_list: {}", e))
             }
             "get_phy_id_list" => {
-                fx_log_info!(tag: "WlanFacade", "Getting the phy id list.");
+                info!(tag = "WlanFacade", "Getting the phy id list.");
                 let result = self.get_phy_id_list().await?;
                 to_value(result).map_err(|e| format_err!("error handling get_phy_id_list: {}", e))
             }
             "destroy_iface" => {
-                fx_log_info!(tag: "WlanFacade", "Performing wlan destroy_iface");
+                info!(tag = "WlanFacade", "Performing wlan destroy_iface");
                 let iface_id = parse_u64_identifier(args.clone())?;
                 self.destroy_iface(iface_id as u16).await?;
                 to_value(true).map_err(|e| format_err!("error handling destroy_iface: {}", e))
             }
             "disconnect" => {
-                fx_log_info!(tag: "WlanFacade", "performing wlan disconnect");
+                info!(tag = "WlanFacade", "performing wlan disconnect");
                 self.disconnect().await?;
                 to_value(true).map_err(|e| format_err!("error handling disconnect: {}", e))
             }
@@ -98,12 +98,12 @@ impl Facade for WlanFacade {
                     None => return Err(format_err!("Please provide target iface id")),
                 };
 
-                fx_log_info!(tag: "WlanFacade", "performing wlan query iface");
+                info!(tag = "WlanFacade", "performing wlan query iface");
                 let result = self.query_iface(iface_id).await?;
                 to_value(result).map_err(|e| format_err!("error handling query iface: {}", e))
             }
             "status" => {
-                fx_log_info!(tag: "WlanFacade", "fetching connection status");
+                info!(tag = "WlanFacade", "fetching connection status");
                 let result = self.status().await?;
                 to_value(result).map_err(|e| format_err!("error handling connection status: {}", e))
             }

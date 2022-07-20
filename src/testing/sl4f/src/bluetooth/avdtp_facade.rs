@@ -10,11 +10,11 @@ use fidl_fuchsia_bluetooth_avdtp::{
 };
 use fuchsia_async as fasync;
 use fuchsia_component::client;
-use fuchsia_syslog::macros::*;
 use futures::stream::StreamExt;
 use parking_lot::RwLock;
 use std::sync::Arc;
 use std::{collections::hash_map::Entry, collections::HashMap};
+use tracing::*;
 
 use crate::bluetooth::types::PeerFactoryMap;
 use crate::common_utils::common::macros::{fx_err_and_bail, with_line};
@@ -61,18 +61,14 @@ impl AvdtpFacade {
         let tag = "AvdtpFacade::create_avdtp_service_proxy";
         match self.inner.read().avdtp_service_proxy.clone() {
             Some(avdtp_service_proxy) => {
-                fx_log_info!(
-                    tag: &with_line!(tag),
-                    "Current Avdtp service proxy: {:?}",
-                    avdtp_service_proxy
+                info!(
+                    tag = &with_line!(tag),
+                    "Current Avdtp service proxy: {:?}", avdtp_service_proxy
                 );
                 Ok(avdtp_service_proxy)
             }
             None => {
-                fx_log_info!(
-                    tag: &with_line!(tag),
-                    "Launching A2DP and setting new Avdtp service proxy"
-                );
+                info!(tag = &with_line!(tag), "Launching A2DP and setting new Avdtp service proxy");
 
                 let mut options: Vec<String> = Vec::new();
                 match initiator_delay {
@@ -125,7 +121,7 @@ impl AvdtpFacade {
         let fut = async move {
             let result = avdtp_service_future.await;
             if let Err(_err) = result {
-                fx_log_err!("Failed to monitor AVDTP event stream.");
+                error!("Failed to monitor AVDTP event stream.");
             }
         };
         fasync::Task::spawn(fut).detach();
@@ -209,7 +205,7 @@ impl AvdtpFacade {
         if let Some(p) = self.get_peer_controller_by_id(peer_id) {
             let result = p.get_capabilities().await;
             match result {
-                Ok(capabilities) => fx_log_info!("{:?}", capabilities),
+                Ok(capabilities) => info!("{:?}", capabilities),
                 Err(e) => fx_err_and_bail!(
                     &with_line!(tag),
                     format_err!("Error getting capabilities: {:?}", e)
@@ -230,7 +226,7 @@ impl AvdtpFacade {
         if let Some(p) = self.get_peer_controller_by_id(peer_id) {
             let result = p.get_all_capabilities().await;
             match result {
-                Ok(capabilities) => fx_log_info!("{:?}", capabilities),
+                Ok(capabilities) => info!("{:?}", capabilities),
                 Err(e) => fx_err_and_bail!(
                     &with_line!(tag),
                     format_err!("Error getting capabilities: {:?}", e)
@@ -398,16 +394,16 @@ impl AvdtpFacade {
                         match peer_map.write().entry(peer_id.value.to_string()) {
                             Entry::Occupied(mut entry) => {
                                 entry.insert(peer);
-                                fx_log_info!("Overriding device in PeerFactoryMap");
+                                info!("Overriding device in PeerFactoryMap");
                             }
                             Entry::Vacant(entry) => {
                                 entry.insert(peer);
-                                fx_log_info!("Inserted device into PeerFactoryMap");
+                                info!("Inserted device into PeerFactoryMap");
                             }
                         };
                         // Establish channel with the given peer_id and server endpoint.
                         let _ = avdtp_svc.get_peer(&mut peer_id, server);
-                        fx_log_info!("Getting peer with peer_id: {}", peer_id.value);
+                        info!("Getting peer with peer_id: {}", peer_id.value);
                     }
                 },
                 Err(e) => {

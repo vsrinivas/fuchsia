@@ -6,10 +6,10 @@ use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_bluetooth_le::{AdvertisingHandleMarker, PeripheralMarker, PeripheralProxy};
 use fuchsia_component as app;
-use fuchsia_syslog::macros::*;
 use parking_lot::RwLock;
 use serde_json::Value;
 use std::convert::TryInto;
+use tracing::{error, info, warn};
 
 // Sl4f-Constants and Ble advertising related functionality
 use crate::bluetooth::types::FacadeArg;
@@ -43,9 +43,9 @@ impl BleAdvertiseFacade {
     // Store a new advertising handle.
     fn set_adv_handle(&self, adv_handle: Option<ClientEnd<AdvertisingHandleMarker>>) {
         if adv_handle.is_some() {
-            fx_log_info!(tag: "set_adv_handle", "Assigned new advertising handle");
+            info!(tag = "set_adv_handle", "Assigned new advertising handle");
         } else {
-            fx_log_info!(tag: "set_adv_handle", "Cleared advertising handle");
+            info!(tag = "set_adv_handle", "Cleared advertising handle");
         }
         self.inner.write().adv_handle = adv_handle;
     }
@@ -55,10 +55,10 @@ impl BleAdvertiseFacade {
             Some(_) => "Valid",
             None => "None",
         };
-        fx_log_info!(tag: "print",
-            "BleAdvertiseFacade: Adv Status: {}, Peripheral: {:?}",
-            adv_status,
-            self.get_peripheral_proxy(),
+        info!(tag = "print",
+            %adv_status,
+            peripheral = ?self.get_peripheral_proxy(),
+            "BleAdvertiseFacade",
         );
     }
 
@@ -66,10 +66,7 @@ impl BleAdvertiseFacade {
     pub fn set_peripheral_proxy(&self) {
         let new_peripheral = match self.inner.read().peripheral.clone() {
             Some(p) => {
-                fx_log_warn!(tag: "set_peripheral_proxy",
-                    "Current peripheral: {:?}",
-                    p,
-                );
+                warn!(tag = "set_peripheral_proxy", current_peripheral = ?p);
                 Some(p)
             }
             None => {
@@ -97,22 +94,22 @@ impl BleAdvertiseFacade {
                 let (handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
                 let result = p.start_advertising(parameters, handle_remote).await?;
                 if let Err(err) = result {
-                    fx_log_err!(tag: "start_adv", "Failed to start adveritising: {:?}", err);
+                    error!(tag = "start_adv", ?err, "Failed to start adveritising");
                     return Err(Sl4fError::new(&format!("{:?}", err)).into());
                 }
-                fx_log_info!(tag: "start_adv", "Started advertising");
+                info!(tag = "start_adv", "Started advertising");
                 self.set_adv_handle(Some(handle));
                 Ok(())
             }
             None => {
-                fx_log_err!(tag: "start_adv", "No peripheral created.");
+                error!(tag = "start_adv", "No peripheral created.");
                 return Err(format_err!("No peripheral proxy created."));
             }
         }
     }
 
     pub fn stop_adv(&self) {
-        fx_log_info!(tag: "stop_adv", "Stop advertising");
+        info!(tag = "stop_adv", "Stop advertising");
         self.set_adv_handle(None);
     }
 

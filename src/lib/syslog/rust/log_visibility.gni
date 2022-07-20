@@ -204,8 +204,6 @@ third_party_rust_crate_log_visibility = [
   "//src/sys/time/timekeeper:*",
   "//src/sys/universe-resolver:*",
   "//src/testing/metrics-logger:*",
-  "//src/testing/sl4f:*",
-  "//src/testing/sl4f/proxy:*",
   "//src/ui/bin/terminal:*",
   "//src/ui/examples/flatland-display:*",
   "//src/ui/examples/flatland-view-provider:*",

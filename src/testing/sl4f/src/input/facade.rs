@@ -7,9 +7,9 @@ use crate::input::types::{
     SwipeRequest, TapRequest, TextRequest,
 };
 use anyhow::{Context, Error};
-use fuchsia_syslog::macros::fx_log_info;
 use serde_json::{from_value, Value};
 use std::{convert::TryFrom, time::Duration};
+use tracing::info;
 
 const DEFAULT_DIMENSION: u32 = 1000;
 const DEFAULT_DURATION: Duration = Duration::from_millis(300);
@@ -62,7 +62,7 @@ impl InputFacade {
     ///                          events), defaults to 1
     ///     * `duration`: Duration of the event(s) in milliseconds, defaults to 300
     pub async fn tap(&self, args: Value) -> Result<ActionResult, Error> {
-        fx_log_info!("Executing Tap in Input Facade.");
+        info!("Executing Tap in Input Facade.");
         let req: TapRequest = from_value(args)?;
         let width = req.width.unwrap_or(DEFAULT_DIMENSION);
         let height = req.height.unwrap_or(DEFAULT_DIMENSION);
@@ -101,7 +101,7 @@ impl InputFacade {
     /// });
     ///
     pub async fn multi_finger_tap(&self, args: Value) -> Result<ActionResult, Error> {
-        fx_log_info!("Executing MultiFingerTap in Input Facade.");
+        info!("Executing MultiFingerTap in Input Facade.");
         let req: MultiFingerTapRequest = from_value(args)?;
         let width = req.width.unwrap_or(DEFAULT_DIMENSION);
         let height = req.height.unwrap_or(DEFAULT_DIMENSION);
@@ -136,7 +136,7 @@ impl InputFacade {
     ///                          the swipe, defaults to `duration / 17` (to emulate a 60 HZ sensor)
     ///     * `duration`: Duration of the event(s) in milliseconds, default to 300
     pub async fn swipe(&self, args: Value) -> Result<ActionResult, Error> {
-        fx_log_info!("Executing Swipe in Input Facade.");
+        info!("Executing Swipe in Input Facade.");
         let req: SwipeRequest = from_value(args)?;
         let width = req.width.unwrap_or(DEFAULT_DIMENSION);
         let height = req.height.unwrap_or(DEFAULT_DIMENSION);
@@ -200,7 +200,7 @@ impl InputFacade {
     /// });
     /// ```
     pub async fn multi_finger_swipe(&self, args: Value) -> Result<ActionResult, Error> {
-        fx_log_info!("Executing MultiFingerSwipe in Input Facade.");
+        info!("Executing MultiFingerSwipe in Input Facade.");
         let req: MultiFingerSwipeRequest = from_value(args)?;
         let width = req.width.unwrap_or(DEFAULT_DIMENSION);
         let height = req.height.unwrap_or(DEFAULT_DIMENSION);
@@ -276,7 +276,7 @@ impl InputFacade {
     /// });
     /// ```
     pub async fn text(&self, args: Value) -> Result<ActionResult, Error> {
-        fx_log_info!("Executing Text in Input Facade.");
+        info!("Executing Text in Input Facade.");
         let req: TextRequest = from_value(args)?;
         let text = match req.text.len() {
             0 => Err(format_err!("`text` must be non-empty")),
@@ -329,7 +329,7 @@ impl InputFacade {
     ///
     /// [HID Usages and Descriptions]: https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf
     pub async fn key_press(&self, args: Value) -> Result<ActionResult, Error> {
-        fx_log_info!("Executing KeyboardEvent in Input Facade.");
+        info!("Executing KeyboardEvent in Input Facade.");
         let req: KeyPressRequest = from_value(args)?;
         let hid_usage_id = req.hid_usage_id;
         let key_press_duration =
@@ -403,7 +403,7 @@ impl InputFacade {
     /// * `Err(Error)` otherwise.
     ///
     pub async fn key_events(&self, args: Value) -> Result<ActionResult, Error> {
-        fx_log_info!("Executing KeyEvents in Input Facade: {:?}", args);
+        info!(?args, "Executing KeyEvents in Input Facade");
         let req: types::KeyEventsRequest = from_value(args)?;
         input_synthesis::dispatch_key_events(&req.key_events[..]).await?;
         Ok(ActionResult::Success)

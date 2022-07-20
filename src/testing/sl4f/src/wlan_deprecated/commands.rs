@@ -6,8 +6,8 @@ use {
     crate::{server::Facade, wlan_deprecated::facade::WlanDeprecatedConfigurationFacade},
     anyhow::{format_err, Error},
     async_trait::async_trait,
-    fuchsia_syslog::macros::*,
     serde_json::{to_value, Value},
+    tracing::info,
 };
 
 #[async_trait(?Send)]
@@ -16,9 +16,9 @@ impl Facade for WlanDeprecatedConfigurationFacade {
         match method.as_ref() {
             "suggest_ap_mac" => {
                 let mac = self.parse_mac_argument(args)?;
-                fx_log_info!(
-                    tag: "WlanDeprecatedConfigurationFacade", "setting suggested MAC to: {:?}",
-                    mac
+                info!(
+                    tag = "WlanDeprecatedConfigurationFacade",
+                    "setting suggested MAC to: {:?}", mac
                 );
                 let result = self.suggest_access_point_mac_address(mac).await?;
                 to_value(result).map_err(|e| {

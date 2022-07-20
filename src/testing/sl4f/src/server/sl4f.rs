@@ -7,13 +7,13 @@ use fidl_fuchsia_testing_sl4f::{
     FacadeIteratorMarker, FacadeIteratorSynchronousProxy, FacadeProviderMarker, FacadeProviderProxy,
 };
 use fuchsia_component::client::connect_to_protocol;
-use fuchsia_syslog::macros::{fx_log_err, fx_log_info, fx_log_warn};
 use fuchsia_zircon as zx;
 use maplit::{convert_args, hashmap};
 use parking_lot::RwLock;
 use serde_json::{json, Value};
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
+use tracing::{error, info, warn};
 
 // Standardized sl4f types and constants
 use crate::{
@@ -233,7 +233,7 @@ impl Sl4f {
         let facade_provider = match connect_to_protocol::<FacadeProviderMarker>() {
             Ok(proxy) => proxy,
             Err(error) => {
-                fx_log_err!("Failed to connect to FacadeProvider: {}", error);
+                error!(%error, "Failed to connect to FacadeProvider");
                 return Err(error.into());
             }
         };
@@ -255,7 +255,7 @@ impl Sl4f {
                             break;
                         }
                         Err(error) => {
-                            fx_log_err!("Failed to get proxied facade list: {}", error);
+                            error!(%error, "Failed to get proxied facade list");
                             proxied_facades.clear();
                             break;
                         }
@@ -265,7 +265,7 @@ impl Sl4f {
             // The channel's server end was closed due to no `FacadeProvider` instance.
             Err(error) if error.is_closed() => (),
             Err(error) => {
-                fx_log_err!("Failed to get FacadeIterator: {}", error);
+                error!(%error, "Failed to get FacadeIterator");
                 return Err(error.into());
             }
         };
@@ -286,7 +286,7 @@ impl Sl4f {
         // If there are any proxied facades, make a synchronous request to cleanup transient state.
         if !self.proxied_facades.is_empty() {
             if let Err(error) = self.facade_provider.cleanup().await {
-                fx_log_err!("Failed to execute Cleanup() with: {}", error);
+                error!(%error, "Failed to execute Cleanup()");
             }
         }
         self.clients.write().cleanup_clients();
@@ -304,7 +304,7 @@ impl Sl4f {
         // If there are any proxied facades, make a synchronous request to print state.
         if !self.proxied_facades.is_empty() {
             if let Err(error) = self.facade_provider.print().await {
-                fx_log_err!("Failed to execute Print() with: {}", error);
+                error!(%error, "Failed to execute Print()");
             }
         }
     }
@@ -382,15 +382,12 @@ impl Sl4fClients {
         use std::collections::hash_map::Entry::*;
         match self.clients.entry(id) {
             Occupied(entry) => {
-                fx_log_warn!(tag: "client_init",
-                    "Key: {:?} already exists in clients. ",
-                    entry.key()
-                );
+                warn!(tag = "client_init", "Key: {:?} already exists in clients. ", entry.key());
                 true
             }
             Vacant(entry) => {
                 entry.insert(Vec::new());
-                fx_log_info!(tag: "client_init", "Updated clients: {:?}", self.clients);
+                info!(tag = "client_init", "Updated clients: {:?}", self.clients);
                 false
             }
         }
@@ -401,7 +398,7 @@ impl Sl4fClients {
     }
 
     fn print_clients(&self) {
-        fx_log_info!("SL4F Clients: {:?}", self.clients);
+        info!("SL4F Clients: {:?}", self.clients);
     }
 }
 
@@ -430,31 +427,31 @@ pub async fn serve(
     match (request.method(), request.uri().path()) {
         (&Method::GET, "/") => {
             // Parse the command request
-            fx_log_info!(tag: "serve", "Received command request via GET.");
+            info!(tag = "serve", "Received command request via GET.");
             client_request(request, &sender).await
         }
         (&Method::POST, "/") => {
             // Parse the command request
-            fx_log_info!(tag: "serve", "Received command request via POST.");
+            info!(tag = "serve", "Received command request via POST.");
             client_request(request, &sender).await
         }
         (&Method::GET, "/init") => {
             // Initialize a client
-            fx_log_info!(tag: "serve", "Received init request.");
+            info!(tag = "serve", "Received init request.");
             client_init(request, &clients).await
         }
         (&Method::GET, "/print_clients") => {
             // Print information about all clients
-            fx_log_info!(tag: "serve", "Received print client request.");
+            info!(tag = "serve", "Received print client request.");
             const PRINT_ACK: &str = "Successfully printed clients.";
             json(&PRINT_ACK)
         }
         (&Method::GET, "/cleanup") => {
-            fx_log_info!(tag: "serve", "Received server cleanup request.");
+            info!(tag = "serve", "Received server cleanup request.");
             server_cleanup(request, &sender).await
         }
         _ => {
-            fx_log_err!(tag: "serve", "Received unknown server request.");
+            error!(tag = "serve", "Received unknown server request.");
             const FAIL_REQUEST_ACK: &str = "Unknown GET request.";
             let res = CommandResponse::new(
                 json!(""),
@@ -476,8 +473,8 @@ async fn client_request(
 
     let (request_id, method_id, method_params) = match parse_request(request).await {
         Ok(res) => res,
-        Err(e) => {
-            fx_log_err!(tag: "client_request", "Failed to parse request. {:?}", e);
+        Err(error) => {
+            error!(tag = "client_request", ?error, "Failed to parse request");
             return json(&FAIL_TEST_ACK);
         }
     };
@@ -489,7 +486,12 @@ async fn client_request(
     sender.send(AsyncRequest::Command(req)).await.expect("Failed to send request to async thread.");
     let resp = receiver.await.expect("Async thread dropped responder.");
 
-    fx_log_info!(tag: "client_request", "Received async thread response for {:?}: {:?}", method_id.method, resp);
+    info!(
+        tag = "client_request",
+        method = ?method_id.method,
+        response = ?resp,
+        "Received async thread response"
+    );
 
     // If the response has a return value, package into response, otherwise use error code
     match resp.result {
@@ -550,9 +552,10 @@ async fn parse_request(
     let request_id_raw = request_data.id;
     let method_id_raw = request_data.method;
     let method_params = request_data.params;
-    fx_log_info!(tag: "parse_request",
-        "request id: {:?}, name: {:?}, args: {:?}",
-        request_id_raw, method_id_raw, method_params
+    info!(tag = "parse_request",
+        request_id = ?request_id_raw,
+        name = ?method_id_raw,
+        args = ?method_params
     );
 
     let request_id = RequestId::new(request_id_raw);
@@ -569,7 +572,7 @@ async fn server_cleanup(
     const FAIL_CLEANUP_ACK: &str = "Failed to cleanup SL4F resources.";
     const CLEANUP_ACK: &str = "Successful cleanup of SL4F resources.";
 
-    fx_log_info!(tag: "server_cleanup", "Cleaning up server state");
+    info!(tag = "server_cleanup", "Cleaning up server state");
     let (request_id, _, _) = match parse_request(request).await {
         Ok(res) => res,
         Err(_) => return json(&FAIL_CLEANUP_ACK),

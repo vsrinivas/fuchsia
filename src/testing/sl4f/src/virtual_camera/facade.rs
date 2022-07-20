@@ -7,9 +7,9 @@ use fidl_fuchsia_camera_test_virtualcamera::{
     StreamConfig, VirtualCameraDeviceMarker, VirtualCameraDeviceProxy,
 };
 use fuchsia_component::client::connect_to_protocol;
-use fuchsia_syslog::macros::*;
 use serde_json::{to_value, Value};
 use std::convert::TryInto;
+use tracing::*;
 
 /// Facade providing access to Virtual Camera interfaces.
 #[derive(Debug)]
@@ -34,7 +34,7 @@ impl VirtualCameraFacade {
         let config_index =
             args["index"].as_u64().ok_or(format_err!("index not a number"))?.try_into()?;
 
-        fx_log_info!("AddStreamConfig: index received {:?}", config_index);
+        info!("AddStreamConfig: index received {:?}", config_index);
 
         let config_width = (args
             .get("width")
@@ -44,7 +44,7 @@ impl VirtualCameraFacade {
             as u32)
             .try_into()?;
 
-        fx_log_info!("AddStreamConfig: width received {:?}", config_width);
+        info!("AddStreamConfig: width received {:?}", config_width);
 
         let config_height = (args
             .get("height")
@@ -54,7 +54,7 @@ impl VirtualCameraFacade {
             as u32)
             .try_into()?;
 
-        fx_log_info!("AddStreamConfig: height received {:?}", config_height);
+        info!("AddStreamConfig: height received {:?}", config_height);
 
         // Use the test proxy if one was provided, otherwise connect to the
         // discoverable Virtual Camera service.
@@ -71,7 +71,7 @@ impl VirtualCameraFacade {
             { StreamConfig { width: config_width, height: config_height, ..StreamConfig::EMPTY } };
 
         // Call the FIDL method.
-        fx_log_info!("Stream Config specifications {:?}", stream_config);
+        info!("Stream Config specifications {:?}", stream_config);
         match camera_proxy.add_stream_config(config_index, stream_config) {
             Ok(_) => Ok(to_value(true)?),
             Err(e) => Err(format_err!("AddStreamConfig failed with err {:?}", e)),
@@ -89,7 +89,7 @@ impl VirtualCameraFacade {
             },
         };
 
-        fx_log_info!("AddToDeviceWatcher FIDL protocol connected");
+        info!("AddToDeviceWatcher FIDL protocol connected");
 
         match camera_proxy.add_to_device_watcher().await? {
             Ok(_) => Ok(to_value(true)?),

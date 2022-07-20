@@ -9,7 +9,6 @@ use fidl_fuchsia_metricslogger_test::{
     Metric, MetricsLoggerMarker, MetricsLoggerProxy, Power, StatisticsArgs,
 };
 use fuchsia_component::client::connect_to_protocol;
-use fuchsia_syslog::macros::fx_log_err;
 use serde_json::Value;
 
 const CLIENT_ID: &'static str = "sl4f";
