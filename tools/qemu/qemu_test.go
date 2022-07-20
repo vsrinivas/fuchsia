@@ -247,7 +247,7 @@ func TestQEMUCommandBuilder(t *testing.T) {
 			"-netdev", "user,id=net0",
 			"-device", "virtio-net-pci,mac=52:54:00:63:5e:7a,vectors=8,netdev=net0",
 			"-drive", "if=none,id=usb,file=/usbdrive,format=raw",
-			"-device", "usb-storage,drive=usb",
+			"-device", "usb-storage,drive=usb,removable=on",
 			"-append", "kernel.serial=legacy infra.foo=bar"},
 	}, cmd, err)
 
@@ -271,7 +271,7 @@ func TestQEMUCommandBuilder(t *testing.T) {
 			"-netdev", "user,id=net0",
 			"-device", "virtio-net-pci,mac=52:54:00:63:5e:7a,vectors=8,netdev=net0",
 			"-drive", "if=none,id=usb,file=/usbdrive,format=raw",
-			"-device", "usb-storage,drive=usb",
+			"-device", "usb-storage,drive=usb,removable=on",
 			"-device", "qemu-xhci,id=xhci",
 			"-append", "kernel.serial=legacy infra.foo=bar"},
 	}, cmd, err)

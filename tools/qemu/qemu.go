@@ -213,7 +213,7 @@ func (q *QEMUCommandBuilder) AddVirtioBlkPciDrive(d Drive) {
 
 func (q *QEMUCommandBuilder) AddUSBDrive(d Drive) {
 	q.SetFlag("-drive", fmt.Sprintf("if=none,id=%s,file=%s,format=raw", d.ID, d.File))
-	q.SetFlag("-device", fmt.Sprintf("usb-storage,drive=%s", d.ID))
+	q.SetFlag("-device", fmt.Sprintf("usb-storage,drive=%s,removable=on", d.ID))
 }
 
 // AddHCI adds an host-controller-interface.
