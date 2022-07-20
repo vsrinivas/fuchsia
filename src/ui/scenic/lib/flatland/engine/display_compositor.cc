@@ -893,6 +893,12 @@ allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
     FX_DCHECK(status == ZX_OK);
   }
 
+  // We know that this collection is supported by display because we collected constraints from
+  // display in scenic_impl::ImportBufferCollection() and waited for successful allocation.
+  buffer_collection_supports_display_[collection_id] = true;
+  buffer_collection_pixel_format_[collection_id] =
+      out_collection_info->settings.image_format_constraints.pixel_format;
+
   // Import the images as well.
   for (uint32_t i = 0; i < num_vmos; i++) {
     allocation::ImageMetadata target = {.collection_id = collection_id,
@@ -902,11 +908,6 @@ allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
                                         .height = height};
     display_engine_data.frame_event_datas.push_back(NewFrameEventData());
     display_engine_data.targets.push_back(target);
-    // We know that this collection is supported by display because we collected constraints from
-    // display in scenic_impl::ImportBufferCollection() and waited for successful allocation.
-    buffer_collection_supports_display_[collection_id] = true;
-    buffer_collection_pixel_format_[collection_id] =
-        out_collection_info->settings.image_format_constraints.pixel_format;
     bool res = ImportBufferImage(target);
     FX_DCHECK(res);
   }
