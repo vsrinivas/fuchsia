@@ -203,8 +203,15 @@ impl<'a> IssueTemplate<'a> {
             vec![schema::IssueRef::from(format!("projects/fuchsia/issues/{}", issue))]
         });
 
+        // Ensure RVG label present.
+        let mut label_vec = self.labels.to_vec();
+        let rvg_label = "Restrict-View-Google".to_string();
+        if !label_vec.contains(&rvg_label) {
+            label_vec.push(rvg_label);
+        }
+
         let labels =
-            Some(self.labels.iter().cloned().map(schema::LabelValue::from).collect::<Vec<_>>());
+            Some(label_vec.iter().cloned().map(schema::LabelValue::from).collect::<Vec<_>>());
 
         let holding_component = component_defs.get(HOLDING_COMPONENT).expect("couldn't find holding component definition, you may need to rerun with --prpc to fetch component definitions");
         let request = schema::MakeIssueRequest {
