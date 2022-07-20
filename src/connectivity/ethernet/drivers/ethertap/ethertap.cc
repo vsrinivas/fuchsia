@@ -213,7 +213,7 @@ zx_status_t TapDevice::EthernetImplSetParam(uint32_t param, int32_t value, const
         qsort(event_data.begin(), size, 1, [](const void* ap, const void* bp) {
           int a = *static_cast<const uint8_t*>(ap);
           int b = *static_cast<const uint8_t*>(bp);
-          return a < b ? -1 : (a > 1 ? 1 : 0);
+          return a < b ? -1 : (a > b ? 1 : 0);
         });
       }
       break;
