@@ -6,12 +6,11 @@
 //! of each emulator "engine" such as aemu and qemu.
 
 mod arg_templates;
-mod femu;
-mod qemu;
+mod qemu_based;
 pub mod serialization;
 
-use femu::FemuEngine;
-use qemu::QemuEngine;
+use qemu_based::femu::FemuEngine;
+use qemu_based::qemu::QemuEngine;
 use serialization::read_from_disk;
 
 use anyhow::{bail, Context, Result};

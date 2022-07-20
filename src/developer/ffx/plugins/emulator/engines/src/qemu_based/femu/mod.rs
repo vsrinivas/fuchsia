@@ -2,33 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! The qemu module encapsulates the interactions with the emulator instance
-//! started via the QEMU emulator.
-//! Some of the functions related to QEMU are pub(crate) to allow reuse by
-//! femu module since femu is a wrapper around an older version of QEMU.
+//! The femu module encapsulates the interactions with the emulator instance
+//! started via the Fuchsia emulator, Femu.
 
-use crate::serialization::SerializingEngine;
+use crate::{qemu_based::QemuBasedEngine, serialization::SerializingEngine};
 use anyhow::{bail, Context, Result};
 use async_trait::async_trait;
-use ffx_emulator_common::{
-    config::{FfxConfigWrapper, QEMU_TOOL},
-    process,
-};
-use ffx_emulator_config::{
-    CpuArchitecture, EmulatorConfiguration, EmulatorEngine, EngineType, PointingDevice,
-};
+use ffx_emulator_common::{config, config::FfxConfigWrapper, process};
+use ffx_emulator_config::{EmulatorConfiguration, EmulatorEngine, EngineType};
 use fidl_fuchsia_developer_ffx as ffx;
 use serde::{Deserialize, Serialize};
-use std::{
-    path::{Path, PathBuf},
-    process::Command,
-};
-
-pub(crate) mod qemu_base;
-pub(crate) use qemu_base::QemuBasedEngine;
+use std::{path::PathBuf, process::Command};
 
 #[derive(Clone, Debug, Default, Deserialize, PartialEq, Serialize)]
-pub struct QemuEngine {
+pub struct FemuEngine {
     #[serde(skip)]
     pub(crate) ffx_config: FfxConfigWrapper,
     #[serde(default)]
@@ -38,45 +25,18 @@ pub struct QemuEngine {
     pub(crate) engine_type: EngineType,
 }
 
-impl QemuEngine {
-    /// returns the path to the qemu binary to execute. This is based on the guest OS architecture.
-    ///
-    /// Currently this is done by getting the default CLI which is for x64 images, and then
-    /// replace it if the guest OK is arm64.
-    /// TODO(http://fxdev.bug/98862): Improve the SDK metadata to have multiple binaries per tool.
-    async fn get_qemu_path(&self) -> Result<PathBuf> {
-        let cli_name = match self.emulator_configuration.device.cpu.architecture {
-            CpuArchitecture::Arm64 => Some("qemu-system-aarch64"),
-            CpuArchitecture::X64 => None,
-            CpuArchitecture::Unsupported => None,
-        };
-
-        // Realistically, the file is always in a directory, so the empty path is a reasonable
-        // fallback since it will "never" happen
-        let qemu_x64_path = match self.ffx_config.get_host_tool(QEMU_TOOL).await {
-            Ok(qemu_path) => qemu_path.canonicalize().context(format!(
-                "Failed to canonicalize the path to the emulator binary: {:?}",
-                qemu_path
-            ))?,
-            Err(e) => bail!("Cannot find {} in the SDK: {:?}", QEMU_TOOL, e),
-        };
-
-        // If we need to, replace the executable name.
-        if let Some(exe_name) = cli_name {
-            let mut p = PathBuf::from(qemu_x64_path.parent().unwrap_or(Path::new("")));
-            p.push(exe_name);
-            Ok(p)
-        } else {
-            Ok(qemu_x64_path)
-        }
-    }
-}
-
 #[async_trait]
-impl EmulatorEngine for QemuEngine {
+impl EmulatorEngine for FemuEngine {
     async fn stage(&mut self) -> Result<()> {
-        self.emulator_binary =
-            self.get_qemu_path().await.context("could not determine qemu cli path")?;
+        self.emulator_binary = match self.ffx_config.get_host_tool(config::FEMU_TOOL).await {
+            Ok(aemu_path) => aemu_path.canonicalize().context(format!(
+                "Failed to canonicalize the path to the emulator binary: {:?}",
+                aemu_path
+            ))?,
+            Err(e) => {
+                bail!("Cannot find {} in the SDK: {:?}", config::FEMU_TOOL, e);
+            }
+        };
 
         if !self.emulator_binary.exists() || !self.emulator_binary.is_file() {
             bail!("Giving up finding emulator binary. Tried {:?}", self.emulator_binary)
@@ -105,11 +65,10 @@ impl EmulatorEngine for QemuEngine {
     }
 
     fn validate(&self) -> Result<()> {
-        if self.emulator_configuration.device.pointing_device == PointingDevice::Touch {
-            eprintln!("Touchscreen as a pointing device is not available on Qemu.");
+        if !self.emulator_configuration.runtime.headless && std::env::var("DISPLAY").is_err() {
             eprintln!(
-                "If you encounter errors, try changing the pointing device to 'mouse' in the \
-                Virtual Device specification."
+                "No DISPLAY set in the local environment, try running with --headless if you \
+                encounter failures related to display or Qt.",
             );
         }
         self.validate_network_flags(&self.emulator_configuration)
@@ -124,10 +83,23 @@ impl EmulatorEngine for QemuEngine {
         process::is_running(self.pid)
     }
 
-    /// Build the Command to launch Qemu emulator running Fuchsia.
+    /// Build the Command to launch Android emulator running Fuchsia.
     fn build_emulator_cmd(&self) -> Command {
         let mut cmd = Command::new(&self.emulator_binary);
-        cmd.args(&self.emulator_configuration.flags.args);
+        let feature_arg = self
+            .emulator_configuration
+            .flags
+            .features
+            .iter()
+            .map(|x| x.to_string())
+            .collect::<Vec<_>>()
+            .join(",");
+        if feature_arg.len() > 0 {
+            cmd.arg("-feature").arg(feature_arg);
+        }
+        cmd.args(&self.emulator_configuration.flags.options)
+            .arg("-fuchsia")
+            .args(&self.emulator_configuration.flags.args);
         let extra_args = self
             .emulator_configuration
             .flags
@@ -155,9 +127,9 @@ impl EmulatorEngine for QemuEngine {
 }
 
 #[async_trait]
-impl SerializingEngine for QemuEngine {}
+impl SerializingEngine for FemuEngine {}
 
-impl QemuBasedEngine for QemuEngine {
+impl QemuBasedEngine for FemuEngine {
     fn set_pid(&mut self, pid: u32) {
         self.pid = pid;
     }

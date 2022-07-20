@@ -33,6 +33,9 @@ use std::{
     time::Duration,
 };
 
+pub(crate) mod femu;
+pub(crate) mod qemu;
+
 /// QemuBasedEngine collects the interface for
 /// emulator engine implementations that use
 /// QEMU as the emulator.

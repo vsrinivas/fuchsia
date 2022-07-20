@@ -10,10 +10,10 @@ if (is_host) {
     edition = "2021"
     sources = [
       "src/arg_templates.rs",
-      "src/femu/mod.rs",
       "src/lib.rs",
-      "src/qemu/mod.rs",
-      "src/qemu/qemu_base.rs",
+      "src/qemu_based/femu/mod.rs",
+      "src/qemu_based/mod.rs",
+      "src/qemu_based/qemu/mod.rs",
       "src/serialization.rs",
     ]
     deps = [

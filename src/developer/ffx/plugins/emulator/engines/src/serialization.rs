@@ -64,7 +64,7 @@ pub trait SerializingEngine: Serialize {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::qemu::QemuEngine;
+    use crate::qemu_based::qemu::QemuEngine;
     use ffx_emulator_config::EngineType;
     use regex::Regex;
     use std::{
