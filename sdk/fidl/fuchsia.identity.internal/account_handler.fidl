@@ -12,8 +12,8 @@ using fuchsia.identity.authentication;
 ///
 /// This interface is intended only for use by the AccountManager component that
 /// starts instances of AccountHandler. We define which account the handler
-/// should be handling one time via this channel rather than via startup flags to
-/// provide additional flexibility given the range of scenarios:
+/// should be handling one time via this channel rather than via startup flags
+/// to provide additional flexibility given the range of scenarios:
 /// * The account is completely new
 /// * The account is being added to the current device for the first time
 /// * Account information is already present on the local disk and is readable
@@ -73,40 +73,42 @@ protocol AccountHandlerControl {
     ///                     mechanism will be created for storage
     ///                     unlock.
     ///
-    /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Uninitialized`
-    /// state.
+    /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the
+    /// `Uninitialized` state.
     CreateAccount(struct {
         auth_mechanism_id fuchsia.identity.account.AuthMechanismId:optional;
     }) -> (struct {}) error fuchsia.identity.account.Error;
 
     /// Loads pre-auth data, which allows the account to be unlocked later.
     ///
-    /// This moves the AccountHandler from the `Uninitialized` state to the `Locked` state.
+    /// This moves the AccountHandler from the `Uninitialized` state to the
+    /// `Locked` state.
     ///
-    /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Uninitialized`
-    /// state.
+    /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the
+    /// `Uninitialized` state.
     Preload() -> (struct {}) error fuchsia.identity.account.Error;
 
-    /// Reach the `Initialized` state, attempting authentication and unlocking the account where
-    /// necessary.
+    /// Reach the `Initialized` state, attempting authentication and unlocking
+    /// the account where necessary.
     ///
     /// Fails with
-    /// - FAILED_PRECONDITION if the AccountHandler is not in the `Locked` or `Initialized` state.
+    /// - FAILED_PRECONDITION if the AccountHandler is not in the `Locked` or
+    ///   `Initialized` state.
     /// - FAILED_AUTH_ATTEMPT if the authentication attempt failed.
     UnlockAccount() -> (struct {}) error fuchsia.identity.account.Error;
 
-    /// Reach the `Locked` state, closing any open `Account` and `Persona` channels for the account.
+    /// Reach the `Locked` state, closing any open `Account` and `Persona`
+    /// channels for the account.
     ///
-    /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Initialized` or
-    /// `Locked` state.
+    /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the
+    /// `Initialized` or `Locked` state.
     LockAccount() -> (struct {}) error fuchsia.identity.account.Error;
 
     /// Deletes all persistent information about the Fuchsia account handled by
     /// this handler, including all credentials and global identifiers.
-    /// Credential revocation is attempted before deletion. After a
-    /// successful call to RemoveAccount, all other open interfaces for this
-    /// account handler will be closed and any subsequent calls on the current
-    /// interface will fail.
+    /// After a successful call to RemoveAccount, all other open interfaces for
+    /// this account handler will be closed and any subsequent calls on the
+    /// current interface will fail.
     RemoveAccount() -> (struct {}) error fuchsia.identity.account.Error;
 
     /// Connects an interface to read properties of and perform operations on
@@ -118,8 +120,8 @@ protocol AccountHandlerControl {
     ///                    authentication on this account
     /// `account` The server end of an `Account` channel
     ///
-    /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Initialized`
-    /// state.
+    /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the
+    /// `Initialized` state.
     GetAccount(resource struct {
         auth_context_provider client_end:fuchsia.auth.AuthenticationContextProvider;
         account server_end:fuchsia.identity.account.Account;
