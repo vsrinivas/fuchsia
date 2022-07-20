@@ -22,6 +22,10 @@
             {
                 "api_level": "8",
                 "abi_revision": "0xA56735A6690E09D8"
+            },
+            {
+                "api_level": "9",
+                "abi_revision": "0xECDB841C251A8CB9"
             }
         ]
     },

@@ -1,0 +1,15 @@
+[
+    {
+        "declaration": "()",
+        "kind": "protocol/member",
+        "name": "fuchsia.ui.lifecycle/LifecycleController.Terminate"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.ui.lifecycle/LifecycleController"
+    },
+    {
+        "kind": "library",
+        "name": "fuchsia.ui.lifecycle"
+    }
+]
