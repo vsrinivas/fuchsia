@@ -23,7 +23,7 @@ pub type AsyncInitVmo = BoxFuture<'static, InitVmoResult>;
 pub(in crate::file::vmo) trait VmoFileInterface: Send + Sync {
     fn init_vmo(self: Arc<Self>) -> AsyncInitVmo;
 
-    fn state(&self) -> MutexLockFuture<VmoFileState>;
+    fn state(&self) -> MutexLockFuture<Option<VmoFileState>>;
 
     fn is_readable(&self) -> bool {
         false

@@ -237,33 +237,27 @@ where
     // File connections share state with the file itself.
     // TODO: It should be `pub(in super::connection)` but the compiler claims, `super` does not
     // contain a `connection`.  Neither `pub(in create:vmo::connection)` works.
-    pub(super) state: Mutex<VmoFileState>,
+    pub(super) state: Mutex<Option<VmoFileState>>,
 }
 
 /// State shared between all the connections to a file, across all execution scopes.
 // TODO: It should be `pub(in super::connection)` but the compiler claims, `super` does not contain
 // a `connection`.  Neither the `pub(in create:vmo::connection)` works.
-pub(super) enum VmoFileState {
-    /// No connections currently exist for this file.
-    Uninitialized,
+pub(super) struct VmoFileState {
+    pub vmo: Vmo,
 
-    /// File currently has one or more connections.
-    Initialized {
-        vmo: Vmo,
+    /// Size of the file, as observed via the `File` FIDL protocol.  Must be less than or equal
+    /// to the `vmo_size`.
+    pub size: u64,
 
-        /// Size of the file, as observed via the `File` FIDL protocol.  Must be less than or equal
-        /// to the `vmo_size`.
-        size: u64,
+    /// Size of the `vmo` - to save on a system call.  Must be no less than `size`.
+    pub vmo_size: u64,
 
-        /// Size of the `vmo` - to save on a system call.  Must be no less than `size`.
-        vmo_size: u64,
+    /// Maximum capacity we are allowed to extend the VMO size to.
+    pub capacity: u64,
 
-        /// Maximum capacity we are allowed to extend the VMO size to.
-        capacity: u64,
-
-        /// Number of active connections to the file.
-        connection_count: u64,
-    },
+    /// Number of active connections to the file.
+    pub connection_count: u64,
 }
 
 impl<InitVmo, InitVmoFuture> VmoFile<InitVmo, InitVmoFuture>
@@ -306,7 +300,7 @@ where
             writable,
             executable,
             inode,
-            state: Mutex::new(VmoFileState::Uninitialized),
+            state: Mutex::new(None),
         })
     }
 }
@@ -320,7 +314,7 @@ where
         Box::pin((self.init_vmo)())
     }
 
-    fn state(&self) -> MutexLockFuture<VmoFileState> {
+    fn state(&self) -> MutexLockFuture<Option<VmoFileState>> {
         self.state.lock()
     }
 

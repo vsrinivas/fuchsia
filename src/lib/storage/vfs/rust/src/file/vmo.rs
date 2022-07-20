@@ -39,20 +39,20 @@ pub(self) mod connection;
 
 /// A read-only file backed by a VMO.
 pub struct ReadOnlyVmoFile {
-    state: Mutex<VmoFileState>,
+    state: Mutex<Option<VmoFileState>>,
 }
 
 impl ReadOnlyVmoFile {
     /// Returns a new read-only file backed by the provided VMO.
     pub fn new(vmo: zx::Vmo, size: u64) -> Self {
         Self {
-            state: Mutex::new(VmoFileState::Initialized {
+            state: Mutex::new(Some(VmoFileState {
                 vmo,
                 size,
                 vmo_size: size,
                 capacity: size,
                 connection_count: 0,
-            }),
+            })),
         }
     }
 }
@@ -62,7 +62,7 @@ impl VmoFileInterface for ReadOnlyVmoFile {
         unreachable!();
     }
 
-    fn state(&self) -> MutexLockFuture<VmoFileState> {
+    fn state(&self) -> MutexLockFuture<Option<VmoFileState>> {
         self.state.lock()
     }
 
