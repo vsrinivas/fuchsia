@@ -630,7 +630,7 @@ mod tests {
         // to the ThermalStateHandler node's implementation of the
         // `fuchsia.thermal.ClientStateConnector` protocol.
         fn new(mut service_fs: ServiceFs<ServiceObjLocal<'static, ()>>) -> Self {
-            let env = service_fs.create_nested_environment("env").unwrap();
+            let env = service_fs.create_salted_nested_environment("env").unwrap();
             fasync::Task::local(service_fs.collect()).detach();
             Self { env }
         }

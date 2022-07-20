@@ -611,7 +611,7 @@ mod tests {
         // Takes a ServiceFs and creates a nested environment which we'll later use for connecting
         // to the `SystemPowerModeHandler` node's services.
         fn new(mut service_fs: ServiceFs<ServiceObjLocal<'static, ()>>) -> Self {
-            let env = service_fs.create_nested_environment("env").unwrap();
+            let env = service_fs.create_salted_nested_environment("env").unwrap();
             fasync::Task::local(service_fs.collect()).detach();
             Self { env }
         }
