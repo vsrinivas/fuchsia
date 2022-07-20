@@ -2,10 +2,23 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/cpp/sdk_source_set.gni")
+
 # The base library that supports domain objects.
 #
 # It works on host and Fuchsia.
-source_set("cpp_base") {
+sdk_source_set("cpp_base") {
+  # TODO(fxbug.dev/92356): Change this back to "partner" post API stability.
+  category = "experimental"
+
+  # TODO(fxbug.dev/104801): Rename SDK element to "fidl_cpp_base".
+  api = "fidl_cpp_base_v2.api"
+  sdk_name = "fidl_cpp_base_v2"
+
+  # TODO(fxbug.dev/90775): We should represent the library as a
+  # `sdk_static_library` when supported.
+  build_as_static = true
+
   public = [
     "include/lib/fidl/cpp/natural_coding_traits.h",
     "include/lib/fidl/cpp/natural_decoder.h",
@@ -33,7 +46,18 @@ config("cpp_base.headers") {
 # The unified C++ library that adds messaging APIs on top of domain objects.
 #
 # It is Fuchsia-only.
-source_set("cpp") {
+sdk_source_set("cpp") {
+  # TODO(fxbug.dev/92356): Change this back to "partner" post API stability.
+  category = "experimental"
+
+  # TODO(fxbug.dev/104801): Rename SDK element to "fidl_cpp".
+  api = "fidl_cpp_v2.api"
+  sdk_name = "fidl_cpp_v2"
+
+  # TODO(fxbug.dev/90775): We should represent the library as a
+  # `sdk_static_library` when supported.
+  build_as_static = true
+
   public = [
     "include/lib/fidl/cpp/any_error_in.h",
     "include/lib/fidl/cpp/channel.h",
@@ -58,7 +82,11 @@ source_set("cpp") {
 }
 
 # The support header for HLCPP / Natural conversion
-source_set("hlcpp_conversion") {
+sdk_source_set("hlcpp_conversion") {
+  # TODO(fxbug.dev/92356): Change this back to "partner" post API stability.
+  category = "experimental"
+  api = "fidl_cpp_hlcpp_conversion.api"
+  sdk_name = "fidl_cpp_hlcpp_conversion"
   public = [ "include/lib/fidl/cpp/hlcpp_conversion.h" ]
   public_configs = [ ":cpp_base.headers" ]
   public_deps = [ "//sdk/lib/fidl/cpp:cpp_base" ]
