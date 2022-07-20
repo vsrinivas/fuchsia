@@ -7,7 +7,7 @@ import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
   output_name = "debug-dash-launcher"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
 
   deps = [
