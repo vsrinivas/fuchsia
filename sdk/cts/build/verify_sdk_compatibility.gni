@@ -10,11 +10,11 @@
 #     A generated tarball of the SDK archive.
 #
 template("generate_sdk_layout_golden_file") {
-  assert(defined(invoker.sdk_archive), "SDK archive tarball is required")
+  assert(defined(invoker.sdk_archive), "SDK archive tarball is required.")
 
   # Run the test.
   action(target_name) {
-    forward_variables_from(invoker, "*", [ "policy" ])
+    forward_variables_from(invoker, "*")
 
     script = "//sdk/cts/build/scripts/verify_sdk_compatibility.py"
     gold_file = "$target_gen_dir/sdk_directory_layout.json.golden"
@@ -32,5 +32,9 @@ template("generate_sdk_layout_golden_file") {
       "--gen_golden_path",
       rebase_path(gold_file, root_build_dir),
     ]
+
+    metadata = {
+      cts_artifacts = [ "sdk_directory_layout.json.golden" ]
+    }
   }
 }
