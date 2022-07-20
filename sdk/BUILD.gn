@@ -522,13 +522,17 @@ sdk("fuchsia_dart") {
     "//sdk/dart/fuchsia_component_test:fuchsia_component_test_sdk($dart_toolchain)",
     "//sdk/dart/fuchsia_inspect:fuchsia_inspect_sdk($dart_toolchain)",
     "//sdk/dart/fuchsia_logger:fuchsia_logger_sdk($dart_toolchain)",
-    "//sdk/dart/fuchsia_modular:fuchsia_modular_sdk($dart_toolchain)",
     "//sdk/dart/fuchsia_scenic:fuchsia_scenic_sdk($dart_toolchain)",
     "//sdk/dart/fuchsia_scenic_flutter:fuchsia_scenic_flutter_sdk($dart_toolchain)",
     "//sdk/dart/fuchsia_services:fuchsia_services_sdk($dart_toolchain)",
     "//sdk/dart/fuchsia_vfs:fuchsia_vfs_sdk($dart_toolchain)",
+    "//sdk/fidl/fuchsia.auth:fuchsia.auth_sdk",
     "//sdk/fidl/fuchsia.element:fuchsia.element_sdk",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_sdk",
+    "//sdk/fidl/fuchsia.modular:fuchsia.modular_sdk",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_sdk",
+    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_sdk",
+    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_sdk",
     "//tools/fidl/fidlgen_dart:fidlgen_dart_sdk($host_toolchain)",
   ]
 
