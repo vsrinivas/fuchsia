@@ -48,14 +48,8 @@ executable("memory-pressure-test-executable") {
   ]
 }
 
-fuchsia_component("memory-pressure") {
-  component_name = "sysmem-memory-pressure"
-  manifest = "meta/sysmem-memory-pressure.cmx"
+fuchsia_shell_package("sysmem-memory-pressure") {
   deps = [ ":memory-pressure-executable" ]
-}
-
-fuchsia_package("sysmem-memory-pressure") {
-  deps = [ ":memory-pressure" ]
 }
 
 fuchsia_component("memory-pressure-test-component") {
