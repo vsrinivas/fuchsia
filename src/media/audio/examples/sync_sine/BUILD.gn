@@ -25,6 +25,5 @@ executable("bin") {
 }
 
 fuchsia_shell_package("sync_sine") {
-  manifest = "meta/sync_sine.cmx"
   deps = [ ":bin" ]
 }

@@ -34,6 +34,5 @@ executable("bin") {
 }
 
 fuchsia_shell_package("tones") {
-  manifest = "meta/tones.cmx"
   deps = [ ":bin" ]
 }

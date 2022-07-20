@@ -27,5 +27,4 @@ executable("bin") {
 
 fuchsia_shell_package("fx") {
   deps = [ ":bin" ]
-  manifest = "meta/fx.cmx"
 }

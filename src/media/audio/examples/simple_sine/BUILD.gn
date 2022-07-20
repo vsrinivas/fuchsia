@@ -24,6 +24,5 @@ executable("bin") {
 }
 
 fuchsia_shell_package("simple_sine") {
-  manifest = "meta/simple_sine.cmx"
   deps = [ ":bin" ]
 }
