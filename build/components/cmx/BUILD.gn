@@ -279,8 +279,6 @@ group("cmx_allowlist") {
     "//src/identity/bin/dev_authenticator:dev_authenticator_always_succeed_manifest_compile",
     "//src/identity/bin/google_auth_provider:google_auth_provider_component_manifest_compile",
     "//src/identity/tests/account_manager_integration:account_manager_integration_test_component_manifest_compile",
-    "//src/identity/tools/accountctl:accountctl_component_manifest_compile",
-    "//src/identity/tools/sktool:sktool_component_manifest_compile",
     "//src/intl/intl_services:pkg_component_manifest_compile",
     "//src/intl/intl_services:pkg_small_component_manifest_compile",
     "//src/intl/time_zone_info_service:component_manifest_compile",

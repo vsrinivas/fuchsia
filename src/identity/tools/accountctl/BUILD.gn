@@ -34,5 +34,4 @@ rustc_binary("bin") {
 
 fuchsia_shell_package("accountctl") {
   deps = [ ":bin" ]
-  manifest = "meta/accountctl.cmx"
 }
