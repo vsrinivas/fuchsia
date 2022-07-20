@@ -270,6 +270,7 @@ pub trait NonSyncContext:
     + IcmpContext<Ipv4>
     + IcmpContext<Ipv6>
     + TcpNonSyncContext
+    + 'static
 {
 }
 impl<
@@ -288,7 +289,8 @@ impl<
             + UdpContext<Ipv6>
             + IcmpContext<Ipv4>
             + IcmpContext<Ipv6>
-            + TcpNonSyncContext,
+            + TcpNonSyncContext
+            + 'static,
     > NonSyncContext for C
 {
 }

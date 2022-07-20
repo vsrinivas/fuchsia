@@ -5,7 +5,7 @@
 //! The integrations for protocols built on top of an IP device.
 
 use alloc::boxed::Box;
-use core::{num::NonZeroU8, time::Duration};
+use core::{marker::PhantomData, num::NonZeroU8, time::Duration};
 
 use net_types::{
     ip::{AddrSubnet, Ip as _, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
@@ -22,7 +22,7 @@ use packet_formats::{
 
 use crate::{
     context::FrameContext,
-    error::ExistsError,
+    error::{ExistsError, NotFoundError},
     ip::{
         self,
         device::{
@@ -35,11 +35,13 @@ use crate::{
             router_solicitation::{Ipv6DeviceRsContext, Ipv6LayerRsContext},
             send_ip_frame,
             slaac::{
-                SlaacAddressEntry, SlaacAddressEntryMut, SlaacConfiguration, SlaacStateContext,
+                SlaacAddressEntry, SlaacAddressEntryMut, SlaacAddresses, SlaacAddrsMutAndConfig,
+                SlaacStateContext, SlaacStateLayout,
             },
             state::{
                 AddrConfig, AddressState, DelIpv6AddrReason, IpDeviceConfiguration,
-                Ipv4DeviceConfiguration, Ipv6AddressEntry, Ipv6DeviceConfiguration, SlaacConfig,
+                Ipv4DeviceConfiguration, Ipv6AddressEntry, Ipv6DeviceConfiguration,
+                Ipv6DeviceState, SlaacConfig,
             },
             IpDeviceIpExt, IpDeviceNonSyncContext,
         },
@@ -52,6 +54,101 @@ use crate::{
         Ipv4PresentAddressStatus, Ipv6PresentAddressStatus, SendIpPacketMeta, DEFAULT_TTL,
     },
 };
+
+pub(super) struct SlaacAddrs<
+    'a,
+    C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
+    SC: device::Ipv6DeviceContext<C>,
+> {
+    sync_ctx: &'a mut SC,
+    device_id: SC::DeviceId,
+    _marker: PhantomData<C>,
+}
+
+fn iter_slaac_addrs_mut<
+    C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
+    SC: device::Ipv6DeviceContext<C>,
+>(
+    sync_ctx: &mut SC,
+    device_id: SC::DeviceId,
+) -> impl Iterator<Item = SlaacAddressEntryMut<'_, C::Instant>> + '_ {
+    SC::get_ip_device_state_mut(sync_ctx, device_id).ip_state.iter_addrs_mut().filter_map(
+        |Ipv6AddressEntry { addr_sub, state: _, config, deprecated }| match config {
+            AddrConfig::Slaac(config) => {
+                Some(SlaacAddressEntryMut { addr_sub: *addr_sub, config, deprecated })
+            }
+            AddrConfig::Manual => None,
+        },
+    )
+}
+
+impl<
+        'a,
+        C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
+        SC: device::Ipv6DeviceContext<C> + GmpHandler<Ipv6, C> + DadHandler<C> + 'static,
+    > SlaacAddresses<C> for SlaacAddrs<'a, C, SC>
+{
+    fn iter_mut(&mut self) -> Box<dyn Iterator<Item = SlaacAddressEntryMut<'_, C::Instant>> + '_> {
+        let SlaacAddrs { sync_ctx, device_id, _marker } = self;
+        Box::new(iter_slaac_addrs_mut(*sync_ctx, *device_id))
+    }
+
+    fn iter(&self) -> Box<dyn Iterator<Item = SlaacAddressEntry<C::Instant>> + '_> {
+        let SlaacAddrs { sync_ctx, device_id, _marker } = self;
+        Box::new(
+            SC::get_ip_device_state(*sync_ctx, *device_id)
+                .ip_state
+                .iter_addrs()
+                .cloned()
+                .filter_map(|Ipv6AddressEntry { addr_sub, state: _, config, deprecated }| {
+                    match config {
+                        AddrConfig::Slaac(config) => {
+                            Some(SlaacAddressEntry { addr_sub, config, deprecated })
+                        }
+                        AddrConfig::Manual => None,
+                    }
+                }),
+        )
+    }
+
+    fn add_addr_sub(
+        &mut self,
+        ctx: &mut C,
+        add_addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
+        slaac_config: SlaacConfig<C::Instant>,
+    ) -> Result<SlaacAddressEntryMut<'_, C::Instant>, ExistsError> {
+        let SlaacAddrs { sync_ctx, device_id, _marker } = self;
+        add_ipv6_addr_subnet(
+            *sync_ctx,
+            ctx,
+            *device_id,
+            add_addr_sub.to_witness(),
+            AddrConfig::Slaac(slaac_config),
+        )
+        .map(|()| {
+            iter_slaac_addrs_mut(*sync_ctx, *device_id)
+                .find(|SlaacAddressEntryMut { addr_sub, config: _, deprecated: _ }| {
+                    addr_sub == &add_addr_sub
+                })
+                .unwrap()
+        })
+    }
+
+    fn remove_addr(
+        &mut self,
+        ctx: &mut C,
+        addr: &UnicastAddr<Ipv6Addr>,
+    ) -> Result<(), NotFoundError> {
+        let SlaacAddrs { sync_ctx, device_id, _marker } = self;
+        del_ipv6_addr_with_reason(
+            *sync_ctx,
+            ctx,
+            *device_id,
+            &addr.into_specified(),
+            DelIpv6AddrReason::ManualAction,
+        )
+    }
+}
 
 /// The IP packet hop limit for all NDP packets.
 ///
@@ -67,101 +164,59 @@ use crate::{
 pub(super) const REQUIRED_NDP_IP_PACKET_HOP_LIMIT: u8 = 255;
 
 impl<
+        'a,
         C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
-        SC: device::Ipv6DeviceContext<C> + GmpHandler<Ipv6, C> + DadHandler<C>,
+        SC: device::Ipv6DeviceContext<C> + GmpHandler<Ipv6, C> + DadHandler<C> + 'static,
+    > SlaacStateLayout<'a, C> for SC
+{
+    type SlaacAddrs = SlaacAddrs<'a, C, SC>;
+}
+
+impl<
+        C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>,
+        SC: device::Ipv6DeviceContext<C> + GmpHandler<Ipv6, C> + DadHandler<C> + 'static,
     > SlaacStateContext<C> for SC
 {
-    fn get_config(&self, device_id: Self::DeviceId) -> SlaacConfiguration {
-        let Ipv6DeviceConfiguration {
-            dad_transmits: _,
-            max_router_solicitations: _,
-            slaac_config,
-            ip_config: _,
-        } = SC::get_ip_device_state(self, device_id).config;
-        slaac_config
-    }
-
-    fn dad_transmits(&self, device_id: Self::DeviceId) -> Option<NonZeroU8> {
-        let Ipv6DeviceConfiguration {
-            dad_transmits,
-            max_router_solicitations: _,
-            slaac_config: _,
-            ip_config: _,
-        } = SC::get_ip_device_state(self, device_id).config;
-
-        dad_transmits
-    }
-
-    fn retrans_timer(&self, device_id: SC::DeviceId) -> Duration {
-        SC::get_ip_device_state(self, device_id).retrans_timer.get()
-    }
-
-    fn get_interface_identifier(&self, device_id: Self::DeviceId) -> [u8; 8] {
-        SC::get_eui64_iid(self, device_id).unwrap_or_else(Default::default)
-    }
-
-    fn iter_slaac_addrs(
-        &self,
-
+    fn with_slaac_addrs_mut_and_configs<
+        'a,
+        O,
+        F: FnOnce(SlaacAddrsMutAndConfig<'_, C, SlaacAddrs<'a, C, SC>>) -> O,
+    >(
+        &'a mut self,
         device_id: Self::DeviceId,
-    ) -> Box<dyn Iterator<Item = SlaacAddressEntry<C::Instant>> + '_> {
-        Box::new(
-            SC::get_ip_device_state(self, device_id).ip_state.iter_addrs().cloned().filter_map(
-                |Ipv6AddressEntry { addr_sub, state: _, config, deprecated }| match config {
-                    AddrConfig::Slaac(config) => {
-                        Some(SlaacAddressEntry { addr_sub, config, deprecated })
-                    }
-                    AddrConfig::Manual => None,
+        cb: F,
+    ) -> O
+    where
+        C: 'a,
+    {
+        let Ipv6DeviceState {
+            retrans_timer,
+            route_discovery: _,
+            router_soliciations_remaining: _,
+            ip_state: _,
+            config:
+                Ipv6DeviceConfiguration {
+                    dad_transmits,
+                    max_router_solicitations: _,
+                    slaac_config,
+                    ip_config: _,
                 },
-            ),
-        )
-    }
+        } = SC::get_ip_device_state_mut(self, device_id);
+        let slaac_config = *slaac_config;
+        let dad_transmits = *dad_transmits;
+        let retrans_timer = retrans_timer.get();
+        let interface_identifier =
+            SC::get_eui64_iid(self, device_id).unwrap_or_else(Default::default);
+        let mut addrs = SlaacAddrs { sync_ctx: self, device_id, _marker: PhantomData };
 
-    fn iter_slaac_addrs_mut(
-        &mut self,
-
-        device_id: Self::DeviceId,
-    ) -> Box<dyn Iterator<Item = SlaacAddressEntryMut<'_, C::Instant>> + '_> {
-        Box::new(SC::get_ip_device_state_mut(self, device_id).ip_state.iter_addrs_mut().filter_map(
-            |Ipv6AddressEntry { addr_sub, state: _, config, deprecated }| match config {
-                AddrConfig::Slaac(config) => {
-                    Some(SlaacAddressEntryMut { addr_sub: *addr_sub, config, deprecated })
-                }
-                AddrConfig::Manual => None,
-            },
-        ))
-    }
-
-    fn add_slaac_addr_sub(
-        &mut self,
-        ctx: &mut C,
-        device_id: Self::DeviceId,
-        addr_sub: AddrSubnet<Ipv6Addr, UnicastAddr<Ipv6Addr>>,
-        slaac_config: SlaacConfig<C::Instant>,
-    ) -> Result<(), ExistsError> {
-        add_ipv6_addr_subnet(
-            self,
-            ctx,
-            device_id,
-            addr_sub.to_witness(),
-            AddrConfig::Slaac(slaac_config),
-        )
-    }
-
-    fn remove_slaac_addr(
-        &mut self,
-        ctx: &mut C,
-        device_id: Self::DeviceId,
-        addr: &UnicastAddr<Ipv6Addr>,
-    ) {
-        del_ipv6_addr_with_reason(
-            self,
-            ctx,
-            device_id,
-            &addr.into_specified(),
-            DelIpv6AddrReason::ManualAction,
-        )
-        .unwrap()
+        cb(SlaacAddrsMutAndConfig {
+            addrs: &mut addrs,
+            config: slaac_config,
+            dad_transmits: dad_transmits,
+            retrans_timer,
+            interface_identifier,
+            _marker: PhantomData,
+        })
     }
 }
 
