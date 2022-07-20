@@ -2,12 +2,16 @@
   "name": "test.unionsandwich",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl",
       "data": "test.unionsandwich",
       "start_offset": 8,
-      "end_offset": 26,
-      "file": "../../tools/fidl/fidlc/testdata/union_sandwich.test.fidl"
+      "end_offset": 26
     }
   ],
   "using_declarations": [],
-  "dependencies": []
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": []
 }

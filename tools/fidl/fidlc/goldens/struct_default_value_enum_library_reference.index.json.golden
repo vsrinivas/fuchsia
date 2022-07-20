@@ -2,20 +2,22 @@
   "name": "test.structdefaultvalueenumlibraryreference",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/example.test.fidl",
       "data": "test.structdefaultvalueenumlibraryreference",
       "start_offset": 8,
-      "end_offset": 51,
-      "file": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/example.test.fidl"
+      "end_offset": 51
     }
   ],
   "using_declarations": [
     {
       "library_name": "test.dependent",
       "referenced_at": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/example.test.fidl",
         "data": "test.dependent",
         "start_offset": 60,
-        "end_offset": 74,
-        "file": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/example.test.fidl"
+        "end_offset": 74
       }
     }
   ],
@@ -23,11 +25,36 @@
     {
       "library_name": "test.dependent",
       "library_location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/dependent.test.fidl",
         "data": "library test.dependent",
         "start_offset": 0,
-        "end_offset": 22,
-        "file": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/dependent.test.fidl"
+        "end_offset": 22
       }
     }
-  ]
+  ],
+  "dependency_identifiers": [
+    {
+      "identifier": "test.dependent/MyEnum",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/dependent.test.fidl",
+        "data": "MyEnum",
+        "start_offset": 30,
+        "end_offset": 36
+      }
+    },
+    {
+      "identifier": "test.dependent/MyEnum.A",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/dependent.test.fidl",
+        "data": "A",
+        "start_offset": 65,
+        "end_offset": 66
+      }
+    }
+  ],
+  "consts": [],
+  "enums": []
 }

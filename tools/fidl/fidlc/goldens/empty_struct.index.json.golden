@@ -2,12 +2,16 @@
   "name": "test.emptystruct",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
       "data": "test.emptystruct",
       "start_offset": 8,
-      "end_offset": 24,
-      "file": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl"
+      "end_offset": 24
     }
   ],
   "using_declarations": [],
-  "dependencies": []
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": []
 }

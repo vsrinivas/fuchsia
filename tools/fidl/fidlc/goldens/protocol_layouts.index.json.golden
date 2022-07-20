@@ -2,20 +2,22 @@
   "name": "test.protocollayouts",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl",
       "data": "test.protocollayouts",
       "start_offset": 8,
-      "end_offset": 28,
-      "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl"
+      "end_offset": 28
     }
   ],
   "using_declarations": [
     {
       "library_name": "test.protocollayouts.imported",
       "referenced_at": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl",
         "data": "test.protocollayouts.imported",
         "start_offset": 37,
-        "end_offset": 66,
-        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl"
+        "end_offset": 66
       }
     }
   ],
@@ -23,11 +25,15 @@
     {
       "library_name": "test.protocollayouts.imported",
       "library_location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/imported.test.fidl",
         "data": "library test.protocollayouts.imported",
         "start_offset": 0,
-        "end_offset": 37,
-        "file": "../../tools/fidl/fidlc/testdata/protocol_layouts/imported.test.fidl"
+        "end_offset": 37
       }
     }
-  ]
+  ],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": []
 }

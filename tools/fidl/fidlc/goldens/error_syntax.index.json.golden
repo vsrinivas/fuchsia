@@ -2,20 +2,22 @@
   "name": "test.errorsyntax",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/error_syntax/child.test.fidl",
       "data": "test.errorsyntax",
       "start_offset": 173,
-      "end_offset": 189,
-      "file": "../../tools/fidl/fidlc/testdata/error_syntax/child.test.fidl"
+      "end_offset": 189
     }
   ],
   "using_declarations": [
     {
       "library_name": "test.errorsyntax.parent",
       "referenced_at": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/error_syntax/child.test.fidl",
         "data": "test.errorsyntax.parent",
         "start_offset": 198,
-        "end_offset": 221,
-        "file": "../../tools/fidl/fidlc/testdata/error_syntax/child.test.fidl"
+        "end_offset": 221
       }
     }
   ],
@@ -23,11 +25,15 @@
     {
       "library_name": "test.errorsyntax.parent",
       "library_location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/error_syntax/parent.test.fidl",
         "data": "library test.errorsyntax.parent",
         "start_offset": 165,
-        "end_offset": 196,
-        "file": "../../tools/fidl/fidlc/testdata/error_syntax/parent.test.fidl"
+        "end_offset": 196
       }
     }
-  ]
+  ],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": []
 }

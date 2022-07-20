@@ -2,12 +2,16 @@
   "name": "test.error",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/error.test.fidl",
       "data": "test.error",
       "start_offset": 8,
-      "end_offset": 18,
-      "file": "../../tools/fidl/fidlc/testdata/error.test.fidl"
+      "end_offset": 18
     }
   ],
   "using_declarations": [],
-  "dependencies": []
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": []
 }

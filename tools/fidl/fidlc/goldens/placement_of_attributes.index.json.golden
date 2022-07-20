@@ -2,20 +2,22 @@
   "name": "test.placementofattributes",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
       "data": "test.placementofattributes",
       "start_offset": 8,
-      "end_offset": 34,
-      "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl"
+      "end_offset": 34
     }
   ],
   "using_declarations": [
     {
       "library_name": "test.exampleusing",
       "referenced_at": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
         "data": "test.exampleusing",
         "start_offset": 96,
-        "end_offset": 113,
-        "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl"
+        "end_offset": 113
       }
     }
   ],
@@ -23,11 +25,53 @@
     {
       "library_name": "test.exampleusing",
       "library_location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/exampleusing.test.fidl",
         "data": "library test.exampleusing",
         "start_offset": 0,
-        "end_offset": 25,
-        "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/exampleusing.test.fidl"
+        "end_offset": 25
       }
+    }
+  ],
+  "dependency_identifiers": [],
+  "consts": [
+    {
+      "identifier": "test.placementofattributes/EXAMPLE_CONST",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+        "data": "EXAMPLE_CONST",
+        "start_offset": 214,
+        "end_offset": 227
+      },
+      "value": {
+        "type": "literal"
+      }
+    }
+  ],
+  "enums": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.placementofattributes/ExampleEnum",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+        "data": "ExampleEnum",
+        "start_offset": 255,
+        "end_offset": 266
+      },
+      "members": [
+        {
+          "name": "MEMBER",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+            "data": "MEMBER",
+            "start_offset": 307,
+            "end_offset": 313
+          }
+        }
+      ]
     }
   ]
 }

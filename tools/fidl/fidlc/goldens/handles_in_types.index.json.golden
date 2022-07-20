@@ -2,12 +2,50 @@
   "name": "test.handlesintypes",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
       "data": "test.handlesintypes",
       "start_offset": 8,
-      "end_offset": 27,
-      "file": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl"
+      "end_offset": 27
     }
   ],
   "using_declarations": [],
-  "dependencies": []
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.handlesintypes/obj_type",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
+        "data": "obj_type",
+        "start_offset": 202,
+        "end_offset": 210
+      },
+      "members": [
+        {
+          "name": "NONE",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
+            "data": "NONE",
+            "start_offset": 240,
+            "end_offset": 244
+          }
+        },
+        {
+          "name": "VMO",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/handles_in_types.test.fidl",
+            "data": "VMO",
+            "start_offset": 254,
+            "end_offset": 257
+          }
+        }
+      ]
+    }
+  ]
 }

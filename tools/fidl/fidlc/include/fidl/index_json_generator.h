@@ -14,6 +14,7 @@
 #include <vector>
 
 #include "experimental_flags.h"
+#include "fidl/names.h"
 #include "flat/compiler.h"
 #include "flat_ast.h"
 #include "json_writer.h"
@@ -33,15 +34,35 @@ class IndexJSONGenerator : public utils::JsonWriter<IndexJSONGenerator> {
 
   ~IndexJSONGenerator() = default;
 
+  // struct representing an identifier from dependency library referenced in target library
+  struct ReferencedIdentifier {
+    explicit ReferencedIdentifier(const flat::Name& name)
+        :identifier(NameFlatName(name)) {
+      ZX_ASSERT_MSG(name.span().has_value(), "anonymous name used as an identifier");
+      span = name.span().value();
+    }
+    ReferencedIdentifier(std::string identifier, SourceSpan span)
+        : span(span), identifier(std::move(identifier)) {}
+    SourceSpan span;
+    std::string identifier;
+  };
+
   void Generate(SourceSpan value);
+  void Generate(ReferencedIdentifier value);
   void Generate(long value) { EmitNumeric(value); }
   void Generate(unsigned long value) { EmitNumeric(value); }
   void Generate(const flat::Compilation::Dependency& dependency);
   void Generate(std::pair<flat::Library*, SourceSpan> reference);
+  void Generate(const flat::Const& value);
+  void Generate(const flat::Constant& value);
+  void Generate(const flat::Enum& value);
+  void Generate(const flat::Enum::Member& value);
+  void Generate(const flat::Name& value);
 
   std::ostringstream Produce();
 
  private:
+  std::vector<ReferencedIdentifier> GetDependencyIdentifiers();
   const flat::Compilation* compilation_;
   std::ostringstream json_file_;
 };

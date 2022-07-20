@@ -2,20 +2,22 @@
   "name": "test.typealiases",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
       "data": "test.typealiases",
       "start_offset": 8,
-      "end_offset": 24,
-      "file": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl"
+      "end_offset": 24
     }
   ],
   "using_declarations": [
     {
       "library_name": "test.someotherlibrary",
       "referenced_at": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
         "data": "test.someotherlibrary",
         "start_offset": 33,
-        "end_offset": 54,
-        "file": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl"
+        "end_offset": 54
       }
     }
   ],
@@ -23,11 +25,49 @@
     {
       "library_name": "test.someotherlibrary",
       "library_location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/type_aliases/someotherlibrary.test.fidl",
         "data": "library test.someotherlibrary",
         "start_offset": 0,
-        "end_offset": 29,
-        "file": "../../tools/fidl/fidlc/testdata/type_aliases/someotherlibrary.test.fidl"
+        "end_offset": 29
       }
+    }
+  ],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.typealiases/obj_type",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
+        "data": "obj_type",
+        "start_offset": 229,
+        "end_offset": 237
+      },
+      "members": [
+        {
+          "name": "NONE",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
+            "data": "NONE",
+            "start_offset": 267,
+            "end_offset": 271
+          }
+        },
+        {
+          "name": "CHANNEL",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/type_aliases/example.test.fidl",
+            "data": "CHANNEL",
+            "start_offset": 281,
+            "end_offset": 288
+          }
+        }
+      ]
     }
   ]
 }

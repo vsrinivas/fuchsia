@@ -2,12 +2,16 @@
   "name": "test.struct",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/struct.test.fidl",
       "data": "test.struct",
       "start_offset": 8,
-      "end_offset": 19,
-      "file": "../../tools/fidl/fidlc/testdata/struct.test.fidl"
+      "end_offset": 19
     }
   ],
   "using_declarations": [],
-  "dependencies": []
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": []
 }

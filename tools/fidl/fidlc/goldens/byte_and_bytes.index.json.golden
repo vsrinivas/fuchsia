@@ -2,12 +2,16 @@
   "name": "test.byteandbytes",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/byte_and_bytes.test.fidl",
       "data": "test.byteandbytes",
       "start_offset": 8,
-      "end_offset": 25,
-      "file": "../../tools/fidl/fidlc/testdata/byte_and_bytes.test.fidl"
+      "end_offset": 25
     }
   ],
   "using_declarations": [],
-  "dependencies": []
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": []
 }

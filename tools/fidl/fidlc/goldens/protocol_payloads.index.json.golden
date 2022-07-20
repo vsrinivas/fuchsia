@@ -2,20 +2,22 @@
   "name": "test.protocolpayloads",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl",
       "data": "test.protocolpayloads",
       "start_offset": 8,
-      "end_offset": 29,
-      "file": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl"
+      "end_offset": 29
     }
   ],
   "using_declarations": [
     {
       "library_name": "test.protocolpayloads.imported",
       "referenced_at": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl",
         "data": "test.protocolpayloads.imported",
         "start_offset": 38,
-        "end_offset": 68,
-        "file": "../../tools/fidl/fidlc/testdata/protocol_payloads/example.test.fidl"
+        "end_offset": 68
       }
     }
   ],
@@ -23,11 +25,15 @@
     {
       "library_name": "test.protocolpayloads.imported",
       "library_location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_payloads/imported.test.fidl",
         "data": "library test.protocolpayloads.imported",
         "start_offset": 0,
-        "end_offset": 38,
-        "file": "../../tools/fidl/fidlc/testdata/protocol_payloads/imported.test.fidl"
+        "end_offset": 38
       }
     }
-  ]
+  ],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": []
 }

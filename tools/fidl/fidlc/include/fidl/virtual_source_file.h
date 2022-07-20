@@ -21,6 +21,8 @@ class VirtualSourceFile : public SourceFile {
  public:
   explicit VirtualSourceFile(std::string filename) : SourceFile(std::move(filename), "") {}
 
+  bool IsVirtual() const override { return true; }
+
   std::string_view LineContaining(std::string_view view, Position* position_out) const override;
 
   SourceSpan AddLine(std::string_view line);

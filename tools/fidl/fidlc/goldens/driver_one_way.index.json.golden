@@ -2,12 +2,16 @@
   "name": "test.driveroneway",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/driver_one_way.test.fidl",
       "data": "test.driveroneway",
       "start_offset": 173,
-      "end_offset": 190,
-      "file": "../../tools/fidl/fidlc/testdata/driver_one_way.test.fidl"
+      "end_offset": 190
     }
   ],
   "using_declarations": [],
-  "dependencies": []
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": []
 }

@@ -2,12 +2,97 @@
   "name": "test.doccomments",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
       "data": "test.doccomments",
       "start_offset": 58,
-      "end_offset": 74,
-      "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl"
+      "end_offset": 74
     }
   ],
   "using_declarations": [],
-  "dependencies": []
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [
+    {
+      "identifier": "test.doccomments/C",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+        "data": "C",
+        "start_offset": 779,
+        "end_offset": 780
+      },
+      "value": {
+        "type": "literal"
+      }
+    }
+  ],
+  "enums": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.doccomments/MyFlexibleEnum",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+        "data": "MyFlexibleEnum",
+        "start_offset": 1192,
+        "end_offset": 1206
+      },
+      "members": [
+        {
+          "name": "FOO",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+            "data": "FOO",
+            "start_offset": 1306,
+            "end_offset": 1309
+          }
+        },
+        {
+          "name": "BAR",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+            "data": "BAR",
+            "start_offset": 1448,
+            "end_offset": 1451
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.doccomments/MyStrictEnum",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+        "data": "MyStrictEnum",
+        "start_offset": 858,
+        "end_offset": 870
+      },
+      "members": [
+        {
+          "name": "FOO",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+            "data": "FOO",
+            "start_offset": 968,
+            "end_offset": 971
+          }
+        },
+        {
+          "name": "BAR",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+            "data": "BAR",
+            "start_offset": 1110,
+            "end_offset": 1113
+          }
+        }
+      ]
+    }
+  ]
 }

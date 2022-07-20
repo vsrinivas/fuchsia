@@ -2,12 +2,50 @@
   "name": "test.newtype",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/new_type.test.fidl",
       "data": "test.newtype",
       "start_offset": 8,
-      "end_offset": 20,
-      "file": "../../tools/fidl/fidlc/testdata/new_type.test.fidl"
+      "end_offset": 20
     }
   ],
   "using_declarations": [],
-  "dependencies": []
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.newtype/Enum",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/new_type.test.fidl",
+        "data": "Enum",
+        "start_offset": 61,
+        "end_offset": 65
+      },
+      "members": [
+        {
+          "name": "A",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/new_type.test.fidl",
+            "data": "A",
+            "start_offset": 79,
+            "end_offset": 80
+          }
+        },
+        {
+          "name": "B",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/new_type.test.fidl",
+            "data": "B",
+            "start_offset": 90,
+            "end_offset": 91
+          }
+        }
+      ]
+    }
+  ]
 }

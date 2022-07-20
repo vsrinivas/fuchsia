@@ -2,12 +2,16 @@
   "name": "test.protocolrequest",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
       "data": "test.protocolrequest",
       "start_offset": 8,
-      "end_offset": 28,
-      "file": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl"
+      "end_offset": 28
     }
   ],
   "using_declarations": [],
-  "dependencies": []
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": []
 }

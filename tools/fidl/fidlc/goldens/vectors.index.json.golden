@@ -2,12 +2,16 @@
   "name": "test.vectors",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/vectors.test.fidl",
       "data": "test.vectors",
       "start_offset": 172,
-      "end_offset": 184,
-      "file": "../../tools/fidl/fidlc/testdata/vectors.test.fidl"
+      "end_offset": 184
     }
   ],
   "using_declarations": [],
-  "dependencies": []
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": []
 }

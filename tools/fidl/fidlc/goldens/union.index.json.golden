@@ -2,12 +2,16 @@
   "name": "test.union",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
       "data": "test.union",
       "start_offset": 8,
-      "end_offset": 18,
-      "file": "../../tools/fidl/fidlc/testdata/union.test.fidl"
+      "end_offset": 18
     }
   ],
   "using_declarations": [],
-  "dependencies": []
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": []
 }

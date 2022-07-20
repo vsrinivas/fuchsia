@@ -2,12 +2,67 @@
   "name": "test.versions",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
       "data": "test.versions",
       "start_offset": 28,
-      "end_offset": 41,
-      "file": "../../tools/fidl/fidlc/testdata/versions.test.fidl"
+      "end_offset": 41
     }
   ],
   "using_declarations": [],
-  "dependencies": []
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [
+    {
+      "identifier": "test.versions/ADDED_AT_HEAD",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+        "data": "ADDED_AT_HEAD",
+        "start_offset": 1249,
+        "end_offset": 1262
+      },
+      "value": {
+        "type": "literal"
+      }
+    },
+    {
+      "identifier": "test.versions/Const",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+        "data": "Const",
+        "start_offset": 141,
+        "end_offset": 146
+      },
+      "value": {
+        "type": "literal"
+      }
+    }
+  ],
+  "enums": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.versions/Enum",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+        "data": "Enum",
+        "start_offset": 305,
+        "end_offset": 309
+      },
+      "members": [
+        {
+          "name": "A",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "data": "A",
+            "start_offset": 361,
+            "end_offset": 362
+          }
+        }
+      ]
+    }
+  ]
 }

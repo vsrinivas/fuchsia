@@ -2,20 +2,22 @@
   "name": "test.transitivedependencies",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl",
       "data": "test.transitivedependencies",
       "start_offset": 8,
-      "end_offset": 35,
-      "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl"
+      "end_offset": 35
     }
   ],
   "using_declarations": [
     {
       "library_name": "test.middle",
       "referenced_at": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl",
         "data": "test.middle",
         "start_offset": 44,
-        "end_offset": 55,
-        "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl"
+        "end_offset": 55
       }
     }
   ],
@@ -23,11 +25,15 @@
     {
       "library_name": "test.middle",
       "library_location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies/middle.test.fidl",
         "data": "library test.middle",
         "start_offset": 0,
-        "end_offset": 19,
-        "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies/middle.test.fidl"
+        "end_offset": 19
       }
     }
-  ]
+  ],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": []
 }

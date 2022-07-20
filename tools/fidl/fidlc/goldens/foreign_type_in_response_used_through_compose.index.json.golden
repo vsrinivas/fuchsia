@@ -2,20 +2,22 @@
   "name": "test.foreigntypeinresponseusedthroughcompose",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/top.test.fidl",
       "data": "test.foreigntypeinresponseusedthroughcompose",
       "start_offset": 8,
-      "end_offset": 52,
-      "file": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/top.test.fidl"
+      "end_offset": 52
     }
   ],
   "using_declarations": [
     {
       "library_name": "test.middle",
       "referenced_at": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/top.test.fidl",
         "data": "test.middle",
         "start_offset": 61,
-        "end_offset": 72,
-        "file": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/top.test.fidl"
+        "end_offset": 72
       }
     }
   ],
@@ -23,20 +25,25 @@
     {
       "library_name": "test.bottom",
       "library_location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/bottom.test.fidl",
         "data": "library test.bottom",
         "start_offset": 0,
-        "end_offset": 19,
-        "file": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/bottom.test.fidl"
+        "end_offset": 19
       }
     },
     {
       "library_name": "test.middle",
       "library_location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl",
         "data": "library test.middle",
         "start_offset": 0,
-        "end_offset": 19,
-        "file": "../../tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/middle.test.fidl"
+        "end_offset": 19
       }
     }
-  ]
+  ],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": []
 }

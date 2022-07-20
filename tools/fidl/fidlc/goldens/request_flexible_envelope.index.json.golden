@@ -2,12 +2,16 @@
   "name": "test.requestflexibleenvelope",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
       "data": "test.requestflexibleenvelope",
       "start_offset": 8,
-      "end_offset": 36,
-      "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl"
+      "end_offset": 36
     }
   ],
   "using_declarations": [],
-  "dependencies": []
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": []
 }

@@ -2,12 +2,16 @@
   "name": "test.inheritancewithrecursivedecl",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
       "data": "test.inheritancewithrecursivedecl",
       "start_offset": 8,
-      "end_offset": 41,
-      "file": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl"
+      "end_offset": 41
     }
   ],
   "using_declarations": [],
-  "dependencies": []
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": []
 }

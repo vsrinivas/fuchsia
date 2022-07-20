@@ -2,20 +2,22 @@
   "name": "test.bindingsdenylist",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
       "data": "test.bindingsdenylist",
       "start_offset": 8,
-      "end_offset": 29,
-      "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl"
+      "end_offset": 29
     }
   ],
   "using_declarations": [
     {
       "library_name": "test.dependent",
       "referenced_at": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
         "data": "test.dependent",
         "start_offset": 38,
-        "end_offset": 52,
-        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl"
+        "end_offset": 52
       }
     }
   ],
@@ -23,11 +25,53 @@
     {
       "library_name": "test.dependent",
       "library_location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/dependent.test.fidl",
         "data": "library test.dependent",
         "start_offset": 0,
-        "end_offset": 22,
-        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/dependent.test.fidl"
+        "end_offset": 22
       }
+    }
+  ],
+  "dependency_identifiers": [],
+  "consts": [
+    {
+      "identifier": "test.bindingsdenylist/AllBindings",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "data": "AllBindings",
+        "start_offset": 488,
+        "end_offset": 499
+      },
+      "value": {
+        "type": "literal"
+      }
+    }
+  ],
+  "enums": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.bindingsdenylist/OnlyDart",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "data": "OnlyDart",
+        "start_offset": 707,
+        "end_offset": 715
+      },
+      "members": [
+        {
+          "name": "A",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "A",
+            "start_offset": 736,
+            "end_offset": 737
+          }
+        }
+      ]
     }
   ]
 }

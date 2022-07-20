@@ -2,12 +2,16 @@
   "name": "test.escaping",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
       "data": "test.escaping",
       "start_offset": 8,
-      "end_offset": 21,
-      "file": "../../tools/fidl/fidlc/testdata/escaping.test.fidl"
+      "end_offset": 21
     }
   ],
   "using_declarations": [],
-  "dependencies": []
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": []
 }

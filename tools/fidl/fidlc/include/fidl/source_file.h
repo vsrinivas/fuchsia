@@ -17,6 +17,8 @@ class SourceFile {
   SourceFile(std::string filename, std::string data);
   virtual ~SourceFile();
 
+  virtual bool IsVirtual() const { return false; }
+
   // Enables move construction and assignment
   SourceFile(SourceFile&& rhs) = default;
   SourceFile& operator=(SourceFile&&) = default;

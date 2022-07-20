@@ -2,12 +2,79 @@
   "name": "test.anonymous",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
       "data": "test.anonymous",
       "start_offset": 8,
-      "end_offset": 22,
-      "file": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl"
+      "end_offset": 22
     }
   ],
   "using_declarations": [],
-  "dependencies": []
+  "dependencies": [],
+  "dependency_identifiers": [],
+  "consts": [],
+  "enums": [
+    {
+      "is_anonymous": true,
+      "identifier": "test.anonymous/Op",
+      "members": [
+        {
+          "name": "ADD",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "data": "ADD",
+            "start_offset": 190,
+            "end_offset": 193
+          }
+        },
+        {
+          "name": "MUL",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "data": "MUL",
+            "start_offset": 211,
+            "end_offset": 214
+          }
+        },
+        {
+          "name": "DIV",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "data": "DIV",
+            "start_offset": 232,
+            "end_offset": 235
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.anonymous/SomeProtocol_SomeMethod_Error",
+      "members": [
+        {
+          "name": "ERROR_ONE",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "data": "ERROR_ONE",
+            "start_offset": 1016,
+            "end_offset": 1025
+          }
+        },
+        {
+          "name": "ERROR_TWO",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/anonymous.test.fidl",
+            "data": "ERROR_TWO",
+            "start_offset": 1039,
+            "end_offset": 1048
+          }
+        }
+      ]
+    }
+  ]
 }

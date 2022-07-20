@@ -2,20 +2,22 @@
   "name": "test.importedconstvalues",
   "lib_declarations": [
     {
+      "is_virtual": false,
+      "file": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
       "data": "test.importedconstvalues",
       "start_offset": 8,
-      "end_offset": 32,
-      "file": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl"
+      "end_offset": 32
     }
   ],
   "using_declarations": [
     {
       "library_name": "test.dependent",
       "referenced_at": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
         "data": "test.dependent",
         "start_offset": 41,
-        "end_offset": 55,
-        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl"
+        "end_offset": 55
       }
     }
   ],
@@ -23,11 +25,271 @@
     {
       "library_name": "test.dependent",
       "library_location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/dependent.test.fidl",
         "data": "library test.dependent",
         "start_offset": 0,
-        "end_offset": 22,
-        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/dependent.test.fidl"
+        "end_offset": 22
       }
     }
-  ]
+  ],
+  "dependency_identifiers": [
+    {
+      "identifier": "test.dependent/MY_ALIASED_STRING",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/dependent.test.fidl",
+        "data": "MY_ALIASED_STRING",
+        "start_offset": 95,
+        "end_offset": 112
+      }
+    },
+    {
+      "identifier": "test.dependent/MY_BYTE",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/dependent.test.fidl",
+        "data": "MY_BYTE",
+        "start_offset": 480,
+        "end_offset": 487
+      }
+    },
+    {
+      "identifier": "test.dependent/MY_FALSE",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/dependent.test.fidl",
+        "data": "MY_FALSE",
+        "start_offset": 170,
+        "end_offset": 178
+      }
+    },
+    {
+      "identifier": "test.dependent/MY_FLOAT32",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/dependent.test.fidl",
+        "data": "MY_FLOAT32",
+        "start_offset": 199,
+        "end_offset": 209
+      }
+    },
+    {
+      "identifier": "test.dependent/MY_FLOAT64",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/dependent.test.fidl",
+        "data": "MY_FLOAT64",
+        "start_offset": 231,
+        "end_offset": 241
+      }
+    },
+    {
+      "identifier": "test.dependent/MY_INT16",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/dependent.test.fidl",
+        "data": "MY_INT16",
+        "start_offset": 289,
+        "end_offset": 297
+      }
+    },
+    {
+      "identifier": "test.dependent/MY_INT32",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/dependent.test.fidl",
+        "data": "MY_INT32",
+        "start_offset": 316,
+        "end_offset": 324
+      }
+    },
+    {
+      "identifier": "test.dependent/MY_INT64",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/dependent.test.fidl",
+        "data": "MY_INT64",
+        "start_offset": 343,
+        "end_offset": 351
+      }
+    },
+    {
+      "identifier": "test.dependent/MY_INT8",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/dependent.test.fidl",
+        "data": "MY_INT8",
+        "start_offset": 264,
+        "end_offset": 271
+      }
+    },
+    {
+      "identifier": "test.dependent/MY_STRING",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/dependent.test.fidl",
+        "data": "MY_STRING",
+        "start_offset": 63,
+        "end_offset": 72
+      }
+    },
+    {
+      "identifier": "test.dependent/MY_TRUE",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/dependent.test.fidl",
+        "data": "MY_TRUE",
+        "start_offset": 143,
+        "end_offset": 150
+      }
+    },
+    {
+      "identifier": "test.dependent/MY_UINT16",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/dependent.test.fidl",
+        "data": "MY_UINT16",
+        "start_offset": 396,
+        "end_offset": 405
+      }
+    },
+    {
+      "identifier": "test.dependent/MY_UINT32",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/dependent.test.fidl",
+        "data": "MY_UINT32",
+        "start_offset": 424,
+        "end_offset": 433
+      }
+    },
+    {
+      "identifier": "test.dependent/MY_UINT64",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/dependent.test.fidl",
+        "data": "MY_UINT64",
+        "start_offset": 452,
+        "end_offset": 461
+      }
+    },
+    {
+      "identifier": "test.dependent/MY_UINT8",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/dependent.test.fidl",
+        "data": "MY_UINT8",
+        "start_offset": 370,
+        "end_offset": 378
+      }
+    },
+    {
+      "identifier": "test.dependent/MyEnum",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/dependent.test.fidl",
+        "data": "MyEnum",
+        "start_offset": 561,
+        "end_offset": 567
+      }
+    },
+    {
+      "identifier": "test.dependent/MyEnum.MEMBER",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/dependent.test.fidl",
+        "data": "MEMBER",
+        "start_offset": 595,
+        "end_offset": 601
+      }
+    }
+  ],
+  "consts": [
+    {
+      "identifier": "test.importedconstvalues/BITS_MEMBER",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+        "data": "BITS_MEMBER",
+        "start_offset": 229,
+        "end_offset": 240
+      },
+      "value": {
+        "type": "identifier",
+        "identifier": "test.dependent/MyBits.MEMBER",
+        "referenced_at": {
+          "is_virtual": false,
+          "file": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+          "data": "test.dependent.MyBits.MEMBER",
+          "start_offset": 265,
+          "end_offset": 293
+        }
+      }
+    },
+    {
+      "identifier": "test.importedconstvalues/BITS_MEMBER_PRIMITIVE",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+        "data": "BITS_MEMBER_PRIMITIVE",
+        "start_offset": 479,
+        "end_offset": 500
+      },
+      "value": {
+        "type": "identifier",
+        "identifier": "test.dependent/MyBits.MEMBER",
+        "referenced_at": {
+          "is_virtual": false,
+          "file": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+          "data": "test.dependent.MyBits.MEMBER",
+          "start_offset": 508,
+          "end_offset": 536
+        }
+      }
+    },
+    {
+      "identifier": "test.importedconstvalues/ENUM_MEMBER",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+        "data": "ENUM_MEMBER",
+        "start_offset": 301,
+        "end_offset": 312
+      },
+      "value": {
+        "type": "identifier",
+        "identifier": "test.dependent/MyEnum.MEMBER",
+        "referenced_at": {
+          "is_virtual": false,
+          "file": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+          "data": "test.dependent.MyEnum.MEMBER",
+          "start_offset": 337,
+          "end_offset": 365
+        }
+      }
+    },
+    {
+      "identifier": "test.importedconstvalues/ENUM_MEMBER_PRIMITIVE",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+        "data": "ENUM_MEMBER_PRIMITIVE",
+        "start_offset": 650,
+        "end_offset": 671
+      },
+      "value": {
+        "type": "identifier",
+        "identifier": "test.dependent/MyEnum.MEMBER",
+        "referenced_at": {
+          "is_virtual": false,
+          "file": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+          "data": "test.dependent.MyEnum.MEMBER",
+          "start_offset": 679,
+          "end_offset": 707
+        }
+      }
+    }
+  ],
+  "enums": []
 }
