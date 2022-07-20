@@ -24,27 +24,40 @@ zx_status_t PinnedVmObject::Create(fbl::RefPtr<VmObject> vmo, size_t offset, siz
   DEBUG_ASSERT(IS_PAGE_ALIGNED(offset) && IS_PAGE_ALIGNED(size));
   DEBUG_ASSERT(out_pinned_vmo != nullptr);
 
+  PinnedVmObject pinned_vmo;
+
   zx_status_t status = vmo->CommitRangePinned(offset, size, write);
   if (status != ZX_OK) {
     LTRACEF("vmo->CommitRange failed: %d\n", status);
     return status;
   }
 
-  out_pinned_vmo->vmo_ = ktl::move(vmo);
-  out_pinned_vmo->offset_ = offset;
-  out_pinned_vmo->size_ = size;
+  pinned_vmo.vmo_ = ktl::move(vmo);
+  pinned_vmo.offset_ = offset;
+  pinned_vmo.size_ = size;
+
+  *out_pinned_vmo = ktl::move(pinned_vmo);
 
   return ZX_OK;
 }
 
-PinnedVmObject::PinnedVmObject() = default;
-
-PinnedVmObject::PinnedVmObject(PinnedVmObject&&) = default;
-
-PinnedVmObject& PinnedVmObject::operator=(PinnedVmObject&&) = default;
-
-PinnedVmObject::~PinnedVmObject() {
+void PinnedVmObject::Unpin() {
   if (vmo_) {
     vmo_->Unpin(offset_, size_);
+    vmo_.reset();
   }
 }
+
+PinnedVmObject::PinnedVmObject() = default;
+
+PinnedVmObject::PinnedVmObject(PinnedVmObject&&) noexcept = default;
+
+PinnedVmObject& PinnedVmObject::operator=(PinnedVmObject&& pinned) noexcept {
+  Unpin();
+  vmo_ = ktl::move(pinned.vmo_);
+  offset_ = pinned.offset_;
+  size_ = pinned.size_;
+  return *this;
+}
+
+PinnedVmObject::~PinnedVmObject() { Unpin(); }

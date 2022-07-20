@@ -6,6 +6,8 @@
 
 #include <lib/fit/defer.h>
 
+#include <vm/pinned_vm_object.h>
+
 #include "test_helper.h"
 
 namespace vm_unittest {
@@ -3509,6 +3511,66 @@ static bool vmo_zero_pinned_test() {
   END_TEST;
 }
 
+static bool vmo_pinned_wrapper_test() {
+  BEGIN_TEST;
+
+  {
+    fbl::RefPtr<VmObjectPaged> vmo;
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, PAGE_SIZE, &vmo);
+    ASSERT_EQ(ZX_OK, status);
+
+    PinnedVmObject pinned;
+    status = PinnedVmObject::Create(vmo, 0, PAGE_SIZE, true, &pinned);
+    EXPECT_OK(status);
+    status = PinnedVmObject::Create(vmo, 0, PAGE_SIZE, true, &pinned);
+    EXPECT_OK(status);
+  }
+
+  {
+    fbl::RefPtr<VmObjectPaged> vmo;
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, PAGE_SIZE, &vmo);
+    ASSERT_EQ(ZX_OK, status);
+
+    PinnedVmObject pinned;
+    status = PinnedVmObject::Create(vmo, 0, PAGE_SIZE, true, &pinned);
+    EXPECT_OK(status);
+
+    PinnedVmObject empty;
+    pinned = ktl::move(empty);
+  }
+
+  {
+    fbl::RefPtr<VmObjectPaged> vmo;
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, PAGE_SIZE, &vmo);
+    ASSERT_EQ(ZX_OK, status);
+
+    PinnedVmObject pinned;
+    status = PinnedVmObject::Create(vmo, 0, PAGE_SIZE, true, &pinned);
+    EXPECT_OK(status);
+
+    PinnedVmObject empty;
+    empty = ktl::move(pinned);
+  }
+
+  {
+    fbl::RefPtr<VmObjectPaged> vmo;
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, PAGE_SIZE, &vmo);
+    ASSERT_EQ(ZX_OK, status);
+
+    PinnedVmObject pinned1;
+    status = PinnedVmObject::Create(vmo, 0, PAGE_SIZE, true, &pinned1);
+    EXPECT_OK(status);
+
+    PinnedVmObject pinned2;
+    status = PinnedVmObject::Create(vmo, 0, PAGE_SIZE, true, &pinned2);
+    EXPECT_OK(status);
+
+    pinned1 = ktl::move(pinned2);
+  }
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(vmo_tests)
 VM_UNITTEST(vmo_create_test)
 VM_UNITTEST(vmo_create_maximum_size)
@@ -3563,6 +3625,7 @@ VM_UNITTEST(vmo_dirty_pages_with_hints_test)
 VM_UNITTEST(vmo_pinning_backlink_test)
 VM_UNITTEST(vmo_supply_zero_offset_test)
 VM_UNITTEST(vmo_zero_pinned_test)
+VM_UNITTEST(vmo_pinned_wrapper_test)
 UNITTEST_END_TESTCASE(vmo_tests, "vmo", "VmObject tests")
 
 }  // namespace vm_unittest
