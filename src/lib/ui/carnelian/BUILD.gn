@@ -410,13 +410,16 @@ rustc_binary("carnelian_integration_test_bin") {
 
 fuchsia_component("carnelian-integration-test-component") {
   testonly = true
-  manifest = "meta/carnelian_integration_test.cmx"
+  manifest = "meta/carnelian_integration_test.cml"
   deps = [ ":carnelian_integration_test_bin" ]
 }
 
 fuchsia_test_package("carnelian-integration-test") {
   test_components = [ ":carnelian-integration-test-component" ]
-  deps = [ ":carnelian-integration-test-component" ]
+  deps = [
+    ":carnelian-integration-test-component",
+    "//src/ui/testing/test_ui_stack:test-ui-stack",
+  ]
   test_specs = {
     environments = [ nuc_env ]
   }
@@ -436,7 +439,7 @@ rustc_binary("carnelian_fb_integration_test_bin") {
 
 fuchsia_component("carnelian-fb-integration-test-component") {
   testonly = true
-  manifest = "meta/carnelian_fb_integration_test.cmx"
+  manifest = "meta/carnelian_fb_integration_test.cml"
   deps = [ ":carnelian_fb_integration_test_bin" ]
 }
 
