@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-
+    children: [
+        {
+            name: "mediasession",
+            url: "fuchsia-pkg://fuchsia.com/mediasession#meta/mediasession.cm",
+        },
+    ],
     use: [
         {
             protocol: [
@@ -13,17 +18,16 @@
             from: "#mediasession",
         },
     ],
-    children: [
+    offer: [
         {
-            name: "mediasession",
-            url: "fuchsia-pkg://fuchsia.com/mediasession#meta/mediasession.cm",
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#mediasession",
         },
-        offer: [
-            {
-                protocol: "fuchsia.media.UsageReporter",
-                from: "#audio_core",
-                to: "#mediasession",
-            },
-        ],
+        {
+            protocol: "fuchsia.media.UsageReporter",
+            from: "#audio_core",
+            to: "#mediasession",
+        },
     ],
 }
