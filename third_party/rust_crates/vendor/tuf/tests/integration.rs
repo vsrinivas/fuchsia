@@ -295,12 +295,18 @@ fn rejects_bad_delegation_signatures() {
                 &MetadataPath::new("delegation").unwrap(),
                 &raw_delegation
             ),
-            Err(Error::VerificationFailure(_))
+            Err(Error::MetadataMissingSignatures {
+                role,
+                number_of_valid_signatures: 0,
+                threshold: 1,
+            })
+            if role == MetadataPath::new("delegation").unwrap()
         );
 
+        let target_path = TargetPath::new("foo").unwrap();
         assert_matches!(
-            tuf.target_description(&TargetPath::new("foo").unwrap()),
-            Err(Error::TargetUnavailable)
+            tuf.target_description(&target_path),
+            Err(Error::TargetNotFound(p)) if p == target_path
         );
     })
 }
@@ -511,7 +517,12 @@ fn diamond_delegation() {
                 &MetadataPath::new("delegation-c").unwrap(),
                 &raw_delegation_c
             ),
-            Err(Error::VerificationFailure(_))
+            Err(Error::MetadataMissingSignatures {
+                role,
+                number_of_valid_signatures: 0,
+                threshold: 1,
+            })
+            if role == MetadataPath::new("delegation-c").unwrap()
         );
 
         tuf.update_delegated_targets(
@@ -526,9 +537,10 @@ fn diamond_delegation() {
             .target_description(&TargetPath::new("foo").unwrap())
             .is_ok());
 
+        let target_path = TargetPath::new("bar").unwrap();
         assert_matches!(
-            tuf.target_description(&TargetPath::new("bar").unwrap()),
-            Err(Error::TargetUnavailable)
+            tuf.target_description(&target_path),
+            Err(Error::TargetNotFound(p)) if p == target_path
         );
     })
 }

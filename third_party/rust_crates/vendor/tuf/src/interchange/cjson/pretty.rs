@@ -10,7 +10,7 @@ use crate::Result;
 /// This is identical to [Json] in all manners except for the `canonicalize` method. Instead of
 /// writing the metadata in the canonical format, it first canonicalizes it, then pretty prints
 /// the metadata.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct JsonPretty;
 
 impl DataInterchange for JsonPretty {

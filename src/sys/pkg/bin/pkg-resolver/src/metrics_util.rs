@@ -18,13 +18,12 @@ pub fn tuf_error_as_update_tuf_client_event_code(
         UpdateTufClientMetricDimensionResult as EventCodes,
     };
     match e {
-        Tuf(BadSignature) => EventCodes::BadSignature,
+        Tuf(BadSignature(_)) => EventCodes::BadSignature,
         Tuf(Encoding(_)) => EventCodes::Encoding,
         Tuf(ExpiredMetadata(_)) => EventCodes::ExpiredMetadata,
         Tuf(IllegalArgument(_)) => EventCodes::IllegalArgument,
-        Tuf(MissingMetadata(_)) => EventCodes::MissingMetadata,
         Tuf(NoSupportedHashAlgorithm) => EventCodes::NoSupportedHashAlgorithm,
-        Tuf(NotFound) => EventCodes::NotFound,
+        Tuf(MetadataNotFound { .. }) => EventCodes::MissingMetadata,
         Tuf(BadHttpStatus { code, .. }) => match *code {
             StatusCode::BAD_REQUEST => EventCodes::HttpBadRequest,
             StatusCode::UNAUTHORIZED => EventCodes::HttpUnauthorized,
@@ -48,12 +47,10 @@ pub fn tuf_error_as_update_tuf_client_event_code(
                 _ => EventCodes::Opaque,
             },
         },
-        Tuf(Programming(_)) => EventCodes::Programming,
-        Tuf(TargetUnavailable) => EventCodes::TargetUnavailable,
+        Tuf(TargetNotFound { .. }) => EventCodes::TargetUnavailable,
         Tuf(UnknownKeyType(_)) => EventCodes::UnknownKeyType,
-        Tuf(VerificationFailure(_)) => EventCodes::VerificationFailure,
-        Tuf(Http(_)) => EventCodes::Http,
-        Tuf(Hyper(_)) => EventCodes::Hyper,
+        Tuf(Http { .. }) => EventCodes::Http,
+        Tuf(Hyper { .. }) => EventCodes::Hyper,
         Timeout => EventCodes::DeadlineExceeded,
         _ => EventCodes::UnexpectedTufErrorVariant,
     }
@@ -67,13 +64,12 @@ pub fn tuf_error_as_create_tuf_client_event_code(
         CreateTufClientMetricDimensionResult as EventCodes,
     };
     match e {
-        Tuf(BadSignature) => EventCodes::BadSignature,
+        Tuf(BadSignature(_)) => EventCodes::BadSignature,
         Tuf(Encoding(_)) => EventCodes::Encoding,
         Tuf(ExpiredMetadata(_)) => EventCodes::ExpiredMetadata,
         Tuf(IllegalArgument(_)) => EventCodes::IllegalArgument,
-        Tuf(MissingMetadata(_)) => EventCodes::MissingMetadata,
+        Tuf(MetadataNotFound { .. }) => EventCodes::MissingMetadata,
         Tuf(NoSupportedHashAlgorithm) => EventCodes::NoSupportedHashAlgorithm,
-        Tuf(NotFound) => EventCodes::NotFound,
         Tuf(BadHttpStatus { code, .. }) => match *code {
             StatusCode::BAD_REQUEST => EventCodes::HttpBadRequest,
             StatusCode::UNAUTHORIZED => EventCodes::HttpUnauthorized,
@@ -97,12 +93,10 @@ pub fn tuf_error_as_create_tuf_client_event_code(
                 _ => EventCodes::Opaque,
             },
         },
-        Tuf(Programming(_)) => EventCodes::Programming,
-        Tuf(TargetUnavailable) => EventCodes::TargetUnavailable,
+        Tuf(TargetNotFound { .. }) => EventCodes::TargetUnavailable,
         Tuf(UnknownKeyType(_)) => EventCodes::UnknownKeyType,
-        Tuf(VerificationFailure(_)) => EventCodes::VerificationFailure,
-        Tuf(Http(_)) => EventCodes::Http,
-        Tuf(Hyper(_)) => EventCodes::Hyper,
+        Tuf(Http { .. }) => EventCodes::Http,
+        Tuf(Hyper { .. }) => EventCodes::Hyper,
         Timeout => EventCodes::DeadlineExceeded,
         _ => EventCodes::UnexpectedTufErrorVariant,
     }

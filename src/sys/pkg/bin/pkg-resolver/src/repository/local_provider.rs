@@ -37,6 +37,7 @@ impl RepositoryProvider<Json> for LocalMirrorRepositoryProvider {
         meta_path: &MetadataPath,
         version: MetadataVersion,
     ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
+        let meta_path = meta_path.clone();
         let path = meta_path.components::<Json>(version).join("/");
         async move {
             let (local, remote) = fidl::endpoints::create_endpoints::<fio::FileMarker>()
@@ -47,7 +48,7 @@ impl RepositoryProvider<Json> for LocalMirrorRepositoryProvider {
                 .await
                 .context("sending get_metadata")
                 .map_err(make_opaque_error)?
-                .map_err(|_| tuf::Error::NotFound)?;
+                .map_err(|_| tuf::Error::MetadataNotFound { path: meta_path.clone(), version })?;
 
             // Wait for OnOpen so that we know that the open actually succeeded.
             let file_proxy =
@@ -67,7 +68,9 @@ impl RepositoryProvider<Json> for LocalMirrorRepositoryProvider {
 
             match status {
                 Ok(()) => {}
-                Err(Status::NOT_FOUND) => return Err(tuf::Error::NotFound),
+                Err(Status::NOT_FOUND) => {
+                    return Err(tuf::Error::MetadataNotFound { path: meta_path, version })
+                }
                 Err(e) => return Err(tuf::Error::Opaque(format!("open failed: {:?}", e))),
             }
 

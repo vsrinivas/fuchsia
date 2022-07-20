@@ -6,14 +6,15 @@ use futures_util::io::{copy, AllowStdIo};
 use log::debug;
 use std::collections::HashMap;
 use std::fs::{DirBuilder, File};
+use std::io;
 use std::marker::PhantomData;
 use std::path::{Path, PathBuf};
 use tempfile::{NamedTempFile, TempPath};
 
+use crate::error::{Error, Result};
 use crate::interchange::DataInterchange;
 use crate::metadata::{MetadataPath, MetadataVersion, TargetPath};
 use crate::repository::{RepositoryProvider, RepositoryStorage};
-use crate::Result;
 
 /// A builder to create a repository contained on the local file system.
 pub struct FileSystemRepositoryBuilder<D> {
@@ -131,11 +132,49 @@ where
         path
     }
 
-    fn fetch_path(
+    fn fetch_metadata_from_path(
         &self,
+        meta_path: &MetadataPath,
+        version: MetadataVersion,
         path: &Path,
     ) -> BoxFuture<'_, Result<Box<dyn AsyncRead + Send + Unpin + '_>>> {
-        let reader = File::open(&path);
+        let reader = File::open(&path).map_err(|err| {
+            if err.kind() == io::ErrorKind::NotFound {
+                Error::MetadataNotFound {
+                    path: meta_path.clone(),
+                    version,
+                }
+            } else {
+                Error::IoPath {
+                    path: path.to_path_buf(),
+                    err,
+                }
+            }
+        });
+
+        async move {
+            let reader = reader?;
+            let reader: Box<dyn AsyncRead + Send + Unpin> = Box::new(AllowStdIo::new(reader));
+            Ok(reader)
+        }
+        .boxed()
+    }
+
+    fn fetch_target_from_path(
+        &self,
+        target_path: &TargetPath,
+        path: &Path,
+    ) -> BoxFuture<'_, Result<Box<dyn AsyncRead + Send + Unpin + '_>>> {
+        let reader = File::open(&path).map_err(|err| {
+            if err.kind() == io::ErrorKind::NotFound {
+                Error::TargetNotFound(target_path.clone())
+            } else {
+                Error::IoPath {
+                    path: path.to_path_buf(),
+                    err,
+                }
+            }
+        });
 
         async move {
             let reader = reader?;
@@ -156,7 +195,7 @@ where
         version: MetadataVersion,
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         let path = self.metadata_path(meta_path, version);
-        self.fetch_path(&path)
+        self.fetch_metadata_from_path(meta_path, version, &path)
     }
 
     fn fetch_target<'a>(
@@ -164,7 +203,7 @@ where
         target_path: &TargetPath,
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         let path = self.target_path(target_path);
-        self.fetch_path(&path)
+        self.fetch_target_from_path(target_path, &path)
     }
 }
 
@@ -186,8 +225,16 @@ where
             }
 
             let mut temp_file = AllowStdIo::new(create_temp_file(&path)?);
-            copy(metadata, &mut temp_file).await?;
-            temp_file.into_inner().persist(&path)?;
+            if let Err(err) = copy(metadata, &mut temp_file).await {
+                return Err(Error::IoPath { path, err });
+            }
+            temp_file
+                .into_inner()
+                .persist(&path)
+                .map_err(|err| Error::IoPath {
+                    path,
+                    err: err.error,
+                })?;
 
             Ok(())
         }
@@ -207,8 +254,16 @@ where
             }
 
             let mut temp_file = AllowStdIo::new(create_temp_file(&path)?);
-            copy(read, &mut temp_file).await?;
-            temp_file.into_inner().persist(&path)?;
+            if let Err(err) = copy(read, &mut temp_file).await {
+                return Err(Error::IoPath { path, err });
+            }
+            temp_file
+                .into_inner()
+                .persist(&path)
+                .map_err(|err| Error::IoPath {
+                    path,
+                    err: err.error,
+                })?;
 
             Ok(())
         }
@@ -242,14 +297,17 @@ where
             if path.exists() {
                 debug!("Target path exists. Overwriting: {:?}", path);
             }
-            tmp_path.persist(path)?;
+            tmp_path.persist(&path).map_err(|err| Error::IoPath {
+                path,
+                err: err.error,
+            })?;
         }
 
         for (path, tmp_path) in self.metadata {
             if path.exists() {
                 debug!("Metadata path exists. Overwriting: {:?}", path);
             }
-            tmp_path.persist(path)?;
+            tmp_path.persist(path).map_err(|err| err.error)?;
         }
 
         Ok(())
@@ -267,9 +325,11 @@ where
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         let path = self.repo.metadata_path(meta_path, version);
         if let Some(temp_path) = self.metadata.get(&path) {
-            self.repo.fetch_path(temp_path)
+            self.repo
+                .fetch_metadata_from_path(meta_path, version, temp_path)
         } else {
-            self.repo.fetch_path(&path)
+            self.repo
+                .fetch_metadata_from_path(meta_path, version, &path)
         }
     }
 
@@ -279,9 +339,9 @@ where
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         let path = self.repo.target_path(target_path);
         if let Some(temp_path) = self.targets.get(&path) {
-            self.repo.fetch_path(temp_path)
+            self.repo.fetch_target_from_path(target_path, temp_path)
         } else {
-            self.repo.fetch_path(&path)
+            self.repo.fetch_target_from_path(target_path, &path)
         }
     }
 }
@@ -301,7 +361,9 @@ where
 
         async move {
             let mut temp_file = AllowStdIo::new(create_temp_file(&path)?);
-            copy(read, &mut temp_file).await?;
+            if let Err(err) = copy(read, &mut temp_file).await {
+                return Err(Error::IoPath { path, err });
+            }
             metadata.insert(path, temp_file.into_inner().into_temp_path());
 
             Ok(())
@@ -319,7 +381,9 @@ where
 
         async move {
             let mut temp_file = AllowStdIo::new(create_temp_file(&path)?);
-            copy(read, &mut temp_file).await?;
+            if let Err(err) = copy(read, &mut temp_file).await {
+                return Err(Error::IoPath { path, err });
+            }
             targets.insert(path, temp_file.into_inner().into_temp_path());
 
             Ok(())
@@ -335,10 +399,22 @@ fn create_temp_file(path: &Path) -> Result<NamedTempFile> {
     // non-atomically copying the file to another mountpoint.
 
     if let Some(parent) = path.parent() {
-        DirBuilder::new().recursive(true).create(parent)?;
-        Ok(NamedTempFile::new_in(parent)?)
+        DirBuilder::new()
+            .recursive(true)
+            .create(parent)
+            .map_err(|err| Error::IoPath {
+                path: parent.to_path_buf(),
+                err,
+            })?;
+        Ok(NamedTempFile::new_in(parent).map_err(|err| Error::IoPath {
+            path: parent.to_path_buf(),
+            err,
+        })?)
     } else {
-        Ok(NamedTempFile::new_in(".")?)
+        Ok(NamedTempFile::new_in(".").map_err(|err| Error::IoPath {
+            path: path.to_path_buf(),
+            err,
+        })?)
     }
 }
 
@@ -374,7 +450,11 @@ mod test {
                         vec![],
                     )
                     .await,
-                Err(Error::NotFound)
+                Err(Error::MetadataNotFound {
+                    path,
+                    version,
+                })
+                if path == MetadataPath::root() && version == MetadataVersion::None
             );
         })
     }

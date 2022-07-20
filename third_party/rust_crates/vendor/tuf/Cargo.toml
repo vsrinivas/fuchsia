@@ -12,7 +12,7 @@
 [package]
 edition = "2018"
 name = "tuf"
-version = "0.3.0-beta7"
+version = "0.3.0-beta9"
 authors = [
     "heartsucker <heartsucker@autistici.org>",
     "Erick Tryzelaar <etryzelaar@google.com>",
@@ -54,14 +54,7 @@ features = ["io"]
 [dependencies.http]
 version = "0.2.0"
 
-[dependencies.hyper_013]
-version = "0.13.2"
-features = ["stream"]
-optional = true
-default-features = false
-package = "hyper"
-
-[dependencies.hyper_014]
+[dependencies.hyper]
 version = "0.14.15"
 features = [
     "stream",
@@ -70,7 +63,6 @@ features = [
 ]
 optional = true
 default-features = false
-package = "hyper"
 
 [dependencies.itoa]
 version = "0.4"
@@ -121,5 +113,8 @@ version = "1"
 version = "1"
 
 [features]
-default = ["hyper_014/tcp"]
+default = [
+    "hyper",
+    "hyper/tcp",
+]
 unstable_rsa = []

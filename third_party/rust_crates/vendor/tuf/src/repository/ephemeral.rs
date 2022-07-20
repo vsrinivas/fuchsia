@@ -59,7 +59,10 @@ where
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         let bytes = match self.metadata.get(&(meta_path.clone(), version)) {
             Some(bytes) => Ok(bytes),
-            None => Err(Error::NotFound),
+            None => Err(Error::MetadataNotFound {
+                path: meta_path.clone(),
+                version,
+            }),
         };
         bytes_to_reader(bytes).boxed()
     }
@@ -70,7 +73,7 @@ where
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         let bytes = match self.targets.get(target_path) {
             Some(bytes) => Ok(bytes),
-            None => Err(Error::NotFound),
+            None => Err(Error::TargetNotFound(target_path.clone())),
         };
         bytes_to_reader(bytes).boxed()
     }
@@ -157,7 +160,13 @@ where
         let bytes = if let Some(bytes) = self.staging_repo.metadata.get(&key) {
             Ok(bytes)
         } else {
-            self.parent_repo.metadata.get(&key).ok_or(Error::NotFound)
+            self.parent_repo
+                .metadata
+                .get(&key)
+                .ok_or_else(|| Error::MetadataNotFound {
+                    path: meta_path.clone(),
+                    version,
+                })
         };
         bytes_to_reader(bytes).boxed()
     }
@@ -172,7 +181,7 @@ where
             self.parent_repo
                 .targets
                 .get(target_path)
-                .ok_or(Error::NotFound)
+                .ok_or_else(|| Error::TargetNotFound(target_path.clone()))
         };
         bytes_to_reader(bytes).boxed()
     }
@@ -225,7 +234,7 @@ mod test {
 
             let path = TargetPath::new("batty").unwrap();
             if let Err(err) = repo.fetch_target(&path).await {
-                assert_matches!(err, Error::NotFound);
+                assert_matches!(err, Error::TargetNotFound(p) if p == path);
             } else {
                 panic!("expected fetch_target to fail");
             }

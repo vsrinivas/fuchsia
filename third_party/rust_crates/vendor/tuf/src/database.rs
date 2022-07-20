@@ -9,8 +9,9 @@ use crate::crypto::PublicKey;
 use crate::error::Error;
 use crate::interchange::DataInterchange;
 use crate::metadata::{
-    Delegations, Metadata, MetadataPath, RawSignedMetadata, RawSignedMetadataSet, RootMetadata,
-    SnapshotMetadata, TargetDescription, TargetPath, TargetsMetadata, TimestampMetadata,
+    Delegations, Metadata, MetadataPath, MetadataVersion, RawSignedMetadata, RawSignedMetadataSet,
+    RootMetadata, SnapshotMetadata, TargetDescription, TargetPath, TargetsMetadata,
+    TimestampMetadata,
 };
 use crate::verify::{self, Verified};
 use crate::Result;
@@ -41,10 +42,16 @@ impl<D: DataInterchange> Database<D> {
     {
         let verified_root = {
             // Make sure the keys signed the root.
-            let new_root = verify::verify_signatures(raw_root, root_threshold, root_keys)?;
+            let new_root = verify::verify_signatures(
+                &MetadataPath::root(),
+                raw_root,
+                root_threshold,
+                root_keys,
+            )?;
 
             // Make sure the root signed itself.
-            let verified_root = verify::verify_signatures(
+            verify::verify_signatures(
+                &MetadataPath::root(),
                 raw_root,
                 new_root.root().threshold(),
                 new_root.keys().iter().filter_map(|(k, v)| {
@@ -54,9 +61,7 @@ impl<D: DataInterchange> Database<D> {
                         None
                     }
                 }),
-            )?;
-
-            verified_root
+            )?
         };
 
         Ok(Database {
@@ -83,13 +88,12 @@ impl<D: DataInterchange> Database<D> {
             let unverified_root = raw_root.parse_untrusted()?.assume_valid()?;
 
             // Make sure the root signed itself.
-            let verified_root = verify::verify_signatures(
+            verify::verify_signatures(
+                &MetadataPath::root(),
                 raw_root,
                 unverified_root.root().threshold(),
                 unverified_root.root_keys(),
-            )?;
-
-            verified_root
+            )?
         };
 
         Ok(Database {
@@ -136,7 +140,10 @@ impl<D: DataInterchange> Database<D> {
         let mut db = if let Some(root) = metadata_set.root() {
             Database::from_root_with_trusted_keys(root, root_threshold, root_keys)?
         } else {
-            return Err(Error::MissingMetadata(MetadataPath::root()));
+            return Err(Error::MetadataNotFound {
+                path: MetadataPath::root(),
+                version: MetadataVersion::None,
+            });
         };
 
         db.update_metadata_after_root(start_time, metadata_set)?;
@@ -169,7 +176,10 @@ impl<D: DataInterchange> Database<D> {
         let mut db = if let Some(root) = metadata_set.root() {
             Database::from_trusted_root(root)?
         } else {
-            return Err(Error::MissingMetadata(MetadataPath::root()));
+            return Err(Error::MetadataNotFound {
+                path: MetadataPath::root(),
+                version: MetadataVersion::None,
+            });
         };
 
         db.update_metadata_after_root(start_time, metadata_set)?;
@@ -270,6 +280,7 @@ impl<D: DataInterchange> Database<D> {
             //     cycle, begin at step 0 and version N of the root metadata file.  Verify the
             //     trusted root signed the new root.
             let new_root = verify::verify_signatures(
+                &MetadataPath::root(),
                 raw_root,
                 trusted_root.root().threshold(),
                 trusted_root.root_keys(),
@@ -277,6 +288,7 @@ impl<D: DataInterchange> Database<D> {
 
             // Verify the new root signed itself.
             let new_root = verify::verify_signatures(
+                &MetadataPath::root(),
                 raw_root,
                 new_root.root().threshold(),
                 new_root.root_keys(),
@@ -294,15 +306,15 @@ impl<D: DataInterchange> Database<D> {
             //     update cycle, begin at step 0 and version N of the root metadata file.
 
             let next_root_version = trusted_root.version().checked_add(1).ok_or_else(|| {
-                Error::VerificationFailure("root version should be less than max u32".into())
+                Error::MetadataVersionMustBeSmallerThanMaxU32(MetadataPath::root())
             })?;
 
             if new_root.version() != next_root_version {
-                return Err(Error::VerificationFailure(format!(
-                    "Attempted to roll back root metadata at version {} to {}.",
-                    trusted_root.version(),
-                    new_root.version()
-                )));
+                return Err(Error::AttemptedMetadataRollBack {
+                    role: MetadataPath::root(),
+                    trusted_version: trusted_root.version(),
+                    new_version: new_root.version(),
+                });
             }
 
             /////////////////////////////////////////
@@ -371,6 +383,7 @@ impl<D: DataInterchange> Database<D> {
             //     cycle, and report the signature failure.
 
             let new_timestamp = verify::verify_signatures(
+                &MetadataPath::timestamp(),
                 raw_timestamp,
                 trusted_root.timestamp().threshold(),
                 trusted_root.timestamp_keys(),
@@ -390,11 +403,11 @@ impl<D: DataInterchange> Database<D> {
             if let Some(trusted_timestamp) = &self.trusted_timestamp {
                 match new_timestamp.version().cmp(&trusted_timestamp.version()) {
                     Ordering::Less => {
-                        return Err(Error::VerificationFailure(format!(
-                            "Attempted to roll back timestamp metadata at version {} to {}.",
-                            trusted_timestamp.version(),
-                            new_timestamp.version()
-                        )));
+                        return Err(Error::AttemptedMetadataRollBack {
+                            role: MetadataPath::timestamp(),
+                            trusted_version: trusted_timestamp.version(),
+                            new_version: new_timestamp.version(),
+                        });
                     }
                     Ordering::Equal => {
                         return Ok(None);
@@ -463,11 +476,11 @@ impl<D: DataInterchange> Database<D> {
                     .cmp(&trusted_snapshot.version())
                 {
                     Ordering::Less => {
-                        return Err(Error::VerificationFailure(format!(
-                            "Attempted to roll back snapshot metadata at version {} to {}.",
-                            trusted_snapshot.version(),
-                            trusted_timestamp.snapshot().version()
-                        )));
+                        return Err(Error::AttemptedMetadataRollBack {
+                            role: MetadataPath::snapshot(),
+                            trusted_version: trusted_snapshot.version(),
+                            new_version: trusted_timestamp.snapshot().version(),
+                        });
                     }
                     Ordering::Equal => {
                         return Ok(false);
@@ -502,6 +515,7 @@ impl<D: DataInterchange> Database<D> {
             //     signature failure.
 
             let new_snapshot = verify::verify_signatures(
+                &MetadataPath::snapshot(),
                 raw_snapshot,
                 trusted_root.snapshot().threshold(),
                 trusted_root.snapshot_keys(),
@@ -512,12 +526,12 @@ impl<D: DataInterchange> Database<D> {
             // the version.
 
             if new_snapshot.version() != trusted_timestamp.snapshot().version() {
-                return Err(Error::VerificationFailure(format!(
-                    "The timestamp metadata reported that the snapshot metadata should be at \
-                     version {} but version {} was found instead.",
-                    trusted_timestamp.snapshot().version(),
-                    new_snapshot.version(),
-                )));
+                return Err(Error::WrongMetadataVersion {
+                    parent_role: MetadataPath::timestamp(),
+                    child_role: MetadataPath::snapshot(),
+                    expected_version: trusted_timestamp.snapshot().version(),
+                    new_version: new_snapshot.version(),
+                });
             }
 
             /////////////////////////////////////////
@@ -533,11 +547,11 @@ impl<D: DataInterchange> Database<D> {
 
             if let Some(trusted_snapshot) = &self.trusted_snapshot {
                 if new_snapshot.version() < trusted_snapshot.version() {
-                    return Err(Error::VerificationFailure(format!(
-                        "Attempted to roll back snapshot metadata at version {} to {}",
-                        trusted_snapshot.version(),
-                        new_snapshot.version(),
-                    )));
+                    return Err(Error::AttemptedMetadataRollBack {
+                        role: MetadataPath::snapshot(),
+                        trusted_version: trusted_snapshot.version(),
+                        new_version: new_snapshot.version(),
+                    });
                 }
             }
 
@@ -667,18 +681,17 @@ impl<D: DataInterchange> Database<D> {
             let trusted_targets = self.trusted_targets_unexpired(start_time)?;
 
             if trusted_targets.delegations().is_none() {
-                return Err(Error::VerificationFailure(
-                    "Delegations not authorized".into(),
-                ));
+                return Err(Error::UnauthorizedDelegation {
+                    parent_role: parent_role.clone(),
+                    child_role: role.clone(),
+                });
             };
 
             let (threshold, keys) = self
                 .find_delegation_threshold_and_keys(parent_role, role)?
-                .ok_or_else(|| {
-                    Error::VerificationFailure(format!(
-                        "The delegated targets role {:?} is not known to the delegating targets role {}",
-                        role, parent_role,
-                    ))
+                .ok_or_else(|| Error::UnauthorizedDelegation {
+                    parent_role: parent_role.clone(),
+                    child_role: role.clone(),
                 })?;
 
             let trusted_delegated_targets_version =
@@ -715,12 +728,14 @@ impl<D: DataInterchange> Database<D> {
         // this metadata expired isn't part of the spec. Do we actually want to do this?
         let trusted_snapshot = self.trusted_snapshot_unexpired(start_time)?;
 
-        let trusted_targets_description = trusted_snapshot.meta().get(role).ok_or_else(|| {
-            Error::VerificationFailure(format!(
-                "Snapshot metadata had no description of the {} metadata",
-                role
-            ))
-        })?;
+        let trusted_targets_description =
+            trusted_snapshot
+                .meta()
+                .get(role)
+                .ok_or_else(|| Error::MissingMetadataDescription {
+                    parent_role: MetadataPath::snapshot(),
+                    child_role: role.clone(),
+                })?;
 
         /////////////////////////////////////////
         // TUF-1.0.5 §5.4.1:
@@ -749,6 +764,7 @@ impl<D: DataInterchange> Database<D> {
         //     the update cycle, and report the failure.
 
         let new_targets = verify::verify_signatures(
+            role,
             raw_targets,
             trusted_targets_threshold,
             trusted_targets_keys,
@@ -761,24 +777,22 @@ impl<D: DataInterchange> Database<D> {
         // FIXME(#295): TUF-1.0.5 §5.3.3.2 says this check should be done when updating the
         // snapshot, not here.
         if new_targets.version() != trusted_targets_description.version() {
-            return Err(Error::VerificationFailure(format!(
-                "The snapshot metadata reported that the {} metadata should be at \
-                     version {} but version {} was found instead.",
-                role,
-                trusted_targets_description.version(),
-                new_targets.version()
-            )));
+            return Err(Error::WrongMetadataVersion {
+                parent_role: MetadataPath::snapshot(),
+                child_role: role.clone(),
+                expected_version: trusted_targets_description.version(),
+                new_version: new_targets.version(),
+            });
         }
 
         if let Some(trusted_targets_version) = trusted_targets_version {
             match new_targets.version().cmp(&trusted_targets_version) {
                 Ordering::Less => {
-                    return Err(Error::VerificationFailure(format!(
-                        "Attempted to roll back {} metadata at version {} to {}.",
-                        role,
-                        trusted_targets_version,
-                        trusted_targets_description.version()
-                    )));
+                    return Err(Error::AttemptedMetadataRollBack {
+                        role: role.clone(),
+                        trusted_version: trusted_targets_version,
+                        new_version: new_targets.version(),
+                    });
                 }
                 Ordering::Equal => {
                     return Ok(None);
@@ -815,12 +829,18 @@ impl<D: DataInterchange> Database<D> {
             if let Some(trusted_targets) = self.trusted_targets() {
                 trusted_targets
             } else {
-                return Err(Error::MissingMetadata(parent_role.clone()));
+                return Err(Error::MetadataNotFound {
+                    path: parent_role.clone(),
+                    version: MetadataVersion::None,
+                });
             }
         } else if let Some(trusted_parent) = self.trusted_delegations.get(parent_role) {
             trusted_parent
         } else {
-            return Err(Error::MissingMetadata(parent_role.clone()));
+            return Err(Error::MetadataNotFound {
+                path: parent_role.clone(),
+                version: MetadataVersion::None,
+            });
         };
 
         // Only consider targets metadata that define delegations.
@@ -951,9 +971,9 @@ impl<D: DataInterchange> Database<D> {
                     &mut visited,
                 )
                 .1
-                .ok_or(Error::TargetUnavailable)
+                .ok_or_else(|| Error::TargetNotFound(target_path.clone()))
             }
-            None => Err(Error::TargetUnavailable),
+            None => Err(Error::TargetNotFound(target_path.clone())),
         }
     }
 
@@ -983,7 +1003,10 @@ impl<D: DataInterchange> Database<D> {
                 }
                 Ok(trusted_timestamp)
             }
-            None => Err(Error::MissingMetadata(MetadataPath::timestamp())),
+            None => Err(Error::MetadataNotFound {
+                path: MetadataPath::timestamp(),
+                version: MetadataVersion::None,
+            }),
         }
     }
 
@@ -995,7 +1018,10 @@ impl<D: DataInterchange> Database<D> {
                 }
                 Ok(trusted_snapshot)
             }
-            None => Err(Error::MissingMetadata(MetadataPath::snapshot())),
+            None => Err(Error::MetadataNotFound {
+                path: MetadataPath::snapshot(),
+                version: MetadataVersion::None,
+            }),
         }
     }
 
@@ -1007,7 +1033,10 @@ impl<D: DataInterchange> Database<D> {
                 }
                 Ok(trusted_targets)
             }
-            None => Err(Error::MissingMetadata(MetadataPath::targets())),
+            None => Err(Error::MetadataNotFound {
+                path: MetadataPath::targets(),
+                version: MetadataVersion::None,
+            }),
         }
     }
 }
@@ -1071,7 +1100,12 @@ mod test {
 
         assert_matches!(
             Database::from_root_with_trusted_keys(&raw_root, 1, once(KEYS[1].public())),
-            Err(Error::VerificationFailure(s)) if s == "Signature threshold not met: 0/1"
+            Err(Error::MetadataMissingSignatures {
+                role,
+                number_of_valid_signatures: 0,
+                threshold: 1,
+            })
+            if role == MetadataPath::root()
         );
     }
 
@@ -1108,7 +1142,12 @@ mod test {
 
         assert_matches!(
             Database::from_trusted_metadata(&metadata),
-            Err(Error::VerificationFailure(s)) if s == "Signature threshold not met: 0/1"
+            Err(Error::MetadataMissingSignatures {
+                role,
+                number_of_valid_signatures: 0,
+                threshold: 1,
+            })
+            if role == MetadataPath::root()
         );
     }
 
@@ -1148,7 +1187,12 @@ mod test {
 
         assert_matches!(
             Database::from_metadata_with_trusted_keys(&metadata, 1, once(KEYS[1].public())),
-            Err(Error::VerificationFailure(s)) if s == "Signature threshold not met: 0/1"
+            Err(Error::MetadataMissingSignatures {
+                role,
+                number_of_valid_signatures: 0,
+                threshold: 1,
+            })
+            if role == MetadataPath::root()
         );
     }
 
@@ -1184,7 +1228,8 @@ mod test {
         // second update with the same metadata should fail.
         assert_matches!(
             tuf.update_root(&raw_root),
-            Err(Error::VerificationFailure(_))
+            Err(Error::AttemptedMetadataRollBack { role, trusted_version: 2, new_version: 2 })
+            if role == MetadataPath::root()
         );
     }
 
@@ -1700,7 +1745,12 @@ mod test {
 
         assert_matches!(
             tuf.update_metadata(&metadata2),
-            Err(Error::VerificationFailure(s)) if s == "Signature threshold not met: 0/1"
+            Err(Error::MetadataMissingSignatures {
+                role,
+                number_of_valid_signatures: 0,
+                threshold: 1,
+            })
+            if role == MetadataPath::root()
         );
     }
 }

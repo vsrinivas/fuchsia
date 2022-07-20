@@ -166,8 +166,11 @@ impl Repository {
                 updating_client.metadata_versions(),
                 target_path
             ),
-            Err(error::TufOrTimeout::Tuf(TufError::NotFound)) => {
-                return Err(MerkleForError::NotFound)
+            Err(error::TufOrTimeout::Tuf(TufError::MetadataNotFound { path, version })) => {
+                return Err(MerkleForError::MetadataNotFound { path, version })
+            }
+            Err(error::TufOrTimeout::Tuf(TufError::TargetNotFound(path))) => {
+                return Err(MerkleForError::TargetNotFound(path))
             }
             Err(other) => {
                 fx_log_err!(
@@ -182,7 +185,10 @@ impl Repository {
 
         let description =
             updating_client.fetch_target_description(&target_path).await.map_err(|e| match e {
-                TufError::NotFound => MerkleForError::NotFound,
+                TufError::MetadataNotFound { path, version } => {
+                    MerkleForError::MetadataNotFound { path, version }
+                }
+                TufError::TargetNotFound(path) => MerkleForError::TargetNotFound(path),
                 other => MerkleForError::FetchTargetDescription(target_path.as_str().into(), other),
             })?;
 
@@ -498,7 +504,11 @@ mod tests {
             TargetPath::new("path_that_doesnt_exist/0".to_string()).expect("created target path");
 
         // We still updated, but didn't fetch any packages
-        assert_matches!(repo.get_merkle_at_path(&target_path).await, Err(MerkleForError::NotFound));
+        assert_matches!(
+            repo.get_merkle_at_path(&target_path).await,
+            Err(MerkleForError::TargetNotFound(path))
+            if path == target_path
+        );
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -522,7 +532,14 @@ mod tests {
         // TODO(fxbug.dev/39651) if the Repository can't connect to the remote server AND
         // we've updated our local repo recently, then it should return the merkle that is stored locally
         should_fail.set();
-        assert_matches!(repo.get_merkle_at_path(&target_path).await, Err(MerkleForError::NotFound));
+        assert_matches!(
+            repo.get_merkle_at_path(&target_path).await,
+            Err(MerkleForError::MetadataNotFound {
+                path: metadata_path,
+                version: MetadataVersion::None,
+            })
+            if metadata_path == MetadataPath::timestamp()
+        );
 
         // When the server is unblocked, we should succeed again
         should_fail.unset();
@@ -554,11 +571,11 @@ mod tests {
         should_fail.set();
         assert_matches!(
             repo.get_merkle_at_path(&target_path).await,
-            Err(MerkleForError::FetchTargetDescription(
-                extracted_path, TufError::MissingMetadata(metadata_path)))
-            if
-                metadata_path == MetadataPath::snapshot() &&
-                extracted_path == "just-meta-far/0"
+            Err(MerkleForError::MetadataNotFound {
+                path: metadata_path,
+                version: MetadataVersion::None,
+            })
+            if metadata_path == MetadataPath::snapshot()
         );
     }
 

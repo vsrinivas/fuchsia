@@ -599,7 +599,7 @@ where
 
         // If we couldn't find 1.root.json, see if root.json exists and try to initialize trust with it.
         let mut root = match root {
-            Err(tuf::Error::NotFound) => {
+            Err(tuf::Error::MetadataNotFound { .. }) => {
                 tuf_repo.fetch_metadata(&MetadataPath::root(), MetadataVersion::None).await?
             }
             Err(err) => return Err(err.into()),

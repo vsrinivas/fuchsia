@@ -24,7 +24,7 @@ use {
         },
         time::Duration,
     },
-    tuf::metadata::TargetPath,
+    tuf::metadata::{MetadataPath, MetadataVersion, TargetPath},
 };
 
 pub use fidl_fuchsia_pkg_ext::BasePackageIndex;
@@ -311,7 +311,8 @@ impl ToResolveError for CacheError {
 impl ToResolveStatus for MerkleForError {
     fn to_resolve_status(&self) -> Status {
         match self {
-            MerkleForError::NotFound => Status::NOT_FOUND,
+            MerkleForError::MetadataNotFound { .. } => Status::INTERNAL,
+            MerkleForError::TargetNotFound(_) => Status::NOT_FOUND,
             MerkleForError::InvalidTargetPath(_) => Status::INTERNAL,
             // FIXME(42326) when tuf::Error gets an HTTP error variant, this should be mapped to Status::UNAVAILABLE
             MerkleForError::FetchTargetDescription(..) => Status::INTERNAL,
@@ -324,7 +325,8 @@ impl ToResolveStatus for MerkleForError {
 impl ToResolveError for MerkleForError {
     fn to_resolve_error(&self) -> pkg::ResolveError {
         match self {
-            MerkleForError::NotFound => pkg::ResolveError::PackageNotFound,
+            MerkleForError::MetadataNotFound { .. } => pkg::ResolveError::Internal,
+            MerkleForError::TargetNotFound(_) => pkg::ResolveError::PackageNotFound,
             MerkleForError::InvalidTargetPath(_) => pkg::ResolveError::Internal,
             // FIXME(42326) when tuf::Error gets an HTTP error variant, this should be mapped to Status::UNAVAILABLE
             MerkleForError::FetchTargetDescription(..) => pkg::ResolveError::Internal,
@@ -438,7 +440,12 @@ impl ToResolveError for FetchError {
 impl From<&MerkleForError> for metrics::MerkleForUrlMetricDimensionResult {
     fn from(e: &MerkleForError) -> metrics::MerkleForUrlMetricDimensionResult {
         match e {
-            MerkleForError::NotFound => metrics::MerkleForUrlMetricDimensionResult::NotFound,
+            MerkleForError::MetadataNotFound { .. } => {
+                metrics::MerkleForUrlMetricDimensionResult::TufError
+            }
+            MerkleForError::TargetNotFound(_) => {
+                metrics::MerkleForUrlMetricDimensionResult::NotFound
+            }
             MerkleForError::FetchTargetDescription(..) => {
                 metrics::MerkleForUrlMetricDimensionResult::TufError
             }
@@ -480,8 +487,11 @@ pub async fn merkle_for_url<'a>(
 
 #[derive(Debug, thiserror::Error)]
 pub enum MerkleForError {
-    #[error("the package was not found in the repository")]
-    NotFound,
+    #[error("the repository metadata {path} at version {version} was not found in the repository")]
+    MetadataNotFound { path: MetadataPath, version: MetadataVersion },
+
+    #[error("the package {0} was not found in the repository")]
+    TargetNotFound(TargetPath),
 
     #[error("unexpected tuf error when fetching target description for {0:?}")]
     FetchTargetDescription(String, #[source] tuf::error::Error),

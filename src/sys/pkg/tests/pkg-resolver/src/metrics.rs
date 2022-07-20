@@ -363,7 +363,7 @@ async fn merkle_for_url_failure() {
     // Deleting the `targets` stanza from the targets metadata without updating the signature will
     // cause validation during the metadata update to fail, but the pkg-resolver does not fail a
     // resolve when metadata updates fail, instead the pkg-resolver will attempt to fetch the target
-    // description from the tuf-client which will fail with `MissingMetadata(Targets)`.
+    // description from the tuf-client which will fail with `MetadataNotFound { path: Targets, .. }`.
     fn delete_targets_stanza(mut v: serde_json::Value) -> serde_json::Value {
         v["signed"]["targets"].take();
         v
@@ -401,7 +401,7 @@ async fn create_tuf_client_error() {
         Some(responder),
         Err(fidl_fuchsia_pkg::ResolveError::Internal),
         metrics::CREATE_TUF_CLIENT_METRIC_ID,
-        vec![metrics::CreateTufClientMetricDimensionResult::NotFound],
+        vec![metrics::CreateTufClientMetricDimensionResult::MissingMetadata],
     )
     .await;
 }
@@ -426,9 +426,9 @@ async fn update_tuf_client_error() {
             "/2.targets.json",
             responder::StaticResponseCode::not_found(),
         )),
-        Err(fidl_fuchsia_pkg::ResolveError::PackageNotFound),
+        Err(fidl_fuchsia_pkg::ResolveError::Internal),
         metrics::UPDATE_TUF_CLIENT_METRIC_ID,
-        vec![metrics::UpdateTufClientMetricDimensionResult::NotFound],
+        vec![metrics::UpdateTufClientMetricDimensionResult::MissingMetadata],
     )
     .await;
 }
@@ -697,8 +697,8 @@ mod pkg_resolver_create_tuf_client {
             // turns them into a 500 and closes the connection. That results in flakiness when we can
             // request faster than the connection is removed from the pool.
             (101, 101, Http1xx),
-            // We're not sending a body, so our empty response will report as an encoding issue.
-            (200, 200, Encoding),
+            // We're not sending a body, so our empty response will report as an BadHttpStatus issue.
+            (200, 200, UnexpectedTufErrorVariant),
             (201, 299, Http2xx),
         ],
         status_ranges_3xx => [
@@ -709,8 +709,8 @@ mod pkg_resolver_create_tuf_client {
             (401, 401, HttpUnauthorized),
             (402, 402, Http4xx),
             (403, 403, HttpForbidden),
-            // rust-tuf returns its own NotFound for this, so we never use HttpNotFound.
-            (404, 404, NotFound),
+            // rust-tuf returns its own MetadataNotFound for this, so we never use HttpNotFound.
+            (404, 404, MissingMetadata),
             (405, 405, HttpMethodNotAllowed),
             (406, 407, Http4xx),
             (408, 408, HttpRequestTimeout),
@@ -812,8 +812,8 @@ mod pkg_resolver_update_tuf_client {
             // turns them into a 500 and closes the connection. That results in flakiness when we can
             // request faster than the connection is removed from the pool.
             (101, 101, Http1xx),
-            // We're not sending a body, so our empty response will report as an encoding issue.
-            (200, 200, Encoding),
+            // We're not sending a body, so our empty response will report as a BadHttpStatus issue.
+            (200, 200, UnexpectedTufErrorVariant),
             (201, 299, Http2xx),
         ],
         status_ranges_3xx => [

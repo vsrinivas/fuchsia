@@ -19,10 +19,10 @@ pub use self::file_system::{
     FileSystemBatchUpdate, FileSystemRepository, FileSystemRepositoryBuilder,
 };
 
-#[cfg(any(feature = "hyper_013", feature = "hyper_014"))]
+#[cfg(feature = "hyper")]
 mod http;
 
-#[cfg(any(feature = "hyper_013", feature = "hyper_014"))]
+#[cfg(feature = "hyper")]
 pub use self::http::{HttpRepository, HttpRepositoryBuilder};
 
 mod ephemeral;
@@ -460,11 +460,11 @@ where
                     let target_path = target_path.with_hash_prefix(hash)?;
                     match self.repository.fetch_target(&target_path).await {
                         Ok(target) => break target,
-                        Err(Error::NotFound) => {}
+                        Err(Error::TargetNotFound(_)) => {}
                         Err(err) => return Err(err),
                     }
                 } else {
-                    return Err(Error::NotFound);
+                    return Err(Error::TargetNotFound(target_path.clone()));
                 }
             }
         } else {
@@ -532,7 +532,8 @@ mod test {
                     vec![],
                 )
                 .await,
-                Err(Error::NotFound)
+                Err(Error::MetadataNotFound { path, version })
+                if path == MetadataPath::root() && version == MetadataVersion::None
             );
         });
     }

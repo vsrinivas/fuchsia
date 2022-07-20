@@ -7,11 +7,10 @@ use std::collections::HashMap;
 use crate::crypto::{KeyId, PublicKey, Signature};
 use crate::error::Error;
 use crate::interchange::DataInterchange;
-use crate::metadata::{Metadata, RawSignedMetadata};
-use crate::Result;
+use crate::metadata::{Metadata, MetadataPath, RawSignedMetadata};
 
 /// `Verified` is a wrapper type that signifies the inner type has had it's signature verified.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Verified<T> {
     value: T,
 }
@@ -38,7 +37,7 @@ impl<T> std::ops::Deref for Verified<T> {
 /// # use chrono::prelude::*;
 /// # use tuf::crypto::{Ed25519PrivateKey, PrivateKey, SignatureScheme, HashAlgorithm};
 /// # use tuf::interchange::Json;
-/// # use tuf::metadata::{SnapshotMetadataBuilder, SignedMetadata};
+/// # use tuf::metadata::{MetadataPath, SnapshotMetadataBuilder, SignedMetadata};
 /// # use tuf::verify::verify_signatures;
 ///
 /// let key_1: &[u8] = include_bytes!("../tests/ed25519/ed25519-1.pk8.der");
@@ -53,30 +52,49 @@ impl<T> std::ops::Deref for Verified<T> {
 ///     .to_raw()
 ///     .unwrap();
 ///
-/// assert!(verify_signatures(&raw_snapshot, 1, vec![key_1.public()]).is_ok());
+/// assert!(verify_signatures(
+///     &MetadataPath::snapshot(),
+///     &raw_snapshot,
+///     1,
+///     vec![key_1.public()],
+/// ).is_ok());
 ///
 /// // fail with increased threshold
-/// assert!(verify_signatures(&raw_snapshot, 2, vec![key_1.public()]).is_err());
+/// assert!(verify_signatures(
+///     &MetadataPath::snapshot(),
+///     &raw_snapshot,
+///     2,
+///     vec![key_1.public()],
+/// ).is_err());
 ///
 /// // fail when the keys aren't authorized
-/// assert!(verify_signatures(&raw_snapshot, 1, vec![key_2.public()]).is_err());
+/// assert!(verify_signatures(
+///     &MetadataPath::snapshot(),
+///     &raw_snapshot,
+///     1,
+///     vec![key_2.public()],
+/// ).is_err());
 ///
 /// // fail when the keys don't exist
-/// assert!(verify_signatures(&raw_snapshot, 1, &[]).is_err());
+/// assert!(verify_signatures(
+///     &MetadataPath::snapshot(),
+///     &raw_snapshot,
+///     1,
+///     &[],
+/// ).is_err());
 pub fn verify_signatures<'a, D, M, I>(
+    role: &MetadataPath,
     raw_metadata: &RawSignedMetadata<D, M>,
     threshold: u32,
     authorized_keys: I,
-) -> Result<Verified<M>>
+) -> Result<Verified<M>, Error>
 where
     D: DataInterchange,
     M: Metadata,
     I: IntoIterator<Item = &'a PublicKey>,
 {
     if threshold < 1 {
-        return Err(Error::VerificationFailure(
-            "Threshold must be strictly greater than zero".into(),
-        ));
+        return Err(Error::MetadataThresholdMustBeGreaterThanZero(role.clone()));
     }
 
     let authorized_keys = authorized_keys
@@ -94,12 +112,6 @@ where
 
         let unverified: SignedMetadata<D> = D::from_slice(raw_metadata.as_bytes())?;
 
-        if unverified.signatures.is_empty() {
-            return Err(Error::VerificationFailure(
-                "The metadata was not signed with any authorized keys.".into(),
-            ));
-        }
-
         let canonical_bytes = D::canonicalize(&unverified.signed)?;
         (unverified.signatures, canonical_bytes)
     };
@@ -114,7 +126,7 @@ where
 
     for (key_id, sig) in signatures {
         match authorized_keys.get(key_id) {
-            Some(pub_key) => match pub_key.verify(&canonical_bytes, sig) {
+            Some(pub_key) => match pub_key.verify(role, &canonical_bytes, sig) {
                 Ok(()) => {
                     debug!("Good signature from key ID {:?}", pub_key.key_id());
                     signatures_needed -= 1;
@@ -136,11 +148,11 @@ where
     }
 
     if signatures_needed > 0 {
-        return Err(Error::VerificationFailure(format!(
-            "Signature threshold not met: {}/{}",
-            threshold - signatures_needed,
-            threshold
-        )));
+        return Err(Error::MetadataMissingSignatures {
+            role: role.clone(),
+            number_of_valid_signatures: threshold - signatures_needed,
+            threshold,
+        });
     }
 
     // Everything looks good so deserialize the metadata.

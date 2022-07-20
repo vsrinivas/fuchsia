@@ -216,6 +216,15 @@ pub enum MetadataVersion {
     Number(u32),
 }
 
+impl Display for MetadataVersion {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            MetadataVersion::None => f.write_str("none"),
+            MetadataVersion::Number(version) => write!(f, "{}", version),
+        }
+    }
+}
+
 impl MetadataVersion {
     /// Converts this struct into the string used for addressing metadata.
     pub fn prefix(&self) -> String {
@@ -240,7 +249,7 @@ pub trait Metadata: Debug + PartialEq + Serialize + DeserializeOwned {
 
 /// Unverified raw metadata with attached signatures and type information identifying the
 /// metadata's type and serialization format.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RawSignedMetadata<D, M> {
     bytes: Vec<u8>,
     _marker: PhantomData<(D, M)>,
@@ -275,7 +284,7 @@ where
 
 /// A collection of [RawSignedMetadata] that describes the metadata at one
 /// commit.
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct RawSignedMetadataSet<D> {
     root: Option<RawSignedMetadata<D, RootMetadata>>,
     targets: Option<RawSignedMetadata<D, TargetsMetadata>>,
@@ -748,7 +757,7 @@ impl From<RootMetadata> for RootMetadataBuilder {
 }
 
 /// Metadata for the root role.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RootMetadata {
     version: u32,
     expires: DateTime<Utc>,
@@ -900,7 +909,7 @@ impl<'de> Deserialize<'de> for RootMetadata {
 }
 
 /// The definition of what allows a role to be trusted.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RoleDefinition {
     threshold: u32,
     key_ids: Vec<KeyId>,
@@ -1147,7 +1156,7 @@ impl TimestampMetadataBuilder {
 }
 
 /// Metadata for the timestamp role.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TimestampMetadata {
     version: u32,
     expires: DateTime<Utc>,
@@ -1214,7 +1223,7 @@ impl<'de> Deserialize<'de> for TimestampMetadata {
 }
 
 /// Description of a piece of metadata, used in verification.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct MetadataDescription {
     version: u32,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -1415,7 +1424,7 @@ impl From<SnapshotMetadata> for SnapshotMetadataBuilder {
 }
 
 /// Metadata for the snapshot role.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SnapshotMetadata {
     version: u32,
     expires: DateTime<Utc>,
@@ -1570,7 +1579,7 @@ impl TargetPath {
                     .collect::<HashSet<_>>()
             })
             .collect::<Vec<_>>();
-        self.matches_chain(&*new)
+        self.matches_chain(&new)
     }
 
     /// Prefix the target path with a hash value to support TUF spec 5.5.2.
@@ -1592,9 +1601,9 @@ impl TargetPath {
     }
 }
 
-impl ToString for TargetPath {
-    fn to_string(&self) -> String {
-        self.0.clone()
+impl Display for TargetPath {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(&self.0)
     }
 }
 
@@ -1612,7 +1621,7 @@ impl Borrow<str> for TargetPath {
 }
 
 /// Description of a target, used in verification.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TargetDescription {
     length: u64,
     hashes: HashMap<HashAlgorithm, HashValue>,
@@ -1839,7 +1848,7 @@ impl<'de> Deserialize<'de> for TargetDescription {
 }
 
 /// Metadata for the targets role.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TargetsMetadata {
     version: u32,
     expires: DateTime<Utc>,
@@ -2012,7 +2021,7 @@ impl Default for TargetsMetadataBuilder {
 }
 
 /// Wrapper to described a collections of delegations.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Delegations {
     keys: HashMap<KeyId, PublicKey>,
     roles: Vec<Delegation>,
@@ -2076,7 +2085,7 @@ impl<'de> Deserialize<'de> for Delegations {
 }
 
 /// A delegated targets role.
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Delegation {
     role: MetadataPath,
     terminating: bool,
@@ -2195,7 +2204,7 @@ mod test {
         ];
 
         for path in bad_paths.iter() {
-            assert!(safe_path(*path).is_err());
+            assert!(safe_path(path).is_err());
             assert!(TargetPath::new(path.to_string()).is_err());
             assert!(MetadataPath::new(path.to_string()).is_err());
             assert!(TargetPath::new(path.to_string()).is_err());
@@ -2507,7 +2516,12 @@ mod test {
         let raw_root = signed.to_raw().unwrap();
 
         assert_matches!(
-            verify_signatures(&raw_root, 1, &[root_key.public().clone()]),
+            verify_signatures(
+                &MetadataPath::root(),
+                &raw_root,
+                1,
+                &[root_key.public().clone()]
+            ),
             Ok(_)
         );
     }
@@ -2527,7 +2541,12 @@ mod test {
         let raw_root = decoded.to_raw().unwrap();
 
         assert_matches!(
-            verify_signatures(&raw_root, 1, &[root_key.public().clone()]),
+            verify_signatures(
+                &MetadataPath::root(),
+                &raw_root,
+                1,
+                &[root_key.public().clone()]
+            ),
             Ok(_)
         );
     }
@@ -2550,11 +2569,21 @@ mod test {
             serde_json::from_value(jsn).unwrap();
         let raw_root = decoded.to_raw().unwrap();
         assert_matches!(
-            verify_signatures(&raw_root, 2, &[root_key.public().clone()]),
-            Err(Error::VerificationFailure(_))
+            verify_signatures(&MetadataPath::root(), &raw_root, 2, &[root_key.public().clone()]),
+            Err(Error::MetadataMissingSignatures {
+                role,
+                number_of_valid_signatures: 1,
+                threshold: 2,
+            })
+            if role == MetadataPath::root()
         );
         assert_matches!(
-            verify_signatures(&raw_root, 1, &[root_key.public().clone()]),
+            verify_signatures(
+                &MetadataPath::root(),
+                &raw_root,
+                1,
+                &[root_key.public().clone()]
+            ),
             Ok(_)
         );
     }
@@ -2595,11 +2624,21 @@ mod test {
 
         // Ensure the signatures are valid as-is.
         assert_matches!(
-            verify_signatures(&standard.to_raw().unwrap(), 1, &public_keys),
+            verify_signatures(
+                &M::ROLE.into(),
+                &standard.to_raw().unwrap(),
+                1,
+                &public_keys
+            ),
             Ok(_)
         );
         assert_matches!(
-            verify_signatures(&custom.to_raw().unwrap(), 1, std::iter::once(key.public())),
+            verify_signatures(
+                &M::ROLE.into(),
+                &custom.to_raw().unwrap(),
+                1,
+                std::iter::once(key.public())
+            ),
             Ok(_)
         );
 
@@ -2608,15 +2647,23 @@ mod test {
         std::mem::swap(&mut standard.metadata, &mut custom.metadata);
         assert_matches!(
             verify_signatures(
+                &M::ROLE.into(),
                 &standard.to_raw().unwrap(),
                 1,
                 std::iter::once(key.public())
             ),
-            Err(Error::VerificationFailure(_))
+            Err(Error::MetadataMissingSignatures { role, number_of_valid_signatures: 0, threshold: 1 })
+            if role == M::ROLE.into()
         );
         assert_matches!(
-            verify_signatures(&custom.to_raw().unwrap(), 1, std::iter::once(key.public())),
-            Err(Error::VerificationFailure(_))
+            verify_signatures(
+                &M::ROLE.into(),
+                &custom.to_raw().unwrap(),
+                1,
+                std::iter::once(key.public())
+            ),
+            Err(Error::MetadataMissingSignatures { role, number_of_valid_signatures: 0, threshold: 1 })
+            if role == M::ROLE.into()
         );
     }
 
@@ -3036,7 +3083,7 @@ mod test {
     //                              (,,(,    \.         `.   ____,-`.,
     //                           (,'     `/   \.   ,--.___`.'
     //                       ,  ,'  ,--.  `,   \.;'         `
-    //                        `{o, {    \  :    \;
+    //                        `(o, /    \  :    \;
     //                          |,,'    /  /    //
     //                          j;;    /  ,' ,-//.    ,---.      ,
     //                          \;'   /  ,' /  _  \  /  _  \   ,'/

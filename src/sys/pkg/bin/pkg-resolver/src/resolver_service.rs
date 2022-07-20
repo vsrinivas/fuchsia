@@ -304,7 +304,7 @@ impl QueuedResolver {
         rewritten_url: &AbsolutePackageUrl,
     ) -> Result<Option<(BlobId, PackageDirectory)>, fidl_fuchsia_pkg_ext::cache::OpenError> {
         match tuf_error {
-            Cache(MerkleFor(NotFound)) => {
+            Cache(MerkleFor(TargetNotFound(_))) => {
                 // If we can get metadata but the repo doesn't know about the package,
                 // it shouldn't be in the cache, BUT some SDK customers currently rely on this
                 // behavior.
@@ -323,6 +323,7 @@ impl QueuedResolver {
             | OpenRepo(..)
             | Cache(Fidl(..))
             | Cache(ListNeeds(..))
+            | Cache(MerkleFor(MetadataNotFound { .. }))
             | Cache(MerkleFor(FetchTargetDescription(..)))
             | Cache(MerkleFor(InvalidTargetPath(..)))
             | Cache(MerkleFor(NoCustomMetadata))
@@ -626,7 +627,7 @@ async fn hash_from_repo_or_cache(
     let fut = repo_manager.read().await.get_package_hash(&rewritten_url);
     match fut.await {
         Ok(b) => Ok(HashSource::Tuf(b)),
-        Err(e @ GetPackageHashError::MerkleFor(MerkleForError::NotFound)) => {
+        Err(e @ GetPackageHashError::MerkleFor(MerkleForError::TargetNotFound(_))) => {
             // If we can get metadata but the repo doesn't know about the package,
             // it shouldn't be in the cache, BUT some SDK customers currently rely on this behavior.
             // TODO(fxbug.dev/50764): remove this behavior.

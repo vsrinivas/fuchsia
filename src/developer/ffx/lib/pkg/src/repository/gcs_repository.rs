@@ -230,6 +230,7 @@ where
         meta_path: &MetadataPath,
         version: MetadataVersion,
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>, tuf::Error>> {
+        let meta_path = meta_path.clone();
         let path = meta_path.components::<Json>(version).join("/");
         let repo = self.repo.clone();
 
@@ -237,7 +238,7 @@ where
             let resp = RepositoryBackend::fetch_metadata(&repo, &path, Range::Full).await.map_err(
                 |err| match err {
                     Error::Tuf(err) => err,
-                    Error::NotFound => tuf::Error::NotFound,
+                    Error::NotFound => tuf::Error::MetadataNotFound { path: meta_path, version },
                     err => tuf::Error::Opaque(err.to_string()),
                 },
             )?;
@@ -257,6 +258,7 @@ where
         &'a self,
         target_path: &TargetPath,
     ) -> BoxFuture<'a, Result<Box<dyn AsyncRead + Send + Unpin + 'a>, tuf::Error>> {
+        let target_path = target_path.clone();
         let path = target_path.components().join("/");
         let repo = self.repo.clone();
 
@@ -264,7 +266,7 @@ where
             let resp = RepositoryBackend::fetch_metadata(&repo, &path, Range::Full).await.map_err(
                 |err| match err {
                     Error::Tuf(err) => err,
-                    Error::NotFound => tuf::Error::NotFound,
+                    Error::NotFound => tuf::Error::TargetNotFound(target_path),
                     err => tuf::Error::Opaque(err.to_string()),
                 },
             )?;

@@ -181,7 +181,7 @@ pub use pretty::JsonPretty;
 ///   "snapshot": METADATA_DESCRIPTION
 /// }
 /// ```
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Json;
 
 impl DataInterchange for Json {

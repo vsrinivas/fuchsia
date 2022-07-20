@@ -52,6 +52,7 @@ where
     async fn fetch_path<'a>(
         &'a self,
         path: String,
+        not_found_err: tuf::Error,
     ) -> tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>> {
         let file_proxy = fuchsia_fs::directory::open_file(
             &self.repo_proxy,
@@ -60,7 +61,7 @@ where
         )
         .await
         .map_err(|err| match err {
-            fuchsia_fs::node::OpenError::OpenError(zx::Status::NOT_FOUND) => tuf::Error::NotFound,
+            fuchsia_fs::node::OpenError::OpenError(zx::Status::NOT_FOUND) => not_found_err,
             _ => make_opaque_error(anyhow!("opening '{}': {:?}", path, err)),
         })?;
 
@@ -165,7 +166,8 @@ where
         version: MetadataVersion,
     ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         let path = get_metadata_path::<D>(meta_path, version);
-        self.fetch_path(path).boxed()
+        self.fetch_path(path, tuf::Error::MetadataNotFound { path: meta_path.clone(), version })
+            .boxed()
     }
 
     fn fetch_target<'a>(
@@ -173,7 +175,7 @@ where
         target_path: &TargetPath,
     ) -> BoxFuture<'a, tuf::Result<Box<dyn AsyncRead + Send + Unpin + 'a>>> {
         let path = get_target_path(target_path);
-        self.fetch_path(path).boxed()
+        self.fetch_path(path, tuf::Error::TargetNotFound(target_path.clone())).boxed()
     }
 }
 
@@ -302,7 +304,18 @@ mod tests {
             repo.store_path(path.to_string(), &mut cursor).await.unwrap();
 
             let mut data = Vec::new();
-            repo.fetch_path(path.to_string()).await.unwrap().read_to_end(&mut data).await.unwrap();
+            repo.fetch_path(
+                path.to_string(),
+                tuf::Error::MetadataNotFound {
+                    path: MetadataPath::root(),
+                    version: MetadataVersion::None,
+                },
+            )
+            .await
+            .unwrap()
+            .read_to_end(&mut data)
+            .await
+            .unwrap();
             assert_eq!(data, expected_data);
         }
 
@@ -311,7 +324,19 @@ mod tests {
             let store_result = repo.store_path(path.to_string(), &mut cursor).await;
             assert!(store_result.is_err(), "path = {}", path);
 
-            assert!(repo.fetch_path(path.to_string()).await.is_err(), "path = {}", path);
+            assert!(
+                repo.fetch_path(
+                    path.to_string(),
+                    tuf::Error::MetadataNotFound {
+                        path: MetadataPath::root(),
+                        version: MetadataVersion::None
+                    }
+                )
+                .await
+                .is_err(),
+                "path = {}",
+                path
+            );
         }
     }
 

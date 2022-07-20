@@ -105,6 +105,7 @@
 #![allow(
     clippy::collapsible_if,
     clippy::implicit_hasher,
+    clippy::let_unit_value,
     clippy::new_ret_no_self,
     clippy::op_ref,
     clippy::too_many_arguments
@@ -125,6 +126,3 @@ mod util;
 
 pub use crate::database::*;
 pub use crate::error::*;
-
-/// Alias for `Result<T, Error>`.
-pub type Result<T> = std::result::Result<T, Error>;
