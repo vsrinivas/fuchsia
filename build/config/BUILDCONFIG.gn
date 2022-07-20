@@ -1393,6 +1393,7 @@ declare_args() {
         "instrumented",
         "kernel-excluded",
         "replaces-allocator",
+        "fuchsia-only",
       ]
     },
 

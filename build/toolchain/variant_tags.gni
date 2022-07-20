@@ -81,4 +81,9 @@ all_variant_tags = [
   # presence of the 'kernel' tag in the toolchain suite's tags.
   "kernel-excluded",
   "kernel-only",
+
+  # `fuchsia-only/excluded` are used to indicate that a given variant
+  # should only/never be applied to toolchains where current_os == "fuchsia".
+  "fuchsia-excluded",
+  "fuchsia-only",
 ]

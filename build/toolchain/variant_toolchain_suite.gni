@@ -230,6 +230,26 @@ template("variant_toolchain_suite") {
   exclude_tags -= _kernel_exclude_tags
   exclude_tags += _kernel_exclude_tags
 
+  # Ensure that `fuchsia-only` xor `excluded` are part or exclude_tags based on whether
+  # the `toolchain_os` is fuchsia.
+  if (defined(invoker.toolchain_os)) {
+    _is_fuchsia = invoker.toolchain_os == "fuchsia"
+  } else if (defined(invoker.os)) {
+    # Note that the zircon toolchain doesn't define `toolchain_os`. Instead they use `os`.
+    _is_fuchsia = invoker.os == "fuchsia"
+  } else {
+    assert(false,
+           "Unable to determine if toolchain $target_name targets fuchsia")
+  }
+  if (_is_fuchsia) {
+    _fuchsia_exclude_tags = [ "fuchsia-excluded" ]
+  } else {
+    _fuchsia_exclude_tags = [ "fuchsia-only" ]
+  }
+  exclude_tags += _fuchsia_exclude_tags
+  exclude_tags -= _fuchsia_exclude_tags
+  exclude_tags += _fuchsia_exclude_tags
+
   variants = []
   foreach(variant, all_toolchain_variants) {
     variants += [
