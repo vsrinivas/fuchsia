@@ -18,12 +18,14 @@ if (is_host) {
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:async-lock",
+      "//third_party/rust_crates:base64",
       "//third_party/rust_crates:chrono",
       "//third_party/rust_crates:futures",
       "//third_party/rust_crates:home",
       "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:rand",
       "//third_party/rust_crates:regex",
+      "//third_party/rust_crates:ring",
       "//third_party/rust_crates:serde",
       "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:tempfile",
@@ -35,6 +37,11 @@ if (is_host) {
     ]
 
     test_deps = [ "//src/lib/fuchsia-async" ]
+
+    inputs = [
+      "testdata/test1_ed25519",
+      "testdata/test1_authorized_keys",
+    ]
 
     sources = [
       "src/api/mod.rs",
@@ -59,6 +66,7 @@ if (is_host) {
       "src/paths.rs",
       "src/runtime.rs",
       "src/sdk.rs",
+      "src/ssh_key.rs",
       "src/storage.rs",
     ]
   }

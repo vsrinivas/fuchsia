@@ -34,6 +34,7 @@ mod mapping;
 mod nested;
 mod paths;
 mod runtime;
+mod ssh_key;
 mod storage;
 
 pub use api::query::{BuildOverride, ConfigQuery, SelectMode};
@@ -41,6 +42,8 @@ pub use api::query::{BuildOverride, ConfigQuery, SelectMode};
 pub use cache::{env_file, init, test_init};
 
 pub use paths::default_env_path;
+
+pub use ssh_key::SshKeyFiles;
 
 const SDK_TYPE_IN_TREE: &str = "in-tree";
 const SDK_NOT_FOUND_HELP: &str = "\
@@ -142,7 +145,7 @@ where
 }
 
 async fn check_config_files(level: &ConfigLevel, build_dir: Option<&Path>) -> Result<()> {
-    let e = env_file().ok_or(anyhow!("Could not find environment file"))?;
+    let e = env_file().ok_or_else(|| anyhow!("Could not find environment file"))?;
     let mut environment = Environment::load(&e)?;
     environment.check(level, build_dir).await
 }
@@ -158,7 +161,7 @@ pub async fn print_config<W: Write>(mut writer: W, build_dir: Option<&Path>) -> 
 pub(crate) fn default_build_dir() -> BoxFuture<'static, Option<PathBuf>> {
     async move {
         match get_sdk_root().await {
-            (Ok(sdk_path), sdk_type) if sdk_type == SDK_TYPE_IN_TREE => Some(sdk_path.clone()),
+            (Ok(sdk_path), sdk_type) if sdk_type == SDK_TYPE_IN_TREE => Some(sdk_path),
             _ => None,
         }
     }
@@ -177,8 +180,11 @@ async fn get_sdk_root() -> (Result<PathBuf, ConfigError>, String) {
     // All gets in this function should declare that they don't want the build directory searched, because
     // if there is a build directory it *is* generally the sdk.
     let sdk_root = query("sdk.root").build(Some(BuildOverride::NoBuild)).get().await;
-    let sdk_type =
-        query("sdk.type").build(Some(BuildOverride::NoBuild)).get().await.unwrap_or("".to_string());
+    let sdk_type = query("sdk.type")
+        .build(Some(BuildOverride::NoBuild))
+        .get()
+        .await
+        .unwrap_or_else(|_| "".to_string());
     (sdk_root, sdk_type)
 }
 
@@ -427,7 +433,7 @@ mod test {
         std::fs::create_dir_all(start_path.clone()).unwrap();
 
         let meta_path = temp.path().to_path_buf().join("meta");
-        std::fs::create_dir(meta_path.clone()).unwrap();
+        std::fs::create_dir(meta_path).unwrap();
 
         assert!(find_sdk_root(start_path).unwrap().is_none());
     }
