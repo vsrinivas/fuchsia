@@ -332,6 +332,28 @@ pub trait Driver: Send + Sync {
     }
 }
 
+/// Wraps around a FIDL responder to prevent a drop from causing a shutdown.
+/// This is necessary to ensure that the epitaphs are passed correctly.
+struct ResponderNoShutdown<T: fidl::endpoints::Responder>(Option<T>);
+
+impl<T: fidl::endpoints::Responder> ResponderNoShutdown<T> {
+    fn wrap(responder: T) -> Self {
+        ResponderNoShutdown(Some(responder))
+    }
+
+    fn unwrap(mut self) -> T {
+        self.0.take().unwrap()
+    }
+}
+
+impl<T: fidl::endpoints::Responder> Drop for ResponderNoShutdown<T> {
+    fn drop(&mut self) {
+        if let Some(x) = self.0.take() {
+            x.drop_without_shutdown();
+        }
+    }
+}
+
 #[async_trait()]
 impl<T: Driver> ServeTo<DeviceRequestStream> for T {
     async fn serve_to(&self, request_stream: DeviceRequestStream) -> anyhow::Result<()> {
@@ -1130,23 +1152,30 @@ impl<T: Driver> ServeTo<DatasetRequestStream> for T {
         let closure = |command| async {
             match command {
                 DatasetRequest::AttachAllNodesTo { dataset, responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.attach_all_nodes_to(&dataset)
                         .err_into::<Error>()
-                        .and_then(|delay_ms| ready(responder.send(delay_ms).map_err(Error::from)))
+                        .and_then(|delay_ms| {
+                            ready(responder.unwrap().send(delay_ms).map_err(Error::from))
+                        })
                         .await
                         .context("error in attach_all_nodes_to request")?;
                 }
                 DatasetRequest::GetActiveTlvs { responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.get_active_dataset_tlvs()
                         .err_into::<Error>()
-                        .and_then(|x| ready(responder.send(Some(x.as_ref())).map_err(Error::from)))
+                        .and_then(|x| {
+                            ready(responder.unwrap().send(Some(x.as_ref())).map_err(Error::from))
+                        })
                         .await
                         .context("error in get_active_dataset_tlvs request")?;
                 }
                 DatasetRequest::SetActiveTlvs { dataset, responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.set_active_dataset_tlvs(&dataset)
                         .err_into::<Error>()
-                        .and_then(|_| ready(responder.send().map_err(Error::from)))
+                        .and_then(|_| ready(responder.unwrap().send().map_err(Error::from)))
                         .await
                         .context("error in set_active_dataset_tlvs request")?;
                 }
@@ -1156,7 +1185,7 @@ impl<T: Driver> ServeTo<DatasetRequestStream> for T {
 
         request_stream.err_into::<Error>().try_for_each_concurrent(None, closure).await.map_err(
             |err| {
-                fx_log_err!("Error serving DatasetRequestStream: {:?}", err);
+                fx_log_warn!("Error serving DatasetRequestStream: {:?}", err);
 
                 if let Some(epitaph) = err.downcast_ref::<ZxStatus>() {
                     request_control_handle.shutdown_with_epitaph(*epitaph);
@@ -1364,5 +1393,25 @@ mod tests {
             err = server_future.boxed_local().fuse() => panic!("Server task stopped: {:?}", err),
             _ = client_future.boxed().fuse() => (),
         }
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_dataset_request() {
+        let (client_ep, server_ep) = create_endpoints::<DatasetMarker>().unwrap();
+
+        let server_future = async move {
+            let device = DummyDevice::default();
+            device.serve_to(server_ep.into_stream().unwrap()).map(|_| ()).await
+        };
+
+        let client_future = async move {
+            let proxy = client_ep.into_proxy().unwrap();
+            assert_matches!(
+                proxy.attach_all_nodes_to(&[0, 0, 0, 0, 0, 0, 0, 0]).await,
+                Err(fidl::Error::ClientChannelClosed { status: ZxStatus::NOT_SUPPORTED, .. })
+            );
+        };
+
+        futures::join!(server_future.boxed(), client_future.boxed());
     }
 }
