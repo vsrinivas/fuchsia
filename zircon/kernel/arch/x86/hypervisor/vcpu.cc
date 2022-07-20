@@ -471,7 +471,7 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, uint
   vmcs.Write(VmcsFieldXX::CR0_READ_SHADOW, X86_CR0_CD | X86_CR0_ET);
 
   // Enable FXSAVE, XSAVE, and VMX.
-  uint64_t cr4 = X86_CR4_OSFXSR | X86_CR4_VMXE;
+  uint64_t cr4 = X86_CR4_OSFXSR | X86_CR4_OSXSAVE | X86_CR4_VMXE;
   if (vpid.val() == kBaseProcessorVpid) {
     // Enable the PAE bit on the BSP for 64-bit paging.
     cr4 |= X86_CR4_PAE;
@@ -572,8 +572,9 @@ zx_status_t vmcs_init(paddr_t vmcs_address, hypervisor::Id<uint16_t>& vpid, uint
   if (x86_xsave_supported()) {
     // Set initial guest XCR0 to host XCR0.
     vmx_state->host_state.xcr0 = x86_xgetbv(0);
-    vmx_state->guest_state.xcr0 = X86_XSAVE_STATE_BIT_X87;
-    x86_extended_register_init_state_from_bv(extended_register_state, X86_XSAVE_STATE_BIT_X87);
+    vmx_state->guest_state.xcr0 =
+        X86_XSAVE_STATE_BIT_X87 | X86_XSAVE_STATE_BIT_SSE | X86_XSAVE_STATE_BIT_AVX;
+    x86_extended_register_init_state_from_bv(extended_register_state, vmx_state->guest_state.xcr0);
   }
 
   return ZX_OK;
