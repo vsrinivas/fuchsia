@@ -1,0 +1,24 @@
+library fuchsia.example.library;
+
+using fuchsia.pci;
+
+string Name;
+string DeviceCategory {
+  KB = "keyboard",
+  Mouse = "mouse",
+};
+
+uint I2C_ADDRESS;
+enum I2C_PROTOCOL {
+  Device,
+  Impl,
+};
+
+bool Flag {
+  ENABLE = true,
+  DISABLE = false,
+};
+
+extend uint fuchsia.BIND_PCI_VID {
+  GIZMOTRONICS = 0x314159,
+};

@@ -11,4 +11,6 @@ toc:
   path: /docs/development/sdk/driver-sample-qemu-edu.md
 - title: "Write bind rules for a driver"
   path: /docs/development/sdk/write-bind-rules-for-driver.md
+- title: "Bind library code generation tutorial for Bazel"
+  path: /docs/development/sdk/bind-libraries-codegen-bazel.md
 - include: /docs/development/sdk/ffx/_toc.yaml

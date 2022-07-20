@@ -4,6 +4,7 @@
 
 group("drivers") {
   deps = [
+    "bindlib_codegen",
     "driver_test_realm/sample-driver",
     "v2/demo-number:component",
   ]

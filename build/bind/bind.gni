@@ -6,6 +6,7 @@ import("//build/compiled_action.gni")
 import("//build/dist/generated_resource.gni")
 import("//build/host.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/testing/golden_file.gni")
 import("//build/testing/host_test.gni")
 import("//build/testing/host_test_data.gni")
 
@@ -567,13 +568,33 @@ template("_bind_library_cpp") {
     }
   }
 
+  if (defined(invoker.cpp_golden_file)) {
+    cpp_header_golden_action = "${target_name}_cpp_golden"
+    golden_file(cpp_header_golden_action) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      current = cpp_header_file
+      golden = invoker.cpp_golden_file
+      public_deps = [ ":${cpp_header_file_gen_target}" ]
+    }
+  }
+
   source_set(cpp_header_file_target) {
     forward_variables_from(invoker,
                            [
                              "testonly",
                              "visibility",
                            ])
-    deps = [ ":${cpp_header_file_gen_target}" ]
+
+    if (defined(invoker.cpp_golden_file)) {
+      deps = [ ":${cpp_header_golden_action}" ]
+    } else {
+      deps = [ ":${cpp_header_file_gen_target}" ]
+    }
+
     sources = [ cpp_header_file ]
     public_configs = [ ":${include_config}" ]
     if (defined(invoker.public_deps)) {
@@ -634,16 +655,35 @@ template("_bind_library_rust") {
     }
   }
 
+  if (defined(invoker.rust_golden_file)) {
+    rust_file_golden_action = "${target_name}_rust_golden"
+    golden_file(rust_file_golden_action) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      current = rust_file
+      golden = invoker.rust_golden_file
+      public_deps = [ ":${rust_file_gen_target}" ]
+    }
+  }
+
   rustc_library(rust_library_target) {
     forward_variables_from(invoker,
                            [
                              "testonly",
                              "visibility",
                            ])
+    if (defined(invoker.rust_golden_file)) {
+      non_rust_deps = [ ":${rust_file_golden_action}" ]
+    } else {
+      non_rust_deps = [ ":${rust_file_gen_target}" ]
+    }
+
     edition = "2018"
     name = crate_name
     output_dir = crate_output_directory
-    non_rust_deps = [ ":${rust_file_gen_target}" ]
     sources = [ rust_file ]
     source_root = rust_file
     configs -= [ "//build/config/rust/lints:allow_unused_results" ]
@@ -676,6 +716,12 @@ template("_bind_library_rust") {
 #   name (optional)
 #     [string] Name of the library. Defaults to the target's name.
 #
+#   cpp_golden_file (optional)
+#     [string] Path to the golden file for the cpp header.
+#
+#   rust_golden_file (optional)
+#     [string] Path to the golden file for the rust file.
+#
 #   testonly, visibility
 #     Forwarded from invoker.
 #
@@ -683,13 +729,23 @@ template("bind_library") {
   assert(defined(invoker.source), "Need a source file")
 
   _bind_library_cpp(target_name) {
-    forward_variables_from(invoker, "*", [ "sdk_category" ])
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "sdk_category",
+                             "rust_golden_file",
+                           ])
   }
 
   # Rust tools (eg. rust_rlib) are not defined in the Zircon toolchain.
   if (zircon_toolchain == false) {
     _bind_library_rust(target_name) {
-      forward_variables_from(invoker, "*", [ "sdk_category" ])
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "sdk_category",
+                               "cpp_golden_file",
+                             ])
     }
   }
 
@@ -734,7 +790,12 @@ template("bind_library") {
 
   if (defined(invoker.sdk_category)) {
     _bind_library_sdk("$target_name") {
-      forward_variables_from(invoker, "*")
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "cpp_golden_file",
+                               "rust_golden_file",
+                             ])
     }
   }
 }

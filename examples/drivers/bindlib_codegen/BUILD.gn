@@ -1,0 +1,58 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test.gni")
+
+group("bindlib_codegen") {
+  deps = [
+    ":check_golden",
+    ":check_golden_cpp",
+    ":check_golden_rust",
+    ":parent_cpp_code",
+    ":parent_rust_code",
+  ]
+}
+
+# [START example_bind_lib_target]
+bind_library("my_bindlib_target") {  # target_name
+  source = "mybindlib.bind"
+  name = "fuchsia.example.library"  # library_name (optional, defaults to
+                                    # target_name)
+  public_deps = [ "//src/devices/bind/fuchsia.pci" ]
+}
+
+# [END example_bind_lib_target]
+
+# [START example_cpp_target]
+source_set("parent_cpp_code") {
+  sources = [ "parent-driver.cc" ]
+  deps = [ ":my_bindlib_target_cpp" ]
+}
+
+# [END example_cpp_target]
+
+# [START example_rust_target]
+rustc_binary("parent_rust_code") {
+  edition = "2021"
+  source_root = "parent-driver.rs"
+  sources = [ "parent-driver.rs" ]
+  deps = [ ":my_bindlib_target_rust" ]
+}
+
+# [END example_rust_target]
+
+# This is a duplicate of my_bindlib_target used to validate the goldens we are checking in
+# so the docs can show generated code. We don't want to show this build target as an example
+# since the golden file properties here are not necessary.
+bind_library("check_golden") {
+  source = "mybindlib.bind"
+  name = "fuchsia.example.library"
+  public_deps = [ "//src/devices/bind/fuchsia.pci" ]
+  cpp_golden_file = "cpp_codegen.h.golden"
+  rust_golden_file = "rust_codegen.rs.golden"
+}

@@ -12,3 +12,5 @@ toc:
   path: /docs/development/drivers/tutorials/bind-rules-tutorial.md
 - title: "FIDL tutorial"
   path: /docs/development/drivers/tutorials/fidl-tutorial.md
+- title: "Bind library code generation tutorial"
+  path: /docs/development/drivers/tutorials/bind-libraries-codegen.md

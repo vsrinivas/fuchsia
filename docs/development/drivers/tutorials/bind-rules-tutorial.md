@@ -2,9 +2,9 @@
 
 This guide explains how to write bind rules for a driver so that it binds to the devices it wants. It explains how to find the bind properties and then write bind rules for it using the bind language.
 
-This guide assumes familiarity with [Driver Binding] (/docs/development/drivers/concepts/device_driver_model/driver-binding.md).
+This guide assumes familiarity with [Driver Binding](/docs/development/drivers/concepts/device_driver_model/driver-binding.md).
 
-##Current state of bind properties
+## Current state of bind properties
 Currently, bind properties are defined in bind libraries and C++ header files. In the past, bind properties were integer-based key-value pairs described as a C++ struct. All properties were defined in C++ header files and the bind rules were part of the driver source code.
 
 However, the bind system was recently revamped so that bind rules are defined in a separate file using the bind language, and bind properties can support string-based keys with boolean, string, integer or enum values.
@@ -13,7 +13,7 @@ A migration is now in the process to move all drivers from the old bind system t
 
 Until the migration is complete, both the old and new bind systems need to be supported simultaneously.
 
-###Future state of bind properties
+### Future state of bind properties
 Once the bind migration is complete, we can stop supporting the old integer-based bind properties and remove the C++ definitions, such as [protodefs.h](/src/lib/ddk/include/lib/ddk/protodefs.h) and [binding_priv.h](/src/lib/ddk/include/lib/ddk/binding_priv.h). All properties will be defined in bind libraries and the keys will be entirely string-based.
 
 Existing properties can be updated so they utilize the features of the new system. For example, the `BIND_COMPOSITE` property is a flag that is only set for composite devices. However, since the old system only supports integer values, an integer instead of a boolean represents the property value. With the old bind system removed, the property value can be changed to a boolean.
@@ -30,9 +30,9 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
 
 With the new bind system, VIDs can be potentially represented by string values or even enums.
 
-##Looking up bind properties
+## Looking up bind properties
 
-###Using ffx driver list-devices
+### Using ffx driver list-devices
 The command `ffx driver list-devices -v` prints the properties of every device in the tree in the format:
 
 ```
@@ -62,7 +62,7 @@ ProtoId : '....' 00000000(0)
 [ 0/ 1] : fuchsia.acpi.hid="GFSH0005"
 ```
 
-###Driver properties in the driver source code
+### Driver properties in the driver source code
 
 When adding a child device, drivers can provide properties that the bind rules match to. As such, you can find the properties to bind to through the driver source code.
 
@@ -111,20 +111,20 @@ auto args = fdf::wire::NodeAddArgs::Builder(arena)
                   .Build();
 ```
 
-##Defining properties in bind libraries
+## Defining properties in bind libraries
 
 As we migrate from drivers from the old bind system to the new, we redefine the old properties in bind libraries on the new system. These bind libraries are located in the [src/devices/bind](/src/devices/bind) directory.
 
 Any new properties are expected to be defined in the bind libraries.
 
-###Properties from the old bind system
+### Properties from the old bind system
 Most of the old device property keys and values are defined in [binding_priv.h](/src/lib/ddk/include/lib/ddk/binding_priv.h) and [protodefs.h](/src/lib/ddk/include/lib/ddk/protodefs.h).
 
 `binding_priv.h` contains the hardcoded property keys. Each property key is assigned a unique integer value. In the new bind system, these keys are redefined with a `fuchsia.BIND_` prefix. For instance, `BIND_PROTOCOL` becomes `fuchsia.BIND_PROTOCOL` and `BIND_COMPOSITE` becomes `fuchsia.BIND_COMPOSITE`.
 
 `protodefs.h` contains hardcoded ID values for device protocols.
 
-###Device protocol bind library
+### Device protocol bind library
 Each device protocol in `protodefs.h` is expected to have its own bind library that contains its protocol ID and related properties. One example is the [fuchsia.i2c bind library](/src/devices/bind/fuchsia.i2c/fuchsia.i2c.bind), which not only defines the protocol ID values, but also other i2c related properties:
 
 ```
@@ -156,7 +156,7 @@ DDK_PROTOCOL_DEF(I2C_IMPL ,               25,   "i2c-impl", 0)
 
 The `IMPL` value represents a driver that implements and serves the i2c protocol. `DEVICE` represents a core driver that consumes the `IMPL` protocol and serves the `DEVICE` protocol.
 
-##Writing bind rules
+## Writing bind rules
 This section describes how to write bind rules for the current state of driver binding. For bind rules that only bind to the above set of properties, you will need to write:
 
 ```
@@ -170,7 +170,7 @@ fuchsia.BIND_COMPOSITE == 1;
 fuchsia.acpi.hid == "GFSH0005";
 ```
 
-###Property key
+### Property key
 
 The integer key names are defined in `binding_priv.h` and are prefixed with “fuchsia”. For example, the key 0x03 in `dm dump` is determined to be `fuchsia.BIND_COMPOSITE` because `binding_priv.h` contains the following:
 
@@ -182,7 +182,7 @@ The integer key names are defined in `binding_priv.h` and are prefixed with “f
 #define BIND_FIDL_PROTOCOL 0x0004  // primary FIDL protocol of the device
 ```
 
-###Property values
+### Property values
 Since the properties are associated with PCI, the matching values are found in the [fuchsia.pci.bind](/src/devices/bind/fuchsia.pci/fuchsia.pci.bind) library. `fuchsia.pci.BIND_PCI_VID.VIRTIO` is found by matching `0x001af4` to a value in `fuchsia.BIND_PCI_VID`.
 
 ```
@@ -206,7 +206,7 @@ fuchsia.BIND_PCI_VID == 0x1af4;
 
 However, it’s preferable to define a value in the bind library.
 
-###Composite bind rules
+### Composite bind rules
 The same process is used for composite bind rules. For each node you want to write bind rules for, you can print the bind properties and write bind rules for them.
 
 Say you want to write composite bind rules that contain a node that binds to the above example and another node that binds to the following:
@@ -248,7 +248,7 @@ node "acpi" {
 
 ## Bind rules examples
 
-###Branching bind rules
+### Branching bind rules
 
 The bind language supports branching via if statements with some restrictions.
 
@@ -276,7 +276,7 @@ if fuchsia.driver.framework.dfv2 == true {
 }
 ```
 
-###Excluding multiple properties values
+### Excluding multiple properties values
 
 To reject multiple property values for a key, you can chain inequality condition statements together. For example, if you need to reject multiple fuchsia.BIND_PCI_DID values, you can do the following:
 
