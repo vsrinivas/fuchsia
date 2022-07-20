@@ -164,8 +164,16 @@ protocol File2 {
         length uint64;
     }) -> (struct {}) error zx.status;
 
-    /// Acquires a [`zx.handle:VMO`] representing this file, if
-    /// there is one, with the requested access rights.
+    /// Acquires a [`zx.handle:VMO`] representing this file, if there is one,
+    /// with the requested access rights.
+    ///
+    /// Implementations are not required to implement files backed by VMOs so
+    /// this request may fail. Additionally, implementations may only support
+    /// a certain subset of the flags. Clients should be prepared with fallback
+    /// behavior if this request fails.
+    ///
+    /// If a client specifies neither `PRIVATE_CLONE` nor `SHARED_BUFFER`, the
+    /// implementation is free to choose the semantics of the returned VMO.
     ///
     /// + request `flags` a [`VmoFlags`] indicating the desired mode of access.
     /// - response `vmo` the requested [`zx.handle:VMO`].
@@ -188,15 +196,36 @@ protocol File2 {
             /// Request that the VMO be executable.
             EXECUTE = 0x00000004;
 
-            /// Require a copy-on-write clone of the underlying VMO.
-            /// The request should fail if the VMO cannot be cloned.
-            /// May not be supplied with `SHARED_BUFFER`.
+            /// Require a copy-on-write clone of the underlying VMO. The request
+            /// should fail if the VMO cannot be cloned. May not be supplied
+            /// with `SHARED_BUFFER`.
+            ///
+            /// A private clone uses at least the guarantees of the
+            /// `ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE` flag to
+            /// `zx_vmo_create_child()`. This means that the returned VMO will
+            /// be copy-on-write (if `WRITE` is requested) but that it may or
+            /// may not reflect subsequent content changes to the underlying
+            /// file. The returned VMO will not reflect size changes to the
+            /// file. These semantics match those of the POSIX `mmap()`
+            /// `MAP_PRIVATE` flag.
+            ///
+            /// In some cases, clients requiring a guaranteed snapshot of the
+            /// file can use `SHARED_BUFFER` and then use
+            /// `zx_vmo_create_child()` with `ZX_VMO_CHILD_SNAPSHOT`. However,
+            /// in addition to cases where the implementation can't return a
+            /// `SHARED_BUFFER`, creating a full snapshot will fail if the VMO
+            /// is attached to the pager. Since most filesystems will use the
+            /// paging system, the full snapshot approach should only be used in
+            /// specific cases where the client is talking to a known server.
             PRIVATE_CLONE = 0x00010000;
 
-            /// Require an exact (non-cloned) handle to the underlying VMO.
-            /// All clients using this flag would get a VMO with the same koid.
-            /// The request should fail if a handle to the exact VMO cannot be returned.
-            /// May not be supplied with `PRIVATE_CLONE`.
+            /// Require an exact (non-cloned) handle to the underlying VMO. All
+            /// clients using this flag would get a VMO with the same koid, and
+            /// this VMO will reflect content and size changes as they are made
+            /// to the underlying file.
+            ///
+            /// The request should fail if a handle to the exact VMO cannot be
+            /// returned. May not be supplied with `PRIVATE_CLONE`.
             SHARED_BUFFER = 0x00020000;
         };
     }) -> (resource struct {

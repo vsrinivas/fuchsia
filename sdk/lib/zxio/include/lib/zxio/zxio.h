@@ -304,30 +304,83 @@ ZXIO_EXPORT zx_status_t zxio_token_get(zxio_t* io, zx_handle_t* out_token);
 // access rights.
 ZXIO_EXPORT zx_status_t zxio_vmo_get(zxio_t* io, zxio_vmo_flags_t flags, zx_handle_t* out_vmo);
 
-// Get a read-only VMO containing the whole contents of the file.
+// Get a read-only VMO containing the whole contents of the file. This function creates a clone of
+// the underlying VMO using `zxio_vmo_get_clone()` when possible, falling back to eagerly reading
+// the contents into a freshly-created VMO. Copying the file data can have significant memory and
+// performance implications for large files so this function must be used carefully, but having this
+// fallback avoids the many error cases of `zxio_vmo_get_clone()` and `zxio_vmo_get_exact()`.
 //
-// This function creates a clone of the underlying VMO when possible. If the
-// function cannot create a clone, the function will eagerly read the contents
-// of the file into a freshly-created VMO.
+// When cloning is successful, the cloned VMO will have at least the semantics of the
+// `ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE` flag for the `zx_vmo_create_child()` system call. This
+// leaves unspecified whether the returned VMO will reflect subsequent changes in the underlying
+// file or not. When the eager-reading fallback happens, the returned VMO will be a non-atomic
+// snapshot of the file when it was read. The size of the VMO will not reflect changes to the
+// underlying file. As a result, users should not make assumptions about the semantics of the
+// returned VMO with respect to file content changes.
+//
+// See also:
+//
+//   * `fdio_get_vmo_copy()` which is a frontend for this function taking a file descriptor.
+//   * `zxio_vmo_get_clone()`
+//   * `zxio_vmo_get_exact()`
+//   * `zxio_vmo_get_exec()`
 ZXIO_EXPORT zx_status_t zxio_vmo_get_copy(zxio_t* io, zx_handle_t* out_vmo);
 
-// Get a read-only VMO containing the whole contents of the file.
+// Gets a VMO containing a read-only child of the underlying VMO representing the file.
 //
-// This function creates a clone of the underlying VMO when possible. If the
-// function cannot create a clone, the function will return an error.
+// Zxio supports things other than normal files, and no filesystem is required to provide the
+// contents of the file as a VMO. Therefore, callers should be prepared for this function to fail.
+// Callers that can tolerate the performance and memory implications of an eager copy of the entire
+// contents of the file can use `zxio_vmo_get_copy()` which includes automatic fallback.
+//
+// On success, the returned VMO will have at least the semantics of the
+// `ZX_VMO_CHILD_SNAPSHOT_AT_LEAST_ON_WRITE` flag for the `zx_vmo_create_child()` system call. This
+// leaves unspecified whether the returned VMO will reflect subsequent changes in the underlying
+// file or not. The size of the VMO will not reflect changes to the underlying file. These semantics
+// match the POSIX `mmap()` `MAP_PRIVATE` flag.
+//
+// Users requiring a guaranteed snapshot of the file should use `zxio_vmo_get_exact()` and then use
+// `zx_vmo_create_child()` with `ZX_VMO_CHILD_SNAPSHOT` to create a snapshot. However, clients
+// should be prepared for this to fail in common cases, both because the filesystem is not required
+// to supply an exact VMO, and because creating a snapshot has additional restrictions (most
+// commonly that the VMO must not be attached to the paging system).
+//
+// See also:
+//
+//   * `fdio_get_vmo_clone()` which is a frontend for this function taking a file descriptor.
+//   * `zxio_vmo_get_copy()`
+//   * `zxio_vmo_get_exact()`
+//   * `zxio_vmo_get_exec()`
 ZXIO_EXPORT zx_status_t zxio_vmo_get_clone(zxio_t* io, zx_handle_t* out_vmo);
 
-// Get a read-only handle to the exact VMO used by the file system server to
-// represent the file.
+// Get a read-only handle to the exact VMO used to represent the file. This VMO will track size and
+// content changes to the file.
 //
-// This function fails if the server does not have an exact VMO representation
-// of the file.
+// Not all file descriptors represent normal files, and no filesystem is required to provide the
+// contents of the file as a VMO. Therefore, callers should be prepared for this function to fail.
+// Callers that can tolerate the performance and memory implications of an eager copy of the entire
+// contents of the file can use `zxio_vmo_get_copy()` which includes automatic fallback.
+//
+// See also:
+//
+//   * `fdio_get_vmo_exact()` which is a frontend for this function taking a file descriptor.
+//   * `zxio_vmo_get_clone()`
+//   * `zxio_vmo_get_copy()`
+//   * `zxio_vmo_get_exec()`
 ZXIO_EXPORT zx_status_t zxio_vmo_get_exact(zxio_t* io, zx_handle_t* out_vmo);
 
-// Get a read + execute VMO as a clone of the underlying VMO in this file.
-// This function will fail rather than copying the contents if it cannot clone,
-// or if the particular |io| does not support / allow a read + execute VMO
-// representation.
+// Get VMO containing a read-only executable child of the underlying VMO. This function will fail
+// rather than copying the contents if it cannot be cloned.
+//
+// This function is identical to `zxio_vmo_get_clone()` except it adds executable rights. See that
+// function for more information.
+//
+// See also:
+//
+//   * `fdio_get_vmo_exec()` which is a frontend for this function taking a file descriptor.
+//   * `zxio_vmo_get_clone()`
+//   * `zxio_vmo_get_copy()`
+//   * `zxio_vmo_get_exact()`
 ZXIO_EXPORT zx_status_t zxio_vmo_get_exec(zxio_t* io, zx_handle_t* out_vmo);
 
 // Queries the number of bytes available to read from this object without
