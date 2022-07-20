@@ -1,0 +1,26 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+@available(added=HEAD)
+library fuchsia.ui.test.input;
+
+/// *** This protocol must not be used in production. ***
+///
+/// Enables clients to register fake input devices, which can be used to
+/// inject input events directly into Input Pipeline.
+@discoverable
+protocol Registry {
+
+    /// Enables the client to inject touch events using the corresponding
+    /// client end to `device`.
+    ///
+    /// Clients are allowed at most one in-flight call at a time. Subsequent
+    /// calls must wait until the acknowledgment returns. Non-compliance
+    /// results in channel closure.
+    ///
+    /// The `fuchsia.ui.test.input.TouchScreen` channel will remain open even
+    /// if the `Registry` connection closes.
+    RegisterTouchScreen(resource table {
+        1: device server_end:TouchScreen;
+    }) -> ();
+};

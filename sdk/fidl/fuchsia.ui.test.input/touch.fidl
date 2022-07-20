@@ -1,0 +1,19 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.test.input;
+
+using fuchsia.math;
+
+/// A tool to inject touch events into Input Pipeline.
+///
+/// Please extend as necessary.
+protocol TouchScreen {
+    /// Simulates a tap at the requested location in the input device's logical
+    /// coordinate space, which spans [-1000, 1000] on both the x and y axes.
+    SimulateTap(table {
+        /// Location of the tap event, in the input device's logical coordinate space.
+        1: tap_location fuchsia.math.Vec;
+    }) -> ();
+};
