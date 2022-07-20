@@ -364,35 +364,40 @@ impl<T: Driver> ServeTo<DeviceRequestStream> for T {
         let closure = |command| async {
             match command {
                 DeviceRequest::ProvisionNetwork { params, responder } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.provision_network(params)
                         .err_into::<Error>()
-                        .and_then(|_| ready(responder.send().map_err(Error::from)))
+                        .and_then(|_| ready(responder.unwrap().send().map_err(Error::from)))
                         .await
                         .context("error in provision_network request")?;
                 }
 
                 DeviceRequest::LeaveNetwork { responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.leave_network()
                         .err_into::<Error>()
-                        .and_then(|_| ready(responder.send().map_err(Error::from)))
+                        .and_then(|_| ready(responder.unwrap().send().map_err(Error::from)))
                         .await
                         .context("error in leave_network request")?;
                 }
 
                 DeviceRequest::SetActive { active, responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.set_active(active)
                         .err_into::<Error>()
-                        .and_then(|_| ready(responder.send().map_err(Error::from)))
+                        .and_then(|_| ready(responder.unwrap().send().map_err(Error::from)))
                         .await
                         .context("error in set_active request")?;
                 }
 
                 DeviceRequest::GetSupportedNetworkTypes { responder } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.get_supported_network_types()
                         .err_into::<Error>()
                         .and_then(|response| {
                             ready(
                                 responder
+                                    .unwrap()
                                     .send(&mut response.iter().map(String::as_str))
                                     .map_err(Error::from),
                             )
@@ -402,6 +407,7 @@ impl<T: Driver> ServeTo<DeviceRequestStream> for T {
                 }
 
                 DeviceRequest::WatchDeviceState { responder } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     watcher
                         .try_lock()
                         .ok_or(format_err!(
@@ -412,7 +418,9 @@ impl<T: Driver> ServeTo<DeviceRequestStream> for T {
                             Some(x) => x.map_err(Error::from),
                             None => Err(format_err!("watch_device_state stream ended early")),
                         })
-                        .and_then(|response| ready(responder.send(response).map_err(Error::from)))
+                        .and_then(|response| {
+                            ready(responder.unwrap().send(response).map_err(Error::from))
+                        })
                         .await
                         .context("error in watch_device_state request")?;
                 }
@@ -444,15 +452,17 @@ impl<T: Driver> ServeTo<DeviceExtraRequestStream> for T {
         let closure = |command| async {
             match command {
                 DeviceExtraRequest::GetCredential { responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.get_credential()
                         .err_into::<Error>()
                         .and_then(|mut response| {
-                            ready(responder.send(response.as_mut()).map_err(Error::from))
+                            ready(responder.unwrap().send(response.as_mut()).map_err(Error::from))
                         })
                         .await
                         .context("error in get_credential request")?;
                 }
                 DeviceExtraRequest::WatchIdentity { responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     watcher
                         .try_lock()
                         .ok_or_else(|| {
@@ -465,14 +475,19 @@ impl<T: Driver> ServeTo<DeviceExtraRequestStream> for T {
                             Some(x) => x.map_err(Error::from),
                             None => Err(format_err!("Device combined state stream ended early")),
                         })
-                        .and_then(|response| ready(responder.send(response).map_err(Error::from)))
+                        .and_then(|response| {
+                            ready(responder.unwrap().send(response).map_err(Error::from))
+                        })
                         .await
                         .context("error in watch_identity request")?;
                 }
                 DeviceExtraRequest::GetCurrentMacAddress { responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.get_current_mac_address()
                         .err_into::<Error>()
-                        .and_then(|response| ready(responder.send(&response).map_err(Error::from)))
+                        .and_then(|response| {
+                            ready(responder.unwrap().send(&response).map_err(Error::from))
+                        })
                         .await
                         .context("error in get_current_mac_address request")?;
                 }
@@ -505,10 +520,16 @@ impl<T: Driver> ServeTo<ExperimentalDeviceRequestStream> for T {
         let closure = |command| async {
             match command {
                 ExperimentalDeviceRequest::GetSupportedChannels { responder } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.get_supported_channels()
                         .err_into::<Error>()
                         .and_then(|response| {
-                            ready(responder.send(&mut response.into_iter()).map_err(Error::from))
+                            ready(
+                                responder
+                                    .unwrap()
+                                    .send(&mut response.into_iter())
+                                    .map_err(Error::from),
+                            )
                         })
                         .await
                         .context("error in get_supported_channels request")?;
@@ -712,9 +733,10 @@ impl<T: Driver> ServeTo<TelemetryProviderRequestStream> for T {
         let closure = |command| async {
             match command {
                 TelemetryProviderRequest::GetTelemetry { responder } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.get_telemetry()
                         .err_into::<Error>()
-                        .and_then(|x| ready(responder.send(x).map_err(Error::from)))
+                        .and_then(|x| ready(responder.unwrap().send(x).map_err(Error::from)))
                         .await
                         .context("error in get_telemetry_info request")?;
                 }
@@ -836,92 +858,118 @@ impl<T: Driver> ServeTo<DeviceTestRequestStream> for T {
         let closure = |command| async {
             match command {
                 DeviceTestRequest::Reset { responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.reset()
                         .err_into::<Error>()
-                        .and_then(|_| ready(responder.send().map_err(Error::from)))
+                        .and_then(|_| ready(responder.unwrap().send().map_err(Error::from)))
                         .await
                         .context("error in reset request")?;
                 }
 
                 DeviceTestRequest::GetNcpVersion { responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.get_ncp_version()
                         .err_into::<Error>()
                         .and_then(|response| {
-                            ready(responder.send(response.as_str()).map_err(Error::from))
+                            ready(responder.unwrap().send(response.as_str()).map_err(Error::from))
                         })
                         .await
                         .context("error in get_ncp_version request")?;
                 }
                 DeviceTestRequest::GetCurrentChannel { responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.get_current_channel()
                         .err_into::<Error>()
-                        .and_then(|response| ready(responder.send(response).map_err(Error::from)))
+                        .and_then(|response| {
+                            ready(responder.unwrap().send(response).map_err(Error::from))
+                        })
                         .await
                         .context("error in get_current_channel request")?;
                 }
                 DeviceTestRequest::GetCurrentRssi { responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.get_current_rssi()
                         .err_into::<Error>()
-                        .and_then(|response| ready(responder.send(response).map_err(Error::from)))
+                        .and_then(|response| {
+                            ready(responder.unwrap().send(response).map_err(Error::from))
+                        })
                         .await
                         .context("error in get_current_rssi request")?;
                 }
                 DeviceTestRequest::GetFactoryMacAddress { responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.get_factory_mac_address()
                         .err_into::<Error>()
-                        .and_then(|response| ready(responder.send(&response).map_err(Error::from)))
+                        .and_then(|response| {
+                            ready(responder.unwrap().send(&response).map_err(Error::from))
+                        })
                         .await
                         .context("error in get_factory_mac_address request")?;
                 }
                 DeviceTestRequest::GetCurrentMacAddress { responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.get_current_mac_address()
                         .err_into::<Error>()
-                        .and_then(|response| ready(responder.send(&response).map_err(Error::from)))
+                        .and_then(|response| {
+                            ready(responder.unwrap().send(&response).map_err(Error::from))
+                        })
                         .await
                         .context("error in get_current_mac_address request")?;
                 }
                 DeviceTestRequest::GetPartitionId { responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.get_partition_id()
                         .err_into::<Error>()
-                        .and_then(|response| ready(responder.send(response).map_err(Error::from)))
+                        .and_then(|response| {
+                            ready(responder.unwrap().send(response).map_err(Error::from))
+                        })
                         .await
                         .context("error in get_partition_id request")?;
                 }
                 DeviceTestRequest::GetThreadRloc16 { responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.get_thread_rloc16()
                         .err_into::<Error>()
-                        .and_then(|response| ready(responder.send(response).map_err(Error::from)))
+                        .and_then(|response| {
+                            ready(responder.unwrap().send(response).map_err(Error::from))
+                        })
                         .await
                         .context("error in get_thread_rloc16 request")?;
                 }
                 DeviceTestRequest::GetThreadRouterId { responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.get_thread_router_id()
                         .err_into::<Error>()
-                        .and_then(|response| ready(responder.send(response).map_err(Error::from)))
+                        .and_then(|response| {
+                            ready(responder.unwrap().send(response).map_err(Error::from))
+                        })
                         .await
                         .context("error in get_thread_router_id request")?;
                 }
                 DeviceTestRequest::ReplaceMacAddressFilterSettings {
                     settings, responder, ..
                 } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.replace_mac_address_filter_settings(settings)
                         .err_into::<Error>()
-                        .and_then(|_| ready(responder.send().map_err(Error::from)))
+                        .and_then(|_| ready(responder.unwrap().send().map_err(Error::from)))
                         .await
                         .context("error in set_address_filter_settings request")?;
                 }
                 DeviceTestRequest::GetMacAddressFilterSettings { responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.get_mac_address_filter_settings()
                         .err_into::<Error>()
-                        .and_then(|x| ready(responder.send(x).map_err(Error::from)))
+                        .and_then(|x| ready(responder.unwrap().send(x).map_err(Error::from)))
                         .await
                         .context("error in get_address_filter_settings request")?;
                 }
                 DeviceTestRequest::GetNeighborTable { responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.get_neighbor_table()
                         .err_into::<Error>()
                         .and_then(|x| {
-                            ready(responder.send(&mut x.into_iter()).map_err(Error::from))
+                            ready(responder.unwrap().send(&mut x.into_iter()).map_err(Error::from))
                         })
                         .await
                         .context("error in get_neighbor_table_snapshot request")?;
@@ -952,31 +1000,35 @@ impl<T: Driver> ServeTo<DeviceRouteRequestStream> for T {
         let closure = |command| async {
             match command {
                 DeviceRouteRequest::RegisterOnMeshPrefix { prefix, responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.register_on_mesh_prefix(prefix)
                         .err_into::<Error>()
-                        .and_then(|_| ready(responder.send().map_err(Error::from)))
+                        .and_then(|_| ready(responder.unwrap().send().map_err(Error::from)))
                         .await
                         .context("error in register_on_mesh_prefix request")?;
                 }
                 DeviceRouteRequest::UnregisterOnMeshPrefix { subnet, responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.unregister_on_mesh_prefix(subnet)
                         .err_into::<Error>()
-                        .and_then(|_| ready(responder.send().map_err(Error::from)))
+                        .and_then(|_| ready(responder.unwrap().send().map_err(Error::from)))
                         .await
                         .context("error in unregister_on_mesh_prefix request")?;
                 }
 
                 DeviceRouteRequest::RegisterExternalRoute { external_route, responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.register_external_route(external_route)
                         .err_into::<Error>()
-                        .and_then(|_| ready(responder.send().map_err(Error::from)))
+                        .and_then(|_| ready(responder.unwrap().send().map_err(Error::from)))
                         .await
                         .context("error in register_external_route request")?;
                 }
                 DeviceRouteRequest::UnregisterExternalRoute { subnet, responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.unregister_external_route(subnet)
                         .err_into::<Error>()
-                        .and_then(|_| ready(responder.send().map_err(Error::from)))
+                        .and_then(|_| ready(responder.unwrap().send().map_err(Error::from)))
                         .await
                         .context("error in unregister_external_route request")?;
                 }
@@ -1006,19 +1058,21 @@ impl<T: Driver> ServeTo<DeviceRouteExtraRequestStream> for T {
         let closure = |command| async {
             match command {
                 DeviceRouteExtraRequest::GetLocalOnMeshPrefixes { responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.get_local_on_mesh_prefixes()
                         .err_into::<Error>()
                         .and_then(|x| {
-                            ready(responder.send(&mut x.into_iter()).map_err(Error::from))
+                            ready(responder.unwrap().send(&mut x.into_iter()).map_err(Error::from))
                         })
                         .await
                         .context("error in get_local_on_mesh_prefixes request")?;
                 }
                 DeviceRouteExtraRequest::GetLocalExternalRoutes { responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.get_local_external_routes()
                         .err_into::<Error>()
                         .and_then(|x| {
-                            ready(responder.send(&mut x.into_iter()).map_err(Error::from))
+                            ready(responder.unwrap().send(&mut x.into_iter()).map_err(Error::from))
                         })
                         .await
                         .context("error in get_local_external_routes request")?;
@@ -1049,9 +1103,12 @@ impl<T: Driver> ServeTo<FactoryDeviceRequestStream> for T {
         let closure = |command| async {
             match command {
                 FactoryDeviceRequest::SendMfgCommand { responder, command, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.send_mfg_command(&command)
                         .err_into::<Error>()
-                        .and_then(|response| ready(responder.send(&response).map_err(Error::from)))
+                        .and_then(|response| {
+                            ready(responder.unwrap().send(&response).map_err(Error::from))
+                        })
                         .await
                         .context("error in send_mfg_command request")?;
                 }
@@ -1081,16 +1138,18 @@ impl<T: Driver> ServeTo<CountersRequestStream> for T {
         let closure = |command| async {
             match command {
                 CountersRequest::Get { responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.get_counters()
                         .err_into::<Error>()
-                        .and_then(|x| ready(responder.send(x).map_err(Error::from)))
+                        .and_then(|x| ready(responder.unwrap().send(x).map_err(Error::from)))
                         .await
                         .context("error in get_counters request")?;
                 }
                 CountersRequest::Reset { responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.reset_counters()
                         .err_into::<Error>()
-                        .and_then(|x| ready(responder.send(x).map_err(Error::from)))
+                        .and_then(|x| ready(responder.unwrap().send(x).map_err(Error::from)))
                         .await
                         .context("error in reset_counters request")?;
                 }
@@ -1120,9 +1179,10 @@ impl<T: Driver> ServeTo<LegacyJoiningRequestStream> for T {
         let closure = |command| async {
             match command {
                 LegacyJoiningRequest::MakeJoinable { duration, port, responder, .. } => {
+                    let responder = ResponderNoShutdown::wrap(responder);
                     self.make_joinable(fuchsia_zircon::Duration::from_nanos(duration), port)
                         .err_into::<Error>()
-                        .and_then(|_| ready(responder.send().map_err(Error::from)))
+                        .and_then(|_| ready(responder.unwrap().send().map_err(Error::from)))
                         .await
                         .context("error in make_joinable request")?;
                 }
