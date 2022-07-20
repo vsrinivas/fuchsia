@@ -353,7 +353,7 @@ zx::status<GptDevicePartitioner::FindFirstFitResult> GptDevicePartitioner::FindF
   qsort(partitions, partition_count, sizeof(PartitionPosition), [](const void* p1, const void* p2) {
     ssize_t s1 = static_cast<ssize_t>(static_cast<const PartitionPosition*>(p1)->start);
     ssize_t s2 = static_cast<ssize_t>(static_cast<const PartitionPosition*>(p2)->start);
-    return s1 > s2 ? +1 : -1;
+    return s1 == s2 ? 0 : (s1 > s2 ? +1 : -1);
   });
 
   // Look for space between the partitions. Since the reserved spots of the
