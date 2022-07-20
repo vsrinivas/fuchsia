@@ -71,6 +71,8 @@
                 "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
                 "fuchsia.location.namedplace.RegulatoryRegionWatcher",
                 "fuchsia.lowpan.bootstrap.Thread",
+                "fuchsia.media.drm.PlayReady",
+                "fuchsia.media.drm.Widevine",
                 "fuchsia.media.SessionAudioConsumerFactory",
                 "fuchsia.media.sessions2.ActiveSession",
                 "fuchsia.media.sessions2.Discovery",
@@ -129,15 +131,6 @@
             ],
             from: "parent",
             to: "#session",
-        },
-        {
-            protocol: [
-                "fuchsia.media.drm.PlayReady",
-                "fuchsia.media.drm.Widevine",
-            ],
-            from: "parent",
-            to: "#session",
-            availability: "same_as_target",
         },
         {
             // Routed to session-manager via factory_store_providers.core_shard.cml.
