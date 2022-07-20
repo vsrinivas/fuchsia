@@ -4,7 +4,7 @@
 
 // Used to test task.kill and task.killall
 // an executable that does not end until it is killed
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
 
-int main(int argc, char** argv) { zx_nanosleep(zx_deadline_after(ZX_MIN(10))); }
+#include <future>
+
+int main(int argc, char** argv) { std::promise<void>().get_future().wait(); }
