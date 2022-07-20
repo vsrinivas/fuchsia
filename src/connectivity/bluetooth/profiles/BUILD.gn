@@ -17,6 +17,8 @@ group("profiles") {
     "bt-fastpair-provider:tests",
     "bt-hfp-audio-gateway",
     "bt-hfp-audio-gateway:tests",
+    "bt-hfp-hands-free",
+    "bt-hfp-hands-free:tests",
     "bt-peripheral-hub",
     "bt-peripheral-hub:tests",
     "bt-rfcomm",

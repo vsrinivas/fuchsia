@@ -1,0 +1,50 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  edition = "2021"
+  name = "bt_hfp_hands_free"
+  with_unit_tests = true
+
+  deps = [
+    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
+    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/connectivity/bluetooth/lib/profile-client",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:bitflags",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  sources = [
+    "src/config.rs",
+    "src/main.rs",
+    "src/profile.rs",
+    "src/service_definition.rs",
+  ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
+
+fuchsia_component("component") {
+  component_name = "bt-hfp-hands-free"
+  deps = [ ":bin" ]
+  manifest = "meta/bt-hfp-hands-free.cml"
+}
+
+fuchsia_package("bt-hfp-hands-free") {
+  deps = [ ":component" ]
+}
+
+fuchsia_unittest_package("bt-hfp-hands-free-tests") {
+  deps = [ ":bin_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":bt-hfp-hands-free-tests" ]
+}
