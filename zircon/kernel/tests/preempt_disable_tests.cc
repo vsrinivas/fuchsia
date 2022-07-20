@@ -351,14 +351,51 @@ static bool test_auto_preempt_disabler() {
   END_TEST;
 }
 
+static bool test_auto_timeslice_extension() {
+  BEGIN_TEST;
+
+  PreemptionState& preemption_state = Thread::Current::preemption_state();
+
+  // Basic.
+  {
+    ASSERT_TRUE(preemption_state.PreemptIsEnabled());
+    {
+      AutoExpiringPreemptDisabler guard(ZX_TIME_INFINITE);
+      ASSERT_FALSE(preemption_state.PreemptIsEnabled());
+    }
+    ASSERT_TRUE(preemption_state.PreemptIsEnabled());
+  }
+
+  // Nested.  Only the outermost guard matters.
+  {
+    ASSERT_TRUE(preemption_state.PreemptIsEnabled());
+    {
+      AutoExpiringPreemptDisabler guard1(ZX_TIME_INFINITE);
+      ASSERT_FALSE(preemption_state.PreemptIsEnabled());
+      {
+        AutoExpiringPreemptDisabler guard2(0);
+        // Even though guard2's duration is 0, preemption should still be disabled because of
+        // guard1's extension.
+        ASSERT_FALSE(preemption_state.PreemptIsEnabled());
+      }
+      ASSERT_FALSE(preemption_state.PreemptIsEnabled());
+    }
+    ASSERT_TRUE(preemption_state.PreemptIsEnabled());
+  }
+
+  END_TEST;
+}
+
 // Verify that in certain contexts where preemption cannot immediately occur, unblocking a thread
 // pinned to the current CPU will mark the CPU for preemption.
 //
 // This test covers three cases:
 //
 // 1. preemption is disabled
-// 2. a spinlock is held
-// 3. blocking is disallowed via |arch_set_blocking_disallowed|.
+// 2. eager resched is disabled
+// 3. timeslice extension
+// 4. a spinlock is held
+// 5. blocking is disallowed via |arch_set_blocking_disallowed|.
 //
 // See fxbug.dev/100545 for motivation.
 static bool test_local_preempt_pending() {
@@ -434,7 +471,33 @@ static bool test_local_preempt_pending() {
     END_TEST;
   }));
 
-  // 2. Holding a spinlock should cause a preemption event to become pending.
+  // 2. Eager resched disabled should cause a preemption event to become pending.
+  EXPECT_TRUE(setup_and_run_with([](Event& event) -> bool {
+    BEGIN_TEST;
+    AutoEagerReschedDisabler aerd;
+    // Unblock the |waiter|.  Because we've got eager resched disabled (which implies preempt
+    // disable), a preemption event for the local CPU should become pending.
+    event.Signal();
+    cpu_mask_t pending = Thread::Current::preemption_state().preempts_pending();
+    EXPECT_NE(0u, pending);
+    EXPECT_TRUE(pending | cpu_num_to_mask(arch_curr_cpu_num()));
+    END_TEST;
+  }));
+
+  // 3. A timeslice extension should cause a preemption event to become pending.
+  EXPECT_TRUE(setup_and_run_with([](Event& event) -> bool {
+    BEGIN_TEST;
+    AutoExpiringPreemptDisabler guard(ZX_TIME_INFINITE);
+    // Unblock the |waiter|.  Because we've got eager resched disabled (which implies preempt
+    // disable), a preemption event for the local CPU should become pending.
+    event.Signal();
+    cpu_mask_t pending = Thread::Current::preemption_state().preempts_pending();
+    EXPECT_NE(0u, pending);
+    EXPECT_TRUE(pending | cpu_num_to_mask(arch_curr_cpu_num()));
+    END_TEST;
+  }));
+
+  // 4. Holding a spinlock should cause a preemption event to become pending.
   EXPECT_TRUE(setup_and_run_with([](Event& event) {
     BEGIN_TEST;
     DECLARE_SINGLETON_SPINLOCK_WITH_TYPE(local_lock, MonitoredSpinLock);
@@ -448,7 +511,7 @@ static bool test_local_preempt_pending() {
     END_TEST;
   }));
 
-  // 3. arch_blocking_disallowed() should cause a preemption event to become pending.
+  // 5. arch_blocking_disallowed() should cause a preemption event to become pending.
   EXPECT_TRUE(setup_and_run_with([](Event& event) {
     BEGIN_TEST;
     // The fault handler may use the blocking disallowed state as a recursion check so be sure to
@@ -468,6 +531,76 @@ static bool test_local_preempt_pending() {
   END_TEST;
 }
 
+static bool test_evaluate_timeslice_extension() {
+  BEGIN_TEST;
+
+  // Nothing preventing preemption.
+  PreemptionState& preemption_state = Thread::Current::preemption_state();
+  ASSERT_TRUE(preemption_state.PreemptIsEnabled());
+  ASSERT_TRUE(preemption_state.EvaluateTimesliceExtension());
+  ASSERT_TRUE(preemption_state.PreemptIsEnabled());
+
+  // Disabled (by count).
+  {
+    AutoPreemptDisabler apd;
+    EXPECT_FALSE(preemption_state.PreemptIsEnabled());
+    EXPECT_FALSE(preemption_state.EvaluateTimesliceExtension());
+    EXPECT_FALSE(preemption_state.PreemptIsEnabled());
+  }
+  ASSERT_TRUE(preemption_state.PreemptIsEnabled());
+
+  // Disabled (by eager resched count).
+  {
+    AutoEagerReschedDisabler aerd;
+    EXPECT_FALSE(preemption_state.PreemptIsEnabled());
+    EXPECT_FALSE(preemption_state.EvaluateTimesliceExtension());
+    EXPECT_FALSE(preemption_state.PreemptIsEnabled());
+  }
+  ASSERT_TRUE(preemption_state.PreemptIsEnabled());
+
+  // Disabled (by infinite timeslice extension).
+  {
+    AutoExpiringPreemptDisabler guard(ZX_TIME_INFINITE);
+    EXPECT_FALSE(preemption_state.PreemptIsEnabled());
+    EXPECT_FALSE(preemption_state.EvaluateTimesliceExtension());
+    EXPECT_FALSE(preemption_state.PreemptIsEnabled());
+  }
+  ASSERT_TRUE(preemption_state.PreemptIsEnabled());
+
+  // See that the timeslice extension expires.
+  {
+    AutoExpiringPreemptDisabler guard(0);
+    EXPECT_FALSE(preemption_state.PreemptIsEnabled());
+    EXPECT_TRUE(preemption_state.EvaluateTimesliceExtension());
+    EXPECT_TRUE(preemption_state.PreemptIsEnabled());
+  }
+  ASSERT_TRUE(preemption_state.PreemptIsEnabled());
+
+  // AutoPreemptDisabler inside an expired AutoExpiringPreemptDisabler.
+  {
+    AutoExpiringPreemptDisabler guard1(0);
+    AutoPreemptDisabler guard2;
+    EXPECT_FALSE(preemption_state.PreemptIsEnabled());
+    EXPECT_FALSE(preemption_state.EvaluateTimesliceExtension());
+    // Still false because of the APD.
+    EXPECT_FALSE(preemption_state.PreemptIsEnabled());
+  }
+  ASSERT_TRUE(preemption_state.PreemptIsEnabled());
+
+  // AutoEagerReschedDisabler inside an expired AutoExpiringPreemptDisabler.
+  {
+    AutoExpiringPreemptDisabler guard1(0);
+    AutoEagerReschedDisabler guard2;
+    EXPECT_FALSE(preemption_state.PreemptIsEnabled());
+    EXPECT_FALSE(preemption_state.EvaluateTimesliceExtension());
+    // Still false because of the AERD.
+    EXPECT_FALSE(preemption_state.PreemptIsEnabled());
+  }
+  ASSERT_TRUE(preemption_state.PreemptIsEnabled());
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(preempt_disable_tests)
 UNITTEST("test_in_timer_callback", test_in_timer_callback)
 UNITTEST("test_inc_dec_disable_counts", test_inc_dec_disable_counts)
@@ -476,5 +609,7 @@ UNITTEST("test_blocking_clears_preempt_pending", test_blocking_clears_preempt_pe
 UNITTEST("test_interrupt_preserves_preempt_pending", test_interrupt_preserves_preempt_pending)
 UNITTEST("test_interrupt_with_preempt_disable", test_interrupt_with_preempt_disable)
 UNITTEST("test_auto_preempt_disabler", test_auto_preempt_disabler)
+UNITTEST("test_auto_timeslice_extension", test_auto_timeslice_extension)
 UNITTEST("test_local_preempt_pending", test_local_preempt_pending)
+UNITTEST("test_evaluate_timeslice_extension", test_evaluate_timeslice_extension)
 UNITTEST_END_TESTCASE(preempt_disable_tests, "preempt_disable_tests", "preempt_disable_tests")

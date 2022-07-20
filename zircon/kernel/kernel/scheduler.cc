@@ -1028,8 +1028,8 @@ void Scheduler::RescheduleCommon(SchedTime now, EndTraceCallback end_outer_trace
   SchedulerState* const next_state = &next_thread->scheduler_state();
 
   // Flush pending preemptions.
-  mp_reschedule(current_thread->preemption_state().preempts_pending_, 0);
-  current_thread->preemption_state().preempts_pending_ = 0;
+  mp_reschedule(current_thread->preemption_state().preempts_pending(), 0);
+  current_thread->preemption_state().preempts_pending_clear();
 
   // Update the state of the current and next thread.
   next_thread->set_running();
@@ -1497,6 +1497,10 @@ void Scheduler::Remove(Thread* thread) {
 }
 
 inline void Scheduler::RescheduleMask(cpu_mask_t cpus_to_reschedule_mask) {
+  // Does the local CPU need to be preempted?
+  const cpu_mask_t local_mask = cpu_num_to_mask(arch_curr_cpu_num());
+  const cpu_mask_t local_cpu = cpus_to_reschedule_mask & local_mask;
+
   PreemptionState& preemption_state = Thread::Current::Get()->preemption_state();
 
   // First deal with the remote CPUs.
@@ -1506,16 +1510,18 @@ inline void Scheduler::RescheduleMask(cpu_mask_t cpus_to_reschedule_mask) {
   } else {
     // EagerReschedDisabled implies that local preemption is also disabled.
     DEBUG_ASSERT(!preemption_state.PreemptIsEnabled());
-    preemption_state.preempts_pending_.fetch_or(cpus_to_reschedule_mask);
+    preemption_state.preempts_pending_add(cpus_to_reschedule_mask);
+    if (local_cpu != 0) {
+      preemption_state.EvaluateTimesliceExtension();
+    }
     return;
   }
 
-  // Does the local CPU need to be preempted?
-  const cpu_mask_t local_mask = cpu_num_to_mask(arch_curr_cpu_num());
-  const cpu_mask_t local_cpu = cpus_to_reschedule_mask & local_mask;
   if (local_cpu != 0) {
+    const bool preempt_enabled = preemption_state.EvaluateTimesliceExtension();
+
     // Can we do it here and now?
-    if (preemption_state.PreemptIsEnabled()) {
+    if (preempt_enabled) {
       // TODO(fxbug.dev/64884): Once spinlocks imply preempt disable, this if-else can be replaced
       // with a call to Preempt().
       if (arch_num_spinlocks_held() < 2 && !arch_blocking_disallowed()) {
@@ -1526,7 +1532,7 @@ inline void Scheduler::RescheduleMask(cpu_mask_t cpus_to_reschedule_mask) {
     }
 
     // Nope, can't do it now.  Make a note for later.
-    preemption_state.preempts_pending_.fetch_or(local_cpu);
+    preemption_state.preempts_pending_add(local_cpu);
   }
 }
 
@@ -1655,12 +1661,13 @@ void Scheduler::Reschedule() {
   SchedulerState* const current_state = &current_thread->scheduler_state();
   const cpu_num_t current_cpu = arch_curr_cpu_num();
 
+  const bool preempt_enabled = current_thread->preemption_state().EvaluateTimesliceExtension();
+
   // Pend the preemption rather than rescheduling if preemption is disabled or
   // if there is more than one spinlock held.
   // TODO(fxbug.dev/64884): Remove check when spinlocks imply preempt disable.
-  if (!current_thread->preemption_state().PreemptIsEnabled() || arch_num_spinlocks_held() > 1 ||
-      arch_blocking_disallowed()) {
-    current_thread->preemption_state().preempts_pending_ |= cpu_num_to_mask(current_cpu);
+  if (!preempt_enabled || arch_num_spinlocks_held() > 1 || arch_blocking_disallowed()) {
+    current_thread->preemption_state().preempts_pending_add(cpu_num_to_mask(current_cpu));
     return;
   }
 
