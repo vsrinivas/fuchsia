@@ -5,6 +5,7 @@
 #include "filesystem-mounter.h"
 
 #include <dirent.h>
+#include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.fxfs/cpp/wire_types.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
@@ -19,10 +20,19 @@
 #include <sys/stat.h>
 #include <zircon/status.h>
 
+#include <string>
+
 #include <fbl/ref_ptr.h>
 
 #include "constants.h"
 #include "fdio.h"
+#include "fidl/fuchsia.io/cpp/markers.h"
+#include "lib/fdio/namespace.h"
+#include "lib/fidl/cpp/wire/internal/transport_channel.h"
+#include "lib/zx/status.h"
+#include "src/lib/storage/fs_management/cpp/format.h"
+#include "src/lib/storage/fs_management/cpp/mount.h"
+#include "src/lib/storage/fs_management/cpp/options.h"
 #include "src/storage/blobfs/mount.h"
 #include "src/storage/minfs/minfs.h"
 
@@ -41,7 +51,7 @@ constexpr unsigned char kInsecureCryptMetadataKey[32] = {
 };
 
 zx::status<> FilesystemMounter::LaunchFsComponent(zx::channel block_device,
-                                                  fuchsia_fs_startup::wire::StartOptions options,
+                                                  const fs_management::MountOptions& options,
                                                   const std::string& partition_name) {
   std::string startup_service_path =
       std::string("/") + partition_name + "/fuchsia.fs.startup.Startup";
@@ -54,7 +64,13 @@ zx::status<> FilesystemMounter::LaunchFsComponent(zx::channel block_device,
   }
   auto startup_client = fidl::BindSyncClient(std::move(*startup_client_end));
   fidl::ClientEnd<fuchsia_hardware_block::Block> block_client_end(std::move(block_device));
-  auto startup_res = startup_client->Start(std::move(block_client_end), std::move(options));
+  auto start_options_or = options.as_start_options();
+  if (!start_options_or.is_ok()) {
+    FX_PLOGS(ERROR, start_options_or.error_value()) << "Failed to build start options";
+    return start_options_or.take_error();
+  }
+  auto startup_res =
+      startup_client->Start(std::move(block_client_end), std::move(start_options_or.value()));
   if (!startup_res.ok()) {
     FX_LOGS(ERROR) << "failed to start through startup service at " << startup_service_path << ": "
                    << startup_res.status_string();
@@ -70,7 +86,7 @@ zx_status_t FilesystemMounter::LaunchFs(int argc, const char** argv, zx_handle_t
                 /* TODO(fxbug.dev/32044) */ zx::resource(), hnd, ids, len, nullptr);
 }
 
-std::string FilesystemMounter::GetDevicePath(const zx::channel& block_device) {
+zx::status<std::string> FilesystemMounter::GetDevicePath(const zx::channel& block_device) {
   std::string device_path;
   if (auto result =
           fidl::WireCall(fidl::UnownedClientEnd<fuchsia_device::Controller>(block_device.borrow()))
@@ -78,13 +94,15 @@ std::string FilesystemMounter::GetDevicePath(const zx::channel& block_device) {
       result.status() != ZX_OK) {
     FX_LOGS(WARNING) << "Unable to get device topological path (FIDL error): "
                      << zx_status_get_string(result.status());
+    return zx::error(result.status());
   } else if (result->is_error()) {
     FX_LOGS(WARNING) << "Unable to get device topological path: "
                      << zx_status_get_string(result->error_value());
+    return zx::error(result->error_value());
   } else {
     device_path = result->value()->path.get();
   }
-  return device_path;
+  return zx::ok(device_path);
 }
 
 zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, const char* binary,
@@ -92,7 +110,7 @@ zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, con
                                                 zx::channel block_device_client,
                                                 fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client) {
   FX_LOGS(INFO) << "FilesystemMounter::MountFilesystem(" << binary << ")";
-  std::string device_path = GetDevicePath(block_device_client);
+  std::string device_path = GetDevicePath(block_device_client).value_or("");
   FX_LOGS(INFO) << "Mounting device " << device_path << " with " << binary << " at "
                 << FsManager::MountPointPath(point);
 
@@ -115,16 +133,16 @@ zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, con
   if (options.verbose_mount) {
     argv.push_back("--verbose");
   }
-  if (options.write_compression_algorithm != nullptr) {
+  if (options.write_compression_algorithm) {
     argv.push_back("--compression");
-    argv.push_back(options.write_compression_algorithm);
+    argv.push_back(options.write_compression_algorithm->c_str());
   }
   if (options.sandbox_decompression) {
     argv.push_back("--sandbox_decompression");
   }
-  if (options.cache_eviction_policy != nullptr) {
+  if (options.cache_eviction_policy) {
     argv.push_back("--eviction_policy");
-    argv.push_back(options.cache_eviction_policy);
+    argv.push_back(options.cache_eviction_policy->c_str());
   }
   argv.push_back("mount");
   argv.push_back(nullptr);
@@ -145,7 +163,7 @@ zx::status<> FilesystemMounter::MountFilesystem(FsManager::MountPoint point, con
 }
 
 zx_status_t FilesystemMounter::MountData(zx::channel block_device,
-                                         const fs_management::MountOptions& options,
+                                         fs_management::MountOptions options,
                                          fs_management::DiskFormat format) {
   if (data_mounted_) {
     return ZX_ERR_ALREADY_BOUND;
@@ -171,21 +189,25 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device,
                               << fs_management::DiskFormatString(format);
     }
   } else {
-    std::string device_path = GetDevicePath(block_device);
+    // Note: filesystem-mounter-test.cc stubs out LaunchFsComponent and passes in invalid channels.
+    // GetDevicePath are ignored and errors benign in these tests.
+    const std::string device_path = GetDevicePath(block_device).value_or("");
 
-    auto fidl_options = options.as_start_options();
     if (format == fs_management::kDiskFormatFxfs) {
-      // TODO(fxbug.dev/99591): Statically route the crypt service.
-      auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
-      if (crypt_client_or.is_error()) {
-        return crypt_client_or.error_value();
-      }
-      fidl_options->crypt = std::move(crypt_client_or).value();
+      options.crypt_client = []() {
+        // TODO(fxbug.dev/99591): Statically route the crypt service.
+        auto crypt_client_or = service::Connect<fuchsia_fxfs::Crypt>();
+        if (crypt_client_or.is_error()) {
+          FX_PLOGS(ERROR, crypt_client_or.error_value()) << "Failed to connect to Crypt service.";
+          return zx::channel();
+        }
+        return std::move(crypt_client_or).value().TakeChannel();
+      };
     }
 
-    if (zx::status<> status =
-            LaunchFsComponent(std::move(block_device), *std::move(fidl_options), "data");
-        status.is_error()) {
+    auto status = LaunchFsComponent(std::move(block_device), options, "data");
+    if (status.is_error()) {
+      FX_PLOGS(ERROR, status.error_value()) << "Failed to launch filesystem component.";
       return status.error_value();
     }
 
@@ -240,7 +262,7 @@ zx_status_t FilesystemMounter::MountDurable(zx::channel block_device,
 }
 
 zx_status_t FilesystemMounter::MountBlob(zx::channel block_device,
-                                         fuchsia_fs_startup::wire::StartOptions options) {
+                                         const fs_management::MountOptions& options) {
   if (blob_mounted_) {
     return ZX_ERR_ALREADY_BOUND;
   }

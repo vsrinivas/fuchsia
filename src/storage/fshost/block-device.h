@@ -28,9 +28,9 @@ namespace fshost {
 // Get the topological path of the device backing |fd|.
 std::string GetTopologicalPath(int fd);
 
-// Collect and synthesize the blobfs startup options.
-fuchsia_fs_startup::wire::StartOptions GetBlobfsStartOptions(
-    const fshost_config::Config* config, const FshostBootArgs* boot_args);
+// Collect and synthesize the blobfs mount options.
+fs_management::MountOptions GetBlobfsMountOptions(const fshost_config::Config& config,
+                                                  const FshostBootArgs* boot_args);
 
 // A concrete implementation of the block device interface.
 //

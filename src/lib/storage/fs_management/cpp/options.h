@@ -23,7 +23,7 @@ struct MountOptions {
 
   // An optional compression algorithm specifier for the filesystem to use when storing files (if
   // the filesystem supports it).
-  const char* write_compression_algorithm = nullptr;
+  std::optional<std::string> write_compression_algorithm;
 
   // An optional compression level for the filesystem to use when storing files (if the filesystem
   // and the configured |write_compression_algorithm| supports it).
@@ -32,7 +32,7 @@ struct MountOptions {
 
   // An optional cache eviction policy specifier for the filesystem to use for in-memory data (if
   // the filesystem supports it).
-  const char* cache_eviction_policy = nullptr;
+  std::optional<std::string> cache_eviction_policy;
 
   // If set, run fsck after every transaction.
   bool fsck_after_every_transaction = false;
@@ -49,14 +49,14 @@ struct MountOptions {
   // the child component is in a collection.
   //
   // See //src/storage/docs/launching.md for more information.
-  const char* component_child_name = nullptr;
+  std::optional<std::string> component_child_name;
 
   // If set, and the filesystem type supports it, use the provided collection name to connect to an
   // existing filesystem component instance that implements and is serving the
   // fuchsia.fs.startup.Startup protocol. This won't do anything if component_child_name isn't set.
   //
   // See //src/storage/docs/launching.md for more information.
-  const char* component_collection_name = nullptr;
+  std::optional<std::string> component_collection_name;
 
   // If set, use the specified component URL rather than a default.
   std::string component_url;
@@ -98,14 +98,14 @@ struct MkfsOptions {
   // the child component is in a collection.
   //
   // See //src/storage/docs/launching.md for more information.
-  const char* component_child_name = nullptr;
+  std::optional<std::string> component_child_name;
 
   // If set, and the filesystem type supports it, use the provided collection name to connect to an
   // existing filesystem component instance that implements and is serving the
   // fuchsia.fs.startup.Startup protocol. This won't do anything if component_child_name isn't set.
   //
   // See //src/storage/docs/launching.md for more information.
-  const char* component_collection_name = nullptr;
+  std::optional<std::string> component_collection_name;
 
   // If set, use the specified component URL rather than a default.
   std::string component_url;
@@ -137,14 +137,14 @@ struct FsckOptions {
   // the child component is in a collection.
   //
   // See //src/storage/docs/launching.md for more information.
-  const char* component_child_name = nullptr;
+  std::optional<std::string> component_child_name;
 
   // If set, and the filesystem type supports it, use the provided collection name to connect to an
   // existing filesystem component instance that implements and is serving the
   // fuchsia.fs.startup.Startup protocol. This won't do anything if component_child_name isn't set.
   //
   // See //src/storage/docs/launching.md for more information.
-  const char* component_collection_name = nullptr;
+  std::optional<std::string> component_collection_name;
 
   // If set, use the specified component URL rather than a default.
   std::string component_url;

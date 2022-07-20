@@ -43,6 +43,7 @@
 #include "fshost-boot-args.h"
 #include "lib/async/cpp/task.h"
 #include "lifecycle.h"
+#include "src/lib/storage/fs_management/cpp/admin.h"
 #include "src/lib/storage/vfs/cpp/remote_dir.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"

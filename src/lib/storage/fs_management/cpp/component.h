@@ -11,25 +11,25 @@ namespace fs_management {
 
 // Connect to a filesystem component in our realm with the given |component_child_name|, optionally
 // a dynamic component in the collection named |component_collection_name|. |component_child_name|
-// is required. If |component_collection_name| is a nullptr, it's assumed that the component is a
+// is required. If |component_collection_name| is unset, it's assumed that the component is a
 // static child.
 //
 // If it fails to find a component with the INSTANCE_NOT_FOUND error, and the component is a
-// dynamic child (i.e. |component_collection_name| is non-null), then it attempts to launch a new
+// dynamic child (i.e. |component_collection_name| is set), then it attempts to launch a new
 // instance of the component using the provided |component_url|.
 //
 // In all successful cases, it returns the exposed directory associated with the launched component
 // instance.
 zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ConnectNativeFsComponent(
-    std::string_view component_url, const char* component_child_name,
-    const char* component_collection_name);
+    std::string_view component_url, std::string_view component_child_name,
+    std::optional<std::string_view> component_collection_name);
 
 // Destroy a filesystem component in our realm, named |component_child_name| in the collection
 // |component_collection_name|. Destruction only works on dynamic components, so the collection
 // name is required. If it tries to destroy a component and gets an INSTANCE_NOT_FOUND error, it
 // still returns success - the end goal of having no component with this moniker is achieved.
-zx::status<> DestroyNativeFsComponent(const char* component_child_name,
-                                      const char* component_collection_name);
+zx::status<> DestroyNativeFsComponent(std::string_view component_child_name,
+                                      std::string_view component_collection_name);
 
 }  // namespace fs_management
 

@@ -74,9 +74,10 @@ void AdminServer::Mount(MountRequestView request, MountCompleter::Sync& complete
   fs_management::MountOptions options = {
       .readonly = o.has_read_only() && o.read_only(),
       .verbose_mount = o.has_verbose() && o.verbose(),
-      .write_compression_algorithm =
-          o.has_write_compression_algorithm() ? compression_algorithm.c_str() : nullptr,
   };
+  if (o.has_write_compression_algorithm()) {
+    options.write_compression_algorithm = compression_algorithm;
+  }
 
   FX_LOGS(INFO) << "Mounting " << fs_management::DiskFormatString(df) << " filesystem at /mnt/"
                 << name;
@@ -88,9 +89,9 @@ void AdminServer::Mount(MountRequestView request, MountCompleter::Sync& complete
   // up with a deadlock.  To avoid this, spawn a separate thread.  Unfortunately, this isn't
   // thread-safe if we're shutting down, but since mounting is a debug only thing for now, we don't
   // worry about it.
-  std::thread thread([device_path = std::move(device_path), name,
-                      completer = completer.ToAsync(), options = std::move(options),
-                      fd = std::move(fd), df, fs_manager = fs_manager_, dispatcher]() mutable {
+  std::thread thread([device_path = std::move(device_path), name, completer = completer.ToAsync(),
+                      options = std::move(options), fd = std::move(fd), df,
+                      fs_manager = fs_manager_, dispatcher]() mutable {
     static int mount_index = 0;
     std::string component_child_name = name + "." + std::to_string(mount_index++);
     options.component_child_name = component_child_name.c_str();

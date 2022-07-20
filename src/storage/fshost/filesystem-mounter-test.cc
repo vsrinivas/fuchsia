@@ -17,6 +17,9 @@
 
 #include <gtest/gtest.h>
 
+#include "fidl/fuchsia.io/cpp/markers.h"
+#include "src/lib/storage/fs_management/cpp/format.h"
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/lib/testing/predicates/status.h"
 #include "src/storage/blobfs/mount.h"
 #include "src/storage/fshost/block-watcher.h"
@@ -55,7 +58,7 @@ TEST_F(MounterTest, CreateFilesystemMounter) { FilesystemMounter mounter(manager
 
 enum class FilesystemType {
   kBlobfs,
-  kMinfs,
+  kData,
   kDurable,
   kFactoryfs,
 };
@@ -87,13 +90,13 @@ class TestMounter : public FilesystemMounter {
   void ExpectFilesystem(FilesystemType fs) { expected_filesystem_ = fs; }
 
   zx::status<> LaunchFsComponent(zx::channel block_device,
-                                 fuchsia_fs_startup::wire::StartOptions options,
+                                 const fs_management::MountOptions& options,
                                  const std::string& fs_name) final {
     switch (expected_filesystem_) {
       case FilesystemType::kBlobfs:
         EXPECT_EQ(fs_name, "blobfs");
         break;
-      case FilesystemType::kMinfs:
+      case FilesystemType::kData:
         EXPECT_EQ(fs_name, "data");
         break;
       default:
@@ -163,9 +166,9 @@ TEST_F(MounterTest, FactoryMount) {
   ASSERT_TRUE(mounter.FactoryMounted());
 }
 
-TEST_F(MounterTest, MinfsMount) {
+TEST_F(MounterTest, DataMount) {
   TestMounter mounter(manager(), &config_);
-  mounter.ExpectFilesystem(FilesystemType::kMinfs);
+  mounter.ExpectFilesystem(FilesystemType::kData);
   ASSERT_OK(mounter.MountData(zx::channel(), fs_management::MountOptions(),
                               fs_management::DiskFormat::kDiskFormatMinfs));
   ASSERT_TRUE(mounter.DataMounted());
@@ -174,7 +177,7 @@ TEST_F(MounterTest, MinfsMount) {
 TEST_F(MounterTest, BlobfsMount) {
   TestMounter mounter(manager(), &config_);
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
-  ASSERT_OK(mounter.MountBlob(zx::channel(), fuchsia_fs_startup::wire::StartOptions()));
+  ASSERT_OK(mounter.MountBlob(zx::channel(), fs_management::MountOptions()));
   ASSERT_TRUE(mounter.BlobMounted());
 }
 

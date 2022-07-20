@@ -90,13 +90,13 @@ zx::status<> MkfsComponentFs(fidl::UnownedClientEnd<fuchsia_io::Directory> expos
 __EXPORT
 zx_status_t Mkfs(const char* device_path, DiskFormat df, LaunchCallback cb,
                  const MkfsOptions& options) {
-  if (options.component_child_name != nullptr) {
+  if (options.component_child_name) {
     std::string_view url =
         options.component_url.empty() ? DiskFormatComponentUrl(df) : options.component_url;
     // If we don't know the url, fall back on the old launching method.
     if (!url.empty()) {
       // Otherwise, launch the component way.
-      auto exposed_dir_or = ConnectNativeFsComponent(url, options.component_child_name,
+      auto exposed_dir_or = ConnectNativeFsComponent(url, *options.component_child_name,
                                                      options.component_collection_name);
       if (exposed_dir_or.is_error()) {
         return exposed_dir_or.status_value();

@@ -15,6 +15,8 @@
 
 #include <fbl/unique_fd.h>
 
+#include "fidl/fuchsia.io/cpp/markers.h"
+#include "lib/fidl/cpp/wire/internal/transport_channel.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/fshost-boot-args.h"
@@ -37,7 +39,7 @@ class FilesystemMounter {
 
   // Attempts to mount a block device to "/data".
   // Fails if already mounted.
-  zx_status_t MountData(zx::channel block_device_client, const fs_management::MountOptions& options,
+  zx_status_t MountData(zx::channel block_device_client, fs_management::MountOptions options,
                         fs_management::DiskFormat format);
 
   // Attempts to mount a block device to "/durable".
@@ -48,22 +50,12 @@ class FilesystemMounter {
   // Attempts to mount a block device to "/blob".
   // Fails if already mounted.
   zx_status_t MountBlob(zx::channel block_device_client,
-                        fuchsia_fs_startup::wire::StartOptions options);
+                        const fs_management::MountOptions& options);
 
   // Attempts to mount a block device to "/factory".
   // Fails if already mounted.
   zx_status_t MountFactoryFs(zx::channel block_device_client,
                              const fs_management::MountOptions& options);
-
-  // Actually launches the filesystem component.
-  //
-  // TODO(fxbug.dev/91577): All filesystems should be launched as components. Once they are, remove
-  // LaunchFs.
-  //
-  // Virtualized to enable testing.
-  virtual zx::status<> LaunchFsComponent(zx::channel block_device,
-                                         fuchsia_fs_startup::wire::StartOptions options,
-                                         const std::string& fs_name);
 
   std::shared_ptr<FshostBootArgs> boot_args() { return fshost_.boot_args(); }
   void ReportPartitionCorrupted(fs_management::DiskFormat format);
@@ -88,13 +80,23 @@ class FilesystemMounter {
                                zx::channel block_device_client,
                                fidl::ClientEnd<fuchsia_fxfs::Crypt> crypt_client = {});
 
+  // Actually launches the filesystem component.
+  //
+  // TODO(fxbug.dev/91577): All filesystems should be launched as components. Once they are, remove
+  // LaunchFs.
+  //
+  // Virtualized to enable testing.
+  virtual zx::status<> LaunchFsComponent(zx::channel block_device,
+                                         const fs_management::MountOptions& options,
+                                         const std::string& partition_name);
+
   // Actually launches the filesystem process.
   //
   // Virtualized to enable testing.
   virtual zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
                                size_t len);
 
-  static std::string GetDevicePath(const zx::channel& block_device);
+  static zx::status<std::string> GetDevicePath(const zx::channel& block_device);
 
   FsManager& fshost_;
   const fshost_config::Config& config_;

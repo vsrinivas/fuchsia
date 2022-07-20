@@ -109,25 +109,25 @@ zx::status<> InitNativeFsComponent(fidl::UnownedClientEnd<Directory> exposed_dir
 zx::status<fidl::ClientEnd<Directory>> FsInit(zx::channel device, DiskFormat df,
                                               const MountOptions& options, LaunchCallback cb,
                                               zx::channel crypt_client) {
-  if (options.component_child_name != nullptr) {
+  if (options.component_child_name) {
     std::string_view url =
         options.component_url.empty() ? DiskFormatComponentUrl(df) : options.component_url;
     // If we don't know the url, fall back on the old launching method.
     if (!url.empty()) {
       // Otherwise, launch the component way.
-      auto exposed_dir_or = ConnectNativeFsComponent(url, options.component_child_name,
+      auto exposed_dir_or = ConnectNativeFsComponent(url, *options.component_child_name,
                                                      options.component_collection_name);
       if (exposed_dir_or.is_error())
         return exposed_dir_or.take_error();
       zx::status<> start_status =
           InitNativeFsComponent(*exposed_dir_or, std::move(device), options);
-      if (start_status.is_error() && options.component_collection_name != nullptr) {
+      if (start_status.is_error() && options.component_collection_name) {
         // If we hit an error starting, destroy the component instance. It may have been left in a
         // partially initialized state. We purposely ignore the result of destruction; it probably
         // won't fail, but if it does there is nothing we can really do, and the start error is
         // more important.
-        [[maybe_unused]] auto result = DestroyNativeFsComponent(options.component_child_name,
-                                                                options.component_collection_name);
+        [[maybe_unused]] auto result = DestroyNativeFsComponent(*options.component_child_name,
+                                                                *options.component_collection_name);
         return start_status.take_error();
       }
       return exposed_dir_or;

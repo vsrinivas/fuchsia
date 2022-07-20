@@ -224,33 +224,26 @@ std::string GetTopologicalPath(int fd) {
   return {path.data(), path.size()};
 }
 
-fuchsia_fs_startup::wire::StartOptions GetBlobfsStartOptions(const fshost_config::Config* config,
-                                                             const FshostBootArgs* boot_args) {
-  fuchsia_fs_startup::wire::StartOptions options;
+fs_management::MountOptions GetBlobfsMountOptions(const fshost_config::Config& config,
+                                                  const FshostBootArgs* boot_args) {
+  fs_management::MountOptions options;
+  options.component_child_name = "blobfs";
   options.write_compression_level = -1;
-  options.sandbox_decompression = config->sandbox_decompression();
+  options.sandbox_decompression = config.sandbox_decompression();
   if (boot_args) {
-    std::optional<std::string> algorithm = boot_args->blobfs_write_compression_algorithm();
-    if (algorithm == "UNCOMPRESSED") {
-      options.write_compression_algorithm =
-          fuchsia_fs_startup::wire::CompressionAlgorithm::kUncompressed;
-    } else if (algorithm == "ZSTD_CHUNKED") {
-      options.write_compression_algorithm =
-          fuchsia_fs_startup::wire::CompressionAlgorithm::kZstdChunked;
-    } else if (algorithm.has_value()) {
-      // An unrecognized compression algorithm was requested. Ignore it and continue.
-      FX_LOGS(WARNING) << "Ignoring " << *algorithm << " algorithm";
+    if (boot_args->blobfs_write_compression_algorithm()) {
+      // Ignore invalid options.
+      if (boot_args->blobfs_write_compression_algorithm() == "ZSTD_CHUNKED" ||
+          boot_args->blobfs_write_compression_algorithm() == "UNCOMPRESSED") {
+        options.write_compression_algorithm = boot_args->blobfs_write_compression_algorithm();
+      }
     }
-    std::optional<std::string> eviction_policy = boot_args->blobfs_eviction_policy();
-    if (eviction_policy == "NEVER_EVICT") {
-      options.cache_eviction_policy_override =
-          fuchsia_fs_startup::wire::EvictionPolicyOverride::kNeverEvict;
-    } else if (eviction_policy == "EVICT_IMMEDIATELY") {
-      options.cache_eviction_policy_override =
-          fuchsia_fs_startup::wire::EvictionPolicyOverride::kEvictImmediately;
-    } else if (eviction_policy.has_value()) {
-      // An unrecognized eviction policy override was requested. Ignore it and continue.
-      FX_LOGS(WARNING) << "Ignoring " << *eviction_policy << " policy";
+    if (boot_args->blobfs_eviction_policy()) {
+      // Ignore invalid options.
+      if (boot_args->blobfs_eviction_policy() == "NEVER_EVICT" ||
+          boot_args->blobfs_eviction_policy() == "EVICT_IMMEDIATELY") {
+        options.cache_eviction_policy = boot_args->blobfs_eviction_policy();
+      }
     }
   }
   return options;
@@ -303,8 +296,8 @@ const std::string& BlockDevice::partition_name() const {
   if (!partition_name_.empty()) {
     return partition_name_;
   }
-  // The block device might not support the partition protocol in which case the connection will be
-  // closed, so clone the channel in case that happens.
+  // The block device might not support the partition protocol in which case the connection will
+  // be closed, so clone the channel in case that happens.
   fdio_cpp::UnownedFdioCaller connection(fd_.get());
   fidl::ClientEnd<fuchsia_hardware_block_partition::Partition> channel(
       zx::channel(fdio_service_clone(connection.borrow_channel())));
@@ -344,8 +337,8 @@ const fuchsia_hardware_block_partition::wire::Guid& BlockDevice::GetInstanceGuid
   }
   instance_guid_.emplace();
   fdio_cpp::UnownedFdioCaller connection(fd_.get());
-  // The block device might not support the partition protocol in which case the connection will be
-  // closed, so clone the channel in case that happens.
+  // The block device might not support the partition protocol in which case the connection will
+  // be closed, so clone the channel in case that happens.
   auto response = fidl::WireCall(fidl::ClientEnd<fuchsia_hardware_block_partition::Partition>(
                                      zx::channel(fdio_service_clone(connection.borrow_channel()))))
                       ->GetInstanceGuid();
@@ -367,8 +360,8 @@ const fuchsia_hardware_block_partition::wire::Guid& BlockDevice::GetTypeGuid() c
   }
   type_guid_.emplace();
   fdio_cpp::UnownedFdioCaller connection(fd_.get());
-  // The block device might not support the partition protocol in which case the connection will be
-  // closed, so clone the channel in case that happens.
+  // The block device might not support the partition protocol in which case the connection will
+  // be closed, so clone the channel in case that happens.
   auto response = fidl::WireCall(fidl::ClientEnd<fuchsia_hardware_block_partition::Partition>(
                                      zx::channel(fdio_service_clone(connection.borrow_channel()))))
                       ->GetTypeGuid();
@@ -394,7 +387,7 @@ zx_status_t BlockDevice::AttachDriver(const std::string_view& driver) {
     return io_status;
   }
   if (resp->is_error()) {
-    FX_PLOGS(ERROR, resp->error_value()) << "Failed to attach driver";
+    FX_PLOGS(ERROR, resp->error_value()) << "Failed to attach driver: " << driver;
     return resp->error_value();
   }
   return ZX_OK;
@@ -715,7 +708,7 @@ zx_status_t BlockDevice::MountFilesystem() {
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(blobfs)";
       if (zx_status_t status = mounter_->MountBlob(
               std::move(block_device),
-              GetBlobfsStartOptions(device_config_, mounter_->boot_args().get()));
+              GetBlobfsMountOptions(*device_config_, mounter_->boot_args().get()));
           status != ZX_OK) {
         FX_PLOGS(ERROR, status) << "Failed to mount blobfs partition";
         return status;
@@ -727,51 +720,64 @@ zx_status_t BlockDevice::MountFilesystem() {
     case fs_management::kDiskFormatMinfs: {
       fs_management::MountOptions options;
 
-      // Fxfs supports the migrate_root mount option which allows us to copy source data before the
-      // mount is finalised.
       std::thread copy_thread;
+      zx_status_t copy_status = ZX_OK;
       std::optional<Copier> copier = std::move(source_data_);
       source_data_.reset();
 
+      // Copy data to the device if a copier has been provided.
       if (copier) {
+        // Fxfs supports the migrate_root mount option which allows us to copy source data before
+        // the mount is finalised.
         if (format_ == fs_management::kDiskFormatFxfs) {
-          options.migrate_root = [&copier,
-                                  &copy_thread]() -> fidl::ServerEnd<fuchsia_io::Directory> {
+          copy_status = ZX_ERR_BAD_STATE;
+          options.migrate_root = [&copier, &copy_thread,
+                                  &copy_status]() -> fidl::ServerEnd<fuchsia_io::Directory> {
             FX_CHECK(copier);
 
             auto migrate_root_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
-            if (migrate_root_or.is_error())
+            if (migrate_root_or.is_error()) {
+              FX_PLOGS(ERROR, migrate_root_or.error_value())
+                  << "Failed to create endpoints for migration.";
+              copy_status = migrate_root_or.error_value();
               return {};
+            }
 
             zx::channel client = migrate_root_or->client.TakeChannel();
-            copy_thread = std::thread([&copier, client = std::move(client)]() mutable {
-              FX_LOGS(INFO) << "Copying data...";
-              fbl::unique_fd fd;
-              if (zx_status_t status = fdio_fd_create(client.release(), fd.reset_and_get_address());
-                  status != ZX_OK) {
-                FX_PLOGS(ERROR, status) << "Unable to create fd";
-                return;
-              }
-              if (zx_status_t status = copier->Write(std::move(fd)); status != ZX_OK) {
-                FX_PLOGS(ERROR, status) << "Failed to copy data";
-                return;
-              }
-              FX_LOGS(INFO) << "Successfully copied data";
-            });
-
+            copy_thread =
+                std::thread([&copier, client = std::move(client), &copy_status]() mutable {
+                  FX_LOGS(INFO) << "Copying data...";
+                  fbl::unique_fd fd;
+                  if (copy_status = fdio_fd_create(client.release(), fd.reset_and_get_address());
+                      copy_status != ZX_OK) {
+                    FX_PLOGS(ERROR, copy_status) << "Unable to create fd";
+                    return;
+                  }
+                  if (copy_status = copier->Write(std::move(fd)); copy_status != ZX_OK) {
+                    FX_PLOGS(ERROR, copy_status) << "Failed to copy data";
+                    return;
+                  }
+                  FX_LOGS(INFO) << "Successfully copied data";
+                  copy_status = ZX_OK;
+                });
             return std::move(migrate_root_or->server);
           };
         } else {
-          // Treat errors here as non-fatal.
-          [[maybe_unused]] zx_status_t status = CopySourceData(*copier);
+          FX_LOGS(INFO) << "CopySourceData into destination.";
+          copy_status = CopySourceData(*copier);
         }
       }
 
       FX_LOGS(INFO) << "BlockDevice::MountFilesystem(data partition)";
       zx_status_t status = MountData(options, std::move(block_device));
 
-      if (copy_thread.joinable())
+      if (copy_thread.joinable()) {
         copy_thread.join();
+        if (copy_status != ZX_OK) {
+          // Treat errors here as non-fatal, informative.
+          FX_PLOGS(ERROR, copy_status) << "Copy failed.";
+        }
+      }
 
       if (status != ZX_OK) {
         FX_LOGS(ERROR) << "Failed to mount data partition: " << zx_status_get_string(status) << ".";
@@ -1090,7 +1096,8 @@ zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format
 
   auto extend_result =
       fidl::WireCall(volume_client)
-          ->Extend(1, slice_count - 1);  // Another -1 here because we get the first slice for free.
+          ->Extend(1,
+                   slice_count - 1);  // Another -1 here because we get the first slice for free.
   if (zx_status_t status =
           extend_result.status() == ZX_OK ? extend_result->status : extend_result.status();
       status != ZX_OK) {
@@ -1149,8 +1156,8 @@ zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format
   return ZX_OK;
 }
 
-// This copies source data for filesystems that aren't components and don't support the migrate_root
-// mount option.
+// This copies source data for filesystems that aren't components and don't support the
+// migrate_root mount option.
 zx_status_t BlockDevice::CopySourceData(const Copier& copier) const {
   FX_LOGS(INFO) << "Copying data...";
   auto export_root_or = fidl::CreateEndpoints<fuchsia_io::Directory>();

@@ -11,8 +11,8 @@
 namespace fs_management {
 
 zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ConnectNativeFsComponent(
-    const std::string_view component_url, const char* component_child_name,
-    const char* component_collection_name) {
+    std::string_view component_url, std::string_view component_child_name,
+    std::optional<std::string_view> component_collection_name) {
   auto realm_client_end = service::Connect<fuchsia_component::Realm>();
   if (realm_client_end.is_error())
     return realm_client_end.take_error();
@@ -21,8 +21,8 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ConnectNativeFsComponent(
   fidl::ClientEnd<fuchsia_io::Directory> client_end;
   fuchsia_component_decl::wire::ChildRef child_ref{
       .name = fidl::StringView::FromExternal(component_child_name)};
-  if (component_collection_name != nullptr)
-    child_ref.collection = fidl::StringView::FromExternal(component_collection_name);
+  if (component_collection_name)
+    child_ref.collection = fidl::StringView::FromExternal(*component_collection_name);
 
   auto exposed_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   if (exposed_endpoints.is_error())
@@ -34,14 +34,14 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ConnectNativeFsComponent(
   if (open_exposed_res->is_ok()) {
     client_end = std::move(exposed_endpoints->client);
   } else if (open_exposed_res->error_value() == fuchsia_component::wire::Error::kInstanceNotFound) {
-    if (component_collection_name == nullptr)
+    if (!component_collection_name)
       return zx::error(ZX_ERR_NOT_FOUND);
 
     // If the error was INSTANCE_NOT_FOUND, and it's expected to be in a collection, try launching
     // the component ourselves.
     fidl::Arena allocator;
     fuchsia_component_decl::wire::CollectionRef collection_ref{
-        .name = fidl::StringView::FromExternal(component_collection_name)};
+        .name = fidl::StringView::FromExternal(*component_collection_name)};
     auto child_decl = fuchsia_component_decl::wire::Child::Builder(allocator)
                           .name(component_child_name)
                           .url(component_url)
@@ -72,8 +72,8 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ConnectNativeFsComponent(
   return zx::ok(std::move(client_end));
 }
 
-zx::status<> DestroyNativeFsComponent(const char* component_child_name,
-                                      const char* component_collection_name) {
+zx::status<> DestroyNativeFsComponent(std::string_view component_child_name,
+                                      std::string_view component_collection_name) {
   auto realm_client_end = service::Connect<fuchsia_component::Realm>();
   if (realm_client_end.is_error())
     return realm_client_end.take_error();

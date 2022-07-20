@@ -22,7 +22,7 @@ std::vector<std::string> MountOptions::as_argv(const char *binary) const {
   }
   if (write_compression_algorithm) {
     argv.push_back("--compression");
-    argv.push_back(write_compression_algorithm);
+    argv.push_back(*write_compression_algorithm);
   }
   if (write_compression_level >= 0) {
     argv.push_back("--compression_level");
@@ -30,7 +30,7 @@ std::vector<std::string> MountOptions::as_argv(const char *binary) const {
   }
   if (cache_eviction_policy) {
     argv.push_back("--eviction_policy");
-    argv.push_back(cache_eviction_policy);
+    argv.push_back(*cache_eviction_policy);
   }
   if (fsck_after_every_transaction) {
     argv.push_back("--fsck_after_every_transaction");
@@ -53,12 +53,11 @@ zx::status<fuchsia_fs_startup::wire::StartOptions> MountOptions::as_start_option
   if (migrate_root)
     options.migrate_root = migrate_root();
 
-  if (write_compression_algorithm != nullptr) {
-    std::string write_compression_algorithm_string(write_compression_algorithm);
-    if (write_compression_algorithm_string == "ZSTD_CHUNKED") {
+  if (write_compression_algorithm) {
+    if (*write_compression_algorithm == "ZSTD_CHUNKED") {
       options.write_compression_algorithm =
           fuchsia_fs_startup::wire::CompressionAlgorithm::kZstdChunked;
-    } else if (write_compression_algorithm_string == "UNCOMPRESSED") {
+    } else if (*write_compression_algorithm == "UNCOMPRESSED") {
       options.write_compression_algorithm =
           fuchsia_fs_startup::wire::CompressionAlgorithm::kUncompressed;
     } else {
@@ -66,14 +65,16 @@ zx::status<fuchsia_fs_startup::wire::StartOptions> MountOptions::as_start_option
     }
   }
 
-  if (cache_eviction_policy != nullptr) {
-    std::string cache_eviction_policy_string(cache_eviction_policy);
-    if (cache_eviction_policy_string == "NEVER_EVICT") {
+  if (cache_eviction_policy) {
+    if (*cache_eviction_policy == "NEVER_EVICT") {
       options.cache_eviction_policy_override =
           fuchsia_fs_startup::wire::EvictionPolicyOverride::kNeverEvict;
-    } else if (cache_eviction_policy_string == "EVICT_IMMEDIATELY") {
+    } else if (*cache_eviction_policy == "EVICT_IMMEDIATELY") {
       options.cache_eviction_policy_override =
           fuchsia_fs_startup::wire::EvictionPolicyOverride::kEvictImmediately;
+    } else if (*cache_eviction_policy == "NONE") {
+      options.cache_eviction_policy_override =
+          fuchsia_fs_startup::wire::EvictionPolicyOverride::kNone;
     } else {
       return zx::error(ZX_ERR_INVALID_ARGS);
     }

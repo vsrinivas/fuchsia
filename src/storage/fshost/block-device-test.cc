@@ -20,6 +20,8 @@
 
 #include <gtest/gtest.h>
 
+#include "src/lib/storage/fs_management/cpp/format.h"
+#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/fshost/block-device-manager.h"
 #include "src/storage/fshost/block-watcher.h"
 #include "src/storage/fshost/config.h"
@@ -146,9 +148,9 @@ class TestMinfsMounter : public FilesystemMounter {
       : FilesystemMounter(fshost, config) {}
 
   zx::status<> LaunchFsComponent(zx::channel block_device,
-                                 fuchsia_fs_startup::wire::StartOptions options,
-                                 const std::string& fs_name) final {
-    EXPECT_EQ(fs_name, "data");
+                                 const fs_management::MountOptions& options,
+                                 const std::string& partition_name) final {
+    EXPECT_EQ(partition_name, "data");
     return zx::ok();
   }
 

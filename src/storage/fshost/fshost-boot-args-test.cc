@@ -117,7 +117,8 @@ TEST_F(FshostBootArgsTest, BlobfsStartOptionsDefaults) {
 
   auto fshost_config = DefaultConfig();
 
-  startup::wire::StartOptions options = GetBlobfsStartOptions(&fshost_config, boot_args_shared().get());
+  startup::wire::StartOptions options =
+      GetBlobfsMountOptions(fshost_config, boot_args_shared().get()).as_start_options().value();
   ASSERT_EQ(options.write_compression_algorithm, startup::wire::CompressionAlgorithm::kZstdChunked);
   ASSERT_EQ(options.cache_eviction_policy_override, startup::wire::EvictionPolicyOverride::kNone);
   ASSERT_FALSE(options.sandbox_decompression);
@@ -131,7 +132,8 @@ TEST_F(FshostBootArgsTest, BlobfsStartOptionsUncompressedNoEvictNoSandbox) {
 
   auto fshost_config = DefaultConfig();
 
-  startup::wire::StartOptions options = GetBlobfsStartOptions(&fshost_config, boot_args_shared().get());
+  startup::wire::StartOptions options =
+      GetBlobfsMountOptions(fshost_config, boot_args_shared().get()).as_start_options().value();
   ASSERT_EQ(options.write_compression_algorithm,
             startup::wire::CompressionAlgorithm::kUncompressed);
   ASSERT_EQ(options.cache_eviction_policy_override,
@@ -148,7 +150,8 @@ TEST_F(FshostBootArgsTest, BlobfsStartOptionsChunkedEvictSandbox) {
   auto fshost_config = EmptyConfig();
   fshost_config.sandbox_decompression() = true;
 
-  startup::wire::StartOptions options = GetBlobfsStartOptions(&fshost_config, boot_args_shared().get());
+  startup::wire::StartOptions options =
+      GetBlobfsMountOptions(fshost_config, boot_args_shared().get()).as_start_options().value();
   ASSERT_EQ(options.write_compression_algorithm, startup::wire::CompressionAlgorithm::kZstdChunked);
   ASSERT_EQ(options.cache_eviction_policy_override,
             startup::wire::EvictionPolicyOverride::kEvictImmediately);
@@ -161,13 +164,11 @@ TEST_F(FshostBootArgsTest, BlobfsStartOptionsGarbage) {
       {"blobfs.cache-eviction-policy", "NOT_A_POLICY"}};
   ASSERT_NO_FATAL_FAILURE(CreateFshostBootArgs(boot_config));
 
-  // The fshost config implementation should pick up on this as "set" even if there is a value we
-  // don't care about. This is the equivalent of putting "sandbox-decompression=GARBAGE_VALUE" in
-  // the fshost config file.
   auto fshost_config = EmptyConfig();
   fshost_config.sandbox_decompression() = true;
 
-  startup::wire::StartOptions options = GetBlobfsStartOptions(&fshost_config, boot_args_shared().get());
+  startup::wire::StartOptions options =
+      GetBlobfsMountOptions(fshost_config, boot_args_shared().get()).as_start_options().value();
   ASSERT_EQ(options.write_compression_algorithm, startup::wire::CompressionAlgorithm::kZstdChunked);
   ASSERT_EQ(options.cache_eviction_policy_override, startup::wire::EvictionPolicyOverride::kNone);
   ASSERT_TRUE(options.sandbox_decompression);
