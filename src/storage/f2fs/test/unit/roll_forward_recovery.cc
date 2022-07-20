@@ -825,5 +825,356 @@ TEST(FsyncRecoveryTest, RecoveryWithoutFsync) {
   EXPECT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}, &bc), ZX_OK);
 }
 
+TEST(FsyncRecoveryTest, RenameFileWithStrictFsync) {
+  std::unique_ptr<Bcache> bc;
+  FileTester::MkfsOnFakeDev(&bc);
+
+  std::unique_ptr<F2fs> fs;
+  MountOptions options{};
+  // Enable roll-forward recovery
+  ASSERT_EQ(options.SetValue(options.GetNameView(kOptDisableRollForward), 0), ZX_OK);
+
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+  // This is same scenario of xfstest generic/342
+  fbl::RefPtr<VnodeF2fs> root;
+  FileTester::CreateRoot(fs.get(), &root);
+  fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+  // 1. Create "a"
+  FileTester::CreateChild(root_dir.get(), S_IFDIR, "a");
+  fbl::RefPtr<fs::Vnode> child_dir_vn;
+  FileTester::Lookup(root_dir.get(), "a", &child_dir_vn);
+  fbl::RefPtr<Dir> child_dir = fbl::RefPtr<Dir>::Downcast(std::move(child_dir_vn));
+  ASSERT_EQ(child_dir->SyncFile(0, safemath::checked_cast<loff_t>(child_dir->GetSize()), 0), ZX_OK);
+
+  // 2. Create "a/foo"
+  uint32_t first_signature = 0xa1;
+  uint32_t data_page_count = 4;
+  auto ret = CreateFileAndWritePages(child_dir.get(), "foo", data_page_count, first_signature);
+  ASSERT_TRUE(ret.is_ok());
+  fbl::RefPtr<VnodeF2fs> first_foo_vnode = std::move(*ret);
+  ASSERT_EQ(
+      first_foo_vnode->SyncFile(0, safemath::checked_cast<loff_t>(first_foo_vnode->GetSize()), 0),
+      ZX_OK);
+
+  // 3. Rename "a/foo" to "a/bar"
+  FileTester::RenameChild(child_dir, child_dir, "foo", "bar");
+
+  // 4. Create "a/foo"
+  uint32_t second_signature = 0xb2;
+  ret = CreateFileAndWritePages(child_dir.get(), "foo", data_page_count, second_signature);
+  ASSERT_TRUE(ret.is_ok());
+  fbl::RefPtr<VnodeF2fs> second_foo_vnode = std::move(*ret);
+
+  // 5. Fsync "a/foo"
+  uint64_t pre_checkpoint_ver = fs->GetSuperblockInfo().GetCheckpoint().checkpoint_ver;
+  ASSERT_EQ(
+      second_foo_vnode->SyncFile(0, safemath::checked_cast<loff_t>(second_foo_vnode->GetSize()), 0),
+      ZX_OK);
+  uint64_t curr_checkpoint_ver = fs->GetSuperblockInfo().GetCheckpoint().checkpoint_ver;
+  // Checkpoint should be performed instead of fsync in STRICT mode
+  ASSERT_EQ(pre_checkpoint_ver + 1, curr_checkpoint_ver);
+
+  ASSERT_EQ(first_foo_vnode->Close(), ZX_OK);
+  first_foo_vnode = nullptr;
+  ASSERT_EQ(second_foo_vnode->Close(), ZX_OK);
+  second_foo_vnode = nullptr;
+  ASSERT_EQ(child_dir->Close(), ZX_OK);
+  child_dir = nullptr;
+  ASSERT_EQ(root_dir->Close(), ZX_OK);
+  root_dir = nullptr;
+
+  // 6. SPO
+  FileTester::SuddenPowerOff(std::move(fs), &bc);
+
+  // 7. Remount
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+  FileTester::CreateRoot(fs.get(), &root);
+  root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+  FileTester::Lookup(root_dir.get(), "a", &child_dir_vn);
+  child_dir = fbl::RefPtr<Dir>::Downcast(std::move(child_dir_vn));
+
+  // 8. Find "a/bar"
+  fbl::RefPtr<fs::Vnode> first_foo_vn;
+  FileTester::Lookup(child_dir.get(), "bar", &first_foo_vn);
+  auto first_foo_file = fbl::RefPtr<File>::Downcast(std::move(first_foo_vn));
+
+  // 9. Find "a/foo"
+  fbl::RefPtr<fs::Vnode> second_foo_vn;
+  FileTester::Lookup(child_dir.get(), "foo", &second_foo_vn);
+  auto second_foo_file = fbl::RefPtr<File>::Downcast(std::move(second_foo_vn));
+
+  // 10. Check fsynced file
+  ASSERT_EQ(first_foo_file->GetSize(), data_page_count * PAGE_SIZE);
+  for (uint32_t index = 0; index < data_page_count; ++index) {
+    uint32_t write_buf[PAGE_SIZE / (sizeof(uint32_t) / sizeof(uint8_t))];
+    FileTester::ReadFromFile(first_foo_file.get(), write_buf, PAGE_SIZE,
+                             static_cast<size_t>(index) * PAGE_SIZE);
+    ASSERT_EQ(write_buf[0], index + first_signature);
+  }
+
+  ASSERT_EQ(second_foo_file->GetSize(), data_page_count * PAGE_SIZE);
+  for (uint32_t index = 0; index < data_page_count; ++index) {
+    uint32_t write_buf[PAGE_SIZE / (sizeof(uint32_t) / sizeof(uint8_t))];
+    FileTester::ReadFromFile(second_foo_file.get(), write_buf, PAGE_SIZE,
+                             static_cast<size_t>(index) * PAGE_SIZE);
+    ASSERT_EQ(write_buf[0], index + second_signature);
+  }
+
+  ASSERT_EQ(first_foo_file->Close(), ZX_OK);
+  first_foo_file = nullptr;
+  ASSERT_EQ(second_foo_file->Close(), ZX_OK);
+  second_foo_file = nullptr;
+  ASSERT_EQ(child_dir->Close(), ZX_OK);
+  child_dir = nullptr;
+  ASSERT_EQ(root_dir->Close(), ZX_OK);
+  root_dir = nullptr;
+
+  // 11. Unmount and check filesystem
+  FileTester::Unmount(std::move(fs), &bc);
+  EXPECT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}, &bc), ZX_OK);
+}
+
+TEST(FsyncRecoveryTest, RenameFileToOtherDirWithStrictFsync) {
+  std::unique_ptr<Bcache> bc;
+  FileTester::MkfsOnFakeDev(&bc);
+
+  std::unique_ptr<F2fs> fs;
+  MountOptions options{};
+  // Enable roll-forward recovery
+  ASSERT_EQ(options.SetValue(options.GetNameView(kOptDisableRollForward), 0), ZX_OK);
+
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+  fbl::RefPtr<VnodeF2fs> root;
+  FileTester::CreateRoot(fs.get(), &root);
+  fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+  // 1. Create "a"
+  FileTester::CreateChild(root_dir.get(), S_IFDIR, "a");
+  fbl::RefPtr<fs::Vnode> child_a_dir_vn;
+  FileTester::Lookup(root_dir.get(), "a", &child_a_dir_vn);
+  fbl::RefPtr<Dir> child_a_dir = fbl::RefPtr<Dir>::Downcast(std::move(child_a_dir_vn));
+  ASSERT_EQ(child_a_dir->SyncFile(0, safemath::checked_cast<loff_t>(child_a_dir->GetSize()), 0),
+            ZX_OK);
+
+  // 1. Create "b"
+  FileTester::CreateChild(root_dir.get(), S_IFDIR, "b");
+  fbl::RefPtr<fs::Vnode> child_b_dir_vn;
+  FileTester::Lookup(root_dir.get(), "b", &child_b_dir_vn);
+  fbl::RefPtr<Dir> child_b_dir = fbl::RefPtr<Dir>::Downcast(std::move(child_b_dir_vn));
+  ASSERT_EQ(child_b_dir->SyncFile(0, safemath::checked_cast<loff_t>(child_b_dir->GetSize()), 0),
+            ZX_OK);
+
+  // 2. Create "a/foo"
+  uint32_t first_signature = 0xa1;
+  uint32_t data_page_count = 4;
+  auto ret = CreateFileAndWritePages(child_a_dir.get(), "foo", data_page_count, first_signature);
+  ASSERT_TRUE(ret.is_ok());
+  fbl::RefPtr<VnodeF2fs> first_foo_vnode = std::move(*ret);
+  ASSERT_EQ(
+      first_foo_vnode->SyncFile(0, safemath::checked_cast<loff_t>(first_foo_vnode->GetSize()), 0),
+      ZX_OK);
+
+  // 3. Rename "a/foo" to "b/bar"
+  FileTester::RenameChild(child_a_dir, child_b_dir, "foo", "bar");
+
+  // 4. Create "a/foo"
+  uint32_t second_signature = 0xb2;
+  ret = CreateFileAndWritePages(child_a_dir.get(), "foo", data_page_count, second_signature);
+  ASSERT_TRUE(ret.is_ok());
+  fbl::RefPtr<VnodeF2fs> second_foo_vnode = std::move(*ret);
+
+  // 5. Fsync "a/foo"
+  uint64_t pre_checkpoint_ver = fs->GetSuperblockInfo().GetCheckpoint().checkpoint_ver;
+  ASSERT_EQ(
+      second_foo_vnode->SyncFile(0, safemath::checked_cast<loff_t>(second_foo_vnode->GetSize()), 0),
+      ZX_OK);
+  uint64_t curr_checkpoint_ver = fs->GetSuperblockInfo().GetCheckpoint().checkpoint_ver;
+  // Checkpoint should be performed instead of fsync in STRICT mode
+  ASSERT_EQ(pre_checkpoint_ver + 1, curr_checkpoint_ver);
+
+  ASSERT_EQ(first_foo_vnode->Close(), ZX_OK);
+  first_foo_vnode = nullptr;
+  ASSERT_EQ(second_foo_vnode->Close(), ZX_OK);
+  second_foo_vnode = nullptr;
+  ASSERT_EQ(child_a_dir->Close(), ZX_OK);
+  child_a_dir = nullptr;
+  ASSERT_EQ(child_b_dir->Close(), ZX_OK);
+  child_b_dir = nullptr;
+  ASSERT_EQ(root_dir->Close(), ZX_OK);
+  root_dir = nullptr;
+
+  // 6. SPO
+  FileTester::SuddenPowerOff(std::move(fs), &bc);
+
+  // 7. Remount
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+  FileTester::CreateRoot(fs.get(), &root);
+  root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+  FileTester::Lookup(root_dir.get(), "a", &child_a_dir_vn);
+  child_a_dir = fbl::RefPtr<Dir>::Downcast(std::move(child_a_dir_vn));
+
+  FileTester::Lookup(root_dir.get(), "b", &child_b_dir_vn);
+  child_b_dir = fbl::RefPtr<Dir>::Downcast(std::move(child_b_dir_vn));
+
+  // 8. Find "b/bar"
+  fbl::RefPtr<fs::Vnode> first_foo_vn;
+  FileTester::Lookup(child_b_dir.get(), "bar", &first_foo_vn);
+  auto first_foo_file = fbl::RefPtr<File>::Downcast(std::move(first_foo_vn));
+
+  // 9. Find "a/foo"
+  fbl::RefPtr<fs::Vnode> second_foo_vn;
+  FileTester::Lookup(child_a_dir.get(), "foo", &second_foo_vn);
+  auto second_foo_file = fbl::RefPtr<File>::Downcast(std::move(second_foo_vn));
+
+  // 10. Check fsynced file
+  ASSERT_EQ(first_foo_file->GetSize(), data_page_count * PAGE_SIZE);
+  for (uint32_t index = 0; index < data_page_count; ++index) {
+    uint32_t write_buf[PAGE_SIZE / (sizeof(uint32_t) / sizeof(uint8_t))];
+    FileTester::ReadFromFile(first_foo_file.get(), write_buf, PAGE_SIZE,
+                             static_cast<size_t>(index) * PAGE_SIZE);
+    ASSERT_EQ(write_buf[0], index + first_signature);
+  }
+
+  ASSERT_EQ(second_foo_file->GetSize(), data_page_count * PAGE_SIZE);
+  for (uint32_t index = 0; index < data_page_count; ++index) {
+    uint32_t write_buf[PAGE_SIZE / (sizeof(uint32_t) / sizeof(uint8_t))];
+    FileTester::ReadFromFile(second_foo_file.get(), write_buf, PAGE_SIZE,
+                             static_cast<size_t>(index) * PAGE_SIZE);
+    ASSERT_EQ(write_buf[0], index + second_signature);
+  }
+
+  ASSERT_EQ(first_foo_file->Close(), ZX_OK);
+  first_foo_file = nullptr;
+  ASSERT_EQ(second_foo_file->Close(), ZX_OK);
+  second_foo_file = nullptr;
+  ASSERT_EQ(child_a_dir->Close(), ZX_OK);
+  child_a_dir = nullptr;
+  ASSERT_EQ(child_b_dir->Close(), ZX_OK);
+  child_b_dir = nullptr;
+  ASSERT_EQ(root_dir->Close(), ZX_OK);
+  root_dir = nullptr;
+
+  // 11. Unmount and check filesystem
+  FileTester::Unmount(std::move(fs), &bc);
+  EXPECT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}, &bc), ZX_OK);
+}
+
+TEST(FsyncRecoveryTest, RenameDirectoryWithStrictFsync) {
+  std::unique_ptr<Bcache> bc;
+  FileTester::MkfsOnFakeDev(&bc);
+
+  std::unique_ptr<F2fs> fs;
+  MountOptions options{};
+  // Enable roll-forward recovery
+  ASSERT_EQ(options.SetValue(options.GetNameView(kOptDisableRollForward), 0), ZX_OK);
+
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+  fbl::RefPtr<VnodeF2fs> root;
+  FileTester::CreateRoot(fs.get(), &root);
+  fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+  // 1. Create "a"
+  FileTester::CreateChild(root_dir.get(), S_IFDIR, "a");
+  fbl::RefPtr<fs::Vnode> child_dir_vn;
+  FileTester::Lookup(root_dir.get(), "a", &child_dir_vn);
+  fbl::RefPtr<Dir> child_dir = fbl::RefPtr<Dir>::Downcast(std::move(child_dir_vn));
+  ASSERT_EQ(child_dir->SyncFile(0, safemath::checked_cast<loff_t>(child_dir->GetSize()), 0), ZX_OK);
+
+  // 2. Create "a/foo"
+  FileTester::CreateChild(child_dir.get(), S_IFDIR, "foo");
+  fbl::RefPtr<fs::Vnode> first_foo_vnode;
+  FileTester::Lookup(child_dir.get(), "foo", &first_foo_vnode);
+  auto first_foo_dir = fbl::RefPtr<Dir>::Downcast(std::move(first_foo_vnode));
+  FileTester::CreateChild(first_foo_dir.get(), S_IFREG, "bar_verification_file");
+  ASSERT_EQ(first_foo_dir->SyncFile(0, safemath::checked_cast<loff_t>(first_foo_dir->GetSize()), 0),
+            ZX_OK);
+
+  // 3. Rename "a/foo" to "a/bar"
+  FileTester::RenameChild(child_dir, child_dir, "foo", "bar");
+
+  // 4. Create "a/foo"
+  FileTester::CreateChild(child_dir.get(), S_IFDIR, "foo");
+  fbl::RefPtr<fs::Vnode> second_foo_vnode;
+  FileTester::Lookup(child_dir.get(), "foo", &second_foo_vnode);
+  auto second_foo_dir = fbl::RefPtr<Dir>::Downcast(std::move(second_foo_vnode));
+  FileTester::CreateChild(second_foo_dir.get(), S_IFREG, "foo_verification_file");
+
+  // 5. Fsync "a/foo"
+  uint64_t pre_checkpoint_ver = fs->GetSuperblockInfo().GetCheckpoint().checkpoint_ver;
+  ASSERT_EQ(
+      second_foo_dir->SyncFile(0, safemath::checked_cast<loff_t>(second_foo_dir->GetSize()), 0),
+      ZX_OK);
+  uint64_t curr_checkpoint_ver = fs->GetSuperblockInfo().GetCheckpoint().checkpoint_ver;
+  // Checkpoint should be performed instead of fsync in STRICT mode
+  ASSERT_EQ(pre_checkpoint_ver + 1, curr_checkpoint_ver);
+
+  ASSERT_EQ(first_foo_dir->Close(), ZX_OK);
+  first_foo_dir = nullptr;
+  ASSERT_EQ(second_foo_dir->Close(), ZX_OK);
+  second_foo_dir = nullptr;
+  ASSERT_EQ(child_dir->Close(), ZX_OK);
+  child_dir = nullptr;
+  ASSERT_EQ(root_dir->Close(), ZX_OK);
+  root_dir = nullptr;
+
+  // 6. SPO
+  FileTester::SuddenPowerOff(std::move(fs), &bc);
+
+  // 7. Remount
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+  FileTester::CreateRoot(fs.get(), &root);
+  root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+  FileTester::Lookup(root_dir.get(), "a", &child_dir_vn);
+  child_dir = fbl::RefPtr<Dir>::Downcast(std::move(child_dir_vn));
+
+  // 8. Find "a/bar"
+  fbl::RefPtr<fs::Vnode> first_foo_vn;
+  FileTester::Lookup(child_dir.get(), "bar", &first_foo_vn);
+  first_foo_dir = fbl::RefPtr<Dir>::Downcast(std::move(first_foo_vn));
+  ASSERT_NE(first_foo_dir, nullptr);
+  fbl::RefPtr<fs::Vnode> bar_verfication_vn;
+  FileTester::Lookup(first_foo_dir.get(), "bar_verification_file", &bar_verfication_vn);
+  ASSERT_NE(bar_verfication_vn, nullptr);
+
+  // 9. Find "a/foo"
+  fbl::RefPtr<fs::Vnode> second_foo_vn;
+  FileTester::Lookup(child_dir.get(), "foo", &second_foo_vn);
+  second_foo_dir = fbl::RefPtr<Dir>::Downcast(std::move(second_foo_vn));
+  ASSERT_NE(second_foo_dir, nullptr);
+  fbl::RefPtr<fs::Vnode> foo_verfication_vn;
+  FileTester::Lookup(second_foo_dir.get(), "foo_verification_file", &foo_verfication_vn);
+  ASSERT_NE(foo_verfication_vn, nullptr);
+
+  ASSERT_EQ(bar_verfication_vn->Close(), ZX_OK);
+  bar_verfication_vn = nullptr;
+  ASSERT_EQ(foo_verfication_vn->Close(), ZX_OK);
+  foo_verfication_vn = nullptr;
+  ASSERT_EQ(first_foo_dir->Close(), ZX_OK);
+  first_foo_dir = nullptr;
+  ASSERT_EQ(second_foo_dir->Close(), ZX_OK);
+  second_foo_dir = nullptr;
+  ASSERT_EQ(child_dir->Close(), ZX_OK);
+  child_dir = nullptr;
+  ASSERT_EQ(root_dir->Close(), ZX_OK);
+  root_dir = nullptr;
+
+  // 11. Unmount and check filesystem
+  FileTester::Unmount(std::move(fs), &bc);
+  EXPECT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}, &bc), ZX_OK);
+}
+
 }  // namespace
 }  // namespace f2fs

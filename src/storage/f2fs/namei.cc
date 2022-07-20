@@ -512,6 +512,12 @@ zx_status_t Dir::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view oldname
       DropNlink();
       WriteInode(false);
     }
+
+    // Add new parent directory to VnodeSet to ensure consistency of renamed vnode.
+    Vfs()->GetSuperblockInfo().AddVnodeToVnodeSet(InoType::kModifiedDirIno, new_dir->Ino());
+    if (old_vnode->IsDir()) {
+      Vfs()->GetSuperblockInfo().AddVnodeToVnodeSet(InoType::kModifiedDirIno, old_vnode->Ino());
+    }
   }
 
   Vfs()->GetSegmentManager().BalanceFs();

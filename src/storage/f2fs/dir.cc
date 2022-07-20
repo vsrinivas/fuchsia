@@ -461,14 +461,15 @@ zx_status_t Dir::AddLinkSafe(std::string_view name, VnodeF2fs *vnode) {
   return AddLink(name, vnode);
 }
 
-/**
- * It only removes the dentry from the dentry page,corresponding name
- * entry in name page does not need to be touched during deletion.
- */
+// It only removes the dentry from the dentry page, corresponding name
+// entry in name page does not need to be touched during deletion.
 void Dir::DeleteEntry(DirEntry *dentry, fbl::RefPtr<Page> &page, VnodeF2fs *vnode) {
   DentryBlock *dentry_blk;
   unsigned int bit_pos;
   int slots = (LeToCpu(dentry->name_len) + kNameLen - 1) / kNameLen;
+
+  // Add to VnodeSet to ensure consistency of deleted entry.
+  Vfs()->GetSuperblockInfo().AddVnodeToVnodeSet(InoType::kModifiedDirIno, Ino());
 
   if (TestFlag(InodeInfoFlag::kInlineDentry)) {
     DeleteInlineEntry(dentry, page, vnode);

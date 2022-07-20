@@ -86,7 +86,8 @@ enum class PageType {
 
 // Types of inode number lists
 enum class InoType {
-  kOrphanIno,  // for orphan ino list
+  kOrphanIno,       // Orphan ino list
+  kModifiedDirIno,  // Modified directory ino list
   kNrInoType,
 };
 
@@ -132,8 +133,8 @@ class VnodeSet {
   }
 
  private:
-  mutable fs::SharedMutex vnode_mutex_;  // for vnode set
-  std::set<nid_t> vnodes __TA_GUARDED(vnode_mutex_); // vnode set
+  mutable fs::SharedMutex vnode_mutex_;               // for vnode set
+  std::set<nid_t> vnodes __TA_GUARDED(vnode_mutex_);  // vnode set
 };
 
 class SuperblockInfo {
@@ -218,7 +219,7 @@ class SuperblockInfo {
     return vnode_set_[static_cast<uint8_t>(type)].FindVnode(ino);
   }
 
-  uint64_t GetVnodeSetSize(InoType type)  {
+  uint64_t GetVnodeSetSize(InoType type) {
     return vnode_set_[static_cast<uint8_t>(type)].GetSize();
   }
 

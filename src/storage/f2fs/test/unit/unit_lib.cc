@@ -120,6 +120,11 @@ void FileTester::DeleteChild(Dir *vn, std::string_view name, bool is_dir) {
   // TODO: After EvictInode available, check if nids of the child are correctly freed
 }
 
+void FileTester::RenameChild(fbl::RefPtr<Dir> &old_vnode, fbl::RefPtr<Dir> &new_vnode,
+                             std::string_view oldname, std::string_view newname) {
+  ASSERT_EQ(old_vnode->Rename(new_vnode, oldname, newname, false, false), ZX_OK);
+}
+
 void FileTester::CreateChildren(F2fs *fs, std::vector<fbl::RefPtr<VnodeF2fs>> &vnodes,
                                 std::vector<uint32_t> &inos, fbl::RefPtr<Dir> &parent,
                                 std::string name, uint32_t inode_cnt) {

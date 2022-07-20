@@ -53,6 +53,8 @@ class FileTester {
 
   static void CreateChild(Dir *vn, uint32_t mode, std::string_view name);
   static void DeleteChild(Dir *vn, std::string_view name, bool is_dir = true);
+  static void RenameChild(fbl::RefPtr<Dir> &old_vnode, fbl::RefPtr<Dir> &new_vnode,
+                          std::string_view oldname, std::string_view newname);
   static void CreateChildren(F2fs *fs, std::vector<fbl::RefPtr<VnodeF2fs>> &vnodes,
                              std::vector<uint32_t> &inos, fbl::RefPtr<Dir> &parent,
                              std::string name, uint32_t inode_cnt);
