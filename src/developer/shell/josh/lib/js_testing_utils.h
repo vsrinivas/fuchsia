@@ -38,8 +38,8 @@ class JsTest : public ::testing::Test {
     }
   }
 
-  bool Eval(std::string command) {
-    JSValue result = JS_Eval(ctx_->Get(), command.c_str(), command.length(), "batch", 0);
+  bool Eval(std::string_view command) {
+    JSValue result = JS_Eval(ctx_->Get(), command.data(), command.size(), "batch", 0);
     if (JS_IsException(result)) {
       ctx_->DumpError();
       return false;
