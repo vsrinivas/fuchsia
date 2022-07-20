@@ -11,7 +11,7 @@ use {
     },
     crate::wire::{OpType, VirtioVsockFlags, VirtioVsockHeader},
     anyhow::{anyhow, Error},
-    async_lock::RwLock,
+    async_lock::{Mutex, RwLock},
     fidl::client::QueryResponseFut,
     fidl_fuchsia_virtualization::HostVsockEndpointConnect2Responder,
     fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -19,7 +19,7 @@ use {
         channel::mpsc::UnboundedSender,
         future::{AbortHandle, Abortable, Aborted},
     },
-    std::{cell::Cell, convert::TryFrom, mem, rc::Rc},
+    std::{convert::TryFrom, mem, rc::Rc},
     virtio_device::{
         chain::{ReadableChain, WritableChain},
         mem::DriverMem,
@@ -132,8 +132,8 @@ pub struct VsockConnection {
 
     // Control handles for state dependent futures that the device can wait on. When potentially
     // transitioning states, all futures are cancelled and restarted on the new state.
-    rx_abort: Cell<Option<AbortHandle>>,
-    state_action_abort: Cell<Option<AbortHandle>>,
+    rx_abort: Mutex<Option<AbortHandle>>,
+    state_action_abort: Mutex<Option<AbortHandle>>,
 }
 
 pub enum WantRxChainResult {
@@ -185,8 +185,8 @@ impl VsockConnection {
         VsockConnection {
             key,
             state: RwLock::new(state),
-            rx_abort: Cell::new(None),
-            state_action_abort: Cell::new(None),
+            rx_abort: Mutex::new(None),
+            state_action_abort: Mutex::new(None),
         }
     }
 
@@ -228,10 +228,13 @@ impl VsockConnection {
     async fn cancel_pending_tasks_and_get_mutable_state(
         &self,
     ) -> async_lock::RwLockWriteGuard<'_, VsockConnectionState> {
-        if let Some(handle) = self.rx_abort.take() {
+        let mut rx_abort = self.rx_abort.lock().await;
+        let mut state_action_abort = self.state_action_abort.lock().await;
+
+        if let Some(handle) = rx_abort.take() {
             handle.abort();
         }
-        if let Some(handle) = self.state_action_abort.take() {
+        if let Some(handle) = state_action_abort.take() {
             handle.abort();
         }
 
@@ -253,7 +256,7 @@ impl VsockConnection {
     pub async fn want_rx_chain(self: Rc<Self>) -> WantRxChainResult {
         loop {
             let (abort_handle, abort_registration) = AbortHandle::new_pair();
-            self.rx_abort.set(Some(abort_handle));
+            *self.rx_abort.lock().await = Some(abort_handle);
 
             let result = {
                 let state = self.state.read().await;
@@ -265,6 +268,12 @@ impl VsockConnection {
                     return WantRxChainResult::ReadyForChain(self);
                 }
                 Ok(false) => {
+                    // There may be a state action associated with stopping RX processing such as
+                    // a transition into a shutdown state.
+                    if let Some(handle) = self.state_action_abort.lock().await.take() {
+                        handle.abort();
+                    }
+
                     return WantRxChainResult::StopAwaiting;
                 }
                 Err(Aborted) => {
@@ -288,7 +297,7 @@ impl VsockConnection {
     pub async fn handle_state_action(&self) -> StateAction {
         loop {
             let (abort_handle, abort_registration) = AbortHandle::new_pair();
-            self.state_action_abort.set(Some(abort_handle));
+            *self.state_action_abort.lock().await = Some(abort_handle);
 
             let result = {
                 let state = self.state.read().await;

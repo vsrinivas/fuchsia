@@ -142,14 +142,19 @@ impl VsockDevice {
                     Err(err) => Err(anyhow!("Failed to complete chain: {}", err)),
                 },
                 op => {
-                    if let Some(connection) = self.connections.borrow().get(&key) {
+                    let connection = self.connections.borrow().get(&key).map(|conn| conn.clone());
+                    if let Some(connection) = connection {
                         connection.handle_guest_tx(op, header, chain).await
                     } else {
                         if op == OpType::Reset {
                             // Ignore spurious Reset packets for non-existent connections.
                             Ok(())
                         } else {
-                            Err(anyhow!("Received packet for non-existent connection: {:?}", key))
+                            Err(anyhow!(
+                                "Received {:?} packet for non-existent connection: {:?}",
+                                op,
+                                key
+                            ))
                         }
                     }
                 }
@@ -479,7 +484,8 @@ impl VsockDevice {
     // Move the connection into a forced shutdown state. If the connection doesn't exist, sends
     // a reset packet for that connection.
     async fn force_close_connection(&self, key: VsockConnectionKey) {
-        if let Some(connection) = self.connections.borrow().get(&key) {
+        let connection = self.connections.borrow().get(&key).map(|conn| conn.clone());
+        if let Some(connection) = connection {
             connection.force_close_connection(self.control_packet_tx.clone()).await;
         } else {
             self.send_reset_packet(key);

@@ -65,7 +65,7 @@ async fn run_virtio_vsock(
     let rx_stream = device.take_stream(wire::RX_QUEUE_IDX)?;
 
     // Ignore the event queue as we don't support VM migrations.
-    let _ = device.take_stream(wire::EVENT_QUEUE_IDX)?;
+    let _event_stream = device.take_stream(wire::EVENT_QUEUE_IDX)?;
 
     // Notify the controller that vsock is ready.
     ready_responder.send()?;

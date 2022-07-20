@@ -165,7 +165,6 @@ pub struct ClientInitiated {
     responder: Option<HostVsockEndpointConnect2Responder>,
 
     key: VsockConnectionKey,
-
     control_packets: UnboundedSender<VirtioVsockHeader>,
 }
 
@@ -179,7 +178,6 @@ impl ClientInitiated {
             sent_request_to_guest: Cell::new(false),
             responder: Some(responder),
             key,
-
             control_packets,
         }
     }
@@ -484,22 +482,25 @@ impl ReadWrite {
             return false;
         }
 
-        // This connection is waiting on a credit update via guest TX.
-        if self.credit.borrow().peer_free_bytes() == 0 {
-            return future::pending::<bool>().await;
-        }
-
         // Optimization when data is available on a fully open socket, preventing the device from
         // needing to reacquire a read signal from the kernel. This is the steady state when a
         // connection is bottlenecked on the guest refilling the RX queue.
         if self.socket.as_ref().outstanding_read_bytes().unwrap_or(0) > 0
             && !self.socket.is_closed()
+            && self.credit.borrow().peer_free_bytes() > 0
         {
             return true;
         }
 
         match self.get_rx_socket_state().await {
-            SocketState::Ready | SocketState::ClosedWithBytesOutstanding => true,
+            SocketState::Ready | SocketState::ClosedWithBytesOutstanding => {
+                if self.credit.borrow().peer_free_bytes() == 0 {
+                    // This connection is waiting on a credit update via guest TX.
+                    future::pending::<bool>().await
+                } else {
+                    true
+                }
+            }
             SocketState::Closed => {
                 // This connection will transmit no more bytes, either due to error or a closed
                 // and drained peer.
@@ -535,6 +536,18 @@ impl ReadWrite {
             peer_buffer_available,
             std::cmp::min(usable_chain_bytes, bytes_on_socket),
         );
+
+        if bytes_to_send == 0 {
+            // TODO(fxb/97355): Investigate how common this is.
+            syslog::fx_log_err!(
+                "No calculated bytes to send. Usable bytes: {}, bytes on socket: \
+                {}, peer buffer available: {}.",
+                usable_chain_bytes,
+                bytes_on_socket,
+                peer_buffer_available
+            );
+            return Ok(());
+        }
 
         self.credit.borrow_mut().increment_rx_count(bytes_to_send.try_into()?);
 
