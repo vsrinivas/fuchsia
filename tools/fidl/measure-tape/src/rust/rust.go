@@ -284,6 +284,8 @@ impl Measurable for {{ $targetType }} {
 
 mod inner {
 #![allow(unused_imports)]
+#![allow(unused_mut)]
+
 use {
   crate::Size,
   fidl::encoding::round_up_to_align,
