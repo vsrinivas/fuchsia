@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use lazy_static::lazy_static;
+use regex::Regex;
 use std::sync::Arc;
 
 use crate::auth::FsCred;
@@ -41,6 +43,7 @@ fn static_directory_builder_with_common_task_entries<'a>(
         .add_node_entry(b"cmdline", CmdlineFile::new(fs, task.clone()))
         .add_node_entry(b"comm", CommFile::new(fs, task.clone()))
         .add_node_entry(b"attr", attr_directory(fs))
+        .add_node_entry(b"ns", dynamic_directory(fs, NsDirectory))
 }
 
 /// Creates an [`FsNode`] that represents the `/proc/<pid>/attr` directory.
@@ -73,6 +76,92 @@ impl DirectoryDelegate for FdDirectory {
             FdSymlink::file_mode(),
             self.task.as_fscred(),
         ))
+    }
+}
+
+const NS_ENTRIES: &'static [&'static str] = &[
+    "cgroup",
+    "ipc",
+    "mnt",
+    "net",
+    "pid",
+    "pid_for_children",
+    "time",
+    "time_for_children",
+    "user",
+    "uts",
+];
+
+/// /proc/[pid]/ns directory
+struct NsDirectory;
+
+impl DirectoryDelegate for NsDirectory {
+    fn list(&self, _fs: &Arc<FileSystem>) -> Result<Vec<DynamicDirectoryEntry>, Errno> {
+        // For each namespace, this contains a link to the current identifier of the given namespace
+        // for the current task.
+        Ok(NS_ENTRIES
+            .iter()
+            .map(|name| DynamicDirectoryEntry {
+                entry_type: DirectoryEntryType::LNK,
+                name: name.as_bytes().to_vec(),
+                inode: None,
+            })
+            .collect())
+    }
+
+    fn lookup(&self, fs: &Arc<FileSystem>, name: &FsStr) -> Result<Arc<FsNode>, Errno> {
+        // If name is a given namespace, link to the current identifier of the that namespace for
+        // the current task.
+        // If name is {namespace}:[id], get a file descriptor for the given namespace.
+
+        let name = String::from_utf8(name.to_vec()).map_err(|_| ENOENT)?;
+        let mut elements = name.split(':');
+        let ns = elements.next().expect("name must not be empty");
+        // The name doesn't starts with a known namespace.
+        if !NS_ENTRIES.contains(&ns) {
+            return error!(ENOENT);
+        }
+        if let Some(id) = elements.next() {
+            // The name starts with {namespace}:, check that it matches {namespace}:[id]
+            lazy_static! {
+                static ref NS_IDENTIFIER_RE: Regex = Regex::new("^\\[[0-9]+\\]$").unwrap();
+            }
+            if NS_IDENTIFIER_RE.is_match(id) {
+                // TODO(qsr): For now, returns an empty file. In the future, this should create a
+                // reference to to correct namespace, and ensures it keeps it alive.
+                Ok(fs.create_node_with_ops(
+                    ByteVecFile::new(vec![]),
+                    mode!(IFREG, 0o444),
+                    FsCred::root(),
+                ))
+            } else {
+                error!(ENOENT)
+            }
+        } else {
+            // The name is {namespace}, link to the correct one of the current task.
+            Ok(fs.create_node(
+                Box::new(NsDirectoryEntry { name }),
+                mode!(IFLNK, 0o7777),
+                FsCred::root(),
+            ))
+        }
+    }
+}
+
+/// An entry in the ns pseudo directory. For now, all namespace have the identifier 1.
+struct NsDirectoryEntry {
+    name: String,
+}
+
+impl FsNodeOps for NsDirectoryEntry {
+    fs_node_impl_symlink!();
+
+    fn readlink(
+        &self,
+        _node: &FsNode,
+        _current_task: &CurrentTask,
+    ) -> Result<SymlinkTarget, Errno> {
+        Ok(SymlinkTarget::Path(format!("{}:[1]", self.name).as_bytes().to_vec()))
     }
 }
 
