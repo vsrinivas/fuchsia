@@ -1,6 +1,6 @@
 {
   "pkg/fdio/include/lib/fdio/directory.h": "a65310f1923370f34f071cd476ecd793",
-  "pkg/fdio/include/lib/fdio/fd.h": "3066f7f319c7f8b6cd57f5a96f4ff6e5",
+  "pkg/fdio/include/lib/fdio/fd.h": "1cd146f5a23a72402b5dd8042124b226",
   "pkg/fdio/include/lib/fdio/fdio.h": "fb3fab45bec9b946e1d72b3a01cd6426",
   "pkg/fdio/include/lib/fdio/io.h": "7fee54073b7ca254c20e7a988a1aa795",
   "pkg/fdio/include/lib/fdio/limits.h": "9b99b72bd188543dba96528bf5797ca8",

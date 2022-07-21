@@ -34,8 +34,9 @@ zx_status_t fdio_fd_create(zx_handle_t handle, int* fd_out) ZX_AVAILABLE_SINCE(1
 // Clones the current working directory.
 //
 // Upon success, |out_handle| contains a handle that represents the current
-// working directory. This handle is suitable for transferring to another
-// process.
+// working directory. Internally, cloning creates a new distinct connection to
+// the directory that can be transferred to another process without affecting
+// the current process's directory connection.
 //
 // # Errors
 //
@@ -50,7 +51,11 @@ zx_status_t fdio_cwd_clone(zx_handle_t* out_handle) ZX_AVAILABLE_SINCE(1);
 // Clones a file descriptor.
 //
 // Upon success, |out_handle| contains a handle that represents the given file
-// descriptor. This handle is suitable for transferring to another process.
+// descriptor. Internally, cloning creates a new distinct connection to the file
+// or service (via the fuchsia.io/Node.Clone FIDL interface) that can be
+// transferred to another process without affecting the connection associated with
+// the |fd|. This is more heavyweight than transferring via fdio_fd_transfer() but
+// can be done in more cases. See also fdio_fd_transfer_or_clone().
 //
 // |fd| is not modified by this function.
 //
@@ -72,7 +77,16 @@ zx_status_t fdio_fd_clone(int fd, zx_handle_t* out_handle) ZX_AVAILABLE_SINCE(1)
 // descriptor table for this process.
 //
 // Upon success, |out_handle| contains a handle that represents the given file
-// descriptor.
+// descriptor. This handle represents the connection to the file or service that
+// was previously represented by the |fd|. This behavior is identical to that of
+// fdio_get_service_handle().
+//
+// A file descriptor may not always be in a state that its underlying handle
+// can be transferred in this way. For example, if it has been dup()-ed, there
+// will be more than one descriptor referring to the same handle. In these
+// cases, callers may want to use the less-efficient fdio_fd_clone() to create a
+// new connection to the same file, or fdio_fd_transfer_or_clone() to
+// automatically do this fallback.
 //
 // # Errors
 //
@@ -90,8 +104,10 @@ zx_status_t fdio_fd_clone(int fd, zx_handle_t* out_handle) ZX_AVAILABLE_SINCE(1)
 // object.
 zx_status_t fdio_fd_transfer(int fd, zx_handle_t* out_handle) ZX_AVAILABLE_SINCE(1);
 
-// Prepares a file descriptor for transfer, or falls-back to cloning it if
-// the descriptor is not transferrable (e.g. it is an FD that has been dup()ed).
+// Prepares a file descriptor for transfer (as fdio_fd_transfer()), or
+// falls-back to cloning (as fdio_fd_clone()) it if the descriptor is not
+// transferrable. FDs that have been dup()ed have multiple file descriptors
+// sharing the same kernel handle that prevents doing a simple transfer.
 //
 // Upon return, the given file descriptor has been removed from the file
 // descriptor table for this process.

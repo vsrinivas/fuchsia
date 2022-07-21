@@ -103,18 +103,7 @@ zx_status_t fdio_unbind_from_fd(int fd, fdio_t** out) {
 }
 
 __EXPORT
-zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
-  fdio_ptr io = unbind_from_fd(fd);
-  if (io == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  std::variant reference = GetLastReference(std::move(io));
-  auto* ptr = std::get_if<fdio::last_reference>(&reference);
-  if (ptr) {
-    return ptr->unwrap(out);
-  }
-  return ZX_ERR_UNAVAILABLE;
-}
+zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) { return fdio_fd_transfer(fd, out); }
 
 __EXPORT
 fdio_t* fdio_zxio_create(zxio_storage_t** out_storage) {
