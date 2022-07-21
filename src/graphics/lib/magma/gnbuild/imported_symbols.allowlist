@@ -248,6 +248,8 @@ sigprocmask
 # SETJMP
 longjmp
 setjmp
+siglongjmp
+sigsetjmp
 
 # STDIO
 fclose
@@ -323,6 +325,7 @@ strncasecmp
 strncat
 strncmp
 strncpy
+strndup
 strnlen
 strrchr
 strsignal
@@ -384,6 +387,7 @@ pthread_rwlock_rdlock
 pthread_rwlock_unlock
 pthread_rwlock_wrlock
 pthread_self
+pthread_setname_np
 pthread_setspecific
 pthread_sigmask
 sem_destroy
