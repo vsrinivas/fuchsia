@@ -131,23 +131,9 @@ struct parsed_vndr_ies {
   struct parsed_vndr_ie_info ie_info[VNDR_IE_PARSE_LIMIT];
 };
 
-#define BRCMF_CONNECT_STATUS_LIST \
-  X(CONNECTED)                    \
-  X(DEAUTHENTICATING)             \
-  X(DISASSOCIATING)               \
-  X(NO_NETWORK)                   \
-  X(LINK_FAILED)                  \
-  X(CONNECTING_TIMEOUT)           \
-  X(AUTHENTICATION_FAILED)        \
-  X(ASSOC_REQ_FAILED)
-
-#define X(CONNECT_STATUS) CONNECT_STATUS,
-enum class brcmf_connect_status_t : uint8_t { BRCMF_CONNECT_STATUS_LIST };
-#undef X
-
 #define X(CONNECT_STATUS)                      \
   case brcmf_connect_status_t::CONNECT_STATUS: \
-    return "brcmf_connect_status_t::" #CONNECT_STATUS;
+    return #CONNECT_STATUS;
 const char* brcmf_get_connect_status_str(brcmf_connect_status_t connect_status) {
   switch (connect_status) { BRCMF_CONNECT_STATUS_LIST };
 }
@@ -5168,7 +5154,7 @@ static zx_status_t brcmf_bss_connect_done(brcmf_if* ifp, brcmf_connect_status_t 
         break;
       }
       default: {
-        BRCMF_WARN("Unsuccessful connection: connect_status %s assoc_result %d",
+        BRCMF_WARN("Unsuccessful connection: connect_status %s, assoc_result %d",
                    brcmf_get_connect_status_str(connect_status), static_cast<int>(assoc_result));
         zx_status_t err = brcmf_clear_firmware_connection_state(ifp);
         if (err != ZX_OK) {

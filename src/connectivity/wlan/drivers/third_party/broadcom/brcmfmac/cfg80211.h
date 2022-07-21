@@ -184,6 +184,22 @@ enum brcmf_scan_status {
   BRCMF_SCAN_STATUS_SUPPRESS,
 };
 
+#define BRCMF_CONNECT_STATUS_LIST \
+  X(CONNECTED)                    \
+  X(DEAUTHENTICATING)             \
+  X(DISASSOCIATING)               \
+  X(NO_NETWORK)                   \
+  X(LINK_FAILED)                  \
+  X(CONNECTING_TIMEOUT)           \
+  X(AUTHENTICATION_FAILED)        \
+  X(ASSOC_REQ_FAILED)
+
+#define X(CONNECT_STATUS) CONNECT_STATUS,
+enum class brcmf_connect_status_t : uint8_t { BRCMF_CONNECT_STATUS_LIST };
+#undef X
+
+const char* brcmf_get_connect_status_str(brcmf_connect_status_t connect_status);
+
 /* dongle configuration */
 struct brcmf_cfg80211_conf {
   uint32_t frag_threshold;
