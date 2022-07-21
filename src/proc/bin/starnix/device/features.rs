@@ -11,7 +11,7 @@ use crate::task::CurrentTask;
 use crate::types::*;
 use std::collections::HashSet;
 
-/// Parses and runs the features from the provided "program strvec.". Some features,
+/// Parses and runs the features from the provided "program strvec". Some features,
 /// such as Wayland, should be enabled on a per-component basis. We run this when we first
 /// make the Galaxy. When we start the component, we run the run_component_features
 /// function.

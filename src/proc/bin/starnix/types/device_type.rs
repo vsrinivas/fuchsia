@@ -7,6 +7,7 @@ use crate::types::uapi::*;
 pub const MEM_MAJOR: u32 = 1;
 pub const TTY_ALT_MAJOR: u32 = 5;
 pub const MISC_MAJOR: u32 = 10;
+pub const FB_MAJOR: u32 = 29;
 
 #[derive(Copy, Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct DeviceType(dev_t);
@@ -20,6 +21,7 @@ impl DeviceType {
     pub const URANDOM: DeviceType = DeviceType::new(1, 9);
     pub const TTY: DeviceType = DeviceType::new(5, 0);
     pub const PTMX: DeviceType = DeviceType::new(5, 2);
+    pub const FB0: DeviceType = DeviceType::new(29, 0);
 
     pub const fn new(major: u32, minor: u32) -> DeviceType {
         // This encoding is part of the Linux UAPI. The encoded value is

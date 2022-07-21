@@ -11,6 +11,7 @@ pub use binder::*;
 pub use features::*;
 pub use registry::*;
 
+pub mod framebuffer;
 pub mod magma;
 pub mod mem;
 pub mod terminal;

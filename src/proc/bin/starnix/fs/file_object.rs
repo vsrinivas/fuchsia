@@ -172,6 +172,8 @@ pub trait FileOps: Send + Sync + AsAny {
     /// If no options are set and the events are already active at the time of calling, handler
     /// will be called on immediately on the next wait. If `WaitAsyncOptions::EDGE_TRIGGERED` is
     /// specified as an option, active events are not considered.
+    ///
+    /// If your file does not block, implement this with fileops_impl_nonblocking.
     fn wait_async(
         &self,
         _file: &FileObject,
@@ -184,6 +186,8 @@ pub trait FileOps: Send + Sync + AsAny {
 
     /// Cancel a wait set up by wait_async.
     /// Returns true if the wait has not been activated and has been cancelled.
+    ///
+    /// If your file does not block, implement this with fileops_impl_nonblocking.
     fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Arc<Waiter>, _key: WaitKey);
 
     fn query_events(&self, current_task: &CurrentTask) -> FdEvents;

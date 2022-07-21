@@ -13,7 +13,7 @@ use std::ffi::CString;
 use std::sync::Arc;
 
 use crate::auth::Credentials;
-use crate::device::run_features;
+use crate::device::{framebuffer, run_features};
 use crate::execution::*;
 use crate::fs::layeredfs::LayeredFs;
 use crate::fs::tmpfs::TmpFs;
@@ -95,9 +95,14 @@ pub async fn create_galaxy() -> Result<Galaxy, Error> {
     run_features(&CONFIG.features, &init_task)
         .map_err(|e| anyhow!("Failed to initialize features: {:?}", e))?;
     // TODO: This should probably be part of the "feature" CONFIGuration.
-    let kernel = init_task.kernel().clone();
 
+    let kernel = init_task.kernel().clone();
     let root_fs = init_task.fs.clone();
+
+    kernel
+        .device_registry
+        .write()
+        .register_chrdev_major(framebuffer::Framebuffer::new()?, FB_MAJOR)?;
 
     let startup_file_path = if CONFIG.startup_file_path.is_empty() {
         None

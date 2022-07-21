@@ -16,9 +16,6 @@ use crate::lock::RwLock;
 use crate::task::*;
 use crate::types::{DeviceType, Errno, OpenFlags};
 
-//#[cfg(test)]
-//use std::ffi::CString;
-
 pub struct Kernel {
     /// The Zircon job object that holds the processes running in this kernel.
     pub job: zx::Job,

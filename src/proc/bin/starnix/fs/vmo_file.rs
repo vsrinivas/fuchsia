@@ -74,7 +74,7 @@ impl VmoFileObject {
     }
 
     pub fn read_at(
-        vmo: &Arc<zx::Vmo>,
+        vmo: &zx::Vmo,
         file: &FileObject,
         current_task: &CurrentTask,
         offset: usize,
@@ -107,7 +107,7 @@ impl VmoFileObject {
     }
 
     pub fn write_at(
-        vmo: &Arc<zx::Vmo>,
+        vmo: &zx::Vmo,
         file: &FileObject,
         current_task: &CurrentTask,
         offset: usize,
@@ -143,7 +143,7 @@ impl VmoFileObject {
     }
 
     pub fn get_vmo(
-        vmo: &Arc<zx::Vmo>,
+        vmo: &zx::Vmo,
         _file: &FileObject,
         _current_task: &CurrentTask,
         prot: zx::VmarFlags,

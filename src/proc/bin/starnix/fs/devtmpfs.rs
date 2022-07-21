@@ -37,5 +37,7 @@ fn init_devtmpfs() -> FileSystemHandle {
     mkchr(b"tty", DeviceType::TTY);
     root.create_symlink(b"ptmx", b"pts/ptmx", FsCred::root()).unwrap();
 
+    mkchr(b"fb0", DeviceType::FB0);
+
     fs
 }
