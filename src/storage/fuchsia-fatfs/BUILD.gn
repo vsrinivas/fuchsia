@@ -70,7 +70,10 @@ rustc_fuzzer("fat-fuzzer") {
   ]
 
   sources = [ "src/fuzzer.rs" ] + fatfs_sources
-  deps = fatfs_deps + [ "//third_party/rust_crates:futures" ]
+  deps = fatfs_deps + [
+           "//src/lib/fuzzing/rust:fuzz",
+           "//third_party/rust_crates:futures",
+         ]
 }
 
 fuzzers_package("fuchsia-fatfs-fuzzer") {

@@ -97,21 +97,30 @@ rustc_fuzzer("bind_rules_bytecode_fuzzer") {
   edition = "2021"
   source_root = "src/fuzzer/bytecode_fuzzer.rs"
   sources = [ "src/fuzzer/bytecode_fuzzer.rs" ]
-  deps = [ ":lib" ]
+  deps = [
+    ":lib",
+    "//src/lib/fuzzing/rust:fuzz",
+  ]
 }
 
 rustc_fuzzer("instruction_section_fuzzer") {
   edition = "2021"
   source_root = "src/fuzzer/bytecode_section_fuzzer.rs"
   sources = [ "src/fuzzer/bytecode_section_fuzzer.rs" ]
-  deps = [ ":lib" ]
+  deps = [
+    ":lib",
+    "//src/lib/fuzzing/rust:fuzz",
+  ]
 }
 
 rustc_fuzzer("symbol_table_section_fuzzer") {
   edition = "2021"
   source_root = "src/fuzzer/bytecode_section_fuzzer.rs"
   sources = [ "src/fuzzer/bytecode_section_fuzzer.rs" ]
-  deps = [ ":lib" ]
+  deps = [
+    ":lib",
+    "//src/lib/fuzzing/rust:fuzz",
+  ]
 }
 
 fuzzers_package("bind-fuzzers") {

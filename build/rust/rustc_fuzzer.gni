@@ -85,6 +85,7 @@ template("rustc_fuzzer") {
   rustc_staticlib(fuzzer_lib) {
     forward_variables_from(invoker,
                            [
+                             "deps",
                              "version",
                              "edition",
                              "source_root",
@@ -94,29 +95,15 @@ template("rustc_fuzzer") {
                              "features",
                              "rustenv",
                            ])
+
     visibility = [ ":*" ]
     testonly = true
     configs = []
-    configs += invoker.configs
-    configs += [ ":$fuzzer_cfg" ]
-
-    # TODO(https://fxbug.dev/104019): Avoid this suppression. At the time of
-    # writing it is needed because the fuzz macro uses the arbitrary crate, and
-    # there's no support for import-hygienic procedural macros.
-    configs += [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
-
-    deps = [
-      "//src/lib/fuzzing/rust:fuzz",
-      "//third_party/rust_crates:arbitrary",
-    ]
-    if (defined(invoker.deps)) {
-      deps += invoker.deps
-    }
+    configs = [ ":$fuzzer_cfg" ] + invoker.configs
     original_target_name = _original_target_name
   }
 
   fuzzer(fuzzer_name) {
-    non_rust_deps = []
     forward_variables_from(invoker,
                            "*",
                            [
@@ -130,7 +117,6 @@ template("rustc_fuzzer") {
                              "configs",
                            ])
     deps = [ ":$fuzzer_lib" ]
-    deps += non_rust_deps
 
     # fxbug.dev/94239: rustc multiple codegen units seems incompatible
     # with fuzzing.

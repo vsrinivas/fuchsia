@@ -99,6 +99,7 @@ rustc_fuzzer("fuzz-parse-packet") {
     "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet-formats-dhcp",
     "//src/connectivity/ppp/lib/ppp_packet",
+    "//src/lib/fuzzing/rust:fuzz",
     "//src/lib/mdns/rust:mdns",
     "//src/lib/network/netsvc-proto",
     "//src/lib/network/packet",

@@ -180,6 +180,7 @@ rustc_fuzzer("fuzz-single-device") {
            "//src/connectivity/lib/fuzz-util",
            "//src/connectivity/lib/net-declare",
            "//src/connectivity/lib/net-types",
+           "//src/lib/fuzzing/rust:fuzz",
            "//src/lib/network/packet",
            "//third_party/rust_crates:arbitrary",
            "//third_party/rust_crates:lazy_static",

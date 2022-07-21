@@ -11,6 +11,10 @@ import("//build/rust/rustc_library.gni")
 rustc_fuzzer("toy_example_arbitrary") {
   edition = "2021"
   sources = [ "src/lib.rs" ]
+  deps = [
+    "//src/lib/fuzzing/rust:fuzz",
+    "//third_party/rust_crates:arbitrary",
+  ]
 }
 
 # If the fuzz target function name differs from the fuzzer name, provide it via
@@ -20,6 +24,10 @@ rustc_fuzzer("toy_example_raw_bytes") {
   rustfunction = "toy_example_u8"
 
   sources = [ "src/lib.rs" ]
+  deps = [
+    "//src/lib/fuzzing/rust:fuzz",
+    "//third_party/rust_crates:arbitrary",
+  ]
 }
 
 # If it is infeasible to refactor a Rust binary into a library, set the
@@ -28,7 +36,11 @@ rustc_fuzzer("toy_example_raw_bytes") {
 rustc_fuzzer("toy_example_with_main") {
   edition = "2021"
   source_root = "src/main.rs"
-  deps = [ ":helper" ]
+  deps = [
+    ":helper",
+    "//src/lib/fuzzing/rust:fuzz",
+    "//third_party/rust_crates:arbitrary",
+  ]
 
   sources = [ "src/main.rs" ]
 }
@@ -44,7 +56,11 @@ rustc_library("helper") {
 
 rustc_fuzzer("toy_example_same_name") {
   edition = "2021"
-  deps = [ ":helper" ]
+  deps = [
+    ":helper",
+    "//src/lib/fuzzing/rust:fuzz",
+    "//third_party/rust_crates:arbitrary",
+  ]
 
   sources = [ "src/lib.rs" ]
 }
