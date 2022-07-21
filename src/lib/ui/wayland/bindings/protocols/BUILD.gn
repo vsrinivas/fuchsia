@@ -29,6 +29,7 @@ group("protocols") {
 
 wayland_protocol("wayland") {
   protocol = "//third_party/wayland/protocol/wayland.xml"
+  need_fuchsia_zircon = true
 }
 
 wayland_protocol("wp_viewporter") {
@@ -42,6 +43,7 @@ wayland_protocol("xdg_shell") {
 wayland_protocol("zwp_linux_dmabuf_v1") {
   protocol = "third_party/freedesktop.org/unstable/linux-dmabuf/linux-dmabuf-unstable-v1.xml"
   deps = [ ":wayland" ]
+  need_fuchsia_zircon = true
 }
 
 wayland_protocol("zaura_shell") {

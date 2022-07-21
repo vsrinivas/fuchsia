@@ -45,6 +45,7 @@ rustc_test("wayland_scanner_front_end_test") {
 
 wayland_protocol("test_protocol") {
   protocol = "tests/test_protocol.xml"
+  need_fuchsia_zircon = true
 }
 
 rustc_test("wayland_scanner_back_end_test") {

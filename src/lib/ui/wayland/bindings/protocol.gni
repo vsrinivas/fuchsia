@@ -15,6 +15,10 @@ import("//build/rust/rustc_library.gni")
 #     Additional protocol dependencies for this protocol. These labels should
 #     correspond another `wayland_protocol` target.
 #
+#   need_fuchsia_zircon (optional, default = false)
+#     Whether the generated rust library should depend on the fuchsia-zircon
+#     crate.
+#
 # Ex:
 #    wayland_protocol("base") {
 #        protocol = "base_protocol.xml"
@@ -67,21 +71,18 @@ template("wayland_protocol") {
       deps = [
         "//src/lib/trace/rust:trace",
         "//src/lib/ui/wayland/core",
-        "//src/lib/zircon/rust:fuchsia-zircon",
         "//third_party/rust_crates:anyhow",
         "//third_party/rust_crates:bitflags",
       ]
+      if (defined(invoker.need_fuchsia_zircon) && invoker.need_fuchsia_zircon) {
+        deps += [ "//src/lib/zircon/rust:fuchsia-zircon" ]
+      }
       foreach(dep, protocol_deps) {
         deps += [ dep + "_${type}_protocol" ]
       }
       source_root = target_crate_root + "_${type}_protocol.rs"
 
       sources = [ target_crate_root + "_${type}_protocol.rs" ]
-
-      # TODO(https://fxbug.dev/104019): Avoid this suppression. At the time of
-      # writing it is needed because fuchsia-zircon is not used by all
-      # protocols.
-      configs += [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
     }
   }
 }
