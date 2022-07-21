@@ -10,7 +10,7 @@ use fuchsia_async::{Task, Timer, WakeupTime};
 use fuchsia_syslog::fx_log_err;
 use futures::channel::mpsc::UnboundedSender;
 use futures::future::OptionFuture;
-use futures::lock::Mutex;
+use futures::lock::{Mutex, MutexGuard};
 use futures::{FutureExt, StreamExt};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
@@ -399,37 +399,52 @@ impl DeviceStorage {
         Ok(())
     }
 
+    async fn get_inner(
+        &self,
+        key: &'static str,
+    ) -> (MutexGuard<'_, CachedStorage>, Option<Option<String>>) {
+        let typed_storage = self
+            .typed_storage_map
+            .get(key)
+            // TODO(fxbug.dev/67371) Replace this with an error result.
+            .unwrap_or_else(|| panic!("Invalid data keyed by {}", key));
+        let cached_storage = typed_storage.cached_storage.lock().await;
+        let new = if cached_storage.current_data.is_none() || !self.caching_enabled {
+            let stash_key = prefixed(key);
+            if let Some(stash_value) =
+                cached_storage.stash_proxy.get_value(&stash_key).await.unwrap_or_else(|_| {
+                    panic!("failed to get value from stash for {:?}", stash_key)
+                })
+            {
+                if let Value::Stringval(string_value) = *stash_value {
+                    Some(Some(string_value))
+                } else {
+                    panic!("Unexpected type for key found in stash");
+                }
+            } else {
+                Some(None)
+            }
+        } else {
+            None
+        };
+
+        (cached_storage, new)
+    }
+
     /// Gets the latest value cached locally, or loads the value from storage.
     /// Doesn't support multiple concurrent callers of the same struct.
     pub(crate) async fn get<T>(&self) -> T
     where
         T: DeviceStorageCompatible,
     {
-        let typed_storage = self
-            .typed_storage_map
-            .get(T::KEY)
-            // TODO(fxbug.dev/67371) Replace this with an error result.
-            .unwrap_or_else(|| panic!("Invalid data keyed by {}", T::KEY));
-        let mut cached_storage = typed_storage.cached_storage.lock().await;
-        if cached_storage.current_data.is_none() || !self.caching_enabled {
-            let stash_key = prefixed(T::KEY);
-            if let Some(stash_value) =
-                cached_storage.stash_proxy.get_value(&stash_key).await.unwrap_or_else(|_| {
-                    panic!("failed to get value from stash for {:?}", stash_key)
-                })
-            {
-                if let Value::Stringval(string_value) = &*stash_value {
-                    cached_storage.current_data =
-                        Some(Box::new(T::deserialize_from(&string_value))
-                            as Box<dyn Any + Send + Sync>);
-                } else {
-                    panic!("Unexpected type for key found in stash");
-                }
+        let (mut cached_storage, update) = self.get_inner(T::KEY).await;
+        if let Some(update) = update {
+            cached_storage.current_data = if let Some(string_value) = update {
+                Some(Box::new(T::deserialize_from(&string_value)) as Box<dyn Any + Send + Sync>)
             } else {
-                cached_storage.current_data =
-                    Some(Box::new(T::default_value()) as Box<dyn Any + Send + Sync>);
-            }
-        }
+                Some(Box::new(T::default_value()) as Box<dyn Any + Send + Sync>)
+            };
+        };
 
         cached_storage
             .current_data

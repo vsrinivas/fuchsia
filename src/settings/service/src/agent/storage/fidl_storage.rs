@@ -17,7 +17,7 @@ use fuchsia_syslog::fx_log_err;
 use fuchsia_zircon as zx;
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::future::OptionFuture;
-use futures::lock::Mutex;
+use futures::lock::{Mutex, MutexGuard};
 use futures::{FutureExt, StreamExt};
 use std::any::Any;
 use std::collections::HashMap;
@@ -336,17 +336,12 @@ impl FidlStorage {
         self.inner_write(T::KEY, new_value).await
     }
 
-    /// Gets the latest value cached locally, or loads the value from storage.
-    /// Doesn't support multiple concurrent callers of the same struct.
-    pub(crate) async fn get<T>(&self) -> T
-    where
-        T: FidlStorageConvertible,
-    {
+    async fn get_inner(&self, key: &'static str) -> MutexGuard<'_, CachedStorage> {
         let typed_storage = self
             .typed_storage_map
-            .get(T::KEY)
+            .get(key)
             // TODO(fxbug.dev/67371) Replace this with an error result.
-            .unwrap_or_else(|| panic!("Invalid data keyed by {}", T::KEY));
+            .unwrap_or_else(|| panic!("Invalid data keyed by {}", key));
         let mut cached_storage = typed_storage.cached_storage.lock().await;
         if cached_storage.current_data.is_none() || !self.caching_enabled {
             if let Some(file_proxy) = match fuchsia_fs::directory::open_file(
@@ -359,13 +354,13 @@ impl FidlStorage {
                 Ok(file_proxy) => Some(file_proxy),
                 Err(OpenError::OpenError(Status::NOT_FOUND)) => None,
                 // TODO(fxbug.dev/67371) Replace this with an error result.
-                Err(e) => panic!("failed to open file for {:?}: {:?}", T::KEY, e),
+                Err(e) => panic!("failed to open file for {:?}: {:?}", key, e),
             } {
                 let data = match fuchsia_fs::file::read(&file_proxy).await {
                     Ok(data) => Some(data),
                     Err(ReadError::ReadError(Status::NOT_FOUND)) => None,
                     // TODO(fxbug.dev/67371) Replace this with an error result.
-                    Err(e) => panic!("failed to get fidl data from disk for {:?}: {:?}", T::KEY, e),
+                    Err(e) => panic!("failed to get fidl data from disk for {:?}: {:?}", key, e),
                 };
 
                 cached_storage.current_data = data;
@@ -373,6 +368,16 @@ impl FidlStorage {
         }
 
         cached_storage
+    }
+
+    /// Gets the latest value cached locally, or loads the value from storage.
+    /// Doesn't support multiple concurrent callers of the same struct.
+    pub(crate) async fn get<T>(&self) -> T
+    where
+        T: FidlStorageConvertible,
+    {
+        self.get_inner(T::KEY)
+            .await
             .current_data
             .as_ref()
             .map(|data| {
