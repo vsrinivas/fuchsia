@@ -8,7 +8,7 @@ use {
         static_pkgs::collection::{StaticPkgsCollection, StaticPkgsContents, StaticPkgsError},
     },
     anyhow::{Context, Result},
-    fuchsia_archive::Reader as FarReader,
+    fuchsia_archive::Utf8Reader as FarReader,
     fuchsia_hash::Hash,
     fuchsia_merkle::MerkleTree,
     fuchsia_url::{PackageName, PackageVariant},

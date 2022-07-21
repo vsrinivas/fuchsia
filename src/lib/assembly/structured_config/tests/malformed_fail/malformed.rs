@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 use assembly_structured_config::{validate_component, ValidationError};
-use fuchsia_archive::Reader;
+use fuchsia_archive::Utf8Reader;
 use std::io::Cursor;
 
 const FAIL_MISSING_PROGRAM: &str = "meta/fail_missing_program.cm";
 const FAIL_BAD_RUNNER: &str = "meta/fail_bad_runner.cm";
 
-fn malformed_test_meta_far() -> Reader<Cursor<Vec<u8>>> {
-    Reader::new(Cursor::new(std::fs::read(env!("TEST_META_FAR")).unwrap())).unwrap()
+fn malformed_test_meta_far() -> Utf8Reader<Cursor<Vec<u8>>> {
+    Utf8Reader::new(Cursor::new(std::fs::read(env!("TEST_META_FAR")).unwrap())).unwrap()
 }
 
 #[test]

@@ -34,6 +34,13 @@ pub enum Error {
     #[error("while instantiating a fuchsia archive reader")]
     ArchiveReader(#[source] fuchsia_archive::Error),
 
+    #[error("meta.far has a path that is not valid utf-8: {path:?}")]
+    NonUtf8MetaEntry {
+        #[source]
+        source: std::str::Utf8Error,
+        path: Vec<u8>,
+    },
+
     #[error("while reading meta/contents")]
     ReadMetaContents(#[source] fuchsia_archive::Error),
 
@@ -55,7 +62,7 @@ impl Error {
             ArchiveReader(_) | ReadMetaContents(_) | DeserializeMetaContents(_) => {
                 zx::Status::INVALID_ARGS
             }
-            FileDirectoryCollision { .. } => zx::Status::INVALID_ARGS,
+            FileDirectoryCollision { .. } | NonUtf8MetaEntry { .. } => zx::Status::INVALID_ARGS,
         }
     }
 }

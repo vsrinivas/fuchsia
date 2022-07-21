@@ -173,7 +173,7 @@ mod test {
 
     fn read_far_contents(path: &Path) -> BTreeMap<String, String> {
         let mut metafar = File::open(path).unwrap();
-        let mut far_reader = fuchsia_archive::Reader::new(&mut metafar).unwrap();
+        let mut far_reader = fuchsia_archive::Utf8Reader::new(&mut metafar).unwrap();
         let far_paths = far_reader.list().map(|e| e.path().to_string()).collect::<Vec<_>>();
 
         let mut far_contents = BTreeMap::new();

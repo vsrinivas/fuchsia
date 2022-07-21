@@ -125,7 +125,7 @@ pub struct BasePackageBuildResults {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fuchsia_archive::Reader;
+    use fuchsia_archive::Utf8Reader;
     use fuchsia_hash::Hash;
     use fuchsia_pkg::{BlobInfo, MetaPackage, PackageManifest, PackageManifestBuilder};
     use fuchsia_url::PinnedAbsolutePackageUrl;
@@ -193,7 +193,7 @@ mod tests {
         }
 
         // Read the output and ensure it contains the right files (and their hashes)
-        let mut far_reader = Reader::new(File::open(&far_path).unwrap()).unwrap();
+        let mut far_reader = Utf8Reader::new(File::open(&far_path).unwrap()).unwrap();
         let package = far_reader.read_file("meta/package").unwrap();
         assert_eq!(br#"{"name":"system_image","version":"0"}"#, &*package);
         let contents = far_reader.read_file("meta/contents").unwrap();

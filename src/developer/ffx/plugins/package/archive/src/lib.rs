@@ -111,7 +111,7 @@ mod test {
         cmd_archive(cmd).await.unwrap();
         assert!(result_far.exists());
         let archive = File::open(&result_far).unwrap();
-        let mut package_archive = fuchsia_archive::Reader::new(&archive).unwrap();
+        let mut package_archive = fuchsia_archive::Utf8Reader::new(&archive).unwrap();
         assert_eq!(package_archive.read_file("meta.far").unwrap().len(), 16384);
         assert_eq!(
             package_archive

@@ -112,7 +112,7 @@ fn find_meta_far(build_dir: &PathBuf, manifest_path: String) -> Result<PathBuf, 
 
 fn cm_decl_from_meta_far(meta_far_path: &PathBuf, cm_path: &str) -> Result<Component, Error> {
     let mut meta_far = fs::File::open(meta_far_path)?;
-    let mut far_reader = fuchsia_archive::Reader::new(&mut meta_far)?;
+    let mut far_reader = fuchsia_archive::Utf8Reader::new(&mut meta_far)?;
     let cm_contents = far_reader.read_file(cm_path)?;
     let decl: Component = decode_persistent(&cm_contents)?;
     Ok(decl)

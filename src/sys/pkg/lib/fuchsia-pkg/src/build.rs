@@ -259,7 +259,8 @@ mod test_build_with_file_system {
             &file_system,
         )
         .unwrap();
-        let mut reader = fuchsia_archive::Reader::new(File::open(&meta_far_path).unwrap()).unwrap();
+        let mut reader =
+            fuchsia_archive::Utf8Reader::new(File::open(&meta_far_path).unwrap()).unwrap();
         let actual_meta_package_bytes = reader.read_file("meta/package").unwrap();
         let expected_meta_package_bytes = v.as_slice();
         assert_eq!(actual_meta_package_bytes.as_slice(), &expected_meta_package_bytes[..]);
@@ -329,7 +330,8 @@ mod test_build_with_file_system {
                 &file_system,
             )
                 .unwrap();
-            let reader = fuchsia_archive::Reader::new(File::open(&meta_far_path).unwrap()).unwrap();
+            let reader =
+                fuchsia_archive::Utf8Reader::new(File::open(&meta_far_path).unwrap()).unwrap();
             let expected_far_directory_names = {
                 let mut map: HashSet<&str> = HashSet::new();
                 for path in GENERATED_FAR_CONTENTS.iter() {
@@ -365,7 +367,8 @@ mod test_build_with_file_system {
                 &file_system,
             )
                 .unwrap();
-            let mut reader = fuchsia_archive::Reader::new(File::open(&meta_far_path).unwrap()).unwrap();
+            let mut reader =
+                fuchsia_archive::Utf8Reader::new(File::open(&meta_far_path).unwrap()).unwrap();
             for (resource_path, host_path) in creation_manifest.far_contents().iter() {
                 let expected_contents = file_system.content_map.get(host_path).unwrap();
                 let actual_contents = reader.read_file(resource_path).unwrap();
@@ -394,7 +397,8 @@ mod test_build_with_file_system {
                 &file_system,
             )
                 .unwrap();
-            let mut reader = fuchsia_archive::Reader::new(File::open(&meta_far_path).unwrap()).unwrap();
+            let mut reader =
+                fuchsia_archive::Utf8Reader::new(File::open(&meta_far_path).unwrap()).unwrap();
             let meta_contents =
                 MetaContents::deserialize(
                     reader.read_file("meta/contents").unwrap().as_slice())
@@ -504,7 +508,8 @@ mod test_build {
                 None,
             )
                 .unwrap();
-            let mut reader = fuchsia_archive::Reader::new(fs::File::open(&meta_far_path).unwrap()).unwrap();
+            let mut reader =
+                fuchsia_archive::Utf8Reader::new(fs::File::open(&meta_far_path).unwrap()).unwrap();
             for (resource_path, host_path) in creation_manifest.far_contents().iter() {
                 let expected_contents = std::fs::read(host_path).unwrap();
                 let actual_contents = reader.read_file(resource_path).unwrap();

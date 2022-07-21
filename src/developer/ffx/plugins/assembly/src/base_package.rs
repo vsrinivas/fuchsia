@@ -81,7 +81,7 @@ pub fn construct_base_package(
 mod tests {
     use super::*;
 
-    use fuchsia_archive::Reader;
+    use fuchsia_archive::Utf8Reader;
     use serde_json::json;
     use std::fs::File;
     use std::io::Write;
@@ -114,7 +114,7 @@ mod tests {
 
         // Read the base package, and assert the contents are correct.
         let base_package_file = File::open(base_package.path).unwrap();
-        let mut far_reader = Reader::new(&base_package_file).unwrap();
+        let mut far_reader = Utf8Reader::new(&base_package_file).unwrap();
         let contents = far_reader.read_file("meta/contents").unwrap();
         let contents = std::str::from_utf8(&contents).unwrap();
         let expected_contents = "\
@@ -153,7 +153,7 @@ mod tests {
 
         // Read the base package, and assert the contents are correct.
         let base_package_file = File::open(base_package.path).unwrap();
-        let mut far_reader = Reader::new(&base_package_file).unwrap();
+        let mut far_reader = Utf8Reader::new(&base_package_file).unwrap();
         let contents = far_reader.read_file("meta/package").unwrap();
         let contents = std::str::from_utf8(&contents).unwrap();
 

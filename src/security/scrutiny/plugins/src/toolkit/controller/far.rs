@@ -4,7 +4,7 @@
 
 use {
     anyhow::Result,
-    fuchsia_archive::Reader as FarReader,
+    fuchsia_archive::Utf8Reader as FarReader,
     scrutiny::{
         model::controller::{DataController, HintDataType},
         model::model::*,

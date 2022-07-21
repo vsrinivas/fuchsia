@@ -320,7 +320,7 @@ async fn get_blobs(
 
     let mut archive = File::open(&meta_far_path)
         .map_err(|e| ffx_error!(r#"Cannot open meta_far "{}": {}"#, meta_far_path.display(), e))?;
-    let mut meta_far = fuchsia_archive::Reader::new(&mut archive).map_err(|e| {
+    let mut meta_far = fuchsia_archive::Utf8Reader::new(&mut archive).map_err(|e| {
         ffx_error!(r#"Cannot read fuchsia_archive "{}": {}"#, meta_far_path.display(), e)
     })?;
     let meta_contents = meta_far.read_file("meta/contents").map_err(|e| {

@@ -109,7 +109,7 @@ mod tests {
         assert_eq!(config_data_manifest.name().as_ref(), "config-data");
 
         let mut config_data_metafar = File::open(config_data_metafar_path).unwrap();
-        let mut far_reader = fuchsia_archive::Reader::new(&mut config_data_metafar).unwrap();
+        let mut far_reader = fuchsia_archive::Utf8Reader::new(&mut config_data_metafar).unwrap();
         let config_file_data = far_reader.read_file("meta/data/foo/dest/path").unwrap();
         assert_eq!(config_file_data, "some data".as_bytes());
     }

@@ -99,11 +99,11 @@ tests! {
 
     directory_entries_not_sorted =>
         Err(Error::DirectoryEntriesOutOfOrder { entry_index: 1, name, previous_name})
-            if name == "a" && previous_name == "b",
+            if name == b"a" && previous_name == b"b",
 
     directory_entries_with_same_name =>
         Err(Error::DirectoryEntriesOutOfOrder { entry_index: 1, name, previous_name})
-            if name == "a" && previous_name == "a",
+            if name == b"a" && previous_name == b"a",
 
     directory_names_chunk_length_not_a_multiple_of_8_bytes =>
         Err(Error::InvalidDirectoryNamesChunkLen(1)),
@@ -127,44 +127,53 @@ tests! {
 
     zero_length_name =>  Err(Error::ZeroLengthName),
 
-    name_with_null_character =>  Err(Error::NameContainsNull(name)) if name == "\0",
+    name_with_null_character => Err(Error::NameContainsNull(name)) if name == b"\0",
 
-    name_with_leading_slash =>  Err(Error::NameStartsWithSlash(name)) if name == "/a",
+    name_with_leading_slash => Err(Error::NameStartsWithSlash(name)) if name == b"/a",
 
-    name_with_trailing_slash =>  Err(Error::NameEndsWithSlash(name)) if name == "a/",
+    name_with_trailing_slash => Err(Error::NameEndsWithSlash(name)) if name == b"a/",
 
-    name_with_empty_segment =>  Err(Error::NameContainsEmptySegment(name)) if name == "a//a",
+    name_with_empty_segment =>
+        Err(Error::NameContainsEmptySegment(name)) if name == b"a//a",
 
-    name_with_dot_segment =>  Err(Error::NameContainsDotSegment(name)) if name == "a/./a",
+    name_with_dot_segment =>
+        Err(Error::NameContainsDotSegment(name)) if name == b"a/./a",
 
-    name_with_dot_dot_segment =>  Err(Error::NameContainsDotDotSegment(name)) if name == "a/../a",
+    name_with_dot_dot_segment =>
+        Err(Error::NameContainsDotDotSegment(name)) if name == b"a/../a",
 
     content_chunk_starts_early =>
-        Err(Error::InvalidContentChunkOffset{name, expected: 4096, actual: 4095}) if name == "a",
+        Err(Error::InvalidContentChunkOffset{name, expected: 4096, actual: 4095})
+        if name == b"a",
 
     content_chunk_starts_late =>
-        Err(Error::InvalidContentChunkOffset{name, expected: 4096, actual: 4097}) if name == "a",
+        Err(Error::InvalidContentChunkOffset{name, expected: 4096, actual: 4097})
+        if name == b"a",
 
     second_content_chunk_starts_early =>
-        Err(Error::InvalidContentChunkOffset{name, expected: 8192, actual: 8191}) if name == "b",
+        Err(Error::InvalidContentChunkOffset{name, expected: 8192, actual: 8191})
+        if name == b"b",
 
     second_content_chunk_starts_late =>
-        Err(Error::InvalidContentChunkOffset{name, expected: 8192, actual: 8193}) if name == "b",
+        Err(Error::InvalidContentChunkOffset{name, expected: 8192, actual: 8193})
+        if name == b"b",
 
     content_chunk_not_zero_padded =>
         Err(Error::ContentChunkBeyondArchive{name, lower_bound: 8192, archive_size: 4097})
-        if name == "a",
+        if name == b"a",
 
     content_chunk_overlap =>
-        Err(Error::InvalidContentChunkOffset{name, expected: 12288, actual: 8192}) if name == "b",
+        Err(Error::InvalidContentChunkOffset{name, expected: 12288, actual: 8192})
+        if name == b"b",
 
     content_chunk_not_tightly_packed =>
-        Err(Error::InvalidContentChunkOffset{name, expected: 4096, actual: 8192}) if name == "a",
+        Err(Error::InvalidContentChunkOffset{name, expected: 4096, actual: 8192})
+        if name == b"a",
 
     content_chunk_offset_past_end_of_file =>
         Err(Error::ContentChunkBeyondArchive{
             name,
             lower_bound: 4096,
             archive_size: 104})
-        if name == "a",
+        if name == b"a",
 }

@@ -267,7 +267,7 @@ impl<'a> PackageFetcher<'a> {
         let meta_far_path = self.fetch_blob(&meta_far_hash).await?;
 
         let mut archive = File::open(&meta_far_path)?;
-        let mut meta_far = fuchsia_archive::Reader::new(&mut archive)?;
+        let mut meta_far = fuchsia_archive::Utf8Reader::new(&mut archive)?;
         let meta_contents = meta_far.read_file("meta/contents")?;
         let meta_contents = MetaContents::deserialize(meta_contents.as_slice())?.into_contents();
 

@@ -4,16 +4,16 @@
 
 use {
     crate::{
-        align, name::validate_name, DirectoryEntry, Error, Index, IndexEntry, CONTENT_ALIGNMENT,
-        DIRECTORY_ENTRY_LEN, DIR_CHUNK_TYPE, DIR_NAMES_CHUNK_TYPE, INDEX_ENTRY_LEN, INDEX_LEN,
-        MAGIC_INDEX_VALUE,
+        name::validate_name, next_multiple_of, DirectoryEntry, Error, Index, IndexEntry,
+        CONTENT_ALIGNMENT, DIRECTORY_ENTRY_LEN, DIR_CHUNK_TYPE, DIR_NAMES_CHUNK_TYPE,
+        INDEX_ENTRY_LEN, INDEX_LEN, MAGIC_INDEX_VALUE,
     },
-    bincode::serialize_into,
     std::{
         collections::BTreeMap,
         convert::TryInto as _,
         io::{copy, Read, Write},
     },
+    zerocopy::AsBytes as _,
 };
 
 fn write_zeros(mut target: impl Write, count: usize) -> Result<(), Error> {
@@ -30,7 +30,7 @@ fn write_zeros(mut target: impl Write, count: usize) -> Result<(), Error> {
 /// * `path_content_map` - map from archive relative path to (size, contents)
 pub fn write(
     mut target: impl Write,
-    path_content_map: BTreeMap<impl AsRef<str>, (u64, Box<dyn Read + '_>)>,
+    path_content_map: BTreeMap<impl AsRef<[u8]>, (u64, Box<dyn Read + '_>)>,
 ) -> Result<(), Error> {
     // `write` could be written to take the content chunks as one of:
     // 1. Box<dyn Read>: requires an allocation per chunk
@@ -41,71 +41,74 @@ pub fn write(
     let mut directory_entries = vec![];
     for (destination_name, (size, _)) in &path_content_map {
         let destination_name = destination_name.as_ref();
-        validate_name(destination_name.as_bytes())?;
+        validate_name(destination_name)?;
         directory_entries.push(DirectoryEntry {
-            name_offset: path_data.len() as u32,
+            name_offset: u32::try_from(path_data.len()).map_err(|_| Error::TooMuchPathData)?.into(),
             name_length: destination_name
                 .len()
                 .try_into()
                 .map_err(|_| Error::NameTooLong(destination_name.len()))?,
-            reserved: 0,
-            data_offset: 0,
-            data_length: *size,
-            reserved2: 0,
+            reserved: 0.into(),
+            data_offset: 0.into(),
+            data_length: (*size).into(),
+            reserved2: 0.into(),
         });
         path_data.extend_from_slice(destination_name.as_bytes());
     }
 
-    let index = Index { magic: MAGIC_INDEX_VALUE, length: 2 * INDEX_ENTRY_LEN as u64 };
+    let index = Index { magic: MAGIC_INDEX_VALUE, length: (2 * INDEX_ENTRY_LEN).into() };
 
     let dir_index = IndexEntry {
         chunk_type: DIR_CHUNK_TYPE,
-        offset: INDEX_LEN + INDEX_ENTRY_LEN * 2,
-        length: directory_entries.len() as u64 * DIRECTORY_ENTRY_LEN,
+        offset: (INDEX_LEN + INDEX_ENTRY_LEN * 2).into(),
+        length: (directory_entries.len() as u64 * DIRECTORY_ENTRY_LEN).into(),
     };
 
     let name_index = IndexEntry {
         chunk_type: DIR_NAMES_CHUNK_TYPE,
-        offset: dir_index.offset + dir_index.length,
-        length: align(path_data.len() as u64, 8),
+        offset: (dir_index.offset.get() + dir_index.length.get()).into(),
+        length: next_multiple_of(path_data.len() as u64, 8).into(),
     };
 
-    serialize_into(&mut target, &index).map_err(Error::SerializeIndex)?;
+    target.write_all(index.as_bytes()).map_err(Error::SerializeIndex)?;
 
-    serialize_into(&mut target, &dir_index).map_err(Error::SerializeDirectoryChunkIndexEntry)?;
+    target.write_all(dir_index.as_bytes()).map_err(Error::SerializeDirectoryChunkIndexEntry)?;
 
-    serialize_into(&mut target, &name_index)
+    target
+        .write_all(name_index.as_bytes())
         .map_err(Error::SerializeDirectoryNamesChunkIndexEntry)?;
 
-    let mut content_offset = align(name_index.offset + name_index.length, CONTENT_ALIGNMENT);
+    let mut content_offset =
+        next_multiple_of(name_index.offset.get() + name_index.length.get(), CONTENT_ALIGNMENT);
 
     for entry in &mut directory_entries {
-        entry.data_offset = content_offset;
-        content_offset = align(content_offset + entry.data_length, CONTENT_ALIGNMENT);
-        serialize_into(&mut target, &entry).map_err(Error::SerializeDirectoryEntry)?;
+        entry.data_offset = content_offset.into();
+        content_offset =
+            next_multiple_of(content_offset + entry.data_length.get(), CONTENT_ALIGNMENT);
+        target.write_all(entry.as_bytes()).map_err(Error::SerializeDirectoryEntry)?;
     }
 
     target.write_all(&path_data).map_err(Error::Write)?;
 
-    write_zeros(&mut target, name_index.length as usize - path_data.len())?;
+    write_zeros(&mut target, name_index.length.get() as usize - path_data.len())?;
 
-    let pos = name_index.offset + name_index.length;
-    let padding_count = align(pos, CONTENT_ALIGNMENT) - pos;
+    let pos = name_index.offset.get() + name_index.length.get();
+    let padding_count = next_multiple_of(pos, CONTENT_ALIGNMENT) - pos;
     write_zeros(&mut target, padding_count as usize)?;
 
     for (entry_index, (archive_path, (_, mut contents))) in path_content_map.into_iter().enumerate()
     {
         let bytes_read = copy(&mut contents, &mut target).map_err(Error::Copy)?;
-        if bytes_read != directory_entries[entry_index].data_length {
+        if bytes_read != directory_entries[entry_index].data_length.get() {
             return Err(Error::ContentChunkSizeMismatch {
-                expected: directory_entries[entry_index].data_length,
+                expected: directory_entries[entry_index].data_length.get(),
                 actual: bytes_read,
-                path: archive_path.as_ref().to_string(),
+                path: archive_path.as_ref().into(),
             });
         }
-        let pos =
-            directory_entries[entry_index].data_offset + directory_entries[entry_index].data_length;
-        let padding_count = align(pos, CONTENT_ALIGNMENT) - pos;
+        let pos = directory_entries[entry_index].data_offset.get()
+            + directory_entries[entry_index].data_length.get();
+        let padding_count = next_multiple_of(pos, CONTENT_ALIGNMENT) - pos;
         write_zeros(&mut target, padding_count as usize)?;
     }
 
@@ -145,8 +148,8 @@ mod tests {
 
     #[test]
     fn validates_name() {
-        let mut path_content_map: BTreeMap<&str, (u64, Box<dyn Read>)> = BTreeMap::new();
-        path_content_map.insert(".", (0, Box::new("".as_bytes())));
+        let path_content_map =
+            BTreeMap::from_iter([(".", (0, Box::new("".as_bytes()) as Box<dyn Read>))]);
         let mut target = Cursor::new(Vec::new());
         assert_matches!(
             write(&mut target, path_content_map),

@@ -4,7 +4,7 @@
 
 use assembly_structured_config::{validate_component, Repackager, ValidationError};
 use assembly_validate_product::{validate_package, PackageValidationError};
-use fuchsia_archive::Reader;
+use fuchsia_archive::Utf8Reader;
 use fuchsia_pkg::{BlobInfo, PackageBuilder, PackageManifest};
 use maplit::btreemap;
 use std::io::Cursor;
@@ -17,7 +17,7 @@ const FAIL_MISSING_CONFIG: &str = "meta/fail_missing_config.cm";
 fn test_package_manifest() -> (PackageManifest, TempDir) {
     // read the archive file
     let archive =
-        Reader::new(Cursor::new(std::fs::read(env!("TEST_PACKAGE_FAR")).unwrap())).unwrap();
+        Utf8Reader::new(Cursor::new(std::fs::read(env!("TEST_PACKAGE_FAR")).unwrap())).unwrap();
 
     // unpack the archive and create a manifest
     let outdir = TempDir::new().unwrap();
@@ -31,11 +31,11 @@ fn test_package_manifest() -> (PackageManifest, TempDir) {
     (manifest, outdir)
 }
 
-fn test_meta_far() -> (Reader<Cursor<Vec<u8>>>, TempDir) {
+fn test_meta_far() -> (Utf8Reader<Cursor<Vec<u8>>>, TempDir) {
     let (package_manifest, unpacked) = test_package_manifest();
     let meta_far_source =
         package_manifest.blobs().iter().find(|b| b.path == "meta/").unwrap().source_path.clone();
-    let reader = Reader::new(Cursor::new(std::fs::read(meta_far_source).unwrap())).unwrap();
+    let reader = Utf8Reader::new(Cursor::new(std::fs::read(meta_far_source).unwrap())).unwrap();
     (reader, unpacked)
 }
 

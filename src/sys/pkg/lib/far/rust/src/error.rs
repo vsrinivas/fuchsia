@@ -13,6 +13,9 @@ pub enum Error {
     #[error("Names can be no longer than 65,535 bytes, supplied name was {0} bytes")]
     NameTooLong(usize),
 
+    #[error("The length of the concatenated path data must fit in a u32")]
+    TooMuchPathData,
+
     #[error("Writing archive")]
     Write(#[source] io::Error),
 
@@ -30,9 +33,10 @@ pub enum Error {
 
     #[error(
         "Content chunk had expected size {expected} but Reader supplied {actual} at archive \
-             path '{path:?}'"
+             path: {}",
+        format_path_for_error(path)
     )]
-    ContentChunkSizeMismatch { expected: u64, actual: u64, path: String },
+    ContentChunkSizeMismatch { expected: u64, actual: u64, path: Vec<u8> },
 
     #[error("Missing directory chunk index entry")]
     MissingDirectoryChunkIndexEntry,
@@ -40,26 +44,17 @@ pub enum Error {
     #[error("Missing directory names chunk index entry")]
     MissingDirectoryNamesChunkIndexEntry,
 
-    #[error("Deserializing directory entry")]
-    DeserializeDirectoryEntry(#[source] bincode::Error),
-
-    #[error("Deserializing index")]
-    DeserializeIndex(#[source] bincode::Error),
-
-    #[error("Deserializing index entry")]
-    DeserializeIndexEntry(#[source] bincode::Error),
-
     #[error("Serialize index")]
-    SerializeIndex(#[source] bincode::Error),
+    SerializeIndex(#[source] std::io::Error),
 
     #[error("Serialize directory chunk index entry")]
-    SerializeDirectoryChunkIndexEntry(#[source] bincode::Error),
+    SerializeDirectoryChunkIndexEntry(#[source] std::io::Error),
 
     #[error("Serialize directory names chunk index entry")]
-    SerializeDirectoryNamesChunkIndexEntry(#[source] bincode::Error),
+    SerializeDirectoryNamesChunkIndexEntry(#[source] std::io::Error),
 
     #[error("Serialize directory entry")]
-    SerializeDirectoryEntry(#[source] bincode::Error),
+    SerializeDirectoryEntry(#[source] std::io::Error),
 
     #[error("Invalid magic bytes, expected [c8, bf, 0b, 48, ad, ab, c5, 11], found {0:02x?}")]
     InvalidMagic([u8; 8]),
@@ -80,6 +75,13 @@ pub enum Error {
     )]
     InvalidChunkOffset { chunk_type: ChunkType, expected: u64, actual: u64 },
 
+    #[error(
+        "Invalid chunk length for chunk {}, offset + length overflows, offset: {offset}, length: \
+         {length}",
+        ascii_chunk(chunk_type)
+    )]
+    InvalidChunkLength { chunk_type: ChunkType, offset: u64, length: u64 },
+
     #[error("Bad length of directory names chunk, expected multiple of 8, found {0}")]
     InvalidDirectoryNamesChunkLen(u64),
 
@@ -90,64 +92,86 @@ pub enum Error {
     InvalidDirectoryChunkLen(u64),
 
     #[error(
-        "Unsorted directory entry {entry_index} has name {name} but comes after name \
-         {previous_name}"
+        "Unsorted directory entry {entry_index} has name {} but comes after name \
+         {}",
+        format_path_for_error(name),
+        format_path_for_error(previous_name)
     )]
-    DirectoryEntriesOutOfOrder { entry_index: u64, name: String, previous_name: String },
+    DirectoryEntriesOutOfOrder { entry_index: usize, name: Vec<u8>, previous_name: Vec<u8> },
 
     #[error("Directory entry has a zero length name")]
     ZeroLengthName,
 
-    #[error("Directory entry name starts with '/' {0:?}")]
-    NameStartsWithSlash(String),
+    #[error("Directory entry name starts with '/' {}", format_path_for_error(.0))]
+    NameStartsWithSlash(Vec<u8>),
 
-    #[error("Directory entry name ends with '/' {0:?}")]
-    NameEndsWithSlash(String),
+    #[error("Directory entry name ends with '/' {}", format_path_for_error(.0))]
+    NameEndsWithSlash(Vec<u8>),
 
-    #[error("Directory entry name contains the null character {0:?}")]
-    NameContainsNull(String),
+    #[error("Directory entry name contains the null character {}", format_path_for_error(.0))]
+    NameContainsNull(Vec<u8>),
 
-    #[error("Directory entry name contains an empty segment (consecutive '/') {0:?}")]
-    NameContainsEmptySegment(String),
+    #[error(
+        "Directory entry name contains an empty segment (consecutive '/') {}",
+        format_path_for_error(.0)
+    )]
+    NameContainsEmptySegment(Vec<u8>),
 
-    #[error("Directory entry name contains a segment of '.' {0:?}")]
-    NameContainsDotSegment(String),
+    #[error("Directory entry name contains a segment of '.' {}", format_path_for_error(.0))]
+    NameContainsDotSegment(Vec<u8>),
 
-    #[error("Directory entry name contains a segment of '..' {0:?}")]
-    NameContainsDotDotSegment(String),
+    #[error("Directory entry name contains a segment of '..' {}", format_path_for_error(.0))]
+    NameContainsDotDotSegment(Vec<u8>),
 
     #[error(
         "Path data for directory entry {entry_index} has offset {offset} larger than \
              directory names chunk size {chunk_size}"
     )]
-    PathDataOffsetTooLarge { entry_index: u64, offset: usize, chunk_size: usize },
+    PathDataOffsetTooLarge { entry_index: usize, offset: usize, chunk_size: usize },
 
     #[error(
         "Path data for directory entry {entry_index} has offset {offset} plus length \
              {length} larger than directory names chunk size {chunk_size}"
     )]
-    PathDataLengthTooLarge { entry_index: u64, offset: usize, length: u16, chunk_size: usize },
+    PathDataLengthTooLarge { entry_index: usize, offset: usize, length: u16, chunk_size: usize },
 
-    #[error("Path data not utf8")]
-    PathDataInvalidUtf8(#[source] std::str::Utf8Error),
+    #[error("Path data not utf8: {path:?}")]
+    PathDataInvalidUtf8 { source: std::str::Utf8Error, path: Vec<u8> },
 
-    #[error("Path not present in archive: {0:?}")]
-    PathNotPresent(String),
+    #[error("Path not present in archive: {}", format_path_for_error(.0))]
+    PathNotPresent(Vec<u8>),
 
     #[error("Attempted to read past the end of a content chunk")]
     ReadPastEnd,
 
     #[error(
-        "Directory entry for {name} has a bad content chunk offset, expected {expected} actual \
-         {actual}"
+        "Directory entry for {} has a bad content chunk offset, expected {expected} actual \
+         {actual}",
+        format_path_for_error(name)
     )]
-    InvalidContentChunkOffset { name: String, expected: u64, actual: u64 },
+    InvalidContentChunkOffset { name: Vec<u8>, expected: u64, actual: u64 },
 
     #[error(
-        "Archive has {archive_size} bytes, but content chunk (including padding) for {name} ends \
-         at {lower_bound}"
+        "Directory entry for {} implies a content chunk end that overflows u64, offset: \
+         {offset}, length: {length}",
+        format_path_for_error(name)
     )]
-    ContentChunkBeyondArchive { name: String, lower_bound: u64, archive_size: u64 },
+    ContentChunkEndOverflow { name: Vec<u8>, offset: u64, length: u64 },
+
+    #[error(
+        "Archive has {archive_size} bytes, but content chunk (including padding) for {} ends \
+         at {lower_bound}",
+        format_path_for_error(name)
+    )]
+    ContentChunkBeyondArchive { name: Vec<u8>, lower_bound: u64, archive_size: u64 },
+
+    #[error(
+        "The content chunk for {} is {chunk_size} bytes but the system does not support \
+         buffers larger than {} bytes",
+        format_path_for_error(name),
+        usize::MAX
+    )]
+    ContentChunkDoesNotFitInMemory { name: Vec<u8>, chunk_size: u64 },
 }
 
 // Displays ChunkType as ascii characters if possible, escapes bytes that are out of range.
@@ -155,6 +179,11 @@ pub enum Error {
 fn ascii_chunk(bytes: &[u8; 8]) -> String {
     let v: Vec<u8> = bytes.iter().copied().flat_map(std::ascii::escape_default).collect();
     String::from_utf8_lossy(&v).into_owned()
+}
+
+// Debug formats `path`, first converting it to an &str if it is valid UTF-8.
+fn format_path_for_error(path: &[u8]) -> String {
+    std::str::from_utf8(path).map(|s| format!("{s:?}")).unwrap_or_else(|_| format!("{path:?}"))
 }
 
 #[cfg(test)]

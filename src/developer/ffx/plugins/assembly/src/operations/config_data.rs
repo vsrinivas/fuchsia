@@ -109,7 +109,7 @@ fn extract_config_far(
     let mut meta_files = BTreeMap::new();
 
     let mut cursor = Cursor::new(meta_far);
-    let mut far = fuchsia_archive::Reader::new(&mut cursor)?;
+    let mut far = fuchsia_archive::Utf8Reader::new(&mut cursor)?;
 
     let pkg_files: Vec<String> = far.list().map(|e| e.path().to_string()).collect();
     // Extract all the far meta files.
@@ -333,7 +333,7 @@ mod tests {
         pkg_file.read_to_end(&mut pkg_buffer).unwrap();
 
         let mut cursor = Cursor::new(pkg_buffer);
-        let mut far = fuchsia_archive::Reader::new(&mut cursor).unwrap();
+        let mut far = fuchsia_archive::Utf8Reader::new(&mut cursor).unwrap();
 
         // adding a new config data file.
         let new_file_out = far.read_file("meta/data/session_manager/test/new_file").unwrap();

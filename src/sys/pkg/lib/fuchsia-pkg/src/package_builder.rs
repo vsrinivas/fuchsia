@@ -101,7 +101,7 @@ impl PackageBuilder {
     /// Create a PackageBuilder from an existing package archive. Requires an out directory for
     /// temporarily unpacking contents.
     pub fn from_archive<R>(
-        mut archive: fuchsia_archive::Reader<R>,
+        mut archive: fuchsia_archive::Utf8Reader<R>,
         outdir: impl AsRef<Path>,
     ) -> Result<Self>
     where
@@ -479,7 +479,7 @@ struct PackagedMetaFar {
 impl PackagedMetaFar {
     fn parse(bytes: &[u8]) -> Result<Self> {
         let mut meta_far =
-            fuchsia_archive::Reader::new(Cursor::new(bytes)).context("reading FAR")?;
+            fuchsia_archive::Utf8Reader::new(Cursor::new(bytes)).context("reading FAR")?;
 
         let mut abi_revision = None;
         let mut name = None;
@@ -590,7 +590,7 @@ mod tests {
 
         // Validate that the metafar contains the additional file in meta
         let mut metafar = std::fs::File::open(metafar_path).unwrap();
-        let mut far_reader = fuchsia_archive::Reader::new(&mut metafar).unwrap();
+        let mut far_reader = fuchsia_archive::Utf8Reader::new(&mut metafar).unwrap();
         let far_file_data = far_reader.read_file("meta/some/file").unwrap();
         let far_file_data = std::str::from_utf8(far_file_data.as_slice()).unwrap();
         assert_eq!(far_file_data, "some data for far");
@@ -684,7 +684,7 @@ mod tests {
                 "meta/" => {
                     // Validate that the metafar contains the additional file in meta
                     let mut metafar = std::fs::File::open(&blob_info.source_path).unwrap();
-                    let mut far_reader = fuchsia_archive::Reader::new(&mut metafar).unwrap();
+                    let mut far_reader = fuchsia_archive::Utf8Reader::new(&mut metafar).unwrap();
                     let paths_in_far =
                         far_reader.list().map(|e| e.path().to_string()).collect::<Vec<_>>();
                     assert_eq!(
@@ -735,7 +735,7 @@ mod tests {
     fn test_from_archive() {
         // this package is defined in this test's build rules
         let archive_bytes = include_bytes!(env!("TEST_PACKAGE_ARCHIVE"));
-        let archive = fuchsia_archive::Reader::new(Cursor::new(archive_bytes)).unwrap();
+        let archive = fuchsia_archive::Utf8Reader::new(Cursor::new(archive_bytes)).unwrap();
         let tempdir = TempDir::new().unwrap();
 
         // call the function under test
@@ -754,7 +754,7 @@ mod tests {
             match &*blob_info.path {
                 "meta/" => {
                     let mut metafar = std::fs::File::open(&blob_info.source_path).unwrap();
-                    let far_reader = fuchsia_archive::Reader::new(&mut metafar).unwrap();
+                    let far_reader = fuchsia_archive::Utf8Reader::new(&mut metafar).unwrap();
                     let paths_in_far =
                         far_reader.list().map(|e| e.path().to_string()).collect::<Vec<_>>();
 

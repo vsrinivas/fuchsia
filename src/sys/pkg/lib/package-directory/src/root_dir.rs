@@ -16,7 +16,6 @@ use {
     async_utils::async_once::Once,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio,
-    fuchsia_archive::AsyncReader,
     fuchsia_fs::file::AsyncReadAtExt as _,
     fuchsia_pkg::MetaContents,
     fuchsia_syslog::fx_log_err,
@@ -54,46 +53,51 @@ impl<S: crate::NonMetaStorage> RootDir<S> {
         let meta_far = open_for_read(&non_meta_storage, &hash, fio::OpenFlags::DESCRIBE)
             .map_err(Error::OpenMetaFar)?;
 
-        let mut async_reader = match AsyncReader::new(fuchsia_fs::file::BufferedAsyncReadAt::new(
-            fuchsia_fs::file::AsyncFile::from_proxy(Clone::clone(&meta_far)),
-        ))
-        .await
-        {
-            Ok(async_reader) => async_reader,
-            Err(e) => {
-                if matches!(
-                    meta_far.take_event_stream().next().await,
-                    Some(Ok(fio::FileEvent::OnOpen_{s, ..}))
-                        if s == zx::Status::NOT_FOUND.into_raw()
-                ) {
-                    return Err(Error::MissingMetaFar);
+        let mut async_reader =
+            match fuchsia_archive::AsyncReader::new(fuchsia_fs::file::BufferedAsyncReadAt::new(
+                fuchsia_fs::file::AsyncFile::from_proxy(Clone::clone(&meta_far)),
+            ))
+            .await
+            {
+                Ok(async_reader) => async_reader,
+                Err(e) => {
+                    if matches!(
+                        meta_far.take_event_stream().next().await,
+                        Some(Ok(fio::FileEvent::OnOpen_{s, ..}))
+                            if s == zx::Status::NOT_FOUND.into_raw()
+                    ) {
+                        return Err(Error::MissingMetaFar);
+                    }
+                    return Err(Error::ArchiveReader(e));
                 }
-                return Err(Error::ArchiveReader(e));
-            }
-        };
+            };
 
         let reader_list = async_reader.list();
 
-        let mut meta_files = HashMap::with_capacity(reader_list.size_hint().0);
+        let mut meta_files = HashMap::with_capacity(reader_list.len());
 
         for entry in reader_list {
-            if entry.path().starts_with("meta/") {
-                for (i, _) in entry.path().match_indices("/").skip(1) {
-                    if meta_files.contains_key(&entry.path()[..i]) {
-                        return Err(Error::FileDirectoryCollision {
-                            path: entry.path()[..i].to_string(),
-                        });
+            let path = std::str::from_utf8(entry.path())
+                .map_err(|source| Error::NonUtf8MetaEntry {
+                    source,
+                    path: entry.path().to_owned(),
+                })?
+                .to_owned();
+            if path.starts_with("meta/") {
+                for (i, _) in path.match_indices("/").skip(1) {
+                    if meta_files.contains_key(&path[..i]) {
+                        return Err(Error::FileDirectoryCollision { path: path[..i].to_string() });
                     }
                 }
                 meta_files.insert(
-                    String::from(entry.path()),
+                    path,
                     MetaFileLocation { offset: entry.offset(), length: entry.length() },
                 );
             }
         }
 
         let meta_contents_bytes =
-            async_reader.read_file("meta/contents").await.map_err(Error::ReadMetaContents)?;
+            async_reader.read_file(b"meta/contents").await.map_err(Error::ReadMetaContents)?;
 
         let non_meta_files = MetaContents::deserialize(&meta_contents_bytes[..])
             .map_err(Error::DeserializeMetaContents)?
@@ -443,6 +447,28 @@ mod tests {
         assert_matches!(
             RootDir::new(blobfs_client, [0; 32].into()).await,
             Err(Error::MissingMetaFar)
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn new_rejects_invalid_utf8() {
+        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
+        let mut meta_far = vec![];
+        let () = fuchsia_archive::write(
+            &mut meta_far,
+            std::collections::BTreeMap::from_iter([(
+                b"\xff",
+                (0, Box::new("".as_bytes()) as Box<dyn std::io::Read>),
+            )]),
+        )
+        .unwrap();
+        let hash = fuchsia_merkle::MerkleTree::from_reader(&*meta_far).unwrap().root();
+        let () = blobfs_fake.add_blob(hash, meta_far);
+
+        assert_matches!(
+            RootDir::new(blobfs_client, hash).await,
+            Err(Error::NonUtf8MetaEntry{path, ..})
+                if path == vec![255]
         );
     }
 

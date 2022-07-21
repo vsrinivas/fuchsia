@@ -665,7 +665,7 @@ mod tests {
 
         // 2. Read the metafar.
         let mut config_data_metafar = File::open(&metafar_blobinfo.source_path).unwrap();
-        let mut far_reader = fuchsia_archive::Reader::new(&mut config_data_metafar).unwrap();
+        let mut far_reader = fuchsia_archive::Utf8Reader::new(&mut config_data_metafar).unwrap();
 
         // 3.  Read the configuration file.
         let config_file_data = far_reader
@@ -762,7 +762,7 @@ mod tests {
                 .unwrap();
         let metafar_blobinfo = config_data_pkg.blobs().iter().find(|b| b.path == "meta/").unwrap();
         let mut far_reader =
-            fuchsia_archive::Reader::new(File::open(&metafar_blobinfo.source_path).unwrap())
+            fuchsia_archive::Utf8Reader::new(File::open(&metafar_blobinfo.source_path).unwrap())
                 .unwrap();
 
         // Assert both config_data files match those written above

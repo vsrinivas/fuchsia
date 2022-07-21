@@ -11,7 +11,7 @@ use {
         },
     },
     anyhow::{anyhow, Context, Result},
-    fuchsia_archive::Reader as FarReader,
+    fuchsia_archive::Utf8Reader as FarReader,
     fuchsia_hash::Hash,
     fuchsia_url::AbsolutePackageUrl,
     scrutiny_utils::{

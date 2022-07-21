@@ -10,8 +10,8 @@ rustc_library("fuchsia-archive") {
   edition = "2021"
   deps = [
     "//src/lib/fuchsia-fs",
-    "//third_party/rust_crates:bincode",
-    "//third_party/rust_crates:serde",
+    "//src/lib/zerocopy",
+    "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:thiserror",
   ]
   test_deps = [
@@ -22,10 +22,12 @@ rustc_library("fuchsia-archive") {
   ]
   sources = [
     "src/async_read.rs",
+    "src/async_utf8_reader.rs",
     "src/error.rs",
     "src/lib.rs",
     "src/name.rs",
     "src/read.rs",
+    "src/utf8_reader.rs",
     "src/write.rs",
   ]
 }

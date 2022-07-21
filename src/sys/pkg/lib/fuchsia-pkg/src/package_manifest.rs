@@ -106,7 +106,7 @@ impl PackageManifest {
         let mut meta_far_file = File::open(&meta_far_path)?;
         let meta_far_size = meta_far_file.metadata()?.len();
 
-        let mut meta_far = fuchsia_archive::Reader::new(&mut meta_far_file)?;
+        let mut meta_far = fuchsia_archive::Utf8Reader::new(&mut meta_far_file)?;
 
         let meta_contents = meta_far.read_file("meta/contents")?;
         let meta_contents = MetaContents::deserialize(meta_contents.as_slice())?.into_contents();

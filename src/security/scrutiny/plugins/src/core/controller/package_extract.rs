@@ -5,7 +5,7 @@
 use {
     crate::core::collection::{Package, Packages},
     anyhow::{anyhow, Context, Result},
-    fuchsia_archive::Reader as FarReader,
+    fuchsia_archive::Utf8Reader as FarReader,
     fuchsia_url::AbsolutePackageUrl,
     scrutiny::{
         model::controller::{DataController, HintDataType},

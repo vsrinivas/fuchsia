@@ -76,7 +76,7 @@ pub fn validate_package(manifest: &PackageManifest) -> Result<(), PackageValidat
             path: PathBuf::from(meta_far_info.source_path.clone()),
         })?;
     let mut reader =
-        fuchsia_archive::Reader::new(meta_far).map_err(PackageValidationError::ReadArchive)?;
+        fuchsia_archive::Utf8Reader::new(meta_far).map_err(PackageValidationError::ReadArchive)?;
 
     // validate components in the meta/ directory
     let mut errors = BTreeMap::new();

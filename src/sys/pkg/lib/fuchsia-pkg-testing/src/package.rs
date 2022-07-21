@@ -127,7 +127,7 @@ impl Package {
     /// Returns the parsed contents of the meta/contents file.
     pub fn meta_contents(&self) -> Result<MetaContents, Error> {
         let mut raw_meta_far = self.meta_far()?;
-        let mut meta_far = fuchsia_archive::Reader::new(&mut raw_meta_far)?;
+        let mut meta_far = fuchsia_archive::Utf8Reader::new(&mut raw_meta_far)?;
         let raw_meta_contents = meta_far.read_file("meta/contents")?;
 
         Ok(MetaContents::deserialize(raw_meta_contents.as_slice())?)
@@ -228,7 +228,7 @@ impl Package {
         dir: &fio::DirectoryProxy,
     ) -> Result<(), VerificationError> {
         let mut raw_meta_far = self.meta_far()?;
-        let mut meta_far = fuchsia_archive::Reader::new(&mut raw_meta_far)?;
+        let mut meta_far = fuchsia_archive::Utf8Reader::new(&mut raw_meta_far)?;
         let mut expected_paths = HashSet::new();
 
         // Verify all entries referenced by meta/contents exist and have the correct merkle root.

@@ -43,7 +43,7 @@ impl Package {
         mut meta_far: R,
         blobs: BTreeMap<String, BlobEntry>,
     ) -> Result<Self> {
-        let mut meta_far = fuchsia_archive::Reader::new(&mut meta_far)?;
+        let mut meta_far = fuchsia_archive::Utf8Reader::new(&mut meta_far)?;
         let meta_contents =
             MetaContents::deserialize(meta_far.read_file("meta/contents")?.as_slice())?;
         let meta_package =

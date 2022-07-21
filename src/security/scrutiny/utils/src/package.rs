@@ -5,7 +5,7 @@
 use {
     crate::{artifact::ArtifactReader, key_value::parse_key_value},
     anyhow::{anyhow, Context, Result},
-    fuchsia_archive::Reader,
+    fuchsia_archive::Utf8Reader,
     fuchsia_merkle::MerkleTree,
     std::{fs::File, io::Cursor, path::Path, str::from_utf8},
 };
@@ -16,7 +16,7 @@ pub static META_CONTENTS_PATH: &str = "meta/contents";
 pub fn open_update_package<P: AsRef<Path>>(
     update_package_path: P,
     artifact_reader: &mut Box<dyn ArtifactReader>,
-) -> Result<Reader<Cursor<Vec<u8>>>> {
+) -> Result<Utf8Reader<Cursor<Vec<u8>>>> {
     let update_package_path = update_package_path.as_ref();
     let mut update_package_file = File::open(update_package_path).with_context(|| {
         format!("Failed to open update package meta.far at {:?}", update_package_path)
@@ -37,7 +37,7 @@ pub fn open_update_package<P: AsRef<Path>>(
                 update_package_path
             )
         })?;
-    Reader::new(Cursor::new(far_contents)).with_context(|| {
+    Utf8Reader::new(Cursor::new(far_contents)).with_context(|| {
         format!(
             "Failed to initialize far reader for update package at {:?} with merkle root {}",
             update_package_path, update_package_merkle
@@ -46,7 +46,7 @@ pub fn open_update_package<P: AsRef<Path>>(
 }
 
 pub fn read_content_blob(
-    far_reader: &mut Reader<Cursor<Vec<u8>>>,
+    far_reader: &mut Utf8Reader<Cursor<Vec<u8>>>,
     artifact_reader: &mut Box<dyn ArtifactReader>,
     path: &str,
 ) -> Result<Vec<u8>> {

@@ -72,7 +72,7 @@ impl Display for ReadError {
 impl Error for ReadError {}
 
 // NOTE: this implementation doesn't allow access to anything outside of `/pkg/meta`
-impl<T> PkgNamespaceInner for fuchsia_archive::Reader<T>
+impl<T> PkgNamespaceInner for fuchsia_archive::Utf8Reader<T>
 where
     T: Read + Seek,
 {
@@ -83,7 +83,7 @@ where
     }
 }
 
-impl<T> PkgNamespace for fuchsia_archive::Reader<T>
+impl<T> PkgNamespace for fuchsia_archive::Utf8Reader<T>
 where
     T: Read + Seek,
 {

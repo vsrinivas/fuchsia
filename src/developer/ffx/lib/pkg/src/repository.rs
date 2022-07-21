@@ -10,7 +10,6 @@ use {
     fidl_fuchsia_developer_ffx::{ListFields, PackageEntry, RepositoryPackage},
     fidl_fuchsia_developer_ffx_ext::{RepositorySpec, RepositoryStorageType},
     fidl_fuchsia_pkg as pkg,
-    fuchsia_archive::AsyncReader,
     fuchsia_fs::file::Adapter,
     fuchsia_pkg::MetaContents,
     fuchsia_url::RepositoryUrl,
@@ -420,7 +419,8 @@ impl Repository {
                 .await
                 .with_context(|| format!("reading blob {}", meta_far_hash))?;
 
-            let mut archive = AsyncReader::new(Adapter::new(Cursor::new(bytes))).await?;
+            let mut archive =
+                fuchsia_archive::AsyncUtf8Reader::new(Adapter::new(Cursor::new(bytes))).await?;
             let contents = archive.read_file("meta/contents").await?;
             let contents = MetaContents::deserialize(contents.as_slice())?;
 
@@ -524,7 +524,9 @@ impl Repository {
             .await
             .with_context(|| format!("reading blob {}", hash))?;
 
-        let mut archive = AsyncReader::new(Adapter::new(Cursor::new(meta_far_bytes))).await?;
+        let mut archive =
+            fuchsia_archive::AsyncUtf8Reader::new(Adapter::new(Cursor::new(meta_far_bytes)))
+                .await?;
 
         let modified = self
             .backend

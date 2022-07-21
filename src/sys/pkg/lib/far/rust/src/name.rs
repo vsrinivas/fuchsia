@@ -12,26 +12,22 @@ enum CurrentSegment {
 }
 use CurrentSegment::*;
 
-fn error_string(name: &[u8]) -> String {
-    String::from_utf8_lossy(name).into_owned()
-}
-
 /// Does not validate max name length of 2**16 - 1, as this is not needed on the read path and can
 /// be done separately conveniently on the write path.
 pub fn validate_name(name: &[u8]) -> Result<&[u8], Error> {
     let mut state = Empty;
     for c in name.iter() {
         state = match c {
-            b'\0' => return Err(Error::NameContainsNull(error_string(name))),
+            b'\0' => return Err(Error::NameContainsNull(name.into())),
             b'/' => match state {
                 Empty => {
                     if name[0] == b'/' {
-                        return Err(Error::NameStartsWithSlash(error_string(name)));
+                        return Err(Error::NameStartsWithSlash(name.into()));
                     }
-                    return Err(Error::NameContainsEmptySegment(error_string(name)));
+                    return Err(Error::NameContainsEmptySegment(name.into()));
                 }
-                Dot => return Err(Error::NameContainsDotSegment(error_string(name))),
-                DotDot => return Err(Error::NameContainsDotDotSegment(error_string(name))),
+                Dot => return Err(Error::NameContainsDotSegment(name.into())),
+                DotDot => return Err(Error::NameContainsDotDotSegment(name.into())),
                 Other => Empty,
             },
             b'.' => match state {
@@ -48,11 +44,11 @@ pub fn validate_name(name: &[u8]) -> Result<&[u8], Error> {
             if name.is_empty() {
                 Err(Error::ZeroLengthName)
             } else {
-                Err(Error::NameEndsWithSlash(error_string(name)))
+                Err(Error::NameEndsWithSlash(name.into()))
             }
         }
-        Dot => Err(Error::NameContainsDotSegment(error_string(name))),
-        DotDot => Err(Error::NameContainsDotDotSegment(error_string(name))),
+        Dot => Err(Error::NameContainsDotSegment(name.into())),
+        DotDot => Err(Error::NameContainsDotDotSegment(name.into())),
         Other => Ok(name),
     }
 }
@@ -78,42 +74,42 @@ mod tests {
         for name in ["/", "/a"].iter() {
             assert_matches!(
                 validate_name(name.as_bytes()),
-                Err(Error::NameStartsWithSlash(n)) if n == error_string(name.as_bytes())
+                Err(Error::NameStartsWithSlash(n)) if n == name.as_bytes()
             );
         }
 
         for name in ["a/", "aa/"].iter() {
             assert_matches!(
                 validate_name(name.as_bytes()),
-                Err(Error::NameEndsWithSlash(n)) if n == error_string(name.as_bytes())
+                Err(Error::NameEndsWithSlash(n)) if n == name.as_bytes()
             );
         }
 
         for name in ["\0", "a\0", "\0a", "a/\0", "\0/a"].iter() {
             assert_matches!(
                 validate_name(name.as_bytes()),
-                Err(Error::NameContainsNull(n)) if n == error_string(name.as_bytes())
+                Err(Error::NameContainsNull(n)) if n == name.as_bytes()
             );
         }
 
         for name in ["a//a", "a/a//a"].iter() {
             assert_matches!(
                 validate_name(name.as_bytes()),
-                Err(Error::NameContainsEmptySegment(n)) if n == error_string(name.as_bytes())
+                Err(Error::NameContainsEmptySegment(n)) if n == name.as_bytes()
             );
         }
 
         for name in [".", "./a", "a/.", "a/./a"].iter() {
             assert_matches!(
                 validate_name(name.as_bytes()),
-                Err(Error::NameContainsDotSegment(n)) if n == error_string(name.as_bytes())
+                Err(Error::NameContainsDotSegment(n)) if n == name.as_bytes()
             );
         }
 
         for name in ["..", "../a", "a/..", "a/../a"].iter() {
             assert_matches!(
                 validate_name(name.as_bytes()),
-                Err(Error::NameContainsDotDotSegment(n)) if n == error_string(name.as_bytes())
+                Err(Error::NameContainsDotDotSegment(n)) if n == name.as_bytes()
             );
         }
     }
