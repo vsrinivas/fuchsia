@@ -10,6 +10,8 @@ Tools used to pass RFCOMM tests in PTS:
 * fx log
 
 Notes:
+* Follow the instructions in the [RFCOMM manual testing](../../profiles/bt-rfcomm/manual_testing.md)
+  README to set up the correct testing environment.
 * Run `fx log --only test-rfcomm-client` to enable logging in a separate terminal. Relevant RFCOMM
   values will be printed in this log.
 * Ensure the HFP component is not running. If `ps | grep hfp` returns a process, terminate it by
