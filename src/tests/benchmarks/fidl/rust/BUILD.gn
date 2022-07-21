@@ -46,10 +46,6 @@ template("rust_gidl_benchmark_suite") {
     non_rust_deps = [ ":${target_name}__gidl" ]
 
     sources = [ output_file ]
-
-    # TODO(https://fxbug.dev/104019): Avoid this suppression. At the time of
-    # writing it is needed because not all tests use all these dependencies.
-    configs += [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
   }
 }
 

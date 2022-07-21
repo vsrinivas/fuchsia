@@ -12,6 +12,7 @@ use {
         ObjectType, Rights, UnknownData,
     },
     fidl_test_benchmarkfidl{{ .CrateSuffix }} as test_benchmarkfidl{{ .CrateSuffix }},
+    fuchsia_async as fasync,
     fuchsia_criterion::criterion::{BatchSize, Bencher, black_box},
     futures::{future, stream::StreamExt},
     fuchsia_zircon as zx,
@@ -129,7 +130,7 @@ fn benchmark_{{ .Name }}_decode(b: &mut Bencher) {
 
 {{ if .EnableSendEventBenchmark }}
 async fn {{ .Name }}_send_event_receiver_thread(receiver_fidl_chan_end: zx::Channel, sender_fifo: std::sync::mpsc::SyncSender<()>) {
-    let async_receiver_fidl_chan_end = fuchsia_async::Channel::from_channel(receiver_fidl_chan_end).unwrap();
+    let async_receiver_fidl_chan_end = fasync::Channel::from_channel(receiver_fidl_chan_end).unwrap();
     let proxy = {{ .ValueType }}EventProtocolProxy::new(async_receiver_fidl_chan_end);
     let mut event_stream = proxy.take_event_stream();
     while let Some(_event) = event_stream.next().await {
@@ -141,16 +142,16 @@ fn benchmark_{{ .Name }}_send_event(b: &mut Bencher) {
     let (sender_fifo, receiver_fifo) = std::sync::mpsc::sync_channel(1);
     let (sender_fidl_chan_end, receiver_fidl_chan_end) = zx::Channel::create().unwrap();
     std::thread::spawn(|| {
-        fuchsia_async::LocalExecutor::new()
+        fasync::LocalExecutor::new()
             .unwrap()
             .run_singlethreaded(async move {
             {{ .Name }}_send_event_receiver_thread(receiver_fidl_chan_end, sender_fifo).await;
         });
     });
-    fuchsia_async::LocalExecutor::new()
+    fasync::LocalExecutor::new()
         .unwrap()
         .run_singlethreaded(async move {
-            let async_sender_fidl_chan_end = fuchsia_async::Channel::from_channel(sender_fidl_chan_end).unwrap();
+            let async_sender_fidl_chan_end = fasync::Channel::from_channel(sender_fidl_chan_end).unwrap();
             let sender = <{{ .ValueType }}EventProtocolRequestStream as fidl::endpoints::RequestStream>::from_channel(async_sender_fidl_chan_end);
             b.iter_batched_ref(|| {
                 {{- if .HandleDefs }}
@@ -171,7 +172,7 @@ fn benchmark_{{ .Name }}_send_event(b: &mut Bencher) {
 
 {{ if .EnableEchoCallBenchmark }}
 async fn {{ .Name }}_echo_call_server_thread(server_end: zx::Channel) {
-    let async_server_end = fuchsia_async::Channel::from_channel(server_end).unwrap();
+    let async_server_end = fasync::Channel::from_channel(server_end).unwrap();
     let stream = <{{ .ValueType }}EchoCallRequestStream as fidl::endpoints::RequestStream>::from_channel(async_server_end);
     const MAX_CONCURRENT: usize = 10;
     stream.for_each_concurrent(MAX_CONCURRENT, |request| {
@@ -190,7 +191,7 @@ async fn {{ .Name }}_echo_call_server_thread(server_end: zx::Channel) {
 fn benchmark_{{ .Name }}_echo_call(b: &mut Bencher) {
     let (client_end, server_end) = zx::Channel::create().unwrap();
     std::thread::spawn(|| {
-        fuchsia_async::LocalExecutor::new()
+        fasync::LocalExecutor::new()
             .unwrap()
             .run_singlethreaded(async move {
             {{ .Name }}_echo_call_server_thread(server_end).await;
