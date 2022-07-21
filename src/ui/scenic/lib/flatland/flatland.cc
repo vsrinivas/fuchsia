@@ -1078,6 +1078,18 @@ void Flatland::SetSolidFill(ContentId rect_id, fuchsia::ui::composition::ColorRg
     return;
   }
 
+  if (color.red < 0.f || color.red > 1.f || isinf(color.red) || isnan(color.red) ||
+      color.green < 0.f || color.green > 1.f || isinf(color.green) || isnan(color.green) ||
+      color.blue < 0.f || color.blue > 1.f || isinf(color.blue) || isnan(color.blue) ||
+      color.alpha < 0.f || color.alpha > 1.f || isinf(color.alpha) || isnan(color.alpha)) {
+    error_reporter_->ERROR() << "Invalid color channel(s) (" << color.red << ", " << color.green
+                             << ", " << color.blue << ", " << color.alpha << ")";
+    ReportBadOperationError();
+    return;
+  }
+
+  image_kv->second.collection_id = allocation::kInvalidId;
+  image_kv->second.identifier = allocation::kInvalidImageId;
   image_kv->second.multiply_color = {color.red, color.green, color.blue, color.alpha};
   matrices_[content_kv->second].SetScale(
       {.x = static_cast<float>(size.width), .y = static_cast<float>(size.height)});

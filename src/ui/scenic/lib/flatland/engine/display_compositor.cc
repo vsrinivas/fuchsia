@@ -396,12 +396,6 @@ bool DisplayCompositor::SetRenderDataOnDisplay(const RenderData& data) {
   // Every rectangle should have an associated image.
   uint32_t num_images = data.images.size();
 
-  // Return early if we have an image that cannot be imported into display.
-  for (uint32_t i = 0; i < num_images; i++) {
-    if (InternalImageId(data.images[i].identifier) == allocation::kInvalidImageId)
-      return false;
-  }
-
   // Since we map 1 image to 1 layer, if there are more images than layers available for
   // the given display, then they cannot be directly composited to the display in hardware.
   std::vector<uint64_t> layers;
@@ -437,11 +431,26 @@ bool DisplayCompositor::SetRenderDataOnDisplay(const RenderData& data) {
 
   for (uint32_t i = 0; i < num_images; i++) {
     const uint32_t image_id = data.images[i].identifier;
-    if (image_id == allocation::kInvalidImageId) {
-      ApplyLayerColor(layers[i], data.rectangles[i], data.images[i]);
+    if (image_id != allocation::kInvalidImageId) {
+      if (buffer_collection_supports_display_[data.images[i].collection_id]) {
+        ApplyLayerImage(layers[i], data.rectangles[i], data.images[i], /*wait_id*/ 0,
+                        /*signal_id*/ image_event_map_[image_id].signal_id);
+      } else {
+        return false;
+      }
     } else {
-      ApplyLayerImage(layers[i], data.rectangles[i], data.images[i], /*wait_id*/ 0,
-                      /*signal_id*/ image_event_map_[image_id].signal_id);
+      // TODO(fxbug.dev/104887): Not all display hardware is able to handle color layers with
+      // specific sizes, which is required for doing solid-fill rects on the display path.
+      // If we encounter one of those rects here -- unless it is the backmost layer and fullscreen
+      // -- then we abort.
+      const auto& rect = data.rectangles[i];
+      const auto& display_size = display_info_map_[data.display_id].dimensions;
+      if (i == 0 && rect.origin.x == 0 && rect.origin.y == 0 && rect.extent.x == display_size.x &&
+          rect.extent.y == display_size.y) {
+        ApplyLayerColor(layers[i], rect, data.images[i]);
+      } else {
+        return false;
+      }
     }
   }
   return true;
@@ -450,6 +459,28 @@ bool DisplayCompositor::SetRenderDataOnDisplay(const RenderData& data) {
 void DisplayCompositor::ApplyLayerColor(uint32_t layer_id, escher::Rectangle2D rectangle,
                                         allocation::ImageMetadata image) {
   std::unique_lock<std::mutex> lock(lock_);
+
+  // We have to convert the image_metadata's multiply color, which is an array of normalized
+  // floating point values, to an unnormalized array of uint8_ts in the range 0-255.
+  std::vector<uint8_t> col = {static_cast<uint8_t>(255 * image.multiply_color[0]),
+                              static_cast<uint8_t>(255 * image.multiply_color[1]),
+                              static_cast<uint8_t>(255 * image.multiply_color[2]),
+                              static_cast<uint8_t>(255 * image.multiply_color[3])};
+
+  (*display_controller_.get())->SetLayerColorConfig(layer_id, ZX_PIXEL_FORMAT_ARGB_8888, col);
+
+// TODO(fxbug.dev/104887): Currently, not all display hardware supports the ability to
+// set either the position or the alpha on a color layer, as color layers are not primary
+// layers. There exist hardware that require a color layer to be the backmost layer and to be
+// the size of the entire display. This means that for the time being, we must rely on GPU
+// composition for solid color rects.
+//
+// There is the option of assigning a 1x1 image with the desired color to a standard image layer,
+// as a way of mimicking color layers (and this is what is done in the GPU path as well) --
+// however, not all hardware supports images with sizes that differ from the destination size of
+// the rect. So implementing that solution on the display path as well is problematic.
+#if 0
+
   auto [src, dst] = DisplaySrcDstFrames::New(rectangle, image);
 
   // TODO(fxbug.dev/77993): The display controller pathway currently does not accurately take into
@@ -464,18 +495,10 @@ void DisplayCompositor::ApplyLayerColor(uint32_t layer_id, escher::Rectangle2D r
   // handle transforms/matrices going forward.
   auto transform = fuchsia::hardware::display::Transform::IDENTITY;
 
-  // We have to convert the image_metadata's multiply color, which is an array of normalized
-  // floating point values, to an unnormalized array of uint8_ts in the range 0-255.
-  std::vector<uint8_t> col = {static_cast<uint8_t>(255 * image.multiply_color[0]),
-                              static_cast<uint8_t>(255 * image.multiply_color[1]),
-                              static_cast<uint8_t>(255 * image.multiply_color[2]),
-                              static_cast<uint8_t>(255 * image.multiply_color[3])};
-
-  (*display_controller_.get())->SetLayerColorConfig(layer_id, ZX_PIXEL_FORMAT_ARGB_8888, col);
   (*display_controller_.get())->SetLayerPrimaryPosition(layer_id, transform, src, dst);
-
   auto alpha_mode = GetAlphaMode(image.blend_mode);
   (*display_controller_.get())->SetLayerPrimaryAlpha(layer_id, alpha_mode, image.multiply_color[3]);
+#endif
 }
 
 void DisplayCompositor::ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D rectangle,

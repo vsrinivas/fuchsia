@@ -789,7 +789,10 @@ protocol Flatland {
 
 
     /// Defines the color and size of a filled rect. |rect_id| must refer to content that
-    /// was created via a call to CreateFilledRect. The color is not premultiplied.
+    /// was created via a call to CreateFilledRect. The color is not premultiplied. Color values
+    /// must be within the range [0,1] inclusive, and normal 32-bit
+    /// floating point values: https://en.wikipedia.org/wiki/Normal_number_%28computing%29. Values
+    /// that do not conform to these specifications will cause the channel to close.
     SetSolidFill(resource struct {
         rect_id ContentId;
         color ColorRgba;
