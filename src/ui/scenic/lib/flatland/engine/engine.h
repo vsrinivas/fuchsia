@@ -63,7 +63,7 @@ class Engine {
       FX_LOGS(WARNING) << "Color correction Implementation already exists.";
     }
     color_conversion_impl_ =
-        std::make_shared<ColorConversionImpl>(std::move(request), flatland_compositor_.get());
+        std::make_shared<ColorConversionImpl>(std::move(request), flatland_compositor_);
   }
 
  private:
@@ -75,7 +75,7 @@ class Engine {
   class ColorConversionImpl : public fuchsia::ui::display::color::Converter {
    public:
     ColorConversionImpl(fidl::InterfaceRequest<fuchsia::ui::display::color::Converter> request,
-                        DisplayCompositor* flatland_compositor)
+                        std::weak_ptr<DisplayCompositor> flatland_compositor)
         : binding_(this, std::move(request)), flatland_compositor_(flatland_compositor) {}
 
     // |fuchsia::ui::display::color::Converter|
@@ -88,7 +88,7 @@ class Engine {
    private:
     // The FIDL binding for the color correction api, which references |this| as the implementation.
     fidl::Binding<fuchsia::ui::display::color::Converter> binding_;
-    flatland::DisplayCompositor* flatland_compositor_ = nullptr;
+    std::weak_ptr<flatland::DisplayCompositor> flatland_compositor_;
   };
 
   struct SceneState {

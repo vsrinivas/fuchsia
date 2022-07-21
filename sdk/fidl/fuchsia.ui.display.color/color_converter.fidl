@@ -35,12 +35,24 @@ protocol Converter {
     /// If any of the values do not meet this specification, the new color conversion values
     /// will not be applied and a value of ZX_ERR_INVALID_ARGS will be returned. Otherwise,
     /// the return value will be ZX_OK: https://en.wikipedia.org/wiki/Normal_number_%28computing%29.
+    /// Once a value of ZX_OK has been returned to the client, the color conversion values are ready
+    /// to be used in future render calls, including screenshots.
+    ///
+    /// Values in |ConversionProperties| may also be left blank. The default values for each member,
+    /// if left blank, are as follows:
+    ///     coefficients =
+    ///             [1, 0, 0,
+    ///              0, 1, 0,
+    ///              0, 0, 1]  (i.e. the identity matrix)
+    ///     preoffsets = [0,0,0]
+    ///     postoffsets = [0,0,0]
+    /// Thus, ColorConversion can be reset by passing in an empty table to this function.
     ///
     /// Hardware that support color conversion generally accept a limited range of coefficient
     /// values. Coefficients in the range of [-2, 2] inclusive will be accepted by most
     /// hardware. The hardware driver will clamp values that are outside its acceptable range.
     ///
-    /// `preoffsets`, `postoffsets`: Clients are encourged to produce color conversion values that
+    /// `preoffsets`, `postoffsets`: Clients are encouraged to produce color conversion values that
     /// do not depend on pre and post offsets since some hardware do not have support for that.
     /// For cases where pre and post offset values need to be used, the range should be limited to
     /// (-1, 1).

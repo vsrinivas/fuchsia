@@ -21,6 +21,21 @@
 #include <string>
 #include <unordered_set>
 
+namespace {
+template <std::size_t Dim>
+std::string GetArrayString(const std::string& name, const std::array<float, Dim>& array) {
+  std::string result = name + ": [";
+  for (uint32_t i = 0; i < array.size(); i++) {
+    result += std::to_string(array[i]);
+    if (i < array.size() - 1) {
+      result += ", ";
+    }
+  }
+  result += "]\n";
+  return result;
+}
+}  // namespace
+
 // Hardcoded double buffering.
 // TODO(fxbug.dev/76640): make this configurable.  Even fancier: is it worth considering sharing a
 // pool of framebuffers between multiple displays?  (assuming that their dimensions are similar,
@@ -204,33 +219,28 @@ Engine::SceneState::SceneState(Engine& engine, TransformHandle root_transform) {
 
 void Engine::ColorConversionImpl::SetValues(
     fuchsia::ui::display::color::ConversionProperties properties, SetValuesCallback callback) {
-  FX_DCHECK(flatland_compositor_);
+  auto compositor = flatland_compositor_.lock();
+  FX_DCHECK(compositor);
 
-  if (!properties.has_coefficients()) {
-    FX_LOGS(ERROR) << "ColorConversionProperties must have coefficients.";
-    callback(ZX_ERR_INVALID_ARGS);
-    return;
-  }
+  auto coefficients = properties.has_coefficients()
+                          ? properties.coefficients()
+                          : std::array<float, 9>{1, 0, 0, 0, 1, 0, 0, 0, 1};
+  auto preoffsets =
+      properties.has_preoffsets() ? properties.preoffsets() : std::array<float, 3>{0, 0, 0};
+  auto postoffsets =
+      properties.has_postoffsets() ? properties.postoffsets() : std::array<float, 3>{0, 0, 0};
 
-  if (!properties.has_preoffsets()) {
-    FX_LOGS(ERROR) << "ColorConversionProperties must have preoffsets.";
-    callback(ZX_ERR_INVALID_ARGS);
-    return;
-  }
-
-  if (!properties.has_postoffsets()) {
-    FX_LOGS(ERROR) << "ColorConversionProperties must have postoffsets.";
-    callback(ZX_ERR_INVALID_ARGS);
-    return;
-  }
-
-  auto coefficients = properties.coefficients();
-  auto preoffsets = properties.preoffsets();
-  auto postoffsets = properties.postoffsets();
+  auto print_parameters = [&coefficients, &preoffsets, &postoffsets]() {
+    const std::string& coefficients_str = GetArrayString("Coefficients", coefficients);
+    const std::string& preoffsets_str = GetArrayString("Preoffsets", preoffsets);
+    const std::string& postoffsets_str = GetArrayString("Postoffsets", postoffsets);
+    FX_LOGS(ERROR) << "Invalid Color Conversion Parameter Values: \n"
+                   << coefficients_str << preoffsets_str << postoffsets_str;
+  };
 
   for (auto val : coefficients) {
     if (isinf(val) || isnan(val)) {
-      FX_LOGS(ERROR) << "Invalid color conversion parameter value: " << val;
+      print_parameters();
       callback(ZX_ERR_INVALID_ARGS);
       return;
     }
@@ -238,7 +248,7 @@ void Engine::ColorConversionImpl::SetValues(
 
   for (auto val : preoffsets) {
     if (isinf(val) || isnan(val)) {
-      FX_LOGS(ERROR) << "Invalid color conversion parameter value: " << val;
+      print_parameters();
       callback(ZX_ERR_INVALID_ARGS);
       return;
     }
@@ -246,19 +256,21 @@ void Engine::ColorConversionImpl::SetValues(
 
   for (auto val : postoffsets) {
     if (isinf(val) || isnan(val)) {
-      FX_LOGS(ERROR) << "Invalid color conversion parameter value: " << val;
+      print_parameters();
       callback(ZX_ERR_INVALID_ARGS);
       return;
     }
   }
 
-  flatland_compositor_->SetColorConversionValues(coefficients, preoffsets, postoffsets);
+  compositor->SetColorConversionValues(coefficients, preoffsets, postoffsets);
   callback(ZX_OK);
 }
 
 void Engine::ColorConversionImpl::SetMinimumRgb(uint8_t minimum_rgb,
                                                 SetMinimumRgbCallback callback) {
-  callback(flatland_compositor_->SetMinimumRgb(minimum_rgb));
+  auto compositor = flatland_compositor_.lock();
+  FX_DCHECK(compositor);
+  callback(compositor->SetMinimumRgb(minimum_rgb));
 }
 
 }  // namespace flatland
