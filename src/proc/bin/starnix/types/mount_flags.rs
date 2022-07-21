@@ -14,5 +14,8 @@ bitflags! {
         const NODEV = uapi::MS_NODEV;
         const BIND = uapi::MS_BIND;
         const REC = uapi::MS_REC;
+        const SLAVE = uapi::MS_SLAVE;
+        const SHARED = uapi::MS_SHARED;
+        const PRIVATE = uapi::MS_PRIVATE;
     }
 }

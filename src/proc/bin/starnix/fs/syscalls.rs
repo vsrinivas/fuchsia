@@ -1101,6 +1101,14 @@ pub fn sys_mount(
         errno!(EINVAL)
     })?;
 
+    if flags.contains(MountFlags::SLAVE)
+        || flags.contains(MountFlags::SHARED)
+        || flags.contains(MountFlags::PRIVATE)
+    {
+        not_implemented!(current_task, "unsupported mount flag: {:#x}. Faking success", flags);
+        return Ok(());
+    }
+
     let target = lookup_for_mount(current_task, target_addr)?;
 
     if flags.contains(MountFlags::BIND) {
