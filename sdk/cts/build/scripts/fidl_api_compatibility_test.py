@@ -74,7 +74,7 @@ class GoldenMismatchError(Exception):
             cmd = update_cmd(self.current, self.golden)
             hints.append(
                 f"Please acknowledge this change by updating the golden.\n"
-                f"You can rebuild with `--args=bless_goldens=true` or run:\n"
+                f"To do this, please run:\n"
                 f"  {cmd}\n")
 
         hint_lines = '\n'.join(hints)
