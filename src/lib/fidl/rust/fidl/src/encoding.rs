@@ -4,7 +4,8 @@
 
 //! Encoding contains functions and traits for FIDL encoding and decoding.
 
-pub use static_assertions::const_assert_eq;
+pub use {static_assertions::const_assert_eq, zerocopy};
+
 use {
     crate::endpoints::ProtocolMarker,
     crate::handle::{
