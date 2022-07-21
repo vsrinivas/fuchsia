@@ -844,9 +844,8 @@ class VmMapBuilder final : public RestartableVmEnumerator<zx_info_maps_t, VmMapB
 
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-zx_status_t GetVmAspaceMaps(VmAspace* current_aspace, fbl::RefPtr<VmAspace> target_aspace,
-                            user_out_ptr<zx_info_maps_t> maps, size_t max, size_t* actual,
-                            size_t* available) {
+zx_status_t GetVmAspaceMaps(fbl::RefPtr<VmAspace> target_aspace, user_out_ptr<zx_info_maps_t> maps,
+                            size_t max, size_t* actual, size_t* available) {
   DEBUG_ASSERT(target_aspace != nullptr);
   *actual = 0;
   *available = 0;
@@ -913,8 +912,8 @@ class AspaceVmoEnumerator final
 
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-zx_status_t GetVmAspaceVmos(VmAspace* current_aspace, fbl::RefPtr<VmAspace> target_aspace,
-                            VmoInfoWriter& vmos, size_t max, size_t* actual, size_t* available) {
+zx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> target_aspace, VmoInfoWriter& vmos, size_t max,
+                            size_t* actual, size_t* available) {
   DEBUG_ASSERT(target_aspace != nullptr);
   DEBUG_ASSERT(actual != nullptr);
   DEBUG_ASSERT(available != nullptr);

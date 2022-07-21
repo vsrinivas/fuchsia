@@ -42,11 +42,9 @@ class VmoInfoWriter {
 // been written is returned via |available|.
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-// |current_aspace| refers to the current active aspace for which |maps| is a pointer for, and
 // |target_aspace| is the aspace that is to be enumerated.
-zx_status_t GetVmAspaceMaps(VmAspace* current_aspace, fbl::RefPtr<VmAspace> target_aspace,
-                            user_out_ptr<zx_info_maps_t> maps, size_t max, size_t* actual,
-                            size_t* available);
+zx_status_t GetVmAspaceMaps(fbl::RefPtr<VmAspace> target_aspace, user_out_ptr<zx_info_maps_t> maps,
+                            size_t max, size_t* actual, size_t* available);
 
 // Walks the VmAspace and writes entries that describe its mapped VMOs into
 // |vmos|, which must point to enough memory for |max| entries. The number of
@@ -54,10 +52,9 @@ zx_status_t GetVmAspaceMaps(VmAspace* current_aspace, fbl::RefPtr<VmAspace> targ
 // have been written is returned via |available|.
 // NOTE: Code outside of the syscall layer should not typically know about
 // user_ptrs; do not use this pattern as an example.
-// |current_aspace| refers to the current active aspace for which |vmos| is a pointer for, and
 // |target_aspace| is the aspace that is to be enumerated.
-zx_status_t GetVmAspaceVmos(VmAspace* current_aspace, fbl::RefPtr<VmAspace> target_aspace,
-                            VmoInfoWriter& vmos, size_t max, size_t* actual, size_t* available);
+zx_status_t GetVmAspaceVmos(fbl::RefPtr<VmAspace> target_aspace, VmoInfoWriter& vmos, size_t max,
+                            size_t* actual, size_t* available);
 
 // For every VMO in the process's handle table, writes an entry into |vmos|,
 // which must point to enough memory for |max| entries. The number of entries

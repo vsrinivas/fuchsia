@@ -470,7 +470,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       auto maps = _buffer.reinterpret<zx_info_maps_t>();
       size_t count = buffer_size / sizeof(zx_info_maps_t);
       size_t avail = 0;
-      status = process->GetAspaceMaps(up->aspace().get(), maps, count, &count, &avail);
+      status = process->GetAspaceMaps(maps, count, &count, &avail);
 
       if (_actual) {
         zx_status_t copy_status = _actual.copy_to_user(count);
@@ -498,11 +498,11 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
       if (topic == ZX_INFO_PROCESS_VMOS_V1) {
         SubsetVmoInfoWriter<zx_info_vmo_v1_t> writer{_buffer.reinterpret<zx_info_vmo_v1_t>()};
         count = buffer_size / sizeof(zx_info_vmo_v1_t);
-        status = process->GetVmos(up->aspace().get(), writer, count, &count, &avail);
+        status = process->GetVmos(writer, count, &count, &avail);
       } else {
         SubsetVmoInfoWriter<zx_info_vmo_t> writer{_buffer.reinterpret<zx_info_vmo_t>()};
         count = buffer_size / sizeof(zx_info_vmo_t);
-        status = process->GetVmos(up->aspace().get(), writer, count, &count, &avail);
+        status = process->GetVmos(writer, count, &count, &avail);
       }
 
       if (_actual) {
