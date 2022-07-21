@@ -1,0 +1,26 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.clipboard;
+
+/// Set of errors that can be returned by the clipboard server.
+type ClipboardError = flexible enum {
+    /// An internal error occurred. All the client can do is try again later.
+    INTERNAL = 1;
+
+    /// The clipboard was empty, or the requested item(s) were not present on the clipboard.
+    EMPTY = 2;
+
+    /// The client sent an invalid request, e.g. missing requiring fields.
+    INVALID_REQUEST = 3;
+
+    /// The client sent the server an invalid `ViewRef` or a `ViewRef` that is already associated
+    /// with another client.
+    INVALID_VIEW_REF = 4;
+
+    /// The client attempted to perform an operation that requires input focus, at a moment when
+    /// it did not have input focus. The client should wait until it has focus again before
+    /// retrying.
+    UNAUTHORIZED = 5;
+};

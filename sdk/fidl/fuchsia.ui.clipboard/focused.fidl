@@ -1,0 +1,35 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.clipboard;
+
+using fuchsia.ui.views;
+
+/// A protocol that allows graphical clients that own `ViewRef`s to request read ("paste") access to
+/// the clipboard. Clients can register for access at any time, but `GetItem` calls will only
+/// succeed while the view has input focus.
+@discoverable
+protocol FocusedReaderRegistry {
+    /// If the `ViewRef` is valid, the clipboard server will allow the client to send commands using
+    ///the given `Reader`. If the `ViewRef` later becomes invalid, the `Reader`'s channel will be
+    /// closed.
+    RequestReader(resource table {
+        1: view_ref fuchsia.ui.views.ViewRef;
+        2: reader_request server_end:Reader;
+    }) -> (struct {}) error ClipboardError;
+};
+
+/// A protocol that allows graphical clients that own `ViewRef`s to request write ("copy") access to
+/// the clipboard. Clients can register for access at any time, but `SetItem` calls will only
+/// succeed while the view has input focus.
+@discoverable
+protocol FocusedWriterRegistry {
+    /// If the `ViewRef` is valid, the clipboard server will allow the client to send commands using
+    /// the given `Writer`. If the `ViewRef` later becomes invalid, the `Writer`'s channel will be
+    /// closed.
+    RequestWriter(resource table {
+        1: view_ref fuchsia.ui.views.ViewRef;
+        2: writer_request server_end:Writer;
+    }) -> (struct {}) error ClipboardError;
+};

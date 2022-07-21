@@ -1,0 +1,40 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.clipboard;
+
+/// A single item on the clipboard, consisting of a MIME type and a payload.
+type ClipboardItem = resource table {
+    /// MIME type of the data, according to the client that placed the data on the clipboard.
+    /// *Note:* The clipboard service does not validate clipboard items and does not guarantee that
+    /// they conform to the given MIME type's specifications.
+    1: mime_type_hint string:MAX_MIME_TYPE_LENGTH;
+    /// The payload of the clipboard item.
+    2: payload ClipboardItemData;
+};
+
+/// The payload of a `ClipboardItem`. Future expansions will support additional transport formats.
+type ClipboardItemData = flexible resource union {
+    /// A UTF-8 string.
+    1: text string:MAX_TEXT_LENGTH;
+};
+
+/// Allows data to be read from the clipboard, i.e. pasted.
+protocol Reader {
+    /// Reads a single item from the clipboard. If the client's `View` does not have input focus, an
+    /// error will be returned. If there is no item on the clipboard, `ClipboardError.EMPTY` will
+    /// be returned.
+    GetItem(table {}) -> (ClipboardItem) error ClipboardError;
+};
+
+/// Allows data to be written to the clipboard, i.e. copied.
+protocol Writer {
+    /// Writes a single item to the clipboard. If the client's `View` does not have input focus, an
+    /// error will be returned.
+    SetItem(ClipboardItem) -> (struct {}) error ClipboardError;
+
+    /// Clears the contents of the clipboard. If the client's `View` does not have input focus, an
+    /// error will be returned.
+    Clear(table {}) -> (struct {}) error ClipboardError;
+};

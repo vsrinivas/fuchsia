@@ -1,0 +1,15 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.clipboard;
+
+/// The maximum length of a plain-text clipboard item in bytes. Although FIDL messages support
+/// larger messages, this limit allows space to be reserved for potential other fields in the
+/// message.
+const MAX_TEXT_LENGTH uint32 = 32768;
+
+/// The maximum length of a MIME Type identifier. Per
+/// [IETF RFC 4288](https://datatracker.ietf.org/doc/html/rfc4288#section-4.2), a MIME type may have
+/// up to 127 characters before and 127 characters after the slash, for a total of 255.
+const MAX_MIME_TYPE_LENGTH uint32 = 255;
