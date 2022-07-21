@@ -5,9 +5,10 @@
 #include "src/media/audio/drivers/test/test_base.h"
 
 #include <fcntl.h>
+#include <fuchsia/component/cpp/fidl.h>
 #include <fuchsia/hardware/audio/cpp/fidl.h>
+#include <fuchsia/logger/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
-#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/time.h>
@@ -22,6 +23,13 @@
 #include "src/media/audio/drivers/test/audio_device_enumerator_stub.h"
 
 namespace media::audio::drivers::test {
+
+using component_testing::ChildRef;
+using component_testing::ParentRef;
+using component_testing::Protocol;
+using component_testing::RealmBuilder;
+using component_testing::RealmRoot;
+using component_testing::Route;
 
 // Device discovery is done once at binary open; a fresh FIDL channel is used for each test.
 void TestBase::SetUp() {
@@ -53,26 +61,23 @@ void TestBase::ConnectToBluetoothDevice() {
   std::unique_ptr<AudioDeviceEnumeratorStub> audio_device_enumerator_impl =
       std::make_unique<AudioDeviceEnumeratorStub>();
 
-  auto real_services = sys::ServiceDirectory::CreateFromNamespace();
-  auto real_env = real_services->Connect<fuchsia::sys::Environment>();
-  auto test_services = sys::testing::EnvironmentServices::Create(real_env);
-
-  // Make the AudioDeviceEnumerator stub visible in the nested environment
-  test_services->AddService(
-      std::make_unique<vfs::Service>(audio_device_enumerator_impl->DevEnumFidlRequestHandler()),
-      fuchsia::media::AudioDeviceEnumerator::Name_);
-
-  // Create the nested test environment, and launch the audio harness there.
-  // test_env_ and harness_ must be kept alive during test execution
-  test_env_ = sys::testing::EnclosingEnvironment::Create("audio_driver_test_env", real_env,
-                                                         std::move(test_services));
-  bt_harness_ = test_env_->CreateComponentFromUrl(
-      "fuchsia-pkg://fuchsia.com/audio-device-output-harness#meta/audio-device-output-harness.cmx");
-
-  bt_harness_.events().OnTerminated = [](int64_t return_code,
-                                         fuchsia::sys::TerminationReason reason) {
-    FAIL() << "OnTerminated: " << return_code << ", reason " << static_cast<int64_t>(reason);
-  };
+  auto builder = RealmBuilder::Create();
+  builder.AddLocalChild("audio-device-enumerator", audio_device_enumerator_impl.get());
+  builder.AddChild("audio-device-output-harness", "#meta/audio-device-output-harness.cm");
+  builder.AddRoute(Route{.capabilities = {Protocol{fuchsia::media::AudioDeviceEnumerator::Name_}},
+                         .source = ChildRef{"audio-device-enumerator"},
+                         .targets = {ChildRef{"audio-device-output-harness"}}});
+  builder.AddRoute(Route{.capabilities = {Protocol{fuchsia::logger::LogSink::Name_}},
+                         .source = ParentRef{},
+                         .targets = {ChildRef{"audio-device-output-harness"}}});
+  builder.AddRoute(Route{
+      .capabilities = {Protocol{.name = fuchsia::component::Binder::Name_, .as = "audio-binder"}},
+      .source = ChildRef{"audio-device-output-harness"},
+      .targets = {ParentRef{}}});
+  realm_ = std::make_unique<RealmRoot>(builder.Build());
+  ASSERT_EQ(ZX_OK, realm_->Connect("audio-binder", audio_binder_.NewRequest().TakeChannel()));
+  audio_binder_.set_error_handler(
+      [](zx_status_t status) { FAIL() << "audio-device-output-harness exited"; });
 
   // Wait for the Bluetooth harness to AddDeviceByChannel, then pass it on
   RunLoopUntil([impl = audio_device_enumerator_impl.get()]() {

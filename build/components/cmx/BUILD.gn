@@ -126,7 +126,6 @@ group("cmx_allowlist") {
     "//src/connectivity/bluetooth/profiles/bt-avrcp-target:component_manifest_compile",
     "//src/connectivity/bluetooth/profiles/tests/bt-a2dp-loopback:bt-a2dp-loopback_component_manifest_compile",
     "//src/connectivity/bluetooth/testing/mock-piconet-server:component_manifest_compile",
-    "//src/connectivity/bluetooth/tests/audio-device-output-harness:component_manifest_compile",
     "//src/connectivity/bluetooth/tools/bt-fct-hci:bt-fct-hci_component_manifest_compile",
     "//src/connectivity/bluetooth/tools/bt-snoop:bt-snoop_component_manifest_compile",
     "//src/connectivity/ethernet/drivers/usb-cdc-ecm:usb-cdc-ecm-descriptor-fuzzer_component_manifest_compile",

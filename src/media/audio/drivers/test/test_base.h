@@ -8,8 +8,7 @@
 #include <fuchsia/hardware/audio/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/async-loop/default.h>
-#include <lib/sys/cpp/component_context.h>
-#include <lib/sys/cpp/testing/enclosing_environment.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/device/audio.h>
 
@@ -109,8 +108,8 @@ class TestBase : public media::audio::test::TestFixture {
   void ValidateGetFormats();
   void SetMinMaxFormats();
 
-  std::unique_ptr<sys::testing::EnclosingEnvironment> test_env_;
-  fuchsia::sys::ComponentControllerPtr bt_harness_;
+  std::unique_ptr<component_testing::RealmRoot> realm_;
+  fuchsia::component::BinderPtr audio_binder_;
 
   const DeviceEntry& device_entry_;
 

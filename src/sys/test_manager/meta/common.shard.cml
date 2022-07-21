@@ -542,6 +542,16 @@
             rights: [ "rw*" ],
         },
 
+        // audio_driver_tests requires access to audio input and output.
+        {
+            directory: [
+                "dev-audio-input",
+                "dev-audio-output",
+            ],
+            from: "parent",
+            to: [ "#system-tests" ],
+        },
+
         // optee_test requires access to /dev/class/tee.
         {
             directory: "dev-tee",

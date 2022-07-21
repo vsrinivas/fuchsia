@@ -1,0 +1,31 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "sys/component/realm_builder.shard.cml",
+
+        // This test defines its own main
+        "sys/testing/elf_test_runner.shard.cml",
+        "sys/testing/system-test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/audio_driver_tests",
+    },
+    use: [
+        {
+            protocol: [ "fuchsia.scheduler.ProfileProvider" ],
+        },
+        {
+            directory: "dev-audio-input",
+            rights: [ "rw*" ],
+            path: "/dev/class/audio-input",
+        },
+        {
+            directory: "dev-audio-output",
+            rights: [ "rw*" ],
+            path: "/dev/class/audio-output",
+        },
+    ],
+}

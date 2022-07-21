@@ -8,15 +8,15 @@
 #include <fuchsia/hardware/audio/cpp/fidl.h>
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/syslog/cpp/macros.h>
 
 namespace media::audio::drivers::test {
 
-class AudioDeviceEnumeratorStub : public fuchsia::media::AudioDeviceEnumerator {
+class AudioDeviceEnumeratorStub : public fuchsia::media::AudioDeviceEnumerator,
+                                  public component_testing::LocalComponent {
  public:
-  fidl::InterfaceRequestHandler<fuchsia::media::AudioDeviceEnumerator> DevEnumFidlRequestHandler() {
-    return audio_device_enumerator_bindings_.GetHandler(this);
-  }
+  void Start(std::unique_ptr<component_testing::LocalComponentHandles> mock_handles) override;
 
   // fuchsia::media::AudioDeviceEnumerator impl
   void GetDevices(GetDevicesCallback get_devices_callback) final;
@@ -33,6 +33,7 @@ class AudioDeviceEnumeratorStub : public fuchsia::media::AudioDeviceEnumerator {
   bool channel_available() const { return channel_.is_valid(); }
 
  private:
+  std::unique_ptr<component_testing::LocalComponentHandles> handles_;
   // The set of AudioDeviceEnumerator clients we are currently tending to.
   fidl::BindingSet<fuchsia::media::AudioDeviceEnumerator> audio_device_enumerator_bindings_;
 

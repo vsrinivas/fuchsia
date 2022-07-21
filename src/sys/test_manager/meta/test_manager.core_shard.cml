@@ -258,6 +258,20 @@
         {
             directory: "dev",
             from: "parent",
+            as: "dev-audio-input",
+            to: "#test_manager",
+            subdir: "class/audio-input",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-audio-output",
+            to: "#test_manager",
+            subdir: "class/audio-output",
+        },
+        {
+            directory: "dev",
+            from: "parent",
             as: "dev-input",
             to: "#test_manager",
             subdir: "class/input",

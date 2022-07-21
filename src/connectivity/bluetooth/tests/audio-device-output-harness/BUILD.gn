@@ -27,12 +27,8 @@ rustc_binary("bin") {
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
 }
 
-fuchsia_component("component") {
+fuchsia_component("audio-device-output-harness") {
   component_name = "audio-device-output-harness"
-  manifest = "meta/audio-device-output-harness.cmx"
+  manifest = "meta/audio-device-output-harness.cml"
   deps = [ ":bin" ]
-}
-
-fuchsia_package("audio-device-output-harness") {
-  deps = [ ":component" ]
 }
