@@ -81,8 +81,30 @@ impl fmt::Debug for Lifecycle {
     }
 }
 
+/// The pre-authentication state for an account.
+struct AccountPreAuthState {
+    // TODO(fxbug.dev/104516): Populate and use AccountPreAuthState. This should probably
+    // be implemented in the pre_auth module rather than as the separate struct defined here.
+}
+
+impl From<Vec<u8>> for AccountPreAuthState {
+    fn from(_data: Vec<u8>) -> Self {
+        // TODO(fxbug.dev/104516): Deserialize AccountPreAuthState. This should probably be
+        // implemented using serde.
+        AccountPreAuthState {}
+    }
+}
+
+impl Into<Vec<u8>> for AccountPreAuthState {
+    fn into(self) -> Vec<u8> {
+        // TODO(fxbug.dev/104516): Serialize AccountPreAuthState. This should probably be
+        // implemented using serde.
+        vec![]
+    }
+}
+
 /// The core state of the AccountHandler, i.e. the Account (once it is known) and references to
-/// the execution context and a TokenManager.
+/// the execution context.
 pub struct AccountHandler {
     /// An AccountHandlerContextProxy for this account.
     context: AccountHandlerContextProxy,
@@ -103,7 +125,6 @@ pub struct AccountHandler {
 
     /// Helper for outputting account handler information via fuchsia_inspect.
     inspect: Arc<inspect::AccountHandler>,
-    // TODO(jsankey): Add TokenManager and AccountHandlerContext.
 }
 
 impl AccountHandler {
@@ -145,21 +166,21 @@ impl AccountHandler {
     ) -> Result<(), fidl::Error> {
         match req {
             AccountHandlerControlRequest::CreateAccount { payload, responder } => {
-                let mut response =
+                let response =
                     self.create_account(payload.interaction, payload.auth_mechanism_id).await;
-                responder.send(&mut response)?;
+                responder.send(&mut response.map(|state| state.into()))?;
             }
-            AccountHandlerControlRequest::Preload { responder } => {
-                let mut response = self.preload().await;
+            AccountHandlerControlRequest::Preload { pre_auth_state, responder } => {
+                let mut response = self.preload(AccountPreAuthState::from(pre_auth_state)).await;
                 responder.send(&mut response)?;
             }
             AccountHandlerControlRequest::UnlockAccount { payload, responder } => {
-                let mut response = self.unlock_account(payload.interaction).await;
-                responder.send(&mut response)?;
+                let response = self.unlock_account(payload.interaction).await;
+                responder.send(&mut response.map(|opt| opt.map(|state| state.into())))?;
             }
             AccountHandlerControlRequest::LockAccount { responder } => {
-                let mut response = self.lock_account().await;
-                responder.send(&mut response)?;
+                let response = self.lock_account().await;
+                responder.send(&mut response.map(|opt| opt.map(|state| state.into())))?;
             }
             AccountHandlerControlRequest::RemoveAccount { responder } => {
                 let mut response = self.remove_account().await;
@@ -204,7 +225,7 @@ impl AccountHandler {
         &self,
         _interaction: Option<ServerEnd<InteractionMarker>>,
         auth_mechanism_id: Option<String>,
-    ) -> Result<(), ApiError> {
+    ) -> Result<AccountPreAuthState, ApiError> {
         // TODO(fxb/104337): Implement the server end of the interaction protocol.
         let (_, test_interaction_server_end) = create_endpoints().unwrap();
         let mut test_ipse = InteractionProtocolServerEnd::Test(test_interaction_server_end);
@@ -264,7 +285,7 @@ impl AccountHandler {
                 .map_err(|err| err.api_error)?;
                 *state_lock = Lifecycle::Initialized { account: Arc::new(account) };
                 self.inspect.lifecycle.set("initialized");
-                Ok(())
+                Ok(AccountPreAuthState {})
             }
             ref invalid_state @ _ => {
                 warn!("CreateAccount was called in the {:?} state", invalid_state);
@@ -275,7 +296,7 @@ impl AccountHandler {
 
     /// Loads pre-authentication state for an account.  Moves the handler from
     /// the `Uninitialized` to the `Locked` state.
-    async fn preload(&self) -> Result<(), ApiError> {
+    async fn preload(&self, _pre_auth_state: AccountPreAuthState) -> Result<(), ApiError> {
         if self.lifetime == AccountLifetime::Ephemeral {
             warn!("Preload was called on an ephemeral account");
             return Err(ApiError::InvalidRequest);
@@ -306,12 +327,12 @@ impl AccountHandler {
     async fn unlock_account(
         &self,
         interaction: Option<ServerEnd<InteractionMarker>>,
-    ) -> Result<(), ApiError> {
+    ) -> Result<Option<AccountPreAuthState>, ApiError> {
         let mut state_lock = self.state.lock().await;
         match &*state_lock {
             Lifecycle::Initialized { .. } => {
                 info!("UnlockAccount was called in the Initialized state, quietly succeeding.");
-                return Ok(());
+                return Ok(None);
             }
             Lifecycle::Locked => {
                 let (prekey_material, updated_state) =
@@ -343,7 +364,7 @@ impl AccountHandler {
                 }
                 *state_lock = Lifecycle::Initialized { account: Arc::new(account) };
                 self.inspect.lifecycle.set("initialized");
-                Ok(())
+                Ok(None)
             }
             ref invalid_state @ _ => {
                 warn!("UnlockAccount was called in the {:?} state", invalid_state);
@@ -354,11 +375,14 @@ impl AccountHandler {
 
     /// Locks the account, terminating all open Account and Persona channels.  Moves
     /// the handler to the `Locked` state.
-    async fn lock_account(&self) -> Result<(), ApiError> {
-        Self::lock_now(Arc::clone(&self.state), Arc::clone(&self.inspect)).await.map_err(|err| {
-            warn!("LockAccount call failed: {:?}", err);
-            err.api_error
-        })
+    async fn lock_account(&self) -> Result<Option<AccountPreAuthState>, ApiError> {
+        Self::lock_now(Arc::clone(&self.state), Arc::clone(&self.inspect))
+            .await
+            .map_err(|err| {
+                warn!("LockAccount call failed: {:?}", err);
+                err.api_error
+            })
+            .map(|_| None)
     }
 
     /// Remove the active account. This method should not be retried on failure.
@@ -734,7 +758,8 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy| async move {
                 let (_, account_server_end) = create_endpoints().unwrap();
-                proxy.preload().await??;
+                let pre_auth_state: Vec<u8> = AccountPreAuthState {}.into();
+                proxy.preload(&pre_auth_state).await??;
                 assert_eq!(
                     proxy.get_account(account_server_end).await?,
                     Err(ApiError::FailedPrecondition)
@@ -849,7 +874,8 @@ mod tests {
             None,
             Arc::clone(&inspector),
             |proxy| async move {
-                proxy.preload().await??;
+                let pre_auth_state: Vec<u8> = AccountPreAuthState {}.into();
+                proxy.preload(&pre_auth_state).await??;
                 assert_data_tree!(inspector, root: {
                     account_handler: contains {
                         lifecycle: "locked",
@@ -1024,7 +1050,7 @@ mod tests {
                         .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
                         .await
                         .unwrap(),
-                    Ok(())
+                    Ok(None)
                 );
 
                 // Lifecycle updated
@@ -1083,7 +1109,7 @@ mod tests {
                         .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
                         .await
                         .unwrap(),
-                    Ok(())
+                    Ok(None)
                 );
 
                 // Lifecycle updated
@@ -1275,7 +1301,9 @@ mod tests {
             None,
             Arc::new(Inspector::new()),
             |proxy| async move {
-                proxy.preload().await??; // Preloading a non-existing account will succeed, for now
+                let pre_auth_state: Vec<u8> = AccountPreAuthState {}.into();
+                // Preloading a non-existing account will succeed, for now
+                proxy.preload(&pre_auth_state).await??;
                 assert_eq!(proxy.remove_account().await?, Err(ApiError::UnsupportedOperation));
                 Ok(())
             },
@@ -1368,7 +1396,9 @@ mod tests {
             None,
             Arc::new(Inspector::new()),
             |proxy| async move {
-                proxy.preload().await??; // Preloading a non-existing account will succeed, for now
+                let pre_auth_state: Vec<u8> = AccountPreAuthState {}.into();
+                // Preloading a non-existing account will succeed, for now
+                proxy.preload(&pre_auth_state).await??;
                 assert_eq!(
                     proxy.unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY).await?,
                     Err(ApiError::NotFound)

@@ -26,6 +26,8 @@ use {
     std::sync::Arc,
 };
 
+const EMPTY_PRE_AUTH_STATE: Vec<u8> = vec![];
+
 lazy_static! {
     // Indicating en error-free, standard response.
     pub static ref DEFAULT_ACCOUNT_ID: AccountId = AccountId::new(10000);
@@ -78,13 +80,13 @@ impl AccountHandlerConnection for FakeAccountHandlerConnection {
             while let Some(req) = stream.try_next().await.unwrap() {
                 match req {
                     AccountHandlerControlRequest::CreateAccount { responder, .. } => {
-                        let mut response = Ok(());
+                        let mut response = Ok(EMPTY_PRE_AUTH_STATE.clone());
                         if generate_unknown_err {
                             response = Err(ApiError::Unknown);
                         }
                         responder.send(&mut response).unwrap();
                     }
-                    AccountHandlerControlRequest::Preload { responder } => {
+                    AccountHandlerControlRequest::Preload { responder, .. } => {
                         let mut response = Ok(());
                         if generate_unknown_err {
                             response = Err(ApiError::Unknown);
@@ -176,7 +178,7 @@ mod tests {
             DEFAULT_ACCOUNT_ID.clone(),
         )
         .await?;
-        assert!(conn.proxy().preload().await.unwrap().is_ok());
+        assert!(conn.proxy().preload(&EMPTY_PRE_AUTH_STATE).await.unwrap().is_ok());
         Ok(())
     }
 
@@ -187,7 +189,10 @@ mod tests {
             UNKNOWN_ERROR_ACCOUNT_ID.clone(),
         )
         .await?;
-        assert_eq!(conn.proxy().preload().await.unwrap().unwrap_err(), ApiError::Unknown);
+        assert_eq!(
+            conn.proxy().preload(&EMPTY_PRE_AUTH_STATE).await.unwrap().unwrap_err(),
+            ApiError::Unknown
+        );
         Ok(())
     }
 
@@ -198,7 +203,10 @@ mod tests {
             DEFAULT_ACCOUNT_ID.clone(),
         )
         .await?;
-        assert_eq!(conn.proxy().preload().await.unwrap().unwrap_err(), ApiError::Internal);
+        assert_eq!(
+            conn.proxy().preload(&EMPTY_PRE_AUTH_STATE).await.unwrap().unwrap_err(),
+            ApiError::Internal
+        );
         Ok(())
     }
 

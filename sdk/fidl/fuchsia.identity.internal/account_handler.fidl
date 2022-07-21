@@ -6,6 +6,18 @@ library fuchsia.identity.internal;
 using fuchsia.identity.account;
 using fuchsia.identity.authentication;
 
+/// The maximum length of the pre-auth account state, in bytes.
+const ACCOUNT_PRE_AUTH_STATE_MAX_SIZE uint32 = 10240;
+
+/// Data associated with an account that is available prior to authentication,
+/// such as the account name.
+///
+/// This data is generated and used by an AccountHandler, but is persisted as an
+/// opaque blob by the AccountManager on behalf of the AccountHandler. This
+/// partitioning means neither component has access to both the device-encrypted
+/// disk and the account-encrypted disk.
+alias AccountPreAuthState = bytes:ACCOUNT_PRE_AUTH_STATE_MAX_SIZE;
+
 /// The control channel for an AccountHandler component.
 ///
 /// This interface is intended only for use by the AccountManager component that
@@ -75,6 +87,9 @@ protocol AccountHandlerControl {
     ///                     mechanism will be created for storage
     ///                     unlock.
     ///
+    /// Returns an `AccountPreAuthState` that the client should persist for
+    /// use in future operations on the account.
+    ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the
     /// `Uninitialized` state.
     CreateAccount(resource table {
@@ -83,16 +98,21 @@ protocol AccountHandlerControl {
         // TODO(fxbug.dev/104199): Remove this field once interaction is
         // used for tests.
         3: auth_mechanism_id fuchsia.identity.account.AuthMechanismId;
-    }) -> (struct {}) error fuchsia.identity.account.Error;
+    }) -> (struct {
+        pre_auth_state AccountPreAuthState;
+    }) error fuchsia.identity.account.Error;
 
-    /// Loads pre-auth data, which allows the account to be unlocked later.
+    /// Loads the supplied pre-auth data, which allows the account to be
+    /// unlocked later.
     ///
     /// This moves the AccountHandler from the `Uninitialized` state to the
     /// `Locked` state.
     ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the
     /// `Uninitialized` state.
-    Preload() -> (struct {}) error fuchsia.identity.account.Error;
+    Preload(struct {
+        pre_auth_state AccountPreAuthState;
+    }) -> (struct {}) error fuchsia.identity.account.Error;
 
     /// Reach the `Initialized` state, attempting authentication and unlocking
     /// the account where necessary.
@@ -100,20 +120,30 @@ protocol AccountHandlerControl {
     /// `interaction` An `Interaction` channel enabling the user to complete
     ///               authentication challenges if these are necessary.
     ///
+    /// On success, returns an `AccountPreAuthState` if the stored pre-
+    /// authentication state should be updated as a result of the operation.
+    ///
     /// Fails with
     /// - FAILED_PRECONDITION if the AccountHandler is not in the `Locked` or
     ///   `Initialized` state.
     /// - FAILED_AUTH_ATTEMPT if the authentication attempt failed.
     UnlockAccount(resource table {
         1: interaction server_end:fuchsia.identity.authentication.Interaction;
-    }) -> (struct {}) error fuchsia.identity.account.Error;
+    }) -> (struct {
+        pre_auth_state AccountPreAuthState:optional;
+    }) error fuchsia.identity.account.Error;
 
     /// Reach the `Locked` state, closing any open `Account` and `Persona`
     /// channels for the account.
     ///
+    /// On success, returns an `AccountPreAuthState` if the stored pre-
+    /// authentication state should be updated as a result of the operation.
+    ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the
     /// `Initialized` or `Locked` state.
-    LockAccount() -> (struct {}) error fuchsia.identity.account.Error;
+    LockAccount() -> (struct {
+        pre_auth_state AccountPreAuthState:optional;
+    }) error fuchsia.identity.account.Error;
 
     /// Deletes all persistent information about the Fuchsia account handled by
     /// this handler, including all credentials and global identifiers.

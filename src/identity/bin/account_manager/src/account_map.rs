@@ -98,7 +98,7 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
                 );
                 new_handler
                     .proxy()
-                    .preload()
+                    .preload(&vec![])
                     .await
                     .account_manager_error(ApiError::Resource)?
                     .map_err(|err| {
