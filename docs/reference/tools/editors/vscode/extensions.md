@@ -7,7 +7,7 @@ for Fuchsia:
 
 ## Official Fuchsia-specific extensions
 
-Fuchsia-specific extensions provide support with custom Fuchsia files. These extensions are developed 
+Fuchsia-specific extensions provide support with custom Fuchsia files. These extensions are developed
 and are currently supported by Fuchsia developers.
 
 ### Fuchsia developer extension
@@ -17,9 +17,9 @@ Fuchsia devices, logging, and syntax highlighting. This extension is Fuchsia’s
 and can be used with the source tree and the SDK. For more information see the 
 [Fuchsia developer extension page][extension-install].
 
-<img class="vscode-image-logo vscode-image-center"
-     alt="This figure shows the image of the fuchsia extension logo "
-     src="images/extensions/extension-logo.png">
+<img class="vscode-image vscode-image-center"
+     alt="This figure shows the image of the fuchisa developer extension in the Visual Studio Code marketplace"
+     src="images/extensions/extension-page.png">
 
 ## Community contributed extensions
 
@@ -208,5 +208,5 @@ from [Configuring workflow](#rust-configure-workflow):
 [lsp-definition]: https://microsoft.github.io/language-server-protocol/
 [vscode-remote-workspaces]: /docs/reference/tools/editors/vscode/remote-workspaces.md
 [extension-install]: /docs/reference/tools/editors/vscode/fuchsia-ext-install.md
-[extension-link]: https://code.visualstudio.com/
+[extension-link]: https://marketplace.visualstudio.com/items?itemName=fuchsia-authors.vscode-fuchsia
 [structured-config-json5]: /docs/development/components/structured_config.md
