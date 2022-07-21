@@ -15,7 +15,7 @@ const MAXIMUM_ENTRIES_PER_BATCH uint16 = 64;
 
 /// Enum describing the potential failure states of the streaming protocol when serving results
 /// to the client over the result iterator.
-// TODO(fxbug.dev/104384): Decide if this should be `flexible`. #strictaudit
+// TODO(fxbug.dev/104630): Change this from `strict` to `flexible` #strictaudit
 type ReaderError = strict enum {
     // An IO error suggests that parsing of data hierarchy VMOs or writing of formatted data to
     // sockets has failed.
@@ -51,7 +51,7 @@ type FormattedContent = flexible resource union {
 };
 
 /// Enum specifying the modes by which a user can connect to and stream diagnostics metrics.
-// TODO(fxbug.dev/104384): Decide if this should be `flexible`. #strictaudit
+// TODO(fxbug.dev/104630): Change this from `strict` to `flexible` #strictaudit
 type StreamMode = strict enum : uint8 {
     /// The stream will serve a snapshot of the diagnostics data at the time of
     /// connection, then end.
@@ -66,7 +66,7 @@ type StreamMode = strict enum : uint8 {
 };
 
 // Enum specifying the data types available through the diagnostics platform.
-// TODO(fxbug.dev/104384): Decide if this should be `flexible`. #strictaudit
+// TODO(fxbug.dev/104630): Change this from `strict` to `flexible` #strictaudit
 type DataType = strict enum : uint8 {
     /// Complete inspect hierarchies on the system.
     INSPECT = 1;

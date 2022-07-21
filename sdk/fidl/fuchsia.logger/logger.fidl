@@ -12,7 +12,7 @@ using fuchsia.diagnostics;
 /// minimum severity level - with any log equal to or
 /// greater than the threshold being included in the
 /// printable logs.
-// TODO(fxbug.dev/104384): Decide if this should be `flexible`. #strictaudit
+// TODO(fxbug.dev/104630): Change this from `strict` to `flexible` #strictaudit
 type LogLevelFilter = strict enum : int8 {
     @available(removed=8)
     DEPRECATED_INFO_LOAD_BEARING_IN_CHROMIUM = 0;
@@ -114,7 +114,7 @@ protocol Log {
     });
 };
 
-// TODO(fxbug.dev/104384): Decide if this should be `flexible`. #strictaudit
+// TODO(fxbug.dev/104630): Change this from `strict` to `flexible`. #strictaudit
 type InterestChangeError = strict enum : uint32 {
     /// Incorrectly called WaitForInterestChange twice
     /// without waiting for the first call to return.
