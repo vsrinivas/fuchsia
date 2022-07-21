@@ -14,7 +14,7 @@ use {
     fuchsia_url::UnpinnedAbsolutePackageUrl,
     omaha_client::cup_ecdsa::{PublicKeyAndId, PublicKeys},
     serde::{Deserialize, Serialize},
-    std::collections::BTreeMap,
+    std::collections::{BTreeMap, HashSet},
 };
 
 #[derive(Debug, Eq, FromArgs, PartialEq)]
@@ -135,16 +135,20 @@ pub fn generate_pkg_resolver_config(
     configs: &Vec<InputConfig>,
     key_config: &PublicKeysByServiceUrl,
 ) -> ResolverConfigs {
-    ResolverConfigs {
-        packages: configs
-            .iter()
-            .map(|i| ResolverConfig {
-                url: i.url.clone(),
-                executable: i.executable.unwrap_or(false),
-                public_keys: make_public_keys(&i.service_url, key_config),
-            })
-            .collect(),
+    let packages: Vec<_> = configs
+        .iter()
+        .map(|i| ResolverConfig {
+            url: i.url.clone(),
+            executable: i.executable.unwrap_or(false),
+            public_keys: make_public_keys(&i.service_url, key_config),
+        })
+        .collect();
+    if packages.iter().map(|config| config.url.path()).collect::<HashSet<_>>().len()
+        < packages.len()
+    {
+        panic!("Eager package URL must have unique path");
     }
+    ResolverConfigs { packages }
 }
 
 pub mod test_support {
@@ -409,5 +413,33 @@ mod tests {
             &serde_json::to_string_pretty(&pkg_resolver_config).unwrap(),
             &expected,
         );
+    }
+
+    #[test]
+    #[should_panic(expected = "Eager package URL must have unique path")]
+    fn test_generate_pkg_resolver_config_duplicate_path() {
+        let key_config = test_support::make_key_config_for_test();
+        let configs = vec![
+            InputConfig {
+                url: "fuchsia-pkg://example.com/package_service_1".parse().unwrap(),
+                default_channel: Some("stable".to_string()),
+                flavor: None,
+                executable: None,
+                realms: vec![Realm {
+                    app_id: "1a2b3c4d".to_string(),
+                    channels: vec!["stable".to_string(), "beta".to_string(), "alpha".to_string()],
+                }],
+                service_url: "https://example.com".to_string(),
+            },
+            InputConfig {
+                url: "fuchsia-pkg://another-example.com/package_service_1".parse().unwrap(),
+                default_channel: None,
+                flavor: None,
+                executable: None,
+                realms: vec![],
+                service_url: "https://example.com".to_string(),
+            },
+        ];
+        let _ = generate_pkg_resolver_config(&configs, &key_config);
     }
 }

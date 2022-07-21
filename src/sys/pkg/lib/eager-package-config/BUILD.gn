@@ -21,13 +21,16 @@ rustc_library("eager-package-config") {
   ]
   if (is_fuchsia) {
     deps += [
-      "//src/lib/fidl/rust/fidl",
+      "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
       "//src/lib/fuchsia-fs",
       "//src/lib/zircon/rust:fuchsia-zircon",
+      "//third_party/rust_crates:futures",
+      "//third_party/rust_crates:thiserror",
     ]
   }
 
   test_deps = [
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:pretty_assertions",
   ]
@@ -40,6 +43,7 @@ rustc_library("eager-package-config") {
 }
 
 fuchsia_unittest_package("eager-package-config-lib-tests") {
+  manifest = "meta/eager-package-config-lib-test.cml"
   deps = [ ":eager-package-config_test" ]
 }
 

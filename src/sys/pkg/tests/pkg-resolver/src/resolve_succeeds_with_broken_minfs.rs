@@ -581,16 +581,18 @@ async fn minfs_fails_create_repo_configs() {
     verify_pkg_resolution_succeeds_during_minfs_repo_config_failure(
         Arc::clone(&open_handler),
         || open_handler.get_open_fail_count(),
-        // Before the first pkg-resolver restart, we fail 3 times:
+        // Before the first pkg-resolver restart, we fail 4 times:
         // * when trying to open repositories.json on start
         // * when trying to open rewrites.json on start
+        // * when trying to open eager_packages.pf on start
         // * when trying to open repositories.json when adding a dynamic repo config
-        3,
+        4,
         // We fail an additional 3 times after the restart to account for following files
         // failing to open again on startup:
         // * repositories.json
         // * rewrites.json
-        5,
+        // * eager_packages.pf
+        7,
         || open_handler.make_open_succeed(),
     )
     .await;
@@ -608,14 +610,16 @@ async fn minfs_fails_create_rewrite_rules() {
         // Before the first pkg-resolver restart, we fail 5 times:
         // * when trying to open repositories.json on start
         // * when trying to open rewrites.json on start
+        // * when trying to open eager_packages.pf on start
         // * when trying to open repositories.json when adding a dynamic repo config
         // * when trying to open rewrites.json when adding a dynamic rewrite rule
-        4,
+        5,
         // We fail an additional 3 times after the restart to account for following files
         // failing to open again on startup:
         // * repositories.json
         // * rewrites.json
-        6,
+        // * eager_packages.pf
+        8,
         || open_handler.make_open_succeed(),
     )
     .await;

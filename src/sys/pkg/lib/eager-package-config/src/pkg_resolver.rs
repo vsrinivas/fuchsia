@@ -10,8 +10,8 @@ use {
 
 #[cfg(target_os = "fuchsia")]
 use {
-    anyhow::{Context as _, Error},
-    fuchsia_zircon as zx,
+    fidl_fuchsia_io as fio, fuchsia_zircon as zx, futures::stream::StreamExt as _,
+    std::collections::HashSet,
 };
 
 #[cfg(target_os = "fuchsia")]
@@ -34,23 +34,117 @@ pub struct EagerPackageConfig {
 impl EagerPackageConfigs {
     /// Read eager config from namespace. Returns an empty instance of `EagerPackageConfigs` in
     /// case config was not found.
-    pub async fn from_namespace() -> Result<Self, Error> {
-        match fuchsia_fs::file::read_in_namespace(EAGER_PACKAGE_CONFIG_PATH).await {
-            Ok(json) => Ok(serde_json::from_slice(&json).context("parsing eager package config")?),
-            Err(e) => match e.into_inner() {
-                fuchsia_fs::file::ReadError::Open(fuchsia_fs::node::OpenError::OpenError(
-                    status,
-                ))
-                | fuchsia_fs::file::ReadError::Fidl(fidl::Error::ClientChannelClosed {
-                    status,
-                    ..
-                }) if status == zx::Status::NOT_FOUND => {
+    pub async fn from_namespace() -> Result<Self, EagerPackageConfigsError> {
+        Self::from_path(EAGER_PACKAGE_CONFIG_PATH).await
+    }
+
+    async fn from_path(path: &str) -> Result<Self, EagerPackageConfigsError> {
+        let proxy = fuchsia_fs::file::open_in_namespace(
+            path,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::DESCRIBE,
+        )?;
+        match fuchsia_fs::file::read(&proxy).await {
+            Ok(json) => Self::from_json(&json),
+            Err(e) => {
+                if matches!(
+                    proxy.take_event_stream().next().await,
+                    Some(Ok(fio::FileEvent::OnOpen_{s, ..}))
+                        if s == zx::Status::NOT_FOUND.into_raw()
+                ) {
                     Ok(EagerPackageConfigs { packages: Vec::new() })
+                } else {
+                    Err(EagerPackageConfigsError::Read(e))
                 }
-                err => Err(err).with_context(|| {
-                    format!("Error reading eager package config file {EAGER_PACKAGE_CONFIG_PATH}")
-                }),
-            },
+            }
         }
+    }
+
+    fn from_json(json: &[u8]) -> Result<Self, EagerPackageConfigsError> {
+        let configs: Self = serde_json::from_slice(json)?;
+        if configs.packages.iter().map(|config| config.url.path()).collect::<HashSet<_>>().len()
+            < configs.packages.len()
+        {
+            return Err(EagerPackageConfigsError::DuplicatePath);
+        }
+        Ok(configs)
+    }
+}
+
+#[cfg(target_os = "fuchsia")]
+#[derive(Debug, thiserror::Error)]
+pub enum EagerPackageConfigsError {
+    #[error("open eager package config")]
+    Open(#[from] fuchsia_fs::node::OpenError),
+    #[error("read eager package config")]
+    Read(#[from] fuchsia_fs::file::ReadError),
+    #[error("parse eager package config from json")]
+    Json(#[from] serde_json::Error),
+    #[error("eager package URL must have unique path")]
+    DuplicatePath,
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        assert_matches::assert_matches,
+        fuchsia_async as fasync,
+        omaha_client::cup_ecdsa::test_support::{
+            make_default_json_public_keys_for_test, make_default_public_keys_for_test,
+        },
+    };
+
+    #[fasync::run_singlethreaded(test)]
+    async fn not_found_tmp() {
+        let configs = EagerPackageConfigs::from_path("/tmp/not-found").await.unwrap();
+        assert_eq!(configs.packages, vec![]);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn not_found_pkg() {
+        let configs = EagerPackageConfigs::from_path("/pkg/not-found").await.unwrap();
+        assert_eq!(configs.packages, vec![]);
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn success() {
+        let json = serde_json::json!({
+            "packages":[
+                {
+                    "url": "fuchsia-pkg://example.com/package_service_1",
+                    "public_keys": make_default_json_public_keys_for_test()
+                }
+            ]
+        });
+        assert_eq!(
+            EagerPackageConfigs::from_json(json.to_string().as_bytes()).unwrap(),
+            EagerPackageConfigs {
+                packages: vec![EagerPackageConfig {
+                    url: "fuchsia-pkg://example.com/package_service_1".parse().unwrap(),
+                    executable: false,
+                    public_keys: make_default_public_keys_for_test()
+                }]
+            }
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn duplicate_path() {
+        let json = serde_json::json!({
+            "packages":[
+                {
+                    "url": "fuchsia-pkg://example.com/package_service_1",
+                    "public_keys": make_default_json_public_keys_for_test()
+                },
+                {
+                    "url": "fuchsia-pkg://another-example.com/package_service_1",
+                    "public_keys": make_default_json_public_keys_for_test()
+                }
+            ]
+        });
+        assert_matches!(
+            EagerPackageConfigs::from_json(json.to_string().as_bytes()),
+            Err(EagerPackageConfigsError::DuplicatePath)
+        );
     }
 }
