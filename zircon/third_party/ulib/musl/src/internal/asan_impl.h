@@ -30,6 +30,8 @@
 void __asan_early_init(void) __attribute__((visibility("hidden")));
 #define ADDR_MASK UINTPTR_MAX
 
+static inline void __hwasan_init(void) {}
+
 #elif __has_feature(hwaddress_sanitizer)
 
 // Expose the hwasan interface.
@@ -46,6 +48,9 @@ void __asan_early_init(void) __attribute__((visibility("hidden")));
 // With ARM TBI, the bottom 56 bits are the relevant addressing bits.
 #define ADDR_MASK (~(UINT64_C(0xFF) << 56))
 
+// This is explicitly called in __libc_start_main.c before extensions are initialized.
+void __hwasan_init(void);
+
 #else  // !__has_feature(address_sanitizer)
 
 #define __asan_weak_alias(name)  // Do nothing in unsanitized build.
@@ -56,5 +61,7 @@ void __asan_early_init(void) __attribute__((visibility("hidden")));
 // in a bunch of places.
 static inline void __asan_early_init(void) {}
 #define ADDR_MASK UINTPTR_MAX
+
+static inline void __hwasan_init(void) {}
 
 #endif  // __has_feature(address_sanitizer)

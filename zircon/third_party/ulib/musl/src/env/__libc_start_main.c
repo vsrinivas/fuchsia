@@ -120,6 +120,11 @@ static void start_main(const struct start_params* p) {
   __sanitizer_startup_hook(argc, argv, __environ, p->td->safe_stack.iov_base,
                            p->td->safe_stack.iov_len);
 
+  // Setup the hwasan runtime before any `__libc_extensions_init`s are called.
+  // This is needed because libraries which define this function (like fdio)
+  // may be instrumented and either access `__hwasan_tls` or make runtime calls.
+  __hwasan_init();
+
   // Allow companion libraries a chance to claim handles, zeroing out
   // handles[i] and handle_info[i] for handles they claim.
   if (&__libc_extensions_init != NULL) {
