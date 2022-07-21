@@ -3708,6 +3708,12 @@ This must have in its `bin/` subdirectory `gen_snapshot.OS-CPU` binaries.
 
 From //build/dart/dart.gni:8
 
+### prebuilt_fastboot
+
+**Current value (from the default):** `"//prebuilt/third_party/fastboot/fastboot"`
+
+From //build/images/tools/fastboot.gni:6
+
 ### prebuilt_libvulkan_img_path
 The path to a prebuilt libvulkan.so for an IMG GPU.
 
@@ -4017,7 +4023,7 @@ Enable to use the rust virtio GPU and input devices by default in the VMM.
 
 **Current value (from the default):** `false`
 
-From //src/virtualization/bin/vmm/BUILD.gn:12
+From //src/virtualization/bin/args.gni:10
 
 ### rustc_prefix
 Sets a custom base directory for `rustc` and `cargo`.
@@ -4984,11 +4990,12 @@ Path to file to use for italic font
 
 From //src/bringup/bin/virtcon/virtcon_args.gni:14
 
-### virtio_vsock_inprocess
+### virtio_vsock_legacy_inprocess
+Enable to use the legacy vsock device.
 
 **Current value (from the default):** `true`
 
-From //src/virtualization/bin/vmm/BUILD.gn:9
+From //src/virtualization/bin/args.gni:7
 
 ### virtmagma_debug
 Enable verbose logging in virtmagma-related code
