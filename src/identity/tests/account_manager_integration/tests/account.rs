@@ -12,7 +12,6 @@ use {
     },
     fidl_fuchsia_logger::LogSinkMarker,
     fidl_fuchsia_stash::StoreMarker,
-    fidl_fuchsia_sys::{EnvironmentMarker, LauncherMarker},
     fidl_fuchsia_tracing_provider::RegistryMarker,
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
@@ -24,16 +23,12 @@ use {
 /// Type alias for the LocalAccountId FIDL type
 type LocalAccountId = u64;
 
-const ALWAYS_SUCCEED_AUTH_MECHANISM_ID: &str =
-    "fuchsia-pkg://fuchsia.com/dev_authenticator#meta/dev_authenticator_always_succeed.cmx";
+const ALWAYS_SUCCEED_AUTH_MECHANISM_ID: &str = "#meta/dev_authenticator_always_succeed.cm";
 
-const ALWAYS_FAIL_AUTHENTICATION_AUTH_MECHANISM_ID: &str = concat!(
-    "fuchsia-pkg://fuchsia.com/dev_authenticator",
-    "#meta/dev_authenticator_always_fail_authentication.cmx"
-);
+const ALWAYS_FAIL_AUTHENTICATION_AUTH_MECHANISM_ID: &str =
+    "#meta/dev_authenticator_always_fail_authentication.cm";
 
-const ACCOUNT_MANAGER_URL: &'static str =
-    "fuchsia-pkg://fuchsia.com/account_manager_integration_test#meta/account_manager_for_test.cmx";
+const ACCOUNT_MANAGER_URL: &'static str = "#meta/account_manager.cm";
 const STASH_URL: &'static str = "#meta/stash.cm";
 
 /// Maximum time between a lock request and when the account is locked
@@ -92,10 +87,23 @@ impl Deref for NestedAccountManagerProxy {
 /// Start account manager in an isolated environment and return a proxy to it.
 async fn create_account_manager() -> Result<NestedAccountManagerProxy, Error> {
     let builder = RealmBuilder::new().await?;
-    let account_manager = builder
-        .add_legacy_child("account_manager", ACCOUNT_MANAGER_URL, ChildOptions::new())
-        .await?;
+    let account_manager =
+        builder.add_child("account_manager", ACCOUNT_MANAGER_URL, ChildOptions::new()).await?;
     let stash = builder.add_child("stash", STASH_URL, ChildOptions::new()).await?;
+    let dev_authenticator_always_succeed = builder
+        .add_child(
+            "dev_authenticator_always_succeed",
+            ALWAYS_SUCCEED_AUTH_MECHANISM_ID,
+            ChildOptions::new(),
+        )
+        .await?;
+    let dev_authenticator_always_fail_authentication = builder
+        .add_child(
+            "dev_authenticator_always_fail_authentication",
+            ALWAYS_FAIL_AUTHENTICATION_AUTH_MECHANISM_ID,
+            ChildOptions::new(),
+        )
+        .await?;
     builder
         .add_route(
             Route::new()
@@ -107,10 +115,32 @@ async fn create_account_manager() -> Result<NestedAccountManagerProxy, Error> {
     builder
         .add_route(
             Route::new()
+                .capability(Capability::protocol_by_name(
+                    "fuchsia.identity.authentication.AlwaysSucceedStorageUnlockMechanism",
+                ))
+                .from(&dev_authenticator_always_succeed)
+                .to(&account_manager),
+        )
+        .await?;
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name(
+                    "fuchsia.identity.authentication.AlwaysFailStorageUnlockMechanism",
+                ))
+                .from(&dev_authenticator_always_fail_authentication)
+                .to(&account_manager),
+        )
+        .await?;
+    builder
+        .add_route(
+            Route::new()
                 .capability(Capability::protocol::<LogSinkMarker>())
                 .from(Ref::parent())
                 .to(&account_manager)
-                .to(&stash),
+                .to(&stash)
+                .to(&dev_authenticator_always_fail_authentication)
+                .to(&dev_authenticator_always_succeed),
         )
         .await?;
     builder
@@ -121,8 +151,14 @@ async fn create_account_manager() -> Result<NestedAccountManagerProxy, Error> {
     builder
         .add_route(
             Route::new()
-                .capability(Capability::protocol::<EnvironmentMarker>())
-                .capability(Capability::protocol::<LauncherMarker>())
+                .capability(Capability::storage("data"))
+                .from(Ref::parent())
+                .to(&account_manager),
+        )
+        .await?;
+    builder
+        .add_route(
+            Route::new()
                 .capability(Capability::protocol::<RegistryMarker>())
                 .from(Ref::parent())
                 .to(&account_manager),
@@ -141,7 +177,6 @@ async fn create_account_manager() -> Result<NestedAccountManagerProxy, Error> {
 
     let account_manager_proxy =
         instance.root.connect_to_protocol_at_exposed_dir::<AccountManagerMarker>()?;
-
     Ok(NestedAccountManagerProxy { account_manager_proxy, _realm_instance: instance })
 }
 

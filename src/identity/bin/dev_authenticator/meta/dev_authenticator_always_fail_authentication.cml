@@ -11,4 +11,16 @@
             "ALWAYS_FAIL_AUTHENTICATION",
         ],
     },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.identity.authentication.StorageUnlockMechanism" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.identity.authentication.StorageUnlockMechanism",
+            from: "self",
+            as: "fuchsia.identity.authentication.AlwaysFailStorageUnlockMechanism",
+        },
+    ],
 }

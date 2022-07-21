@@ -49,9 +49,9 @@ lazy_static! {
     /// testing.
     static ref DEV_AUTHENTICATION_MECHANISM_IDS: Vec<String> = vec![
         concat!("fuchsia-pkg://fuchsia.com/dev_authenticator",
-                "#meta/dev_authenticator_always_succeed.cmx").to_string(),
+                "#meta/dev_authenticator_always_succeed.cm").to_string(),
         concat!("fuchsia-pkg://fuchsia.com/dev_authenticator",
-                "#meta/dev_authenticator_always_fail_authentication.cmx").to_string(),
+                "#meta/dev_authenticator_always_fail_authentication.cm").to_string(),
     ];
 }
 

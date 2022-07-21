@@ -1,0 +1,71 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/account_manager",
+    },
+    collections: [
+        {
+            name: "account_handlers",
+            durability: "transient",
+        },
+    ],
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.identity.account.AccountManager",
+                "fuchsia.identity.internal.AccountHandlerContext",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.stash.Store",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+        {
+            storage: "data",
+            path: "/data",
+        },
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.identity.internal.AccountHandlerContext" ],
+            from: "self",
+            to: "#account_handlers",
+        },
+        {
+            protocol: [
+                "fuchsia.identity.authentication.AlwaysFailStorageUnlockMechanism",
+                "fuchsia.identity.authentication.AlwaysSucceedStorageUnlockMechanism",
+                "fuchsia.logger.LogSink",
+                "fuchsia.stash.Store",
+            ],
+            from: "parent",
+            to: "#account_handlers",
+        },
+        {
+            storage: "data",
+            from: "parent",
+            to: [ "#account_handlers" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.identity.account.AccountManager",
+            from: "self",
+        },
+    ],
+}

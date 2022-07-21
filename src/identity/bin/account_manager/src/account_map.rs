@@ -92,11 +92,10 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
             None => Err(AccountManagerError::new(ApiError::NotFound)),
             Some(Some(handler)) => Ok(Arc::clone(handler)),
             Some(ref mut handler_option) => {
-                let new_handler = Arc::new(AHC::new(
-                    account_id.clone(),
-                    Lifetime::Persistent,
-                    Arc::clone(&self.context),
-                )?);
+                let new_handler = Arc::new(
+                    AHC::new(account_id.clone(), Lifetime::Persistent, Arc::clone(&self.context))
+                        .await?,
+                );
                 new_handler
                     .proxy()
                     .preload()
@@ -115,14 +114,14 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
 
     /// Returns an AccountHandlerConnection for a new account. The
     /// AccountHandler is in the Uninitialized state.
-    pub fn new_handler(&self, lifetime: Lifetime) -> Result<Arc<AHC>, AccountManagerError> {
+    pub async fn new_handler(&self, lifetime: Lifetime) -> Result<Arc<AHC>, AccountManagerError> {
         let mut account_id = AccountId::new(rand::random::<u64>());
         // IDs are 64 bit integers that are meant to be random. Its very unlikely we'll create
         // the same one twice but not impossible.
         while self.accounts.contains_key(&account_id) {
             account_id = AccountId::new(rand::random::<u64>());
         }
-        let new_handler = AHC::new(account_id.clone(), lifetime, Arc::clone(&self.context))?;
+        let new_handler = AHC::new(account_id.clone(), lifetime, Arc::clone(&self.context)).await?;
         Ok(Arc::new(new_handler))
     }
 
@@ -278,17 +277,23 @@ mod tests {
         )?;
 
         // Regular persistent account
-        let conn_test = Arc::new(FakeAccountHandlerConnection::new_with_defaults(
-            Lifetime::Persistent,
-            TEST_ACCOUNT_ID_1.clone(),
-        )?);
+        let conn_test = Arc::new(
+            FakeAccountHandlerConnection::new_with_defaults(
+                Lifetime::Persistent,
+                TEST_ACCOUNT_ID_1.clone(),
+            )
+            .await?,
+        );
         map.add_account(conn_test).await?;
 
         // An ephemeral account that will not survive a lifecycle
-        let conn_ephemeral = Arc::new(FakeAccountHandlerConnection::new_with_defaults(
-            Lifetime::Ephemeral,
-            TEST_ACCOUNT_ID_2.clone(),
-        )?);
+        let conn_ephemeral = Arc::new(
+            FakeAccountHandlerConnection::new_with_defaults(
+                Lifetime::Ephemeral,
+                TEST_ACCOUNT_ID_2.clone(),
+            )
+            .await?,
+        );
         map.add_account(conn_ephemeral).await?;
 
         // All accounts should be available in this lifecycle
@@ -431,10 +436,13 @@ mod tests {
             total: 1u64,
             active: 0u64,
         }});
-        let conn_test = Arc::new(FakeAccountHandlerConnection::new_with_defaults(
-            Lifetime::Persistent,
-            TEST_ACCOUNT_ID_1.clone(),
-        )?);
+        let conn_test = Arc::new(
+            FakeAccountHandlerConnection::new_with_defaults(
+                Lifetime::Persistent,
+                TEST_ACCOUNT_ID_1.clone(),
+            )
+            .await?,
+        );
 
         // Cannot add duplicate account, even if it isn't currently loaded
         assert_eq!(

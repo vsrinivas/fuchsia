@@ -215,7 +215,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
         auth_mechanism_id: Option<String>,
     ) -> Result<Arc<AHC>, ApiError> {
         let account_handler =
-            self.account_map.lock().await.new_handler(lifetime).map_err(|err| {
+            self.account_map.lock().await.new_handler(lifetime).await.map_err(|err| {
                 warn!("Could not initialize account handler: {:?}", err);
                 err.api_error
             })?;

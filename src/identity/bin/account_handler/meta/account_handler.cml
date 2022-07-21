@@ -10,9 +10,16 @@
         runner: "elf",
         binary: "bin/account_handler",
     },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.identity.internal.AccountHandlerControl" ],
+        },
+    ],
     use: [
         {
             protocol: [
+                "fuchsia.identity.authentication.AlwaysFailStorageUnlockMechanism",
+                "fuchsia.identity.authentication.AlwaysSucceedStorageUnlockMechanism",
                 "fuchsia.identity.internal.AccountHandlerContext",
                 "fuchsia.stash.Store",
             ],
@@ -20,6 +27,12 @@
         {
             storage: "data",
             path: "/data",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.identity.internal.AccountHandlerControl",
+            from: "self",
         },
     ],
 }

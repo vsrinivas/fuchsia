@@ -11,11 +11,12 @@ rustc_binary("bin") {
   with_unit_tests = true
 
   deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component-rustc",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl-rustc",
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
     "//sdk/fidl/fuchsia.identity.authentication:fuchsia.identity.authentication-rustc",
     "//sdk/fidl/fuchsia.identity.internal:fuchsia.identity.internal-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/identity/lib/account_common",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
@@ -54,22 +55,16 @@ rustc_binary("bin") {
   ]
 }
 
-fuchsia_component("account_manager_for_test") {
-  # Needed to pass arguments to account manager during test.
-  # TODO(fxbug.dev/90404): Remove/Migrate the legacy component for test too.
-  deps = [ ":bin" ]
-  manifest = "meta/account_manager_for_test.cmx"
-}
-
 fuchsia_component("account_manager_component") {
   component_name = "account_manager"
   deps = [ ":bin" ]
-
-  # fxbug.dev/83213 retain the v1 component while out of tree components still
-  # need it
-  manifest = "meta/account_manager.cmx"
+  manifest = "meta/account_manager.cml"
 }
 
 fuchsia_package("account_manager") {
-  deps = [ ":account_manager_component" ]
+  deps = [
+    ":account_manager_component",
+    "//src/identity/bin/account_handler:account_handler_cmp",
+    "//src/identity/bin/account_handler:account_handler_ephemeral",
+  ]
 }

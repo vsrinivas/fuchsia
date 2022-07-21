@@ -53,17 +53,17 @@ pub struct FakeAccountHandlerConnection {
 impl FakeAccountHandlerConnection {
     /// Returns a new FakeAccountHandlerConnection with an empty
     /// AccountHandlerContext, for convenience.
-    pub fn new_with_defaults(
+    pub async fn new_with_defaults(
         lifetime: Lifetime,
         account_id: AccountId,
     ) -> Result<Self, AccountManagerError> {
-        Self::new(account_id, lifetime, Arc::clone(&EMPTY_ACCOUNT_HANDLER_CONTEXT))
+        Self::new(account_id, lifetime, Arc::clone(&EMPTY_ACCOUNT_HANDLER_CONTEXT)).await
     }
 }
 
 #[async_trait]
 impl AccountHandlerConnection for FakeAccountHandlerConnection {
-    fn new(
+    async fn new(
         account_id: AccountId,
         lifetime: Lifetime,
         _context: Arc<AccountHandlerContext>,
@@ -140,6 +140,7 @@ mod tests {
                 Lifetime::Persistent,
                 Arc::clone(&EMPTY_ACCOUNT_HANDLER_CONTEXT)
             )
+            .await
             .unwrap_err()
             .api_error,
             ApiError::Resource
@@ -151,7 +152,8 @@ mod tests {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Persistent,
             DEFAULT_ACCOUNT_ID.clone(),
-        )?;
+        )
+        .await?;
         assert_eq!(conn.get_lifetime(), &Lifetime::Persistent);
         Ok(())
     }
@@ -161,7 +163,8 @@ mod tests {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Ephemeral,
             DEFAULT_ACCOUNT_ID.clone(),
-        )?;
+        )
+        .await?;
         assert_eq!(conn.get_lifetime(), &Lifetime::Ephemeral);
         Ok(())
     }
@@ -171,7 +174,8 @@ mod tests {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Persistent,
             DEFAULT_ACCOUNT_ID.clone(),
-        )?;
+        )
+        .await?;
         assert!(conn.proxy().preload().await.unwrap().is_ok());
         Ok(())
     }
@@ -181,7 +185,8 @@ mod tests {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Persistent,
             UNKNOWN_ERROR_ACCOUNT_ID.clone(),
-        )?;
+        )
+        .await?;
         assert_eq!(conn.proxy().preload().await.unwrap().unwrap_err(), ApiError::Unknown);
         Ok(())
     }
@@ -191,7 +196,8 @@ mod tests {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Ephemeral,
             DEFAULT_ACCOUNT_ID.clone(),
-        )?;
+        )
+        .await?;
         assert_eq!(conn.proxy().preload().await.unwrap().unwrap_err(), ApiError::Internal);
         Ok(())
     }
@@ -201,7 +207,8 @@ mod tests {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Persistent,
             DEFAULT_ACCOUNT_ID.clone(),
-        )?;
+        )
+        .await?;
         assert!(conn
             .proxy()
             .create_account(AccountHandlerControlCreateAccountRequest::EMPTY)
@@ -216,7 +223,8 @@ mod tests {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Persistent,
             UNKNOWN_ERROR_ACCOUNT_ID.clone(),
-        )?;
+        )
+        .await?;
         assert_eq!(
             conn.proxy()
                 .create_account(AccountHandlerControlCreateAccountRequest::EMPTY)
@@ -233,7 +241,8 @@ mod tests {
         let conn = FakeAccountHandlerConnection::new_with_defaults(
             Lifetime::Persistent,
             DEFAULT_ACCOUNT_ID.clone(),
-        )?;
+        )
+        .await?;
         assert!(conn.proxy().terminate().is_ok());
         assert!(conn
             .proxy()
@@ -251,6 +260,7 @@ mod tests {
             Lifetime::Persistent,
             DEFAULT_ACCOUNT_ID.clone(),
         )
+        .await
         .unwrap();
         assert!(conn.proxy().remove_account().await.unwrap_err().is_closed());
     }

@@ -42,15 +42,10 @@ const DATA_DIR: &str = "/data";
 /// This command line flag (prefixed with `--`) results in an in-memory ephemeral account.
 const EPHEMERAL_FLAG: &str = "ephemeral";
 
-/// This required command line option (prefixed with `--`), followed by a decimal string,
-/// determines the account identifier.
-const ACCOUNT_ID_OPTION: &str = "account_id";
-
 // TODO(dnordstrom): Remove all panics.
 fn main() -> Result<(), Error> {
     let mut opts = getopts::Options::new();
     opts.optflag("", EPHEMERAL_FLAG, "this account is an in-memory ephemeral account");
-    opts.reqopt("", ACCOUNT_ID_OPTION, "set the account id", "ID");
     let args: Vec<String> = std::env::args().collect();
     let options = opts.parse(args)?;
     let lifetime = if options.opt_present(EPHEMERAL_FLAG) {
@@ -58,13 +53,12 @@ fn main() -> Result<(), Error> {
     } else {
         AccountLifetime::Persistent { account_dir: DATA_DIR.into() }
     };
-    let account_id = {
-        let account_id = options.opt_str(ACCOUNT_ID_OPTION).expect("Internal getopts error");
-        AccountId::from_canonical_str(&account_id).expect(&format!(
-            "`{}` should be provided as an unsigned 64-bit integer (in decimal).",
-            &account_id
-        ))
-    };
+
+    // TODO(fxbug.dev/104516): We'll clean up account id when we deprecate stash.
+    // Account ID was used to differentiate the different
+    // stash stores in CFv2. But since we have sandboxed storage available in v2,
+    // we don't need unique names for each. Hence the hardcoded value for now.
+    let account_id = AccountId::new(111222);
 
     fuchsia_syslog::init_with_tags(&[
         "auth",

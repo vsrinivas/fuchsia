@@ -12,12 +12,7 @@
     },
     offer: [
         {
-            protocol: [
-                "fuchsia.sys.Environment",
-                "fuchsia.sys.Launcher",
-                "fuchsia.sys.Loader",
-                "fuchsia.tracing.provider.Registry",
-            ],
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
             from: "parent",
             to: [ "#realm_builder" ],
         },
@@ -27,9 +22,4 @@
             to: [ "#realm_builder" ],
         },
     ],
-    facets: {
-        // Needed for the Launcher capability to launch account handler.
-        // TODO(fxbug.dev/90404): Remove this when we move account manager to CFv2
-        "fuchsia.test": { type: "system" },
-    },
 }

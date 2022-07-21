@@ -87,8 +87,8 @@ impl AccountHandlerContext {
 mod tests {
     use super::*;
 
-    const DUMMY_AUTHENTICATOR_URL_1: &str = "fuchsia-pkg://fuchsia.com/dummy_auth_1#meta/auth.cmx";
-    const DUMMY_AUTHENTICATOR_URL_2: &str = "fuchsia-pkg://fuchsia.com/dummy_auth_2#meta/auth.cmx";
+    const DUMMY_AUTHENTICATOR_URL_1: &str = "fuchsia-pkg://fuchsia.com/dummy_auth_1#meta/auth.cml";
+    const DUMMY_AUTHENTICATOR_URL_2: &str = "fuchsia-pkg://fuchsia.com/dummy_auth_2#meta/auth.cml";
 
     /// Note: Most AccountHandlerContext methods launch instances of an authenticator.
     /// Since it is currently not convenient to mock out this component launching in Rust, we rely

@@ -4,27 +4,44 @@
 
 use {
     crate::account_handler_context::AccountHandlerContext,
-    account_common::{AccountId, AccountManagerError, ResultExt as AccountResultExt},
-    anyhow::Context as _,
+    account_common::{AccountId, AccountManagerError, ResultExt},
+    anyhow::Context,
     async_trait::async_trait,
     core::fmt::Debug,
+    fidl_fuchsia_component::{CreateChildArgs, RealmMarker},
+    fidl_fuchsia_component_decl::{Child, CollectionRef, StartupMode},
     fidl_fuchsia_identity_account::{Error as ApiError, Lifetime},
     fidl_fuchsia_identity_internal::{AccountHandlerControlMarker, AccountHandlerControlProxy},
     fidl_fuchsia_stash::StoreMarker,
-    fidl_fuchsia_sys::EnvironmentControllerProxy,
     fuchsia_async as fasync,
-    fuchsia_component::{client::App, fuchsia_single_component_package_url, server::ServiceFs},
+    fuchsia_component::{client, server::ServiceFs},
     futures::prelude::*,
     log::{error, info, warn},
     std::{fmt, sync::Arc},
 };
 
 /// The url used to launch new AccountHandler component instances.
-const ACCOUNT_HANDLER_URL: &str = fuchsia_single_component_package_url!("account_handler");
+///
+/// Note that account_handler and account_manager are packaged together in
+/// the integration test and in production so the same relative URL works
+/// in both cases. In the future, we could use structured configuration to
+/// set the account_handler url to allow more flexibility in packaging.
+const ACCOUNT_HANDLER_URL: &str = "#meta/account_handler.cm";
 
 /// The url used to launch new ephemeral AccountHandler component instances.
-const ACCOUNT_HANDLER_EPHEMERAL_URL: &str =
-    "fuchsia-pkg://fuchsia.com/account_handler#meta/account_handler_ephemeral.cmx";
+///
+/// Note that account_handler and account_manager are packaged together in
+/// the integration test and in production so the same relative URL works
+/// in both cases. In the future, we could use structured configuration to
+/// set the account_handler url to allow more flexibility in packaging.
+const ACCOUNT_HANDLER_EPHEMERAL_URL: &str = "#meta/account_handler_ephemeral.cm";
+
+/// The collection where we spawn new AccountHandler component instances.
+const ACCOUNT_HANDLER_COLLECTION_NAME: &str = "account_handlers";
+
+/// The prefix which, after appending account id is used for
+/// all AccountHandler instance names.
+const ACCOUNT_PREFIX: &str = "account_";
 
 /// This trait is an abstraction over a connection to an account handler
 /// component. It contains both static methods for creating connections
@@ -33,7 +50,7 @@ const ACCOUNT_HANDLER_EPHEMERAL_URL: &str =
 #[async_trait]
 pub trait AccountHandlerConnection: Send + Sized + Debug {
     /// Create a new uninitialized AccountHandlerConnection.
-    fn new(
+    async fn new(
         account_id: AccountId,
         lifetime: Lifetime,
         context: Arc<AccountHandlerContext>,
@@ -59,18 +76,6 @@ pub trait AccountHandlerConnection: Send + Sized + Debug {
 /// Implementation of an AccountHandlerConnection which creates real component
 /// instances.
 pub struct AccountHandlerConnectionImpl {
-    /// An `App` object for the launched AccountHandler.
-    ///
-    /// Note: This must remain in scope for the component to remain running, but never needs to be
-    /// read.
-    _app: App,
-
-    /// An `EnvController` object for the launched AccountHandler.
-    ///
-    /// Note: This must remain in scope for the component to remain running, but never needs to be
-    /// read.
-    _env_controller: EnvironmentControllerProxy,
-
     /// The account id of the account.
     account_id: AccountId,
 
@@ -89,7 +94,7 @@ impl fmt::Debug for AccountHandlerConnectionImpl {
 
 #[async_trait]
 impl AccountHandlerConnection for AccountHandlerConnectionImpl {
-    fn new(
+    async fn new(
         account_id: AccountId,
         lifetime: Lifetime,
         context: Arc<AccountHandlerContext>,
@@ -102,12 +107,9 @@ impl AccountHandlerConnection for AccountHandlerConnectionImpl {
             ACCOUNT_HANDLER_URL
         };
 
-        // Note: The combination of component URL and environment label determines the location of
-        // the data directory for the launched component. It is critical that the label is unique
-        // and stable per-account, which we achieve through using the account id as the environment
-        // name. We also pass in the account id as a flag, because the environment
-        // name is not known to the launched component.
-        let account_id_string = account_id.to_canonical_string();
+        // We append account id to the account_prefix to get a unique instance
+        // name for each account.
+        let account_handler_name = ACCOUNT_PREFIX.to_string() + &account_id.to_canonical_string();
         let mut fs_for_account_handler = ServiceFs::new();
         if lifetime == Lifetime::Persistent {
             fs_for_account_handler.add_proxy_service::<StoreMarker, _>();
@@ -122,27 +124,47 @@ impl AccountHandlerConnection for AccountHandlerConnectionImpl {
             })
             .detach();
         });
-        let (env_controller, app) = fs_for_account_handler
-            .launch_component_in_nested_environment(
-                account_handler_url.to_string(),
-                Some(vec![format!("--account_id={}", account_id_string)]),
-                account_id_string.as_ref(),
-            )
-            .context("Failed to start launcher")
-            .account_manager_error(ApiError::Resource)?;
-        fasync::Task::spawn(fs_for_account_handler.collect()).detach();
-        let proxy = app
-            .connect_to_protocol::<AccountHandlerControlMarker>()
-            .context("Failed to connect to AccountHandlerControl")
+        let realm = client::connect_to_protocol::<RealmMarker>()
+            .context("failed to connect to fuchsia.component.Realm")
             .account_manager_error(ApiError::Resource)?;
 
-        Ok(AccountHandlerConnectionImpl {
-            _app: app,
-            _env_controller: env_controller,
-            account_id,
-            lifetime,
-            proxy,
-        })
+        let mut collection_ref =
+            CollectionRef { name: String::from(ACCOUNT_HANDLER_COLLECTION_NAME) };
+
+        let child_decl = Child {
+            name: Some(account_handler_name.clone()),
+            url: Some(account_handler_url.to_string()),
+            startup: Some(StartupMode::Lazy),
+            ..Child::EMPTY
+        };
+
+        realm
+            .create_child(&mut collection_ref, child_decl, CreateChildArgs::EMPTY)
+            .await
+            .map_err(|err| {
+                warn!("Failed to create account_handler component instance: {:?}", err);
+                AccountManagerError::new(ApiError::Resource)
+            })?
+            .map_err(|err| {
+                warn!("Failed to create account_handler component instance: {:?}", err);
+                AccountManagerError::new(ApiError::Resource)
+            })?;
+
+        let exposed_dir = client::open_childs_exposed_directory(
+            account_handler_name,
+            Some(ACCOUNT_HANDLER_COLLECTION_NAME.to_string()),
+        )
+        .await
+        .context("failed to open exposed directory")
+        .account_manager_error(ApiError::Resource)?;
+
+        let proxy =
+            client::connect_to_protocol_at_dir_root::<AccountHandlerControlMarker>(&exposed_dir)
+                .context("Failed to connect to AccountHandlerControl")
+                .account_manager_error(ApiError::Resource)?;
+        fasync::Task::spawn(fs_for_account_handler.collect()).detach();
+
+        Ok(AccountHandlerConnectionImpl { account_id, lifetime, proxy })
     }
 
     fn get_account_id(&self) -> &AccountId {

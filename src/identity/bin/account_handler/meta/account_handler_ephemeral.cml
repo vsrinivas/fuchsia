@@ -11,9 +11,23 @@
         binary: "bin/account_handler",
         args: [ "--ephemeral" ],
     },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.identity.internal.AccountHandlerControl" ],
+        },
+    ],
     use: [
         {
-            protocol: [ "fuchsia.identity.internal.AccountHandlerContext" ],
+            protocol: [
+                "fuchsia.identity.authentication.AlwaysFailStorageUnlockMechanism",
+                "fuchsia.identity.authentication.AlwaysSucceedStorageUnlockMechanism",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.identity.internal.AccountHandlerControl",
+            from: "self",
         },
     ],
 }
