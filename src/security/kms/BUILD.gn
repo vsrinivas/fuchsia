@@ -68,7 +68,7 @@ fuchsia_package_with_single_component("kms") {
 }
 
 fuchsia_unittest_package("kms_tests") {
-  manifest = "meta/kms_bin_test.cmx"
+  manifest = "meta/kms_bin_test.cml"
   deps = [ ":bin_test" ]
 }
 
