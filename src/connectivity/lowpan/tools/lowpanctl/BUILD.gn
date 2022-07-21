@@ -66,7 +66,6 @@ rustc_binary("bin") {
 
 fuchsia_shell_package("lowpanctl") {
   deps = [ ":bin" ]
-  manifest = "meta/lowpanctl.cmx"
 }
 
 fuchsia_unittest_package("lowpanctl-unittests") {

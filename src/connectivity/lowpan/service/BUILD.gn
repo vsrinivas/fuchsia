@@ -30,7 +30,10 @@ rustc_binary("bin") {
     "//third_party/rust_crates:regex",
   ]
 
-  test_deps = [ "//src/lib/zircon/rust:fuchsia-zircon" ]
+  test_deps = [
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+  ]
 
   sources = [
     "src/inspect.rs",
@@ -45,17 +48,8 @@ fuchsia_component("lowpanservice-cv2") {
   manifest = "meta/lowpanservice.cml"
 }
 
-fuchsia_component("lowpanservice-cv1") {
-  component_name = "lowpanservice"
-  deps = [ ":bin" ]
-  manifest = "meta/lowpanservice.cmx"
-}
-
 fuchsia_package("lowpanservice") {
-  deps = [
-    ":lowpanservice-cv1",
-    ":lowpanservice-cv2",
-  ]
+  deps = [ ":lowpanservice-cv2" ]
 }
 
 group("service") {
@@ -63,10 +57,11 @@ group("service") {
 }
 
 fuchsia_unittest_package("lowpanservice-test") {
-  manifest = "meta/lowpanservice-test.cmx"
+  manifest = "meta/lowpanservice-test.cml"
   deps = [
     ":bin_test",
-    "//src/connectivity/lowpan/drivers/lowpan-dummy-driver",
+    ":lowpanservice-cv2",
+    "//src/connectivity/lowpan/drivers/lowpan-dummy-driver:lowpan-dummy-driver-cmp",
   ]
   test_specs = {
     log_settings = {

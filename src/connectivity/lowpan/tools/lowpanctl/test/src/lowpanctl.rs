@@ -2,12 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Context as _, Error};
+use anyhow::{bail, format_err, Context as _, Error};
 use fasync::Time;
 use fidl_fuchsia_lowpan::DeviceWatcherMarker;
 use fuchsia_async as fasync;
 use fuchsia_async::TimeoutExt;
-use fuchsia_component::client::{connect_to_protocol, launch, launcher};
+use fuchsia_component::client::connect_to_protocol;
+use fuchsia_component_test::ScopedInstanceFactory;
 use futures::prelude::*;
 
 const DEFAULT_TIMEOUT: fuchsia_zircon::Duration = fuchsia_zircon::Duration::from_seconds(50);
@@ -223,10 +224,11 @@ pub async fn test_lowpanctl_command(args: Vec<String>) -> Result<(), Error> {
 
     // Step 2: Start a LoWPAN Dummy Driver
     println!("Starting lowpan dummy driver");
-    let launcher = launcher()?;
-    let driver_url = "fuchsia-pkg://fuchsia.com/lowpan-dummy-driver#meta/lowpan-dummy-driver.cmx";
-    let mut driver =
-        launch(&launcher, driver_url.to_string(), None).context("launch dummy driver")?;
+    let dummy_driver = ScopedInstanceFactory::new("drivers")
+        .new_instance("#meta/lowpan-dummy-driver.cm")
+        .await
+        .context("creating lowpan dummy driver")?;
+    dummy_driver.connect_to_binder()?;
 
     // Step 3: Wait to receive an event that the driver has registered.
     let (added, removed) = lookup
@@ -243,21 +245,18 @@ pub async fn test_lowpanctl_command(args: Vec<String>) -> Result<(), Error> {
 
     // Step 4: Call lowpanctl
     println!("Calling lowpanctl with {:?}", args);
-    let lowpanctl_url = "fuchsia-pkg://fuchsia.com/lowpanctl#meta/lowpanctl.cmx";
-    let lowpanctl_cmd =
-        launch(&launcher, lowpanctl_url.to_string(), Some(args)).context("launch lowpanctl")?;
-
-    println!("Waiting for \"lowpanctl\" to complete");
-    let output = lowpanctl_cmd
-        .wait_with_output()
-        .on_timeout(Time::after(DEFAULT_TIMEOUT), || Err(format_err!("Timeout")))
-        .await
+    let output = std::process::Command::new("/pkg/bin/lowpanctl")
+        .args(args)
+        .output()
         .context("waiting for lowpanctl to finish")?;
+    if !output.status.success() {
+        bail!("lowpanctl command failed: {:#?}", output);
+    }
 
-    println!("Command \"lowpanctl\" completed, {:?}", output.ok());
+    println!("Command \"lowpanctl\" completed");
 
     // Step 5: Kill the dummy driver.
-    driver.kill().context("Unable to kill driver")?;
+    drop(dummy_driver);
 
     // Step 6: Wait to receive an event that the driver has unregistered.
     let (added, removed) = lookup
@@ -271,8 +270,6 @@ pub async fn test_lowpanctl_command(args: Vec<String>) -> Result<(), Error> {
 
     assert!(added.is_empty(), "Final device watch had added devices");
     assert_eq!(removed, vec!["lowpan0".to_string()]);
-
-    output.ok()?;
 
     Ok(())
 }

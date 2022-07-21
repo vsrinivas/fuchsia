@@ -88,15 +88,8 @@ fuchsia_component("lowpan-ot-driver-cv2") {
   manifest = "meta/lowpan-ot-driver.cml"
 }
 
-fuchsia_component("lowpan-ot-driver-cv1") {
-  component_name = "lowpan-ot-driver"
-  deps = [ ":bin" ]
-  manifest = "meta/lowpan-ot-driver.cmx"
-}
-
 fuchsia_package("lowpan-ot-driver") {
   deps = [
-    ":lowpan-ot-driver-cv1",
     ":lowpan-ot-driver-cv2",
     "//src/connectivity/lowpan/monitor:lowpan-monitor",
   ]

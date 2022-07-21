@@ -23,9 +23,14 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_package_with_single_component("lowpan-dummy-driver") {
+fuchsia_component("lowpan-dummy-driver-cmp") {
+  component_name = "lowpan-dummy-driver"
   deps = [ ":bin" ]
-  manifest = "meta/lowpan-dummy-driver.cmx"
+  manifest = "meta/lowpan-dummy-driver.cml"
+}
+
+fuchsia_package("lowpan-dummy-driver") {
+  deps = [ ":lowpan-dummy-driver-cmp" ]
 }
 
 fuchsia_unittest_package("lowpan-dummy-driver-test") {

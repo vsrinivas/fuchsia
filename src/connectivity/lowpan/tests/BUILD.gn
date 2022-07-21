@@ -11,8 +11,12 @@ group("tests") {
 }
 
 fuchsia_unittest_package("lowpan-integration-tests") {
-  manifest = "meta/lowpan-integration-tests.cmx"
-  deps = [ ":lowpan-integration-tests-bin" ]
+  manifest = "meta/lowpan-integration-tests.cml"
+  deps = [
+    ":lowpan-integration-tests-bin",
+    "//src/connectivity/lowpan/drivers/lowpan-dummy-driver:lowpan-dummy-driver-cmp",
+    "//src/connectivity/lowpan/service:lowpanservice-cv2",
+  ]
   test_specs = {
     log_settings = {
       max_severity = "WARN"
@@ -31,6 +35,7 @@ rustc_test("lowpan-integration-tests-bin") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",

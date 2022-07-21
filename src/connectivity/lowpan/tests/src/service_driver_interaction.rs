@@ -12,7 +12,8 @@ use fidl_fuchsia_lowpan_device::{
 use fidl_fuchsia_lowpan_test::{DeviceTestConnectorMarker, DeviceTestMarker};
 use fuchsia_async as fasync;
 use fuchsia_async::TimeoutExt;
-use fuchsia_component::client::{connect_to_protocol, launch, launcher};
+use fuchsia_component::client::connect_to_protocol;
+use fuchsia_component_test::ScopedInstanceFactory;
 use futures::prelude::*;
 
 const DEFAULT_TIMEOUT: fuchsia_zircon::Duration = fuchsia_zircon::Duration::from_seconds(50);
@@ -37,9 +38,11 @@ async fn test_service_driver_interaction() -> Result<(), Error> {
     assert!(added.is_empty() && removed.is_empty(), "Initial device list not empty");
 
     // Step 2: Start the LoWPAN Dummy Driver
-    let launcher = launcher()?;
-    let driver_url = "fuchsia-pkg://fuchsia.com/lowpan-dummy-driver#meta/lowpan-dummy-driver.cmx";
-    let mut driver = launch(&launcher, driver_url.to_string(), None)?;
+    let dummy_driver = ScopedInstanceFactory::new("drivers")
+        .new_instance("#meta/lowpan-dummy-driver.cm")
+        .await
+        .context("creating lowpan dummy driver")?;
+    dummy_driver.connect_to_binder()?;
 
     // Step 3: Wait to receive an event that the driver has registered.
     let (added, removed) = lookup
@@ -91,7 +94,7 @@ async fn test_service_driver_interaction() -> Result<(), Error> {
     assert!(device_test.get_ncp_version().await.is_ok());
 
     // Step 6: Kill the driver.
-    driver.kill().context("Unable to kill driver")?;
+    drop(dummy_driver);
 
     // Step 7: Make sure that the service doesn't have the device anymore.
     let (added, removed) = lookup

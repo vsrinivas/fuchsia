@@ -698,8 +698,7 @@ mod tests {
     use fuchsia_async as fasync;
     use fuchsia_async::Time;
     use fuchsia_async::TimeoutExt;
-    use fuchsia_component::client::launch;
-    use fuchsia_component::client::launcher;
+    use fuchsia_component_test::ScopedInstanceFactory;
     use fuchsia_inspect::assert_data_tree;
     use fuchsia_inspect::testing::AnyProperty;
 
@@ -716,11 +715,12 @@ mod tests {
             "events":{},
         });
 
-        let launcher = launcher().unwrap();
-        let driver_url =
-            "fuchsia-pkg://fuchsia.com/lowpan-dummy-driver#meta/lowpan-dummy-driver.cmx";
-        let _driver =
-            launch(&launcher, driver_url.to_string(), None).context("launch dummy driver").unwrap();
+        // Start a lowpan dummy driver
+        let dummy_driver = ScopedInstanceFactory::new("drivers")
+            .new_instance("#meta/lowpan-dummy-driver.cm")
+            .await
+            .unwrap();
+        dummy_driver.connect_to_binder().unwrap();
 
         let _res = watch_device_changes(inspect_tree.clone(), look_up.clone())
             .on_timeout(Time::after(fuchsia_zircon::Duration::from_seconds(5)), || {

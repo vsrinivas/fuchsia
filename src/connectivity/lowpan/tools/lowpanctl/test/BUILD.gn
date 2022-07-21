@@ -19,6 +19,7 @@ rustc_test("lowpanctl-integration-test-bin") {
     "//src/connectivity/lowpan/tools/lowpanctl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -31,6 +32,11 @@ rustc_test("lowpanctl-integration-test-bin") {
 }
 
 fuchsia_unittest_package("lowpanctl-integration-test") {
-  manifest = "meta/lowpanctl-integration-test.cmx"
-  deps = [ ":lowpanctl-integration-test-bin" ]
+  manifest = "meta/lowpanctl-integration-test.cml"
+  deps = [
+    ":lowpanctl-integration-test-bin",
+    "//src/connectivity/lowpan/drivers/lowpan-dummy-driver:lowpan-dummy-driver-cmp",
+    "//src/connectivity/lowpan/service:lowpanservice-cv2",
+    "//src/connectivity/lowpan/tools/lowpanctl:bin",
+  ]
 }
