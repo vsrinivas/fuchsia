@@ -12,13 +12,19 @@ use {
         repo_info::RepoInfo,
     },
     ::gcs::client::{DirectoryProgress, FileProgress, ProgressResponse, ProgressResult, Throttle},
-    anyhow::{bail, Context, Result},
+    anyhow::{anyhow, bail, Context, Result},
+    camino::Utf8Path,
     chrono::{DateTime, NaiveDateTime, Utc},
     ffx_config::sdk::SdkVersion,
     fms::{find_product_bundle, Entries},
     fuchsia_hyper::new_https_client,
     futures::{stream::FuturesUnordered, TryStreamExt as _},
-    pkg::repository::{GcsRepository, HttpRepository, Repository, RepositoryBackend},
+    pkg::{
+        repo_keys::RepoKeys,
+        repository::{
+            FileSystemRepository, GcsRepository, HttpRepository, Repository, RepositoryBackend,
+        },
+    },
     sdk_metadata::{Metadata, PackageBundle},
     serde_json::Value,
     std::{
@@ -323,7 +329,7 @@ where
         tracing::debug!("    package repository: {}", package.repo_uri);
     }
 
-    let mut metadata_repo_uri = url::Url::parse(&package.repo_uri)
+    let mut repo_metadata_uri = url::Url::parse(&package.repo_uri)
         .with_context(|| format!("parsing package.repo_uri {:?}", package.repo_uri))?;
 
     match package.format.as_str() {
@@ -332,24 +338,26 @@ where
             // file. In the latter case, it will strip off the last segment before joining paths.
             // Since the metadata and blob url are directories, make sure they have a trailing
             // slash.
-            if !metadata_repo_uri.path().ends_with('/') {
-                metadata_repo_uri.set_path(&format!("{}/", metadata_repo_uri.path()));
+            if !repo_metadata_uri.path().ends_with('/') {
+                repo_metadata_uri.set_path(&format!("{}/", repo_metadata_uri.path()));
             }
 
-            metadata_repo_uri = metadata_repo_uri.join("repository/")?;
+            let repo_keys_uri = repo_metadata_uri.join("keys/")?;
+            repo_metadata_uri = repo_metadata_uri.join("repository/")?;
 
-            let blob_repo_uri = if let Some(blob_repo_uri) = &package.blob_uri {
+            let repo_blobs_uri = if let Some(blob_repo_uri) = &package.blob_uri {
                 url::Url::parse(blob_repo_uri)
                     .with_context(|| format!("parsing package.repo_uri {:?}", blob_repo_uri))?
             } else {
                 // If the blob uri is unspecified, then use `$METADATA_URI/blobs/`.
-                metadata_repo_uri.join("blobs/")?
+                repo_metadata_uri.join("blobs/")?
             };
 
             fetch_package_repository_from_files(
                 local_dir,
-                metadata_repo_uri,
-                blob_repo_uri,
+                repo_keys_uri,
+                repo_metadata_uri,
+                repo_blobs_uri,
                 progress,
             )
             .await
@@ -360,7 +368,7 @@ where
                 unimplemented!();
             }
 
-            fetch_package_repository_from_tgz(local_dir, metadata_repo_uri, progress).await
+            fetch_package_repository_from_tgz(local_dir, repo_metadata_uri, progress).await
         }
         _ =>
         // The schema currently defines only "files" or "tgz" (see RFC-100).
@@ -386,14 +394,15 @@ where
 /// * `gs://`
 async fn fetch_package_repository_from_files<F>(
     local_dir: &Path,
-    metadata_repo_uri: Url,
-    blob_repo_uri: Url,
+    repo_keys_uri: Url,
+    repo_metadata_uri: Url,
+    repo_blobs_uri: Url,
     progress: &mut F,
 ) -> Result<()>
 where
     F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
-    match (metadata_repo_uri.scheme(), blob_repo_uri.scheme()) {
+    match (repo_metadata_uri.scheme(), repo_blobs_uri.scheme()) {
         (GS_SCHEME, GS_SCHEME) => {
             // FIXME(fxbug.dev/103331): we are reproducing the gcs library's authentication flow,
             // where we will prompt for an oauth token if we get a permission denied error. This
@@ -406,19 +415,19 @@ where
             let client = get_gcs_client_without_auth();
             let backend = Box::new(GcsRepository::new(
                 client,
-                metadata_repo_uri.clone(),
-                blob_repo_uri.clone(),
+                repo_metadata_uri.clone(),
+                repo_blobs_uri.clone(),
             )?) as Box<dyn RepositoryBackend + Send + Sync + 'static>;
 
-            if fetch_package_repository_from_backend(
+            if let Ok(()) = fetch_package_repository_from_backend(
                 local_dir,
-                metadata_repo_uri.clone(),
-                blob_repo_uri.clone(),
+                repo_keys_uri.clone(),
+                repo_metadata_uri.clone(),
+                repo_blobs_uri.clone(),
                 backend,
                 progress,
             )
             .await
-            .is_ok()
             {
                 return Ok(());
             }
@@ -428,14 +437,15 @@ where
 
             let backend = Box::new(GcsRepository::new(
                 client,
-                metadata_repo_uri.clone(),
-                blob_repo_uri.clone(),
+                repo_metadata_uri.clone(),
+                repo_blobs_uri.clone(),
             )?) as Box<dyn RepositoryBackend + Send + Sync + 'static>;
 
             fetch_package_repository_from_backend(
                 local_dir,
-                metadata_repo_uri.clone(),
-                blob_repo_uri.clone(),
+                repo_keys_uri.clone(),
+                repo_metadata_uri.clone(),
+                repo_blobs_uri.clone(),
                 backend,
                 progress,
             )
@@ -445,14 +455,15 @@ where
             let client = new_https_client();
             let backend = Box::new(HttpRepository::new(
                 client,
-                metadata_repo_uri.clone(),
-                blob_repo_uri.clone(),
+                repo_metadata_uri.clone(),
+                repo_blobs_uri.clone(),
             )) as Box<dyn RepositoryBackend + Send + Sync + 'static>;
 
             fetch_package_repository_from_backend(
                 local_dir,
-                metadata_repo_uri,
-                blob_repo_uri,
+                repo_keys_uri,
+                repo_metadata_uri,
+                repo_blobs_uri,
                 backend,
                 progress,
             )
@@ -463,15 +474,16 @@ where
             Ok(())
         }
         (_, _) => {
-            bail!("Unexpected URI scheme in ({}, {})", metadata_repo_uri, blob_repo_uri);
+            bail!("Unexpected URI scheme in ({}, {})", repo_metadata_uri, repo_blobs_uri);
         }
     }
 }
 
 async fn fetch_package_repository_from_backend<F>(
     local_dir: &Path,
-    metadata_repo_uri: Url,
-    blob_repo_uri: Url,
+    repo_keys_uri: Url,
+    repo_metadata_uri: Url,
+    repo_blobs_uri: Url,
     backend: Box<dyn RepositoryBackend + Send + Sync + 'static>,
     progress: &mut F,
 ) -> Result<()>
@@ -479,11 +491,24 @@ where
     F: FnMut(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
 {
     let repo = Repository::new("repo", backend).await.with_context(|| {
-        format!("creating package repository {} {}", metadata_repo_uri, blob_repo_uri)
+        format!("creating package repository {} {}", repo_metadata_uri, repo_blobs_uri)
     })?;
 
+    let local_dir =
+        Utf8Path::from_path(local_dir).ok_or_else(|| anyhow!("local dir must be UTF-8 safe"))?;
+    let keys_dir = local_dir.join("keys");
     let metadata_dir = local_dir.join("repository");
     let blobs_dir = metadata_dir.join("blobs");
+
+    // Download the repository private keys.
+    fetch_bundle_uri(&repo_keys_uri.join("timestamp.json")?, keys_dir.as_std_path(), progress)
+        .await?;
+
+    fetch_bundle_uri(&repo_keys_uri.join("snapshot.json")?, keys_dir.as_std_path(), progress)
+        .await?;
+
+    fetch_bundle_uri(&repo_keys_uri.join("targets.json")?, keys_dir.as_std_path(), progress)
+        .await?;
 
     // TUF metadata may be expired, so pretend we're updating relative to the Unix Epoch so the
     // metadata won't expired.
@@ -495,13 +520,13 @@ where
         &start_time,
     )
     .await
-    .with_context(|| format!("downloading repository {} {}", metadata_repo_uri, blob_repo_uri))?;
+    .with_context(|| format!("downloading repository {} {}", repo_metadata_uri, repo_blobs_uri))?;
 
     let mut count = 0;
     // Exit early if there are no targets.
     if let Some(trusted_targets) = trusted_targets {
         // Download all the packages.
-        let fetcher = pkg::resolve::PackageFetcher::new(&repo, &blobs_dir, 5).await?;
+        let fetcher = pkg::resolve::PackageFetcher::new(&repo, blobs_dir.as_std_path(), 5).await?;
 
         let mut futures = FuturesUnordered::new();
 
@@ -517,7 +542,7 @@ where
             count += 1;
             if throttle.is_ready() {
                 match progress(
-                    DirectoryProgress { url: blob_repo_uri.as_ref(), at: 0, of: 1 },
+                    DirectoryProgress { url: repo_blobs_uri.as_ref(), at: 0, of: 1 },
                     FileProgress { url: "Packages", at: 0, of: count },
                 )
                 .context("rendering progress")?
@@ -533,11 +558,17 @@ where
 
         while let Some(()) = futures.try_next().await? {}
         progress(
-            DirectoryProgress { url: blob_repo_uri.as_ref(), at: 1, of: 1 },
+            DirectoryProgress { url: repo_blobs_uri.as_ref(), at: 1, of: 1 },
             FileProgress { url: "Packages", at: count, of: count },
         )
         .context("rendering progress")?;
     };
+
+    let repo_storage = FileSystemRepository::new(metadata_dir, blobs_dir);
+    let keys_dir = local_dir.join("keys");
+    let repo_keys = RepoKeys::from_dir(keys_dir.as_std_path())?;
+
+    pkg::repo_storage::refresh_repository(&repo_storage, &repo_keys).await?;
 
     Ok(())
 }
@@ -554,9 +585,7 @@ where
 {
     fetch_bundle_uri(&repo_uri, &local_dir, progress)
         .await
-        .with_context(|| format!("downloading repo URI {}", repo_uri))?;
-
-    Ok(())
+        .with_context(|| format!("downloading repo URI {}", repo_uri))
 }
 
 /// Download and expand data.
