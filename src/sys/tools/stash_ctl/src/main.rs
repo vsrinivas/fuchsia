@@ -10,7 +10,7 @@ use anyhow::{format_err, Context as _, Error};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_mem;
 use fuchsia_async as fasync;
-use fuchsia_component::client::connect_to_protocol_at;
+use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon as zx;
 use futures::FutureExt;
 use std::convert::{TryFrom, TryInto};
@@ -25,7 +25,7 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::LocalExecutor::new().context("Error creating executor")?;
 
     let acc = if cfg.secure {
-        let stashserver = connect_to_protocol_at::<SecureStoreMarker>("/exposed")?;
+        let stashserver = connect_to_protocol::<SecureStoreMarker>()?;
 
         // Identify
         stashserver.identify("stash_ctl")?;
@@ -36,7 +36,7 @@ fn main() -> Result<(), Error> {
 
         acc
     } else {
-        let stashserver = connect_to_protocol_at::<StoreMarker>("/exposed")?;
+        let stashserver = connect_to_protocol::<StoreMarker>()?;
 
         // Identify
         stashserver.identify("stash_ctl")?;

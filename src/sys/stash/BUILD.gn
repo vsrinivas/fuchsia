@@ -101,20 +101,6 @@ fuchsia_package("pkg") {
   ]
 }
 
-# TODO(fxbug.dev/100447): Change the contents of the stash package
-# based on build type (user, eng, userdebug) rather than using
-# a different package altogether.
-fuchsia_package("pkg_eng") {
-  package_name = "stash"
-  deps = [
-    ":stash2_v2",
-    ":stash_cmp",
-    ":stash_secure_v2",
-    ":stash_v2",
-    "//src/sys/tools/stash_ctl:bin",
-  ]
-}
-
 fuchsia_unittest_package("stash-tests") {
   manifest = "meta/stash_bin_test.cml"
   deps = [ ":bin_test" ]

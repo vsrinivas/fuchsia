@@ -9,26 +9,15 @@ interacting with data store in stash by other clients.
 
 ## Building
 
-`stash_ctl` is packaged with the `stash` component. Include it with the following
-`fx set` invocation:
-
-```
-> fx set <product>.<arch> --with //src/sys/stash --args=stashctl_enabled=true
-```
+To add this project to your build, append `--with //src/sys/tools/stash_ctl`
+to the `fx set` invocation.
 
 ## Running
 
-`stash_ctl` is included in the `workstation_eng` product and is
-accessible via `ffx component explore`:
+`stash_ctl` is accessible via the shell:
 
 ```
-> fx set workstation_eng.x64
-> fx build
-```
-
-```
-> ffx component explore /core/stash
-$ stash_ctl --help
+$ fx shell run stash_ctl --help
 ```
 
 ## Testing
@@ -37,9 +26,8 @@ There are no unit tests for `stash_ctl`. It can be manually tested against the
 stash service.
 
 ```
-> ffx component explore /core/stash
-$ stash_ctl set foo int 3
-$ stash_ctl get foo
+$ fx shell run stash_ctl set foo int 3
+$ fx shell run stash_ctl get foo
 ```
 
 ## Source layout

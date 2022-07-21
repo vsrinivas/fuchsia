@@ -29,6 +29,10 @@ fuchsia_unittest_package("stash_ctl_tests") {
   deps = [ ":bin_test" ]
 }
 
+fuchsia_shell_package("stash_ctl") {
+  deps = [ ":bin" ]
+}
+
 group("tests") {
   testonly = true
   public_deps = [ ":stash_ctl_tests" ]
