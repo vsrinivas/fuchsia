@@ -400,11 +400,18 @@ protocol Device {
     }) -> (struct {}) error Status;
 
     /// Set a device to be able to wake the system from suspend. The device must have a _PRW
-    /// (Power Resource for Wake) method.
+    /// (Power Resource for Wake) method. This method should be called from the driver suspend
+    /// hook, using the |requested_state| provided by the driver framework. If the device is unable
+    /// to wake the system from the requested sleep state, then the device will not be set as a
+    /// wake source.
     /// Errors:
+    /// NOT_SUPPORTED - requested sleep state is deeper than the deepest sleep that the device can
+    /// wake the system from.
     /// BAD_DATA - unable to get wake GPE information.
     /// BAD_PARAMETER - could not get GPE information.
     /// TYPE - GPE is not marked as a wake GPE.
     /// NOT_EXIST - GPE register could not be found.
-    SetWakeDevice() -> (struct {}) error Status;
+    SetWakeDevice(struct {
+        requested_state uint8;
+    }) -> (struct {}) error Status;
 };

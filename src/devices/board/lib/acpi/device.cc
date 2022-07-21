@@ -1105,6 +1105,15 @@ void Device::SetWakeDevice(SetWakeDeviceRequestView request,
     return;
   }
 
+  if (request->requested_state > prw_result->Package.Elements[1].Integer.Value) {
+    zxlogf(ERROR,
+           "Requested sleep state (%u) is deeper than the deepest sleep state that the device can "
+           "wake the system from (%llu)",
+           request->requested_state, prw_result->Package.Elements[1].Integer.Value);
+    completer.ReplyError(fuchsia_hardware_acpi::wire::Status::kNotSupported);
+    return;
+  }
+
   ACPI_HANDLE gpe_dev = nullptr;
   uint32_t gpe_num;
   // See ACPI v6.3 Section 7.3.13
@@ -1138,7 +1147,7 @@ void Device::SetWakeDevice(SetWakeDeviceRequestView request,
     return;
   }
 
-  zxlogf(INFO, "Lowest sleep state that device can wake system from: %llu",
+  zxlogf(INFO, "Deepest sleep state that device can wake system from: %llu",
          prw_result->Package.Elements[1].Integer.Value);
 
   // Get the power resources associated with the _PRW object and turn them all on.
