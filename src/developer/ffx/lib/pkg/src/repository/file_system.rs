@@ -5,6 +5,7 @@
 use {
     crate::{
         range::{ContentRange, Range},
+        repo_storage::RepoStorage,
         repository::{Error, RepositoryBackend, Resource},
     },
     anyhow::Result,
@@ -33,6 +34,7 @@ use {
         interchange::Json,
         repository::{
             FileSystemRepositoryBuilder as TufFileSystemRepositoryBuilder, RepositoryProvider,
+            RepositoryStorageProvider,
         },
     },
 };
@@ -192,6 +194,17 @@ impl RepositoryBackend for FileSystemRepository {
     fn get_tuf_repo(
         &self,
     ) -> Result<Box<(dyn RepositoryProvider<Json> + Send + Sync + 'static)>, Error> {
+        let repo =
+            TufFileSystemRepositoryBuilder::<Json>::new(self.metadata_repo_path.clone()).build()?;
+
+        Ok(Box::new(repo))
+    }
+}
+
+impl RepoStorage for FileSystemRepository {
+    fn get_tuf_repo_storage(
+        &self,
+    ) -> Result<Box<dyn RepositoryStorageProvider<Json> + Send + Sync>> {
         let repo =
             TufFileSystemRepositoryBuilder::<Json>::new(self.metadata_repo_path.clone()).build()?;
 

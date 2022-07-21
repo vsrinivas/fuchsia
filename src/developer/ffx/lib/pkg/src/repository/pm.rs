@@ -5,6 +5,7 @@
 use {
     crate::{
         range::Range,
+        repo_storage::RepoStorage,
         repository::{Error, FileSystemRepository, RepositoryBackend, RepositorySpec},
         resource::Resource,
     },
@@ -12,7 +13,10 @@ use {
     camino::Utf8PathBuf,
     futures::stream::BoxStream,
     std::time::SystemTime,
-    tuf::{interchange::Json, repository::RepositoryProvider},
+    tuf::{
+        interchange::Json,
+        repository::{RepositoryProvider, RepositoryStorageProvider},
+    },
 };
 
 /// Serve a repository from a local pm repository.
@@ -28,6 +32,7 @@ impl PmRepository {
         let metadata_repo_path = pm_repo_path.join("repository");
         let blob_repo_path = metadata_repo_path.join("blobs");
         let repo = FileSystemRepository::new(metadata_repo_path, blob_repo_path);
+
         Self { pm_repo_path, repo }
     }
 }
@@ -66,5 +71,13 @@ impl RepositoryBackend for PmRepository {
 
     async fn blob_modification_time(&self, path: &str) -> Result<Option<SystemTime>> {
         self.repo.blob_modification_time(path).await
+    }
+}
+
+impl RepoStorage for PmRepository {
+    fn get_tuf_repo_storage(
+        &self,
+    ) -> Result<Box<dyn RepositoryStorageProvider<Json> + Send + Sync>> {
+        self.repo.get_tuf_repo_storage()
     }
 }

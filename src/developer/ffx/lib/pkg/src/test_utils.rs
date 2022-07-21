@@ -5,7 +5,7 @@
 use {
     crate::repository::{FileSystemRepository, PmRepository, Repository, RepositoryKeyConfig},
     anyhow::{anyhow, Context, Result},
-    camino::Utf8PathBuf,
+    camino::{Utf8Path, Utf8PathBuf},
     fuchsia_pkg::PackageBuilder,
     futures::io::AllowStdIo,
     maplit::hashmap,
@@ -64,16 +64,23 @@ fn copy_dir(from: &Path, to: &Path) -> Result<()> {
         let entry = entry?;
         let to_path = to.join(entry.path().strip_prefix(from)?);
         if entry.metadata()?.is_dir() {
-            create_dir(&to_path).context(format!("creating {:?}", to_path))?;
+            if to_path.exists() {
+                continue;
+            } else {
+                create_dir(&to_path).with_context(|| format!("creating {:?}", to_path))?;
+            }
         } else {
-            copy(entry.path(), &to_path).context(format!(
-                "copying {:?} to {:?}",
-                entry.path(),
-                to_path
-            ))?;
+            copy(entry.path(), &to_path)
+                .with_context(|| format!("copying {:?} to {:?}", entry.path(), to_path))?;
         }
     }
 
+    Ok(())
+}
+
+pub fn make_repo_dir(root: &Utf8Path) -> Result<()> {
+    let src = PathBuf::from(EMPTY_REPO_PATH).canonicalize()?;
+    copy_dir(&src, root.as_std_path())?;
     Ok(())
 }
 
@@ -83,8 +90,7 @@ pub async fn make_readonly_empty_repository(name: &str) -> Result<Repository> {
 }
 
 pub async fn make_writable_empty_repository(name: &str, root: Utf8PathBuf) -> Result<Repository> {
-    let src = PathBuf::from(EMPTY_REPO_PATH).canonicalize()?;
-    copy_dir(&src, root.as_std_path())?;
+    make_repo_dir(&root)?;
     let backend = PmRepository::new(root);
     Ok(Repository::new(name, Box::new(backend)).await?)
 }

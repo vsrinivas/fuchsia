@@ -40,7 +40,7 @@ ffx_plugin("ffx_pdk_update") {
   ]
 
   test_deps = [
-    "//src/developer/ffx/lib/pkg:empty-repo",
+    "//src/developer/ffx/lib/pkg:empty-repo-metadata",
     "//src/developer/ffx/lib/pkg:pkg",
     "//src/sys/pkg/lib/fuchsia-pkg",
   ]
