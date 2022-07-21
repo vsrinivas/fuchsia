@@ -170,13 +170,12 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
   image_config.pixel_format = kDefaultImageFormat;
 
   // Try to import the image into the display controller API and make sure it succeeds.
-  uint64_t display_image_id;
+  uint64_t display_image_id = allocation::GenerateUniqueImageId();
   zx_status_t import_image_status = ZX_OK;
   (*display_controller.get())
-      ->ImportImage(image_config, collection_id, /*vmo_index*/ 0, &import_image_status,
-                    &display_image_id);
+      ->ImportImage2(image_config, collection_id, display_image_id, /*vmo_index*/ 0,
+                     &import_image_status);
   EXPECT_EQ(import_image_status, ZX_OK);
-  EXPECT_NE(display_image_id, 0u);
 }
 
 // Test out event signaling on the Display Controller by importing a buffer collection and its 2
@@ -224,10 +223,11 @@ VK_TEST_F(DisplayTest, SetDisplayImageTest) {
   // Import the images to the display.
   uint64_t image_ids[kNumVmos];
   for (uint64_t i = 0; i < kNumVmos; i++) {
+    image_ids[i] = allocation::GenerateUniqueImageId();
     zx_status_t import_image_status = ZX_OK;
     auto transport_status = (*display_controller.get())
-                                ->ImportImage(image_config, display_collection_id, i,
-                                              &import_image_status, &image_ids[i]);
+                                ->ImportImage2(image_config, display_collection_id, image_ids[i], i,
+                                               &import_image_status);
     ASSERT_EQ(transport_status, ZX_OK);
     ASSERT_EQ(import_image_status, ZX_OK);
     ASSERT_NE(image_ids[i], fuchsia::hardware::display::INVALID_DISP_ID);

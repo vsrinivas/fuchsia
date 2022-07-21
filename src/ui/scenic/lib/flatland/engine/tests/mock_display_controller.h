@@ -48,6 +48,10 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
   MOCK_METHOD(void, ImportImage,
               (fuchsia::hardware::display::ImageConfig, uint64_t, uint32_t, ImportImageCallback));
 
+  MOCK_METHOD(void, ImportImage2,
+              (fuchsia::hardware::display::ImageConfig, uint64_t, uint64_t, uint32_t,
+               ImportImage2Callback));
+
   MOCK_METHOD(void, ReleaseImage, (uint64_t));
 
   MOCK_METHOD(void, SetLayerPrimaryConfig, (uint64_t, fuchsia::hardware::display::ImageConfig));

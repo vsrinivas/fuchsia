@@ -115,6 +115,11 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
     callback(ZX_OK, image_id++);
   }
 
+  void ImportImage2(fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id,
+                    uint64_t image_id, uint32_t index, ImportImage2Callback callback) override {
+    callback(ZX_OK);
+  }
+
   void SetLayerPrimaryPosition(uint64_t layer_id, fuchsia::hardware::display::Transform transform,
                                fuchsia::hardware::display::Frame src_frame,
                                fuchsia::hardware::display::Frame dest_frame) override {

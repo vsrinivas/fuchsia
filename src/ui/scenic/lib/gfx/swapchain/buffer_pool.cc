@@ -345,10 +345,12 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
       buffer.escher_image->set_swapchain_layout(kSwapchainLayout);
       layout_updater.ScheduleSetImageInitialLayout(buffer.escher_image, kSwapchainLayout);
     }
+
+    buffer.id = allocation::GenerateUniqueImageId();
     zx_status_t import_image_status = ZX_OK;
     zx_status_t transport_status = (*environment->display_controller)
-                                       ->ImportImage(image_config_, display_collection_id, i,
-                                                     &import_image_status, &buffer.id);
+                                       ->ImportImage2(image_config_, display_collection_id,
+                                                      buffer.id, i, &import_image_status);
     if (transport_status != ZX_OK) {
       buffer.id = fuchsia::hardware::display::INVALID_DISP_ID;
       FX_PLOGS(ERROR, transport_status) << "Importing image FIDL call failed.";

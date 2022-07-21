@@ -290,6 +290,7 @@ protocol Controller {
     // mechanism outside the scope of this API. The ImageConfig must be
     // compatible with that passed through SetBufferCollectionConstraints on
     // the collection id.
+    @deprecated
     ImportImage(struct {
         image_config ImageConfig;
         collection_id uint64;
@@ -298,6 +299,22 @@ protocol Controller {
         res zx.status;
         image_id uint64;
     });
+
+    // Imports a Buffer-Collection backed image. If tiling is not TYPE_SIMPLE,
+    // it is up to the driver and client to agree on its meaning through some
+    // mechanism outside the scope of this API. The ImageConfig must be
+    // compatible with that passed through SetBufferCollectionConstraints on
+    // the collection id. If the provided |image_id| is already in use, this
+    // function will return |ZX_ERR_ALREADY_EXISTS|.
+    ImportImage2(struct {
+        image_config ImageConfig;
+        collection_id uint64;
+        image_id uint64;
+        index uint32;
+    }) -> (struct {
+        res zx.status;
+    });
+
 
     // Releases an image.
     //

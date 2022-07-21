@@ -134,12 +134,101 @@ void Client::ImportImage(ImportImageRequestView request, ImportImageCompleter::S
     return;
   }
 
-  auto image_id = next_image_id_++;
+  // TODO(fxbug.dev/104900) Until this version of ImportImage is completely replaced by V2, we can't
+  // risk having image_ids from both versions colliding with eachother. As a result, we want to make
+  // sure that the ids generated here do not interfere with the ids passed into |ImportImage2|. So
+  // we increment until finding a free id.
+  uint64_t image_id = 0;
+  do {
+    image_id = next_image_id_++;
+  } while ((images_.find(image_id)).IsValid());
+
   image->id = image_id;
   release_image.cancel();
   images_.insert(std::move(image));
 
   _completer.Reply(0, image_id);
+}
+
+void Client::ImportImage2(ImportImage2RequestView request,
+                          ImportImage2Completer::Sync& _completer) {
+  auto it = collection_map_.find(request->collection_id);
+  if (it == collection_map_.end()) {
+    _completer.Reply(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  // Can't import an image with an id that's already in use.
+  auto image_check = images_.find(request->image_id);
+  if (image_check.IsValid()) {
+    _completer.Reply(ZX_ERR_ALREADY_EXISTS);
+    return;
+  }
+
+  fidl::WireSyncClient<sysmem::BufferCollection>& collection = it->second.driver;
+
+  auto check_status = collection->CheckBuffersAllocated();
+  if (!check_status.ok() || check_status.value().status != ZX_OK) {
+    _completer.Reply(ZX_ERR_SHOULD_WAIT);
+    return;
+  }
+
+  image_t dc_image = {};
+  dc_image.height = request->image_config.height;
+  dc_image.width = request->image_config.width;
+  dc_image.pixel_format = request->image_config.pixel_format;
+  dc_image.type = request->image_config.type;
+
+  zx_status_t status = controller_->dc()->ImportImage(
+      &dc_image, collection.client_end().borrow().channel()->get(), request->index);
+  if (status != ZX_OK) {
+    _completer.Reply(status);
+    return;
+  }
+
+  auto release_image =
+      fit::defer([this, &dc_image]() { controller_->dc()->ReleaseImage(&dc_image); });
+  zx::vmo vmo;
+  uint32_t stride = 0;
+  if (use_kernel_framebuffer_) {
+    ZX_ASSERT(it->second.kernel.is_valid());
+    auto res = it->second.kernel->WaitForBuffersAllocated();
+    if (!res.ok() || res.value().status != ZX_OK) {
+      _completer.Reply(ZX_ERR_NO_MEMORY);
+      return;
+    }
+    sysmem::wire::BufferCollectionInfo2& info = res.value().buffer_collection_info;
+
+    if (!info.settings.has_image_format_constraints || request->index >= info.buffer_count) {
+      _completer.Reply(ZX_ERR_OUT_OF_RANGE);
+      return;
+    }
+    uint32_t minimum_row_bytes;
+    if (!image_format::GetMinimumRowBytes(info.settings.image_format_constraints, dc_image.width,
+                                          &minimum_row_bytes)) {
+      zxlogf(DEBUG, "Cannot determine minimum row bytes.\n");
+      _completer.Reply(ZX_ERR_INVALID_ARGS);
+      return;
+    }
+    vmo = std::move(info.buffers[request->index].vmo);
+    stride = minimum_row_bytes / ZX_PIXEL_FORMAT_BYTES(dc_image.pixel_format);
+  }
+
+  fbl::AllocChecker ac;
+  auto image = fbl::AdoptRef(
+      new (&ac) Image(controller_, dc_image, std::move(vmo), stride, &proxy_->node(), id_));
+  if (!ac.check()) {
+    zxlogf(DEBUG, "Alloc checker failed while constructing Image.\n");
+    _completer.Reply(ZX_ERR_NO_MEMORY);
+    return;
+  }
+
+  auto image_id = request->image_id;
+  image->id = image_id;
+  release_image.cancel();
+  images_.insert(std::move(image));
+
+  _completer.Reply(0);
 }
 
 void Client::ReleaseImage(ReleaseImageRequestView request,

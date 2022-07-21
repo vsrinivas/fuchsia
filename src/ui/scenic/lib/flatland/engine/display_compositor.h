@@ -185,9 +185,6 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
   // CheckConfig has verified that the config is okay, since ApplyConfig does not return any errors.
   fuchsia::hardware::display::ConfigStamp ApplyConfig();
 
-  // Returns the image id used by the display controller.
-  uint64_t InternalImageId(allocation::GlobalImageId image_id) const;
-
   // This mutex protects access to |display_controller_| and |image_id_map_|.
   //
   // TODO(fxbug.dev/44335): Convert this to a lock-free structure. This is a unique
@@ -198,9 +195,6 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
 
   // Handle to the display controller interface.
   std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller_;
-
-  // Maps the flatland global image id to the image id used by the display controller.
-  std::unordered_map<allocation::GlobalImageId, uint64_t> image_id_map_;
 
   // Maps the flatland global image id to the events used by the display controller.
   std::unordered_map<allocation::GlobalImageId, ImageEventData> image_event_map_;

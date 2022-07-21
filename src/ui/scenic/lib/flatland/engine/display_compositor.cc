@@ -326,7 +326,6 @@ bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metad
     }
   }
 
-  uint64_t display_image_id;
   FX_DCHECK(buffer_collection_pixel_format_.count(metadata.collection_id));
   auto pixel_format = buffer_collection_pixel_format_[metadata.collection_id];
   fuchsia::hardware::display::ImageConfig image_config = {
@@ -340,8 +339,8 @@ bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metad
   {
     std::unique_lock<std::mutex> lock(lock_);
     auto status = (*display_controller_.get())
-                      ->ImportImage(image_config, metadata.collection_id, metadata.vmo_index,
-                                    &import_image_status, &display_image_id);
+                      ->ImportImage2(image_config, metadata.collection_id, metadata.identifier,
+                                     metadata.vmo_index, &import_image_status);
     FX_DCHECK(status == ZX_OK);
 
     if (import_image_status != ZX_OK) {
@@ -350,7 +349,6 @@ bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metad
     }
 
     // Add the display-specific ID to the global map.
-    image_id_map_[metadata.identifier] = display_image_id;
     return true;
   }
 }
@@ -358,17 +356,14 @@ bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metad
 void DisplayCompositor::ReleaseBufferImage(allocation::GlobalImageId image_id) {
   TRACE_DURATION("gfx", "flatland::DisplayCompositor::ReleaseBufferImage");
 
-  auto display_image_id = InternalImageId(image_id);
-
   // Locks the rest of the function.
   std::unique_lock<std::mutex> lock(lock_);
   FX_DCHECK(display_controller_);
-  (*display_controller_.get())->ReleaseImage(display_image_id);
+  (*display_controller_.get())->ReleaseImage(image_id);
 
   // Release image from the renderer.
   renderer_->ReleaseBufferImage(image_id);
 
-  image_id_map_.erase(image_id);
   image_event_map_.erase(image_id);
 }
 
@@ -505,7 +500,6 @@ void DisplayCompositor::ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D r
                                         allocation::ImageMetadata image,
                                         scenic_impl::DisplayEventId wait_id,
                                         scenic_impl::DisplayEventId signal_id) {
-  auto display_image_id = InternalImageId(image.identifier);
   auto [src, dst] = DisplaySrcDstFrames::New(rectangle, image);
 
   std::unique_lock<std::mutex> lock(lock_);
@@ -542,7 +536,7 @@ void DisplayCompositor::ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D r
   (*display_controller_.get())->SetLayerPrimaryAlpha(layer_id, alpha_mode, image.multiply_color[3]);
 
   // Set the imported image on the layer.
-  (*display_controller_.get())->SetLayerImage(layer_id, display_image_id, wait_id, signal_id);
+  (*display_controller_.get())->SetLayerImage(layer_id, image.identifier, wait_id, signal_id);
 }
 
 DisplayCompositor::DisplayConfigResponse DisplayCompositor::CheckConfig() {
@@ -962,13 +956,6 @@ bool DisplayCompositor::SetMinimumRgb(uint8_t minimum_rgb) {
     return false;
   }
   return true;
-}
-
-uint64_t DisplayCompositor::InternalImageId(allocation::GlobalImageId image_id) const {
-  // Lock the whole function.
-  std::unique_lock<std::mutex> lock(lock_);
-  auto itr = image_id_map_.find(image_id);
-  return itr == image_id_map_.end() ? allocation::kInvalidImageId : itr->second;
 }
 
 }  // namespace flatland
