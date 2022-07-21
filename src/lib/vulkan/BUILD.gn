@@ -218,7 +218,7 @@ sdk_atom("vulkan_layers") {
 # Copy Vulkan runtime (loader, validation layers library and layers descriptor)
 # to test_data directory.
 #
-if (is_host) {
+if (is_host && current_cpu == "x64") {
   copy("copy_vulkan_libs") {
     assert(has_prebuilt_vulkan_runtime, "Prebuilt Vulkan runtime not found.")
     _lib_dir = vulkan_host_runtime_sub_dirs.lib
