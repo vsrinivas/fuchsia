@@ -8,6 +8,13 @@ using zx;
 
 @discoverable
 protocol PeerManager {
+    /// Returns a browse controller client to a remote target (TG) service at
+    /// the peer specified by `peer_id`.
+    GetBrowseControllerForTarget(resource struct {
+        peer_id bt.PeerId;
+        client server_end:BrowseController;
+    }) -> (struct {}) error zx.status;
+
     /// Returns a controller client to a remote target (TG) service at the peer specified by
     /// `peer_id`.
     GetControllerForTarget(resource struct {
@@ -59,10 +66,79 @@ protocol AbsoluteVolumeHandler {
     });
 };
 
-/// Client wrapper for local controller (CT) -> remote target (TG) AVCTP connections between devices.
-/// A client is high level construct and does not represent a connection with a device.
-/// Connections are internally managed and may be shared by multiple clients.
-/// The actual connection may be opened on-demand after any command here is called.
+/// Client wrapper for local controller (CT) -> remote target (TG) AVCTP
+/// connections between devices for browse related commands.
+///
+/// NOTE: a client is high level construct and does not represent a connection
+/// with a device. Connections are internally managed and may be shared by
+/// multiple clients. The actual connection may be opened on-demand after any
+/// command here is called.
+protocol BrowseController {
+    /// Used for GetFolderItems(MediaPlayerList).
+    /// Gets the list of media players. End index is inclusive.
+    GetMediaPlayerItems(struct {
+        start_index uint32;
+        end_index uint32;
+    }) -> (struct {
+        items vector<MediaPlayerItem>:MAX_MEDIA_PLAYER_ITEMS;
+    }) error BrowseControllerError;
+
+    /// Used for GetFolderItems(NowPlayingList).
+    /// Gets the list of items from the now playing list aka the queue of the
+    /// addressed media player.
+    /// + request `end_index` is inclusive.
+    GetNowPlayingItems(struct {
+        start_index uint32;
+        end_index uint32;
+        attribute_option AttributeRequestOption;
+    }) -> (struct {
+        items vector<MediaElementItem>:MAX_NOW_PLAYING_ITEMS;
+    }) error BrowseControllerError;
+
+    /// Used for GetFolderItems(MediaPlayerVirtualFilesystem).
+    /// Gets the list of folder item/media element item.
+    /// + request `end_index` is inclusive.
+    GetFileSystemItems(struct {
+        start_index uint32;
+        end_index uint32;
+        attribute_option AttributeRequestOption;
+    }) -> (struct {
+        items vector<FileSystemItem>:MAX_FILESYSTEM_ITEMS;
+    }) error BrowseControllerError;
+
+    /// Used for ChangePath browse command.
+    /// + request `path` dictates whether or not the direction will be Move Up
+    ///   or Move down. If `path.parent` is set, direction will be Move Up. If
+    ///   `path.child_folder_uid` is set, direction will be Move Down.
+    ChangePath(struct {
+        path Path;
+    }) -> (struct {
+        num_items uint32;
+    }) error BrowseControllerError;
+
+    ///  Used for PlayItem(FileSystem).
+    PlayFileSystemItem(struct {
+        /// UID of folder or media element.
+        uid uint64;
+    }) -> (struct {}) error BrowseControllerError;
+
+    ///  Used for PlayItem(NowPlayingList). Plays the specified item from the now playing
+    /// list aka the queue of the addressed media player.
+    PlayNowPlayingItem(struct {
+        uid uint64;
+    }) -> (struct {}) error BrowseControllerError;
+
+    /// Changes the addressed `player_id` on the target when multiple are supported.
+    SetBrowsedPlayer(struct {
+        player_id uint16;
+    }) -> (struct {}) error BrowseControllerError;
+};
+
+/// Client wrapper for local controller (CT) -> remote target (TG) AVCTP
+/// connections between devices for AV/C commands.
+///
+/// See `BrowseController` protocol note for more detailed explanation on
+/// the purpose of this protocol.
 protocol Controller {
     /// Returns currently set player application setting values for the `attribute_ids`.
     /// If no `attribute_ids` are provided, this method will query the TG for all valid

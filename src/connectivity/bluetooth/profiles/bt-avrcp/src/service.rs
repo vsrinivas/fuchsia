@@ -36,10 +36,9 @@ impl From<PeerError> for ControllerError {
             PeerError::AvctpError(_) => ControllerError::ProtocolError,
             PeerError::RemoteNotFound => ControllerError::RemoteNotConnected,
             PeerError::CommandNotSupported => ControllerError::CommandNotImplemented,
-            PeerError::CommandFailed => ControllerError::UnkownFailure,
             PeerError::ConnectionFailure(_) => ControllerError::ConnectionError,
             PeerError::UnexpectedResponse => ControllerError::UnexpectedResponse,
-            _ => ControllerError::UnkownFailure,
+            _ => ControllerError::UnknownFailure,
         }
     }
 }
@@ -330,12 +329,6 @@ impl TestAvrcpClientController {
                     }
                 }
             }
-            ControllerExtRequest::Connect { control_handle: _ } => {
-                // TODO(fxbug.dev/37266): implement
-            }
-            ControllerExtRequest::Disconnect { control_handle: _ } => {
-                // TODO(fxbug.dev/37266): implement
-            }
             ControllerExtRequest::SendRawVendorDependentCommand { pdu_id, command, responder } => {
                 responder.send(
                     &mut self
@@ -414,11 +407,14 @@ where
 {
     while let Some(req) = stream.try_next().await? {
         match req {
+            // TODO(fxb/97014): complete backend implementation.
+            PeerManagerRequest::GetBrowseControllerForTarget { responder, .. } => {
+                responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?;
+            }
             PeerManagerRequest::GetControllerForTarget { peer_id, client, responder } => {
                 let peer_id = peer_id.into();
                 info!("Received client request for controller for peer {}", peer_id);
 
-                let client: fidl::endpoints::ServerEnd<ControllerMarker> = client;
                 match client.into_stream() {
                     Err(err) => {
                         warn!("Unable to take client stream: {:?}", err);
@@ -500,8 +496,11 @@ where
 {
     while let Some(req) = stream.try_next().await? {
         match req {
+            // TODO(fxb/97014): complete backend implementation.
+            PeerManagerExtRequest::GetBrowseControllerForTarget { responder, .. } => {
+                responder.send(&mut Err(zx::sys::ZX_ERR_NOT_SUPPORTED))?;
+            }
             PeerManagerExtRequest::GetControllerForTarget { peer_id, client, responder } => {
-                let client: fidl::endpoints::ServerEnd<ControllerExtMarker> = client;
                 let peer_id: PeerId = peer_id.into();
                 info!("New test connection request for {}", peer_id);
 

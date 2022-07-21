@@ -7,15 +7,28 @@ using fuchsia.bluetooth as bt;
 using fuchsia.bluetooth.avrcp as avrcp;
 using zx;
 
+/// NOTE: The test controller protocols returned by the
+/// `Get{Browse|}ControllerForTarget` methods provide additional methods not
+/// exposed by primary controller protocol that are designed to be used
+/// for PTS qualification testing and debugging purposes only.
+/// WARNING: This test controller protocol client can cause breaking
+/// side-effects for other controller clients connected to this the same peer.
+/// Use with caution and avoid having additional primary controller
+/// clients interacting with the same remote peer while using the test
+/// controller.
 @discoverable
 protocol PeerManagerExt {
-    /// Returns a test controller client to a remote target service at the peer specified by
-    /// `peer_id`. This client is to be used alongside the primary controller client.
-    /// The test protocol provides additional methods not exposed by primary controller protocol
-    /// that are designed to be used for PTS qualification testing and debugging purposes only.
-    /// WARNING: This test controller can cause breaking side-effects for other controller clients
-    /// connected to this the same peer. Use with caution and avoid having additional primary
-    /// controller clients interacting with the same remote peer while using the test controller.
+    /// Returns a test browse controller client to a remote target service at
+    /// the peer specified by `peer_id`. This client is to be used alongside the
+    /// primary browse controller client.
+    GetBrowseControllerForTarget(resource struct {
+        peer_id bt.PeerId;
+        client server_end:BrowseControllerExt;
+    }) -> (struct {}) error zx.status;
+
+    /// Returns a test controller client to a remote target service at the
+    /// peer specified by `peer_id`. This client is to be used alongside the
+    /// primary controller client.
     GetControllerForTarget(resource struct {
         peer_id bt.PeerId;
         client server_end:ControllerExt;
@@ -36,12 +49,6 @@ protocol ControllerExt {
         events_supported vector<avrcp.NotificationEvent>:avrcp.MAX_NOTIFICATIONS;
     }) error avrcp.ControllerError;
 
-    /// Explicitly attempt to connect to the remote peer.
-    Connect();
-
-    /// Explicitly disconnect any L2CAP channels, if any, to the remote peer.
-    Disconnect();
-
     /// Send raw vendor depedent "Control" command packet to a specific PDU on the remote peer.
     /// Returns the entire response packet including the headers or error if the remote endpoint
     /// disconnects or does not return a response in set amount of time.
@@ -51,4 +58,25 @@ protocol ControllerExt {
     }) -> (struct {
         response bytes;
     }) error avrcp.ControllerError;
+};
+
+/// Provides additional methods not in `BrowseController` that are strictly for
+/// testing and debug.
+protocol BrowseControllerExt {
+    /// Returns whether there is an underlying connection open with the remote device currently.
+    IsConnected() -> (struct {
+        connected bool;
+    });
+
+    /// Send raw AVRCP "browse" command packet to a specific PDU on the remote peer.
+    /// Returns the entire response packet including the headers or error if the remote endpoint
+    /// disconnects or does not return a response in set amount of time.
+    /// + request `command` contains a specific browse command's encoded
+    ///         parameters.
+    SendRawBrowseCommand(struct {
+        pdu_id uint8;
+        command bytes;
+    }) -> (struct {
+        response bytes;
+    }) error avrcp.BrowseControllerError;
 };

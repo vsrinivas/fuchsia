@@ -9,7 +9,7 @@ library fuchsia.bluetooth.avrcp;
 
 /// Status codes for commands sent as the controller.
 type ControllerError = strict enum : uint32 {
-    UNKOWN_FAILURE = 1;
+    UNKNOWN_FAILURE = 1;
     TIMED_OUT = 2;
     REMOTE_NOT_CONNECTED = 3;
     COMMAND_NOT_IMPLEMENTED = 4;
@@ -343,6 +343,32 @@ type MediaPlayerItem = table {
     5: displayable_name string:255;
 };
 
+/// Response data for a browseable media element item.
+/// Defined by AVRCP 1.6.2 section 6.10.2.3.
+type MediaElementItem = table {
+    1: media_element_uid uint64;
+    2: media_type MediaType;
+    3: displayable_name string:255;
+    4: attributes MediaAttributes;
+};
+
+/// Response data for a browseable folder item.
+/// Defined by AVRCP 1.6.2 section 6.10.2.2.
+type FolderItem = table {
+    1: folder_uid uint64;
+    2: folder_type FolderType;
+    3: is_playable bool;
+    4: displayable_name string:255;
+};
+
+/// Items returned from GetFolderItems(Filesystem) may be either a folder or media element.
+/// Defined by AVRCP 1.6.2 section 6.10.1.2.
+/// Only one of `folder` or `media_element` should be set.
+type FileSystemItem = strict union {
+    1: folder FolderItem;
+    2: media_element MediaElementItem;
+};
+
 /// Defined by AV\C Panel specification.
 type AvcPanelCommand = strict enum : uint8 {
     SELECT = 0x00;
@@ -404,4 +430,99 @@ type AvcPanelCommand = strict enum : uint8 {
     GREEN = 0x7b;
     BLUE = 0x7c;
     YELLOW = 0x7d;
+};
+
+/// Errors from AVRCP 1.6.2 Section 6.15.3.
+type BrowseControllerError = strict enum : uint32 {
+    UNKNOWN_FAILURE = 1;
+    TIMED_OUT = 2;
+    REMOTE_NOT_CONNECTED = 3;
+    COMMAND_NOT_IMPLEMENTED = 4;
+    COMMAND_REJECTED = 5;
+    COMMAND_UNEXPECTED = 6;
+    PACKET_ENCODING = 7;
+    PROTOCOL_ERROR = 8;
+    CONNECTION_ERROR = 9;
+    // More specific errors (i.e. derived from response's StatusCode).
+    UID_CHANGED = 10;
+    INVALID_DIRECTION = 11;
+    INVALID_ID = 12;
+    INVALID_SCOPE = 13;
+    RANGE_OUT_OF_BOUNDS = 14;
+    ITEM_NOT_PLAYABLE = 15;
+    MEDIA_IN_USE = 16;
+    PLAYER_NOT_BROWSABLE = 17;
+    PLAYER_NOT_ADDRESSED = 18;
+    NO_VALID_RESULTS = 19;
+    NO_AVAILABLE_PLAYERS = 20;
+};
+
+/// The maximum number of MediaAttributeId that can be returned from a call to
+/// GetFileSystemItems or GetNowPlayingItems.
+/// This value based on list of media attributes available as per
+/// AVRCP 1.6.2, 26 Appendix E: list of media attributes.
+const MAX_NUM_MEDIA_ATTRIBUTES uint8 = 8;
+
+/// Defined by AVRCP 1.6.2 Appendix E (media attributes).
+/// 0x9-0xFFFFFFFF reserved for future use.
+type MediaAttributeId = strict enum : uint32 {
+    TITLE = 0x01;
+    ARTIST_NAME = 0x02;
+    ALBUM_NAME = 0x03;
+    TRACK_NUMBER = 0x04;
+    TOTAL_NUMBER_OF_TRACKS = 0x05;
+    GENRE = 0x06;
+    PLAYING_TIME = 0x07;
+    DEFAULT_COVER_ART = 0x08;
+};
+
+/// The folder type associated with a folder item.
+/// Defined by AVRCP 1.6.2 section 6.10.2.2.
+type FolderType = strict enum : uint8 {
+    MIXED = 0x00;
+    TITLES = 0x01;
+    ALBUMS = 0x02;
+    ARTISTS = 0x03;
+    GENRES = 0x04;
+    PLAYLISTS = 0x05;
+    YEARS = 0x06;
+    // Bit 7 is reserved.
+};
+
+/// Type of a media element item.
+/// Defined by AVRCP 1.6.2 section 6.10.2.3.
+type MediaType = strict enum : uint8 {
+    AUDIO = 0x00;
+    VIDEO = 0x01;
+    // Bit 0x02-0xFF is reserved.
+};
+
+/// The maximum number of MediaPlayerItems that can be returned from a call to
+/// GetFileSystemItems.
+/// This value is arbitrary and is meant to limit the number of items that can be returned.
+/// AVRCP 1.6.2, Section 6.10.4.2.2 defines the `Number of Items` parameter as a uint16.
+const MAX_FILESYSTEM_ITEMS uint16 = 16;
+
+/// The maximum number of MediaPlayerItems that can be returned from a call to
+/// GetFileSystemItems.
+/// This value is arbitrary and is meant to limit the number of items that can be returned.
+/// AVRCP 1.6.2, Section 6.10.4.2.2 defines the `Number of Items` parameter as a uint16.
+const MAX_NOW_PLAYING_ITEMS uint16 = 16;
+
+/// Set `get_all` if we want all attributes of a media element item.
+/// Set `attribute_list` if we want to get only the specified attributes.
+/// If `get_all` is set to false, it will be treated as attribute request
+/// with emtpy list of attribute IDs.
+type AttributeRequestOption = strict union {
+    1: get_all bool;
+    2: attribute_list vector<MediaAttributeId>:MAX_NUM_MEDIA_ATTRIBUTES;
+};
+
+/// Relative path from the current directory.
+/// As per AVRCP 1.6.2 Section 6.10.4.1.1, it either specifies a parent folder
+/// for Folder Up direction or a child folder by its unique ID for Folder
+/// Down direction.
+type Path = flexible union {
+    1: parent struct {};
+    2: child_folder_uid uint64;
 };
