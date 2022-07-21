@@ -90,8 +90,7 @@ std::vector<ui_testing::UITestRealm::Config> SemanticsIntegrationTestV2::UIConfi
   {
     ui_testing::UITestRealm::Config config;
 
-    // TODO(fxbug.dev/98691): Add a non-trivial display pixel density once scene
-    // manager supports scaling.
+    config.display_pixel_density = 4.1668f;
 
     config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
@@ -263,9 +262,6 @@ float SemanticsIntegrationTestV2::ExpectedPixelScaleForDisplayPixelDensity(
   // hard-code the set of values we use in our tests here.
   static std::unordered_map<float, float> pixel_density_to_pixel_scale;
   pixel_density_to_pixel_scale[4.1668f] = 1.2549f;
-
-  // If pixel density is 0, default to a pixel scale of 1.
-  pixel_density_to_pixel_scale[0.f] = 1.f;
 
   FX_CHECK(pixel_density_to_pixel_scale.count(display_pixel_density));
 
