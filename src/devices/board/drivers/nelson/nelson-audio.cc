@@ -237,7 +237,7 @@ zx_status_t Nelson::AudioInit() {
   controller_out.metadata_list = tdm_metadata;
   controller_out.metadata_count = std::size(tdm_metadata);
 
-  if (board_info.board_revision < BOARD_REV_P2) {
+  if (board_info.board_revision == BOARD_REV_P2) {
     // CODEC pin assignments.
     gpio_impl_.SetAltFunction(GPIO_SOC_AUDIO_EN, 0);  // GPIO
     gpio_impl_.ConfigOut(GPIO_SOC_AUDIO_EN, 0);
