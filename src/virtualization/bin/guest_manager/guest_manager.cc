@@ -11,6 +11,12 @@
 #include "lib/fpromise/result.h"
 #include "src/lib/files/file.h"
 
+#ifdef USE_VIRTIO_VSOCK_LEGACY_INPROCESS
+#define VIRTIO_VSOCK_LEGACY_INPROCESS 1
+#else
+#define VIRTIO_VSOCK_LEGACY_INPROCESS 0
+#endif
+
 GuestManager::GuestManager(async_dispatcher_t* dispatcher, sys::ComponentContext* context,
                            std::string config_pkg_dir_path, std::string config_path)
     : context_(context),
@@ -85,12 +91,15 @@ void GuestManager::LaunchGuest(
   // fuchsia::virtualization::GuestConfigProvider::Get
   context_->svc()->Connect(std::move(controller));
 
-  // Setup guest endpoint.
-  fuchsia::virtualization::GuestVsockEndpointPtr vm_guest_endpoint;
-  context_->svc()->Connect(vm_guest_endpoint.NewRequest());
-  local_guest_endpoint_ =
-      std::make_unique<GuestVsockEndpoint>(fuchsia::virtualization::DEFAULT_GUEST_CID,
-                                           std::move(vm_guest_endpoint), &host_vsock_endpoint_);
+  if constexpr (VIRTIO_VSOCK_LEGACY_INPROCESS) {
+    // Setup guest endpoint.
+    fuchsia::virtualization::GuestVsockEndpointPtr vm_guest_endpoint;
+    context_->svc()->Connect(vm_guest_endpoint.NewRequest());
+    local_guest_endpoint_ =
+        std::make_unique<GuestVsockEndpoint>(fuchsia::virtualization::DEFAULT_GUEST_CID,
+                                             std::move(vm_guest_endpoint), &host_vsock_endpoint_);
+  }
+
   callback(fpromise::ok());
 }
 
@@ -113,7 +122,11 @@ void GuestManager::ConnectToBalloon(
 
 void GuestManager::GetHostVsockEndpoint(
     fidl::InterfaceRequest<fuchsia::virtualization::HostVsockEndpoint> endpoint) {
-  host_vsock_endpoint_.AddBinding(std::move(endpoint));
+  if constexpr (VIRTIO_VSOCK_LEGACY_INPROCESS) {
+    host_vsock_endpoint_.AddBinding(std::move(endpoint));
+  } else {
+    context_->svc()->Connect(std::move(endpoint));
+  }
 }
 
 void GuestManager::GetGuestInfo(GetGuestInfoCallback callback) {

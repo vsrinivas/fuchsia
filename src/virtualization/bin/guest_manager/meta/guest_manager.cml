@@ -36,6 +36,7 @@
                 "fuchsia.virtualization.BalloonController",
                 "fuchsia.virtualization.Guest",
                 "fuchsia.virtualization.GuestVsockEndpoint",
+                "fuchsia.virtualization.HostVsockEndpoint",
             ],
             from: "#vmm",
         },

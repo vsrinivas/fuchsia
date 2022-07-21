@@ -40,6 +40,8 @@ source_set("lib") {
     "//src/virtualization/lib/guest_config",
     "//zircon/system/ulib/bitmap",
   ]
+
+  configs += [ "//src/virtualization/bin:args" ]
 }
 
 executable("bin") {

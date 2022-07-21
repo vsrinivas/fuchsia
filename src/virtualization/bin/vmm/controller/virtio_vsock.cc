@@ -22,7 +22,7 @@ constexpr uint32_t kDeviceFeatures = 0;
 
 constexpr const char* kComponentName = "virtio_vsock";
 constexpr const char* kComponentCollectionName = "virtio_vsock_devices";
-constexpr const char* kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_rng#meta/virtio_vsock.cm";
+constexpr const char* kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_vsock#meta/virtio_vsock.cm";
 
 // There is one device per guest, and one guest per host, so all guests will use the same CID.
 constexpr uint64_t kGuestCid = fuchsia::virtualization::DEFAULT_GUEST_CID;
@@ -39,11 +39,16 @@ VirtioVsock::VirtioVsock(const PhysMem& phys_mem)
 
 zx_status_t VirtioVsock::Start(const zx::guest& guest, fuchsia::component::RealmSyncPtr& realm,
                                async_dispatcher_t* dispatcher) {
-  zx_status_t status = CreateDynamicComponent(
-      realm, kComponentCollectionName, kComponentName, kComponentUrl,
-      [vsock = vsock_.NewRequest()](std::shared_ptr<sys::ServiceDirectory> services) mutable {
-        return services->Connect(std::move(vsock));
-      });
+  zx_status_t status =
+      CreateDynamicComponent(realm, kComponentCollectionName, kComponentName, kComponentUrl,
+                             [vsock = vsock_.NewRequest(), endpoint = endpoint_.NewRequest()](
+                                 std::shared_ptr<sys::ServiceDirectory> services) mutable {
+                               zx_status_t status = services->Connect(std::move(vsock));
+                               if (status != ZX_OK) {
+                                 return status;
+                               }
+                               return services->Connect(std::move(endpoint));
+                             });
   if (status != ZX_OK) {
     return status;
   }
@@ -63,6 +68,10 @@ zx_status_t VirtioVsock::Start(const zx::guest& guest, fuchsia::component::Realm
   return result.is_err() ? result.err() : ZX_OK;
 }
 
+zx_status_t VirtioVsock::AddPublicService(sys::ComponentContext* context) {
+  return context->outgoing()->AddPublicService(bindings_.GetHandler(this));
+}
+
 zx_status_t VirtioVsock::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr_t desc,
                                         zx_gpaddr_t avail, zx_gpaddr_t used) {
   return vsock_->ConfigureQueue(queue, size, desc, avail, used);
@@ -70,6 +79,16 @@ zx_status_t VirtioVsock::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpaddr
 
 zx_status_t VirtioVsock::Ready(uint32_t negotiated_features) {
   return vsock_->Ready(negotiated_features);
+}
+
+void VirtioVsock::Connect2(uint32_t guest_port, VirtioVsock::Connect2Callback callback) {
+  endpoint_->Connect2(guest_port, std::move(callback));
+}
+
+void VirtioVsock::Listen(uint32_t port,
+                         fidl::InterfaceHandle<fuchsia::virtualization::HostVsockAcceptor> acceptor,
+                         VirtioVsock::ListenCallback callback) {
+  endpoint_->Listen(port, std::move(acceptor), std::move(callback));
 }
 
 }  // namespace controller

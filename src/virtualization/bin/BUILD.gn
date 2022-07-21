@@ -2,6 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/virtualization/bin/args.gni")
+
+config("args") {
+  defines = []
+  if (virtio_vsock_legacy_inprocess) {
+    defines += [ "USE_VIRTIO_VSOCK_LEGACY_INPROCESS" ]
+  }
+  if (rust_virtio_gpu_input_devices) {
+    defines += [ "USE_RUST_VIRTIO_GPU_INPUT" ]
+  }
+}
+
 group("bin") {
   # Remove this once linux_runner no longer sets "linux_runner_extras_tests" to
   # "true" by default.

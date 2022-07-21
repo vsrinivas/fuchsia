@@ -5,17 +5,6 @@
 import("//build/components.gni")
 import("//build/fuzzing/fuzzer.gni")
 
-declare_args() {
-  virtio_vsock_inprocess = true
-
-  # Enable to use the rust virtio GPU and input devices by default in the VMM.
-  rust_virtio_gpu_input_devices = false
-}
-
-config("rust_gpu_input") {
-  defines = [ "USE_RUST_VIRTIO_GPU_INPUT" ]
-}
-
 group("vmm") {
   deps = [
     ":vmm_package",
@@ -130,9 +119,7 @@ source_set("lib") {
   }
 
   configs += [ "//build/config:all_source" ]
-  if (rust_virtio_gpu_input_devices) {
-    configs += [ ":rust_gpu_input" ]
-  }
+  configs += [ "//src/virtualization/bin:args" ]
 
   deps = [
     "//sdk/fidl/fuchsia.component",
@@ -173,10 +160,6 @@ source_set("lib") {
   }
 }
 
-config("in_process_vsock") {
-  defines = [ "USE_LEGACY_IN_PROCESS_VSOCK" ]
-}
-
 executable("bin") {
   output_name = "vmm"
 
@@ -193,10 +176,7 @@ executable("bin") {
   ]
 
   configs += [ "//build/config:all_source" ]
-
-  if (virtio_vsock_inprocess) {
-    configs += [ ":in_process_vsock" ]
-  }
+  configs += [ "//src/virtualization/bin:args" ]
 }
 
 resource("vmm-resources") {

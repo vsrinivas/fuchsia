@@ -69,10 +69,10 @@ static constexpr char kMcfgPath[] = "/pkg/data/mcfg.aml";
 #error Unknown architecture.
 #endif
 
-#ifdef USE_LEGACY_IN_PROCESS_VSOCK
-#define IN_PROCESS_VSOCK 1
+#ifdef USE_VIRTIO_VSOCK_LEGACY_INPROCESS
+#define VIRTIO_VSOCK_LEGACY_INPROCESS 1
 #else
-#define IN_PROCESS_VSOCK 0
+#define VIRTIO_VSOCK_LEGACY_INPROCESS 0
 #endif
 
 static zx_gpaddr_t AllocDeviceAddr(size_t device_size) {
@@ -300,7 +300,7 @@ int main(int argc, char** argv) {
   // process vsock is used.
   std::unique_ptr<async::Loop> vsock_loop;
 
-  if constexpr (IN_PROCESS_VSOCK) {
+  if constexpr (VIRTIO_VSOCK_LEGACY_INPROCESS) {
     vsock_loop = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     legacy_vsock =
         std::make_unique<VirtioVsock>(context.get(), guest.phys_mem(), vsock_loop->dispatcher());
@@ -538,6 +538,14 @@ int main(int argc, char** argv) {
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to add GPU public service";
     loop.Quit();
+  }
+
+  if constexpr (!VIRTIO_VSOCK_LEGACY_INPROCESS) {
+    status = experimental_vsock->AddPublicService(context.get());
+    if (status != ZX_OK) {
+      FX_PLOGS(ERROR, status) << "Failed to add vsock public service";
+      loop.Quit();
+    }
   }
 
   // Start the dispatch thread for communicating with the out of process
