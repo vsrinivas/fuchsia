@@ -19,9 +19,11 @@ use crate::{
 };
 
 use {
+    anyhow::Error,
     fidl::{
         self,
         endpoints::{RequestStream, ServerEnd},
+        epitaph::ChannelEpitaphExt as _,
     },
     fidl_fuchsia_io as fio,
     fuchsia_async::Channel,
@@ -99,31 +101,48 @@ impl Service {
         mode: u32,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
-        // There will be a few cases in this methods and one in `<Service as
-        // DirectoryEntry>::open()` when we encounter an error while trying to process requests.
-        //
-        // We are not supposed to send `OnOpen` events if the node is opened without
-        // `OPEN_FLAG_NODE_REFERENCE` as the `server_end` might be interpreted as a protocol that
-        // does not support Node.  So the only thing we can do is to close the channel.  We could
-        // have send an epitaph, but they are not supported by Rust and in the next version of
-        // fuchsia.io the error handing will be different anyways.
+        let channel = match Channel::from_channel(server_end.into_channel()) {
+            Ok(channel) => channel,
+            Err(_) => {
+                // We were unable to convert the channel into an async channel, which most likely
+                // means the channel was invalid in some way, so there's nothing we can do.
+                return;
+            }
+        };
+
+        // If this returns an error, it will be because it failed to send the OnOpen event, in which
+        // case there's nothing we can do.
+        let describe = |channel, status: Result<(), Status>| -> Result<Channel, Error> {
+            if !flags.contains(fio::OpenFlags::DESCRIBE) {
+                return Ok(channel);
+            }
+            // TODO(https://fxbug.dev/104708): This is a bit crude but there seems to be no other
+            // way of sending on_open_ using FIDL and then getting the channel back.
+            let request_stream = fio::NodeRequestStream::from_channel(channel);
+            let (status, mut node_info) = match status {
+                Ok(()) => (Status::OK, Some(fio::NodeInfo::Service(fio::Service))),
+                Err(status) => (status, None),
+            };
+            request_stream.control_handle().send_on_open_(status.into_raw(), node_info.as_mut())?;
+            let (inner, _is_terminated) = request_stream.into_inner();
+            // It's safe to unwrap here because inner is clearly the only Arc reference left.
+            Ok(Arc::try_unwrap(inner).unwrap().into_channel())
+        };
 
         let flags = match new_connection_validate_flags(flags, mode) {
             Ok(updated) => updated,
-            Err(_status) => {
-                // See comment at the beginning of the method.
+            Err(status) => {
+                if let Ok(channel) = describe(channel, Err(status)) {
+                    let _ = channel.close_with_epitaph(status);
+                }
                 return;
             }
         };
 
         debug_assert!(flags.contains(fio::OpenFlags::RIGHT_READABLE));
 
-        match Channel::from_channel(server_end.into_channel()) {
-            Ok(channel) => (self.open)(scope, channel),
-            Err(_err) => {
-                // See comment at the beginning of the method.
-                return;
-            }
+        if let Ok(channel) = describe(channel, Ok(())) {
+            (self.open)(scope, channel);
         }
     }
 }

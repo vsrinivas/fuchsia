@@ -9,9 +9,14 @@ use super::{endpoint, host};
 use crate::file::test_utils::run_server_client;
 
 use {
-    fidl::endpoints::{Proxy, RequestStream},
+    assert_matches::assert_matches,
+    fidl::{
+        endpoints::{Proxy, RequestStream},
+        Error,
+    },
     fidl_fuchsia_io as fio,
     fidl_test_placeholders::{EchoProxy, EchoRequest, EchoRequestStream},
+    fuchsia_zircon::Status,
     futures::{
         channel::{mpsc, oneshot},
         stream::StreamExt,
@@ -73,7 +78,7 @@ fn simple_endpoint() {
 
             let response = proxy.echo_string(Some("test")).await.unwrap();
 
-            assert_eq!(response, Some("test".to_string()));
+            assert_eq!(response.as_deref(), Some("test"));
         },
     );
 }
@@ -88,7 +93,7 @@ fn simple_host() {
 
             let response = proxy.echo_string(Some("test")).await.unwrap();
 
-            assert_eq!(response, Some("test".to_string()));
+            assert_eq!(response.as_deref(), Some("test"));
         },
     );
 }
@@ -119,19 +124,91 @@ fn server_state_checking() {
                 // `next()` wraps in `Option` and our value is `Option<String>`, hence double
                 // `Option`.
                 assert_eq!(on_message_rx.next().await, Some(Some("message 1".to_string())));
-                assert_eq!(response, Some("message 1".to_string()));
+                assert_eq!(response.as_deref(), Some("message 1"));
 
                 let response = proxy.echo_string(Some("message 2")).await.unwrap();
 
                 // `next()` wraps in `Option` and our value is `Option<String>`, hence double
                 // `Option`.
                 assert_eq!(on_message_rx.next().await, Some(Some("message 2".to_string())));
-                assert_eq!(response, Some("message 2".to_string()));
+                assert_eq!(response.as_deref(), Some("message 2"));
 
                 drop(proxy);
 
                 assert_eq!(done_rx.await, Ok(()));
             }
+        },
+    );
+}
+
+#[test]
+fn test_describe() {
+    run_server_client(
+        READ_WRITE | fio::OpenFlags::DESCRIBE,
+        host(|requests| echo_server(requests, None, None)),
+        |node_proxy| async move {
+            let (status, node_info) = node_proxy
+                .take_event_stream()
+                .next()
+                .await
+                .expect("Channel closed")
+                .expect("Expected event")
+                .into_on_open_()
+                .expect("Expected OnOpen");
+            assert_eq!(Status::from_raw(status), Status::OK);
+            assert_matches!(node_info.as_deref(), Some(fio::NodeInfo::Service(fio::Service)));
+
+            let proxy = EchoProxy::from_channel(node_proxy.into_channel().unwrap());
+
+            let response = proxy.echo_string(Some("test")).await.unwrap();
+
+            assert_eq!(response.as_deref(), Some("test"));
+        },
+    );
+}
+
+#[test]
+fn test_describe_error() {
+    run_server_client(
+        READ_WRITE | fio::OpenFlags::DIRECTORY | fio::OpenFlags::DESCRIBE,
+        host(|requests| echo_server(requests, None, None)),
+        |node_proxy| async move {
+            let mut event_stream = node_proxy.take_event_stream();
+
+            let (status, node_info) = event_stream
+                .next()
+                .await
+                .expect("Channel closed")
+                .expect("Expected event")
+                .into_on_open_()
+                .expect("Expected OnOpen");
+            assert_eq!(Status::from_raw(status), Status::NOT_DIR);
+            assert_eq!(node_info, None);
+
+            // And we should also get an epitaph.
+            assert_matches!(
+                event_stream.next().await,
+                Some(Err(Error::ClientChannelClosed { status: Status::NOT_DIR, .. }))
+            );
+
+            assert_matches!(event_stream.next().await, None);
+        },
+    );
+}
+
+#[test]
+fn test_epitaph() {
+    run_server_client(
+        READ_WRITE | fio::OpenFlags::DIRECTORY,
+        host(|requests| echo_server(requests, None, None)),
+        |node_proxy| async move {
+            let mut event_stream = node_proxy.take_event_stream();
+            assert_matches!(
+                event_stream.next().await,
+                Some(Err(Error::ClientChannelClosed { status: Status::NOT_DIR, .. }))
+            );
+
+            assert_matches!(event_stream.next().await, None);
         },
     );
 }

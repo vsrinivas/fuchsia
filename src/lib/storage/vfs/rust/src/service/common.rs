@@ -78,12 +78,8 @@ pub fn new_connection_validate_flags(
     if !flags.intersects(fio::OpenFlags::RIGHT_READABLE) {
         return Err(Status::ACCESS_DENIED);
     }
-    let allowed_flags = fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE;
-
-    // OPEN_FLAG_DESCRIBE is not allowed when connecting directly to the service itself.
-    if flags.intersects(fio::OpenFlags::DESCRIBE) {
-        return Err(Status::INVALID_ARGS);
-    }
+    let allowed_flags =
+        fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::DESCRIBE;
 
     // Anything else is also not allowed.
     if flags.intersects(!allowed_flags) {
@@ -174,8 +170,8 @@ mod tests {
         ncvf_ok(fio::OpenFlags::RIGHT_READABLE, 0, fio::OpenFlags::RIGHT_READABLE);
         ncvf_err(fio::OpenFlags::RIGHT_WRITABLE, 0, Status::ACCESS_DENIED);
 
-        // OPEN_FLAG_DESCRIBE is not allowed.
-        ncvf_err(READ_WRITE | fio::OpenFlags::DESCRIBE, 0, Status::INVALID_ARGS);
+        // OPEN_FLAG_DESCRIBE is allowed.
+        ncvf_ok(READ_WRITE | fio::OpenFlags::DESCRIBE, 0, READ_WRITE | fio::OpenFlags::DESCRIBE);
 
         ncvf_ok(READ_WRITE | fio::OpenFlags::NOT_DIRECTORY, 0, READ_WRITE);
         ncvf_err(READ_WRITE | fio::OpenFlags::DIRECTORY, 0, Status::NOT_DIR);
@@ -225,14 +221,14 @@ mod tests {
             0,
             READ_WRITE,
         );
-        ncvf_err(
+        ncvf_ok(
             READ_WRITE
                 | fio::OpenFlags::DESCRIBE
                 | fio::OpenFlags::POSIX_DEPRECATED
                 | fio::OpenFlags::POSIX_WRITABLE
                 | fio::OpenFlags::POSIX_EXECUTABLE,
             0,
-            Status::INVALID_ARGS,
+            READ_WRITE | fio::OpenFlags::DESCRIBE,
         );
     }
 

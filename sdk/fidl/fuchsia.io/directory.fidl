@@ -37,7 +37,9 @@ type OpenFlags = strict bits : uint32 {
     /// and, if the node is a file, these extra operations: `GetFlags`, `SetFlags`.
     NODE_REFERENCE = 0x00400000;
     /// Requests that an "OnOpen" event is sent to the interface request.
-    /// The event will contain a non-null NodeInfo if the open/clone is successful.
+    /// The event will contain a non-null NodeInfo if the open/clone is successful. This can be used
+    /// to open a protocol that does not compose fuchsia.io/Node; the event is sent as if the
+    /// protocol is fuchsia.io/Node and then the target protocol is used exclusively.
     DESCRIBE = 0x00800000;
     /// DO NOT USE. In process of being removed.
     /// TODO(fxbug.dev/81185): Remove when all clients have updated to the latest SDK.
