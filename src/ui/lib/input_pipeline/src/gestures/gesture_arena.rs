@@ -391,10 +391,18 @@ impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> _GestureArena<ContenderF
 
     fn handle_event_while_forwarding(
         &self,
-        _winner: Box<dyn Winner>,
-        _new_event: TouchpadEvent,
+        winner: Box<dyn Winner>,
+        new_event: TouchpadEvent,
     ) -> (MutableState, Vec<MouseEvent>) {
-        todo!()
+        match winner.process_new_event(new_event) {
+            ProcessNewEventResult::ContinueGesture(generated_event, winner) => {
+                (MutableState::Forwarding { winner }, generated_event.into_iter().collect())
+            }
+            ProcessNewEventResult::EndGesture(Some(unconsumed_event)) => {
+                self.handle_event_while_idle(unconsumed_event)
+            }
+            ProcessNewEventResult::EndGesture(None) => (MutableState::Idle, vec![]),
+        }
     }
 }
 
@@ -720,11 +728,43 @@ mod tests {
         }
 
         #[derive(Clone, Debug)]
-        pub(super) struct StubWinner {}
+        pub(super) struct StubWinner {
+            inner: Rc<RefCell<StubWinnerInner>>,
+        }
+
+        impl StubWinner {
+            pub(super) fn new() -> Self {
+                Self {
+                    inner: Rc::new(RefCell::new(StubWinnerInner {
+                        next_result: None,
+                        calls_received: 0,
+                    })),
+                }
+            }
+
+            /// Set the value to be returned on the next call to `examine_event()`.
+            pub(super) fn set_next_result(&self, next_result: ProcessNewEventResult) {
+                self.inner.borrow_mut().next_result = Some(next_result);
+            }
+
+            pub(super) fn calls_received(&self) -> usize {
+                self.inner.borrow().calls_received
+            }
+        }
+
+        #[derive(Debug)]
+        struct StubWinnerInner {
+            next_result: Option<ProcessNewEventResult>,
+            calls_received: usize,
+        }
 
         impl Winner for StubWinner {
             fn process_new_event(self: Box<Self>, _event: TouchpadEvent) -> ProcessNewEventResult {
-                todo!() // Resolve when implementing the forwarding state
+                let mut inner = self.inner.borrow_mut();
+                inner.calls_received += 1;
+                inner.next_result.take().unwrap_or_else(|| {
+                    panic!("missing `next_result` on call {}", inner.calls_received)
+                })
             }
         }
 
@@ -1261,7 +1301,7 @@ mod tests {
             );
         }
 
-        #[test_case(Some(StubWinner {}); "with_winner")]
+        #[test_case(Some(StubWinner::new()); "with_winner")]
         #[test_case(None; "without_winner")]
         #[fuchsia::test(allow_stalls = false)]
         async fn generates_events_from_process_buffered_events_on_single_matched_contender(
@@ -1495,12 +1535,259 @@ mod tests {
             matched_contender.set_next_process_buffered_events_result(
                 ProcessBufferedEventsResult {
                     generated_events: vec![],
-                    winner: Some(StubWinner {}.into()),
+                    winner: Some(StubWinner::new().into()),
                     recognized_gesture: RecognizedGesture::Palm,
                 },
             );
             arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
             assert_matches!(*arena.mutable_state.borrow(), MutableState::Forwarding { .. });
+        }
+    }
+
+    mod forwarding_state {
+        use {
+            super::{
+                super::{
+                    Contender, ExamineEventResult, MouseEvent, MutableState, ProcessNewEventResult,
+                    TouchpadEvent, UnhandledInputHandler, _GestureArena,
+                },
+                utils::{
+                    make_unhandled_mouse_event, make_unhandled_touchpad_event, ContenderForever,
+                    StubContender, StubWinner,
+                },
+            },
+            crate::{input_device, mouse_binding, Position},
+            assert_matches::assert_matches,
+            fuchsia_zircon as zx,
+            maplit::hashset,
+            pretty_assertions::assert_eq,
+            std::{
+                cell::{Cell, RefCell},
+                rc::Rc,
+            },
+            test_case::test_case,
+        };
+
+        /// Creates an arena in the forwarding state, with
+        /// a) the given `winner`, and
+        /// b) an appropriate contender factory
+        ///
+        /// If `contender` is `None`, the contender factory will abort on the first
+        /// call.
+        ///
+        /// If `contender` is `Some`, the contender factory will return the content
+        /// of the `Option` on the first call, and abort on the second call.
+        ///
+        /// The former is the common case for the tests. The latter is useful for
+        /// tests that exercise the arena's handling of an `EndGesture(Some)`.
+        fn make_forwarding_arena(
+            winner: StubWinner,
+            contender: Option<Box<dyn Contender>>,
+        ) -> Rc<_GestureArena<impl Fn() -> Vec<Box<dyn Contender>>>> {
+            let contender = Cell::new(contender);
+            Rc::new(_GestureArena {
+                contender_factory: move || vec![contender.take().expect("`contender` is None")],
+                mutable_state: RefCell::new(MutableState::Forwarding { winner: winner.into() }),
+            })
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn invokes_process_new_event_on_touchpad_event() {
+            let winner = StubWinner::new();
+            let arena = make_forwarding_arena(winner.clone(), None);
+            winner.set_next_result(ProcessNewEventResult::EndGesture(None));
+            arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            assert_eq!(winner.calls_received(), 1);
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn does_not_invoke_process_new_event_on_mouse_event() {
+            let winner = StubWinner::new();
+            let arena = make_forwarding_arena(winner.clone(), None);
+            winner.set_next_result(ProcessNewEventResult::EndGesture(None));
+            arena.handle_unhandled_input_event(make_unhandled_mouse_event()).await;
+            assert_eq!(winner.calls_received(), 0);
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn invokes_process_new_event_for_multiple_new_events() {
+            // Create `arena` with `winner` and a `ContenderForever`. The latter
+            // makes the test fail in a more useful way if the `GestureArena`
+            // is buggy.
+            let winner = StubWinner::new();
+            let arena = make_forwarding_arena(winner.clone(), Some(ContenderForever {}.into()));
+
+            // Send two events to `arena`.
+            winner.set_next_result(ProcessNewEventResult::ContinueGesture(
+                None,
+                winner.clone().into(),
+            ));
+            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            winner.set_next_result(ProcessNewEventResult::ContinueGesture(
+                None,
+                winner.clone().into(),
+            ));
+            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+
+            // Verify `winner` was called as expected.
+            assert_eq!(winner.calls_received(), 2);
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn generates_event_on_continue_gesture_with_mouse_event() {
+            let winner = StubWinner::new();
+            let arena = make_forwarding_arena(winner.clone(), None);
+            winner.set_next_result(ProcessNewEventResult::ContinueGesture(
+                Some(MouseEvent {
+                    timestamp: zx::Time::from_nanos(123),
+                    mouse_data: mouse_binding::MouseEvent {
+                        location: mouse_binding::MouseLocation::Relative(
+                            mouse_binding::RelativeLocation {
+                                counts: Position::zero(),
+                                millimeters: Position::zero(),
+                            },
+                        ),
+                        wheel_delta_v: None,
+                        wheel_delta_h: None,
+                        phase: mouse_binding::MousePhase::Move,
+                        affected_buttons: hashset! {},
+                        pressed_buttons: hashset! {},
+                    },
+                }),
+                winner.clone().into(),
+            ));
+            assert_matches!(
+                arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await.as_slice(),
+                [
+                    input_device::InputEvent {
+                        event_time,
+                        handled: input_device::Handled::No,
+                        device_event: input_device::InputDeviceEvent::Mouse(_),
+                        ..
+                    },
+                ] => pretty_assertions::assert_eq!(*event_time, zx::Time::from_nanos(123))
+            );
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn generates_no_events_on_continue_gesture_without_mouse_event() {
+            let winner = StubWinner::new();
+            let arena = make_forwarding_arena(winner.clone(), None);
+            winner.set_next_result(ProcessNewEventResult::ContinueGesture(
+                None,
+                winner.clone().into(),
+            ));
+            pretty_assertions::assert_eq!(
+                arena
+                    .handle_unhandled_input_event(make_unhandled_touchpad_event())
+                    .await
+                    .as_slice(),
+                vec![]
+            );
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn generates_no_events_on_end_gesture_without_touchpad_event() {
+            let winner = StubWinner::new();
+            let arena = make_forwarding_arena(winner.clone(), None);
+            winner.set_next_result(ProcessNewEventResult::EndGesture(None));
+            pretty_assertions::assert_eq!(
+                arena
+                    .handle_unhandled_input_event(make_unhandled_touchpad_event())
+                    .await
+                    .as_slice(),
+                vec![]
+            );
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn generates_no_events_on_end_gesture_with_touchpad_event() {
+            // Create `arena` with a `StubContender` for processing the unconsumed
+            // `TouchpadEvent`.
+            let winner = StubWinner::new();
+            let contender = StubContender::new();
+            let arena = make_forwarding_arena(winner.clone(), Some(contender.clone().into()));
+            winner.set_next_result(ProcessNewEventResult::EndGesture(Some(TouchpadEvent {
+                contacts: vec![],
+                pressed_buttons: vec![],
+                timestamp: zx::Time::ZERO,
+            })));
+
+            // Set a return value for the `examine_event()` call.
+            contender.set_next_result(ExamineEventResult::Mismatch);
+
+            // Verify no events were generated.
+            pretty_assertions::assert_eq!(
+                arena
+                    .handle_unhandled_input_event(make_unhandled_touchpad_event())
+                    .await
+                    .as_slice(),
+                vec![]
+            );
+        }
+
+        #[test_case(Some(MouseEvent{
+            timestamp: zx::Time::from_nanos(123),
+            mouse_data: mouse_binding::MouseEvent {
+                location: mouse_binding::MouseLocation::Relative(
+                    mouse_binding::RelativeLocation {
+                        counts: Position::zero(),
+                        millimeters: Position::zero(),
+                    },
+                ),
+                wheel_delta_v: None,
+                wheel_delta_h: None,
+                phase: mouse_binding::MousePhase::Move,
+                affected_buttons: hashset! {},
+                pressed_buttons: hashset! {},
+            },
+        }); "with_mouse_event")]
+        #[test_case(None; "without_mouse_event")]
+        #[fuchsia::test(allow_stalls = false)]
+        async fn remains_in_forwarding_on_continue_gesture(mouse_event: Option<MouseEvent>) {
+            let winner = StubWinner::new();
+            let arena = make_forwarding_arena(winner.clone(), None);
+            winner.set_next_result(ProcessNewEventResult::ContinueGesture(
+                mouse_event,
+                winner.clone().into(),
+            ));
+            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            assert_matches!(*arena.mutable_state.borrow(), MutableState::Forwarding { .. });
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn transitions_to_idle_on_end_gesture_without_touchpad_event() {
+            let winner = StubWinner::new();
+            let arena = make_forwarding_arena(winner.clone(), None);
+            winner.set_next_result(ProcessNewEventResult::EndGesture(None));
+            arena.clone().handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+            assert_matches!(*arena.mutable_state.borrow(), MutableState::Idle);
+        }
+
+        #[fuchsia::test(allow_stalls = false)]
+        async fn starts_new_contest_on_end_gesture_with_touchpad_event() {
+            // Set up an arena in the forwarding state with `winner`, and
+            // with a factory that will return `contender`. The latter should
+            // be called at the start of the new contest.
+            let winner = StubWinner::new();
+            let contender = StubContender::new();
+            let arena = make_forwarding_arena(winner.clone(), Some(contender.clone().into()));
+
+            // Set up `winner` to end the gesture and return an unconsumed event.
+            winner.set_next_result(ProcessNewEventResult::EndGesture(Some(TouchpadEvent {
+                timestamp: zx::Time::ZERO,
+                contacts: vec![],
+                pressed_buttons: vec![],
+            })));
+
+            // Set up `contender` to reply to the `examine_event()` call.
+            contender.set_next_result(ExamineEventResult::Mismatch);
+
+            // Send an event into the arena.
+            arena.handle_unhandled_input_event(make_unhandled_touchpad_event()).await;
+
+            // Verify that the arena started a new contest.
+            assert_eq!(contender.calls_received(), 1);
         }
     }
 }
