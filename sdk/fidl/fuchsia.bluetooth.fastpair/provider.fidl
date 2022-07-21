@@ -1,0 +1,47 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+@available(added=HEAD)
+library fuchsia.bluetooth.fastpair;
+
+using fuchsia.bluetooth;
+using zx;
+
+/// Represents an active Fast Pair Provider service. The lifetime of the service is tied to this
+/// handle.
+///
+/// Closing the handle disables the service.
+///
+/// The system may close the handle to communicate that the service was terminated
+/// for internal reasons.
+protocol ProviderHandle {
+    /// Called if the Fast Pair pairing procedure for a peer is successfully complete.
+    ///
+    /// + request `id` The unique ID associated with the connected Fast Pair Seeker peer.
+    /// - response Each `OnPairingComplete` request should be acknowledged.
+    OnPairingComplete(struct {
+        id fuchsia.bluetooth.PeerId;
+    }) -> ();
+};
+
+/// Protocol to enable the Bluetooth Fast Pair Provider service on the system.
+@discoverable
+protocol Provider {
+    /// Request to enable the Fast Pair Provider service.
+    ///
+    /// Only one client can register to enable the Fast Pair service. An Error will be returned
+    /// for subsequent requests.
+    ///
+    /// The lifetime of the service is tied to the provided `handle`. To disable Fast Pair
+    /// functionality, close the `handle`.
+    ///
+    /// + request `handle` The client end of the ProviderHandle which determines the lifetime of
+    ///   the Fast Pair service.
+    /// - response An empty response will be sent when the server has processed the
+    ///   request.
+    /// * error Returns `ALREADY_BOUND` if a subsequent request is made to enable
+    ///   the service.
+    Enable(resource struct {
+        handle client_end:ProviderHandle;
+    }) -> (struct {}) error zx.status;
+};
