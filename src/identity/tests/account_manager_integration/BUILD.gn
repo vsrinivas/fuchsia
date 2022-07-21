@@ -21,7 +21,6 @@ rustc_test("test") {
   source_root = "tests/lib.rs"
 
   deps = [
-    "//sdk/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account-rustc",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger-rustc",
     "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",

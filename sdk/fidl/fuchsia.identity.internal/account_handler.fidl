@@ -3,11 +3,9 @@
 // found in the LICENSE file.
 library fuchsia.identity.internal;
 
-using fuchsia.auth;
 using fuchsia.identity.account;
 using fuchsia.identity.authentication;
 
-// TODO(fxbug.dev/42836): Supply UI for system authentication.
 /// The control channel for an AccountHandler component.
 ///
 /// This interface is intended only for use by the AccountManager component that
@@ -67,6 +65,10 @@ protocol AccountHandlerControl {
     /// Creates a completely new system account, optionally protecting the
     /// account with a single enrollment of an authentication mechanism.
     ///
+    /// `metadata` [required] Metadata for the new account
+    /// `interaction` [required] An `Interaction` channel enabling the user to
+    ///               select and enroll authentication mechanisms for the new
+    ///               account.
     /// `auth_mechanism_id` An `AuthMechanismId` for a storage
     ///                     unlock-capable authentication mechanism. If
     ///                     provided, a single enrollment of that
@@ -75,8 +77,12 @@ protocol AccountHandlerControl {
     ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the
     /// `Uninitialized` state.
-    CreateAccount(struct {
-        auth_mechanism_id fuchsia.identity.account.AuthMechanismId:optional;
+    CreateAccount(resource table {
+        1: metadata fuchsia.identity.account.AccountMetadata;
+        2: interaction server_end:fuchsia.identity.authentication.Interaction;
+        // TODO(fxbug.dev/104199): Remove this field once interaction is
+        // used for tests.
+        3: auth_mechanism_id fuchsia.identity.account.AuthMechanismId;
     }) -> (struct {}) error fuchsia.identity.account.Error;
 
     /// Loads pre-auth data, which allows the account to be unlocked later.
@@ -91,11 +97,16 @@ protocol AccountHandlerControl {
     /// Reach the `Initialized` state, attempting authentication and unlocking
     /// the account where necessary.
     ///
+    /// `interaction` An `Interaction` channel enabling the user to complete
+    ///               authentication challenges if these are necessary.
+    ///
     /// Fails with
     /// - FAILED_PRECONDITION if the AccountHandler is not in the `Locked` or
     ///   `Initialized` state.
     /// - FAILED_AUTH_ATTEMPT if the authentication attempt failed.
-    UnlockAccount() -> (struct {}) error fuchsia.identity.account.Error;
+    UnlockAccount(resource table {
+        1: interaction server_end:fuchsia.identity.authentication.Interaction;
+    }) -> (struct {}) error fuchsia.identity.account.Error;
 
     /// Reach the `Locked` state, closing any open `Account` and `Persona`
     /// channels for the account.
@@ -115,15 +126,11 @@ protocol AccountHandlerControl {
     /// the account handled by this handler. The AccountHandler must be in the
     /// `Initialized` state.
     ///
-    /// `context_provider` An `AuthenticationContextProvider` capable of
-    ///                    supplying UI contexts used for interactive
-    ///                    authentication on this account
     /// `account` The server end of an `Account` channel
     ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the
     /// `Initialized` state.
     GetAccount(resource struct {
-        auth_context_provider client_end:fuchsia.auth.AuthenticationContextProvider;
         account server_end:fuchsia.identity.account.Account;
     }) -> (struct {}) error fuchsia.identity.account.Error;
 
@@ -145,7 +152,8 @@ protocol AccountHandlerContext {
     ///
     /// `auth_mechanism_id` An identifier matching an authentication mechanism
     ///                     configured by the account system.
-    /// `storage_unlock_mechanism` The server end of an `StorageUnlockMechanism` channel
+    /// `storage_unlock_mechanism` The server end of an `StorageUnlockMechanism`
+    ///                            channel
     GetStorageUnlockAuthMechanism(resource struct {
         auth_mechanism_id fuchsia.identity.account.AuthMechanismId;
         storage_unlock_mechanism server_end:fuchsia.identity.authentication.StorageUnlockMechanism;

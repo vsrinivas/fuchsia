@@ -130,7 +130,7 @@ impl AccountHandlerConnection for FakeAccountHandlerConnection {
 }
 
 mod tests {
-    use super::*;
+    use {super::*, fidl_fuchsia_identity_internal::AccountHandlerControlCreateAccountRequest};
 
     #[fuchsia_async::run_until_stalled(test)]
     async fn corrupt_handler() {
@@ -202,7 +202,12 @@ mod tests {
             Lifetime::Persistent,
             DEFAULT_ACCOUNT_ID.clone(),
         )?;
-        assert!(conn.proxy().create_account(None).await.unwrap().is_ok());
+        assert!(conn
+            .proxy()
+            .create_account(AccountHandlerControlCreateAccountRequest::EMPTY)
+            .await
+            .unwrap()
+            .is_ok());
         Ok(())
     }
 
@@ -213,7 +218,11 @@ mod tests {
             UNKNOWN_ERROR_ACCOUNT_ID.clone(),
         )?;
         assert_eq!(
-            conn.proxy().create_account(None).await.unwrap().unwrap_err(),
+            conn.proxy()
+                .create_account(AccountHandlerControlCreateAccountRequest::EMPTY)
+                .await
+                .unwrap()
+                .unwrap_err(),
             ApiError::Unknown
         );
         Ok(())
@@ -226,7 +235,12 @@ mod tests {
             DEFAULT_ACCOUNT_ID.clone(),
         )?;
         assert!(conn.proxy().terminate().is_ok());
-        assert!(conn.proxy().create_account(None).await.unwrap_err().is_closed());
+        assert!(conn
+            .proxy()
+            .create_account(AccountHandlerControlCreateAccountRequest::EMPTY)
+            .await
+            .unwrap_err()
+            .is_closed());
         Ok(())
     }
 

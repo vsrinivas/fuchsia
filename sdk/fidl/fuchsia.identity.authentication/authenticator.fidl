@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 library fuchsia.identity.authentication;
 
-// TODO(fxbug.dev/42836): Supply UI for system authentication.
 /// A stateless interface serving an authentication mechanism capable of
 /// supplying pre-key material for use with storage unlock. Clients are
 /// responsible for managing and persisting enrollments. Enrollment
@@ -16,14 +15,19 @@ protocol StorageUnlockMechanism {
     /// Interactively requests the user to authenticate against any of the
     /// provided enrollments.
     ///
-    /// `enrollments`      A list of enrollments that will be accepted.
+    /// `interaction` The server end of a channel that will be used to
+    ///               interact with the UI. The type of this channel must
+    ///               match a mechanism supported by the authenticator.
+    /// `enrollments` A list of enrollments that will be accepted. These
+    ///               must all match the mechanism specified in `interaction`.
     ///
     /// Returns: `attempt` An `AttemptedEvent` where the `enrollment_id` refers
     ///                    to one of the provided enrollments, and the optional
     ///                    `updated_enrollment_data` indicates that the
     ///                    enrollment with said id must also be updated if the
     ///                    attempt is successful.
-    Authenticate(struct {
+    Authenticate(resource struct {
+        interaction InteractionProtocolServerEnd;
         enrollments vector<Enrollment>:MAX_ENROLLMENTS;
     }) -> (struct {
         attempt AttemptedEvent;
@@ -31,13 +35,19 @@ protocol StorageUnlockMechanism {
 
     /// Interactively run the enrollment flow for a single enrollment.
     ///
+    /// `interaction` The server end of a channel that will be used to
+    ///               interact with the UI. The type of this channel must
+    ///               match a mechanism supported by the authenticator.
+    ///
     /// Returns: `enrollment_data` Data associated with this enrollment,
     ///                            to be provided during authentication in
     ///                            the future.
     ///          `prekey_material` The pre-key material that will be produced
     ///                            by successfully authenticating against this
     ///                            enrollment.
-    Enroll() -> (struct {
+    Enroll(resource struct {
+        interaction InteractionProtocolServerEnd;
+    }) -> (struct {
         enrollment_data EnrollmentData;
         prekey_material PrekeyMaterial;
     }) error Error;

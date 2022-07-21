@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 library fuchsia.identity.account;
 
-using fuchsia.auth;
+using fuchsia.identity.authentication;
 
 /// The maximum length of the (UTF-8 encoded) password used in the temporary
 /// methods to support an initial prototype of password-based encryption.
@@ -35,13 +35,12 @@ protocol AccountManager {
     /// attempt will be invoked as part of this call.
     ///
     /// `id` [required] The account's identifier as returned by GetAccountIds()
-    /// `context_provider` [required] An `AuthenticationContextProvider` capable
-    ///                    of supplying UI contexts used for interactive
-    ///                    authentication on this account
+    /// `interaction` An `Interaction` channel enabling the user to complete
+    ///               authentication challenges if these are necessary.
     /// `account` [required] The server end of an `Account` channel
     GetAccount(resource table {
         1: id AccountId;
-        2: context_provider client_end:fuchsia.auth.AuthenticationContextProvider;
+        2: interaction server_end:fuchsia.identity.authentication.Interaction;
         3: reserved; // 3 is reserved for auto_lock in a near-future CL
         4: account server_end:Account;
     }) -> (struct {}) error Error;
@@ -105,6 +104,9 @@ protocol AccountManager {
     ///
     /// `lifetime` [required] The lifetime of the account
     /// `metadata` [required] Metadata for the new account
+    /// `interaction` [required] An `Interaction` channel enabling the user to
+    ///               select and enroll authentication mechanisms for the new
+    ///               account.
     /// `auth_mechanism_id` An `AuthMechanismId` for a storage
     ///                     unlock-capable authentication mechanism. If
     ///                     provided, a single enrollment of that
@@ -112,10 +114,13 @@ protocol AccountManager {
     ///                     unlock.
     ///
     /// Returns: `account_id` The identifier of the newly added account
-    ProvisionNewAccount(table {
+    ProvisionNewAccount(resource table {
         1: lifetime Lifetime;
         2: metadata AccountMetadata;
-        3: auth_mechanism_id AuthMechanismId;
+        3: interaction server_end:fuchsia.identity.authentication.Interaction;
+        // TODO(fxbug.dev/104199): Remove this field once interaction is
+        // used for tests.
+        4: auth_mechanism_id AuthMechanismId;
     }) -> (struct {
         account_id AccountId;
     }) error Error;
@@ -145,6 +150,8 @@ protocol AccountManager {
     }) -> (struct {}) error Error;
 
     /// Returns all available authentication mechanisms.
+    // TODO(fxbug.dev/104199): Remove this method once interaction is
+    // used for tests.
     GetAuthenticationMechanisms() -> (struct {
         auth_mechanisms vector<AuthMechanismProperties>:MAX_AUTH_MECHANISMS;
     }) error Error;

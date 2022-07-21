@@ -18,6 +18,9 @@ use {
         AccountManagerRegisterAccountListenerRequest, AccountManagerRequest,
         AccountManagerRequestStream, Error as ApiError, Lifetime,
     },
+    fidl_fuchsia_identity_internal::{
+        AccountHandlerControlCreateAccountRequest, AccountHandlerControlUnlockAccountRequest,
+    },
     fuchsia_inspect::Inspector,
     futures::{lock::Mutex, prelude::*},
     log::{info, warn},
@@ -124,23 +127,29 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
         &self,
         AccountManagerGetAccountRequest {
             id,
-            context_provider,
+            interaction,
             account,
             ..
         }: AccountManagerGetAccountRequest,
     ) -> Result<(), ApiError> {
         let id = id.ok_or(ApiError::InvalidRequest)?.into();
         let account = account.ok_or(ApiError::InvalidRequest)?;
-        let context_provider = context_provider.ok_or(ApiError::InvalidRequest)?;
 
         let mut account_map = self.account_map.lock().await;
         let account_handler = account_map.get_handler(&id).await.map_err(|err| {
             warn!("Failure getting account handler connection: {:?}", err);
             err.api_error
         })?;
-        account_handler.proxy().unlock_account().await.map_err(|_| ApiError::Resource)??;
+        account_handler
+            .proxy()
+            .unlock_account(AccountHandlerControlUnlockAccountRequest {
+                interaction,
+                ..AccountHandlerControlUnlockAccountRequest::EMPTY
+            })
+            .await
+            .map_err(|_| ApiError::Resource)??;
 
-        account_handler.proxy().get_account(context_provider, account).await.map_err(|err| {
+        account_handler.proxy().get_account(account).await.map_err(|err| {
             warn!("Failure calling get account: {:?}", err);
             ApiError::Resource
         })?
@@ -172,9 +181,12 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
             warn!("Could not get account handler for account removal {:?}", err);
             err.api_error
         })?;
-        // TODO(fxbug.dev/43491): Make a conscious decision on what should happen when removing
-        // a locked account.
-        account_handler.proxy().unlock_account().await.map_err(|_| ApiError::Resource)??;
+        // TODO(fxbug.dev/43491): Don't unlock accounts before removing them.
+        account_handler
+            .proxy()
+            .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
+            .await
+            .map_err(|_| ApiError::Resource)??;
         account_handler.proxy().remove_account().await.map_err(|_| ApiError::Resource)??;
         account_handler.terminate().await;
         // Emphemeral accounts were never included in the StoredAccountList and so it does not need
@@ -209,12 +221,15 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
             })?;
         account_handler
             .proxy()
-            .create_account(auth_mechanism_id.as_ref().map(|x| &**x))
+            .create_account(AccountHandlerControlCreateAccountRequest {
+                auth_mechanism_id,
+                ..AccountHandlerControlCreateAccountRequest::EMPTY
+            })
             .await
             .map_err(|err| {
-            warn!("Could not create account: {:?}", err);
-            ApiError::Resource
-        })??;
+                warn!("Could not create account: {:?}", err);
+                ApiError::Resource
+            })??;
         Ok(account_handler)
     }
 

@@ -99,16 +99,24 @@ pub fn spawn_context_channel(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::fake_authenticator::Expected;
-    use fidl::endpoints::create_proxy;
-    use lazy_static::lazy_static;
+    use {
+        super::*,
+        crate::fake_authenticator::Expected,
+        fidl::endpoints::{create_endpoints, create_proxy},
+        fidl_fuchsia_identity_authentication::InteractionProtocolServerEnd,
+        lazy_static::lazy_static,
+    };
 
     lazy_static! {
         static ref TEST_PREKEY_MATERIAL: Vec<u8> = vec![13; 256];
         static ref TEST_ENROLLMENT_DATA: Vec<u8> = vec![13, 37];
         static ref AUTH_MECHANISM_ID_OK: &'static str = "auth-mech-id-1";
         static ref AUTH_MECHANISM_ID_BAD: &'static str = "auth-mech-id-2";
+    }
+
+    fn create_test_interaction_protocol() -> InteractionProtocolServerEnd {
+        let (_, server_end) = create_endpoints().unwrap();
+        InteractionProtocolServerEnd::Test(server_end)
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -131,7 +139,10 @@ mod tests {
                 .unwrap(),
             Err(ApiError::NotFound)
         );
-        assert!(auth_mechanism_proxy.enroll().await.is_err());
+        assert!(auth_mechanism_proxy
+            .enroll(&mut create_test_interaction_protocol())
+            .await
+            .is_err());
 
         // Existing authenticator.
         let (auth_mechanism_proxy, server_end) = create_proxy().unwrap();
@@ -142,6 +153,6 @@ mod tests {
                 .unwrap(),
             Ok(())
         );
-        assert!(auth_mechanism_proxy.enroll().await.is_ok());
+        assert!(auth_mechanism_proxy.enroll(&mut create_test_interaction_protocol()).await.is_ok());
     }
 }

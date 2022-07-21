@@ -10,10 +10,12 @@ use {
     },
     account_common::{AccountId, AccountManagerError},
     anyhow::format_err,
-    fidl::endpoints::{create_proxy, ServerEnd},
+    fidl::endpoints::{create_endpoints, create_proxy, ServerEnd},
     fidl::prelude::*,
     fidl_fuchsia_identity_account::{AccountMarker, Error as ApiError},
-    fidl_fuchsia_identity_authentication::{Enrollment, StorageUnlockMechanismProxy},
+    fidl_fuchsia_identity_authentication::{
+        Enrollment, InteractionMarker, InteractionProtocolServerEnd, StorageUnlockMechanismProxy,
+    },
     fidl_fuchsia_identity_internal::{
         AccountHandlerContextProxy, AccountHandlerControlRequest,
         AccountHandlerControlRequestStream,
@@ -128,16 +130,17 @@ impl AccountHandler {
         req: AccountHandlerControlRequest,
     ) -> Result<(), fidl::Error> {
         match req {
-            AccountHandlerControlRequest::CreateAccount { auth_mechanism_id, responder } => {
-                let mut response = self.create_account(auth_mechanism_id).await;
+            AccountHandlerControlRequest::CreateAccount { payload, responder } => {
+                let mut response =
+                    self.create_account(payload.interaction, payload.auth_mechanism_id).await;
                 responder.send(&mut response)?;
             }
             AccountHandlerControlRequest::Preload { responder } => {
                 let mut response = self.preload().await;
                 responder.send(&mut response)?;
             }
-            AccountHandlerControlRequest::UnlockAccount { responder } => {
-                let mut response = self.unlock_account().await;
+            AccountHandlerControlRequest::UnlockAccount { payload, responder } => {
+                let mut response = self.unlock_account(payload.interaction).await;
                 responder.send(&mut response)?;
             }
             AccountHandlerControlRequest::LockAccount { responder } => {
@@ -148,11 +151,7 @@ impl AccountHandler {
                 let mut response = self.remove_account().await;
                 responder.send(&mut response)?;
             }
-            AccountHandlerControlRequest::GetAccount {
-                auth_context_provider: _,
-                account,
-                responder,
-            } => {
+            AccountHandlerControlRequest::GetAccount { account, responder } => {
                 let mut response = self.get_account(account).await;
                 responder.send(&mut response)?;
             }
@@ -183,7 +182,16 @@ impl AccountHandler {
 
     /// Creates a new system account and attaches it to this handler.  Moves
     /// the handler from the `Uninitialized` to the `Initialized` state.
-    async fn create_account(&self, auth_mechanism_id: Option<String>) -> Result<(), ApiError> {
+    // TODO(fxb/104199): Remove auth_mechanism once interaction is used for tests.
+    async fn create_account(
+        &self,
+        _interaction: Option<ServerEnd<InteractionMarker>>,
+        auth_mechanism_id: Option<String>,
+    ) -> Result<(), ApiError> {
+        // TODO(fxb/104337): Implement the server end of the interaction protocol.
+        let (_, test_interaction_server_end) = create_endpoints().unwrap();
+        let mut test_ipse = InteractionProtocolServerEnd::Test(test_interaction_server_end);
+
         let mut state_lock = self.state.lock().await;
         match *state_lock {
             Lifecycle::Uninitialized => {
@@ -192,7 +200,7 @@ impl AccountHandler {
                         let auth_mechanism_proxy =
                             self.get_auth_mechanism_connection(&auth_mechanism_id).await?;
                         let (data, prekey_material) = auth_mechanism_proxy
-                            .enroll()
+                            .enroll(&mut test_ipse)
                             .await
                             .map_err(|err| {
                                 warn!("Error connecting to authenticator: {:?}", err);
@@ -278,7 +286,10 @@ impl AccountHandler {
     /// If the account is enrolled with an authentication mechanism,
     /// authentication will be performed as part of this call. Moves
     /// the handler to the `Initialized` state.
-    async fn unlock_account(&self) -> Result<(), ApiError> {
+    async fn unlock_account(
+        &self,
+        interaction: Option<ServerEnd<InteractionMarker>>,
+    ) -> Result<(), ApiError> {
         let mut state_lock = self.state.lock().await;
         match &*state_lock {
             Lifecycle::Initialized { .. } => {
@@ -287,7 +298,7 @@ impl AccountHandler {
             }
             Lifecycle::Locked => {
                 let (prekey_material, updated_state) =
-                    self.authenticate().await.map_err(|err| {
+                    self.authenticate(interaction).await.map_err(|err| {
                         warn!("Authentication error: {:?}", err);
                         err.api_error
                     })?;
@@ -430,7 +441,13 @@ impl AccountHandler {
     /// attempt is successful.
     async fn authenticate(
         &self,
+        _interaction: Option<ServerEnd<InteractionMarker>>,
     ) -> Result<(Option<Vec<u8>>, Option<pre_auth::State>), AccountManagerError> {
+        // TODO(fxb/104337): Implement the server end of the supplied interaction protocol to
+        // spawn new connections to authenticators.
+        let (_, test_interaction_server_end) = create_endpoints().unwrap();
+        let mut test_ipse = InteractionProtocolServerEnd::Test(test_interaction_server_end);
+
         let pre_auth_state = self.pre_auth_manager.get().await.map_err(|err| {
             warn!("Error fetching pre-auth state: {:?}", err);
             err.api_error
@@ -441,7 +458,8 @@ impl AccountHandler {
             let auth_mechanism_proxy =
                 self.get_auth_mechanism_connection(auth_mechanism_id).await?;
             let mut enrollments = vec![Enrollment { id: ENROLLMENT_ID, data: data.clone() }];
-            let fut = auth_mechanism_proxy.authenticate(&mut enrollments.iter_mut());
+            let fut =
+                auth_mechanism_proxy.authenticate(&mut test_ipse, &mut enrollments.iter_mut());
             let auth_attempt = fut.await.map_err(|err| {
                 AccountManagerError::new(ApiError::Unknown)
                     .with_cause(format_err!("Error connecting to authenticator: {:?}", err))
@@ -548,7 +566,10 @@ mod tests {
     use fidl_fuchsia_identity_authentication::{
         AttemptedEvent, Enrollment, Error as AuthenticationApiError,
     };
-    use fidl_fuchsia_identity_internal::{AccountHandlerControlMarker, AccountHandlerControlProxy};
+    use fidl_fuchsia_identity_internal::{
+        AccountHandlerControlCreateAccountRequest, AccountHandlerControlMarker,
+        AccountHandlerControlProxy, AccountHandlerControlUnlockAccountRequest,
+    };
     use fuchsia_async as fasync;
     use fuchsia_async::DurationExt;
     use fuchsia_inspect::testing::AnyProperty;
@@ -677,9 +698,8 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy| async move {
                 let (_, account_server_end) = create_endpoints().unwrap();
-                let (acp_client_end, _) = create_endpoints().unwrap();
                 assert_eq!(
-                    proxy.get_account(acp_client_end, account_server_end).await?,
+                    proxy.get_account(account_server_end).await?,
                     Err(ApiError::FailedPrecondition)
                 );
                 Ok(())
@@ -697,10 +717,9 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy| async move {
                 let (_, account_server_end) = create_endpoints().unwrap();
-                let (acp_client_end, _) = create_endpoints().unwrap();
                 proxy.preload().await??;
                 assert_eq!(
-                    proxy.get_account(acp_client_end, account_server_end).await?,
+                    proxy.get_account(account_server_end).await?,
                     Err(ApiError::FailedPrecondition)
                 );
                 Ok(())
@@ -717,8 +736,12 @@ mod tests {
             None,
             Arc::new(Inspector::new()),
             |proxy| async move {
-                proxy.create_account(None).await??;
-                assert_eq!(proxy.create_account(None).await?, Err(ApiError::FailedPrecondition));
+                proxy.create_account(AccountHandlerControlCreateAccountRequest::EMPTY).await??;
+
+                assert_eq!(
+                    proxy.create_account(AccountHandlerControlCreateAccountRequest::EMPTY).await?,
+                    Err(ApiError::FailedPrecondition)
+                );
                 Ok(())
             },
         );
@@ -735,8 +758,9 @@ mod tests {
             Arc::clone(&inspector),
             |account_handler_proxy| {
                 async move {
-                    account_handler_proxy.create_account(None).await??;
-
+                    account_handler_proxy
+                        .create_account(AccountHandlerControlCreateAccountRequest::EMPTY)
+                        .await??;
                     assert_data_tree!(inspector, root: {
                         account_handler: contains {
                             account: contains {
@@ -746,8 +770,7 @@ mod tests {
                     });
 
                     let (account_client_end, account_server_end) = create_endpoints().unwrap();
-                    let (acp_client_end, _) = create_endpoints().unwrap();
-                    account_handler_proxy.get_account(acp_client_end, account_server_end).await??;
+                    account_handler_proxy.get_account(account_server_end).await??;
 
                     assert_data_tree!(inspector, root: {
                         account_handler: contains {
@@ -791,7 +814,7 @@ mod tests {
             None,
             Arc::clone(&inspector),
             |proxy| async move {
-                proxy.create_account(None).await??;
+                proxy.create_account(AccountHandlerControlCreateAccountRequest::EMPTY).await??;
                 assert_data_tree!(inspector, root: {
                     account_handler: contains {
                         lifecycle: "initialized",
@@ -815,7 +838,7 @@ mod tests {
                         lifecycle: "locked",
                     }
                 });
-                proxy.unlock_account().await??;
+                proxy.unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY).await??;
                 assert_data_tree!(inspector, root: {
                     account_handler: contains {
                         lifecycle: "initialized",
@@ -838,11 +861,11 @@ mod tests {
             None,
             Arc::clone(&inspector),
             |proxy| async move {
-                proxy.create_account(None).await??;
+                proxy.create_account(AccountHandlerControlCreateAccountRequest::EMPTY).await??;
                 proxy.lock_account().await??;
-                proxy.unlock_account().await??;
+                proxy.unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY).await??;
                 proxy.lock_account().await??;
-                proxy.unlock_account().await??;
+                proxy.unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY).await??;
                 Ok(())
             },
         );
@@ -859,7 +882,10 @@ mod tests {
             None,
             Arc::new(Inspector::new()),
             |proxy| async move {
-                assert_eq!(proxy.unlock_account().await?, Err(ApiError::FailedPrecondition));
+                assert_eq!(
+                    proxy.unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY).await?,
+                    Err(ApiError::FailedPrecondition)
+                );
                 Ok(())
             },
         );
@@ -884,13 +910,25 @@ mod tests {
             |proxy| async move {
                 // Non-existing auth mechanism
                 assert_eq!(
-                    proxy.create_account(Some(TEST_INVALID_AUTH_MECHANISM_ID)).await.unwrap(),
+                    proxy
+                        .create_account(AccountHandlerControlCreateAccountRequest {
+                            auth_mechanism_id: Some(TEST_INVALID_AUTH_MECHANISM_ID.to_string()),
+                            ..AccountHandlerControlCreateAccountRequest::EMPTY
+                        })
+                        .await
+                        .unwrap(),
                     Err(ApiError::NotFound)
                 );
 
                 // An authentication API error was returned and converted to the appropriate error
                 assert_eq!(
-                    proxy.create_account(Some(TEST_AUTH_MECHANISM_ID)).await.unwrap(),
+                    proxy
+                        .create_account(AccountHandlerControlCreateAccountRequest {
+                            auth_mechanism_id: Some(TEST_AUTH_MECHANISM_ID.to_string()),
+                            ..AccountHandlerControlCreateAccountRequest::EMPTY
+                        })
+                        .await
+                        .unwrap(),
                     Err(ApiError::InvalidRequest)
                 );
 
@@ -905,7 +943,14 @@ mod tests {
                 );
 
                 // Account creation with enrollment succeeded
-                proxy.create_account(Some(TEST_AUTH_MECHANISM_ID)).await.unwrap().unwrap();
+                proxy
+                    .create_account(AccountHandlerControlCreateAccountRequest {
+                        auth_mechanism_id: Some(TEST_AUTH_MECHANISM_ID.to_string()),
+                        ..AccountHandlerControlCreateAccountRequest::EMPTY
+                    })
+                    .await
+                    .unwrap()
+                    .unwrap();
                 assert_data_tree!(inspector, root: { account_handler: contains {
                     lifecycle: "initialized",
                 }});
@@ -941,12 +986,25 @@ mod tests {
             Some(authenticator),
             Arc::clone(&inspector),
             |proxy| async move {
-                proxy.create_account(Some(TEST_AUTH_MECHANISM_ID)).await.unwrap().unwrap();
+                proxy
+                    .create_account(AccountHandlerControlCreateAccountRequest {
+                        auth_mechanism_id: Some(TEST_AUTH_MECHANISM_ID.to_string()),
+                        ..AccountHandlerControlCreateAccountRequest::EMPTY
+                    })
+                    .await
+                    .unwrap()
+                    .unwrap();
                 proxy.lock_account().await.unwrap().unwrap();
                 assert_eq!(pre_auth_manager.get().await.unwrap().as_ref(), &*TEST_PRE_AUTH_SINGLE);
 
                 // Authentication passed
-                assert_eq!(proxy.unlock_account().await.unwrap(), Ok(()));
+                assert_eq!(
+                    proxy
+                        .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
+                        .await
+                        .unwrap(),
+                    Ok(())
+                );
 
                 // Lifecycle updated
                 assert_data_tree!(inspector, root: { account_handler: contains {
@@ -986,11 +1044,24 @@ mod tests {
             Some(authenticator),
             Arc::clone(&inspector),
             |proxy| async move {
-                proxy.create_account(Some(TEST_AUTH_MECHANISM_ID)).await.unwrap().unwrap();
+                proxy
+                    .create_account(AccountHandlerControlCreateAccountRequest {
+                        auth_mechanism_id: Some(TEST_AUTH_MECHANISM_ID.to_string()),
+                        ..AccountHandlerControlCreateAccountRequest::EMPTY
+                    })
+                    .await
+                    .unwrap()
+                    .unwrap();
                 proxy.lock_account().await.unwrap().unwrap();
 
                 // Authentication passed
-                assert_eq!(proxy.unlock_account().await.unwrap(), Ok(()));
+                assert_eq!(
+                    proxy
+                        .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
+                        .await
+                        .unwrap(),
+                    Ok(())
+                );
 
                 // Lifecycle updated
                 assert_data_tree!(inspector, root: { account_handler: contains {
@@ -1053,18 +1124,40 @@ mod tests {
             Some(authenticator),
             Arc::clone(&inspector),
             |proxy| async move {
-                proxy.create_account(Some(TEST_AUTH_MECHANISM_ID)).await.unwrap().unwrap();
+                proxy
+                    .create_account(AccountHandlerControlCreateAccountRequest {
+                        auth_mechanism_id: Some(TEST_AUTH_MECHANISM_ID.to_string()),
+                        ..AccountHandlerControlCreateAccountRequest::EMPTY
+                    })
+                    .await
+                    .unwrap()
+                    .unwrap();
                 proxy.lock_account().await.unwrap().unwrap();
 
                 // Aborted authentication attempt
-                assert_eq!(proxy.unlock_account().await.unwrap(), Err(ApiError::Unknown));
+                assert_eq!(
+                    proxy
+                        .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
+                        .await
+                        .unwrap(),
+                    Err(ApiError::Unknown)
+                );
 
                 // Unexpected enrollment id
-                assert_eq!(proxy.unlock_account().await.unwrap(), Err(ApiError::Internal));
+                assert_eq!(
+                    proxy
+                        .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
+                        .await
+                        .unwrap(),
+                    Err(ApiError::Internal)
+                );
 
                 // Unexpected pre-key material
                 assert_eq!(
-                    proxy.unlock_account().await.unwrap(),
+                    proxy
+                        .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
+                        .await
+                        .unwrap(),
                     Err(ApiError::FailedAuthentication)
                 );
 
@@ -1075,9 +1168,8 @@ mod tests {
 
                 // Extra sanity check that account is not retrievable
                 let (_, account_server_end) = create_endpoints().unwrap();
-                let (acp_client_end, _) = create_endpoints().unwrap();
                 assert_eq!(
-                    proxy.get_account(acp_client_end, account_server_end).await.unwrap(),
+                    proxy.get_account(account_server_end).await.unwrap(),
                     Err(ApiError::FailedPrecondition)
                 );
 
@@ -1106,7 +1198,9 @@ mod tests {
                         }
                     });
 
-                    proxy.create_account(None).await??;
+                    proxy
+                        .create_account(AccountHandlerControlCreateAccountRequest::EMPTY)
+                        .await??;
                     assert_data_tree!(inspector, root: {
                         account_handler: {
                             account_id: TEST_ACCOUNT_ID_UINT,
@@ -1123,8 +1217,7 @@ mod tests {
 
                     // Keep an open channel to an account.
                     let (account_client_end, account_server_end) = create_endpoints().unwrap();
-                    let (acp_client_end, _) = create_endpoints().unwrap();
-                    proxy.get_account(acp_client_end, account_server_end).await??;
+                    proxy.get_account(account_server_end).await??;
                     let account_proxy = account_client_end.into_proxy().unwrap();
 
                     // Make sure remove_account() can make progress with an open channel.
@@ -1189,12 +1282,13 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy| {
                 async move {
-                    proxy.create_account(None).await??;
+                    proxy
+                        .create_account(AccountHandlerControlCreateAccountRequest::EMPTY)
+                        .await??;
 
                     // Keep an open channel to an account.
                     let (account_client_end, account_server_end) = create_endpoints().unwrap();
-                    let (acp_client_end, _) = create_endpoints().unwrap();
-                    proxy.get_account(acp_client_end, account_server_end).await??;
+                    proxy.get_account(account_server_end).await??;
                     let account_proxy = account_client_end.into_proxy().unwrap();
 
                     // Terminate the handler
@@ -1222,12 +1316,17 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy| {
                 async move {
-                    proxy.create_account(None).await??;
+                    proxy
+                        .create_account(AccountHandlerControlCreateAccountRequest::EMPTY)
+                        .await??;
                     proxy.lock_account().await??;
                     proxy.terminate()?;
 
                     // Check that further operations fail
-                    assert!(proxy.unlock_account().await.is_err());
+                    assert!(proxy
+                        .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
+                        .await
+                        .is_err());
                     assert!(proxy.terminate().is_err());
                     Ok(())
                 }
@@ -1245,7 +1344,10 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy| async move {
                 proxy.preload().await??; // Preloading a non-existing account will succeed, for now
-                assert_eq!(proxy.unlock_account().await?, Err(ApiError::NotFound));
+                assert_eq!(
+                    proxy.unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY).await?,
+                    Err(ApiError::NotFound)
+                );
                 Ok(())
             },
         );
@@ -1260,7 +1362,12 @@ mod tests {
             Arc::new(Inspector::new()),
             |proxy| async move {
                 assert_eq!(
-                    proxy.create_account(Some(TEST_AUTH_MECHANISM_ID)).await?,
+                    proxy
+                        .create_account(AccountHandlerControlCreateAccountRequest {
+                            auth_mechanism_id: Some(TEST_AUTH_MECHANISM_ID.to_string()),
+                            ..AccountHandlerControlCreateAccountRequest::EMPTY
+                        })
+                        .await?,
                     Err(ApiError::InvalidRequest)
                 );
                 Ok(())
@@ -1277,12 +1384,13 @@ mod tests {
             None,
             Arc::clone(&inspector),
             |account_handler_proxy| async move {
-                account_handler_proxy.create_account(None).await??;
+                account_handler_proxy
+                    .create_account(AccountHandlerControlCreateAccountRequest::EMPTY)
+                    .await??;
 
                 // Get a proxy to the Account interface
                 let (account_client_end, account_server_end) = create_endpoints().unwrap();
-                let (acp_client_end, _) = create_endpoints().unwrap();
-                account_handler_proxy.get_account(acp_client_end, account_server_end).await??;
+                account_handler_proxy.get_account(account_server_end).await??;
                 let account_proxy = account_client_end.into_proxy().unwrap();
 
                 // Send the lock request
@@ -1315,12 +1423,13 @@ mod tests {
             None,
             Arc::clone(&inspector),
             |account_handler_proxy| async move {
-                account_handler_proxy.create_account(None).await??;
+                account_handler_proxy
+                    .create_account(AccountHandlerControlCreateAccountRequest::EMPTY)
+                    .await??;
 
                 // Get a proxy to the Account interface
                 let (account_client_end, account_server_end) = create_endpoints().unwrap();
-                let (acp_client_end, _) = create_endpoints().unwrap();
-                account_handler_proxy.get_account(acp_client_end, account_server_end).await??;
+                account_handler_proxy.get_account(account_server_end).await??;
                 let account_proxy = account_client_end.into_proxy().unwrap();
 
                 // Send the lock request
@@ -1344,12 +1453,16 @@ mod tests {
             Some(authenticator),
             Arc::clone(&inspector),
             |account_handler_proxy| async move {
-                account_handler_proxy.create_account(Some(TEST_AUTH_MECHANISM_ID)).await??;
+                account_handler_proxy
+                    .create_account(AccountHandlerControlCreateAccountRequest {
+                        auth_mechanism_id: Some(TEST_AUTH_MECHANISM_ID.to_string()),
+                        ..AccountHandlerControlCreateAccountRequest::EMPTY
+                    })
+                    .await??;
 
                 // Get a proxy to the Account interface
                 let (account_client_end, account_server_end) = create_endpoints().unwrap();
-                let (acp_client_end, _) = create_endpoints().unwrap();
-                account_handler_proxy.get_account(acp_client_end, account_server_end).await??;
+                account_handler_proxy.get_account(account_server_end).await??;
                 let account_proxy = account_client_end.into_proxy().unwrap();
 
                 // Send the lock request
@@ -1369,9 +1482,8 @@ mod tests {
 
                 // Extra check to ensure the account cannot be retrieved
                 let (_, account_server_end) = create_endpoints().unwrap();
-                let (acp_client_end, _) = create_endpoints().unwrap();
                 assert_eq!(
-                    account_handler_proxy.get_account(acp_client_end, account_server_end).await?,
+                    account_handler_proxy.get_account(account_server_end).await?,
                     Err(ApiError::FailedPrecondition)
                 );
                 Ok(())

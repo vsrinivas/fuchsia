@@ -48,14 +48,16 @@ impl FakeAuthenticator {
     ) -> Result<(), fidl::Error> {
         let next = self.messages.lock().await.pop_front().expect("got an unexpected message");
         match request {
-            StorageUnlockMechanismRequest::Authenticate { enrollments, responder } => match next {
-                Expected::Authenticate { req, mut resp } => {
-                    assert_eq!(enrollments, req);
-                    responder.send(&mut resp)
+            StorageUnlockMechanismRequest::Authenticate { enrollments, responder, .. } => {
+                match next {
+                    Expected::Authenticate { req, mut resp } => {
+                        assert_eq!(enrollments, req);
+                        responder.send(&mut resp)
+                    }
+                    _ => panic!("got a different message than expected"),
                 }
-                _ => panic!("got a different message than expected"),
-            },
-            StorageUnlockMechanismRequest::Enroll { responder } => match next {
+            }
+            StorageUnlockMechanismRequest::Enroll { responder, .. } => match next {
                 Expected::Enroll { mut resp } => responder.send(&mut resp),
                 _ => panic!("got a different message than expected"),
             },
@@ -90,11 +92,15 @@ pub enum Expected {
 }
 
 mod test {
-    use super::*;
-    use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_identity_authentication::StorageUnlockMechanismMarker;
-    use fuchsia_async as fasync;
-    use lazy_static::lazy_static;
+    use {
+        super::*,
+        fidl::endpoints::{create_endpoints, create_proxy_and_stream},
+        fidl_fuchsia_identity_authentication::{
+            InteractionProtocolServerEnd, StorageUnlockMechanismMarker,
+        },
+        fuchsia_async as fasync,
+        lazy_static::lazy_static,
+    };
 
     lazy_static! {
         static ref TEST_PREKEY_MATERIAL: Vec<u8> = vec![13; 256];
@@ -120,6 +126,11 @@ mod test {
         };
     }
 
+    fn create_test_interaction_protocol() -> InteractionProtocolServerEnd {
+        let (_, server_end) = create_endpoints().unwrap();
+        InteractionProtocolServerEnd::Test(server_end)
+    }
+
     #[fasync::run_until_stalled(test)]
     async fn check_multiple_expected() {
         let authenticator = FakeAuthenticator::new();
@@ -141,15 +152,21 @@ mod test {
         })
         .detach();
 
-        let resp = proxy.enroll().await.unwrap();
+        let resp = proxy.enroll(&mut create_test_interaction_protocol()).await.unwrap();
         assert_eq!(resp, Ok((TEST_ENROLLMENT_DATA_1.clone(), TEST_PREKEY_MATERIAL.clone())));
 
         let mut req = vec![TEST_ENROLLMENT_1.clone()];
-        let resp = proxy.authenticate(&mut req.iter_mut()).await.unwrap();
+        let resp = proxy
+            .authenticate(&mut create_test_interaction_protocol(), &mut req.iter_mut())
+            .await
+            .unwrap();
         assert_eq!(resp, Ok(TEST_ATTEMPT_1.clone()));
 
         let mut req = vec![TEST_ENROLLMENT_2.clone()];
-        let resp = proxy.authenticate(&mut req.iter_mut()).await.unwrap();
+        let resp = proxy
+            .authenticate(&mut create_test_interaction_protocol(), &mut req.iter_mut())
+            .await
+            .unwrap();
         assert_eq!(resp, Err(ApiError::Unknown));
     }
 
@@ -169,7 +186,8 @@ mod test {
         .detach();
 
         let mut req = vec![TEST_ENROLLMENT_2.clone()];
-        let _ = proxy.authenticate(&mut req.iter_mut()).await;
+        let _ =
+            proxy.authenticate(&mut create_test_interaction_protocol(), &mut req.iter_mut()).await;
     }
 
     #[fasync::run_until_stalled(test)]
@@ -186,7 +204,7 @@ mod test {
             authenticator.handle_requests_from_stream(stream).await.unwrap();
         })
         .detach();
-        let _ = proxy.enroll().await;
+        let _ = proxy.enroll(&mut create_test_interaction_protocol()).await;
     }
 
     #[fasync::run_until_stalled(test)]
@@ -199,7 +217,7 @@ mod test {
             authenticator.handle_requests_from_stream(stream).await.unwrap();
         })
         .detach();
-        let _ = proxy.enroll().await;
+        let _ = proxy.enroll(&mut create_test_interaction_protocol()).await;
     }
 
     #[fasync::run_until_stalled(test)]
