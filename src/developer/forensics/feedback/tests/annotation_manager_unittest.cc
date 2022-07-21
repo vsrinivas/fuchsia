@@ -643,5 +643,44 @@ TEST_F(AnnotationManagerTest, MultipleProviders) {
       HasSubstr("Annotation \"annotation\" collected by 4 providers"));
 }
 
+class MultipleTypeProvider : public StaticAsyncAnnotationProvider,
+                             public DynamicAsyncAnnotationProvider {
+ public:
+  MultipleTypeProvider(async_dispatcher_t* dispatcher, Annotations annotations,
+                       const zx::duration delay = zx::sec(0))
+      : dispatcher_(dispatcher), annotations_(std::move(annotations)), delay_(delay) {}
+
+  std::set<std::string> GetKeys() const override {
+    std::set<std::string> keys;
+    for (const auto& [k, _] : annotations_) {
+      keys.insert(k);
+    }
+
+    return keys;
+  }
+
+  void GetOnce(::fit::callback<void(Annotations)> callback) override {
+    async::PostDelayedTask(
+        dispatcher_, [this, cb = std::move(callback)]() mutable { cb(annotations_); }, delay_);
+  }
+
+  void Get(::fit::callback<void(Annotations)> callback) override {
+    async::PostDelayedTask(
+        dispatcher_, [this, cb = std::move(callback)]() mutable { cb(annotations_); }, delay_);
+  }
+
+ private:
+  async_dispatcher_t* dispatcher_;
+  Annotations annotations_;
+  zx::duration delay_;
+};
+
+TEST_F(AnnotationManagerTest, DuplicateProviders) {
+  MultipleTypeProvider multiple_provider(dispatcher(), {{"annotation", Error::kMissingValue}});
+  // This should NOT exit abnormally
+  AnnotationManager manager(dispatcher(), {"annotation"}, {}, nullptr, {}, {&multiple_provider}, {},
+                            {&multiple_provider});
+}
+
 }  // namespace
 }  // namespace forensics::feedback

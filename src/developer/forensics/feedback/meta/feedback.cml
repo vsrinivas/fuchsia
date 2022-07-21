@@ -40,14 +40,13 @@
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.process.Launcher",
                 "fuchsia.sysinfo.SysInfo",
+                "fuchsia.ui.activity.Provider",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.update.channelcontrol.ChannelControl",
             ],
         },
         {
-            protocol: [
-                "fuchsia.settings.Privacy",
-            ],
+            protocol: [ "fuchsia.settings.Privacy" ],
             availability: "optional",
         },
         {

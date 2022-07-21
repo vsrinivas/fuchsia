@@ -14,12 +14,16 @@
 
 namespace forensics::feedback {
 
-// Collects safe-to-cache annotations asynchronously.
-class StaticAsyncAnnotationProvider {
+// Defines an interface for functionality all annotation providers must implement.
+class AnnotationProvider {
  public:
   // Returns the annotation keys a provider will collect.
   virtual std::set<std::string> GetKeys() const = 0;
+};
 
+// Collects safe-to-cache annotations asynchronously.
+class StaticAsyncAnnotationProvider : public virtual AnnotationProvider {
+ public:
   // Returns the annotations this provider collects via |callback|.
   //
   // Note: this method will be called once.
@@ -29,10 +33,8 @@ class StaticAsyncAnnotationProvider {
 // Collects unsafe-to-cache annotations synchronously.
 //
 // Note: synchronous calls must be low-cost and return quickly, e.g. not IPC.
-class DynamicSyncAnnotationProvider {
+class DynamicSyncAnnotationProvider : public virtual AnnotationProvider {
  public:
-  virtual std::set<std::string> GetKeys() const = 0;
-
   // Returns the Annotations from this provider.
   virtual Annotations Get() = 0;
 };
@@ -50,21 +52,16 @@ class NonPlatformAnnotationProvider : public DynamicSyncAnnotationProvider {
 };
 
 // Collects unsafe-to-cache annotations asynchronously.
-class DynamicAsyncAnnotationProvider {
+class DynamicAsyncAnnotationProvider : public virtual AnnotationProvider {
  public:
-  // Returns the annotation keys a provider will collect.
-  virtual std::set<std::string> GetKeys() const = 0;
-
   // Returns the annotations this provider collects via |callback|.
   virtual void Get(::fit::callback<void(Annotations)> callback) = 0;
 };
 
 // Collects safe-to-cache but dynamic annotations asynchronously.
-class CachedAsyncAnnotationProvider {
+class CachedAsyncAnnotationProvider : public virtual AnnotationProvider {
  public:
   virtual ~CachedAsyncAnnotationProvider() = default;
-
-  virtual std::set<std::string> GetKeys() const = 0;
 
   // Returns the annotations this provider collects via |callback| when they change.
   //
