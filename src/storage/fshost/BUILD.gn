@@ -444,6 +444,11 @@ fuchsia_structured_config_cpp_elf_lib("fshost_config") {
   cm_label = ":fshost_manifest"
 }
 
+fuchsia_structured_config_rust_lib("fshost_config_rust") {
+  name = "fshost_config"
+  cm_label = ":fshost_manifest"
+}
+
 group("bootfs") {
   deps = [
     ":fshost",

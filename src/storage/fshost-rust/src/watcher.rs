@@ -15,8 +15,8 @@ const DEV_CLASS_BLOCK: &'static str = "/dev/class/block";
 pub async fn block_watcher() -> Result<impl futures::Stream<Item = Box<BlockDevice>>> {
     Ok(watch(DEV_CLASS_BLOCK).await?.filter_map(|event| async {
         match event {
-            PathEvent::Added(path, _) => Some(Box::new(BlockDevice { path })),
-            PathEvent::Existing(path, _) => Some(Box::new(BlockDevice { path })),
+            PathEvent::Added(path, _) => Some(Box::new(BlockDevice::new(path))),
+            PathEvent::Existing(path, _) => Some(Box::new(BlockDevice::new(path))),
             PathEvent::Removed(_) => None,
         }
     }))

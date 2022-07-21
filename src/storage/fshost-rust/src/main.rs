@@ -11,6 +11,7 @@ use {
     vfs::{directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path},
 };
 
+mod config;
 mod device;
 mod manager;
 mod matcher;
@@ -45,7 +46,8 @@ async fn main() -> Result<()> {
 
     // Run the main loop of fshost, handling devices as they appear according to our filesystem
     // policy.
-    let mut fs_manager = manager::Manager::new(shutdown_rx);
+    let mut fs_manager =
+        manager::Manager::new(shutdown_rx, fshost_config::Config::take_from_startup_handle());
     let shutdown_responder = fs_manager.device_handler().await?;
 
     log::info!("shutdown signal received");

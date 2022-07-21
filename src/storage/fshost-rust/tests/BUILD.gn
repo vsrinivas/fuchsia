@@ -4,6 +4,7 @@
 
 import("//build/components.gni")
 import("//build/rust/rustc_test.gni")
+import("//src/storage/fshost/generated_fshost_config.gni")
 import("//tools/cmc/build/cmc.gni")
 
 fshost_integration_test_deps = [
@@ -74,6 +75,7 @@ fuchsia_test_component("fshost_rust_integration_test_component") {
 cmc_merge("test-fshost-rust.cml") {
   sources = [
     "//src/storage/fshost/meta/base_fshost.cml",
+    "//src/storage/fshost/meta/config.cml",
     "//src/storage/fshost/meta/core_fshost.cml",
     "//src/storage/fshost/meta/rust_fshost.cml",
   ]
@@ -84,7 +86,10 @@ fuchsia_component("test-fshost-rust") {
   manifest_outputs = get_target_outputs(":test-fshost-rust.cml")
   manifest = manifest_outputs[0]
   manifest_deps = [ ":test-fshost-rust.cml" ]
-  deps = [ "..:fshost-rust" ]
+  deps = [
+    ":config",
+    "..:fshost-rust",
+  ]
 }
 
 fuchsia_test_package("fshost_integration_tests") {
@@ -98,6 +103,10 @@ fuchsia_test_package("fshost_integration_tests") {
     ":test-fshost-rust",
     "//src/storage/fshost/testing:test-fshost",
   ]
+}
+
+generated_fshost_config("config") {
+  component_name = "test-fshost-rust"
 }
 
 group("tests") {
