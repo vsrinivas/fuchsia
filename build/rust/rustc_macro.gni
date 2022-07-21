@@ -185,7 +185,6 @@ template("rustc_macro") {
                                "rustenv",
                                "sources",
                                "testonly",
-                               "visibility",
                              ])
 
       deps = []
