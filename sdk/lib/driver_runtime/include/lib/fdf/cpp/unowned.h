@@ -55,6 +55,36 @@ class Unowned final {
   T value_;
 };
 
+template <typename T>
+bool operator==(const Unowned<T>& a, const Unowned<T>& b) {
+  return a->get() == b->get();
+}
+
+template <typename T>
+bool operator!=(const Unowned<T>& a, const Unowned<T>& b) {
+  return !(a == b);
+}
+
+template <typename T>
+bool operator<(const Unowned<T>& a, const Unowned<T>& b) {
+  return a->get() < b->get();
+}
+
+template <typename T>
+bool operator>(const Unowned<T>& a, const Unowned<T>& b) {
+  return a->get() > b->get();
+}
+
+template <typename T>
+bool operator<=(const Unowned<T>& a, const Unowned<T>& b) {
+  return !(a > b);
+}
+
+template <typename T>
+bool operator>=(const Unowned<T>& a, const Unowned<T>& b) {
+  return !(a < b);
+}
+
 }  // namespace fdf
 
 #endif  // LIB_DRIVER_RUNTIME_INCLUDE_LIB_FDF_CPP_UNOWNED_H_

@@ -1725,3 +1725,28 @@ TEST(ChannelTest2, CreateAllThePairs) {
     ASSERT_TRUE(channels->end1.is_valid());
   }
 }
+
+TEST(UnownedChannelTest, Equality) {
+  fdf::UnownedChannel c1;
+  fdf::UnownedChannel c2;
+  EXPECT_TRUE(c1 == c2);
+  EXPECT_FALSE(c1 != c2);
+  EXPECT_FALSE(c1 > c2);
+  EXPECT_FALSE(c1 < c2);
+  EXPECT_TRUE(c1 >= c2);
+  EXPECT_TRUE(c1 <= c2);
+}
+
+TEST(UnownedChannelTest, Comparison) {
+  zx::status channels = fdf::ChannelPair::Create(0);
+  ASSERT_EQ(ZX_OK, channels.status_value());
+  fdf::Channel c = std::move(channels->end0);
+  fdf::UnownedChannel unowned_valid{c};
+  fdf::UnownedChannel unowned_default;
+  EXPECT_FALSE(unowned_valid == unowned_default);
+  EXPECT_TRUE(unowned_valid != unowned_default);
+  EXPECT_TRUE(unowned_valid > unowned_default);
+  EXPECT_FALSE(unowned_valid < unowned_default);
+  EXPECT_TRUE(unowned_valid >= unowned_default);
+  EXPECT_FALSE(unowned_valid <= unowned_default);
+}
