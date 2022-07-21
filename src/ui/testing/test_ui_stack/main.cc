@@ -41,16 +41,16 @@ int run_test_ui_stack(int argc, const char** argv) {
   // Read component configuration, and convert to UITestRealm::Config.
   auto test_ui_stack_config = test_ui_stack_config_lib::Config::TakeFromStartupHandle();
   ui_testing::UITestRealm::Config config;
-  if (test_ui_stack_config.use_modern_ui_stack()) {
-    config.use_flatland = true;
-    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
-    config.use_input = true;
-    config.accessibility_owner = ui_testing::UITestRealm::AccessibilityOwnerType::FAKE;
-  } else {
-    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
-    config.use_input = true;
-    config.accessibility_owner = ui_testing::UITestRealm::AccessibilityOwnerType::FAKE;
-  }
+
+  // Check for unsupported Flatland x Root Presenter configuration.
+  FX_DCHECK(!test_ui_stack_config.use_flatland() || test_ui_stack_config.use_scene_manager())
+      << "Unsupported UI configuration: Flatland x Root Presenter.";
+
+  config.use_flatland = test_ui_stack_config.use_flatland();
+  config.scene_owner = test_ui_stack_config.use_scene_manager()
+                           ? ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER
+                           : ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
+  config.accessibility_owner = ui_testing::UITestRealm::AccessibilityOwnerType::FAKE;
 
   // Build test realm.
   ui_testing::UITestRealm realm(config);

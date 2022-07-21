@@ -57,7 +57,8 @@ fuchsia_structured_config_values("test_ui_stack_default_config") {
   testonly = true
   cm_label = ":test_ui_stack_manifest"
   values = {
-    use_modern_ui_stack = false
+    use_scene_manager = false
+    use_flatland = false
   }
 }
 

@@ -61,6 +61,7 @@
         },
     ],
     config: {
-        use_modern_ui_stack: { type: "bool" },
+        use_scene_manager: { type: "bool" },
+        use_flatland: { type: "bool" },
     },
 }
