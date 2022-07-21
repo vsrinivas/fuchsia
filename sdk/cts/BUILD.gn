@@ -80,6 +80,7 @@ group("cts") {
   deps = [
     ":core_sdk_layout",
     ":cts_no_e2e",
+    ":sdk_layout_golden_file_copy",
     "examples:tests",
     "tests",
   ]
@@ -138,9 +139,16 @@ generate_sdk_layout_golden_file("core_sdk_layout") {
   deps = [ "//sdk:core_archive" ]
 }
 
+copy("sdk_layout_golden_file_copy") {
+  testonly = true
+  sources = get_target_outputs(":core_sdk_layout")
+  outputs = [ "$target_gen_dir/cts/sdk_directory_layout.json.golden" ]
+  deps = [ ":core_sdk_layout" ]
+}
+
 cts_copy_to_sdk("generate_sdk_golden") {
   testonly = true
   dest = ""
-  sources = get_target_outputs(":core_sdk_layout")
-  non_sdk_deps = [ ":core_sdk_layout" ]
+  sources = get_target_outputs(":sdk_layout_golden_file_copy")
+  non_sdk_deps = [ ":sdk_layout_golden_file_copy" ]
 }

@@ -17,7 +17,7 @@ template("generate_sdk_layout_golden_file") {
     forward_variables_from(invoker, "*")
 
     script = "//sdk/cts/build/scripts/verify_sdk_compatibility.py"
-    gold_file = "$target_gen_dir/sdk_directory_layout.json.golden"
+    gold_file = "$root_build_dir/cts/sdk_directory_layout.json.golden"
 
     tarfile = sdk_archive
 
@@ -34,7 +34,7 @@ template("generate_sdk_layout_golden_file") {
     ]
 
     metadata = {
-      cts_artifacts = [ "sdk_directory_layout.json.golden" ]
+      cts_artifacts = [ "cts/sdk_directory_layout.json.golden" ]
     }
   }
 }
