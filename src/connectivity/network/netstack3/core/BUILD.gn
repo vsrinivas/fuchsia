@@ -105,7 +105,7 @@ lib_test_deps = [
 ]
 
 lib_not_fuzz_deps = [
-  # TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
+  # TODO(https://github.com/rust-lang/rust/issues/62502): remove this module.
   "fakestd",
 ]
 

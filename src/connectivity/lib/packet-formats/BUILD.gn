@@ -57,7 +57,7 @@ rustc_library("packet-formats") {
   configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
 
   deps = _common_deps + [
-           # TODO(https://github.com/dtolnay/thiserror/pull/64): remove this module.
+           # TODO(https://github.com/rust-lang/rust/issues/62502): remove this module.
            "//src/connectivity/network/netstack3/core/fakestd",
          ]
 
