@@ -21,6 +21,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/packages"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/paver"
 	"go.fuchsia.dev/fuchsia/src/testing/host-target-testing/zbi"
+	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
@@ -114,8 +115,7 @@ func (b *ArtifactsBuild) GetPackageRepository(ctx context.Context, fetchMode Blo
 
 	logger.Infof(ctx, "downloading package repository")
 
-	// Make sure the blob contains the `packages/all_blobs.json`. If not,
-	// we need to fall back to the old `packages.tar.gz` file.
+	// Make sure the blob contains the `packages/all_blobs.json`.
 	if _, ok := b.srcs["packages/all_blobs.json"]; !ok {
 		logger.Errorf(ctx, "blobs manifest doesn't exist for build %s", b.id)
 		return nil, fmt.Errorf("blob manifest doesn't exist for build %s", b.id)
@@ -209,20 +209,39 @@ func (b *ArtifactsBuild) GetBuildImages(ctx context.Context) (string, error) {
 
 	logger.Infof(ctx, "downloading build images")
 
-	// Check if the build produced any images/ files. If not, we need to
-	// fall back on the old build-archive.tgz file.
-	imageSrcs := []string{}
+	imageDir := filepath.Join(b.dir, b.id, "images")
+	if err := b.archive.download(ctx, b.id, false, filepath.Join(imageDir, paver.ImageManifest), []string{path.Join("images", paver.ImageManifest)}); err != nil {
+		return "", fmt.Errorf("failed to download image manifest: %w", err)
+	}
+	imagesJSON := filepath.Join(imageDir, paver.ImageManifest)
+	f, err := os.Open(imagesJSON)
+	if err != nil {
+		return "", fmt.Errorf("failed to open %q: %w", imagesJSON, err)
+	}
+	defer f.Close()
+
+	var items []build.Image
+	if err := json.NewDecoder(f).Decode(&items); err != nil {
+		return "", fmt.Errorf("failed to parse %q: %w", imagesJSON, err)
+	}
+
+	// Get list of all available images to download and only download
+	// the ones needed for paving.
+	imageSrcMap := make(map[string]struct{})
 	for src := range b.srcs {
 		if strings.HasPrefix(src, "images/") {
-			imageSrcs = append(imageSrcs, src)
+			imageSrcMap[src] = struct{}{}
 		}
 	}
-
-	if len(imageSrcs) == 0 {
-		return "", fmt.Errorf("build %s has no images/ directory", b.id)
+	imageSrcs := []string{}
+	for _, item := range items {
+		if len(item.PaveArgs) > 0 || len(item.PaveZedbootArgs) > 0 {
+			src := path.Join("images", item.Path)
+			if _, ok := imageSrcMap[src]; ok {
+				imageSrcs = append(imageSrcs, src)
+			}
+		}
 	}
-
-	imageDir := filepath.Join(b.dir, b.id, "images")
 
 	if err := b.archive.download(ctx, b.id, false, filepath.Dir(imageDir), imageSrcs); err != nil {
 		return "", fmt.Errorf("failed to download images to %s: %w", imageDir, err)
@@ -402,11 +421,7 @@ func (b *FuchsiaDirBuild) GetVbmetaPath(ctx context.Context) (string, error) {
 	}
 	defer f.Close()
 
-	var items []struct {
-		Name string `json:"name"`
-		Path string `json:"path"`
-		Type string `json:"type"`
-	}
+	var items []build.Image
 	if err := json.NewDecoder(f).Decode(&items); err != nil {
 		return "", fmt.Errorf("failed to parse %q: %w", imagesJSON, err)
 	}

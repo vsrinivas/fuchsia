@@ -29,6 +29,7 @@ go_library("host-target-testing") {
     "//src/sys/pkg/lib/repo",
     "//third_party/golibs:github.com/theupdateframework/go-tuf",
     "//third_party/golibs:golang.org/x/crypto",
+    "//tools/build",
     "//tools/lib/retry",
     "//tools/net/sshutil",
   ]
