@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxb/97355): Remove once the device is complete.
-#![allow(dead_code)]
-
 use {
     anyhow::{anyhow, Error},
     bitflags::bitflags,

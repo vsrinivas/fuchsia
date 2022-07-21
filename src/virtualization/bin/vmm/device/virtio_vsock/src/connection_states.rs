@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxb/97355): Remove once the device is complete.
-#![allow(dead_code)]
-
 //! This file defines the possible states for a vsock connection. States can only transition
 //! in a single direction denoted by the arrow, and transitions happen either by the state
 //! achieving some action such as GuestInitiated getting a response from a client, or by
@@ -739,7 +736,6 @@ impl ClientInitiatedShutdown {
         ClientInitiatedShutdown {
             timeout: fasync::Time::after(zx::Duration::from_seconds(5)),
             key,
-
             control_packets,
         }
     }
@@ -892,16 +888,12 @@ impl VsockConnectionState {
         match self {
             VsockConnectionState::Invalid => panic!("Connection entered an impossible state"),
             VsockConnectionState::ClientInitiated(state) => state.do_state_action().await,
+            VsockConnectionState::ClientInitiatedShutdown(state) => state.do_state_action().await,
             VsockConnectionState::GuestInitiated(state) => state.do_state_action().await,
             VsockConnectionState::GuestInitiatedShutdown(state) => state.do_state_action().await,
             VsockConnectionState::ReadWrite(state) => state.do_state_action().await,
             VsockConnectionState::ShutdownClean(state) => state.do_state_action().await,
             VsockConnectionState::ShutdownForced(state) => state.do_state_action().await,
-            _ => {
-                // Some states have no actions, and are waiting on guest instruction passed via
-                // TX queue.
-                future::pending::<StateAction>().await
-            }
         }
     }
 

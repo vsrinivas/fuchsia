@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxb/97355): Remove once the device is complete.
-#![allow(dead_code)]
-
 use {
     crate::connection_states::{
         ClientInitiated, GuestInitiated, ShutdownForced, StateAction, VsockConnectionState,
@@ -124,6 +121,7 @@ impl VsockConnectionKey {
     }
 }
 
+#[derive(Debug)]
 pub struct VsockConnection {
     key: VsockConnectionKey,
 
@@ -136,6 +134,7 @@ pub struct VsockConnection {
     state_action_abort: Mutex<Option<AbortHandle>>,
 }
 
+#[derive(Debug)]
 pub enum WantRxChainResult {
     // This connection wants the next available RX chain. The connection is returned so that
     // the device can reschedule polling this connection after it is serviced.
@@ -143,6 +142,12 @@ pub enum WantRxChainResult {
 
     // This connection will never want another RX chain.
     StopAwaiting,
+}
+
+impl PartialEq for WantRxChainResult {
+    fn eq(&self, other: &Self) -> bool {
+        std::mem::discriminant(self) == std::mem::discriminant(other)
+    }
 }
 
 impl VsockConnection {
@@ -334,6 +339,7 @@ mod tests {
     use {
         super::*,
         crate::wire::{LE16, LE32},
+        async_utils::PollExt,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_virtualization::{
             HostVsockAcceptorMarker, HostVsockEndpointMarker, DEFAULT_GUEST_CID, HOST_CID,
@@ -520,11 +526,11 @@ mod tests {
             .expect("failed to create HostVsockAcceptor request stream");
 
         let response_fut = proxy.accept(1, 2, 3);
-        let connection = VsockConnection::new_guest_initiated(
+        let connection = Rc::new(VsockConnection::new_guest_initiated(
             VsockConnectionKey::new(HOST_CID, 3, DEFAULT_GUEST_CID, 2),
             response_fut,
             control_tx,
-        );
+        ));
 
         // State transition relies on client acceptor response.
         let state_action_fut = connection.handle_state_action();
@@ -562,7 +568,12 @@ mod tests {
         // Close connection by closing the client socket.
         drop(client_socket);
 
-        // TODO(fxb/97355): Poll whether the connection will ever want another RX chain.
+        let want_rx_fut = connection.clone().want_rx_chain();
+        futures::pin_mut!(want_rx_fut);
+        assert_eq!(
+            executor.run_until_stalled(&mut want_rx_fut).expect("future should have completed"),
+            WantRxChainResult::StopAwaiting
+        );
     }
 
     // This test case is testing the following:
