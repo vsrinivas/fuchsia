@@ -71,24 +71,31 @@ auto CompleteAndConsume() {
 AnnotationManager::AnnotationManager(
     async_dispatcher_t* dispatcher, std::set<std::string> allowlist,
     const Annotations static_annotations, NonPlatformAnnotationProvider* non_platform_provider,
-    std::vector<DynamicSyncAnnotationProvider*> dynamic_sync_providers,
-    std::vector<StaticAsyncAnnotationProvider*> static_async_providers,
-    std::vector<CachedAsyncAnnotationProvider*> cached_async_providers,
-    std::vector<DynamicAsyncAnnotationProvider*> dynamic_async_providers)
+    const std::vector<DynamicSyncAnnotationProvider*> dynamic_sync_providers,
+    const std::vector<StaticAsyncAnnotationProvider*> static_async_providers,
+    const std::vector<CachedAsyncAnnotationProvider*> cached_async_providers,
+    const std::vector<DynamicAsyncAnnotationProvider*> dynamic_async_providers)
     : dispatcher_(dispatcher),
       allowlist_(std::move(allowlist)),
       static_annotations_(),
       non_platform_provider_(non_platform_provider),
-      dynamic_sync_providers_(std::move(dynamic_sync_providers)),
-      static_async_providers_(std::move(static_async_providers)),
-      dynamic_async_providers_(std::move(dynamic_async_providers)),
-      cached_async_providers_(std::move(cached_async_providers)) {
+      dynamic_sync_providers_(dynamic_sync_providers),
+      static_async_providers_(static_async_providers),
+      dynamic_async_providers_(dynamic_async_providers),
+      cached_async_providers_(cached_async_providers) {
   for (const auto& k : allowlist_) {
     // Count the number of providers in |providers| that collect |k|.
-    auto Count = [&k](const auto& providers) {
+    // Because a provider can be more than one type of Provider, only count
+    // keys from providers we have not seen yet.
+    std::set<AnnotationProvider*> seen;
+    auto Count = [&k, &seen](const auto& providers) {
       size_t count{0u};
       for (auto* p : providers) {
+        if (seen.count(p) != 0) {
+          continue;
+        }
         count += p->GetKeys().count(k);
+        seen.insert(p);
       }
 
       return count;
@@ -106,7 +113,10 @@ AnnotationManager::AnnotationManager(
 
   // Create a weak pointer because |this| isn't guaranteed to outlive providers.
   auto self = ptr_factory_.GetWeakPtr();
-  for (auto* provider : static_async_providers_) {
+
+  // Iterate over a copy of the container so that we can safely modify the actual container during
+  // the for loop
+  for (auto* provider : static_async_providers) {
     provider->GetOnce([self, provider](const Annotations annotations) {
       if (!self) {
         return;
@@ -130,7 +140,9 @@ AnnotationManager::AnnotationManager(
     });
   }
 
-  for (auto* provider : cached_async_providers_) {
+  // Iterate over a copy of the container so that we can safely modify the actual container during
+  // the for loop
+  for (auto* provider : cached_async_providers) {
     provider->GetOnUpdate(
         [self, provider, keys = provider->GetKeys()](const Annotations annotations) {
           if (!self) {

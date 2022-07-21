@@ -222,6 +222,7 @@
             to: [
                 "#cobalt",
                 "#cobalt_system_metrics",
+                "#feedback",
             ],
         },
         {

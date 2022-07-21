@@ -22,6 +22,7 @@
 #include "src/developer/forensics/feedback/annotations/target_channel_provider.h"
 #include "src/developer/forensics/feedback/annotations/time_provider.h"
 #include "src/developer/forensics/feedback/annotations/timezone_provider.h"
+#include "src/developer/forensics/feedback/annotations/ui_state_provider.h"
 #include "src/lib/backoff/backoff.h"
 
 namespace forensics::feedback {
@@ -52,6 +53,7 @@ class AnnotationProviders {
   TimezoneProvider timezone_provider_;
   std::unique_ptr<CachedAsyncAnnotationProvider> device_id_provider_;
   TargetChannelProvider target_channel_provider_;
+  UIStateProvider ui_state_provider_;
 
   AnnotationManager annotation_manager_;
 
