@@ -43,11 +43,7 @@ pub const KVM_PATH: &'static str = "emu.kvm_path";
 /// for details.
 pub const EMU_UPSCRIPT_FILE: &'static str = "emu.upscript";
 
-/// The file containing the authorized keys for SSH access.
-pub const SSH_PUBLIC_KEY: &'static str = "ssh.pub";
-
-const ALL_KEYS: &'static [&'static str] =
-    &[EMU_UPSCRIPT_FILE, EMU_INSTANCE_ROOT_DIR, KVM_PATH, SSH_PUBLIC_KEY];
+const ALL_KEYS: &'static [&'static str] = &[EMU_UPSCRIPT_FILE, EMU_INSTANCE_ROOT_DIR, KVM_PATH];
 
 macro_rules! missing_key_message {
     ($key_name:expr) => {
@@ -142,12 +138,12 @@ mod tests {
         const RANDOM_PROPERTY_NAME: &str = "random-property-name";
 
         let mut config = FfxConfigWrapper::new();
-        // Add a value for ssh_public key. This causes all config queries to be resolved via
+        // Add a value for instance root key. This causes all config queries to be resolved via
         // overrides.
-        config.overrides.insert(SSH_PUBLIC_KEY, fake_path.clone());
+        config.overrides.insert(EMU_INSTANCE_ROOT_DIR, fake_path.clone());
 
         // Get the key
-        let ok_result = config.file(SSH_PUBLIC_KEY).await;
+        let ok_result = config.file(EMU_INSTANCE_ROOT_DIR).await;
         assert_eq!(ok_result.unwrap(), PathBuf::from(fake_path));
 
         // Try to get a key not defined in ALL_KEYS.
