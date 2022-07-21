@@ -14,6 +14,8 @@
 
 #include <zxtest/zxtest.h>
 
+#include "fidl/fuchsia.wlan.wlanphyimpl/cpp/wire_types.h"
+
 extern "C" {
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"
 }
@@ -79,12 +81,12 @@ class WlanphyImplDeviceTest : public FakeUcodeTest {
 
   zx_status_t CreateIface(fuchsia_wlan_common::WlanMacRole role, uint16_t* iface_id_out) {
     auto ch = ::zx::channel(kDummyMlmeChannel);
-    fuchsia_wlan_wlanphyimpl::wire::WlanphyImplCreateIfaceReq req = {
-        .role = role,
-        .mlme_channel = std::move(ch),
-    };
+    static fidl::Arena arena;
+    auto builder = fuchsia_wlan_wlanphyimpl::wire::WlanphyImplCreateIfaceRequest::Builder(arena);
+    builder.role(role);
+    builder.mlme_channel(std::move(ch));
 
-    auto result = client_.sync().buffer(test_arena_)->CreateIface(std::move(req));
+    auto result = client_.sync().buffer(test_arena_)->CreateIface(builder.Build());
     EXPECT_TRUE(result.ok());
     if (result->is_error()) {
       // Returns an invalid iface id.
@@ -92,12 +94,16 @@ class WlanphyImplDeviceTest : public FakeUcodeTest {
       return result->error_value();
     }
 
-    *iface_id_out = result->value()->iface_id;
+    *iface_id_out = result->value()->iface_id();
     return ZX_OK;
   }
 
   zx_status_t DestroyIface(uint16_t iface_id) {
-    auto result = client_.sync().buffer(test_arena_)->DestroyIface(iface_id);
+    static fidl::Arena arena;
+    auto builder = fuchsia_wlan_wlanphyimpl::wire::WlanphyImplDestroyIfaceRequest::Builder(arena);
+    builder.iface_id(iface_id);
+
+    auto result = client_.sync().buffer(test_arena_)->DestroyIface(builder.Build());
     EXPECT_TRUE(result.ok());
     if (result->is_error()) {
       return result->error_value();
@@ -145,6 +151,51 @@ TEST_F(WlanphyImplDeviceTest, PhyPartialCreateCleanup) {
   // Ensure partial create failure removes it from the index.
   phy_create_iface_undo(iwl_trans, iface_id);
   ASSERT_NULL(mvm->mvmvif[iface_id]);
+}
+
+TEST_F(WlanphyImplDeviceTest, CreateIfaceNegativeTest) {
+  static fidl::Arena arena;
+
+  // Both role and channel not populated.
+  {
+    auto builder = fuchsia_wlan_wlanphyimpl::wire::WlanphyImplCreateIfaceRequest::Builder(arena);
+    auto result = client_.sync().buffer(test_arena_)->CreateIface(builder.Build());
+    ASSERT_TRUE(result.ok());
+    ASSERT_TRUE(result->is_error());
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, result->error_value());
+  }
+
+  // Role is set, but not channel.
+  {
+    auto builder = fuchsia_wlan_wlanphyimpl::wire::WlanphyImplCreateIfaceRequest::Builder(arena);
+    builder.role(fuchsia_wlan_common::wire::WlanMacRole::kClient);
+    auto result = client_.sync().buffer(test_arena_)->CreateIface(builder.Build());
+    ASSERT_TRUE(result.ok());
+    ASSERT_TRUE(result->is_error());
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, result->error_value());
+  }
+
+  // Channel is set, but not the role.
+  {
+    auto ch = ::zx::channel(kDummyMlmeChannel);
+    auto builder = fuchsia_wlan_wlanphyimpl::wire::WlanphyImplCreateIfaceRequest::Builder(arena);
+    builder.mlme_channel(std::move(ch));
+    auto result = client_.sync().buffer(test_arena_)->CreateIface(builder.Build());
+    EXPECT_TRUE(result.ok());
+    EXPECT_TRUE(result->is_error());
+    ASSERT_EQ(ZX_ERR_INVALID_ARGS, result->error_value());
+  }
+}
+
+TEST_F(WlanphyImplDeviceTest, DestroyIfaceNegativeTest) {
+  static fidl::Arena arena;
+
+  // ifaceid not populated.
+  auto builder = fuchsia_wlan_wlanphyimpl::wire::WlanphyImplDestroyIfaceRequest::Builder(arena);
+  auto result = client_.sync().buffer(test_arena_)->DestroyIface(builder.Build());
+  ASSERT_TRUE(result.ok());
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, result->error_value());
 }
 
 TEST_F(WlanphyImplDeviceTest, PhyCreateDestroySingleInterface) {
@@ -269,6 +320,37 @@ TEST_F(WlanphyImplDeviceTest, GetCountry) {
   auto& country = result->value()->country;
   EXPECT_EQ('Z', country.alpha2().data()[0]);
   EXPECT_EQ('Z', country.alpha2().data()[1]);
+}
+
+TEST_F(WlanphyImplDeviceTest, SetCountry) {
+  auto country = fuchsia_wlan_wlanphyimpl::wire::WlanphyCountry::WithAlpha2({'U', 'S'});
+  auto result = client_.sync().buffer(test_arena_)->SetCountry(country);
+  ASSERT_TRUE(result.ok());
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, result->error_value());
+}
+
+TEST_F(WlanphyImplDeviceTest, ClearCountry) {
+  auto result = client_.sync().buffer(test_arena_)->ClearCountry();
+  ASSERT_TRUE(result.ok());
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, result->error_value());
+}
+
+TEST_F(WlanphyImplDeviceTest, SetPsMode) {
+  static fidl::Arena arena;
+  auto builder = fuchsia_wlan_wlanphyimpl::wire::WlanphyImplSetPsModeRequest::Builder(arena);
+  auto result = client_.sync().buffer(test_arena_)->SetPsMode(builder.Build());
+  ASSERT_TRUE(result.ok());
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, result->error_value());
+}
+
+TEST_F(WlanphyImplDeviceTest, GetPsMode) {
+  auto result = client_.sync().buffer(test_arena_)->GetPsMode();
+  ASSERT_TRUE(result.ok());
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, result->error_value());
 }
 
 }  // namespace

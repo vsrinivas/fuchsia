@@ -17,6 +17,8 @@ extern "C" {
 
 namespace wlan::iwlwifi {
 
+namespace wlanphyimpl_fidl = fuchsia_wlan_wlanphyimpl::wire;
+
 WlanphyImplDevice::WlanphyImplDevice(zx_device_t* parent)
     : ::ddk::Device<WlanphyImplDevice, ::ddk::Initializable, ::ddk::Unbindable,
                     ddk::ServiceConnectable>(parent) {
@@ -81,11 +83,18 @@ void WlanphyImplDevice::GetSupportedMacRoles(GetSupportedMacRolesRequestView req
 void WlanphyImplDevice::CreateIface(CreateIfaceRequestView request, fdf::Arena& arena,
                                     CreateIfaceCompleter::Sync& completer) {
   zx_status_t status = ZX_OK;
-  auto req = &request->req;
+
+  if (!request->has_role() || !request->has_mlme_channel()) {
+    IWL_ERR(this, "%s() missing info in request role(%u), channel(%u)\n", __func__,
+            request->has_role(), request->has_mlme_channel());
+    completer.buffer(arena).ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
   uint16_t out_iface_id;
   wlanphy_impl_create_iface_req_t create_iface_req;
 
-  switch (req->role) {
+  switch (request->role()) {
     case fuchsia_wlan_common::WlanMacRole::kClient:
       create_iface_req.role = WLAN_MAC_ROLE_CLIENT;
       break;
@@ -96,12 +105,12 @@ void WlanphyImplDevice::CreateIface(CreateIfaceRequestView request, fdf::Arena& 
       create_iface_req.role = WLAN_MAC_ROLE_MESH;
       break;
     default:
-      IWL_ERR(this, "Unrecognized role from the request. Requested role: %u\n", req->role);
+      IWL_ERR(this, "Unrecognized role from the request. Requested role: %u\n", request->role());
       completer.buffer(arena).ReplyError(ZX_ERR_INVALID_ARGS);
       return;
   }
 
-  create_iface_req.mlme_channel = req->mlme_channel.release();
+  create_iface_req.mlme_channel = request->mlme_channel().release();
 
   if ((status = phy_create_iface(drvdata(), &create_iface_req, &out_iface_id)) != ZX_OK) {
     IWL_ERR(this, "%s() failed phy create: %s\n", __func__, zx_status_get_string(status));
@@ -122,12 +131,25 @@ void WlanphyImplDevice::CreateIface(CreateIfaceRequestView request, fdf::Arena& 
     return;
   }
   wlan_softmac_device.release();
-  completer.buffer(arena).ReplySuccess(out_iface_id);
+
+  IWL_INFO("%s() created iface %u\n", __func__, out_iface_id);
+
+  fidl::Arena fidl_arena;
+  auto builder = wlanphyimpl_fidl::WlanphyImplCreateIfaceResponse::Builder(fidl_arena);
+  builder.iface_id(out_iface_id);
+  completer.buffer(arena).ReplySuccess(builder.Build());
 }
 
 void WlanphyImplDevice::DestroyIface(DestroyIfaceRequestView request, fdf::Arena& arena,
                                      DestroyIfaceCompleter::Sync& completer) {
-  zx_status_t status = phy_destroy_iface(drvdata(), request->iface_id);
+  if (!request->has_iface_id()) {
+    IWL_ERR(this, "%s() invoked without valid iface id\n", __func__);
+    completer.buffer(arena).ReplyError(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  IWL_INFO("%s() for iface %u\n", __func__, request->iface_id());
+  zx_status_t status = phy_destroy_iface(drvdata(), request->iface_id());
   if (status != ZX_OK) {
     completer.buffer(arena).ReplyError(status);
     IWL_ERR(this, "%s() failed destroy iface: %s\n", __func__, zx_status_get_string(status));
@@ -140,9 +162,10 @@ void WlanphyImplDevice::DestroyIface(DestroyIfaceRequestView request, fdf::Arena
 void WlanphyImplDevice::SetCountry(SetCountryRequestView request, fdf::Arena& arena,
                                    SetCountryCompleter::Sync& completer) {
   wlanphy_country_t country;
+
   if (!request->country.is_alpha2()) {
+    IWL_ERR(this, "%s() only alpha2 format is supported\n", __func__);
     completer.buffer(arena).ReplyError(ZX_ERR_NOT_SUPPORTED);
-    IWL_ERR(this, "Invalid input format of country code.\n");
     return;
   }
 
@@ -177,6 +200,7 @@ void WlanphyImplDevice::GetCountry(GetCountryRequestView request, fdf::Arena& ar
   }
 
   memcpy(alpha2.begin(), country.alpha2, WLANPHY_ALPHA2_LEN);
+
   auto out_country = fuchsia_wlan_wlanphyimpl::wire::WlanphyCountry::WithAlpha2(alpha2);
   completer.buffer(arena).ReplySuccess(out_country);
 }

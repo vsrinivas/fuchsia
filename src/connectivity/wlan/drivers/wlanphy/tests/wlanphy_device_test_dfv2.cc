@@ -10,6 +10,7 @@
 
 #include <zxtest/zxtest.h>
 
+#include "fidl/fuchsia.wlan.wlanphyimpl/cpp/wire_types.h"
 #include "src/connectivity/wlan/drivers/wlanphy/device_dfv2.h"
 #include "src/connectivity/wlan/drivers/wlanphy/driver.h"
 #include "src/devices/testing/mock-ddk/mock-device.h"
@@ -89,6 +90,9 @@ class WlanphyDeviceTest : public ::zxtest::Test,
 
     // Establish FIDL connection based on fuchsia_wlan_device::Phy protocol.
     wlanphy_device_->Connect(std::move(endpoints_phy->server));
+
+    // Initialize struct to avoid random values.
+    memset(static_cast<void*>(&create_iface_req_), 0, sizeof(create_iface_req_));
   }
 
   ~WlanphyDeviceTest() {
@@ -111,14 +115,25 @@ class WlanphyDeviceTest : public ::zxtest::Test,
   }
   void CreateIface(CreateIfaceRequestView request, fdf::Arena& arena,
                    CreateIfaceCompleter::Sync& completer) override {
-    memcpy(&create_iface_req_, &request->req,
-           sizeof(fuchsia_wlan_wlanphyimpl::wire::WlanphyImplCreateIfaceReq));
-    completer.buffer(arena).ReplySuccess(kFakeIfaceId);
+    has_init_sta_addr_ = false;
+    if (request->has_init_sta_addr()) {
+      create_iface_req_.init_sta_addr = request->init_sta_addr();
+      has_init_sta_addr_ = true;
+    }
+    if (request->has_role()) {
+      create_iface_req_.role = request->role();
+    }
+
+    fidl::Arena fidl_arena;
+    auto builder =
+        fuchsia_wlan_wlanphyimpl::wire::WlanphyImplCreateIfaceResponse::Builder(fidl_arena);
+    builder.iface_id(kFakeIfaceId);
+    completer.buffer(arena).ReplySuccess(builder.Build());
     test_completion_.Signal();
   }
   void DestroyIface(DestroyIfaceRequestView request, fdf::Arena& arena,
                     DestroyIfaceCompleter::Sync& completer) override {
-    destroy_iface_id_ = request->iface_id;
+    destroy_iface_id_ = request->iface_id();
     completer.buffer(arena).ReplySuccess();
     test_completion_.Signal();
   }
@@ -141,18 +156,24 @@ class WlanphyDeviceTest : public ::zxtest::Test,
   }
   void SetPsMode(SetPsModeRequestView request, fdf::Arena& arena,
                  SetPsModeCompleter::Sync& completer) override {
-    ps_mode_ = request->ps_mode;
+    ps_mode_ = request->ps_mode();
     completer.buffer(arena).ReplySuccess();
     test_completion_.Signal();
   }
   void GetPsMode(GetPsModeRequestView request, fdf::Arena& arena,
                  GetPsModeCompleter::Sync& completer) override {
-    completer.buffer(arena).ReplySuccess(kFakePsMode);
+    fidl::Arena fidl_arena;
+    auto builder =
+        fuchsia_wlan_wlanphyimpl::wire::WlanphyImplGetPsModeResponse::Builder(fidl_arena);
+    builder.ps_mode(kFakePsMode);
+
+    completer.buffer(arena).ReplySuccess(builder.Build());
     test_completion_.Signal();
   }
 
   // Record the create iface request data when fake wlanphyimpl device gets it.
-  fuchsia_wlan_wlanphyimpl::wire::WlanphyImplCreateIfaceReq create_iface_req_;
+  fuchsia_wlan_device::wire::CreateIfaceRequest create_iface_req_;
+  bool has_init_sta_addr_;
 
   // Record the destroy iface request data when fake wlanphyimpl device gets it.
   uint16_t destroy_iface_id_;
@@ -169,6 +190,8 @@ class WlanphyDeviceTest : public ::zxtest::Test,
   static constexpr fidl::Array<uint8_t, WLANPHY_ALPHA2_LEN> kAlpha2{'W', 'W'};
   static constexpr fuchsia_wlan_common::wire::PowerSaveType kFakePsMode =
       fuchsia_wlan_common::wire::PowerSaveType::kPsModePerformance;
+  static constexpr ::fidl::Array<uint8_t, 6> kValidStaAddr = {1, 2, 3, 4, 5, 6};
+  static constexpr ::fidl::Array<uint8_t, 6> kInvalidStaAddr = {0, 0, 0, 0, 0, 0};
 
   // The completion to synchronize the state in tests, because there are async FIDL calls.
   libsync::Completion test_completion_;
@@ -214,16 +237,13 @@ TEST_F(WlanphyDeviceTest, CreateIfaceTestNullAddr) {
   fuchsia_wlan_device::wire::CreateIfaceRequest req = {
       .role = fuchsia_wlan_common::wire::WlanMacRole::kClient,
       .mlme_channel = std::move(dummy_channel),
-      .init_sta_addr =
-          {
-              .data_ = {0, 0, 0, 0, 0, 0},
-          },
+      .init_sta_addr = kInvalidStaAddr,
   };
 
   auto result = client_phy_.sync()->CreateIface(std::move(req));
   ASSERT_TRUE(result.ok());
   test_completion_.Wait();
-  EXPECT_FALSE(create_iface_req_.has_init_sta_addr);
+  EXPECT_FALSE(has_init_sta_addr_);
 }
 
 TEST_F(WlanphyDeviceTest, CreateIfaceTestValidAddr) {
@@ -233,17 +253,14 @@ TEST_F(WlanphyDeviceTest, CreateIfaceTestValidAddr) {
   fuchsia_wlan_device::wire::CreateIfaceRequest req = {
       .role = fuchsia_wlan_common::wire::WlanMacRole::kClient,
       .mlme_channel = std::move(dummy_channel),
-      .init_sta_addr =
-          {
-              .data_ = {1, 2, 3, 4, 5, 6},
-          },
+      .init_sta_addr = kValidStaAddr,
   };
 
   auto result = client_phy_.sync()->CreateIface(std::move(req));
   ASSERT_TRUE(result.ok());
   test_completion_.Wait();
-  EXPECT_TRUE(create_iface_req_.has_init_sta_addr);
-  EXPECT_EQ(0, memcmp(&create_iface_req_.init_sta_addr.data()[0], &req.init_sta_addr.data()[0],
+  EXPECT_TRUE(has_init_sta_addr_);
+  EXPECT_EQ(0, memcmp(&create_iface_req_.init_sta_addr, &req.init_sta_addr.data()[0],
                       fuchsia_wlan_ieee80211::wire::kMacAddrLen));
   EXPECT_EQ(kFakeIfaceId, result->value()->iface_id);
 }
