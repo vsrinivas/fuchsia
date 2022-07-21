@@ -333,6 +333,12 @@ zx_status_t udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, ui
   uint8_t* payload = std::copy_n(reinterpret_cast<const uint8_t*>(&udp), sizeof(udp), body);
   std::copy_n(static_cast<const uint8_t*>(data), dlen, payload);
   checksum = ip6_finalize_checksum(checksum, body, sizeof(udp) + dlen);
+  // Do not transmit all zeroes checksum, replace with its one's complement.
+  //
+  // https://datatracker.ietf.org/doc/html/rfc768
+  if (checksum == 0) {
+    checksum = 0xFFFF;
+  }
   std::copy_n(reinterpret_cast<const uint8_t*>(&checksum), sizeof(checksum),
               body + offsetof(udp_hdr_t, checksum));
   return buffer.Send(ETH_HDR_LEN + IP6_HDR_LEN + length);
@@ -417,7 +423,7 @@ void udp6_recv_internal(async_dispatcher_t* dispatcher, ip6_hdr_t* ip, void* _da
     udp->checksum = 0;
 
   sum = ip6_finalize_checksum(ip6_header_checksum(*ip, HDR_UDP), udp, len);
-  if (unlikely(sum != 0xFFFF)) {
+  if (unlikely(sum != 0)) {
     BAD_PACKET_FROM(&ip->src, "incorrect checksum in UDP packet");
     return;
   }
@@ -441,15 +447,8 @@ void icmp6_recv(ip6_hdr_t* ip, void* _data, size_t len) {
   icmp6_hdr_t* icmp = static_cast<icmp6_hdr_t*>(_data);
   uint16_t sum;
 
-  if (unlikely(icmp->checksum == 0)) {
-    BAD_PACKET_FROM(&ip->src, "missing checksum in ICMP packet");
-    return;
-  }
-  if (icmp->checksum == 0xFFFF)
-    icmp->checksum = 0;
-
   sum = ip6_finalize_checksum(ip6_header_checksum(*ip, HDR_ICMP6), icmp, len);
-  if (unlikely(sum != 0xFFFF)) {
+  if (unlikely(sum != 0)) {
     BAD_PACKET_FROM(&ip->src, "incorrect checksum in ICMP packet");
     return;
   }

@@ -32,11 +32,5 @@ uint16_t ip6_header_checksum(const ip6_hdr_t& ip, uint8_t type) {
 }
 
 uint16_t ip6_finalize_checksum(uint16_t header_checksum, const void* payload, size_t len) {
-  uint16_t sum = checksum(payload, len, header_checksum);
-
-  // 0 is illegal, so 0xffff remains 0xffff.
-  if (sum != 0xffff) {
-    return ~sum;
-  }
-  return sum;
+  return ~checksum(payload, len, header_checksum);
 }
