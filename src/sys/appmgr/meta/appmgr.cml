@@ -87,7 +87,7 @@
             path: "/factory",
         },
         {
-            directory: "minfs",
+            directory: "data",
             rights: [ "rw*" ],
             path: "/data",
         },

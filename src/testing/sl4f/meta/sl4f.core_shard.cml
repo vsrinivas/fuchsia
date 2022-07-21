@@ -244,7 +244,7 @@
 
         // TODO(https://fxbug.dev/98760): Remove once fixed.
         {
-            directory: "minfs",
+            directory: "data",
             from: "parent",
             to: "#sl4f",
         },

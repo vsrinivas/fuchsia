@@ -10,7 +10,7 @@
     use: [
         // TODO(https://fxbug.dev/98760): Remove once fixed.
         {
-            directory: "minfs",
+            directory: "data",
             rights: [ "rw*" ],
             path: "/data",
         },

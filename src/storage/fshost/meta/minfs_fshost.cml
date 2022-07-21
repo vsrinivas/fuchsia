@@ -39,7 +39,7 @@
         {
             directory: "root",
             from: "#minfs",
-            as: "minfs",
+            as: "data",
         },
     ],
 }

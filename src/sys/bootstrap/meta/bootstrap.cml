@@ -643,7 +643,7 @@
         {
             directory: [
                 "blob",
-                "minfs",
+                "data",
                 "mnt",
             ],
             from: "#fshost",
@@ -1060,9 +1060,9 @@
         {
             directory: [
                 "blob",
+                "data",
                 "durable",
                 "factory",
-                "minfs",
                 "mnt",
                 "tmp",
             ],

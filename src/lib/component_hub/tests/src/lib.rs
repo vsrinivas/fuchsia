@@ -116,7 +116,7 @@ async fn select() {
     let hub_dir = Directory::from_namespace(hub_path).unwrap();
 
     let select::MatchingComponents { mut exposed, used } =
-        select::find_components("minfs".to_string(), hub_dir).await.unwrap();
+        select::find_components("data".to_string(), hub_dir).await.unwrap();
 
     assert_eq!(exposed.len(), 1);
     assert_eq!(used.len(), 0);

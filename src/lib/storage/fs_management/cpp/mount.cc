@@ -224,8 +224,8 @@ zx::status<> MountedFilesystem::UnmountImpl() {
 }
 
 __EXPORT
-zx::status<> Shutdown(fidl::UnownedClientEnd<Directory> export_root) {
-  auto admin_or = service::ConnectAt<fuchsia_fs::Admin>(export_root);
+zx::status<> Shutdown(fidl::UnownedClientEnd<Directory> svc_dir) {
+  auto admin_or = service::ConnectAt<fuchsia_fs::Admin>(svc_dir);
   if (admin_or.is_error())
     return admin_or.take_error();
 

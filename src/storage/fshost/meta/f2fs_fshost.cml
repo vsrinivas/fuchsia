@@ -4,14 +4,14 @@
 {
     capabilities: [
         {
-            directory: "minfs",
+            directory: "data",
             rights: [ "rw*" ],
             path: "/fs/data",
         },
     ],
     expose: [
         {
-            directory: "minfs",
+            directory: "data",
             from: "self",
         },
     ],

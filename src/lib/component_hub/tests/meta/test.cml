@@ -22,9 +22,9 @@
     ],
     capabilities: [
         {
-            directory: "minfs",
+            directory: "data",
             rights: [ "rw*" ],
-            path: "/minfs",
+            path: "/data",
         },
         { protocol: "fuchsia.foo.Bar" },
     ],
@@ -56,7 +56,7 @@
         // These capabilities aren't actually being served.
         // `select` should still be able to find them.
         {
-            directory: "minfs",
+            directory: "data",
             from: "self",
         },
         {

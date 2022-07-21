@@ -101,7 +101,7 @@ TEST_F(MigrationTest, MigratesZxcryptMinfsToFxfs) {
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
 
   // Fxfs should be automatically mounted.
-  auto [root_fd, fs_type] = WaitForMount("minfs");
+  auto [root_fd, fs_type] = WaitForMount("data");
   EXPECT_TRUE(root_fd);
   EXPECT_EQ(fs_type, VFS_TYPE_FXFS);
 

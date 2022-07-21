@@ -33,7 +33,7 @@
             path: "/config/ssl",
         },
         {
-            directory: "minfs",
+            directory: "data",
             rights: [ "rw*" ],
             path: "/data",
         },

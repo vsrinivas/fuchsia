@@ -325,11 +325,11 @@
             directory: [
                 "blob",
                 "boot",
+                "data",
                 "dev",
                 "durable",
                 "factory",
                 "hub",
-                "minfs",
                 "mnt",
                 "system",
                 "tmp",

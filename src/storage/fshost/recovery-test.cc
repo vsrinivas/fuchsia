@@ -65,7 +65,7 @@ TEST_F(FsRecoveryTest, EmptyPartitionRecoveryTest) {
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
 
   // Minfs should be automatically mounted.
-  auto [fd, fs_type] = WaitForMount("minfs");
+  auto [fd, fs_type] = WaitForMount("data");
   EXPECT_TRUE(fd);
   uint64_t expected_type = 0ul;
   if (DataFilesystemFormat() == "minfs") {
@@ -140,7 +140,7 @@ TEST_F(FsRecoveryTest, CorruptDataRecoveryTest) {
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
 
   // Minfs should be automatically mounted.
-  auto [fd, fs_type] = WaitForMount("minfs");
+  auto [fd, fs_type] = WaitForMount("data");
   EXPECT_TRUE(fd);
   uint64_t expected_type = 0ul;
   if (DataFilesystemFormat() == "minfs") {

@@ -49,7 +49,7 @@
         {
             directory: "root",
             from: "#fxfs",
-            as: "minfs",
+            as: "data",
         },
     ],
 }

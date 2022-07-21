@@ -735,7 +735,7 @@
             to: "#metrics-logger",
         },
         {
-            directory: "minfs",
+            directory: "data",
             from: "parent",
             as: "ssh",
             to: "#ssh-key-manager",

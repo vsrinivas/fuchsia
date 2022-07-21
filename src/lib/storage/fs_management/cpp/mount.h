@@ -52,10 +52,12 @@ class __EXPORT MountedFilesystem {
 zx::status<MountedFilesystem> Mount(fbl::unique_fd device_fd, const char* mount_path, DiskFormat df,
                                     const MountOptions& options, LaunchCallback cb);
 
-// Shuts down a filesystem (using fuchsia.fs/Admin). Depending on whether or not this filesystem is
-// a component, the protocol is in a different spot.
+// Shuts down a filesystem.
+//
+// This method takes a directory protocol to the service directory and assumes that we
+// can find the fuchsia.fs.Admin protocol there.
 __EXPORT
-zx::status<> Shutdown(fidl::UnownedClientEnd<fuchsia_io::Directory> export_root);
+zx::status<> Shutdown(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir);
 
 }  // namespace fs_management
 
