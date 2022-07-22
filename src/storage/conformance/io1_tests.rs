@@ -13,7 +13,6 @@ use {
     futures::StreamExt,
     io_conformance_util::{flags::build_flag_combinations, test_harness::TestHarness},
     libc,
-    std::convert::TryInto,
 };
 
 const TEST_FILE: &str = "testing.txt";
@@ -254,11 +253,10 @@ fn file(name: &str, contents: Vec<u8>) -> io_test::DirectoryEntry {
     })
 }
 
-fn vmo_file(name: &str, contents: &[u8]) -> io_test::DirectoryEntry {
-    let size = contents.len() as u64;
-    let vmo = zx::Vmo::create(size).expect("Cannot create VMO");
+fn vmo_file(name: &str, contents: &[u8], capacity: u64) -> io_test::DirectoryEntry {
+    let vmo = zx::Vmo::create(capacity).expect("Cannot create VMO");
     let () = vmo.write(contents, 0).expect("Cannot write to VMO");
-    let () = vmo.set_content_size(&size).expect("Cannot set VMO content size");
+    let () = vmo.set_content_size(&(contents.len() as u64)).expect("Cannot set VMO content size");
     io_test::DirectoryEntry::VmoFile(io_test::VmoFile {
         name: Some(name.to_string()),
         vmo: Some(vmo),
@@ -335,7 +333,7 @@ async fn validate_vmo_file_rights() {
         return;
     }
     // Create a test directory with a VmoFile object, and ensure the directory has all rights.
-    let root = root_directory(vec![vmo_file(TEST_FILE, TEST_FILE_CONTENTS)]);
+    let root = root_directory(vec![vmo_file(TEST_FILE, TEST_FILE_CONTENTS, 128 * 1024)]);
     let root_dir = harness.get_directory(root, harness.dir_rights.all());
     // Opening with READ/WRITE should succeed.
     open_node::<fio::NodeMarker>(
@@ -1176,7 +1174,7 @@ async fn file_get_readable_memory_with_sufficient_rights() {
         for sharing_mode in
             [fio::VmoFlags::empty(), fio::VmoFlags::SHARED_BUFFER, fio::VmoFlags::PRIVATE_CLONE]
         {
-            let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
+            let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS, 128 * 1024);
             let (vmo, _) = create_file_and_get_backing_memory(
                 file,
                 &harness,
@@ -1207,7 +1205,7 @@ async fn file_get_readable_memory_with_insufficient_rights() {
     }
 
     for file_flags in harness.vmo_file_rights.valid_combos_without(fio::OpenFlags::RIGHT_READABLE) {
-        let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
+        let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS, 128 * 1024);
         assert_eq!(
             create_file_and_get_backing_memory(file, &harness, file_flags, fio::VmoFlags::READ)
                 .await
@@ -1228,7 +1226,7 @@ async fn file_get_writable_memory_with_sufficient_rights() {
         fio::VmoFlags::empty().union(fio::VmoFlags::WRITE).union(fio::VmoFlags::PRIVATE_CLONE);
 
     for file_flags in harness.vmo_file_rights.valid_combos_with(fio::OpenFlags::RIGHT_WRITABLE) {
-        let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
+        let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS, 128 * 1024);
         let (vmo, _) = create_file_and_get_backing_memory(file, &harness, file_flags, VMO_FLAGS)
             .await
             .expect("Failed to create file and obtain VMO");
@@ -1251,7 +1249,7 @@ async fn file_get_writable_memory_with_insufficient_rights() {
         fio::VmoFlags::empty().union(fio::VmoFlags::WRITE).union(fio::VmoFlags::PRIVATE_CLONE);
 
     for file_flags in harness.vmo_file_rights.valid_combos_without(fio::OpenFlags::RIGHT_WRITABLE) {
-        let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS);
+        let file = vmo_file(TEST_FILE, TEST_FILE_CONTENTS, 128 * 1024);
         assert_eq!(
             create_file_and_get_backing_memory(file, &harness, file_flags, VMO_FLAGS)
                 .await
@@ -1392,7 +1390,7 @@ async fn vmo_file_describe() {
         return;
     }
 
-    let root = root_directory(vec![vmo_file(TEST_FILE, TEST_FILE_CONTENTS)]);
+    let root = root_directory(vec![vmo_file(TEST_FILE, TEST_FILE_CONTENTS, 128 * 1024)]);
     let test_dir = harness
         .get_directory(root, fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
     let file = open_node::<fio::FileMarker>(
@@ -1415,7 +1413,8 @@ async fn vmo_file_write_to_limits() {
         return;
     }
 
-    let root = root_directory(vec![vmo_file(TEST_FILE, TEST_FILE_CONTENTS)]);
+    let capacity = 128 * 1024;
+    let root = root_directory(vec![vmo_file(TEST_FILE, TEST_FILE_CONTENTS, capacity)]);
     let test_dir = harness
         .get_directory(root, fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE);
     let file = open_node::<fio::FileMarker>(
@@ -1428,12 +1427,14 @@ async fn vmo_file_write_to_limits() {
 
     file.describe().await.expect("describe failed");
     let data = vec![0u8];
-    file.write_at(&data[..], TEST_FILE_CONTENTS.len().try_into().unwrap())
+
+    // The VMO file will have a capacity
+    file.write_at(&data[..], capacity)
         .await
         .expect("fidl call failed")
         .expect_err("Write at end of file limit should fail");
     // An empty write should still succeed even if it targets an out-of-bounds offset.
-    file.write_at(&[], TEST_FILE_CONTENTS.len().try_into().unwrap())
+    file.write_at(&[], capacity)
         .await
         .expect("fidl call failed")
         .expect("Zero-byte write at end of file limit should succeed");

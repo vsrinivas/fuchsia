@@ -4,10 +4,10 @@
 
 //! Common utilities used by tests for the VMO backed files.
 
-use super::{read_only, read_write, InitVmoResult, NewVmo, VmoFile};
+use super::{read_only, read_write, InitVmoResult, VmoFile};
 
 use {
-    fuchsia_zircon::{Status, Vmo, VmoOptions},
+    fuchsia_zircon::{Status, Vmo},
     futures::future::BoxFuture,
     std::sync::Arc,
     void::Void,
@@ -54,39 +54,8 @@ pub fn simple_init_vmo_with_capacity(
             let vmo_size = std::cmp::max(size, capacity);
             let vmo = Vmo::create(vmo_size)?;
             vmo.write(&content, 0)?;
-            Ok(NewVmo { vmo, size, capacity })
-        })
-    }
-}
-
-/// Just like [`simple_init_vmo`], except that the returned VMOs have the `RESIZABLE` flag set,
-/// allowing them to grow.  `capacity` is still set as in [`simple_init_vmo`], so you most likely
-/// want to use [`simple_init_vmo_resizable_with_capacity`].  The VMO is initially sized to be the
-/// maximum of the `content` length and 100.
-pub fn simple_init_vmo_resizable(
-    content: &[u8],
-) -> impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static {
-    let capacity = std::cmp::max(content.len() as u64, DEFAULT_MIN_CAPACITY);
-    simple_init_vmo_resizable_with_capacity(content, capacity)
-}
-
-/// Similar to the [`simple_init_vmo`], but the produced VMOs are resizable, and the `capacity` is
-/// set by the caller.  Note that this capacity is a limitation enforced by the FIDL binding layer,
-/// not something applied to the VMO.  The VMO is initially sized to be the maximum of the
-/// `content` length and the specified `capacity`.
-pub fn simple_init_vmo_resizable_with_capacity(
-    content: &[u8],
-    capacity: u64,
-) -> impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static {
-    let content = content.to_vec();
-    move || {
-        let content = content.clone();
-        Box::pin(async move {
-            let size = content.len() as u64;
-            let vmo_size = std::cmp::max(size, capacity);
-            let vmo = Vmo::create_with_opts(VmoOptions::RESIZABLE, vmo_size)?;
-            vmo.write(&content, 0)?;
-            Ok(NewVmo { vmo, size, capacity })
+            vmo.set_content_size(&size)?;
+            Ok(vmo)
         })
     }
 }
@@ -217,16 +186,4 @@ pub fn simple_read_write(
     >,
 > {
     read_write(simple_init_vmo(initial_content))
-}
-
-/// Similar to [`simple_read_write`] except allows file to grow.
-pub fn simple_read_write_resizeable(
-    initial_content: &[u8],
-) -> Arc<
-    VmoFile<
-        impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static,
-        BoxFuture<'static, InitVmoResult>,
-    >,
-> {
-    read_write(simple_init_vmo_resizable(initial_content))
 }

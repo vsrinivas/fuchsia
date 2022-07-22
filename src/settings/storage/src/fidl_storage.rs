@@ -404,7 +404,7 @@ mod tests {
     use vfs::directory::entry::DirectoryEntry;
     use vfs::directory::mutable::simple::tree_constructor;
     use vfs::execution_scope::ExecutionScope;
-    use vfs::file::vmo::asynchronous::test_utils::simple_init_vmo_resizable_with_capacity;
+    use vfs::file::vmo::asynchronous::test_utils::simple_init_vmo_with_capacity;
     use vfs::file::vmo::read_write;
     use vfs::mut_pseudo_directory;
     use vfs::registry::{inode_registry, token_registry};
@@ -461,7 +461,7 @@ mod tests {
             .token_registry(token_registry::Simple::new())
             .inode_registry(inode_registry::Simple::new())
             .entry_constructor(tree_constructor(move |_, _| {
-                Ok(read_write(simple_init_vmo_resizable_with_capacity(b"", 100)))
+                Ok(read_write(simple_init_vmo_with_capacity(b"", 100)))
             }))
             .new();
         let (client, server) = create_proxy::<DirectoryMarker>().unwrap();
@@ -481,7 +481,7 @@ mod tests {
         let content = encode_persistent(&mut value_to_get.to_storable()).unwrap();
         let content_len = content.len();
         let fs = mut_pseudo_directory! {
-            "xyz.pfidl" => read_write(simple_init_vmo_resizable_with_capacity(
+            "xyz.pfidl" => read_write(simple_init_vmo_with_capacity(
                 &content,
                 content_len as u64
             ))
@@ -937,7 +937,7 @@ mod tests {
                     println!("Force failing attempt {}", *attempts_guard);
                     Err(fidl::Status::NO_SPACE)
                 } else {
-                    Ok(read_write(simple_init_vmo_resizable_with_capacity(b"", 100)))
+                    Ok(read_write(simple_init_vmo_with_capacity(b"", 100)))
                 }
             }))
             .new();

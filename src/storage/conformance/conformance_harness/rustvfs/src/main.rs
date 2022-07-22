@@ -40,12 +40,12 @@ const HARNESS_EXEC_PATH: &'static str = "/pkg/bin/io_conformance_harness_rustvfs
 ///
 /// The VMO backing the buffer is duplicated so that tests can ensure the same VMO is returned by
 /// subsequent GetBackingMemory calls.
-fn new_vmo_file(vmo: zx::Vmo, size: u64) -> Result<Arc<dyn DirectoryEntry>, Error> {
+fn new_vmo_file(vmo: zx::Vmo) -> Result<Arc<dyn DirectoryEntry>, Error> {
     let init_vmo = move || {
         // Need to clone VMO as this might be invoked multiple times.
         let vmo =
             vmo.duplicate_handle(zx::Rights::SAME_RIGHTS).expect("Failed to duplicate VMO!").into();
-        async move { Ok(vmo::NewVmo { vmo, size, capacity: size }) }
+        async move { Ok(vmo) }
     };
     Ok(vmo::read_write(init_vmo))
 }
@@ -58,9 +58,7 @@ fn new_executable_file() -> Result<Arc<dyn DirectoryEntry>, Error> {
             HARNESS_EXEC_PATH,
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )?;
-        let vmo = fdio::get_vmo_exec_from_file(&file)?;
-        let size = vmo.get_size()?;
-        Ok(vmo::NewVmo { vmo, size, capacity: size })
+        Ok(fdio::get_vmo_exec_from_file(&file)?)
     };
     Ok(vmo::read_exec(init_vmo))
 }
@@ -94,15 +92,13 @@ fn add_entry(
         io_test::DirectoryEntry::File(io_test::File { name, contents, .. }) => {
             let name = name.expect("File must have name");
             let contents = contents.expect("File must have contents");
-            let new_file =
-                vmo::read_write(vmo::simple_init_vmo_resizable_with_capacity(&contents, 100));
+            let new_file = vmo::read_write(vmo::simple_init_vmo_with_capacity(&contents, 100));
             dest.add_entry(name, new_file)?;
         }
         io_test::DirectoryEntry::VmoFile(io_test::VmoFile { name, vmo, .. }) => {
             let name = name.expect("VMO file must have a name");
             let vmo = vmo.expect("VMO file must have a VMO");
-            let size = vmo.get_content_size().expect("VMO file must have a content size");
-            let vmo_file = new_vmo_file(vmo, size)?;
+            let vmo_file = new_vmo_file(vmo)?;
             dest.add_entry(name, vmo_file)?;
         }
         io_test::DirectoryEntry::ExecutableFile(io_test::ExecutableFile { name, .. }) => {
@@ -162,7 +158,7 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
         let scope = ExecutionScope::build()
             .token_registry(token_registry)
             .entry_constructor(simple::tree_constructor(|_parent, _filename| {
-                let entry = vmo::read_write(vmo::simple_init_vmo_resizable_with_capacity(&[], 100));
+                let entry = vmo::read_write(vmo::simple_init_vmo_with_capacity(&[], 100));
                 Ok(entry)
             }))
             .new();

@@ -13,10 +13,7 @@ use crate::{
     file::common::{
         get_backing_memory_validate_flags, new_connection_validate_flags, vmo_flags_to_rights,
     },
-    file::vmo::{
-        asynchronous::{NewVmo, VmoFileState},
-        connection::VmoFileInterface,
-    },
+    file::vmo::{asynchronous::VmoFileState, connection::VmoFileInterface},
 };
 
 use {
@@ -128,12 +125,10 @@ impl VmoFileConnection {
                 };
 
             if flags.intersects(fio::OpenFlags::TRUNCATE) {
-                let mut seek = 0;
-                if let Err(status) = Self::truncate_vmo(&mut *state, 0, &mut seek) {
+                if let Err(status) = Self::truncate_vmo(&mut *state, 0) {
                     send_on_open_with_error(flags, server_end, status);
                     return;
                 }
-                debug_assert!(seek == 0);
             }
 
             match &mut *state {
@@ -194,49 +189,13 @@ impl VmoFileConnection {
             return Ok((state, server_end));
         }
 
-        let NewVmo { vmo, mut size, capacity } = match file.init_vmo().await {
-            Ok(res) => res,
+        let vmo = match file.init_vmo().await {
+            Ok(vmo) => vmo,
             Err(status) => return Err((status, server_end)),
         };
-        let mut vmo_size = match vmo.get_size() {
-            Ok(size) => size,
-            Err(status) => return Err((status, server_end)),
-        };
-
-        if cfg!(debug_assertions) {
-            // Debug build will just enforce the constraints.
-            assert!(
-                vmo_size >= size,
-                "`init_vmo` returned a VMO that is smaller than the declared size.\n\
-                 VMO size: {}\n\
-                 Declared size: {}",
-                vmo_size,
-                size
-            );
-        } else if vmo_size < size {
-            // Release build will try to recover.
-            match vmo.set_size(size) {
-                Ok(()) => {
-                    // Actual VMO size might be different from the requested one due to rounding,
-                    // so we have to ask for it.
-                    vmo_size = match vmo.get_size() {
-                        Ok(size) => size,
-                        Err(status) => return Err((status, server_end)),
-                    };
-                }
-                Err(zx::Status::UNAVAILABLE) => {
-                    // VMO is not resizable.  Try to use what we got.
-                    size = vmo_size;
-                }
-                Err(status) => return Err((status, server_end)),
-            }
-        }
 
         *state = Some(VmoFileState {
             vmo,
-            vmo_size,
-            size,
-            capacity,
             // We are going to increment the connection count later, so it needs to
             // start at 0.
             connection_count: 0,
@@ -245,35 +204,28 @@ impl VmoFileConnection {
         Ok((state, server_end))
     }
 
-    fn truncate_vmo(
-        state: &mut Option<VmoFileState>,
-        new_size: u64,
-        seek: &mut u64,
-    ) -> Result<(), zx::Status> {
+    fn truncate_vmo(state: &mut Option<VmoFileState>, new_size: u64) -> Result<(), zx::Status> {
         let state = state.as_mut().ok_or(zx::Status::INTERNAL)?;
 
-        let effective_capacity = core::cmp::max(state.size, state.capacity);
+        let capacity = state.vmo.get_size()?;
 
-        if new_size > effective_capacity {
+        if new_size > capacity {
             return Err(zx::Status::OUT_OF_RANGE);
         }
 
         assert_eq_size!(usize, u64);
 
-        state.vmo.set_size(new_size)?;
-        // Actual VMO size might be different from the requested one due to rounding,
-        // so we have to ask for it.
-        state.vmo_size = state.vmo.get_size()?;
+        let old_size = state.vmo.get_content_size()?;
 
-        state.vmo.set_content_size(&new_size)?;
-
-        state.size = new_size;
-
-        // We are not supposed to touch the seek position during truncation, but the
-        // effective_capacity might be smaller now - in which case we do need to move the
-        // seek position.
-        let new_effective_capacity = core::cmp::max(new_size, state.capacity);
-        *seek = core::cmp::min(*seek, new_effective_capacity);
+        if new_size < old_size {
+            // Zero out old data (which will decommit).
+            state.vmo.set_content_size(&new_size)?;
+            state.vmo.op_range(zx::VmoOp::ZERO, new_size, old_size - new_size)?;
+        } else if new_size > old_size {
+            // Zero out the range we are extending into.
+            state.vmo.op_range(zx::VmoOp::ZERO, old_size, new_size - old_size)?;
+            state.vmo.set_content_size(&new_size)?;
+        }
 
         Ok(())
     }
@@ -449,6 +401,8 @@ impl VmoFileConnection {
         let state = self.file.state().await;
         let state = state.as_ref().ok_or(zx::Status::INTERNAL)?;
 
+        let content_size = state.vmo.get_content_size()?;
+
         Ok(fio::NodeAttributes {
             mode: fio::MODE_TYPE_FILE
                 | rights_to_posix_mode_bits(
@@ -457,8 +411,8 @@ impl VmoFileConnection {
                     self.file.is_executable(),
                 ),
             id: self.file.get_inode(),
-            content_size: state.size,
-            storage_size: state.capacity,
+            content_size,
+            storage_size: content_size,
             link_count: 1,
             creation_time: 0,
             modification_time: 0,
@@ -480,7 +434,9 @@ impl VmoFileConnection {
         let state = self.file.state().await;
         let state = state.as_ref().ok_or(zx::Status::INTERNAL)?;
 
-        match state.size.checked_sub(offset) {
+        let size = state.vmo.get_content_size()?;
+
+        match size.checked_sub(offset) {
             None => Ok(Vec::new()),
             Some(rem) => {
                 let count = core::cmp::min(count, rem);
@@ -516,7 +472,9 @@ impl VmoFileConnection {
         let mut state = self.file.state().await;
         let state = state.as_mut().ok_or(zx::Status::INTERNAL)?;
 
-        let capacity = core::cmp::max(state.size, state.capacity);
+        let size = state.vmo.get_content_size()?;
+        let capacity = state.vmo.get_size()?;
+
         if offset >= capacity {
             return Err(zx::Status::OUT_OF_RANGE);
         }
@@ -529,23 +487,15 @@ impl VmoFileConnection {
         }
 
         let len = content.len().try_into().unwrap();
-        let end = offset + len;
-        if end > state.size {
-            if end > state.vmo_size {
-                state.vmo.set_size(end)?;
-                // As VMO sizes are rounded, we do not really know the current size
-                // of the VMO after the `set_size` call.  We need an additional
-                // `get_size`, if we want to be aware of the exact size.  We can
-                // probably do our own rounding, but it seems more fragile.
-                // Hopefully, this extra syscall will be invisible, as it should not
-                // happen too frequently.  It will be at least offset by 4 more
-                // syscalls that happen for every `write_at` FIDL call.
-                state.vmo_size = state.vmo.get_size()?;
-            }
-            state.vmo.set_content_size(&end)?;
-            state.size = end;
+
+        if offset > size {
+            state.vmo.op_range(zx::VmoOp::ZERO, size, offset - size)?;
         }
         state.vmo.write(content, offset)?;
+        let end = offset + len;
+        if end > size {
+            state.vmo.set_content_size(&end)?;
+        }
         Ok(len)
     }
 
@@ -568,7 +518,7 @@ impl VmoFileConnection {
         let origin: i64 = match origin {
             fio::SeekOrigin::Start => 0,
             fio::SeekOrigin::Current => self.seek,
-            fio::SeekOrigin::End => state.size,
+            fio::SeekOrigin::End => state.vmo.get_content_size()?,
         }
         .try_into()
         .unwrap();
@@ -589,7 +539,7 @@ impl VmoFileConnection {
             return Err(zx::Status::BAD_HANDLE);
         }
 
-        Self::truncate_vmo(&mut *self.file.state().await, length, &mut self.seek)
+        Self::truncate_vmo(&mut *self.file.state().await, length)
     }
 
     async fn handle_get_backing_memory(
@@ -614,8 +564,6 @@ impl VmoFileConnection {
         let state = self.file.state().await;
         let state = state.as_ref().ok_or(zx::Status::INTERNAL)?;
 
-        let () = state.vmo.set_content_size(&state.size)?;
-
         // Logic here matches fuchsia.io requirements and matches what works for memfs.
         // Shared requests are satisfied by duplicating an handle, and private shares are
         // child VMOs.
@@ -627,12 +575,13 @@ impl VmoFileConnection {
         // callback here will make the implementation of those files systems easier.
         let vmo_rights = vmo_flags_to_rights(flags);
         // Unless private sharing mode is specified, we always default to shared.
+        let size = state.vmo.get_content_size()?;
         let vmo = if flags.contains(fio::VmoFlags::PRIVATE_CLONE) {
-            Self::get_as_private(&state.vmo, vmo_rights, state.size)
+            Self::get_as_private(&state.vmo, vmo_rights, size)
         } else {
             Self::get_as_shared(&state.vmo, vmo_rights)
         }?;
-        Ok(Buffer { vmo, size: state.size })
+        Ok(Buffer { vmo, size })
     }
 
     fn get_as_shared(vmo: &zx::Vmo, mut rights: zx::Rights) -> Result<zx::Vmo, zx::Status> {

@@ -134,12 +134,11 @@ impl BootfsSvc {
                 )
             })?;
 
-        BootfsSvc::create_dir_entry(child, size, is_exec, inode)
+        BootfsSvc::create_dir_entry(child, is_exec, inode)
     }
 
     fn create_dir_entry(
         vmo: zx::Vmo,
-        size: u64,
         is_exec: bool,
         inode: u64,
     ) -> Result<Arc<dyn DirectoryEntry>, Error> {
@@ -148,7 +147,7 @@ impl BootfsSvc {
             // can be invoked multiple times.
             let vmo_dup =
                 vmo.duplicate_handle(zx::Rights::SAME_RIGHTS).expect("Failed to duplicate VMO.");
-            async move { Ok(vmo::NewVmo { vmo: vmo_dup, size, capacity: size }) }
+            async move { Ok(vmo_dup) }
         };
         Ok(vmo::VmoFile::new_with_inode(init_vmo, true, false, is_exec, inode))
     }
@@ -289,17 +288,16 @@ impl BootfsSvc {
             return Ok(self);
         }
 
-        // If content size is set (non-zero), it's the exact size of the file backed
-        // by the VMO, and is the file size the VFS should report.
-        let content_size = vmo.get_content_size()?;
-        let size = if content_size != 0 { content_size } else { vmo_size };
+        // If content size is zero, set it to the size of the VMO.
+        if vmo.get_content_size()? == 0 {
+            vmo.set_content_size(&vmo_size)?;
+        }
 
         let info = vmo.basic_info()?;
         let is_exec = info.rights.contains(zx::Rights::EXECUTE);
 
         match BootfsSvc::create_dir_entry(
             vmo,
-            size,
             is_exec,
             BootfsSvc::get_next_inode(&mut self.next_inode),
         ) {

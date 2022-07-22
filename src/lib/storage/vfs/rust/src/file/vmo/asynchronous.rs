@@ -30,42 +30,15 @@ use crate::{
 use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io as fio,
-    fuchsia_zircon::{Status, Vmo, VmoOptions},
+    fuchsia_zircon::{Status, Vmo},
     futures::future::BoxFuture,
     futures::lock::{Mutex, MutexLockFuture},
     std::{future::Future, sync::Arc},
 };
 
-/// `init_vmo` callback returns an instance of this struct to describe the VMO it has generated, as
-/// well as `size` and `capacity` restrictions for the new file.
-pub struct NewVmo {
-    /// `Vmo` object to be used for the file content.
-    pub vmo: Vmo,
-
-    /// VMOs area allocated in pages, while files are allocated in bytes.  There is no way to know
-    /// what was the actual allocation size from the VMO alone, so the callback needs to tell the
-    /// size explicitly.
-    ///
-    /// This number must be less than or equal than the allocated VMO size.  When this constraint
-    /// is violated a debug build will panic, while a release build will try to resize the VMO to
-    /// the specified size.  If the VMO is not resizable it will reduce the file size to match the
-    /// allocation size.
-    pub size: u64,
-
-    /// Maximum size this `Vmo` can be extended to.  If this field is larger than the current size
-    /// of the `Vmo`, then the `Vmo` will be resized if a request arrives that should touch data
-    /// outside of the currently allocated size.  Make sure to provide a VMO with the
-    /// `ZX_VMO_RESIZABLE` flag.
-    ///
-    /// If the `size` is larger than `capacity`, users of the file will be able to access bytes
-    /// beyond the capacity - all `size` bytes of data.  But if the file is truncated, then the
-    /// `capacity` will take over and will limit the access and resize operations.
-    pub capacity: u64,
-}
-
 /// Connection buffer initialization result. It is either a byte buffer with the file content, or
 /// an error code.
-pub type InitVmoResult = Result<NewVmo, Status>;
+pub type InitVmoResult = Result<Vmo, Status>;
 
 /// Creates a new read-only `VmoFile` backed by the specified `init_vmo` handler.
 ///
@@ -107,8 +80,7 @@ fn init_vmo<'a>(content: Arc<[u8]>) -> impl Fn() -> BoxFuture<'a, InitVmoResult>
             let size = content.len() as u64;
             let vmo = Vmo::create(size)?;
             vmo.write(&content, 0)?;
-            vmo.set_content_size(&size)?;
-            Ok(NewVmo { vmo, size, capacity: size })
+            Ok(vmo)
         })
     }
 }
@@ -165,30 +137,7 @@ pub fn simple_init_vmo_with_capacity(
                 vmo.write(&content, 0)?;
             }
             vmo.set_content_size(&size)?;
-            Ok(NewVmo { vmo, size, capacity })
-        })
-    }
-}
-
-/// Similar to the `simple_init_vmo`, but the produced VMOs are resizable, and the `capacity` is
-/// set by the caller.  Note that this capacity is a limitation enforced by the FIDL binding layer,
-/// not something applied to the VMO.  The VMO is initially sized to be the maximum of the
-/// `content` length and the specified `capacity`.
-pub fn simple_init_vmo_resizable_with_capacity(
-    content: &[u8],
-    capacity: u64,
-) -> impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static {
-    let content = content.to_vec();
-    move || {
-        let content = content.clone();
-        Box::pin(async move {
-            let vmo_size = content.len() as u64;
-            let vmo = Vmo::create_with_opts(VmoOptions::RESIZABLE, vmo_size)?;
-            if vmo_size > 0 {
-                vmo.write(&content, 0)?;
-            }
-            vmo.set_content_size(&vmo_size)?;
-            Ok(NewVmo { vmo, size: vmo_size, capacity })
+            Ok(vmo)
         })
     }
 }
@@ -245,16 +194,6 @@ where
 // a `connection`.  Neither the `pub(in create:vmo::connection)` works.
 pub(super) struct VmoFileState {
     pub vmo: Vmo,
-
-    /// Size of the file, as observed via the `File` FIDL protocol.  Must be less than or equal
-    /// to the `vmo_size`.
-    pub size: u64,
-
-    /// Size of the `vmo` - to save on a system call.  Must be no less than `size`.
-    pub vmo_size: u64,
-
-    /// Maximum capacity we are allowed to extend the VMO size to.
-    pub capacity: u64,
 
     /// Number of active connections to the file.
     pub connection_count: u64,

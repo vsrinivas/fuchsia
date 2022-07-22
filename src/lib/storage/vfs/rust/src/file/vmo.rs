@@ -10,8 +10,7 @@ pub mod asynchronous;
 /// A read-only file interface that accepts a zx::Vmo upon construction can be found below.  All
 /// other support is currently via an asynchronous interface.
 pub use asynchronous::{
-    read_only, read_only_const, read_only_static, read_write,
-    simple_init_vmo_resizable_with_capacity, simple_init_vmo_with_capacity,
+    read_only, read_only_const, read_only_static, read_write, simple_init_vmo_with_capacity,
 };
 
 use crate::{
@@ -44,16 +43,8 @@ pub struct ReadOnlyVmoFile {
 
 impl ReadOnlyVmoFile {
     /// Returns a new read-only file backed by the provided VMO.
-    pub fn new(vmo: zx::Vmo, size: u64) -> Self {
-        Self {
-            state: Mutex::new(Some(VmoFileState {
-                vmo,
-                size,
-                vmo_size: size,
-                capacity: size,
-                connection_count: 0,
-            })),
-        }
+    pub fn new(vmo: zx::Vmo) -> Self {
+        Self { state: Mutex::new(Some(VmoFileState { vmo, connection_count: 0 })) }
     }
 }
 
@@ -119,9 +110,10 @@ mod tests {
         let vmo = zx::Vmo::create(1024).expect("create failed");
         let data = b"Read only str";
         vmo.write(data, 0).expect("write failed");
+        vmo.set_content_size(&(data.len() as u64)).expect("set_content_size failed");
         run_server_client(
             fio::OpenFlags::RIGHT_READABLE,
-            Arc::new(ReadOnlyVmoFile::new(vmo, data.len() as u64)),
+            Arc::new(ReadOnlyVmoFile::new(vmo)),
             |proxy| async move {
                 assert_read!(proxy, "Read only str");
                 assert_close!(proxy);

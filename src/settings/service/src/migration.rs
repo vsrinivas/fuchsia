@@ -350,7 +350,7 @@ mod tests {
     use vfs::directory::entry::DirectoryEntry;
     use vfs::directory::mutable::simple::tree_constructor;
     use vfs::execution_scope::ExecutionScope;
-    use vfs::file::vmo::asynchronous::{read_write, simple_init_vmo_resizable_with_capacity};
+    use vfs::file::vmo::asynchronous::{read_write, simple_init_vmo_with_capacity};
     use vfs::mut_pseudo_directory;
     use vfs::registry::{inode_registry, token_registry};
 
@@ -410,7 +410,7 @@ mod tests {
             .token_registry(token_registry::Simple::new())
             .inode_registry(inode_registry::Simple::new())
             .entry_constructor(tree_constructor(move |_, _| {
-                Ok(read_write(simple_init_vmo_resizable_with_capacity(b"", 100)))
+                Ok(read_write(simple_init_vmo_with_capacity(b"", 100)))
             }))
             .new();
         let (client, server) = create_proxy::<DirectoryMarker>().unwrap();
@@ -470,10 +470,10 @@ mod tests {
     async fn if_migration_file_and_up_to_date_no_migrations_run() {
         let fs = mut_pseudo_directory! {
             MIGRATION_FILE_NAME => read_write(
-                simple_init_vmo_resizable_with_capacity(b"1", 1)
+                simple_init_vmo_with_capacity(b"1", 1)
             ),
             "test_1.pfidl" => read_write(
-                simple_init_vmo_resizable_with_capacity(b"", 1)
+                simple_init_vmo_with_capacity(b"", 1)
             ),
         };
         let (directory, _vmo_map) = serve_vfs_dir(fs);
@@ -508,7 +508,7 @@ mod tests {
     async fn migration_file_exists_but_missing_data() {
         let fs = mut_pseudo_directory! {
             MIGRATION_FILE_NAME => read_write(
-                simple_init_vmo_resizable_with_capacity(b"1", 1)
+                simple_init_vmo_with_capacity(b"1", 1)
             ),
         };
         let (directory, _vmo_map) = serve_vfs_dir(fs);
@@ -563,10 +563,10 @@ mod tests {
     async fn migration_file_exists_and_newer_migrations_should_update() {
         let fs = mut_pseudo_directory! {
             MIGRATION_FILE_NAME => read_write(
-                simple_init_vmo_resizable_with_capacity(b"1", 1)
+                simple_init_vmo_with_capacity(b"1", 1)
             ),
             "test_1.pfidl" => read_write(
-                simple_init_vmo_resizable_with_capacity(b"", 1)
+                simple_init_vmo_with_capacity(b"", 1)
             ),
         };
         let (directory, _vmo_map) = serve_vfs_dir(fs);

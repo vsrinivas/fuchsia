@@ -10,18 +10,15 @@ use {
     std::{collections::HashMap, sync::Arc},
     tracing::*,
     vfs::{
-        directory::entry::DirectoryEntry,
-        directory::helper::DirectlyMutable,
-        directory::immutable::simple as simpledir,
-        execution_scope::ExecutionScope,
-        file::vmo::asynchronous::{read_only, NewVmo},
-        path::Path as VfsPath,
+        directory::entry::DirectoryEntry, directory::helper::DirectlyMutable,
+        directory::immutable::simple as simpledir, execution_scope::ExecutionScope,
+        file::vmo::asynchronous::read_only, path::Path as VfsPath,
     },
 };
 
 enum DirectoryOrFile {
     Directory(HashMap<String, DirectoryOrFile>),
-    File(Arc<zx::Vmo>, u64),
+    File(Arc<zx::Vmo>),
 }
 
 /// An `ExecutionScope` does not terminate tasks scheduled on it when the scope is dropped, as many
@@ -88,7 +85,7 @@ fn directory_contents_to_hashmap(
                     .or_insert(DirectoryOrFile::Directory(HashMap::new()));
                 current_directory = match dir_or_file {
                     DirectoryOrFile::Directory(d) => d,
-                    DirectoryOrFile::File(_, _) => {
+                    DirectoryOrFile::File(_) => {
                         return Err(format_err!(
                             "directory_contents invalid, {:?} is inside of a file",
                             entry.file_path
@@ -98,10 +95,8 @@ fn directory_contents_to_hashmap(
             } else {
                 let vmo =
                     Arc::new(entry.file_contents.vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?);
-                current_directory.insert(
-                    path_part.to_string(),
-                    DirectoryOrFile::File(vmo, entry.file_contents.size),
-                );
+                vmo.set_content_size(&entry.file_contents.size)?;
+                current_directory.insert(path_part.to_string(), DirectoryOrFile::File(vmo));
             }
         }
     }
@@ -118,20 +113,14 @@ fn build_directory(
                 .clone()
                 .add_entry(&path, build_directory(sub_directory)?)
                 .context("could not add directory to directory")?,
-            DirectoryOrFile::File(vmo, size) => {
+            DirectoryOrFile::File(vmo) => {
                 directory
                     .clone()
                     .add_entry(
                         &path,
                         read_only(move || {
                             let vmo = vmo.clone();
-                            async move {
-                                Ok(NewVmo {
-                                    vmo: vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?,
-                                    size,
-                                    capacity: size,
-                                })
-                            }
+                            async move { Ok(vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?) }
                         }),
                     )
                     .context("could not add file to directory")?;

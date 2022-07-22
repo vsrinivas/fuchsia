@@ -465,11 +465,8 @@ mod tests {
         futures::{channel::mpsc, join, lock::Mutex},
         std::{boxed::Box, iter::FromIterator, str::FromStr, sync::Arc},
         vfs::{
-            directory::entry::DirectoryEntry,
-            execution_scope::ExecutionScope,
-            file::{vmo::asynchronous::read_only_static, vmo::asynchronous::NewVmo},
-            path::Path,
-            pseudo_directory,
+            directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
+            file::vmo::asynchronous::read_only_static, path::Path, pseudo_directory,
         },
     };
 
@@ -765,7 +762,7 @@ mod tests {
                         let capacity = cm_bytes.len() as u64;
                         let vmo = Vmo::create(capacity)?;
                         vmo.write(&cm_bytes, 0).expect("failed to write manifest bytes to vmo");
-                        Ok(NewVmo { vmo, size: capacity, capacity })
+                        Ok(vmo)
                     }),
                 },
             };

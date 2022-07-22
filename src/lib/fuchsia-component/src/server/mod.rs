@@ -493,7 +493,8 @@ macro_rules! add_functions {
             vmo: zx::Vmo,
             length: u64,
         ) -> &mut Self {
-            self.add_entry_at(path.into(), Arc::new(ReadOnlyVmoFile::new(vmo, length)))
+            vmo.set_content_size(&length).unwrap();
+            self.add_entry_at(path.into(), Arc::new(ReadOnlyVmoFile::new(vmo)))
         }
 
         fn add_entry_at(&mut self, path: String, entry: Arc<dyn DirectoryEntry>) -> &mut Self {
