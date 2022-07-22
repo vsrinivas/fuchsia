@@ -36,6 +36,10 @@
             url: "fuchsia-pkg://fuchsia.com/elf-test-ambient-exec-runner#meta/elf-test-ambient-exec-runner.cm",
         },
         {
+            name: "g3_dart_jit_product_runner",
+            url: "fuchsia-pkg://fuchsia.com/g3_dart_jit_product_runner#meta/g3_dart_jit_product_runner.cm",
+        },
+        {
             name: "gtest_runner",
             url: "fuchsia-pkg://fuchsia.com/gtest-runner#meta/gtest-runner.cm",
         },
@@ -219,6 +223,7 @@
             to: [
                 "#dart_aot_runner",
                 "#dart_jit_runner",
+                "#g3_dart_jit_product_runner",
             ],
         },
         {
@@ -430,6 +435,7 @@
                 // TODO(99511) Remove dependence on config-data once it is removed from the dart_*_runner cml.
                 "#dart_aot_runner",
                 "#dart_jit_runner",
+                "#g3_dart_jit_product_runner",
                 "#system-tests",
             ],
         },
