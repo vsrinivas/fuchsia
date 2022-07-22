@@ -3,3 +3,6 @@ set noparent
 abarth@google.com
 dschuyler@google.com
 hjfreyer@google.com
+
+# For platform versioning tooling changes.
+kjharland@google.com
