@@ -47,7 +47,6 @@ rustc_binary("storage-benchmarks") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tracing",
-    "//third_party/rust_crates:uuid",
   ]
   data_deps = [ "//src/storage/bin/f2fs" ]
   test_deps = [

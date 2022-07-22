@@ -13,7 +13,6 @@ rustc_test("stressor-bin") {
   testonly = true
 
   deps = [
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",

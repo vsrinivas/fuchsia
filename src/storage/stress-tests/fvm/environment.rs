@@ -7,20 +7,18 @@ use {
         instance_actor::InstanceActor, volume::VolumeConnection, volume_actor::VolumeActor, Args,
     },
     async_trait::async_trait,
-    fidl_fuchsia_hardware_block_partition::Guid,
     fuchsia_zircon::Vmo,
     futures::lock::Mutex,
     rand::{rngs::SmallRng, Rng, SeedableRng},
     std::sync::Arc,
     std::time::Duration,
-    storage_stress_test_utils::fvm::FvmInstance,
+    storage_stress_test_utils::fvm::{FvmInstance, Guid},
     stress_test::{actor::ActorRunner, environment::Environment, random_seed},
 };
 
 // All partitions in this test have their type set to this arbitrary GUID.
-const TYPE_GUID: Guid = Guid {
-    value: [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf],
-};
+const TYPE_GUID: Guid =
+    [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf];
 
 /// Describes the environment that this blobfs stress test will run under.
 pub struct FvmEnvironment {
@@ -52,10 +50,10 @@ impl FvmEnvironment {
         for i in 0..args.num_volumes {
             // Create the new volume
             let volume_name = format!("testpart-{}", i);
-            let volume_guid = fvm.new_volume(&volume_name, TYPE_GUID, 1).await;
+            let volume_guid = fvm.new_volume(&volume_name, &TYPE_GUID, None).await;
 
             // Connect to the volume
-            let volume = VolumeConnection::new(volume_guid, args.fvm_slice_size).await;
+            let volume = VolumeConnection::new(&volume_guid, args.fvm_slice_size).await;
 
             // Create the actor
             let rng = SmallRng::from_seed(rng.gen());
@@ -93,7 +91,7 @@ impl Environment for FvmEnvironment {
         let mut runners = vec![];
 
         for (guid, actor) in &self.volume_actors {
-            let actor_name = format!("volume_actor_{}", guid.value[0]);
+            let actor_name = format!("volume_actor_{}", guid[0]);
             runners.push(ActorRunner::new(actor_name, None, actor.clone()));
         }
 
@@ -135,7 +133,7 @@ impl Environment for FvmEnvironment {
             let mut actor = actor.lock().await;
 
             // Connect to the volume
-            let volume = VolumeConnection::new(*guid, self.args.fvm_slice_size).await;
+            let volume = VolumeConnection::new(guid, self.args.fvm_slice_size).await;
 
             // Replace the volume
             actor.volume = volume;

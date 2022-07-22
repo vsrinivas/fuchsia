@@ -7,7 +7,6 @@ use {
         deletion_actor::DeletionActor, file_actor::FileActor, instance_actor::InstanceActor, Args,
     },
     async_trait::async_trait,
-    fidl_fuchsia_hardware_block_partition::Guid,
     fidl_fuchsia_io as fio,
     fs_management::{asynchronous::Filesystem, FSConfig},
     fuchsia_component::client::connect_to_protocol_at_path,
@@ -19,16 +18,15 @@ use {
     std::time::Duration,
     storage_stress_test_utils::{
         data::{Compressibility, FileFactory, UncompressedSize},
-        fvm::{get_volume_path, FvmInstance},
+        fvm::{get_volume_path, FvmInstance, Guid},
         io::Directory,
     },
     stress_test::{actor::ActorRunner, environment::Environment, random_seed},
 };
 
 // All partitions in this test have their type set to this arbitrary GUID.
-const TYPE_GUID: Guid = Guid {
-    value: [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf],
-};
+const TYPE_GUID: Guid =
+    [0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf];
 
 const ONE_MIB: u64 = 1048576;
 const FOUR_MIB: u64 = 4 * ONE_MIB;
@@ -66,7 +64,7 @@ impl<FSC: Clone + FSConfig> FsEnvironment<FSC> {
             FvmInstance::new(true, &vmo, args.fvm_slice_size, args.ramdisk_block_size).await;
 
         // Initialize the filesystem on a new volume
-        let volume_guid = fvm.new_volume("default", TYPE_GUID, fvm.total_slices().await).await;
+        let volume_guid = fvm.new_volume("default", &TYPE_GUID, Some(fvm.free_space().await)).await;
         let volume_path = get_volume_path(&volume_guid).await;
         let node =
             connect_to_protocol_at_path::<fio::NodeMarker>(volume_path.to_str().unwrap()).unwrap();

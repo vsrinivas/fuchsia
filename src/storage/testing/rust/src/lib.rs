@@ -20,6 +20,10 @@ pub mod zxcrypt;
 
 pub type Guid = [u8; 16];
 
+pub fn create_random_guid() -> Guid {
+    *uuid::Uuid::new_v4().as_bytes()
+}
+
 pub async fn bind_fvm(proxy: &ControllerProxy) -> Result<()> {
     fvm::bind_fvm_driver(proxy).await
 }

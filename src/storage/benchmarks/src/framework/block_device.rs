@@ -14,7 +14,8 @@ use {
     ramdevice_client::RamdiskClient,
     std::path::{Path, PathBuf},
     storage_isolated_driver_manager::{
-        fvm, wait_for_block_device, wait_for_ramctl, zxcrypt, BlockDeviceMatcher, Guid,
+        create_random_guid, fvm, wait_for_block_device, wait_for_ramctl, zxcrypt,
+        BlockDeviceMatcher, Guid,
     },
 };
 
@@ -191,10 +192,6 @@ impl Drop for FvmVolume {
             self.volume.destroy(zx::Time::INFINITE).expect("Failed to destroy the FVM volume");
         zx::ok(status).expect("Failed to destroy the FVM volume");
     }
-}
-
-fn create_random_guid() -> Guid {
-    *uuid::Uuid::new_v4().as_bytes()
 }
 
 async fn set_up_fvm_volume(

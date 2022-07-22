@@ -12,7 +12,6 @@ rustc_library("utils") {
 
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition-rustc",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//src/lib/fuchsia-component",
@@ -30,6 +29,4 @@ rustc_library("utils") {
     "io.rs",
     "mod.rs",
   ]
-
-  non_rust_deps = [ "//src/lib/storage/fs_management/c" ]
 }
