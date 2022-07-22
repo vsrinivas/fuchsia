@@ -6,6 +6,7 @@
 #include <stdio.h>
 
 #include <memory>
+#include <mutex>
 #include <thread>
 
 #include <gtest/gtest.h>
@@ -34,6 +35,7 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
     fflush(stdout);
     va_end(args);
 
+    std::lock_guard<std::mutex> guard(lock_);
     fail_codec_count_++;
     cond_.notify_all();
   }
@@ -41,7 +43,10 @@ class FakeCodecAdapterEvents : public CodecAdapterEvents {
   void onCoreCodecFailStream(fuchsia::media::StreamError error) override {
     printf("Got onCoreCodecFailStream %d\n", static_cast<int>(error));
     fflush(stdout);
+
+    std::lock_guard<std::mutex> guard(lock_);
     fail_stream_count_++;
+    cond_.notify_all();
   }
 
   void onCoreCodecResetStreamAfterCurrentFrame() override {}
