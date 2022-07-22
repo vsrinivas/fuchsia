@@ -68,7 +68,7 @@ zx_status_t SpiDevice::Create(void* ctx, zx_device_t* parent) {
 
 void SpiDevice::AddChildren(const ddk::SpiImplProtocolClient& spi) {
   auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_spi_businfo::wire::SpiBusMetadata>(
-      zxdev(), DEVICE_METADATA_SPI_CHANNELS);
+      parent(), DEVICE_METADATA_SPI_CHANNELS);
   if (!decoded.is_ok()) {
     return;
   }

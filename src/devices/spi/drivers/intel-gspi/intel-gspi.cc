@@ -70,8 +70,9 @@ zx_status_t GspiDevice::Bind(std::unique_ptr<GspiDevice>* device_ptr) {
     irq_thread_ = std::thread(&GspiDevice::IrqThread, this);
   }
 
-  zx_status_t status =
-      DdkAdd(ddk::DeviceAddArgs("intel-gspi").set_inspect_vmo(inspect_.DuplicateVmo()));
+  zx_status_t status = DdkAdd(ddk::DeviceAddArgs("intel-gspi")
+                                  .set_inspect_vmo(inspect_.DuplicateVmo())
+                                  .forward_metadata(parent(), DEVICE_METADATA_SPI_CHANNELS));
   if (status == ZX_OK) {
     __UNUSED auto dev = device_ptr->release();
   }
@@ -362,8 +363,9 @@ void GspiDevice::DeassertChipSelect() {
 
 zx_status_t GspiDevice::ValidateChildConfig(Con1Reg& con1) {
   auto decoded = ddk::GetEncodedMetadata<fuchsia_hardware_spi_businfo::wire::SpiBusMetadata>(
-      zxdev(), DEVICE_METADATA_SPI_CHANNELS);
+      parent(), DEVICE_METADATA_SPI_CHANNELS);
   if (!decoded.is_ok()) {
+    zxlogf(INFO, "Failed to get metadata %s", decoded.status_string());
     return decoded.error_value();
   }
 

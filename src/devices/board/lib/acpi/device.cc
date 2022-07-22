@@ -220,7 +220,7 @@ void Device::DdkInit(ddk::InitTxn txn) {
     }
   }
 
-  if (metadata_.empty()) {
+  if (metadata_.empty() || !passthrough_dev_) {
     txn.Reply(ZX_OK);
     return;
   }
@@ -228,10 +228,12 @@ void Device::DdkInit(ddk::InitTxn txn) {
   result = ZX_OK;
   switch (bus_type_) {
     case BusType::kSpi:
-      result = DdkAddMetadata(DEVICE_METADATA_SPI_CHANNELS, metadata_.data(), metadata_.size());
+      result = device_add_metadata(passthrough_dev_, DEVICE_METADATA_SPI_CHANNELS, metadata_.data(),
+                                   metadata_.size());
       break;
     case BusType::kI2c:
-      result = DdkAddMetadata(DEVICE_METADATA_I2C_CHANNELS, metadata_.data(), metadata_.size());
+      result = device_add_metadata(passthrough_dev_, DEVICE_METADATA_I2C_CHANNELS, metadata_.data(),
+                                   metadata_.size());
       break;
     default:
       break;
