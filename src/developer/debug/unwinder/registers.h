@@ -107,6 +107,8 @@ class Registers {
   // Return a string describing the value of all registers. Should be useful in debugging.
   std::string Describe() const;
 
+  void Clear() { regs_.clear(); }
+
  private:
   Arch arch_;
   std::map<RegisterID, uint64_t> regs_;

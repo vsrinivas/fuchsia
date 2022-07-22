@@ -33,7 +33,7 @@ using debug::RegisterID;
 using ModuleVector = std::vector<debug_ipc::Module>;
 
 // Default unwinder type to use.
-UnwinderType unwinder_type = UnwinderType::kNgUnwind;
+UnwinderType unwinder_type = UnwinderType::kFuchsia;
 
 // The general registers include thread-specific information (fsbase/gsbase on x64, and tpidr on
 // ARM64). The unwinders don't deal with these registers because unwinding shouldn't affect them.

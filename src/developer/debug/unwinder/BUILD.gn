@@ -27,11 +27,11 @@ static_library("unwinder") {
     deps += [ "//src/developer/debug/shared:elf_h_on_mac" ]
   } else {
     # UnwindLocal() is only available on ELF systems.
-    public += [ "unwind_local.h" ]
-    sources += [
+    public += [
       "third_party/libunwindstack/context.h",
-      "unwind_local.cc",
+      "unwind_local.h",
     ]
+    sources += [ "unwind_local.cc" ]
     if (current_cpu == "x64") {
       sources += [ "third_party/libunwindstack/context_x86_64.S" ]
     }

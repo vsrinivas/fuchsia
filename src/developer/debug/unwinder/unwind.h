@@ -18,7 +18,7 @@ struct Frame {
   enum class Trust {
     kScan,     // From scanning the stack with heuristics, least reliable.
     kFP,       // From the frame pointer.
-    kSSC,      // From the shadow call stack.
+    kSCS,      // From the shadow call stack.
     kCFI,      // From call frame info / .eh_frame section.
     kContext,  // From the input / context, most reliable.
   };
@@ -29,7 +29,8 @@ struct Frame {
   // Trust level of the frame.
   Trust trust;
 
-  // Error when unwinding this frame.
+  // Error when unwinding from this frame, which should be empty except for the
+  // last frame.
   Error error;
 
   // Disallow default constructors.

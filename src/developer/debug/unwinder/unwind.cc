@@ -69,6 +69,45 @@ class CFIUnwinder {
   std::map<uint64_t, DwarfCfi> cfi_map_;
 };
 
+// Unwind from Shadow Call Stacks.
+//
+// It's inherently unreliable to unwind from a shadow call stack, because
+//  1) The shadow call stack provides nothing other than return addresses.
+//  2) A function can choose not to implement shadow call stack, e.g. a leaf
+//     function or a library compiled without SCS, and the unwinder has no way
+//     to detect; those frames will be dropped silently.
+class ShadowCallStackUnwinder {
+ public:
+  explicit ShadowCallStackUnwinder(Memory* scs) : scs_(scs) {}
+
+  Error Step(const Registers& current, Registers& next) {
+    if (current.arch() != Registers::Arch::kArm64) {
+      return Error("Shadow call stack is only supported on arm64");
+    }
+    uint64_t x18;
+    if (auto err = current.Get(RegisterID::kArm64_x18, x18); err.has_err()) {
+      return err;
+    }
+    if (!x18) {
+      return Error("No shadow call stack");
+    }
+    uint64_t ra;
+    if (auto err = scs_->Read(x18 - 8, ra); err.has_err()) {
+      return err;
+    }
+    next.Clear();
+    // A zero ra indicates the beginning of the shadow call stack.
+    if (ra) {
+      next.SetPC(ra);
+    }
+    next.Set(RegisterID::kArm64_x18, x18 - 8);
+    return Success();
+  }
+
+ private:
+  Memory* scs_;
+};
+
 }  // namespace
 
 std::string Frame::Describe() const {
@@ -80,8 +119,8 @@ std::string Frame::Describe() const {
     case Trust::kFP:
       res += "FP";
       break;
-    case Trust::kSSC:
-      res += "SSC";
+    case Trust::kSCS:
+      res += "SCS";
       break;
     case Trust::kCFI:
       res += "CFI";
@@ -107,17 +146,24 @@ std::vector<Frame> Unwind(Memory* memory, const std::vector<uint64_t>& modules,
 
 std::vector<Frame> Unwind(Memory* stack, const std::map<uint64_t, Memory*>& module_map,
                           const Registers& registers, size_t max_depth) {
-  std::vector<Frame> res = {{registers, Frame::Trust::kContext, /* placeholder */ Success()}};
+  std::vector<Frame> res = {{registers, Frame::Trust::kContext, Success()}};
   CFIUnwinder cfi_unwinder(stack, module_map);
+  ShadowCallStackUnwinder scs_unwinder(stack);
 
   while (max_depth--) {
     Registers next(registers.arch());
+    Frame::Trust trust;
 
     Frame& current = res.back();
+    trust = Frame::Trust::kCFI;
     current.error = cfi_unwinder.Step(current.regs, next, current.trust != Frame::Trust::kContext);
 
+    if (current.error.has_err() && scs_unwinder.Step(current.regs, next).ok()) {
+      trust = Frame::Trust::kSCS;
+      current.error = Success();
+    }
+
     if (current.error.has_err()) {
-      // TODO(74320): add more unwinders
       break;
     }
 
@@ -127,7 +173,7 @@ std::vector<Frame> Unwind(Memory* stack, const std::map<uint64_t, Memory*>& modu
       break;
     }
 
-    res.emplace_back(std::move(next), Frame::Trust::kCFI, Success());
+    res.emplace_back(std::move(next), trust, Success());
   }
 
   return res;
