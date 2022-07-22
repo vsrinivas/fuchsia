@@ -17,6 +17,10 @@
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 
+#if defined(__Fuchsia__)
+#include "src/connectivity/network/netstack/udp_serde/udp_serde.h"
+#endif
+
 #include "util.h"
 
 // TODO(C++20): Remove this; std::chrono::duration defines operator<< in c++20. See
@@ -48,6 +52,61 @@ std::pair<sockaddr_storage, socklen_t> GetLoopbackSockaddrAndSocklenForDomain(
     }
   }
 }
+
+#if defined(__Fuchsia__)
+// Saturates `recvfd`'s receive buffers by writing `sendbuf` to `sendfd` N times using `io_method`.
+// `sendbuf` is resized and N picked to ensure that:
+//   - `recvfd`'s associated zircon socket contains `sizeof(kernel buf) - remainder` bytes, where
+//       0 < `remainder` < payload size.
+//   - `recvfd`'s associated Netstack receive buffer contains `M * payload size` bytes, where
+//     `M` > 0.
+// After completion, payloads read out of `recvfd` may be compared against `sendbuf`.
+void FillRxBuffersLeavingRemainderInZirconSocket(const fbl::unique_fd& recvfd,
+                                                 const fbl::unique_fd& sendfd,
+                                                 const IOMethod& io_method,
+                                                 std::vector<char>& sendbuf) {
+  if (!std::getenv(kFastUdpEnvVar)) {
+    FAIL() << "Zircon sockets are only used in Fast UDP";
+  }
+  // Start with the maximum datagram payload size, derived as:
+  // 65535 bytes (max IP packet size) - 20 bytes (IPv4 header) - 8 bytes (UDP header)
+  size_t payload_size = 65507;
+  size_t recv_capacity;
+  ASSERT_NO_FATAL_FAILURE(RxCapacity(recvfd.get(), recv_capacity));
+  zx_info_socket_t zx_socket_info;
+  ASSERT_NO_FATAL_FAILURE(ZxSocketInfoDgram(recvfd.get(), zx_socket_info));
+
+  // Pick a payload size which is less than the maximum datagram payload size and ensures
+  // that the zircon socket has a remainder, as described above.
+  payload_size = std::min(payload_size, zx_socket_info.rx_buf_max - kRxUdpPreludeSize);
+  while (payload_size > 0) {
+    size_t total_size = payload_size + kRxUdpPreludeSize;
+    if (zx_socket_info.rx_buf_max % total_size != 0) {
+      break;
+    }
+    --payload_size;
+  }
+  if (payload_size == 0) {
+    FAIL() << "couldn't find valid UDP payload size for which (zx_socket_info.rx_buf_max % "
+              "payload size) != 0";
+  }
+
+  // It's possible that the receiver's Netstack receive buffer will fill up even when its zircon
+  // socket still has space (because the shuttling routines have lagged). When this happens, the
+  // receiver will drop inbound packets; if enough packets are dropped, we might fail to fill up
+  // the zircon socket. To avoid this scenario, send significantly more than the receiver's total
+  // Rx capacity.
+  size_t payload_count = (2 * recv_capacity) / payload_size;
+
+  sendbuf = std::vector<char>(payload_size, 'a');
+  while (payload_count > 0) {
+    ASSERT_EQ(io_method.ExecuteIO(sendfd.get(), sendbuf.data(), sendbuf.size()),
+              ssize_t(sendbuf.size()))
+        << strerror(errno);
+    --payload_count;
+  }
+}
+#endif  // defined(__Fuchsia__)
 
 void SetUpBoundAndConnectedDatagramSockets(const SocketDomain& domain, fbl::unique_fd& bindfd,
                                            fbl::unique_fd& connectfd) {
@@ -1354,6 +1413,8 @@ TEST(NetDatagramTest, PingIpv4LoopbackAddresses) {
   }
 }
 
+#if defined(__Fuchsia__)
+
 using DomainAndIOMethod = std::tuple<SocketDomain, IOMethod>;
 
 std::string DomainAndIOMethodToString(const testing::TestParamInfo<DomainAndIOMethod>& info) {
@@ -1366,7 +1427,10 @@ std::string DomainAndIOMethodToString(const testing::TestParamInfo<DomainAndIOMe
 
 class IOSendingMethodTest : public testing::TestWithParam<DomainAndIOMethod> {};
 
-TEST_P(IOSendingMethodTest, CloseTerminatesWithRxBufferRemainder) {
+TEST_P(IOSendingMethodTest, CloseTerminatesWithRxZirconSocketRemainder) {
+  if (!std::getenv(kFastUdpEnvVar)) {
+    GTEST_SKIP() << "Zircon sockets are only used in Fast UDP";
+  }
   // Fast datagram sockets on Fuchsia use multiple buffers to store inbound payloads,
   // some of which are in Netstack memory and some of which are in kernel memory.
   // Bytes are shuttled between these buffers using routines that spin until
@@ -1383,48 +1447,10 @@ TEST_P(IOSendingMethodTest, CloseTerminatesWithRxBufferRemainder) {
   fbl::unique_fd recvfd;
   fbl::unique_fd sendfd;
   ASSERT_NO_FATAL_FAILURE(SetUpBoundAndConnectedDatagramSockets(domain, recvfd, sendfd));
-  size_t bound_rx_capacity;
-  ASSERT_NO_FATAL_FAILURE(RxCapacity(recvfd.get(), bound_rx_capacity));
-
-  size_t payload_size = 1000;  // Picked arbitrarily.
-#if defined(__Fuchsia__)
-  if (std::getenv(kFastUdpEnvVar)) {
-    // Pick a payload size that can't be precisely packed into the zircon socket.
-    zx_info_socket_t zx_socket_info;
-    ASSERT_NO_FATAL_FAILURE(ZxSocketInfoDgram(recvfd.get(), zx_socket_info));
-
-    // Derived as 65535 bytes (max IP packet size) - 20 bytes (IPv4 header) - 8 bytes (UDP header).
-    constexpr size_t kMaxDatagramPayloadSize = 65507;
-
-    bool found_unaligned_payload_size = false;
-    while (payload_size < std::min(zx_socket_info.rx_buf_max, kMaxDatagramPayloadSize)) {
-      if (zx_socket_info.rx_buf_max % payload_size != 0) {
-        found_unaligned_payload_size = true;
-        break;
-      }
-      ++payload_size;
-    }
-    if (!found_unaligned_payload_size) {
-      FAIL() << "couldn't find valid UDP payload size for which (sizeof(zircon_socket) % "
-                "payload_size) != 0";
-    }
-  }
-#endif
-
-  // It's possible that the receiver's instack buffer will fill up even when its kernel buffers
-  // still have space (because the shuttling routines have lagged). When this happens, the receiver
-  // will drop inbound packets; if enough packets are dropped, we might fail to fill up the kernel
-  // buffers. To avoid this scenario, send significantly more than the receiver's total Rx capacity.
-  size_t bytes_to_send = bound_rx_capacity * 2;
 
   std::vector<char> buf;
-  buf.resize(payload_size);
-  size_t bytes_sent = 0;
-  while (bytes_sent < bytes_to_send) {
-    ASSERT_EQ(io_method.ExecuteIO(sendfd.get(), buf.data(), payload_size), ssize_t(payload_size))
-        << strerror(errno);
-    bytes_sent += payload_size;
-  }
+  ASSERT_NO_FATAL_FAILURE(
+      FillRxBuffersLeavingRemainderInZirconSocket(recvfd, sendfd, io_method, buf));
 
   struct close_task {
     const std::string name;
@@ -1459,11 +1485,55 @@ TEST_P(IOSendingMethodTest, CloseTerminatesWithRxBufferRemainder) {
   }
 }
 
+TEST_P(IOSendingMethodTest, ReadWithRxZirconSocketRemainder) {
+  if (!std::getenv(kFastUdpEnvVar)) {
+    GTEST_SKIP() << "Zircon sockets are only used in Fast UDP";
+  }
+
+  // Fast datagram sockets on Fuchsia use multiple buffers to store inbound payloads,
+  // some of which are in Netstack memory and some of which are in kernel memory.
+  // Bytes are shuttled between these buffers using goroutines.
+  //
+  // One edge case arises when the kernel buffers have free space, but not so much
+  // space that they can accept the next datagram payload. In this case, the netstack
+  // routines wait until the kernel object can accept the entire payload, in an
+  // operation known as a threshold wait.
+  //
+  // This test exercises this scenario.
+  auto const& [domain, io_method] = GetParam();
+  fbl::unique_fd recvfd;
+  fbl::unique_fd sendfd;
+  ASSERT_NO_FATAL_FAILURE(SetUpBoundAndConnectedDatagramSockets(domain, recvfd, sendfd));
+
+  std::vector<char> buf;
+  ASSERT_NO_FATAL_FAILURE(
+      FillRxBuffersLeavingRemainderInZirconSocket(recvfd, sendfd, io_method, buf));
+
+  zx_info_socket_t zx_socket_info;
+  ASSERT_NO_FATAL_FAILURE(ZxSocketInfoDgram(recvfd.get(), zx_socket_info));
+
+  std::vector<char> recvbuf;
+  recvbuf.resize(buf.size() + 1);
+
+  // Read a number of bytes exceeding the capacity of the Rx kernel buffer. For these
+  // reads to succeed, the Rx routine must have successfully performed a threshold
+  // wait.
+  size_t bytes_read = 0;
+  while (bytes_read <= zx_socket_info.rx_buf_max) {
+    ASSERT_EQ(read(recvfd.get(), recvbuf.data(), recvbuf.size()), ssize_t(buf.size()))
+        << strerror(errno);
+    EXPECT_EQ(std::string_view(recvbuf.data(), buf.size()),
+              std::string_view(buf.data(), buf.size()));
+    bytes_read += buf.size();
+  }
+}
+
 INSTANTIATE_TEST_SUITE_P(IOSendingMethodTests, IOSendingMethodTest,
                          testing::Combine(testing::Values(SocketDomain::IPv4(),
                                                           SocketDomain::IPv6()),
                                           testing::ValuesIn(kSendIOMethods)),
                          DomainAndIOMethodToString);
+#endif  // defined(__Fuchsia__)
 
 class NetDatagramSocketsTestBase {
  protected:
