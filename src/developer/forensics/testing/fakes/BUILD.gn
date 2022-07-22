@@ -42,21 +42,6 @@ executable("fake_data_provider_exe") {
 ###############################################################################
 # SOURCES
 ###############################################################################
-source_set("cobalt") {
-  testonly = true
-
-  sources = [ "cobalt.h" ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.metrics",
-    "//sdk/fidl/fuchsia.metrics.test",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/syslog/cpp",
-    "//src/developer/forensics/utils/cobalt",
-    "//src/lib/fxl",
-  ]
-}
-
 source_set("privacy_settings") {
   testonly = true
 
