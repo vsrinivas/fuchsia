@@ -16,6 +16,7 @@ use {
     std::collections::{HashMap, HashSet},
     std::convert::TryInto,
     std::io::Write,
+    std::path::PathBuf,
     std::time::Duration,
 };
 
@@ -752,6 +753,27 @@ pub async fn run_tests_and_get_outcome<F: Future<Output = ()>>(
     }
 
     test_outcome
+}
+
+pub fn create_reporter<W: 'static + Write + Send + Sync>(
+    filter_ansi: bool,
+    dir: Option<PathBuf>,
+    writer: W,
+) -> Result<output::RunReporter, anyhow::Error> {
+    let stdout_reporter = output::ShellReporter::new(writer);
+    let dir_reporter = dir.map(output::DirectoryWithStdoutReporter::new).transpose()?;
+    let reporter = match (dir_reporter, filter_ansi) {
+        (Some(dir_reporter), false) => output::RunReporter::new(output::MultiplexedReporter::new(
+            stdout_reporter,
+            dir_reporter,
+        )),
+        (Some(dir_reporter), true) => output::RunReporter::new_ansi_filtered(
+            output::MultiplexedReporter::new(stdout_reporter, dir_reporter),
+        ),
+        (None, false) => output::RunReporter::new(stdout_reporter),
+        (None, true) => output::RunReporter::new_ansi_filtered(stdout_reporter),
+    };
+    Ok(reporter)
 }
 
 #[cfg(test)]

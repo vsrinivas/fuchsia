@@ -21,8 +21,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.test.manager:fuchsia.test.manager-rustc",
     "//src/lib/diagnostics/selectors",
     "//src/lib/fidl/rust/fidl",
-    "//src/sys/run_test_suite:lib",
-    "//third_party/rust_crates:anyhow",
   ]
 }
 

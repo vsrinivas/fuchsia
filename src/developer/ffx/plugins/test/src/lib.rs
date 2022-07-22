@@ -165,7 +165,7 @@ async fn run_test<W: 'static + Write + Send + Sync>(
             }
         }
     });
-    let reporter = testing_lib::create_reporter(filter_ansi, output_directory, writer)?;
+    let reporter = run_test_suite_lib::create_reporter(filter_ansi, output_directory, writer)?;
     match run_test_suite_lib::run_tests_and_get_outcome(
         builder_connector.connect().await,
         test_definitions,
