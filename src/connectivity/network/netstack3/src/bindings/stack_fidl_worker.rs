@@ -26,7 +26,8 @@ use futures::{TryFutureExt as _, TryStreamExt as _};
 use log::{debug, error};
 use net_types::{ethernet::Mac, SpecifiedAddr, UnicastAddr};
 use netstack3_core::{
-    add_ip_addr_subnet, add_route, del_ip_addr, del_route, get_all_routes, AddableEntryEither, Ctx,
+    add_ip_addr_subnet, add_route, del_ip_addr, del_route, get_all_routes,
+    transport::tcp::buffer::ReceiveBuffer, AddableEntryEither, Ctx, TcpNonSyncContext,
 };
 
 pub(crate) struct StackFidlWorker<C> {
@@ -51,6 +52,9 @@ where
         + InterfaceEventProducerFactory
         + InterfaceControlRunner,
     C: Clone,
+    <<C as ethernet_worker::EthernetWorkerContext>::NonSyncCtx as TcpNonSyncContext>::ReceiveBuffer: Send,
+    <<C as ethernet_worker::EthernetWorkerContext>::NonSyncCtx as TcpNonSyncContext>::SendBuffer: Send,
+    <<<C as ethernet_worker::EthernetWorkerContext>::NonSyncCtx as TcpNonSyncContext>::ReceiveBuffer as ReceiveBuffer>::Residual: Send,
 {
     pub(crate) async fn serve(ctx: C, stream: StackRequestStream) -> Result<(), fidl::Error> {
         stream
@@ -153,6 +157,9 @@ where
         + InterfaceEventProducerFactory
         + InterfaceControlRunner,
     C: Clone,
+    <<C as ethernet_worker::EthernetWorkerContext>::NonSyncCtx as TcpNonSyncContext>::ReceiveBuffer: Send,
+    <<C as ethernet_worker::EthernetWorkerContext>::NonSyncCtx as TcpNonSyncContext>::SendBuffer: Send,
+    <<<C as ethernet_worker::EthernetWorkerContext>::NonSyncCtx as TcpNonSyncContext>::ReceiveBuffer as ReceiveBuffer>::Residual: Send,
 {
     async fn fidl_add_ethernet_interface(
         self,

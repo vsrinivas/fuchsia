@@ -36,7 +36,7 @@ struct TimerInfo {
 /// A context for specified for a timer type `T` that provides asynchronous
 /// locking to a [`TimerHandler`].
 pub(crate) trait TimerContext<T: Hash + Eq>:
-    Send + Sync + 'static + for<'a> Lockable<'a, <Self as TimerContext<T>>::Handler> + Clone
+    'static + for<'a> Lockable<'a, <Self as TimerContext<T>>::Handler> + Clone
 {
     type Handler: TimerHandler<T>;
 }
@@ -45,7 +45,7 @@ pub(crate) trait TimerContext<T: Hash + Eq>:
 ///
 /// `TimerHandler` is used to communicate expired timers from a
 /// [`TimerDispatcher`] that was spawned with some [`TimerContext`].
-pub(crate) trait TimerHandler<T: Hash + Eq>: Sized + Send + Sync + 'static {
+pub(crate) trait TimerHandler<T: Hash + Eq>: Sized + 'static {
     /// The provided `timer` is expired (its deadline arrived and it wasn't
     /// cancelled or rescheduled).
     fn handle_expired_timer(&mut self, timer: T);
@@ -103,7 +103,7 @@ where
     /// # Panics
     ///
     /// Panics if this `TimerDispatcher` was already spawned.
-    pub(crate) fn spawn<C: TimerContext<T>>(&mut self, ctx: C) {
+    pub(crate) fn spawn<C: TimerContext<T> + Send + Sync>(&mut self, ctx: C) {
         assert!(self.futures_sender.is_none(), "TimerDispatcher already spawned");
         let (sender, mut recv) = mpsc::unbounded();
         self.futures_sender = Some(sender);

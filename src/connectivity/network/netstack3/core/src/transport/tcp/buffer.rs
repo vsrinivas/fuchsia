@@ -15,7 +15,7 @@ use crate::transport::tcp::{
 };
 
 /// Common super trait for both sending and receiving buffer.
-pub trait Buffer: Default + Debug + Send + Sync {
+pub trait Buffer: Default + Debug {
     /// Returns the number of bytes in the buffer that can be read.
     fn len(&self) -> usize;
 
@@ -25,6 +25,7 @@ pub trait Buffer: Default + Debug + Send + Sync {
     /// Returns an empty buffer.
     fn empty() -> Self;
 
+    /// Take the buffer out.
     fn take(&mut self) -> Self {
         mem::replace(self, Self::empty())
     }
@@ -89,7 +90,9 @@ pub trait SendBuffer: Buffer {
 #[derive(Debug, PartialEq)]
 #[cfg_attr(test, derive(Clone))]
 pub enum SendPayload<'a> {
+    /// The payload is contained in a single chunk of memory.
     Contiguous(&'a [u8]),
+    /// The payload straddles across two chunks of memory.
     Straddle(&'a [u8], &'a [u8]),
 }
 

@@ -4,7 +4,7 @@
 
 //! The Transmission Control Protocol (TCP).
 
-pub(crate) mod buffer;
+pub mod buffer;
 mod rtt;
 mod segment;
 mod seqnum;
