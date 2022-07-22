@@ -7,8 +7,8 @@ mod controller;
 use {
     crate::toolkit::controller::{
         blobfs::BlobFsExtractController, far::FarMetaExtractController, fvm::FvmExtractController,
-        zbi::ZbiExtractController, zbi_bootfs::ZbiListBootfsController,
-        zbi_cmdline::ZbiExtractCmdlineController,
+        zbi::ZbiExtractController, zbi_bootfs::ZbiExtractBootfsPackageIndex,
+        zbi_bootfs::ZbiListBootfsController, zbi_cmdline::ZbiExtractCmdlineController,
     },
     scrutiny::prelude::*,
     std::sync::Arc,
@@ -25,6 +25,7 @@ plugin!(
             "/tool/zbi/extract" => ZbiExtractController::default(),
             "/tool/zbi/extract/cmdline" => ZbiExtractCmdlineController::default(),
             "/tool/zbi/list/bootfs" => ZbiListBootfsController::default(),
+            "/tool/zbi/extract/bootfs/packages" => ZbiExtractBootfsPackageIndex::default(),
         }
     ),
     // The toolkit plugin takes no dependencies on the model. It is just a set

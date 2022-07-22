@@ -5,7 +5,7 @@
 use {
     crate::{
         devmgr_config::{DevmgrConfigCollection, DevmgrConfigContents},
-        static_pkgs::collection::{StaticPkgsCollection, StaticPkgsContents, StaticPkgsError},
+        static_pkgs::collection::{StaticPkgsCollection, StaticPkgsError},
     },
     anyhow::{Context, Result},
     fuchsia_archive::Utf8Reader as FarReader,
@@ -17,6 +17,7 @@ use {
     scrutiny_utils::{
         artifact::{ArtifactReader, BlobFsArtifactReader},
         key_value::parse_key_value,
+        package::PackageIndexContents,
         url::from_package_name_variant_path,
     },
     std::{
@@ -36,7 +37,7 @@ static STATIC_PKGS_LISTING_PATH: &str = "data/static_packages";
 #[derive(Debug)]
 struct StaticPkgsData {
     deps: HashSet<PathBuf>,
-    static_pkgs: StaticPkgsContents,
+    static_pkgs: PackageIndexContents,
 }
 
 #[derive(Debug)]

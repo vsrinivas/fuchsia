@@ -9,7 +9,10 @@ use {
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
     scrutiny_utils::golden::{CompareResult, GoldenFile},
     serde_json,
-    std::{collections::HashSet, path::PathBuf},
+    std::{
+        collections::HashSet,
+        path::{Path, PathBuf},
+    },
 };
 
 const SOFT_TRANSITION_MSG : &str = "
@@ -46,22 +49,35 @@ pub async fn verify(cmd: &Command, tmp_dir: Option<&PathBuf>) -> Result<HashSet<
     );
     let scrutiny_output =
         launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
+
+    let unscrutinized_dirs = std::collections::HashSet::from([
+        // /blob dir files are unscrutinized, because their presence is dictated
+        // by the boot package index, which itself is scrutinized the same way
+        // static_packages is scrutinized.
+        Some(Path::new("/blob")),
+    ]);
+
     let bootfs_files: Vec<String> = serde_json::from_str(&scrutiny_output)
         .context(format!("Failed to deserialize scrutiny output: {}", scrutiny_output))?;
+    let total_bootfs_file_count = bootfs_files.len();
+
+    let non_blob_files = bootfs_files
+        .into_iter()
+        .filter(|filename| !unscrutinized_dirs.contains(&Path::new(filename).parent()))
+        .collect::<Vec<String>>();
+
     for golden_file_path in cmd.golden.iter() {
         let golden_file =
-            GoldenFile::open(golden_file_path).context("Failed to open the golden file")?;
-        match golden_file.compare(bootfs_files.clone()) {
+            GoldenFile::open(&golden_file_path).context("Failed to open the golden file")?;
+        match golden_file.compare(non_blob_files.clone()) {
             CompareResult::Matches => Ok(()),
             CompareResult::Mismatch { errors } => {
-                println!("Bootfs file mismatch");
-                println!("");
+                println!("Bootfs file mismatch\n");
                 for error in errors.iter() {
                     println!("{}", error);
                 }
-                println!("");
                 println!(
-                    "If you intended to change the bootfs contents, please acknowledge it by updating {:?} with the added or removed lines.",
+                    "\nIf you intended to change the bootfs contents, please acknowledge it by updating {:?} with the added or removed lines",
                     golden_file_path,
                 );
                 println!("{}", SOFT_TRANSITION_MSG);
@@ -72,5 +88,11 @@ pub async fn verify(cmd: &Command, tmp_dir: Option<&PathBuf>) -> Result<HashSet<
         deps.insert(golden_file_path.clone());
     }
 
-    Ok(deps)
+    // TODO(fxbug.dev/97517): Remove this check when we support scrutiny of bootfs package
+    // index!
+    if non_blob_files.len() != total_bootfs_file_count {
+        return Err(anyhow!("Entries under /blob not supported yet!"));
+    } else {
+        return Ok(deps);
+    }
 }

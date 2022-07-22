@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::package::{deserialize_pkg_index, serialize_pkg_index, PackageIndexContents},
     anyhow::{Error, Result},
     byteorder::{LittleEndian, ReadBytesExt},
     log::trace,
@@ -64,6 +65,13 @@ impl BootfsDirectoryEntry {
 pub enum BootfsError {
     #[error("Bootfs magic doesn't match expected")]
     BootfsMagicInvalid,
+}
+
+#[derive(Deserialize, Serialize, PartialEq, Debug)]
+pub struct BootfsPackageIndex {
+    // Must be optional to re-use otherwise identical serde logic.
+    #[serde(serialize_with = "serialize_pkg_index", deserialize_with = "deserialize_pkg_index")]
+    pub bootfs_pkgs: Option<PackageIndexContents>,
 }
 
 /// Responsible for extracting the zbi from the package and reading the zbi

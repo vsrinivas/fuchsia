@@ -5,19 +5,10 @@
 use {
     crate::devmgr_config::DevmgrConfigError,
     fuchsia_merkle::Hash,
-    fuchsia_url::{PackageName, PackageVariant},
     scrutiny::prelude::DataCollection,
-    serde::{
-        de::{self, Deserializer, Error as _, MapAccess, Visitor},
-        ser::Serializer,
-        Deserialize, Serialize,
-    },
-    std::{
-        collections::{HashMap, HashSet},
-        fmt,
-        path::PathBuf,
-        str::FromStr,
-    },
+    scrutiny_utils::package::{deserialize_pkg_index, serialize_pkg_index, PackageIndexContents},
+    serde::{Deserialize, Serialize},
+    std::{collections::HashSet, path::PathBuf},
     thiserror::Error,
     uuid::Uuid,
 };
@@ -81,146 +72,12 @@ pub enum StaticPkgsError {
     FailedToParseStaticPkgs { static_pkgs_path: PathBuf, parse_error: String },
 }
 
-/// Static packages file contains lines of the form:
-/// [pkg-name-variant-path]=[merkle-root-hash].
-pub type StaticPkgsContents = HashMap<(PackageName, Option<PackageVariant>), Hash>;
-
 #[derive(Deserialize, Serialize)]
 pub struct StaticPkgsCollection {
     pub deps: HashSet<PathBuf>,
-    #[serde(
-        serialize_with = "serialize_static_pkgs",
-        deserialize_with = "deserialize_static_pkgs"
-    )]
-    pub static_pkgs: Option<StaticPkgsContents>,
+    #[serde(serialize_with = "serialize_pkg_index", deserialize_with = "deserialize_pkg_index")]
+    pub static_pkgs: Option<PackageIndexContents>,
     pub errors: Vec<StaticPkgsError>,
-}
-
-/// Serialize static packages listing contents. A custom strategy is necessary because
-/// map keys are stored as `(PackageName, Option<PackageVariant>)`, which must be manually converted
-/// to a string representation.
-pub fn serialize_static_pkgs<S>(
-    static_pkgs: &Option<StaticPkgsContents>,
-    serializer: S,
-) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    match static_pkgs {
-        None => serializer.serialize_none(),
-        Some(static_pkgs) => {
-            let mut map = HashMap::new();
-            for ((name, variant), hash) in static_pkgs {
-                match variant {
-                    None => {
-                        map.insert(name.to_string(), hash.to_string());
-                    }
-                    Some(variant) => {
-                        map.insert(
-                            format!("{}/{}", name.as_ref(), variant.as_ref()),
-                            hash.to_string(),
-                        );
-                    }
-                }
-            }
-            serializer.serialize_some(&map)
-        }
-    }
-}
-
-/// Deserialize static packages listing contents. A custom strategy is necessary because
-/// map keys are stored as `(PackageName, Option<PackageVariant>)`, which must be manually converted
-/// from a string representation.
-pub fn deserialize_static_pkgs<'de, D>(
-    deserializer: D,
-) -> Result<Option<StaticPkgsContents>, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    struct OptVisitor;
-    struct MapVisitor;
-
-    impl<'de> Visitor<'de> for OptVisitor {
-        type Value = Option<StaticPkgsContents>;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            formatter.write_str("optional static_pkgs map")
-        }
-
-        fn visit_none<E>(self) -> Result<Self::Value, E>
-        where
-            E: de::Error,
-        {
-            Ok(None)
-        }
-
-        fn visit_some<D>(self, deserializer: D) -> Result<Self::Value, D::Error>
-        where
-            D: Deserializer<'de>,
-        {
-            let visitor = MapVisitor;
-            Ok(Some(deserializer.deserialize_any(visitor)?))
-        }
-    }
-
-    impl<'de> Visitor<'de> for MapVisitor {
-        type Value = StaticPkgsContents;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-            formatter.write_str("static_pkgs map")
-        }
-
-        fn visit_map<A>(self, mut map_access: A) -> Result<Self::Value, A::Error>
-        where
-            A: MapAccess<'de>,
-        {
-            let mut map = HashMap::with_capacity(map_access.size_hint().unwrap_or(0));
-            loop {
-                let entry: Option<(String, String)> = map_access.next_entry()?;
-                match entry {
-                    None => break,
-                    Some((name_variant_string, hash_string)) => {
-                        let mut name_parts = vec![];
-                        let mut variant_part = None;
-                        for part in name_variant_string.split("/") {
-                            if let Some(prev_tail) = variant_part {
-                                name_parts.push(prev_tail);
-                            }
-                            variant_part = Some(part);
-                        }
-                        let name_string = name_parts.join("/");
-                        let name = PackageName::from_str(&name_string).map_err(|err| {
-                            A::Error::custom(&format!(
-                                "Failed to parse package name from string: {}: {}",
-                                name_string, err
-                            ))
-                        })?;
-                        let variant = variant_part
-                            .map(|variant| {
-                                PackageVariant::from_str(variant).map_err(|err| {
-                                    A::Error::custom(&format!(
-                                        "Failed to parse package variant from string: {}: {}",
-                                        variant, err
-                                    ))
-                                })
-                            })
-                            .map_or(Ok(None), |r| r.map(Some))?;
-                        let hash = Hash::from_str(&hash_string).map_err(|err| {
-                            A::Error::custom(&format!(
-                                "Failed to parse package hash from string: {}: {}",
-                                hash_string, err
-                            ))
-                        })?;
-                        map.insert((name, variant), hash);
-                    }
-                }
-            }
-            Ok(map)
-        }
-    }
-
-    let visitor = OptVisitor;
-    deserializer.deserialize_option(visitor)
 }
 
 impl DataCollection for StaticPkgsCollection {
