@@ -3,15 +3,19 @@
 // found in the LICENSE file.
 
 use crate::fs::*;
+use crate::lock::{Mutex, RwLock};
 use crate::logging::not_implemented;
 use crate::task::*;
 use crate::types::as_any::AsAny;
 use crate::types::*;
+use std::collections::BTreeMap;
 use std::sync::Arc;
 use zerocopy::AsBytes;
 
 /// The version of selinux_status_t this kernel implements.
 const SELINUX_STATUS_VERSION: u32 = 1;
+
+const SELINUX_PERMS: &[&[u8]] = &[b"add", b"find", b"set"];
 
 struct SeLinuxFs;
 impl FileSystemOps for SeLinuxFs {
@@ -31,6 +35,7 @@ impl SeLinuxFs {
                 SeLinuxNode::new(|| Ok(SeCheckReqProt)),
                 mode!(IFREG, 0o644),
             )
+            .add_entry(b"access", AccessFileNode::new(), mode!(IFREG, 0o666))
             .add_entry(
                 b"deny_unknown",
                 // Allow all unknown object classes/permissions.
@@ -49,7 +54,7 @@ impl SeLinuxFs {
                 )?,
                 mode!(IFREG, 0o444),
             )
-            .add_node_entry(b"class", dynamic_directory(&fs, SeLinuxClassDirectoryDelegate))
+            .add_node_entry(b"class", dynamic_directory(&fs, SeLinuxClassDirectoryDelegate::new()))
             .build_root();
 
         Ok(fs)
@@ -179,26 +184,113 @@ impl SeLinuxFile for SeCheckReqProt {
     }
 }
 
-struct SeLinuxClassDirectoryDelegate;
+struct AccessFile {
+    seqno: u64,
+}
+
+impl FileOps for AccessFile {
+    fileops_impl_nonseekable!();
+    fileops_impl_nonblocking!();
+
+    fn read(
+        &self,
+        _file: &FileObject,
+        current_task: &CurrentTask,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        // Format is allowed decided autitallow auditdeny seqno flags
+        // Everything but seqno must be in hexadecimal format and represents a bits field.
+        let content = format!("ffffffff ffffffff ffffffff 0 {} 0\n", self.seqno);
+        let bytes = content.as_bytes();
+        current_task.mm.write_all(data, &bytes)
+    }
+
+    fn write(
+        &self,
+        _file: &FileObject,
+        _current_task: &CurrentTask,
+        data: &[UserBuffer],
+    ) -> Result<usize, Errno> {
+        Ok(UserBuffer::get_total_length(data)?)
+    }
+}
+
+struct AccessFileNode {
+    seqno: Mutex<u64>,
+}
+
+impl AccessFileNode {
+    fn new() -> Self {
+        Self { seqno: Mutex::new(0) }
+    }
+}
+
+impl FsNodeOps for AccessFileNode {
+    fn create_file_ops(
+        &self,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
+        let seqno = {
+            let mut writer = self.seqno.lock();
+            *writer += 1;
+            *writer
+        };
+        Ok(Box::new(AccessFile { seqno }))
+    }
+}
+
+struct SeLinuxClassDirectoryDelegate {
+    entries: RwLock<BTreeMap<FsString, FsNodeHandle>>,
+}
+
+impl SeLinuxClassDirectoryDelegate {
+    fn new() -> Self {
+        Self { entries: RwLock::new(BTreeMap::new()) }
+    }
+}
 
 impl DirectoryDelegate for SeLinuxClassDirectoryDelegate {
     fn list(&self, _fs: &Arc<FileSystem>) -> Result<Vec<DynamicDirectoryEntry>, Errno> {
-        Ok(vec![])
+        Ok(self
+            .entries
+            .read()
+            .iter()
+            .map(|(name, node)| DynamicDirectoryEntry {
+                entry_type: DirectoryEntryType::DIR,
+                name: name.clone(),
+                inode: Some(node.inode_num),
+            })
+            .collect())
     }
 
     fn lookup(
         &self,
         _current_task: &CurrentTask,
         fs: &Arc<FileSystem>,
-        _name: &FsStr,
+        name: &FsStr,
     ) -> Result<Arc<FsNode>, Errno> {
-        Ok(StaticDirectoryBuilder::new(&fs)
-            .add_entry(b"index", ByteVecFile::new(b"0\n".to_vec()), mode!(IFREG, 0o444))
-            .add_node_entry(
-                b"perms",
-                StaticDirectoryBuilder::new(&fs).set_mode(mode!(IFDIR, 0o555)).build(),
-            )
-            .build())
+        let mut entries = self.entries.write();
+        let next_index = entries.len() + 1;
+        Ok(entries
+            .entry(name.to_vec())
+            .or_insert_with(|| {
+                let index = format!("{}\n", next_index).into_bytes();
+                let mut perms = StaticDirectoryBuilder::new(&fs).set_mode(mode!(IFDIR, 0o555));
+                for (i, perm) in SELINUX_PERMS.iter().enumerate() {
+                    perms = perms.add_entry(
+                        perm,
+                        ByteVecFile::new(format!("{}\n", i + 1).as_bytes().to_vec()),
+                        mode!(IFREG, 0o444),
+                    );
+                }
+                StaticDirectoryBuilder::new(&fs)
+                    .add_entry(b"index", ByteVecFile::new(index), mode!(IFREG, 0o444))
+                    .add_node_entry(b"perms", perms.build())
+                    .set_mode(mode!(IFDIR, 0o555))
+                    .build()
+            })
+            .clone())
     }
 }
 

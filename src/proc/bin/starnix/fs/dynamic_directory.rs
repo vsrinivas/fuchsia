@@ -5,7 +5,7 @@
 use crate::auth::FsCred;
 use crate::fs::{
     emit_dotdot, fileops_impl_directory, DirectoryEntryType, DirentSink, FileObject, FileOps,
-    FileSystem, FsNode, FsNodeOps, FsStr, FsString, SeekOrigin,
+    FileSystem, FsNode, FsNodeHandle, FsNodeOps, FsStr, FsString, SeekOrigin,
 };
 use crate::task::CurrentTask;
 use crate::types::*;
@@ -70,6 +70,31 @@ impl<D: DirectoryDelegate> FsNodeOps for Arc<DynamicDirectory<D>> {
         name: &FsStr,
     ) -> Result<Arc<FsNode>, Errno> {
         self.0.lookup(current_task, &node.fs(), name)
+    }
+
+    fn mknod(
+        &self,
+        _node: &FsNode,
+        _name: &FsStr,
+        _mode: FileMode,
+        _dev: DeviceType,
+        _owner: FsCred,
+    ) -> Result<FsNodeHandle, Errno> {
+        error!(EROFS)
+    }
+
+    fn mkdir(
+        &self,
+        _node: &FsNode,
+        _name: &FsStr,
+        _mode: FileMode,
+        _owner: FsCred,
+    ) -> Result<FsNodeHandle, Errno> {
+        error!(EROFS)
+    }
+
+    fn unlink(&self, _parent: &FsNode, _name: &FsStr, _child: &FsNodeHandle) -> Result<(), Errno> {
+        error!(EROFS)
     }
 }
 

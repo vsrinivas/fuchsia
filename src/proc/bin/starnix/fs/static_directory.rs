@@ -65,7 +65,7 @@ impl<'a> StaticDirectoryBuilder<'a> {
 
     /// Set the mode of the directory. The type must always be IFDIR.
     pub fn set_mode(mut self, mode: FileMode) -> Self {
-        assert!(self.mode.is_dir());
+        assert!(mode.is_dir());
         self.mode = mode;
         self
     }
