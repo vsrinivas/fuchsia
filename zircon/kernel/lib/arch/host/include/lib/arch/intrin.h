@@ -7,6 +7,10 @@
 #ifndef ZIRCON_KERNEL_LIB_ARCH_HOST_INCLUDE_LIB_ARCH_INTRIN_H_
 #define ZIRCON_KERNEL_LIB_ARCH_HOST_INCLUDE_LIB_ARCH_INTRIN_H_
 
+#if defined(__aarch64__)
+#include <arm_acle.h>
+#endif
+
 #ifdef __cplusplus
 
 #include <cstdint>
