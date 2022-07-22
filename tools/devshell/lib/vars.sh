@@ -766,6 +766,7 @@ function fx-run-ninja {
     ${NINJA_STATUS+"NINJA_STATUS=${NINJA_STATUS}"} \
     ${GOMA_DISABLED+"GOMA_DISABLED=$GOMA_DISABLED"} \
     ${TMPDIR+"TMPDIR=$TMPDIR"} \
+    ${CLICOLOR_FORCE+"CLICOLOR_FORCE=$CLICOLOR_FORCE"} \
     "${rbe_wrapper[@]}" \
     "$cmd" "${args[@]}")
 
