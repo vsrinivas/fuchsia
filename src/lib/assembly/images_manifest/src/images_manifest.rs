@@ -200,7 +200,7 @@ pub struct BlobfsContents {
 /// Contains unique set of blobs.
 #[derive(Debug, Default, Deserialize, PartialEq, Serialize)]
 #[serde(transparent)]
-pub struct PackageSetBlobInfo(BTreeSet<PackageBlob>);
+pub struct PackageSetBlobInfo(pub BTreeSet<PackageBlob>);
 
 impl BlobfsContents {
     /// Add base package info into BlobfsContents

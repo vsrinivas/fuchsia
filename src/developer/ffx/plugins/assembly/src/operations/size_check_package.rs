@@ -435,14 +435,14 @@ fn compute_budget_results(
                 package_breakdown.entry(blob.package.clone()).or_insert(PackageSizeInfo {
                     name: "".to_string(),
                     proportional_size: 0,
-                    size: 0,
+                    used_space_in_blobfs: 0,
                     blobs: vec![],
                 });
             package_result.proportional_size += count.size / count.share_count;
-            package_result.size += count.size;
+            package_result.used_space_in_blobfs += count.size;
             package_result.blobs.push(PackageBlobSizeInfo {
                 merkle: blob.hash,
-                size: count.size,
+                used_space_in_blobfs: count.size,
                 share_count: count.share_count,
                 path_in_package: "".to_string(),
             });
@@ -1100,26 +1100,26 @@ mod tests {
                   "package_breakdown": {
                     test_fs.path("obj/src/sys/pkg/bin/pkg-cache/pkg-cache/package_manifest.json").to_str().unwrap(): {
                       "proportional_size": 53,
-                      "size": 159,
+                      "used_space_in_blobfs": 159,
                       "name": "",
                       "blobs": [
                         {
                             "merkle": "0e56473237b6b2ce39358c11a0fbd2f89902f246d966898d7d787c9025124d51",
                             "path_in_package": "",
-                            "size": 159,
+                            "used_space_in_blobfs": 159,
                             "share_count": 3,
                         }
                       ]
                     },
                     test_fs.path("obj/src/sys/pkg/bin/pkgfs/pkgfs/package_manifest.json").to_str().unwrap(): {
                       "proportional_size": 53,
-                      "size": 159,
+                      "used_space_in_blobfs": 159,
                       "name": "",
                       "blobs": [
                         {
                             "merkle": "0e56473237b6b2ce39358c11a0fbd2f89902f246d966898d7d787c9025124d51",
                             "path_in_package": "",
-                            "size": 159,
+                            "used_space_in_blobfs": 159,
                             "share_count": 3,
                         }
                       ]
@@ -1134,13 +1134,13 @@ mod tests {
                   "package_breakdown": {
                     test_fs.path("obj/src/connectivity/bluetooth/core/bt-gap/bt-gap/package_manifest.json").to_str().unwrap(): {
                       "proportional_size": 53,
-                      "size": 159,
+                      "used_space_in_blobfs": 159,
                       "name": "",
                       "blobs": [
                         {
                             "merkle": "0e56473237b6b2ce39358c11a0fbd2f89902f246d966898d7d787c9025124d51",
                             "path_in_package": "",
-                            "size": 159,
+                            "used_space_in_blobfs": 159,
                             "share_count": 3,
                         }
                       ]
@@ -1462,18 +1462,18 @@ mod tests {
                         PackageSizeInfo {
                             name: "".to_string(),
                             proportional_size: 70, /* 90/2 + 50/2 */
-                            size: 140,
+                            used_space_in_blobfs: 140,
                             blobs: vec![
                                 PackageBlobSizeInfo {
                                     merkle: blob2_hash.clone(),
-                                    size: 50,
+                                    used_space_in_blobfs: 50,
                                     share_count: 2,
                                     path_in_package: "".to_string(),
                                 },
                                 PackageBlobSizeInfo {
                                     merkle: blob1_hash.clone(),
                                     path_in_package: "".to_string(),
-                                    size: 90,
+                                    used_space_in_blobfs: 90,
                                     share_count: 2,
                                 },
                             ],
@@ -1484,11 +1484,11 @@ mod tests {
                         PackageSizeInfo {
                             name: "".to_string(),
                             proportional_size: 45, /* 90/2 */
-                            size: 90,
+                            used_space_in_blobfs: 90,
                             blobs: vec![PackageBlobSizeInfo {
                                 merkle: blob1_hash.clone(),
                                 path_in_package: "".to_string(),
-                                size: 90,
+                                used_space_in_blobfs: 90,
                                 share_count: 2,
                             }],
                         },
@@ -1505,11 +1505,11 @@ mod tests {
                     PackageSizeInfo {
                         name: "".to_string(),
                         proportional_size: 25, /* 50/2 */
-                        size: 50,
+                        used_space_in_blobfs: 50,
                         blobs: vec![PackageBlobSizeInfo {
                             merkle: blob2_hash.clone(),
                             path_in_package: "".to_string(),
-                            size: 50,
+                            used_space_in_blobfs: 50,
                             share_count: 2,
                         }],
                     },

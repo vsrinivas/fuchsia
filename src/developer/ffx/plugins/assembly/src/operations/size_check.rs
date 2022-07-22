@@ -8,9 +8,9 @@ use serde::Serialize;
 #[derive(Debug, Serialize, Eq, PartialEq, Default)]
 pub struct PackageSizeInfo {
     pub name: String,
-    /// Size of the package if each blob is counted fully.
-    pub size: u64,
-    /// Size of the package if each blob is divided equally among all the packages that reference it.
+    /// Space used by this package in blobfs if each blob is counted fully.
+    pub used_space_in_blobfs: u64,
+    /// Size of the package in blobfs if each blob is divided equally among all the packages that reference it.
     pub proportional_size: u64,
     /// Blobs in this package and information about their size.
     pub blobs: Vec<PackageBlobSizeInfo>,
@@ -20,8 +20,8 @@ pub struct PackageSizeInfo {
 pub struct PackageBlobSizeInfo {
     pub merkle: Hash,
     pub path_in_package: String,
-    /// Size of the blob on target.
-    pub size: u64,
+    /// Space used by this blob in blobfs
+    pub used_space_in_blobfs: u64,
     /// Number of occurrences of the blob across all packages.
     pub share_count: u64,
 }
