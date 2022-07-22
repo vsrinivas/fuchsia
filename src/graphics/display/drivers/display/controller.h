@@ -53,8 +53,8 @@ class Controller : public ControllerParent,
                    public ddk::DisplayCaptureInterfaceProtocol<Controller>,
                    public ddk::EmptyProtocol<ZX_PROTOCOL_DISPLAY_CONTROLLER> {
  public:
-  Controller(zx_device_t* parent);
-  ~Controller();
+  explicit Controller(zx_device_t* parent);
+  ~Controller() override;
 
   static void PopulateDisplayMode(const edid::timing_params_t& params, display_mode_t* mode);
 
