@@ -87,11 +87,7 @@ inline zx_status_t WaitQueue::BlockEtcPostamble(const Deadline& deadline) TA_REQ
     timer.Set(deadline, &WaitQueue::TimeoutHandler, (void*)current_thread);
   }
 
-  ktrace_ptr(TAG_KWAIT_BLOCK, this, 0, 0);
-
   Scheduler::Block();
-
-  ktrace_ptr(TAG_KWAIT_UNBLOCK, this, current_thread->wait_queue_state().blocked_status_, 0);
 
   // we don't really know if the timer fired or not, so it's better safe to try to cancel it
   if (deadline.when() != ZX_TIME_INFINITE) {

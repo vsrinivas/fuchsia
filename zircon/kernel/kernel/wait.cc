@@ -309,7 +309,6 @@ bool WaitQueue::WakeOne(zx_status_t wait_queue_error) {
   t = Peek(current_time());
   if (t) {
     Dequeue(t, wait_queue_error);
-    ktrace_ptr(TAG_KWAIT_WAKE, this, 0, 0);
 
     // Wake up the new thread, putting it in a run queue on a cpu.
     Scheduler::Unblock(t);
@@ -396,7 +395,6 @@ void WaitQueue::WakeAll(zx_status_t wait_queue_error) {
   }
 
   DEBUG_ASSERT(collection_.Count() == 0);
-  ktrace_ptr(TAG_KWAIT_WAKE, this, 0, 0);
 
   // Wake up the new thread(s), putting it in a run queue on a cpu.
   Scheduler::Unblock(ktl::move(list));

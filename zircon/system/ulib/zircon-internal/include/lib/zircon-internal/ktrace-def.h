@@ -142,10 +142,6 @@ KTRACE_DEF(0x143, 32B, PORT_QUEUE, IPC)      // id, size
 KTRACE_DEF(0x150, 32B, WAIT_ONE, IPC)       // id, signals, timeoutlo, timeouthi
 KTRACE_DEF(0x151, 32B, WAIT_ONE_DONE, IPC)  // id, status, pending
 
-KTRACE_DEF(0x160, 32B, KWAIT_BLOCK, SCHEDULER)    // queue_hi, queue_hi
-KTRACE_DEF(0x161, 32B, KWAIT_WAKE, SCHEDULER)     // queue_hi, queue_hi, is_mutex
-KTRACE_DEF(0x162, 32B, KWAIT_UNBLOCK, SCHEDULER)  // queue_hi, queue_hi, blocked_status
-
 KTRACE_DEF(0x170, 32B, VCPU_ENTER, TASKS)
 KTRACE_DEF(0x171, 32B, VCPU_EXIT, TASKS)     // meta, exit_address_hi, exit_address_lo
 KTRACE_DEF(0x172, 32B, VCPU_BLOCK, TASKS)    // meta

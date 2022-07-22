@@ -344,8 +344,6 @@ __NO_INLINE void Mutex::ReleaseContendedMutex(Thread* current_thread, uintptr_t 
   wait_.WakeThreads(1, {cbk, &woken});
   tracer.KernelMutexWake(this, woken, wait_.Count());
 
-  ktrace_ptr(TAG_KWAIT_WAKE, &wait_, 1, 0);
-
   // So, the mutex is now in one of three states.  It can be...
   //
   // 1) Owned and contested (we woke a thread up, and there are still waiters)
