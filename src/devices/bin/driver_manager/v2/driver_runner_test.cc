@@ -33,8 +33,42 @@ namespace fcd = fuchsia_component_decl;
 
 using namespace testing;
 using namespace inspect::testing;
-
 using namespace dfv2;
+
+struct NodeChecker {
+  std::vector<std::string> node_name;
+  std::vector<std::string> child_names;
+  std::map<std::string, std::string> str_properties;
+};
+
+void CheckNode(const inspect::Hierarchy& hierarchy, const NodeChecker& checker) {
+  auto node = hierarchy.GetByPath(checker.node_name);
+  ASSERT_NE(nullptr, node);
+
+  if (node->children().size() != checker.child_names.size()) {
+    printf("Mismatched children\n");
+    for (size_t i = 0; i < node->children().size(); i++) {
+      printf("Child %ld : %s\n", i, node->children()[i].name().c_str());
+    }
+    ASSERT_EQ(node->children().size(), checker.child_names.size());
+  }
+
+  for (auto& child : checker.child_names) {
+    auto ptr = node->GetByPath({child});
+    if (!ptr) {
+      printf("Failed to find child %s\n", child.c_str());
+    }
+    ASSERT_NE(nullptr, ptr);
+  }
+
+  for (auto& property : checker.str_properties) {
+    auto prop = node->node().get_property<inspect::StringPropertyValue>(property.first);
+    if (!prop) {
+      printf("Failed to find property %s\n", property.first.c_str());
+    }
+    ASSERT_EQ(property.second, prop->value());
+  }
+}
 
 class FakeContext : public fpromise::context {
  public:
@@ -1678,61 +1712,38 @@ TEST_F(DriverRunnerTest, StartAndInspect) {
   auto root_driver = StartRootDriver("fuchsia-boot:///#meta/root-driver.cm", driver_runner);
   ASSERT_EQ(ZX_OK, root_driver.status_value());
 
-  auto heirarchy = Inspect(driver_runner);
-  ASSERT_EQ("root", heirarchy.node().name());
-  ASSERT_EQ(3ul, heirarchy.children().size());
+  auto hierarchy = Inspect(driver_runner);
+  ASSERT_EQ("root", hierarchy.node().name());
+  ASSERT_EQ(3ul, hierarchy.children().size());
 
-  // root/node_topology
-  {
-    auto node_topology = heirarchy.GetByPath({"node_topology"});
-    ASSERT_NE(nullptr, node_topology);
-    ASSERT_EQ(1ul, node_topology->children().size());
-    ASSERT_EQ(0ul, node_topology->node().properties().size());
-  }
+  ASSERT_NO_FATAL_FAILURE(CheckNode(hierarchy, {
+                                                   .node_name = {"node_topology"},
+                                                   .child_names = {"root"},
+                                               }));
 
-  // root/node_topology/root
-  {
-    auto root = heirarchy.GetByPath({"node_topology", "root"});
-    ASSERT_NE(nullptr, root);
-    ASSERT_EQ(1ul, root->children().size());
-    ASSERT_EQ(1ul, root->node().properties().size());
+  ASSERT_NO_FATAL_FAILURE(
+      CheckNode(hierarchy, {.node_name = {"node_topology", "root"},
+                            .child_names = {"second"},
+                            .str_properties = {
+                                {"driver", "fuchsia-boot:///#meta/root-driver.cm"},
+                            }}));
 
-    auto driver = root->node().get_property<inspect::StringPropertyValue>("driver");
-    ASSERT_EQ("fuchsia-boot:///#meta/root-driver.cm", driver->value());
-  }
+  ASSERT_NO_FATAL_FAILURE(
+      CheckNode(hierarchy, {.node_name = {"node_topology", "root", "second"},
+                            .child_names = {},
+                            .str_properties = {
+                                {"offers", "fuchsia.package.RenamedA, fuchsia.package.RenamedB"},
+                                {"symbols", "symbol-A, symbol-B"},
+                                {"driver", "unbound"},
+                            }}));
 
-  // root/node_topology/root/second
-  {
-    auto second = heirarchy.GetByPath({"node_topology", "root", "second"});
-    ASSERT_NE(nullptr, second);
-    ASSERT_EQ(0ul, second->children().size());
-    ASSERT_EQ(3ul, second->node().properties().size());
+  ASSERT_NO_FATAL_FAILURE(CheckNode(hierarchy, {
+                                                   .node_name = {"unbound_composites"},
+                                               }));
 
-    auto offers = second->node().get_property<inspect::StringPropertyValue>("offers");
-    ASSERT_EQ("fuchsia.package.RenamedA, fuchsia.package.RenamedB", offers->value());
-
-    auto symbols = second->node().get_property<inspect::StringPropertyValue>("symbols");
-    ASSERT_EQ("symbol-A, symbol-B", symbols->value());
-
-    auto driver = second->node().get_property<inspect::StringPropertyValue>("driver");
-    ASSERT_EQ("unbound", driver->value());
-  }
-
-  // root/unbound_composites
-  {
-    auto unbound_composites = heirarchy.GetByPath({"unbound_composites"});
-    ASSERT_EQ(0ul, unbound_composites->children().size());
-    ASSERT_EQ(0ul, unbound_composites->node().properties().size());
-    ASSERT_NE(nullptr, unbound_composites);
-  }
-
-  // root/orphan_nodes
-  {
-    auto orphan_nodes = heirarchy.GetByPath({"orphan_nodes"});
-    ASSERT_EQ(0ul, orphan_nodes->children().size());
-    ASSERT_EQ(0ul, orphan_nodes->node().properties().size());
-    ASSERT_NE(nullptr, orphan_nodes);
-  }
+  ASSERT_NO_FATAL_FAILURE(CheckNode(hierarchy, {
+                                                   .node_name = {"orphan_nodes"},
+                                               }));
 
   StopDriverComponent(std::move(root_driver.value()));
 }
@@ -1794,78 +1805,52 @@ TEST_F(DriverRunnerTest, StartAndInspect_CompositeDriver) {
                                      .colocate = true,
                                  });
 
-  auto heirarchy = Inspect(driver_runner);
-  ASSERT_EQ("root", heirarchy.node().name());
-  ASSERT_EQ(3ul, heirarchy.children().size());
+  auto hierarchy = Inspect(driver_runner);
+  ASSERT_EQ("root", hierarchy.node().name());
+  ASSERT_EQ(3ul, hierarchy.children().size());
 
-  // root/node_topology
-  {
-    auto node_topology = heirarchy.GetByPath({"node_topology"});
-    ASSERT_NE(nullptr, node_topology);
-    ASSERT_EQ(1ul, node_topology->children().size());
-    ASSERT_EQ(0ul, node_topology->node().properties().size());
-  }
+  ASSERT_NO_FATAL_FAILURE(CheckNode(hierarchy, {
+                                                   .node_name = {"node_topology"},
+                                                   .child_names = {"root"},
+                                               }));
 
-  // root/node_topology/root
-  {
-    auto root = heirarchy.GetByPath({"node_topology", "root"});
-    ASSERT_NE(nullptr, root);
-    ASSERT_EQ(2ul, root->children().size());
-    ASSERT_EQ(1ul, root->node().properties().size());
+  ASSERT_NO_FATAL_FAILURE(
+      CheckNode(hierarchy, {.node_name = {"node_topology", "root"},
+                            .child_names = {"part-1", "part-2"},
+                            .str_properties = {
+                                {"driver", "fuchsia-boot:///#meta/root-driver.cm"},
+                            }}));
 
-    auto driver = root->node().get_property<inspect::StringPropertyValue>("driver");
-    ASSERT_EQ("fuchsia-boot:///#meta/root-driver.cm", driver->value());
-  }
+  ASSERT_NO_FATAL_FAILURE(CheckNode(hierarchy, {.node_name = {"node_topology", "root", "part-1"},
+                                                .child_names = {"composite"},
+                                                .str_properties = {
+                                                    {"offers", "fuchsia.package.RenamedA"},
+                                                    {"driver", "unbound"},
+                                                }}));
 
-  // root/node_topology/root/part-1
-  {
-    auto part1 = heirarchy.GetByPath({"node_topology", "root", "part-1"});
-    ASSERT_NE(nullptr, part1);
-    ASSERT_EQ(1ul, part1->children().size());
-    ASSERT_EQ(2ul, part1->node().properties().size());
+  ASSERT_NO_FATAL_FAILURE(CheckNode(
+      hierarchy,
+      {.node_name = {"node_topology", "root", "part-1", "composite"}, .child_names = {"child"}}));
 
-    auto offers = part1->node().get_property<inspect::StringPropertyValue>("offers");
-    ASSERT_EQ("fuchsia.package.RenamedA", offers->value());
+  ASSERT_NO_FATAL_FAILURE(CheckNode(
+      hierarchy, {
+                     .node_name = {"node_topology", "root", "part-1", "composite", "child"},
+                 }));
 
-    auto driver = part1->node().get_property<inspect::StringPropertyValue>("driver");
-    ASSERT_EQ("unbound", driver->value());
-  }
+  ASSERT_NO_FATAL_FAILURE(CheckNode(hierarchy, {.node_name = {"node_topology", "root", "part-2"},
+                                                .child_names = {"composite"},
+                                                .str_properties = {
+                                                    {"offers", "fuchsia.package.RenamedB"},
+                                                    {"driver", "unbound"},
+                                                }}));
 
-  // root/node_topology/root/composite
-  {
-    auto composite = heirarchy.GetByPath({"node_topology", "root", "part-1", "composite"});
-    ASSERT_NE(nullptr, composite);
-    ASSERT_EQ(1ul, composite->children().size());
-    ASSERT_EQ(1ul, composite->node().properties().size());
+  ASSERT_NO_FATAL_FAILURE(CheckNode(hierarchy, {
+                                                   .node_name = {"unbound_composites"},
+                                               }));
 
-    auto child = composite->GetByPath({"child"});
-    ASSERT_NE(nullptr, child);
-    ASSERT_EQ(0ul, child->children().size());
-    ASSERT_EQ(1ul, child->node().properties().size());
-  }
-
-  // root/node_topology/root/part-2
-  {
-    auto part2 = heirarchy.GetByPath({"node_topology", "root", "part-2"});
-    ASSERT_NE(nullptr, part2);
-    ASSERT_EQ(1ul, part2->children().size());
-    ASSERT_EQ(2ul, part2->node().properties().size());
-
-    auto offers = part2->node().get_property<inspect::StringPropertyValue>("offers");
-    ASSERT_EQ("fuchsia.package.RenamedB", offers->value());
-  }
-
-  // root/unbound_composites
-  {
-    auto unbound_composites = heirarchy.GetByPath({"unbound_composites"});
-    ASSERT_NE(nullptr, unbound_composites);
-  }
-
-  // root/orphan_nodes
-  {
-    auto orphan_nodes = heirarchy.GetByPath({"orphan_nodes"});
-    ASSERT_NE(nullptr, orphan_nodes);
-  }
+  ASSERT_NO_FATAL_FAILURE(CheckNode(hierarchy, {
+                                                   .node_name = {"orphan_nodes"},
+                                               }));
 
   StopDriverComponent(std::move(root_driver.value()));
 }
