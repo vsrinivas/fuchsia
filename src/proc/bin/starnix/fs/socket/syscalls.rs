@@ -176,7 +176,7 @@ pub fn sys_bind(
                 current_task.abstract_socket_namespace.bind(name, socket)?;
             } else {
                 let mode = file.node().info().mode;
-                let mode = current_task.fs.apply_umask(mode).with_type(FileMode::IFSOCK);
+                let mode = current_task.fs().apply_umask(mode).with_type(FileMode::IFSOCK);
                 let (parent, basename) =
                     current_task.lookup_parent_at(FdNumber::AT_FDCWD, &name)?;
 

@@ -55,12 +55,8 @@ pub fn create_kernel_and_task_with_fs(
         fs = Some(FsContext::new(TmpFs::new()));
     }
 
-    let task = Task::create_process_without_parent(
-        &kernel,
-        CString::new("test-task").unwrap(),
-        fs.unwrap(),
-    )
-    .expect("failed to create first task");
+    let task = Task::create_process_without_parent(&kernel, CString::new("test-task").unwrap(), fs)
+        .expect("failed to create first task");
 
     // Take the lock on thread group and task in the correct order to ensure any wrong ordering
     // will trigger the tracing-mutex at the right call site.
@@ -79,7 +75,7 @@ pub fn create_task(kernel: &Arc<Kernel>, task_name: &str) -> CurrentTask {
     let task = Task::create_process_without_parent(
         kernel,
         CString::new(task_name).unwrap(),
-        create_pkgfs(),
+        Some(create_pkgfs()),
     )
     .expect("failed to create second task");
 

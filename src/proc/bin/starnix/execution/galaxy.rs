@@ -48,7 +48,7 @@ impl Galaxy {
         let task = Task::create_process_without_parent(
             &self.kernel,
             binary_path.clone(),
-            self.root_fs.clone(),
+            Some(self.root_fs.clone()),
         )?;
         let init_task = self.kernel.pids.read().get_task(1);
         if let Some(init_task) = init_task {
@@ -82,22 +82,23 @@ pub async fn create_galaxy() -> Result<Galaxy, Error> {
     kernel.cmdline = CONFIG.kernel_cmdline.as_bytes().to_vec();
     let kernel = Arc::new(kernel);
 
+    let mut init_task = create_init_task(&kernel)?;
     let fs_context = create_fs_context(&kernel, &pkg_dir_proxy)?;
-    let mut init_task = create_init_task(&kernel, &fs_context)?;
+    init_task.set_fs(fs_context.clone());
+    let system_task = create_task(&kernel, Some(fs_context), "kthread", Credentials::root())?;
 
-    mount_filesystems(&init_task, &pkg_dir_proxy)?;
+    mount_filesystems(&system_task, &pkg_dir_proxy)?;
 
     // Hack to allow mounting apexes before apexd is working.
     // TODO(tbodt): Remove once apexd works.
-    mount_apexes(&init_task)?;
+    mount_apexes(&system_task)?;
 
     // Run all common features that were specified in the .cml.
-    run_features(&CONFIG.features, &init_task)
+    run_features(&CONFIG.features, &system_task)
         .map_err(|e| anyhow!("Failed to initialize features: {:?}", e))?;
     // TODO: This should probably be part of the "feature" CONFIGuration.
-
     let kernel = init_task.kernel().clone();
-    let root_fs = init_task.fs.clone();
+    let root_fs = init_task.fs().clone();
 
     kernel
         .device_registry
@@ -123,7 +124,6 @@ pub async fn create_galaxy() -> Result<Galaxy, Error> {
     execute_task(init_task, |result| {
         tracing::info!("Finished running init process: {:?}", result);
     });
-    let system_task = create_task(&kernel, &fs_context, "kthread", Credentials::root())?;
     if let Some(startup_file_path) = startup_file_path {
         wait_for_init_file(&startup_file_path, &system_task).await?;
     };
@@ -189,23 +189,23 @@ fn mount_apexes(init_task: &CurrentTask) -> Result<(), Error> {
 
 fn create_task(
     kernel: &Arc<Kernel>,
-    fs: &Arc<FsContext>,
+    fs: Option<Arc<FsContext>>,
     name: &str,
     credentials: Credentials,
 ) -> Result<CurrentTask, Error> {
-    let task = Task::create_process_without_parent(kernel, to_cstr(&name.to_string()), fs.clone())?;
+    let task = Task::create_process_without_parent(kernel, to_cstr(&name.to_string()), fs)?;
     task.set_creds(credentials);
     Ok(task)
 }
 
-fn create_init_task(kernel: &Arc<Kernel>, fs: &Arc<FsContext>) -> Result<CurrentTask, Error> {
+fn create_init_task(kernel: &Arc<Kernel>) -> Result<CurrentTask, Error> {
     let credentials = Credentials::from_passwd(&CONFIG.init_user)?;
     let name = if CONFIG.init.is_empty() { "" } else { &CONFIG.init[0] };
-    create_task(kernel, fs, name, credentials)
+    create_task(kernel, None, name, credentials)
 }
 
 fn mount_filesystems(
-    init_task: &CurrentTask,
+    system_task: &CurrentTask,
     pkg_dir_proxy: &fio::DirectorySynchronousProxy,
 ) -> Result<(), Error> {
     let mut mounts_iter = CONFIG.mounts.iter();
@@ -213,12 +213,12 @@ fn mount_filesystems(
     let _ = mounts_iter.next();
     for mount_spec in mounts_iter {
         let (mount_point, child_fs) = create_filesystem_from_spec(
-            init_task.kernel(),
-            Some(&init_task),
+            system_task.kernel(),
+            Some(&system_task),
             pkg_dir_proxy,
             mount_spec,
         )?;
-        let mount_point = init_task.lookup_path_from_root(mount_point)?;
+        let mount_point = system_task.lookup_path_from_root(mount_point)?;
         mount_point.mount(child_fs, MountFlags::empty())?;
     }
     Ok(())
@@ -231,7 +231,7 @@ async fn wait_for_init_file(
     // TODO(fxb/96299): Use inotify machinery to wait for the file.
     loop {
         fasync::Timer::new(fasync::Duration::from_millis(100).after_now()).await;
-        let root = current_task.fs.root();
+        let root = current_task.fs().root();
         let mut context = LookupContext::default();
         match current_task.lookup_path(&mut context, root, startup_file_path.as_bytes()) {
             Ok(_) => break,

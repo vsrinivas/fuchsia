@@ -743,7 +743,7 @@ mod tests {
         // Create a device file that points to the `zero` device (which is automatically
         // registered in the kernel).
         current_task
-            .fs
+            .fs()
             .root()
             .create_node(&current_task, b"zero", mode!(IFCHR, 0o666), DeviceType::ZERO)
             .expect("create_node");
@@ -772,7 +772,7 @@ mod tests {
 
         // Create a node.
         let node = &current_task
-            .fs
+            .fs()
             .root()
             .create_node(&current_task, b"zero", FileMode::IFCHR, DeviceType::ZERO)
             .expect("create_node")
@@ -839,7 +839,7 @@ mod tests {
 
         // Create a node.
         let node = &current_task
-            .fs
+            .fs()
             .root()
             .create_node(&current_task, b"foo", FileMode::IFREG, DeviceType::NONE)
             .expect("create_node")

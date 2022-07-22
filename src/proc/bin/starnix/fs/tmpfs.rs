@@ -259,7 +259,7 @@ mod test {
 
         let path = b"test.bin";
         let _file = current_task
-            .fs
+            .fs()
             .root()
             .create_node(&current_task, path, mode!(IFREG, 0o777), DeviceType::NONE)
             .unwrap();
@@ -303,7 +303,7 @@ mod test {
         // Open an empty file
         let path = b"test.bin";
         let _file = current_task
-            .fs
+            .fs()
             .root()
             .create_node(&current_task, path, mode!(IFREG, 0o777), DeviceType::NONE)
             .unwrap();
@@ -365,7 +365,7 @@ mod test {
         let (_kernel, current_task) = create_kernel_and_task();
 
         {
-            let root = &current_task.fs.root().entry;
+            let root = &current_task.fs().root().entry;
             let usr = root.create_dir(b"usr").expect("failed to create usr");
             root.create_dir(b"etc").expect("failed to create usr/etc");
             usr.create_dir(b"bin").expect("failed to create usr/bin");

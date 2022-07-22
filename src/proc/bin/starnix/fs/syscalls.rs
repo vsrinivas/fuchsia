@@ -348,7 +348,7 @@ pub fn sys_chroot(current_task: &CurrentTask, user_path: UserCString) -> Result<
         return error!(ENOTDIR);
     }
 
-    current_task.fs.chroot(name);
+    current_task.fs().chroot(name);
     Ok(())
 }
 
@@ -357,7 +357,7 @@ pub fn sys_chdir(current_task: &CurrentTask, user_path: UserCString) -> Result<(
     if !name.entry.node.is_dir() {
         return error!(ENOTDIR);
     }
-    current_task.fs.chdir(name);
+    current_task.fs().chdir(name);
     Ok(())
 }
 
@@ -366,7 +366,7 @@ pub fn sys_fchdir(current_task: &CurrentTask, fd: FdNumber) -> Result<(), Errno>
     if !file.name.entry.node.is_dir() {
         return error!(ENOTDIR);
     }
-    current_task.fs.chdir(file.name.clone());
+    current_task.fs().chdir(file.name.clone());
     Ok(())
 }
 
@@ -930,10 +930,10 @@ pub fn sys_getcwd(
     buf: UserAddress,
     size: usize,
 ) -> Result<usize, Errno> {
-    let mut cwd = current_task.fs.cwd().path();
+    let mut cwd = current_task.fs().cwd().path();
 
     let mut bytes = vec![];
-    if !cwd.starts_with(&current_task.fs.root().path()) {
+    if !cwd.starts_with(&current_task.fs().root().path()) {
         bytes.append(&mut b"(unreachable)".to_vec());
     }
 
@@ -947,7 +947,7 @@ pub fn sys_getcwd(
 }
 
 pub fn sys_umask(current_task: &CurrentTask, umask: FileMode) -> Result<FileMode, Errno> {
-    Ok(current_task.fs.set_umask(umask))
+    Ok(current_task.fs().set_umask(umask))
 }
 
 fn get_fd_flags(flags: u32) -> FdFlags {

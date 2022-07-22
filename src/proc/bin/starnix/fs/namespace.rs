@@ -341,7 +341,7 @@ impl NamespaceNode {
     ) -> Result<NamespaceNode, Errno> {
         self.entry.node.check_access(current_task, Access::WRITE)?;
         let owner = current_task.as_fscred();
-        let mode = current_task.fs.apply_umask(mode);
+        let mode = current_task.fs().apply_umask(mode);
         Ok(self.with_new_entry(self.entry.create_node(name, mode, dev, owner)?))
     }
 
@@ -389,7 +389,7 @@ impl NamespaceNode {
             Ok(self.clone())
         } else if basename == b".." {
             // Make sure this can't escape a chroot
-            if *self == current_task.fs.root() {
+            if *self == current_task.fs().root() {
                 return Ok(self.clone());
             }
             Ok(self.parent().unwrap_or_else(|| self.clone()))
@@ -409,7 +409,7 @@ impl NamespaceNode {
                         child = match child.entry.node.readlink(current_task)? {
                             SymlinkTarget::Path(link_target) => {
                                 let link_directory = if link_target[0] == b'/' {
-                                    current_task.fs.root()
+                                    current_task.fs().root()
                                 } else {
                                     self.clone()
                                 };

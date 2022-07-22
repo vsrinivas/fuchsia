@@ -917,7 +917,7 @@ pub fn sys_unshare(current_task: &CurrentTask, flags: u32) -> Result<(), Errno> 
         if !current_task.creds().has_capability(CAP_SYS_ADMIN) {
             return error!(EPERM);
         }
-        current_task.fs.unshare_namespace();
+        current_task.fs().unshare_namespace();
     }
 
     Ok(())

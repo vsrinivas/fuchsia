@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use fuchsia_zircon as zx;
+use once_cell::sync::OnceCell;
 use std::cmp;
 use std::convert::TryFrom;
 use std::ffi::CString;
@@ -135,7 +136,9 @@ pub struct Task {
     pub mm: Arc<MemoryManager>,
 
     /// The file system for this task.
-    pub fs: Arc<FsContext>,
+    ///
+    /// The only case when this is not set is for the initial task while the FsContext is built.
+    fs: OnceCell<Arc<FsContext>>,
 
     /// The namespace for abstract AF_UNIX sockets for this task.
     pub abstract_socket_namespace: Arc<AbstractUnixSocketNamespace>,
@@ -177,12 +180,21 @@ impl Task {
         thread: zx::Thread,
         files: Arc<FdTable>,
         mm: Arc<MemoryManager>,
-        fs: Arc<FsContext>,
+        // The only case where fs should be None if when building the initial task that is the
+        // used to build the initial FsContext.
+        fs: Option<Arc<FsContext>>,
         creds: Credentials,
         abstract_socket_namespace: Arc<AbstractUnixSocketNamespace>,
         abstract_vsock_namespace: Arc<AbstractVsockSocketNamespace>,
         exit_signal: Option<Signal>,
     ) -> CurrentTask {
+        let fs = {
+            let result = OnceCell::new();
+            if let Some(fs) = fs {
+                result.get_or_init(|| fs);
+            }
+            result
+        };
         let result = CurrentTask::new(Task {
             id,
             thread_group,
@@ -229,14 +241,25 @@ impl Task {
         *self.creds.write() = creds;
     }
 
+    pub fn fs(&self) -> &Arc<FsContext> {
+        self.fs.get().unwrap()
+    }
+
+    pub fn set_fs(&self, fs: Arc<FsContext>) {
+        self.fs.set(fs).map_err(|_| "Cannot set fs multiple times").unwrap();
+    }
+
     /// Create a task that is the leader of a new thread group.
     ///
     /// This function creates an underlying Zircon process to host the new
     /// task.
+    ///
+    /// root_fs should only be None for the init task, and set_fs should be called as soon as the
+    /// FsContext is build.
     pub fn create_process_without_parent(
         kernel: &Arc<Kernel>,
         initial_name: CString,
-        root_fs: Arc<FsContext>,
+        root_fs: Option<Arc<FsContext>>,
     ) -> Result<CurrentTask, Errno> {
         let mut pids = kernel.pids.write();
         let pid = pids.allocate_pid();
@@ -337,7 +360,7 @@ impl Task {
             Some(Signal::try_from(UncheckedSignal::new(raw_child_exist_signal))?)
         };
 
-        let fs = if flags & (CLONE_FS as u64) != 0 { self.fs.clone() } else { self.fs.fork() };
+        let fs = if flags & (CLONE_FS as u64) != 0 { self.fs().clone() } else { self.fs().fork() };
         let files =
             if flags & (CLONE_FILES as u64) != 0 { self.files.clone() } else { self.files.fork() };
 
@@ -389,7 +412,7 @@ impl Task {
             thread,
             files,
             mm,
-            fs,
+            Some(fs),
             creds,
             self.abstract_socket_namespace.clone(),
             self.abstract_vsock_namespace.clone(),
@@ -613,9 +636,9 @@ impl CurrentTask {
     ) -> Result<(NamespaceNode, &'a FsStr), Errno> {
         let dir = if !path.is_empty() && path[0] == b'/' {
             path = &path[1..];
-            self.fs.root()
+            self.fs().root()
         } else if dir_fd == FdNumber::AT_FDCWD {
-            self.fs.cwd()
+            self.fs().cwd()
         } else {
             let file = self.files.get(dir_fd)?;
             file.name.clone()
@@ -679,7 +702,7 @@ impl CurrentTask {
                     context.remaining_follows -= 1;
                     match name.entry.node.readlink(self)? {
                         SymlinkTarget::Path(path) => {
-                            let dir = if path[0] == b'/' { self.fs.root() } else { parent };
+                            let dir = if path[0] == b'/' { self.fs().root() } else { parent };
                             self.resolve_open_path(context, dir, &path, mode, flags)
                         }
                         SymlinkTarget::Node(node) => Ok(node),
@@ -858,7 +881,7 @@ impl CurrentTask {
     /// Resolves symlinks.
     pub fn lookup_path_from_root(&self, path: &FsStr) -> Result<NamespaceNode, Errno> {
         let mut context = LookupContext::default();
-        self.lookup_path(&mut context, self.fs.root(), path)
+        self.lookup_path(&mut context, self.fs().root(), path)
     }
 
     pub fn exec(
