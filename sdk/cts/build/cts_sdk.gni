@@ -73,7 +73,6 @@ template("cts_sdk") {
         "cts/pkg/fidl_cpp/BUILD.gn",
         "cts/pkg/fidl_cpp_base/BUILD.gn",
         "cts/pkg/fidl_cpp_sync/BUILD.gn",
-        "cts/pkg/fidl_test_support/BUILD.gn",
         "cts/pkg/fit-promise/BUILD.gn",
         "cts/pkg/fit/BUILD.gn",
         "cts/pkg/inspect/BUILD.gn",
