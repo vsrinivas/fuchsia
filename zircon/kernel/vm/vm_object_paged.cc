@@ -798,9 +798,8 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
       } else {
         uint64_t new_len = len;
         if (!TrimRange(offset, len, size_locked(), &new_len)) {
-          return ZX_OK;
-        }
-        if (new_len == 0) {
+          // No remaining range to process. Set len to 0 so that the top level loop can exit.
+          len = 0;
           return ZX_OK;
         }
         len = new_len;
@@ -809,9 +808,9 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
     return ZX_OK;
   };
 
-  // As we may need to wait on arbitrary page requests we just keep running this until the commit
-  // process finishes with success.
-  for (;;) {
+  // As we may need to wait on arbitrary page requests we just keep running this as long as there is
+  // a non-zero range to process.
+  while (len > 0) {
     uint64_t committed_len = 0;
     zx_status_t commit_status =
         cow_pages_locked()->CommitRangeLocked(offset, len, &committed_len, &page_request);
@@ -939,12 +938,10 @@ zx_status_t VmObjectPaged::CommitRangeInternal(uint64_t offset, uint64_t len, bo
       }
     }
 
-    // If commit was successful we can stop here.
-    if (commit_status == ZX_OK) {
-      DEBUG_ASSERT(len == 0);
-      return ZX_OK;
-    }
+    // If commit was successful we should have no more to process.
+    DEBUG_ASSERT(commit_status != ZX_OK || len == 0);
   }
+  return ZX_OK;
 }
 
 zx_status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len) {

@@ -5498,4 +5498,47 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(SliceOpZero, 0) {
                                                              sizeof(range), &num_ranges, nullptr));
 }
 
+// Tests a racing resize while a commit is blocked on a page request.
+TEST_WITH_AND_WITHOUT_TRAP_DIRTY(CommitResizeRace, ZX_VMO_RESIZABLE) {
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  // Create the VMO and supply only one page. Let the commit fault the other one in.
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(2, create_option, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  // The VMO hasn't been modified yet.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Commit all the pages.
+  TestThread t([vmo]() -> bool {
+    return vmo->vmo().op_range(ZX_VMO_OP_COMMIT, 0, 2 * zx_system_get_page_size(), nullptr, 0) ==
+           ZX_OK;
+  });
+  ASSERT_TRUE(t.Start());
+
+  // We should see a READ request for the unpopulated page.
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 1, 1, ZX_TIME_INFINITE));
+
+  // Resize down the VMO invalidating the unpopulated page, so that the commit has no work to do
+  // when woken up from the page request wait.
+  ASSERT_TRUE(vmo->Resize(1));
+
+  // Since the remaining page was already supplied, the commit should succeed.
+  ASSERT_TRUE(t.Wait());
+
+  // Resize should have modified the VMO.
+  ASSERT_TRUE(pager.VerifyModified(vmo));
+  // Querying the modified state should have reset the modified flag.
+  ASSERT_FALSE(pager.VerifyModified(vmo));
+
+  // Verify VMO contents and dirty ranges.
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+}
+
 }  // namespace pager_tests
