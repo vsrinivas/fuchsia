@@ -37,7 +37,15 @@ impl SysFs {
                     )
                     .add_node_entry(
                         b"fuse",
-                        StaticDirectoryBuilder::new(&fs).set_mode(mode!(IFDIR, 0o755)).build(),
+                        StaticDirectoryBuilder::new(&fs)
+                            .set_mode(mode!(IFDIR, 0o755))
+                            .add_node_entry(
+                                b"connections",
+                                StaticDirectoryBuilder::new(&fs)
+                                    .set_mode(mode!(IFDIR, 0o755))
+                                    .build(),
+                            )
+                            .build(),
                     )
                     .build(),
             )
