@@ -90,7 +90,7 @@ zx_status_t SimFirmware::SetupIovarTable() {
   // The table initialized with information of all iovars. Note: passing std::nullopt to the second
   // field means that the size check is customized by handler functions, passing std::nullptr to the
   // third or the fourth field means that the handler is not supported.
-  static const IovarMetadata kIovarInfoTable[] = {
+  const IovarMetadata kIovarInfoTable[] = {
       {"allmulti", sizeof(sim_iface_entry_t::allmulti), &SimFirmware::IovarIfaceVarSet,
        &SimFirmware::IovarIfaceVarGet, offsetof(sim_iface_entry_t, allmulti)},
       {"ampdu_ba_wsize", sizeof(uint32_t), &SimFirmware::IovarSet, &SimFirmware::IovarGet,
