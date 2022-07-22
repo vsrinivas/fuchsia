@@ -76,6 +76,12 @@ const char* EfiStatusToString(efi_status status);
 // Convert efi memory type code to zbi memory type code.
 uint32_t EfiToZbiMemRangeType(uint32_t efi_mem_type);
 
+// Convert an integer to big endian byte order
+uint64_t ToBigEndian(uint64_t val);
+
+// Convert an given integer, assuming in big endian to little endian order.
+uint64_t BigToHostEndian(uint64_t val);
+
 }  // namespace gigaboot
 
 #endif  // SRC_FIRMWARE_GIGABOOT_CPP_UTILS_H_

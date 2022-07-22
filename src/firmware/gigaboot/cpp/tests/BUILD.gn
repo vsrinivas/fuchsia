@@ -7,6 +7,7 @@ import("//build/test.gni")
 test("unittests") {
   sources = [
     "boot_zbi_items_tests.cc",
+    "fastboot_test.cc",
     "gpt_tests.cc",
     "mock_boot_service.cc",
     "mock_boot_service.h",
@@ -14,6 +15,7 @@ test("unittests") {
   public_deps = [
     "..:lib",
     "//sdk/lib/fit",
+    "//src/firmware/lib/fastboot/test:utils",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/zbitl",
     "//zircon/kernel/lib/efi",

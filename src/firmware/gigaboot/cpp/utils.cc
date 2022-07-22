@@ -72,4 +72,14 @@ uint32_t EfiToZbiMemRangeType(uint32_t efi_mem_type) {
   return ZBI_MEM_RANGE_RESERVED;
 }
 
+uint64_t ToBigEndian(uint64_t val) {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+  return __builtin_bswap64(val);
+#else
+  return val;
+#endif
+}
+
+uint64_t BigToHostEndian(uint64_t val) { return ToBigEndian(val); }
+
 }  // namespace gigaboot

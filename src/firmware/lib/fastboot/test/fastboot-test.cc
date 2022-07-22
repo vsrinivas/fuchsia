@@ -8,6 +8,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fastboot/fastboot.h>
+#include <lib/fastboot/test/test-transport.h>
 #include <lib/fidl-async/cpp/bind.h>
 
 #include <unordered_map>
@@ -27,51 +28,6 @@
 namespace fastboot {
 
 namespace {
-
-using Packets = std::vector<std::string>;
-
-class TestTransport : public Transport {
- public:
-  void AddInPacket(const void* data, size_t size) {
-    const char* start = static_cast<const char*>(data);
-    in_packets_.insert(in_packets_.begin(), std::string(start, start + size));
-  }
-
-  template <typename T>
-  void AddInPacket(const T& container) {
-    return AddInPacket(container.data(), container.size());
-  }
-
-  const Packets& GetOutPackets() { return out_packets_; }
-
-  zx::status<size_t> ReceivePacket(void* dst, size_t capacity) override {
-    if (in_packets_.empty()) {
-      return zx::error(ZX_ERR_BAD_STATE);
-    }
-
-    const std::string& packet = in_packets_.back();
-    if (packet.size() > capacity) {
-      return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
-    }
-
-    size_t size = packet.size();
-    memcpy(dst, packet.data(), size);
-    in_packets_.pop_back();
-    return zx::ok(size);
-  }
-
-  size_t PeekPacketSize() override { return in_packets_.empty() ? 0 : in_packets_.back().size(); }
-
-  // Send a packet over the transport.
-  zx::status<> Send(std::string_view packet) override {
-    out_packets_.push_back(std::string(packet.data(), packet.size()));
-    return zx::ok();
-  }
-
- private:
-  Packets in_packets_;
-  Packets out_packets_;
-};
 
 void CheckPacketsEqual(const Packets& lhs, const Packets& rhs) {
   ASSERT_EQ(lhs.size(), rhs.size());

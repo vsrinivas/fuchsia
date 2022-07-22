@@ -10,6 +10,13 @@ group("test") {
   deps = [ ":fastboot-test-package" ]
 }
 
+source_set("utils") {
+  public = [ "../include/lib/fastboot/test/test-transport" ]
+  sources = [ "test-transport.cc" ]
+  public_configs = [ "..:include" ]
+  deps = [ "//zircon/system/ulib/zxc" ]
+}
+
 test("fastboot-test") {
   sources = [
     "fastboot-test.cc",
@@ -20,6 +27,7 @@ test("fastboot-test") {
     "../include",
   ]
   deps = [
+    ":utils",
     "..:lib",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_llcpp",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_llcpp",
