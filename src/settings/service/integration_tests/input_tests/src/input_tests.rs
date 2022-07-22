@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::lib::{InputTest, Mocks};
+use crate::common::{InputTest, Mocks};
 use anyhow::Error;
 use async_trait::async_trait;
 use fidl_fuchsia_camera3::{
@@ -14,7 +14,7 @@ use fuchsia_component_test::LocalComponentHandles;
 use futures::{StreamExt, TryStreamExt};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
-mod lib;
+mod common;
 
 #[async_trait]
 impl Mocks for InputTest {

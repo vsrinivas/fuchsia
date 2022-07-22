@@ -10,14 +10,15 @@ import("//build/rust/rustc_test.gni")
 rustc_test("bin") {
   name = "input_integration_test"
   edition = "2021"
-  source_root = "input_tests.rs"
+  source_root = "src/input_tests.rs"
   sources = [
-    "input_tests.rs",
-    "lib.rs",
+    "src/common.rs",
+    "src/input_tests.rs",
   ]
   deps = [
     "//sdk/fidl/fuchsia.camera3:fuchsia.camera3-rustc",
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",

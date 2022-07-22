@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::lib::PrivacyTest;
-mod lib;
+use crate::common::PrivacyTest;
+mod common;
 
 struct PrivacyInfo {
     pub user_data_sharing_consent: Option<bool>,

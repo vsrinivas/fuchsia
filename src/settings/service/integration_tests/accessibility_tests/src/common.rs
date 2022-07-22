@@ -3,15 +3,16 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
-use fidl_fuchsia_settings::*;
+use fidl::endpoints::DiscoverableProtocolMarker;
+use fidl_fuchsia_settings::{AccessibilityMarker, AccessibilityProxy};
 use fuchsia_component_test::{ChildOptions, RealmBuilder, RealmInstance};
 use utils;
 
 const COMPONENT_URL: &str = "#meta/setui_service.cm";
 
-pub struct PrivacyTest;
+pub struct AccessibilityTest;
 
-impl PrivacyTest {
+impl AccessibilityTest {
     pub async fn create_realm() -> Result<RealmInstance, Error> {
         let builder = RealmBuilder::new().await?;
         // Add setui_service as child of the realm builder.
@@ -21,7 +22,7 @@ impl PrivacyTest {
             builder,
             settings: &setui_service,
             has_config_data: true,
-            capabilities: vec!["fuchsia.settings.Privacy"],
+            capabilities: vec![AccessibilityMarker::PROTOCOL_NAME],
         };
         // Add basic Settings service realm information.
         utils::create_realm_basic(&info).await?;
@@ -29,10 +30,10 @@ impl PrivacyTest {
         Ok(instance)
     }
 
-    pub fn connect_to_privacymarker(instance: &RealmInstance) -> PrivacyProxy {
+    pub fn connect_to_accessibilitymarker(instance: &RealmInstance) -> AccessibilityProxy {
         return instance
             .root
-            .connect_to_protocol_at_exposed_dir::<PrivacyMarker>()
-            .expect("connecting to Privacy");
+            .connect_to_protocol_at_exposed_dir::<AccessibilityMarker>()
+            .expect("connecting to Accessibility");
     }
 }

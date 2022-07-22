@@ -4,7 +4,8 @@
 
 use anyhow::Error;
 use async_trait::async_trait;
-use fidl_fuchsia_settings::*;
+use fidl::endpoints::DiscoverableProtocolMarker;
+use fidl_fuchsia_settings::{InputMarker, InputProxy};
 use fuchsia_component_test::{
     Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
 };
@@ -36,7 +37,7 @@ impl InputTest {
             builder,
             settings: &setui_service,
             has_config_data: true,
-            capabilities: vec!["fuchsia.settings.Input"],
+            capabilities: vec![InputMarker::PROTOCOL_NAME],
         };
         // Add basic Settings service realm information.
         utils::create_realm_basic(&info).await?;

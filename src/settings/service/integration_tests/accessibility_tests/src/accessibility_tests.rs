@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::lib::AccessibilityTest;
-use fidl_fuchsia_settings::*;
+use crate::common::AccessibilityTest;
+use fidl_fuchsia_settings::{
+    AccessibilitySettings, CaptionFontFamily, CaptionFontStyle, CaptionsSettings,
+    ColorBlindnessType, EdgeStyle,
+};
 use fidl_fuchsia_ui_types::ColorRgba;
-mod lib;
+mod common;
 
 #[fuchsia::test]
 async fn test_accessibility_set_all() {

@@ -10,13 +10,14 @@ import("//build/rust/rustc_test.gni")
 rustc_test("bin") {
   name = "privacy_integration_test"
   edition = "2021"
-  source_root = "privacy_tests.rs"
+  source_root = "src/privacy_tests.rs"
   sources = [
-    "lib.rs",
-    "privacy_tests.rs",
+    "src/common.rs",
+    "src/privacy_tests.rs",
   ]
   deps = [
     "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component-test",
     "//src/settings/service/integration_tests/utils",
