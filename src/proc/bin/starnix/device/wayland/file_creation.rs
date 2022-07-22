@@ -20,6 +20,7 @@ pub fn create_display_socket(
         current_task.lookup_parent_at(FdNumber::AT_FDCWD, &display_path)?;
 
     let _socket_dir_entry = socket_parent.entry.bind_socket(
+        current_task,
         socket_basename,
         display_socket.clone(),
         SocketAddress::Unix(display_path.clone()),

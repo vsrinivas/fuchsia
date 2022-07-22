@@ -2621,9 +2621,9 @@ impl BinderFs {
     }
 }
 
-pub fn create_binders(kernel: &Kernel) -> Result<(), Errno> {
-    let fs = dev_tmp_fs(kernel);
-    for (name, node) in BinderFs::get_binder_nodes(kernel, fs)?.into_iter() {
+pub fn create_binders(current_task: &CurrentTask) -> Result<(), Errno> {
+    let fs = dev_tmp_fs(current_task);
+    for (name, node) in BinderFs::get_binder_nodes(current_task.kernel(), fs)?.into_iter() {
         fs.root().create_entry(name, || Ok(node))?;
     }
     Ok(())

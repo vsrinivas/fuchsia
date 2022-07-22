@@ -83,7 +83,7 @@ pub async fn create_galaxy() -> Result<Galaxy, Error> {
     let kernel = Arc::new(kernel);
 
     let mut init_task = create_init_task(&kernel)?;
-    let fs_context = create_fs_context(&kernel, &pkg_dir_proxy)?;
+    let fs_context = create_fs_context(&init_task, &pkg_dir_proxy)?;
     init_task.set_fs(fs_context.clone());
     let system_task = create_task(&kernel, Some(fs_context), "kthread", Credentials::root())?;
 
@@ -132,7 +132,7 @@ pub async fn create_galaxy() -> Result<Galaxy, Error> {
 }
 
 fn create_fs_context(
-    kernel: &Arc<Kernel>,
+    task: &CurrentTask,
     pkg_dir_proxy: &fio::DirectorySynchronousProxy,
 ) -> Result<Arc<FsContext>, Error> {
     // The mounts are appplied in the order listed. Mounting will fail if the designated mount
@@ -140,8 +140,7 @@ fn create_fs_context(
     // applied on top of it.
     let mut mounts_iter = CONFIG.mounts.iter();
     let (root_point, root_fs) = create_filesystem_from_spec(
-        &kernel,
-        None,
+        task,
         &pkg_dir_proxy,
         mounts_iter.next().ok_or_else(|| anyhow!("Mounts list is empty"))?,
     )?;
@@ -212,12 +211,8 @@ fn mount_filesystems(
     // Skip the first mount, that was used to create the root filesystem.
     let _ = mounts_iter.next();
     for mount_spec in mounts_iter {
-        let (mount_point, child_fs) = create_filesystem_from_spec(
-            system_task.kernel(),
-            Some(&system_task),
-            pkg_dir_proxy,
-            mount_spec,
-        )?;
+        let (mount_point, child_fs) =
+            create_filesystem_from_spec(&system_task, pkg_dir_proxy, mount_spec)?;
         let mount_point = system_task.lookup_path_from_root(mount_point)?;
         mount_point.mount(child_fs, MountFlags::empty())?;
     }

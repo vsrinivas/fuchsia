@@ -961,17 +961,21 @@ impl MemoryManager {
     }
 
     pub fn exec(&self, exe_node: NamespaceNode) -> Result<(), zx::Status> {
-        let mut state = self.state.write();
-        let info = self.root_vmar.info()?;
-        // SAFETY: This operation is safe because the VMAR is for another process.
-        unsafe { state.user_vmar.destroy()? }
-        state.user_vmar = create_user_vmar(&self.root_vmar, &info)?;
-        state.user_vmar_info = state.user_vmar.info()?;
-        state.brk = None;
-        state.mappings = RangeMap::new();
-        state.executable_node = Some(exe_node);
+        // The previous mapping should be dropped only after the lock to state is released to
+        // prevent lock order inversion.
+        let _old_mappings = {
+            let mut state = self.state.write();
+            let info = self.root_vmar.info()?;
+            // SAFETY: This operation is safe because the VMAR is for another process.
+            unsafe { state.user_vmar.destroy()? }
+            state.user_vmar = create_user_vmar(&self.root_vmar, &info)?;
+            state.user_vmar_info = state.user_vmar.info()?;
+            state.brk = None;
+            state.executable_node = Some(exe_node);
 
-        *self.dumpable.lock() = DumpPolicy::DISABLE;
+            *self.dumpable.lock() = DumpPolicy::DISABLE;
+            std::mem::replace(&mut state.mappings, RangeMap::new())
+        };
         Ok(())
     }
 

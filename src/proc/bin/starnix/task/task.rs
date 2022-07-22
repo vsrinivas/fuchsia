@@ -643,6 +643,12 @@ impl CurrentTask {
             let file = self.files.get(dir_fd)?;
             file.name.clone()
         };
+        if !path.is_empty() {
+            if !dir.entry.node.is_dir() {
+                return error!(ENOTDIR);
+            }
+            dir.entry.node.check_access(self, Access::EXEC)?;
+        }
         Ok((dir, path))
     }
 
@@ -667,6 +673,8 @@ impl CurrentTask {
     /// If the final path component (after following any symlinks, if enabled) does not exist,
     /// and `flags` contains `OpenFlags::CREAT`, a new node is created at the location of the
     /// final path component.
+    ///
+    /// This returns the resolved node, and a boolean indicating whether the node has been created.
     fn resolve_open_path(
         &self,
         context: &mut LookupContext,
@@ -674,7 +682,7 @@ impl CurrentTask {
         path: &FsStr,
         mode: FileMode,
         flags: OpenFlags,
-    ) -> Result<NamespaceNode, Errno> {
+    ) -> Result<(NamespaceNode, bool), Errno> {
         let path = context.update_for_path(&path);
         let mut parent_content = context.with(SymlinkMode::Follow);
         let (parent, basename) = self.lookup_parent(&mut parent_content, dir.clone(), path)?;
@@ -705,27 +713,30 @@ impl CurrentTask {
                             let dir = if path[0] == b'/' { self.fs().root() } else { parent };
                             self.resolve_open_path(context, dir, &path, mode, flags)
                         }
-                        SymlinkTarget::Node(node) => Ok(node),
+                        SymlinkTarget::Node(node) => Ok((node, false)),
                     }
                 } else {
                     if must_create {
                         return error!(EEXIST);
                     }
-                    Ok(name)
+                    Ok((name, false))
                 }
             }
             Err(e) if e == errno!(ENOENT) && flags.contains(OpenFlags::CREAT) => {
                 if context.must_be_directory {
                     return error!(EISDIR);
                 }
-                parent.create_node(
-                    self,
-                    &basename,
-                    mode.with_type(FileMode::IFREG),
-                    DeviceType::NONE,
-                )
+                Ok((
+                    parent.create_node(
+                        self,
+                        &basename,
+                        mode.with_type(FileMode::IFREG),
+                        DeviceType::NONE,
+                    )?,
+                    true,
+                ))
             }
-            error => error,
+            Err(e) => Err(e),
         }
     }
 
@@ -771,18 +782,12 @@ impl CurrentTask {
         let (dir, path) = self.resolve_dir_fd(dir_fd, path)?;
         let mut context = LookupContext::new(symlink_mode);
         context.must_be_directory = flags.contains(OpenFlags::DIRECTORY);
-        let name = self.resolve_open_path(&mut context, dir, path, mode, flags)?;
+        let (name, created) = self.resolve_open_path(&mut context, dir, path, mode, flags)?;
 
         // Be sure not to reference the mode argument after this point.
         let mode = name.entry.node.info().mode;
         if nofollow && mode.is_lnk() {
             return error!(ELOOP);
-        }
-
-        // Mode only applies to future accesses of newly created files.
-        // Also, O_PATH doesn't require permissions.
-        if !flags.intersects(OpenFlags::CREAT | OpenFlags::PATH) {
-            name.entry.node.check_access(self, Access::from_open_flags(flags))?;
         }
 
         if mode.is_dir() {
@@ -806,11 +811,18 @@ impl CurrentTask {
             // TODO(security): We should really do an access check for whether
             // this task can write to this file.
             if mode.contains(FileMode::IWUSR) {
-                name.entry.node.truncate(0)?;
+                name.entry.node.truncate(self, 0)?;
             }
         }
 
-        name.open(self, flags)
+        // If the node has been created, the open operation should not verify access right:
+        // From <https://man7.org/linux/man-pages/man2/open.2.html>
+        //
+        // > Note that mode applies only to future accesses of the newly created file; the
+        // > open() call that creates a read-only file may well return a  read/write  file
+        // > descriptor.
+
+        name.open(self, flags, !created)
     }
 
     /// A wrapper for FsContext::lookup_parent_at that resolves the given

@@ -33,7 +33,12 @@ pub trait DirectoryDelegate: Sync + Send + 'static {
 
     /// Look up an entry by `name`. A [`FileSystem`] is provided in order to generate an [`FsNode`]
     /// instance.
-    fn lookup(&self, fs: &Arc<FileSystem>, name: &FsStr) -> Result<Arc<FsNode>, Errno>;
+    fn lookup(
+        &self,
+        current_task: &CurrentTask,
+        fs: &Arc<FileSystem>,
+        name: &FsStr,
+    ) -> Result<Arc<FsNode>, Errno>;
 }
 
 /// Creates an [`FsNode`] that implements a directory, whose contents are determined dynamically by
@@ -58,8 +63,13 @@ impl<D: DirectoryDelegate> FsNodeOps for Arc<DynamicDirectory<D>> {
         Ok(Box::new(self.clone()))
     }
 
-    fn lookup(&self, node: &FsNode, name: &FsStr) -> Result<Arc<FsNode>, Errno> {
-        self.0.lookup(&node.fs(), name)
+    fn lookup(
+        &self,
+        node: &FsNode,
+        current_task: &CurrentTask,
+        name: &FsStr,
+    ) -> Result<Arc<FsNode>, Errno> {
+        self.0.lookup(current_task, &node.fs(), name)
     }
 }
 

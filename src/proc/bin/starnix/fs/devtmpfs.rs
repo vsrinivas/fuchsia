@@ -8,20 +8,22 @@ use crate::fs::*;
 use crate::task::*;
 use crate::types::*;
 
-pub fn dev_tmp_fs(kernel: &Kernel) -> &FileSystemHandle {
-    kernel.dev_tmp_fs.get_or_init(|| init_devtmpfs())
+pub fn dev_tmp_fs(task: &CurrentTask) -> &FileSystemHandle {
+    task.kernel().dev_tmp_fs.get_or_init(|| init_devtmpfs(task))
 }
 
-fn init_devtmpfs() -> FileSystemHandle {
+fn init_devtmpfs(current_task: &CurrentTask) -> FileSystemHandle {
     let fs = TmpFs::new();
     let root = fs.root();
 
     let mkchr = |name, device_type| {
-        root.create_node(name, mode!(IFCHR, 0o666), device_type, FsCred::root()).unwrap();
+        root.create_node(current_task, name, mode!(IFCHR, 0o666), device_type, FsCred::root())
+            .unwrap();
     };
 
     let mkdir = |name| {
-        root.create_node(name, mode!(IFDIR, 0o755), DeviceType::NONE, FsCred::root()).unwrap();
+        root.create_node(current_task, name, mode!(IFDIR, 0o755), DeviceType::NONE, FsCred::root())
+            .unwrap();
     };
 
     mkchr(b"null", DeviceType::NULL);
@@ -35,7 +37,7 @@ fn init_devtmpfs() -> FileSystemHandle {
     // tty related nodes
     mkdir(b"pts");
     mkchr(b"tty", DeviceType::TTY);
-    root.create_symlink(b"ptmx", b"pts/ptmx", FsCred::root()).unwrap();
+    root.create_symlink(current_task, b"ptmx", b"pts/ptmx", FsCred::root()).unwrap();
 
     mkchr(b"fb0", DeviceType::FB0);
 

@@ -9,6 +9,7 @@ use super::*;
 use crate::auth::FsCred;
 use crate::lock::{Mutex, MutexGuard};
 use crate::logging::not_implemented;
+use crate::task::CurrentTask;
 use crate::types::*;
 
 pub struct TmpFs(());
@@ -143,7 +144,12 @@ impl FsNodeOps for TmpfsDirectory {
         Ok(Box::new(MemoryDirectoryFile::new()))
     }
 
-    fn lookup(&self, _node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
+    fn lookup(
+        &self,
+        _node: &FsNode,
+        _current_task: &CurrentTask,
+        name: &FsStr,
+    ) -> Result<FsNodeHandle, Errno> {
         error!(ENOENT, format!("looking for {:?}", String::from_utf8_lossy(name)))
     }
 
@@ -240,11 +246,12 @@ mod test {
 
     #[::fuchsia::test]
     fn test_tmpfs() {
+        let (_kernel, current_task) = create_kernel_and_task();
         let fs = TmpFs::new();
         let root = fs.root();
-        let usr = root.create_dir(b"usr").unwrap();
-        let _etc = root.create_dir(b"etc").unwrap();
-        let _usr_bin = usr.create_dir(b"bin").unwrap();
+        let usr = root.create_dir(&current_task, b"usr").unwrap();
+        let _etc = root.create_dir(&current_task, b"etc").unwrap();
+        let _usr_bin = usr.create_dir(&current_task, b"bin").unwrap();
         let mut names = root.copy_child_names();
         names.sort();
         assert!(names.iter().eq([b"etc", b"usr"].iter()));
@@ -366,9 +373,9 @@ mod test {
 
         {
             let root = &current_task.fs().root().entry;
-            let usr = root.create_dir(b"usr").expect("failed to create usr");
-            root.create_dir(b"etc").expect("failed to create usr/etc");
-            usr.create_dir(b"bin").expect("failed to create usr/bin");
+            let usr = root.create_dir(&current_task, b"usr").expect("failed to create usr");
+            root.create_dir(&current_task, b"etc").expect("failed to create usr/etc");
+            usr.create_dir(&current_task, b"bin").expect("failed to create usr/bin");
         }
 
         // At this point, all the nodes are dropped.
@@ -397,7 +404,7 @@ mod test {
             .expect("failed to open /usr/bin");
         usr_bin
             .name
-            .unlink(b"test.txt", UnlinkKind::NonDirectory)
+            .unlink(&current_task, b"test.txt", UnlinkKind::NonDirectory)
             .expect("failed to unlink test.text");
         assert_eq!(
             errno!(ENOENT),
@@ -405,7 +412,7 @@ mod test {
         );
         assert_eq!(
             errno!(ENOENT),
-            usr_bin.name.unlink(b"test.txt", UnlinkKind::NonDirectory).unwrap_err()
+            usr_bin.name.unlink(&current_task, b"test.txt", UnlinkKind::NonDirectory).unwrap_err()
         );
 
         assert_eq!(0, txt.read(&current_task, &[]).expect("failed to read"));
@@ -421,7 +428,9 @@ mod test {
             errno!(ENOENT),
             current_task.open_file(b"/usr/foo", OpenFlags::RDONLY).unwrap_err()
         );
-        usr.name.unlink(b"bin", UnlinkKind::Directory).expect("failed to unlink /usr/bin");
+        usr.name
+            .unlink(&current_task, b"bin", UnlinkKind::Directory)
+            .expect("failed to unlink /usr/bin");
     }
 
     #[::fuchsia::test]

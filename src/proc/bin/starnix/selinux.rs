@@ -186,7 +186,12 @@ impl DirectoryDelegate for SeLinuxClassDirectoryDelegate {
         Ok(vec![])
     }
 
-    fn lookup(&self, fs: &Arc<FileSystem>, _name: &FsStr) -> Result<Arc<FsNode>, Errno> {
+    fn lookup(
+        &self,
+        _current_task: &CurrentTask,
+        fs: &Arc<FileSystem>,
+        _name: &FsStr,
+    ) -> Result<Arc<FsNode>, Errno> {
         Ok(StaticDirectoryBuilder::new(&fs)
             .add_entry(b"index", ByteVecFile::new(b"0\n".to_vec()), mode!(IFREG, 0o444))
             .add_node_entry(

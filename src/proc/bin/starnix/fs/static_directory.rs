@@ -107,7 +107,12 @@ impl FsNodeOps for Arc<StaticDirectory> {
         Ok(Box::new(self.clone()))
     }
 
-    fn lookup(&self, _node: &FsNode, name: &FsStr) -> Result<Arc<FsNode>, Errno> {
+    fn lookup(
+        &self,
+        _node: &FsNode,
+        _current_task: &CurrentTask,
+        name: &FsStr,
+    ) -> Result<Arc<FsNode>, Errno> {
         self.entries.get(name).cloned().ok_or_else(|| {
             errno!(
                 ENOENT,

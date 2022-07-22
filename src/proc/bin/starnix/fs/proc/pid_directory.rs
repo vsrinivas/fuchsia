@@ -67,7 +67,12 @@ impl DirectoryDelegate for FdDirectory {
         Ok(fds_to_directory_entries(self.task.files.get_all_fds()))
     }
 
-    fn lookup(&self, fs: &Arc<FileSystem>, name: &FsStr) -> Result<Arc<FsNode>, Errno> {
+    fn lookup(
+        &self,
+        _current_task: &CurrentTask,
+        fs: &Arc<FileSystem>,
+        name: &FsStr,
+    ) -> Result<Arc<FsNode>, Errno> {
         let fd = FdNumber::from_fs_str(name).map_err(|_| errno!(ENOENT))?;
         // Make sure that the file descriptor exists before creating the node.
         let _ = self.task.files.get(fd).map_err(|_| errno!(ENOENT))?;
@@ -109,7 +114,12 @@ impl DirectoryDelegate for NsDirectory {
             .collect())
     }
 
-    fn lookup(&self, fs: &Arc<FileSystem>, name: &FsStr) -> Result<Arc<FsNode>, Errno> {
+    fn lookup(
+        &self,
+        _current_task: &CurrentTask,
+        fs: &Arc<FileSystem>,
+        name: &FsStr,
+    ) -> Result<Arc<FsNode>, Errno> {
         // If name is a given namespace, link to the current identifier of the that namespace for
         // the current task.
         // If name is {namespace}:[id], get a file descriptor for the given namespace.
@@ -179,7 +189,12 @@ impl DirectoryDelegate for FdInfoDirectory {
         Ok(fds_to_directory_entries(self.task.files.get_all_fds()))
     }
 
-    fn lookup(&self, fs: &Arc<FileSystem>, name: &FsStr) -> Result<Arc<FsNode>, Errno> {
+    fn lookup(
+        &self,
+        _current_task: &CurrentTask,
+        fs: &Arc<FileSystem>,
+        name: &FsStr,
+    ) -> Result<Arc<FsNode>, Errno> {
         let fd = FdNumber::from_fs_str(name).map_err(|_| errno!(ENOENT))?;
         let file = self.task.files.get(fd).map_err(|_| errno!(ENOENT))?;
         let pos = *file.offset.lock();
@@ -219,7 +234,12 @@ impl DirectoryDelegate for TaskListDirectory {
             .collect())
     }
 
-    fn lookup(&self, fs: &Arc<FileSystem>, name: &FsStr) -> Result<Arc<FsNode>, Errno> {
+    fn lookup(
+        &self,
+        _current_task: &CurrentTask,
+        fs: &Arc<FileSystem>,
+        name: &FsStr,
+    ) -> Result<Arc<FsNode>, Errno> {
         let tid = std::str::from_utf8(name)
             .map_err(|_| errno!(ENOENT))?
             .parse::<pid_t>()

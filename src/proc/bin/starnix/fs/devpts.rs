@@ -96,7 +96,12 @@ impl DirectoryDelegate for DevPtsDirectoryDelegate {
         Ok(result)
     }
 
-    fn lookup(&self, fs: &Arc<FileSystem>, name: &FsStr) -> Result<Arc<FsNode>, Errno> {
+    fn lookup(
+        &self,
+        _current_task: &CurrentTask,
+        fs: &Arc<FileSystem>,
+        name: &FsStr,
+    ) -> Result<Arc<FsNode>, Errno> {
         let name = std::str::from_utf8(name).map_err(|_| ENOENT)?;
         if name == "ptmx" {
             let node = fs.create_node_with_id(
@@ -540,7 +545,7 @@ mod tests {
     ) -> Result<FileHandle, Errno> {
         let component = fs.root().component_lookup(task, name)?;
         Ok(FileObject::new(
-            component.node.open(task, flags)?,
+            component.node.open(task, flags, true)?,
             NamespaceNode::new_anonymous(component.clone()),
             flags,
         ))
@@ -618,20 +623,21 @@ mod tests {
         let pts = fs
             .root()
             .create_node(
+                &task,
                 b"custom_pts",
                 mode!(IFCHR, 0o666),
                 DeviceType::new(DEVPTS_FIRST_MAJOR, 0),
                 FsCred::root(),
             )
             .expect("custom_pts");
-        assert!(pts.node.open(&task, OpenFlags::RDONLY).is_err());
+        assert!(pts.node.open(&task, OpenFlags::RDONLY, true).is_err());
     }
 
     #[::fuchsia::test]
     fn test_open_tty() {
         let (kernel, task) = create_kernel_and_task();
         let fs = dev_pts_fs(&kernel);
-        let devfs = crate::fs::devtmpfs::dev_tmp_fs(&kernel);
+        let devfs = crate::fs::devtmpfs::dev_tmp_fs(&task);
 
         let ptmx = open_ptmx_and_unlock(&task, &fs).expect("ptmx");
         set_controlling_terminal(&task, &ptmx, false).expect("set_controlling_terminal");
@@ -685,7 +691,7 @@ mod tests {
         let _ptmx_file = open_file(&task, &fs, b"ptmx").expect("open file");
 
         let pts = fs.root().component_lookup(&task, b"0").expect("component_lookup");
-        assert_eq!(pts.node.open(&task, OpenFlags::RDONLY).map(|_| ()), Err(EIO));
+        assert_eq!(pts.node.open(&task, OpenFlags::RDONLY, true).map(|_| ()), Err(EIO));
     }
 
     #[::fuchsia::test]
@@ -698,14 +704,14 @@ mod tests {
         // Check that the lock is not set.
         assert_eq!(ioctl::<i32>(&task, &ptmx, TIOCGPTLCK, &0), Ok(0));
         // /dev/pts/0 can be opened
-        pts.node.open(&task, OpenFlags::RDONLY).expect("open");
+        pts.node.open(&task, OpenFlags::RDONLY, true).expect("open");
 
         // Lock the terminal
         ioctl::<i32>(&task, &ptmx, TIOCSPTLCK, &42).expect("ioctl");
         // Check that the lock is set.
         assert_eq!(ioctl::<i32>(&task, &ptmx, TIOCGPTLCK, &0), Ok(1));
         // /dev/pts/0 cannot be opened
-        assert_eq!(pts.node.open(&task, OpenFlags::RDONLY).map(|_| ()), Err(EIO));
+        assert_eq!(pts.node.open(&task, OpenFlags::RDONLY, true).map(|_| ()), Err(EIO));
     }
 
     #[::fuchsia::test]

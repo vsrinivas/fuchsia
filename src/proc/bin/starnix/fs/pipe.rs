@@ -227,7 +227,11 @@ pub fn new_pipe(current_task: &CurrentTask) -> Result<(FileHandle, FileHandle), 
     node.info_write().blksize = ATOMIC_IO_BYTES;
 
     let open = |flags: OpenFlags| {
-        Ok(FileObject::new_anonymous(node.open(current_task, flags)?, Arc::clone(&node), flags))
+        Ok(FileObject::new_anonymous(
+            node.open(current_task, flags, false)?,
+            Arc::clone(&node),
+            flags,
+        ))
     };
 
     Ok((open(OpenFlags::RDONLY)?, open(OpenFlags::WRONLY)?))

@@ -210,5 +210,5 @@ pub fn new_memfd(current_task: &CurrentTask, flags: OpenFlags) -> Result<FileHan
     let fs = anon_fs(current_task.kernel());
     let node =
         fs.create_node_with_ops(VmoFileNode::new()?, mode!(IFREG, 0o600), current_task.as_fscred());
-    Ok(FileObject::new_anonymous(node.open(current_task, flags)?, node, flags))
+    Ok(FileObject::new_anonymous(node.open(current_task, flags, false)?, node, flags))
 }

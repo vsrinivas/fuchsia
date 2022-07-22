@@ -59,7 +59,12 @@ impl FsNodeOps for Arc<ProcDirectory> {
         Ok(Box::new(self.clone()))
     }
 
-    fn lookup(&self, node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
+    fn lookup(
+        &self,
+        node: &FsNode,
+        _current_task: &CurrentTask,
+        name: &FsStr,
+    ) -> Result<FsNodeHandle, Errno> {
         match self.nodes.get(name) {
             Some(node) => Ok(Arc::clone(&node)),
             None => {

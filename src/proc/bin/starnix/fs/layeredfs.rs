@@ -47,11 +47,16 @@ impl FsNodeOps for Arc<LayeredFs> {
         }))
     }
 
-    fn lookup(&self, _node: &FsNode, name: &FsStr) -> Result<Arc<FsNode>, Errno> {
+    fn lookup(
+        &self,
+        _node: &FsNode,
+        current_task: &CurrentTask,
+        name: &FsStr,
+    ) -> Result<Arc<FsNode>, Errno> {
         if let Some(fs) = self.mappings.get(name) {
             Ok(fs.root().node.clone())
         } else {
-            self.base_fs.root().node.lookup(name)
+            self.base_fs.root().node.lookup(current_task, name)
         }
     }
 }
@@ -171,8 +176,8 @@ mod test {
     fn test_remove_duplicates() {
         let (_kernel, current_task) = create_kernel_and_task();
         let base = TmpFs::new();
-        base.root().create_dir(b"d1").expect("create_dir");
-        base.root().create_dir(b"d2").expect("create_dir");
+        base.root().create_dir(&current_task, b"d1").expect("create_dir");
+        base.root().create_dir(&current_task, b"d2").expect("create_dir");
         let base_entries = get_root_entry_names(&current_task, &base);
         assert_eq!(base_entries.len(), 4);
         assert!(base_entries.contains(&b".".to_vec()));

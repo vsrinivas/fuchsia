@@ -214,8 +214,7 @@ pub fn get_pkg_hash(pkg: &fio::DirectorySynchronousProxy) -> Result<String, Erro
 }
 
 pub fn create_filesystem_from_spec<'a>(
-    kernel: &Arc<Kernel>,
-    task: Option<&CurrentTask>,
+    task: &CurrentTask,
     pkg: &fio::DirectorySynchronousProxy,
     spec: &'a str,
 ) -> Result<(&'a [u8], WhatToMount), Error> {
@@ -230,10 +229,7 @@ pub fn create_filesystem_from_spec<'a>(
     // manifest file, for whatever reason. Anything else is passed to create_filesystem, which is
     // common code that also handles the mount() system call.
     let fs = match fs_type {
-        "bind" => {
-            let task = task.ok_or(errno!(ENOENT))?;
-            Dir(task.lookup_path_from_root(fs_src.as_bytes())?.entry)
-        }
+        "bind" => Dir(task.lookup_path_from_root(fs_src.as_bytes())?.entry),
         "remotefs" => Fs(create_remotefs_filesystem(pkg, &fs_src)?),
         "ext4" => {
             let vmo =
@@ -241,7 +237,7 @@ pub fn create_filesystem_from_spec<'a>(
                     .context("failed to open EXT4 image file")?;
             Fs(ExtFilesystem::new(vmo)?)
         }
-        _ => create_filesystem(&kernel, fs_src.as_bytes(), fs_type.as_bytes(), b"")?,
+        _ => create_filesystem(task, fs_src.as_bytes(), fs_type.as_bytes(), b"")?,
     };
     Ok((mount_point.as_bytes(), fs))
 }

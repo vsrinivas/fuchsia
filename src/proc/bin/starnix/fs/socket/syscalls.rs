@@ -183,6 +183,7 @@ pub fn sys_bind(
                 let _dir_entry = parent
                     .entry
                     .bind_socket(
+                        current_task,
                         basename,
                         socket.clone(),
                         SocketAddress::Unix(name.clone()),

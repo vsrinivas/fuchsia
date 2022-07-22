@@ -162,11 +162,11 @@ impl FileSystem {
         mode: FileMode,
         owner: FsCred,
     ) -> FsNodeHandle {
+        if let Some(label) = self.selinux_context.get() {
+            let _ = ops.set_xattr(b"security.selinux", label, XattrOp::Create);
+        }
         let node = FsNode::new_uncached(ops, self, id, mode, owner);
         self.nodes.lock().insert(node.inode_num, Arc::downgrade(&node));
-        if let Some(label) = self.selinux_context.get() {
-            let _ = node.set_xattr(b"security.selinux", label, XattrOp::Create);
-        }
         node
     }
 

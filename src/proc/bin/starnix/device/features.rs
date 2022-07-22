@@ -22,11 +22,11 @@ pub fn run_features<'a>(entries: &'a Vec<String>, current_task: &CurrentTask) ->
             "wayland" => {}
             "binder" => {
                 // Creates the various binder drivers (/dev/binder, /dev/hwbinder, /dev/vndbinder).
-                create_binders(current_task.kernel())?;
+                create_binders(current_task)?;
             }
             "logd" => {
                 // Creates a socket at /dev/socket/logdw logs anything written to it.
-                create_socket_and_start_server(current_task.kernel());
+                create_socket_and_start_server(current_task);
             }
             "selinux_enabled" => {}
             feature => {
@@ -48,7 +48,7 @@ pub fn run_component_features<'a>(
             "wayland" => {
                 let kernel = current_task.kernel();
                 let dev = kernel.device_registry.write().register_misc_chrdev(MagmaFile::new)?;
-                dev_tmp_fs(kernel).root().add_node_ops_dev(
+                dev_tmp_fs(current_task).root().add_node_ops_dev(
                     b"magma0",
                     mode!(IFCHR, 0o600),
                     dev,

@@ -436,7 +436,6 @@ pub fn sys_readlinkat(
     buffer_size: usize,
 ) -> Result<usize, Errno> {
     let entry = lookup_parent_at(current_task, dir_fd, user_path, |parent, basename| {
-        parent.entry.node.check_access(current_task, Access::READ)?;
         let mut context = LookupContext::new(SymlinkMode::NoFollow);
         Ok(parent.lookup_child(&current_task, &mut context, basename)?.entry)
     })?;
@@ -468,16 +467,14 @@ pub fn sys_truncate(
 ) -> Result<(), Errno> {
     let length = length.try_into().map_err(|_| errno!(EINVAL))?;
     let name = lookup_at(current_task, FdNumber::AT_FDCWD, user_path, LookupFlags::default())?;
-    // TODO: Check for writability.
-    name.entry.node.truncate(length)?;
+    name.entry.node.truncate(current_task, length)?;
     Ok(())
 }
 
 pub fn sys_ftruncate(current_task: &CurrentTask, fd: FdNumber, length: off_t) -> Result<(), Errno> {
     let length = length.try_into().map_err(|_| errno!(EINVAL))?;
     let file = current_task.files.get(fd)?;
-    // TODO: Check for writability.
-    file.node().truncate(length)?;
+    file.node().truncate(current_task, length)?;
     Ok(())
 }
 
@@ -551,7 +548,7 @@ pub fn sys_linkat(
         if !NamespaceNode::mount_eq(&target, &parent) {
             return error!(EXDEV);
         }
-        parent.entry.link(basename, &target.entry.node)
+        parent.entry.link(current_task, basename, &target.entry.node)
     })?;
 
     Ok(())
@@ -577,7 +574,7 @@ pub fn sys_unlinkat(
     let kind =
         if flags & AT_REMOVEDIR != 0 { UnlinkKind::Directory } else { UnlinkKind::NonDirectory };
     lookup_parent_at(current_task, dir_fd, user_path, |parent, basename| {
-        parent.unlink(basename, kind)
+        parent.unlink(current_task, basename, kind)
     })?;
     Ok(())
 }
@@ -610,7 +607,7 @@ pub fn sys_renameat(
         return error!(EXDEV);
     }
 
-    DirEntry::rename(&old_parent, &old_basename, &new_parent, &new_basename)?;
+    DirEntry::rename(current_task, &old_parent, &old_basename, &new_parent, &new_basename)?;
     Ok(())
 }
 
@@ -710,14 +707,9 @@ fn do_getxattr(
     value_addr: UserAddress,
     size: usize,
 ) -> Result<usize, Errno> {
-    node.entry.node.check_access(current_task, Access::READ)?;
-    if !node.entry.node.info().mode.contains(FileMode::IRUSR) {
-        return error!(EACCES);
-    }
-
     let mut name = vec![0u8; XATTR_NAME_MAX as usize + 1];
     let name = read_xattr_name(current_task, name_addr, &mut name)?;
-    let value = node.entry.node.get_xattr(name)?;
+    let value = node.entry.node.get_xattr(current_task, name)?;
     if size == 0 {
         return Ok(value.len());
     }
@@ -771,7 +763,6 @@ fn do_setxattr(
     if size > XATTR_NAME_MAX as usize {
         return error!(E2BIG);
     }
-    node.entry.node.check_access(current_task, Access::WRITE)?;
     let mode = node.entry.node.info().mode;
     if mode.is_chr() || mode.is_fifo() {
         return error!(EPERM);
@@ -787,7 +778,7 @@ fn do_setxattr(
     let name = read_xattr_name(current_task, name_addr, &mut name)?;
     let mut value = vec![0u8; size];
     current_task.mm.read_memory(value_addr, &mut value)?;
-    node.entry.node.set_xattr(name, &value, op)
+    node.entry.node.set_xattr(current_task, name, &value, op)
 }
 
 pub fn sys_fsetxattr(
@@ -834,14 +825,13 @@ fn do_removexattr(
     node: &NamespaceNode,
     name_addr: UserCString,
 ) -> Result<(), Errno> {
-    node.entry.node.check_access(current_task, Access::WRITE)?;
     let mode = node.entry.node.info().mode;
     if mode.is_chr() || mode.is_fifo() {
         return error!(EPERM);
     }
     let mut name = vec![0u8; XATTR_NAME_MAX as usize + 1];
     let name = read_xattr_name(current_task, name_addr, &mut name)?;
-    node.entry.node.remove_xattr(name)
+    node.entry.node.remove_xattr(current_task, name)
 }
 
 pub fn sys_removexattr(
@@ -1018,9 +1008,10 @@ pub fn sys_symlinkat(
         return error!(ENOENT);
     }
 
-    lookup_parent_at(current_task, new_dir_fd, user_path, |parent, basename| {
+    let res = lookup_parent_at(current_task, new_dir_fd, user_path, |parent, basename| {
         parent.symlink(current_task, basename, target)
-    })?;
+    });
+    res?;
     Ok(())
 }
 
@@ -1139,7 +1130,7 @@ pub fn sys_mount(
             String::from_utf8_lossy(data)
         );
 
-        let fs = create_filesystem(current_task.kernel(), source, fs_type, data)?;
+        let fs = create_filesystem(current_task, source, fs_type, data)?;
         target.mount(fs, flags)?;
     }
 

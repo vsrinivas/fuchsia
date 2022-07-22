@@ -160,6 +160,7 @@ fn mount_component_pkg_data(
         let pkg_dir =
             galaxy.system_task.lookup_path_from_root(COMPONENT_PKG_ROOT_DIRECTORY.as_bytes())?;
         pkg_dir.entry.create_node(
+            &galaxy.system_task,
             hash.as_bytes(),
             mode!(IFDIR, 0o755),
             DeviceType::NONE,

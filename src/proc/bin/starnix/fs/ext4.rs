@@ -71,7 +71,12 @@ impl FsNodeOps for ExtDirectory {
         Ok(Box::new(ExtDirFileObject { inner: self.inner.clone() }))
     }
 
-    fn lookup(&self, node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
+    fn lookup(
+        &self,
+        node: &FsNode,
+        _current_task: &CurrentTask,
+        name: &FsStr,
+    ) -> Result<FsNodeHandle, Errno> {
         let dir_entries =
             self.inner.fs().parser.entries_from_inode(&self.inner.inode).map_err(ext_error)?;
         let entry = dir_entries

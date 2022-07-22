@@ -156,19 +156,10 @@ impl DirEntry {
     /// entry.
     pub fn component_lookup(
         self: &DirEntryHandle,
-        _current_task: &CurrentTask,
+        current_task: &CurrentTask,
         name: &FsStr,
     ) -> Result<DirEntryHandle, Errno> {
-        let (node, _) = self.get_or_create_child(name, || {
-            // TODO(tbodt): correct access check:
-            // self.node.check_access(current_task, Access::X)?;
-            if !self.node.info().mode.contains(FileMode::IWUSR) {
-                return error!(EACCES);
-            }
-            // TODO(tbodt): correct access check:
-            // self.node.check_access(current_task, Access::X)?;
-            self.node.lookup(name)
-        })?;
+        let (node, _) = self.get_or_create_child(name, || self.node.lookup(current_task, name))?;
         Ok(node)
     }
 
@@ -234,15 +225,22 @@ impl DirEntry {
     // This is marked as test-only because it sets the owner/group to root instead of the current
     // user to save a bit of typing in tests, but this shouldn't happen silently in production.
     #[cfg(test)]
-    pub fn create_dir(self: &DirEntryHandle, name: &FsStr) -> Result<DirEntryHandle, Errno> {
+    pub fn create_dir(
+        self: &DirEntryHandle,
+        current_task: &CurrentTask,
+        name: &FsStr,
+    ) -> Result<DirEntryHandle, Errno> {
         // TODO: apply_umask
-        self.create_entry(name, || self.node.mkdir(name, mode!(IFDIR, 0o777), FsCred::root()))
+        self.create_entry(name, || {
+            self.node.mkdir(current_task, name, mode!(IFDIR, 0o777), FsCred::root())
+        })
     }
 
     /// Ask the filesystem to create a node. This is the equivalent of mknod. Works for any type of
     /// file other than a symlink.
     pub fn create_node(
         self: &DirEntryHandle,
+        current_task: &CurrentTask,
         name: &FsStr,
         mode: FileMode,
         dev: DeviceType,
@@ -250,9 +248,9 @@ impl DirEntry {
     ) -> Result<DirEntryHandle, Errno> {
         self.create_entry(name, || {
             if mode.is_dir() {
-                self.node.mkdir(name, mode, owner)
+                self.node.mkdir(current_task, name, mode, owner)
             } else {
-                let node = self.node.mknod(name, mode, dev, owner)?;
+                let node = self.node.mknod(current_task, name, mode, dev, owner)?;
                 if mode.is_sock() {
                     node.set_socket(Socket::new(SocketDomain::Unix, SocketType::Stream));
                 }
@@ -263,6 +261,7 @@ impl DirEntry {
 
     pub fn bind_socket(
         self: &DirEntryHandle,
+        current_task: &CurrentTask,
         name: &FsStr,
         socket: SocketHandle,
         socket_address: SocketAddress,
@@ -270,7 +269,7 @@ impl DirEntry {
         owner: FsCred,
     ) -> Result<DirEntryHandle, Errno> {
         self.create_entry(name, || {
-            let node = self.node.mknod(name, mode, DeviceType::NONE, owner)?;
+            let node = self.node.mknod(current_task, name, mode, DeviceType::NONE, owner)?;
             if let Some(unix_socket) = socket.downcast_socket::<UnixSocket>() {
                 unix_socket.bind_socket_to_node(&socket, socket_address, &node)?;
             } else {
@@ -282,19 +281,25 @@ impl DirEntry {
 
     pub fn create_symlink(
         self: &DirEntryHandle,
+        current_task: &CurrentTask,
         name: &FsStr,
         target: &FsStr,
         owner: FsCred,
     ) -> Result<DirEntryHandle, Errno> {
-        self.create_entry(name, || self.node.create_symlink(name, target, owner))
+        self.create_entry(name, || self.node.create_symlink(current_task, name, target, owner))
     }
 
-    pub fn link(self: &DirEntryHandle, name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {
+    pub fn link(
+        self: &DirEntryHandle,
+        current_task: &CurrentTask,
+        name: &FsStr,
+        child: &FsNodeHandle,
+    ) -> Result<(), Errno> {
         if DirEntry::is_reserved_name(name) {
             return error!(EEXIST);
         }
         let (entry, exists) = self.get_or_create_child(name, || {
-            self.node.link(name, child)?;
+            self.node.link(current_task, name, child)?;
             Ok(child.clone())
         })?;
         if exists {
@@ -305,11 +310,16 @@ impl DirEntry {
         Ok(())
     }
 
-    pub fn unlink(self: &DirEntryHandle, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {
+    pub fn unlink(
+        self: &DirEntryHandle,
+        current_task: &CurrentTask,
+        name: &FsStr,
+        kind: UnlinkKind,
+    ) -> Result<(), Errno> {
         assert!(!DirEntry::is_reserved_name(name));
         let mut state = self.state.write();
 
-        let child = self.component_lookup_locked(&mut state, name)?;
+        let child = self.component_lookup_locked(current_task, &mut state, name)?;
         let child_state = child.state.read();
 
         if child_state.mount_count > 0 {
@@ -335,7 +345,7 @@ impl DirEntry {
             }
         }
 
-        self.node.unlink(name, &child.node)?;
+        self.node.unlink(current_task, name, &child.node)?;
         state.children.remove(name);
 
         std::mem::drop(child_state);
@@ -372,6 +382,7 @@ impl DirEntry {
     ///
     /// old_parent and new_parent must belong to the same file system.
     pub fn rename(
+        current_task: &CurrentTask,
         old_parent_name: &NamespaceNode,
         old_basename: &FsStr,
         new_parent_name: &NamespaceNode,
@@ -431,7 +442,11 @@ impl DirEntry {
 
             // Now that we know the old_parent child list cannot change, we
             // establish the DirEntry that we are going to try to rename.
-            let renamed = old_parent.component_lookup_locked(state.old_parent(), old_basename)?;
+            let renamed = old_parent.component_lookup_locked(
+                current_task,
+                state.old_parent(),
+                old_basename,
+            )?;
 
             // Check whether the renamed entry is a mountpoint.
             // TODO: We should hold a read lock on the mount points for this
@@ -450,40 +465,43 @@ impl DirEntry {
             // We need to check if there is already a DirEntry with
             // new_basename in new_parent. If so, there are additional checks
             // we need to perform.
-            let maybe_replaced =
-                match new_parent.component_lookup_locked(state.new_parent(), new_basename) {
-                    Ok(replaced) => {
-                        // Sayeth https://man7.org/linux/man-pages/man2/rename.2.html:
-                        //
-                        // "If oldpath and newpath are existing hard links referring to the
-                        // same file, then rename() does nothing, and returns a success
-                        // status."
-                        if Arc::ptr_eq(&renamed.node, &replaced.node) {
-                            return Ok(());
-                        }
-
-                        // Sayeth https://man7.org/linux/man-pages/man2/rename.2.html:
-                        //
-                        // "oldpath can specify a directory.  In this case, newpath must"
-                        // either not exist, or it must specify an empty directory."
-                        if replaced.node.is_dir() {
-                            // Check whether the replaced entry is a mountpoint.
-                            // TODO: We should hold a read lock on the mount points for this
-                            //       namespace to prevent the child from becoming a mount point
-                            //       while this function is executing.
-                            if new_parent_name.child_is_mountpoint(&replaced) {
-                                return error!(EBUSY);
-                            }
-                        } else if renamed.node.is_dir() {
-                            return error!(ENOTDIR);
-                        }
-                        Some(replaced)
+            let maybe_replaced = match new_parent.component_lookup_locked(
+                current_task,
+                state.new_parent(),
+                new_basename,
+            ) {
+                Ok(replaced) => {
+                    // Sayeth https://man7.org/linux/man-pages/man2/rename.2.html:
+                    //
+                    // "If oldpath and newpath are existing hard links referring to the
+                    // same file, then rename() does nothing, and returns a success
+                    // status."
+                    if Arc::ptr_eq(&renamed.node, &replaced.node) {
+                        return Ok(());
                     }
-                    // It's fine for the lookup to fail to find a child.
-                    Err(errno) if errno == errno!(ENOENT) => None,
-                    // However, other errors are fatal.
-                    Err(e) => return Err(e),
-                };
+
+                    // Sayeth https://man7.org/linux/man-pages/man2/rename.2.html:
+                    //
+                    // "oldpath can specify a directory.  In this case, newpath must"
+                    // either not exist, or it must specify an empty directory."
+                    if replaced.node.is_dir() {
+                        // Check whether the replaced entry is a mountpoint.
+                        // TODO: We should hold a read lock on the mount points for this
+                        //       namespace to prevent the child from becoming a mount point
+                        //       while this function is executing.
+                        if new_parent_name.child_is_mountpoint(&replaced) {
+                            return error!(EBUSY);
+                        }
+                    } else if renamed.node.is_dir() {
+                        return error!(ENOTDIR);
+                    }
+                    Some(replaced)
+                }
+                // It's fine for the lookup to fail to find a child.
+                Err(errno) if errno == errno!(ENOENT) => None,
+                // However, other errors are fatal.
+                Err(e) => return Err(e),
+            };
 
             // We've found all the errors that we know how to find. Ask the
             // file system to actually execute the rename operation. Once the
@@ -527,11 +545,13 @@ impl DirEntry {
 
     fn component_lookup_locked(
         self: &DirEntryHandle,
+        current_task: &CurrentTask,
         state: &mut DirEntryState,
         name: &FsStr,
     ) -> Result<DirEntryHandle, Errno> {
         assert!(!DirEntry::is_reserved_name(name));
-        let (node, _) = self.get_or_create_child_locked(state, name, || self.node.lookup(name))?;
+        let (node, _) =
+            self.get_or_create_child_locked(state, name, || self.node.lookup(current_task, name))?;
         Ok(node)
     }
 

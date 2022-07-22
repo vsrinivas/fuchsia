@@ -18,7 +18,7 @@ use super::*;
 use crate::device::BinderFs;
 use crate::lock::RwLock;
 use crate::selinux::selinux_fs;
-use crate::task::{CurrentTask, Kernel};
+use crate::task::CurrentTask;
 use crate::types::*;
 
 /// A mount namespace.
@@ -191,13 +191,14 @@ pub enum WhatToMount {
 }
 
 pub fn create_filesystem(
-    kernel: &Arc<Kernel>,
+    task: &CurrentTask,
     _source: &FsStr,
     fs_type: &FsStr,
     data: &FsStr,
 ) -> Result<WhatToMount, Errno> {
+    let kernel = task.kernel();
     let fs = match fs_type {
-        b"devtmpfs" => dev_tmp_fs(kernel).clone(),
+        b"devtmpfs" => dev_tmp_fs(task).clone(),
         b"devpts" => dev_pts_fs(kernel).clone(),
         b"proc" => proc_fs(kernel.clone()),
         b"selinuxfs" => selinux_fs(kernel).clone(),
@@ -328,8 +329,17 @@ impl NamespaceNode {
     /// This function is the primary way of instantiating FileObjects. Each
     /// FileObject records the NamespaceNode that created it in order to
     /// remember its path in the Namespace.
-    pub fn open(&self, current_task: &CurrentTask, flags: OpenFlags) -> Result<FileHandle, Errno> {
-        Ok(FileObject::new(self.entry.node.open(current_task, flags)?, self.clone(), flags))
+    pub fn open(
+        &self,
+        current_task: &CurrentTask,
+        flags: OpenFlags,
+        check_access: bool,
+    ) -> Result<FileHandle, Errno> {
+        Ok(FileObject::new(
+            self.entry.node.open(current_task, flags, check_access)?,
+            self.clone(),
+            flags,
+        ))
     }
 
     pub fn create_node(
@@ -339,10 +349,9 @@ impl NamespaceNode {
         mode: FileMode,
         dev: DeviceType,
     ) -> Result<NamespaceNode, Errno> {
-        self.entry.node.check_access(current_task, Access::WRITE)?;
         let owner = current_task.as_fscred();
         let mode = current_task.fs().apply_umask(mode);
-        Ok(self.with_new_entry(self.entry.create_node(name, mode, dev, owner)?))
+        Ok(self.with_new_entry(self.entry.create_node(current_task, name, mode, dev, owner)?))
     }
 
     pub fn symlink(
@@ -351,12 +360,16 @@ impl NamespaceNode {
         name: &FsStr,
         target: &FsStr,
     ) -> Result<NamespaceNode, Errno> {
-        self.entry.node.check_access(current_task, Access::WRITE)?;
         let owner = current_task.as_fscred();
-        Ok(self.with_new_entry(self.entry.create_symlink(name, target, owner)?))
+        Ok(self.with_new_entry(self.entry.create_symlink(current_task, name, target, owner)?))
     }
 
-    pub fn unlink(&self, name: &FsStr, kind: UnlinkKind) -> Result<(), Errno> {
+    pub fn unlink(
+        &self,
+        current_task: &CurrentTask,
+        name: &FsStr,
+        kind: UnlinkKind,
+    ) -> Result<(), Errno> {
         if DirEntry::is_reserved_name(name) {
             match kind {
                 UnlinkKind::Directory => {
@@ -372,7 +385,7 @@ impl NamespaceNode {
                 UnlinkKind::NonDirectory => error!(ENOTDIR),
             }
         } else {
-            self.entry.unlink(name, kind)
+            self.entry.unlink(current_task, name, kind)
         }
     }
 
@@ -563,10 +576,11 @@ mod test {
         let (_kernel, current_task) = create_kernel_and_task();
         let root_fs = TmpFs::new();
         let root_node = Arc::clone(root_fs.root());
-        let _dev_node = root_node.create_dir(b"dev").expect("failed to mkdir dev");
+        let _dev_node = root_node.create_dir(&current_task, b"dev").expect("failed to mkdir dev");
         let dev_fs = TmpFs::new();
         let dev_root_node = Arc::clone(dev_fs.root());
-        let _dev_pts_node = dev_root_node.create_dir(b"pts").expect("failed to mkdir pts");
+        let _dev_pts_node =
+            dev_root_node.create_dir(&current_task, b"pts").expect("failed to mkdir pts");
 
         let ns = Namespace::new(root_fs.clone());
         let mut context = LookupContext::default();
@@ -598,10 +612,11 @@ mod test {
         let (_kernel, current_task) = create_kernel_and_task();
         let root_fs = TmpFs::new();
         let root_node = Arc::clone(root_fs.root());
-        let _dev_node = root_node.create_dir(b"dev").expect("failed to mkdir dev");
+        let _dev_node = root_node.create_dir(&current_task, b"dev").expect("failed to mkdir dev");
         let dev_fs = TmpFs::new();
         let dev_root_node = Arc::clone(dev_fs.root());
-        let _dev_pts_node = dev_root_node.create_dir(b"pts").expect("failed to mkdir pts");
+        let _dev_pts_node =
+            dev_root_node.create_dir(&current_task, b"pts").expect("failed to mkdir pts");
 
         let ns = Namespace::new(root_fs.clone());
         let mut context = LookupContext::default();
@@ -634,10 +649,11 @@ mod test {
         let (_kernel, current_task) = create_kernel_and_task();
         let root_fs = TmpFs::new();
         let root_node = Arc::clone(root_fs.root());
-        let _dev_node = root_node.create_dir(b"dev").expect("failed to mkdir dev");
+        let _dev_node = root_node.create_dir(&current_task, b"dev").expect("failed to mkdir dev");
         let dev_fs = TmpFs::new();
         let dev_root_node = Arc::clone(dev_fs.root());
-        let _dev_pts_node = dev_root_node.create_dir(b"pts").expect("failed to mkdir pts");
+        let _dev_pts_node =
+            dev_root_node.create_dir(&current_task, b"pts").expect("failed to mkdir pts");
 
         let ns = Namespace::new(root_fs.clone());
         let mut context = LookupContext::default();
@@ -668,7 +684,7 @@ mod test {
         let (_kernel, current_task) = create_kernel_and_task();
         let root_fs = TmpFs::new();
         let ns = Namespace::new(root_fs.clone());
-        let _foo_node = root_fs.root().create_dir(b"foo")?;
+        let _foo_node = root_fs.root().create_dir(&current_task, b"foo")?;
         let mut context = LookupContext::default();
         let foo_dir = ns.root().lookup_child(&current_task, &mut context, b"foo")?;
 
@@ -707,14 +723,17 @@ mod test {
         let root_fs = TmpFs::new();
         let ns1 = Namespace::new(root_fs.clone());
         let ns2 = Namespace::new(root_fs.clone());
-        let _foo_node = root_fs.root().create_dir(b"foo")?;
+        let _foo_node = root_fs.root().create_dir(&current_task, b"foo")?;
         let mut context = LookupContext::default();
         let foo_dir = ns1.root().lookup_child(&current_task, &mut context, b"foo")?;
 
         let foofs = TmpFs::new();
         foo_dir.mount(WhatToMount::Fs(foofs.clone()), MountFlags::empty())?;
 
-        assert_eq!(errno!(EBUSY), ns2.root().unlink(b"foo", UnlinkKind::Directory).unwrap_err());
+        assert_eq!(
+            errno!(EBUSY),
+            ns2.root().unlink(&current_task, b"foo", UnlinkKind::Directory).unwrap_err()
+        );
 
         Ok(())
     }

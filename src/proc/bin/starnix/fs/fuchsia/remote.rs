@@ -143,7 +143,12 @@ impl FsNodeOps for RemoteNode {
         Ok(Box::new(RemoteFileObject::new(zxio)))
     }
 
-    fn lookup(&self, node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
+    fn lookup(
+        &self,
+        node: &FsNode,
+        _current_task: &CurrentTask,
+        name: &FsStr,
+    ) -> Result<FsNodeHandle, Errno> {
         let name = std::str::from_utf8(name).map_err(|_| {
             warn!("bad utf8 in pathname! remote filesystems can't handle this");
             EINVAL
@@ -574,7 +579,7 @@ mod test {
         let mut context = LookupContext::default();
         let _test_file = root
             .lookup_child(&current_task, &mut context, b"bin/hello_starnix")?
-            .open(&current_task, OpenFlags::RDONLY)?;
+            .open(&current_task, OpenFlags::RDONLY, true)?;
         Ok(())
     }
 

@@ -54,7 +54,12 @@ impl FsNodeOps for CgroupDirectoryNode {
         Ok(Box::new(MemoryDirectoryFile::new()))
     }
 
-    fn lookup(&self, _node: &FsNode, name: &FsStr) -> Result<FsNodeHandle, Errno> {
+    fn lookup(
+        &self,
+        _node: &FsNode,
+        _current_task: &CurrentTask,
+        name: &FsStr,
+    ) -> Result<FsNodeHandle, Errno> {
         error!(ENOENT, format!("looking for {:?}", String::from_utf8_lossy(name)))
     }
 

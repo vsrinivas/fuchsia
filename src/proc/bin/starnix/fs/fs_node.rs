@@ -182,7 +182,12 @@ pub trait FsNodeOps: Send + Sync + AsAny {
     ///
     /// The child parameter is an empty node. Operations other than initialize may panic before
     /// initialize is called.
-    fn lookup(&self, _node: &FsNode, _name: &FsStr) -> Result<FsNodeHandle, Errno> {
+    fn lookup(
+        &self,
+        _node: &FsNode,
+        _current_task: &CurrentTask,
+        _name: &FsStr,
+    ) -> Result<FsNodeHandle, Errno> {
         error!(ENOTDIR)
     }
 
@@ -435,6 +440,7 @@ impl FsNode {
         operation: FlockOperation,
     ) -> Result<(), Errno> {
         loop {
+            self.check_access(current_task, Access::READ)?;
             let mut flock_info = self.flock_info.lock();
             if operation.is_unlock() {
                 flock_info.retain(|fh| !Arc::ptr_eq(&fh, file_handle));
@@ -505,11 +511,16 @@ impl FsNode {
         &self,
         current_task: &CurrentTask,
         flags: OpenFlags,
+        check_access: bool,
     ) -> Result<Box<dyn FileOps>, Errno> {
         // If O_PATH is set, there is no need to create a real FileOps because
         // most file operations are disabled.
         if flags.contains(OpenFlags::PATH) {
             return Ok(Box::new(OPathOps::new()));
+        }
+
+        if check_access {
+            self.check_access(current_task, Access::from_open_flags(flags))?;
         }
 
         let (mode, rdev) = {
@@ -537,23 +548,27 @@ impl FsNode {
         }
     }
 
-    pub fn lookup(&self, name: &FsStr) -> Result<FsNodeHandle, Errno> {
-        self.ops().lookup(self, name)
+    pub fn lookup(&self, current_task: &CurrentTask, name: &FsStr) -> Result<FsNodeHandle, Errno> {
+        self.check_access(current_task, Access::EXEC)?;
+        self.ops().lookup(self, current_task, name)
     }
 
     pub fn mknod(
         &self,
+        current_task: &CurrentTask,
         name: &FsStr,
         mode: FileMode,
         dev: DeviceType,
         owner: FsCred,
     ) -> Result<FsNodeHandle, Errno> {
         assert!(mode & FileMode::IFMT != FileMode::EMPTY, "mknod called without node type.");
+        self.check_access(current_task, Access::WRITE)?;
         self.ops().mknod(self, name, mode, dev, owner)
     }
 
     pub fn mkdir(
         &self,
+        current_task: &CurrentTask,
         name: &FsStr,
         mode: FileMode,
         owner: FsCred,
@@ -562,45 +577,52 @@ impl FsNode {
             mode & FileMode::IFMT == FileMode::IFDIR,
             "mkdir called without directory node type."
         );
+        self.check_access(current_task, Access::WRITE)?;
         self.ops().mkdir(self, name, mode, owner)
     }
 
     pub fn create_symlink(
         &self,
+        current_task: &CurrentTask,
         name: &FsStr,
         target: &FsStr,
         owner: FsCred,
     ) -> Result<FsNodeHandle, Errno> {
+        self.check_access(current_task, Access::WRITE)?;
         self.ops().create_symlink(self, name, target, owner)
     }
 
     pub fn readlink(&self, current_task: &CurrentTask) -> Result<SymlinkTarget, Errno> {
+        // TODO(qsr): Is there a permission check here?
         let now = fuchsia_runtime::utc_time();
         self.info_write().time_access = now;
         self.ops().readlink(self, current_task)
     }
 
-    pub fn link(&self, name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {
+    pub fn link(&self, task: &Task, name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {
+        self.check_access(task, Access::WRITE)?;
         self.ops().link(self, name, child)
     }
 
-    pub fn unlink(&self, name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {
+    pub fn unlink(&self, task: &Task, name: &FsStr, child: &FsNodeHandle) -> Result<(), Errno> {
+        self.check_access(task, Access::WRITE)?;
         self.ops().unlink(self, name, child)
     }
 
-    pub fn truncate(&self, length: u64) -> Result<(), Errno> {
+    pub fn truncate(&self, task: &Task, length: u64) -> Result<(), Errno> {
+        self.check_access(task, Access::WRITE)?;
         self.ops().truncate(self, length)
     }
 
     /// Check whether the node can be accessed in the current context with the specified access
     /// flags (read, write, or exec). Accounts for capabilities and whether the current user is the
     /// owner or is in the file's group.
-    pub fn check_access(&self, current_task: &CurrentTask, access: Access) -> Result<(), Errno> {
+    pub fn check_access(&self, task: &Task, access: Access) -> Result<(), Errno> {
         let (node_uid, node_gid, mode) = {
             let info = self.info();
             (info.uid, info.gid, info.mode.bits())
         };
-        let creds = current_task.creds();
+        let creds = task.creds();
         if creds.has_capability(CAP_DAC_OVERRIDE) {
             return Ok(());
         }
@@ -640,12 +662,14 @@ impl FsNode {
     ///
     /// Does not change the IFMT of the node.
     pub fn chmod(&self, mode: FileMode) {
+        // TODO(qsr, security): Check permissions.
         let mut info = self.info_write();
         info.mode = (info.mode & !FileMode::PERMISSIONS) | (mode & FileMode::PERMISSIONS);
     }
 
     /// Sets the owner and/or group on this FsNode.
     pub fn chown(&self, owner: Option<uid_t>, group: Option<gid_t>) {
+        // TODO(qsr, security): Check permissions.
         let mut info = self.info_write();
         if let Some(owner) = owner {
             info.uid = owner;
@@ -698,15 +722,24 @@ impl FsNode {
         })
     }
 
-    pub fn get_xattr(&self, name: &FsStr) -> Result<FsString, Errno> {
+    pub fn get_xattr(&self, task: &Task, name: &FsStr) -> Result<FsString, Errno> {
+        self.check_access(task, Access::READ)?;
         self.ops().get_xattr(name)
     }
 
-    pub fn set_xattr(&self, name: &FsStr, value: &FsStr, op: XattrOp) -> Result<(), Errno> {
+    pub fn set_xattr(
+        &self,
+        task: &Task,
+        name: &FsStr,
+        value: &FsStr,
+        op: XattrOp,
+    ) -> Result<(), Errno> {
+        self.check_access(task, Access::WRITE)?;
         self.ops().set_xattr(name, value, op)
     }
 
-    pub fn remove_xattr(&self, name: &FsStr) -> Result<(), Errno> {
+    pub fn remove_xattr(&self, task: &Task, name: &FsStr) -> Result<(), Errno> {
+        self.check_access(task, Access::WRITE)?;
         self.ops().remove_xattr(name)
     }
 
