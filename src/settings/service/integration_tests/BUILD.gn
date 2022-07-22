@@ -8,6 +8,7 @@ group("integration_tests") {
     "accessibility_tests",
     "do_not_disturb_tests",
     "input_tests",
+    "night_mode_tests",
     "privacy_tests",
   ]
 }

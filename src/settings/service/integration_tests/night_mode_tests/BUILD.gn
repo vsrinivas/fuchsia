@@ -1,0 +1,55 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/config.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_test("bin") {
+  name = "night_mode_integration_test"
+  edition = "2021"
+  source_root = "src/night_mode_tests.rs"
+  sources = [
+    "src/common.rs",
+    "src/night_mode_tests.rs",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component-test",
+    "//src/settings/service/integration_tests/utils",
+    "//third_party/rust_crates:anyhow",
+  ]
+
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
+
+fuchsia_component("night_mode_integration_test") {
+  testonly = true
+  manifest = "meta/night_mode_integration_test.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_test_package("night_mode_integration_test_pkg") {
+  package_name = "night_mode_integration_test"
+  test_components = [ ":night_mode_integration_test" ]
+  deps = [
+    ":night_mode_integration_test",
+    ":tests_config",
+    "//src/settings/service:setui_service_v2",
+    "//src/sys/stash:pkg",
+  ]
+}
+
+config_data("tests_config") {
+  for_pkg = "night_mode_integration_test_pkg"
+  sources = [ "testdata/interface_configuration.json" ]
+}
+
+group("night_mode_tests") {
+  testonly = true
+  public_deps = [ ":night_mode_integration_test_pkg" ]
+}
