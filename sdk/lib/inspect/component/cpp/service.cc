@@ -94,12 +94,22 @@ void TreeServer::GetContent(GetContentRequestView request, GetContentCompleter::
     } else if (failure_behavior.has_value() && *failure_behavior == behavior_types::Live) {
       buffer.vmo = inspector_.DuplicateVmo();
     } else {
-      buffer.vmo = inspector_.CopyVmo();
+      auto maybe_vmo = inspector_.CopyVmo();
+      if (maybe_vmo.has_value()) {
+        buffer.vmo = std::move(maybe_vmo.value());
+      } else {
+        buffer.vmo = inspector_.DuplicateVmo();
+      }
     }
   } else if (primary_behavior == behavior_types::Live) {
     buffer.vmo = inspector_.DuplicateVmo();
   } else {
-    buffer.vmo = inspector_.CopyVmo();
+    auto maybe_vmo = inspector_.CopyVmo();
+    if (maybe_vmo.has_value()) {
+      buffer.vmo = std::move(maybe_vmo.value());
+    } else {
+      buffer.vmo = inspector_.DuplicateVmo();
+    }
   }
 
   content_builder.buffer(std::move(buffer));

@@ -83,18 +83,23 @@ zx::vmo Inspector::DuplicateVmo() const {
   return ret;
 }
 
-zx::vmo Inspector::CopyVmo() const {
+cpp17::optional<zx::vmo> Inspector::CopyVmo() const {
   zx::vmo ret;
 
-  state_->Copy(&ret);
+  if (!state_->Copy(&ret)) {
+    return {};
+  }
 
-  return ret;
+  return {std::move(ret)};
 }
 
-std::vector<uint8_t> Inspector::CopyBytes() const {
+cpp17::optional<std::vector<uint8_t>> Inspector::CopyBytes() const {
   std::vector<uint8_t> ret;
-  state_->CopyBytes(&ret);
-  return ret;
+  if (!state_->CopyBytes(&ret)) {
+    return {};
+  }
+
+  return {std::move(ret)};
 }
 
 InspectStats Inspector::GetStats() const {

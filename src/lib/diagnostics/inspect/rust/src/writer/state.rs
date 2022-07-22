@@ -295,9 +295,13 @@ impl State {
     }
 
     /// Copies the bytes in the VMO into the returned vector.
-    pub fn copy_vmo_bytes(&self) -> Vec<u8> {
+    pub fn copy_vmo_bytes(&self) -> Option<Vec<u8>> {
         let state = self.inner.lock();
-        state.heap.bytes()
+        if state.transaction_count > 0 {
+            return None;
+        }
+
+        Some(state.heap.bytes())
     }
 }
 
@@ -541,6 +545,10 @@ impl InnerState {
     }
 
     fn frozen_vmo_copy(&self, header: &Block<Arc<Mapping>>) -> Result<Option<zx::Vmo>, Error> {
+        if self.transaction_count > 0 {
+            return Ok(None);
+        }
+
         let old = header.freeze_header()?;
         let ret = self
             .vmo
@@ -610,7 +618,7 @@ impl InnerState {
         format!("{}-{}", prefix, id)
     }
 
-    pub(in crate) fn allocate_link<'b>(
+    pub(crate) fn allocate_link<'b>(
         &mut self,
         name: impl Into<StringReference<'b>>,
         content: &str,
@@ -1065,7 +1073,7 @@ mod tests {
     #[fuchsia::test]
     fn test_create() {
         let state = get_state(4096);
-        let snapshot = Snapshot::try_from(state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 8);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
@@ -1160,7 +1168,7 @@ mod tests {
         };
 
         // Verify blocks.
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
@@ -1197,7 +1205,7 @@ mod tests {
             // Free node.
             assert!(state.free_value(block.index()).is_ok());
         }
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
@@ -1223,7 +1231,7 @@ mod tests {
             block
         };
 
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 9);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
@@ -1253,7 +1261,7 @@ mod tests {
             // Free metric.
             assert!(state.free_value(block.index()).is_ok());
         }
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
@@ -1279,7 +1287,7 @@ mod tests {
 
             block
         };
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 9);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
@@ -1309,7 +1317,7 @@ mod tests {
             // Free metric.
             assert!(state.free_value(block.index()).is_ok());
         }
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
@@ -1335,7 +1343,7 @@ mod tests {
             block
         };
 
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 9);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
@@ -1358,7 +1366,7 @@ mod tests {
             // Free metric.
             assert!(state.free_value(block.index()).is_ok());
         }
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
@@ -1382,7 +1390,7 @@ mod tests {
 
         drop(state);
 
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
 
         // if cleanup happened correctly, the name + extent and property + extent have been freed
@@ -1422,7 +1430,7 @@ mod tests {
             assert!(state.inner_lock.string_reference_ids.get(&(&sf).id()).is_none());
         }
 
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
@@ -1512,7 +1520,7 @@ mod tests {
             block
         };
 
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
@@ -1526,7 +1534,7 @@ mod tests {
             // Free property.
             assert!(state.free_property(block.index()).is_ok());
         }
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
@@ -1558,7 +1566,7 @@ mod tests {
             state.free_value(array.index()).unwrap();
         }
 
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
@@ -1576,7 +1584,7 @@ mod tests {
 
         drop(state);
 
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let mut state = core_state.try_lock().expect("lock state");
 
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
@@ -1628,7 +1636,7 @@ mod tests {
             block
         };
 
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
@@ -1642,7 +1650,7 @@ mod tests {
             let mut state = core_state.try_lock().expect("lock state");
             assert!(state.free_property(block.index()).is_ok());
         }
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
@@ -1668,7 +1676,7 @@ mod tests {
             block
         };
 
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 9);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
@@ -1681,7 +1689,7 @@ mod tests {
             let mut state = core_state.try_lock().expect("lock state");
             assert!(state.free_value(block.index()).is_ok());
         }
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
@@ -1715,7 +1723,7 @@ mod tests {
             block
         };
 
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert_eq!(blocks[0].block_type(), BlockType::Header);
         assert_eq!(blocks[1].block_type(), BlockType::StringReference);
@@ -1728,7 +1736,7 @@ mod tests {
             let mut state = core_state.try_lock().expect("lock state");
             assert!(state.free_value(block.index()).is_ok());
         }
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
@@ -1786,7 +1794,7 @@ mod tests {
             block
         };
 
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 11);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
@@ -1801,7 +1809,7 @@ mod tests {
             let mut state = core_state.try_lock().expect("lock state");
             assert!(state.free_property(block.index()).is_ok());
         }
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
@@ -1854,7 +1862,7 @@ mod tests {
         }
 
         // Current expected layout of VMO:
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
 
         assert_eq!(blocks[0].block_type(), BlockType::Header);
@@ -1889,7 +1897,7 @@ mod tests {
             child_block
         };
 
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
 
         // Note that the way Extents get allocated means that they aren't necessarily
@@ -1906,7 +1914,7 @@ mod tests {
             let mut state = core_state.try_lock().expect("lock state");
             assert!(state.free_value(child_block.index()).is_ok());
         }
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }
@@ -1986,8 +1994,8 @@ mod tests {
             block
         };
 
-        // Verfiy all the VMO blocks.
-        let snapshot = Snapshot::try_from(state.copy_vmo_bytes()).unwrap();
+        // Verify all the VMO blocks.
+        let snapshot = Snapshot::try_from(state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert_eq!(blocks.len(), 10);
         assert_eq!(blocks[0].block_type(), BlockType::Header);
@@ -2005,7 +2013,7 @@ mod tests {
             // Verify the callback was cleared on free link.
             assert!(state_guard.callbacks().get("link-name-0").is_none());
         }
-        let snapshot = Snapshot::try_from(state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
 
@@ -2120,7 +2128,7 @@ mod tests {
             assert!(state.free_property(block1.index()).is_ok());
             assert!(state.free_property(block2.index()).is_ok());
         }
-        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes()).unwrap();
+        let snapshot = Snapshot::try_from(core_state.copy_vmo_bytes().unwrap()).unwrap();
         let blocks: Vec<ScannedBlock<'_>> = snapshot.scan().collect();
         assert!(blocks[1..].iter().all(|b| b.block_type() == BlockType::Free));
     }

@@ -273,6 +273,11 @@ bool State::DuplicateVmo(zx::vmo* vmo) const {
 
 cpp17::optional<zx::vmo> State::FrozenVmoCopy() const {
   std::lock_guard<std::mutex> lock(mutex_);
+
+  if (transaction_count_ > 0) {
+    return {};
+  }
+
   std::unique_ptr<AutoGenerationIncrement> gen = MaybeFreezeAndIncrementGeneration();
 
   uint64_t size;
@@ -289,6 +294,10 @@ cpp17::optional<zx::vmo> State::FrozenVmoCopy() const {
 bool State::Copy(zx::vmo* vmo) const {
   std::lock_guard<std::mutex> lock(mutex_);
 
+  if (transaction_count_ > 0) {
+    return false;
+  }
+
   size_t size = heap_->size();
   if (zx::vmo::create(size, 0, vmo) != ZX_OK) {
     return false;
@@ -303,6 +312,10 @@ bool State::Copy(zx::vmo* vmo) const {
 
 bool State::CopyBytes(std::vector<uint8_t>* out) const {
   std::lock_guard<std::mutex> lock(mutex_);
+
+  if (transaction_count_ > 0) {
+    return false;
+  }
 
   size_t size = heap_->size();
   if (size == 0) {
