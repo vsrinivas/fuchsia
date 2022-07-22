@@ -718,6 +718,7 @@ func Main() {
 	}
 
 	addMulticastIpv4RoutingTableControllerService(componentCtx, ns.stack)
+	addMulticastIpv6RoutingTableControllerService(componentCtx, ns.stack)
 
 	componentCtx.BindStartupHandle(context.Background())
 }

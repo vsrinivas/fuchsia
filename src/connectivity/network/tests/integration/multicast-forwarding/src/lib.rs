@@ -5,6 +5,7 @@
 #![cfg(test)]
 
 use assert_matches::assert_matches;
+use async_trait::async_trait;
 use derivative::Derivative;
 use fidl::endpoints::Proxy as _;
 use fidl_fuchsia_net as fnet;
@@ -14,9 +15,9 @@ use fidl_fuchsia_net_multicast_admin as fnet_multicast_admin;
 use fuchsia_async::{self as fasync, DurationExt as _, TimeoutExt as _};
 use fuchsia_zircon::{self as zx};
 use futures::{StreamExt as _, TryFutureExt as _, TryStreamExt as _};
-use lazy_static::lazy_static;
 use maplit::hashmap;
-use net_declare::{fidl_ip_v4, fidl_subnet};
+use net_declare::{fidl_ip, fidl_subnet};
+use net_types::ip::{IpAddr, IpVersion};
 use netemul::RealmUdpSocket as _;
 use netstack_testing_common::{
     interfaces,
@@ -27,48 +28,83 @@ use std::collections::HashMap;
 use test_case::test_case;
 use test_util::assert_gt;
 
-lazy_static! {
-    /// Client device configs for a `MulticastForwardingNetwork`.
-    static ref CLIENT_CONFIGS: HashMap<Client, RouterConnectedDeviceConfig<'static>> = hashmap! {
-        Client::A => RouterConnectedDeviceConfig {
-            name: "clientA",
-            ep_addr: fidl_subnet!("192.168.1.2/24"),
-            router_ep_addr: fidl_subnet!("192.168.1.1/24"),
-        },
-        Client::B => RouterConnectedDeviceConfig {
-            name: "clientB",
-            ep_addr: fidl_subnet!("192.168.2.2/24"),
-            router_ep_addr: fidl_subnet!("192.168.2.1/24"),
-        },
-    };
+type UnicastSourceAndMulticastDestination = IpAddr<
+    fnet_multicast_admin::Ipv4UnicastSourceAndMulticastDestination,
+    fnet_multicast_admin::Ipv6UnicastSourceAndMulticastDestination,
+>;
 
-    /// Server device configs for a `MulticastForwardingNetwork`.
-    static ref SERVER_CONFIGS: HashMap<Server, RouterConnectedDeviceConfig<'static>> = hashmap! {
-        Server::A => RouterConnectedDeviceConfig {
-            name: "serverA",
-            ep_addr: fidl_subnet!("192.168.0.2/24"),
-            router_ep_addr: fidl_subnet!("192.168.0.1/24"),
-        },
-        Server::B => RouterConnectedDeviceConfig {
-            name: "serverB",
-            ep_addr: fidl_subnet!("192.168.3.1/24"),
-            router_ep_addr: fidl_subnet!("192.168.3.2/24"),
-        },
-    };
+#[derive(Clone, Copy)]
+enum IpAddrType {
+    Any,
+    LinkLocalMulticast,
+    LinkLocalUnicast,
+    Multicast,
+    OtherMulticast,
+    Unicast,
 }
 
-const IPV4_MULTICAST_ADDR: fnet::Ipv4Address = fidl_ip_v4!("225.0.0.0");
-const IPV4_OTHER_MULTICAST_ADDR: fnet::Ipv4Address = fidl_ip_v4!("225.0.0.1");
-const IPV4_ANY_ADDR: fnet::Ipv4Address = fidl_ip_v4!("0.0.0.0");
-const IPV4_LINK_LOCAL_UNICAST_ADDR: fnet::Ipv4Address = fidl_ip_v4!("169.254.0.10");
-const IPV4_UNICAST_ADDR: fnet::Ipv4Address = fidl_ip_v4!("192.168.0.2");
-const IPV4_LINK_LOCAL_MULTICAST_ADDR: fnet::Ipv4Address = fidl_ip_v4!("224.0.0.1");
+impl IpAddrType {
+    /// Returns the IP address associated with the variant.
+    ///
+    /// The IP version of the returned address matches the specified `version`.
+    fn address(&self, version: IpVersion) -> fnet::IpAddress {
+        match version {
+            IpVersion::V4 => match *self {
+                IpAddrType::Any => fidl_ip!("0.0.0.0"),
+                IpAddrType::LinkLocalMulticast => fidl_ip!("224.0.0.1"),
+                IpAddrType::LinkLocalUnicast => fidl_ip!("169.254.0.10"),
+                IpAddrType::Multicast => fidl_ip!("225.0.0.0"),
+                IpAddrType::OtherMulticast => fidl_ip!("225.0.0.1"),
+                IpAddrType::Unicast => fidl_ip!("192.168.0.2"),
+            },
+            IpVersion::V6 => match *self {
+                IpAddrType::Any => fidl_ip!("::"),
+                IpAddrType::LinkLocalMulticast => fidl_ip!("ff02::a"),
+                IpAddrType::LinkLocalUnicast => fidl_ip!("fe80::a"),
+                IpAddrType::Multicast => fidl_ip!("ff0e::a"),
+                IpAddrType::OtherMulticast => fidl_ip!("ff0e::b"),
+                IpAddrType::Unicast => fidl_ip!("200b::1"),
+            },
+        }
+    }
+}
 
 /// Identifier for a device that listens for multicast packets.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 enum Client {
     A,
     B,
+}
+
+impl Client {
+    fn name(&self) -> String {
+        format!("client-{:?}", self)
+    }
+
+    fn config(&self, version: IpVersion) -> RouterConnectedDeviceConfig {
+        match version {
+            IpVersion::V4 => match *self {
+                Client::A => RouterConnectedDeviceConfig {
+                    ep_addr: fidl_subnet!("192.168.1.2/24"),
+                    router_ep_addr: fidl_subnet!("192.168.1.1/24"),
+                },
+                Client::B => RouterConnectedDeviceConfig {
+                    ep_addr: fidl_subnet!("192.168.2.2/24"),
+                    router_ep_addr: fidl_subnet!("192.168.2.1/24"),
+                },
+            },
+            IpVersion::V6 => match *self {
+                Client::A => RouterConnectedDeviceConfig {
+                    ep_addr: fidl_subnet!("a::1/24"),
+                    router_ep_addr: fidl_subnet!("b::1/24"),
+                },
+                Client::B => RouterConnectedDeviceConfig {
+                    ep_addr: fidl_subnet!("a::2/24"),
+                    router_ep_addr: fidl_subnet!("b::2/24"),
+                },
+            },
+        }
+    }
 }
 
 /// Identifier for a device that sends multicast packets.
@@ -85,6 +121,37 @@ fn create_router_realm<'a>(
     sandbox
         .create_netstack_realm::<Netstack2, _>(format!("{}_router_realm", name))
         .expect("create realm")
+}
+
+impl Server {
+    fn name(&self) -> String {
+        format!("server-{:?}", self)
+    }
+
+    fn config(&self, version: IpVersion) -> RouterConnectedDeviceConfig {
+        match version {
+            IpVersion::V4 => match *self {
+                Server::A => RouterConnectedDeviceConfig {
+                    ep_addr: fidl_subnet!("192.168.0.2/24"),
+                    router_ep_addr: fidl_subnet!("192.168.0.1/24"),
+                },
+                Server::B => RouterConnectedDeviceConfig {
+                    ep_addr: fidl_subnet!("192.168.3.1/24"),
+                    router_ep_addr: fidl_subnet!("192.168.3.2/24"),
+                },
+            },
+            IpVersion::V6 => match *self {
+                Server::A => RouterConnectedDeviceConfig {
+                    ep_addr: fidl_subnet!("a::3/24"),
+                    router_ep_addr: fidl_subnet!("b::3/24"),
+                },
+                Server::B => RouterConnectedDeviceConfig {
+                    ep_addr: fidl_subnet!("a::4/24"),
+                    router_ep_addr: fidl_subnet!("b::4/24"),
+                },
+            },
+        }
+    }
 }
 
 /// A network that is configured to send, forward, and receive multicast
@@ -110,6 +177,7 @@ struct MulticastForwardingNetwork<'a> {
     clients: std::collections::HashMap<Client, ClientDevice<'a>>,
     servers: std::collections::HashMap<Server, RouterConnectedDevice<'a>>,
     options: MulticastForwardingNetworkOptions,
+    version: IpVersion,
 }
 
 impl<'a> MulticastForwardingNetwork<'a> {
@@ -117,35 +185,49 @@ impl<'a> MulticastForwardingNetwork<'a> {
 
     async fn new<E: netemul::Endpoint>(
         name: &'a str,
+        version: IpVersion,
         sandbox: &'a netemul::TestSandbox,
         router_realm: &'a netemul::TestRealm<'a>,
         options: MulticastForwardingNetworkOptions,
     ) -> MulticastForwardingNetwork<'a> {
         let MulticastForwardingNetworkOptions {
-            multicast_addr,
             source_device,
             enable_multicast_forwarding,
             listen_from_router,
             packet_ttl: _,
         } = options;
-
-        let multicast_socket_addr = std::net::SocketAddr::V4(multicast_addr);
-        let servers: HashMap<_, _> = futures::stream::iter(SERVER_CONFIGS.iter())
-            .then(|(server, config)| async move {
-                let device =
-                    create_router_connected_device::<E>(name, sandbox, router_realm, config).await;
-                (*server, device)
+        let multicast_socket_addr = create_socket_addr(IpAddrType::Multicast.address(version));
+        let servers: HashMap<_, _> = futures::stream::iter([Server::A, Server::B])
+            .then(|server| async move {
+                let device = create_router_connected_device::<E>(
+                    format!("{}_{}", name, server.name()),
+                    sandbox,
+                    router_realm,
+                    server.config(version),
+                )
+                .await;
+                (server, device)
             })
             .collect()
             .await;
-        let clients: HashMap<_, _> = futures::stream::iter(CLIENT_CONFIGS.iter())
-            .then(|(client, config)| async move {
-                let device =
-                    create_router_connected_device::<E>(name, sandbox, router_realm, config).await;
-                let socket =
-                    create_listener_socket(&device.realm, device.ep_addr, multicast_socket_addr)
-                        .await;
-                (*client, ClientDevice { device, socket })
+        let clients: HashMap<_, _> = futures::stream::iter([Client::A, Client::B])
+            .then(|client| async move {
+                let device = create_router_connected_device::<E>(
+                    format!("{}_{}", name, client.name()),
+                    sandbox,
+                    router_realm,
+                    client.config(version),
+                )
+                .await;
+                let socket = create_listener_socket(
+                    &device.realm,
+                    version,
+                    device.interface.id(),
+                    device.ep_addr,
+                    multicast_socket_addr,
+                )
+                .await;
+                (client, ClientDevice { device, socket })
             })
             .collect()
             .await;
@@ -165,6 +247,8 @@ impl<'a> MulticastForwardingNetwork<'a> {
             Some(
                 create_listener_socket(
                     router_realm,
+                    version,
+                    input_server_device.router_interface.id(),
                     input_server_device.router_ep_addr,
                     multicast_socket_addr,
                 )
@@ -179,45 +263,59 @@ impl<'a> MulticastForwardingNetwork<'a> {
             clients,
             servers,
             options,
+            version,
         }
     }
 
-    /// Sends a single multicast packet from a configured server to the router.
+    /// Sends a single multicast packet from a configured device.
     async fn send_multicast_packet(&self) {
-        let (realm, addr) = match self.options.source_device {
+        let (realm, addr, id) = match self.options.source_device {
             SourceDevice::Router(server) => {
-                (self.router_realm, self.get_server(server).router_ep_addr)
+                let server_device = self.get_server(server);
+                (
+                    self.router_realm,
+                    server_device.router_ep_addr,
+                    server_device.router_interface.id(),
+                )
             }
             SourceDevice::Server(server) => {
                 let server_device = self.get_server(server);
-                (&server_device.realm, server_device.ep_addr)
+                (&server_device.realm, server_device.ep_addr, server_device.interface.id())
             }
         };
 
-        let server_sock = fasync::net::UdpSocket::bind_in_realm(
-            realm,
-            std::net::SocketAddr::V4(self.options.multicast_addr),
-        )
-        .await
-        .expect("bind_in_realm failed for server socket");
-
-        let interface_addr = get_ipv4_address(addr);
-        server_sock
-            .as_ref()
-            .set_multicast_if_v4(&interface_addr.addr.into())
-            .expect("set_multicast_if_v4 failed");
-        server_sock
-            .as_ref()
-            .set_multicast_ttl_v4(self.options.packet_ttl.into())
-            .expect("set_multicast_ttl_v4 failed");
-
-        let r = server_sock
-            .send_to(
-                Self::PAYLOAD.as_bytes(),
-                std::net::SocketAddr::V4(self.options.multicast_addr),
-            )
+        let dst_addr = create_socket_addr(IpAddrType::Multicast.address(self.version));
+        let server_sock = fasync::net::UdpSocket::bind_in_realm(realm, dst_addr)
             .await
-            .expect("send_to failed");
+            .expect("bind_in_realm failed for server socket");
+
+        match self.version {
+            IpVersion::V4 => {
+                let interface_addr = get_ipv4_address_from_subnet(addr);
+                server_sock
+                    .as_ref()
+                    .set_multicast_if_v4(&interface_addr.addr.into())
+                    .expect("set_multicast_if_v4 failed");
+                server_sock
+                    .as_ref()
+                    .set_multicast_ttl_v4(self.options.packet_ttl.into())
+                    .expect("set_multicast_ttl_v4 failed");
+            }
+            IpVersion::V6 => {
+                server_sock
+                    .as_ref()
+                    .set_multicast_if_v6(u32::try_from(id).unwrap_or_else(|e| {
+                        panic!("failed to convert {} to u32 with error: {:?}", id, e)
+                    }))
+                    .expect("set_multicast_if_v6 failed");
+                server_sock
+                    .as_ref()
+                    .set_multicast_hops_v6(self.options.packet_ttl.into())
+                    .expect("set_multicast_hops_v6 failed");
+            }
+        }
+        let r =
+            server_sock.send_to(Self::PAYLOAD.as_bytes(), dst_addr).await.expect("send_to failed");
         assert_eq!(r, Self::PAYLOAD.as_bytes().len());
     }
 
@@ -236,11 +334,7 @@ impl<'a> MulticastForwardingNetwork<'a> {
             expectations
                 .into_iter()
                 .map(|(client, expect_forwarded_packet)| {
-                    (
-                        format!("client{:?}", client),
-                        &self.get_client(client).socket,
-                        expect_forwarded_packet,
-                    )
+                    (client.name(), &self.get_client(client).socket, expect_forwarded_packet)
                 })
                 .chain(
                     self.router_listener_socket
@@ -265,10 +359,7 @@ impl<'a> MulticastForwardingNetwork<'a> {
                 expect_packet,
             ) {
                 (Some((r, from)), true) => {
-                    assert_eq!(
-                        from,
-                        std::net::SocketAddr::V4(create_socket_addr_v4(self.get_source_address()))
-                    );
+                    assert_eq!(from, create_socket_addr(self.get_source_address()));
                     assert_eq!(r, Self::PAYLOAD.as_bytes().len());
                     assert_eq!(&buf[..r], Self::PAYLOAD.as_bytes());
                 }
@@ -282,23 +373,21 @@ impl<'a> MulticastForwardingNetwork<'a> {
         .await;
     }
 
-    fn create_multicast_controller(&self) -> fnet_multicast_admin::Ipv4RoutingTableControllerProxy {
-        self.router_realm
-            .connect_to_protocol::<fnet_multicast_admin::Ipv4RoutingTableControllerMarker>()
-            .expect("connect to protocol")
+    /// Creates a `RoutingTableController`.
+    fn create_multicast_controller(&self) -> Box<dyn RoutingTableController> {
+        match self.version {
+            IpVersion::V4 => Box::new(Ipv4RoutingTableController::new(self.router_realm)),
+            IpVersion::V6 => Box::new(Ipv6RoutingTableController::new(self.router_realm)),
+        }
     }
 
-    async fn add_default_route(
-        &self,
-        controller: &fnet_multicast_admin::Ipv4RoutingTableControllerProxy,
-    ) {
-        let mut addresses = self.default_unicast_source_and_multicast_destination();
-        let route = self.default_multicast_route();
-
+    async fn add_default_route(&self, controller: &Box<dyn RoutingTableController>) {
         controller
-            .add_route(&mut addresses, route)
+            .add_route(
+                self.default_unicast_source_and_multicast_destination(),
+                self.default_multicast_route(),
+            )
             .await
-            .expect("add_route failed")
             .expect("add_route error");
     }
 
@@ -364,12 +453,12 @@ impl<'a> MulticastForwardingNetwork<'a> {
     }
 
     /// Returns the address of the interface that sends multicast packets.
-    fn get_source_address(&self) -> fnet::Ipv4Address {
+    fn get_source_address(&self) -> fnet::IpAddress {
         let subnet = match self.options.source_device {
             SourceDevice::Router(server) => self.get_server(server).router_ep_addr,
             SourceDevice::Server(server) => self.get_server(server).ep_addr,
         };
-        get_ipv4_address(subnet)
+        subnet.addr
     }
 
     /// Returns the interface ID of the router interface handles incoming
@@ -382,25 +471,20 @@ impl<'a> MulticastForwardingNetwork<'a> {
         }
     }
 
-    fn get_device_address(&self, address: DeviceAddress) -> fnet::Ipv4Address {
+    fn get_device_address(&self, address: DeviceAddress) -> fnet::IpAddress {
         match address {
-            DeviceAddress::Router(server) => {
-                get_ipv4_address(self.get_server(server).router_ep_addr)
-            }
-            DeviceAddress::Server(server) => get_ipv4_address(self.get_server(server).ep_addr),
-            DeviceAddress::Other(addr) => addr,
+            DeviceAddress::Router(server) => self.get_server(server).router_ep_addr.addr,
+            DeviceAddress::Server(server) => self.get_server(server).ep_addr.addr,
+            DeviceAddress::Other(addr) => addr.address(self.version),
         }
     }
 
     fn default_unicast_source_and_multicast_destination(
         &self,
-    ) -> fnet_multicast_admin::Ipv4UnicastSourceAndMulticastDestination {
-        fnet_multicast_admin::Ipv4UnicastSourceAndMulticastDestination {
-            unicast_source: self.get_source_address(),
-            multicast_destination: fnet::Ipv4Address {
-                addr: self.options.multicast_addr.ip().octets(),
-            },
-        }
+    ) -> UnicastSourceAndMulticastDestination {
+        let source_addr = self.get_source_address();
+        let destination_addr = IpAddrType::Multicast.address(self.version);
+        self.create_unicast_source_and_multicast_destination(source_addr, destination_addr)
     }
 
     fn default_multicast_route(&self) -> fnet_multicast_admin::Route {
@@ -414,6 +498,44 @@ impl<'a> MulticastForwardingNetwork<'a> {
             ])),
             ..fnet_multicast_admin::Route::EMPTY
         }
+    }
+
+    fn create_unicast_source_and_multicast_destination(
+        &self,
+        source: fnet::IpAddress,
+        destination: fnet::IpAddress,
+    ) -> UnicastSourceAndMulticastDestination {
+        match self.version {
+            IpVersion::V4 => {
+                IpAddr::V4(fnet_multicast_admin::Ipv4UnicastSourceAndMulticastDestination {
+                    unicast_source: get_ipv4_address_from_addr(source),
+                    multicast_destination: get_ipv4_address_from_addr(destination),
+                })
+            }
+            IpVersion::V6 => {
+                IpAddr::V6(fnet_multicast_admin::Ipv6UnicastSourceAndMulticastDestination {
+                    unicast_source: get_ipv6_address_from_addr(source),
+                    multicast_destination: get_ipv6_address_from_addr(destination),
+                })
+            }
+        }
+    }
+
+    /// Waits for the `controller` to be fully initialized.
+    ///
+    /// Multicast forwarding is enabled at the protocol level when a controller is
+    /// instantiated. However, controller creation is asynchronous. As a result,
+    /// some operations may race with the creation of a controller. In such a case,
+    /// callers should invoke this function to ensure that the controller is fully
+    /// initialized.
+    async fn wait_for_controller_to_start(&self, controller: &Box<dyn RoutingTableController>) {
+        let multicast_addr = IpAddrType::Multicast.address(self.version);
+        let invalid_addresses =
+            self.create_unicast_source_and_multicast_destination(multicast_addr, multicast_addr);
+        assert_eq!(
+            controller.add_route(invalid_addresses, self.default_multicast_route()).await,
+            Err(AddRouteError::InvalidAddress)
+        );
     }
 }
 
@@ -443,18 +565,13 @@ struct MulticastForwardingNetworkOptions {
     /// packets.
     #[derivative(Default(value = "false"))]
     listen_from_router: bool,
-    /// The multicast group address that packets should be sent to and that
-    /// listeners should join.
-    #[derivative(Default(value = "create_socket_addr_v4(IPV4_MULTICAST_ADDR)"))]
-    multicast_addr: std::net::SocketAddrV4,
 }
 
 /// Configuration for a device that is connected to a router.
 ///
 /// The device and the router are connected via the interfaces that correspond
 /// to `ep_addr` and `router_ep_addr`.
-struct RouterConnectedDeviceConfig<'a> {
-    name: &'a str,
+struct RouterConnectedDeviceConfig {
     /// The address of an interface that should be added to the device.
     ep_addr: fnet::Subnet,
     /// The address of a connecting interface that should be added to the
@@ -471,7 +588,7 @@ struct RouterConnectedDevice<'a> {
     router_interface: netemul::TestInterface<'a>,
 
     _network: netemul::TestNetwork<'a>,
-    _interface: netemul::TestInterface<'a>,
+    interface: netemul::TestInterface<'a>,
 }
 
 /// A device that is connected to a router and is listening for multicast
@@ -479,6 +596,322 @@ struct RouterConnectedDevice<'a> {
 struct ClientDevice<'a> {
     device: RouterConnectedDevice<'a>,
     socket: fasync::net::UdpSocket,
+}
+
+fn get_ipv4_address_from_addr(addr: fnet::IpAddress) -> fnet::Ipv4Address {
+    assert_matches!(addr, fnet::IpAddress::Ipv4(ipv4) => ipv4)
+}
+
+fn get_ipv6_address_from_addr(addr: fnet::IpAddress) -> fnet::Ipv6Address {
+    assert_matches!(addr, fnet::IpAddress::Ipv6(ipv6) => ipv6)
+}
+
+// TODO(https://fxbug.dev/104930): Implement macros to generate the error
+// conversion implementations and controllers.
+#[derive(thiserror::Error, Debug, PartialEq)]
+enum AddRouteError {
+    #[error("Invalid address")]
+    InvalidAddress,
+    #[error("Required route fields missing")]
+    RequiredRouteFieldsMissing,
+    #[error("Interface not found")]
+    InterfaceNotFound,
+    #[error("Input cannot be output")]
+    InputCannotBeOutput,
+}
+
+impl From<fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError> for AddRouteError {
+    fn from(value: fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError) -> Self {
+        match value {
+            fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::InputCannotBeOutput => AddRouteError::InputCannotBeOutput,
+            fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::InterfaceNotFound => AddRouteError::InterfaceNotFound,
+            fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::InvalidAddress => AddRouteError::InvalidAddress,
+            fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::RequiredRouteFieldsMissing => AddRouteError::RequiredRouteFieldsMissing,
+        }
+    }
+}
+
+impl From<fnet_multicast_admin::Ipv6RoutingTableControllerAddRouteError> for AddRouteError {
+    fn from(value: fnet_multicast_admin::Ipv6RoutingTableControllerAddRouteError) -> Self {
+        match value {
+            fnet_multicast_admin::Ipv6RoutingTableControllerAddRouteError::InputCannotBeOutput => AddRouteError::InputCannotBeOutput,
+            fnet_multicast_admin::Ipv6RoutingTableControllerAddRouteError::InterfaceNotFound => AddRouteError::InterfaceNotFound,
+            fnet_multicast_admin::Ipv6RoutingTableControllerAddRouteError::InvalidAddress => AddRouteError::InvalidAddress,
+            fnet_multicast_admin::Ipv6RoutingTableControllerAddRouteError::RequiredRouteFieldsMissing => AddRouteError::RequiredRouteFieldsMissing,
+        }
+    }
+}
+
+#[derive(thiserror::Error, Debug, PartialEq)]
+enum DelRouteError {
+    #[error("Invalid address")]
+    InvalidAddress,
+    #[error("Route not found")]
+    NotFound,
+}
+
+impl From<fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError> for DelRouteError {
+    fn from(value: fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError) -> Self {
+        match value {
+            fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError::InvalidAddress => {
+                DelRouteError::InvalidAddress
+            }
+            fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError::NotFound => {
+                DelRouteError::NotFound
+            }
+        }
+    }
+}
+
+impl From<fnet_multicast_admin::Ipv6RoutingTableControllerDelRouteError> for DelRouteError {
+    fn from(value: fnet_multicast_admin::Ipv6RoutingTableControllerDelRouteError) -> Self {
+        match value {
+            fnet_multicast_admin::Ipv6RoutingTableControllerDelRouteError::InvalidAddress => {
+                DelRouteError::InvalidAddress
+            }
+            fnet_multicast_admin::Ipv6RoutingTableControllerDelRouteError::NotFound => {
+                DelRouteError::NotFound
+            }
+        }
+    }
+}
+
+#[derive(thiserror::Error, Debug, PartialEq)]
+enum GetRouteStatsError {
+    #[error("Invalid address")]
+    InvalidAddress,
+    #[error("Route not found")]
+    NotFound,
+}
+
+impl From<fnet_multicast_admin::Ipv4RoutingTableControllerGetRouteStatsError>
+    for GetRouteStatsError
+{
+    fn from(value: fnet_multicast_admin::Ipv4RoutingTableControllerGetRouteStatsError) -> Self {
+        match value {
+            fnet_multicast_admin::Ipv4RoutingTableControllerGetRouteStatsError::InvalidAddress => {
+                GetRouteStatsError::InvalidAddress
+            }
+            fnet_multicast_admin::Ipv4RoutingTableControllerGetRouteStatsError::NotFound => {
+                GetRouteStatsError::NotFound
+            }
+        }
+    }
+}
+
+impl From<fnet_multicast_admin::Ipv6RoutingTableControllerGetRouteStatsError>
+    for GetRouteStatsError
+{
+    fn from(value: fnet_multicast_admin::Ipv6RoutingTableControllerGetRouteStatsError) -> Self {
+        match value {
+            fnet_multicast_admin::Ipv6RoutingTableControllerGetRouteStatsError::InvalidAddress => {
+                GetRouteStatsError::InvalidAddress
+            }
+            fnet_multicast_admin::Ipv6RoutingTableControllerGetRouteStatsError::NotFound => {
+                GetRouteStatsError::NotFound
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+struct RoutingEventResult {
+    dropped_events: u64,
+    addresses: UnicastSourceAndMulticastDestination,
+    input_interface: u64,
+    event: fnet_multicast_admin::RoutingEvent,
+}
+
+/// A controller for interacting with a multicast routing table.
+#[async_trait]
+trait RoutingTableController {
+    async fn add_route(
+        &self,
+        addresses: UnicastSourceAndMulticastDestination,
+        route: fnet_multicast_admin::Route,
+    ) -> Result<(), AddRouteError>;
+
+    async fn del_route(
+        &self,
+        addresses: UnicastSourceAndMulticastDestination,
+    ) -> Result<(), DelRouteError>;
+
+    async fn get_route_stats(
+        &self,
+        addresses: UnicastSourceAndMulticastDestination,
+    ) -> Result<fnet_multicast_admin::RouteStats, GetRouteStatsError>;
+
+    async fn watch_routing_events(&self) -> Result<RoutingEventResult, fidl::Error>;
+
+    /// Asserts that the controller was closed with the `expected_reason`.
+    async fn expect_closed_for_reason(
+        &self,
+        expected_reason: fnet_multicast_admin::TableControllerCloseReason,
+    );
+}
+
+/// Proxies requests to a
+/// `fnet_multicast_admin::Ipv4RoutingTableControllerProxy`.
+struct Ipv4RoutingTableController {
+    controller: fnet_multicast_admin::Ipv4RoutingTableControllerProxy,
+}
+
+impl Ipv4RoutingTableController {
+    fn new(router_realm: &netemul::TestRealm<'_>) -> Self {
+        Ipv4RoutingTableController {
+            controller: router_realm
+                .connect_to_protocol::<fnet_multicast_admin::Ipv4RoutingTableControllerMarker>()
+                .expect("connect to protocol"),
+        }
+    }
+}
+
+#[async_trait]
+impl RoutingTableController for Ipv4RoutingTableController {
+    async fn add_route(
+        &self,
+        addresses: UnicastSourceAndMulticastDestination,
+        route: fnet_multicast_admin::Route,
+    ) -> Result<(), AddRouteError> {
+        let mut ipv4_addresses = assert_matches!(addresses, IpAddr::V4(addr) => addr);
+        self.controller
+            .add_route(&mut ipv4_addresses, route)
+            .await
+            .expect("add_route failed")
+            .map_err(Into::into)
+    }
+
+    async fn del_route(
+        &self,
+        addresses: UnicastSourceAndMulticastDestination,
+    ) -> Result<(), DelRouteError> {
+        let mut ipv4_addresses = assert_matches!(addresses, IpAddr::V4(addr) => addr);
+        self.controller
+            .del_route(&mut ipv4_addresses)
+            .await
+            .expect("del_route failed")
+            .map_err(Into::into)
+    }
+
+    async fn get_route_stats(
+        &self,
+        addresses: UnicastSourceAndMulticastDestination,
+    ) -> Result<fnet_multicast_admin::RouteStats, GetRouteStatsError> {
+        let mut ipv4_addresses = assert_matches!(addresses, IpAddr::V4(addr) => addr);
+        self.controller
+            .get_route_stats(&mut ipv4_addresses)
+            .await
+            .expect("get_route_stats failed")
+            .map_err(Into::into)
+    }
+
+    async fn watch_routing_events(&self) -> Result<RoutingEventResult, fidl::Error> {
+        self.controller.watch_routing_events().await.map(
+            |(dropped_events, addresses, input_interface, event)| RoutingEventResult {
+                dropped_events: dropped_events,
+                addresses: IpAddr::V4(addresses),
+                input_interface: input_interface,
+                event: event,
+            },
+        )
+    }
+
+    async fn expect_closed_for_reason(
+        &self,
+        expected_reason: fnet_multicast_admin::TableControllerCloseReason,
+    ) {
+        let fnet_multicast_admin::Ipv4RoutingTableControllerEvent::OnClose { error: reason } = self
+            .controller
+            .take_event_stream()
+            .try_next()
+            .await
+            .expect("read Ipv4RoutingTableController event")
+            .expect("Ipv4RoutingTableController event stream ended unexpectedly");
+        assert_eq!(reason, expected_reason);
+        assert_eq!(self.controller.on_closed().await, Ok(zx::Signals::CHANNEL_PEER_CLOSED));
+    }
+}
+
+/// Proxies requests to a
+/// `fnet_multicast_admin::Ipv6RoutingTableControllerProxy`.
+struct Ipv6RoutingTableController {
+    controller: fnet_multicast_admin::Ipv6RoutingTableControllerProxy,
+}
+
+impl Ipv6RoutingTableController {
+    fn new(router_realm: &netemul::TestRealm<'_>) -> Self {
+        Ipv6RoutingTableController {
+            controller: router_realm
+                .connect_to_protocol::<fnet_multicast_admin::Ipv6RoutingTableControllerMarker>()
+                .expect("connect to protocol"),
+        }
+    }
+}
+
+#[async_trait]
+impl RoutingTableController for Ipv6RoutingTableController {
+    async fn add_route(
+        &self,
+        addresses: UnicastSourceAndMulticastDestination,
+        route: fnet_multicast_admin::Route,
+    ) -> Result<(), AddRouteError> {
+        let mut ipv6_addresses = assert_matches!(addresses, IpAddr::V6(addr) => addr);
+        self.controller
+            .add_route(&mut ipv6_addresses, route)
+            .await
+            .expect("add_route failed")
+            .map_err(Into::into)
+    }
+
+    async fn del_route(
+        &self,
+        addresses: UnicastSourceAndMulticastDestination,
+    ) -> Result<(), DelRouteError> {
+        let mut ipv6_addresses = assert_matches!(addresses, IpAddr::V6(addr) => addr);
+        self.controller
+            .del_route(&mut ipv6_addresses)
+            .await
+            .expect("del_route failed")
+            .map_err(Into::into)
+    }
+
+    async fn get_route_stats(
+        &self,
+        addresses: UnicastSourceAndMulticastDestination,
+    ) -> Result<fnet_multicast_admin::RouteStats, GetRouteStatsError> {
+        let mut ipv6_addresses = assert_matches!(addresses, IpAddr::V6(addr) => addr);
+        self.controller
+            .get_route_stats(&mut ipv6_addresses)
+            .await
+            .expect("get_route_stats failed")
+            .map_err(Into::into)
+    }
+
+    async fn watch_routing_events(&self) -> Result<RoutingEventResult, fidl::Error> {
+        self.controller.watch_routing_events().await.map(
+            |(dropped_events, addresses, input_interface, event)| RoutingEventResult {
+                dropped_events: dropped_events,
+                addresses: IpAddr::V6(addresses),
+                input_interface: input_interface,
+                event: event,
+            },
+        )
+    }
+
+    async fn expect_closed_for_reason(
+        &self,
+        expected_reason: fnet_multicast_admin::TableControllerCloseReason,
+    ) {
+        let fnet_multicast_admin::Ipv6RoutingTableControllerEvent::OnClose { error: reason } = self
+            .controller
+            .take_event_stream()
+            .try_next()
+            .await
+            .expect("read Ipv6RoutingTableController event")
+            .expect("Ipv6RoutingTableController event stream ended unexpectedly");
+        assert_eq!(reason, expected_reason);
+        assert_eq!(self.controller.on_closed().await, Ok(zx::Signals::CHANNEL_PEER_CLOSED));
+    }
 }
 
 /// Adds the `addr` to the `interface`.
@@ -496,26 +929,24 @@ async fn add_address(interface: &netemul::TestInterface<'_>, addr: fnet::Subnet)
 /// Creates a `RouterConnectedDevice` from the provided `config` that is
 /// connected to the `router_realm`.
 async fn create_router_connected_device<'a, E: netemul::Endpoint>(
-    name: &'a str,
+    name: String,
     sandbox: &'a netemul::TestSandbox,
     router_realm: &'a netemul::TestRealm<'a>,
-    config: &'a RouterConnectedDeviceConfig<'a>,
+    config: RouterConnectedDeviceConfig,
 ) -> RouterConnectedDevice<'a> {
     let realm = sandbox
-        .create_netstack_realm::<Netstack2, _>(format!("{}_{}_realm", name, config.name))
+        .create_netstack_realm::<Netstack2, _>(format!("{}_realm", name))
         .expect("create_netstack_realm failed");
-    let network = sandbox
-        .create_network(format!("{}_{}_network", name, config.name))
-        .await
-        .expect("create_network failed");
+    let network =
+        sandbox.create_network(format!("{}_network", name)).await.expect("create_network failed");
     let interface = realm
-        .join_network::<E, _>(&network, format!("{}-{}-ep", name, config.name))
+        .join_network::<E, _>(&network, format!("{}-ep", name))
         .await
         .expect("join_network failed for router connected device");
     add_address(&interface, config.ep_addr).await;
 
     let router_interface = router_realm
-        .join_network::<E, _>(&network, format!("{}-router-{}-ep", name, config.name))
+        .join_network::<E, _>(&network, format!("{}-router-ep", name))
         .await
         .expect("join_network failed for router");
     add_address(&router_interface, config.router_ep_addr).await;
@@ -523,7 +954,7 @@ async fn create_router_connected_device<'a, E: netemul::Endpoint>(
     RouterConnectedDevice {
         realm: realm,
         _network: network,
-        _interface: interface,
+        interface: interface,
         ep_addr: config.ep_addr,
         router_ep_addr: config.router_ep_addr,
         router_interface: router_interface,
@@ -536,6 +967,8 @@ async fn create_router_connected_device<'a, E: netemul::Endpoint>(
 /// `interface_address`.
 async fn create_listener_socket<'a>(
     realm: &'a netemul::TestRealm<'a>,
+    version: IpVersion,
+    id: u64,
     interface_address: fnet::Subnet,
     multicast_addr: std::net::SocketAddr,
 ) -> fasync::net::UdpSocket {
@@ -543,16 +976,39 @@ async fn create_listener_socket<'a>(
         .await
         .expect("bind_in_realm failed");
 
-    let iface_addr = get_ipv4_address(interface_address);
+    match version {
+        IpVersion::V4 => {
+            let iface_addr = get_ipv4_address_from_subnet(interface_address);
+            let multicast_v4_addr = match multicast_addr.ip() {
+                std::net::IpAddr::V4(ipv4) => ipv4,
+                std::net::IpAddr::V6(ipv6) => {
+                    panic!("multicast_addr unexpectedly IPv6: {:?}", ipv6)
+                }
+            };
+            socket
+                .as_ref()
+                .join_multicast_v4(&multicast_v4_addr, &iface_addr.addr.into())
+                .expect("join_multicast_v4 failed");
+        }
+        IpVersion::V6 => {
+            let multicast_v6_addr = match multicast_addr.ip() {
+                std::net::IpAddr::V4(ipv4) => {
+                    panic!("multicast_addr unexpectedly IPv4: {:?}", ipv4)
+                }
+                std::net::IpAddr::V6(ipv6) => ipv6,
+            };
+            socket
+                .as_ref()
+                .join_multicast_v6(
+                    &multicast_v6_addr,
+                    u32::try_from(id).unwrap_or_else(|e| {
+                        panic!("failed to convert {} to u32 with error: {:?}", id, e)
+                    }),
+                )
+                .expect("join_multicast_v6 failed");
+        }
+    }
 
-    let multicast_v4_addr = match multicast_addr.ip() {
-        std::net::IpAddr::V4(ipv4) => ipv4,
-        std::net::IpAddr::V6(ipv6) => panic!("multicast_addr unexpectedly IPv6: {:?}", ipv6),
-    };
-    socket
-        .as_ref()
-        .join_multicast_v4(&multicast_v4_addr, &iface_addr.addr.into())
-        .expect("join_multicast_v4 failed");
     socket
 }
 
@@ -564,6 +1020,10 @@ async fn set_multicast_forwarding(interface: &fnet_interfaces_ext::admin::Contro
             multicast_forwarding: Some(enabled),
             ..fnet_interfaces_admin::Ipv4Configuration::EMPTY
         }),
+        ipv6: Some(fnet_interfaces_admin::Ipv6Configuration {
+            multicast_forwarding: Some(enabled),
+            ..fnet_interfaces_admin::Ipv6Configuration::EMPTY
+        }),
         ..fnet_interfaces_admin::Configuration::EMPTY
     };
 
@@ -574,56 +1034,22 @@ async fn set_multicast_forwarding(interface: &fnet_interfaces_ext::admin::Contro
         .expect("set_configuration error");
 }
 
-async fn expect_table_controller_closed_with_reason(
-    controller: &fnet_multicast_admin::Ipv4RoutingTableControllerProxy,
-    expected_reason: fnet_multicast_admin::TableControllerCloseReason,
-) {
-    let fnet_multicast_admin::Ipv4RoutingTableControllerEvent::OnClose { error: reason } =
-        controller
-            .take_event_stream()
-            .try_next()
-            .await
-            .expect("read Ipv4RoutingTableController event")
-            .expect("Ipv4RoutingTableController event stream ended unexpectedly");
-    assert_eq!(reason, expected_reason);
-    assert_eq!(controller.on_closed().await, Ok(zx::Signals::CHANNEL_PEER_CLOSED));
-}
-
 /// Returns an `fnet::Ipv4Address` from the `subnet` or panics if one does not
 /// exist.
-fn get_ipv4_address(subnet: fnet::Subnet) -> fnet::Ipv4Address {
-    match subnet.addr {
-        fnet::IpAddress::Ipv4(ipv4) => ipv4,
-        fnet::IpAddress::Ipv6(_ipv6) => panic!("subnet unexpectedly IPv6: {:?}", subnet),
+fn get_ipv4_address_from_subnet(subnet: fnet::Subnet) -> fnet::Ipv4Address {
+    assert_matches!(subnet.addr, fnet::IpAddress::Ipv4(ipv4) => ipv4)
+}
+
+fn create_socket_addr(addr: fnet::IpAddress) -> std::net::SocketAddr {
+    const PORT: u16 = 1234;
+    match addr {
+        fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr }) => {
+            std::net::SocketAddr::new(std::net::IpAddr::V4(addr.into()), PORT)
+        }
+        fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr }) => {
+            std::net::SocketAddr::new(std::net::IpAddr::V6(addr.into()), PORT)
+        }
     }
-}
-
-fn create_socket_addr_v4(addr: fnet::Ipv4Address) -> std::net::SocketAddrV4 {
-    std::net::SocketAddrV4::new(addr.addr.into(), 1234)
-}
-
-/// Waits for the `controller` to be fully initialized.
-///
-/// Multicast forwarding is enabled at the protocol level when a controller is
-/// instantiated. However, controller creation is asynchronous. As a result,
-/// some operations may race with the creation of a controller. In such a case,
-/// callers should invoke this function to ensure that the controller is fully
-/// initialized.
-async fn wait_for_controller_to_start(
-    controller: &fnet_multicast_admin::Ipv4RoutingTableControllerProxy,
-    test_network: &MulticastForwardingNetwork<'_>,
-) {
-    let mut invalid_addresses = fnet_multicast_admin::Ipv4UnicastSourceAndMulticastDestination {
-        unicast_source: IPV4_MULTICAST_ADDR,
-        multicast_destination: IPV4_MULTICAST_ADDR,
-    };
-    assert_eq!(
-        controller
-            .add_route(&mut invalid_addresses, test_network.default_multicast_route())
-            .await
-            .expect("add_route failed"),
-        Err(fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::InvalidAddress)
-    );
 }
 
 /// Configuration for a client device that has joined a multicast group.
@@ -640,7 +1066,7 @@ enum DeviceAddress {
     /// The address of a `Server`.
     Server(Server),
     /// A manually specified address.
-    Other(fnet::Ipv4Address),
+    Other(IpAddrType),
 }
 
 /// An action that should be executed with the multicast routing controller.
@@ -832,7 +1258,7 @@ struct MulticastForwardingTestOptions {
     };
     "missing route"
 )]
-async fn multicast_forwarding<E: netemul::Endpoint>(
+async fn multicast_forwarding<E: netemul::Endpoint, I: net_types::ip::Ip>(
     name: &str,
     case_name: &str,
     clients: HashMap<Client, ClientConfig>,
@@ -847,15 +1273,20 @@ async fn multicast_forwarding<E: netemul::Endpoint>(
     let test_name = format!("{}_{}", name, case_name);
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let router_realm = create_router_realm(&test_name, &sandbox);
-    let test_network =
-        MulticastForwardingNetwork::new::<E>(&test_name, &sandbox, &router_realm, network_options)
-            .await;
+    let test_network = MulticastForwardingNetwork::new::<E>(
+        &test_name,
+        I::VERSION,
+        &sandbox,
+        &router_realm,
+        network_options,
+    )
+    .await;
     let mut controller = Some(test_network.create_multicast_controller());
 
-    let mut addresses = fnet_multicast_admin::Ipv4UnicastSourceAndMulticastDestination {
-        unicast_source: test_network.get_device_address(route_source_address),
-        multicast_destination: IPV4_MULTICAST_ADDR,
-    };
+    let addresses = test_network.create_unicast_source_and_multicast_destination(
+        test_network.get_device_address(route_source_address),
+        IpAddrType::Multicast.address(I::VERSION),
+    );
 
     let outgoing_interfaces = clients
         .iter()
@@ -876,9 +1307,8 @@ async fn multicast_forwarding<E: netemul::Endpoint>(
     controller
         .as_ref()
         .expect("controller not present")
-        .add_route(&mut addresses, route)
+        .add_route(addresses, route)
         .await
-        .expect("add_route failed")
         .expect("add_route error");
 
     match controller_action {
@@ -917,16 +1347,14 @@ async fn multicast_forwarding<E: netemul::Endpoint>(
     match expected_event {
         None => {}
         Some(expected_event) => {
-            let (dropped_events, event_addresses, input_interface, event) = controller
-                .expect("controller not present")
-                .watch_routing_events()
-                .await
-                .expect("watch_routing_events failed");
+            let RoutingEventResult { dropped_events, addresses, input_interface, event } =
+                controller
+                    .expect("controller not present")
+                    .watch_routing_events()
+                    .await
+                    .expect("watch_routing_events failed");
             assert_eq!(dropped_events, 0);
-            assert_eq!(
-                event_addresses,
-                test_network.default_unicast_source_and_multicast_destination()
-            );
+            assert_eq!(addresses, test_network.default_unicast_source_and_multicast_destination());
             assert_eq!(input_interface, test_network.get_source_router_interface_id());
             assert_eq!(event, expected_event);
         }
@@ -966,8 +1394,8 @@ struct AddMulticastRouteTestOptions {
     action: Option<RouteAction>,
     #[derivative(Default(value = "DeviceAddress::Server(Server::A)"))]
     source_address: DeviceAddress,
-    #[derivative(Default(value = "IPV4_MULTICAST_ADDR"))]
-    destination_address: fnet::Ipv4Address,
+    #[derivative(Default(value = "IpAddrType::Multicast"))]
+    destination_address: IpAddrType,
 }
 
 #[variants_test]
@@ -1003,7 +1431,7 @@ struct AddMulticastRouteTestOptions {
         route_min_ttl: 1,
         expect_forwarded_packet: false,
     },
-    Err(fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::InterfaceNotFound),
+    Err(AddRouteError::InterfaceNotFound),
     AddMulticastRouteTestOptions {
         input_interface: Some(RouterInterface::Other(1000)),
         ..AddMulticastRouteTestOptions::default()
@@ -1016,7 +1444,7 @@ struct AddMulticastRouteTestOptions {
         route_min_ttl: 1,
         expect_forwarded_packet: false,
     },
-    Err(fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::InterfaceNotFound),
+    Err(AddRouteError::InterfaceNotFound),
     AddMulticastRouteTestOptions {
         action: Some(RouteAction::OutgoingInterface(RouterInterface::Other(1000))),
         ..AddMulticastRouteTestOptions::default()
@@ -1029,7 +1457,7 @@ struct AddMulticastRouteTestOptions {
         route_min_ttl: 1,
         expect_forwarded_packet: false,
     },
-    Err(fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::InputCannotBeOutput),
+    Err(AddRouteError::InputCannotBeOutput),
     AddMulticastRouteTestOptions {
         input_interface: Some(RouterInterface::Server(Server::A)),
         action: Some(RouteAction::OutgoingInterface(RouterInterface::Server(Server::A))),
@@ -1043,7 +1471,7 @@ struct AddMulticastRouteTestOptions {
         route_min_ttl: 1,
         expect_forwarded_packet: false,
     },
-    Err(fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::RequiredRouteFieldsMissing),
+    Err(AddRouteError::RequiredRouteFieldsMissing),
     AddMulticastRouteTestOptions {
         action: Some(RouteAction::EmptyOutgoingInterfaces),
         ..AddMulticastRouteTestOptions::default()
@@ -1056,7 +1484,7 @@ struct AddMulticastRouteTestOptions {
         route_min_ttl: 1,
         expect_forwarded_packet: false,
     },
-    Err(fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::RequiredRouteFieldsMissing),
+    Err(AddRouteError::RequiredRouteFieldsMissing),
     AddMulticastRouteTestOptions {
         input_interface: None,
         ..AddMulticastRouteTestOptions::default()
@@ -1069,7 +1497,7 @@ struct AddMulticastRouteTestOptions {
         route_min_ttl: 1,
         expect_forwarded_packet: false,
     },
-    Err(fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::RequiredRouteFieldsMissing),
+    Err(AddRouteError::RequiredRouteFieldsMissing),
     AddMulticastRouteTestOptions {
         action: None,
         ..AddMulticastRouteTestOptions::default()
@@ -1082,9 +1510,9 @@ struct AddMulticastRouteTestOptions {
         route_min_ttl: 1,
         expect_forwarded_packet: false,
     },
-    Err(fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::InvalidAddress),
+    Err(AddRouteError::InvalidAddress),
     AddMulticastRouteTestOptions {
-        source_address: DeviceAddress::Other(IPV4_MULTICAST_ADDR),
+        source_address: DeviceAddress::Other(IpAddrType::Multicast),
         ..AddMulticastRouteTestOptions::default()
     };
     "multicast source address"
@@ -1095,9 +1523,9 @@ struct AddMulticastRouteTestOptions {
         route_min_ttl: 1,
         expect_forwarded_packet: false,
     },
-    Err(fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::InvalidAddress),
+    Err(AddRouteError::InvalidAddress),
     AddMulticastRouteTestOptions {
-        source_address: DeviceAddress::Other(IPV4_ANY_ADDR),
+        source_address: DeviceAddress::Other(IpAddrType::Any),
         ..AddMulticastRouteTestOptions::default()
     };
     "any source address"
@@ -1108,9 +1536,9 @@ struct AddMulticastRouteTestOptions {
         route_min_ttl: 1,
         expect_forwarded_packet: false,
     },
-    Err(fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::InvalidAddress),
+    Err(AddRouteError::InvalidAddress),
     AddMulticastRouteTestOptions {
-        source_address: DeviceAddress::Other(IPV4_LINK_LOCAL_UNICAST_ADDR),
+        source_address: DeviceAddress::Other(IpAddrType::LinkLocalUnicast),
         ..AddMulticastRouteTestOptions::default()
     };
     "link-local unicast source address"
@@ -1121,9 +1549,9 @@ struct AddMulticastRouteTestOptions {
         route_min_ttl: 1,
         expect_forwarded_packet: false,
     },
-    Err(fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::InvalidAddress),
+    Err(AddRouteError::InvalidAddress),
     AddMulticastRouteTestOptions {
-        destination_address: IPV4_UNICAST_ADDR,
+        destination_address: IpAddrType::Unicast,
         ..AddMulticastRouteTestOptions::default()
     };
     "unicast destination address"
@@ -1134,21 +1562,18 @@ struct AddMulticastRouteTestOptions {
         route_min_ttl: 1,
         expect_forwarded_packet: false,
     },
-    Err(fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError::InvalidAddress),
+    Err(AddRouteError::InvalidAddress),
     AddMulticastRouteTestOptions {
-        destination_address: IPV4_LINK_LOCAL_MULTICAST_ADDR,
+        destination_address: IpAddrType::LinkLocalMulticast,
         ..AddMulticastRouteTestOptions::default()
     };
     "link-local multicast destination address"
 )]
-async fn add_multicast_route<E: netemul::Endpoint>(
+async fn add_multicast_route<E: netemul::Endpoint, I: net_types::ip::Ip>(
     name: &str,
     case_name: &str,
     client: ClientConfig,
-    expected_add_route_result: Result<
-        (),
-        fnet_multicast_admin::Ipv4RoutingTableControllerAddRouteError,
-    >,
+    expected_add_route_result: Result<(), AddRouteError>,
     options: AddMulticastRouteTestOptions,
 ) {
     let AddMulticastRouteTestOptions {
@@ -1163,6 +1588,7 @@ async fn add_multicast_route<E: netemul::Endpoint>(
     let router_realm = create_router_realm(&test_name, &sandbox);
     let test_network = MulticastForwardingNetwork::new::<E>(
         &test_name,
+        I::VERSION,
         &sandbox,
         &router_realm,
         MulticastForwardingNetworkOptions::default(),
@@ -1174,16 +1600,16 @@ async fn add_multicast_route<E: netemul::Endpoint>(
     // The queuing of a pending packet below may race with the creation of the
     // multicast controller. As a result, a wait point is inserted to ensure
     // that the controller is fully initialized before a packet is sent.
-    wait_for_controller_to_start(&controller, &test_network).await;
+    test_network.wait_for_controller_to_start(&controller).await;
+
+    let addresses = test_network.create_unicast_source_and_multicast_destination(
+        test_network.get_device_address(source_address),
+        destination_address.address(I::VERSION),
+    );
 
     // Queue a packet that could potentially be forwarded once a multicast route
     // is installed.
     test_network.send_multicast_packet().await;
-
-    let mut addresses = fnet_multicast_admin::Ipv4UnicastSourceAndMulticastDestination {
-        unicast_source: test_network.get_device_address(source_address),
-        multicast_destination: destination_address,
-    };
 
     let get_interface_id = |interface| -> u64 {
         match interface {
@@ -1216,10 +1642,7 @@ async fn add_multicast_route<E: netemul::Endpoint>(
         ..fnet_multicast_admin::Route::EMPTY
     };
 
-    assert_eq!(
-        controller.add_route(&mut addresses, route).await.expect("add_route failed"),
-        expected_add_route_result
-    );
+    assert_eq!(controller.add_route(addresses, route).await, expected_add_route_result);
 
     test_network
         .receive_multicast_packet(hashmap! {
@@ -1229,11 +1652,12 @@ async fn add_multicast_route<E: netemul::Endpoint>(
 }
 
 #[variants_test]
-async fn multiple_multicast_controllers<E: netemul::Endpoint>(name: &str) {
+async fn multiple_multicast_controllers<E: netemul::Endpoint, I: net_types::ip::Ip>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let router_realm = create_router_realm(name, &sandbox);
     let test_network = MulticastForwardingNetwork::new::<E>(
         name,
+        I::VERSION,
         &sandbox,
         &router_realm,
         MulticastForwardingNetworkOptions::default(),
@@ -1243,15 +1667,10 @@ async fn multiple_multicast_controllers<E: netemul::Endpoint>(name: &str) {
     let controller = test_network.create_multicast_controller();
     test_network.add_default_route(&controller).await;
 
-    let closed_controller = router_realm
-        .connect_to_protocol::<fnet_multicast_admin::Ipv4RoutingTableControllerMarker>()
-        .expect("connect to protocol");
-
-    expect_table_controller_closed_with_reason(
-        &closed_controller,
-        fnet_multicast_admin::TableControllerCloseReason::AlreadyInUse,
-    )
-    .await;
+    let closed_controller = test_network.create_multicast_controller();
+    closed_controller
+        .expect_closed_for_reason(fnet_multicast_admin::TableControllerCloseReason::AlreadyInUse)
+        .await;
 
     // The closed controller should not impact the already active controller.
     // Consequently, a packet should still be forwardable using the route added
@@ -1264,11 +1683,12 @@ async fn multiple_multicast_controllers<E: netemul::Endpoint>(name: &str) {
 }
 
 #[variants_test]
-async fn watch_routing_events_hanging<E: netemul::Endpoint>(name: &str) {
+async fn watch_routing_events_hanging<E: netemul::Endpoint, I: net_types::ip::Ip>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let router_realm = create_router_realm(name, &sandbox);
     let test_network = MulticastForwardingNetwork::new::<E>(
         name,
+        I::VERSION,
         &sandbox,
         &router_realm,
         MulticastForwardingNetworkOptions::default(),
@@ -1277,10 +1697,10 @@ async fn watch_routing_events_hanging<E: netemul::Endpoint>(name: &str) {
 
     let controller = test_network.create_multicast_controller();
 
-    wait_for_controller_to_start(&controller, &test_network).await;
+    test_network.wait_for_controller_to_start(&controller).await;
 
     let watch_routing_events_fut = async {
-        let (dropped_events, addresses, input_interface, event) =
+        let RoutingEventResult { dropped_events, addresses, input_interface, event } =
             controller.watch_routing_events().await.expect("watch_routing_events failed");
         assert_eq!(dropped_events, 0);
         assert_eq!(addresses, test_network.default_unicast_source_and_multicast_destination());
@@ -1303,11 +1723,14 @@ async fn watch_routing_events_hanging<E: netemul::Endpoint>(name: &str) {
 }
 
 #[variants_test]
-async fn watch_routing_events_already_hanging<E: netemul::Endpoint>(name: &str) {
+async fn watch_routing_events_already_hanging<E: netemul::Endpoint, I: net_types::ip::Ip>(
+    name: &str,
+) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let router_realm = create_router_realm(name, &sandbox);
     let test_network = MulticastForwardingNetwork::new::<E>(
         name,
+        I::VERSION,
         &sandbox,
         &router_realm,
         MulticastForwardingNetworkOptions::default(),
@@ -1321,9 +1744,7 @@ async fn watch_routing_events_already_hanging<E: netemul::Endpoint>(name: &str) 
     // packets should be forwarded.
     test_network.send_and_receive_multicast_packet(hashmap! { Client::A => true }).await;
 
-    async fn watch_routing_events(
-        controller: &fnet_multicast_admin::Ipv4RoutingTableControllerProxy,
-    ) {
+    async fn watch_routing_events(controller: &Box<dyn RoutingTableController>) {
         let err =
             controller.watch_routing_events().await.expect_err("should fail with PEER_CLOSED");
         let status = assert_matches!(err, fidl::Error::ClientChannelClosed{status, ..} => status);
@@ -1334,11 +1755,9 @@ async fn watch_routing_events_already_hanging<E: netemul::Endpoint>(name: &str) 
         futures::future::join(watch_routing_events(&controller), watch_routing_events(&controller))
             .await;
 
-    expect_table_controller_closed_with_reason(
-        &controller,
-        fnet_multicast_admin::TableControllerCloseReason::HangingGetError,
-    )
-    .await;
+    controller
+        .expect_closed_for_reason(fnet_multicast_admin::TableControllerCloseReason::HangingGetError)
+        .await;
 
     // The routing table should be dropped when the controller is closed. As a
     // result, a packet should no longer be forwarded.
@@ -1346,11 +1765,14 @@ async fn watch_routing_events_already_hanging<E: netemul::Endpoint>(name: &str) 
 }
 
 #[variants_test]
-async fn watch_routing_events_dropped_events<E: netemul::Endpoint>(name: &str) {
+async fn watch_routing_events_dropped_events<E: netemul::Endpoint, I: net_types::ip::Ip>(
+    name: &str,
+) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let router_realm = create_router_realm(name, &sandbox);
     let test_network = MulticastForwardingNetwork::new::<E>(
         name,
+        I::VERSION,
         &sandbox,
         &router_realm,
         MulticastForwardingNetworkOptions::default(),
@@ -1359,7 +1781,7 @@ async fn watch_routing_events_dropped_events<E: netemul::Endpoint>(name: &str) {
 
     let controller = test_network.create_multicast_controller();
 
-    let mut addresses = test_network.default_unicast_source_and_multicast_destination();
+    let addresses = test_network.default_unicast_source_and_multicast_destination();
     let route = fnet_multicast_admin::Route {
         expected_input_interface: Some(test_network.get_server(Server::B).router_interface.id()),
         action: Some(fnet_multicast_admin::Action::OutgoingInterfaces(vec![
@@ -1371,11 +1793,7 @@ async fn watch_routing_events_dropped_events<E: netemul::Endpoint>(name: &str) {
         ..fnet_multicast_admin::Route::EMPTY
     };
 
-    controller
-        .add_route(&mut addresses, route)
-        .await
-        .expect("add_route failed")
-        .expect("add_route error");
+    controller.add_route(addresses, route).await.expect("add_route error");
 
     async fn add_wrong_input_interface_events(
         test_network: &MulticastForwardingNetwork<'_>,
@@ -1393,10 +1811,10 @@ async fn watch_routing_events_dropped_events<E: netemul::Endpoint>(name: &str) {
     }
 
     async fn expect_num_dropped_events(
-        controller: &fnet_multicast_admin::Ipv4RoutingTableControllerProxy,
+        controller: &Box<dyn RoutingTableController>,
         expected_num_dropped_events: u64,
     ) {
-        let (dropped_events, _event_addresses, _input_interface, _event) =
+        let RoutingEventResult { dropped_events, .. } =
             controller.watch_routing_events().await.expect("watch_routing_events failed");
         assert_eq!(dropped_events, expected_num_dropped_events);
     }
@@ -1419,74 +1837,72 @@ async fn watch_routing_events_dropped_events<E: netemul::Endpoint>(name: &str) {
 #[test_case(
     "success",
     DeviceAddress::Server(Server::A),
-    IPV4_MULTICAST_ADDR,
+    IpAddrType::Multicast,
     Ok(());
     "success"
 )]
 #[test_case(
     "no_matching_route_for_source_address",
     DeviceAddress::Server(Server::B),
-    IPV4_MULTICAST_ADDR,
-    Err(fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError::NotFound);
+    IpAddrType::Multicast,
+    Err(DelRouteError::NotFound);
     "no matching route for source address"
 )]
 #[test_case(
     "no_matching_route_for_destination_address",
     DeviceAddress::Server(Server::A),
-    IPV4_OTHER_MULTICAST_ADDR,
-    Err(fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError::NotFound);
+    IpAddrType::OtherMulticast,
+    Err(DelRouteError::NotFound);
     "no matching route for destination address"
 )]
 #[test_case(
     "multicast_source_address",
-    DeviceAddress::Other(IPV4_MULTICAST_ADDR),
-    IPV4_MULTICAST_ADDR,
-    Err(fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError::InvalidAddress);
+    DeviceAddress::Other(IpAddrType::Multicast),
+    IpAddrType::Multicast,
+    Err(DelRouteError::InvalidAddress);
     "multicast source address"
 )]
 #[test_case(
     "any_source_address",
-    DeviceAddress::Other(IPV4_ANY_ADDR),
-    IPV4_MULTICAST_ADDR,
-    Err(fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError::InvalidAddress);
+    DeviceAddress::Other(IpAddrType::Any),
+    IpAddrType::Multicast,
+    Err(DelRouteError::InvalidAddress);
     "any source address"
 )]
 #[test_case(
     "link_local_unicast_source_address",
-    DeviceAddress::Other(IPV4_LINK_LOCAL_UNICAST_ADDR),
-    IPV4_MULTICAST_ADDR,
-    Err(fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError::InvalidAddress);
+    DeviceAddress::Other(IpAddrType::LinkLocalUnicast),
+    IpAddrType::Multicast,
+    Err(DelRouteError::InvalidAddress);
     "link local unicast source address"
 )]
 #[test_case(
     "unicast_destination_address",
     DeviceAddress::Server(Server::A),
-    IPV4_UNICAST_ADDR,
-    Err(fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError::InvalidAddress);
+    IpAddrType::Unicast,
+    Err(DelRouteError::InvalidAddress);
     "unicast destination address"
 )]
 #[test_case(
     "link_local_multicast_destination_address",
     DeviceAddress::Server(Server::A),
-    IPV4_LINK_LOCAL_MULTICAST_ADDR,
-    Err(fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError::InvalidAddress);
+    IpAddrType::LinkLocalMulticast,
+    Err(DelRouteError::InvalidAddress);
     "link local multicast destination address"
 )]
-async fn del_multicast_route<E: netemul::Endpoint>(
+async fn del_multicast_route<E: netemul::Endpoint, I: net_types::ip::Ip>(
     name: &str,
     case_name: &str,
     source_address: DeviceAddress,
-    destination_address: fnet::Ipv4Address,
-    expected_del_route_result: Result<
-        (),
-        fnet_multicast_admin::Ipv4RoutingTableControllerDelRouteError,
-    >,
+    destination_address: IpAddrType,
+    expected_del_route_result: Result<(), DelRouteError>,
 ) {
     let test_name = format!("{}_{}", name, case_name);
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let router_realm = create_router_realm(&test_name, &sandbox);
     let test_network = MulticastForwardingNetwork::new::<E>(
         &test_name,
+        I::VERSION,
         &sandbox,
         &router_realm,
         MulticastForwardingNetworkOptions::default(),
@@ -1504,15 +1920,12 @@ async fn del_multicast_route<E: netemul::Endpoint>(
         })
         .await;
 
-    let mut del_addresses = fnet_multicast_admin::Ipv4UnicastSourceAndMulticastDestination {
-        unicast_source: test_network.get_device_address(source_address),
-        multicast_destination: destination_address,
-    };
-
-    assert_eq!(
-        controller.del_route(&mut del_addresses).await.expect("del_route failed"),
-        expected_del_route_result
+    let del_addresses = test_network.create_unicast_source_and_multicast_destination(
+        test_network.get_device_address(source_address),
+        destination_address.address(I::VERSION),
     );
+
+    assert_eq!(controller.del_route(del_addresses).await, expected_del_route_result);
 
     // After del_route has been called, multicast packets should no longer be
     // forwarded if the route was successfully removed.
@@ -1527,64 +1940,65 @@ async fn del_multicast_route<E: netemul::Endpoint>(
 #[test_case(
     "no_matching_route_for_source_address",
     DeviceAddress::Server(Server::B),
-    IPV4_MULTICAST_ADDR,
-    fnet_multicast_admin::Ipv4RoutingTableControllerGetRouteStatsError::NotFound;
+    IpAddrType::Multicast,
+    GetRouteStatsError::NotFound;
     "no matching route for source address"
 )]
 #[test_case(
     "no_matching_route_for_destination_address",
     DeviceAddress::Server(Server::A),
-    IPV4_OTHER_MULTICAST_ADDR,
-    fnet_multicast_admin::Ipv4RoutingTableControllerGetRouteStatsError::NotFound;
+    IpAddrType::OtherMulticast,
+    GetRouteStatsError::NotFound;
     "no matching route for destination address"
 )]
 #[test_case(
     "multicast_source_address",
-    DeviceAddress::Other(IPV4_MULTICAST_ADDR),
-    IPV4_MULTICAST_ADDR,
-    fnet_multicast_admin::Ipv4RoutingTableControllerGetRouteStatsError::InvalidAddress;
+    DeviceAddress::Other(IpAddrType::Multicast),
+    IpAddrType::Multicast,
+    GetRouteStatsError::InvalidAddress;
     "multicast source address"
 )]
 #[test_case(
     "any_source_address",
-    DeviceAddress::Other(IPV4_ANY_ADDR),
-    IPV4_MULTICAST_ADDR,
-    fnet_multicast_admin::Ipv4RoutingTableControllerGetRouteStatsError::InvalidAddress;
+    DeviceAddress::Other(IpAddrType::Any),
+    IpAddrType::Multicast,
+    GetRouteStatsError::InvalidAddress;
     "any source address"
 )]
 #[test_case(
     "link_local_unicast_source_address",
-    DeviceAddress::Other(IPV4_LINK_LOCAL_UNICAST_ADDR),
-    IPV4_MULTICAST_ADDR,
-    fnet_multicast_admin::Ipv4RoutingTableControllerGetRouteStatsError::InvalidAddress;
+    DeviceAddress::Other(IpAddrType::LinkLocalUnicast),
+    IpAddrType::Multicast,
+    GetRouteStatsError::InvalidAddress;
     "link local unicast source address"
 )]
 #[test_case(
     "unicast_destination_address",
     DeviceAddress::Server(Server::A),
-    IPV4_UNICAST_ADDR,
-    fnet_multicast_admin::Ipv4RoutingTableControllerGetRouteStatsError::InvalidAddress;
+    IpAddrType::Unicast,
+    GetRouteStatsError::InvalidAddress;
     "unicast destination address"
 )]
 #[test_case(
     "link_local_multicast_destination_address",
     DeviceAddress::Server(Server::A),
-    IPV4_LINK_LOCAL_MULTICAST_ADDR,
-    fnet_multicast_admin::Ipv4RoutingTableControllerGetRouteStatsError::InvalidAddress;
+    IpAddrType::LinkLocalMulticast,
+    GetRouteStatsError::InvalidAddress;
     "link local multicast destination address"
 )]
-async fn get_route_stats_errors<E: netemul::Endpoint>(
+async fn get_route_stats_errors<E: netemul::Endpoint, I: net_types::ip::Ip>(
     name: &str,
     case_name: &str,
     source_address: DeviceAddress,
-    destination_address: fnet::Ipv4Address,
-    expected_error: fnet_multicast_admin::Ipv4RoutingTableControllerGetRouteStatsError,
+    destination_address: IpAddrType,
+    expected_error: GetRouteStatsError,
 ) {
     let test_name = format!("{}_{}", name, case_name);
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let router_realm = create_router_realm(&test_name, &sandbox);
     let test_network = MulticastForwardingNetwork::new::<E>(
         &test_name,
+        I::VERSION,
         &sandbox,
         &router_realm,
         MulticastForwardingNetworkOptions::default(),
@@ -1594,27 +2008,21 @@ async fn get_route_stats_errors<E: netemul::Endpoint>(
     let controller = test_network.create_multicast_controller();
     test_network.add_default_route(&controller).await;
 
-    let mut get_route_stats_addresses =
-        fnet_multicast_admin::Ipv4UnicastSourceAndMulticastDestination {
-            unicast_source: test_network.get_device_address(source_address),
-            multicast_destination: destination_address,
-        };
-
-    assert_eq!(
-        controller
-            .get_route_stats(&mut get_route_stats_addresses)
-            .await
-            .expect("get_route_stats failed"),
-        Err(expected_error)
+    let get_route_stats_addresses = test_network.create_unicast_source_and_multicast_destination(
+        test_network.get_device_address(source_address),
+        destination_address.address(I::VERSION),
     );
+
+    assert_eq!(controller.get_route_stats(get_route_stats_addresses).await, Err(expected_error));
 }
 
 #[variants_test]
-async fn get_route_stats<E: netemul::Endpoint>(name: &str) {
+async fn get_route_stats<E: netemul::Endpoint, I: net_types::ip::Ip>(name: &str) {
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let router_realm = create_router_realm(name, &sandbox);
     let test_network = MulticastForwardingNetwork::new::<E>(
         name,
+        I::VERSION,
         &sandbox,
         &router_realm,
         MulticastForwardingNetworkOptions::default(),
@@ -1625,29 +2033,34 @@ async fn get_route_stats<E: netemul::Endpoint>(name: &str) {
     test_network.add_default_route(&controller).await;
 
     async fn get_last_used_timestamp(
-        controller: &fnet_multicast_admin::Ipv4RoutingTableControllerProxy,
-        addresses: &mut fnet_multicast_admin::Ipv4UnicastSourceAndMulticastDestination,
+        controller: &Box<dyn RoutingTableController>,
+        addresses: UnicastSourceAndMulticastDestination,
     ) -> i64 {
         controller
             .get_route_stats(addresses)
             .await
-            .expect("get_route_stats failed")
             .expect("get_route_stats error")
             .last_used
             .expect("last_used missing value")
     }
 
-    let mut addresses = test_network.default_unicast_source_and_multicast_destination();
-
     // The route should initially be assigned a timestamp that corresponds to
     // when it was created.
-    let mut timestamp = get_last_used_timestamp(&controller, &mut addresses).await;
+    let mut timestamp = get_last_used_timestamp(
+        &controller,
+        test_network.default_unicast_source_and_multicast_destination(),
+    )
+    .await;
     assert_gt!(timestamp, 0);
 
     // Verify that the timestamp is updated each time the route is used.
     for _ in 0..2 {
         test_network.send_and_receive_multicast_packet(hashmap! { Client::A => true }).await;
-        let current_timestamp = get_last_used_timestamp(&controller, &mut addresses).await;
+        let current_timestamp = get_last_used_timestamp(
+            &controller,
+            test_network.default_unicast_source_and_multicast_destination(),
+        )
+        .await;
         assert_gt!(current_timestamp, timestamp);
         timestamp = current_timestamp;
     }

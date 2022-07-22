@@ -67,6 +67,7 @@ impl NetstackVersion {
                 fnet_interfaces::StateMarker::PROTOCOL_NAME,
                 fnet_debug::InterfacesMarker::PROTOCOL_NAME,
                 fnet_multicast_admin::Ipv4RoutingTableControllerMarker::PROTOCOL_NAME,
+                fnet_multicast_admin::Ipv6RoutingTableControllerMarker::PROTOCOL_NAME,
                 fnet_neighbor::ControllerMarker::PROTOCOL_NAME,
                 fnet_neighbor::ViewMarker::PROTOCOL_NAME,
                 fnet_routes::StateMarker::PROTOCOL_NAME,
