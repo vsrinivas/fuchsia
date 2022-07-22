@@ -16,14 +16,14 @@
             "system-services": [
                 "fuchsia.device.NameProvider",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sysmem.Allocator"
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.vulkan.loader.Loader"
             ]
         }
     },
     "include": [
         "//src/chromium/web_engine/meta/shards/web_engine_base.shard.cmx",
         "//src/chromium/web_engine/meta/shards/web_engine_feature_network.shard.cmx",
-        "//src/lib/vulkan/test-application-container.shard.cmx",
         "syslog/client.shard.cmx"
     ],
     "program": {
@@ -32,7 +32,10 @@
     "sandbox": {
         "services": [
             "fuchsia.sys.Launcher",
-            "fuchsia.ui.scenic.Scenic"
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.vulkan.loader.Loader"
         ]
     }
 }
