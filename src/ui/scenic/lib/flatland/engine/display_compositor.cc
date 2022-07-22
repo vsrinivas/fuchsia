@@ -580,33 +580,33 @@ void DisplayCompositor::RenderFrame(uint64_t frame_number, zx::time presentation
 
   // Create and set layers, one per image/rectangle, set the layer images and the layer transforms.
   // Afterwards we check the config, if it fails for whatever reason, such as there being too many
-  // layers, then we fall back to software composition.  Keep track of the display_ids, so that we
-  // can pass them to the display controller.
+  // layers, then we fall back to software composition.
   bool hardware_fail = false;
-  std::vector<uint64_t> display_ids;
-  for (auto& data : render_data_list) {
-    display_ids.push_back(data.display_id);
-    if (!SetRenderDataOnDisplay(data)) {
-      // TODO(fxbug.dev/77416): just because setting the data on one display fails (e.g. due to too
-      // many layers), that doesn't mean that all displays need to use GPU-composition.  Some day we
-      // might want to use GPU-composition for some client images, and direct-scanout for others.
-      hardware_fail = true;
-      break;
-    }
-    if (should_apply_display_color_conversion_) {
-      // Apply direct-to-display color conversion here.
-      zx_status_t status = (*display_controller_)
-                               ->SetDisplayColorConversion(
-                                   data.display_id, color_conversion_preoffsets_,
-                                   color_conversion_coefficients_, color_conversion_postoffsets_);
-      FX_CHECK(status == ZX_OK) << "Could not apply hardware color conversion: " << status;
+  if (!kDisableDisplayComposition) {
+    for (auto& data : render_data_list) {
+      if (!SetRenderDataOnDisplay(data)) {
+        // TODO(fxbug.dev/77416): just because setting the data on one display fails (e.g. due to
+        // too many layers), that doesn't mean that all displays need to use GPU-composition.  Some
+        // day we might want to use GPU-composition for some client images, and direct-scanout for
+        // others.
+        hardware_fail = true;
+        break;
+      }
+      if (should_apply_display_color_conversion_) {
+        // Apply direct-to-display color conversion here.
+        zx_status_t status = (*display_controller_)
+                                 ->SetDisplayColorConversion(
+                                     data.display_id, color_conversion_preoffsets_,
+                                     color_conversion_coefficients_, color_conversion_postoffsets_);
+        FX_CHECK(status == ZX_OK) << "Could not apply hardware color conversion: " << status;
+      }
     }
   }
 
   // Determine whether we need to fall back to GPU composition.  Avoid calling CheckConfig() if we
   // don't need to, because this requires a round-trip to the display controller.
   bool fallback_to_gpu_composition = false;
-  if (hardware_fail) {
+  if (hardware_fail || kDisableDisplayComposition) {
     fallback_to_gpu_composition = true;
   } else {
     auto [result, ops] = CheckConfig();

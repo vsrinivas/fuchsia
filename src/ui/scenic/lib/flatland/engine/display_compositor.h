@@ -38,6 +38,14 @@ class DisplayCompositorTest;
 class DisplayCompositor final : public allocation::BufferCollectionImporter,
                                 public std::enable_shared_from_this<DisplayCompositor> {
  public:
+#ifdef DISABLE_DISPLAY_COMPOSITION
+  // Uses the GPU/Vulkan compositor by default, instead of attempting to composit using the display
+  // controller.
+  constexpr static bool kDisableDisplayComposition = true;
+#else
+  constexpr static bool kDisableDisplayComposition = false;
+#endif
+
   // TODO(fxbug.dev/66807): The DisplayCompositor has multiple parts of its code where usage of the
   // display controller is protected by locks, because of the multithreaded environment of flatland.
   // Ideally, we'd want the DisplayCompositor to have sole ownership of the display controller -

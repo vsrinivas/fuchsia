@@ -9,6 +9,9 @@ config("engine_config") {
   if (flatland_visual_debugging) {
     defines += [ "VISUAL_DEBUGGING_ENABLED" ]
   }
+  if (flatland_disable_display_composition) {
+    defines += [ "FLATLAND_DISABLE_DISPLAY_COMPOSITION" ]
+  }
 }
 
 config("cpu_accessible_config") {

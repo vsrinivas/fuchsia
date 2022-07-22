@@ -156,6 +156,12 @@ scenic_impl::ConfigValues GetConfig(sys::ComponentContext* app_context) {
     stash_loop.Run(zx::time::infinite(), /*once*/ true);
   }
 
+  // If we are disabling display composition, then disable display import constraints.
+  if (flatland::DisplayCompositor::kDisableDisplayComposition) {
+    values.flatland_buffer_collection_import_mode =
+        flatland::BufferCollectionImportMode::RendererOnly;
+  }
+
   FX_LOGS(INFO) << "Scenic min_predicted_frame_duration(us): "
                 << values.min_predicted_frame_duration.to_usecs();
   FX_LOGS(INFO) << "i_can_haz_flatland: " << values.i_can_haz_flatland;
