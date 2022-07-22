@@ -170,6 +170,7 @@ config("fidl-deprecated-c-bindings") {
     "//src/graphics/display/drivers/goldfish-display:goldfish-display-driver",
     "//src/graphics/display/drivers/goldfish-display:goldfish-unittests",
     "//src/graphics/display/drivers/intel-i915:common_srcs",
+    "//src/graphics/display/drivers/intel-i915-tgl:common_srcs",
     "//src/graphics/display/testing",
     "//src/graphics/drivers/virtio:gpu_lib",
     "//src/graphics/lib/magma/src/magma_util/platform/zircon:sysmem_connection",

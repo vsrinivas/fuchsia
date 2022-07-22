@@ -1,0 +1,11 @@
+{
+    "short_description": "PCI Intel display and GPU core driver (temporary fork for Tiger Lake enablement",
+    "manufacturer": "Intel",
+    "families": [
+        "Tiger Lake"
+    ],
+    "models": [],
+    "areas": [
+        "Display"
+    ]
+}

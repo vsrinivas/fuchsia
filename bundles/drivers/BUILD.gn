@@ -79,6 +79,7 @@ group("pci") {
     "//src/devices/serial/drivers/virtio-console:virtio_console",
     "//src/devices/usb/drivers/xhci:xhci",
     "//src/graphics/display/drivers/intel-i915:intel-i915",
+    "//src/graphics/display/drivers/intel-i915-tgl:intel-i915-tgl",
     "//src/graphics/display/drivers/simple:simple.amd-kaveri",
     "//src/graphics/display/drivers/simple:simple.bochs",
     "//src/graphics/display/drivers/simple:simple.gga",

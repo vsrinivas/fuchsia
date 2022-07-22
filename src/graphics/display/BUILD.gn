@@ -15,6 +15,7 @@ group("drivers") {
     "drivers/fake:fake-display",
     "drivers/goldfish-display",
     "drivers/intel-i915",
+    "drivers/intel-i915-tgl",
     "drivers/simple:simple.amd-kaveri",
     "drivers/simple:simple.bochs",
     "drivers/simple:simple.gga",

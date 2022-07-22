@@ -1,0 +1,20 @@
+[
+    {
+        "name": "Protocol",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.bluetooth.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_COMPOSITE": "1"
+        }
+    },
+    {
+        "name": "Skylake",
+        "expected": "abort",
+        "device": {
+            "fuchsia.BIND_PROTOCOL": "fuchsia.pci.BIND_PROTOCOL.DEVICE",
+            "fuchsia.BIND_PCI_VID": "fuchsia.pci.BIND_PCI_VID.INTEL",
+            "fuchsia.BIND_PCI_DID": "0x191e",
+            "fuchsia.BIND_COMPOSITE": "1"
+        }
+    }
+]

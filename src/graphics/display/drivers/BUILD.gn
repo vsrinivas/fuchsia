@@ -14,6 +14,7 @@ group("tests") {
     "fake:tests",
     "goldfish-display:tests",
     "intel-i915:tests",
+    "intel-i915-tgl:tests",
     "simple:tests",
     "ssd1306:tests",
   ]

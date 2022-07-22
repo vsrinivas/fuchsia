@@ -1,44 +1,44 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 #include <gtest/gtest.h>
 
-#include "src/graphics/display/drivers/intel-i915/dp-display.h"
-#include "src/graphics/display/drivers/intel-i915/fake-dpcd-channel.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/dp-display.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/fake-dpcd-channel.h"
 
-using i915::testing::FakeDpcdChannel;
-using i915::testing::kDefaultLaneCount;
-using i915::testing::kMaxLinkRateTableEntries;
+using i915_tgl::testing::FakeDpcdChannel;
+using i915_tgl::testing::kDefaultLaneCount;
+using i915_tgl::testing::kMaxLinkRateTableEntries;
 
 namespace {
 
-TEST(TglDpCapabilitiesTest, NoSupportedLinkRates) {
+TEST(DpCapabilitiesTest, NoSupportedLinkRates) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
 
-  auto cap = i915::DpCapabilities::Read(&fake_dpcd, &node);
+  auto cap = i915_tgl::DpCapabilities::Read(&fake_dpcd, &node);
   EXPECT_TRUE(cap.is_error());
 }
 
 // Tests that invalid lane counts are rejected.
-TEST(TglDpCapabilitiesTest, InvalidMaxLaneCount) {
+TEST(DpCapabilitiesTest, InvalidMaxLaneCount) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetMaxLinkRate(dpcd::LinkBw::k1620Mbps);
 
   fake_dpcd.SetMaxLaneCount(0);
-  EXPECT_TRUE(i915::DpCapabilities::Read(&fake_dpcd, &node).is_error());
+  EXPECT_TRUE(i915_tgl::DpCapabilities::Read(&fake_dpcd, &node).is_error());
 
   fake_dpcd.SetMaxLaneCount(3);
-  EXPECT_TRUE(i915::DpCapabilities::Read(&fake_dpcd, &node).is_error());
+  EXPECT_TRUE(i915_tgl::DpCapabilities::Read(&fake_dpcd, &node).is_error());
 
   fake_dpcd.SetMaxLaneCount(5);
-  EXPECT_TRUE(i915::DpCapabilities::Read(&fake_dpcd, &node).is_error());
+  EXPECT_TRUE(i915_tgl::DpCapabilities::Read(&fake_dpcd, &node).is_error());
 }
 
 // Tests that the basic set of getters work for non-EDP.
-TEST(TglDpCapabilitiesTest, BasicFields) {
+TEST(DpCapabilitiesTest, BasicFields) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
 
@@ -47,7 +47,7 @@ TEST(TglDpCapabilitiesTest, BasicFields) {
   fake_dpcd.SetMaxLinkRate(dpcd::LinkBw::k1620Mbps);
   fake_dpcd.SetSinkCount(1);
 
-  auto cap = i915::DpCapabilities::Read(&fake_dpcd, &node);
+  auto cap = i915_tgl::DpCapabilities::Read(&fake_dpcd, &node);
   ASSERT_TRUE(cap.is_ok());
   EXPECT_EQ(dpcd::Revision::k1_4, cap.value().dpcd_revision());
   EXPECT_EQ(kDefaultLaneCount, cap.value().max_lane_count());
@@ -61,20 +61,20 @@ TEST(TglDpCapabilitiesTest, BasicFields) {
 }
 
 // Tests that eDP registers are processed when supported.
-TEST(TglDpCapabilitiesTest, EdpRegisters) {
+TEST(DpCapabilitiesTest, EdpRegisters) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
   fake_dpcd.SetEdpCapable(dpcd::EdpRevision::k1_2);
 
-  auto cap = i915::DpCapabilities::Read(&fake_dpcd, &node);
+  auto cap = i915_tgl::DpCapabilities::Read(&fake_dpcd, &node);
   ASSERT_TRUE(cap.is_ok());
   EXPECT_EQ(std::optional{dpcd::EdpRevision::k1_2}, cap.value().edp_revision());
   EXPECT_FALSE(cap.value().backlight_aux_power());
   EXPECT_FALSE(cap.value().backlight_aux_brightness());
 }
 
-TEST(TglDpCapabilitiesTest, EdpBacklight) {
+TEST(DpCapabilitiesTest, EdpBacklight) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
@@ -89,7 +89,7 @@ TEST(TglDpCapabilitiesTest, EdpBacklight) {
   bc.set_brightness_aux_set_cap(1);
   fake_dpcd.registers[dpcd::DPCD_EDP_BACKLIGHT_CAP] = bc.reg_value();
 
-  auto cap = i915::DpCapabilities::Read(&fake_dpcd, &node);
+  auto cap = i915_tgl::DpCapabilities::Read(&fake_dpcd, &node);
   ASSERT_TRUE(cap.is_ok());
   EXPECT_TRUE(cap.value().backlight_aux_power());
   EXPECT_TRUE(cap.value().backlight_aux_brightness());
@@ -97,13 +97,13 @@ TEST(TglDpCapabilitiesTest, EdpBacklight) {
 
 // Tests that the list of supported link rates is populated correctly using the "Max Link Rate"
 // method.
-TEST(TglDpCapabilitiesTest, MaxLinkRate1620NoEdp) {
+TEST(DpCapabilitiesTest, MaxLinkRate1620NoEdp) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
   fake_dpcd.SetMaxLinkRate(dpcd::LinkBw::k1620Mbps);
 
-  auto cap = i915::DpCapabilities::Read(&fake_dpcd, &node);
+  auto cap = i915_tgl::DpCapabilities::Read(&fake_dpcd, &node);
   ASSERT_TRUE(cap.is_ok());
   EXPECT_FALSE(cap.value().use_link_rate_table());
   ASSERT_EQ(1u, cap.value().supported_link_rates_mbps().size());
@@ -112,13 +112,13 @@ TEST(TglDpCapabilitiesTest, MaxLinkRate1620NoEdp) {
 
 // Tests that the list of supported link rates is populated correctly using the "Max Link Rate"
 // method.
-TEST(TglDpCapabilitiesTest, MaxLinkRate2700NoEdp) {
+TEST(DpCapabilitiesTest, MaxLinkRate2700NoEdp) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
   fake_dpcd.SetMaxLinkRate(dpcd::LinkBw::k2700Mbps);
 
-  auto cap = i915::DpCapabilities::Read(&fake_dpcd, &node);
+  auto cap = i915_tgl::DpCapabilities::Read(&fake_dpcd, &node);
   ASSERT_TRUE(cap.is_ok());
   EXPECT_FALSE(cap.value().use_link_rate_table());
   ASSERT_EQ(2u, cap.value().supported_link_rates_mbps().size());
@@ -128,13 +128,13 @@ TEST(TglDpCapabilitiesTest, MaxLinkRate2700NoEdp) {
 
 // Tests that the list of supported link rates is populated correctly using the "Max Link Rate"
 // method.
-TEST(TglDpCapabilitiesTest, MaxLinkRate5400NoEdp) {
+TEST(DpCapabilitiesTest, MaxLinkRate5400NoEdp) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
   fake_dpcd.SetMaxLinkRate(dpcd::LinkBw::k5400Mbps);
 
-  auto cap = i915::DpCapabilities::Read(&fake_dpcd, &node);
+  auto cap = i915_tgl::DpCapabilities::Read(&fake_dpcd, &node);
   ASSERT_TRUE(cap.is_ok());
   EXPECT_FALSE(cap.value().use_link_rate_table());
   ASSERT_EQ(3u, cap.value().supported_link_rates_mbps().size());
@@ -145,13 +145,13 @@ TEST(TglDpCapabilitiesTest, MaxLinkRate5400NoEdp) {
 
 // Tests that the list of supported link rates is populated correctly using the "Max Link Rate"
 // method.
-TEST(TglDpCapabilitiesTest, MaxLinkRate8100NoEdp) {
+TEST(DpCapabilitiesTest, MaxLinkRate8100NoEdp) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
   fake_dpcd.SetMaxLinkRate(dpcd::LinkBw::k8100Mbps);
 
-  auto cap = i915::DpCapabilities::Read(&fake_dpcd, &node);
+  auto cap = i915_tgl::DpCapabilities::Read(&fake_dpcd, &node);
   ASSERT_TRUE(cap.is_ok());
   EXPECT_FALSE(cap.value().use_link_rate_table());
   ASSERT_EQ(4u, cap.value().supported_link_rates_mbps().size());
@@ -163,14 +163,14 @@ TEST(TglDpCapabilitiesTest, MaxLinkRate8100NoEdp) {
 
 // Tests that link rate discovery falls back to MAX_LINK_RATE if eDP v1.4 is supported but the
 // link rate table is empty.
-TEST(TglDpCapabilitiesTest, FallbackToMaxLinkRateWhenLinkRateTableIsEmpty) {
+TEST(DpCapabilitiesTest, FallbackToMaxLinkRateWhenLinkRateTableIsEmpty) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
   fake_dpcd.SetEdpCapable(dpcd::EdpRevision::k1_4);
   fake_dpcd.SetMaxLinkRate(dpcd::LinkBw::k1620Mbps);
 
-  auto cap = i915::DpCapabilities::Read(&fake_dpcd, &node);
+  auto cap = i915_tgl::DpCapabilities::Read(&fake_dpcd, &node);
   ASSERT_TRUE(cap.is_ok());
   EXPECT_FALSE(cap.value().use_link_rate_table());
   EXPECT_FALSE(cap.value().supported_link_rates_mbps().empty());
@@ -178,7 +178,7 @@ TEST(TglDpCapabilitiesTest, FallbackToMaxLinkRateWhenLinkRateTableIsEmpty) {
 
 // Tests that the list of supported link rates is populated correctly when using the "Link Rate
 // Table" method.
-TEST(TglDpCapabilitiesTest, LinkRateTableOneEntry) {
+TEST(DpCapabilitiesTest, LinkRateTableOneEntry) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
@@ -187,7 +187,7 @@ TEST(TglDpCapabilitiesTest, LinkRateTableOneEntry) {
 
   fake_dpcd.PopulateLinkRateTable({100});  // 100 * 200kHz ==> 20MHz
 
-  auto cap = i915::DpCapabilities::Read(&fake_dpcd, &node);
+  auto cap = i915_tgl::DpCapabilities::Read(&fake_dpcd, &node);
   ASSERT_TRUE(cap.is_ok());
   EXPECT_TRUE(cap.value().use_link_rate_table());
   EXPECT_EQ(1u, cap.value().supported_link_rates_mbps().size());
@@ -196,7 +196,7 @@ TEST(TglDpCapabilitiesTest, LinkRateTableOneEntry) {
 
 // Tests that the list of supported link rates is populated correctly when using the "Link Rate
 // Table" method.
-TEST(TglDpCapabilitiesTest, LinkRateTableSomeEntries) {
+TEST(DpCapabilitiesTest, LinkRateTableSomeEntries) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
@@ -208,7 +208,7 @@ TEST(TglDpCapabilitiesTest, LinkRateTableSomeEntries) {
   // 300 * 200kHz ==> 60MHz
   fake_dpcd.PopulateLinkRateTable({100, 200, 300});
 
-  auto cap = i915::DpCapabilities::Read(&fake_dpcd, &node);
+  auto cap = i915_tgl::DpCapabilities::Read(&fake_dpcd, &node);
   ASSERT_TRUE(cap.is_ok());
   EXPECT_TRUE(cap.value().use_link_rate_table());
   EXPECT_EQ(3u, cap.value().supported_link_rates_mbps().size());
@@ -217,7 +217,7 @@ TEST(TglDpCapabilitiesTest, LinkRateTableSomeEntries) {
 
 // Tests that the list of supported link rates is populated correctly when using the "Link Rate
 // Table" method.
-TEST(TglDpCapabilitiesTest, LinkRateTableMaxEntries) {
+TEST(DpCapabilitiesTest, LinkRateTableMaxEntries) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
@@ -235,7 +235,7 @@ TEST(TglDpCapabilitiesTest, LinkRateTableMaxEntries) {
   }
   fake_dpcd.PopulateLinkRateTable(std::move(input));
 
-  auto cap = i915::DpCapabilities::Read(&fake_dpcd, &node);
+  auto cap = i915_tgl::DpCapabilities::Read(&fake_dpcd, &node);
   ASSERT_TRUE(cap.is_ok());
   EXPECT_TRUE(cap.value().use_link_rate_table());
   EXPECT_EQ(kMaxLinkRateTableEntries, cap.value().supported_link_rates_mbps().size());
@@ -245,7 +245,7 @@ TEST(TglDpCapabilitiesTest, LinkRateTableMaxEntries) {
 // Tests that the list of supported link rates is populated based on the "Link Rate Table" method
 // when both the table and the MAX_LINK_RATE register hold valid values (which is optional but
 // allowed by the eDP specification).
-TEST(TglDpCapabilitiesTest, LinkRateTableUsedWhenMaxLinkRateIsAlsoPresent) {
+TEST(DpCapabilitiesTest, LinkRateTableUsedWhenMaxLinkRateIsAlsoPresent) {
   inspect::Node node;
   FakeDpcdChannel fake_dpcd;
   fake_dpcd.SetDefaults();
@@ -258,7 +258,7 @@ TEST(TglDpCapabilitiesTest, LinkRateTableUsedWhenMaxLinkRateIsAlsoPresent) {
   constexpr uint32_t kExpectedLinkRate = 5400;
   fake_dpcd.PopulateLinkRateTable({kExpectedLinkRate * kConversionFactor});
 
-  auto cap = i915::DpCapabilities::Read(&fake_dpcd, &node);
+  auto cap = i915_tgl::DpCapabilities::Read(&fake_dpcd, &node);
   ASSERT_TRUE(cap.is_ok());
   EXPECT_TRUE(cap.value().use_link_rate_table());
   EXPECT_EQ(1u, cap.value().supported_link_rates_mbps().size());

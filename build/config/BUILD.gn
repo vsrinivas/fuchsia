@@ -721,6 +721,7 @@ config("Wno-conversion") {
     "//src/graphics/display/drivers/fake:*",
     "//src/graphics/display/drivers/goldfish-display:*",
     "//src/graphics/display/drivers/intel-i915:*",
+    "//src/graphics/display/drivers/intel-i915-tgl:*",
     "//src/graphics/display/drivers/ssd1306:*",
     "//src/graphics/display/lib/designware:*",
     "//src/graphics/display/lib/designware/test:*",

@@ -285,6 +285,7 @@
 //src/graphics/display/drivers/dsi-dw:dsi-dw-driver
 //src/graphics/display/drivers/fake:fake-display-driver
 //src/graphics/display/drivers/goldfish-display:goldfish-display-driver
+//src/graphics/display/drivers/intel-i915-tgl:intel-i915-tgl-driver
 //src/graphics/display/drivers/intel-i915:intel-i915-driver
 //src/graphics/display/drivers/simple:simple.amd-kaveri-driver
 //src/graphics/display/drivers/simple:simple.bochs-driver
