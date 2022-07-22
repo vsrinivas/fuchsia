@@ -132,11 +132,10 @@ impl InputHandler for InspectHandler {
         self.last_seen_timestamp_ns.set(now.into_nanos());
         self.last_generated_timestamp_ns.set(event_time.into_nanos());
         let event_type = EventType::for_device_event(&input_event.device_event);
-        self.events_by_type.get(&event_type).expect("all event types are tracked").count_event(
-            now,
-            event_time,
-            &input_event.handled,
-        );
+        self.events_by_type
+            .get(&event_type)
+            .unwrap_or_else(|| panic!("no event counters for {}", event_type))
+            .count_event(now, event_time, &input_event.handled);
         vec![input_event]
     }
 }
@@ -161,6 +160,7 @@ impl InspectHandler {
         EventCounters::add_new_into(&mut events_by_type, &node, EventType::ConsumerControls);
         EventCounters::add_new_into(&mut events_by_type, &node, EventType::Mouse);
         EventCounters::add_new_into(&mut events_by_type, &node, EventType::TouchScreen);
+        EventCounters::add_new_into(&mut events_by_type, &node, EventType::Touchpad);
         EventCounters::add_new_into(&mut events_by_type, &node, EventType::MouseConfig);
         #[cfg(test)]
         EventCounters::add_new_into(&mut events_by_type, &node, EventType::Fake);
@@ -235,7 +235,13 @@ mod tests {
                      last_generated_timestamp_ns: 0i64,
                      last_seen_timestamp_ns: 0i64,
                 },
-            }
+                touchpad: {
+                    events_count: 0u64,
+                    handled_events_count: 0u64,
+                    last_generated_timestamp_ns: 0i64,
+                    last_seen_timestamp_ns: 0i64,
+               },
+           }
         });
 
         handler
@@ -285,6 +291,12 @@ mod tests {
                      last_generated_timestamp_ns: 0i64,
                      last_seen_timestamp_ns: 0i64,
                 },
+                touchpad: {
+                    events_count: 0u64,
+                    handled_events_count: 0u64,
+                    last_generated_timestamp_ns: 0i64,
+                    last_seen_timestamp_ns: 0i64,
+               },
             }
         });
 
@@ -335,6 +347,12 @@ mod tests {
                      last_generated_timestamp_ns: 0i64,
                      last_seen_timestamp_ns: 0i64,
                 },
+                touchpad: {
+                    events_count: 0u64,
+                    handled_events_count: 0u64,
+                    last_generated_timestamp_ns: 0i64,
+                    last_seen_timestamp_ns: 0i64,
+               },
             }
         });
 
@@ -385,6 +403,12 @@ mod tests {
                      last_generated_timestamp_ns: 0i64,
                      last_seen_timestamp_ns: 0i64,
                 },
+                touchpad: {
+                    events_count: 0u64,
+                    handled_events_count: 0u64,
+                    last_generated_timestamp_ns: 0i64,
+                    last_seen_timestamp_ns: 0i64,
+               },
             }
         });
     }
