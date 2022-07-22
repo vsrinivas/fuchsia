@@ -89,26 +89,21 @@ class DriverWaiter : public TransportWaiter {
  public:
   DriverWaiter(fidl_handle_t handle, async_dispatcher_t* dispatcher,
                TransportWaitSuccessHandler success_handler,
-               TransportWaitFailureHandler failure_handler) {
-    state_.handle = handle;
-    state_.dispatcher = dispatcher;
-    state_.success_handler = std::move(success_handler);
-    state_.failure_handler = std::move(failure_handler);
-  }
+               TransportWaitFailureHandler failure_handler);
 
   zx_status_t Begin() override;
 
   CancellationResult Cancel() override;
 
  private:
-  struct State {
-    fidl_handle_t handle;
-    async_dispatcher_t* dispatcher;
-    TransportWaitSuccessHandler success_handler;
-    TransportWaitFailureHandler failure_handler;
-    std::optional<fdf::ChannelRead> channel_read;
-  };
-  State state_;
+  void HandleChannelRead(fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
+                         fdf_status_t status);
+
+  fidl_handle_t handle_;
+  async_dispatcher_t* dispatcher_;
+  TransportWaitSuccessHandler success_handler_;
+  TransportWaitFailureHandler failure_handler_;
+  fdf::ChannelRead channel_read_;
 };
 
 // A view into an object providing storage for messages read from a driver channel.

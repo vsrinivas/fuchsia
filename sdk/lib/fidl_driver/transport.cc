@@ -196,32 +196,39 @@ const TransportVTable DriverTransport::VTable = {
     .create_thread_checker = driver_create_thread_checker,
 };
 
-zx_status_t DriverWaiter::Begin() {
-  state_.channel_read.emplace(
-      state_.handle, 0 /* options */,
-      [&state = state_](fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
-                        fdf_status_t status) {
-        if (status != ZX_OK) {
-          fidl::UnbindInfo unbind_info;
-          if (status == ZX_ERR_PEER_CLOSED) {
-            unbind_info = fidl::UnbindInfo::PeerClosed(status);
-          } else {
-            unbind_info = fidl::UnbindInfo::DispatcherError(status);
-          }
-          return state.failure_handler(unbind_info);
-        }
+DriverWaiter::DriverWaiter(fidl_handle_t handle, async_dispatcher_t* dispatcher,
+                           TransportWaitSuccessHandler success_handler,
+                           TransportWaitFailureHandler failure_handler)
+    : handle_(handle),
+      dispatcher_(dispatcher),
+      success_handler_(std::move(success_handler)),
+      failure_handler_(std::move(failure_handler)),
+      channel_read_{fdf::ChannelRead{handle, 0 /* options */,
+                                     fit::bind_member<&DriverWaiter::HandleChannelRead>(this)}} {}
 
-        fdf::Arena arena;
-        DriverMessageStorageView storage_view{.arena = &arena};
-        IncomingMessage msg = fidl::MessageRead(fdf::UnownedChannel(state.handle), storage_view);
-        if (!msg.ok()) {
-          return state.failure_handler(fidl::UnbindInfo{msg});
-        }
-        state.channel_read = std::nullopt;
-        return state.success_handler(msg, &storage_view);
-      });
-  zx_status_t status =
-      state_.channel_read->Begin(fdf_dispatcher_from_async_dispatcher(state_.dispatcher));
+void DriverWaiter::HandleChannelRead(fdf_dispatcher_t* dispatcher, fdf::ChannelRead* channel_read,
+                                     fdf_status_t status) {
+  if (status != ZX_OK) {
+    fidl::UnbindInfo unbind_info;
+    if (status == ZX_ERR_PEER_CLOSED) {
+      unbind_info = fidl::UnbindInfo::PeerClosed(status);
+    } else {
+      unbind_info = fidl::UnbindInfo::DispatcherError(status);
+    }
+    return failure_handler_(unbind_info);
+  }
+
+  fdf::Arena arena;
+  DriverMessageStorageView storage_view{.arena = &arena};
+  IncomingMessage msg = fidl::MessageRead(fdf::UnownedChannel(handle_), storage_view);
+  if (!msg.ok()) {
+    return failure_handler_(fidl::UnbindInfo{msg});
+  }
+  return success_handler_(msg, &storage_view);
+}
+
+zx_status_t DriverWaiter::Begin() {
+  zx_status_t status = channel_read_.Begin(fdf_dispatcher_from_async_dispatcher(dispatcher_));
   if (status == ZX_ERR_UNAVAILABLE) {
     // Begin() is called when the dispatcher is shutting down.
     return ZX_ERR_CANCELED;
@@ -230,13 +237,12 @@ zx_status_t DriverWaiter::Begin() {
 }
 
 fidl::internal::DriverWaiter::CancellationResult DriverWaiter::Cancel() {
-  fdf_dispatcher_t* dispatcher = fdf_dispatcher_from_async_dispatcher(state_.dispatcher);
+  fdf_dispatcher_t* dispatcher = fdf_dispatcher_from_async_dispatcher(dispatcher_);
   uint32_t options = fdf_dispatcher_get_options(dispatcher);
-  ZX_ASSERT(state_.channel_read.has_value());
 
   if (options & FDF_DISPATCHER_OPTION_UNSYNCHRONIZED) {
     // Unsynchronized dispatcher.
-    fdf_status_t status = state_.channel_read->Cancel();
+    fdf_status_t status = channel_read_.Cancel();
     ZX_ASSERT(status == ZX_OK || status == ZX_ERR_NOT_FOUND);
 
     // When the dispatcher is unsynchronized, our |ChannelRead| handler will
@@ -251,11 +257,15 @@ fidl::internal::DriverWaiter::CancellationResult DriverWaiter::Cancel() {
   fdf_dispatcher_t* current_dispatcher = fdf_dispatcher_get_current_dispatcher();
   if (current_dispatcher == dispatcher) {
     // The binding is being torn down from a dispatcher thread.
-    fdf_status_t status = state_.channel_read->Cancel();
-    // If the status is not |ZX_OK|, then the FIDL runtime has gotten out of
-    // sync with the state of the driver runtime.
-    ZX_ASSERT(status == ZX_OK);
-    return CancellationResult::kOk;
+    fdf_status_t status = channel_read_.Cancel();
+    switch (status) {
+      case ZX_OK:
+        return CancellationResult::kOk;
+      case ZX_ERR_NOT_FOUND:
+        return CancellationResult::kNotFound;
+      default:
+        ZX_PANIC("Unsupported status: %d", status);
+    }
   }
 
   // The binding is being torn down from a foreign thread.
