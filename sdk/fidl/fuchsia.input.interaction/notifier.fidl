@@ -1,0 +1,18 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.input.interaction;
+
+/// The Notifier protocol offers a subscription interface through
+/// which clients can watch for changes in the system's activity state.
+@discoverable
+protocol Notifier {
+    /// Subscribe to changes in the system's state with a hanging-get FIDL
+    /// pattern.
+    ///
+    /// The server will always respond immediately with the initial state,
+    /// and after that whenever the system's state changes.
+    WatchState() -> (resource struct {
+        state State;
+    });
+};

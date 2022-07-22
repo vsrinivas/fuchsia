@@ -1,0 +1,16 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.input.interaction.observation;
+
+using zx;
+
+/// The Aggregator protocol collects evidence of user activity and uses this
+/// evidence to set the system's activity state.
+@discoverable
+protocol Aggregator {
+    /// Reports a discrete activity such as a keystroke.
+    ReportDiscreteActivity(struct {
+        event_time zx.time;
+    }) -> ();
+};
