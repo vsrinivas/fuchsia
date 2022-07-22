@@ -48,23 +48,16 @@ pub fn convert_bundle_to_configs(
         }
     }
 
-    if let Some(manifests) = &product_bundle.manifests {
-        if let Some(emu) = &manifests.emu {
-            emulator_configuration.guest = GuestConfig {
-                // TODO(fxbug.dev/88908): Eventually we'll need to support multiple disk_images.
-                fvm_image: Some(data_root.join(&emu.disk_images[0])),
-                kernel_image: data_root.join(&emu.kernel),
-                zbi_image: data_root.join(&emu.initial_ramdisk),
-            };
-        } else {
-            return Err(anyhow!(
-                "The Product Bundle specified by {} does not contain any Emulator Manifests.",
-                &product_bundle.name
-            ));
-        }
+    if let Some(emu) = &product_bundle.manifests.emu {
+        emulator_configuration.guest = GuestConfig {
+            // TODO(fxbug.dev/88908): Eventually we'll need to support multiple disk_images.
+            fvm_image: Some(data_root.join(&emu.disk_images[0])),
+            kernel_image: data_root.join(&emu.kernel),
+            zbi_image: data_root.join(&emu.initial_ramdisk),
+        };
     } else {
         return Err(anyhow!(
-            "The Product Bundle specified by {} does not contain a Manifest section.",
+            "The Product Bundle specified by {} does not contain any Emulator Manifests.",
             &product_bundle.name
         ));
     }
@@ -88,14 +81,14 @@ mod tests {
             description: Some("A fake product bundle".to_string()),
             device_refs: vec!["".to_string()],
             images: vec![],
-            manifests: Some(Manifests {
+            manifests: Manifests {
                 emu: Some(EmuManifest {
                     disk_images: vec!["path/to/disk".to_string()],
                     initial_ramdisk: "path/to/zbi".to_string(),
                     kernel: "path/to/kernel".to_string(),
                 }),
                 flash: None,
-            }),
+            },
             metadata: None,
             packages: vec![],
             name: "FakeBundle".to_string(),
@@ -129,7 +122,7 @@ mod tests {
         assert_eq!(config.device.storage, device.hardware.storage);
 
         assert!(config.guest.fvm_image.is_some());
-        let emu = pb.manifests.unwrap().emu.unwrap();
+        let emu = pb.manifests.emu.unwrap();
 
         let expected_kernel = sdk_root.join(emu.kernel);
         let expected_fvm = sdk_root.join(&emu.disk_images[0]);
@@ -142,14 +135,14 @@ mod tests {
         assert_eq!(config.host.port_map.len(), 0);
 
         // Adjust all of the values that affect the config, then run it again.
-        pb.manifests = Some(Manifests {
+        pb.manifests = Manifests {
             emu: Some(EmuManifest {
                 disk_images: vec!["different_path/to/disk".to_string()],
                 initial_ramdisk: "different_path/to/zbi".to_string(),
                 kernel: "different_path/to/kernel".to_string(),
             }),
             flash: None,
-        });
+        };
         device.hardware = Hardware {
             cpu: Cpu { arch: CpuArchitecture::Arm64 },
             audio: AudioDevice { model: AudioModel::None },
@@ -176,7 +169,7 @@ mod tests {
         assert_eq!(config.device.storage, device.hardware.storage);
 
         assert!(config.guest.fvm_image.is_some());
-        let emu = pb.manifests.unwrap().emu.unwrap();
+        let emu = pb.manifests.emu.unwrap();
         let expected_kernel = sdk_root.join(emu.kernel);
         let expected_fvm = sdk_root.join(&emu.disk_images[0]);
         let expected_zbi = sdk_root.join(emu.initial_ramdisk);

@@ -127,6 +127,7 @@ mod tests {
                                 "base_uri": "gs://fuchsia/development/0.20201216.2.1/images/generic-x64.tgz",
                                 "format": "tgz"
                             }],
+                            "manifests": {},
                             "packages": [{
                                 "format": "tgz",
                                 "repo_uri": "gs://fuchsia/development/0.20201216.2.1/packages/generic-x64.tar.gz"
@@ -176,6 +177,7 @@ mod tests {
                             "base_uri": "gs://fuchsia/development/0.20201216.2.1/images/generic-x64.tgz",
                             "format": "tgz"
                         }],
+                        "manifests": {},
                         "packages": [{
                             "format": "tgz",
                             "repo_uri": "gs://fuchsia/development/0.20201216.2.1/packages/generic-x64.tar.gz"

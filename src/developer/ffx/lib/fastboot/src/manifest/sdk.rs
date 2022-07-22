@@ -39,17 +39,14 @@ impl TryFrom<&SdkEntries> for FlashManifestV3 {
     fn try_from(p: &SdkEntries) -> Result<FlashManifestV3> {
         // Eventually we'll need to use the identifier to get an entry.
         match p.entries.iter().next() {
-            Some(Metadata::ProductBundleV1(bundle)) => match &bundle.manifests {
-                Some(m) => match &m.flash {
-                    Some(f) => Ok(FlashManifestV3 {
-                        hw_revision: f.hw_revision.clone(),
-                        credentials: f.credentials.iter().map(|c| c.clone()).collect(),
-                        products: f.products.iter().map(|p| p.into()).collect(),
-                        ..Default::default()
-                    }),
-                    None => bail!("SDK Flash Manifest does not exist"),
-                },
-                None => bail!("No manifests in product bundle"),
+            Some(Metadata::ProductBundleV1(bundle)) => match &bundle.manifests.flash {
+                Some(f) => Ok(FlashManifestV3 {
+                    hw_revision: f.hw_revision.clone(),
+                    credentials: f.credentials.iter().map(|c| c.clone()).collect(),
+                    products: f.products.iter().map(|p| p.into()).collect(),
+                    ..Default::default()
+                }),
+                None => bail!("SDK Flash Manifest does not exist"),
             },
             _ => bail!("SDK Flash Manifest is malformed"),
         }

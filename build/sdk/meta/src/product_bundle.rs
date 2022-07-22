@@ -181,8 +181,7 @@ pub struct ProductBundleV1 {
     pub images: Vec<ImageBundle>,
 
     /// Manifests describing how to boot the product on a device.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub manifests: Option<Manifests>,
+    pub manifests: Manifests,
 
     /// A list of key-value pairs describing product dimensions. Tools must not
     /// rely on the presence or absence of certain keys. Tools may display them
@@ -222,6 +221,8 @@ mod tests {
                     "base_uri": "gs://fuchsia/development/0.20201216.2.1/images/generic-x64.tgz",
                     "format": "tgz"
                 }],
+                "manifests": {
+                },
                 "packages": [{
                     "format": "tgz",
                     "repo_uri": "gs://fuchsia/development/0.20201216.2.1/packages/generic-x64.tar.gz"
@@ -308,6 +309,8 @@ mod tests {
                     "base_uri": "gs://fuchsia/development/0.20201216.2.1/images/generic-x64.tgz",
                     "format": "tgz"
                 }],
+                "manifests": {
+                },
                 "packages": [{
                     "format": "tgz",
                     "repo_uri": "gs://fuchsia/development/0.20201216.2.1/packages/generic-x64.tar.gz"

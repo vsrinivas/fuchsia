@@ -72,7 +72,7 @@ pub async fn create_product_bundle(cmd: &CreateCommand) -> Result<()> {
         device_refs,
         images: images_vec,
         packages: packages_vec,
-        manifests: Some(manifests),
+        manifests,
         metadata: Some(metadata),
         kind: ElementType::ProductBundle,
     };
@@ -201,8 +201,8 @@ mod test {
 
         assert_eq!("Product bundle for workstation-oot.x64", product_bundle.description.unwrap());
         assert_eq!("workstation-oot.x64", product_bundle.name);
-        assert!(product_bundle.manifests.clone().unwrap().emu.is_some());
-        assert!(product_bundle.manifests.clone().unwrap().flash.is_none());
+        assert!(product_bundle.manifests.clone().emu.is_some());
+        assert!(product_bundle.manifests.clone().flash.is_none());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -243,7 +243,7 @@ mod test {
         let product_bundle: ProductBundleV1 = envelope.data;
         assert_eq!("Product bundle for workstation-oot.x64", product_bundle.description.unwrap());
         assert_eq!("workstation-oot.x64", product_bundle.name);
-        assert!(product_bundle.manifests.clone().unwrap().flash.is_some());
-        assert!(product_bundle.manifests.clone().unwrap().emu.is_none());
+        assert!(product_bundle.manifests.clone().flash.is_some());
+        assert!(product_bundle.manifests.clone().emu.is_none());
     }
 }
