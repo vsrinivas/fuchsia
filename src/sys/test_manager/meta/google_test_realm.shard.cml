@@ -30,6 +30,7 @@
         {
             protocol: [
                 "fuchsia.device.NameProvider",
+                "fuchsia.intl.PropertyProvider",
                 "fuchsia.mediacodec.CodecFactory",
                 "fuchsia.net.name.Lookup",
                 "fuchsia.posix.socket.Provider",
