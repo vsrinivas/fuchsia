@@ -229,7 +229,6 @@ rustc_library("lib") {
     "src/tests/bluetooth_earcons_tests.rs",
     "src/tests/camera_watcher_agent_tests.rs",
     "src/tests/display_tests.rs",
-    "src/tests/do_not_disturb_tests.rs",
     "src/tests/environment_tests.rs",
     "src/tests/event_tests.rs",
     "src/tests/factory_reset_tests.rs",

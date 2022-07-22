@@ -43,7 +43,6 @@ mod audio_tests;
 mod bluetooth_earcons_tests;
 mod camera_watcher_agent_tests;
 mod display_tests;
-mod do_not_disturb_tests;
 mod environment_tests;
 mod event_tests;
 mod factory_reset_tests;
