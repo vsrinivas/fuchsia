@@ -89,35 +89,6 @@ dart_test("summarize_perf_results_test") {
 }
 test_list += [ "summarize_perf_results_test" ]
 
-flutter_test_list = [
-  # fxbug.dev/60742
-  # "button_flutter_benchmarks_test",
-
-  # fxbug.dev/56644
-  # "clockface_flutter_benchmarks_test",
-
-  # fxbug.dev/59483
-  # "scroll_flutter_benchmarks_test",
-]
-foreach(target_name, flutter_test_list) {
-  dart_test(target_name) {
-    sources = [ "flutter/$target_name.dart" ]
-
-    deps = [
-      "//sdk/testing/sl4f/client",
-      "//sdk/testing/sl4f/flutter_driver_sl4f",
-      "//third_party/dart-pkg/pub/test",
-    ]
-
-    non_dart_deps = [ ":runtime_deps($host_toolchain)" ]
-
-    environments = [
-      atlas_env,
-      nuc_env,
-    ]
-  }
-}
-
 # Split the following tests into shards so that each shard fits
 # within the default time limit.
 shards = [
@@ -225,11 +196,6 @@ group("package_deps") {
     "//src/ui/bin/input-pipeline",
     "//src/ui/examples/simplest_app",
 
-    # These are used by the flutter benchmarks.
-    "//src/experiences/benchmarks/bin/button_flutter:button_flutter",
-    "//src/experiences/benchmarks/bin/clockface_flutter:clockface-flutter",
-    "//src/experiences/benchmarks/bin/scroll_flutter:scroll-flutter",
-
     # These are used by storage_benchmarks_test
     "//src/storage/bin/start-storage-benchmark:start-storage-benchmark",
   ]
@@ -241,10 +207,6 @@ group("test") {
   deps = [ ":package_deps" ]
 
   foreach(target_name, test_list) {
-    deps += [ ":$target_name($host_toolchain)" ]
-  }
-
-  foreach(target_name, flutter_test_list) {
     deps += [ ":$target_name($host_toolchain)" ]
   }
 }
@@ -287,10 +249,7 @@ dart_test("touch_input_latency_benchmarks_test") {
 # Unit tests of processing logic
 group("tests") {
   testonly = true
-  deps = [
-    ":flutter_startup_time_metric_test($host_toolchain)",
-    ":touch_input_latency_metric_test($host_toolchain)",
-  ]
+  deps = [ ":touch_input_latency_metric_test($host_toolchain)" ]
 }
 
 dart_test("touch_input_latency_metric_test") {
@@ -302,26 +261,6 @@ dart_test("touch_input_latency_metric_test") {
 
   deps = [
     "//sdk/testing/sl4f/client",
-    "//third_party/dart-pkg/pub/args",
-    "//third_party/dart-pkg/pub/logging",
-    "//third_party/dart-pkg/pub/meta",
-    "//third_party/dart-pkg/pub/test",
-    "//third_party/dart-pkg/pub/tuple",
-  ]
-}
-
-dart_test("flutter_startup_time_metric_test") {
-  sources = [
-    "flutter/flutter_startup_time_metric_test.dart",
-    "flutter/helpers.dart",
-    "helpers.dart",
-    "summarize.dart",
-  ]
-
-  deps = [
-    "//sdk/testing/sl4f/client",
-    "//sdk/testing/sl4f/flutter_driver_sl4f",
-    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/logging",
     "//third_party/dart-pkg/pub/meta",

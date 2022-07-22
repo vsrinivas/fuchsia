@@ -15,8 +15,6 @@ This directory contains the following performance tests:
 *   `fidl_microbenchmarks_test` - SL4F wrapper for running FIDL
     microbenchmarks which test FIDL bindings for multiple languages.
 
-*   `flutter` - Various Flutter performance tests.
-
 *   `flatland_benchmarks_test` - Tests the performance of Flatland's
     end-to-end present latency, measured by tracing flow events, for minimal
     Flatland client (`flatland-view-provider`).
