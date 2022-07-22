@@ -6,7 +6,7 @@ import("//build/dart/dart.gni")
 import("//build/python/python_binary.gni")
 import("//build/sdk/sdk_atom.gni")
 
-kernel_snapshot = "//prebuilt/third_party/dart/$host_os-$host_cpu/bin/snapshots/gen_kernel.dart.snapshot"
+kernel_snapshot = "${prebuilt_dart_sdk}/bin/snapshots/gen_kernel.dart.snapshot"
 
 # TODO(alainv): Move that to dart_tool.gni to make it more generic.
 sdk_atom("kernel_compiler_sdk") {

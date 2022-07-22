@@ -4,6 +4,7 @@
 
 import("//build/compiled_action.gni")
 import("//build/config/build_api_module.gni")
+import("//build/dart/dart.gni")
 import("//build/dart/dart_packages.gni")
 import("//build/python/python_binary.gni")
 import("//build/python/python_host_test.gni")
@@ -44,7 +45,7 @@ action("dart_sdk_docs") {
   inputs = [
     "//sdk/dart",
     "//analysis_options.yaml",
-    "//prebuilt/third_party/dart/${host_platform}/bin/dart",
+    "${prebuilt_dart_sdk}/bin/dart",
   ]
 
   outputs = [
@@ -65,8 +66,7 @@ action("dart_sdk_docs") {
     "--out-dir",
     rebase_path("$target_out_dir/__untraced_dartdoc_output__", target_gen_dir),
     "--prebuilts-dir",
-    rebase_path("//prebuilt/third_party/dart/${host_platform}/bin",
-                target_gen_dir),
+    rebase_path("${prebuilt_dart_sdk}/bin", target_gen_dir),
     "--dep-file",
     rebase_path(depfile, root_build_dir),
   ]

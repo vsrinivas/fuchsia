@@ -5,5 +5,5 @@
 import("//build/dart/dart_tool.gni")
 
 dart_prebuilt_tool("gen_kernel") {
-  snapshot = "//prebuilt/third_party/dart/$host_os-$host_cpu/bin/snapshots/gen_kernel.dart.snapshot"
+  snapshot = "${prebuilt_dart_sdk}/bin/snapshots/gen_kernel.dart.snapshot"
 }
