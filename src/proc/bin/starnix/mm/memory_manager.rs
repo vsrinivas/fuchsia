@@ -818,7 +818,9 @@ impl MemoryManager {
                 stack_size: 0,
                 stack_start: UserAddress::default(),
             }),
-            dumpable: Mutex::new(DumpPolicy::DISABLE),
+            // TODO(security): Reset to DISABLE, or the value in the fs.suid_dumpable sysctl, under
+            // certain conditions as specified in the prctl(2) man page.
+            dumpable: Mutex::new(DumpPolicy::USER),
         })
     }
 
@@ -972,7 +974,6 @@ impl MemoryManager {
             state.brk = None;
             state.executable_node = Some(exe_node);
 
-            *self.dumpable.lock() = DumpPolicy::DISABLE;
             std::mem::replace(&mut state.mappings, RangeMap::new())
         };
         Ok(())
