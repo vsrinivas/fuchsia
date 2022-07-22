@@ -35,7 +35,6 @@ pub enum DevSubCommand {
     Iface(IfaceCommand),
     Client(ClientCommand),
     Ap(ApCommand),
-    Mesh(MeshCommand),
 }
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -107,21 +106,6 @@ pub struct ApCommand {
 pub enum ApSubCommand {
     Start(Start),
     Stop(Stop),
-}
-
-#[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand, name = "mesh", description = "Controls a WLAN mesh interface.")]
-pub struct MeshCommand {
-    #[argh(subcommand)]
-    pub subcommand: MeshSubCommand,
-}
-
-#[derive(FromArgs, Debug, PartialEq)]
-#[argh(subcommand)]
-pub enum MeshSubCommand {
-    Join(Join),
-    Leave(Leave),
-    Paths(Paths),
 }
 
 impl From<PhySubCommand> for wlan_dev::opts::Opt {
@@ -277,7 +261,6 @@ impl From<DevSubCommand> for wlan_dev::opts::Opt {
             DevSubCommand::Iface(iface_cmd) => wlan_dev::opts::Opt::from(iface_cmd.subcommand),
             DevSubCommand::Client(client_cmd) => wlan_dev::opts::Opt::from(client_cmd.subcommand),
             DevSubCommand::Ap(ap_cmd) => wlan_dev::opts::Opt::from(ap_cmd.subcommand),
-            DevSubCommand::Mesh(mesh_cmd) => wlan_dev::opts::Opt::from(mesh_cmd.subcommand),
         }
     }
 }
@@ -736,16 +719,6 @@ impl From<Stop> for wlan_dev::opts::ApCmd {
     }
 }
 
-impl From<MeshSubCommand> for wlan_dev::opts::Opt {
-    fn from(cmd: MeshSubCommand) -> Self {
-        wlan_dev::opts::Opt::Mesh(match cmd {
-            MeshSubCommand::Join(arg) => wlan_dev::opts::MeshCmd::from(arg),
-            MeshSubCommand::Leave(arg) => wlan_dev::opts::MeshCmd::from(arg),
-            MeshSubCommand::Paths(arg) => wlan_dev::opts::MeshCmd::from(arg),
-        })
-    }
-}
-
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "join", description = "Joins a mesh")]
 pub struct Join {
@@ -763,16 +736,6 @@ pub struct Join {
     channel: u8,
 }
 
-impl From<Join> for wlan_dev::opts::MeshCmd {
-    fn from(cmd: Join) -> Self {
-        wlan_dev::opts::MeshCmd::Join {
-            iface_id: cmd.iface_id,
-            mesh_id: cmd.mesh_id,
-            channel: cmd.channel,
-        }
-    }
-}
-
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "leave", description = "Leaves a mesh")]
 pub struct Leave {
@@ -786,12 +749,6 @@ pub struct Leave {
     iface_id: u16,
 }
 
-impl From<Leave> for wlan_dev::opts::MeshCmd {
-    fn from(cmd: Leave) -> Self {
-        wlan_dev::opts::MeshCmd::Leave { iface_id: cmd.iface_id }
-    }
-}
-
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "paths", description = "Retrieves mesh paths")]
 pub struct Paths {
@@ -803,12 +760,6 @@ pub struct Paths {
         description = "interface ID for which mesh paths will be queried"
     )]
     iface_id: u16,
-}
-
-impl From<Paths> for wlan_dev::opts::MeshCmd {
-    fn from(cmd: Paths) -> Self {
-        wlan_dev::opts::MeshCmd::Paths { iface_id: cmd.iface_id }
-    }
 }
 
 #[cfg(test)]
@@ -1025,38 +976,6 @@ mod tests {
         assert_eq!(
             wlan_dev::opts::ApCmd::from(Stop { iface_id: 123 }),
             wlan_dev::opts::ApCmd::Stop { iface_id: 123 }
-        )
-    }
-
-    #[test]
-    fn test_mesh_join_conversion() {
-        assert_eq!(
-            wlan_dev::opts::MeshCmd::from(Join {
-                iface_id: 456,
-                mesh_id: String::from("zxcv"),
-                channel: 123,
-            }),
-            wlan_dev::opts::MeshCmd::Join {
-                iface_id: 456,
-                mesh_id: String::from("zxcv"),
-                channel: 123,
-            }
-        )
-    }
-
-    #[test]
-    fn test_mesh_leave_conversion() {
-        assert_eq!(
-            wlan_dev::opts::MeshCmd::from(Leave { iface_id: 123 }),
-            wlan_dev::opts::MeshCmd::Leave { iface_id: 123 }
-        )
-    }
-
-    #[test]
-    fn test_mesh_paths_conversion() {
-        assert_eq!(
-            wlan_dev::opts::MeshCmd::from(Paths { iface_id: 123 }),
-            wlan_dev::opts::MeshCmd::Paths { iface_id: 123 }
         )
     }
 }

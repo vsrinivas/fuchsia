@@ -27,6 +27,9 @@ pub(crate) async fn serve_monitor_requests(
     while let Some(req) = req_stream.try_next().await.context("error running DeviceService")? {
         match req {
             DeviceMonitorRequest::ListPhys { responder } => responder.send(&mut list_phys(&phys)),
+            DeviceMonitorRequest::ListIfaces { responder } => {
+                responder.send(&mut list_ifaces(&ifaces))
+            }
             DeviceMonitorRequest::GetDevPath { phy_id, responder } => {
                 responder.send(get_dev_path(&phys, phy_id).as_deref())
             }
@@ -110,6 +113,10 @@ pub(crate) async fn serve_monitor_requests(
 
 fn list_phys(phys: &PhyMap) -> Vec<u16> {
     phys.get_snapshot().iter().map(|(phy_id, _)| *phy_id).collect()
+}
+
+fn list_ifaces(ifaces: &IfaceMap) -> Vec<u16> {
+    ifaces.get_snapshot().iter().map(|(iface_id, _)| *iface_id).collect()
 }
 
 fn get_dev_path(phys: &PhyMap, phy_id: u16) -> Option<String> {
@@ -533,6 +540,57 @@ mod tests {
         // The future to list the PHYs should complete and no PHYs should be present.
         assert_variant!(exec.run_until_stalled(&mut list_fut), Poll::Ready(Ok(phys)) => {
             assert!(phys.is_empty())
+        });
+    }
+
+    #[test]
+    fn test_list_ifaces() {
+        let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let test_values = test_setup();
+        let service_fut = serve_monitor_requests(
+            test_values.monitor_req_stream,
+            test_values.phys.clone(),
+            test_values.ifaces.clone(),
+            test_values.watcher_service,
+            test_values.dev_proxy,
+        );
+        pin_mut!(service_fut);
+
+        assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
+
+        // Request the list of available ifaces.
+        let list_fut = test_values.monitor_proxy.list_ifaces();
+        pin_mut!(list_fut);
+        assert_variant!(exec.run_until_stalled(&mut list_fut), Poll::Pending);
+
+        // Progress the service loop.
+        assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
+
+        // The future to list the ifaces should complete and no ifaces should be present.
+        assert_variant!(exec.run_until_stalled(&mut list_fut),Poll::Ready(Ok(ifaces)) => {
+            assert!(ifaces.is_empty())
+        });
+
+        // Add a fake iface.
+        let (generic_sme, _) =
+            create_proxy::<fidl_sme::GenericSmeMarker>().expect("Failed to create generic sme");
+        let fake_iface = IfaceDevice {
+            phy_ownership: PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
+            generic_sme,
+        };
+        test_values.ifaces.insert(0, fake_iface);
+
+        // Request the list of available ifaces.
+        let list_fut = test_values.monitor_proxy.list_ifaces();
+        pin_mut!(list_fut);
+        assert_variant!(exec.run_until_stalled(&mut list_fut), Poll::Pending);
+
+        // Progress the service loop.
+        assert_variant!(exec.run_until_stalled(&mut service_fut), Poll::Pending);
+
+        // The future to list the ifaces should complete and the iface should be present.
+        assert_variant!(exec.run_until_stalled(&mut list_fut), Poll::Ready(Ok(ifaces)) => {
+            assert_eq!(vec![0u16], ifaces);
         });
     }
 

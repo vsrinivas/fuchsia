@@ -8,18 +8,12 @@ use {
 };
 
 #[ffx_plugin(
-    wlan_service::DeviceServiceProxy = "core/wlanstack:expose:fuchsia.wlan.device.service.DeviceService",
     wlan_service::DeviceMonitorProxy = "core/wlandevicemonitor:expose:fuchsia.wlan.device.service.DeviceMonitor"
 )]
 pub async fn handle_dev_cmd(
-    dev_svc_proxy: wlan_service::DeviceServiceProxy,
     monitor_proxy: wlan_service::DeviceMonitorProxy,
     cmd: arg_types::DevCommand,
 ) -> Result<(), Error> {
-    wlan_dev::handle_wlantool_command(
-        dev_svc_proxy,
-        monitor_proxy,
-        wlan_dev::opts::Opt::from(cmd.subcommand),
-    )
-    .await
+    wlan_dev::handle_wlantool_command(monitor_proxy, wlan_dev::opts::Opt::from(cmd.subcommand))
+        .await
 }

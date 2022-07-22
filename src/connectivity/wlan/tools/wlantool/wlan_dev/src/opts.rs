@@ -130,10 +130,6 @@ pub enum Opt {
     /// commands for AP stations
     Ap(ApCmd),
 
-    #[structopt(name = "mesh")]
-    /// commands for mesh stations
-    Mesh(MeshCmd),
-
     #[structopt(name = "rsn")]
     #[cfg(target_os = "fuchsia")]
     /// commands for verifying RSN behavior
@@ -343,30 +339,6 @@ pub enum ApCmd {
     },
     #[structopt(name = "stop")]
     Stop {
-        #[structopt(short = "i", long = "iface", default_value = "0")]
-        iface_id: u16,
-    },
-}
-
-#[derive(StructOpt, Clone, Debug, PartialEq)]
-pub enum MeshCmd {
-    #[structopt(name = "join")]
-    Join {
-        #[structopt(short = "i", long = "iface", default_value = "0")]
-        iface_id: u16,
-        #[structopt(short = "m", long = "mesh_id")]
-        mesh_id: String,
-        #[structopt(short = "c", long = "channel")]
-        // TODO(porce): Expand to support PHY and CBW
-        channel: u8,
-    },
-    #[structopt(name = "leave")]
-    Leave {
-        #[structopt(short = "i", long = "iface", default_value = "0")]
-        iface_id: u16,
-    },
-    #[structopt(name = "paths")]
-    Paths {
         #[structopt(short = "i", long = "iface", default_value = "0")]
         iface_id: u16,
     },

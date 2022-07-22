@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context, Error},
-    fidl_fuchsia_wlan_device_service::{DeviceMonitorMarker, DeviceServiceMarker},
+    fidl_fuchsia_wlan_device_service::DeviceMonitorMarker,
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     structopt::StructOpt,
@@ -21,11 +21,9 @@ fn main() -> Result<(), Error> {
     println!("{:?}", opt);
 
     let mut exec = fasync::LocalExecutor::new().context("error creating event loop")?;
-    let dev_svc_proxy = connect_to_protocol::<DeviceServiceMarker>()
-        .context("failed to `connect` to device service")?;
     let monitor_proxy = connect_to_protocol::<DeviceMonitorMarker>()
         .context("failed to `connect` to device monitor")?;
 
-    let fut = wlan_dev::handle_wlantool_command(dev_svc_proxy, monitor_proxy, opt);
+    let fut = wlan_dev::handle_wlantool_command(monitor_proxy, opt);
     exec.run_singlethreaded(fut)
 }

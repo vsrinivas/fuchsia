@@ -9,10 +9,9 @@ use {
     fidl_fuchsia_wlan_common::{self as fidl_common, WlanMacRole},
     fidl_fuchsia_wlan_common_security as fidl_security,
     fidl_fuchsia_wlan_device_service::{
-        self as wlan_service, DeviceMonitorProxy, DeviceServiceProxy, QueryIfaceResponse,
+        self as wlan_service, DeviceMonitorProxy, QueryIfaceResponse,
     },
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_internal as fidl_internal,
-    fidl_fuchsia_wlan_minstrel::Peer,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fidl_fuchsia_wlan_sme::{
         ConnectTransactionEvent, ScanTransactionEvent, ScanTransactionEventStream,
@@ -43,7 +42,6 @@ pub mod opts;
 use crate::opts::*;
 
 type DeviceMonitor = DeviceMonitorProxy;
-type DeviceService = DeviceServiceProxy;
 
 /// Context for negotiating an `Authentication` (security protocol and credentials).
 ///
@@ -175,29 +173,24 @@ impl TryFrom<SecurityContext> for fidl_security::Authentication {
     }
 }
 
-pub async fn handle_wlantool_command(
-    dev_svc_proxy: DeviceService,
-    monitor_proxy: DeviceMonitor,
-    opt: Opt,
-) -> Result<(), Error> {
+pub async fn handle_wlantool_command(monitor_proxy: DeviceMonitor, opt: Opt) -> Result<(), Error> {
     match opt {
         Opt::Phy(cmd) => do_phy(cmd, monitor_proxy).await,
-        Opt::Iface(cmd) => do_iface(cmd, dev_svc_proxy, monitor_proxy).await,
-        Opt::Client(opts::ClientCmd::Connect(cmd)) => do_client_connect(cmd, dev_svc_proxy).await,
-        Opt::Connect(cmd) => do_client_connect(cmd, dev_svc_proxy).await,
+        Opt::Iface(cmd) => do_iface(cmd, monitor_proxy).await,
+        Opt::Client(opts::ClientCmd::Connect(cmd)) => do_client_connect(cmd, monitor_proxy).await,
+        Opt::Connect(cmd) => do_client_connect(cmd, monitor_proxy).await,
         Opt::Client(opts::ClientCmd::Disconnect(cmd)) | Opt::Disconnect(cmd) => {
-            do_client_disconnect(cmd, dev_svc_proxy).await
+            do_client_disconnect(cmd, monitor_proxy).await
         }
-        Opt::Client(opts::ClientCmd::Scan(cmd)) => do_client_scan(cmd, dev_svc_proxy).await,
-        Opt::Scan(cmd) => do_client_scan(cmd, dev_svc_proxy).await,
+        Opt::Client(opts::ClientCmd::Scan(cmd)) => do_client_scan(cmd, monitor_proxy).await,
+        Opt::Scan(cmd) => do_client_scan(cmd, monitor_proxy).await,
         Opt::Client(opts::ClientCmd::WmmStatus(cmd)) | Opt::WmmStatus(cmd) => {
-            do_client_wmm_status(cmd, dev_svc_proxy, &mut std::io::stdout()).await
+            do_client_wmm_status(cmd, monitor_proxy, &mut std::io::stdout()).await
         }
-        Opt::Ap(cmd) => do_ap(cmd, dev_svc_proxy).await,
-        Opt::Mesh(cmd) => do_mesh(cmd, dev_svc_proxy).await,
+        Opt::Ap(cmd) => do_ap(cmd, monitor_proxy).await,
         #[cfg(target_os = "fuchsia")]
         Opt::Rsn(cmd) => do_rsn(cmd).await,
-        Opt::Status(cmd) => do_status(cmd, dev_svc_proxy).await,
+        Opt::Status(cmd) => do_status(cmd, monitor_proxy).await,
     }
 }
 
@@ -296,11 +289,7 @@ fn is_valid_country_str(country: &String) -> bool {
     country.len() == 2 && country.chars().all(|x| x.is_ascii())
 }
 
-async fn do_iface(
-    cmd: opts::IfaceCmd,
-    dev_svc_proxy: DeviceService,
-    monitor_proxy: DeviceMonitor,
-) -> Result<(), Error> {
+async fn do_iface(cmd: opts::IfaceCmd, monitor_proxy: DeviceMonitor) -> Result<(), Error> {
     match cmd {
         opts::IfaceCmd::New { phy_id, role, sta_addr } => {
             let sta_addr = match sta_addr {
@@ -325,66 +314,33 @@ async fn do_iface(
             }
         }
         opts::IfaceCmd::List => {
-            let response = dev_svc_proxy.list_ifaces().await.context("error getting response")?;
+            let response = monitor_proxy.list_ifaces().await.context("error getting response")?;
             println!("response: {:?}", response);
         }
         opts::IfaceCmd::Query { iface_id } => {
-            let (status, response) =
-                dev_svc_proxy.query_iface(iface_id).await.context("error querying iface")?;
-            match status {
-                zx_sys::ZX_OK => {
-                    let response_str = match response {
-                        Some(response) => format_iface_query_response(*response),
-                        None => format!("Iface {} returns empty query response", iface_id),
-                    };
-                    println!("response: {}", response_str)
-                }
-                status => println!("error querying Iface {}: {}", iface_id, status),
+            let result =
+                monitor_proxy.query_iface(iface_id).await.context("error querying iface")?;
+            match result {
+                Ok(response) => println!("response: {}", format_iface_query_response(response)),
+                Err(err) => println!("error querying Iface {}: {}", iface_id, err),
             }
         }
         opts::IfaceCmd::Minstrel(cmd) => match cmd {
-            opts::MinstrelCmd::List { iface_id } => {
-                let ids = get_iface_ids(dev_svc_proxy.clone(), iface_id).await?;
-                for id in ids {
-                    if let Ok(peers) = list_minstrel_peers(dev_svc_proxy.clone(), id).await {
-                        if peers.is_empty() {
-                            continue;
-                        }
-                        println!("iface {} has {} peers:", id, peers.len());
-                        for peer in peers {
-                            println!("{}", peer);
-                        }
-                    }
-                }
+            opts::MinstrelCmd::List { iface_id: _ } => {
+                println!("List minstrel peers is not supported.");
             }
-            opts::MinstrelCmd::Show { iface_id, peer_addr } => {
-                let peer_addr = match peer_addr {
-                    Some(s) => Some(s.parse()?),
-                    None => None,
-                };
-                let ids = get_iface_ids(dev_svc_proxy.clone(), iface_id).await?;
-                for id in ids {
-                    if let Err(e) =
-                        show_minstrel_peer_for_iface(dev_svc_proxy.clone(), id, peer_addr).await
-                    {
-                        println!(
-                            "querying peer(s) {} on iface {} returned an error: {}",
-                            peer_addr.unwrap_or(MacAddr([0; 6])),
-                            id,
-                            e
-                        );
-                    }
-                }
+            opts::MinstrelCmd::Show { iface_id: _, peer_addr: _ } => {
+                println!("Show minstrel peer is not supported.");
             }
         },
-        opts::IfaceCmd::Status(cmd) => do_status(cmd, dev_svc_proxy).await?,
+        opts::IfaceCmd::Status(cmd) => do_status(cmd, monitor_proxy).await?,
     }
     Ok(())
 }
 
 async fn do_client_connect(
     cmd: opts::ClientConnectCmd,
-    dev_svc_proxy: DeviceServiceProxy,
+    monitor_proxy: DeviceMonitorProxy,
 ) -> Result<(), Error> {
     async fn try_get_bss_desc(
         mut events: ScanTransactionEventStream,
@@ -435,7 +391,7 @@ async fn do_client_connect(
     );
     let opts::ClientConnectCmd { iface_id, ssid, password, psk, scan_type } = cmd;
     let ssid = Ssid::try_from(ssid)?;
-    let sme = get_client_sme(dev_svc_proxy, iface_id).await?;
+    let sme = get_client_sme(monitor_proxy, iface_id).await?;
     let (local, remote) = endpoints::create_proxy()?;
     let mut req = match scan_type {
         ScanTypeArg::Active => fidl_sme::ScanRequest::Active(fidl_sme::ActiveScanRequest {
@@ -471,10 +427,10 @@ async fn do_client_connect(
 
 async fn do_client_disconnect(
     cmd: opts::ClientDisconnectCmd,
-    dev_svc_proxy: DeviceService,
+    monitor_proxy: DeviceMonitor,
 ) -> Result<(), Error> {
     let opts::ClientDisconnectCmd { iface_id } = cmd;
-    let sme = get_client_sme(dev_svc_proxy, iface_id).await?;
+    let sme = get_client_sme(monitor_proxy, iface_id).await?;
     sme.disconnect(fidl_sme::UserDisconnectReason::WlanDevTool)
         .await
         .map_err(|e| format_err!("error sending disconnect request: {}", e))
@@ -482,10 +438,10 @@ async fn do_client_disconnect(
 
 async fn do_client_scan(
     cmd: opts::ClientScanCmd,
-    dev_svc_proxy: DeviceService,
+    monitor_proxy: DeviceMonitor,
 ) -> Result<(), Error> {
     let opts::ClientScanCmd { iface_id, scan_type } = cmd;
-    let sme = get_client_sme(dev_svc_proxy, iface_id).await?;
+    let sme = get_client_sme(monitor_proxy, iface_id).await?;
     let (local, remote) = endpoints::create_proxy()?;
     let mut req = match scan_type {
         ScanTypeArg::Passive => fidl_sme::ScanRequest::Passive(fidl_sme::PassiveScanRequest {}),
@@ -498,17 +454,16 @@ async fn do_client_scan(
     handle_scan_transaction(local).await
 }
 
-async fn print_iface_status(iface_id: u16, dev_svc_proxy: DeviceService) -> Result<(), Error> {
-    let (status, resp) =
-        dev_svc_proxy.query_iface(iface_id).await.context("querying iface info")?;
+async fn print_iface_status(iface_id: u16, monitor_proxy: DeviceMonitor) -> Result<(), Error> {
+    let result = monitor_proxy
+        .query_iface(iface_id)
+        .await
+        .context("querying iface info")?
+        .map_err(|e| zx_status::Status::from_raw(e))?;
 
-    zx_status::Status::ok(status)?;
-    if resp.is_none() {
-        return Err(format_err!("No response"));
-    }
-    match resp.unwrap().role {
+    match result.role {
         WlanMacRole::Client => {
-            let client_sme = get_client_sme(dev_svc_proxy, iface_id).await?;
+            let client_sme = get_client_sme(monitor_proxy, iface_id).await?;
             let client_status_response = client_sme.status().await?;
             match client_status_response {
                 fidl_sme::ClientStatusResponse::Connected(serving_ap_info) => {
@@ -531,7 +486,7 @@ async fn print_iface_status(iface_id: u16, dev_svc_proxy: DeviceService) -> Resu
             }
         }
         WlanMacRole::Ap => {
-            let sme = get_ap_sme(dev_svc_proxy, iface_id).await?;
+            let sme = get_ap_sme(monitor_proxy, iface_id).await?;
             let status = sme.status().await?;
             println!(
                 "Iface {}: Running AP: {:?}",
@@ -551,14 +506,14 @@ async fn print_iface_status(iface_id: u16, dev_svc_proxy: DeviceService) -> Resu
     Ok(())
 }
 
-async fn do_status(cmd: opts::IfaceStatusCmd, dev_svc_proxy: DeviceService) -> Result<(), Error> {
-    let ids = get_iface_ids(dev_svc_proxy.clone(), cmd.iface_id).await?;
+async fn do_status(cmd: opts::IfaceStatusCmd, monitor_proxy: DeviceMonitor) -> Result<(), Error> {
+    let ids = get_iface_ids(monitor_proxy.clone(), cmd.iface_id).await?;
 
     if ids.len() == 0 {
         return Err(format_err!("No iface found"));
     }
     for iface_id in ids {
-        if let Err(e) = print_iface_status(iface_id, dev_svc_proxy.clone()).await {
+        if let Err(e) = print_iface_status(iface_id, monitor_proxy.clone()).await {
             println!("Iface {}: Error querying status: {}", iface_id, e);
             continue;
         }
@@ -568,10 +523,10 @@ async fn do_status(cmd: opts::IfaceStatusCmd, dev_svc_proxy: DeviceService) -> R
 
 async fn do_client_wmm_status(
     cmd: opts::ClientWmmStatusCmd,
-    dev_svc_proxy: DeviceService,
+    monitor_proxy: DeviceMonitor,
     stdout: &mut dyn std::io::Write,
 ) -> Result<(), Error> {
-    let sme = get_client_sme(dev_svc_proxy, cmd.iface_id).await?;
+    let sme = get_client_sme(monitor_proxy, cmd.iface_id).await?;
     let wmm_status = sme
         .wmm_status()
         .await
@@ -611,10 +566,10 @@ fn print_wmm_ac_params(
     Ok(())
 }
 
-async fn do_ap(cmd: opts::ApCmd, dev_svc_proxy: DeviceService) -> Result<(), Error> {
+async fn do_ap(cmd: opts::ApCmd, monitor_proxy: DeviceMonitor) -> Result<(), Error> {
     match cmd {
         opts::ApCmd::Start { iface_id, ssid, password, channel } => {
-            let sme = get_ap_sme(dev_svc_proxy, iface_id).await?;
+            let sme = get_ap_sme(monitor_proxy, iface_id).await?;
             let mut config = fidl_sme::ApConfig {
                 ssid: ssid.as_bytes().to_vec(),
                 password: password.map_or(vec![], |p| p.as_bytes().to_vec()),
@@ -630,48 +585,9 @@ async fn do_ap(cmd: opts::ApCmd, dev_svc_proxy: DeviceService) -> Result<(), Err
             println!("{:?}", sme.start(&mut config).await?);
         }
         opts::ApCmd::Stop { iface_id } => {
-            let sme = get_ap_sme(dev_svc_proxy, iface_id).await?;
+            let sme = get_ap_sme(monitor_proxy, iface_id).await?;
             let r = sme.stop().await;
             println!("{:?}", r);
-        }
-    }
-    Ok(())
-}
-
-async fn do_mesh(cmd: opts::MeshCmd, dev_svc_proxy: DeviceService) -> Result<(), Error> {
-    match cmd {
-        opts::MeshCmd::Join { iface_id, mesh_id, channel } => {
-            let sme = get_mesh_sme(dev_svc_proxy, iface_id).await?;
-            let mut config = fidl_sme::MeshConfig { mesh_id: mesh_id.as_bytes().to_vec(), channel };
-            let r = sme.join(&mut config).await?;
-            match r {
-                fidl_sme::JoinMeshResultCode::DfsUnsupported => {
-                    println!(
-                        "{:?}: The specified role does not support DFS channel {:?}",
-                        r, config.channel
-                    );
-                }
-                _ => {
-                    println!("{:?}", r);
-                }
-            }
-        }
-        opts::MeshCmd::Leave { iface_id } => {
-            let sme = get_mesh_sme(dev_svc_proxy, iface_id).await?;
-            let r = sme.leave().await;
-            println!("{:?}", r);
-        }
-        opts::MeshCmd::Paths { iface_id } => {
-            let sme = get_mesh_sme(dev_svc_proxy, iface_id).await?;
-            let (code, table) = sme.get_mesh_path_table().await?;
-            match code {
-                fidl_sme::GetMeshPathTableResultCode::Success => {
-                    println!("{:?}", table);
-                }
-                fidl_sme::GetMeshPathTableResultCode::InternalError => {
-                    println!("Internal Error in getting the Mesh Path Table.");
-                }
-            }
         }
     }
     Ok(())
@@ -830,7 +746,7 @@ async fn handle_connect_transaction(
 }
 
 /// Constructs a `Result<(), Error>` from a `zx::zx_status_t` returned
-/// from one of the `get_client_sme`, `get_ap_sme`, or `get_mesh_sme`
+/// from one of the `get_client_sme` or `get_ap_sme`
 /// functions. In particular, when `zx_status::Status::from_raw(raw_status)` does
 /// not match `zx_status::Status::OK`, this function will attach the appropriate
 /// error message to the returned `Result`. When `zx_status::Status::from_raw(raw_status)`
@@ -840,21 +756,19 @@ async fn handle_connect_transaction(
 /// The cause is a readable conversion of `raw_status` based on `station_mode`
 /// and `iface_id`. The context notes the failed operation and suggests the
 /// interface be checked for support of the given `station_mode`.
-fn result_from_sme_raw_status(
+fn error_from_sme_raw_status(
     raw_status: zx_sys::zx_status_t,
     station_mode: WlanMacRole,
     iface_id: u16,
-) -> Result<(), Error> {
+) -> Error {
     match zx_status::Status::from_raw(raw_status) {
-        zx_status::Status::OK => Ok(()),
-        zx_status::Status::NOT_FOUND => Err(Error::msg("invalid interface id")),
-        zx_status::Status::NOT_SUPPORTED => {
-            Err(Error::msg("operation not supported on SME interface"))
-        }
+        zx_status::Status::OK => Error::msg("Unexpected OK error"),
+        zx_status::Status::NOT_FOUND => Error::msg("invalid interface id"),
+        zx_status::Status::NOT_SUPPORTED => Error::msg("operation not supported on SME interface"),
         zx_status::Status::INTERNAL => {
-            Err(Error::msg("internal server error sending endpoint to the SME server future"))
+            Error::msg("internal server error sending endpoint to the SME server future")
         }
-        _ => Err(Error::msg("unrecognized error associated with SME interface")),
+        _ => Error::msg("unrecognized error associated with SME interface"),
     }
     .context(format!(
         "Failed to access {:?} for interface id {}. \
@@ -864,106 +778,38 @@ fn result_from_sme_raw_status(
 }
 
 async fn get_client_sme(
-    dev_svc_proxy: DeviceService,
+    monitor_proxy: DeviceMonitor,
     iface_id: u16,
 ) -> Result<fidl_sme::ClientSmeProxy, Error> {
     let (proxy, remote) = endpoints::create_proxy()?;
-    let raw_status = dev_svc_proxy
+    monitor_proxy
         .get_client_sme(iface_id, remote)
         .await
-        .context("error sending GetClientSme request")?;
-    result_from_sme_raw_status(raw_status, WlanMacRole::Client, iface_id).map(|_| proxy)
+        .context("error sending GetClientSme request")?
+        .map_err(|e| error_from_sme_raw_status(e, WlanMacRole::Client, iface_id))?;
+    Ok(proxy)
 }
 
 async fn get_ap_sme(
-    dev_svc_proxy: DeviceService,
+    monitor_proxy: DeviceMonitor,
     iface_id: u16,
 ) -> Result<fidl_sme::ApSmeProxy, Error> {
     let (proxy, remote) = endpoints::create_proxy()?;
-    let raw_status = dev_svc_proxy
+    monitor_proxy
         .get_ap_sme(iface_id, remote)
         .await
-        .context("error sending GetApSme request")?;
-    result_from_sme_raw_status(raw_status, WlanMacRole::Ap, iface_id).map(|_| proxy)
-}
-
-async fn get_mesh_sme(
-    dev_svc_proxy: DeviceService,
-    iface_id: u16,
-) -> Result<fidl_sme::MeshSmeProxy, Error> {
-    let (proxy, remote) = endpoints::create_proxy()?;
-    let raw_status = dev_svc_proxy
-        .get_mesh_sme(iface_id, remote)
-        .await
-        .context("error sending GetMeshSme request")?;
-    result_from_sme_raw_status(raw_status, WlanMacRole::Mesh, iface_id).map(|_| proxy)
+        .context("error sending GetApSme request")?
+        .map_err(|e| error_from_sme_raw_status(e, WlanMacRole::Ap, iface_id))?;
+    Ok(proxy)
 }
 
 async fn get_iface_ids(
-    dev_svc_proxy: DeviceService,
+    monitor_proxy: DeviceMonitor,
     iface_id: Option<u16>,
 ) -> Result<Vec<u16>, Error> {
     match iface_id {
         Some(id) => Ok(vec![id]),
-        None => {
-            let response = dev_svc_proxy.list_ifaces().await.context("error listing ifaces")?;
-            Ok(response.ifaces.into_iter().map(|iface| iface.iface_id).collect())
-        }
-    }
-}
-
-async fn list_minstrel_peers(
-    dev_svc_proxy: DeviceService,
-    iface_id: u16,
-) -> Result<Vec<MacAddr>, Error> {
-    let (status, peers) = dev_svc_proxy
-        .get_minstrel_list(iface_id)
-        .await
-        .context(format!("Error getting minstrel peer list iface {}", iface_id))?;
-    if status == zx_sys::ZX_OK {
-        Ok(peers.addrs.into_iter().map(|v| MacAddr(v)).collect())
-    } else {
-        println!("Error getting minstrel peer list from iface {}: {}", iface_id, status);
-        Ok(vec![])
-    }
-}
-
-async fn show_minstrel_peer_for_iface(
-    dev_svc_proxy: DeviceService,
-    id: u16,
-    peer_addr: Option<MacAddr>,
-) -> Result<(), Error> {
-    let peer_addrs = get_peer_addrs(dev_svc_proxy.clone(), id, peer_addr).await?;
-    let mut first_peer = true;
-    for mut peer_addr in peer_addrs {
-        let (status, resp) = dev_svc_proxy
-            .get_minstrel_stats(id, &mut peer_addr.0)
-            .await
-            .context(format!("Error getting minstrel stats from peer {}", peer_addr))?;
-        if status != zx_sys::ZX_OK {
-            println!(
-                "error getting minstrel stats for {} from iface {}: {}",
-                peer_addr, id, status
-            );
-        } else if let Some(peer) = resp {
-            if first_peer {
-                println!("iface {}", id);
-                first_peer = false;
-            }
-            print_minstrel_stats(peer);
-        }
-    }
-    Ok(())
-}
-
-async fn get_peer_addrs(
-    dev_svc_proxy: DeviceService,
-    iface_id: u16,
-    peer_addr: Option<MacAddr>,
-) -> Result<Vec<MacAddr>, Error> {
-    match peer_addr {
-        Some(addr) => Ok(vec![addr]),
-        None => list_minstrel_peers(dev_svc_proxy, iface_id).await,
+        None => monitor_proxy.list_ifaces().await.context("error listing ifaces"),
     }
 }
 
@@ -978,47 +824,12 @@ fn format_iface_query_response(resp: QueryIfaceResponse) -> String {
     )
 }
 
-fn print_minstrel_stats(mut peer: Box<Peer>) {
-    let total_attempts: f64 = peer.entries.iter().map(|e| e.attempts_total as f64).sum();
-    let total_success: f64 = peer.entries.iter().map(|e| e.success_total as f64).sum();
-    println!(
-        "{}, max_tp: {}, max_probability: {}, attempts/success: {:.6}, probes: {}",
-        MacAddr(peer.addr),
-        peer.max_tp,
-        peer.max_probability,
-        total_attempts / total_success,
-        peer.probes
-    );
-    println!(
-        "     TxVector                            succ_c   att_c  succ_t   att_t \
-         probability throughput probes probe_cycles_skipped"
-    );
-    peer.entries.sort_by(|l, r| l.tx_vector_idx.cmp(&r.tx_vector_idx));
-    for e in peer.entries {
-        println!(
-            "{}{} {:<36} {:7} {:7} {:7} {:7} {:11.4} {:10.3} {:6} {:20}",
-            if e.tx_vector_idx == peer.max_tp { "T" } else { " " },
-            if e.tx_vector_idx == peer.max_probability { "P" } else { " " },
-            e.tx_vec_desc,
-            e.success_cur,
-            e.attempts_cur,
-            e.success_total,
-            e.attempts_total,
-            e.probability * 100.0,
-            e.cur_tp,
-            e.probes_total,
-            e.probe_cycles_skipped,
-        );
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {
         super::*,
-        assert_matches::assert_matches,
         fidl::endpoints::create_proxy,
-        fidl_fuchsia_wlan_device_service::{DeviceMonitorMarker, DeviceServiceMarker},
+        fidl_fuchsia_wlan_device_service::DeviceMonitorMarker,
         fuchsia_async as fasync,
         futures::task::Poll,
         ieee80211::SsidError,
@@ -1114,13 +925,11 @@ mod tests {
     #[test]
     fn destroy_iface() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let (wlansvc_local, _) =
-            create_proxy::<DeviceServiceMarker>().expect("failed to create DeviceService service");
         let (monitor_svc_local, monitor_svc_remote) =
             create_proxy::<DeviceMonitorMarker>().expect("failed to create DeviceMonitor service");
         let mut monitor_svc_stream =
             monitor_svc_remote.into_stream().expect("failed to create stream");
-        let del_fut = do_iface(IfaceCmd::Delete { iface_id: 5 }, wlansvc_local, monitor_svc_local);
+        let del_fut = do_iface(IfaceCmd::Delete { iface_id: 5 }, monitor_svc_local);
         pin_mut!(del_fut);
 
         assert_variant!(exec.run_until_stalled(&mut del_fut), Poll::Pending);
@@ -1281,39 +1090,33 @@ mod tests {
         assert!(generate_psk("short", "coolnet").is_err());
     }
 
-    fn has_expected_cause(result: Result<(), Error>, message: &str) -> bool {
-        match result {
-            Err(e) => e.chain().any(|cause| cause.to_string() == message),
-            _ => false,
-        }
+    fn has_expected_cause(error: Error, message: &str) -> bool {
+        error.chain().any(|cause| cause.to_string() == message)
     }
 
     #[test]
-    fn test_result_from_sme_raw_status() {
-        let ok =
-            result_from_sme_raw_status(zx_status::Status::OK.into_raw(), WlanMacRole::Client, 0);
-        let not_found = result_from_sme_raw_status(
+    fn test_error_from_sme_raw_status() {
+        let not_found = error_from_sme_raw_status(
             zx_status::Status::NOT_FOUND.into_raw(),
             WlanMacRole::Mesh,
             1,
         );
-        let not_supported = result_from_sme_raw_status(
+        let not_supported = error_from_sme_raw_status(
             zx_status::Status::NOT_SUPPORTED.into_raw(),
             WlanMacRole::Ap,
             2,
         );
-        let internal_error = result_from_sme_raw_status(
+        let internal_error = error_from_sme_raw_status(
             zx_status::Status::INTERNAL.into_raw(),
             WlanMacRole::Client,
             3,
         );
-        let unrecognized_error = result_from_sme_raw_status(
+        let unrecognized_error = error_from_sme_raw_status(
             zx_status::Status::INTERRUPTED_RETRY.into_raw(),
             WlanMacRole::Mesh,
             4,
         );
 
-        assert_matches!(ok, Ok(()));
         assert!(has_expected_cause(not_found, "invalid interface id"));
         assert!(has_expected_cause(not_supported, "operation not supported on SME interface"));
         assert!(has_expected_cause(
@@ -1329,9 +1132,9 @@ mod tests {
     #[test]
     fn reject_connect_ssid_too_long() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let (wlansvc_local, wlansvc_remote) =
-            create_proxy::<DeviceServiceMarker>().expect("failed to create DeviceService service");
-        let mut wlansvc_stream = wlansvc_remote.into_stream().expect("failed to create stream");
+        let (monitor_local, monitor_remote) =
+            create_proxy::<DeviceMonitorMarker>().expect("failed to create DeviceMonitor service");
+        let mut monitor_stream = monitor_remote.into_stream().expect("failed to create stream");
         // SSID is one byte too long.
         let cmd = opts::ClientConnectCmd {
             iface_id: 0,
@@ -1341,40 +1144,40 @@ mod tests {
             scan_type: opts::ScanTypeArg::Passive,
         };
 
-        let connect_fut = do_client_connect(cmd, wlansvc_local.clone());
+        let connect_fut = do_client_connect(cmd, monitor_local.clone());
         pin_mut!(connect_fut);
 
         assert_variant!(exec.run_until_stalled(&mut connect_fut), Poll::Ready(Err(e)) => {
           assert_eq!(format!("{}", e), format!("{}", SsidError::Size(33)));
         });
         // No connect request is sent to SME because the command is invalid and rejected.
-        assert_variant!(exec.run_until_stalled(&mut wlansvc_stream.next()), Poll::Pending);
+        assert_variant!(exec.run_until_stalled(&mut monitor_stream.next()), Poll::Pending);
     }
 
     #[test]
     fn test_wmm_status() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
-        let (wlansvc_local, wlansvc_remote) =
-            create_proxy::<DeviceServiceMarker>().expect("failed to create DeviceService service");
-        let mut wlansvc_stream = wlansvc_remote.into_stream().expect("failed to create stream");
+        let (monitor_local, monitor_remote) =
+            create_proxy::<DeviceMonitorMarker>().expect("failed to create DeviceMonitor service");
+        let mut monitor_stream = monitor_remote.into_stream().expect("failed to create stream");
         let mut stdout = Vec::new();
         {
             let fut = do_client_wmm_status(
                 ClientWmmStatusCmd { iface_id: 11 },
-                wlansvc_local,
+                monitor_local,
                 &mut stdout,
             );
             pin_mut!(fut);
 
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Pending);
             let mut fake_sme_server_stream = assert_variant!(
-                exec.run_until_stalled(&mut wlansvc_stream.next()),
-                Poll::Ready(Some(Ok(wlan_service::DeviceServiceRequest::GetClientSme {
-                    iface_id, sme, responder,
+                exec.run_until_stalled(&mut monitor_stream.next()),
+                Poll::Ready(Some(Ok(wlan_service::DeviceMonitorRequest::GetClientSme {
+                    iface_id, sme_server, responder,
                 }))) => {
                     assert_eq!(iface_id, 11);
-                    responder.send(zx_status::Status::OK.into_raw()).expect("failed to send GetClientSme response");
-                    sme.into_stream().expect("sme server stream failed")
+                    responder.send(&mut Ok(())).expect("failed to send GetClientSme response");
+                    sme_server.into_stream().expect("sme server stream failed")
                 }
             );
 

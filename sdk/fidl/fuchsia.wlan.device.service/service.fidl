@@ -235,7 +235,10 @@ protocol DeviceService {
 protocol DeviceMonitor {
     // Phy methods
     ListPhys() -> (struct {
-        phy_list vector<uint16>;
+        phy_list vector<uint16>:MAX;
+    });
+    ListIfaces() -> (struct {
+        iface_list vector<uint16>:MAX;
     });
     GetDevPath(struct {
         phy_id uint16;

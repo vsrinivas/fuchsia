@@ -14,7 +14,6 @@ rustc_library("wlan-dev") {
     "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service-rustc",
     "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211-rustc",
     "//sdk/fidl/fuchsia.wlan.internal:fuchsia.wlan.internal-rustc",
-    "//sdk/fidl/fuchsia.wlan.minstrel:fuchsia.wlan.minstrel-rustc",
     "//sdk/fidl/fuchsia.wlan.sme:fuchsia.wlan.sme-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/lib/ieee80211",
@@ -41,7 +40,6 @@ rustc_library("wlan-dev") {
     ]
     test_deps = [
       "//src/lib/fuchsia-async",
-      "//third_party/rust_crates:assert_matches",
       "//third_party/rust_crates:pin-utils",
     ]
   }
