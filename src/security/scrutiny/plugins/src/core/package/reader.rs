@@ -347,19 +347,6 @@ mod tests {
         // `meta/baz` and `grr.cmx` with the same content: not valid service definitions.
         let baz_bytes = "baz\n".as_bytes();
 
-        let mut path_content_map: BTreeMap<&str, (u64, Box<dyn Read>)> = BTreeMap::new();
-        let meta_foo_cmx_str = "meta/foo.cmx";
-        let meta_bar_cmx_str = "meta/bar.cmx";
-        let meta_baz_str = "meta/baz";
-        let grr_cmx_str = "meta.cmx";
-        let meta_foo_cmx_path = PathBuf::from(meta_foo_cmx_str);
-        let meta_bar_cmx_path = PathBuf::from(meta_bar_cmx_str);
-        // No expectations require construction of a `meta_baz_path` or `grr_cmx_path`.
-        path_content_map.insert(meta_foo_cmx_str, (foo_bytes.len() as u64, Box::new(foo_bytes)));
-        path_content_map.insert(meta_bar_cmx_str, (bar_bytes.len() as u64, Box::new(bar_bytes)));
-        path_content_map.insert(meta_baz_str, (baz_bytes.len() as u64, Box::new(baz_bytes)));
-        path_content_map.insert(grr_cmx_str, (baz_bytes.len() as u64, Box::new(baz_bytes)));
-
         // Reuse paths "a", "c", and "1" as content of non-meta test files.
         let a_str = "a";
         let c_str = "c";
@@ -374,10 +361,24 @@ mod tests {
             format!("{}={}\n{}={}\n{}={}\n", a_str, a_hash, c_str, c_hash, one_str, one_hash);
         let meta_contents_str = &meta_contents_string;
         let meta_contents_bytes = meta_contents_str.as_bytes();
+
+        let mut path_content_map: BTreeMap<&str, (u64, Box<dyn Read>)> = BTreeMap::new();
         path_content_map.insert(
             META_CONTENTS_PATH,
             (meta_contents_bytes.len() as u64, Box::new(meta_contents_bytes)),
         );
+
+        let meta_foo_cmx_str = "meta/foo.cmx";
+        let meta_bar_cmx_str = "meta/bar.cmx";
+        let meta_baz_str = "meta/baz";
+        let grr_cmx_str = "meta.cmx";
+        let meta_foo_cmx_path = PathBuf::from(meta_foo_cmx_str);
+        let meta_bar_cmx_path = PathBuf::from(meta_bar_cmx_str);
+        // No expectations require construction of a `meta_baz_path` or `grr_cmx_path`.
+        path_content_map.insert(meta_foo_cmx_str, (foo_bytes.len() as u64, Box::new(foo_bytes)));
+        path_content_map.insert(meta_bar_cmx_str, (bar_bytes.len() as u64, Box::new(bar_bytes)));
+        path_content_map.insert(meta_baz_str, (baz_bytes.len() as u64, Box::new(baz_bytes)));
+        path_content_map.insert(grr_cmx_str, (baz_bytes.len() as u64, Box::new(baz_bytes)));
 
         // Construct package named `foo`.
         let mut target = Cursor::new(Vec::new());
