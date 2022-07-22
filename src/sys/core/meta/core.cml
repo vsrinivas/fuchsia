@@ -591,6 +591,13 @@
             to: "#debug-dash-launcher",
         },
         {
+            protocol: [ "fuchsia.ui.display.internal.DisplayPower" ],
+            from: "#ui",
+            to: "#brightness_manager",
+            dependency: "weak",
+            source_availability: "unknown",
+        },
+        {
             storage: "data",
             from: "self",
             to: "#brightness_manager",
@@ -1016,6 +1023,13 @@
             // Trace manager may be excluded from builds where tracing is not
             // expected to be used for observability, such as in the bringup
             // product and non-eng builds of any product.
+            source_availability: "unknown",
+        },
+        {
+            protocol: [ "fuchsia.ui.scenic.Scenic" ],
+            from: "#ui",
+            to: "#feedback",
+            dependency: "weak",
             source_availability: "unknown",
         },
     ],

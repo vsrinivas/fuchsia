@@ -13,21 +13,7 @@
 
     // Protocols listed in capabilities are routed from the v1 sys realm.
     // See also //src/sys/appmgr/meta/appmgr.core_shard.cml
-    capabilities: [
-        {
-            protocol: [
-                "fuchsia.accessibility.gesture.ListenerRegistry",
-                "fuchsia.accessibility.tts.EngineRegistry",
-                "fuchsia.accessibility.virtualkeyboard.Registry",
-                "fuchsia.input.virtualkeyboard.ControllerCreator",
-                "fuchsia.input.virtualkeyboard.Manager",
-                "fuchsia.recovery.ui.FactoryResetCountdown",
-                "fuchsia.ui.brightness.ColorAdjustmentHandler",
-                "fuchsia.ui.input.ImeVisibilityService",
-                "fuchsia.ui.policy.DisplayBacklight",
-            ],
-        },
-    ],
+    capabilities: [],
 
     // Protocols used from a child are routed to the v1 sys realm.
     // See also //src/sys/appmgr/meta/appmgr.core_shard.cml

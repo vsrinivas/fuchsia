@@ -16,21 +16,8 @@
     // TODO(fxbug.dev/103234): Remove this shard
     offer: [
         {
-            protocol: [ "fuchsia.ui.input.PointerCaptureListenerRegistry" ],
-            from: "self",
-            to: [ "#session-manager" ],
-        },
-        {
             protocol: [ "fuchsia.media.AudioCore" ],
             from: "#audio_core",
-            to: [ "#session-manager" ],
-        },
-        {
-            protocol: [
-                "fuchsia.ui.shortcut.Manager",
-                "fuchsia.ui.shortcut.Registry",
-            ],
-            from: "#ui",
             to: [ "#session-manager" ],
         },
         {

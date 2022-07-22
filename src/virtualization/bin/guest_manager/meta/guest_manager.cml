@@ -58,13 +58,20 @@
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
-                "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.scenic.Scenic",
                 "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
             to: "#vmm",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "parent",
+            to: "#vmm",
+            availability: "optional",
         },
         {
             directory: "dev-gpu",

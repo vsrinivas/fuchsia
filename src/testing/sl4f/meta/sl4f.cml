@@ -90,7 +90,6 @@
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.ScreenCapture",
-                "fuchsia.ui.input.InputDeviceRegistry",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.weave.FactoryDataManager",
                 "fuchsia.weave.Stack",

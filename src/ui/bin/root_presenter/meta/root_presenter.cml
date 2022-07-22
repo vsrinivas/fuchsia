@@ -17,7 +17,6 @@
                 "fuchsia.input.virtualkeyboard.Manager",
                 "fuchsia.ui.accessibility.view.Registry",
                 "fuchsia.ui.brightness.ColorAdjustmentHandler",
-                "fuchsia.ui.input.accessibility.PointerEventRegistry",
                 "fuchsia.ui.pointerinjector.configuration.Setup",
                 "fuchsia.ui.policy.DisplayBacklight",
                 "fuchsia.ui.policy.Presenter",

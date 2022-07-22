@@ -5,46 +5,38 @@
     include: [ "syslog/client.shard.cml" ],
     children: [
         {
+            // Centralized management of accessibility features.
             name: "a11y_manager",
             url: "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cm",
-            startup: "eager",
         },
         {
+            // Scene owner.
             name: "scene_manager",
             url: "fuchsia-pkg://fuchsia.com/scene_manager#meta/scene_manager.cm",
-            startup: "eager",
         },
         {
+            // Display server.
             name: "scenic",
             url: "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cm",
-        },
-        {
-            name: "text_manager",
-            url: "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cm",
         },
         {
             // Centralized management of keyboard shortcuts.
             // TODO(fxbug.dev/104239): Configure presence via build flag.
             name: "shortcut_manager",
             url: "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cm",
-            startup: "eager",
+        },
+        {
+            // Centralized management of text entry.
+            name: "text_manager",
+            url: "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cm",
+        },
+        {
+            // Centralized management of virtual keyboard features.
+            name: "virtual_keyboard_manager",
+            url: "fuchsia-pkg://fuchsia.com/virtual_keyboard_manager#meta/virtual_keyboard_manager.cm",
         },
     ],
     offer: [
-        {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.tracing.provider.Registry",
-            ],
-            from: "parent",
-            to: [
-                "#a11y_manager",
-                "#scene_manager",
-                "#scenic",
-                "#shortcut_manager",
-                "#text_manager",
-            ],
-        },
         {
             directory: "config-data",
             from: "parent",
@@ -74,12 +66,47 @@
         },
         {
             protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [
+                "#a11y_manager",
+                "#scene_manager",
+                "#scenic",
+                "#shortcut_manager",
+                "#text_manager",
+                "#virtual_keyboard_manager",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.feedback.LastRebootInfoProvider",
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.settings.Accessibility",
+            ],
+            from: "parent",
+            to: [ "#a11y_manager" ],
+        },
+        {
+            protocol: [
                 "fuchsia.settings.Keyboard",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
             to: [ "#scene_manager" ],
+        },
+        {
+            protocol: [
+                "fuchsia.metrics.MetricEventLoggerFactory",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.stash.Store",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.vulkan.loader.Loader",
+            ],
+            from: "parent",
+            to: [ "#scenic" ],
         },
         {
             protocol: [
@@ -102,13 +129,20 @@
             to: [ "#scene_manager" ],
         },
         {
-            protocol: [
-                "fuchsia.feedback.LastRebootInfoProvider",
-                "fuchsia.intl.PropertyProvider",
-                "fuchsia.settings.Accessibility",
-            ],
-            from: "parent",
+            protocol: [ "fuchsia.ui.accessibility.view.Registry" ],
+            from: "#scene_manager",
             to: [ "#a11y_manager" ],
+        },
+        {
+            protocol: [
+                // TODO(fxbug.dev/100268) Magnifier is only used by gfx, not
+                // flatland. Remove when gfx is gone.
+                "fuchsia.accessibility.Magnifier",
+                "fuchsia.accessibility.scene.Provider",
+            ],
+            from: "#a11y_manager",
+            to: [ "#scene_manager" ],
+            dependency: "weak",
         },
         {
             protocol: [
@@ -121,34 +155,6 @@
             ],
             from: "#scenic",
             to: [ "#a11y_manager" ],
-        },
-        {
-            protocol: [ "fuchsia.ui.accessibility.view.Registry" ],
-            from: "#scene_manager",
-            to: [ "#a11y_manager" ],
-        },
-        {
-            protocol: [
-                // TODO(fxbug.dev/100268) Magnifier is only used by gfx, not
-                // flatland. Maybe we should split this manifest into
-                // gfx/flatland versions.
-                "fuchsia.accessibility.Magnifier",
-                "fuchsia.accessibility.scene.Provider",
-            ],
-            from: "#a11y_manager",
-            to: [ "#scene_manager" ],
-            dependency: "weak",
-        },
-        {
-            protocol: [
-                "fuchsia.metrics.MetricEventLoggerFactory",
-                "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.stash.Store",
-                "fuchsia.sysmem.Allocator",
-                "fuchsia.vulkan.loader.Loader",
-            ],
-            from: "parent",
-            to: [ "#scenic" ],
         },
         {
             protocol: [
@@ -177,19 +183,51 @@
     ],
     expose: [
         {
-            protocol: [
-                "fuchsia.input.injection.InputDeviceRegistry",
-                "fuchsia.session.scene.Manager",
-            ],
-            from: "#scene_manager",
+            // Expose FlatlandDisplay to the V1 realm for the benefit of
+            // flatland_benchmark.
+            // TODO(fxbug.dev/104906): Remove this when no longer needed.
+            protocol: [ "fuchsia.ui.composition.FlatlandDisplay" ],
+            from: "#scenic",
         },
         {
             protocol: [
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.composition.ScreenCapture",
+                "fuchsia.ui.composition.Screenshot",
+                "fuchsia.ui.display.internal.DisplayPower",
+                "fuchsia.ui.display.singleton.Info",
+                "fuchsia.ui.focus.FocusChainListenerRegistry",
+                "fuchsia.ui.input.PointerCaptureListenerRegistry",
+                "fuchsia.ui.pointerinjector.Registry",
+                "fuchsia.ui.scenic.Scenic",
+                "fuchsia.ui.views.ViewRefInstalled",
+            ],
+            from: "#scenic",
+        },
+        {
+            protocol: [
+                "fuchsia.accessibility.gesture.ListenerRegistry",
                 "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.accessibility.tts.EngineRegistry",
                 "fuchsia.accessibility.tts.TtsManager",
+                "fuchsia.accessibility.virtualkeyboard.Registry",
             ],
             from: "#a11y_manager",
+        },
+        {
+            protocol: [
+                "fuchsia.input.injection.InputDeviceRegistry", // test-only
+                "fuchsia.recovery.policy.Device",
+                "fuchsia.recovery.ui.FactoryResetCountdown",
+                "fuchsia.session.scene.Manager",
+                "fuchsia.ui.accessibility.view.Registry",
+                "fuchsia.ui.brightness.ColorAdjustmentHandler",
+                "fuchsia.ui.input.config.Features",
+                "fuchsia.ui.policy.DeviceListenerRegistry",
+                "fuchsia.ui.policy.DisplayBacklight",
+            ],
+            from: "#scene_manager",
         },
         {
             protocol: [
@@ -200,28 +238,19 @@
         },
         {
             protocol: [
-                "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.composition.ScreenCapture",
-                "fuchsia.ui.display.internal.DisplayPower",
-                "fuchsia.ui.display.singleton.Info",
-                "fuchsia.ui.focus.FocusChainListenerRegistry",
-                "fuchsia.ui.input.PointerCaptureListenerRegistry",
-                "fuchsia.ui.lifecycle.LifecycleController",
-                "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.scenic.Scenic",
-                "fuchsia.ui.views.ViewRefInstalled",
-            ],
-            from: "#scenic",
-        },
-        {
-            protocol: [
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.input3.KeyEventInjector",
                 "fuchsia.ui.keyboard.focus.Controller",
             ],
             from: "#text_manager",
+        },
+        {
+            protocol: [
+                "fuchsia.input.virtualkeyboard.ControllerCreator",
+                "fuchsia.input.virtualkeyboard.Manager",
+            ],
+            from: "#virtual_keyboard_manager",
         },
     ],
 }

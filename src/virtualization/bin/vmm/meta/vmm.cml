@@ -72,9 +72,12 @@
                 "fuchsia.sysinfo.SysInfo",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
-                "fuchsia.ui.composition.Allocator",
                 "fuchsia.virtualization.GuestConfigProvider",
             ],
+        },
+        {
+            protocol: [ "fuchsia.ui.composition.Allocator" ],
+            availability: "optional",
         },
         {
             protocol: "fuchsia.component.Realm",
@@ -114,6 +117,7 @@
             ],
             from: "parent",
             to: "#virtio_gpu_devices",
+            availability: "optional",
         },
         {
             protocol: [
@@ -131,11 +135,16 @@
         {
             protocol: [
                 "fuchsia.sysmem.Allocator",
-                "fuchsia.ui.composition.Allocator",
                 "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
             to: "#virtio_magma_devices",
+        },
+        {
+            protocol: [ "fuchsia.ui.composition.Allocator" ],
+            from: "parent",
+            to: "#virtio_magma_devices",
+            availability: "optional",
         },
     ],
     expose: [

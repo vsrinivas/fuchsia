@@ -29,8 +29,6 @@
             protocol: [
                 "fuchsia.bluetooth.rfcomm.test.RfcommTest", // test-only
                 "fuchsia.developer.tiles.Controller", // test-only
-                "fuchsia.input.injection.InputDeviceRegistry", // test-only
-                "fuchsia.ui.input.InputDeviceRegistry", // test-only
             ],
         },
     ],
@@ -140,6 +138,18 @@
         },
         {
             protocol: [
+                "fuchsia.input.injection.InputDeviceRegistry", // test-only
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.ScreenCapture",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "#ui",
+            to: "#sl4f",
+            dependency: "weak",
+            source_availability: "unknown",
+        },
+        {
+            protocol: [
                 "fuchsia.wlan.policy.AccessPointListener",
                 "fuchsia.wlan.policy.AccessPointProvider",
                 "fuchsia.wlan.policy.ClientListener",
@@ -179,15 +189,10 @@
             protocol: [
                 "fuchsia.bluetooth.rfcomm.test.RfcommTest", // test-only
                 "fuchsia.developer.tiles.Controller", // test-only
-                "fuchsia.input.injection.InputDeviceRegistry", // test-only
                 "fuchsia.lowpan.device.Lookup", // #appmgr
                 "fuchsia.sys.Launcher", // #appmgr
                 "fuchsia.tracing.controller.Controller", // #appmgr
                 "fuchsia.tracing.provider.Registry", // #appmgr
-                "fuchsia.ui.composition.Allocator", // #appmgr
-                "fuchsia.ui.composition.ScreenCapture", // #appmgr
-                "fuchsia.ui.input.InputDeviceRegistry", // test-only
-                "fuchsia.ui.scenic.Scenic", // #appmgr
                 "fuchsia.weave.FactoryDataManager", // #appmgr
             ],
             from: "self",

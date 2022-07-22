@@ -26,7 +26,6 @@
         {
             protocol: [
                 "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.input.ImeVisibilityService",
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.input3.KeyEventInjector",
                 "fuchsia.ui.keyboard.focus.Controller",

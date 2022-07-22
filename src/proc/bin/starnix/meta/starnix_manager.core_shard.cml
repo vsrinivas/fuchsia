@@ -4,9 +4,14 @@
 {
     offer: [
         {
-            protocol: [ "fuchsia.ui.input3.Keyboard" ],
+            protocol: [
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.scenic.Scenic",
+            ],
             from: "#ui",
-            to: [ "#starnix_manager" ],
+            to: "#starnix_manager",
             dependency: "weak",
             source_availability: "unknown",
         },

@@ -170,7 +170,6 @@
         },
         {
             protocol: [
-                "fuchsia.input.injection.InputDeviceRegistry",
                 "fuchsia.input.keymap.Configuration", // TODO(fxbug.dev/88656): can remove?
                 "fuchsia.ui.accessibility.view.Registry",
             ],

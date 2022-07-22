@@ -30,7 +30,10 @@
             storage: "data",
             path: "/data",
         },
-        { protocol: "fuchsia.ui.display.internal.DisplayPower" },
+        {
+            protocol: "fuchsia.ui.display.internal.DisplayPower",
+            availability: "optional",
+        },
     ],
     expose: [
         {

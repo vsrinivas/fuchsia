@@ -34,27 +34,11 @@
     ],
 
     // Protocols used from a child are routed to the v1 sys realm.
-    use: [
-        {
-            protocol: [
-                "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.input3.Keyboard",
-                "fuchsia.ui.input3.KeyEventInjector",
-                "fuchsia.ui.keyboard.focus.Controller",
-            ],
-            from: "#ui",
-            dependency: "weak",
-        },
-    ],
+    use: [],
     offer: [
         {
             // Routed from v1 components.
             protocol: [
-                "fuchsia.accessibility.gesture.ListenerRegistry",
-                "fuchsia.accessibility.tts.EngineRegistry",
-                "fuchsia.accessibility.virtualkeyboard.Registry",
-                "fuchsia.input.virtualkeyboard.ControllerCreator",
-                "fuchsia.input.virtualkeyboard.Manager",
                 "fuchsia.location.namedplace.RegulatoryRegionConfigurator",
                 "fuchsia.location.namedplace.RegulatoryRegionWatcher",
                 "fuchsia.lowpan.bootstrap.Thread",
@@ -62,14 +46,9 @@
                 "fuchsia.media.sessions2.ActiveSession",
                 "fuchsia.media.sessions2.Discovery",
                 "fuchsia.media.sessions2.Publisher",
-                "fuchsia.recovery.ui.FactoryResetCountdown",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
                 "fuchsia.timezone.Timezone",
-                "fuchsia.ui.brightness.ColorAdjustmentHandler",
-                "fuchsia.ui.input.ImeVisibilityService",
-                "fuchsia.ui.policy.DeviceListenerRegistry",
-                "fuchsia.ui.policy.DisplayBacklight",
                 "fuchsia.ultrasound.Factory",
                 "fuchsia.weave.FactoryDataManager",
                 "fuchsia.weave.Provisioner",
@@ -127,17 +106,6 @@
                 "fuchsia.settings.Setup",
             ],
             from: "#setui_service",
-            to: "#session-manager",
-        },
-        {
-            protocol: [
-                "fuchsia.accessibility.semantics.SemanticsManager",
-                "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.input3.Keyboard",
-                "fuchsia.ui.input3.KeyEventInjector",
-                "fuchsia.ui.keyboard.focus.Controller",
-            ],
-            from: "#ui",
             to: "#session-manager",
         },
         {

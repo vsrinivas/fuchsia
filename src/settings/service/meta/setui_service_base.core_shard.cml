@@ -52,14 +52,16 @@
             protocol: [
                 "fuchsia.media.sessions2.Discovery",
                 "fuchsia.tracing.provider.Registry",
-                "fuchsia.ui.policy.DeviceListenerRegistry",
             ],
             from: "self",
             to: "#setui_service",
             dependency: "weak_for_migration",
         },
         {
-            protocol: "fuchsia.recovery.policy.Device",
+            protocol: [
+                "fuchsia.recovery.policy.Device",
+                "fuchsia.ui.policy.DeviceListenerRegistry",
+            ],
             from: "#ui",
             to: "#setui_service",
 

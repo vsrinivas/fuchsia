@@ -40,11 +40,13 @@
                 "fuchsia.stash.Store",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.brightness.Control",
-                "fuchsia.ui.policy.DeviceListenerRegistry",
             ],
         },
         {
-            protocol: "fuchsia.recovery.policy.Device",
+            protocol: [
+                "fuchsia.recovery.policy.Device",
+                "fuchsia.ui.policy.DeviceListenerRegistry",
+            ],
             from: "parent",
             availability: "optional",
         },

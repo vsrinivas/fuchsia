@@ -19,24 +19,28 @@
             to: "#carnelian-examples",
         },
         {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "self",
+            to: "#carnelian-examples",
+        },
+        {
             protocol: "fuchsia.sysmem.Allocator",
             from: "#sysmem_connector",
             to: "#carnelian-examples",
         },
         {
+            protocol: "fuchsia.vulkan.loader.Loader",
+            from: "#vulkan_loader",
+            to: "#carnelian-examples",
+        },
+        {
             protocol: [
-                "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.policy.Presenter",
                 "fuchsia.ui.scenic.Scenic",
             ],
-            from: "self",
-            to: "#carnelian-examples",
-        },
-        {
-            protocol: "fuchsia.vulkan.loader.Loader",
-            from: "#vulkan_loader",
+            from: "#ui",
             to: "#carnelian-examples",
         },
         {

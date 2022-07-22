@@ -137,12 +137,7 @@
             to: "#test_manager",
         },
         {
-            protocol: [
-                "fuchsia.process.Resolver",
-                "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.scenic.Scenic",
-            ],
+            protocol: [ "fuchsia.process.Resolver" ],
             from: "self",
             to: "#test_manager",
             dependency: "weak_for_migration",
@@ -179,6 +174,17 @@
             protocol: "fuchsia.vulkan.loader.Loader",
             from: "#vulkan_loader",
             to: "#test_manager",
+        },
+        {
+            protocol: [
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+            from: "#ui",
+            to: "#test_manager",
+            dependency: "weak",
+            source_availability: "unknown",
         },
         {
             directory: "dev",

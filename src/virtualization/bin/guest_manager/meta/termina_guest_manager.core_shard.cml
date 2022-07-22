@@ -67,23 +67,15 @@
             source_availability: "unknown",
         },
         {
-            protocol: [ "fuchsia.ui.input.ImeService" ],
-            from: "#ui",
-            to: [ "#termina-guest-manager" ],
-            dependency: "weak",
-            source_availability: "unknown",
-        },
-
-        // Route from CFv1 realm.
-        {
             protocol: [
                 "fuchsia.ui.composition.Allocator",
-                "fuchsia.ui.policy.Presenter",
+                "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.scenic.Scenic",
             ],
-            from: "self",
+            from: "#ui",
             to: "#termina-guest-manager",
-            dependency: "weak_for_migration",
+            dependency: "weak",
+            source_availability: "unknown",
         },
     ],
     expose: [

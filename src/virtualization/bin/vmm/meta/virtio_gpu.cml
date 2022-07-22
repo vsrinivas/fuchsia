@@ -14,11 +14,14 @@
     ],
     use: [
         {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+        },
+        {
             protocol: [
-                "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.scenic.Scenic",
             ],
+            availability: "optional",
         },
     ],
     expose: [
