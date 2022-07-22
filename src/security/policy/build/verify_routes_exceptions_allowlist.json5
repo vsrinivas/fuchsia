@@ -1120,7 +1120,7 @@
                     },
                 },
 
-                // TODO(fxbug.dev/103977): once fixed, delete the suppressions below.
+                // TODO(fxbug.dev/104942): once fixed, delete the suppressions below.
                 {
                     using_node: "/bootstrap/power_manager",
                     capability: "fuchsia.settings.Input",
