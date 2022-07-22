@@ -363,7 +363,7 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
       // Linear Format
       auto& linear_constraints = constraints.image_format_constraints[0];
       linear_constraints.pixel_format.has_format_modifier = false;
-      linear_constraints.bytes_per_row_divisor = 16;
+      linear_constraints.bytes_per_row_divisor = is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
 
       // Y-Tiled format
       auto& tiled_constraints = constraints.image_format_constraints[1];
@@ -385,9 +385,11 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
       // output frames at various dimensions as coded in the stream.  Aside from
       // the current stream being somewhere in these bounds, these have nothing to
       // do with the current stream in particular.
-      linear_constraints.min_coded_width = tiled_constraints.min_coded_width = 16;
+      linear_constraints.min_coded_width = tiled_constraints.min_coded_width =
+          is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
       linear_constraints.max_coded_width = tiled_constraints.max_coded_width = max_picture_width_;
-      linear_constraints.min_coded_height = tiled_constraints.min_coded_height = 16;
+      linear_constraints.min_coded_height = tiled_constraints.min_coded_height =
+          is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
       linear_constraints.max_coded_height = tiled_constraints.max_coded_height =
           max_picture_height_;
 
@@ -397,15 +399,18 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
       // might be able to go bigger than that as long as the other dimension is
       // smaller to compensate, we don't really need to enable any larger than
       // 4k's width in either dimension, so we don't.
-      linear_constraints.min_bytes_per_row = tiled_constraints.min_bytes_per_row = 16;
+      linear_constraints.min_bytes_per_row = tiled_constraints.min_bytes_per_row =
+          is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
 
       // no hard-coded max stride, at least for now
       linear_constraints.max_bytes_per_row = tiled_constraints.max_bytes_per_row = 0xFFFFFFFF;
       linear_constraints.max_coded_width_times_coded_height =
           tiled_constraints.max_coded_width_times_coded_height = 3840 * 2160;
       linear_constraints.layers = tiled_constraints.layers = 1;
-      linear_constraints.coded_width_divisor = tiled_constraints.coded_width_divisor = 16;
-      linear_constraints.coded_height_divisor = tiled_constraints.coded_height_divisor = 16;
+      linear_constraints.coded_width_divisor = tiled_constraints.coded_width_divisor =
+          is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
+      linear_constraints.coded_height_divisor = tiled_constraints.coded_height_divisor =
+          is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
       linear_constraints.start_offset_divisor = tiled_constraints.start_offset_divisor = 1;
 
       // Odd display dimensions are permitted, but these don't imply odd YV12
@@ -460,6 +465,9 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
  private:
   friend class VaApiOutput;
   friend class test::Vp9VaapiTestFixture;
+
+  static constexpr uint32_t kH264MinBlockSize = 16u;
+  static constexpr uint32_t kVp9MinBlockSize = 2u;
 
   // Used from trace events
   enum DecoderState { kIdle, kDecoding, kError };
@@ -544,7 +552,7 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
       // bytes_per_row_divisor must be a multiple of the size from in the output constraints.
       auto& bytes_per_row_divisor =
           buffer_settings_[kOutputPort]->image_format_constraints.bytes_per_row_divisor;
-      ZX_ASSERT(bytes_per_row_divisor >= 16);
+      ZX_ASSERT(bytes_per_row_divisor >= is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize);
       alignment = bytes_per_row_divisor;
     }
 
