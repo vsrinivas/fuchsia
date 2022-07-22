@@ -17,6 +17,7 @@
 
 #include <dev/coresight/component.h>
 #include <hwreg/bitfields.h>
+#include <hwreg/internal.h>
 
 namespace coresight {
 
@@ -30,9 +31,8 @@ struct Class0x1RomEntry : public hwreg::RegisterBase<Class0x1RomEntry, uint32_t>
   DEF_BIT(1, format);
   DEF_BIT(0, present);
 
-  static auto GetAt(uint32_t offset, uint32_t N) {
-    return hwreg::RegisterAddr<Class0x1RomEntry>(offset +
-                                                 N * static_cast<uint32_t>(sizeof(uint32_t)));
+  static auto Get(uint32_t N) {
+    return hwreg::RegisterAddr<Class0x1RomEntry>(N * static_cast<uint32_t>(sizeof(uint32_t)));
   }
 };
 
@@ -45,9 +45,8 @@ struct Class0x9Rom32BitEntry : public hwreg::RegisterBase<Class0x9Rom32BitEntry,
   DEF_BIT(2, powerid_valid);
   DEF_FIELD(1, 0, present);
 
-  static auto GetAt(uint32_t offset, uint32_t N) {
-    return hwreg::RegisterAddr<Class0x9Rom32BitEntry>(offset +
-                                                      N * static_cast<uint32_t>(sizeof(uint32_t)));
+  static auto Get(uint32_t N) {
+    return hwreg::RegisterAddr<Class0x9Rom32BitEntry>(N * static_cast<uint32_t>(sizeof(uint32_t)));
   }
 };
 
@@ -60,9 +59,8 @@ struct Class0x9Rom64BitEntry : public hwreg::RegisterBase<Class0x9Rom64BitEntry,
   DEF_BIT(2, powerid_valid);
   DEF_FIELD(1, 0, present);
 
-  static auto GetAt(uint32_t offset, uint32_t N) {
-    return hwreg::RegisterAddr<Class0x9Rom64BitEntry>(offset +
-                                                      N * static_cast<uint32_t>(sizeof(uint64_t)));
+  static auto Get(uint32_t N) {
+    return hwreg::RegisterAddr<Class0x9Rom64BitEntry>(N * static_cast<uint32_t>(sizeof(uint64_t)));
   }
 };
 
@@ -79,9 +77,7 @@ struct Class0x9RomDeviceIdRegister
   DEF_BIT(4, sysmem);
   DEF_ENUM_FIELD(Format, 3, 0, format);
 
-  static auto GetAt(uint32_t offset) {
-    return hwreg::RegisterAddr<Class0x9RomDeviceIdRegister>(offset + 0xfcc);
-  }
+  static auto Get() { return hwreg::RegisterAddr<Class0x9RomDeviceIdRegister>(0xfcc); }
 };
 
 // [CS] D5
@@ -137,11 +133,48 @@ class RomTable {
     bool present;
   };
 
+  // Relativizes access with a fixed offset. Necessarily needs to be expressed
+  // using hwreg internals in order to account for `std::variant`s of I/O
+  // providers (e.g., hwreg::Mock::RegisterIo used for testing), implicitly
+  // allowed by the framework.
+  template <typename IoProvider>
+  class RelativizedIo {
+   public:
+    RelativizedIo(IoProvider& io, uint32_t offset) : io_(io), offset_(offset) {}
+
+    template <class IntType>
+    void Write(IntType val, uint32_t offset) {
+      return hwreg::internal::Visit(
+          [val, offset = offset + offset_](auto&& io) { io.Write(val, offset); }, io_);
+    }
+
+    template <class IntType>
+    IntType Read(uint32_t offset) {
+      IntType ret = 0;
+      hwreg::internal::Visit(
+          [offset = offset + offset_, &ret](auto&& io) { ret = io.template Read<IntType>(offset); },
+          io_);
+      return ret;
+    }
+
+   private:
+    IoProvider& io_;
+    uint32_t offset_;
+  };
+
   template <typename IoProvider, typename ComponentCallback>
-  static fitx::result<WalkError> WalkFrom(IoProvider io, uint32_t max_offset,
+  static fitx::result<WalkError> WalkFrom(IoProvider root_io, uint32_t max_offset,
                                           ComponentCallback&& callback, uint32_t offset) {
-    const ClassId classid = ComponentIdRegister::GetAt(offset).ReadFrom(&io).classid();
-    const DeviceArchRegister arch_reg = DeviceArchRegister::GetAt(offset).ReadFrom(&io);
+    if (max_offset - kMinimumComponentSize < offset) {
+      return fitx::error(WalkError{"component exceeds aperture", offset});
+    }
+
+    // Treats I/O as rooted at the current offset (instead of rooted at the base ROM table, which
+    // would complicate register access).
+    RelativizedIo<IoProvider> io{root_io, offset};
+
+    const ClassId classid = ComponentIdRegister::Get().ReadFrom(&io).classid();
+    const DeviceArchRegister arch_reg = DeviceArchRegister::Get().ReadFrom(&io);
     const auto architect = static_cast<uint16_t>(arch_reg.architect());
     const auto archid = static_cast<uint16_t>(arch_reg.archid());
     if (IsTable(classid, architect, archid)) {
@@ -152,7 +185,7 @@ class RomTable {
       } else {
         // If not a class 0x1 table, then a class 0x9.
         ZX_DEBUG_ASSERT(classid == ClassId::kCoreSight);
-        format = Class0x9RomDeviceIdRegister::GetAt(offset).ReadFrom(&io).format();
+        format = Class0x9RomDeviceIdRegister::Get().ReadFrom(&io).format();
         switch (*format) {
           case Class0x9EntryFormat::k32Bit:
             max_entries = kMax0x9Rom32BitEntries;
@@ -167,7 +200,7 @@ class RomTable {
 
       for (uint32_t i = 0; i < max_entries; ++i) {
         fitx::result<std::string_view, EntryContents> read_entry_result =
-            ReadEntryAt(io, offset, i, classid, format);
+            ReadEntry(io, i, classid, format);
         if (read_entry_result.is_error()) {
           return fitx::error(WalkError{read_entry_result.error_value(), offset});
         }
@@ -181,11 +214,8 @@ class RomTable {
         // [CS] D5.4
         // the offset provided by the ROM table entry requires a shift of 12 bits.
         uint32_t new_offset = offset + (contents.offset << 12);
-        if (max_offset - kMinimumComponentSize < new_offset) {
-          printf("does not fit: (view size, offset) = (%u, %u)\n", max_offset, new_offset);
-          return fitx::error(WalkError{"component exceeds aperture", new_offset});
-        }
-        if (fitx::result<WalkError> walk_result = WalkFrom(io, max_offset, callback, new_offset);
+        if (fitx::result<WalkError> walk_result =
+                WalkFrom(root_io, max_offset, callback, new_offset);
             walk_result.is_error()) {
           return walk_result;
         }
@@ -205,11 +235,10 @@ class RomTable {
   static bool IsTable(ClassId classid, uint16_t architect, uint16_t archid);
 
   template <typename IoProvider>
-  static fitx::result<std::string_view, EntryContents> ReadEntryAt(
-      IoProvider io, uint32_t offset, uint32_t N, ClassId classid,
-      std::optional<Class0x9EntryFormat> format) {
+  static fitx::result<std::string_view, EntryContents> ReadEntry(
+      IoProvider io, uint32_t N, ClassId classid, std::optional<Class0x9EntryFormat> format) {
     if (classid == ClassId::k0x1RomTable) {
-      auto entry = Class0x1RomEntry::GetAt(offset, N).ReadFrom(&io);
+      auto entry = Class0x1RomEntry::Get(N).ReadFrom(&io);
       return fitx::ok(EntryContents{
           .value = entry.reg_value(),
           .offset = static_cast<uint32_t>(entry.offset()),
@@ -223,7 +252,7 @@ class RomTable {
 
     switch (*format) {
       case Class0x9EntryFormat::k32Bit: {
-        auto entry = Class0x9Rom32BitEntry::GetAt(offset, N).ReadFrom(&io);
+        auto entry = Class0x9Rom32BitEntry::Get(N).ReadFrom(&io);
         return fitx::ok(EntryContents{
             .value = entry.reg_value(),
             .offset = static_cast<uint32_t>(entry.offset()),
@@ -232,7 +261,7 @@ class RomTable {
         });
       }
       case Class0x9EntryFormat::k64Bit: {
-        auto entry = Class0x9Rom64BitEntry::GetAt(offset, N).ReadFrom(&io);
+        auto entry = Class0x9Rom64BitEntry::Get(N).ReadFrom(&io);
         uint64_t u32_offset = entry.offset() & 0xffffffff;
         if (entry.offset() != u32_offset) {
           return fitx::error(

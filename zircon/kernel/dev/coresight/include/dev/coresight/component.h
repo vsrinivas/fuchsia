@@ -73,10 +73,7 @@ struct ComponentIdRegister : public hwreg::RegisterBase<ComponentIdRegister, uin
   DEF_ENUM_FIELD(Class, 7, 4, classid);
   DEF_FIELD(3, 0, prmbl_1);
 
-  static auto GetAt(uint32_t offset) {
-    return hwreg::RegisterAddr<ComponentIdRegister>(offset + 0xff4);
-  }
-  static auto Get() { return GetAt(0u); }
+  static auto Get() { return hwreg::RegisterAddr<ComponentIdRegister>(0xff4); }
 };
 
 // B.2.2
@@ -84,10 +81,7 @@ struct PeripheralId0Register : public hwreg::RegisterBase<PeripheralId0Register,
   DEF_RSVDZ_FIELD(31, 8);
   DEF_FIELD(7, 0, part0);
 
-  static auto GetAt(uint32_t offset) {
-    return hwreg::RegisterAddr<PeripheralId0Register>(offset + 0xfe0);
-  }
-  static auto Get() { return GetAt(0); }
+  static auto Get() { return hwreg::RegisterAddr<PeripheralId0Register>(0xfe0); }
 };
 
 struct PeripheralId1Register : public hwreg::RegisterBase<PeripheralId1Register, uint32_t> {
@@ -95,10 +89,7 @@ struct PeripheralId1Register : public hwreg::RegisterBase<PeripheralId1Register,
   DEF_FIELD(7, 4, des0);
   DEF_FIELD(3, 0, part1);
 
-  static auto GetAt(uint32_t offset) {
-    return hwreg::RegisterAddr<PeripheralId1Register>(offset + 0xfe4);
-  }
-  static auto Get() { return GetAt(0); }
+  static auto Get() { return hwreg::RegisterAddr<PeripheralId1Register>(0xfe4); }
 };
 
 struct PeripheralId2Register : public hwreg::RegisterBase<PeripheralId2Register, uint32_t> {
@@ -107,10 +98,7 @@ struct PeripheralId2Register : public hwreg::RegisterBase<PeripheralId2Register,
   DEF_BIT(3, jedec);
   DEF_FIELD(2, 0, des1);
 
-  static auto GetAt(uint32_t offset) {
-    return hwreg::RegisterAddr<PeripheralId2Register>(offset + 0xfe8);
-  }
-  static auto Get() { return GetAt(0); }
+  static auto Get() { return hwreg::RegisterAddr<PeripheralId2Register>(0xfe8); }
 };
 
 struct PeripheralId4Register : public hwreg::RegisterBase<PeripheralId4Register, uint32_t> {
@@ -118,10 +106,7 @@ struct PeripheralId4Register : public hwreg::RegisterBase<PeripheralId4Register,
   DEF_FIELD(7, 4, size);
   DEF_FIELD(3, 0, des2);
 
-  static auto GetAt(uint32_t offset) {
-    return hwreg::RegisterAddr<PeripheralId4Register>(offset + 0xfd0);
-  }
-  static auto Get() { return GetAt(0); }
+  static auto Get() { return hwreg::RegisterAddr<PeripheralId4Register>(0xfd0); }
 };
 
 // [CS] B2.2.2
@@ -137,16 +122,10 @@ inline uint16_t GetDesigner(IoProvider io) {
 // [CS] B2.2.2
 // This number is an ID chosen by the designer.
 template <typename IoProvider>
-inline uint16_t GetPartIdAt(IoProvider io, uint32_t offset) {
-  const auto part0 =
-      static_cast<uint16_t>(PeripheralId0Register::GetAt(offset).ReadFrom(&io).part0());
-  const auto part1 =
-      static_cast<uint16_t>(PeripheralId1Register::GetAt(offset).ReadFrom(&io).part1());
-  return static_cast<uint16_t>((part1 << 8) | part0);
-}
-template <typename IoProvider>
 inline uint16_t GetPartId(IoProvider io) {
-  return GetPartIdAt(io, 0);
+  const auto part0 = static_cast<uint16_t>(PeripheralId0Register::Get().ReadFrom(&io).part0());
+  const auto part1 = static_cast<uint16_t>(PeripheralId1Register::Get().ReadFrom(&io).part1());
+  return static_cast<uint16_t>((part1 << 8) | part0);
 }
 
 // B2.3.3
@@ -170,10 +149,7 @@ struct DeviceArchRegister : public hwreg::RegisterBase<DeviceArchRegister, uint3
   DEF_FIELD(19, 16, revision);
   DEF_FIELD(15, 0, archid);
 
-  static auto GetAt(uint32_t offset) {
-    return hwreg::RegisterAddr<DeviceArchRegister>(offset + 0xfbc);
-  }
-  static auto Get() { return GetAt(0u); }
+  static auto Get() { return hwreg::RegisterAddr<DeviceArchRegister>(0xfbc); }
 };
 
 // [CS] B2.3.8
