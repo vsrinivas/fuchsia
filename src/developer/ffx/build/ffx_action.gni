@@ -133,6 +133,7 @@ template("ffx_action") {
                              "assert_no_deps",
                              "data_deps",
                              "depfile",
+                             "hermetic_action_ignored_prefixes",
                              "hermetic_deps",
                              "inputs",
                              "metadata",
