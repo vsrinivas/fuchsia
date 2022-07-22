@@ -248,7 +248,6 @@ impl<T: RoutingTestModelBuilder> CommonAvailabilityTest<T> {
         struct TestCase {
             source: OfferSource,
             storage_source: Option<OfferSource>,
-            event_stream_source: Option<OfferSource>,
             offer_availability: Availability,
             use_availability: Availability,
         }
@@ -256,21 +255,18 @@ impl<T: RoutingTestModelBuilder> CommonAvailabilityTest<T> {
             TestCase {
                 source: OfferSource::static_child("b".to_string()),
                 storage_source: Some(OfferSource::Self_),
-                event_stream_source: Some(OfferSource::Framework),
                 offer_availability: Availability::Optional,
                 use_availability: Availability::Required,
             },
             TestCase {
                 source: OfferSource::Void,
                 storage_source: None,
-                event_stream_source: None,
                 offer_availability: Availability::Optional,
                 use_availability: Availability::Required,
             },
             TestCase {
                 source: OfferSource::Void,
                 storage_source: None,
-                event_stream_source: None,
                 offer_availability: Availability::Optional,
                 use_availability: Availability::Optional,
             },
@@ -315,22 +311,6 @@ impl<T: RoutingTestModelBuilder> CommonAvailabilityTest<T> {
                             subdir: None,
                             storage_id: fdecl::StorageId::StaticInstanceIdOrMoniker,
                         })
-                        .offer(OfferDecl::EventStream(OfferEventStreamDecl {
-                            source: test_case
-                                .event_stream_source
-                                .as_ref()
-                                .map(Clone::clone)
-                                .unwrap_or(test_case.source.clone()),
-                            source_name: "started".into(),
-                            scope: None,
-                            filter: None,
-                            target: OfferTarget::Child(ChildRef {
-                                name: "c".to_string(),
-                                collection: None,
-                            }),
-                            target_name: CapabilityName::from("started"),
-                            availability: test_case.offer_availability.clone(),
-                        }))
                         .add_lazy_child("b")
                         .add_lazy_child("c")
                         .build(),
@@ -385,13 +365,6 @@ impl<T: RoutingTestModelBuilder> CommonAvailabilityTest<T> {
                             target_path: "/data".try_into().unwrap(),
                             availability: test_case.use_availability.clone(),
                         }))
-                        .use_(UseDecl::EventStream(UseEventStreamDecl {
-                            source: UseSource::Parent,
-                            source_name: "started".into(),
-                            target_path: "/event/stream".try_into().unwrap(),
-                            scope: None,
-                            availability: test_case.use_availability.clone(),
-                        }))
                         .build(),
                 ),
             ];
@@ -412,15 +385,6 @@ impl<T: RoutingTestModelBuilder> CommonAvailabilityTest<T> {
                     from_cm_namespace: false,
                     storage_subdir: None,
                     expected_res: ExpectedResult::Err(zx_status::Status::UNAVAILABLE),
-                },
-                CheckUse::EventStream {
-                    expected_res: ExpectedResult::Err(zx_status::Status::UNAVAILABLE),
-                    path: "/event/stream".try_into().unwrap(),
-                    scope: vec![
-                        ComponentEventRoute { component: "/".to_string(), scope: Some(vec![]) },
-                        ComponentEventRoute { component: "/".to_string(), scope: None },
-                    ],
-                    name: "started".into(),
                 },
             ] {
                 model.check_use(vec!["c"].into(), check_use).await;
