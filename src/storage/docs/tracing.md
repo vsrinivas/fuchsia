@@ -1,7 +1,7 @@
 # Tracing the storage stack
 
 This document describes the storage stack's integration with Fuchsia's
-[tracing system](/docs/concepts/tracing.md) system, and how you can use tracing
+[tracing system](/docs/development/tracing/README.md) system, and how you can use tracing
 to investigate performance, interactions, and behaviour in the storage stack.
 
 For general background on how to use tracing, see
@@ -13,14 +13,14 @@ Run the following command to take a trace for investigating general storage
 issues:
 
 ```
-ffx trace start --categories=storage,blobfs,kernel,kernel:sched,minfs --duration 10
+ffx trace start --categories "storage,blobfs,kernel,kernel:sched,minfs,fxfs" --duration 10
 ```
 
 If you want to see detailed flows for page faults and user pager events, add the
 `kernel:vm` category as well:
 
 ```
-ffx trace start --categories=storage,blobfs,kernel,kernel:sched,kernel:vm,minfs --duration 10
+ffx trace start --categories "storage,blobfs,kernel,kernel:sched,kernel:vm,minfs,fxfs" --duration 10
 ```
 
 Once the trace is complete, an `.fxt` file will be generated. Load this file in
@@ -40,7 +40,7 @@ between durations in different threads or processes:
 Trace durations are the most common type of instrumentation. They record how
 long a given operation takes (measured both by wall time and CPU time).
 
-Both blobfs and minfs have instrumentation for a variety of common filesystem
+Each filesystem (blobfs, minfs, and fxfs) has instrumentation for a variety of common filesystem
 operations. For example, in blobfs, every block transaction is instrumented to
 record the duration (
 [source](https://cs.opensource.google/fuchsia/fuchsia/+/main:src/storage/blobfs/blobfs.h;l=97;drc=f14ae2556f5c35bf9f33f4cd7f1b6fb5a53dd80d)):
@@ -101,6 +101,7 @@ The following categories are useful for storage work:
 | kernel:vm    | Trace events for page faults, which is useful for investigating fault performance. (This allows you to see the faulting thread.) |
 | blobfs       | Blobfs-specific trace events. |
 | minfs        | Minfs-specific trace events. |
+| fxfs         | Fxfs-specific trace events. |
 | zxcrypt      | zxcrypt-specific trace events. |
 | storage      | General storage trace events (block IO flows, for example) |
 
@@ -112,5 +113,5 @@ Most likely the trace buffer was too small. You can increase the trace buffer
 size with the `--buffer-size` flag (units are MB):
 
 ```
-ffx trace start --categories=storage,blobfs,kernel,kernel:sched --duration 5  --buffer-size 64
+ffx trace start --categories "storage,blobfs,kernel,kernel:sched" --duration 5 --buffer-size 64
 ```
