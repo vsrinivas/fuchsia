@@ -195,3 +195,16 @@ using {{ .Name }} = {{ .Unified }};
   };
 
 {{- end }}
+
+
+
+{{- define "Enums:Traits:TypeConversionsHeader" }}
+template <>
+struct NaturalTypeForWireType<{{ .Wire }}> {
+    using type = {{ .Unified }};
+};
+template <>
+struct WireTypeForNaturalType<{{ .Unified }}> {
+    using type = {{ .Wire }};
+};
+{{- end }}

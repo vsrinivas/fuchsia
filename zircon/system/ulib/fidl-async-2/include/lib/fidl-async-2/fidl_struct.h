@@ -206,7 +206,7 @@ class FidlStruct {
   void reset_internal(const FidlCStruct* to_copy_and_own_handles) {
     if (ptr_) {
       // Move handles into the owned natural type, then discard the value.
-      (void)fidl::ToNatural(std::move(*ptr_));
+      (void)fidl::ToNatural(TakeAsLlcpp());
     }
     if (to_copy_and_own_handles) {
       storage_ = *to_copy_and_own_handles;

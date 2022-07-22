@@ -14,6 +14,15 @@
 namespace fidl {
 namespace internal {
 
+template <>
+struct NaturalTypeForWireType<::test_protocols::wire::ErrorEnum> {
+  using type = ::test_protocols::ErrorEnum;
+};
+template <>
+struct WireTypeForNaturalType<::test_protocols::ErrorEnum> {
+  using type = ::test_protocols::wire::ErrorEnum;
+};
+
 #ifdef __Fuchsia__
 
 template <>

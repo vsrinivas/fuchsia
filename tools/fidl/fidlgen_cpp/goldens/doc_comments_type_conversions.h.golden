@@ -15,6 +15,40 @@ namespace fidl {
 namespace internal {
 
 template <>
+struct NaturalTypeForWireType<::test_doccomments::wire::MyStrictBits> {
+  using type = ::test_doccomments::MyStrictBits;
+};
+template <>
+struct WireTypeForNaturalType<::test_doccomments::MyStrictBits> {
+  using type = ::test_doccomments::wire::MyStrictBits;
+};
+template <>
+struct NaturalTypeForWireType<::test_doccomments::wire::MyFlexibleBits> {
+  using type = ::test_doccomments::MyFlexibleBits;
+};
+template <>
+struct WireTypeForNaturalType<::test_doccomments::MyFlexibleBits> {
+  using type = ::test_doccomments::wire::MyFlexibleBits;
+};
+
+template <>
+struct NaturalTypeForWireType<::test_doccomments::wire::MyStrictEnum> {
+  using type = ::test_doccomments::MyStrictEnum;
+};
+template <>
+struct WireTypeForNaturalType<::test_doccomments::MyStrictEnum> {
+  using type = ::test_doccomments::wire::MyStrictEnum;
+};
+template <>
+struct NaturalTypeForWireType<::test_doccomments::wire::MyFlexibleEnum> {
+  using type = ::test_doccomments::MyFlexibleEnum;
+};
+template <>
+struct WireTypeForNaturalType<::test_doccomments::MyFlexibleEnum> {
+  using type = ::test_doccomments::wire::MyFlexibleEnum;
+};
+
+template <>
 struct WireNaturalConversionTraits<::test_doccomments::wire::Struct, ::test_doccomments::Struct> {
   static ::test_doccomments::Struct ToNatural(::test_doccomments::wire::Struct src);
   static ::test_doccomments::wire::Struct ToWire(fidl::AnyArena& arena, ::test_doccomments::Struct src);

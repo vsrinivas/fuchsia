@@ -29,6 +29,8 @@ fidl/{{ .LibraryDots }}/cpp/type_conversions.h
 {{ end -}}
 
 {{ EnsureNamespace "fidl::internal" }}
+{{ range .Bits }}{{ template "Bits:Traits:TypeConversionsHeader" . }}{{ end }}
+{{ range .Enums }}{{ template "Enums:Traits:TypeConversionsHeader" . }}{{ end }}
 {{ range .Structs }}{{ template "Struct:Traits:TypeConversionsHeader" . }}{{ end }}
 {{ range .Tables }}{{ template "Table:Traits:TypeConversionsHeader" . }}{{ end }}
 {{ range .Unions }}{{ template "Union:Traits:TypeConversionsHeader" . }}{{ end }}

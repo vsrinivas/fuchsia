@@ -14,6 +14,15 @@
 namespace fidl {
 namespace internal {
 
+template <>
+struct NaturalTypeForWireType<::test_handlesintypes::wire::ObjType> {
+  using type = ::test_handlesintypes::ObjType;
+};
+template <>
+struct WireTypeForNaturalType<::test_handlesintypes::ObjType> {
+  using type = ::test_handlesintypes::wire::ObjType;
+};
+
 #ifdef __Fuchsia__
 
 template <>

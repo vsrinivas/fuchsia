@@ -135,6 +135,8 @@ struct internal::WireCodingTraits<{{ . }}, ::fidl::internal::WireCodingConstrain
 
 {{ end }}
 
+
+
 {{- define "Bits:Traits:CommonTypesHeader" }}
 
 template <>
@@ -173,4 +175,17 @@ using {{ .Name }} = {{ .Unified }};
       {{- end }}
     }
   };
+{{- end }}
+
+
+
+{{- define "Bits:Traits:TypeConversionsHeader" }}
+template <>
+struct NaturalTypeForWireType<{{ .Wire }}> {
+    using type = {{ .Unified }};
+};
+template <>
+struct WireTypeForNaturalType<{{ .Unified }}> {
+    using type = {{ .Wire }};
+};
 {{- end }}

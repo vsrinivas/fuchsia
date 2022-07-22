@@ -10,8 +10,52 @@
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/vector_view.h>
 
+#include <type_traits>
+
 namespace fidl {
 namespace internal {
+
+// The base case for |NaturalTypeForWireType| prints an error.
+// Generated code should specialize this template for generated wire types.
+template <typename WireType, typename Enable = void>
+struct NaturalTypeForWireType {
+  // A type-dependent expression to help emit a static_assert error only when we
+  // hit this template specialization base case. `static_assert(false);` does
+  // not work because the compiler will eagerly fail. |T| is not used otherwise.
+  template <typename... T>
+  static constexpr bool kDoesNotKnowHowToConvertThisType = false;
+  static_assert(kDoesNotKnowHowToConvertThisType<WireType>,
+                "Does not know how to convert this type to its corresponding natural type. "
+                "Make sure to include the FIDL headers for natural types. "
+                "The #include pattern looks like #include <fidl/my.library/cpp/fidl.h>");
+  using type = WireType;
+};
+
+// The base case for |WireTypeForNaturalType| prints an error.
+// Generated code should specialize this template for generated natural types.
+template <typename NaturalType, typename Enable = void>
+struct WireTypeForNaturalType {
+  // A type-dependent expression to help emit a static_assert error only when we
+  // hit this template specialization base case. `static_assert(false);` does
+  // not work because the compiler will eagerly fail. |T| is not used otherwise.
+  template <typename... T>
+  static constexpr bool kDoesNotKnowHowToConvertThisType = false;
+  static_assert(kDoesNotKnowHowToConvertThisType<NaturalType>,
+                "Does not know how to convert this type to its corresponding wire type. "
+                "Make sure to include the FIDL headers for natural types. "
+                "The #include pattern looks like #include <fidl/my.library/cpp/fidl.h>");
+  using type = NaturalType;
+};
+
+// Specialize for primitive types.
+template <typename T>
+struct NaturalTypeForWireType<T, std::enable_if_t<std::is_arithmetic_v<T>>> {
+  using type = T;
+};
+template <typename T>
+struct WireTypeForNaturalType<T, std::enable_if_t<std::is_arithmetic_v<T>>> {
+  using type = T;
+};
 
 template <typename WireType, typename NaturalType>
 struct WireNaturalConversionTraits;
@@ -20,15 +64,6 @@ template <typename T>
 struct WireNaturalConversionTraits<T, T> {
   static T ToNatural(T src) { return std::move(src); }
   static T ToWire(fidl::AnyArena&, T src) { return std::move(src); }
-};
-
-template <typename WireType>
-struct NaturalTypeForWireType {
-  using type = WireType;
-};
-template <typename NaturalType>
-struct WireTypeForNaturalType {
-  using type = NaturalType;
 };
 
 template <>

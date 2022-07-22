@@ -14,6 +14,39 @@
 namespace fidl {
 namespace internal {
 
+template <>
+struct NaturalTypeForWireType<::test_enum::wire::MyStrictEnum> {
+  using type = ::test_enum::MyStrictEnum;
+};
+template <>
+struct WireTypeForNaturalType<::test_enum::MyStrictEnum> {
+  using type = ::test_enum::wire::MyStrictEnum;
+};
+template <>
+struct NaturalTypeForWireType<::test_enum::wire::MyFlexibleEnumWithCustomUnknown> {
+  using type = ::test_enum::MyFlexibleEnumWithCustomUnknown;
+};
+template <>
+struct WireTypeForNaturalType<::test_enum::MyFlexibleEnumWithCustomUnknown> {
+  using type = ::test_enum::wire::MyFlexibleEnumWithCustomUnknown;
+};
+template <>
+struct NaturalTypeForWireType<::test_enum::wire::MyFlexibleEnum> {
+  using type = ::test_enum::MyFlexibleEnum;
+};
+template <>
+struct WireTypeForNaturalType<::test_enum::MyFlexibleEnum> {
+  using type = ::test_enum::wire::MyFlexibleEnum;
+};
+template <>
+struct NaturalTypeForWireType<::test_enum::wire::MyEmptyFlexibleEnum> {
+  using type = ::test_enum::MyEmptyFlexibleEnum;
+};
+template <>
+struct WireTypeForNaturalType<::test_enum::MyEmptyFlexibleEnum> {
+  using type = ::test_enum::wire::MyEmptyFlexibleEnum;
+};
+
 #ifdef __Fuchsia__
 
 #endif  // __Fuchsia__

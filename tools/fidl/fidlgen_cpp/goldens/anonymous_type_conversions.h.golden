@@ -15,6 +15,40 @@ namespace fidl {
 namespace internal {
 
 template <>
+struct NaturalTypeForWireType<::test_anonymous::wire::Flags> {
+  using type = ::test_anonymous::Flags;
+};
+template <>
+struct WireTypeForNaturalType<::test_anonymous::Flags> {
+  using type = ::test_anonymous::wire::Flags;
+};
+template <>
+struct NaturalTypeForWireType<::test_anonymous::wire::BitsMember> {
+  using type = ::test_anonymous::BitsMember;
+};
+template <>
+struct WireTypeForNaturalType<::test_anonymous::BitsMember> {
+  using type = ::test_anonymous::wire::BitsMember;
+};
+
+template <>
+struct NaturalTypeForWireType<::test_anonymous::wire::SomeProtocolSomeMethodError> {
+  using type = ::test_anonymous::SomeProtocolSomeMethodError;
+};
+template <>
+struct WireTypeForNaturalType<::test_anonymous::SomeProtocolSomeMethodError> {
+  using type = ::test_anonymous::wire::SomeProtocolSomeMethodError;
+};
+template <>
+struct NaturalTypeForWireType<::test_anonymous::wire::Op> {
+  using type = ::test_anonymous::Op;
+};
+template <>
+struct WireTypeForNaturalType<::test_anonymous::Op> {
+  using type = ::test_anonymous::wire::Op;
+};
+
+template <>
 struct WireNaturalConversionTraits<::test_anonymous::wire::TableData, ::test_anonymous::TableData> {
   static ::test_anonymous::TableData ToNatural(::test_anonymous::wire::TableData src);
   static ::test_anonymous::wire::TableData ToWire(fidl::AnyArena& arena, ::test_anonymous::TableData src);

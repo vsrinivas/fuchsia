@@ -15,6 +15,24 @@ namespace fidl {
 namespace internal {
 
 template <>
+struct NaturalTypeForWireType<::test_placementofattributes::wire::ExampleBits> {
+  using type = ::test_placementofattributes::ExampleBits;
+};
+template <>
+struct WireTypeForNaturalType<::test_placementofattributes::ExampleBits> {
+  using type = ::test_placementofattributes::wire::ExampleBits;
+};
+
+template <>
+struct NaturalTypeForWireType<::test_placementofattributes::wire::ExampleEnum> {
+  using type = ::test_placementofattributes::ExampleEnum;
+};
+template <>
+struct WireTypeForNaturalType<::test_placementofattributes::ExampleEnum> {
+  using type = ::test_placementofattributes::wire::ExampleEnum;
+};
+
+template <>
 struct WireNaturalConversionTraits<::test_placementofattributes::wire::ExampleStruct, ::test_placementofattributes::ExampleStruct> {
   static ::test_placementofattributes::ExampleStruct ToNatural(::test_placementofattributes::wire::ExampleStruct src);
   static ::test_placementofattributes::wire::ExampleStruct ToWire(fidl::AnyArena& arena, ::test_placementofattributes::ExampleStruct src);

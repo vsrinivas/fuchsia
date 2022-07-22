@@ -10,6 +10,7 @@
 #include <lib/fidl/cpp/unknown_interaction_handler.h>
 #include <lib/fidl/llcpp/internal/server_details.h>
 #include <lib/fidl/llcpp/message.h>
+#include <lib/fidl_driver/cpp/internal/endpoint_conversions.h>
 #include <lib/fidl_driver/cpp/natural_client.h>
 #include <lib/fidl_driver/cpp/unified_messaging_declarations.h>
 

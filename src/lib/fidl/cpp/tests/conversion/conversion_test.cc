@@ -91,6 +91,36 @@ TEST(NaturalToWireConversion, InvalidHandle) {
   fidl::Arena arena;
   EXPECT_EQ(zx::handle(), fidl::ToWire(arena, zx::handle()));
 }
+
+TEST(WireToNaturalConversion, ClientEnd) {
+  static_assert(std::is_same_v<decltype(fidl::ToNatural(fidl::ClientEnd<test_types::Baz>())),
+                               fidl::ClientEnd<test_types::Baz>>);
+  EXPECT_EQ(fidl::ClientEnd<test_types::Baz>(),
+            fidl::ToNatural(fidl::ClientEnd<test_types::Baz>()));
+}
+
+TEST(NaturalToWireConversion, ClientEnd) {
+  static_assert(std::is_same_v<decltype(fidl::ToNatural(fidl::ClientEnd<test_types::Baz>())),
+                               fidl::ClientEnd<test_types::Baz>>);
+  fidl::Arena arena;
+  EXPECT_EQ(fidl::ClientEnd<test_types::Baz>(),
+            fidl::ToWire(arena, fidl::ClientEnd<test_types::Baz>()));
+}
+
+TEST(WireToNaturalConversion, ServerEnd) {
+  static_assert(std::is_same_v<decltype(fidl::ToNatural(fidl::ServerEnd<test_types::Baz>())),
+                               fidl::ServerEnd<test_types::Baz>>);
+  EXPECT_EQ(fidl::ServerEnd<test_types::Baz>(),
+            fidl::ToNatural(fidl::ServerEnd<test_types::Baz>()));
+}
+
+TEST(NaturalToWireConversion, ServerEnd) {
+  static_assert(std::is_same_v<decltype(fidl::ToNatural(fidl::ServerEnd<test_types::Baz>())),
+                               fidl::ServerEnd<test_types::Baz>>);
+  fidl::Arena arena;
+  EXPECT_EQ(fidl::ServerEnd<test_types::Baz>(),
+            fidl::ToWire(arena, fidl::ServerEnd<test_types::Baz>()));
+}
 #endif
 
 TEST(WireToNaturalConversion, String) {
@@ -196,7 +226,7 @@ TEST(NaturalToWireConversion, OptionalVector) {
 }
 
 TEST(WireToNaturalConversion, ObjectView) {
-  EXPECT_EQ(nullptr, fidl::ToNatural(fidl::ObjectView<test_types::CopyableStruct>()));
+  EXPECT_EQ(nullptr, fidl::ToNatural(fidl::ObjectView<test_types::wire::CopyableStruct>()));
 
   fidl::Arena<512> arena;
   std::unique_ptr<test_types::CopyableStruct> val =

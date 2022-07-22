@@ -9,6 +9,7 @@
 #define SRC_LIB_FIDL_CPP_INCLUDE_LIB_FIDL_CPP_CHANNEL_H_
 
 #include <lib/fidl/cpp/client.h>
+#include <lib/fidl/cpp/internal/channel_endpoint_conversions.h>
 #include <lib/fidl/cpp/unified_messaging.h>
 #include <lib/fidl/llcpp/channel.h>
 #include <lib/fidl/llcpp/internal/arrow.h>

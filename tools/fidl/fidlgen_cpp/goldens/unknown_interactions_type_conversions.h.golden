@@ -16,6 +16,8 @@ namespace internal {
 
 
 
+
+
 template <>
 struct WireNaturalConversionTraits<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse, ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse> {
   static ::test_unknowninteractions::UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse ToNatural(::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse src);

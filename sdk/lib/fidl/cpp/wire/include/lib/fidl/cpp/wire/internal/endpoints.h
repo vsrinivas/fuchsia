@@ -129,6 +129,70 @@ class UnownedServerEndBase : public UnownedTransportEnd<Protocol, Transport> {
       : UnownedServerEndBase(owner.handle()->get()) {}
 };
 
+// Comparison operators between server-end objects.
+// For the channel transport, these comparisons have the same semantics
+// as the comparison operators on the wrapped |zx::channel|s.
+
+template <typename T, typename U>
+bool operator==(const ServerEndBase<T, U>& a, const ServerEndBase<T, U>& b) {
+  return a.handle() == b.handle();
+}
+
+template <typename T, typename U>
+bool operator!=(const ServerEndBase<T, U>& a, const ServerEndBase<T, U>& b) {
+  return !(a == b);
+}
+
+template <typename T, typename U>
+bool operator<(const ServerEndBase<T, U>& a, const ServerEndBase<T, U>& b) {
+  return a.handle() < b.handle();
+}
+
+template <typename T, typename U>
+bool operator>(const ServerEndBase<T, U>& a, const ServerEndBase<T, U>& b) {
+  return a.handle() > b.handle();
+}
+
+template <typename T, typename U>
+bool operator<=(const ServerEndBase<T, U>& a, const ServerEndBase<T, U>& b) {
+  return a.handle() <= b.handle();
+}
+
+template <typename T, typename U>
+bool operator>=(const ServerEndBase<T, U>& a, const ServerEndBase<T, U>& b) {
+  return a.handle() >= b.handle();
+}
+
+template <typename T, typename U>
+bool operator==(const UnownedServerEndBase<T, U>& a, const UnownedServerEndBase<T, U>& b) {
+  return a.handle() == b.handle();
+}
+
+template <typename T, typename U>
+bool operator!=(const UnownedServerEndBase<T, U>& a, const UnownedServerEndBase<T, U>& b) {
+  return !(a == b);
+}
+
+template <typename T, typename U>
+bool operator<(const UnownedServerEndBase<T, U>& a, const UnownedServerEndBase<T, U>& b) {
+  return a.handle() < b.handle();
+}
+
+template <typename T, typename U>
+bool operator>(const UnownedServerEndBase<T, U>& a, const UnownedServerEndBase<T, U>& b) {
+  return a.handle() > b.handle();
+}
+
+template <typename T, typename U>
+bool operator<=(const UnownedServerEndBase<T, U>& a, const UnownedServerEndBase<T, U>& b) {
+  return a.handle() <= b.handle();
+}
+
+template <typename T, typename U>
+bool operator>=(const UnownedServerEndBase<T, U>& a, const UnownedServerEndBase<T, U>& b) {
+  return a.handle() >= b.handle();
+}
+
 template <typename Protocol, typename Transport>
 class ClientEndBase : public TransportEnd<Protocol, Transport> {
   using TransportEnd = TransportEnd<Protocol, Transport>;

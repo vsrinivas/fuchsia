@@ -44,6 +44,7 @@ source_set("fidl_driver") {
 
 source_set("fidl_driver_natural") {
   public = [
+    "include/lib/fidl_driver/cpp/internal/endpoint_conversions.h",
     "include/lib/fidl_driver/cpp/internal/natural_client_details.h",
     "include/lib/fidl_driver/cpp/internal/wire_client_details.h",
     "include/lib/fidl_driver/cpp/natural_client.h",

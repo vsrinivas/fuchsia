@@ -14,6 +14,15 @@
 namespace fidl {
 namespace internal {
 
+template <>
+struct NaturalTypeForWireType<::test_bitsconstants::wire::BitsType> {
+  using type = ::test_bitsconstants::BitsType;
+};
+template <>
+struct WireTypeForNaturalType<::test_bitsconstants::BitsType> {
+  using type = ::test_bitsconstants::wire::BitsType;
+};
+
 #ifdef __Fuchsia__
 
 #endif  // __Fuchsia__
