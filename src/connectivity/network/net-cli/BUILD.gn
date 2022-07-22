@@ -40,6 +40,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:prettytable-rs",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:thiserror",
   ]
 
   test_deps = [

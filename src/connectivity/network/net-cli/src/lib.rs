@@ -28,7 +28,9 @@ use std::collections::hash_map::HashMap;
 use std::{convert::TryFrom as _, iter::FromIterator as _, str::FromStr as _};
 
 mod opts;
-pub use opts::{Command, CommandEnum};
+pub use opts::{
+    underlying_user_facing_error, user_facing_error, Command, CommandEnum, UserFacingError,
+};
 
 mod ser;
 
@@ -326,14 +328,17 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                     .await?;
             match response {
                 finterfaces_ext::InterfaceState::Unknown(id) => {
-                    return Err(anyhow::anyhow!("interface with id={} not found", id));
+                    return Err(user_facing_error(format!("interface with id={} not found", id)));
                 }
                 finterfaces_ext::InterfaceState::Known(properties) => {
                     let finterfaces_ext::Properties { id, .. } = &properties;
                     let mac = debug_interfaces.get_mac(*id).await.context("call get_mac")?;
                     match mac {
                         Err(fdebug::InterfacesGetMacError::NotFound) => {
-                            return Err(anyhow::anyhow!("interface with id={} not found", id));
+                            return Err(user_facing_error(format!(
+                                "interface with id={} not found",
+                                id
+                            )));
                         }
                         Ok(mac) => {
                             let mac = mac.map(|box_| *box_);
@@ -522,7 +527,10 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                         .context("call remove address")?
                 };
                 if !did_remove {
-                    return Err(anyhow::anyhow!("Address {} not found on interface {}", addr, id));
+                    return Err(user_facing_error(format!(
+                        "Address {} not found on interface {}",
+                        addr, id
+                    )));
                 }
                 info!("Address {} deleted from interface {}", addr, id);
             }
@@ -573,7 +581,7 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                                         None => build_name_to_id_map().await?,
                                     };
                                     let id = name_to_id.get(&name).copied().ok_or_else(|| {
-                                        anyhow::anyhow!("no interface named {}", name)
+                                        user_facing_error(format!("no interface named {}", name))
                                     })?;
                                     (Some(name_to_id), id)
                                 }

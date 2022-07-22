@@ -14,6 +14,20 @@ use std::convert::{TryFrom as _, TryInto as _};
 pub(crate) mod dhcpd;
 pub(crate) mod dns;
 
+#[derive(thiserror::Error, Clone, Debug)]
+#[error("{msg}")]
+pub struct UserFacingError {
+    pub msg: String,
+}
+
+pub fn user_facing_error(cause: impl Into<String>) -> anyhow::Error {
+    UserFacingError { msg: cause.into() }.into()
+}
+
+pub fn underlying_user_facing_error(error: &anyhow::Error) -> Option<UserFacingError> {
+    error.root_cause().downcast_ref::<UserFacingError>().cloned()
+}
+
 fn parse_ip_version_str(value: &str) -> Result<fnet::IpVersion, String> {
     match &value.to_lowercase()[..] {
         "ipv4" => Ok(fnet::IpVersion::V4),
@@ -143,7 +157,7 @@ impl InterfaceIdentifier {
                 response
                     .values()
                     .find_map(|interface| (&interface.name == name).then(|| interface.id))
-                    .ok_or_else(|| anyhow::anyhow!("No interface with name {}", name))
+                    .ok_or_else(|| user_facing_error(format!("No interface with name {}", name)))
             }
         }
     }
@@ -165,12 +179,12 @@ impl core::str::FromStr for InterfaceIdentifier {
         nicid_parse_result.map_or_else(
             |nicid_parse_error| {
                 if !s.starts_with("name:") {
-                    Err(anyhow::anyhow!(
+                    Err(user_facing_error(format!(
                         "Failed to parse as NICID (error: {}) or as interface name \
                         (error: interface names must be specified as `name:ifname`, where \
                         ifname is the actual interface name in this example)",
                         nicid_parse_error
-                    ))
+                    )))
                 } else {
                     Ok(Self::Name(s["name:".len()..].to_string()))
                 }

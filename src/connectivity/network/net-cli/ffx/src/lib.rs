@@ -6,6 +6,7 @@
 #![deny(unused_results)]
 
 use anyhow::Context as _;
+use errors::FfxError;
 use ffx_core::ffx_plugin;
 use fidl::endpoints::ProtocolMarker;
 use fidl_fuchsia_developer_remotecontrol as fremotecontrol;
@@ -161,6 +162,8 @@ impl net_cli::NetCliDepsConnector for FfxConnector<'_> {
     }
 }
 
+const EXIT_FAILURE: i32 = 1;
+
 #[ffx_plugin()]
 pub async fn net(
     remote_control: fremotecontrol::RemoteControlProxy,
@@ -168,5 +171,12 @@ pub async fn net(
 ) -> Result<(), anyhow::Error> {
     let ffx_net_args::Command { cmd, realm } = cmd;
     let realm = realm.as_deref().unwrap_or(NETWORK_REALM);
-    net_cli::do_root(net_cli::Command { cmd }, &FfxConnector { remote_control, realm }).await
+    net_cli::do_root(net_cli::Command { cmd }, &FfxConnector { remote_control, realm })
+        .await
+        .map_err(|e| match net_cli::underlying_user_facing_error(&e) {
+            Some(net_cli::UserFacingError { msg }) => {
+                FfxError::Error(anyhow::Error::msg(msg), EXIT_FAILURE).into()
+            }
+            None => e,
+        })
 }
