@@ -113,6 +113,12 @@ import("//src/storage/fshost/generated_fshost_config.gni")
 #     should be "system_image_prime", so that the package does not override the
 #     non-prime package during publishing.
 #
+#   kernel_zbi (optional); defaults: "//zircon/kernel"
+#     [label] Label of the zircon kernel to use.  This needs to use the `images`
+#     metadata key to provide the `path` and `name` fields (see the
+#     build_api_module("images")` in `//BUILD.gn`).  The default value is most likely
+#     the correct one.  This should only be overridden in special circumstances.
+#
 # Board parameters:
 #
 #   assembly_compress_blobs (default: true)
@@ -185,6 +191,11 @@ template("assembled_system") {
     assert(
         invoker.product_assembly_config_file != "",
         "'product_assembly_config_file' cannot be an empty string. Don't provide a value if it is not being used.")
+  }
+
+  kernel_zbi = "//zircon/kernel"
+  if (defined(invoker.kernel_zbi)) {
+    kernel_zbi = invoker.kernel_zbi
   }
 
   fvm_tool_target = "//src/storage/bin/fvm($host_toolchain)"
@@ -506,7 +517,7 @@ template("assembled_system") {
                            ])
 
     output_path = files.image_assembly_config
-    kernel_image = "//zircon/kernel"
+    kernel_image = kernel_zbi
 
     base_packages = []
     if (generate_fvm) {
