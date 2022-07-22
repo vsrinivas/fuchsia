@@ -505,21 +505,21 @@ void Client::SetDisplayColorConversion(SetDisplayColorConversionRequestView requ
     config->pending_.cc_flags |= COLOR_CONVERSION_PREOFFSET;
     memcpy(config->pending_.cc_preoffsets, request->preoffsets.data(),
            sizeof(request->preoffsets.data_));
-    static_assert(sizeof(request->preoffsets) == sizeof(config->pending_.cc_preoffsets), "");
+    static_assert(sizeof(request->preoffsets) == sizeof(config->pending_.cc_preoffsets));
   }
 
   if (!isnan(request->coefficients[0])) {
     config->pending_.cc_flags |= COLOR_CONVERSION_COEFFICIENTS;
     memcpy(config->pending_.cc_coefficients, request->coefficients.data(),
            sizeof(request->coefficients.data_));
-    static_assert(sizeof(request->coefficients) == sizeof(config->pending_.cc_coefficients), "");
+    static_assert(sizeof(request->coefficients) == sizeof(config->pending_.cc_coefficients));
   }
 
   if (!isnan(request->postoffsets[0])) {
     config->pending_.cc_flags |= COLOR_CONVERSION_POSTOFFSET;
     memcpy(config->pending_.cc_postoffsets, request->postoffsets.data(),
            sizeof(request->postoffsets.data_));
-    static_assert(sizeof(request->postoffsets) == sizeof(config->pending_.cc_postoffsets), "");
+    static_assert(sizeof(request->postoffsets) == sizeof(config->pending_.cc_postoffsets));
   }
 
   config->display_config_change_ = true;

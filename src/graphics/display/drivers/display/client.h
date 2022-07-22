@@ -183,7 +183,7 @@ class Client : public fidl::WireServer<fuchsia_hardware_display::Controller> {
   Client(Controller* controller, ClientProxy* proxy, bool is_vc, bool use_kernel_framebuffer,
          uint32_t id, zx::channel server_channel);
 
-  ~Client();
+  ~Client() override;
 
   fpromise::result<fidl::ServerBindingRef<fuchsia_hardware_display::Controller>, zx_status_t> Init(
       zx::channel server_channel);
