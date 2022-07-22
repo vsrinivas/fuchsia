@@ -1,0 +1,48 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+
+_sources = [ "src/lib.rs" ]
+
+rustc_library("netstack3_sync_instrumented") {
+  version = "0.0.1"
+  edition = "2021"
+  with_unit_tests = true
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+  features = [ "recursive-lock-panic" ]
+
+  sources = _sources
+}
+
+rustc_library("netstack3_sync_not_instrumented") {
+  version = "0.0.1"
+  edition = "2021"
+  with_unit_tests = true
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+  features = []
+
+  sources = _sources
+}
+
+fuchsia_unittest_package("netstack3-sync-instrumented-package") {
+  package_name = "netstack3-sync-instrumented"
+  deps = [ ":netstack3_sync_instrumented_test" ]
+}
+
+fuchsia_unittest_package("netstack3-sync-not-instrumented-package") {
+  package_name = "netstack3-sync-not-instrumented"
+  deps = [ ":netstack3_sync_not_instrumented_test" ]
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":netstack3-sync-instrumented-package",
+    ":netstack3-sync-not-instrumented-package",
+    ":netstack3_sync_instrumented_test($host_toolchain)",
+    ":netstack3_sync_not_instrumented($host_toolchain)",
+  ]
+}

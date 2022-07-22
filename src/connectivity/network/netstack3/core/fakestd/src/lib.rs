@@ -6,7 +6,3 @@
 
 pub use ::core::{convert, fmt, option};
 pub use ::std::error;
-
-pub mod sync {
-    pub use ::std::sync::{Mutex, MutexGuard, RwLock, RwLockReadGuard, RwLockWriteGuard};
-}

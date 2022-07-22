@@ -109,6 +109,10 @@ lib_not_fuzz_deps = [
   "fakestd",
 ]
 
+lib_not_benchmark_deps = [ "sync:netstack3_sync_instrumented" ]
+
+lib_benchmark_deps = [ "sync:netstack3_sync_not_instrumented" ]
+
 rustc_library("netstack3-core") {
   name = "netstack3_core"
   version = "0.1.0"
@@ -117,7 +121,7 @@ rustc_library("netstack3-core") {
   configs -= [ "//build/config/rust:no_features" ]
   configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
 
-  deps = lib_deps + lib_not_fuzz_deps
+  deps = lib_deps + lib_not_fuzz_deps + lib_not_benchmark_deps
 
   sources = lib_sources
 
@@ -131,7 +135,7 @@ rustc_test("netstack3-core_test") {
   configs -= [ "//build/config/rust:no_features" ]
   configs += [ "//build/config/rust:netstack3_only_specialization_feature" ]
 
-  deps = lib_deps + lib_test_deps + lib_not_fuzz_deps
+  deps = lib_deps + lib_test_deps + lib_not_fuzz_deps + lib_not_benchmark_deps
 
   sources = lib_sources
 
@@ -156,7 +160,7 @@ rustc_library("netstack3-core-benchmarks") {
   testonly = true
   with_unit_tests = true
   sources = lib_sources
-  deps = lib_deps + lib_test_deps + lib_not_fuzz_deps +
+  deps = lib_deps + lib_test_deps + lib_not_fuzz_deps + lib_benchmark_deps +
          [ "//third_party/rust_crates:criterion" ]
   configs -= [ "//build/config/rust/lints:allow_unused_results" ]
   configs -= [ "//build/config/rust:no_features" ]
@@ -176,7 +180,7 @@ rustc_fuzzer("fuzz-single-device") {
   rustfunction = "single_device_arbitrary_packets"
 
   sources = lib_sources
-  deps = lib_deps + lib_test_deps + [
+  deps = lib_deps + lib_test_deps + lib_not_benchmark_deps + [
            "//src/connectivity/lib/fuzz-util",
            "//src/connectivity/lib/net-declare",
            "//src/connectivity/lib/net-types",
@@ -215,5 +219,6 @@ group("tests") {
     ":netstack3-core-test-package",
     ":netstack3-core_test($host_toolchain)",
     "specialize-ip-macro:tests",
+    "sync:tests",
   ]
 }
