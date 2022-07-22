@@ -193,8 +193,6 @@ pub struct BlobfsContents {
     pub packages: PackagesMetadata,
     /// Maximum total size of all the blobs stored in this image.
     pub maximum_contents_size: Option<u64>,
-    /// List of blobs across all packages
-    pub blobs: PackageSetBlobInfo,
 }
 
 /// Contains unique set of blobs.
@@ -209,7 +207,7 @@ impl BlobfsContents {
         path: impl AsRef<Path>,
         merkle_size_map: &HashMap<String, u64>,
     ) -> anyhow::Result<()> {
-        Self::add_package(&mut self.packages.base, &mut self.blobs, path, merkle_size_map)?;
+        Self::add_package(&mut self.packages.base, path, merkle_size_map)?;
         Ok(())
     }
 
@@ -219,13 +217,12 @@ impl BlobfsContents {
         path: impl AsRef<Path>,
         merkle_size_map: &HashMap<String, u64>,
     ) -> anyhow::Result<()> {
-        Self::add_package(&mut self.packages.cache, &mut self.blobs, path, merkle_size_map)?;
+        Self::add_package(&mut self.packages.cache, path, merkle_size_map)?;
         Ok(())
     }
 
     fn add_package(
         package_set: &mut PackageSetMetadata,
-        content_blobs: &mut PackageSetBlobInfo,
         path: impl AsRef<Path>,
         merkle_size_map: &HashMap<String, u64>,
     ) -> anyhow::Result<()> {
@@ -234,13 +231,6 @@ impl BlobfsContents {
         let name = package_manifest.name().to_string();
         let mut package_blobs: Vec<PackageBlob> = vec![];
         for blob in package_manifest.into_blobs() {
-            content_blobs.0.insert(PackageBlob {
-                merkle: blob.merkle.to_string(),
-                path: blob.path.to_string(),
-                used_space_in_blobfs: *merkle_size_map
-                    .get(&blob.merkle.to_string())
-                    .context("Blob merkle not found")?,
-            });
             package_blobs.push(PackageBlob {
                 merkle: blob.merkle.to_string(),
                 path: blob.path.to_string(),
@@ -503,8 +493,6 @@ mod tests {
         assert_eq!(actual_package_blobs_base, &expected_blobs);
         assert_eq!(actual_package_blobs_cache, &expected_blobs);
 
-        // Verify blobs in BlobfsContents
-        assert_eq!(contents.blobs.0.iter().map(|x| x.clone()).collect::<Vec<_>>(), expected_blobs);
         Ok(())
     }
 
@@ -569,8 +557,7 @@ mod tests {
                         "base": [],
                         "cache": [],
                     },
-                    "maximum_contents_size": None::<u64>,
-                    "blobs": [],
+                    "maximum_contents_size": None::<u64>
                 },
             },
             {

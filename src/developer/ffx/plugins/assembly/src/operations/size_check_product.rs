@@ -206,7 +206,6 @@ mod tests {
                 cache: PackageSetMetadata(vec![]),
             },
             maximum_contents_size: Some(1234),
-            blobs: Default::default(),
         };
         let mut images_manifest = ImagesManifest {
             images: vec![Image::VBMeta("a/b/c".into()), Image::FVM("x/y/z".into())],
