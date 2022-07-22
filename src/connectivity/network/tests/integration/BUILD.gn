@@ -21,11 +21,15 @@ tests = [
   "ipv4",
   "ipv6",
   "management",
-  "multicast-forwarding",
   "reachability",
   "socket",
   "sys",
 ]
+if (!is_coverage) {
+  # TODO(fxbug.dev/104137): Re-enable this test when it passes with
+  # the coverage variant.
+  tests += [ "multicast-forwarding" ]
+}
 
 foreach(test, tests) {
   name = "netstack-${test}-integration-test"
