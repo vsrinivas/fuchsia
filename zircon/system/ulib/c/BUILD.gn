@@ -97,6 +97,16 @@ if (current_toolchain == default_toolchain) {
       "//build/config:shared_library_config",
       "//build/config:symbol_no_undefined",
     ]
+
+    # TODO(fxbug.dev/104480): Ensure all of libc uses libcalls into the hwasan
+    # runtime for storing frame record info.
+    if (!is_gcc && toolchain_variant.tags + [ "hwasan" ] - [ "hwasan" ] !=
+                   toolchain_variant.tags) {
+      cflags = [
+        "-mllvm",
+        "-hwasan-record-stack-history=libcall",
+      ]
+    }
   }
 
   group("libc_config_deps") {
