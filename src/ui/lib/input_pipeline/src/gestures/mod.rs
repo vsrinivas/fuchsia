@@ -6,3 +6,5 @@ mod click;
 mod gesture_arena;
 mod motion;
 mod primary_tap;
+
+pub use gesture_arena::make_input_handler as make_touchpad_gestures_handler;

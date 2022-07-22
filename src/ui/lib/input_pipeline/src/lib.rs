@@ -38,6 +38,7 @@ pub mod focus_listener;
 pub mod gestures;
 pub mod input_pipeline;
 
+pub use gestures::make_touchpad_gestures_handler;
 pub use utils::CursorMessage;
 pub use utils::Position;
 pub use utils::Size;

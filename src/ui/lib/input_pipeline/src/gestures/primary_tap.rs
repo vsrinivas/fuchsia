@@ -15,23 +15,23 @@ use {
 
 /// The initial state of this recognizer, before a tap has been detected.
 #[derive(Debug)]
-struct InitialContender {
+pub(super) struct InitialContender {
     /// The maximum displacement that a detected finger can withstand to still
     /// be considered a tap. Measured in millimeters.
-    max_finger_displacement: f32,
+    pub(super) max_finger_displacement_in_mm: f32,
 
     /// The maximum time that can elapse between a finger down and finger up
     /// to be considered a tap gesture.
-    max_time_elapsed: zx::Duration,
+    pub(super) max_time_elapsed: zx::Duration,
 }
 
 impl InitialContender {
-    fn into_finger_down_contender(
+    fn into_finger_contact_contender(
         self: Box<Self>,
         finger_down_event: TouchpadEvent,
     ) -> Box<dyn gesture_arena::Contender> {
-        Box::new(FingerDownContender {
-            max_finger_displacement: self.max_finger_displacement,
+        Box::new(FingerContactContender {
+            max_finger_displacement_in_mm: self.max_finger_displacement_in_mm,
             max_time_elapsed: self.max_time_elapsed,
             finger_down_event,
         })
@@ -45,18 +45,18 @@ impl gesture_arena::Contender for InitialContender {
         }
 
         match event.pressed_buttons.len() {
-            0 => ExamineEventResult::Contender(self.into_finger_down_contender(event.clone())),
+            0 => ExamineEventResult::Contender(self.into_finger_contact_contender(event.clone())),
             _ => ExamineEventResult::Mismatch,
         }
     }
 }
 
-/// The state when this recognizer has detected a single finger down.
+/// The state when this recognizer has detected a single finger in contact with the touchpad.
 #[derive(Debug)]
-struct FingerDownContender {
+struct FingerContactContender {
     /// The maximum displacement that a detected finger can withstand to still
     /// be considered a tap. Measured in millimeters.
-    max_finger_displacement: f32,
+    max_finger_displacement_in_mm: f32,
 
     /// The maximum time that can elapse between a finger down and finger up
     /// to be considered a tap gesture.
@@ -66,7 +66,7 @@ struct FingerDownContender {
     finger_down_event: TouchpadEvent,
 }
 
-impl FingerDownContender {
+impl FingerContactContender {
     fn into_matched_contender(
         self: Box<Self>,
         finger_up_event: TouchpadEvent,
@@ -79,7 +79,7 @@ impl FingerDownContender {
     }
 }
 
-impl gesture_arena::Contender for FingerDownContender {
+impl gesture_arena::Contender for FingerContactContender {
     fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
         if !is_valid_event_time(event, &self.finger_down_event, self.max_time_elapsed) {
             return ExamineEventResult::Mismatch;
@@ -95,7 +95,7 @@ impl gesture_arena::Contender for FingerDownContender {
                 if !position_is_in_tap_threshold(
                     position_from_event(event),
                     position_from_event(&self.finger_down_event),
-                    self.max_finger_displacement,
+                    self.max_finger_displacement_in_mm,
                 ) {
                     return ExamineEventResult::Mismatch;
                 }
@@ -215,13 +215,13 @@ mod tests {
     };
 
     const MAX_TIME_ELAPSED: zx::Duration = zx::Duration::from_nanos(10000);
-    const MAX_FINGER_DISPLACEMENT: f32 = 10.0;
-    const HALF_MOTION: f32 = MAX_FINGER_DISPLACEMENT / 2.0;
+    const MAX_FINGER_DISPLACEMENT_IN_MM: f32 = 10.0;
+    const HALF_MOTION: f32 = MAX_FINGER_DISPLACEMENT_IN_MM / 2.0;
 
     fn assert_finger_down_contender(result: ExamineEventResult) {
         match result {
             ExamineEventResult::Contender(boxed) => {
-                assert_eq!((&*boxed).as_any().type_id(), TypeId::of::<FingerDownContender>());
+                assert_eq!((&*boxed).as_any().type_id(), TypeId::of::<FingerContactContender>());
             }
             other => panic!("Expected a Contender but found {:?}", other),
         }
@@ -251,7 +251,7 @@ mod tests {
     fn contender_no_touch_contacts() {
         assert_matches!(
             Box::new(InitialContender {
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
                 max_time_elapsed: MAX_TIME_ELAPSED
             })
             .examine_event(&TouchpadEvent {
@@ -269,7 +269,7 @@ mod tests {
     fn contender_many_touch_contacts() {
         assert_matches!(
             Box::new(InitialContender {
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
                 max_time_elapsed: MAX_TIME_ELAPSED
             })
             .examine_event(&TouchpadEvent {
@@ -290,7 +290,7 @@ mod tests {
     fn contender_single_button() {
         assert_matches!(
             Box::new(InitialContender {
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
                 max_time_elapsed: MAX_TIME_ELAPSED
             })
             .examine_event(&TouchpadEvent {
@@ -308,7 +308,7 @@ mod tests {
     fn contender_many_buttons() {
         assert_matches!(
             Box::new(InitialContender {
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
                 max_time_elapsed: MAX_TIME_ELAPSED
             })
             .examine_event(&TouchpadEvent {
@@ -321,12 +321,12 @@ mod tests {
     }
 
     /// Tests that an InitialContender with a single touch contact and no
-    /// pressed buttons yields a FingerDownContender.
+    /// pressed buttons yields a FingerContactContender.
     #[fuchsia::test]
     fn contender_no_buttons() {
         assert_finger_down_contender(
             Box::new(InitialContender {
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
                 max_time_elapsed: MAX_TIME_ELAPSED,
             })
             .examine_event(&TouchpadEvent {
@@ -337,13 +337,13 @@ mod tests {
         );
     }
 
-    /// Tests that a FingerDownContender with an event whose timestamp exceeds
+    /// Tests that a FingerContactContender with an event whose timestamp exceeds
     /// the elapsed threshold yields a Mismatch.
     #[fuchsia::test]
     fn finger_down_contender_too_long() {
         assert_matches!(
-            Box::new(FingerDownContender {
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+            Box::new(FingerContactContender {
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
                 max_time_elapsed: MAX_TIME_ELAPSED,
                 finger_down_event: TouchpadEvent {
                     contacts: vec![create_touch_contact(0, Position::zero())],
@@ -360,13 +360,13 @@ mod tests {
         );
     }
 
-    /// Tests that a FingerDownContender with zero touch contacts yields a
+    /// Tests that a FingerContactContender with zero touch contacts yields a
     /// MatchedContender.
     #[fuchsia::test]
     fn finger_down_contender_no_touch_contacts() {
         assert_examined_matched_contender(
-            Box::new(FingerDownContender {
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+            Box::new(FingerContactContender {
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
                 max_time_elapsed: MAX_TIME_ELAPSED,
                 finger_down_event: TouchpadEvent {
                     contacts: vec![create_touch_contact(0, Position::zero())],
@@ -382,13 +382,13 @@ mod tests {
         );
     }
 
-    /// Tests that a FingerDownContender with multiple touch contacts yields a
+    /// Tests that a FingerContactContender with multiple touch contacts yields a
     /// Mismatch.
     #[fuchsia::test]
     fn finger_down_contender_many_touch_contacts() {
         assert_matches!(
-            Box::new(FingerDownContender {
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+            Box::new(FingerContactContender {
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
                 max_time_elapsed: MAX_TIME_ELAPSED,
                 finger_down_event: TouchpadEvent {
                     contacts: vec![create_touch_contact(0, Position::zero())],
@@ -408,13 +408,13 @@ mod tests {
         );
     }
 
-    /// Tests that a FingerDownContender with a single touch contact and
+    /// Tests that a FingerContactContender with a single touch contact and
     /// too much displacement yields a Mismatch.
     #[fuchsia::test]
     fn finger_down_contender_large_displacement() {
         assert_matches!(
-            Box::new(FingerDownContender {
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+            Box::new(FingerContactContender {
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
                 max_time_elapsed: MAX_TIME_ELAPSED,
                 finger_down_event: TouchpadEvent {
                     contacts: vec![create_touch_contact(0, Position::zero())],
@@ -425,7 +425,7 @@ mod tests {
             .examine_event(&TouchpadEvent {
                 contacts: vec![create_touch_contact(
                     0,
-                    Position { x: MAX_FINGER_DISPLACEMENT, y: MAX_FINGER_DISPLACEMENT }
+                    Position { x: MAX_FINGER_DISPLACEMENT_IN_MM, y: MAX_FINGER_DISPLACEMENT_IN_MM }
                 )],
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![],
@@ -434,14 +434,14 @@ mod tests {
         );
     }
 
-    /// Tests that a FingerDownContender with a single touch contact,
+    /// Tests that a FingerContactContender with a single touch contact,
     /// no displacement, and no pressed buttons yields a
-    /// FingerDownContender.
+    /// FingerContactContender.
     #[fuchsia::test]
     fn finger_down_contender_no_buttons_no_displacement() {
         assert_finger_down_contender(
-            Box::new(FingerDownContender {
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+            Box::new(FingerContactContender {
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
                 max_time_elapsed: MAX_TIME_ELAPSED,
                 finger_down_event: TouchpadEvent {
                     contacts: vec![create_touch_contact(0, Position::zero())],
@@ -457,14 +457,14 @@ mod tests {
         );
     }
 
-    /// Tests that a FingerDownContender with a single touch contact,
+    /// Tests that a FingerContactContender with a single touch contact,
     /// acceptable displacement, and no pressed buttons yields a
-    /// FingerDownContender.
+    /// FingerContactContender.
     #[fuchsia::test]
     fn finger_down_contender_no_buttons_some_displacement() {
         assert_finger_down_contender(
-            Box::new(FingerDownContender {
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+            Box::new(FingerContactContender {
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
                 max_time_elapsed: MAX_TIME_ELAPSED,
                 finger_down_event: TouchpadEvent {
                     contacts: vec![create_touch_contact(0, Position::zero())],
@@ -483,14 +483,14 @@ mod tests {
         );
     }
 
-    /// Tests that a FingerDownContender with a single touch contact,
+    /// Tests that a FingerContactContender with a single touch contact,
     /// acceptable displacement, and one pressed button yields a
     /// Mismatch.
     #[fuchsia::test]
     fn finger_down_contender_single_button() {
         assert_matches!(
-            Box::new(FingerDownContender {
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+            Box::new(FingerContactContender {
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
                 max_time_elapsed: MAX_TIME_ELAPSED,
                 finger_down_event: TouchpadEvent {
                     contacts: vec![create_touch_contact(0, Position::zero())],
@@ -510,14 +510,14 @@ mod tests {
         );
     }
 
-    /// Tests that a FingerDownContender with a single touch contact,
+    /// Tests that a FingerContactContender with a single touch contact,
     /// acceptable displacement, and multiple pressed buttons yields a
     /// Mismatch.
     #[fuchsia::test]
     fn finger_down_contender_many_buttons() {
         assert_matches!(
-            Box::new(FingerDownContender {
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+            Box::new(FingerContactContender {
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
                 max_time_elapsed: MAX_TIME_ELAPSED,
                 finger_down_event: TouchpadEvent {
                     contacts: vec![create_touch_contact(0, Position::zero())],

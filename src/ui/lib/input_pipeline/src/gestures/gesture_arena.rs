@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    super::{click, motion, primary_tap},
     crate::{input_device, input_handler::UnhandledInputHandler, mouse_binding, touch_binding},
     async_trait::async_trait,
     core::cell::RefCell,
@@ -12,6 +13,23 @@ use {
     std::any::Any,
     std::fmt::Debug,
 };
+
+pub fn make_input_handler() -> std::rc::Rc<dyn crate::input_handler::InputHandler> {
+    std::rc::Rc::new(_GestureArena::new_internal(|| {
+        vec![
+            Box::new(click::InitialContender {
+                max_finger_displacement_in_mm: SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
+            }),
+            Box::new(motion::InitialContender {
+                min_movement_in_mm: SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
+            }),
+            Box::new(primary_tap::InitialContender {
+                max_finger_displacement_in_mm: SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM,
+                max_time_elapsed: TAP_TIMEOUT,
+            }),
+        ]
+    }))
+}
 
 pub(super) const PRIMARY_BUTTON: mouse_binding::MouseButton = 1;
 pub(super) const SECONDARY_BUTTON: mouse_binding::MouseButton = 2;
@@ -157,6 +175,9 @@ pub(super) trait Winner: std::fmt::Debug {
     fn process_new_event(self: Box<Self>, event: TouchpadEvent) -> ProcessNewEventResult;
 }
 
+const SPURIOUS_TO_INTENTIONAL_MOTION_THRESHOLD_MM: f32 = 16.0 / 12.0;
+const TAP_TIMEOUT: zx::Duration = zx::Duration::from_millis(200);
+
 #[derive(Debug)]
 enum MutableState {
     /// Not currently processing a gesture event stream.
@@ -194,6 +215,10 @@ struct _GestureArena<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> {
 impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> _GestureArena<ContenderFactory> {
     #[cfg(test)]
     fn new_for_test(contender_factory: ContenderFactory) -> _GestureArena<ContenderFactory> {
+        Self::new_internal(contender_factory)
+    }
+
+    fn new_internal(contender_factory: ContenderFactory) -> _GestureArena<ContenderFactory> {
         _GestureArena { contender_factory, mutable_state: RefCell::new(MutableState::Idle) }
     }
 }

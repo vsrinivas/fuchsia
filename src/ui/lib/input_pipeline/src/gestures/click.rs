@@ -14,10 +14,10 @@ use {
 
 /// The initial state of this recognizer, before a click has been detected.
 #[derive(Debug)]
-struct InitialContender {
+pub(super) struct InitialContender {
     /// The maximum displacement that a detected finger can withstand to still
     /// be considered a click. Measured in millimeters.
-    max_finger_displacement: f32,
+    pub(super) max_finger_displacement_in_mm: f32,
 }
 
 impl InitialContender {
@@ -26,7 +26,7 @@ impl InitialContender {
         initial_position: Position,
     ) -> Box<dyn gesture_arena::Contender> {
         Box::new(UnpressedContender {
-            max_finger_displacement: self.max_finger_displacement,
+            max_finger_displacement_in_mm: self.max_finger_displacement_in_mm,
             initial_position,
         })
     }
@@ -36,7 +36,7 @@ impl InitialContender {
         pressed_event: TouchpadEvent,
     ) -> Box<dyn gesture_arena::Contender> {
         Box::new(PressedContender {
-            max_finger_displacement: self.max_finger_displacement,
+            max_finger_displacement_in_mm: self.max_finger_displacement_in_mm,
             pressed_event,
         })
     }
@@ -67,7 +67,7 @@ impl gesture_arena::Contender for InitialContender {
 struct UnpressedContender {
     /// The maximum displacement that a detected finger can withstand to still
     /// be considered a click. Measured in millimeters.
-    max_finger_displacement: f32,
+    max_finger_displacement_in_mm: f32,
 
     /// The position of the initial single touch contact.
     initial_position: Position,
@@ -79,7 +79,7 @@ impl UnpressedContender {
         pressed_event: TouchpadEvent,
     ) -> Box<dyn gesture_arena::Contender> {
         Box::new(PressedContender {
-            max_finger_displacement: self.max_finger_displacement,
+            max_finger_displacement_in_mm: self.max_finger_displacement_in_mm,
             pressed_event,
         })
     }
@@ -94,7 +94,7 @@ impl gesture_arena::Contender for UnpressedContender {
         if !position_is_in_click_threshold(
             position_from_event(event),
             self.initial_position,
-            self.max_finger_displacement,
+            self.max_finger_displacement_in_mm,
         ) {
             return ExamineEventResult::Mismatch;
         }
@@ -113,7 +113,7 @@ impl gesture_arena::Contender for UnpressedContender {
 struct PressedContender {
     /// The maximum displacement that a detected finger can withstand to still
     /// be considered a click. Measured in millimeters.
-    max_finger_displacement: f32,
+    max_finger_displacement_in_mm: f32,
 
     /// The TouchpadEvent when a button was first pressed.
     pressed_event: TouchpadEvent,
@@ -136,7 +136,7 @@ impl gesture_arena::Contender for PressedContender {
                 if !position_is_in_click_threshold(
                     position_from_event(event),
                     position_from_event(&self.pressed_event),
-                    self.max_finger_displacement,
+                    self.max_finger_displacement_in_mm,
                 ) {
                     return ExamineEventResult::Mismatch;
                 }
@@ -256,8 +256,8 @@ mod tests {
         std::any::TypeId,
     };
 
-    const MAX_FINGER_DISPLACEMENT: f32 = 10.0;
-    const HALF_MOTION: f32 = MAX_FINGER_DISPLACEMENT / 2.0;
+    const MAX_FINGER_DISPLACEMENT_IN_MM: f32 = 10.0;
+    const HALF_MOTION: f32 = MAX_FINGER_DISPLACEMENT_IN_MM / 2.0;
 
     fn assert_contender_matches_type_id(result: ExamineEventResult, type_id: TypeId) {
         match result {
@@ -291,12 +291,14 @@ mod tests {
     #[fuchsia::test]
     async fn contender_no_touch_contacts() {
         assert_matches!(
-            Box::new(InitialContender { max_finger_displacement: MAX_FINGER_DISPLACEMENT })
-                .examine_event(&TouchpadEvent {
-                    contacts: vec![],
-                    timestamp: zx::Time::from_nanos(0),
-                    pressed_buttons: vec![],
-                }),
+            Box::new(InitialContender {
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM
+            })
+            .examine_event(&TouchpadEvent {
+                contacts: vec![],
+                timestamp: zx::Time::from_nanos(0),
+                pressed_buttons: vec![],
+            }),
             ExamineEventResult::Mismatch
         );
     }
@@ -306,15 +308,17 @@ mod tests {
     #[fuchsia::test]
     async fn contender_many_touch_contacts() {
         assert_matches!(
-            Box::new(InitialContender { max_finger_displacement: MAX_FINGER_DISPLACEMENT })
-                .examine_event(&TouchpadEvent {
-                    contacts: vec![
-                        create_touch_contact(0, Position::zero()),
-                        create_touch_contact(1, Position::zero())
-                    ],
-                    timestamp: zx::Time::from_nanos(0),
-                    pressed_buttons: vec![],
-                }),
+            Box::new(InitialContender {
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM
+            })
+            .examine_event(&TouchpadEvent {
+                contacts: vec![
+                    create_touch_contact(0, Position::zero()),
+                    create_touch_contact(1, Position::zero())
+                ],
+                timestamp: zx::Time::from_nanos(0),
+                pressed_buttons: vec![],
+            }),
             ExamineEventResult::Mismatch
         );
     }
@@ -324,12 +328,14 @@ mod tests {
     #[fuchsia::test]
     async fn contender_no_buttons() {
         assert_contender_matches_type_id(
-            Box::new(InitialContender { max_finger_displacement: MAX_FINGER_DISPLACEMENT })
-                .examine_event(&TouchpadEvent {
-                    contacts: vec![create_touch_contact(0, Position::zero())],
-                    timestamp: zx::Time::from_nanos(0),
-                    pressed_buttons: vec![],
-                }),
+            Box::new(InitialContender {
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
+            })
+            .examine_event(&TouchpadEvent {
+                contacts: vec![create_touch_contact(0, Position::zero())],
+                timestamp: zx::Time::from_nanos(0),
+                pressed_buttons: vec![],
+            }),
             TypeId::of::<UnpressedContender>(),
         );
     }
@@ -339,12 +345,14 @@ mod tests {
     #[fuchsia::test]
     async fn contender_single_button() {
         assert_contender_matches_type_id(
-            Box::new(InitialContender { max_finger_displacement: MAX_FINGER_DISPLACEMENT })
-                .examine_event(&TouchpadEvent {
-                    contacts: vec![create_touch_contact(0, Position::zero())],
-                    timestamp: zx::Time::from_nanos(0),
-                    pressed_buttons: vec![0],
-                }),
+            Box::new(InitialContender {
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
+            })
+            .examine_event(&TouchpadEvent {
+                contacts: vec![create_touch_contact(0, Position::zero())],
+                timestamp: zx::Time::from_nanos(0),
+                pressed_buttons: vec![0],
+            }),
             TypeId::of::<PressedContender>(),
         );
     }
@@ -354,12 +362,14 @@ mod tests {
     #[fuchsia::test]
     async fn contender_many_buttons() {
         assert_matches!(
-            Box::new(InitialContender { max_finger_displacement: MAX_FINGER_DISPLACEMENT })
-                .examine_event(&TouchpadEvent {
-                    contacts: vec![create_touch_contact(0, Position::zero())],
-                    timestamp: zx::Time::from_nanos(0),
-                    pressed_buttons: vec![0, 1],
-                },),
+            Box::new(InitialContender {
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM
+            })
+            .examine_event(&TouchpadEvent {
+                contacts: vec![create_touch_contact(0, Position::zero())],
+                timestamp: zx::Time::from_nanos(0),
+                pressed_buttons: vec![0, 1],
+            },),
             ExamineEventResult::Mismatch
         );
     }
@@ -371,7 +381,7 @@ mod tests {
         assert_matches!(
             Box::new(UnpressedContender {
                 initial_position: Position::zero(),
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM
             })
             .examine_event(&TouchpadEvent {
                 contacts: vec![],
@@ -389,7 +399,7 @@ mod tests {
         assert_matches!(
             Box::new(UnpressedContender {
                 initial_position: Position::zero(),
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM
             })
             .examine_event(&TouchpadEvent {
                 contacts: vec![
@@ -410,12 +420,12 @@ mod tests {
         assert_matches!(
             Box::new(UnpressedContender {
                 initial_position: Position::zero(),
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM
             })
             .examine_event(&TouchpadEvent {
                 contacts: vec![create_touch_contact(
                     0,
-                    Position { x: MAX_FINGER_DISPLACEMENT, y: MAX_FINGER_DISPLACEMENT }
+                    Position { x: MAX_FINGER_DISPLACEMENT_IN_MM, y: MAX_FINGER_DISPLACEMENT_IN_MM }
                 ),],
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![],
@@ -432,7 +442,7 @@ mod tests {
         assert_contender_matches_type_id(
             Box::new(UnpressedContender {
                 initial_position: Position::zero(),
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
             })
             .examine_event(&TouchpadEvent {
                 contacts: vec![create_touch_contact(
@@ -454,7 +464,7 @@ mod tests {
         assert_contender_matches_type_id(
             Box::new(UnpressedContender {
                 initial_position: Position::zero(),
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
             })
             .examine_event(&TouchpadEvent {
                 contacts: vec![create_touch_contact(
@@ -476,7 +486,7 @@ mod tests {
         assert_matches!(
             Box::new(UnpressedContender {
                 initial_position: Position::zero(),
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM
             })
             .examine_event(&TouchpadEvent {
                 contacts: vec![create_touch_contact(
@@ -496,7 +506,7 @@ mod tests {
     async fn pressed_contender_no_touch_contacts() {
         assert_examined_matched_contender(
             Box::new(PressedContender {
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
                 pressed_event: TouchpadEvent {
                     contacts: vec![create_touch_contact(0, Position::zero())],
                     timestamp: zx::Time::from_nanos(0),
@@ -517,7 +527,7 @@ mod tests {
     async fn pressed_contender_many_touch_contacts() {
         assert_matches!(
             Box::new(PressedContender {
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
                 pressed_event: TouchpadEvent {
                     contacts: vec![create_touch_contact(0, Position::zero())],
                     timestamp: zx::Time::from_nanos(0),
@@ -542,7 +552,7 @@ mod tests {
     async fn pressed_contender_large_displacement() {
         assert_matches!(
             Box::new(PressedContender {
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
                 pressed_event: TouchpadEvent {
                     contacts: vec![create_touch_contact(0, Position::zero())],
                     timestamp: zx::Time::from_nanos(0),
@@ -552,7 +562,7 @@ mod tests {
             .examine_event(&TouchpadEvent {
                 contacts: vec![create_touch_contact(
                     0,
-                    Position { x: MAX_FINGER_DISPLACEMENT, y: MAX_FINGER_DISPLACEMENT }
+                    Position { x: MAX_FINGER_DISPLACEMENT_IN_MM, y: MAX_FINGER_DISPLACEMENT_IN_MM }
                 )],
                 timestamp: zx::Time::from_nanos(0),
                 pressed_buttons: vec![],
@@ -568,7 +578,7 @@ mod tests {
     async fn pressed_contender_no_buttons() {
         assert_examined_matched_contender(
             Box::new(PressedContender {
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
                 pressed_event: TouchpadEvent {
                     contacts: vec![create_touch_contact(0, Position::zero())],
                     timestamp: zx::Time::from_nanos(0),
@@ -593,7 +603,7 @@ mod tests {
     async fn pressed_contender_single_button() {
         assert_contender_matches_type_id(
             Box::new(PressedContender {
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
                 pressed_event: TouchpadEvent {
                     contacts: vec![create_touch_contact(0, Position::zero())],
                     timestamp: zx::Time::from_nanos(0),
@@ -619,7 +629,7 @@ mod tests {
     async fn pressed_contender_many_buttons() {
         assert_matches!(
             Box::new(PressedContender {
-                max_finger_displacement: MAX_FINGER_DISPLACEMENT,
+                max_finger_displacement_in_mm: MAX_FINGER_DISPLACEMENT_IN_MM,
                 pressed_event: TouchpadEvent {
                     contacts: vec![create_touch_contact(0, Position::zero())],
                     timestamp: zx::Time::from_nanos(0),
