@@ -10,6 +10,7 @@
 #include <lib/fitx/result.h>
 #include <zircon/assert.h>
 
+#include <optional>
 #include <string_view>
 #include <type_traits>
 #include <utility>
@@ -36,7 +37,7 @@ struct Class0x1RomEntry : public hwreg::RegisterBase<Class0x1RomEntry, uint32_t>
 };
 
 // [CS] D7.5.17
-struct Class0x9RomNarrowEntry : public hwreg::RegisterBase<Class0x9RomNarrowEntry, uint32_t> {
+struct Class0x9Rom32BitEntry : public hwreg::RegisterBase<Class0x9Rom32BitEntry, uint32_t> {
   DEF_FIELD(31, 12, offset);
   DEF_RSVDZ_FIELD(11, 9);
   DEF_FIELD(8, 4, powerid);
@@ -45,13 +46,13 @@ struct Class0x9RomNarrowEntry : public hwreg::RegisterBase<Class0x9RomNarrowEntr
   DEF_FIELD(1, 0, present);
 
   static auto GetAt(uint32_t offset, uint32_t N) {
-    return hwreg::RegisterAddr<Class0x9RomNarrowEntry>(offset +
-                                                       N * static_cast<uint32_t>(sizeof(uint32_t)));
+    return hwreg::RegisterAddr<Class0x9Rom32BitEntry>(offset +
+                                                      N * static_cast<uint32_t>(sizeof(uint32_t)));
   }
 };
 
 // [CS] D7.5.17
-struct Class0x9RomWideEntry : public hwreg::RegisterBase<Class0x9RomWideEntry, uint64_t> {
+struct Class0x9Rom64BitEntry : public hwreg::RegisterBase<Class0x9Rom64BitEntry, uint64_t> {
   DEF_FIELD(63, 12, offset);
   DEF_RSVDZ_FIELD(11, 9);
   DEF_FIELD(8, 4, powerid);
@@ -60,18 +61,23 @@ struct Class0x9RomWideEntry : public hwreg::RegisterBase<Class0x9RomWideEntry, u
   DEF_FIELD(1, 0, present);
 
   static auto GetAt(uint32_t offset, uint32_t N) {
-    return hwreg::RegisterAddr<Class0x9RomWideEntry>(offset +
-                                                     N * static_cast<uint32_t>(sizeof(uint64_t)));
+    return hwreg::RegisterAddr<Class0x9Rom64BitEntry>(offset +
+                                                      N * static_cast<uint32_t>(sizeof(uint64_t)));
   }
 };
 
 // [CS] D7.5.10
 struct Class0x9RomDeviceIdRegister
     : public hwreg::RegisterBase<Class0x9RomDeviceIdRegister, uint32_t> {
+  enum class Format : uint8_t {
+    k32Bit = 0,
+    k64Bit = 1,
+  };
+
   DEF_RSVDZ_FIELD(31, 6);
   DEF_BIT(5, prr);
   DEF_BIT(4, sysmem);
-  DEF_FIELD(3, 0, format);
+  DEF_ENUM_FIELD(Format, 3, 0, format);
 
   static auto GetAt(uint32_t offset) {
     return hwreg::RegisterAddr<Class0x9RomDeviceIdRegister>(offset + 0xfcc);
@@ -115,16 +121,13 @@ class RomTable {
 
  private:
   using ClassId = ComponentIdRegister::Class;
+  using Class0x9EntryFormat = Class0x9RomDeviceIdRegister::Format;
 
   // [CS] D6.2.1, D7.2.1
-  // The largest possible ROM table entry index, for various types.
-  static constexpr uint32_t k0x1EntryUpperBound = 960u;
-  static constexpr uint32_t k0x9NarrowEntryUpperBound = 512u;
-  static constexpr uint32_t k0x9WideEntryUpperBound = 256u;
-
-  // [CS] D7.5.10
-  static constexpr uint8_t kDevidFormatNarrow = 0x0;
-  static constexpr uint8_t kDevidFormatWide = 0x1;
+  // The maximum number of ROM table entries, for various types.
+  static constexpr uint32_t kMax0x1RomEntries = 960u;
+  static constexpr uint32_t kMax0x9Rom32BitEntries = 512u;
+  static constexpr uint32_t kMax0x9Rom64BitEntries = 256u;
 
   // There are several types of ROM table entry registers; this struct serves
   // as unified front-end for accessing their contents.
@@ -142,15 +145,27 @@ class RomTable {
     const auto architect = static_cast<uint16_t>(arch_reg.architect());
     const auto archid = static_cast<uint16_t>(arch_reg.archid());
     if (IsTable(classid, architect, archid)) {
-      const auto format =
-          static_cast<uint8_t>(Class0x9RomDeviceIdRegister::GetAt(offset).ReadFrom(&io).format());
-
-      fitx::result<std::string_view, uint32_t> upper_bound = EntryIndexUpperBound(classid, format);
-      if (upper_bound.is_error()) {
-        return fitx::error(WalkError{upper_bound.error_value(), offset});
+      uint32_t max_entries = 0;
+      std::optional<Class0x9EntryFormat> format;
+      if (classid == ClassId::k0x1RomTable) {
+        max_entries = kMax0x1RomEntries;
+      } else {
+        // If not a class 0x1 table, then a class 0x9.
+        ZX_DEBUG_ASSERT(classid == ClassId::kCoreSight);
+        format = Class0x9RomDeviceIdRegister::GetAt(offset).ReadFrom(&io).format();
+        switch (*format) {
+          case Class0x9EntryFormat::k32Bit:
+            max_entries = kMax0x9Rom32BitEntries;
+            break;
+          case Class0x9EntryFormat::k64Bit:
+            max_entries = kMax0x9Rom64BitEntries;
+            break;
+          default:
+            return fitx::error(WalkError{"bad format value", offset});
+        }
       }
 
-      for (uint32_t i = 0; i < upper_bound.value(); ++i) {
+      for (uint32_t i = 0; i < max_entries; ++i) {
         fitx::result<std::string_view, EntryContents> read_entry_result =
             ReadEntryAt(io, offset, i, classid, format);
         if (read_entry_result.is_error()) {
@@ -189,13 +204,10 @@ class RomTable {
 
   static bool IsTable(ClassId classid, uint16_t architect, uint16_t archid);
 
-  static fitx::result<std::string_view, uint32_t> EntryIndexUpperBound(ClassId classid,
-                                                                       uint8_t format);
-
   template <typename IoProvider>
-  static fitx::result<std::string_view, EntryContents> ReadEntryAt(IoProvider io, uint32_t offset,
-                                                                   uint32_t N, ClassId classid,
-                                                                   uint8_t format) {
+  static fitx::result<std::string_view, EntryContents> ReadEntryAt(
+      IoProvider io, uint32_t offset, uint32_t N, ClassId classid,
+      std::optional<Class0x9EntryFormat> format) {
     if (classid == ClassId::k0x1RomTable) {
       auto entry = Class0x1RomEntry::GetAt(offset, N).ReadFrom(&io);
       return fitx::ok(EntryContents{
@@ -207,10 +219,11 @@ class RomTable {
 
     // If not a class 0x1 table, then a class 0x9.
     ZX_DEBUG_ASSERT(classid == ClassId::kCoreSight);
+    ZX_DEBUG_ASSERT(format);
 
-    switch (format) {
-      case kDevidFormatNarrow: {
-        auto entry = Class0x9RomNarrowEntry::GetAt(offset, N).ReadFrom(&io);
+    switch (*format) {
+      case Class0x9EntryFormat::k32Bit: {
+        auto entry = Class0x9Rom32BitEntry::GetAt(offset, N).ReadFrom(&io);
         return fitx::ok(EntryContents{
             .value = entry.reg_value(),
             .offset = static_cast<uint32_t>(entry.offset()),
@@ -218,8 +231,8 @@ class RomTable {
             .present = static_cast<bool>(entry.present() & 0b11),
         });
       }
-      case kDevidFormatWide: {
-        auto entry = Class0x9RomWideEntry::GetAt(offset, N).ReadFrom(&io);
+      case Class0x9EntryFormat::k64Bit: {
+        auto entry = Class0x9Rom64BitEntry::GetAt(offset, N).ReadFrom(&io);
         uint64_t u32_offset = entry.offset() & 0xffffffff;
         if (entry.offset() != u32_offset) {
           return fitx::error(

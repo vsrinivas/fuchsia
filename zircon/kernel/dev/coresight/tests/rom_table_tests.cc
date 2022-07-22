@@ -53,7 +53,6 @@ TEST_F(RomTableTest, Empty0x1Table) {
       // Visit: Table (class 0x1)
       .ExpectRead(kClass0x1RomComponentIdReg, 0x0000 + 0xff4)
       .ExpectRead(kEmptyDevArchReg, 0x0000 + 0xfbc)
-      .ExpectRead(kDevIdReg, 0x0000 + 0xfcc)
       // Read: Entry0 of Table (empty and last)
       .ExpectRead(kEmptyRomEntryReg, 0u);
 
@@ -86,7 +85,6 @@ TEST_F(RomTableTest, DepthOneReferences) {
       // Visit: Table (class 0x1)
       .ExpectRead(kClass0x1RomComponentIdReg, 0x0000 + 0xff4)
       .ExpectRead(kEmptyDevArchReg, 0x0000 + 0xfbc)
-      .ExpectRead(kDevIdReg, 0x0000 + 0xfcc)
       // Read: Entry0 of Table -> Component0
       .ExpectRead(kOffset0x1000Class0x1RomEntryReg, 0x0000)
           // Visit: Component0
@@ -126,13 +124,11 @@ TEST_F(RomTableTest, DepthTwoReferences) {
       // Visit: Table (class 0x1)
       .ExpectRead(kClass0x1RomComponentIdReg, 0x0000 + 0xff4)
       .ExpectRead(kEmptyDevArchReg, 0x0000 + 0xfbc)
-      .ExpectRead(kDevIdReg, 0x0000 + 0xfcc)
       // Read: Entry0 of Table -> Subtable0
       .ExpectRead(kOffset0x1000Class0x1RomEntryReg, 0x0000)
           // Visit: Subtable0 (class 0x1)
           .ExpectRead(kClass0x1RomComponentIdReg, 0x1000 + 0xff4)
           .ExpectRead(kEmptyDevArchReg, 0x1000 + 0xfbc)
-          .ExpectRead(kDevIdReg, 0x1000 + 0xfcc)
           // Read: Entry0 of Subtable0 -> Component00
           .ExpectRead(kOffset0x1000Class0x1RomEntryReg, 0x1000)
               // Visit: Component00
@@ -201,13 +197,11 @@ TEST_F(RomTableTest, NegativeOffset) {
       // Visit: Table (class 0x1)
       .ExpectRead(kClass0x1RomComponentIdReg, 0x0000 + 0xff4)
       .ExpectRead(kEmptyDevArchReg, 0x0000 + 0xfbc)
-      .ExpectRead(kDevIdReg, 0x0000 + 0xfcc)
       // Read: Entry0 of Table -> Subtable0
       .ExpectRead(kOffset0xa000Class0x1RomEntryReg, 0x0000)
           // Visit: Subtable0 (class 0x1)
           .ExpectRead(kClass0x1RomComponentIdReg, 0xa000 + 0xff4)
           .ExpectRead(kEmptyDevArchReg, 0xa000 + 0xfbc)
-          .ExpectRead(kDevIdReg, 0xa000 + 0xfcc)
           // Read: Entry0 of Subtable0 -> Component00
           .ExpectRead(kOffset0xfffff000Class0x1RomEntryReg, 0xa000)
               // Visit: Component00
