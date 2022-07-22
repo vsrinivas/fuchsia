@@ -47,7 +47,8 @@ template("fidl_api_compatibility_test") {
       "--stamp",
       rebase_path(stamp_file, root_build_dir),
       "--fidl_api_diff_path",
-      rebase_path("$root_build_dir/host_x64/fidl_api_diff", root_build_dir),
+      rebase_path("$root_build_dir/host_${host_cpu}/fidl_api_diff",
+                  root_build_dir),
       "--policy",
       policy,
     ]
