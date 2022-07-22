@@ -14,9 +14,6 @@ use futures::future::BoxFuture;
 use futures::stream::{FuturesUnordered, StreamFuture};
 use futures::StreamExt;
 
-use super::device_storage::{DeviceStorage, DeviceStorageConvertible};
-use super::fidl_storage::{FidlStorage, FidlStorageConvertible};
-use super::storage_factory::StorageFactory;
 use crate::accessibility::types::AccessibilityInfo;
 use crate::agent::{self, Context, Lifespan};
 use crate::audio::policy as audio_policy;
@@ -41,11 +38,13 @@ use crate::policy::{PolicyInfo, PolicyType};
 use crate::privacy::types::PrivacyInfo;
 use crate::service::{self, Address};
 use crate::setup::types::SetupInfo;
-use crate::storage::{
-    Error, Payload, StorageInfo, StorageRequest, StorageResponse, StorageType, UpdateState,
-};
+use crate::storage::{Error, Payload, StorageInfo, StorageRequest, StorageResponse, StorageType};
 use crate::Role;
 use crate::{trace, trace_guard};
+use settings_storage::device_storage::{DeviceStorage, DeviceStorageConvertible};
+use settings_storage::fidl_storage::{FidlStorage, FidlStorageConvertible};
+use settings_storage::storage_factory::StorageFactory;
+use settings_storage::UpdateState;
 
 /// `Blueprint` struct for managing the state needed to construct a [`StorageAgent`].
 pub(crate) struct Blueprint<T, F>
@@ -385,14 +384,14 @@ payload_convert!(Storage, Payload);
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
-    use crate::agent::storage::storage_factory::FidlStorageFactory;
     use crate::async_property_test;
     use crate::display::types::LightData;
     use crate::message::base::Audience;
     use crate::message::MessageHubUtil;
+    use crate::storage::testing::InMemoryStorageFactory;
     use fidl::endpoints::create_proxy_and_stream;
     use fidl_fuchsia_io::DirectoryMarker;
+    use settings_storage::storage_factory::FidlStorageFactory;
 
     enum Setting {
         Info(SettingInfo),

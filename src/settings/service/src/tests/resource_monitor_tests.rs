@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
 use crate::agent::{BlueprintHandle, Context as AgentContext, Payload};
 use crate::monitor;
 use crate::monitor::base::monitor::Context as MonitorContext;
 use crate::monitor::environment::Actor;
+use crate::storage::testing::InMemoryStorageFactory;
 use crate::tests::scaffold;
 use crate::EnvironmentBuilder;
 use anyhow::Error;

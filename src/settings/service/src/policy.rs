@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::device_storage::DeviceStorage;
-use crate::agent::storage::storage_factory::StorageFactory;
 use crate::audio::policy::{self as audio, State};
 use crate::base::SettingType;
 use crate::generate_inspect_with_info;
@@ -15,6 +13,8 @@ use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
 use serde::{Deserialize, Serialize};
+use settings_storage::device_storage::DeviceStorage;
+use settings_storage::storage_factory::StorageFactory;
 use std::borrow::Cow;
 use std::convert::TryFrom;
 use std::sync::Arc;
@@ -99,7 +99,7 @@ conversion_impls! {
 #[cfg(test)]
 mod testing {
     use super::{PolicyInfo, UnknownInfo};
-    use crate::agent::storage::device_storage::DeviceStorageCompatible;
+    use settings_storage::device_storage::DeviceStorageCompatible;
 
     impl DeviceStorageCompatible for UnknownInfo {
         const KEY: &'static str = "unknown_info";

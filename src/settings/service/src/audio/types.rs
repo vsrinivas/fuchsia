@@ -5,8 +5,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use crate::agent::storage::device_storage::DeviceStorageCompatible;
 use crate::audio::{create_default_modified_counters, default_audio_info, ModifiedCounters};
+use settings_storage::device_storage::DeviceStorageCompatible;
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum AudioSettingSource {

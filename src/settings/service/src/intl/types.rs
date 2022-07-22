@@ -5,8 +5,8 @@
 use fidl_fuchsia_settings::IntlSettings;
 use serde::{Deserialize, Serialize};
 
-use crate::agent::storage::fidl_storage::FidlStorageConvertible;
 use crate::base::Merge;
+use settings_storage::fidl_storage::FidlStorageConvertible;
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct IntlInfo {
@@ -155,9 +155,9 @@ impl From<HourCycle> for fidl_fuchsia_settings::HourCycle {
 
 #[cfg(test)]
 mod tests {
-    use crate::agent::storage::fidl_storage::FidlStorageConvertible;
     use crate::intl::types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
     use fidl_fuchsia_settings::IntlSettings;
+    use settings_storage::fidl_storage::FidlStorageConvertible;
 
     const TIME_ZONE_ID: &str = "PDT";
     const LOCALE_ID: &str = "en_us";

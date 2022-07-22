@@ -17,12 +17,12 @@ use crate::blueprint_definition;
 use crate::clock;
 use crate::handler::base::{Error, Payload as HandlerPayload, Request};
 use crate::inspect::utils::enums::ResponseType;
-use crate::inspect::utils::inspect_queue::InspectQueue;
-use crate::inspect::utils::inspect_writable_map::InspectWritableMap;
 use crate::message::base::{filter, MessageEvent, MessengerType};
 use crate::message::receptor::Receptor;
 use crate::service::TryFromWithClient;
 use crate::{service, trace};
+use settings_inspect_utils::inspect_queue::InspectQueue;
+use settings_inspect_utils::inspect_writable_map::InspectWritableMap;
 
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, component, NumericProperty, Property};
@@ -313,7 +313,7 @@ impl SettingProxyInspectAgent {
         inspect_queue.push(RequestInspectInfo::new(
             format!("{:?}", request),
             timestamp.clone(),
-            &inspect_queue.inspect_node,
+            inspect_queue.inspect_node(),
             &format!("{:020}", count),
         ));
 
@@ -360,7 +360,7 @@ impl SettingProxyInspectAgent {
             .requests_by_type
             .get_mut(&link_info.key)
             .expect("Should find a RequestInspectInfo to record the response.");
-        let last_requests = &mut request_info_queue.items;
+        let last_requests = request_info_queue.items_mut();
 
         // The match should be the last item in the queue if a response replies back immediately.
         for request in last_requests.iter().rev() {

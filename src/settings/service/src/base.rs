@@ -258,7 +258,7 @@ pub(crate) fn get_all_setting_types() -> HashSet<SettingType> {
 
 #[cfg(test)]
 mod testing {
-    use crate::agent::storage::device_storage::DeviceStorageCompatible;
+    use settings_storage::device_storage::DeviceStorageCompatible;
 
     use super::{SettingInfo, UnknownInfo};
 

@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
-use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
-use crate::agent::storage::storage_factory::{StorageAccess, StorageFactory};
 use crate::base::{SettingInfo, SettingType, UnknownInfo};
 use crate::message::base::{Audience, MessengerType};
 use crate::service::{self, Address};
-use crate::storage::{Payload, StorageInfo, StorageRequest, StorageResponse, UpdateState};
+use crate::storage::testing::InMemoryStorageFactory;
+use crate::storage::{Payload, StorageInfo, StorageRequest, StorageResponse};
 use crate::EnvironmentBuilder;
 use assert_matches::assert_matches;
+use settings_storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use settings_storage::storage_factory::{StorageAccess, StorageFactory};
+use settings_storage::UpdateState;
 use std::sync::Arc;
 
 const ENV_NAME: &str = "storage_agent_test_environment";

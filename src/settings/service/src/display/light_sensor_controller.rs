@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::agent::storage::device_storage::DeviceStorage;
-use crate::agent::storage::storage_factory::StorageAccess;
 use crate::base::SettingInfo;
 use crate::display::light_sensor::{open_sensor, read_sensor, Sensor};
 use crate::display::types::LightData;
@@ -21,6 +19,8 @@ use futures::channel::oneshot::{self, Receiver, Sender};
 use futures::future::{AbortHandle, Abortable, FusedFuture};
 use futures::lock::Mutex;
 use futures::prelude::*;
+use settings_storage::device_storage::DeviceStorage;
+use settings_storage::storage_factory::StorageAccess;
 use std::fs::File;
 use std::pin::Pin;
 use std::sync::Arc;

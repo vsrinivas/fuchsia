@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
 use crate::ingress::fidl::Interface;
 use crate::setup::types::{ConfigurationInterfaceFlags, SetupInfo};
+use crate::storage::testing::InMemoryStorageFactory;
 use crate::tests::fakes::hardware_power_statecontrol_service::{
     Action, HardwarePowerStatecontrolService,
 };

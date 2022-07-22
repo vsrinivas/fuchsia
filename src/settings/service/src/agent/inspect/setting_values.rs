@@ -17,11 +17,11 @@ use crate::blueprint_definition;
 use crate::clock;
 use crate::handler::base::{Payload as SettingPayload, Request};
 use crate::handler::setting_handler::{Event, Payload as HandlerPayload};
-use crate::inspect::utils::inspect_writable_map::InspectWritableMap;
 use crate::message::base::{filter, Audience, MessageEvent, MessengerType};
 use crate::service;
 use crate::service::message::Messenger;
 use crate::service::TryFromWithClient;
+use settings_inspect_utils::inspect_writable_map::InspectWritableMap;
 
 const INSPECT_NODE_NAME: &str = "setting_values";
 const SETTING_TYPE_INSPECT_NODE_NAME: &str = "setting_types";

@@ -63,8 +63,6 @@
 //! [Response]: crate::handler::base::Payload::Response
 //! [Rebroadcast]: crate::handler::base::Request::Rebroadcast
 
-use crate::agent::storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
-use crate::agent::storage::storage_factory::StorageAccess;
 use crate::audio::default_audio_info;
 use crate::audio::policy::{
     self as audio_policy, AudioPolicyConfig, PolicyId, PropertyTarget, Request as PolicyRequest,
@@ -87,6 +85,8 @@ use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_err;
 use fuchsia_trace as ftrace;
+use settings_storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use settings_storage::storage_factory::StorageAccess;
 use std::collections::hash_map::Entry;
 
 /// Used as the argument field in a ControllerError::InvalidArgument to signal the FIDL handler to

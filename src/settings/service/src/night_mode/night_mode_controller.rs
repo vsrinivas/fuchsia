@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
-use crate::agent::storage::storage_factory::StorageAccess;
 use crate::base::SettingInfo;
 use crate::handler::base::Request;
 use crate::handler::setting_handler::persist::{controller as data_controller, ClientProxy};
@@ -12,6 +10,8 @@ use crate::handler::setting_handler::{
 };
 use crate::night_mode::types::NightModeInfo;
 use async_trait::async_trait;
+use settings_storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use settings_storage::storage_factory::StorageAccess;
 
 impl DeviceStorageCompatible for NightModeInfo {
     const KEY: &'static str = "night_mode_info";

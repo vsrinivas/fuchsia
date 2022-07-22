@@ -13,7 +13,6 @@ use crate::agent::Payload;
 use crate::base::SettingType;
 use crate::blueprint_definition;
 use crate::handler::base::{Payload as HandlerPayload, Request};
-use crate::inspect::utils::managed_inspect_map::ManagedInspectMap;
 use crate::message::base::{filter, MessageEvent, MessengerType};
 use crate::service::TryFromWithClient;
 use crate::{service, trace};
@@ -22,6 +21,7 @@ use fuchsia_inspect::{self as inspect, component};
 use fuchsia_inspect_derive::Inspect;
 use futures::StreamExt;
 use inspect::NumericProperty;
+use settings_inspect_utils::managed_inspect_map::ManagedInspectMap;
 use std::collections::HashMap;
 use std::sync::Arc;
 

@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use crate::agent::restore_agent;
-use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
 use crate::base::SettingType;
 use crate::factory_reset::types::FactoryResetInfo;
 use crate::handler::base::Request;
 use crate::handler::setting_handler::ControllerError;
 use crate::ingress::fidl::Interface;
+use crate::storage::testing::InMemoryStorageFactory;
 use crate::tests::fakes::base::create_setting_handler;
 use crate::tests::fakes::recovery_policy_service::RecoveryPolicy;
 use crate::tests::fakes::service_registry::ServiceRegistry;

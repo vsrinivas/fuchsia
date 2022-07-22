@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 
 use crate::agent::restore_agent;
-use crate::agent::storage::device_storage::DeviceStorage;
-use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
 use crate::audio::types::{AudioInfo, AudioSettingSource, AudioStream, AudioStreamType};
 use crate::audio::{create_default_modified_counters, default_audio_info};
 use crate::base::SettingType;
 use crate::ingress::fidl::Interface;
+use crate::storage::testing::InMemoryStorageFactory;
 use crate::tests::fakes::audio_core_service::{self, AudioCoreService};
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::tests::fakes::sound_player_service::SoundPlayerService;
@@ -21,6 +20,7 @@ use fidl_fuchsia_settings::*;
 use fuchsia_component::server::NestedEnvironment;
 use fuchsia_zircon::Status;
 use futures::lock::Mutex;
+use settings_storage::device_storage::DeviceStorage;
 use std::collections::HashMap;
 use std::sync::Arc;
 

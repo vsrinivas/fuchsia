@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
 use crate::base::{SettingInfo, SettingType, UnknownInfo as SettingUnknownInfo};
 use crate::handler::base::{Payload, Request, Response as SettingResponse};
 use crate::handler::setting_handler::SettingHandlerResult;
@@ -15,6 +14,7 @@ use crate::policy::{
     self as policy_base, BoxedHandler, PolicyHandlerFactory, PolicyType, UnknownInfo,
 };
 use crate::service;
+use crate::storage::testing::InMemoryStorageFactory;
 use crate::tests::message_utils::verify_payload;
 use async_trait::async_trait;
 use futures::future::BoxFuture;

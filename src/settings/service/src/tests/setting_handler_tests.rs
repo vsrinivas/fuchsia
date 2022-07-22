@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use crate::accessibility::types::AccessibilityInfo;
-use crate::agent::storage::device_storage::DeviceStorageCompatible;
-use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
-use crate::agent::storage::storage_factory::FidlStorageFactory;
 use crate::agent::{restore_agent, Blueprint};
 use crate::base::{get_all_setting_types, SettingInfo, SettingType, UnknownInfo};
 use crate::handler::base::{ContextBuilder, Request};
@@ -18,6 +15,7 @@ use crate::handler::setting_handler::{
 use crate::message::base::{Audience, MessengerType};
 use crate::message::MessageHubUtil;
 use crate::service;
+use crate::storage::testing::InMemoryStorageFactory;
 use crate::tests::message_utils::verify_payload;
 use crate::EnvironmentBuilder;
 use async_trait::async_trait;
@@ -25,6 +23,8 @@ use fidl::endpoints::create_proxy_and_stream;
 use fidl_fuchsia_io::DirectoryMarker;
 use futures::channel::mpsc::{unbounded, UnboundedSender};
 use futures::StreamExt;
+use settings_storage::device_storage::DeviceStorageCompatible;
+use settings_storage::storage_factory::FidlStorageFactory;
 use std::collections::hash_map::Entry;
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
@@ -150,7 +150,7 @@ async fn test_write_notify() {
     .await;
 
     let (directory_proxy, _stream) = create_proxy_and_stream::<DirectoryMarker>().unwrap();
-    let blueprint = crate::agent::storage::storage_agent::Blueprint::new(
+    let blueprint = crate::agent::storage_agent::Blueprint::new(
         Arc::clone(&storage_factory),
         Arc::new(FidlStorageFactory::new(1, directory_proxy)),
     );

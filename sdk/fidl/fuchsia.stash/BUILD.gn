@@ -30,6 +30,7 @@ fidl("fuchsia.stash") {
     "//src/modular/lib/modular_test_harness/*",
     "//src/modular/tests/*",
     "//src/settings/service/*",
+    "//src/settings/storage/*",
     "//src/sys/pkg/bin/omaha-client/*",
     "//src/sys/stash/*",
     "//src/sys/tools/stash_ctl/*",

@@ -3,9 +3,6 @@
 // found in the LICENSE file.
 
 use crate::agent::authority::Authority;
-use crate::agent::storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
-use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
-use crate::agent::storage::storage_factory::{FidlStorageFactory, StorageFactory};
 use crate::agent::Lifespan;
 use crate::audio::default_audio_info;
 use crate::audio::policy::audio_policy_handler::{AudioPolicyHandler, ARG_POLICY_ID};
@@ -26,12 +23,15 @@ use crate::policy::{PolicyInfo, PolicyType, Request};
 use crate::service;
 use crate::service::TryFromWithClient;
 use crate::service_context::ServiceContext;
+use crate::storage::testing::InMemoryStorageFactory;
 use crate::tests::message_utils::verify_payload;
 use assert_matches::assert_matches;
 use fidl::endpoints::create_proxy_and_stream;
 use fidl_fuchsia_io::DirectoryMarker;
 use fuchsia_async::Task;
 use futures::StreamExt;
+use settings_storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use settings_storage::storage_factory::{FidlStorageFactory, StorageFactory};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -103,7 +103,7 @@ impl TestEnvironment {
         let (directory_proxy, _stream) = create_proxy_and_stream::<DirectoryMarker>().unwrap();
 
         agent_authority
-            .register(Arc::new(crate::agent::storage::storage_agent::Blueprint::new(
+            .register(Arc::new(crate::agent::storage_agent::Blueprint::new(
                 storage_factory,
                 Arc::new(FidlStorageFactory::new(1, directory_proxy)),
             )))

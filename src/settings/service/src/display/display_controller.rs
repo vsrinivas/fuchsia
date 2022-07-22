@@ -4,8 +4,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::agent::storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
-use crate::agent::storage::storage_factory::StorageAccess;
 use crate::base::{Merge, SettingInfo, SettingType};
 use crate::call;
 use crate::config::default_settings::DefaultSetting;
@@ -19,13 +17,15 @@ use crate::handler::setting_handler::{
     controller, ControllerError, IntoHandlerResult, SettingHandlerResult,
 };
 use crate::service_context::ExternalServiceProxy;
-use crate::storage::UpdateState;
 use async_trait::async_trait;
 use fidl_fuchsia_ui_brightness::{
     ControlMarker as BrightnessControlMarker, ControlProxy as BrightnessControlProxy,
 };
 use fuchsia_trace as ftrace;
 use lazy_static::lazy_static;
+use settings_storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use settings_storage::storage_factory::StorageAccess;
+use settings_storage::UpdateState;
 use std::sync::Mutex;
 
 pub(super) const DEFAULT_MANUAL_BRIGHTNESS_VALUE: f32 = 0.5;

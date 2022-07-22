@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::inspect::stash_logger::StashInspectLogger;
-use crate::storage::UpdateState;
+use crate::stash_logger::StashInspectLogger;
+use crate::UpdateState;
 use anyhow::{format_err, Context, Error};
 use fidl_fuchsia_stash::{StoreAccessorProxy, Value};
 use fuchsia_async::{Task, Timer, WakeupTime};
@@ -86,14 +86,14 @@ pub trait DeviceStorageCompatible:
     fn default_value() -> Self;
 
     fn deserialize_from(value: &str) -> Self {
-        Self::extract(&value).unwrap_or_else(|error| {
+        Self::extract(value).unwrap_or_else(|error| {
             fx_log_err!("error occurred:{:?}", error);
             Self::default_value()
         })
     }
 
     fn extract(value: &str) -> Result<Self, Error> {
-        serde_json::from_str(&value).map_err(|_| format_err!("could not deserialize"))
+        serde_json::from_str(value).map_err(|_| format_err!("could not deserialize"))
     }
 
     fn serialize_to(&self) -> String {
@@ -180,10 +180,12 @@ where
     }
 }
 
+type MappingFn = Box<dyn FnOnce(&(dyn Any + Send + Sync)) -> String + Send>;
+
 impl DeviceStorage {
     /// Construct a device storage from the iteratable item, which will produce the keys for
     /// storage, and from a generator that will produce a stash proxy given a particular key.
-    pub(crate) fn with_stash_proxy<I, G>(
+    pub fn with_stash_proxy<I, G>(
         iter: I,
         stash_generator: G,
         inspect_handle: Arc<Mutex<StashInspectLogger>>,
@@ -209,7 +211,6 @@ impl DeviceStorage {
                         }),
                     };
 
-                    let stash_proxy_clone = stash_proxy.clone();
                     let inspect_handle = Arc::clone(&inspect_handle);
                     // Each key has an independent flush queue.
                     Task::spawn(async move {
@@ -255,7 +256,7 @@ impl DeviceStorage {
                                     // Timer triggered, check for pending flushes.
                                     if has_pending_flush {
                                         DeviceStorage::stash_flush(
-                                            &stash_proxy_clone,
+                                            &stash_proxy,
                                             Arc::clone(&inspect_handle),
                                             key.to_string()).await;
                                         last_flush = Instant::now();
@@ -280,13 +281,13 @@ impl DeviceStorage {
         }
     }
 
-    #[cfg(test)]
-    pub(super) fn set_caching_enabled(&mut self, enabled: bool) {
+    /// Test-only
+    pub fn set_caching_enabled(&mut self, enabled: bool) {
         self.caching_enabled = enabled;
     }
 
-    #[cfg(test)]
-    pub(super) fn set_debounce_writes(&mut self, debounce: bool) {
+    /// Test-only
+    pub fn set_debounce_writes(&mut self, debounce: bool) {
         self.debounce_writes = debounce;
     }
 
@@ -308,7 +309,7 @@ impl DeviceStorage {
         key: &'static str,
         new_value: String,
         data_as_any: Box<dyn Any + Send + Sync>,
-        mapping_fn: Box<dyn FnOnce(&(dyn Any + Send + Sync)) -> String + Send>,
+        mapping_fn: MappingFn,
     ) -> Result<UpdateState, Error> {
         let typed_storage = self
             .typed_storage_map
@@ -364,7 +365,7 @@ impl DeviceStorage {
     }
 
     /// Write `new_value` to storage. The write will be persisted to disk at a set interval.
-    pub(crate) async fn write<T>(&self, new_value: &T) -> Result<UpdateState, Error>
+    pub async fn write<T>(&self, new_value: &T) -> Result<UpdateState, Error>
     where
         T: DeviceStorageCompatible,
     {
@@ -386,10 +387,9 @@ impl DeviceStorage {
         .await
     }
 
-    #[cfg(test)]
     /// Test-only method to write directly to stash without touching the cache. This is used for
     /// setting up data as if it existed on disk before the connection to stash was made.
-    pub(super) async fn write_str(&self, key: &'static str, value: String) -> Result<(), Error> {
+    pub async fn write_str(&self, key: &'static str, value: String) -> Result<(), Error> {
         let typed_storage =
             self.typed_storage_map.get(key).expect("Did not request an initialized key");
         let cached_storage = typed_storage.cached_storage.lock().await;
@@ -433,7 +433,7 @@ impl DeviceStorage {
 
     /// Gets the latest value cached locally, or loads the value from storage.
     /// Doesn't support multiple concurrent callers of the same struct.
-    pub(crate) async fn get<T>(&self) -> T
+    pub async fn get<T>(&self) -> T
     where
         T: DeviceStorageCompatible,
     {
@@ -465,11 +465,8 @@ fn prefixed(input_string: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use std::convert::TryInto;
-    use std::marker::Unpin;
-    use std::sync::Arc;
-    use std::task::Poll;
-
+    use super::*;
+    use crate::stash_logger::StashInspectLoggerHandle;
     use assert_matches::assert_matches;
     use fidl_fuchsia_stash::{
         FlushError, StoreAccessorMarker, StoreAccessorRequest, StoreAccessorRequestStream,
@@ -479,13 +476,9 @@ mod tests {
     use fuchsia_inspect::assert_data_tree;
     use futures::prelude::*;
     use serde::{Deserialize, Serialize};
-
-    use super::super::storage_factory::testing::*;
-
-    use crate::inspect::stash_logger::StashInspectLoggerHandle;
-    use crate::tests::helpers::move_executor_forward_and_get;
-
-    use super::*;
+    use std::convert::TryInto;
+    use std::marker::Unpin;
+    use std::task::Poll;
 
     const VALUE0: i32 = 3;
     const VALUE1: i32 = 33;
@@ -732,12 +725,12 @@ mod tests {
 
         let logger_handle = StashInspectLoggerHandle::new();
         let lock_future = logger_handle.logger.lock();
-        let inspector = move_executor_forward_and_get(
-            &mut executor,
-            lock_future,
-            "Couldn't get inspect logger lock",
-        )
-        .inspector;
+        futures::pin_mut!(lock_future);
+        let inspector = if let Poll::Ready(res) = executor.run_until_stalled(&mut lock_future) {
+            res.inspector
+        } else {
+            panic!("Couldn't get inspect logger lock");
+        };
         assert_data_tree!(inspector, root: {
             stash_failures: {
                 testkey: {
@@ -955,37 +948,6 @@ mod tests {
 
         // Stash receives a flush request after one timer cycle and the future terminates.
         advance_executor(&mut executor, &mut flush_future);
-    }
-
-    #[fuchsia_async::run_until_stalled(test)]
-    async fn test_in_memory_storage() {
-        let factory = InMemoryStorageFactory::new();
-        factory.initialize_storage::<TestStruct>().await;
-
-        let store_1 = factory.get_device_storage().await;
-        let store_2 = factory.get_device_storage().await;
-
-        // Write initial data through first store.
-        let test_struct = TestStruct { value: VALUE0 };
-
-        // Ensure writing from store1 ends up in store2
-        test_write_propagation(store_1.clone(), store_2.clone(), test_struct).await;
-
-        let test_struct_2 = TestStruct { value: VALUE1 };
-        // Ensure writing from store2 ends up in store1
-        test_write_propagation(store_2.clone(), store_1.clone(), test_struct_2).await;
-    }
-
-    async fn test_write_propagation(
-        store_1: Arc<DeviceStorage>,
-        store_2: Arc<DeviceStorage>,
-        data: TestStruct,
-    ) {
-        assert!(store_1.write(&data).await.is_ok());
-
-        // Ensure it is read in from second store.
-        let retrieved_struct = store_2.get().await;
-        assert_eq!(data, retrieved_struct);
     }
 
     // This mod includes structs to only be used by

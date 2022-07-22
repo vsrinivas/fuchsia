@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
-use crate::agent::storage::storage_factory::StorageAccess;
 use crate::base::SettingInfo;
 use crate::do_not_disturb::types::DoNotDisturbInfo;
 use crate::handler::base::Request;
@@ -12,6 +10,8 @@ use crate::handler::setting_handler::{
     controller, ControllerError, IntoHandlerResult, SettingHandlerResult,
 };
 use async_trait::async_trait;
+use settings_storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use settings_storage::storage_factory::StorageAccess;
 
 impl DeviceStorageCompatible for DoNotDisturbInfo {
     const KEY: &'static str = "do_not_disturb_info";

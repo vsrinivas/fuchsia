@@ -146,6 +146,7 @@ third_party_rust_crate_log_visibility = [
   "//src/security/scrutiny/plugins:*",
   "//src/security/scrutiny/utils:*",
   "//src/settings/service:*",
+  "//src/settings/storage:*",
   "//src/storage/bin/odu:*",
   "//src/storage/conformance/conformance_harness/rustvfs:*",
   "//src/storage/fshost-rust:*",

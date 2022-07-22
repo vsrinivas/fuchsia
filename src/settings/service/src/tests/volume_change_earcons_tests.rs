@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::device_storage::DeviceStorage;
-use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
 use crate::audio::default_audio_info;
 use crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType};
 use crate::ingress::fidl::Interface;
 use crate::input::common::MediaButtonsEventBuilder;
 use crate::message::base::MessengerType;
 use crate::service;
+use crate::storage::testing::InMemoryStorageFactory;
 use crate::tests::fakes::audio_core_service;
 use crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
@@ -25,6 +24,7 @@ use fuchsia_component::server::NestedEnvironment;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use futures::StreamExt;
+use settings_storage::device_storage::DeviceStorage;
 use std::sync::Arc;
 
 const ENV_NAME: &str = "volume_change_earcons_test_environment";

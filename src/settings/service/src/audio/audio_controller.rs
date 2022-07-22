@@ -1,8 +1,6 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::agent::storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
-use crate::agent::storage::storage_factory::StorageAccess;
 use crate::audio::types::{AudioInfo, AudioStream, AudioStreamType, SetAudioStream};
 use crate::audio::{
     create_default_modified_counters, default_audio_info, ModifiedCounters, StreamVolumeControl,
@@ -20,6 +18,8 @@ use async_trait::async_trait;
 use fuchsia_async as fasync;
 use fuchsia_trace as ftrace;
 use futures::lock::Mutex;
+use settings_storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use settings_storage::storage_factory::StorageAccess;
 use std::collections::HashMap;
 use std::sync::Arc;
 

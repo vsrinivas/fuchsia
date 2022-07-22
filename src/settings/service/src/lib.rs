@@ -10,8 +10,6 @@ use std::sync::Arc;
 
 #[cfg(test)]
 use ::fidl::endpoints::{create_proxy, ServerEnd};
-use agent::storage::device_storage::DeviceStorage;
-use agent::storage::fidl_storage::FidlStorage;
 #[cfg(test)]
 use anyhow::format_err;
 use anyhow::{Context, Error};
@@ -29,6 +27,8 @@ use fuchsia_syslog::fx_log_warn;
 use fuchsia_zircon::{Duration, DurationNum};
 use futures::lock::Mutex;
 use futures::StreamExt;
+use settings_storage::device_storage::DeviceStorage;
+use settings_storage::fidl_storage::FidlStorage;
 
 pub use audio::policy::AudioPolicyConfig;
 pub use display::display_configuration::DisplayConfiguration;
@@ -54,7 +54,6 @@ use vfs::registry::{inode_registry, token_registry};
 
 use crate::accessibility::accessibility_controller::AccessibilityController;
 use crate::agent::authority::Authority;
-use crate::agent::storage::storage_factory::{FidlStorageFactory, StorageFactory};
 use crate::agent::{BlueprintHandle as AgentBlueprintHandle, Lifespan};
 use crate::audio::audio_controller::AudioController;
 use crate::audio::policy::audio_policy_handler::AudioPolicyHandler;
@@ -89,6 +88,7 @@ use crate::service::message::Delegate;
 use crate::service_context::GenerateService;
 use crate::service_context::ServiceContext;
 use crate::setup::setup_controller::SetupController;
+use settings_storage::storage_factory::{FidlStorageFactory, StorageFactory};
 
 mod accessibility;
 mod audio;
@@ -863,7 +863,7 @@ where
 
     // The service does not work without storage, so ensure it is always included first.
     agent_authority
-        .register(Arc::new(crate::agent::storage::storage_agent::Blueprint::new(
+        .register(Arc::new(crate::agent::storage_agent::Blueprint::new(
             device_storage_factory,
             fidl_storage_factory,
         )))

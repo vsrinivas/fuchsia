@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::device_storage::DeviceStorage;
-use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
 use crate::agent::BlueprintHandle;
 use crate::base::SettingType;
 use crate::config::base::AgentType;
@@ -15,12 +13,14 @@ use crate::input::common::MediaButtonsEventBuilder;
 use crate::light::light_controller::LightController;
 use crate::light::light_hardware_configuration::{DisableConditions, LightGroupConfiguration};
 use crate::light::types::{ColorRgb, LightGroup, LightInfo, LightState, LightType, LightValue};
+use crate::storage::testing::InMemoryStorageFactory;
 use crate::tests::fakes::hardware_light_service::HardwareLightService;
 use crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::{EnvironmentBuilder, LightHardwareConfiguration};
 use fidl_fuchsia_settings::{LightError, LightMarker, LightProxy};
 use futures::lock::Mutex;
+use settings_storage::device_storage::DeviceStorage;
 use std::option::Option::Some;
 use std::sync::Arc;
 

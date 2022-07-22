@@ -4,11 +4,11 @@
 
 use crate::clock;
 use crate::config;
-use crate::inspect::utils::managed_inspect_map::ManagedInspectMap;
 use fuchsia_inspect::{self as inspect, component, NumericProperty, Property};
 use fuchsia_inspect_derive::Inspect;
 use futures::lock::Mutex;
 use lazy_static::lazy_static;
+use settings_inspect_utils::managed_inspect_map::ManagedInspectMap;
 use std::sync::Arc;
 
 const CONFIG_INSPECT_NODE_NAME: &str = "config_loads";

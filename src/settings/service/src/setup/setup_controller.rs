@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
-use crate::agent::storage::storage_factory::StorageAccess;
 use crate::base::{SettingInfo, SettingType};
 use crate::call_async;
 use crate::handler::base::Request;
@@ -16,6 +14,8 @@ use crate::setup::types::{ConfigurationInterfaceFlags, SetupInfo};
 use async_trait::async_trait;
 use fidl_fuchsia_hardware_power_statecontrol::RebootReason;
 use fuchsia_syslog::fx_log_err;
+use settings_storage::device_storage::{DeviceStorage, DeviceStorageCompatible};
+use settings_storage::storage_factory::StorageAccess;
 
 // TODO(fxb/79710): Separate the logic of communicating with external dependencies from internal
 // logic for settings.

@@ -9,31 +9,30 @@ use std::collections::HashMap;
 /// A map from String to inspect-writeable item T. InspectWritableMap is compatible
 /// with inspect_derive.
 #[derive(Default)]
-pub(crate) struct InspectWritableMap<T> {
+pub struct InspectWritableMap<T> {
     map: HashMap<String, T>,
 }
 
 impl<T> InspectWritableMap<T> {
-    pub(crate) fn new() -> Self {
+    pub fn new() -> Self {
         Self { map: HashMap::new() }
     }
 
-    #[allow(dead_code)]
-    pub(crate) fn get(&mut self, key: &str) -> Option<&T> {
+    pub fn get(&mut self, key: &str) -> Option<&T> {
         self.map.get(key)
     }
 
-    pub(crate) fn get_mut(&mut self, key: &str) -> Option<&mut T> {
+    pub fn get_mut(&mut self, key: &str) -> Option<&mut T> {
         self.map.get_mut(key)
     }
 
-    pub(crate) fn set(&mut self, key: String, value: T) {
+    pub fn set(&mut self, key: String, value: T) {
         let _ = self.map.insert(key, value);
     }
 
     /// Retrieves the existing value of key [key] if it exists, otherwise sets
     /// the value to [value] and returns it.
-    pub(crate) fn get_or_insert_with(&mut self, key: String, value: impl FnOnce() -> T) -> &mut T {
+    pub fn get_or_insert_with(&mut self, key: String, value: impl FnOnce() -> T) -> &mut T {
         self.map.entry(key).or_insert_with(value)
     }
 }
@@ -53,8 +52,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::base::SettingType;
-    use crate::inspect::utils::inspect_writable_map::InspectWritableMap;
+    use crate::inspect_writable_map::InspectWritableMap;
     use fuchsia_inspect::{self as inspect, assert_data_tree, Node};
     use fuchsia_inspect_derive::{IValue, Inspect, WithInspect};
 
@@ -92,7 +90,7 @@ mod tests {
         let inspector = inspect::Inspector::new();
         let mut map = InspectWritableMap::<TestInspectItem>::new();
         let test_val_1 = TestInspectItem::new(6);
-        map.set(format!("{:?}", SettingType::Unknown), test_val_1);
+        map.set("Unknown".to_owned(), test_val_1);
         let _wrapper = TestInspectWrapper::new(map)
             .with_inspect(inspector.root(), "inspect_wrapper")
             .expect("failed to create TestInspectWrapper inspect node");
@@ -113,9 +111,9 @@ mod tests {
         let test_val_1 = TestInspectItem::new(6);
         let test_val_2 = TestInspectItem::new(7);
         let test_val_3 = TestInspectItem::new(8);
-        map.set(format!("{:?}", SettingType::Unknown), test_val_1);
-        map.set(format!("{:?}", SettingType::Unknown), test_val_2);
-        map.set(format!("{:?}", SettingType::Audio), test_val_3);
+        map.set("Unknown".to_owned(), test_val_1);
+        map.set("Unknown".to_owned(), test_val_2);
+        map.set("Audio".to_owned(), test_val_3);
         let _wrapper = TestInspectWrapper::new(map)
             .with_inspect(inspector.root(), "inspect_wrapper")
             .expect("failed to create TestInspectWrapper inspect node");
@@ -136,13 +134,8 @@ mod tests {
     fn test_get() {
         let mut map = InspectWritableMap::<TestInspectItem>::new();
         let test_val_1 = TestInspectItem::new(6);
-        map.set(format!("{:?}", SettingType::Unknown), test_val_1);
-        assert_eq!(
-            *map.get(&format!("{:?}", SettingType::Unknown))
-                .expect("Could not find first test value")
-                .id,
-            6
-        );
+        map.set("Unknown".to_owned(), test_val_1);
+        assert_eq!(*map.get("Unknown").expect("Could not find first test value").id, 6);
     }
 
     // Test the get_or_insert function.
@@ -151,7 +144,7 @@ mod tests {
         let mut map = InspectWritableMap::<TestInspectItem>::new();
         let test_val_1 = TestInspectItem::new(6);
         let test_val_2 = TestInspectItem::new(7);
-        let unknown_type_key = format!("{:?}", SettingType::Unknown);
+        let unknown_type_key = "Unknown".to_owned();
 
         let first_val = map.get_or_insert_with(unknown_type_key.clone(), || test_val_1);
         assert_eq!(*(*first_val).id, 6);

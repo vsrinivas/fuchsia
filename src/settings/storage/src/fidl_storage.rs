@@ -4,7 +4,7 @@
 
 #![allow(dead_code)]
 
-use crate::storage::UpdateState;
+use crate::UpdateState;
 use anyhow::{bail, format_err, Context, Error};
 use fidl::encoding::{decode_persistent, encode_persistent, Persistable};
 use fidl::Status;
@@ -328,7 +328,7 @@ impl FidlStorage {
     }
 
     /// Write `new_value` to storage. The write will be persisted to disk at a set interval.
-    pub(crate) async fn write<T>(&self, new_value: T) -> Result<UpdateState, Error>
+    pub async fn write<T>(&self, new_value: T) -> Result<UpdateState, Error>
     where
         T: FidlStorageConvertible,
     {
@@ -372,7 +372,7 @@ impl FidlStorage {
 
     /// Gets the latest value cached locally, or loads the value from storage.
     /// Doesn't support multiple concurrent callers of the same struct.
-    pub(crate) async fn get<T>(&self) -> T
+    pub async fn get<T>(&self) -> T
     where
         T: FidlStorageConvertible,
     {

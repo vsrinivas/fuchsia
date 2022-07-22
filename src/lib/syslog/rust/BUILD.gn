@@ -151,6 +151,7 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/session/tests/session_manager:*",
   "//src/settings/service:*",
   "//src/settings/service/integration_tests:*",
+  "//src/settings/storage:*",
   "//src/storage/conformance/conformance_harness/rustvfs:*",
   "//src/storage/ext4/lib:*",
   "//src/storage/ext4/read-only:*",

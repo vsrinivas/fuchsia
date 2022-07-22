@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::device_storage::DeviceStorage;
 use crate::base::SettingType;
 use crate::handler::base::{Payload as HandlerPayload, Request, Response as SettingResponse};
 use crate::handler::setting_handler::{SettingHandlerResult, StorageFactory};
@@ -13,12 +12,14 @@ use crate::policy::{
     Request as PolicyRequest,
 };
 use crate::service;
-use crate::storage::{self, StorageInfo, UpdateState};
+use crate::storage::{self, StorageInfo};
 use anyhow::Error;
 use async_trait::async_trait;
 use fuchsia_syslog::fx_log_err;
 use fuchsia_trace as ftrace;
 use futures::future::BoxFuture;
+use settings_storage::device_storage::DeviceStorage;
+use settings_storage::UpdateState;
 use std::convert::{TryFrom, TryInto};
 
 /// PolicyHandlers are in charge of applying and persisting policies set by clients.

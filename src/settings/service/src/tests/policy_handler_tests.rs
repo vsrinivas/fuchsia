@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
-use crate::agent::storage::storage_factory::StorageFactory;
 use crate::handler::base::{Request, Response as SettingResponse};
 use crate::message::base::MessengerType;
 use crate::policy::policy_handler::{
@@ -11,10 +9,12 @@ use crate::policy::policy_handler::{
 };
 use crate::policy::response::{Payload, Response};
 use crate::policy::{Request as PolicyRequest, UnknownInfo};
+use crate::storage::testing::InMemoryStorageFactory;
 use crate::EnvironmentBuilder;
 use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
+use settings_storage::storage_factory::StorageFactory;
 use std::sync::Arc;
 
 const ENV_NAME: &str = "policy_handler_tests_env";

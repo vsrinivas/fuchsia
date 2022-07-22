@@ -12,7 +12,7 @@ use std::collections::HashMap;
 /// or can create its own inspect node when included in a struct that derives Inspect or when
 /// [ManagedInspectMap::with_inspect] is called.
 #[derive(Default)]
-pub(crate) struct ManagedInspectMap<V> {
+pub struct ManagedInspectMap<V> {
     map: HashMap<String, V>,
     node: Node,
 }
@@ -22,13 +22,13 @@ where
     for<'a> &'a mut V: Inspect,
 {
     /// Creates a new [ManagedInspectMap] that attaches inserted values to the given node.
-    pub(crate) fn with_node(node: Node) -> Self {
+    pub fn with_node(node: Node) -> Self {
         Self { map: HashMap::new(), node }
     }
 
     /// Returns a mutable reference to the underlying map. Clients should not insert values into the
     /// map through this reference.
-    pub(crate) fn map_mut(&mut self) -> &mut HashMap<String, V> {
+    pub fn map_mut(&mut self) -> &mut HashMap<String, V> {
         &mut self.map
     }
 
@@ -44,7 +44,7 @@ where
     }
 
     /// Returns a mutable reference to the value at the given key, inserting a value if not present.
-    pub(crate) fn get_or_insert_with(&mut self, key: String, value: impl FnOnce() -> V) -> &mut V {
+    pub fn get_or_insert_with(&mut self, key: String, value: impl FnOnce() -> V) -> &mut V {
         let node = &self.node;
         self.map.entry(key.clone()).or_insert_with(|| {
             // `with_inspect` will only return an error on types with interior mutability.
@@ -65,7 +65,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::inspect::utils::managed_inspect_map::ManagedInspectMap;
+    use crate::managed_inspect_map::ManagedInspectMap;
     use fuchsia_inspect::{assert_data_tree, Inspector, Node};
     use fuchsia_inspect_derive::{IValue, Inspect, WithInspect};
 

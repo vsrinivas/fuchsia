@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
 use crate::display::{light_sensor_testing, LIGHT_SENSOR_SERVICE_NAME};
 use crate::ingress::fidl::{display, Interface};
+use crate::storage::testing::InMemoryStorageFactory;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::EnvironmentBuilder;
 use anyhow::format_err;

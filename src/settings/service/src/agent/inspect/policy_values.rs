@@ -8,7 +8,6 @@ use std::sync::Arc;
 use crate::agent::{Context, Payload};
 use crate::blueprint_definition;
 use crate::clock;
-use crate::inspect::utils::managed_inspect_map::ManagedInspectMap;
 use crate::message::base::{filter, role, MessageEvent, MessengerType};
 use crate::policy::{self as policy_base, Payload as PolicyPayload, Request, Role};
 use crate::service::message::{Audience, MessageClient, Messenger, Signature};
@@ -19,6 +18,7 @@ use fuchsia_inspect::{self as inspect, component, Property};
 use fuchsia_inspect_derive::Inspect;
 use fuchsia_syslog::fx_log_err;
 use futures::StreamExt;
+use settings_inspect_utils::managed_inspect_map::ManagedInspectMap;
 
 const INSPECT_NODE_NAME: &str = "policy_values";
 

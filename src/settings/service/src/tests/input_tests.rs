@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
 use crate::base::SettingType;
 use crate::handler::base::{Payload as HandlerPayload, Request};
 use crate::ingress::fidl::Interface;
@@ -19,6 +18,7 @@ use crate::message::receptor::Receptor;
 use crate::service::message::Delegate;
 use crate::service::{Address, Payload, Role};
 use crate::service_context::ServiceContext;
+use crate::storage::testing::InMemoryStorageFactory;
 use crate::tests::fakes::input_device_registry_service::InputDeviceRegistryService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::tests::helpers::move_executor_forward;

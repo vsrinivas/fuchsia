@@ -1,7 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::agent::storage::storage_factory::StorageFactory as StorageFactoryTrait;
 use crate::base::{HasSettingType, SettingInfo, SettingType};
 use crate::handler::base::{Context, ControllerGenerateResult, Request};
 use crate::message::base::Audience;
@@ -16,6 +15,7 @@ use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
+use settings_storage::storage_factory::StorageFactory as StorageFactoryTrait;
 use std::borrow::Cow;
 use std::convert::TryInto;
 use std::marker::PhantomData;
@@ -343,14 +343,15 @@ impl IntoHandlerResult for SettingInfo {
 pub mod persist {
     use super::ClientImpl as BaseProxy;
     use super::*;
-    use crate::agent::storage::device_storage::DeviceStorageConvertible;
     use crate::base::SettingInfo;
     use crate::message::base::{Audience, MessageEvent};
     use crate::service;
-    use crate::storage::{self, UpdateState};
+    use crate::storage;
     use crate::trace;
     use fuchsia_trace as ftrace;
     use futures::StreamExt;
+    use settings_storage::device_storage::DeviceStorageConvertible;
+    use settings_storage::UpdateState;
 
     pub trait Storage: DeviceStorageConvertible + Into<SettingInfo> + Send + Sync {}
     impl<T: DeviceStorageConvertible + Into<SettingInfo> + Send + Sync> Storage for T {}

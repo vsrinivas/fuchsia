@@ -9,9 +9,9 @@ use fidl_fuchsia_settings::{AccessibilityMarker, AudioMarker, DisplayMarker, Pri
 
 use fidl_fuchsia_settings_policy::VolumePolicyControllerMarker;
 
-use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
 use crate::config::default_settings::DefaultSetting;
 use crate::ingress::fidl::InterfaceSpec;
+use crate::storage::testing::InMemoryStorageFactory;
 use crate::tests::fakes::audio_core_service;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::AgentConfiguration;

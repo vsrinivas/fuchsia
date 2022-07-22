@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use crate::agent::restore_agent;
-use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
 use crate::base::SettingType;
 use crate::config::base::ControllerFlag;
 use crate::display::types::{DisplayInfo, LowLightMode, Theme};
 use crate::ingress::fidl::{display, Interface};
+use crate::storage::testing::InMemoryStorageFactory;
 use crate::tests::fakes::brightness_service::BrightnessService;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::tests::test_failure_utils::create_test_env_with_failures;

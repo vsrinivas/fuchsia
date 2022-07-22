@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::inspect::utils::managed_inspect_map::ManagedInspectMap;
 use fuchsia_inspect::{self as inspect, component, NumericProperty};
 use fuchsia_inspect_derive::Inspect;
 use futures::lock::Mutex;
 use lazy_static::lazy_static;
+use settings_inspect_utils::managed_inspect_map::ManagedInspectMap;
 use std::sync::Arc;
 
 const STASH_INSPECT_NODE_NAME: &str = "stash_failures";

@@ -9,16 +9,16 @@ use std::collections::VecDeque;
 /// A vector of items to be written to inspect. It will only keep the last [size_limit]
 /// items. It is compatible with inspect_derive.
 #[derive(Default)]
-pub(crate) struct InspectQueue<T> {
-    pub(crate) items: VecDeque<T>,
+pub struct InspectQueue<T> {
+    items: VecDeque<T>,
     // Required because VecDeque::with_capacity doesn't necessarily give the
     // exact capacity specified.
     size_limit: usize,
-    pub(crate) inspect_node: inspect::Node,
+    inspect_node: inspect::Node,
 }
 
 impl<T> InspectQueue<T> {
-    pub(crate) fn new(size: usize) -> Self {
+    pub fn new(size: usize) -> Self {
         Self {
             items: VecDeque::with_capacity(size),
             size_limit: size,
@@ -26,7 +26,15 @@ impl<T> InspectQueue<T> {
         }
     }
 
-    pub(crate) fn push(&mut self, item: T) {
+    pub fn items_mut(&mut self) -> &mut VecDeque<T> {
+        &mut self.items
+    }
+
+    pub fn inspect_node(&self) -> &inspect::Node {
+        &self.inspect_node
+    }
+
+    pub fn push(&mut self, item: T) {
         // If the queue is over capacity, remove one.
         if self.items.len() == self.size_limit {
             let _ = self.items.pop_front();
@@ -56,7 +64,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::inspect::utils::inspect_queue::InspectQueue;
+    use crate::inspect_queue::InspectQueue;
     use fuchsia_inspect::{self as inspect, assert_data_tree, Node};
     use fuchsia_inspect_derive::{IValue, Inspect, WithInspect};
 

@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::device_storage::DeviceStorage;
-use crate::agent::storage::storage_factory::StorageFactory;
 use crate::base::SettingType;
 use crate::policy::{
     BoxedHandler, Context, GenerateHandler, PolicyHandlerFactory, PolicyHandlerFactoryError,
@@ -11,6 +9,8 @@ use crate::policy::{
 };
 use crate::service;
 use async_trait::async_trait;
+use settings_storage::device_storage::DeviceStorage;
+use settings_storage::storage_factory::StorageFactory;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::atomic::{AtomicU64, Ordering};

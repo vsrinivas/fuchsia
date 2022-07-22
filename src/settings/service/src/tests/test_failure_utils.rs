@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
 use crate::base::SettingType;
 use crate::handler::base::Request;
 use crate::handler::setting_handler::ControllerError;
 use crate::ingress::fidl::Interface;
+use crate::storage::testing::InMemoryStorageFactory;
 use crate::tests::fakes::base::create_setting_handler;
 use crate::EnvironmentBuilder;
 use std::sync::Arc;

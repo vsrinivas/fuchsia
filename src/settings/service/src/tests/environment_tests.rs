@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::agent::storage::storage_factory::testing::InMemoryStorageFactory;
 use crate::agent::{
     AgentError, Context, Invocation, InvocationResult, Lifespan, Payload as AgentPayload,
 };
@@ -18,6 +17,7 @@ use crate::job::{self, Job};
 use crate::message::base::{filter, Audience, MessengerType};
 use crate::service::Payload;
 use crate::service_context::ServiceContext;
+use crate::storage::testing::InMemoryStorageFactory;
 use crate::tests::fakes::base::create_setting_handler;
 use crate::tests::fakes::service_registry::ServiceRegistry;
 use crate::tests::message_utils::verify_payload;

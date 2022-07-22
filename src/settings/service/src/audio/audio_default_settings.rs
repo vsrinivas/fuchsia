@@ -85,9 +85,9 @@ mod tests {
     use super::*;
     use fuchsia_async::TestExecutor;
 
-    use crate::agent::storage::device_storage::DeviceStorageCompatible;
     use crate::audio::types::{AudioInfoV1, AudioInfoV2};
     use crate::tests::helpers::move_executor_forward_and_get;
+    use settings_storage::device_storage::DeviceStorageCompatible;
 
     const CONFIG_AUDIO_INFO: AudioInfo = AudioInfo {
         streams: [

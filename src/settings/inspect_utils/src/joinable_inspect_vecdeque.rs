@@ -4,7 +4,7 @@
 
 use fuchsia_inspect::{Node, Property, StringProperty};
 use fuchsia_inspect_derive::Unit;
-use itertools::Itertools;
+// use itertools::Itertools;
 use std::collections::VecDeque;
 
 /// Wrapper around [std::collections::VecDeque] that only holds [String]. Implements
@@ -20,21 +20,27 @@ use std::collections::VecDeque;
 #[derive(Default)]
 struct JoinableInspectVecDeque(VecDeque<String>);
 
+impl JoinableInspectVecDeque {
+    fn join(&self) -> String {
+        self.0.iter().map(String::as_str).collect::<Vec<_>>().join(",")
+    }
+}
+
 impl Unit for JoinableInspectVecDeque {
     type Data = StringProperty;
 
     fn inspect_create(&self, parent: &Node, name: impl AsRef<str>) -> Self::Data {
-        parent.create_string(name.as_ref(), self.0.iter().join(","))
+        parent.create_string(name.as_ref(), self.join())
     }
 
     fn inspect_update(&self, data: &mut Self::Data) {
-        data.set(&self.0.iter().join(","));
+        data.set(&self.join());
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::inspect::utils::joinable_inspect_vecdeque::JoinableInspectVecDeque;
+    use crate::joinable_inspect_vecdeque::JoinableInspectVecDeque;
     use fuchsia_inspect::{assert_data_tree, Inspector, Node};
     use fuchsia_inspect_derive::{IValue, Inspect, WithInspect};
 

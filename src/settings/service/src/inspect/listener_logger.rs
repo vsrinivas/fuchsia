@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use crate::base::SettingType;
-use crate::inspect::utils::managed_inspect_map::ManagedInspectMap;
 use fuchsia_inspect::{self as inspect, component, NumericProperty};
 use fuchsia_inspect_derive::Inspect;
 use fuchsia_syslog::fx_log_err;
+use settings_inspect_utils::managed_inspect_map::ManagedInspectMap;
 
 const LISTENER_INSPECT_NODE_NAME: &str = "active_listeners";
 
