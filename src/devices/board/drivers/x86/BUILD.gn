@@ -62,8 +62,6 @@ fuchsia_driver("platform-bus-x86-driver") {
 
   sources = [
     "acpi-dev/dev-ec.cc",
-    "acpi-dev/dev-lid.cc",
-    "acpi-dev/dev-lid.h",
     "acpi-dev/dev-pwrbtn.cc",
     "acpi-dev/dev-tbmc.cc",
     "acpi-nswalk.cc",
@@ -135,35 +133,6 @@ fuchsia_driver_component("platform-bus-x86") {
   info = "platform-bus-x86-info.json"
   colocate = true
   root_resource = true
-}
-
-test("x86-lid-test") {
-  sources = [
-    "acpi-dev/dev-lid-test.cc",
-    "acpi-dev/dev-lid.cc",
-    "acpi-dev/dev-lid.h",
-  ]
-  configs += [ ":config" ]
-  deps = [
-    "//sdk/banjo/fuchsia.hardware.hidbus:fuchsia.hardware.hidbus_banjo_cpp",
-    "//sdk/fidl/fuchsia.hardware.i2c.businfo:fuchsia.hardware.i2c.businfo_llcpp",
-    "//sdk/fidl/fuchsia.hardware.spi.businfo:fuchsia.hardware.spi.businfo_llcpp",
-    "//src/devices/testing/fake_ddk",
-    "//src/lib/ddk",
-    "//src/lib/ddktl",
-    "//src/ui/input/testing/mock-hidbus-ifc",
-    "//third_party/acpica",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/hid",
-    "//zircon/system/ulib/sync",
-    "//zircon/system/ulib/zircon-internal",
-    "//zircon/system/ulib/zxtest",
-  ]
-}
-
-bootfs_test("x86-lid-bootfs-test") {
-  name = "x86-lid-test"
-  deps = [ ":x86-lid-test" ]
 }
 
 test("x86-ec-test-bin") {

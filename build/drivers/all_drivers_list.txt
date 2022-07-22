@@ -51,6 +51,7 @@
 //src/connectivity/wlan/drivers/wlanphy:wlanphy_driver_dfv2-driver
 //src/connectivity/wlan/testing/wlantap-driver:wlantap_driver-driver
 //src/devices/acpi/drivers/acpi-battery:driver
+//src/devices/acpi/drivers/acpi-lid:driver
 //src/devices/acpi/drivers/acpi-pwrsrc:driver
 //src/devices/acpi/drivers/intel-thermal:driver
 //src/devices/bin/driver-index:fake-driver
@@ -72,8 +73,8 @@
 //src/devices/block/drivers/ftl:ftl-driver
 //src/devices/block/drivers/gpt:gpt-driver
 //src/devices/block/drivers/mbr:mbr-driver
-//src/devices/block/drivers/nvme:nvme-driver
 //src/devices/block/drivers/nvme-cpp:driver
+//src/devices/block/drivers/nvme:nvme-driver
 //src/devices/block/drivers/pci-sdhci:pci-sdhci-driver
 //src/devices/block/drivers/ramdisk:ramdisk-driver
 //src/devices/block/drivers/sdhci:sdhci-driver
@@ -175,9 +176,9 @@
 //src/devices/pwm/drivers/pwm:pwm-driver
 //src/devices/ram/drivers/aml-ram:aml-ram-driver
 //src/devices/registers/drivers/registers:registers-driver
+//src/devices/rtc/drivers/aml-rtc:aml-rtc-driver
 //src/devices/rtc/drivers/nxp:nxp-driver
 //src/devices/rtc/drivers/pl031-rtc:pl031-rtc-driver
-//src/devices/rtc/drivers/aml-rtc:aml-rtc-driver
 //src/devices/securemem/drivers/aml-securemem:aml-securemem-driver
 //src/devices/serial/drivers/aml-uart:aml-uart-driver
 //src/devices/serial/drivers/ftdi:ftdi-driver

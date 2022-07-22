@@ -46,6 +46,7 @@ size_checker_input = {
         "packages/system/intel",
         "packages/system/qmi-usb-transport",
         "packages/system/acpi-battery",
+        "packages/system/acpi-lid",
         "packages/system/acpi-pwrsrc",
         "packages/system/intel-thermal",
         "packages/system/msd-arm-mali-test",

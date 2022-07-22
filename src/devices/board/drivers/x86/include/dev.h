@@ -10,7 +10,6 @@
 
 #include <acpica/acpi.h>
 
-#define LID_HID_STRING "PNP0C0D"
 #define EC_HID_STRING "PNP0C09"
 #define GOOGLE_CROS_EC_HID_STRING "GOOG0004"
 #define GOOGLE_TBMC_HID_STRING "GOOG0006"
@@ -32,6 +31,5 @@
 zx_status_t ec_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 zx_status_t pwrbtn_init(zx_device_t* parent);
 zx_status_t tbmc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
-zx_status_t lid_init(zx_device_t* parent, ACPI_HANDLE acpi_handle);
 
 #endif  // SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_DEV_H_

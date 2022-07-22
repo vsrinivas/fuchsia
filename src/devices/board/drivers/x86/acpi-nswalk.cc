@@ -136,9 +136,7 @@ zx_status_t publish_acpi_devices(acpi::Manager* manager, zx_device_t* platform_b
 
                             // Now, if we recognize the HID, go ahead and deal with
                             // publishing the device.
-                            if (hid == LID_HID_STRING) {
-                              lid_init(acpi_root, object);
-                            } else if (hid == EC_HID_STRING) {
+                            if (hid == EC_HID_STRING) {
                               acpi_ec::EcDevice::Create(acpi_root, acpi, object);
                             } else if (hid == GOOGLE_TBMC_HID_STRING) {
                               tbmc_init(acpi_root, object);
