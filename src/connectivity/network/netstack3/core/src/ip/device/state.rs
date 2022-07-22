@@ -184,16 +184,6 @@ impl<Instant, I: IpDeviceStateIpExt<Instant>> IpDeviceState<Instant, I> {
     }
 }
 
-impl<Instant: crate::Instant> IpDeviceState<Instant, Ipv6> {
-    /// Iterates over the IPv6 addresses assigned to this device, but only those
-    /// which are in the "assigned" state.
-    pub(crate) fn iter_assigned_ipv6_addrs(
-        &self,
-    ) -> impl Iterator<Item = &Ipv6AddressEntry<Instant>> + Clone {
-        self.addrs.iter().filter(|entry| entry.state.is_assigned())
-    }
-}
-
 /// The state common to all IPv4 devices.
 pub(crate) struct Ipv4DeviceState<I: Instant> {
     pub(crate) ip_state: IpDeviceState<I, Ipv4>,

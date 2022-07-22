@@ -905,11 +905,10 @@ trait GmpContext<I: Ip, C: GmpNonSyncContext<I, Self::DeviceId>>:
     fn not_a_member_err(addr: I::Addr) -> Self::Err;
 
     fn with_state_mut<
-        'a,
         O,
-        F: FnOnce(&mut <Self as GmpStateLayout<'a, I, C, Self::GroupState>>::GmpState) -> O,
+        F: FnOnce(&mut <Self as GmpStateLayout<'_, I, C, Self::GroupState>>::GmpState) -> O,
     >(
-        &'a mut self,
+        &mut self,
         device: Self::DeviceId,
         cb: F,
     ) -> O;

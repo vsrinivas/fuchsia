@@ -86,14 +86,13 @@ pub(crate) trait MldContext<C: MldNonSyncContext<Self::DeviceId>>:
         device: Self::DeviceId,
     ) -> Option<LinkLocalUnicastAddr<Ipv6Addr>>;
 
-    /// Gets mutable access to the device's MLD state and whether or not MLD
-    /// is enabled for the `device`.
+    /// Calls the function with a mutable reference to the device's MLD state
+    /// and whether or not MLD is enabled for the `device`.
     fn with_groups_mut_and_enabled<
-        'a,
         O,
-        F: FnOnce(&'a mut MulticastGroupSet<Ipv6Addr, MldGroupState<C::Instant>>, bool) -> O,
+        F: FnOnce(&mut MulticastGroupSet<Ipv6Addr, MldGroupState<C::Instant>>, bool) -> O,
     >(
-        &'a mut self,
+        &mut self,
         device: Self::DeviceId,
         cb: F,
     ) -> O;
@@ -280,11 +279,10 @@ impl<
     }
 
     fn with_state_mut<
-        'a,
         O,
-        F: FnOnce(&mut <Self as GmpStateLayout<'a, Ipv6, C, Self::GroupState>>::GmpState) -> O,
+        F: FnOnce(&mut <Self as GmpStateLayout<'_, Ipv6, C, Self::GroupState>>::GmpState) -> O,
     >(
-        &'a mut self,
+        &mut self,
         device: SC::DeviceId,
         cb: F,
     ) -> O {
@@ -546,11 +544,10 @@ mod tests {
         }
 
         fn with_groups_mut_and_enabled<
-            'a,
             O,
-            F: FnOnce(&'a mut MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>>, bool) -> O,
+            F: FnOnce(&mut MulticastGroupSet<Ipv6Addr, MldGroupState<DummyInstant>>, bool) -> O,
         >(
-            &'a mut self,
+            &mut self,
             DummyDeviceId: DummyDeviceId,
             cb: F,
         ) -> O {

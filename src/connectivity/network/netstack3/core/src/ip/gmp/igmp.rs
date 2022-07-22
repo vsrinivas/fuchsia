@@ -78,14 +78,13 @@ pub(crate) trait IgmpContext<C: IgmpNonSyncContext<Self::DeviceId>>:
     /// Gets an IP address and subnet associated with this device.
     fn get_ip_addr_subnet(&self, device: Self::DeviceId) -> Option<AddrSubnet<Ipv4Addr>>;
 
-    /// Gets mutable access to the device's IGMP state and whether or not IGMP
-    /// is enabled for the `device`.
+    /// Calls the function with a mutable reference to the device's IGMP state
+    /// and whether or not IGMP is enabled for the `device`.
     fn with_groups_mut_and_enabled<
-        'a,
         O,
-        F: FnOnce(&'a mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<C::Instant>>, bool) -> O,
+        F: FnOnce(&mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<C::Instant>>, bool) -> O,
     >(
-        &'a mut self,
+        &mut self,
         device: Self::DeviceId,
         cb: F,
     ) -> O;
@@ -292,11 +291,10 @@ impl<
     }
 
     fn with_state_mut<
-        'a,
         O,
-        F: FnOnce(&mut <Self as GmpStateLayout<'a, Ipv4, C, Self::GroupState>>::GmpState) -> O,
+        F: FnOnce(&mut <Self as GmpStateLayout<'_, Ipv4, C, Self::GroupState>>::GmpState) -> O,
     >(
-        &'a mut self,
+        &mut self,
         device: Self::DeviceId,
         cb: F,
     ) -> O {
@@ -629,11 +627,10 @@ mod tests {
         }
 
         fn with_groups_mut_and_enabled<
-            'a,
             O,
-            F: FnOnce(&'a mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<DummyInstant>>, bool) -> O,
+            F: FnOnce(&mut MulticastGroupSet<Ipv4Addr, IgmpGroupState<DummyInstant>>, bool) -> O,
         >(
-            &'a mut self,
+            &mut self,
             DummyDeviceId: DummyDeviceId,
             cb: F,
         ) -> O {

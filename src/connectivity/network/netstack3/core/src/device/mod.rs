@@ -279,15 +279,20 @@ fn leave_link_multicast_group<NonSyncCtx: NonSyncContext, A: IpAddress>(
 }
 
 impl<NonSyncCtx: NonSyncContext> IpDeviceContext<Ipv4, NonSyncCtx> for SyncCtx<NonSyncCtx> {
-    fn get_ip_device_state(&self, device: DeviceId) -> &Ipv4DeviceState<NonSyncCtx::Instant> {
-        &get_ip_device_state(self, device).ipv4
+    fn with_ip_device_state<O, F: FnOnce(&Ipv4DeviceState<NonSyncCtx::Instant>) -> O>(
+        &self,
+        device: Self::DeviceId,
+        cb: F,
+    ) -> O {
+        cb(&get_ip_device_state(self, device).ipv4)
     }
 
-    fn get_ip_device_state_mut(
+    fn with_ip_device_state_mut<O, F: FnOnce(&mut Ipv4DeviceState<NonSyncCtx::Instant>) -> O>(
         &mut self,
-        device: DeviceId,
-    ) -> &mut Ipv4DeviceState<NonSyncCtx::Instant> {
-        &mut get_ip_device_state_mut(self, device).ipv4
+        device: Self::DeviceId,
+        cb: F,
+    ) -> O {
+        cb(&mut get_ip_device_state_mut(self, device).ipv4)
     }
 
     fn iter_devices(&self) -> Box<dyn Iterator<Item = DeviceId> + '_> {
@@ -352,15 +357,20 @@ impl<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>> BufferIpDeviceContext<Ip
 }
 
 impl<NonSyncCtx: NonSyncContext> IpDeviceContext<Ipv6, NonSyncCtx> for SyncCtx<NonSyncCtx> {
-    fn get_ip_device_state(&self, device: DeviceId) -> &Ipv6DeviceState<NonSyncCtx::Instant> {
-        &get_ip_device_state(self, device).ipv6
+    fn with_ip_device_state<O, F: FnOnce(&Ipv6DeviceState<NonSyncCtx::Instant>) -> O>(
+        &self,
+        device: Self::DeviceId,
+        cb: F,
+    ) -> O {
+        cb(&get_ip_device_state(self, device).ipv6)
     }
 
-    fn get_ip_device_state_mut(
+    fn with_ip_device_state_mut<O, F: FnOnce(&mut Ipv6DeviceState<NonSyncCtx::Instant>) -> O>(
         &mut self,
-        device: DeviceId,
-    ) -> &mut Ipv6DeviceState<NonSyncCtx::Instant> {
-        &mut get_ip_device_state_mut(self, device).ipv6
+        device: Self::DeviceId,
+        cb: F,
+    ) -> O {
+        cb(&mut get_ip_device_state_mut(self, device).ipv6)
     }
 
     fn iter_devices(&self) -> Box<dyn Iterator<Item = DeviceId> + '_> {
@@ -941,40 +951,8 @@ impl<NonSyncCtx: NonSyncContext> NdpPacketHandler<NonSyncCtx, DeviceId> for Sync
 
 #[cfg(test)]
 pub(crate) mod testutil {
-    use net_types::ip::{Ipv4, Ipv6};
-
     use super::*;
-    use crate::{
-        ip::device::state::{IpDeviceState, IpDeviceStateIpExt},
-        Ctx,
-    };
-
-    pub(crate) trait DeviceTestIpExt<Instant: crate::Instant>:
-        IpDeviceStateIpExt<Instant>
-    {
-        fn get_ip_device_state<NonSyncCtx: NonSyncContext<Instant = Instant>>(
-            ctx: &SyncCtx<NonSyncCtx>,
-            device: DeviceId,
-        ) -> &IpDeviceState<NonSyncCtx::Instant, Self>;
-    }
-
-    impl<Instant: crate::Instant> DeviceTestIpExt<Instant> for Ipv4 {
-        fn get_ip_device_state<NonSyncCtx: NonSyncContext<Instant = Instant>>(
-            ctx: &SyncCtx<NonSyncCtx>,
-            device: DeviceId,
-        ) -> &IpDeviceState<NonSyncCtx::Instant, Ipv4> {
-            crate::ip::device::get_ipv4_device_state(ctx, device)
-        }
-    }
-
-    impl<Instant: crate::Instant> DeviceTestIpExt<Instant> for Ipv6 {
-        fn get_ip_device_state<NonSyncCtx: NonSyncContext<Instant = Instant>>(
-            ctx: &SyncCtx<NonSyncCtx>,
-            device: DeviceId,
-        ) -> &IpDeviceState<NonSyncCtx::Instant, Ipv6> {
-            crate::ip::device::get_ipv6_device_state(ctx, device)
-        }
-    }
+    use crate::Ctx;
 
     /// Calls [`receive_frame`], panicking on error.
     pub(crate) fn receive_frame_or_panic<B: BufferMut, NonSyncCtx: BufferNonSyncContext<B>>(

@@ -970,17 +970,13 @@ mod tests {
     use super::*;
     use crate::{
         context::testutil::DummyInstant,
-        device::{
-            arp::ArpHandler, testutil::DeviceTestIpExt, DeviceId, DeviceIdInner, EthernetDeviceId,
-            IpLinkDeviceState,
-        },
+        device::{arp::ArpHandler, DeviceId, DeviceIdInner, EthernetDeviceId, IpLinkDeviceState},
         error::NotFoundError,
         ip::{
-            device::{
-                is_ipv4_routing_enabled, is_ipv6_routing_enabled, set_routing_enabled,
-                state::AssignedAddress,
-            },
-            dispatch_receive_ip_packet_name, receive_ip_packet, DummyDeviceId,
+            device::{is_ip_routing_enabled, set_routing_enabled, state::AssignedAddress},
+            dispatch_receive_ip_packet_name, receive_ip_packet,
+            testutil::is_in_ip_multicast,
+            DummyDeviceId,
         },
         testutil::{
             add_arp_or_ndp_table_entry, assert_empty, get_counter_val, new_rng,
@@ -1069,29 +1065,26 @@ mod tests {
     }
 
     fn contains_addr<A: IpAddress>(
-        ctx: &crate::testutil::DummySyncCtx,
+        sync_ctx: &crate::testutil::DummySyncCtx,
         device: DeviceId,
         addr: SpecifiedAddr<A>,
-    ) -> bool
-    where
-        A::Version: DeviceTestIpExt<DummyInstant>,
-    {
-        <A::Version as DeviceTestIpExt<_>>::get_ip_device_state(ctx, device)
-            .iter_addrs()
-            .any(|a| a.addr() == addr)
-    }
-
-    fn is_in_ip_multicast<A: IpAddress>(
-        ctx: &crate::testutil::DummySyncCtx,
-        device: DeviceId,
-        addr: MulticastAddr<A>,
-    ) -> bool
-    where
-        A::Version: DeviceTestIpExt<DummyInstant>,
-    {
-        <A::Version as DeviceTestIpExt<_>>::get_ip_device_state(ctx, device)
-            .multicast_groups
-            .contains(&addr)
+    ) -> bool {
+        match addr.into() {
+            IpAddr::V4(addr) => {
+                crate::ip::device::IpDeviceContext::<Ipv4, _>::with_ip_device_state(
+                    sync_ctx,
+                    device,
+                    |state| state.ip_state.iter_addrs().any(|a| a.addr() == addr),
+                )
+            }
+            IpAddr::V6(addr) => {
+                crate::ip::device::IpDeviceContext::<Ipv6, _>::with_ip_device_state(
+                    sync_ctx,
+                    device,
+                    |state| state.ip_state.iter_addrs().any(|a| a.addr() == addr),
+                )
+            }
+        }
     }
 
     #[test]
@@ -1279,8 +1272,8 @@ mod tests {
         device: DeviceId,
     ) -> bool {
         match I::VERSION {
-            IpVersion::V4 => is_ipv4_routing_enabled(sync_ctx, device),
-            IpVersion::V6 => is_ipv6_routing_enabled(sync_ctx, device),
+            IpVersion::V4 => is_ip_routing_enabled::<Ipv4, _, _>(sync_ctx, device),
+            IpVersion::V6 => is_ip_routing_enabled::<Ipv6, _, _>(sync_ctx, device),
         }
     }
 
@@ -1506,7 +1499,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_add_remove_ip_addresses<I: Ip + TestIpExt + DeviceTestIpExt<DummyInstant>>() {
+    fn test_add_remove_ip_addresses<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
         let device = crate::add_ethernet_device(
@@ -1616,7 +1609,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_multiple_ip_addresses<I: Ip + TestIpExt + DeviceTestIpExt<DummyInstant>>() {
+    fn test_multiple_ip_addresses<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
         let device = crate::add_ethernet_device(
@@ -1782,9 +1775,7 @@ mod tests {
     /// leave it after calling `leave_ip_multicast` the same number of times as
     /// `join_ip_multicast`.
     #[ip_test]
-    fn test_ip_join_leave_multicast_addr_ref_count<
-        I: Ip + TestIpExt + DeviceTestIpExt<DummyInstant>,
-    >() {
+    fn test_ip_join_leave_multicast_addr_ref_count<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
         let device = crate::add_ethernet_device(
@@ -1833,7 +1824,7 @@ mod tests {
     /// is a panic condition.
     #[ip_test]
     #[should_panic(expected = "attempted to leave IP multicast group we were not a member of:")]
-    fn test_ip_leave_unjoined_multicast<I: Ip + TestIpExt + DeviceTestIpExt<DummyInstant>>() {
+    fn test_ip_leave_unjoined_multicast<I: Ip + TestIpExt>() {
         let config = I::DUMMY_CONFIG;
         let Ctx { mut sync_ctx, mut non_sync_ctx } = DummyEventDispatcherBuilder::default().build();
         let device = crate::add_ethernet_device(

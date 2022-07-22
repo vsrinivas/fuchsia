@@ -463,16 +463,15 @@ pub trait Instant: Sized + Ord + Copy + Clone + Debug + Send + Sync {
 }
 
 /// Get all IPv4 and IPv6 address/subnet pairs configured on a device
-pub fn get_all_ip_addr_subnets<'a, NonSyncCtx: NonSyncContext>(
-    ctx: &'a SyncCtx<NonSyncCtx>,
+pub fn get_all_ip_addr_subnets<NonSyncCtx: NonSyncContext>(
+    ctx: &SyncCtx<NonSyncCtx>,
     device: DeviceId,
-) -> impl 'a + Iterator<Item = AddrSubnetEither> {
-    let addr_v4 = crate::ip::device::get_assigned_ipv4_addr_subnets(ctx, device)
-        .map(|a| AddrSubnetEither::V4(a));
-    let addr_v6 = crate::ip::device::get_assigned_ipv6_addr_subnets(ctx, device)
-        .map(|a| AddrSubnetEither::V6(a));
-
-    addr_v4.chain(addr_v6)
+) -> Vec<AddrSubnetEither> {
+    crate::ip::device::with_assigned_ipv4_addr_subnets(ctx, device, |addrs_v4| {
+        crate::ip::device::with_assigned_ipv6_addr_subnets(ctx, device, |addrs_v6| {
+            addrs_v4.map(AddrSubnetEither::V4).chain(addrs_v6.map(AddrSubnetEither::V6)).collect()
+        })
+    })
 }
 
 /// Set the IP address and subnet for a device.
@@ -571,12 +570,15 @@ mod tests {
         let addr_subnet = AddrSubnetEither::new(ip, prefix).unwrap();
 
         // IP doesn't exist initially.
-        assert_eq!(get_all_ip_addr_subnets(&sync_ctx, device).find(|&a| a == addr_subnet), None);
+        assert_eq!(
+            get_all_ip_addr_subnets(&sync_ctx, device).into_iter().find(|&a| a == addr_subnet),
+            None
+        );
 
         // Add IP (OK).
         let () = add_ip_addr_subnet(&mut sync_ctx, &mut non_sync_ctx, device, addr_subnet).unwrap();
         assert_eq!(
-            get_all_ip_addr_subnets(&sync_ctx, device).find(|&a| a == addr_subnet),
+            get_all_ip_addr_subnets(&sync_ctx, device).into_iter().find(|&a| a == addr_subnet),
             Some(addr_subnet)
         );
 
@@ -586,7 +588,7 @@ mod tests {
             NetstackError::Exists
         );
         assert_eq!(
-            get_all_ip_addr_subnets(&sync_ctx, device).find(|&a| a == addr_subnet),
+            get_all_ip_addr_subnets(&sync_ctx, device).into_iter().find(|&a| a == addr_subnet),
             Some(addr_subnet)
         );
 
@@ -598,21 +600,27 @@ mod tests {
             NetstackError::Exists
         );
         assert_eq!(
-            get_all_ip_addr_subnets(&sync_ctx, device).find(|&a| a == addr_subnet),
+            get_all_ip_addr_subnets(&sync_ctx, device).into_iter().find(|&a| a == addr_subnet),
             Some(addr_subnet)
         );
 
         let ip = SpecifiedAddr::new(ip).unwrap();
         // Del IP (ok).
         let () = del_ip_addr(&mut sync_ctx, &mut non_sync_ctx, device, ip.into()).unwrap();
-        assert_eq!(get_all_ip_addr_subnets(&sync_ctx, device).find(|&a| a == addr_subnet), None);
+        assert_eq!(
+            get_all_ip_addr_subnets(&sync_ctx, device).into_iter().find(|&a| a == addr_subnet),
+            None
+        );
 
         // Del IP again (not found).
         assert_eq!(
             del_ip_addr(&mut sync_ctx, &mut non_sync_ctx, device, ip.into()).unwrap_err(),
             NetstackError::NotFound
         );
-        assert_eq!(get_all_ip_addr_subnets(&sync_ctx, device).find(|&a| a == addr_subnet), None);
+        assert_eq!(
+            get_all_ip_addr_subnets(&sync_ctx, device).into_iter().find(|&a| a == addr_subnet),
+            None
+        );
     }
 
     #[test]

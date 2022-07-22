@@ -60,16 +60,16 @@ pub(super) fn get_mtu<NonSyncCtx: NonSyncContext>(ctx: &SyncCtx<NonSyncCtx>) -> 
 mod tests {
     use alloc::vec::Vec;
 
-    use net_types::ip::{AddrSubnet, Ipv4, Ipv6};
+    use net_types::{
+        ip::{AddrSubnet, Ipv4, Ipv6},
+        SpecifiedAddr,
+    };
 
     use crate::{
         device::DeviceId,
         error::NotFoundError,
-        ip::device::state::{AssignedAddress, IpDeviceState, IpDeviceStateIpExt},
-        testutil::{
-            DummyEventDispatcherBuilder, DummyEventDispatcherConfig, DummyNonSyncCtx, DummySyncCtx,
-            TestIpExt,
-        },
+        ip::device::state::{AssignedAddress, IpDeviceStateIpExt},
+        testutil::{DummyEventDispatcherBuilder, DummyEventDispatcherConfig, TestIpExt},
         Ctx, NonSyncContext, SyncCtx,
     };
 
@@ -91,18 +91,9 @@ mod tests {
             sync_ctx: &mut SyncCtx<NonSyncCtx>,
             ctx: &mut NonSyncCtx,
             device: DeviceId,
-            get_ip_state: for<'a> fn(
-                &'a SyncCtx<NonSyncCtx>,
-                DeviceId,
-            ) -> &'a IpDeviceState<NonSyncCtx::Instant, I>,
+            get_addrs: fn(&SyncCtx<NonSyncCtx>, DeviceId) -> Vec<SpecifiedAddr<I::Addr>>,
         ) {
-            assert_eq!(
-                &get_ip_state(sync_ctx, device)
-                    .iter_addrs()
-                    .map(AssignedAddress::addr)
-                    .collect::<Vec<_>>()[..],
-                []
-            );
+            assert_eq!(get_addrs(sync_ctx, device), []);
 
             let DummyEventDispatcherConfig {
                 subnet,
@@ -115,22 +106,10 @@ mod tests {
                 .expect("error creating AddrSubnet");
             assert_eq!(crate::device::add_ip_addr_subnet(sync_ctx, ctx, device, addr,), Ok(()));
             let addr = addr.addr();
-            assert_eq!(
-                &get_ip_state(sync_ctx, device)
-                    .iter_addrs()
-                    .map(AssignedAddress::addr)
-                    .collect::<Vec<_>>()[..],
-                [addr]
-            );
+            assert_eq!(&get_addrs(sync_ctx, device)[..], [addr]);
 
             assert_eq!(crate::device::del_ip_addr(sync_ctx, ctx, device, &addr,), Ok(()));
-            assert_eq!(
-                &get_ip_state(sync_ctx, device)
-                    .iter_addrs()
-                    .map(AssignedAddress::addr)
-                    .collect::<Vec<_>>()[..],
-                []
-            );
+            assert_eq!(get_addrs(sync_ctx, device), []);
 
             assert_eq!(
                 crate::device::del_ip_addr(sync_ctx, ctx, device, &addr,),
@@ -138,17 +117,19 @@ mod tests {
             );
         }
 
-        test::<Ipv4, _>(
-            &mut sync_ctx,
-            &mut non_sync_ctx,
-            device,
-            crate::ip::device::get_ipv4_device_state::<DummyNonSyncCtx, DummySyncCtx>,
-        );
-        test::<Ipv6, _>(
-            &mut sync_ctx,
-            &mut non_sync_ctx,
-            device,
-            crate::ip::device::get_ipv6_device_state::<DummyNonSyncCtx, DummySyncCtx>,
-        );
+        test::<Ipv4, _>(&mut sync_ctx, &mut non_sync_ctx, device, |sync_ctx, device| {
+            crate::ip::device::IpDeviceContext::<Ipv4, _>::with_ip_device_state(
+                sync_ctx,
+                device,
+                |state| state.ip_state.iter_addrs().map(AssignedAddress::addr).collect::<Vec<_>>(),
+            )
+        });
+        test::<Ipv6, _>(&mut sync_ctx, &mut non_sync_ctx, device, |sync_ctx, device| {
+            crate::ip::device::IpDeviceContext::<Ipv6, _>::with_ip_device_state(
+                sync_ctx,
+                device,
+                |state| state.ip_state.iter_addrs().map(AssignedAddress::addr).collect::<Vec<_>>(),
+            )
+        });
     }
 }

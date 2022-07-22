@@ -460,6 +460,7 @@ impl TestStack {
         let Ctx { sync_ctx, non_sync_ctx } = ctx.deref();
         let device = non_sync_ctx.get_device_info(id).expect("device");
         let addresses = get_all_ip_addr_subnets(sync_ctx, device.core_id())
+            .into_iter()
             .map(|addr| addr.try_into_fidl().expect("convert to FIDL"))
             .collect();
 

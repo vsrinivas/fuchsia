@@ -1341,8 +1341,7 @@ mod tests {
         },
         ip::{
             device::{
-                get_assigned_ipv6_addr_subnets, get_ipv6_device_state, get_ipv6_hop_limit,
-                is_ipv6_routing_enabled,
+                get_ipv6_hop_limit, is_ip_routing_enabled,
                 router_solicitation::{MAX_RTR_SOLICITATION_DELAY, RTR_SOLICITATION_INTERVAL},
                 set_ipv6_routing_enabled,
                 slaac::{SlaacConfiguration, SlaacTimerId, TemporarySlaacAddressConfiguration},
@@ -1350,9 +1349,11 @@ mod tests {
                     AddrConfig, Ipv6AddressEntry, Ipv6DeviceConfiguration, Lifetime,
                     TemporarySlaacConfig,
                 },
-                Ipv6DeviceHandler, Ipv6DeviceTimerId,
+                with_assigned_ipv6_addr_subnets, Ipv6DeviceHandler, Ipv6DeviceTimerId,
             },
-            receive_ipv6_packet, SendIpPacketMeta,
+            receive_ipv6_packet,
+            testutil::is_in_ip_multicast,
+            SendIpPacketMeta,
         },
         testutil::{
             assert_empty, get_counter_val, handle_timer, set_logger_for_test,
@@ -1769,27 +1770,23 @@ mod tests {
         });
 
         // Both devices should be in the solicited-node multicast group.
-        assert!(get_ipv6_device_state(net.sync_ctx("local"), device_id)
-            .multicast_groups
-            .contains(&multicast_addr));
-        assert!(get_ipv6_device_state(net.sync_ctx("remote"), device_id)
-            .multicast_groups
-            .contains(&multicast_addr));
+        assert!(is_in_ip_multicast(net.sync_ctx("local"), device_id, multicast_addr));
+        assert!(is_in_ip_multicast(net.sync_ctx("remote"), device_id, multicast_addr));
 
         let _: StepResult = net.step(receive_frame_or_panic, handle_timer);
 
         // They should now realize the address they intend to use has a
         // duplicate in the local network.
-        assert_empty(get_assigned_ipv6_addr_subnets(net.sync_ctx("local"), device_id));
-        assert_empty(get_assigned_ipv6_addr_subnets(net.sync_ctx("remote"), device_id));
+        with_assigned_ipv6_addr_subnets(net.sync_ctx("local"), device_id, |addrs| {
+            assert_empty(addrs)
+        });
+        with_assigned_ipv6_addr_subnets(net.sync_ctx("remote"), device_id, |addrs| {
+            assert_empty(addrs)
+        });
 
         // Both devices should not be in the multicast group
-        assert!(!get_ipv6_device_state(net.sync_ctx("local"), device_id)
-            .multicast_groups
-            .contains(&multicast_addr));
-        assert!(!get_ipv6_device_state(net.sync_ctx("remote"), device_id)
-            .multicast_groups
-            .contains(&multicast_addr));
+        assert!(!is_in_ip_multicast(net.sync_ctx("local"), device_id, multicast_addr));
+        assert!(!is_in_ip_multicast(net.sync_ctx("remote"), device_id, multicast_addr));
     }
 
     fn dad_timer_id(id: EthernetDeviceId, addr: UnicastAddr<Ipv6Addr>) -> TimerId {
@@ -1843,12 +1840,8 @@ mod tests {
         });
 
         // Only local should be in the solicited node multicast group.
-        assert!(get_ipv6_device_state(net.sync_ctx("local"), device_id)
-            .multicast_groups
-            .contains(&multicast_addr));
-        assert!(!get_ipv6_device_state(net.sync_ctx("remote"), device_id)
-            .multicast_groups
-            .contains(&multicast_addr));
+        assert!(is_in_ip_multicast(net.sync_ctx("local"), device_id, multicast_addr));
+        assert!(!is_in_ip_multicast(net.sync_ctx("remote"), device_id, multicast_addr));
 
         net.with_context("local", |Ctx { sync_ctx, non_sync_ctx }| {
             assert_eq!(
@@ -1870,16 +1863,17 @@ mod tests {
             add_ip_addr_subnet(sync_ctx, non_sync_ctx, device_id, addr).unwrap();
         });
         // Local & remote should be in the multicast group.
-        assert!(get_ipv6_device_state(net.sync_ctx("local"), device_id)
-            .multicast_groups
-            .contains(&multicast_addr));
-        assert!(get_ipv6_device_state(net.sync_ctx("remote"), device_id)
-            .multicast_groups
-            .contains(&multicast_addr));
+        assert!(is_in_ip_multicast(net.sync_ctx("local"), device_id, multicast_addr));
+        assert!(is_in_ip_multicast(net.sync_ctx("remote"), device_id, multicast_addr));
 
         let _: StepResult = net.step(receive_frame_or_panic, handle_timer);
 
-        assert_eq!(get_assigned_ipv6_addr_subnets(net.sync_ctx("remote"), device_id).count(), 1);
+        assert_eq!(
+            with_assigned_ipv6_addr_subnets(net.sync_ctx("remote"), device_id, |addrs| addrs
+                .count()),
+            1
+        );
+
         // Let's make sure that our local node still can use that address.
         assert!(NdpContext::<EthernetLinkDevice, _>::get_ip_device_state(
             net.sync_ctx("local"),
@@ -1891,12 +1885,8 @@ mod tests {
         .is_assigned());
 
         // Only local should be in the solicited node multicast group.
-        assert!(get_ipv6_device_state(net.sync_ctx("local"), device_id)
-            .multicast_groups
-            .contains(&multicast_addr));
-        assert!(!get_ipv6_device_state(net.sync_ctx("remote"), device_id)
-            .multicast_groups
-            .contains(&multicast_addr));
+        assert!(is_in_ip_multicast(net.sync_ctx("local"), device_id, multicast_addr));
+        assert!(!is_in_ip_multicast(net.sync_ctx("remote"), device_id, multicast_addr));
     }
 
     #[test]
@@ -2086,8 +2076,26 @@ mod tests {
 
         // They should now realize the address they intend to use has a
         // duplicate in the local network.
-        assert_eq!(get_assigned_ipv6_addr_subnets(net.sync_ctx("local"), device_id).count(), 1);
-        assert_eq!(get_assigned_ipv6_addr_subnets(net.sync_ctx("remote"), device_id).count(), 1);
+        assert_eq!(
+            with_assigned_ipv6_addr_subnets(net.sync_ctx("local"), device_id, |a| a.count()),
+            1
+        );
+        assert_eq!(
+            with_assigned_ipv6_addr_subnets(net.sync_ctx("remote"), device_id, |a| a.count()),
+            1
+        );
+    }
+
+    fn get_address_state(
+        sync_ctx: &crate::testutil::DummySyncCtx,
+        device: DeviceId,
+        addr: UnicastAddr<Ipv6Addr>,
+    ) -> Option<AddressState> {
+        crate::ip::device::IpDeviceContext::<Ipv6, _>::with_ip_device_state(
+            sync_ctx,
+            device,
+            |state| state.ip_state.find_addr(&addr).map(|a| a.state),
+        )
     }
 
     #[test]
@@ -2122,11 +2130,10 @@ mod tests {
             AddrSubnet::new(local_ip().get(), 128).unwrap(),
         )
         .unwrap();
-        assert!(get_ipv6_device_state(&sync_ctx, dev_id)
-            .find_addr(&local_ip())
-            .unwrap()
-            .state
-            .is_tentative());
+        assert_matches!(
+            get_address_state(&sync_ctx, dev_id, local_ip()),
+            Some(AddressState::Tentative { dad_transmits_remaining: _ })
+        );
         assert_eq!(non_sync_ctx.frames_sent().len(), 1);
 
         // Send another NS.
@@ -2150,16 +2157,14 @@ mod tests {
             AddrSubnet::new(remote_ip().get(), 128).unwrap(),
         )
         .unwrap();
-        assert!(get_ipv6_device_state(&sync_ctx, dev_id)
-            .find_addr(&local_ip())
-            .unwrap()
-            .state
-            .is_tentative());
-        assert!(get_ipv6_device_state(&sync_ctx, dev_id)
-            .find_addr(&remote_ip())
-            .unwrap()
-            .state
-            .is_tentative());
+        assert_matches!(
+            get_address_state(&sync_ctx, dev_id, local_ip()),
+            Some(AddressState::Tentative { dad_transmits_remaining: _ })
+        );
+        assert_matches!(
+            get_address_state(&sync_ctx, dev_id, remote_ip()),
+            Some(AddressState::Tentative { dad_transmits_remaining: _ })
+        );
         assert_eq!(non_sync_ctx.frames_sent().len(), 3);
 
         // Run to the end for DAD for local ip
@@ -2173,16 +2178,11 @@ mod tests {
             ),
             [local_timer_id, remote_timer_id, local_timer_id, remote_timer_id]
         );
-        assert!(get_ipv6_device_state(&sync_ctx, dev_id)
-            .find_addr(&local_ip())
-            .unwrap()
-            .state
-            .is_assigned());
-        assert!(get_ipv6_device_state(&sync_ctx, dev_id)
-            .find_addr(&remote_ip())
-            .unwrap()
-            .state
-            .is_tentative());
+        assert_eq!(get_address_state(&sync_ctx, dev_id, local_ip()), Some(AddressState::Assigned));
+        assert_matches!(
+            get_address_state(&sync_ctx, dev_id, remote_ip()),
+            Some(AddressState::Tentative { dad_transmits_remaining: _ })
+        );
         assert_eq!(non_sync_ctx.frames_sent().len(), 6);
 
         // Run to the end for DAD for local ip
@@ -2194,16 +2194,8 @@ mod tests {
             ),
             [remote_timer_id]
         );
-        assert!(get_ipv6_device_state(&sync_ctx, dev_id)
-            .find_addr(&local_ip())
-            .unwrap()
-            .state
-            .is_assigned());
-        assert!(get_ipv6_device_state(&sync_ctx, dev_id)
-            .find_addr(&remote_ip())
-            .unwrap()
-            .state
-            .is_assigned());
+        assert_eq!(get_address_state(&sync_ctx, dev_id, local_ip()), Some(AddressState::Assigned));
+        assert_eq!(get_address_state(&sync_ctx, dev_id, remote_ip()), Some(AddressState::Assigned));
         assert_eq!(non_sync_ctx.frames_sent().len(), 6);
 
         // No more timers.
@@ -2243,11 +2235,10 @@ mod tests {
             AddrSubnet::new(local_ip().get(), 128).unwrap(),
         )
         .unwrap();
-        assert!(get_ipv6_device_state(&sync_ctx, dev_id)
-            .find_addr(&local_ip())
-            .unwrap()
-            .state
-            .is_tentative());
+        assert_matches!(
+            get_address_state(&sync_ctx, dev_id, local_ip()),
+            Some(AddressState::Tentative { dad_transmits_remaining: _ })
+        );
         assert_eq!(non_sync_ctx.frames_sent().len(), 1);
 
         // Send another NS.
@@ -2271,16 +2262,14 @@ mod tests {
             AddrSubnet::new(remote_ip().get(), 128).unwrap(),
         )
         .unwrap();
-        assert!(get_ipv6_device_state(&sync_ctx, dev_id)
-            .find_addr(&local_ip())
-            .unwrap()
-            .state
-            .is_tentative());
-        assert!(get_ipv6_device_state(&sync_ctx, dev_id)
-            .find_addr(&remote_ip())
-            .unwrap()
-            .state
-            .is_tentative());
+        assert_matches!(
+            get_address_state(&sync_ctx, dev_id, local_ip()),
+            Some(AddressState::Tentative { dad_transmits_remaining: _ })
+        );
+        assert_matches!(
+            get_address_state(&sync_ctx, dev_id, remote_ip()),
+            Some(AddressState::Tentative { dad_transmits_remaining: _ })
+        );
         assert_eq!(non_sync_ctx.frames_sent().len(), 3);
 
         // Run 1s
@@ -2294,27 +2283,24 @@ mod tests {
             ),
             [local_timer_id, remote_timer_id]
         );
-        assert!(get_ipv6_device_state(&sync_ctx, dev_id)
-            .find_addr(&local_ip())
-            .unwrap()
-            .state
-            .is_tentative());
-        assert!(get_ipv6_device_state(&sync_ctx, dev_id)
-            .find_addr(&remote_ip())
-            .unwrap()
-            .state
-            .is_tentative());
+        assert_matches!(
+            get_address_state(&sync_ctx, dev_id, local_ip()),
+            Some(AddressState::Tentative { dad_transmits_remaining: _ })
+        );
+        assert_matches!(
+            get_address_state(&sync_ctx, dev_id, remote_ip()),
+            Some(AddressState::Tentative { dad_transmits_remaining: _ })
+        );
         assert_eq!(non_sync_ctx.frames_sent().len(), 5);
 
         // Remove local ip
         del_ip_addr(&mut sync_ctx, &mut non_sync_ctx, dev_id, &local_ip().into_specified())
             .unwrap();
-        assert_eq!(get_ipv6_device_state(&sync_ctx, dev_id).find_addr(&local_ip()), None);
-        assert!(get_ipv6_device_state(&sync_ctx, dev_id)
-            .find_addr(&remote_ip())
-            .unwrap()
-            .state
-            .is_tentative());
+        assert_eq!(get_address_state(&sync_ctx, dev_id, local_ip()), None);
+        assert_matches!(
+            get_address_state(&sync_ctx, dev_id, remote_ip()),
+            Some(AddressState::Tentative { dad_transmits_remaining: _ })
+        );
         assert_eq!(non_sync_ctx.frames_sent().len(), 5);
 
         // Run to the end for DAD for local ip
@@ -2326,12 +2312,8 @@ mod tests {
             ),
             [remote_timer_id, remote_timer_id]
         );
-        assert_eq!(get_ipv6_device_state(&sync_ctx, dev_id).find_addr(&local_ip()), None);
-        assert!(get_ipv6_device_state(&sync_ctx, dev_id)
-            .find_addr(&remote_ip())
-            .unwrap()
-            .state
-            .is_assigned());
+        assert_eq!(get_address_state(&sync_ctx, dev_id, local_ip()), None);
+        assert_eq!(get_address_state(&sync_ctx, dev_id, remote_ip()), Some(AddressState::Assigned));
         assert_eq!(non_sync_ctx.frames_sent().len(), 6);
 
         // No more timers.
@@ -2894,7 +2876,7 @@ mod tests {
         // Enable routing on device.
         set_ipv6_routing_enabled(&mut sync_ctx, &mut non_sync_ctx, device, true)
             .expect("error setting routing enabled");
-        assert!(is_ipv6_routing_enabled(&sync_ctx, device));
+        assert!(is_ip_routing_enabled::<Ipv6, _, _>(&sync_ctx, device));
 
         // Should have not sent any new packets, but unset the router
         // solicitation timer.
@@ -2904,7 +2886,7 @@ mod tests {
         // Unsetting routing should succeed.
         set_ipv6_routing_enabled(&mut sync_ctx, &mut non_sync_ctx, device, false)
             .expect("error setting routing enabled");
-        assert!(!is_ipv6_routing_enabled(&sync_ctx, device));
+        assert!(!is_ip_routing_enabled::<Ipv6, _, _>(&sync_ctx, device));
         assert_eq!(non_sync_ctx.frames_sent().len(), 1);
         non_sync_ctx.timer_ctx().assert_timers_installed([(timer_id, ..)]);
 

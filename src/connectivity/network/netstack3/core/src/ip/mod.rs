@@ -53,11 +53,7 @@ use crate::{
     device::{DeviceId, FrameDestination},
     error::{ExistsError, NotFoundError},
     ip::{
-        device::{
-            get_ipv4_device_state, get_ipv6_device_state, iter_ipv4_devices, iter_ipv6_devices,
-            state::{AssignedAddress as _, IpDeviceState},
-            IpDeviceNonSyncContext,
-        },
+        device::IpDeviceNonSyncContext,
         forwarding::{AddRouteError, Destination, ForwardingTable},
         gmp::igmp::IgmpPacketHandler,
         icmp::{
@@ -423,6 +419,13 @@ pub(crate) trait IpDeviceContext<I: IpLayerIpExt, C>: IpDeviceIdContext<I> {
     /// Is the device enabled?
     fn is_ip_device_enabled(&self, device_id: Self::DeviceId) -> bool;
 
+    /// Returns the best local address with communicating with the remote.
+    fn get_local_addr_for_remote(
+        &self,
+        device_id: Self::DeviceId,
+        remote: SpecifiedAddr<I::Addr>,
+    ) -> Option<SpecifiedAddr<I::Addr>>;
+
     /// Gets the status of an address.
     ///
     /// Returns the status of the address if it is assigned, and the device it
@@ -512,18 +515,22 @@ impl<
         local_ip: Option<SpecifiedAddr<Ipv4Addr>>,
         addr: SpecifiedAddr<Ipv4Addr>,
     ) -> Result<IpSockRoute<Ipv4, SC::DeviceId>, IpSockRouteError> {
-        let get_local_addr = |dev_state: &IpDeviceState<_, Ipv4>, local_ip| {
+        let get_local_addr = |device, local_ip| {
             if let Some(local_ip) = local_ip {
-                if dev_state.iter_addrs().any(|addr_sub| addr_sub.addr() == local_ip) {
-                    Ok(local_ip)
-                } else {
-                    Err(IpSockUnroutableError::LocalAddrNotAssigned.into())
+                match self.address_status_for_device(local_ip, device) {
+                    AddressStatus::Present(Ipv4PresentAddressStatus::Unicast) => Ok(local_ip),
+                    AddressStatus::Present(
+                        Ipv4PresentAddressStatus::LimitedBroadcast
+                        | Ipv4PresentAddressStatus::SubnetBroadcast
+                        | Ipv4PresentAddressStatus::Multicast,
+                    )
+                    | AddressStatus::Unassigned => {
+                        Err(IpSockUnroutableError::LocalAddrNotAssigned.into())
+                    }
                 }
             } else {
-                dev_state
-                    .iter_addrs()
-                    .next()
-                    .map_or(Err(IpSockRouteError::NoLocalAddrAvailable), |subnet| Ok(subnet.addr()))
+                self.get_local_addr_for_remote(device, addr)
+                    .ok_or(IpSockRouteError::NoLocalAddrAvailable)
             }
         };
 
@@ -531,33 +538,32 @@ impl<
         //
         // TODO(https://fxbug.dev/93870): Encode the delivery of locally
         // destined packets to loopback in the route table.
-        if let Some(dev_state) =
-            iter_ipv4_devices::<C, SC>(self).find_map(|(_device_id, dev_state)| {
-                dev_state.iter_addrs().any(|addr_sub| addr_sub.addr() == addr).then(|| dev_state)
-            })
-        {
-            let loopback = if let Some(loopback) = self.loopback_id() {
-                loopback
-            } else {
-                return Err(IpSockUnroutableError::NoRouteToRemoteAddr.into());
-            };
-
-            return Ok(IpSockRoute {
-                // TODO(https://fxbug.dev/94965): Allow local IPs from any
-                // interface for locally-destined packets.
-                local_ip: get_local_addr(dev_state, local_ip)?,
-                destination: Destination { device: loopback, next_hop: addr },
-            });
+        match self.address_status(addr) {
+            AddressStatus::Present((device_id, Ipv4PresentAddressStatus::Unicast)) => {
+                if let Some(loopback) = self.loopback_id() {
+                    Ok(IpSockRoute {
+                        // TODO(https://fxbug.dev/94965): Allow local IPs from any
+                        // interface for locally-destined packets.
+                        local_ip: get_local_addr(device_id, local_ip)?,
+                        destination: Destination { device: loopback, next_hop: addr },
+                    })
+                } else {
+                    Err(IpSockUnroutableError::NoRouteToRemoteAddr.into())
+                }
+            }
+            AddressStatus::Present((
+                _,
+                Ipv4PresentAddressStatus::LimitedBroadcast
+                | Ipv4PresentAddressStatus::SubnetBroadcast
+                | Ipv4PresentAddressStatus::Multicast,
+            ))
+            | AddressStatus::Unassigned => lookup_route(self, ctx, device, addr)
+                .map(|destination| {
+                    let Destination { device, next_hop: _ } = &destination;
+                    Ok(IpSockRoute { local_ip: get_local_addr(*device, local_ip)?, destination })
+                })
+                .unwrap_or(Err(IpSockUnroutableError::NoRouteToRemoteAddr.into())),
         }
-
-        lookup_route(self, ctx, device, addr)
-            .map(|destination| {
-                let Destination { device, next_hop: _ } = &destination;
-                let dev_state = get_ipv4_device_state(self, *device);
-
-                Ok(IpSockRoute { local_ip: get_local_addr(dev_state, local_ip)?, destination })
-            })
-            .unwrap_or(Err(IpSockUnroutableError::NoRouteToRemoteAddr.into()))
     }
 }
 
@@ -574,7 +580,6 @@ impl<
         addr: SpecifiedAddr<Ipv6Addr>,
     ) -> Result<IpSockRoute<Ipv6, SC::DeviceId>, IpSockRouteError> {
         let get_local_addr = |device, local_ip| {
-            let dev_state = get_ipv6_device_state(self, device);
             if let Some(local_ip) = local_ip {
                 // TODO(joshlf):
                 // - Allow the specified local IP to be the local IP of a
@@ -582,36 +587,21 @@ impl<
                 //   host model.
                 // - What about when the socket is bound to a device? How does
                 //   that affect things?
-                //
-                // TODO(fxbug.dev/69196): Give `local_ip` the type
-                // `Option<UnicastAddr<Ipv6Addr>>` instead of doing this dynamic
-                // check here.
-                let local_ip = UnicastAddr::from_witness(local_ip)
-                    .ok_or(IpSockUnroutableError::LocalAddrNotAssigned)?;
-                if dev_state.find_addr(&local_ip).map_or(true, |entry| entry.state.is_tentative()) {
-                    Err(IpSockUnroutableError::LocalAddrNotAssigned.into())
-                } else {
-                    Ok(local_ip.into_specified())
+                match self.address_status_for_device(local_ip, device) {
+                    AddressStatus::Present(Ipv6PresentAddressStatus::UnicastAssigned) => {
+                        Ok(local_ip)
+                    }
+                    AddressStatus::Present(
+                        Ipv6PresentAddressStatus::Multicast
+                        | Ipv6PresentAddressStatus::UnicastTentative,
+                    )
+                    | AddressStatus::Unassigned => {
+                        Err(IpSockUnroutableError::LocalAddrNotAssigned.into())
+                    }
                 }
             } else {
-                // TODO(joshlf):
-                // - If device binding is used, then we should only consider the
-                //   addresses of the device being bound to.
-                // - If we are operating in the strong host model, then perhaps
-                //   we should restrict ourselves to addresses associated with
-                //   the device found by looking up the remote in the forwarding
-                //   table? This I'm less sure of.
-                crate::ip::socket::ipv6_source_address_selection::select_ipv6_source_address(
-                    addr,
-                    device,
-                    iter_ipv6_devices(self)
-                        .map(|(device_id, ip_state)| {
-                            ip_state.iter_addrs().map(move |a| (a, device_id))
-                        })
-                        .flatten(),
-                )
-                .map(|a| a.into_specified())
-                .ok_or(IpSockRouteError::NoLocalAddrAvailable)
+                self.get_local_addr_for_remote(device, addr)
+                    .ok_or(IpSockRouteError::NoLocalAddrAvailable)
             }
         };
 
@@ -619,32 +609,30 @@ impl<
         //
         // TODO(https://fxbug.dev/93870): Encode the delivery of locally
         // destined packets to loopback in the route table.
-        if let Some(device_id) = iter_ipv6_devices(self).find_map(|(device_id, dev_state)| {
-            dev_state
-                .iter_assigned_ipv6_addrs()
-                .any(|addr_sub| addr_sub.addr() == addr)
-                .then(|| device_id)
-        }) {
-            let loopback = if let Some(loopback) = self.loopback_id() {
-                loopback
-            } else {
-                return Err(IpSockUnroutableError::NoRouteToRemoteAddr.into());
-            };
-
-            return Ok(IpSockRoute {
-                // TODO(https://fxbug.dev/94965): Allow local IPs from any
-                // interface for locally-destined packets.
-                local_ip: get_local_addr(device_id, local_ip)?,
-                destination: Destination { device: loopback, next_hop: addr },
-            });
+        match self.address_status(addr) {
+            AddressStatus::Present((device_id, Ipv6PresentAddressStatus::UnicastAssigned)) => {
+                if let Some(loopback) = self.loopback_id() {
+                    Ok(IpSockRoute {
+                        // TODO(https://fxbug.dev/94965): Allow local IPs from any
+                        // interface for locally-destined packets.
+                        local_ip: get_local_addr(device_id, local_ip)?,
+                        destination: Destination { device: loopback, next_hop: addr },
+                    })
+                } else {
+                    return Err(IpSockUnroutableError::NoRouteToRemoteAddr.into());
+                }
+            }
+            AddressStatus::Present((
+                _,
+                Ipv6PresentAddressStatus::UnicastTentative | Ipv6PresentAddressStatus::Multicast,
+            ))
+            | AddressStatus::Unassigned => lookup_route(self, ctx, device, addr)
+                .map(|destination| {
+                    let Destination { device, next_hop: _ } = &destination;
+                    Ok(IpSockRoute { local_ip: get_local_addr(*device, local_ip)?, destination })
+                })
+                .unwrap_or(Err(IpSockUnroutableError::NoRouteToRemoteAddr.into())),
         }
-
-        lookup_route(self, ctx, device, addr)
-            .map(|destination| {
-                let Destination { device, next_hop: _ } = &destination;
-                Ok(IpSockRoute { local_ip: get_local_addr(*device, local_ip)?, destination })
-            })
-            .unwrap_or(Err(IpSockUnroutableError::NoRouteToRemoteAddr.into()))
     }
 }
 
@@ -2490,6 +2478,53 @@ pub(crate) fn dispatch_receive_ip_packet_name<I: Ip>() -> &'static str {
 }
 
 #[cfg(test)]
+pub(crate) mod testutil {
+    use super::*;
+
+    use net_types::{ip::IpAddr, MulticastAddr};
+
+    use crate::{testutil::DummySyncCtx, DeviceId};
+
+    pub(crate) fn is_in_ip_multicast<A: IpAddress>(
+        sync_ctx: &DummySyncCtx,
+        device: DeviceId,
+        addr: MulticastAddr<A>,
+    ) -> bool {
+        match addr.into() {
+            IpAddr::V4(addr) => {
+                match IpDeviceContext::<Ipv4, _>::address_status_for_device(
+                    sync_ctx,
+                    addr.into_specified(),
+                    device,
+                ) {
+                    AddressStatus::Present(Ipv4PresentAddressStatus::Multicast) => true,
+                    AddressStatus::Unassigned => false,
+                    AddressStatus::Present(
+                        Ipv4PresentAddressStatus::Unicast
+                        | Ipv4PresentAddressStatus::LimitedBroadcast
+                        | Ipv4PresentAddressStatus::SubnetBroadcast,
+                    ) => unreachable!(),
+                }
+            }
+            IpAddr::V6(addr) => {
+                match IpDeviceContext::<Ipv6, _>::address_status_for_device(
+                    sync_ctx,
+                    addr.into_specified(),
+                    device,
+                ) {
+                    AddressStatus::Present(Ipv6PresentAddressStatus::Multicast) => true,
+                    AddressStatus::Unassigned => false,
+                    AddressStatus::Present(
+                        Ipv6PresentAddressStatus::UnicastAssigned
+                        | Ipv6PresentAddressStatus::UnicastTentative,
+                    ) => unreachable!(),
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
 mod tests {
     use alloc::vec;
     use core::{convert::TryFrom, num::NonZeroU16, time::Duration};
@@ -2519,7 +2554,7 @@ mod tests {
     use crate::{
         context::testutil::{DummyInstant, DummyTimerCtxExt as _},
         device::{receive_frame, testutil::receive_frame_or_panic, FrameDestination},
-        ip::device::set_routing_enabled,
+        ip::{device::set_routing_enabled, testutil::is_in_ip_multicast},
         testutil::{
             assert_empty, get_counter_val, handle_timer, new_rng, DummyCtx,
             DummyEventDispatcherBuilder, DummyNonSyncCtx, TestIpExt, DUMMY_CONFIG_V4,
@@ -3671,12 +3706,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn test_joining_leaving_ip_multicast_group<
-        I: Ip
-            + TestIpExt
-            + packet_formats::ip::IpExt
-            + crate::device::testutil::DeviceTestIpExt<DummyInstant>,
-    >() {
+    fn test_joining_leaving_ip_multicast_group<I: Ip + TestIpExt + packet_formats::ip::IpExt>() {
         // Test receiving a packet destined to a multicast IP (and corresponding
         // multicast MAC).
 
@@ -3702,7 +3732,7 @@ mod tests {
         let multi_addr = MulticastAddr::new(multi_addr).unwrap();
         // Should not have dispatched the packet since we are not in the
         // multicast group `multi_addr`.
-        assert!(!I::get_ip_device_state(&sync_ctx, device).multicast_groups.contains(&multi_addr));
+        assert!(!is_in_ip_multicast(&sync_ctx, device, multi_addr));
         receive_frame(&mut sync_ctx, &mut non_sync_ctx, device, buf.clone())
             .expect("error receiving frame");
         assert_eq!(get_counter_val(&non_sync_ctx, dispatch_receive_ip_packet_name::<I>()), 0);
@@ -3723,7 +3753,7 @@ mod tests {
                 multicast_addr,
             ),
         }
-        assert!(I::get_ip_device_state(&sync_ctx, device).multicast_groups.contains(&multi_addr));
+        assert!(is_in_ip_multicast(&sync_ctx, device, multi_addr));
         receive_frame(&mut sync_ctx, &mut non_sync_ctx, device, buf.clone())
             .expect("error receiving frame");
         assert_eq!(get_counter_val(&non_sync_ctx, dispatch_receive_ip_packet_name::<I>()), 1);
@@ -3744,7 +3774,7 @@ mod tests {
                 multicast_addr,
             ),
         }
-        assert!(!I::get_ip_device_state(&sync_ctx, device).multicast_groups.contains(&multi_addr));
+        assert!(!is_in_ip_multicast(&sync_ctx, device, multi_addr));
         receive_frame(&mut sync_ctx, &mut non_sync_ctx, device, buf.clone())
             .expect("error receiving frame");
         assert_eq!(get_counter_val(&non_sync_ctx, dispatch_receive_ip_packet_name::<I>()), 1);
