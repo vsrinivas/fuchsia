@@ -6,19 +6,37 @@ use lazy_static::lazy_static;
 use regex::Regex;
 use std::sync::Arc;
 
-use crate::auth::FsCred;
 use crate::fs::*;
 use crate::lock::Mutex;
 use crate::mm::{ProcMapsFile, ProcStatFile};
 use crate::task::{CurrentTask, Task, ThreadGroup};
 use crate::types::*;
 
+fn dynamic_directory_with_creds<D: DirectoryDelegate>(
+    task: &Arc<Task>,
+    fs: &Arc<FileSystem>,
+    d: D,
+) -> Arc<FsNode> {
+    let node = dynamic_directory(fs, d);
+    {
+        let creds = task.as_fscred();
+        let mut info = node.info_write();
+        info.uid = creds.uid;
+        info.gid = creds.gid;
+    }
+    node
+}
+
 /// Creates an [`FsNode`] that represents the `/proc/<pid>` directory for `task`.
 pub fn pid_directory(fs: &FileSystemHandle, task: &Arc<Task>) -> Arc<FsNode> {
     static_directory_builder_with_common_task_entries(fs, task)
         .add_node_entry(
             b"task",
-            dynamic_directory(fs, TaskListDirectory { thread_group: task.thread_group.clone() }),
+            dynamic_directory_with_creds(
+                task,
+                fs,
+                TaskListDirectory { thread_group: task.thread_group.clone() },
+            ),
         )
         .build()
 }
@@ -36,21 +54,37 @@ fn static_directory_builder_with_common_task_entries<'a>(
 ) -> StaticDirectoryBuilder<'a> {
     StaticDirectoryBuilder::new(fs)
         .add_node_entry(b"exe", ExeSymlink::new(fs, task.clone()))
-        .add_node_entry(b"fd", dynamic_directory(fs, FdDirectory { task: task.clone() }))
-        .add_node_entry(b"fdinfo", dynamic_directory(fs, FdInfoDirectory { task: task.clone() }))
+        .add_node_entry(
+            b"fd",
+            dynamic_directory_with_creds(task, fs, FdDirectory { task: task.clone() }),
+        )
+        .add_node_entry(
+            b"fdinfo",
+            dynamic_directory_with_creds(task, fs, FdInfoDirectory { task: task.clone() }),
+        )
         .add_node_entry(b"maps", ProcMapsFile::new(fs, task.clone()))
         .add_node_entry(b"stat", ProcStatFile::new(fs, task.clone()))
         .add_node_entry(b"cmdline", CmdlineFile::new(fs, task.clone()))
         .add_node_entry(b"comm", CommFile::new(fs, task.clone()))
-        .add_node_entry(b"attr", attr_directory(fs))
-        .add_node_entry(b"ns", dynamic_directory(fs, NsDirectory))
+        .add_node_entry(b"attr", attr_directory(task, fs))
+        .add_node_entry(
+            b"ns",
+            dynamic_directory_with_creds(task, fs, NsDirectory { task: task.clone() }),
+        )
+        .set_creds(task.as_fscred())
 }
 
 /// Creates an [`FsNode`] that represents the `/proc/<pid>/attr` directory.
-fn attr_directory(fs: &FileSystemHandle) -> Arc<FsNode> {
+fn attr_directory(task: &Arc<Task>, fs: &FileSystemHandle) -> Arc<FsNode> {
     StaticDirectoryBuilder::new(fs)
         // The `current` security context is, with selinux disabled, unconfined.
-        .add_entry(b"current", ByteVecFile::new(b"unconfined\n".to_vec()), mode!(IFREG, 0o666))
+        .add_entry_with_creds(
+            b"current",
+            ByteVecFile::new(b"unconfined\n".to_vec()),
+            mode!(IFREG, 0o666),
+            task.as_fscred(),
+        )
+        .set_creds(task.as_fscred())
         .build()
 }
 
@@ -98,7 +132,9 @@ const NS_ENTRIES: &'static [&'static str] = &[
 ];
 
 /// /proc/[pid]/ns directory
-struct NsDirectory;
+struct NsDirectory {
+    task: Arc<Task>,
+}
 
 impl DirectoryDelegate for NsDirectory {
     fn list(&self, _fs: &Arc<FileSystem>) -> Result<Vec<DynamicDirectoryEntry>, Errno> {
@@ -142,7 +178,7 @@ impl DirectoryDelegate for NsDirectory {
                 Ok(fs.create_node_with_ops(
                     ByteVecFile::new(vec![]),
                     mode!(IFREG, 0o444),
-                    FsCred::root(),
+                    self.task.as_fscred(),
                 ))
             } else {
                 error!(ENOENT)
@@ -152,7 +188,7 @@ impl DirectoryDelegate for NsDirectory {
             Ok(fs.create_node(
                 Box::new(NsDirectoryEntry { name }),
                 mode!(IFLNK, 0o7777),
-                FsCred::root(),
+                self.task.as_fscred(),
             ))
         }
     }
@@ -200,7 +236,11 @@ impl DirectoryDelegate for FdInfoDirectory {
         let pos = *file.offset.lock();
         let flags = file.flags();
         let data = format!("pos:\t{}flags:\t0{:o}\n", pos, flags.bits()).into_bytes();
-        Ok(fs.create_node_with_ops(ByteVecFile::new(data), mode!(IFREG, 0o444), FsCred::root()))
+        Ok(fs.create_node_with_ops(
+            ByteVecFile::new(data),
+            mode!(IFREG, 0o444),
+            self.task.as_fscred(),
+        ))
     }
 }
 
@@ -262,7 +302,8 @@ pub struct ExeSymlink {
 
 impl ExeSymlink {
     fn new(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
-        fs.create_node_with_ops(ExeSymlink { task }, mode!(IFLNK, 0o777), FsCred::root())
+        let creds = task.as_fscred();
+        fs.create_node_with_ops(ExeSymlink { task }, mode!(IFLNK, 0o777), creds)
     }
 }
 
@@ -323,12 +364,13 @@ pub struct CmdlineFile {
 
 impl CmdlineFile {
     fn new(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
+        let creds = task.as_fscred();
         fs.create_node_with_ops(
             SimpleFileNode::new(move || {
                 Ok(CmdlineFile { task: Arc::clone(&task), seq: Mutex::new(SeqFileState::new()) })
             }),
             mode!(IFREG, 0o444),
-            FsCred::root(),
+            creds,
         )
     }
 }
@@ -375,12 +417,13 @@ pub struct CommFile {
 
 impl CommFile {
     fn new(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
+        let creds = task.as_fscred();
         fs.create_node_with_ops(
             SimpleFileNode::new(move || {
                 Ok(CommFile { task: Arc::clone(&task), seq: Mutex::new(SeqFileState::new()) })
             }),
             mode!(IFREG, 0o444),
-            FsCred::root(),
+            creds,
         )
     }
 }

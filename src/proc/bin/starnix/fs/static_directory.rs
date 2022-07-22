@@ -38,6 +38,17 @@ impl<'a> StaticDirectoryBuilder<'a> {
     }
 
     /// Adds an entry to the directory. Panics if an entry with the same name was already added.
+    pub fn add_entry_with_creds(
+        self,
+        name: &'static FsStr,
+        ops: impl FsNodeOps + 'static,
+        mode: FileMode,
+        creds: FsCred,
+    ) -> Self {
+        self.add_device_entry_with_creds(name, ops, mode, DeviceType::NONE, creds)
+    }
+
+    /// Adds an entry to the directory. Panics if an entry with the same name was already added.
     pub fn add_device_entry(
         self,
         name: &'static FsStr,
@@ -45,7 +56,19 @@ impl<'a> StaticDirectoryBuilder<'a> {
         mode: FileMode,
         dev: DeviceType,
     ) -> Self {
-        let node = self.fs.create_node_with_ops(ops, mode, FsCred::root());
+        self.add_device_entry_with_creds(name, ops, mode, dev, FsCred::root())
+    }
+
+    /// Adds an entry to the directory. Panics if an entry with the same name was already added.
+    pub fn add_device_entry_with_creds(
+        self,
+        name: &'static FsStr,
+        ops: impl FsNodeOps + 'static,
+        mode: FileMode,
+        dev: DeviceType,
+        creds: FsCred,
+    ) -> Self {
+        let node = self.fs.create_node_with_ops(ops, mode, creds);
         {
             let mut info = node.info_write();
             info.rdev = dev;
@@ -67,6 +90,11 @@ impl<'a> StaticDirectoryBuilder<'a> {
     pub fn set_mode(mut self, mode: FileMode) -> Self {
         assert!(mode.is_dir());
         self.mode = mode;
+        self
+    }
+
+    pub fn set_creds(mut self, creds: FsCred) -> Self {
+        self.creds = creds;
         self
     }
 

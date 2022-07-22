@@ -11,7 +11,6 @@ use std::ffi::{CStr, CString};
 use std::sync::Arc;
 use zerocopy::{AsBytes, FromBytes};
 
-use crate::auth::FsCred;
 use crate::collections::*;
 use crate::fs::*;
 use crate::lock::{Mutex, RwLock};
@@ -1371,12 +1370,13 @@ pub struct ProcMapsFile {
 }
 impl ProcMapsFile {
     pub fn new(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
+        let creds = task.as_fscred();
         fs.create_node_with_ops(
             SimpleFileNode::new(move || {
                 Ok(ProcMapsFile { task: Arc::clone(&task), seq: Mutex::new(SeqFileState::new()) })
             }),
             mode!(IFREG, 0o444),
-            FsCred::root(),
+            creds,
         )
     }
 }
@@ -1444,12 +1444,13 @@ pub struct ProcStatFile {
 
 impl ProcStatFile {
     pub fn new(fs: &FileSystemHandle, task: Arc<Task>) -> FsNodeHandle {
+        let creds = task.as_fscred();
         fs.create_node_with_ops(
             SimpleFileNode::new(move || {
                 Ok(ProcStatFile { task: Arc::clone(&task), seq: Mutex::new(SeqFileState::new()) })
             }),
             mode!(IFREG, 0o444),
-            FsCred::root(),
+            creds,
         )
     }
 }
