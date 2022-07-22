@@ -529,6 +529,17 @@ impl<'a> ValidationContext<'a> {
                     ))
                 }
             }
+            fdecl::Capability::EventStream(event) => {
+                if as_builtin {
+                    self.validate_event_stream_decl(&event)
+                } else {
+                    self.errors.push(Error::invalid_capability_type(
+                        "Component",
+                        "capability",
+                        "event",
+                    ))
+                }
+            }
             _ => {
                 if as_builtin {
                     self.errors.push(Error::invalid_capability_type(
@@ -1301,6 +1312,15 @@ impl<'a> ValidationContext<'a> {
             let name = event.name.as_ref().unwrap();
             if !self.all_capability_ids.insert(name) {
                 self.errors.push(Error::duplicate_field("Event", "name", name.as_str()));
+            }
+        }
+    }
+
+    fn validate_event_stream_decl(&mut self, event: &'a fdecl::EventStream) {
+        if check_name(event.name.as_ref(), "EventStream", "name", &mut self.errors) {
+            let name = event.name.as_ref().unwrap();
+            if !self.all_capability_ids.insert(name) {
+                self.errors.push(Error::duplicate_field("EventStream", "name", name.as_str()));
             }
         }
     }
