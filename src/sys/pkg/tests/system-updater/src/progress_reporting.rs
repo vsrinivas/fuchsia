@@ -24,7 +24,8 @@ async fn progress_reporting_fetch_multiple_packages() {
         .resolver
         .package("update", UPDATE_HASH)
         .add_file("packages.json", make_packages_json([pkg1_url, pkg2_url, pkg3_url]))
-        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH));
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
+        .add_file("zbi", "fake zbi");
     let pkg1 = env.resolver.package("package1", merkle_str!("aa"));
     let pkg2 = env.resolver.package("package2", merkle_str!("bb"));
     let pkg3 = env.resolver.package("package3", merkle_str!("cc"));
@@ -46,10 +47,19 @@ async fn progress_reporting_fetch_multiple_packages() {
     handle_update_pkg.resolve(&update_pkg).await;
     assert_eq!(
         attempt.next().await.unwrap().unwrap(),
-        State::Fetch(
+        State::Stage(
             UpdateInfoAndProgress::builder()
                 .info(info.clone())
                 .progress(Progress::builder().fraction_completed(0.0).bytes_downloaded(0).build())
+                .build()
+        )
+    );
+    assert_eq!(
+        attempt.next().await.unwrap().unwrap(),
+        State::Stage(
+            UpdateInfoAndProgress::builder()
+                .info(info.clone())
+                .progress(Progress::builder().fraction_completed(0.25).bytes_downloaded(0).build())
                 .build()
         )
     );
@@ -86,10 +96,19 @@ async fn progress_reporting_fetch_multiple_packages() {
                 .build()
         )
     );
+    assert_eq!(
+        attempt.next().await.unwrap().unwrap(),
+        State::Fetch(
+            UpdateInfoAndProgress::builder()
+                .info(info.clone())
+                .progress(Progress::builder().fraction_completed(1.0).bytes_downloaded(0).build())
+                .build()
+        )
+    );
 
-    // In this test, we are only testing Fetch updates. Let's assert the Fetch
+    // In this test, we are testing Fetch updates. Let's assert the Fetch
     // phase is over.
-    assert_eq!(attempt.next().await.unwrap().unwrap().id(), StateId::Stage);
+    assert_eq!(attempt.next().await.unwrap().unwrap().id(), StateId::Commit);
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -132,11 +151,17 @@ async fn monitor_connects_to_existing_attempt() {
 
     // Since we wait until the update attempt is over to read from monitor1 events,
     // we should expect that the events in monitor1 merged.
-    assert_eq!(monitor1_events.len(), 5);
+    assert_eq!(monitor1_events.len(), 6);
 
     // While the number of events are different, the ordering should still be the same.
-    let expected_order =
-        [StateId::Prepare, StateId::Fetch, StateId::Stage, StateId::WaitToReboot, StateId::Reboot];
+    let expected_order = [
+        StateId::Prepare,
+        StateId::Stage,
+        StateId::Fetch,
+        StateId::Commit,
+        StateId::WaitToReboot,
+        StateId::Reboot,
+    ];
     assert_success_monitor_states(monitor0_events, &expected_order);
     assert_success_monitor_states(monitor1_events, &expected_order);
 }
@@ -179,11 +204,17 @@ async fn succeed_additional_start_requests_when_compatible() {
 
     // Since we waited for the update attempt to complete before reading from monitor1,
     // the events in monitor1 should have merged.
-    assert_eq!(monitor1_events.len(), 5);
+    assert_eq!(monitor1_events.len(), 6);
 
     // While the number of events are different, the ordering should still be the same.
-    let expected_order =
-        [StateId::Prepare, StateId::Fetch, StateId::Stage, StateId::WaitToReboot, StateId::Reboot];
+    let expected_order = [
+        StateId::Prepare,
+        StateId::Stage,
+        StateId::Fetch,
+        StateId::Commit,
+        StateId::WaitToReboot,
+        StateId::Reboot,
+    ];
     assert_success_monitor_states(monitor0_events, &expected_order);
     assert_success_monitor_states(monitor1_events, &expected_order);
 }

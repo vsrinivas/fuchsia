@@ -60,14 +60,14 @@ async fn succeeds_without_writable_data() {
             PackageResolve(UPDATE_PKG_URL.to_string()),
             ReplaceRetainedPackages(vec![]),
             Gc,
-            BlobfsSync,
             Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
             }),
-            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::DataSinkFlush),
+            BlobfsSync,
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::BootManagerFlush),
             Reboot,
         ]

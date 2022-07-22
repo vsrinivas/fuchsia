@@ -9,8 +9,8 @@
 
 pub mod state;
 pub use state::{
-    FailFetchData, FetchFailureReason, PrepareFailureReason, Progress, State, StateId, UpdateInfo,
-    UpdateInfoAndProgress,
+    FailFetchData, FailStageData, FetchFailureReason, PrepareFailureReason, Progress,
+    StageFailureReason, State, StateId, UpdateInfo, UpdateInfoAndProgress,
 };
 
 pub mod options;

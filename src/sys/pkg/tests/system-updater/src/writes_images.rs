@@ -31,6 +31,54 @@ async fn fails_on_paver_connect_error() {
 }
 
 #[fasync::run_singlethreaded(test)]
+async fn fails_on_missing_zbi_error() {
+    let env = TestEnv::builder().build().await;
+
+    env.resolver
+        .register_package("update", "upd4t3")
+        .add_file("packages.json", make_packages_json([]))
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH));
+
+    let result = env.run_update().await;
+    assert!(result.is_err(), "system updater succeeded when it should fail");
+
+    assert_eq!(
+        env.get_ota_metrics().await,
+        OtaMetrics {
+            initiator: metrics::OtaResultAttemptsMetricDimensionInitiator::UserInitiatedCheck
+                as u32,
+            phase: metrics::OtaResultAttemptsMetricDimensionPhase::ImageWrite as u32,
+            status_code: metrics::OtaResultAttemptsMetricDimensionStatusCode::Error as u32,
+            target: "".into(),
+        }
+    );
+
+    assert_eq!(
+        env.take_interactions(),
+        vec![
+            Paver(PaverEvent::QueryCurrentConfiguration),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::VerifiedBootMetadata
+            },),
+            Paver(PaverEvent::ReadAsset {
+                configuration: paver::Configuration::A,
+                asset: paver::Asset::Kernel
+            },),
+            Paver(PaverEvent::QueryCurrentConfiguration,),
+            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
+            Paver(PaverEvent::SetConfigurationUnbootable {
+                configuration: paver::Configuration::B
+            }),
+            Paver(PaverEvent::BootManagerFlush),
+            PackageResolve(UPDATE_PKG_URL.to_string()),
+            ReplaceRetainedPackages(vec![]),
+            Gc,
+        ]
+    );
+}
+
+#[fasync::run_singlethreaded(test)]
 async fn fails_on_image_write_error() {
     let env = TestEnv::builder()
         .paver_service(|builder| {
@@ -83,7 +131,6 @@ async fn fails_on_image_write_error() {
             PackageResolve(UPDATE_PKG_URL.to_string()),
             ReplaceRetainedPackages(vec![]),
             Gc,
-            BlobfsSync,
             Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
@@ -133,14 +180,14 @@ async fn skip_recovery_does_not_write_recovery_or_vbmeta() {
             PackageResolve(UPDATE_PKG_URL.to_string()),
             ReplaceRetainedPackages(vec![]),
             Gc,
-            BlobfsSync,
             Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
             }),
-            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::DataSinkFlush),
+            BlobfsSync,
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::BootManagerFlush),
             Reboot,
         ]
@@ -179,7 +226,6 @@ async fn writes_to_both_configs_if_abr_not_supported() {
             PackageResolve(UPDATE_PKG_URL.to_string()),
             ReplaceRetainedPackages(vec![]),
             Gc,
-            BlobfsSync,
             Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::A,
                 asset: paver::Asset::Kernel,
@@ -191,6 +237,7 @@ async fn writes_to_both_configs_if_abr_not_supported() {
                 payload: b"fake_zbi".to_vec(),
             }),
             Paver(PaverEvent::DataSinkFlush),
+            BlobfsSync,
             Reboot,
         ]
     );
@@ -356,7 +403,6 @@ async fn writes_recovery() {
             PackageResolve(UPDATE_PKG_URL.to_string()),
             ReplaceRetainedPackages(vec![]),
             Gc,
-            BlobfsSync,
             Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
@@ -367,8 +413,9 @@ async fn writes_recovery() {
                 asset: paver::Asset::Kernel,
                 payload: b"new recovery".to_vec(),
             }),
-            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::DataSinkFlush),
+            BlobfsSync,
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::BootManagerFlush),
             Reboot,
         ]
@@ -410,7 +457,6 @@ async fn writes_recovery_vbmeta() {
             PackageResolve(UPDATE_PKG_URL.to_string()),
             ReplaceRetainedPackages(vec![]),
             Gc,
-            BlobfsSync,
             Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
@@ -426,8 +472,9 @@ async fn writes_recovery_vbmeta() {
                 asset: paver::Asset::VerifiedBootMetadata,
                 payload: b"new recovery vbmeta".to_vec(),
             }),
-            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::DataSinkFlush),
+            BlobfsSync,
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::BootManagerFlush),
             Reboot,
         ]
@@ -468,7 +515,6 @@ async fn writes_fuchsia_vbmeta() {
             PackageResolve(UPDATE_PKG_URL.to_string()),
             ReplaceRetainedPackages(vec![]),
             Gc,
-            BlobfsSync,
             Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
@@ -479,8 +525,9 @@ async fn writes_fuchsia_vbmeta() {
                 asset: paver::Asset::VerifiedBootMetadata,
                 payload: b"fake zbi vbmeta".to_vec(),
             }),
-            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::DataSinkFlush),
+            BlobfsSync,
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::BootManagerFlush),
             Reboot,
         ]
@@ -543,14 +590,14 @@ async fn assert_writes_for_current_and_target(
             PackageResolve(UPDATE_PKG_URL.to_string()),
             ReplaceRetainedPackages(vec![]),
             Gc,
-            BlobfsSync,
             Paver(PaverEvent::WriteAsset {
                 configuration: target_config,
                 asset: paver::Asset::Kernel,
                 payload: b"fake_zbi".to_vec(),
             }),
-            Paver(PaverEvent::SetConfigurationActive { configuration: target_config }),
             Paver(PaverEvent::DataSinkFlush),
+            BlobfsSync,
+            Paver(PaverEvent::SetConfigurationActive { configuration: target_config }),
             Paver(PaverEvent::BootManagerFlush),
             Reboot,
         ]

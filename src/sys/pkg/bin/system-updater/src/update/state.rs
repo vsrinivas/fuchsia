@@ -8,7 +8,7 @@
 use {
     async_generator::Yield,
     fidl_fuchsia_update_installer_ext::{
-        FetchFailureReason, PrepareFailureReason, Progress, State, UpdateInfo,
+        FetchFailureReason, PrepareFailureReason, Progress, StageFailureReason, State, UpdateInfo,
         UpdateInfoAndProgress,
     },
 };
@@ -57,30 +57,70 @@ impl Prepare {
         Prepare
     }
 
-    /// Transition to Fetch state with the given update info and numeric progress target.
+    /// Transition to Stage state with the given update info and numeric progress target.
     ///
     /// The sum of all n given to [`Fetch::add_progress`] and [`Stage::add_progress`] should equal
     /// `progress_goal` specified here.
-    pub async fn enter_fetch(
+    pub async fn enter_stage(
         self,
         co: &mut Yield<State>,
         info: UpdateInfo,
         progress_goal: u64,
-    ) -> Fetch {
-        co.yield_(State::Fetch(
+    ) -> Stage {
+        co.yield_(State::Stage(
             UpdateInfoAndProgress::builder().info(info).progress(Progress::none()).build(),
         ))
         .await;
 
-        Fetch {
-            bytes: ProgressTracker::new(info.download_size()),
+        Stage {
+            info,
             progress: ProgressTracker::new(progress_goal),
+            bytes: ProgressTracker::new(info.download_size()),
         }
     }
 
     /// Transition to the FailPrepare terminal state.
     pub async fn fail(self, co: &mut Yield<State>, reason: PrepareFailureReason) {
         co.yield_(State::FailPrepare(reason)).await;
+    }
+}
+
+/// The Stage state.
+#[must_use]
+pub struct Stage {
+    info: UpdateInfo,
+    bytes: ProgressTracker,
+    progress: ProgressTracker,
+}
+
+impl Stage {
+    fn progress(&self) -> Progress {
+        Progress::builder()
+            .fraction_completed(self.progress.as_fraction())
+            .bytes_downloaded(self.bytes.current)
+            .build()
+    }
+
+    fn info_progress(&self) -> UpdateInfoAndProgress {
+        UpdateInfoAndProgress::builder().info(self.info).progress(self.progress()).build()
+    }
+
+    /// Increment the progress by `n` and emit a status update.
+    pub async fn add_progress(&mut self, co: &mut Yield<State>, n: u64) {
+        self.progress.add(n);
+        co.yield_(State::Stage(self.info_progress())).await;
+    }
+
+    /// Transition to the Fetch state.
+    pub async fn enter_fetch(self, co: &mut Yield<State>) -> Fetch {
+        co.yield_(State::Fetch(self.info_progress())).await;
+
+        Fetch { bytes: self.bytes, progress: self.progress }
+    }
+
+    /// Transition to the FailStage terminal state.
+    pub async fn fail(self, co: &mut Yield<State>, reason: StageFailureReason) {
+        co.yield_(State::FailStage(self.info_progress().with_stage_reason(reason))).await;
     }
 }
 
@@ -113,29 +153,34 @@ impl Fetch {
         co.yield_(State::Fetch(self.info_progress())).await;
     }
 
-    /// Transition to the Stage state.
-    pub async fn enter_stage(self, co: &mut Yield<State>) -> Stage {
+    /// Transition to the Commit state.
+    pub async fn enter_commit(self, co: &mut Yield<State>) -> Commit {
+        debug_assert!(self.progress.done());
         debug_assert!(self.bytes.done());
-
-        co.yield_(State::Stage(self.info_progress())).await;
-
-        Stage { info: self.info(), progress: self.progress }
+        co.yield_(State::Commit(self.info_progress())).await;
+        Commit { info: self.info(), progress: self.progress }
     }
 
     /// Transition to the FailFetch terminal state.
     pub async fn fail(self, co: &mut Yield<State>, reason: FetchFailureReason) {
-        co.yield_(State::FailFetch(self.info_progress().with_reason(reason))).await;
+        co.yield_(State::FailFetch(self.info_progress().with_fetch_reason(reason))).await;
     }
 }
 
-/// The Stage state.
+/// The Commit state.
 #[must_use]
-pub struct Stage {
+pub struct Commit {
     info: UpdateInfo,
     progress: ProgressTracker,
 }
 
-impl Stage {
+impl Commit {
+    /// Transition to the WaitToReboot state.
+    pub async fn enter_wait_to_reboot(self, co: &mut Yield<State>) -> WaitToReboot {
+        co.yield_(State::WaitToReboot(UpdateInfoAndProgress::done(self.info))).await;
+        WaitToReboot { info: self.info }
+    }
+
     fn progress(&self) -> Progress {
         Progress::builder()
             .fraction_completed(self.progress.as_fraction())
@@ -147,24 +192,9 @@ impl Stage {
         UpdateInfoAndProgress::builder().info(self.info).progress(self.progress()).build()
     }
 
-    /// Increment the progress by `n` and emit a status update.
-    pub async fn add_progress(&mut self, co: &mut Yield<State>, n: u64) {
-        self.progress.add(n);
-        co.yield_(State::Stage(self.info_progress())).await;
-    }
-
-    /// Transition to the WaitToReboot state.
-    pub async fn enter_wait_to_reboot(self, co: &mut Yield<State>) -> WaitToReboot {
-        debug_assert!(self.progress.done());
-
-        co.yield_(State::WaitToReboot(UpdateInfoAndProgress::done(self.info))).await;
-
-        WaitToReboot { info: self.info }
-    }
-
-    /// Transition to the FailStage terminal state.
+    /// Transition to the FailCommit terminal state.
     pub async fn fail(self, co: &mut Yield<State>) {
-        co.yield_(State::FailStage(self.info_progress())).await;
+        co.yield_(State::FailCommit(self.info_progress())).await;
     }
 }
 
@@ -246,31 +276,39 @@ mod tests {
             collect_states(|mut co| async move {
                 let info = UpdateInfo::builder().download_size(0).build();
                 let state = Prepare::enter(&mut co).await;
-                let mut state = state.enter_fetch(&mut co, info, 32).await;
+                let mut state = state.enter_stage(&mut co, info, 32).await;
                 state.add_progress(&mut co, 8).await;
                 state.add_progress(&mut co, 8).await;
-                let mut state = state.enter_stage(&mut co).await;
+                let mut state = state.enter_fetch(&mut co).await;
                 state.add_progress(&mut co, 16).await;
+                let state = state.enter_commit(&mut co).await;
                 let state = state.enter_wait_to_reboot(&mut co).await;
                 state.enter_reboot(&mut co).await;
             })
             .await,
             vec![
                 State::Prepare,
-                State::Fetch(
+                State::Stage(
                     UpdateInfoAndProgress::new(
                         info,
                         Progress::builder().fraction_completed(0.0).bytes_downloaded(0).build()
                     )
                     .unwrap()
                 ),
-                State::Fetch(
+                State::Stage(
                     UpdateInfoAndProgress::new(
                         info,
                         Progress::builder().fraction_completed(0.25).bytes_downloaded(0).build()
                     )
                     .unwrap()
                 ),
+                State::Stage(
+                    UpdateInfoAndProgress::new(
+                        info,
+                        Progress::builder().fraction_completed(0.5).bytes_downloaded(0).build()
+                    )
+                    .unwrap()
+                ),
                 State::Fetch(
                     UpdateInfoAndProgress::new(
                         info,
@@ -278,14 +316,14 @@ mod tests {
                     )
                     .unwrap()
                 ),
-                State::Stage(
+                State::Fetch(
                     UpdateInfoAndProgress::new(
                         info,
-                        Progress::builder().fraction_completed(0.5).bytes_downloaded(0).build()
+                        Progress::builder().fraction_completed(1.0).bytes_downloaded(0).build()
                     )
                     .unwrap()
                 ),
-                State::Stage(
+                State::Commit(
                     UpdateInfoAndProgress::new(
                         info,
                         Progress::builder().fraction_completed(1.0).bytes_downloaded(0).build()
@@ -343,15 +381,23 @@ mod tests {
         assert_eq!(
             collect_states(|mut co| async move {
                 let state = Prepare::enter(&mut co).await;
-                let mut state = state
-                    .enter_fetch(&mut co, UpdateInfo::builder().download_size(0).build(), 4)
+                let state = state
+                    .enter_stage(&mut co, UpdateInfo::builder().download_size(0).build(), 4)
                     .await;
+                let mut state = state.enter_fetch(&mut co).await;
                 state.add_progress(&mut co, 1).await;
                 state.fail(&mut co, FetchFailureReason::Internal).await
             })
             .await,
             vec![
                 State::Prepare,
+                State::Stage(
+                    UpdateInfoAndProgress::new(
+                        info,
+                        Progress::builder().fraction_completed(0.0).bytes_downloaded(0).build()
+                    )
+                    .unwrap()
+                ),
                 State::Fetch(
                     UpdateInfoAndProgress::new(
                         info,
@@ -372,7 +418,7 @@ mod tests {
                         Progress::builder().fraction_completed(0.25).bytes_downloaded(0).build()
                     )
                     .unwrap()
-                    .with_reason(FetchFailureReason::Internal)
+                    .with_fetch_reason(FetchFailureReason::Internal)
                 ),
             ]
         );
@@ -386,27 +432,19 @@ mod tests {
             collect_states(|mut co| async move {
                 let state = Prepare::enter(&mut co).await;
                 let mut state = state
-                    .enter_fetch(&mut co, UpdateInfo::builder().download_size(0).build(), 4)
+                    .enter_stage(&mut co, UpdateInfo::builder().download_size(0).build(), 4)
                     .await;
                 state.add_progress(&mut co, 2).await;
-                let mut state = state.enter_stage(&mut co).await;
                 state.add_progress(&mut co, 1).await;
-                state.fail(&mut co).await
+                state.fail(&mut co, StageFailureReason::Internal).await
             })
             .await,
             vec![
                 State::Prepare,
-                State::Fetch(
+                State::Stage(
                     UpdateInfoAndProgress::new(
                         info,
                         Progress::builder().fraction_completed(0.0).bytes_downloaded(0).build()
-                    )
-                    .unwrap()
-                ),
-                State::Fetch(
-                    UpdateInfoAndProgress::new(
-                        info,
-                        Progress::builder().fraction_completed(0.5).bytes_downloaded(0).build()
                     )
                     .unwrap()
                 ),
@@ -430,6 +468,7 @@ mod tests {
                         Progress::builder().fraction_completed(0.75).bytes_downloaded(0).build()
                     )
                     .unwrap()
+                    .with_stage_reason(StageFailureReason::Internal)
                 ),
             ]
         );

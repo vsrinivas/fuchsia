@@ -486,9 +486,9 @@ pub async fn test_updater_succeeds() -> Result<(), Error> {
                 asset: Asset::VerifiedBootMetadata,
                 payload: "This is a vbmeta".as_bytes().to_vec(),
             },
+            PaverEvent::DataSinkFlush,
             // Note that recovery isn't written, as isolated-ota skips them.
             PaverEvent::SetConfigurationActive { configuration: Configuration::B },
-            PaverEvent::DataSinkFlush,
             PaverEvent::BootManagerFlush,
             // This is the isolated-ota library checking to see if the paver configured ABR properly.
             PaverEvent::QueryActiveConfiguration,
@@ -771,9 +771,9 @@ pub async fn test_omaha_works() -> Result<(), Error> {
                 asset: Asset::VerifiedBootMetadata,
                 payload: "This is a vbmeta".as_bytes().to_vec(),
             },
+            PaverEvent::DataSinkFlush,
             // Note that recovery isn't written, as isolated-ota skips them.
             PaverEvent::SetConfigurationActive { configuration: Configuration::B },
-            PaverEvent::DataSinkFlush,
             PaverEvent::BootManagerFlush,
             // This is the isolated-ota library checking to see if the paver configured ABR properly.
             PaverEvent::QueryActiveConfiguration,

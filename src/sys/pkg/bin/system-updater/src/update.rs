@@ -15,7 +15,7 @@ use {
     },
     fidl_fuchsia_space::ManagerProxy as SpaceManagerProxy,
     fidl_fuchsia_update_installer_ext::{
-        FetchFailureReason, Options, PrepareFailureReason, State, UpdateInfo,
+        FetchFailureReason, Options, PrepareFailureReason, StageFailureReason, State, UpdateInfo,
     },
     fuchsia_async::{Task, TimeoutExt as _},
     fuchsia_hash::Hash,
@@ -26,7 +26,10 @@ use {
     sha2::{Digest, Sha256},
     std::{pin::Pin, sync::Arc, time::Duration},
     thiserror::Error,
-    update_package::{Image, ImagePackagesSlots, ImageType, UpdateMode, UpdatePackage},
+    update_package::{
+        Image, ImagePackagesSlots, ImageType, ResolveImagesError, UpdateMode, UpdatePackage,
+        VerifyError,
+    },
 };
 
 mod config;
@@ -118,6 +121,29 @@ impl PrepareError {
             Self::UnsupportedDowngrade { .. } => PrepareFailureReason::UnsupportedDowngrade,
             _ => PrepareFailureReason::Internal,
         }
+    }
+}
+
+/// Error encountered in the Stage state.
+#[derive(Debug, Error)]
+enum StageError {
+    #[error("while persisting target boot slot")]
+    PaverFlush(#[source] anyhow::Error),
+
+    #[error("while determining which images to write")]
+    ResolveImages(#[source] ResolveImagesError),
+
+    #[error("while ensuring the target images are compatible with this update mode")]
+    Verify(#[source] VerifyError),
+
+    #[error("while writing images")]
+    Write(#[source] anyhow::Error),
+}
+
+impl StageError {
+    fn reason(&self) -> StageFailureReason {
+        // TODO: when we resolve the images in the new update flow, add a condition for OutOfSpace.
+        StageFailureReason::Internal
     }
 }
 
@@ -397,14 +423,28 @@ impl<'a> Attempt<'a> {
                 }
             };
 
-        // Fetch packages
+        // Write images
         let mut state = state
-            .enter_fetch(
+            .enter_stage(
                 co,
                 UpdateInfo::builder().download_size(0).build(),
                 packages_to_fetch.len() as u64 + 1,
             )
             .await;
+        *phase = metrics::Phase::ImageWrite;
+
+        let () =
+            match self.stage_images(co, &mut state, &update_pkg, mode, current_configuration).await
+            {
+                Ok(()) => (),
+                Err(e) => {
+                    state.fail(co, e.reason()).await;
+                    bail!(e);
+                }
+            };
+
+        // Fetch packages
+        let mut state = state.enter_fetch(co).await;
         *phase = metrics::Phase::PackageDownload;
 
         let packages = match self.fetch_packages(co, &mut state, packages_to_fetch, mode).await {
@@ -415,19 +455,17 @@ impl<'a> Attempt<'a> {
             }
         };
 
-        // Write images
-        let mut state = state.enter_stage(co).await;
-        *phase = metrics::Phase::ImageWrite;
+        // Commit the update
+        let state = state.enter_commit(co).await;
+        *phase = metrics::Phase::ImageCommit;
 
-        let () =
-            match self.stage_images(co, &mut state, &update_pkg, mode, current_configuration).await
-            {
-                Ok(()) => (),
-                Err(e) => {
-                    state.fail(co).await;
-                    bail!(e);
-                }
-            };
+        let () = match self.commit_images(mode, current_configuration).await {
+            Ok(()) => (),
+            Err(e) => {
+                state.fail(co).await;
+                bail!(e);
+            }
+        };
 
         // Success!
         let state = state.enter_wait_to_reboot(co).await;
@@ -627,6 +665,54 @@ impl<'a> Attempt<'a> {
         Ok((update_pkg, mode, packages_to_fetch, images_to_write, current_config))
     }
 
+    /// Pave the various raw images (zbi, firmware, vbmeta) for fuchsia and/or recovery.
+    async fn stage_images(
+        &mut self,
+        co: &mut async_generator::Yield<State>,
+        state: &mut state::Stage,
+        update_pkg: &UpdatePackage,
+        mode: UpdateMode,
+        current_configuration: paver::CurrentConfiguration,
+    ) -> Result<(), StageError> {
+        let image_list = [
+            ImageType::Bootloader,
+            ImageType::Firmware,
+            ImageType::Zbi,
+            ImageType::ZbiSigned,
+            ImageType::FuchsiaVbmeta,
+            ImageType::Recovery,
+            ImageType::RecoveryVbmeta,
+        ];
+
+        let images =
+            update_pkg.resolve_images(&image_list[..]).await.map_err(StageError::ResolveImages)?;
+
+        let images = images.verify(mode).map_err(StageError::Verify)?.filter(|image| {
+            if self.config.should_write_recovery {
+                true
+            } else {
+                if image.classify().targets_recovery() {
+                    fx_log_info!("Skipping recovery image: {}", image.name());
+                    false
+                } else {
+                    true
+                }
+            }
+        });
+        fx_log_info!("Images to write: {:?}", images);
+        let desired_config = current_configuration.to_non_current_configuration();
+        fx_log_info!("Targeting configuration: {:?}", desired_config);
+
+        write_images(&self.env.data_sink, &update_pkg, desired_config, images.iter())
+            .await
+            .map_err(StageError::Write)?;
+        paver::paver_flush_data_sink(&self.env.data_sink).await.map_err(StageError::PaverFlush)?;
+
+        state.add_progress(co, 1).await;
+
+        Ok(())
+    }
+
     /// Fetch all base packages needed by the target OS.
     async fn fetch_packages(
         &mut self,
@@ -659,53 +745,14 @@ impl<'a> Attempt<'a> {
         Ok(packages)
     }
 
-    /// Pave the various raw images (zbi, bootloaders, vbmeta), and configure the non-current
-    /// configuration as active for the next boot.
-    async fn stage_images(
-        &mut self,
-        co: &mut async_generator::Yield<State>,
-        state: &mut state::Stage,
-        update_pkg: &UpdatePackage,
+    /// Configure the non-current configuration (or recovery) as active for the next boot.
+    async fn commit_images(
+        &self,
         mode: UpdateMode,
         current_configuration: paver::CurrentConfiguration,
     ) -> Result<(), Error> {
-        let image_list = [
-            ImageType::Bootloader,
-            ImageType::Firmware,
-            ImageType::Zbi,
-            ImageType::ZbiSigned,
-            ImageType::FuchsiaVbmeta,
-            ImageType::Recovery,
-            ImageType::RecoveryVbmeta,
-        ];
-
-        let images = update_pkg
-            .resolve_images(&image_list[..])
-            .await
-            .context("while determining which images to write")?;
-
-        let images = images
-            .verify(mode)
-            .context("while ensuring the target images are compatible with this update mode")?
-            .filter(|image| {
-                if self.config.should_write_recovery {
-                    true
-                } else {
-                    if image.classify().targets_recovery() {
-                        fx_log_info!("Skipping recovery image: {}", image.name());
-                        false
-                    } else {
-                        true
-                    }
-                }
-            });
-
-        fx_log_info!("Images to write: {:?}", images);
-
         let desired_config = current_configuration.to_non_current_configuration();
-        fx_log_info!("Targeting configuration: {:?}", desired_config);
 
-        write_images(&self.env.data_sink, &update_pkg, desired_config, images.iter()).await?;
         match mode {
             UpdateMode::Normal => {
                 let () =
@@ -715,9 +762,13 @@ impl<'a> Attempt<'a> {
                 let () = paver::set_recovery_configuration_active(&self.env.boot_manager).await?;
             }
         }
-        let () = paver::flush(&self.env.data_sink, &self.env.boot_manager, desired_config).await?;
 
-        state.add_progress(co, 1).await;
+        match desired_config {
+            paver::NonCurrentConfiguration::A | paver::NonCurrentConfiguration::B => {
+                paver::paver_flush_boot_manager(&self.env.boot_manager).await?;
+            }
+            paver::NonCurrentConfiguration::NotSupported => {}
+        }
 
         Ok(())
     }

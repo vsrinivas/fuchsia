@@ -50,16 +50,21 @@ protocol Monitor {
 ///             |
 ///             v
 ///     +----------------+     +----------------+
+///     |     stage      |---->|   fail_stage   |
+///     +----------------+     +----------------+
+///             |
+///             v
+///     +----------------+     +----------------+
 ///     |     fetch      |---->|   fail_fetch   |
 ///     +----------------+     +----------------+
 ///             |
 ///             v
 ///     +----------------+     +----------------+
-///     |     stage      |---->|   fail_stage   |
+///     |     commit     |---->|   fail_commit  |
 ///     +----------------+     +----------------+
 ///             |
 ///             |              +----------------+
-///             +------------->|    complete    |
+///             +------------> |    complete    |
 ///             |              +----------------+
 ///             v
 ///     +----------------+     +----------------+
@@ -75,24 +80,32 @@ type State = strict union {
     /// state.
     ///
     /// Next States:
-    /// * `fetch` system is ready to install the update.
+    /// * `stage` system is ready to install the update.
     /// * `fail_prepare` on error.
     1: prepare PrepareData;
 
-    /// Fetching packages and kernel images.
+    /// Fetching and writing kernel and firmware images.
     ///
     /// Next States:
-    /// * `stage` required assets are ready to be staged for next boot.
-    /// * `fail_fetch` on error.
-    2: fetch FetchData;
+    /// * `fetch`  required kernel and firmware images are written.
+    /// * `fail_stage`  on error.
+    2: stage StageData;
 
-    /// Writing kernel images and preparing to switch over to the new system.
+    /// Fetching packages.
+    ///
+    /// Next States:
+    /// * `commit` packages were fetched successfully.
+    /// * `fail_fetch` on error.
+    3: fetch FetchData;
+
+    /// Prepare to switch over to the new system by writing the packages
+    /// and switching the active partition.
     ///
     /// Next States:
     /// * `wait_to_reboot` if a reboot is necessary to complete the update.
     /// * `complete` if no reboot is necessary to complete the update.
-    /// * `fail_stage` on error.
-    3: stage StageData;
+    /// * `fail_commit` on error.
+    4: commit CommitData;
 
     /// The system is configured to boot the updated OS on next boot, and the
     /// installer is waiting for the trigger to reboot the system.
@@ -101,48 +114,60 @@ type State = strict union {
     /// * `reboot` when the installer decides it is time to initiate the reboot.
     /// * `defer_reboot` if the initiator specifically requests to not reboot.
     ///
-    4: wait_to_reboot WaitToRebootData;
+    5: wait_to_reboot WaitToRebootData;
 
     /// The installer has initiated a system reboot into the updated OS.
     ///
     /// **This is a terminal state**
     ///
-    5: reboot RebootData;
+    6: reboot RebootData;
 
     /// The initiator specifically requested to skip the reboot, but a reboot is
     /// still required to complete the update.
     ///
     /// **This is a terminal state**
     ///
-    6: defer_reboot DeferRebootData;
+    7: defer_reboot DeferRebootData;
 
     /// The update is complete and no reboot was required.
     ///
     /// **This is a terminal state**
     ///
-    7: complete CompleteData;
+    8: complete CompleteData;
 
     /// An error occurred while preparing the install.
     ///
     /// **This is a terminal state**
     ///
-    8: fail_prepare FailPrepareData;
+    9: fail_prepare FailPrepareData;
+
+    /// An error occurred while staging the images for the OS.
+    ///
+    /// **This is a terminal state**
+    ///
+   10: fail_stage FailStageData;
 
     /// An error occurred while fetching the required artifacts.
     ///
     /// **This is a terminal state**
     ///
-    9: fail_fetch FailFetchData;
+   11: fail_fetch FailFetchData;
 
-    /// An error occurred while staging the new OS.
+    /// An error occured while switching partitions.
     ///
     /// **This is a terminal state**
     ///
-   10: fail_stage FailStageData;
+   12: fail_commit FailCommitData;
 };
 
 /// Data associated with [`State.prepare`].
 type PrepareData = table {};
+
+/// Data associated with [`State.stage`].
+type StageData = table {
+    1: info UpdateInfo;
+    2: progress InstallationProgress;
+};
 
 /// Data associated with [`State.fetch`].
 type FetchData = table {
@@ -150,8 +175,8 @@ type FetchData = table {
     2: progress InstallationProgress;
 };
 
-/// Data associated with [`State.stage`].
-type StageData = table {
+/// Data associated with [`State.commit`].
+type CommitData = table {
     1: info UpdateInfo;
     2: progress InstallationProgress;
 };
@@ -185,6 +210,13 @@ type FailPrepareData = table {
     1: reason PrepareFailureReason;
 };
 
+/// Data associated with [`State.fail_stage`].
+type FailStageData = table {
+    1: info UpdateInfo;
+    2: progress InstallationProgress;
+    3: reason StageFailureReason;
+};
+
 /// Data associated with [`State.fail_fetch`].
 type FailFetchData = table {
     1: info UpdateInfo;
@@ -192,8 +224,8 @@ type FailFetchData = table {
     3: reason FetchFailureReason;
 };
 
-/// Data associated with [`State.fail_stage`].
-type FailStageData = table {
+/// Data associated with [`State.fail_commit`].
+type FailCommitData = table {
     1: info UpdateInfo;
     2: progress InstallationProgress;
 };
@@ -230,6 +262,15 @@ type PrepareFailureReason = strict enum {
     /// unsupported downgrades will fail with this error -- just the ones the system can detect. For
     /// more context, see [RFC-0071](/docs/contribute/governance/rfcs/0071_ota_backstop.md).
     UNSUPPORTED_DOWNGRADE = 2;
+};
+
+/// The set of values provided when an installation attempt fails on [`State.stage`].
+type StageFailureReason = strict enum {
+    /// The stage failed because of some other reason.
+    INTERNAL = 0;
+
+    /// The stage failed because the system does not have enough space to fetch a package.
+    OUT_OF_SPACE = 1;
 };
 
 /// The set of values provided when an installation attempt fails on [`State.fetch`].

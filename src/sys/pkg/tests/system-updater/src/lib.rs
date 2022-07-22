@@ -37,6 +37,7 @@ use {
 
 mod board;
 mod cobalt_metrics;
+mod commits_images;
 mod epoch;
 mod fetch_packages;
 mod history;
@@ -828,4 +829,14 @@ fn default_options() -> Options {
         allow_attach_to_existing_attempt: true,
         should_write_recovery: true,
     }
+}
+
+fn force_recovery_json() -> String {
+    json!({
+      "version": "1",
+      "content": {
+        "mode": "force-recovery",
+      }
+    })
+    .to_string()
 }

@@ -29,6 +29,7 @@ pub enum ResolveImagesError {
 
 /// An error encountered while verifying an [`UnverifiedImageList`].
 #[derive(Debug, Error, PartialEq, Eq)]
+#[allow(missing_docs)]
 pub enum VerifyError {
     #[error("images list did not contain an entry for 'zbi' or 'zbi.signed'")]
     MissingZbi,

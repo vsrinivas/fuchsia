@@ -8,16 +8,6 @@ use {
     pretty_assertions::assert_eq,
 };
 
-fn force_recovery_json() -> String {
-    json!({
-      "version": "1",
-      "content": {
-        "mode": "force-recovery",
-      }
-    })
-    .to_string()
-}
-
 #[fasync::run_singlethreaded(test)]
 async fn writes_recovery_and_force_reboots_into_it() {
     let env = TestEnv::builder().build().await;
@@ -74,13 +64,13 @@ async fn writes_recovery_and_force_reboots_into_it() {
                 asset: paver::Asset::VerifiedBootMetadata,
                 payload: b"the recovery vbmeta".to_vec(),
             }),
+            Paver(PaverEvent::DataSinkFlush),
             Paver(PaverEvent::SetConfigurationUnbootable {
                 configuration: paver::Configuration::A
             }),
             Paver(PaverEvent::SetConfigurationUnbootable {
                 configuration: paver::Configuration::B
             }),
-            Paver(PaverEvent::DataSinkFlush),
             Paver(PaverEvent::BootManagerFlush),
             Reboot,
         ]

@@ -38,7 +38,6 @@ async fn writes_bootloader() {
             PackageResolve(UPDATE_PKG_URL.to_string()),
             ReplaceRetainedPackages(vec![]),
             Gc,
-            BlobfsSync,
             Paver(PaverEvent::WriteFirmware {
                 configuration: paver::Configuration::B,
                 firmware_type: "".to_string(),
@@ -49,8 +48,9 @@ async fn writes_bootloader() {
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
             }),
-            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::DataSinkFlush),
+            BlobfsSync,
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::BootManagerFlush),
             Reboot,
         ]
@@ -91,7 +91,6 @@ async fn writes_firmware() {
             PackageResolve(UPDATE_PKG_URL.to_string()),
             ReplaceRetainedPackages(vec![]),
             Gc,
-            BlobfsSync,
             Paver(PaverEvent::WriteFirmware {
                 configuration: paver::Configuration::B,
                 firmware_type: "".to_string(),
@@ -102,8 +101,9 @@ async fn writes_firmware() {
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
             }),
-            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::DataSinkFlush),
+            BlobfsSync,
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::BootManagerFlush),
             Reboot,
         ]
@@ -147,7 +147,6 @@ async fn writes_multiple_firmware_types() {
             PackageResolve(UPDATE_PKG_URL.to_string()),
             ReplaceRetainedPackages(vec![]),
             Gc,
-            BlobfsSync,
             Paver(PaverEvent::WriteFirmware {
                 configuration: paver::Configuration::B,
                 firmware_type: "a".to_string(),
@@ -163,8 +162,9 @@ async fn writes_multiple_firmware_types() {
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
             }),
-            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::DataSinkFlush),
+            BlobfsSync,
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::BootManagerFlush),
             Reboot,
         ]
@@ -213,7 +213,6 @@ async fn skips_unsupported_firmware_type() {
             PackageResolve(UPDATE_PKG_URL.to_string()),
             ReplaceRetainedPackages(vec![]),
             Gc,
-            BlobfsSync,
             Paver(PaverEvent::WriteFirmware {
                 configuration: paver::Configuration::B,
                 firmware_type: "".to_string(),
@@ -224,8 +223,9 @@ async fn skips_unsupported_firmware_type() {
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
             }),
-            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::DataSinkFlush),
+            BlobfsSync,
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::BootManagerFlush),
             Reboot,
         ]

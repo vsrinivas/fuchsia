@@ -57,15 +57,15 @@ async fn updates_the_system() {
             PackageResolve(UPDATE_PKG_URL.to_string()),
             ReplaceRetainedPackages(vec![SYSTEM_IMAGE_HASH.parse().unwrap()]),
             Gc,
-            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
-            BlobfsSync,
             Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
             }),
-            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::DataSinkFlush),
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
+            BlobfsSync,
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::BootManagerFlush),
             Reboot,
         ]
@@ -109,8 +109,6 @@ async fn requires_zbi() {
             PackageResolve(UPDATE_PKG_URL.to_string()),
             ReplaceRetainedPackages(vec![SYSTEM_IMAGE_HASH.parse().unwrap(),],),
             Gc,
-            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
-            BlobfsSync,
         ]
     );
 }
@@ -142,7 +140,14 @@ async fn updates_the_system_with_progress() {
     // Verify progress reporting events.
     assert_success_monitor_states(
         attempt.map(|res| res.unwrap()).collect().await,
-        &[StateId::Prepare, StateId::Fetch, StateId::Stage, StateId::WaitToReboot, StateId::Reboot],
+        &[
+            StateId::Prepare,
+            StateId::Stage,
+            StateId::Fetch,
+            StateId::Commit,
+            StateId::WaitToReboot,
+            StateId::Reboot,
+        ],
     );
 
     // Verify metrics reported.
@@ -179,15 +184,15 @@ async fn updates_the_system_with_progress() {
             PackageResolve(UPDATE_PKG_URL.to_string()),
             ReplaceRetainedPackages(vec![SYSTEM_IMAGE_HASH.parse().unwrap(),]),
             Gc,
-            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
-            BlobfsSync,
             Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
             }),
-            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::DataSinkFlush),
+            PackageResolve(SYSTEM_IMAGE_URL.to_string()),
+            BlobfsSync,
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::BootManagerFlush),
             Reboot,
         ]

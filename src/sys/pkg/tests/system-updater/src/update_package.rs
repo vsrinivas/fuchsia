@@ -47,14 +47,14 @@ fn construct_events(middle: &mut Vec<SystemUpdaterInteraction>) -> Vec<SystemUpd
     ];
 
     let mut postscript = vec![
-        BlobfsSync,
         Paver(PaverEvent::WriteAsset {
             configuration: paver::Configuration::B,
             asset: paver::Asset::Kernel,
             payload: b"fake zbi".to_vec(),
         }),
-        Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
         Paver(PaverEvent::DataSinkFlush),
+        BlobfsSync,
+        Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
         Paver(PaverEvent::BootManagerFlush),
         Reboot,
     ];
@@ -165,39 +165,9 @@ async fn uses_custom_update_package() {
         .await
         .expect("run system updater");
 
-    assert_eq!(
-        env.take_interactions(),
-        vec![
-            Paver(PaverEvent::QueryCurrentConfiguration),
-            Paver(PaverEvent::ReadAsset {
-                configuration: paver::Configuration::A,
-                asset: paver::Asset::VerifiedBootMetadata
-            }),
-            Paver(PaverEvent::ReadAsset {
-                configuration: paver::Configuration::A,
-                asset: paver::Asset::Kernel
-            }),
-            Paver(PaverEvent::QueryCurrentConfiguration),
-            Paver(PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A }),
-            Paver(PaverEvent::SetConfigurationUnbootable {
-                configuration: paver::Configuration::B
-            }),
-            Paver(PaverEvent::BootManagerFlush),
-            PackageResolve("fuchsia-pkg://fuchsia.com/another-update/4".to_string()),
-            ReplaceRetainedPackages(vec![]),
-            Gc,
-            BlobfsSync,
-            Paver(PaverEvent::WriteAsset {
-                configuration: paver::Configuration::B,
-                asset: paver::Asset::Kernel,
-                payload: b"fake zbi".to_vec(),
-            }),
-            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
-            Paver(PaverEvent::DataSinkFlush),
-            Paver(PaverEvent::BootManagerFlush),
-            Reboot,
-        ]
-    );
+    let mut events = vec![];
+
+    assert_eq!(env.take_interactions(), construct_events(&mut events));
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -725,14 +695,14 @@ async fn retry_update_package_resolve_once() {
             PackageResolve(UPDATE_PKG_URL.to_string()),
             ReplaceRetainedPackages(vec![]),
             Gc,
-            BlobfsSync,
             Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
             }),
-            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::DataSinkFlush),
+            BlobfsSync,
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::BootManagerFlush),
             Reboot,
         ]
@@ -788,14 +758,14 @@ async fn retry_update_package_resolve_twice() {
             PackageResolve(UPDATE_PKG_URL.to_string()),
             ReplaceRetainedPackages(vec![]),
             Gc,
-            BlobfsSync,
             Paver(PaverEvent::WriteAsset {
                 configuration: paver::Configuration::B,
                 asset: paver::Asset::Kernel,
                 payload: b"fake zbi".to_vec(),
             }),
-            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::DataSinkFlush),
+            BlobfsSync,
+            Paver(PaverEvent::SetConfigurationActive { configuration: paver::Configuration::B }),
             Paver(PaverEvent::BootManagerFlush),
             Reboot,
         ]

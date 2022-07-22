@@ -463,7 +463,7 @@ pub async fn write_image(
     res
 }
 
-async fn paver_flush_boot_manager(boot_manager: &BootManagerProxy) -> Result<(), Error> {
+pub async fn paver_flush_boot_manager(boot_manager: &BootManagerProxy) -> Result<(), Error> {
     let () = Status::ok(
         boot_manager
             .flush()
@@ -474,24 +474,11 @@ async fn paver_flush_boot_manager(boot_manager: &BootManagerProxy) -> Result<(),
     Ok(())
 }
 
-/// Flush pending disk writes and boot configuration, if supported.
-pub async fn flush(
-    data_sink: &DataSinkProxy,
-    boot_manager: &BootManagerProxy,
-    desired: NonCurrentConfiguration,
-) -> Result<(), Error> {
+pub async fn paver_flush_data_sink(data_sink: &DataSinkProxy) -> Result<(), Error> {
     let () = Status::ok(
         data_sink.flush().await.context("while performing fuchsia.paver.DataSink/Flush call")?,
     )
     .context("fuchsia.paver.DataSink/Flush responded with")?;
-
-    match desired {
-        NonCurrentConfiguration::A | NonCurrentConfiguration::B => {
-            paver_flush_boot_manager(boot_manager).await.context("while flushing boot manager")?;
-        }
-        NonCurrentConfiguration::NotSupported => {}
-    }
-
     Ok(())
 }
 
@@ -932,22 +919,12 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn flush_makes_calls() {
+    async fn paver_flush_boot_manager_makes_calls() {
         let paver = Arc::new(MockPaverServiceBuilder::new().build());
-        let data_sink = paver.spawn_data_sink_service();
         let boot_manager = paver.spawn_boot_manager_service();
 
-        flush(&data_sink, &boot_manager, NonCurrentConfiguration::A).await.unwrap();
-        assert_eq!(
-            paver.take_events(),
-            vec![PaverEvent::DataSinkFlush, PaverEvent::BootManagerFlush,]
-        );
-
-        flush(&data_sink, &boot_manager, NonCurrentConfiguration::B).await.unwrap();
-        assert_eq!(
-            paver.take_events(),
-            vec![PaverEvent::DataSinkFlush, PaverEvent::BootManagerFlush,]
-        );
+        paver_flush_boot_manager(&boot_manager).await.unwrap();
+        assert_eq!(paver.take_events(), vec![PaverEvent::BootManagerFlush,]);
     }
 }
 
@@ -1253,16 +1230,15 @@ mod abr_not_supported_tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn flush_makes_calls() {
+    async fn paver_flush_boot_manager_doesnt_makes_calls() {
         let paver = Arc::new(
             MockPaverServiceBuilder::new()
                 .boot_manager_close_with_epitaph(Status::NOT_SUPPORTED)
                 .build(),
         );
-        let data_sink = paver.spawn_data_sink_service();
+
         let boot_manager = paver.spawn_boot_manager_service();
 
-        flush(&data_sink, &boot_manager, NonCurrentConfiguration::NotSupported).await.unwrap();
-        assert_eq!(paver.take_events(), vec![PaverEvent::DataSinkFlush,]);
+        assert_matches!(paver_flush_boot_manager(&boot_manager).await, Err(_));
     }
 }
