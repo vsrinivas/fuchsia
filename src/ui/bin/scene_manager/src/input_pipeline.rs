@@ -108,7 +108,7 @@ fn setup_pointer_injector_config_request_stream(
     setup_proxy
 }
 
-async fn add_touch_handler(
+async fn add_touchscreen_handler(
     scene_manager: Arc<Mutex<Box<dyn SceneManager>>>,
     mut assembly: InputPipelineAssembly,
 ) -> InputPipelineAssembly {
@@ -188,6 +188,11 @@ async fn build_input_pipeline_assembly(
         // handler.
         assembly = add_click_drag_handler(assembly);
 
+        // Add the touchpad gestures handler after the click-drag handler,
+        // since the gestures handler creates mouse events but already
+        // disambiguates between click and drag gestures.
+        assembly = add_touchpad_gestures_handler(assembly);
+
         // Add handler to scale pointer motion based on speed of sensor
         // motion. This allows touchpads and mice to be easily used for
         // both precise pointing, and quick motion across the width
@@ -210,7 +215,7 @@ async fn build_input_pipeline_assembly(
             scene_manager.lock().await.get_display_metrics().physical_pixel_ratio().max(1.0);
         assembly = add_pointer_motion_display_scale_handler(assembly, pointer_scale);
 
-        assembly = add_touch_handler(scene_manager.clone(), assembly).await;
+        assembly = add_touchscreen_handler(scene_manager.clone(), assembly).await;
         if use_flatland {
             assembly = add_mouse_handler(scene_manager.clone(), assembly, sender).await;
         } else {
@@ -334,6 +339,10 @@ fn add_pointer_motion_sensor_scale_handler(
 
 fn add_immersive_mode_shortcut_handler(assembly: InputPipelineAssembly) -> InputPipelineAssembly {
     assembly.add_handler(ImmersiveModeShortcutHandler::new())
+}
+
+fn add_touchpad_gestures_handler(assembly: InputPipelineAssembly) -> InputPipelineAssembly {
+    assembly.add_handler(input_pipeline::make_touchpad_gestures_handler())
 }
 
 pub async fn handle_input_config_request_streams(
