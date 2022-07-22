@@ -54,12 +54,9 @@ namespace display {
 class GammaTables : public fbl::RefCounted<GammaTables> {
  public:
   static constexpr uint32_t kTableSize = 256;
-  explicit GammaTables(::fidl::Array<float, kTableSize> r, ::fidl::Array<float, kTableSize> g,
-                       ::fidl::Array<float, kTableSize> b) {
-    std::memcpy(&red, &r, sizeof(r.data_));
-    std::memcpy(&green, &g, sizeof(g.data_));
-    std::memcpy(&blue, &b, sizeof(b.data_));
-  }
+  explicit GammaTables(const ::fidl::Array<float, kTableSize>& r,
+                       const ::fidl::Array<float, kTableSize>& g,
+                       const ::fidl::Array<float, kTableSize>& b);
 
   // We are returning raw pointers here for display driver consumption. However,
   // a ref-counted pointer is held by core display to guarantee validity of the

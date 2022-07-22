@@ -62,6 +62,14 @@ constexpr uint64_t kMaxLayers = 65536;
 
 namespace display {
 
+GammaTables::GammaTables(const ::fidl::Array<float, kTableSize>& r,
+                         const ::fidl::Array<float, kTableSize>& g,
+                         const ::fidl::Array<float, kTableSize>& b) {
+  std::copy(r.begin(), r.end(), red.begin());
+  std::copy(g.begin(), g.end(), green.begin());
+  std::copy(b.begin(), b.end(), blue.begin());
+}
+
 void DisplayConfig::InitializeInspect(inspect::Node* parent) {
   static std::atomic_uint64_t inspect_count;
   node_ = parent->CreateChild(fbl::StringPrintf("display-config-%ld", inspect_count++).c_str());
