@@ -2797,7 +2797,7 @@ TEST(Pager, EvictionHintDontNeed) {
     if (info.committed_bytes == 0) {
       break;
     }
-    printf("page count %zu\n", info.committed_bytes);
+    printf("page count %zu\n", info.committed_bytes / zx_system_get_page_size());
   }
 
   ASSERT_EQ(0, info.committed_bytes);

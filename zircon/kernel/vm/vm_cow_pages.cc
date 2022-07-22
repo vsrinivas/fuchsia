@@ -4232,16 +4232,29 @@ zx_status_t VmCowPages::DirtyPagesLocked(uint64_t offset, uint64_t len) {
   // We don't have a range to consider here if offset was greater than supply_zero_offset_.
   if (start_offset < supply_zero_offset_) {
     const uint64_t end = ktl::min(supply_zero_offset_, end_offset);
-    zx_status_t status = page_list_.ForEveryPageInRange(
+    zx_status_t status = page_list_.ForEveryPageAndGapInRange(
         [&zero_pages_count](const VmPageOrMarker* p, uint64_t off) {
           if (p->IsMarker()) {
             zero_pages_count++;
           }
           return ZX_ERR_NEXT;
         },
+        [this](uint64_t start, uint64_t end) {
+          // A gap indicates a page that has not been supplied yet. It will need to be supplied
+          // first. Although we will never generate a DIRTY request for absent pages in the first
+          // place, it is still possible for a clean page to get evicted after the DIRTY request was
+          // generated.
+          //
+          // Spuriously resolve the DIRTY page request, and let the waiter(s) retry looking up the
+          // page, which will generate a READ request first to supply the missing page.
+          page_source_->OnPagesDirtied(start, end - start);
+          return ZX_ERR_NOT_SUPPORTED;
+        },
         start_offset, end);
-    // We don't expect an error from the traversal.
-    DEBUG_ASSERT(status == ZX_OK);
+
+    if (status != ZX_OK) {
+      return status;
+    }
   }
 
   // Now consider the portion of the range that starts at/after supply_zero_offset_.

@@ -5541,4 +5541,83 @@ TEST_WITH_AND_WITHOUT_TRAP_DIRTY(CommitResizeRace, ZX_VMO_RESIZABLE) {
   ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
 }
 
+// Tests that a write completes successfully if a clean page is evicted after the generation of a
+// DIRTY request but before it has been resolved.
+TEST(PagerWriteback, EvictAfterDirtyRequest) {
+  zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
+  if (!root_resource->is_valid()) {
+    printf("Root resource not available, skipping\n");
+    return;
+  }
+
+  UserPager pager;
+  ASSERT_TRUE(pager.Init());
+
+  Vmo* vmo;
+  ASSERT_TRUE(pager.CreateVmoWithOptions(1, ZX_VMO_TRAP_DIRTY, &vmo));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  std::vector<uint8_t> expected(zx_system_get_page_size(), 0);
+  vmo->GenerateBufferContents(expected.data(), 1, 0);
+  // Verify contents using the VMO, not the VMAR. Using the VMAR will set hardware accessed bits,
+  // harvesting which might occur after applying the DONT_NEED hint below, pulling the page back to
+  // an active queue, making it ineligible for eviction.
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), false));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // Write to the VMO.
+  TestThread t([vmo]() -> bool {
+    uint8_t data[zx_system_get_page_size()];
+    memset(data, 0xaa, sizeof(data));
+    return vmo->vmo().write(data, 0, sizeof(data)) == ZX_OK;
+  });
+  ASSERT_TRUE(t.Start());
+
+  // We should see a DIRTY request.
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, nullptr, 0));
+
+  // Hint DONT_NEED on the page to make it eligible for eviction, and request a scanner reclaim.
+  ASSERT_OK(vmo->vmo().op_range(ZX_VMO_OP_DONT_NEED, 0, zx_system_get_page_size(), nullptr, 0));
+  constexpr char k_command[] = "scanner reclaim 1 only_old";
+  ASSERT_OK(zx_debug_send_command(root_resource->get(), k_command, strlen(k_command)));
+
+  // Eviction is asynchronous. Wait for the page to get evicted.
+  while (true) {
+    zx::nanosleep(zx::deadline_after(zx::msec(50)));
+    printf("polling page count...\n");
+
+    // Verify that the vmo has no committed pages after eviction.
+    zx_info_vmo_t info;
+    ASSERT_OK(vmo->vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
+    if (info.committed_bytes == 0) {
+      break;
+    }
+    printf("page count %zu\n", info.committed_bytes / zx_system_get_page_size());
+  }
+
+  // Try to resolve the DIRTY request now. This should fail.
+  ASSERT_FALSE(pager.DirtyPages(vmo, 0, 1));
+
+  // The thread is blocked still. We should now see a READ request for the evicted page.
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageRead(vmo, 0, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+  // Once the page has been supplied, we should see another DIRTY request.
+  ASSERT_TRUE(t.WaitForBlocked());
+  ASSERT_TRUE(pager.WaitForPageDirty(vmo, 0, 1, ZX_TIME_INFINITE));
+  ASSERT_TRUE(pager.DirtyPages(vmo, 0, 1));
+
+  // The write should now complete.
+  ASSERT_TRUE(t.Wait());
+
+  // Verify contents and dirty pages.
+  memset(expected.data(), 0xaa, zx_system_get_page_size());
+  ASSERT_TRUE(check_buffer_data(vmo, 0, 1, expected.data(), true));
+  zx_vmo_dirty_range_t range = {.offset = 0, .length = 1, .options = 0};
+  ASSERT_TRUE(pager.VerifyDirtyRanges(vmo, &range, 1));
+}
+
 }  // namespace pager_tests
