@@ -25,6 +25,7 @@ use netstack3_core::{
     context::{CounterContext, EventContext, InstantContext, RngContext, TimerContext},
     get_all_ip_addr_subnets, get_ipv4_configuration, get_ipv6_configuration,
     icmp::{BufferIcmpContext, IcmpConnId, IcmpContext, IcmpIpExt},
+    transport::tcp::socket::ListenerId,
     update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither, BufferUdpContext,
     Ctx, DeviceId, DeviceLayerEventDispatcher, IpExt, NonSyncContext, RingBuffer,
     TcpNonSyncContext, TimerId, UdpBoundId, UdpContext,
@@ -40,7 +41,10 @@ use crate::bindings::{
         NetdeviceInfo,
     },
     interfaces_admin,
-    socket::datagram::{IcmpEcho, SocketCollectionIpExt, Udp},
+    socket::{
+        datagram::{IcmpEcho, SocketCollectionIpExt, Udp},
+        stream,
+    },
     util::{ConversionContext as _, IntoFidl as _, TryFromFidlWithContext as _, TryIntoFidl as _},
     BindingsNonSyncCtxImpl, DeviceStatusNotifier, InterfaceControlRunner, LockableContext,
     RequestStreamExt as _, StackTime, DEFAULT_LOOPBACK_MTU,
@@ -135,6 +139,16 @@ where
     }
 }
 
+impl stream::SocketWorkerDispatcher for TestNonSyncCtx {
+    fn register_listener(&mut self, id: ListenerId, socket: fuchsia_zircon::Socket) {
+        self.ctx.register_listener(id, socket)
+    }
+
+    fn unregister_listener(&mut self, id: ListenerId) {
+        self.ctx.unregister_listener(id)
+    }
+}
+
 impl CounterContext for TestNonSyncCtx {
     fn increment_counter(&mut self, key: &'static str) {
         self.ctx.increment_counter(key)
@@ -164,6 +178,7 @@ impl InstantContext for TestNonSyncCtx {
 impl TcpNonSyncContext for TestNonSyncCtx {
     type ReceiveBuffer = RingBuffer;
     type SendBuffer = RingBuffer;
+    fn on_new_connection(&mut self, _listener: ListenerId) {}
 }
 
 impl TimerContext<TimerId> for TestNonSyncCtx {

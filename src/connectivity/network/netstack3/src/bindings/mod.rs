@@ -59,10 +59,9 @@ use netstack3_core::{
     add_ip_addr_subnet, add_route,
     context::{CounterContext, EventContext, InstantContext, RngContext, TimerContext},
     handle_timer, icmp, update_ipv4_configuration, update_ipv6_configuration, AddableEntryEither,
-    BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, IpDeviceConfiguration, IpExt,
-    Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, NonSyncContext, RingBuffer,
-    SlaacConfiguration, TcpNonSyncContext, TimerId, UdpBoundId, UdpConnId, UdpContext,
-    UdpListenerId,
+    BufferUdpContext, Ctx, DeviceId, DeviceLayerEventDispatcher, IdMap, IpDeviceConfiguration,
+    IpExt, Ipv4DeviceConfiguration, Ipv6DeviceConfiguration, NonSyncContext, SlaacConfiguration,
+    TimerId, UdpBoundId, UdpConnId, UdpContext, UdpListenerId,
 };
 
 /// Default MTU for loopback.
@@ -118,6 +117,7 @@ pub(crate) struct BindingsNonSyncCtxImpl {
     devices: Devices,
     icmp_echo_sockets: IcmpEchoSockets,
     udp_sockets: UdpSockets,
+    tcp_listeners: IdMap<zx::Socket>,
 }
 
 impl AsRef<timers::TimerDispatcher<TimerId>> for BindingsNonSyncCtxImpl {
@@ -467,11 +467,6 @@ impl EventContext<netstack3_core::Ipv6RouteDiscoveryEvent<DeviceId>> for Binding
     }
 }
 
-impl TcpNonSyncContext for BindingsNonSyncCtxImpl {
-    type ReceiveBuffer = RingBuffer;
-    type SendBuffer = RingBuffer;
-}
-
 impl BindingsNonSyncCtxImpl {
     fn notify_interface_update(&self, device: DeviceId, event: InterfaceUpdate) {
         self.devices
@@ -806,6 +801,7 @@ impl NetstackSeed {
                 devices: _,
                 icmp_echo_sockets: _,
                 udp_sockets: _,
+                tcp_listeners: _,
             } = non_sync_ctx;
             timers.spawn(netstack.clone());
 

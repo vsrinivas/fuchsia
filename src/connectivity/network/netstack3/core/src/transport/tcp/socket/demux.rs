@@ -269,10 +269,10 @@ where
                 }
                 Connection { acceptor: _, state: _, ip_sock: _ } => None,
             };
-            acceptor_id.map(|acceptor| {
+            acceptor_id.map(|acceptor_id| {
                 let acceptor = sync_ctx
                     .get_tcp_state_mut()
-                    .get_listener_by_id_mut(acceptor)
+                    .get_listener_by_id_mut(acceptor_id)
                     .expect("orphaned acceptee");
                 let pos = acceptor
                     .pending
@@ -281,6 +281,7 @@ where
                     .expect("acceptee is not found in acceptor's pending queue");
                 let conn = acceptor.pending.swap_remove(pos);
                 acceptor.ready.push_back(conn);
+                ctx.on_new_connection(acceptor_id);
             })
         });
         Ok(())

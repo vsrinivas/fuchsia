@@ -17,7 +17,7 @@
 //! [`State::Listen`] an incoming SYN and keep track of whether the connection
 //! is established.
 
-mod demux;
+pub(crate) mod demux;
 mod icmp;
 mod isn;
 
@@ -32,17 +32,14 @@ use nonzero_ext::nonzero;
 
 use assert_matches::assert_matches;
 use log::warn;
-use net_types::{
-    ip::{Ip, IpAddress},
-    SpecifiedAddr,
-};
+use net_types::{ip::IpAddress, SpecifiedAddr};
 use packet::Buf;
 use packet_formats::ip::IpProto;
 use rand::RngCore;
 
 use crate::{
     algorithm::{PortAlloc, PortAllocImpl},
-    context::InstantContext,
+    context::{EventContext, InstantContext},
     data_structures::socketmap::{IterShadows as _, SocketMap, Tagged},
     ip::{
         socket::{IpSock, IpSocket as _},
@@ -59,8 +56,7 @@ use crate::{
         socket::{demux::tcp_serialize_segment, isn::generate_isn},
         state::{Closed, Initial, State},
     },
-    IdMap, Instant, IpDeviceIdContext, IpExt, IpSockCreationError, IpSockSendError,
-    TransportIpContext,
+    IdMap, Instant, IpDeviceIdContext, IpExt, IpSockCreationError, TransportIpContext,
 };
 
 /// Non-sync context for TCP.
@@ -69,19 +65,24 @@ pub trait TcpNonSyncContext: InstantContext {
     type ReceiveBuffer: ReceiveBuffer;
     /// Send buffer used by TCP.
     type SendBuffer: SendBuffer;
+
+    /// A new connection is ready to be accepted on the listener.
+    fn on_new_connection(&mut self, listener: ListenerId);
 }
 
-pub(crate) trait TcpSyncContext<I: IpExt, C: TcpNonSyncContext>:
-    IpDeviceIdContext<I>
-{
+/// Sync context for TCP.
+pub trait TcpSyncContext<I: IpExt, C: TcpNonSyncContext>: IpDeviceIdContext<I> {
+    /// Gets tcp socket states of this context.
     fn get_tcp_state_mut(&mut self) -> &mut TcpSockets<I, Self::DeviceId, C>;
 }
 
 /// Socket address includes the ip address and the port number.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct SocketAddr<A: IpAddress> {
-    ip: SpecifiedAddr<A>,
-    port: NonZeroU16,
+pub struct SocketAddr<A: IpAddress> {
+    /// The IP component of the address.
+    pub ip: SpecifiedAddr<A>,
+    /// The port component of the address.
+    pub port: NonZeroU16,
 }
 
 /// An implementation of [`IpTransportContext`] for TCP.
@@ -300,16 +301,20 @@ enum MaybeListener {
 // TODO(https://fxbug.dev/38297): The following IDs are all `Clone + Copy`,
 // which makes it possible for the client to keep them for longer than they are
 // valid and cause panics. Find a way to make it harder to misuse.
+/// The ID to an unbound socket.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct UnboundId(usize);
+pub struct UnboundId(usize);
+/// The ID to a bound socket.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct BoundId(usize);
+pub struct BoundId(usize);
+/// The ID to a listener socket.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct ListenerId(usize);
+pub struct ListenerId(usize);
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 struct MaybeListenerId(usize);
+/// The ID to a connection socket.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct ConnectionId(usize);
+pub struct ConnectionId(usize);
 
 impl SocketMapAddrStateSpec for MaybeListenerId {
     type Id = MaybeListenerId;
@@ -353,7 +358,8 @@ impl SocketMapAddrStateSpec for ConnectionId {
     }
 }
 
-fn create_socket<I, SC, C>(sync_ctx: &mut SC, _ctx: &mut C) -> UnboundId
+/// Creates a new socket in unbound state.
+pub fn create_socket<I, SC, C>(sync_ctx: &mut SC, _ctx: &mut C) -> UnboundId
 where
     I: IpExt,
     C: TcpNonSyncContext,
@@ -362,14 +368,19 @@ where
     UnboundId(sync_ctx.get_tcp_state_mut().inactive.push(Inactive))
 }
 
+/// Possible errors for the bind operation.
 #[derive(Debug)]
-enum BindError {
+pub enum BindError {
+    /// The local address does not belong to us.
     NoLocalAddr,
+    /// Cannot allocate a port for the local address.
     NoPort,
-    Conflict(InsertError),
+    /// The address that is intended to be bound on is already in use.
+    Conflict,
 }
 
-fn bind<I, SC, C>(
+/// Binds an unbound socket to a local socket address.
+pub fn bind<I, SC, C>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: UnboundId,
@@ -381,6 +392,7 @@ where
     C: TcpNonSyncContext,
     SC: TcpSyncContext<I, C> + TransportIpContext<I, C>,
 {
+    // TODO(https://fxbug.dev/104300): Check if local_ip is a unicast address.
     let port = match port {
         None => {
             let TcpSockets { secret: _, isn_ts: _, port_alloc, inactive: _, socketmap } =
@@ -427,13 +439,14 @@ where
             (),
         )
         .map(|MaybeListenerId(x)| BoundId(x))
-        .map_err(|(err, _, _): (_, MaybeListener, ())| {
+        .map_err(|_: (InsertError, MaybeListener, ())| {
             assert_eq!(sync_ctx.get_tcp_state_mut().inactive.insert(idmap_key, inactive), None);
-            BindError::Conflict(err)
+            BindError::Conflict
         })
 }
 
-fn listen<I, SC, C>(
+/// Listens on an already bound socket.
+pub fn listen<I, SC, C>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     id: BoundId,
@@ -462,12 +475,15 @@ where
     ListenerId(id.into())
 }
 
+/// Possible errors for accept operation.
 #[derive(Debug)]
-enum AcceptError {
+pub enum AcceptError {
+    /// There is no established socket currently.
     WouldBlock,
 }
 
-fn accept<I, SC, C>(
+/// Accepts an established socket from the queue of a listener socket.
+pub fn accept<I, SC, C>(
     sync_ctx: &mut SC,
     _ctx: &mut C,
     id: ListenerId,
@@ -491,14 +507,17 @@ where
     Ok((conn_id, SocketAddr { ip: remote_ip, port: remote_port }))
 }
 
+/// Possible errors when connecting a socket.
 #[derive(Debug)]
-enum ConnectError {
-    IpSockCreationError(IpSockCreationError),
-    IpSocketSendError(IpSockSendError),
+pub enum ConnectError {
+    /// Cannot allocate a local port for the connection.
     NoPort,
+    /// Cannot find a route to the remote host.
+    NoRoute,
 }
 
-fn connect_bound<I, SC, C>(
+/// Connects a socket that has been bound locally.
+pub fn connect_bound<I, SC, C>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: BoundId,
@@ -521,13 +540,16 @@ where
         *bound_addr;
     let ip_sock = sync_ctx
         .new_ip_socket(ctx, device, local_ip, remote.ip, IpProto::Tcp.into(), None)
-        .map_err(ConnectError::IpSockCreationError)?;
+        .map_err(|err| match err {
+            IpSockCreationError::Route(_) => ConnectError::NoRoute,
+        })?;
     let conn_id = connect_inner(sync_ctx, ctx, ip_sock, local_port, remote.port)?;
     let _: Option<_> = sync_ctx.get_tcp_state_mut().socketmap.listeners_mut().remove(&bound_id);
     Ok(conn_id)
 }
 
-fn connect_unbound<I, SC, C>(
+/// Connects a socket that is in unbound state.
+pub fn connect_unbound<I, SC, C>(
     sync_ctx: &mut SC,
     ctx: &mut C,
     id: UnboundId,
@@ -540,7 +562,9 @@ where
 {
     let ip_sock = sync_ctx
         .new_ip_socket(ctx, None, None, remote.ip, IpProto::Tcp.into(), None)
-        .map_err(ConnectError::IpSockCreationError)?;
+        .map_err(|err| match err {
+            IpSockCreationError::Route(_) => ConnectError::NoRoute,
+        })?;
     let local_port = {
         let TcpSockets { secret: _, isn_ts: _, port_alloc, inactive: _, socketmap } =
             sync_ctx.get_tcp_state_mut();
@@ -605,7 +629,7 @@ where
                 sync_ctx.get_tcp_state_mut().socketmap.conns_mut().remove(&conn_id),
                 Some(_)
             );
-            ConnectError::IpSocketSendError(err)
+            ConnectError::NoRoute
         })?;
     Ok(conn_id)
 }
@@ -641,6 +665,13 @@ impl From<usize> for ConnectionId {
     }
 }
 
+impl Into<usize> for ListenerId {
+    fn into(self) -> usize {
+        let Self(x) = self;
+        x
+    }
+}
+
 impl Into<usize> for ConnectionId {
     fn into(self) -> usize {
         let Self(x) = self;
@@ -659,7 +690,7 @@ impl Into<usize> for UnboundId {
 mod tests {
     use const_unwrap::const_unwrap_option;
     use core::fmt::Debug;
-    use net_types::ip::{AddrSubnet, Ipv4, Ipv6, Ipv6SourceAddr};
+    use net_types::ip::{AddrSubnet, Ip, Ipv4, Ipv6, Ipv6SourceAddr};
     use packet::ParseBuffer as _;
     use packet_formats::tcp::{TcpParseArgs, TcpSegment};
     use specialize_ip_macro::ip_test;
@@ -714,6 +745,8 @@ mod tests {
     impl TcpNonSyncContext for TcpNonSyncCtx {
         type ReceiveBuffer = RingBuffer;
         type SendBuffer = RingBuffer;
+
+        fn on_new_connection(&mut self, listener: ListenerId) {}
     }
 
     impl<I: TcpTestIpExt> TransportIpContext<I, TcpNonSyncCtx> for TcpSyncCtx<I>
@@ -885,7 +918,6 @@ mod tests {
         TcpSyncCtx<I>: BufferIpSocketHandler<I, TcpNonSyncCtx, Buf<Vec<u8>>>
             + IpDeviceIdContext<I, DeviceId = DummyDeviceId>,
     {
-        log::info!("listen_addr: {:?}, bind_client: {}", listen_addr, bind_client);
         let mut net = new_test_net::<I>();
 
         let backlog = NonZeroUsize::new(1).unwrap();
@@ -1006,7 +1038,7 @@ mod tests {
                 .expect("first bind should succeed");
         assert_matches!(
             bind(&mut sync_ctx, &mut non_sync_ctx, s2, conflict_addr, Some(PORT_1)),
-            Err(BindError::Conflict(_))
+            Err(BindError::Conflict)
         );
         let _b2 = bind(&mut sync_ctx, &mut non_sync_ctx, s2, conflict_addr, Some(PORT_2))
             .expect("able to rebind to a free address");

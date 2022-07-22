@@ -5,6 +5,7 @@
 //! Socket features exposed by netstack3.
 
 pub(crate) mod datagram;
+pub(crate) mod stream;
 
 use std::convert::Infallible as Never;
 use std::num::NonZeroU64;
@@ -36,6 +37,7 @@ use crate::bindings::{
 // public header from FDIO somehow so we don't need to redefine.
 const ZXSIO_SIGNAL_INCOMING: zx::Signals = zx::Signals::USER_0;
 const ZXSIO_SIGNAL_OUTGOING: zx::Signals = zx::Signals::USER_1;
+const ZXSIO_SIGNAL_CONNECTED: zx::Signals = zx::Signals::USER_3;
 
 /// Common properties for socket workers.
 #[derive(Debug)]
@@ -47,7 +49,8 @@ pub(crate) async fn serve<C>(
 ) -> Result<(), fidl::Error>
 where
     C: LockableContext,
-    C::NonSyncCtx: AsRef<Devices> + datagram::SocketWorkerDispatcher,
+    C::NonSyncCtx:
+        AsRef<Devices> + datagram::SocketWorkerDispatcher + stream::SocketWorkerDispatcher,
     C: Clone + Send + Sync + 'static,
 {
     stream
@@ -65,8 +68,23 @@ where
                     // TODO(https://fxbug.dev/48969): implement this method.
                     responder_send!(responder, &mut Err(zx::Status::NOT_FOUND.into_raw()));
                 }
-                psocket::ProviderRequest::StreamSocket { domain: _, proto: _, responder } => {
-                    responder_send!(responder, &mut Err(Errno::Eprotonosupport));
+                psocket::ProviderRequest::StreamSocket { domain, proto, responder } => {
+                    match fidl::endpoints::create_request_stream() {
+                        Ok((client, request_stream)) => {
+                            responder_send!(
+                                responder,
+                                &mut stream::spawn_worker(
+                                    domain,
+                                    proto,
+                                    ctx.clone(),
+                                    request_stream
+                                )
+                                .await
+                                .map(|()| client)
+                            );
+                        }
+                        Err(_) => responder_send!(responder, &mut Err(Errno::Enobufs)),
+                    }
                 }
                 psocket::ProviderRequest::DatagramSocketDeprecated { domain, proto, responder } => {
                     let mut response = (|| {

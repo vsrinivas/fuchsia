@@ -8,7 +8,7 @@ pub(crate) mod buffer;
 mod rtt;
 mod segment;
 mod seqnum;
-pub(crate) mod socket;
+pub mod socket;
 mod state;
 
 /// Control flags that can alter the state of a TCP control block.
