@@ -11,9 +11,9 @@ use ring::{
     signature::{Ed25519KeyPair, KeyPair},
 };
 use std::{
-    fs::{File, OpenOptions},
+    fs::{DirBuilder, File, OpenOptions},
     io::{BufRead, BufReader, Cursor, Read, Write},
-    os::unix::fs::OpenOptionsExt,
+    os::unix::fs::{DirBuilderExt, OpenOptionsExt},
     path::PathBuf,
     str,
 };
@@ -137,6 +137,9 @@ fn write_public_key(path: &PathBuf, public_key: &[u8]) -> Result<()> {
     let pubkey_b64 = Base64Display::with_config(&public_key_data, base64::STANDARD)
         .map_err(|m| anyhow!("could not base64 encode: {:?}", m))?;
 
+    if let Some(parent) = path.parent() {
+        DirBuilder::new().recursive(true).mode(0o700).create(parent)?;
+    };
     let mut w =
         OpenOptions::new().write(true).read(true).create_new(true).mode(0o600).open(&path)?;
     writeln!(&mut w, "{} {} {}", str::from_utf8(KEYTYPE)?, pubkey_b64, COMMENT)?;
@@ -213,6 +216,9 @@ fn write_private_key(
     let begin = "-----BEGIN OPENSSH PRIVATE KEY-----\n";
     let end = "-----END OPENSSH PRIVATE KEY-----\n";
 
+    if let Some(parent) = path.parent() {
+        DirBuilder::new().recursive(true).mode(0o700).create(parent)?;
+    };
     let mut w =
         OpenOptions::new().write(true).read(true).create_new(true).mode(0o600).open(&path)?;
     writeln!(&mut w, "{}", begin)?;
@@ -423,6 +429,25 @@ mod test {
         let mut input = Cursor::new(data);
         let read_data = read_cstring(&mut input)?;
         assert!(read_data == "hello".as_bytes());
+        Ok(())
+    }
+
+    #[test]
+    fn test_create_with_missing_directory_for_keys() -> Result<()> {
+        let tmp_dir = TempDir::new()?;
+
+        let new_dir_path = tmp_dir.path().join("new-dir");
+        let auth_key_path = new_dir_path.join("authorized_keys");
+        let private_path = new_dir_path.join("privatekey");
+
+        assert!(!&auth_key_path.exists());
+        assert!(!&private_path.exists());
+
+        let ssh_files = SshKeyFiles { authorized_keys: auth_key_path, private_key: private_path };
+        ssh_files.create_keys_if_needed()?;
+
+        assert!(&ssh_files.authorized_keys.exists());
+        assert!(&ssh_files.private_key.exists());
         Ok(())
     }
 }
