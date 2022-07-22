@@ -1644,6 +1644,14 @@ that users can easily switch revisions using a single arg.
 
 From //build/images/args.gni:54
 
+### flatland_disable_display_composition
+If true, this forces the display compositor to always use the GPU/Vulkan
+rendering path, instead of attempting the display controller rendering path.
+
+**Current value (from the default):** `false`
+
+From //src/ui/scenic/lib/flatland/engine/build_args.gni:14
+
 ### flatland_verbose_logging
 If true, Flatland will log an excruciating amount of data.  For debugging.
 
