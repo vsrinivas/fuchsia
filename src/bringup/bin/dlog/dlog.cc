@@ -4,14 +4,8 @@
 
 #include <errno.h>
 #include <fidl/fuchsia.boot/cpp/wire.h>
-#include <lib/fdio/directory.h>
 #include <lib/service/llcpp/service.h>
-#include <lib/zx/channel.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
-#include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
 void usage() {
@@ -107,44 +101,43 @@ int main(int argc, char** argv) {
     if (filter_pid && (pid != rec.pid)) {
       continue;
     }
+    // Calculate needed capacity for the log line.
+    constexpr size_t ts_len = 1 + 5 + 1 + 3 + 2;
+    constexpr char endl = '\n';
+    const bool has_newline = rec.datalen != 0 && rec.data[rec.datalen - sizeof(endl)] == endl;
+    const size_t cap = [plain, has_newline, datalen = rec.datalen]() {
+      const size_t ts_cap = !plain ? ts_len : 0;
+      const size_t newline_cap = !has_newline ? sizeof(endl) : 0;
+      return ts_cap + datalen + newline_cap;
+    }();
+    char buf[cap];
+    size_t len = 0;
     if (!plain) {
-      char tmp[32];
-      size_t len = snprintf(tmp, sizeof(tmp), "[%05llu.%03llu] ", rec.timestamp / 1000000000ULL,
-                            (rec.timestamp / 1000000ULL) % 1000ULL);
-      ssize_t ret = write(STDOUT_FILENO, tmp, len);
+      const zx_time_t millis = rec.timestamp / 1000000;
+      const zx_time_t secs = millis / 1000;
+      const zx_time_t ms = millis % 1000;
+      int ret = snprintf(&buf[len], sizeof(buf) - len, "[%05ld.%03ld] ", secs, ms);
+      ZX_ASSERT_MSG(ret >= 0, "snprintf failed: %d", ret);
+      size_t n = static_cast<size_t>(ret);
+      ZX_ASSERT_MSG(n == ts_len, "unexpected timestamp length %zu/%zu", n, ts_len);
+      len += n;
+    }
+    memcpy(&buf[len], rec.data, rec.datalen);
+    len += rec.datalen;
+    if (!has_newline) {
+      memcpy(&buf[len], &endl, sizeof(endl));
+      len += sizeof(endl);
+    }
+
+    std::string_view view(buf, len);
+    while (!view.empty()) {
+      ssize_t ret = write(STDOUT_FILENO, view.data(), view.size());
       if (ret < 0) {
         fprintf(stderr, "write failed: %s\n", strerror(errno));
         return -1;
       }
       size_t n = static_cast<size_t>(ret);
-      if (n != len) {
-        fprintf(stderr, "short write %zu/%zu\n", n, len);
-        return -1;
-      }
-    }
-    std::string_view line(rec.data, rec.datalen);
-    ssize_t ret = write(STDOUT_FILENO, line.data(), line.size());
-    if (ret < 0) {
-      fprintf(stderr, "write failed: %s\n", strerror(errno));
-      return -1;
-    }
-    size_t n = static_cast<size_t>(ret);
-    if (n != line.size()) {
-      fprintf(stderr, "short write %zu/%lu\n", n, line.size());
-      return -1;
-    }
-    constexpr char endl[] = "\n";
-    if (!cpp20::ends_with(line, endl)) {
-      ssize_t ret = write(STDOUT_FILENO, endl, sizeof(endl));
-      if (ret < 0) {
-        fprintf(stderr, "write failed: %s\n", strerror(errno));
-        return -1;
-      }
-      size_t n = static_cast<size_t>(ret);
-      if (n != sizeof(endl)) {
-        fprintf(stderr, "short write %zu/%lu\n", n, sizeof(endl));
-        return -1;
-      }
+      view = view.substr(n);
     }
   }
   return 0;
