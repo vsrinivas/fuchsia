@@ -14,14 +14,10 @@ group("tests") {
     "processor:tests",
     "profile:tests",
     "register-state:tests",
+    "restricted-mode:tests",
     "status:tests",
     "stress-tests:tests",
     "thread-initial-state:tests",
     "vmo:tests",
   ]
-  if (!is_coverage) {
-    # TODO(fxbug.dev/104806): Re-enable this test when it passes with
-    # the coverage variant.
-    deps += [ "restricted-mode:tests" ]
-  }
 }

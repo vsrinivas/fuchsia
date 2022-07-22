@@ -122,8 +122,8 @@ TEST(RestrictedMode, Basic) {
   zx_restricted_state state{};
 
   // configure the state for x86
-  static int fs_val = 0;
-  static int gs_val = 0;
+  uint64_t fs_val = 0;
+  uint64_t gs_val = 0;
   state.ip = (uint64_t)bounce;
   state.flags = 0;
   state.rax = 1;
@@ -194,8 +194,8 @@ TEST(RestrictedMode, Bench) {
   zx_restricted_state state{};
 
   // configure the state for x86
-  static int fs_val = 0;
-  static int gs_val = 0;
+  uint64_t fs_val = 0;
+  uint64_t gs_val = 0;
   state.ip = (uint64_t)bounce;
   state.flags = 0;
   state.fs_base = (uintptr_t)&fs_val;
