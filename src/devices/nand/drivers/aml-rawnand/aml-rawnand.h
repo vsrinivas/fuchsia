@@ -52,16 +52,6 @@ struct AmlInfoFormat {
     fbl::BitFieldMember<uint8_t, 7, 1> completed;
   } ecc;
   uint32_t reserved;
-
-  // BitFieldMember is not trivially copyable so neither are we, have to copy
-  // each member over manually (copy assignment is needed by tests).
-  AmlInfoFormat& operator=(const AmlInfoFormat& other) {
-    info_bytes = other.info_bytes;
-    zero_bits = other.zero_bits;
-    ecc.raw_value = other.ecc.raw_value;
-    reserved = other.reserved;
-    return *this;
-  }
 };
 
 // gcc doesn't let us use __PACKED with fbl::BitFieldMember<>, but it shouldn't
