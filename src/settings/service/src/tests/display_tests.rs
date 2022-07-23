@@ -41,25 +41,6 @@ async fn setup_display_env() -> DisplayProxy {
     env.connect_to_protocol::<DisplayMarker>().unwrap()
 }
 
-async fn setup_brightness_display_env() -> (DisplayProxy, BrightnessService) {
-    let service_registry = ServiceRegistry::create();
-    let brightness_service_handle = BrightnessService::create();
-    service_registry
-        .lock()
-        .await
-        .register_service(Arc::new(Mutex::new(brightness_service_handle.clone())));
-
-    let env = EnvironmentBuilder::new(Arc::new(InMemoryStorageFactory::new()))
-        .service(Box::new(ServiceRegistry::serve(service_registry)))
-        .fidl_interfaces(&[Interface::Display(display::InterfaceFlags::BASE)])
-        .flags(&[ControllerFlag::ExternalBrightnessControl])
-        .spawn_and_get_nested_environment(ENV_NAME)
-        .await
-        .unwrap();
-
-    (env.connect_to_protocol::<DisplayMarker>().unwrap(), brightness_service_handle)
-}
-
 // Creates an environment that will fail on a get request.
 async fn create_display_test_env_with_failures(
     storage_factory: Arc<InMemoryStorageFactory>,
@@ -94,30 +75,6 @@ async fn test_manual_brightness_with_storage_controller() {
     assert_eq!(settings.brightness_value, Some(CHANGED_BRIGHTNESS));
 }
 
-// Tests that the FIDL calls for manual brightness result in appropriate
-// commands sent to the service.
-#[fuchsia_async::run_until_stalled(test)]
-// Comparisons are just checking that set values are returned the same.
-#[allow(clippy::float_cmp)]
-async fn test_manual_brightness_with_brightness_controller() {
-    let (display_proxy, brightness_service_handle) = setup_brightness_display_env().await;
-
-    let settings = display_proxy.watch().await.expect("watch completed");
-
-    assert_eq!(settings.brightness_value, Some(STARTING_BRIGHTNESS));
-
-    let mut display_settings = DisplaySettings::EMPTY;
-    display_settings.brightness_value = Some(CHANGED_BRIGHTNESS);
-    display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
-
-    let settings = display_proxy.watch().await.expect("watch completed");
-    assert_eq!(settings.brightness_value, Some(CHANGED_BRIGHTNESS));
-
-    let current_brightness =
-        brightness_service_handle.get_manual_brightness().lock().await.expect("get successful");
-    assert_eq!(current_brightness, CHANGED_BRIGHTNESS);
-}
-
 // Tests that the FIDL calls for auto brightness result in appropriate
 // commands sent to the service.
 #[fuchsia_async::run_until_stalled(test)]
@@ -135,65 +92,11 @@ async fn test_auto_brightness_with_storage_controller() {
     assert_eq!(settings.adjusted_auto_brightness, Some(AUTO_BRIGHTNESS_LEVEL));
 }
 
-// Tests that the FIDL calls for auto brightness result in appropriate
-// commands sent to the service.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_auto_brightness_with_brightness_controller() {
-    let (display_proxy, brightness_service_handle) = setup_brightness_display_env().await;
-
-    let mut display_settings = DisplaySettings::EMPTY;
-    display_settings.auto_brightness = Some(true);
-    display_settings.adjusted_auto_brightness = Some(AUTO_BRIGHTNESS_LEVEL);
-    display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
-
-    let settings = display_proxy.watch().await.expect("watch completed");
-    assert_eq!(settings.auto_brightness, Some(true));
-    assert_eq!(settings.adjusted_auto_brightness, Some(AUTO_BRIGHTNESS_LEVEL));
-
-    let auto_brightness =
-        brightness_service_handle.get_auto_brightness().lock().await.expect("get successful");
-    assert!(auto_brightness);
-}
-
 // Tests that the FIDL calls for light mode result in appropriate
 // commands sent to the service.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_light_mode_with_storage_controller() {
     let display_proxy = setup_display_env().await;
-
-    // Test that if display is enabled, it is reflected.
-    let mut display_settings = DisplaySettings::EMPTY;
-    display_settings.low_light_mode = Some(FidlLowLightMode::Enable);
-    display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
-
-    let settings = display_proxy.watch().await.expect("watch completed");
-
-    assert_eq!(settings.low_light_mode, Some(FidlLowLightMode::Enable));
-
-    // Test that if display is disabled, it is reflected.
-    let mut display_settings = DisplaySettings::EMPTY;
-    display_settings.low_light_mode = Some(FidlLowLightMode::Disable);
-    display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
-
-    let settings = display_proxy.watch().await.expect("watch completed");
-
-    assert_eq!(settings.low_light_mode, Some(FidlLowLightMode::Disable));
-
-    // Test that if display is disabled immediately, it is reflected.
-    let mut display_settings = DisplaySettings::EMPTY;
-    display_settings.low_light_mode = Some(FidlLowLightMode::DisableImmediately);
-    display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
-
-    let settings = display_proxy.watch().await.expect("watch completed");
-
-    assert_eq!(settings.low_light_mode, Some(FidlLowLightMode::DisableImmediately));
-}
-
-// Tests that the FIDL calls for light mode result in appropriate
-// commands sent to the service.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_light_mode_with_brightness_controller() {
-    let (display_proxy, _) = setup_brightness_display_env().await;
 
     // Test that if display is enabled, it is reflected.
     let mut display_settings = DisplaySettings::EMPTY;
@@ -346,46 +249,11 @@ async fn test_theme_mode_auto_preserves_previous_type() {
     assert_eq!(settings.theme, expected_theme);
 }
 
-// Tests that calls to the external brightness component are only made when
-// the brightness changes.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_deduped_external_brightness_calls() {
-    let (display_proxy, brightness_service_handle) = setup_brightness_display_env().await;
-
-    let settings = display_proxy.watch().await.expect("watch completed");
-
-    assert_eq!(settings.brightness_value, Some(STARTING_BRIGHTNESS));
-
-    let mut display_settings = DisplaySettings::EMPTY;
-    display_settings.brightness_value = Some(STARTING_BRIGHTNESS);
-    display_proxy.set(display_settings).await.expect("set completed").expect("set successful");
-    let num_changes = *brightness_service_handle.get_num_changes().lock().await;
-    assert_eq!(num_changes, 0);
-
-    let mut display_settings_changed = DisplaySettings::EMPTY;
-    display_settings_changed.brightness_value = Some(CHANGED_BRIGHTNESS);
-    display_proxy
-        .set(display_settings_changed)
-        .await
-        .expect("set completed")
-        .expect("set successful");
-    let num_changes = *brightness_service_handle.get_num_changes().lock().await;
-    assert_eq!(num_changes, 1);
-}
-
 // Tests that the FIDL calls for screen enabled result in appropriate
 // commands sent to the service.
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_screen_enabled_with_storage_controller() {
     let display_proxy = setup_display_env().await;
-    test_screen_enabled(display_proxy).await;
-}
-
-// Tests that the FIDL calls for screen enabled result in appropriate
-// commands sent to the service.
-#[fuchsia_async::run_until_stalled(test)]
-async fn test_screen_enabled_with_brightness_controller() {
-    let (display_proxy, _) = setup_brightness_display_env().await;
     test_screen_enabled(display_proxy).await;
 }
 

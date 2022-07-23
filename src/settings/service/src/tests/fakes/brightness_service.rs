@@ -34,10 +34,6 @@ impl BrightnessService {
     pub(crate) fn get_auto_brightness(&self) -> Arc<Mutex<Option<bool>>> {
         self.auto_brightness.clone()
     }
-
-    pub(crate) fn get_num_changes(&self) -> Arc<Mutex<u32>> {
-        self.num_changes.clone()
-    }
 }
 
 impl Service for BrightnessService {

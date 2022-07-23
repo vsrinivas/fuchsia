@@ -1,0 +1,9 @@
+{
+    "interfaces": [
+        {
+            "Display": [
+                "Base"
+            ]
+        }
+    ]
+}
