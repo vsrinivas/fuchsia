@@ -11,158 +11,6 @@
 
 namespace unwinder {
 
-namespace {
-
-enum : uint8_t {
-  DW_OP_addr = 0x03,
-  DW_OP_deref = 0x06,
-  DW_OP_const1u = 0x08,
-  DW_OP_const1s = 0x09,
-  DW_OP_const2u = 0x0a,
-  DW_OP_const2s = 0x0b,
-  DW_OP_const4u = 0x0c,
-  DW_OP_const4s = 0x0d,
-  DW_OP_const8u = 0x0e,
-  DW_OP_const8s = 0x0f,
-  DW_OP_constu = 0x10,
-  DW_OP_consts = 0x11,
-  DW_OP_dup = 0x12,
-  DW_OP_drop = 0x13,
-  DW_OP_over = 0x14,
-  DW_OP_pick = 0x15,
-  DW_OP_swap = 0x16,
-  DW_OP_rot = 0x17,
-  DW_OP_xderef = 0x18,
-  DW_OP_abs = 0x19,
-  DW_OP_and = 0x1a,
-  DW_OP_div = 0x1b,
-  DW_OP_minus = 0x1c,
-  DW_OP_mod = 0x1d,
-  DW_OP_mul = 0x1e,
-  DW_OP_neg = 0x1f,
-  DW_OP_not = 0x20,
-  DW_OP_or = 0x21,
-  DW_OP_plus = 0x22,
-  DW_OP_plus_uconst = 0x23,
-  DW_OP_shl = 0x24,
-  DW_OP_shr = 0x25,
-  DW_OP_shra = 0x26,
-  DW_OP_xor = 0x27,
-  DW_OP_bra = 0x28,
-  DW_OP_eq = 0x29,
-  DW_OP_ge = 0x2a,
-  DW_OP_gt = 0x2b,
-  DW_OP_le = 0x2c,
-  DW_OP_lt = 0x2d,
-  DW_OP_ne = 0x2e,
-  DW_OP_skip = 0x2f,
-  DW_OP_lit0 = 0x30,
-  DW_OP_lit1 = 0x31,
-  DW_OP_lit2 = 0x32,
-  DW_OP_lit3 = 0x33,
-  DW_OP_lit4 = 0x34,
-  DW_OP_lit5 = 0x35,
-  DW_OP_lit6 = 0x36,
-  DW_OP_lit7 = 0x37,
-  DW_OP_lit8 = 0x38,
-  DW_OP_lit9 = 0x39,
-  DW_OP_lit10 = 0x3a,
-  DW_OP_lit11 = 0x3b,
-  DW_OP_lit12 = 0x3c,
-  DW_OP_lit13 = 0x3d,
-  DW_OP_lit14 = 0x3e,
-  DW_OP_lit15 = 0x3f,
-  DW_OP_lit16 = 0x40,
-  DW_OP_lit17 = 0x41,
-  DW_OP_lit18 = 0x42,
-  DW_OP_lit19 = 0x43,
-  DW_OP_lit20 = 0x44,
-  DW_OP_lit21 = 0x45,
-  DW_OP_lit22 = 0x46,
-  DW_OP_lit23 = 0x47,
-  DW_OP_lit24 = 0x48,
-  DW_OP_lit25 = 0x49,
-  DW_OP_lit26 = 0x4a,
-  DW_OP_lit27 = 0x4b,
-  DW_OP_lit28 = 0x4c,
-  DW_OP_lit29 = 0x4d,
-  DW_OP_lit30 = 0x4e,
-  DW_OP_lit31 = 0x4f,
-  DW_OP_reg0 = 0x50,
-  DW_OP_reg1 = 0x51,
-  DW_OP_reg2 = 0x52,
-  DW_OP_reg3 = 0x53,
-  DW_OP_reg4 = 0x54,
-  DW_OP_reg5 = 0x55,
-  DW_OP_reg6 = 0x56,
-  DW_OP_reg7 = 0x57,
-  DW_OP_reg8 = 0x58,
-  DW_OP_reg9 = 0x59,
-  DW_OP_reg10 = 0x5a,
-  DW_OP_reg11 = 0x5b,
-  DW_OP_reg12 = 0x5c,
-  DW_OP_reg13 = 0x5d,
-  DW_OP_reg14 = 0x5e,
-  DW_OP_reg15 = 0x5f,
-  DW_OP_reg16 = 0x60,
-  DW_OP_reg17 = 0x61,
-  DW_OP_reg18 = 0x62,
-  DW_OP_reg19 = 0x63,
-  DW_OP_reg20 = 0x64,
-  DW_OP_reg21 = 0x65,
-  DW_OP_reg22 = 0x66,
-  DW_OP_reg23 = 0x67,
-  DW_OP_reg24 = 0x68,
-  DW_OP_reg25 = 0x69,
-  DW_OP_reg26 = 0x6a,
-  DW_OP_reg27 = 0x6b,
-  DW_OP_reg28 = 0x6c,
-  DW_OP_reg29 = 0x6d,
-  DW_OP_reg30 = 0x6e,
-  DW_OP_reg31 = 0x6f,
-  DW_OP_breg0 = 0x70,
-  DW_OP_breg1 = 0x71,
-  DW_OP_breg2 = 0x72,
-  DW_OP_breg3 = 0x73,
-  DW_OP_breg4 = 0x74,
-  DW_OP_breg5 = 0x75,
-  DW_OP_breg6 = 0x76,
-  DW_OP_breg7 = 0x77,
-  DW_OP_breg8 = 0x78,
-  DW_OP_breg9 = 0x79,
-  DW_OP_breg10 = 0x7a,
-  DW_OP_breg11 = 0x7b,
-  DW_OP_breg12 = 0x7c,
-  DW_OP_breg13 = 0x7d,
-  DW_OP_breg14 = 0x7e,
-  DW_OP_breg15 = 0x7f,
-  DW_OP_breg16 = 0x80,
-  DW_OP_breg17 = 0x81,
-  DW_OP_breg18 = 0x82,
-  DW_OP_breg19 = 0x83,
-  DW_OP_breg20 = 0x84,
-  DW_OP_breg21 = 0x85,
-  DW_OP_breg22 = 0x86,
-  DW_OP_breg23 = 0x87,
-  DW_OP_breg24 = 0x88,
-  DW_OP_breg25 = 0x89,
-  DW_OP_breg26 = 0x8a,
-  DW_OP_breg27 = 0x8b,
-  DW_OP_breg28 = 0x8c,
-  DW_OP_breg29 = 0x8d,
-  DW_OP_breg30 = 0x8e,
-  DW_OP_breg31 = 0x8f,
-  DW_OP_regx = 0x90,
-  DW_OP_fbreg = 0x91,
-  DW_OP_bregx = 0x92,
-  DW_OP_piece = 0x93,
-  DW_OP_deref_size = 0x94,
-  DW_OP_xderef_size = 0x95,
-  DW_OP_nop = 0x96,
-};
-
-}  // namespace
-
 Error DwarfExpr::Eval(Memory* mem, const Registers& regs, uint64_t initial_value,
                       uint64_t& result) {
   if (!expr_) {
@@ -177,13 +25,200 @@ Error DwarfExpr::Eval(Memory* mem, const Registers& regs, uint64_t initial_value
     if (auto err = expr_->Read(p, op); err.has_err()) {
       return err;
     }
-    if (op >= DW_OP_breg0 && op <= DW_OP_breg31) {
+    switch (op) {
+//
+// Push const values
+//
+#define READ_EXPR_AND_PUSH(type)                         \
+  {                                                      \
+    type val;                                            \
+    if (auto err = expr_->Read(p, val); err.has_err()) { \
+      return err;                                        \
+    }                                                    \
+    stack.push_back(val);                                \
+    continue;                                            \
+  }
+      case DW_OP_addr:
+        READ_EXPR_AND_PUSH(uint64_t)
+      case DW_OP_const1u:
+        READ_EXPR_AND_PUSH(uint8_t)
+      case DW_OP_const2u:
+        READ_EXPR_AND_PUSH(uint16_t)
+      case DW_OP_const4u:
+        READ_EXPR_AND_PUSH(uint32_t)
+      case DW_OP_const8u:
+        READ_EXPR_AND_PUSH(uint64_t)
+      case DW_OP_const1s:
+        READ_EXPR_AND_PUSH(int8_t)
+      case DW_OP_const2s:
+        READ_EXPR_AND_PUSH(int16_t)
+      case DW_OP_const4s:
+        READ_EXPR_AND_PUSH(int32_t)
+      case DW_OP_const8s:
+        READ_EXPR_AND_PUSH(int64_t)
+      case DW_OP_constu: {
+        uint64_t val;
+        if (auto err = expr_->ReadULEB128(p, val); err.has_err()) {
+          return err;
+        }
+        stack.push_back(val);
+        continue;
+      }
+      case DW_OP_consts: {
+        int64_t val;
+        if (auto err = expr_->ReadSLEB128(p, val); err.has_err()) {
+          return err;
+        }
+        stack.push_back(val);
+        continue;
+      }
+#undef READ_EXPR_AND_PUSH
+
+//
+// Stack operations
+//
+#define VALIDATE_STATE(cond) \
+  if (!(cond))               \
+  return Error("invalid DWARF expression")
+
+      case DW_OP_dup: {
+        VALIDATE_STATE(!stack.empty());
+        stack.push_back(stack.back());
+        continue;
+      }
+      case DW_OP_drop: {
+        VALIDATE_STATE(!stack.empty());
+        stack.pop_back();
+        continue;
+      }
+      case DW_OP_pick: {
+        uint8_t idx;
+        if (auto err = expr_->Read(p, idx); err.has_err()) {
+          return err;
+        }
+        VALIDATE_STATE(stack.size() >= idx);
+        stack.push_back(stack[stack.size() - 1 - idx]);
+        continue;
+      }
+      case DW_OP_over: {
+        VALIDATE_STATE(stack.size() >= 2);
+        stack.push_back(stack[stack.size() - 2]);
+        continue;
+      }
+      case DW_OP_swap: {
+        VALIDATE_STATE(stack.size() >= 2);
+        std::swap(stack.back(), stack[stack.size() - 2]);
+        continue;
+      }
+      case DW_OP_deref: {
+        VALIDATE_STATE(!stack.empty());
+        uint64_t val;
+        if (auto err = mem->Read(stack.back(), val); err.has_err()) {
+          return err;
+        }
+        stack.back() = val;
+        continue;
+      }
+
+//
+// Binary operations
+//
+#define HANDLE_BINARY_OPERATOR(op)      \
+  {                                     \
+    VALIDATE_STATE(stack.size() >= 2);  \
+    uint64_t val = stack.back();        \
+    stack.pop_back();                   \
+    stack.back() = stack.back() op val; \
+    continue;                           \
+  }
+      case DW_OP_le:
+        HANDLE_BINARY_OPERATOR(<=)
+      case DW_OP_ge:
+        HANDLE_BINARY_OPERATOR(>=)
+      case DW_OP_eq:
+        HANDLE_BINARY_OPERATOR(==)
+      case DW_OP_lt:
+        HANDLE_BINARY_OPERATOR(<)
+      case DW_OP_gt:
+        HANDLE_BINARY_OPERATOR(>)
+      case DW_OP_ne:
+        HANDLE_BINARY_OPERATOR(!=)
+      case DW_OP_and:
+        HANDLE_BINARY_OPERATOR(&)
+      case DW_OP_or:
+        HANDLE_BINARY_OPERATOR(|)
+      case DW_OP_xor:
+        HANDLE_BINARY_OPERATOR(^)
+      case DW_OP_plus:
+        HANDLE_BINARY_OPERATOR(+)
+      case DW_OP_minus:
+        HANDLE_BINARY_OPERATOR(-)
+      case DW_OP_mul:
+        HANDLE_BINARY_OPERATOR(*)
+      case DW_OP_div:
+        HANDLE_BINARY_OPERATOR(/)
+      case DW_OP_mod:
+        HANDLE_BINARY_OPERATOR(%)
+#undef HANDLE_BINARY_OPERATOR
+
+      // Control flows.
+      case DW_OP_skip: {
+        int16_t skip;
+        if (auto err = expr_->Read(p, skip); err.has_err()) {
+          return err;
+        }
+        p += skip;
+        continue;
+      }
+      case DW_OP_bra: {
+        VALIDATE_STATE(!stack.empty());
+        int16_t skip;
+        if (auto err = expr_->Read(p, skip); err.has_err()) {
+          return err;
+        }
+        if (stack.back()) {
+          p += skip;
+        }
+        stack.pop_back();
+        continue;
+      }
+
+      // Others.
+      case DW_OP_nop: {
+        continue;
+      }
+      case DW_OP_plus_uconst: {
+        VALIDATE_STATE(!stack.empty());
+        uint64_t val;
+        if (auto err = expr_->ReadULEB128(p, val); err.has_err()) {
+          return err;
+        }
+        stack.back() += val;
+        continue;
+      }
+    }  // end of the giant switch.
+
+    if (op >= DW_OP_lit0 && op <= DW_OP_lit31) {
+      stack.push_back(op - DW_OP_lit0);
+      continue;
+    }
+    if ((op >= DW_OP_breg0 && op <= DW_OP_breg31) || op == DW_OP_bregx) {
+      RegisterID reg_id;
+      if (op == DW_OP_bregx) {
+        uint64_t reg;
+        if (auto err = expr_->ReadULEB128(p, reg); err.has_err()) {
+          return err;
+        }
+        reg_id = static_cast<RegisterID>(reg);
+      } else {
+        reg_id = static_cast<RegisterID>(op - DW_OP_breg0);
+      }
       int64_t offset;
       if (auto err = expr_->ReadSLEB128(p, offset); err.has_err()) {
         return err;
       }
       uint64_t val;
-      if (auto err = regs.Get(static_cast<RegisterID>(op - DW_OP_breg0), val); err.has_err()) {
+      if (auto err = regs.Get(reg_id, val); err.has_err()) {
         return err;
       }
       stack.push_back(val + offset);
@@ -192,9 +227,9 @@ Error DwarfExpr::Eval(Memory* mem, const Registers& regs, uint64_t initial_value
     return Error("unsupported DWARF expression op: %hhu", op);
   }
 
-  if (p != expr_end_) {
-    return Error("invalid DWARF expression");
-  }
+  VALIDATE_STATE(p == expr_end_);
+  VALIDATE_STATE(!stack.empty());
+#undef VALIDATE_STATE
 
   result = stack.back();
   return Success();

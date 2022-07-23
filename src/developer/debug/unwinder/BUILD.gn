@@ -22,16 +22,17 @@ static_library("unwinder") {
   ]
   public_deps = [ "//src/lib/fxl" ]
   deps = [ "//sdk/lib/syslog/cpp" ]
+  friend = [ ":tests" ]
 
   if (is_mac) {
     deps += [ "//src/developer/debug/shared:elf_h_on_mac" ]
   } else {
     # UnwindLocal() is only available on ELF systems.
-    public += [
+    public += [ "unwind_local.h" ]
+    sources += [
       "third_party/libunwindstack/context.h",
-      "unwind_local.h",
+      "unwind_local.cc",
     ]
-    sources += [ "unwind_local.cc" ]
     if (current_cpu == "x64") {
       sources += [ "third_party/libunwindstack/context_x86_64.S" ]
     }
@@ -46,7 +47,10 @@ static_library("unwinder") {
 source_set("tests") {
   testonly = true
 
-  sources = [ "memory_unittest.cc" ]
+  sources = [
+    "dwarf_expr_unittest.cc",
+    "memory_unittest.cc",
+  ]
   if (!is_mac) {
     sources += [ "unwind_local_unittest.cc" ]
   }
