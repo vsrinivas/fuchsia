@@ -436,7 +436,10 @@ mod tests {
         };
 
         // add a timeout to receiver so if test is broken it doesn't take forever
-        let receiver = receive_future.on_timeout(Time::after(300.millis()), || panic!("timeout"));
+        // Note: if debugging a hang, you may want to lower the timeout to `300.millis()` to get
+        // faster feedback. This is set to 10s rather than something shorter to avoid triggering
+        // flakes if things happen to be slow.
+        let receiver = receive_future.on_timeout(Time::after(10.seconds()), || panic!("timeout"));
 
         // Sends a message after the timeout has passed
         let sender = async move {
