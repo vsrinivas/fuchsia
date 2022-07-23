@@ -432,7 +432,7 @@ class Multibindable : public base_mixin {
 
 class MetadataList {
  public:
-  MetadataList() {}
+  MetadataList() = default;
   MetadataList& operator=(const MetadataList& other) {
     data_list_.clear();
     metadata_list_.clear();
@@ -466,7 +466,7 @@ class MetadataList {
 
 class DeviceAddArgs {
  public:
-  DeviceAddArgs(const char* name) { args_.name = name; }
+  explicit DeviceAddArgs(const char* name) { args_.name = name; }
   DeviceAddArgs& operator=(const DeviceAddArgs& other) {
     metadata_list_ = std::move(other.metadata_list_);
     args_ = other.args_;
@@ -840,7 +840,7 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
   zx_device_t* parent() const { return this->parent_; }
 
  protected:
-  Device(zx_device_t* parent) : internal::base_device<D, Mixins...>(parent) {
+  explicit Device(zx_device_t* parent) : internal::base_device<D, Mixins...>(parent) {
     internal::CheckMixins<Mixins<D>...>();
     internal::CheckReleasable<D>();
   }
