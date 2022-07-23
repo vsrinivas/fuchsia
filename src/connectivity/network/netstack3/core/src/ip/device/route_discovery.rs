@@ -567,7 +567,7 @@ mod tests {
             .encapsulate(Ipv6PacketBuilder::new(
                 src_ip,
                 dst_ip,
-                crate::ip::device::integration::REQUIRED_NDP_IP_PACKET_HOP_LIMIT,
+                crate::ip::icmp::REQUIRED_NDP_IP_PACKET_HOP_LIMIT,
                 Ipv6Proto::Icmpv6,
             ))
             .serialize_vec_outer()

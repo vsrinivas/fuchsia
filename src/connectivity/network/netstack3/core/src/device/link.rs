@@ -73,7 +73,7 @@ pub(crate) mod testutil {
     use crate::device::DeviceIdContext;
 
     /// A dummy [`LinkDevice`].
-    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
     pub(crate) enum DummyLinkDevice {}
 
     const DUMMY_LINK_ADDRESS_LEN: usize = 1;
@@ -83,7 +83,7 @@ pub(crate) mod testutil {
     /// The value 0xFF is the broadcast address.
     #[derive(FromBytes, AsBytes, Unaligned, Copy, Clone, Debug, Hash, PartialEq, Eq)]
     #[repr(transparent)]
-    pub(crate) struct DummyLinkAddress([u8; DUMMY_LINK_ADDRESS_LEN]);
+    pub(crate) struct DummyLinkAddress(pub(crate) [u8; DUMMY_LINK_ADDRESS_LEN]);
 
     impl UnicastAddress for DummyLinkAddress {
         fn is_unicast(&self) -> bool {
@@ -110,7 +110,7 @@ pub(crate) mod testutil {
     }
 
     /// A dummy ID identifying a [`DummyLinkDevice`].
-    #[derive(Copy, Clone, Debug, Eq, PartialEq)]
+    #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
     pub(crate) struct DummyLinkDeviceId;
 
     impl Display for DummyLinkDeviceId {

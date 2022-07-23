@@ -17,27 +17,34 @@ use net_types::{
     BroadcastAddress, MulticastAddr, MulticastAddress, SpecifiedAddr, UnicastAddr, UnicastAddress,
     Witness,
 };
-use packet::{Buf, BufferMut, EmptyBuf, Nested, Serializer};
+use packet::{Buf, BufferMut, InnerPacketBuilder as _, Nested, Serializer};
 use packet_formats::{
     arp::{peek_arp_types, ArpHardwareType, ArpNetworkType},
     ethernet::{
         EtherType, EthernetFrame, EthernetFrameBuilder, EthernetFrameLengthCheck, EthernetIpExt,
     },
+    icmp::{
+        ndp::{options::NdpOptionBuilder, NeighborSolicitation, OptionSequenceBuilder},
+        IcmpUnusedCode,
+    },
     utils::NonZeroDuration,
 };
 
 use crate::{
-    context::{FrameContext, RngContext, StateContext},
+    context::{FrameContext, RngContext, StateContext, TimerHandler},
     data_structures::ref_counted_hash_map::{InsertResult, RefCountedHashSet, RemoveResult},
     device::{
         arp::{self, ArpContext, ArpDeviceIdContext, ArpFrameMetadata, ArpState, ArpTimerId},
         link::LinkDevice,
-        ndp::{self, NdpContext, NdpHandler, NdpState, NdpTimerId},
+        ndp::NdpContext,
         BufferIpLinkDeviceContext, DeviceIdContext, EthernetDeviceId, FrameDestination,
-        IpLinkDeviceContext, IpLinkDeviceNonSyncContext, RecvIpFrameMeta,
+        IpLinkDeviceContext, IpLinkDeviceNonSyncContext, IpLinkDeviceState, RecvIpFrameMeta,
     },
     error::ExistsError,
-    ip::device::state::{AddrConfig, IpDeviceState},
+    ip::device::{
+        nud::{NudContext, NudHandler, NudState, NudTimerId},
+        state::{AddrConfig, IpDeviceState},
+    },
     NonSyncContext, SyncCtx,
 };
 
@@ -176,6 +183,93 @@ impl<
 {
 }
 
+fn get_state<
+    C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>,
+    SC: EthernetIpLinkDeviceContext<C>,
+>(
+    sync_ctx: &SC,
+    device_id: SC::DeviceId,
+) -> &IpLinkDeviceState<C::Instant, EthernetDeviceState> {
+    sync_ctx.get_state_with(device_id)
+}
+
+fn get_state_mut<
+    C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>,
+    SC: EthernetIpLinkDeviceContext<C>,
+>(
+    sync_ctx: &mut SC,
+    device_id: SC::DeviceId,
+) -> &mut IpLinkDeviceState<C::Instant, EthernetDeviceState> {
+    sync_ctx.get_state_mut_with(device_id)
+}
+
+impl<NonSyncCtx: NonSyncContext> NudContext<Ipv6, EthernetLinkDevice, NonSyncCtx>
+    for SyncCtx<NonSyncCtx>
+{
+    fn retrans_timer(&self, device_id: EthernetDeviceId) -> NonZeroDuration {
+        get_state(self, device_id).ip.ipv6.retrans_timer
+    }
+
+    fn get_state_mut(&mut self, device_id: EthernetDeviceId) -> &mut NudState<Ipv6, Mac> {
+        &mut get_state_mut(self, device_id).link.ipv6_nud
+    }
+
+    fn send_neighbor_solicitation(
+        &mut self,
+        ctx: &mut NonSyncCtx,
+        device_id: EthernetDeviceId,
+        lookup_addr: SpecifiedAddr<Ipv6Addr>,
+    ) {
+        let dst_ip = lookup_addr.to_solicited_node_address().into_specified();
+        let src_ip = crate::ip::IpDeviceContext::<Ipv6, _>::get_local_addr_for_remote(
+            self,
+            device_id.into(),
+            dst_ip,
+        );
+        let src_ip = match src_ip {
+            Some(s) => s,
+            None => return,
+        };
+
+        let mac = get_mac(self, device_id).clone();
+
+        // TODO(https://fxbug.dev/85055): Either panic or guarantee that this error
+        // can't happen statically.
+        let _: Result<(), _> = crate::ip::icmp::send_ndp_packet(
+            self,
+            ctx,
+            device_id.into(),
+            Some(src_ip),
+            dst_ip,
+            OptionSequenceBuilder::<_>::new(
+                [NdpOptionBuilder::SourceLinkLayerAddress(mac.bytes().as_ref())].iter(),
+            )
+            .into_serializer(),
+            IcmpUnusedCode,
+            NeighborSolicitation::new(lookup_addr.get()),
+        );
+    }
+
+    fn address_resolved(
+        &mut self,
+        ctx: &mut NonSyncCtx,
+        device_id: Self::DeviceId,
+        address: SpecifiedAddr<Ipv6Addr>,
+        link_address: Mac,
+    ) {
+        mac_resolved(self, ctx, device_id, IpAddr::V6(address.get()), link_address);
+    }
+
+    fn address_resolution_failed(
+        &mut self,
+        ctx: &mut NonSyncCtx,
+        device_id: Self::DeviceId,
+        address: SpecifiedAddr<Ipv6Addr>,
+    ) {
+        mac_resolution_failed(self, ctx, device_id, IpAddr::V6(address.get()));
+    }
+}
+
 /// Builder for [`EthernetDeviceState`].
 pub(crate) struct EthernetDeviceStateBuilder {
     mac: UnicastAddr<Mac>,
@@ -209,9 +303,9 @@ impl EthernetDeviceStateBuilder {
             hw_mtu: self.mtu,
             link_multicast_groups: RefCountedHashSet::default(),
             ipv4_arp: ArpState::default(),
-            ndp: NdpState::new(),
             pending_frames: HashMap::new(),
             promiscuous_mode: false,
+            ipv6_nud: Default::default(),
         }
     }
 }
@@ -235,9 +329,6 @@ pub(crate) struct EthernetDeviceState {
     /// IPv4 ARP state.
     ipv4_arp: ArpState<EthernetLinkDevice, Ipv4Addr>,
 
-    /// (IPv6) NDP state.
-    ndp: ndp::NdpState<EthernetLinkDevice>,
-
     // pending_frames stores a list of serialized frames indexed by their
     // destination IP addresses. The frames contain an entire EthernetFrame
     // body and the MTU check is performed before queueing them here.
@@ -247,6 +338,9 @@ pub(crate) struct EthernetDeviceState {
     /// that it receives, regardless of the ethernet frame's destination MAC
     /// address.
     promiscuous_mode: bool,
+
+    /// IPv6 NUD state.
+    ipv6_nud: NudState<Ipv6, Mac>,
 }
 
 impl EthernetDeviceState {
@@ -310,7 +404,7 @@ impl EthernetDeviceState {
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Hash)]
 pub(crate) enum EthernetTimerId<D> {
     Arp(ArpTimerId<EthernetLinkDevice, Ipv4Addr, D>),
-    Ndp(NdpTimerId<EthernetLinkDevice, D>),
+    Nudv6(NudTimerId<Ipv6, EthernetLinkDevice, D>),
 }
 
 impl<D> From<ArpTimerId<EthernetLinkDevice, Ipv4Addr, D>> for EthernetTimerId<D> {
@@ -319,16 +413,17 @@ impl<D> From<ArpTimerId<EthernetLinkDevice, Ipv4Addr, D>> for EthernetTimerId<D>
     }
 }
 
-impl<D> From<NdpTimerId<EthernetLinkDevice, D>> for EthernetTimerId<D> {
-    fn from(id: NdpTimerId<EthernetLinkDevice, D>) -> EthernetTimerId<D> {
-        EthernetTimerId::Ndp(id)
+impl<D> From<NudTimerId<Ipv6, EthernetLinkDevice, D>> for EthernetTimerId<D> {
+    fn from(id: NudTimerId<Ipv6, EthernetLinkDevice, D>) -> EthernetTimerId<D> {
+        EthernetTimerId::Nudv6(id)
     }
 }
 
 /// Handle an Ethernet timer firing.
 pub(super) fn handle_timer<
     C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>,
-    SC: EthernetIpLinkDeviceContext<C>,
+    SC: EthernetIpLinkDeviceContext<C>
+        + TimerHandler<C, NudTimerId<Ipv6, EthernetLinkDevice, SC::DeviceId>>,
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
@@ -336,7 +431,7 @@ pub(super) fn handle_timer<
 ) {
     match id {
         EthernetTimerId::Arp(id) => arp::handle_timer(sync_ctx, ctx, id.into()),
-        EthernetTimerId::Ndp(id) => <SC as NdpHandler<_, _>>::handle_timer(sync_ctx, ctx, id),
+        EthernetTimerId::Nudv6(id) => TimerHandler::handle_timer(sync_ctx, ctx, id),
     }
 }
 
@@ -353,8 +448,8 @@ impl_timer_context!(
 impl_timer_context!(
     DeviceId,
     EthernetTimerId<DeviceId>,
-    NdpTimerId<EthernetLinkDevice, DeviceId>,
-    EthernetTimerId::Ndp(id),
+    NudTimerId<Ipv6, EthernetLinkDevice, DeviceId>,
+    EthernetTimerId::Nudv6(id),
     id
 );
 
@@ -368,7 +463,8 @@ pub(super) fn send_ip_frame<
     B: BufferMut,
     C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>,
     SC: EthernetIpLinkDeviceContext<C>
-        + FrameContext<C, B, <SC as DeviceIdContext<EthernetLinkDevice>>::DeviceId>,
+        + FrameContext<C, B, <SC as DeviceIdContext<EthernetLinkDevice>>::DeviceId>
+        + NudHandler<Ipv6, EthernetLinkDevice, C>,
     A: IpAddress,
     S: Serializer<Buffer = B>,
 >(
@@ -394,7 +490,7 @@ pub(super) fn send_ip_frame<
         IpAddr::V6(local_addr) => match UnicastOrMulticastIpv6Addr::from_specified(local_addr) {
             UnicastOrMulticastIpv6Addr::Multicast(addr) => Ok(Mac::from(&addr)),
             UnicastOrMulticastIpv6Addr::Unicast(addr) => {
-                <SC as NdpHandler<_, _>>::lookup(sync_ctx, ctx, device_id, addr)
+                NudHandler::lookup(sync_ctx, ctx, device_id, addr.into_specified())
                     .ok_or(IpAddr::V6(local_addr))
             }
         },
@@ -652,7 +748,7 @@ pub(super) fn insert_static_arp_table_entry<
 #[cfg(test)]
 pub(super) fn insert_ndp_table_entry<
     C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>,
-    SC: EthernetIpLinkDeviceContext<C>,
+    SC: EthernetIpLinkDeviceContext<C> + NudHandler<Ipv6, EthernetLinkDevice, C>,
 >(
     sync_ctx: &mut SC,
     ctx: &mut C,
@@ -660,7 +756,13 @@ pub(super) fn insert_ndp_table_entry<
     addr: UnicastAddr<Ipv6Addr>,
     mac: Mac,
 ) {
-    <SC as NdpHandler<_, _>>::insert_static_neighbor(sync_ctx, ctx, device_id, addr, mac)
+    NudHandler::<Ipv6, EthernetLinkDevice, _>::set_static_neighbor(
+        sync_ctx,
+        ctx,
+        device_id,
+        addr.into_specified(),
+        mac,
+    )
 }
 
 /// Deinitializes and cleans up state for ethernet devices
@@ -676,7 +778,6 @@ pub(super) fn deinitialize<
     device_id: SC::DeviceId,
 ) {
     arp::deinitialize(sync_ctx, ctx, device_id);
-    <SC as NdpHandler<_, _>>::deinitialize(sync_ctx, ctx, device_id);
 }
 
 impl<C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>, SC: EthernetIpLinkDeviceContext<C>>
@@ -772,18 +873,6 @@ impl<C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>, SC: EthernetIpLinkDevi
     }
 }
 
-impl<C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>, SC: EthernetIpLinkDeviceContext<C>>
-    StateContext<C, NdpState<EthernetLinkDevice>, SC::DeviceId> for SC
-{
-    fn get_state_with(&self, id: SC::DeviceId) -> &NdpState<EthernetLinkDevice> {
-        &self.get_state_with(id).link.ndp
-    }
-
-    fn get_state_mut_with(&mut self, id: SC::DeviceId) -> &mut NdpState<EthernetLinkDevice> {
-        &mut self.get_state_mut_with(id).link.ndp
-    }
-}
-
 pub(super) fn get_mac<
     'a,
     C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>,
@@ -798,14 +887,6 @@ pub(super) fn get_mac<
 impl<C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>, SC: EthernetIpLinkDeviceContext<C>>
     NdpContext<EthernetLinkDevice, C> for SC
 {
-    fn get_retrans_timer(&self, device_id: Self::DeviceId) -> NonZeroDuration {
-        self.get_state_with(device_id).ip.ipv6.retrans_timer
-    }
-
-    fn get_link_layer_addr(&self, device_id: SC::DeviceId) -> UnicastAddr<Mac> {
-        get_mac(self, device_id).clone()
-    }
-
     fn get_ip_device_state(&self, device_id: Self::DeviceId) -> &IpDeviceState<C::Instant, Ipv6> {
         &self.get_state_with(device_id).ip.ipv6.ip_state
     }
@@ -815,36 +896,6 @@ impl<C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>, SC: EthernetIpLinkDevi
         device_id: Self::DeviceId,
     ) -> &mut IpDeviceState<C::Instant, Ipv6> {
         &mut self.get_state_mut_with(device_id).ip.ipv6.ip_state
-    }
-
-    fn send_ipv6_frame<S: Serializer<Buffer = EmptyBuf>>(
-        &mut self,
-        ctx: &mut C,
-        device_id: Self::DeviceId,
-        next_hop: SpecifiedAddr<Ipv6Addr>,
-        body: S,
-    ) -> Result<(), S> {
-        // TODO(joshlf): Wire `SpecifiedAddr` through the `ndp` module.
-        send_ip_frame(self, ctx, device_id, next_hop, body)
-    }
-
-    fn address_resolved(
-        &mut self,
-        ctx: &mut C,
-        device_id: SC::DeviceId,
-        address: &UnicastAddr<Ipv6Addr>,
-        link_address: Mac,
-    ) {
-        mac_resolved(self, ctx, device_id, IpAddr::V6(address.get()), link_address);
-    }
-
-    fn address_resolution_failed(
-        &mut self,
-        ctx: &mut C,
-        device_id: SC::DeviceId,
-        address: &UnicastAddr<Ipv6Addr>,
-    ) {
-        mac_resolution_failed(self, ctx, device_id, IpAddr::V6(address.get()));
     }
 
     fn set_mtu(&mut self, _ctx: &mut C, device_id: SC::DeviceId, mut mtu: u32) {
@@ -973,7 +1024,10 @@ mod tests {
         device::{arp::ArpHandler, DeviceId, DeviceIdInner, EthernetDeviceId, IpLinkDeviceState},
         error::NotFoundError,
         ip::{
-            device::{is_ip_routing_enabled, set_routing_enabled, state::AssignedAddress},
+            device::{
+                is_ip_routing_enabled, nud::DynamicNeighborUpdateSource, set_routing_enabled,
+                state::AssignedAddress,
+            },
             dispatch_receive_ip_packet_name, receive_ip_packet,
             testutil::is_in_ip_multicast,
             DummyDeviceId,
@@ -1051,6 +1105,38 @@ mod tests {
             _device_id: DummyDeviceId,
             _multicast_addr: MulticastAddr<Ipv6Addr>,
         ) {
+            unimplemented!()
+        }
+    }
+
+    impl NudHandler<Ipv6, EthernetLinkDevice, DummyNonSyncCtx> for DummyCtx {
+        fn set_dynamic_neighbor(
+            &mut self,
+            _ctx: &mut DummyNonSyncCtx,
+            _device_id: Self::DeviceId,
+            _neighbor: SpecifiedAddr<Ipv6Addr>,
+            _link_addr: Mac,
+            _is_confirmation: DynamicNeighborUpdateSource,
+        ) {
+            unimplemented!()
+        }
+
+        fn set_static_neighbor(
+            &mut self,
+            _ctx: &mut DummyNonSyncCtx,
+            _device_id: Self::DeviceId,
+            _neighbor: SpecifiedAddr<Ipv6Addr>,
+            _link_addr: Mac,
+        ) {
+            unimplemented!()
+        }
+
+        fn lookup(
+            &mut self,
+            _ctx: &mut DummyNonSyncCtx,
+            _device_id: Self::DeviceId,
+            _lookup_addr: SpecifiedAddr<Ipv6Addr>,
+        ) -> Option<Mac> {
             unimplemented!()
         }
     }

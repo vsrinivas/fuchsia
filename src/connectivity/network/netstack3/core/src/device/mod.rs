@@ -49,6 +49,7 @@ use crate::{
     error::{ExistsError, NotFoundError, NotSupportedError},
     ip::{
         device::{
+            nud::{DynamicNeighborUpdateSource, NudHandler, NudIpHandler},
             state::{
                 AddrConfig, DualStackIpDeviceState, Ipv4DeviceConfiguration, Ipv4DeviceState,
                 Ipv6DeviceConfiguration, Ipv6DeviceState,
@@ -339,6 +340,66 @@ fn send_ip_frame<
             self::ethernet::send_ip_frame(sync_ctx, ctx, id, local_addr, body)
         }
         DeviceIdInner::Loopback => self::loopback::send_ip_frame(sync_ctx, ctx, local_addr, body),
+    }
+}
+
+fn bytes_to_mac(b: &[u8]) -> Option<Mac> {
+    (b.len() >= Mac::BYTES).then(|| {
+        Mac::new({
+            let mut bytes = [0; Mac::BYTES];
+            bytes.copy_from_slice(&b[..Mac::BYTES]);
+            bytes
+        })
+    })
+}
+
+impl<C: NonSyncContext> NudIpHandler<Ipv6, C> for SyncCtx<C> {
+    fn handle_neighbor_probe(
+        &mut self,
+        ctx: &mut C,
+        device_id: DeviceId,
+        neighbor: SpecifiedAddr<Ipv6Addr>,
+        link_addr: &[u8],
+    ) {
+        match device_id.inner() {
+            DeviceIdInner::Ethernet(id) => {
+                if let Some(link_addr) = bytes_to_mac(link_addr) {
+                    NudHandler::<Ipv6, EthernetLinkDevice, _>::set_dynamic_neighbor(
+                        self,
+                        ctx,
+                        id,
+                        neighbor,
+                        link_addr,
+                        DynamicNeighborUpdateSource::Probe,
+                    )
+                }
+            }
+            DeviceIdInner::Loopback => {}
+        }
+    }
+
+    fn handle_neighbor_confirmation(
+        &mut self,
+        ctx: &mut C,
+        device_id: DeviceId,
+        neighbor: SpecifiedAddr<Ipv6Addr>,
+        link_addr: &[u8],
+    ) {
+        match device_id.inner() {
+            DeviceIdInner::Ethernet(id) => {
+                if let Some(link_addr) = bytes_to_mac(link_addr) {
+                    NudHandler::<Ipv6, EthernetLinkDevice, _>::set_dynamic_neighbor(
+                        self,
+                        ctx,
+                        id,
+                        neighbor,
+                        link_addr,
+                        DynamicNeighborUpdateSource::Confirmation,
+                    )
+                }
+            }
+            DeviceIdInner::Loopback => {}
+        }
     }
 }
 

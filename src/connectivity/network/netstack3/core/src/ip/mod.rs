@@ -2228,7 +2228,7 @@ impl<I: packet_formats::ip::IpExt, D> From<SendIpPacketMeta<I, D, SpecifiedAddr<
     }
 }
 
-trait BufferIpLayerHandler<I: Ip, C, B: BufferMut>: IpDeviceIdContext<I> {
+pub(crate) trait BufferIpLayerHandler<I: Ip, C, B: BufferMut>: IpDeviceIdContext<I> {
     fn send_ip_packet_from_device<S: Serializer<Buffer = B>>(
         &mut self,
         ctx: &mut C,

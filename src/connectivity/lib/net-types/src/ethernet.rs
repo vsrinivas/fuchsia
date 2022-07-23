@@ -41,9 +41,12 @@ use crate::{
 /// ```
 #[derive(Copy, Clone, Eq, PartialEq, Hash, FromBytes, AsBytes, Unaligned)]
 #[repr(transparent)]
-pub struct Mac([u8; 6]);
+pub struct Mac([u8; Mac::BYTES]);
 
 impl Mac {
+    /// The number of bytes in a Mac address.
+    pub const BYTES: usize = 6;
+
     /// The broadcast MAC address.
     ///
     /// The broadcast MAC address, FF:FF:FF:FF:FF:FF, indicates that a frame
@@ -53,7 +56,7 @@ impl Mac {
     // `BroadcastAddr<Mac>` once the `const_precise_live_drops` feature has
     // stabilized, and thus it's possible to write a `const fn` which converts
     // from `BroadcastAddr<A>` to `A`.
-    pub const BROADCAST: Mac = Mac([0xFF; 6]);
+    pub const BROADCAST: Mac = Mac([0xFF; Self::BYTES]);
 
     /// The default [RFC 4291] EUI-64 magic value used by the [`to_eui64`]
     /// method.
@@ -64,13 +67,13 @@ impl Mac {
 
     /// Constructs a new MAC address.
     #[inline]
-    pub const fn new(bytes: [u8; 6]) -> Mac {
+    pub const fn new(bytes: [u8; Self::BYTES]) -> Mac {
         Mac(bytes)
     }
 
     /// Gets the bytes of the MAC address.
     #[inline]
-    pub const fn bytes(self) -> [u8; 6] {
+    pub const fn bytes(self) -> [u8; Self::BYTES] {
         self.0
     }
 

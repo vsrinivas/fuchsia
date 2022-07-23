@@ -46,6 +46,7 @@ use crate::{
     error::NotFoundError,
     ip::{
         device::{
+            nud::NudIpHandler,
             route_discovery::{Ipv6DiscoveredRoute, RouteDiscoveryHandler},
             slaac::SlaacHandler,
             Ipv6DeviceHandler,
@@ -63,6 +64,19 @@ use crate::{
     sync::{Mutex, RwLock},
     BufferNonSyncContext, NonSyncContext, SyncCtx,
 };
+
+/// The IP packet hop limit for all NDP packets.
+///
+/// See [RFC 4861 section 4.1], [RFC 4861 section 4.2], [RFC 4861 section 4.2],
+/// [RFC 4861 section 4.3], [RFC 4861 section 4.4], and [RFC 4861 section 4.5]
+/// for more information.
+///
+/// [RFC 4861 section 4.1]: https://tools.ietf.org/html/rfc4861#section-4.1
+/// [RFC 4861 section 4.2]: https://tools.ietf.org/html/rfc4861#section-4.2
+/// [RFC 4861 section 4.3]: https://tools.ietf.org/html/rfc4861#section-4.3
+/// [RFC 4861 section 4.4]: https://tools.ietf.org/html/rfc4861#section-4.4
+/// [RFC 4861 section 4.5]: https://tools.ietf.org/html/rfc4861#section-4.5
+pub(super) const REQUIRED_NDP_IP_PACKET_HOP_LIMIT: u8 = 255;
 
 /// The default number of ICMP error messages to send per second.
 ///
@@ -1071,6 +1085,44 @@ impl<
     }
 }
 
+pub(crate) fn send_ndp_packet<
+    C,
+    SC: BufferIpLayerHandler<Ipv6, C, EmptyBuf>,
+    S: Serializer<Buffer = EmptyBuf>,
+    M: IcmpMessage<Ipv6, &'static [u8]>,
+>(
+    sync_ctx: &mut SC,
+    ctx: &mut C,
+    device_id: SC::DeviceId,
+    src_ip: Option<SpecifiedAddr<Ipv6Addr>>,
+    dst_ip: SpecifiedAddr<Ipv6Addr>,
+    body: S,
+    code: M::Code,
+    message: M,
+) -> Result<(), S> {
+    // TODO(https://fxbug.dev/95359): Send through ICMPv6 send path.
+    BufferIpLayerHandler::<Ipv6, _, _>::send_ip_packet_from_device(
+        sync_ctx,
+        ctx,
+        SendIpPacketMeta {
+            device: device_id,
+            src_ip,
+            dst_ip,
+            next_hop: dst_ip,
+            ttl: NonZeroU8::new(REQUIRED_NDP_IP_PACKET_HOP_LIMIT),
+            proto: Ipv6Proto::Icmpv6,
+            mtu: None,
+        },
+        body.encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+            src_ip.map_or(Ipv6::UNSPECIFIED_ADDRESS, |a| a.get()),
+            dst_ip.get(),
+            code,
+            message,
+        )),
+    )
+    .map_err(|s| s.into_inner())
+}
+
 fn send_neighbor_advertisement<
     C,
     SC: Ipv6DeviceHandler<C> + BufferIpLayerHandler<Ipv6, C, EmptyBuf>,
@@ -1098,33 +1150,25 @@ fn send_neighbor_advertisement<
     // that trying to send this advertisement will end up triggering a neighbor
     // solicitation to be sent.
     let src_ll = sync_ctx.get_link_layer_addr_bytes(device_id).map(|a| a.to_vec());
-    let _ = BufferIpLayerHandler::<Ipv6, _, _>::send_ip_packet_from_device(
+
+    // Nothing reasonable to do with the error.
+    let _: Result<(), _> = send_ndp_packet(
         sync_ctx,
         ctx,
-        SendIpPacketMeta {
-            device: device_id,
-            src_ip: Some(device_addr.into_specified()),
-            dst_ip,
-            next_hop: dst_ip,
-            ttl: NonZeroU8::new(255),
-            proto: Ipv6Proto::Icmpv6,
-            mtu: None,
-        },
+        device_id,
+        Some(device_addr.into_specified()),
+        dst_ip,
         OptionSequenceBuilder::new(
             src_ll.as_ref().map(AsRef::as_ref).map(NdpOptionBuilder::TargetLinkLayerAddress).iter(),
         )
-        .into_serializer()
-        .encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
+        .into_serializer(),
+        IcmpUnusedCode,
+        NeighborAdvertisement::new(
+            sync_ctx.is_router_device(device_id),
+            solicited,
+            false,
             device_addr.get(),
-            dst_ip.get(),
-            IcmpUnusedCode,
-            NeighborAdvertisement::new(
-                sync_ctx.is_router_device(device_id),
-                solicited,
-                false,
-                device_addr.get(),
-            ),
-        )),
+        ),
     );
 }
 
@@ -1136,6 +1180,7 @@ fn receive_ndp_packet<
         + NdpPacketHandler<C, <SC as IpDeviceIdContext<Ipv6>>::DeviceId>
         + RouteDiscoveryHandler<C>
         + SlaacHandler<C>
+        + NudIpHandler<Ipv6, C>
         + BufferIpLayerHandler<Ipv6, C, EmptyBuf>,
 >(
     sync_ctx: &mut SC,
@@ -1163,6 +1208,8 @@ fn receive_ndp_packet<
                     return;
                 }
             };
+
+            ctx.increment_counter("ndp::rx_neighbor_solicitation");
 
             match src_ip {
                 Ipv6SourceAddr::Unspecified => {
@@ -1207,10 +1254,37 @@ fn receive_ndp_packet<
 
                     return;
                 }
-                Ipv6SourceAddr::Unicast(_) => {
+                Ipv6SourceAddr::Unicast(src_ip) => {
                     // Neighbor is performing NUD.
-                    //
-                    // TODO(https://fxbug.dev/99830): Move NUD to IP.
+
+                    let link_addr = p.body().iter().find_map(|o| match o {
+                        NdpOption::SourceLinkLayerAddress(a) => Some(a),
+                        NdpOption::TargetLinkLayerAddress(_)
+                        | NdpOption::PrefixInformation(_)
+                        | NdpOption::RedirectedHeader { .. }
+                        | NdpOption::RecursiveDnsServer(_)
+                        | NdpOption::RouteInformation(_)
+                        | NdpOption::Mtu(_) => None,
+                    });
+
+                    if let Some(link_addr) = link_addr {
+                        NudIpHandler::handle_neighbor_probe(
+                            sync_ctx,
+                            ctx,
+                            device_id,
+                            src_ip.into_specified(),
+                            link_addr,
+                        );
+                    }
+
+                    send_neighbor_advertisement(
+                        sync_ctx,
+                        ctx,
+                        device_id,
+                        true,
+                        target_address,
+                        src_ip.into_specified(),
+                    );
                 }
             }
         }
@@ -1239,6 +1313,8 @@ fn receive_ndp_packet<
                     return;
                 }
             };
+
+            ctx.increment_counter("ndp::rx_neighbor_advertisement");
 
             match Ipv6DeviceHandler::remove_duplicate_tentative_address(
                 sync_ctx,
@@ -1281,6 +1357,35 @@ fn receive_ndp_packet<
                     // TODO(https://fxbug.dev/99830): Move NUD to IP.
                 }
             }
+
+            let link_addr = p.body().iter().find_map(|o| match o {
+                NdpOption::TargetLinkLayerAddress(a) => Some(a),
+                NdpOption::SourceLinkLayerAddress(_)
+                | NdpOption::PrefixInformation(_)
+                | NdpOption::RedirectedHeader { .. }
+                | NdpOption::RecursiveDnsServer(_)
+                | NdpOption::RouteInformation(_)
+                | NdpOption::Mtu(_) => None,
+            });
+            let link_addr = match link_addr {
+                Some(a) => a,
+                None => {
+                    trace!(
+                        "dropping NA from {} targetting {} with no TLL option",
+                        src_ip,
+                        target_address
+                    );
+                    return;
+                }
+            };
+
+            NudIpHandler::handle_neighbor_confirmation(
+                sync_ctx,
+                ctx,
+                device_id,
+                target_address.into_specified(),
+                link_addr,
+            );
         }
         NdpPacket::RouterAdvertisement(ref p) => {
             // As per RFC 4861 section 6.1.2,
@@ -1330,12 +1435,48 @@ fn receive_ndp_packet<
 
             for option in p.body().iter() {
                 match option {
-                    NdpOption::SourceLinkLayerAddress(_)
-                    | NdpOption::TargetLinkLayerAddress(_)
+                    NdpOption::TargetLinkLayerAddress(_)
                     | NdpOption::RedirectedHeader { .. }
                     | NdpOption::RecursiveDnsServer(_)
                     | NdpOption::RouteInformation(_)
                     | NdpOption::Mtu(_) => {}
+                    NdpOption::SourceLinkLayerAddress(addr) => {
+                        // As per RFC 4861 section 6.3.4,
+                        //
+                        //   If the advertisement contains a Source Link-Layer
+                        //   Address option, the link-layer address SHOULD be
+                        //   recorded in the Neighbor Cache entry for the router
+                        //   (creating an entry if necessary) and the IsRouter
+                        //   flag in the Neighbor Cache entry MUST be set to
+                        //   TRUE. If no Source Link-Layer Address is included,
+                        //   but a corresponding Neighbor Cache entry exists,
+                        //   its IsRouter flag MUST be set to TRUE. The IsRouter
+                        //   flag is used by Neighbor Unreachability Detection
+                        //   to determine when a router changes to being a host
+                        //   (i.e., no longer capable of forwarding packets).
+                        //   If a Neighbor Cache entry is created for the
+                        //   router, its reachability state MUST be set to STALE
+                        //   as specified in Section 7.3.3.  If a cache entry
+                        //   already exists and is updated with a different
+                        //   link-layer address, the reachability state MUST
+                        //   also be set to STALE.if a Neighbor Cache entry
+                        //
+                        // We do not yet support NUD as described in RFC 4861
+                        // so for now we just record the link-layer address in
+                        // our neighbor table.
+                        //
+                        // TODO(https://fxbug.dev/35185): Support full NUD.
+                        NudIpHandler::handle_neighbor_probe(
+                            sync_ctx,
+                            ctx,
+                            device_id,
+                            {
+                                let src_ip: UnicastAddr<_> = src_ip.into_addr();
+                                src_ip.into_specified()
+                            },
+                            addr,
+                        );
+                    }
                     NdpOption::PrefixInformation(prefix_info) => {
                         // As per RFC 4861 section 6.3.4,
                         //
@@ -1416,6 +1557,7 @@ impl<
             + NdpPacketHandler<C, <SC as IpDeviceIdContext<Ipv6>>::DeviceId>
             + RouteDiscoveryHandler<C>
             + SlaacHandler<C>
+            + NudIpHandler<Ipv6, C>
             + BufferIpLayerHandler<Ipv6, C, EmptyBuf>,
     > BufferIpTransportContext<Ipv6, C, SC, B> for IcmpIpTransportContext
 {
@@ -4013,6 +4155,28 @@ mod tests {
             _meta: SendIpPacketMeta<Ipv6, Self::DeviceId, Option<SpecifiedAddr<Ipv6Addr>>>,
             _body: S,
         ) -> Result<(), S> {
+            unimplemented!()
+        }
+    }
+
+    impl NudIpHandler<Ipv6, Dummyv6NonSyncCtx> for Dummyv6SyncCtx {
+        fn handle_neighbor_probe(
+            &mut self,
+            _ctx: &mut Dummyv6NonSyncCtx,
+            _device_id: Self::DeviceId,
+            _neighbor: SpecifiedAddr<Ipv6Addr>,
+            _link_addr: &[u8],
+        ) {
+            unimplemented!()
+        }
+
+        fn handle_neighbor_confirmation(
+            &mut self,
+            _ctx: &mut Dummyv6NonSyncCtx,
+            _device_id: Self::DeviceId,
+            _neighbor: SpecifiedAddr<Ipv6Addr>,
+            _link_addr: &[u8],
+        ) {
             unimplemented!()
         }
     }

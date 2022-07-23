@@ -1540,9 +1540,7 @@ mod tests {
         },
         device::FrameDestination,
         ip::{
-            device::{
-                integration::REQUIRED_NDP_IP_PACKET_HOP_LIMIT, with_assigned_ipv6_addr_subnets,
-            },
+            device::with_assigned_ipv6_addr_subnets, icmp::REQUIRED_NDP_IP_PACKET_HOP_LIMIT,
             receive_ipv6_packet, DummyDeviceId,
         },
         testutil::{assert_empty, DummyEventDispatcherConfig, FakeCryptoRng, TestIpExt as _},

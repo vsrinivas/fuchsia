@@ -30,6 +30,7 @@ lib_sources = [
   "src/ip/device/dad.rs",
   "src/ip/device/integration.rs",
   "src/ip/device/mod.rs",
+  "src/ip/device/nud.rs",
   "src/ip/device/route_discovery.rs",
   "src/ip/device/router_solicitation.rs",
   "src/ip/device/slaac.rs",

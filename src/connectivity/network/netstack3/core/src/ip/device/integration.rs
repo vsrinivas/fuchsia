@@ -8,16 +8,13 @@ use alloc::boxed::Box;
 use core::{marker::PhantomData, num::NonZeroU8, time::Duration};
 
 use net_types::{
-    ip::{AddrSubnet, Ip as _, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
+    ip::{AddrSubnet, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
     LinkLocalUnicastAddr, MulticastAddr, SpecifiedAddr, UnicastAddr, Witness as _,
 };
 use packet::{BufferMut, EmptyBuf, Serializer};
-use packet_formats::{
-    icmp::{
-        ndp::{NeighborSolicitation, RouterSolicitation},
-        IcmpMessage, IcmpPacketBuilder, IcmpUnusedCode,
-    },
-    ip::Ipv6Proto,
+use packet_formats::icmp::{
+    ndp::{NeighborSolicitation, RouterSolicitation},
+    IcmpUnusedCode,
 };
 
 use crate::{
@@ -49,8 +46,8 @@ use crate::{
             mld::{MldContext, MldFrameMetadata, MldGroupState},
             GmpHandler, MulticastGroupSet,
         },
-        send_ipv6_packet_from_device, AddressStatus, IpLayerIpExt, IpLayerNonSyncContext,
-        Ipv4PresentAddressStatus, Ipv6PresentAddressStatus, SendIpPacketMeta, DEFAULT_TTL,
+        AddressStatus, IpLayerIpExt, IpLayerNonSyncContext, Ipv4PresentAddressStatus,
+        Ipv6PresentAddressStatus, DEFAULT_TTL,
     },
 };
 
@@ -168,19 +165,6 @@ impl<
         )
     }
 }
-
-/// The IP packet hop limit for all NDP packets.
-///
-/// See [RFC 4861 section 4.1], [RFC 4861 section 4.2], [RFC 4861 section 4.2],
-/// [RFC 4861 section 4.3], [RFC 4861 section 4.4], and [RFC 4861 section 4.5]
-/// for more information.
-///
-/// [RFC 4861 section 4.1]: https://tools.ietf.org/html/rfc4861#section-4.1
-/// [RFC 4861 section 4.2]: https://tools.ietf.org/html/rfc4861#section-4.2
-/// [RFC 4861 section 4.3]: https://tools.ietf.org/html/rfc4861#section-4.3
-/// [RFC 4861 section 4.4]: https://tools.ietf.org/html/rfc4861#section-4.4
-/// [RFC 4861 section 4.5]: https://tools.ietf.org/html/rfc4861#section-4.5
-pub(super) const REQUIRED_NDP_IP_PACKET_HOP_LIMIT: u8 = 255;
 
 impl<
         'a,
@@ -372,47 +356,9 @@ impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::Ipv6DeviceContex
     }
 }
 
-fn send_ndp_packet<
-    C: IpLayerNonSyncContext<Ipv6, SC::DeviceId>,
-    SC: ip::BufferIpDeviceContext<Ipv6, C, EmptyBuf>,
-    S: Serializer<Buffer = EmptyBuf>,
-    M: IcmpMessage<Ipv6, &'static [u8]>,
->(
-    sync_ctx: &mut SC,
-    ctx: &mut C,
-    device_id: SC::DeviceId,
-    src_ip: Ipv6Addr,
-    dst_ip: SpecifiedAddr<Ipv6Addr>,
-    body: S,
-    code: M::Code,
-    message: M,
-) -> Result<(), S> {
-    // TODO(https://fxbug.dev/95359): Send through ICMPv6 send path.
-    send_ipv6_packet_from_device(
-        sync_ctx,
-        ctx,
-        SendIpPacketMeta {
-            device: device_id,
-            src_ip: SpecifiedAddr::new(src_ip),
-            dst_ip,
-            next_hop: dst_ip,
-            ttl: NonZeroU8::new(REQUIRED_NDP_IP_PACKET_HOP_LIMIT),
-            proto: Ipv6Proto::Icmpv6,
-            mtu: None,
-        },
-        body.encapsulate(IcmpPacketBuilder::<Ipv6, &[u8], _>::new(
-            src_ip,
-            dst_ip.get(),
-            code,
-            message,
-        )),
-    )
-    .map_err(|s| s.into_inner())
-}
-
 impl<
         C: IpLayerNonSyncContext<Ipv6, SC::DeviceId>,
-        SC: ip::BufferIpDeviceContext<Ipv6, C, EmptyBuf>,
+        SC: ip::BufferIpLayerHandler<Ipv6, C, EmptyBuf>,
     > Ipv6LayerDadContext<C> for SC
 {
     fn send_dad_packet(
@@ -422,11 +368,11 @@ impl<
         dst_ip: MulticastAddr<Ipv6Addr>,
         message: NeighborSolicitation,
     ) -> Result<(), ()> {
-        send_ndp_packet(
+        crate::ip::icmp::send_ndp_packet(
             self,
             ctx,
             device_id,
-            Ipv6::UNSPECIFIED_ADDRESS,
+            None,
             dst_ip.into_specified(),
             EmptyBuf,
             IcmpUnusedCode,
@@ -459,7 +405,7 @@ impl<C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId>, SC: device::Ipv6DeviceContex
 
 impl<
         C: IpDeviceNonSyncContext<Ipv6, SC::DeviceId> + IpLayerNonSyncContext<Ipv6, SC::DeviceId>,
-        SC: ip::BufferIpDeviceContext<Ipv6, C, EmptyBuf> + device::Ipv6DeviceContext<C>,
+        SC: ip::BufferIpLayerHandler<Ipv6, C, EmptyBuf> + device::Ipv6DeviceContext<C>,
     > Ipv6LayerRsContext<C> for SC
 {
     fn send_rs_packet<
@@ -480,11 +426,11 @@ impl<
                 state.ip_state.iter_addrs().map(move |a| (a, device_id)),
             )
         });
-        send_ndp_packet(
+        crate::ip::icmp::send_ndp_packet(
             self,
             ctx,
             device_id,
-            src_ip.map_or(Ipv6::UNSPECIFIED_ADDRESS, |a| a.get()),
+            src_ip.map(|a| a.into_specified()),
             dst_ip,
             body(src_ip),
             IcmpUnusedCode,
