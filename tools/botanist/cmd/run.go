@@ -242,6 +242,11 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	}()
 	defer cancel()
 
+	// Run any preflights to prepare the testbed.
+	if err := r.runPreflights(ctx); err != nil {
+		return err
+	}
+
 	// Start up a local package server if one was requested.
 	if r.localRepo != "" {
 		var port int
@@ -452,6 +457,44 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		removeFFXOutputsDir = true
 	}
 	return err
+}
+
+// runPreflights runs opaque preflight commands passed to botanist from
+// the calling infrastructure.
+func (r *RunCommand) runPreflights(ctx context.Context) error {
+	logger.Debugf(ctx, "checking for preflights")
+	botfilePath := os.Getenv("SWARMING_BOT_FILE")
+	if botfilePath == "" {
+		return nil
+	}
+	data, err := ioutil.ReadFile(botfilePath)
+	if err != nil {
+		return err
+	}
+	if len(data) == 0 {
+		// There were no commands in the botfile, exit out.
+		return nil
+	}
+	type preflightCommands struct {
+		Commands [][]string `json:"commands"`
+	}
+	var cmds preflightCommands
+	if err := json.Unmarshal(data, &cmds); err != nil {
+		return err
+	}
+	runner := subprocess.Runner{
+		Env: os.Environ(),
+	}
+	for _, c := range cmds.Commands {
+		logger.Debugf(ctx, "running preflight %s", c)
+		if err := runner.RunWithStdin(ctx, c, os.Stdout, os.Stderr, nil); err != nil {
+			return err
+		}
+	}
+	// Some preflight commands can cause side effects that take up to 30s.
+	time.Sleep(30 * time.Second)
+	logger.Debugf(ctx, "done running preflights")
+	return nil
 }
 
 // createTestbedConfig creates a configuration file that describes the targets
