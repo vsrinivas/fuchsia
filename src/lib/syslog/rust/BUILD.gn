@@ -186,7 +186,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/sys/tools/stash_ctl:*",
   "//src/sys/universe-resolver:*",
   "//src/testing/fidl/intl_property_manager:*",
-  "//src/testing/metrics-logger:*",
   "//src/testing/system-metrics-logger:*",
   "//src/tests/intl/timezone:*",
   "//src/ui/bin/brightness_manager:*",

@@ -8,10 +8,10 @@ use {
     fidl_fuchsia_hardware_power_sensor as fpower,
     fidl_fuchsia_hardware_temperature as ftemperature, fuchsia_async as fasync,
     fuchsia_inspect::{self as inspect, ArrayProperty, Property},
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
     futures::{stream::FuturesUnordered, StreamExt},
     std::rc::Rc,
+    tracing::{error, info},
 };
 
 // Type aliases for convenience.
@@ -318,11 +318,11 @@ impl<T: Sensor<T>> SensorLogger<T> {
                         .push(fuchsia_trace::ArgValue::of(&sensor_names[index], value as f64));
 
                     if self.output_samples_to_syslog {
-                        fx_log_info!(
-                            "Reading sensor {:?} [{:?}]: {:?}",
-                            &sensor_names[index],
-                            T::unit(),
-                            value
+                        info!(
+                            name = sensor_names[index].as_str(),
+                            unit = T::unit().as_str(),
+                            value,
+                            "Reading sensor"
                         );
                     }
                 }
@@ -331,10 +331,10 @@ impl<T: Sensor<T>> SensorLogger<T> {
                 // sample will be missing from the trace counter as is, and any serious analysis
                 // should be performed on the trace. This sample will also be missing for
                 // calculating statistics.
-                Err(e) => fx_log_err!(
-                    "Error reading sensor {:?}: {:?}",
-                    self.drivers[index].topological_path,
-                    e
+                Err(err) => error!(
+                    ?err,
+                    path = self.drivers[index].topological_path.as_str(),
+                    "Error reading sensor",
                 ),
             };
 
@@ -367,14 +367,13 @@ impl<T: Sensor<T>> SensorLogger<T> {
                         .push(fuchsia_trace::ArgValue::of(&sensor_names[index], avg as f64));
 
                     if self.output_stats_to_syslog {
-                        fx_log_info!(
-                            "Sensor {:?} statistics [{:?}]:\n\
-                            max: {:?}, min: {:?}, avg: {:?};",
-                            &sensor_names[index],
-                            T::unit(),
+                        info!(
+                            name = sensor_names[index].as_str(),
                             max,
                             min,
                             avg,
+                            unit = T::unit().as_str(),
+                            "Sensor statistics",
                         );
                     }
 

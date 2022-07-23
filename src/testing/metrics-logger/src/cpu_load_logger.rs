@@ -6,7 +6,6 @@ use {
     anyhow::{format_err, Result},
     fidl_fuchsia_kernel as fkernel, fuchsia_async as fasync,
     fuchsia_inspect::{self as inspect, Property},
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zbi_abi::{ZbiTopologyEntityType, ZbiTopologyNode},
     fuchsia_zircon as zx,
     futures::stream::StreamExt,
@@ -19,6 +18,7 @@ use {
         mem,
         rc::Rc,
     },
+    tracing::{error, info},
     zerocopy::FromBytes,
 };
 
@@ -187,11 +187,7 @@ impl CpuLoadLogger {
                             );
 
                             if self.output_samples_to_syslog {
-                                fx_log_info!(
-                                    "Max perf scale: {:?} CpuUsage: {:?}",
-                                    cluster.max_perf_scale,
-                                    cpu_usage
-                                );
+                                info!(max_perf_scale = cluster.max_perf_scale, cpu_usage);
                             }
 
                             fuchsia_trace::counter!(
@@ -225,7 +221,7 @@ impl CpuLoadLogger {
                         );
 
                         if self.output_samples_to_syslog {
-                            fx_log_info!("CpuUsage: {:?}", cpu_usage);
+                            info!(cpu_usage);
                         }
 
                         fuchsia_trace::counter!(
@@ -240,7 +236,7 @@ impl CpuLoadLogger {
 
                 self.last_sample.replace(current_sample);
             }
-            Err(e) => fx_log_err!("get_cpu_stats IPC failed: {}", e),
+            Err(err) => error!(%err, "get_cpu_stats IPC failed"),
         }
     }
 }

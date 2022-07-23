@@ -19,7 +19,6 @@ use {
     fuchsia_component::client::connect_to_protocol,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zbi_abi::ZbiType,
     fuchsia_zircon as zx,
     futures::{
@@ -37,6 +36,7 @@ use {
         pin::Pin,
         rc::Rc,
     },
+    tracing::{error, info},
 };
 
 // Max number of clients that can log concurrently. This limit is chosen mostly arbitrarily to allow
@@ -90,19 +90,15 @@ async fn list_drivers(path: &str) -> Vec<String> {
         fuchsia_fs::OpenFlags::RIGHT_READABLE,
     ) {
         Ok(s) => s,
-        Err(e) => {
-            fx_log_info!(
-                "Service directory {} doesn't exist or NodeProxy failed with error: {}",
-                path,
-                e
-            );
+        Err(err) => {
+            info!(%path, %err, "Service directory doesn't exist or NodeProxy failed with error");
             return Vec::new();
         }
     };
     match fuchsia_fs::directory::readdir(&dir).await {
         Ok(s) => s.iter().map(|dir_entry| dir_entry.name.clone()).collect(),
-        Err(e) => {
-            fx_log_err!("Read service directory {} failed with error: {}", path, e);
+        Err(err) => {
+            error!(%path, %err, "Read service directory failed with error");
             Vec::new()
         }
     }
@@ -269,17 +265,17 @@ impl<'a> ServerBuilder<'a> {
                 {
                     Ok((Some(vmo), length)) => match vmo_to_topology(vmo, length) {
                         Ok(topology) => Some(topology),
-                        Err(e) => {
-                            fx_log_err!("Parsing VMO failed with error: {:?}", e);
+                        Err(err) => {
+                            error!(?err, "Parsing VMO failed with error");
                             None
                         }
                     },
                     Ok((None, _)) => {
-                        fx_log_info!("Query Zbi with ZbiType::CpuTopology returned None");
+                        info!("Query Zbi with ZbiType::CpuTopology returned None");
                         None
                     }
-                    Err(e) => {
-                        fx_log_err!("ItemsProxy IPC failed with error: {:?}", e);
+                    Err(err) => {
+                        error!(?err, "ItemsProxy IPC failed with error");
                         None
                     }
                 }
@@ -350,7 +346,7 @@ impl MetricsLoggerServer {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: Error| error!("{:?}", e)),
         )
     }
 
@@ -587,19 +583,17 @@ impl MetricsLoggerServer {
     }
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["metrics-logger"])]
 async fn main() {
     // v2 components can't surface stderr yet, so we need to explicitly log errors.
     match inner_main().await {
-        Err(e) => fx_log_err!("Terminated with error: {}", e),
-        Ok(()) => fx_log_info!("Terminated with Ok(())"),
+        Err(err) => error!(%err, "Terminated with error"),
+        Ok(()) => info!("Terminated with Ok(())"),
     }
 }
 
 async fn inner_main() -> Result<()> {
-    fuchsia_syslog::init_with_tags(&["metrics-logger"]).expect("failed to initialize logger");
-
-    fx_log_info!("Starting metrics logger");
+    info!("Starting metrics logger");
 
     // Set up tracing
     fuchsia_trace_provider::trace_provider_create_with_fdio();
