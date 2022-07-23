@@ -58,14 +58,12 @@ constexpr uint16_t kTraceReplicator = 0x0909;
 // The first component identification register (CIDR1).
 struct ComponentIdRegister : public hwreg::RegisterBase<ComponentIdRegister, uint32_t> {
   enum class Class : uint8_t {
-    // clang-format off
     kGenericVerification = 0x0,
-    k0x1RomTable         = 0x1,
-    kCoreSight           = 0x9,
+    k0x1RomTable = 0x1,
+    kCoreSight = 0x9,
     kPeripheralTestBlock = 0xb,
-    kGenericIp           = 0xe,
-    kNonStandard         = 0xf,  // For older components without standardized registers.
-    // clang-format on
+    kGenericIp = 0xe,
+    kNonStandard = 0xf,  // For older components without standardized registers.
   };
   DEF_RSVDZ_FIELD(31, 8);
   // Should conventionally be called |class| to match the spec, but that is a
@@ -75,6 +73,8 @@ struct ComponentIdRegister : public hwreg::RegisterBase<ComponentIdRegister, uin
 
   static auto Get() { return hwreg::RegisterAddr<ComponentIdRegister>(0xff4); }
 };
+
+std::string_view ToString(ComponentIdRegister::Class classid);
 
 // B.2.2
 struct PeripheralId0Register : public hwreg::RegisterBase<PeripheralId0Register, uint32_t> {
@@ -156,97 +156,55 @@ struct DeviceArchRegister : public hwreg::RegisterBase<DeviceArchRegister, uint3
 // Gives a high-level information about the type of a CoreSight component.
 struct DeviceTypeRegister : public hwreg::RegisterBase<DeviceTypeRegister, uint32_t> {
   enum class MajorType : uint8_t {
-    // clang-format off
-    kMiscellaneous      = 0x0,
-    kTraceSink          = 0x1,
-    kTraceLink          = 0x2,
-    kTraceSource        = 0x3,
-    kDebugControl       = 0x4,
-    kDebugLogic         = 0x5,
+    kMiscellaneous = 0x0,
+    kTraceSink = 0x1,
+    kTraceLink = 0x2,
+    kTraceSource = 0x3,
+    kDebugControl = 0x4,
+    kDebugLogic = 0x5,
     kPerformanceMonitor = 0x6,
-    // clang-format on
   };
 
-  // The identifiable type is parametrized by the bottom byte, which is
-  // comprised of the MAJOR and SUB fields. The following is not exhaustive;
-  // new entries should be added as they are encountered.
-#define TYPE(major, sub) ((sub << 4) | static_cast<uint8_t>(major))
-  enum class Type : uint8_t {
-    // clang-format off
-    kTracePort             = TYPE(MajorType::kTraceSink, 0x1),
-    kTraceBuffer           = TYPE(MajorType::kTraceSink, 0x2),
-    kTraceRouter           = TYPE(MajorType::kTraceSink, 0x3),
-    kTraceFunnel           = TYPE(MajorType::kTraceLink, 0x1),
-    kTraceFilter           = TYPE(MajorType::kTraceLink, 0x2),
-    kTraceFifo             = TYPE(MajorType::kTraceLink, 0x3),
-    kCpuTraceSource        = TYPE(MajorType::kTraceSource, 0x1),
-    kTriggerMatrix         = TYPE(MajorType::kDebugControl, 0x1),
-    kCpuDebugLogic         = TYPE(MajorType::kDebugLogic, 0x1),
-    kCpuPerformanceMonitor = TYPE(MajorType::kPerformanceMonitor, 0x1),
-    // clang-format on
+  enum class Type {
+    kUnknown,
+    kValidationComponent,
+    kTracePort,
+    kTraceBuffer,
+    kTraceRouter,
+    kTraceFunnel,
+    kTraceFilter,
+    kTraceFifo,
+    kCpuTraceSource,
+    kDspTraceSource,
+    kDataEngineTraceSource,
+    kBusTraceSource,
+    kSoftwareTraceSource,
+    kTriggerMatrix,
+    kDebugAuthenticationModule,
+    kPowerRequestor,
+    kCpuDebugLogic,
+    kDspDebugLogic,
+    kDataEngineDebugLogic,
+    kBusDebugLogic,
+    kMemoryDebugLogic,
+    kCpuPerformanceMonitor,
+    kDspPerformanceMonitor,
+    kDataEnginePerformanceMonitor,
+    kBusPerformanceMonitor,
+    kMmuPerformanceMonitor,
   };
-
-  Type type() const { return static_cast<Type>(TYPE(major(), sub())); }
-#undef TYPE
 
   DEF_RSVDZ_FIELD(31, 8);
   DEF_FIELD(7, 4, sub);  // Subtype.
   DEF_ENUM_FIELD(MajorType, 3, 0, major);
 
+  // The type encoded by `sub` and `major` fields.
+  Type type() const;
+
   static auto Get() { return hwreg::RegisterAddr<DeviceTypeRegister>(0xfcc); }
 };
 
-inline std::string_view ToString(ComponentIdRegister::Class classid) {
-  switch (classid) {
-    case ComponentIdRegister::Class::kGenericVerification:
-      return "generic verification";
-    case ComponentIdRegister::Class::k0x1RomTable:
-      return "0x1 ROM table";
-    case ComponentIdRegister::Class::kCoreSight:
-      return "CoreSight";
-    case ComponentIdRegister::Class::kPeripheralTestBlock:
-      return "peripheral test block";
-    case ComponentIdRegister::Class::kGenericIp:
-      return "generic IP";
-    case ComponentIdRegister::Class::kNonStandard:
-      return "non-standard";
-    default:
-      printf("unrecognized component class: %#x\n", static_cast<uint8_t>(classid));
-      return "unknown";
-  }
-}
-
-inline std::string_view ToString(DeviceTypeRegister::Type type) {
-  switch (type) {
-    case DeviceTypeRegister::Type::kTracePort:
-      return "trace port";
-    case DeviceTypeRegister::Type::kTraceBuffer:
-      return "trace buffer";
-    case DeviceTypeRegister::Type::kTraceRouter:
-      return "trace router";
-    case DeviceTypeRegister::Type::kTraceFunnel:
-      return "trace funnel";
-    case DeviceTypeRegister::Type::kTraceFilter:
-      return "trace filter";
-    case DeviceTypeRegister::Type::kTraceFifo:
-      return "trace FIFO";
-    case DeviceTypeRegister::Type::kCpuTraceSource:
-      return "CPU trace source";
-    case DeviceTypeRegister::Type::kTriggerMatrix:
-      return "trigger matrix";
-    case DeviceTypeRegister::Type::kCpuDebugLogic:
-      return "CPU debug logic";
-    case DeviceTypeRegister::Type::kCpuPerformanceMonitor:
-      return "CPU performance monitor";
-    default: {
-      // See DeviceTypeRegister::Type documentation.
-      uint8_t sub = (0b11110000 & static_cast<uint8_t>(type)) >> 4;
-      uint8_t major = 0b00001111 & static_cast<uint8_t>(type);
-      printf("unrecognized device type: (major, sub) = (%#x, %#x)\n", major, sub);
-      return "unknown";
-    }
-  }
-}
+std::string_view ToString(DeviceTypeRegister::Type type);
 
 }  // namespace coresight
 
