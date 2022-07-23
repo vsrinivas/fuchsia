@@ -1,0 +1,57 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/config.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_test("bin") {
+  name = "keyboard_integration_test"
+  edition = "2021"
+  source_root = "src/keyboard_tests.rs"
+  sources = [
+    "src/common.rs",
+    "src/keyboard_tests.rs",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
+    "//sdk/fidl/fuchsia.settings:fuchsia.settings-rustc",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component-test",
+    "//src/settings/service/integration_tests/utils",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:tracing",
+  ]
+
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
+
+fuchsia_component("keyboard_integration_test") {
+  testonly = true
+  manifest = "meta/keyboard_integration_test.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_test_package("keyboard_integration_test_pkg") {
+  package_name = "keyboard_integration_test"
+  test_components = [ ":keyboard_integration_test" ]
+  deps = [
+    ":keyboard_integration_test",
+    ":tests_config",
+    "//src/intl:icudtl",
+    "//src/settings/service:setui_service_v2",
+    "//src/sys/stash:pkg",
+  ]
+}
+
+config_data("tests_config") {
+  for_pkg = "keyboard_integration_test_pkg"
+  sources = [ "testdata/interface_configuration.json" ]
+}
+
+group("keyboard_tests") {
+  testonly = true
+  public_deps = [ ":keyboard_integration_test_pkg" ]
+}
