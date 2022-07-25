@@ -36,7 +36,6 @@ use {
         directory::{entry::DirectoryEntry, helper::DirectlyMutable},
         execution_scope::ExecutionScope,
         path::Path,
-        registry::token_registry,
         remote::remote_boxed_with_type,
     },
 };
@@ -89,10 +88,9 @@ impl State {
 
 impl Component {
     pub fn new() -> Arc<Self> {
-        let registry = token_registry::Simple::new();
         Arc::new(Self {
             state: Mutex::new(State::PreStart { queued: Vec::new() }),
-            scope: ExecutionScope::build().token_registry(registry).new(),
+            scope: ExecutionScope::new(),
             outgoing_dir: vfs::directory::immutable::simple(),
         })
     }

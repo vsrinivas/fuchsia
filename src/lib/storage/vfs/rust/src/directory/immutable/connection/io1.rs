@@ -10,7 +10,7 @@ use crate::{
     directory::{
         common::new_connection_validate_flags,
         connection::{
-            io1::{handle_requests, BaseConnection, ConnectionState, DerivedConnection},
+            io1::{BaseConnection, ConnectionState, DerivedConnection, WithShutdown},
             util::OpenDirectory,
         },
         entry::DirectoryEntry,
@@ -21,12 +21,30 @@ use crate::{
 };
 
 use {
-    anyhow::Error, fidl::endpoints::ServerEnd, fidl_fuchsia_io as fio, fuchsia_zircon::Status,
-    futures::future::BoxFuture, std::sync::Arc,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io as fio,
+    fuchsia_zircon::Status,
+    futures::{channel::oneshot, TryStreamExt},
+    std::sync::Arc,
 };
 
 pub struct ImmutableConnection {
     base: BaseConnection<Self>,
+}
+
+impl ImmutableConnection {
+    async fn handle_requests(
+        mut self,
+        requests: fio::DirectoryRequestStream,
+        shutdown: oneshot::Receiver<()>,
+    ) {
+        let mut requests = requests.with_shutdown(shutdown);
+        while let Ok(Some(request)) = requests.try_next().await {
+            if !matches!(self.base.handle_request(request).await, Ok(ConnectionState::Alive)) {
+                break;
+            }
+        }
+    }
 }
 
 impl DerivedConnection for ImmutableConnection {
@@ -86,9 +104,8 @@ impl DerivedConnection for ImmutableConnection {
         // process of shutting down (this is the only error state currently).  So there is nothing
         // for us to do - the connection will be closed automatically when the connection object is
         // dropped.
-        let _ = scope.spawn_with_shutdown(|shutdown| {
-            handle_requests::<Self>(requests, connection, shutdown)
-        });
+        let _ =
+            scope.spawn_with_shutdown(|shutdown| connection.handle_requests(requests, shutdown));
     }
 
     fn entry_not_found(
@@ -104,12 +121,5 @@ impl DerivedConnection for ImmutableConnection {
         } else {
             Err(Status::NOT_SUPPORTED)
         }
-    }
-
-    fn handle_request(
-        &mut self,
-        request: fio::DirectoryRequest,
-    ) -> BoxFuture<'_, Result<ConnectionState, Error>> {
-        Box::pin(async move { self.base.handle_request(request).await })
     }
 }

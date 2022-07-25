@@ -89,8 +89,11 @@ protocol Node2 {
     -> OnConnectionInfo(ConnectionInfo);
 
     // TODO(https://fxbug.dev/77623): uncomment and implement.
-    // /// Acquires a token which can be used to identify this connection at
-    // /// a later point in time.
+
+
+    // /// Acquires a token which can be used to identify this connection at a later point in
+    // /// time.  The token will remain valid for as long as the connection requesting the token
+    // /// remains open.
     // ///
     // /// This method does not require any rights. Note that the token identifies
     // /// the connection, hence carries the rights information on this connection.

@@ -20,8 +20,16 @@ use {
     anyhow::Error,
     fidl::{endpoints::ServerEnd, Handle},
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
-    futures::{channel::oneshot, future::BoxFuture, select, StreamExt},
-    std::{convert::TryInto as _, default::Default, sync::Arc},
+    futures::channel::oneshot,
+    pin_project::pin_project,
+    std::{
+        convert::TryInto as _,
+        default::Default,
+        future::Future,
+        pin::Pin,
+        sync::Arc,
+        task::{Context, Poll},
+    },
 };
 
 /// Return type for `BaseConnection::handle_request` and [`DerivedConnection::handle_request`].
@@ -66,11 +74,6 @@ pub trait DerivedConnection: Send + Sync {
         name: &str,
         path: &Path,
     ) -> Result<Arc<dyn DirectoryEntry>, zx::Status>;
-
-    fn handle_request(
-        &mut self,
-        request: fio::DirectoryRequest,
-    ) -> BoxFuture<'_, Result<ConnectionState, Error>>;
 }
 
 /// Handles functionality shared between mutable and immutable FIDL connections to a directory.  A
@@ -107,45 +110,33 @@ where
     seek: TraversalPosition,
 }
 
-pub(in crate::directory) async fn handle_requests<Connection>(
-    mut requests: fio::DirectoryRequestStream,
-    mut connection: Connection,
-    mut shutdown: oneshot::Receiver<()>,
-) where
-    Connection: DerivedConnection,
-{
-    loop {
-        let request_or_err = select! {
-            r = requests.next() => {
-                if let Some(r) = r {
-                    r
-                } else {
-                    return;
-                }
-            },
-            _ = shutdown => return,
-        };
+/// Takes a stream and a shutdown receiver and creates a new stream that will terminate when the
+/// shutdown receiver is ready (and ignore any outstanding items in the original stream).
+#[pin_project]
+pub struct StreamWithShutdown<T: futures::Stream>(#[pin] T, #[pin] oneshot::Receiver<()>);
 
-        match request_or_err {
-            Err(_) => {
-                // FIDL level error, such as invalid message format and alike.  Close the
-                // connection on any unexpected error.
-                // TODO: Send an epitaph.
-                break;
-            }
-            Ok(request) => match connection.handle_request(request).await {
-                Ok(ConnectionState::Alive) => (),
-                Ok(ConnectionState::Closed) => break,
-                Err(_) => {
-                    // Protocol level error.  Close the connection on any unexpected error.
-                    // TODO: Send an epitaph.
-                    break;
-                }
-            },
+impl<T: futures::Stream> futures::Stream for StreamWithShutdown<T> {
+    type Item = T::Item;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+        let this = self.project();
+        if let Poll::Ready(Ok(())) = this.1.poll(cx) {
+            return Poll::Ready(None);
         }
+        this.0.poll_next(cx)
     }
-    // The underlying directory will be closed automatically when the OpenDirectory is dropped.
 }
+
+pub trait WithShutdown {
+    fn with_shutdown(self, shutdown: oneshot::Receiver<()>) -> StreamWithShutdown<Self>
+    where
+        Self: futures::Stream + Sized,
+    {
+        StreamWithShutdown(self, shutdown)
+    }
+}
+
+impl<T: futures::Stream> WithShutdown for T {}
 
 impl<Connection> BaseConnection<Connection>
 where
@@ -426,19 +417,15 @@ where
             return Err(zx::Status::INVALID_ARGS);
         }
 
-        let token_registry = match self.scope.token_registry() {
-            None => return Err(zx::Status::NOT_SUPPORTED),
-            Some(registry) => registry,
-        };
-
         if !self.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
             return Err(zx::Status::BAD_HANDLE);
         }
 
-        let target_parent = match token_registry.get_container(target_parent_token)? {
-            None => return Err(zx::Status::NOT_FOUND),
-            Some(entry) => entry,
-        };
+        let (target_parent, _flags) = self
+            .scope
+            .token_registry()
+            .get_owner(target_parent_token)?
+            .ok_or(Err(zx::Status::NOT_FOUND))?;
 
         target_parent.link(target_name, self.directory.clone().into_any(), source_name).await
     }

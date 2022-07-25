@@ -27,7 +27,6 @@ use {
         execution_scope::ExecutionScope,
         file::vmo::asynchronous as vmo,
         path::Path,
-        registry::token_registry,
         remote::remote_dir,
     },
 };
@@ -154,9 +153,7 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
             }
         };
 
-        let token_registry = token_registry::Simple::new();
         let scope = ExecutionScope::build()
-            .token_registry(token_registry)
             .entry_constructor(simple::tree_constructor(|_parent, _filename| {
                 let entry = vmo::read_write(vmo::simple_init_vmo_with_capacity(&[], 100));
                 Ok(entry)

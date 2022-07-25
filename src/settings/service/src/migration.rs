@@ -352,7 +352,7 @@ mod tests {
     use vfs::execution_scope::ExecutionScope;
     use vfs::file::vmo::asynchronous::{read_write, simple_init_vmo_with_capacity};
     use vfs::mut_pseudo_directory;
-    use vfs::registry::{inode_registry, token_registry};
+    use vfs::registry::inode_registry;
 
     #[async_trait]
     impl<T> Migration for (u64, T)
@@ -407,7 +407,6 @@ mod tests {
     ) -> (DirectoryProxy, Arc<Mutex<HashMap<String, Vmo>>>) {
         let vmo_map = Arc::new(Mutex::new(HashMap::new()));
         let fs_scope = ExecutionScope::build()
-            .token_registry(token_registry::Simple::new())
             .inode_registry(inode_registry::Simple::new())
             .entry_constructor(tree_constructor(move |_, _| {
                 Ok(read_write(simple_init_vmo_with_capacity(b"", 100)))

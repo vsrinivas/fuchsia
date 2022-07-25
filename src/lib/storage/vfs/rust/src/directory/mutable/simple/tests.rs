@@ -25,7 +25,6 @@ use crate::{
         test_utils::{run_server_client, test_server_client, DirentsSameInodeBuilder},
     },
     file::vmo::asynchronous::read_only_static,
-    registry::token_registry,
 };
 
 use {
@@ -141,7 +140,6 @@ fn unlink_fails_for_read_only_source() {
             assert_close!(proxy);
         },
     )
-    .token_registry(token_registry::Simple::new())
     .run();
 }
 
@@ -178,7 +176,6 @@ fn rename_within_directory() {
             assert_close!(proxy);
         },
     )
-    .token_registry(token_registry::Simple::new())
     .run();
 }
 
@@ -206,24 +203,20 @@ fn rename_across_directories() {
             open_as_file_assert_err!(&proxy, ro_flags, "etc/fstab", Status::NOT_FOUND);
 
             let tmp = open_get_directory_proxy_assert_ok!(&proxy, rw_flags, "tmp");
+            let etc = open_get_directory_proxy_assert_ok!(&proxy, rw_flags, "etc");
 
-            let etc_token = {
-                let etc = open_get_directory_proxy_assert_ok!(&proxy, rw_flags, "etc");
-                let token = assert_get_token!(&etc);
-                assert_close!(etc);
-                token
-            };
+            let etc_token = assert_get_token!(&etc);
 
             assert_rename!(&tmp, "fstab.new", Event::from(etc_token), "fstab");
 
             open_as_file_assert_err!(&proxy, ro_flags, "tmp/fstab.new", Status::NOT_FOUND);
             open_as_vmo_file_assert_content!(&proxy, ro_flags, "etc/fstab", "/dev/fs /");
 
+            assert_close!(etc);
             assert_close!(tmp);
             assert_close!(proxy);
         },
     )
-    .token_registry(token_registry::Simple::new())
     .run();
 }
 
@@ -276,7 +269,6 @@ fn rename_across_directories_twice() {
             assert_close!(proxy);
         },
     )
-    .token_registry(token_registry::Simple::new())
     .run();
 }
 
@@ -336,7 +328,6 @@ fn rename_within_directory_with_watchers() {
             assert_close!(proxy);
         },
     )
-    .token_registry(token_registry::Simple::new())
     .run();
 }
 
@@ -405,7 +396,6 @@ fn rename_across_directories_with_watchers() {
             assert_close!(proxy);
         },
     )
-    .token_registry(token_registry::Simple::new())
     .run();
 }
 
@@ -483,7 +473,6 @@ fn rename_across_directories_twice_with_watchers() {
             assert_close!(proxy);
         },
     )
-    .token_registry(token_registry::Simple::new())
     .run();
 }
 
@@ -527,7 +516,6 @@ fn rename_into_self_with_watchers() {
             assert_close!(proxy);
         },
     )
-    .token_registry(token_registry::Simple::new())
     .run();
 }
 
@@ -552,7 +540,6 @@ fn get_token_fails_for_read_only_target() {
             assert_close!(proxy);
         },
     )
-    .token_registry(token_registry::Simple::new())
     .run();
 }
 
@@ -586,7 +573,6 @@ fn rename_fails_for_read_only_source() {
             assert_close!(proxy);
         },
     )
-    .token_registry(token_registry::Simple::new())
     .run();
 }
 
@@ -614,7 +600,6 @@ fn hardlink_not_supported() {
             assert_close!(proxy);
         },
     )
-    .token_registry(token_registry::Simple::new())
     .run();
 }
 

@@ -9,7 +9,7 @@ use crate::{
     directory::{
         common::new_connection_validate_flags,
         connection::{
-            io1::{handle_requests, BaseConnection, ConnectionState, DerivedConnection},
+            io1::{BaseConnection, ConnectionState, DerivedConnection, WithShutdown},
             util::OpenDirectory,
         },
         entry::DirectoryEntry,
@@ -18,17 +18,19 @@ use crate::{
     },
     execution_scope::ExecutionScope,
     path::Path,
+    registry::token_registry::{TokenInterface, TokenRegistry, Tokenizable},
 };
 
 use {
     anyhow::{bail, Error},
-    either::{Either, Left, Right},
     fidl::{endpoints::ServerEnd, Handle},
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
-    futures::{channel::oneshot, future::BoxFuture},
-    std::sync::Arc,
+    futures::{channel::oneshot, pin_mut, TryStreamExt},
+    pin_project::pin_project,
+    std::{pin::Pin, sync::Arc},
 };
 
+#[pin_project]
 pub struct MutableConnection {
     base: BaseConnection<Self>,
 }
@@ -59,7 +61,7 @@ impl DerivedConnection for MutableConnection {
             // nothing for us to do - the connection will be closed automatically when the
             // connection object is dropped.
             let _ = scope.spawn_with_shutdown(move |shutdown| {
-                connection.handle_requests(requests, shutdown)
+                Self::handle_requests(connection, requests, shutdown)
             });
         }
     }
@@ -85,22 +87,6 @@ impl DerivedConnection for MutableConnection {
 
         entry_constructor.create_entry(parent, type_, name, path)
     }
-
-    fn handle_request(
-        &mut self,
-        request: fio::DirectoryRequest,
-    ) -> BoxFuture<'_, Result<ConnectionState, Error>> {
-        Box::pin(async move {
-            match self.handle_request(request).await {
-                // If the request was *not* handled (i.e. we got the request back), we pass
-                // the request back into the base handler and return that Result instead.
-                Ok(Right(request)) => self.base.handle_request(request).await,
-                // Otherwise, the request was handled, so we return the new state/error directly.
-                Ok(Left(state)) => Ok(state),
-                Err(error) => Err(error),
-            }
-        })
-    }
 }
 
 impl MutableConnection {
@@ -115,32 +101,32 @@ impl MutableConnection {
         if let Ok((connection, requests)) =
             Self::prepare_connection(scope, directory, flags, server_end)
         {
-            connection.handle_requests(requests, shutdown).await;
+            Self::handle_requests(connection, requests, shutdown).await;
         }
     }
 
     async fn handle_request(
-        &mut self,
+        this: Pin<&mut Tokenizable<Self>>,
         request: fio::DirectoryRequest,
-    ) -> Result<Either<ConnectionState, fio::DirectoryRequest>, Error> {
+    ) -> Result<ConnectionState, Error> {
         match request {
             fio::DirectoryRequest::Unlink { name, options, responder } => {
-                let result = self.handle_unlink(name, options).await;
+                let result = this.as_mut().handle_unlink(name, options).await;
                 responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
             fio::DirectoryRequest::GetToken { responder } => {
-                let (status, token) = match self.handle_get_token() {
+                let (status, token) = match Self::handle_get_token(this.into_ref()) {
                     Ok(token) => (zx::Status::OK, Some(token)),
                     Err(status) => (status, None),
                 };
                 responder.send(status.into_raw(), token)?;
             }
             fio::DirectoryRequest::Rename { src, dst_parent_token, dst, responder } => {
-                let result = self.handle_rename(src, Handle::from(dst_parent_token), dst).await;
+                let result = this.handle_rename(src, Handle::from(dst_parent_token), dst).await;
                 responder.send(&mut result.map_err(zx::Status::into_raw))?;
             }
             fio::DirectoryRequest::SetAttr { flags, attributes, responder } => {
-                let status = match self.handle_setattr(flags, attributes).await {
+                let status = match this.as_mut().handle_setattr(flags, attributes).await {
                     Ok(()) => zx::Status::OK,
                     Err(status) => status,
                 };
@@ -148,7 +134,7 @@ impl MutableConnection {
             }
             fio::DirectoryRequest::Sync { responder } => {
                 responder
-                    .send(&mut self.base.directory.sync().await.map_err(zx::Status::into_raw))?;
+                    .send(&mut this.base.directory.sync().await.map_err(zx::Status::into_raw))?;
             }
             fio::DirectoryRequest::SetFlags { flags, responder } => {
                 let _ = responder;
@@ -176,16 +162,14 @@ impl MutableConnection {
             | fio::DirectoryRequest::Reopen { .. }
             | fio::DirectoryRequest::Rewind { .. }
             | fio::DirectoryRequest::Watch { .. }) => {
-                // Since we haven't handled the request, we return the original request so that
-                // it can be consumed by the base handler instead.
-                return Ok(Right(request));
+                return this.as_mut().base.handle_request(request).await;
             }
         }
-        Ok(Left(ConnectionState::Alive))
+        Ok(ConnectionState::Alive)
     }
 
     async fn handle_setattr(
-        &mut self,
+        self: Pin<&mut Self>,
         flags: fio::NodeAttributeFlags,
         attributes: fio::NodeAttributes,
     ) -> Result<(), zx::Status> {
@@ -199,7 +183,7 @@ impl MutableConnection {
     }
 
     async fn handle_unlink(
-        &mut self,
+        self: Pin<&mut Self>,
         name: String,
         options: fio::UnlinkOptions,
     ) -> Result<(), zx::Status> {
@@ -224,18 +208,11 @@ impl MutableConnection {
             .await
     }
 
-    fn handle_get_token(&self) -> Result<Handle, zx::Status> {
-        if !self.base.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
+    fn handle_get_token(this: Pin<&Tokenizable<Self>>) -> Result<Handle, zx::Status> {
+        if !this.base.flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
             return Err(zx::Status::BAD_HANDLE);
         }
-
-        let token_registry = match self.base.scope.token_registry() {
-            None => return Err(zx::Status::NOT_SUPPORTED),
-            Some(registry) => registry,
-        };
-
-        let token = token_registry.get_token(self.base.directory.clone())?;
-        Ok(token)
+        Ok(TokenRegistry::get_token(this)?)
     }
 
     async fn handle_rename(
@@ -255,15 +232,11 @@ impl MutableConnection {
             return Err(zx::Status::INVALID_ARGS);
         }
 
-        let token_registry = match self.base.scope.token_registry() {
-            None => return Err(zx::Status::NOT_SUPPORTED),
-            Some(registry) => registry,
-        };
-
-        let dst_parent = match token_registry.get_container(dst_parent_token)? {
-            None => return Err(zx::Status::NOT_FOUND),
-            Some(entry) => entry,
-        };
+        let (dst_parent, _flags) =
+            match self.base.scope.token_registry().get_owner(dst_parent_token)? {
+                None => return Err(zx::Status::NOT_FOUND),
+                Some(entry) => entry,
+            };
 
         dst_parent.clone().rename(self.base.directory.clone(), src, dst).await
     }
@@ -304,7 +277,27 @@ impl MutableConnection {
         requests: fio::DirectoryRequestStream,
         shutdown: oneshot::Receiver<()>,
     ) {
-        handle_requests::<Self>(requests, self, shutdown).await;
+        let this = Tokenizable::new(self);
+        pin_mut!(this);
+        let mut requests = requests.with_shutdown(shutdown);
+        while let Ok(Some(request)) = requests.try_next().await {
+            if !matches!(
+                Self::handle_request(Pin::as_mut(&mut this), request).await,
+                Ok(ConnectionState::Alive)
+            ) {
+                break;
+            }
+        }
+    }
+}
+
+impl TokenInterface for MutableConnection {
+    fn get_node_and_flags(&self) -> (Arc<dyn MutableDirectory>, fio::OpenFlags) {
+        (self.base.directory.clone(), self.base.flags)
+    }
+
+    fn token_registry(&self) -> &TokenRegistry {
+        self.base.scope.token_registry()
     }
 }
 
@@ -320,7 +313,6 @@ mod tests {
                 traversal_position::TraversalPosition,
             },
             path::Path,
-            registry::token_registry,
         },
         async_trait::async_trait,
         fuchsia_async as fasync,
@@ -473,8 +465,7 @@ mod tests {
 
     impl MockFilesystem {
         pub fn new(events: &Arc<Events>) -> Self {
-            let token_registry = token_registry::Simple::new();
-            let scope = ExecutionScope::build().token_registry(token_registry).new();
+            let scope = ExecutionScope::new();
             MockFilesystem { cur_id: Mutex::new(0), scope, events: Arc::downgrade(events) }
         }
 

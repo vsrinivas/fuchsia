@@ -32,7 +32,7 @@ use {
         sync::{Arc, Mutex},
         time::Duration,
     },
-    vfs::{execution_scope::ExecutionScope, registry::token_registry},
+    vfs::execution_scope::ExecutionScope,
 };
 
 pub const DEFAULT_FLUSH_PERIOD: Duration = Duration::from_secs(20);
@@ -65,7 +65,7 @@ impl FxVolume {
             executor: fasync::EHandle::local(),
             flush_task: Mutex::new(None),
             fs_id,
-            scope: ExecutionScope::build().token_registry(token_registry::Simple::new()).new(),
+            scope: ExecutionScope::new(),
         })
     }
 

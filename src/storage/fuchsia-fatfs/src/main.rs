@@ -15,7 +15,7 @@ use {
     futures::stream::{StreamExt, TryStreamExt},
     remote_block_device::RemoteBlockClientSync,
     std::sync::Arc,
-    vfs::{execution_scope::ExecutionScope, path::Path, registry::token_registry},
+    vfs::{execution_scope::ExecutionScope, path::Path},
 };
 
 enum Services {
@@ -49,8 +49,7 @@ async fn main() -> Result<(), Error> {
         ))?)?);
 
     // VFS initialization.
-    let registry = token_registry::Simple::new();
-    let scope = ExecutionScope::build().token_registry(registry).new();
+    let scope = ExecutionScope::new();
 
     // Start the filesystem and open the root directory.
     let fatfs = FatFs::new(device).map_err(|_| Status::IO)?;

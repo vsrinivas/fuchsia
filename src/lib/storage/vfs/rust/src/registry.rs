@@ -7,23 +7,11 @@
 pub mod inode_registry;
 pub mod token_registry;
 
-use crate::directory::{entry::DirectoryEntry, entry_container::MutableDirectory};
+use crate::directory::entry::DirectoryEntry;
 
-use {
-    fidl::Handle,
-    fuchsia_zircon::{Rights, Status},
-    std::sync::Arc,
-};
+use {fuchsia_zircon::Rights, std::sync::Arc};
 
 pub const DEFAULT_TOKEN_RIGHTS: Rights = Rights::BASIC;
-
-/// A `TokenRegistry` allows directories to perform "cross-directory" operations, such as renaming
-/// across directories and linking entries.
-pub trait TokenRegistry {
-    fn get_token(&self, container: Arc<dyn MutableDirectory>) -> Result<Handle, Status>;
-    fn get_container(&self, token: Handle) -> Result<Option<Arc<dyn MutableDirectory>>, Status>;
-    fn unregister(&self, container: Arc<dyn MutableDirectory>);
-}
 
 /// An `InodeRegistry` issues "inode ids" to `DirectoryEntry` objects, unique to the scope of the
 /// registry.

@@ -2,198 +2,173 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! A simple implementation of the [`TokenRegistry`] trait.
+//! Implementation of [`TokenRegistry`].
 
-use super::{TokenRegistry, DEFAULT_TOKEN_RIGHTS};
+use super::DEFAULT_TOKEN_RIGHTS;
 
 use {
     crate::directory::entry_container::MutableDirectory,
     fidl::Handle,
+    fidl_fuchsia_io as fio,
     fuchsia_zircon::{AsHandleRef, Event, HandleBased, Koid, Status},
-    std::collections::hash_map::HashMap,
-    std::sync::{Arc, Mutex, Weak},
+    pin_project::{pin_project, pinned_drop},
+    std::{
+        collections::hash_map::{Entry, HashMap},
+        ops::{Deref, DerefMut},
+        pin::Pin,
+        sync::{Arc, Mutex},
+    },
 };
 
-pub struct Simple {
+pub struct TokenRegistry {
     inner: Mutex<Inner>,
 }
 
 struct Inner {
-    /// Maps a container address to a handle used as a token for this container.  Handles do not
-    /// change their koid value while they are alive.  We will use the koid of a handle we receive
-    /// later from the user of the API to find the container that got this particular handle
-    /// associated with it.
+    /// Maps an owner to a handle used as a token for the owner.  Handles do not change their koid
+    /// value while they are alive.  We will use the koid of a handle we receive later from the user
+    /// of the API to find the owner that has this particular handle associated with it.
     ///
-    /// Invariant:
+    /// Every entry in owner_to_token will have a reverse mapping in token_to_owner.
     ///
-    ///     container_to_token.get(container).map(|handle|
-    ///       token_to_container.get(handle.get_koid()).map(|weak_container|
-    ///         weak_container.upgrade().map(|container2| &container == &container2)
-    ///       )
-    ///     ).is_some()
-    ///
-    /// `usize` is actually `*const dyn DirectoryEntry`, but as pointers are `!Send` and
-    /// `!Sync`, we store it as `usize` - never need to dereference it.  See
-    /// [https://internals.rust-lang.org/t/shouldnt-pointers-be-send-sync-or/8818] for discussion.
-    /// Another alternative would be to add `unsafe impl Send for Inner {}`, but it seems less
-    /// desirable, as there are other fields in this struct.
-    ///
-    /// We rely on the presence of the `Weak<dyn MutableDirectory>` in `token_to_container` to
-    /// make sure that the pointer value (store as `usize`) does not change.  `Arc` and `Weak`
-    /// allocate a box for the contained value, that is not moved or deallocated while there is a
-    /// live `Arc` *or* `Weak`.
-    ///
-    /// `Weak` actually has `as_raw()` that would allow me to implement hashing for `Weak<dyn
-    /// MutableDirectory>` based on the contained object address and equality based on the same,
-    /// but it is behind a `weak_into_raw` flag.  See
-    /// [https://github.com/rust-lang/rust/issues/60728].  When this method is stable,
-    /// we should switch to something like
-    ///
-    ///     HashMap<WeakHasher<Weak<dyn MutableDirectory>>, Handle>
-    ///
-    /// where `WeakHasher` hashes the pointer address stored inside the `Weak` instance and
-    /// implements equality based on the contained object address.
-    container_to_token: HashMap<usize, Handle>,
+    /// Owners must be wrapped in Tokenizable which will ensure tokens are unregistered when
+    /// Tokenizable is dropped.  They must be pinned since pointers are used.  They must also
+    /// implement the TokenInterface trait which extracts the information that `get_owner` returns.
+    owner_to_token: HashMap<*const (), Handle>,
 
-    /// Maps a koid of a container to a weak pointer to it.  We actually expect these pointers to
-    /// be always valid, but for robustness we do not store strong references here.  Debug build
-    /// will assert if we ever see a weak reference, but the release build will just ignore it.
-    token_to_container: HashMap<Koid, Weak<dyn MutableDirectory>>,
+    /// Maps a koid of an owner to the owner.
+    token_to_owner: HashMap<Koid, *const dyn TokenInterface>,
 }
 
-impl Simple {
-    pub fn new() -> Arc<Self> {
-        Arc::new(Simple {
+unsafe impl Send for Inner {}
+
+impl TokenRegistry {
+    pub fn new() -> Self {
+        Self {
             inner: Mutex::new(Inner {
-                container_to_token: HashMap::new(),
-                token_to_container: HashMap::new(),
+                owner_to_token: HashMap::new(),
+                token_to_owner: HashMap::new(),
             }),
-        })
+        }
     }
-}
 
-impl TokenRegistry for Simple {
-    fn get_token(&self, container: Arc<dyn MutableDirectory>) -> Result<Handle, Status> {
-        let container_id =
-            container.as_ref() as *const dyn MutableDirectory as *const usize as usize;
-
-        let mut this = if let Ok(this) = self.inner.lock() {
-            this
-        } else {
-            debug_assert!(false, "Another thread has panicked while holding the `inner` lock.\n");
-            return Err(Status::INTERNAL);
-        };
-
-        match this.container_to_token.get(&container_id) {
-            Some(handle) => handle.duplicate_handle(DEFAULT_TOKEN_RIGHTS),
-            None => {
+    /// Returns a token for the owner, creating one if one doesn't already exist.  Tokens will be
+    /// automatically removed when Tokenizable is dropped.
+    pub fn get_token<T: TokenInterface>(owner: Pin<&Tokenizable<T>>) -> Result<Handle, Status> {
+        let ptr = owner.get_ref() as *const _ as *const ();
+        let mut this = owner.token_registry().inner.lock().unwrap();
+        let Inner { owner_to_token, token_to_owner, .. } = &mut *this;
+        match owner_to_token.entry(ptr) {
+            Entry::Occupied(o) => o.into_mut(),
+            Entry::Vacant(v) => {
                 let handle = Event::create()?.into_handle();
                 let koid = handle.get_koid()?;
-
-                let res = handle.duplicate_handle(DEFAULT_TOKEN_RIGHTS)?;
-
-                this.container_to_token.insert(container_id, handle);
-                let insert_res = this.token_to_container.insert(koid, Arc::downgrade(&container));
-                debug_assert!(
-                    insert_res.is_none(),
-                    "`container_to_token` does not have an entry, while `token_to_container` does \
-                     have one.  Either entry was not removed via an `unregister()` call or there \
-                     is a more serious logic error."
+                assert!(
+                    token_to_owner.insert(koid, &owner.0 as &dyn TokenInterface).is_none(),
+                    "koid is a duplicate"
                 );
-
-                Ok(res)
+                v.insert(handle)
             }
         }
+        .duplicate_handle(DEFAULT_TOKEN_RIGHTS)
     }
 
-    fn get_container(&self, token: Handle) -> Result<Option<Arc<dyn MutableDirectory>>, Status> {
+    /// Returns the information provided by get_node_and_flags for the given token.  Returns None if
+    /// no such token exists (perhaps because the owner has been dropped).
+    pub fn get_owner(
+        &self,
+        token: Handle,
+    ) -> Result<Option<(Arc<dyn MutableDirectory>, fio::OpenFlags)>, Status> {
         let koid = token.get_koid()?;
+        let this = self.inner.lock().unwrap();
 
-        let this = if let Ok(this) = self.inner.lock() {
-            this
-        } else {
-            debug_assert!(false, "Another thread has panicked while holding the `inner` lock.\n");
-            return Err(Status::INTERNAL);
-        };
-
-        let res = match this.token_to_container.get(&koid) {
-            Some(container) => match container.upgrade() {
-                Some(container) => Some(container),
-                None => {
-                    debug_assert!(
-                        false,
-                        "`token_to_container` has a weak reference to a dropped value.\n\
-                         Most likely this means that `unregister()` was not called."
-                    );
-                    None
-                }
-            },
-            None => None,
-        };
-
-        Ok(res)
+        match this.token_to_owner.get(&koid) {
+            Some(owner) => {
+                // SAFETY: This is safe because Tokenizable's drop will ensure that unregister is
+                // called to avoid any dangling pointers.
+                Ok(Some(unsafe { (**owner).get_node_and_flags() }))
+            }
+            None => Ok(None),
+        }
     }
 
-    fn unregister(&self, container: Arc<dyn MutableDirectory>) {
-        let container_id =
-            container.as_ref() as *const dyn MutableDirectory as *const usize as usize;
+    // Unregisters the token. This is done automatically by Tokenizable below.
+    fn unregister<T: TokenInterface>(&self, owner: &Tokenizable<T>) {
+        let ptr = owner as *const _ as *const ();
+        let mut this = self.inner.lock().unwrap();
 
-        let mut this = if let Ok(this) = self.inner.lock() {
-            this
-        } else {
-            debug_assert!(false, "Another thread has panicked while holding the `inner` lock.\n");
-            return;
-        };
-
-        match this.container_to_token.remove(&container_id) {
-            Some(handle) => {
-                let koid = match handle.get_koid() {
-                    Ok(koid) => koid,
-                    Err(status) => {
-                        debug_assert!(false, "`get_koid()` failed.  Status: {}", status);
-                        return;
-                    }
-                };
-
-                match this.token_to_container.remove(&koid) {
-                    Some(_container) => (),
-                    None => {
-                        debug_assert!(
-                            false,
-                            "`container_to_token` has an entry, while `token_to_container` does \
-                             not.  This can cause hard to diagnose bugs, as `container_to_token`
-                             relies on the pointers it uses as keys to be distinct. And this is
-                             only guaranteed by the fact that a `Weak` instance wrapping the
-                             pointed to region is still alive."
-                        );
-                    }
-                }
-            }
-            None => {
-                debug_assert!(false, "`unregister()` has been already called for this container");
-                ()
-            }
+        if let Some(handle) = this.owner_to_token.remove(&ptr) {
+            this.token_to_owner.remove(&handle.get_koid().unwrap()).unwrap();
         }
+    }
+}
+
+pub trait TokenInterface: 'static {
+    /// Returns the node and flags that correspond with this token.  This information is returned by
+    /// the `get_owner` method.  For now this always returns Arc<dyn MutableDirectory> but it should
+    /// be possible to change this so that files can be represented in future if and when the need
+    /// arises.
+    fn get_node_and_flags(&self) -> (Arc<dyn MutableDirectory>, fio::OpenFlags);
+
+    /// Returns the token registry.
+    fn token_registry(&self) -> &TokenRegistry;
+}
+
+/// Tokenizable is to be used to wrap anything that might need to have tokens generated.  It will
+/// ensure that the token is unregistered when Tokenizable is dropped.
+#[pin_project(!Unpin, PinnedDrop)]
+pub struct Tokenizable<T: TokenInterface>(#[pin] T);
+
+impl<T: TokenInterface> Tokenizable<T> {
+    pub fn new(inner: T) -> Self {
+        Self(inner)
+    }
+
+    pub fn as_mut(self: Pin<&mut Self>) -> Pin<&mut T> {
+        self.project().0
+    }
+}
+
+impl<T: TokenInterface> Deref for Tokenizable<T> {
+    type Target = T;
+
+    fn deref(&self) -> &T {
+        &self.0
+    }
+}
+
+impl<T: TokenInterface> DerefMut for Tokenizable<T> {
+    fn deref_mut(&mut self) -> &mut T {
+        &mut self.0
+    }
+}
+
+#[pinned_drop]
+impl<T: TokenInterface> PinnedDrop for Tokenizable<T> {
+    fn drop(self: Pin<&mut Self>) {
+        self.0.token_registry().unregister(&self);
     }
 }
 
 #[cfg(test)]
 mod tests {
     use {
-        self::mocks::MockDirectory,
-        super::Simple,
-        crate::registry::{MutableDirectory, TokenRegistry, DEFAULT_TOKEN_RIGHTS},
+        self::mocks::{MockChannel, MockDirectory},
+        super::{TokenRegistry, Tokenizable},
+        crate::registry::DEFAULT_TOKEN_RIGHTS,
         fuchsia_zircon::{AsHandleRef, HandleBased, Rights},
+        futures::pin_mut,
         std::sync::Arc,
     };
 
     #[test]
     fn client_register_same_token() {
-        let client = MockDirectory::new();
-        let registry = Simple::new();
+        let registry = Arc::new(TokenRegistry::new());
+        let client = Tokenizable(MockChannel(registry.clone(), MockDirectory::new()));
+        pin_mut!(client);
 
-        let token1 = registry.get_token(client.clone()).unwrap();
-        let token2 = registry.get_token(client.clone()).unwrap();
+        let token1 = TokenRegistry::get_token(client.as_ref()).unwrap();
+        let token2 = TokenRegistry::get_token(client.as_ref()).unwrap();
 
         let koid1 = token1.get_koid().unwrap();
         let koid2 = token2.get_koid().unwrap();
@@ -202,74 +177,76 @@ mod tests {
 
     #[test]
     fn token_rights() {
-        let client = MockDirectory::new();
-        let registry = Simple::new();
+        let registry = Arc::new(TokenRegistry::new());
+        let client = Tokenizable(MockChannel(registry.clone(), MockDirectory::new()));
+        pin_mut!(client);
 
-        let token = registry.get_token(client.clone()).unwrap();
+        let token = TokenRegistry::get_token(client.as_ref()).unwrap();
 
         assert_eq!(token.basic_info().unwrap().rights, DEFAULT_TOKEN_RIGHTS);
     }
 
     #[test]
     fn client_unregister() {
-        let client: Arc<dyn MutableDirectory> = MockDirectory::new();
-        let registry = Simple::new();
+        let registry = Arc::new(TokenRegistry::new());
 
-        let token = registry.get_token(client.clone()).unwrap();
+        let token = {
+            let client = Tokenizable(MockChannel(registry.clone(), MockDirectory::new()));
+            pin_mut!(client);
 
-        {
-            let res = registry
-                .get_container(token.duplicate_handle(Rights::SAME_RIGHTS).unwrap())
+            let token = TokenRegistry::get_token(client.as_ref()).unwrap();
+
+            {
+                let res = registry
+                    .get_owner(token.duplicate_handle(Rights::SAME_RIGHTS).unwrap())
+                    .unwrap()
+                    .unwrap();
+                // Note this ugly cast in place of `Arc::ptr_eq(&client, &res)` here is to ensure we
+                // don't compare vtable pointers, which are not strictly guaranteed to be the same
+                // across casts done in different code generation units at compilation time.
+                assert_eq!(Arc::as_ptr(&client.1) as *const (), Arc::as_ptr(&res.0) as *const ());
+            }
+
+            token
+        };
+
+        assert!(
+            registry
+                .get_owner(token.duplicate_handle(Rights::SAME_RIGHTS).unwrap())
                 .unwrap()
-                .unwrap();
-            // Note this ugly cast in place of `Arc::ptr_eq(&client, &res)` here is
-            // to ensure we don't compare vtable pointers, which are not strictly guaranteed to be
-            // the same across casts done in different code generation units at compilation time.
-            assert!(
-                client.as_ref() as *const dyn MutableDirectory as *const u8
-                    == res.as_ref() as *const dyn MutableDirectory as *const u8
-            );
-        }
-
-        registry.unregister(client.clone());
-
-        {
-            let res = registry
-                .get_container(token.duplicate_handle(Rights::SAME_RIGHTS).unwrap())
-                .unwrap();
-            assert!(
-                res.is_none(),
-                "`registry.get_container() is not `None` after an `unregister()` call."
-            );
-        }
+                .is_none(),
+            "`registry.get_owner() is not `None` after an connection dropped."
+        );
     }
 
     #[test]
     fn client_get_token_twice_unregister() {
-        let client = MockDirectory::new();
-        let registry = Simple::new();
+        let registry = Arc::new(TokenRegistry::new());
 
-        let token = registry.get_token(client.clone()).unwrap();
+        let token = {
+            let client = Tokenizable(MockChannel(registry.clone(), MockDirectory::new()));
+            pin_mut!(client);
 
-        {
-            let token2 = registry.get_token(client.clone()).unwrap();
+            let token = TokenRegistry::get_token(client.as_ref()).unwrap();
 
-            let koid1 = token.get_koid().unwrap();
-            let koid2 = token2.get_koid().unwrap();
-            assert_eq!(koid1, koid2);
-        }
+            {
+                let token2 = TokenRegistry::get_token(client.as_ref()).unwrap();
 
-        registry.unregister(client.clone());
+                let koid1 = token.get_koid().unwrap();
+                let koid2 = token2.get_koid().unwrap();
+                assert_eq!(koid1, koid2);
+            }
 
-        {
-            let res = registry
-                .get_container(token.duplicate_handle(Rights::SAME_RIGHTS).unwrap())
-                .unwrap();
-            assert!(
-                res.is_none(),
-                "`registry.get_container() is not `None` after an `unregister()` call."
-            );
-        }
+            token
+        };
+
+        assert!(
+            registry
+                .get_owner(token.duplicate_handle(Rights::SAME_RIGHTS).unwrap())
+                .unwrap()
+                .is_none(),
+            "`registry.get_owner() is not `None` after connection dropped."
+        );
     }
 
     mod mocks {
@@ -282,12 +259,25 @@ mod tests {
             },
             execution_scope::ExecutionScope,
             path::Path,
+            registry::token_registry::{TokenInterface, TokenRegistry},
         };
 
         use {
             async_trait::async_trait, fidl::endpoints::ServerEnd, fidl_fuchsia_io as fio,
             fuchsia_zircon::Status, std::sync::Arc,
         };
+
+        pub(super) struct MockChannel(pub Arc<TokenRegistry>, pub Arc<MockDirectory>);
+
+        impl TokenInterface for MockChannel {
+            fn get_node_and_flags(&self) -> (Arc<dyn MutableDirectory>, fio::OpenFlags) {
+                (self.1.clone(), fio::OpenFlags::RIGHT_READABLE)
+            }
+
+            fn token_registry(&self) -> &TokenRegistry {
+                &self.0
+            }
+        }
 
         pub(super) struct MockDirectory {}
 

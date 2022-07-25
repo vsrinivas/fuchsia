@@ -8,7 +8,7 @@ use crate::{
     directory::{entry::DirectoryEntry, mutable::entry_constructor::EntryConstructor},
     execution_scope::ExecutionScope,
     path::Path,
-    registry::{InodeRegistry, TokenRegistry},
+    registry::InodeRegistry,
 };
 
 use {
@@ -128,7 +128,6 @@ where
         server,
         get_client: Box::new(move |proxy| Box::pin(get_client(proxy))),
         coordinator: None,
-        token_registry: None,
         inode_registry: None,
         entry_constructor: None,
     }
@@ -155,7 +154,6 @@ where
         server,
         get_client: Box::new(move |proxy| Box::pin(get_client(proxy))),
         coordinator: None,
-        token_registry: None,
         inode_registry: None,
         entry_constructor: None,
     }
@@ -193,7 +191,6 @@ where
         dyn FnOnce(Marker::Proxy) -> Pin<Box<dyn Future<Output = ()> + 'test_refs>> + 'test_refs,
     >,
     coordinator: Option<Box<dyn FnOnce(TestController) + 'test_refs>>,
-    token_registry: Option<Arc<dyn TokenRegistry + Send + Sync>>,
     inode_registry: Option<Arc<dyn InodeRegistry + Send + Sync>>,
     entry_constructor: Option<Arc<dyn EntryConstructor + Send + Sync>>,
 }
@@ -232,7 +229,6 @@ where
         self
     }
 
-    field_setter!(token_registry, Arc<dyn TokenRegistry + Send + Sync>);
     field_setter!(inode_registry, Arc<dyn InodeRegistry + Send + Sync>);
     field_setter!(entry_constructor, Arc<dyn EntryConstructor + Send + Sync>);
 
@@ -246,10 +242,6 @@ where
             create_proxy::<Marker>().expect("Failed to create connection endpoints");
 
         let scope_builder = ExecutionScope::build();
-        let scope_builder = match self.token_registry {
-            Some(token_registry) => scope_builder.token_registry(token_registry),
-            None => scope_builder,
-        };
         let scope_builder = match self.inode_registry {
             Some(inode_registry) => scope_builder.inode_registry(inode_registry),
             None => scope_builder,

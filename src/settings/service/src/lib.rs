@@ -50,7 +50,7 @@ use vfs::file::vmo::{read_write, simple_init_vmo_with_capacity};
 #[cfg(test)]
 use vfs::mut_pseudo_directory;
 #[cfg(test)]
-use vfs::registry::{inode_registry, token_registry};
+use vfs::registry::inode_registry;
 
 use crate::accessibility::accessibility_controller::AccessibilityController;
 use crate::agent::authority::Authority;
@@ -249,7 +249,6 @@ impl Environment {
 #[cfg(test)]
 fn init_storage_dir() -> DirectoryProxy {
     let fs_scope = ExecutionScope::build()
-        .token_registry(token_registry::Simple::new())
         .inode_registry(inode_registry::Simple::new())
         .entry_constructor(tree_constructor(move |_, _| {
             Ok(read_write(simple_init_vmo_with_capacity(b"", 100)))

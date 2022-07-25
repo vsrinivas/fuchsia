@@ -267,8 +267,9 @@ protocol Directory1 {
         s zx.status;
     });
 
-    /// Acquires a token to a Directory which can be used to identify
-    /// access to it at a later point in time.
+    /// Acquires a token to a Directory which can be used to identify access to it at a later point
+    /// in time. The token will remain valid for as long as the connection requesting the token
+    /// remains open.
     ///
     /// This method requires following rights: `OpenFlags.RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.

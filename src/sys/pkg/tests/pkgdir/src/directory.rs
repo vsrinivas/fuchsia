@@ -5,6 +5,7 @@
 use {
     crate::{dirs_to_test, repeat_by_n, PackageSource},
     anyhow::{anyhow, Context as _, Error},
+    assert_matches::assert_matches,
     fidl::{endpoints::create_proxy, AsHandleRef},
     fidl_fuchsia_io as fio,
     fuchsia_fs::directory::open_directory,
@@ -1272,10 +1273,13 @@ async fn assert_unsupported_directory_calls(
     parent_path: &str,
     child_base_path: &str,
 ) {
-    let parent =
-        fuchsia_fs::directory::open_directory(&source.dir, parent_path, fio::OpenFlags::empty())
-            .await
-            .expect("open parent directory");
+    let parent = fuchsia_fs::directory::open_directory(
+        &source.dir,
+        parent_path,
+        fio::OpenFlags::RIGHT_READABLE,
+    )
+    .await
+    .expect("open parent directory");
 
     // Verify unlink() is not supported.
     assert_eq!(
@@ -1283,13 +1287,21 @@ async fn assert_unsupported_directory_calls(
         Err(zx::Status::NOT_SUPPORTED.into_raw())
     );
 
-    // Verify link() is not supported.
-    // Since we can't call GetToken, we can't construct a valid token to pass here.
-    // But we can at least test what it does with an arbitrary event object.
-    let token: zx::Handle = zx::Event::create().unwrap().into();
-    assert_eq!(
-        zx::Status::from_raw(parent.link(child_base_path, token, "link").await.unwrap()),
-        zx::Status::NOT_SUPPORTED
+    // get_token() should fail because the parent does not have the write right.
+    assert_matches!(parent.get_token().await.expect("get_token fidl failed"),
+                    (status, None) if status != 0);
+
+    // Verify link() is not supported.  parent doesn't have the WRITE right, so this could fail with
+    // BAD_HANDLE, but the token is bad so this could also fail with NOT_FOUND.  We don't care what
+    // error we get just so long as we get one.
+    assert_ne!(
+        zx::Status::from_raw(
+            parent
+                .link(child_base_path, zx::Event::create().unwrap().into(), "link")
+                .await
+                .unwrap()
+        ),
+        zx::Status::OK
     );
 
     // Verify rename() is not supported.

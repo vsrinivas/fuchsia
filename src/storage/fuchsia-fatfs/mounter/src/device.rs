@@ -12,7 +12,7 @@ use {
     fuchsia_zircon as zx,
     remote_block_device::RemoteBlockClientSync,
     std::ops::Deref,
-    vfs::{execution_scope::ExecutionScope, registry::token_registry},
+    vfs::execution_scope::ExecutionScope,
 };
 
 const MICROSOFT_BASIC_DATA_GUID: [u8; 16] = [
@@ -49,8 +49,7 @@ impl FatDevice {
         // TODO(simonshields): if this fails, we could try looking for another partition.
         let fs = FatFs::new(device)?;
 
-        let registry = token_registry::Simple::new();
-        let scope = ExecutionScope::build().token_registry(registry).new();
+        let scope = ExecutionScope::new();
 
         Ok(Some(FatDevice { fs, scope }))
     }
