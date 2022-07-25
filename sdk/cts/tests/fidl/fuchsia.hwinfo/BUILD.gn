@@ -42,12 +42,3 @@ group("tests") {
   testonly = true
   deps = [ ":fuchsia-hwinfo-tests" ]
 }
-
-sdk_molecule("test_sdks") {
-  testonly = true
-  deps = [
-    ":fuchsia-hwinfo-tests_sdk",
-    ":hwinfo-test-bin_sdk",
-    ":hwinfo-test_sdk",
-  ]
-}

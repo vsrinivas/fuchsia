@@ -131,21 +131,3 @@ group("tests") {
   testonly = true
   deps = [ ":fuchsia-element-tests" ]
 }
-
-sdk_molecule("test_sdks") {
-  testonly = true
-  deps = [
-    ":element-manager-test-bin_sdk",
-    ":element-manager-test_sdk",
-    ":fuchsia-element-test_sdk",
-    ":fuchsia-element-tests_sdk",
-    ":reference-element-bin_sdk",
-    ":reference-element_sdk",
-    ":reference-graphical-presenter-bin_sdk",
-    ":reference-graphical-presenter_sdk",
-    ":reference-scenic-bin_sdk",
-    ":reference-scenic_sdk",
-    ":reference-session-bin_sdk",
-    ":reference-session_sdk",
-  ]
-}

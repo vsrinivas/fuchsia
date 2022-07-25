@@ -84,8 +84,3 @@ cts_fuchsia_test_package("collections_integration_test") {
   package_name = "collections_integration_test"
   test_components = [ ":collections_integration_test_component" ]
 }
-
-sdk_molecule("test_sdks") {
-  testonly = true
-  deps = [ ":collections_integration_test_sdk" ]
-}

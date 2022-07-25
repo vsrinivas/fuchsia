@@ -6,55 +6,44 @@ import("//build/config/build_api_module.gni")
 import("//sdk/cts/build/cts.gni")
 import("//sdk/cts/build/verify_sdk_compatibility.gni")
 
-# TODO(fxb/82775): Remove this target once infra points to //sdk:cts.
-group("cts_artifacts") {
+build_api_module("cts_artifacts") {
   testonly = true
-
-  # build_api_module invocation moved to //sdk/cts/build/cts_sdk.gni
-  # and is hooked into the build from the //sdk:cts target.
-
-  deps = [ "//sdk:cts" ]
+  data_keys = [ "cts_artifacts" ]
+  deps = [ "//sdk/cts" ]
 }
 
 generated_file("generated_test_manifest") {
   testonly = true
-  outputs = [ "$target_gen_dir/cts/test_manifest.json" ]
+  outputs = [ "$root_out_dir/cts/test_manifest.json" ]
   output_conversion = "json"
   data_keys = [ "test_manifest" ]
   deps = [
     "examples:tests",
     "tests",
   ]
+
+  metadata = {
+    cts_artifacts = [ "cts/test_manifest.json" ]
+  }
 }
 
 generated_file("generated_host_test_manifest") {
   testonly = true
-  outputs = [ "$target_gen_dir/cts/host_test_manifest.json" ]
+  outputs = [ "$root_out_dir/cts/host_test_manifest.json" ]
   output_conversion = "json"
   data_keys = [ "host_test_manifest" ]
-
   deps = [ "examples/host_tool:tests($host_toolchain)" ]
+
+  metadata = {
+    cts_artifacts = [ "cts/host_test_manifest.json" ]
+  }
 }
 
-cts_copy_to_sdk("test_manifest") {
-  testonly = true
-  dest = ""
-  sources = get_target_outputs(":generated_test_manifest")
-  non_sdk_deps = [ ":generated_test_manifest" ]
-}
-
-cts_copy_to_sdk("host_test_manifest") {
-  testonly = true
-  dest = ""
-  sources = get_target_outputs(":generated_host_test_manifest")
-  non_sdk_deps = [ ":generated_host_test_manifest" ]
-}
-
-sdk_molecule("test_manifest") {
+group("test_manifest") {
   testonly = true
   deps = [
-    ":host_test_manifest_sdk",
-    ":test_manifest_sdk",
+    ":generated_host_test_manifest",
+    ":generated_test_manifest",
   ]
 }
 
@@ -69,18 +58,13 @@ group("cts_no_e2e") {
   ]
 }
 
-# TODO(johnshamoon): Remove this build copy.
-cts_copy_to_sdk("build") {
-  sources = [ "BUILD.gn" ]
-  testonly = true
-}
-
 group("cts") {
   testonly = true
   deps = [
     ":core_sdk_layout",
     ":cts_no_e2e",
-    ":sdk_layout_golden_file_copy",
+    ":plasa",
+    ":test_manifest",
     "examples:tests",
     "tests",
   ]
@@ -95,60 +79,23 @@ generated_file("plasa_manifest") {
   deps = [ "//sdk/fidl:plasa" ]
 }
 
-# TODO(96106): Rename this to plasa_manifest_sdk.
-cts_copy_to_sdk("plasa_manifest") {
+group("plasa") {
   testonly = true
-  sources = get_target_outputs(":plasa_manifest")
-  non_sdk_deps = [ ":plasa_manifest" ]
-}
-
-# Vends a subset of the plasa in CTS.
-sdk_molecule("plasa") {
-  testonly = true
-  category = "cts"
   deps = [
-    ":plasa_manifest_sdk",
+    ":plasa_manifest_copy",
     "//sdk/fidl:plasa",
   ]
 }
 
-sdk_molecule("cts_tests") {
-  category = "cts"
-  deps = [
-    ":build_sdk",
-    ":cts_deps",
-    ":generate_sdk_golden_sdk",
-    ":test_manifest",
-    "examples:test_sdks",
-    "tests:test_sdks",
-    "//sdk/testing/fidl:test_sdks",
-  ]
-
+copy("plasa_manifest_copy") {
   testonly = true
-}
-
-sdk_molecule("cts_deps") {
-  category = "cts"
-  deps = [ "//zircon/public/sysroot/sdk:sysroot_sdk" ]
-  testonly = true
+  sources = get_target_outputs(":plasa_manifest")
+  outputs = [ "$root_build_dir/cts/{{source_file_part}}" ]
+  deps = [ ":plasa_manifest" ]
 }
 
 # Generate SDK directory layout golden file.
 generate_sdk_layout_golden_file("core_sdk_layout") {
   sdk_archive = "$root_out_dir/sdk/archive/core.tar.gz"
   deps = [ "//sdk:core_archive" ]
-}
-
-copy("sdk_layout_golden_file_copy") {
-  testonly = true
-  sources = get_target_outputs(":core_sdk_layout")
-  outputs = [ "$target_gen_dir/cts/sdk_directory_layout.json.golden" ]
-  deps = [ ":core_sdk_layout" ]
-}
-
-cts_copy_to_sdk("generate_sdk_golden") {
-  testonly = true
-  dest = ""
-  sources = get_target_outputs(":sdk_layout_golden_file_copy")
-  non_sdk_deps = [ ":sdk_layout_golden_file_copy" ]
 }

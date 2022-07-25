@@ -62,17 +62,3 @@ action("fidl_mangled_to_api_mapping") {
     rebase_path("$clang_prefix/llvm-dwarfdump", root_build_dir),
   ]
 }
-
-sdk_molecule("test_sdks") {
-  deps = [
-    "fidl:test_sdks",
-    "pkg:test_sdks",
-
-    # TODO(johnshamoon): Enable this when our Dart toolchain is sorted.
-    # "tools:test_sdks",
-
-    # Tests not under //sdk/cts/...
-    "//src/sys/component_manager/tests/collections:test_sdks",
-  ]
-  testonly = true
-}

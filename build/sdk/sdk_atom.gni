@@ -329,19 +329,6 @@ template("sdk_atom") {
       ]
     }
 
-    cts_artifacts = []
-    foreach(f, files) {
-      cts_artifacts += [ "cts/" + f.dest ]
-    }
-
-    if (!defined(invoker.metadata)) {
-      metadata = {
-      }
-    }
-
-    # Used by the build API module in the //sdk:cts target.
-    metadata.cts_artifacts = cts_artifacts
-
     # The manifest output contains the output directory.
     no_output_dir_leaks = false
   }

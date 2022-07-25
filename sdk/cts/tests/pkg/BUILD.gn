@@ -13,13 +13,3 @@ group("tests") {
 
   testonly = true
 }
-
-sdk_molecule("test_sdks") {
-  deps = [
-    "fdio:test_sdks",
-    "fidl/cpp:test_sdks",
-    "memfs:test_sdks",
-  ]
-
-  testonly = true
-}

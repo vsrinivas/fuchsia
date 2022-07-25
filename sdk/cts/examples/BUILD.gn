@@ -19,12 +19,3 @@ group("tests") {
   ]
   testonly = true
 }
-
-sdk_molecule("test_sdks") {
-  deps = [
-    "hello_world:test_sdks",
-    "host_tool:test_sdks($host_toolchain)",
-    "rust:test_sdks",
-  ]
-  testonly = true
-}

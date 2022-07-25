@@ -33,8 +33,3 @@ group("tests") {
   testonly = true
   deps = [ ":cts-hello-world-rust-tests" ]
 }
-
-sdk_molecule("test_sdks") {
-  testonly = true
-  deps = [ ":cts-hello-world-rust-tests_sdk" ]
-}

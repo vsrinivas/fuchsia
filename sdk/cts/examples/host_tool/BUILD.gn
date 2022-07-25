@@ -22,9 +22,4 @@ if (is_host) {
     testonly = true
     deps = [ ":ffx_cts_test" ]
   }
-
-  sdk_molecule("test_sdks") {
-    testonly = true
-    deps = [ ":ffx_cts_test_sdk" ]
-  }
 }

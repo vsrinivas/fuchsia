@@ -236,19 +236,3 @@ group("tests") {
     ]
   }
 }
-
-sdk_molecule("test_sdks") {
-  testonly = true
-  deps = [
-    ":fidl_hlcpp_conformance_test_package_sdk",
-    ":fidl_hlcpp_conformance_tests_bin_sdk",
-    ":fidl_hlcpp_conformance_tests_sdk",
-    ":fidl_hlcpp_unit_test_package_sdk",
-    ":fidl_hlcpp_unit_tests_bin_sdk",
-    ":fidl_hlcpp_unit_tests_sdk",
-    ":handle_util_sdk",
-    ":host_test_sources_sdk",
-    ":test_sources_sdk",
-    ":test_util_sdk",
-  ]
-}

@@ -138,12 +138,11 @@ sdk_fidl_testing_targets = [
 ]
 
 # The FIDL portion of the platform surface area (plasa).
-sdk_molecule("plasa") {
+group("plasa") {
   testonly = true
-  category = "cts"
   deps = []
   foreach(target, sdk_fidl_targets) {
-    deps += [ "${target}_cts_sdk($fidl_toolchain)" ]
+    deps += [ "${target}_copy_summary($fidl_toolchain)" ]
   }
 }
 

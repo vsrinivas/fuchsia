@@ -35,13 +35,3 @@ cts_fuchsia_test_package("driver_test_realm_cts_test") {
   package_name = "driver_test_realm_cts_test"
   test_components = [ ":component" ]
 }
-
-sdk_molecule("test_sdks") {
-  testonly = true
-  deps = [
-    # TODO(fxb/91111): Uncomment this :bin_sdk target.
-    #":bin_sdk",
-    ":component_sdk",
-    ":driver_test_realm_cts_test_sdk",
-  ]
-}

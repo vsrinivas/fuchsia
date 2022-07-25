@@ -405,33 +405,14 @@ template("fidl_library") {
              ] + rebase_path(to_normalize, root_build_dir)
     }
 
-    # Files included in the CTS SDK.
-    sdk_atom("${target_name}_cts_sdk") {
-      testonly = true
-      id = "sdk://cts/$library_name"
-      category = "cts"
-
-      files = [
-        {
-          source = summary_file_json
-          dest = string_replace(summary_file_json, "$root_build_dir/", "")
-        },
-      ]
-
-      meta = {
-        dest = "$file_base/cts/meta.json"
-        schema = "cts_resource"
-        value = {
-          type = "resource"
-          name = target_name
-          resources = []
-          foreach(file, files) {
-            resources += [ file.dest ]
-          }
-        }
-      }
-
-      non_sdk_deps = [ ":$compilation_target_name" ]
+    # Files included in the CTS.
+    copy_target_name = target_name + "_copy_summary"
+    copy(copy_target_name) {
+      sources = [ summary_file_json ]
+      outputs = [ string_replace(summary_file_json,
+                                 "$root_build_dir/",
+                                 "$root_build_dir/cts/") ]
+      deps = [ ":$compilation_target_name" ]
     }
 
     sdk_atom("${target_name}_sdk") {

@@ -38,11 +38,19 @@ template("cts_host_test") {
     deps += [ ":$write_file_target" ]
   }
 
-  cts_copy_to_sdk(target_name) {
+  copy_target_name = target_name + "_copy"
+  copy(copy_target_name) {
     testonly = true
     sources = [ invoker.binary_path ]
-    dest = "host_${host_cpu}"
-    non_sdk_deps = invoker.deps
+    outputs = []
+    foreach(file, get_path_info(sources, "file")) {
+      outputs += [ "$root_build_dir/cts/host_${host_cpu}/$file" ]
+    }
+    deps = invoker.deps
+
+    metadata = {
+      cts_artifacts = rebase_path(outputs, root_build_dir)
+    }
   }
 
   group(target_name) {
@@ -60,6 +68,9 @@ template("cts_host_test") {
         },
       ]
     }
-    deps = [ ":$main_target_name" ]
+    deps = [
+      ":$copy_target_name",
+      ":$main_target_name",
+    ]
   }
 }

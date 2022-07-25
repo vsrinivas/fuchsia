@@ -63,28 +63,8 @@ template("cts_fuchsia_test_package") {
     write_cts_file(write_file_target) {
     }
 
-    # Generate the test_manifest.json metadata entry for this test.
-    # This json file controls how this test's test_spec will be
-    # defined in the prebuilt_test_manifest GN template.
-    if (!uses_experimental_fidl) {
-      _test_components = invoker.test_components
-      _manifest_name = get_target_outputs(_test_components[0])
-      _manifest_name = get_path_info(_manifest_name[0], "file")
-      _test_manifest_metadata = {
-        archive_name = target_name
-        package = invoker.package_name
-        component_name = _manifest_name
-      }
-      if (defined(invoker.test_specs)) {
-        _test_specs = invoker.test_specs
-        _test_manifest_metadata.log_settings = _test_specs.log_settings
-      }
-      metadata = {
-        test_manifest = [ _test_manifest_metadata ]
-      }
-    }
-
-    fuchsia_test_package(target_name) {
+    package_target_name = target_name + "_pkg"
+    fuchsia_test_package(package_target_name) {
       forward_variables_from(invoker, "*")
       if (!defined(deps)) {
         deps = []
@@ -94,26 +74,66 @@ template("cts_fuchsia_test_package") {
         deps += [ ":$verify_target" ]
       }
       deps += [ ":$write_file_target" ]
+
+      # Generate the test_manifest.json metadata entry for this test.
+      # This json file controls how this test's test_spec will be
+      # defined in the prebuilt_test_manifest GN template.
+      if (!uses_experimental_fidl) {
+        _test_components = invoker.test_components
+        _manifest_name = get_target_outputs(_test_components[0])
+        _manifest_name = get_path_info(_manifest_name[0], "file")
+        _test_manifest_metadata = {
+          archive_name = target_name
+          package = invoker.package_name
+          component_name = _manifest_name
+        }
+        if (defined(invoker.test_specs)) {
+          _test_specs = invoker.test_specs
+          _test_manifest_metadata.log_settings = _test_specs.log_settings
+        }
+        metadata = {
+          test_manifest = [ _test_manifest_metadata ]
+        }
+      }
     }
 
     if (!uses_experimental_fidl) {
       archive_target_name = "${target_name}_archive"
       fuchsia_package_archive(archive_target_name) {
         testonly = true
-        package = ":${invoker.target_name}"
+        package = ":${package_target_name}"
+        archive_name = invoker.target_name
       }
 
-      cts_copy_to_sdk(target_name) {
+      copy_target_name = target_name + "_copy"
+      copy(copy_target_name) {
+        forward_variables_from(invoker, [ "metadata" ])
         testonly = true
-        dest = ""  # the root directory
         sources = get_target_outputs(":$archive_target_name")
-        non_sdk_deps = [ ":$archive_target_name" ]
+        outputs = []
+        foreach(file, get_path_info(sources, "file")) {
+          outputs += [ "$root_out_dir/cts/$file" ]
+        }
+        deps = [ ":$archive_target_name" ]
+        metadata = {
+          cts_artifacts = rebase_path(outputs, root_out_dir)
+        }
+      }
+    }
+    group(target_name) {
+      testonly = true
+      deps = [ ":$package_target_name" ]
+      if (!uses_experimental_fidl) {
+        deps += [ ":$copy_target_name" ]
       }
     }
   } else {
     group(target_name) {
       testonly = true
-      deps = [ "$target_name($default_toolchain)" ]
+      deps = [
+        "$target_name($default_toolchain)",
+        "${target_name}_copy",
+      ]
     }
     not_needed(invoker, "*")
   }

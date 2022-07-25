@@ -70,14 +70,3 @@ group("tests") {
   testonly = true
   deps = [ ":fuchsia-diagnostics-tests" ]
 }
-
-sdk_molecule("test_sdks") {
-  testonly = true
-  deps = [
-    ":diagnostics-test-bin_sdk",
-    ":diagnostics-test_sdk",
-    ":fuchsia-diagnostics-tests_sdk",
-    ":inspect-publisher-bin_sdk",
-    ":inspect-publisher_sdk",
-  ]
-}

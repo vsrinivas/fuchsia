@@ -11,7 +11,6 @@ import("//build/sdk/merged_sdk.gni")
 import("//build/sdk/sdk.gni")
 import("//build/sdk/sdk_documentation.gni")
 import("//build/sdk/version_history_sdk_element.gni")
-import("//sdk/cts/build/cts_sdk.gni")
 import("config.gni")
 
 _sdk_public_deps = [
@@ -189,16 +188,6 @@ sdk_documentation("sdk_notice") {
       source = "//tools/check-licenses/golden/sdk/NOTICE.fuchsia"
       dest = "NOTICE.fuchsia"
     },
-  ]
-}
-
-cts_sdk("cts") {
-  testonly = true
-  category = "cts"
-  deps = [
-    ":license",
-    "cts:cts_tests",
-    "cts:plasa",
   ]
 }
 
