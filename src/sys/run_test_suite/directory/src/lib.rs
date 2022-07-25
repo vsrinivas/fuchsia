@@ -5,6 +5,7 @@
 mod macros;
 mod prototype;
 pub mod testing;
+mod v1;
 
 use {
     serde::{Deserialize, Serialize},
@@ -27,6 +28,7 @@ enumerable_enum! {
     #[derive(PartialEq, Eq, Debug, Clone, Copy, Hash)]
     SchemaVersion {
         UnstablePrototype,
+        V1,
     }
 }
 
@@ -96,13 +98,25 @@ pub struct TestRunResult<'a> {
 /// A serializable suite run result.
 /// Contains overall results and artifacts scoped to a suite run, and
 /// results and artifacts scoped to any test run within it.
-#[derive(PartialEq, Eq, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct SuiteResult<'a> {
     pub common: Cow<'a, CommonResult>,
+    /// A hint as to where the summary file should go.
+    // TODO(fxbug.dev/81195): This is only used for the prototype output and
+    // this should be removed at the same time as the prototype.
     pub summary_file_hint: Cow<'a, String>,
     pub cases: Vec<TestCaseResult<'a>>,
     pub tags: Cow<'a, Vec<TestTag>>,
 }
+
+// Manual impl to ignore summary_file_hint.
+impl<'a> PartialEq for SuiteResult<'a> {
+    fn eq(&self, other: &Self) -> bool {
+        self.common == other.common && self.cases == other.cases && self.tags == other.tags
+    }
+}
+
+impl<'a> Eq for SuiteResult<'a> {}
 
 /// A serializable test case result.
 #[derive(PartialEq, Eq, Debug, Clone)]
@@ -112,6 +126,10 @@ pub struct TestCaseResult<'a> {
 
 impl TestRunResult<'static> {
     pub fn from_dir(root: &Path) -> Result<Self, Error> {
+        match v1::parse_from_directory(root) {
+            Ok(res) => return Ok(res),
+            Err(_) => (),
+        }
         prototype::parse_from_directory(root)
     }
 }
@@ -169,6 +187,10 @@ impl From<ArtifactType> for ArtifactMetadata {
 pub struct OutputDirectoryBuilder {
     version: SchemaVersion,
     root: PathBuf,
+    /// Creation instant exists purely to make pseudo random directory names to discourage parsing
+    /// methods that rely on unstable directory names and could be broken when internal
+    /// implementation changes.
+    creation_instant: std::time::Instant,
 }
 
 impl OutputDirectoryBuilder {
@@ -176,7 +198,7 @@ impl OutputDirectoryBuilder {
     pub fn new(dir: impl Into<PathBuf>, version: SchemaVersion) -> Result<Self, Error> {
         let root = dir.into();
         ensure_directory_exists(&root)?;
-        Ok(Self { version, root })
+        Ok(Self { version, root, creation_instant: std::time::Instant::now() })
     }
 
     /// Create a new artifact subdirectory.
@@ -201,6 +223,15 @@ impl OutputDirectoryBuilder {
                     artifacts: HashMap::new(),
                 })
             }
+            SchemaVersion::V1 => {
+                let subdir_root =
+                    self.root.join(format!("{:?}", self.creation_instant.elapsed().as_nanos()));
+                Ok(ArtifactSubDirectory {
+                    version: self.version,
+                    root: subdir_root,
+                    artifacts: HashMap::new(),
+                })
+            }
         }
     }
 
@@ -210,6 +241,7 @@ impl OutputDirectoryBuilder {
             SchemaVersion::UnstablePrototype => {
                 prototype::save_summary(self.root.as_path(), result)
             }
+            SchemaVersion::V1 => v1::save_summary(self.root.as_path(), result),
         }
     }
 
@@ -228,7 +260,7 @@ impl ArtifactSubDirectory {
     ) -> Result<File, Error> {
         ensure_directory_exists(self.root.as_path())?;
         match self.version {
-            SchemaVersion::UnstablePrototype => {
+            SchemaVersion::UnstablePrototype | SchemaVersion::V1 => {
                 // todo validate path
                 self.artifacts.insert(name.as_ref().to_path_buf(), metadata.into());
                 File::create(self.root.join(name))
@@ -243,7 +275,7 @@ impl ArtifactSubDirectory {
         name: impl AsRef<Path>,
     ) -> Result<PathBuf, Error> {
         match self.version {
-            SchemaVersion::UnstablePrototype => {
+            SchemaVersion::UnstablePrototype | SchemaVersion::V1 => {
                 // todo validate path
                 let subdir = self.root.join(name.as_ref());
                 ensure_directory_exists(subdir.as_path())?;
@@ -256,10 +288,12 @@ impl ArtifactSubDirectory {
     /// Get the absolute path of the artifact at |name|, if present.
     pub fn path_to_artifact(&self, name: impl AsRef<Path>) -> Option<PathBuf> {
         match self.version {
-            SchemaVersion::UnstablePrototype => match self.artifacts.contains_key(name.as_ref()) {
-                true => Some(self.root.join(name.as_ref())),
-                false => None,
-            },
+            SchemaVersion::UnstablePrototype | SchemaVersion::V1 => {
+                match self.artifacts.contains_key(name.as_ref()) {
+                    true => Some(self.root.join(name.as_ref())),
+                    false => None,
+                }
+            }
         }
     }
 
@@ -286,6 +320,7 @@ mod test {
     fn validate_against_schema(version: SchemaVersion, root: &Path) {
         match version {
             SchemaVersion::UnstablePrototype => prototype::validate_against_schema(root),
+            SchemaVersion::V1 => v1::validate_against_schema(root),
         }
     }
 

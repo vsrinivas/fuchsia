@@ -159,6 +159,6 @@
         }
     ],
     "description": "Format for the run summary of a Fuchsia test output directory",
-    "id": "https://fuchsia.dev/schema/ffx_test/run_summary-f8025966.json",
+    "id": "https://fuchsia.dev/schema/ffx_test/run_summary-8d1dd964.json",
     "type": "object"
 }
