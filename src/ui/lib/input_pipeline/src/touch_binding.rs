@@ -13,7 +13,7 @@ use {
     fidl_fuchsia_ui_input as fidl_ui_input,
     fidl_fuchsia_ui_input_config::FeaturesRequest as InputConfigFeaturesRequest,
     fidl_fuchsia_ui_pointerinjector as pointerinjector,
-    fuchsia_syslog::fx_log_err,
+    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
     futures::channel::mpsc::Sender,
     maplit::hashmap,
@@ -166,6 +166,12 @@ pub struct ContactDeviceDescriptor {
     /// The range of possible y values for this touch contact.
     pub y_range: fidl_input_report::Range,
 
+    /// The unit of measure for `x_range`.
+    pub x_unit: fidl_input_report::Unit,
+
+    /// The unit of measure for `y_range`.
+    pub y_unit: fidl_input_report::Unit,
+
     /// The range of possible pressure values for this touch contact.
     pub pressure_range: Option<fidl_input_report::Range>,
 
@@ -235,10 +241,14 @@ impl input_device::InputDeviceBinding for TouchBinding {
                             false => Some(fidl_input_report::TouchConfigurationInputMode::MouseCollection),
                         };
                         report.touch = Some(touch);
-                        self.device_proxy
-                            .set_feature_report(report)
-                            .await?
-                            .map_err(|e| format_err!("set_feature_report failed: {}", e))
+                        match self.device_proxy.set_feature_report(report).await? {
+                            Ok(()) => {
+                                // TODO(https://fxbug.dev/105092): Remove log message.
+                                fx_log_info!("touchpad: set touchpad_enabled to {}", enable);
+                                Ok(())
+                            }
+                            Err(e) => Err(format_err!("set_feature_report failed: {}", e)),
+                        }
                     }
                 }
             }
@@ -395,6 +405,8 @@ impl TouchBinding {
             } => Ok(ContactDeviceDescriptor {
                 x_range: x_axis.range,
                 y_range: y_axis.range,
+                x_unit: x_axis.unit,
+                y_unit: y_axis.unit,
                 pressure_range: pressure_axis.map(|axis| axis.range),
                 width_range: width_axis.map(|axis| axis.range),
                 height_range: height_axis.map(|axis| axis.range),

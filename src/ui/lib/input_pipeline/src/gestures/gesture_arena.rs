@@ -5,16 +5,19 @@
 use {
     super::{click, motion, primary_tap},
     crate::{input_device, input_handler::UnhandledInputHandler, mouse_binding, touch_binding},
+    anyhow::{format_err, Error},
     async_trait::async_trait,
     core::cell::RefCell,
     fidl_fuchsia_input_report as fidl_input_report,
-    fuchsia_syslog::fx_log_debug,
+    fuchsia_syslog::{fx_log_debug, fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
     std::any::Any,
     std::fmt::Debug,
 };
 
 pub fn make_input_handler() -> std::rc::Rc<dyn crate::input_handler::InputHandler> {
+    // TODO(https://fxbug.dev/105092): Remove log message.
+    fx_log_info!("touchpad: created input handler");
     std::rc::Rc::new(_GestureArena::new_internal(|| {
         vec![
             Box::new(click::InitialContender {
@@ -241,14 +244,36 @@ impl std::convert::TryFrom<input_device::UnhandledInputEvent> for TouchpadEvent 
     ) -> Result<TouchpadEvent, Self::Error> {
         match unhandled_input_event {
             input_device::UnhandledInputEvent {
-                device_event: input_device::InputDeviceEvent::Touchpad(touchpad_data),
+                device_event: input_device::InputDeviceEvent::Touchpad(ref touchpad_data),
+                device_descriptor:
+                    input_device::InputDeviceDescriptor::Touchpad(ref touchpad_descriptor),
                 event_time,
                 ..
-            } => Ok(TouchpadEvent {
-                timestamp: event_time,
-                pressed_buttons: touchpad_data.pressed_buttons.into_iter().collect::<Vec<_>>(),
-                contacts: touchpad_data.injector_contacts,
-            }),
+            } => {
+                let position_divisor = match get_position_divisor_to_mm(touchpad_descriptor) {
+                    Ok(divisor) => divisor,
+                    Err(e) => {
+                        fx_log_err!("dropping touchpad event; could not compute divisor: {}", e);
+                        return Err(unhandled_input_event);
+                    }
+                };
+                Ok(TouchpadEvent {
+                    timestamp: event_time,
+                    pressed_buttons: touchpad_data
+                        .pressed_buttons
+                        .iter()
+                        .copied()
+                        .collect::<Vec<_>>(),
+                    contacts: touchpad_data
+                        .injector_contacts
+                        .iter()
+                        .map(|contact| touch_binding::TouchContact {
+                            position: contact.position / position_divisor,
+                            ..*contact
+                        })
+                        .collect(),
+                })
+            }
             _ => Err(unhandled_input_event),
         }
     }
@@ -398,7 +423,8 @@ impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> _GestureArena<ContenderF
                 let mut matched_contenders = matched_contenders;
                 let ProcessBufferedEventsResult { generated_events, winner, recognized_gesture } =
                     matched_contenders.remove(0).process_buffered_events(buffered_events);
-                fx_log_debug!("recognized {:?}", recognized_gesture);
+                // TODO(https://fxbug.dev/105092): Remove log message.
+                fx_log_info!("touchpad: recognized {:?}", recognized_gesture);
 
                 match winner {
                     Some(winner) => (MutableState::Forwarding { winner }, generated_events),
@@ -470,6 +496,105 @@ impl<ContenderFactory: Fn() -> Vec<Box<dyn Contender>>> UnhandledInputHandler
     }
 }
 
+/// Returns the multiplier to translate position data for the device described by
+/// `device_descriptor`, from the units in the corresponding `TouchpadEvent`, to
+/// millimeters.
+///
+/// For example, if this function returns 1000, then the original data are in
+/// micrometers, and dividing by 1000 will yield millimeters.
+fn get_position_divisor_to_mm(
+    touchpad_descriptor: &touch_binding::TouchpadDeviceDescriptor,
+) -> Result<f32, Error> {
+    const EXPONENT_MILLIS: i32 = -3;
+    let divisors: Vec<_> = touchpad_descriptor
+        .contacts
+        .iter()
+        .enumerate()
+        .map(|(i, contact_descriptor)| {
+            match (contact_descriptor.x_unit, contact_descriptor.y_unit) {
+                (
+                    fidl_input_report::Unit {
+                        type_: fidl_input_report::UnitType::Meters,
+                        exponent: exponent_x,
+                    },
+                    fidl_input_report::Unit {
+                        type_: fidl_input_report::UnitType::Meters,
+                        exponent: exponent_y,
+                    },
+                ) => {
+                    if exponent_x == exponent_y {
+                        Ok(f32::powi(10.0, EXPONENT_MILLIS - exponent_x))
+                    } else {
+                        Err(format!(
+                            "contact {}: mismatched exponents x={}, y={}",
+                            i, exponent_x, exponent_y
+                        ))
+                    }
+                }
+                (
+                    fidl_input_report::Unit { type_: x_unit_type, .. },
+                    fidl_input_report::Unit { type_: fidl_input_report::UnitType::Meters, .. },
+                ) => Err(format!(
+                    "contact {}: expected x-unit-type of Meters but got {:?}",
+                    i, x_unit_type
+                )),
+                (
+                    fidl_input_report::Unit { type_: fidl_input_report::UnitType::Meters, .. },
+                    fidl_input_report::Unit { type_: y_unit_type, .. },
+                ) => Err(format!(
+                    "contact {}: expected y-unit-type of Meters but got {:?}",
+                    i, y_unit_type
+                )),
+                (
+                    fidl_input_report::Unit { type_: x_unit_type, .. },
+                    fidl_input_report::Unit { type_: y_unit_type, .. },
+                ) => Err(format!(
+                    "contact {}: expected x and y unit-types of Meters but got x={:?} and y={:?}",
+                    i, x_unit_type, y_unit_type
+                )),
+            }
+        })
+        .collect();
+
+    let (divisors, errors): (Vec<_>, Vec<_>) =
+        divisors.into_iter().fold((vec![], vec![]), |(mut divisors, mut errors), divisor| {
+            match divisor {
+                Ok(d) => divisors.push(d),
+                Err(e) => errors.push(e),
+            };
+            (divisors, errors)
+        });
+
+    if !errors.is_empty() {
+        return Err(format_err!(errors
+            .into_iter()
+            .fold(String::new(), |prev_err_msgs, this_err_msg| prev_err_msgs
+                + &this_err_msg
+                + ", ")));
+    }
+
+    let first_divisor = match divisors.first() {
+        Some(&divisor) => divisor,
+        None => return Err(format_err!("no contact descriptors!")),
+    };
+
+    if divisors.iter().any(|&divisor| divisor != first_divisor) {
+        return Err(format_err!(divisors
+            .iter()
+            .enumerate()
+            .filter(|(_i, &divisor)| divisor != first_divisor)
+            .map(|(i, divisor)| format!(
+                "contact {} has a different divisor than the first contact ({:?} != {:?})",
+                i, divisor, first_divisor,
+            ))
+            .fold(String::new(), |prev_err_msgs, this_err_msg| prev_err_msgs
+                + &this_err_msg
+                + ", ")));
+    }
+
+    Ok(first_divisor)
+}
+
 #[cfg(test)]
 mod tests {
     mod utils {
@@ -533,6 +658,14 @@ mod tests {
                 contacts: vec![touch_binding::ContactDeviceDescriptor {
                     x_range: fidl_input_report::Range { min: 0, max: 10_000 },
                     y_range: fidl_input_report::Range { min: 0, max: 10_000 },
+                    x_unit: fidl_input_report::Unit {
+                        type_: fidl_input_report::UnitType::Meters,
+                        exponent: -6,
+                    },
+                    y_unit: fidl_input_report::Unit {
+                        type_: fidl_input_report::UnitType::Meters,
+                        exponent: -6,
+                    },
                     pressure_range: None,
                     width_range: Some(fidl_input_report::Range { min: 0, max: 10_000 }),
                     height_range: Some(fidl_input_report::Range { min: 0, max: 10_000 }),
@@ -572,6 +705,7 @@ mod tests {
                     inner: Rc::new(RefCell::new(StubContenderInner {
                         next_result: None,
                         calls_received: 0,
+                        last_touchpad_event: None,
                     })),
                 }
             }
@@ -595,12 +729,17 @@ mod tests {
             pub(super) fn ref_count(&self) -> usize {
                 Rc::strong_count(&self.inner)
             }
+
+            pub(super) fn get_last_touchpad_event(&self) -> Option<TouchpadEvent> {
+                self.inner.borrow_mut().last_touchpad_event.take()
+            }
         }
 
         #[derive(Debug)]
         struct StubContenderInner {
             next_result: Option<ExamineEventResult>,
             calls_received: usize,
+            last_touchpad_event: Option<TouchpadEvent>,
         }
 
         /// A factory that returns `Vec<Box<dyn Contender>>` from `contenders` on the
@@ -633,9 +772,10 @@ mod tests {
         }
 
         impl Contender for StubContender {
-            fn examine_event(self: Box<Self>, _event: &TouchpadEvent) -> ExamineEventResult {
+            fn examine_event(self: Box<Self>, event: &TouchpadEvent) -> ExamineEventResult {
                 let mut inner = self.inner.borrow_mut();
                 inner.calls_received += 1;
+                inner.last_touchpad_event = Some(event.clone());
                 inner.next_result.take().unwrap_or_else(|| {
                     panic!("missing `next_result` on call {}", inner.calls_received)
                 })
@@ -1813,6 +1953,168 @@ mod tests {
 
             // Verify that the arena started a new contest.
             assert_eq!(contender.calls_received(), 1);
+        }
+    }
+
+    mod touchpad_event_payload {
+        use {
+            super::{
+                super::{ExamineEventResult, UnhandledInputHandler, _GestureArena},
+                utils::{ContenderFactoryOnce, StubContender},
+            },
+            crate::{input_device, touch_binding, Position},
+            assert_matches::assert_matches,
+            fidl_fuchsia_input_report::{self as fidl_input_report, UnitType},
+            fuchsia_zircon as zx,
+            maplit::hashset,
+            std::rc::Rc,
+            test_case::test_case,
+            test_util::assert_near,
+        };
+
+        fn make_touchpad_descriptor(
+            units: Vec<(fidl_input_report::Unit, fidl_input_report::Unit)>,
+        ) -> input_device::InputDeviceDescriptor {
+            let contacts: Vec<_> = units
+                .into_iter()
+                .map(|(x_unit, y_unit)| touch_binding::ContactDeviceDescriptor {
+                    x_range: fidl_input_report::Range { min: 0, max: 1_000_000 },
+                    y_range: fidl_input_report::Range { min: 0, max: 1_000_000 },
+                    x_unit,
+                    y_unit,
+                    pressure_range: None,
+                    width_range: Some(fidl_input_report::Range { min: 0, max: 10_000 }),
+                    height_range: Some(fidl_input_report::Range { min: 0, max: 10_000 }),
+                })
+                .collect();
+            input_device::InputDeviceDescriptor::Touchpad(touch_binding::TouchpadDeviceDescriptor {
+                device_id: 1,
+                contacts,
+            })
+        }
+
+        fn make_unhandled_touchpad_event(
+            contact_position_units: Vec<(fidl_input_report::Unit, fidl_input_report::Unit)>,
+            positions: Vec<Position>,
+        ) -> input_device::UnhandledInputEvent {
+            let injector_contacts: Vec<_> = positions
+                .into_iter()
+                .enumerate()
+                .map(|(i, position)| touch_binding::TouchContact {
+                    id: u32::try_from(i).unwrap(),
+                    position,
+                    contact_size: None,
+                    pressure: None,
+                })
+                .collect();
+            input_device::UnhandledInputEvent {
+                device_event: input_device::InputDeviceEvent::Touchpad(
+                    touch_binding::TouchpadEvent {
+                        injector_contacts,
+                        pressed_buttons: hashset! {},
+                    },
+                ),
+                device_descriptor: make_touchpad_descriptor(contact_position_units),
+                event_time: zx::Time::ZERO,
+                trace_id: None,
+            }
+        }
+
+        #[test_case(
+            vec![(
+                fidl_input_report::Unit{ type_: UnitType::Meters, exponent: -6 },
+                fidl_input_report::Unit{ type_: UnitType::Meters, exponent: -6 },
+            )],
+            vec![ Position { x: 200000.0, y: 100000.0 }]; "from_micrometers")]
+        #[test_case(
+            vec![(
+                fidl_input_report::Unit{ type_: UnitType::Meters, exponent: -2 },
+                fidl_input_report::Unit{ type_: UnitType::Meters, exponent: -2 },
+            )],
+            vec![ Position { x: 20.0, y: 10.0 }]; "from_centimeters")]
+        #[fuchsia::test(allow_stalls = false)]
+        async fn provides_recognizer_position_in_millimeters(
+            contact_position_units: Vec<(fidl_input_report::Unit, fidl_input_report::Unit)>,
+            positions: Vec<Position>,
+        ) {
+            let contender = StubContender::new();
+            let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
+            let arena =
+                Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
+            contender.set_next_result(ExamineEventResult::Mismatch);
+            arena
+                .handle_unhandled_input_event(make_unhandled_touchpad_event(
+                    contact_position_units,
+                    positions,
+                ))
+                .await;
+            assert_matches!(
+                contender.get_last_touchpad_event().unwrap().contacts.as_slice(),
+                [touch_binding::TouchContact { position, .. }] => {
+                    assert_near!(position.x, 200.0, 1.0);
+                    assert_near!(position.y, 100.0, 1.0);
+                }
+            );
+        }
+
+        #[test_case(
+            vec![(
+                fidl_input_report::Unit{ type_: UnitType::None, exponent: -6 },
+                fidl_input_report::Unit{ type_: UnitType::None, exponent: -6 },
+            )],
+            vec![];
+            "both units unspecified")]
+        #[test_case(
+            vec![(
+                fidl_input_report::Unit{ type_: UnitType::None, exponent: -6 },
+                fidl_input_report::Unit{ type_: UnitType::Meters, exponent: -6 },
+            )],
+            vec![];
+            "x unit unspecified")]
+        #[test_case(
+            vec![(
+                fidl_input_report::Unit{ type_: UnitType::Meters, exponent: -6 },
+                fidl_input_report::Unit{ type_: UnitType::None, exponent: -6 },
+            )],
+            vec![];
+            "y unit unspecified")]
+        #[test_case(
+            vec![(
+                fidl_input_report::Unit{ type_: UnitType::Meters, exponent: -3 },
+                fidl_input_report::Unit{ type_: UnitType::Meters, exponent: -6 },
+            )],
+            vec![];
+            "mismatched exponents")]
+        #[test_case(
+            vec![
+                (
+                    fidl_input_report::Unit{ type_: UnitType::Meters, exponent: -3 },
+                    fidl_input_report::Unit{ type_: UnitType::Meters, exponent: -3 },
+                ),
+                (
+                    fidl_input_report::Unit{ type_: UnitType::Meters, exponent: -6 },
+                    fidl_input_report::Unit{ type_: UnitType::Meters, exponent: -6 },
+                ),
+            ],
+            vec![];
+            "unequal divisors")]
+        #[fuchsia::test(allow_stalls = false)]
+        async fn skips_contender_on_bad_descriptor(
+            contact_position_units: Vec<(fidl_input_report::Unit, fidl_input_report::Unit)>,
+            positions: Vec<Position>,
+        ) {
+            let contender = StubContender::new();
+            let contender_factory = ContenderFactoryOnce::new(vec![contender.clone()]);
+            let arena =
+                Rc::new(_GestureArena::new_for_test(|| contender_factory.make_contenders()));
+            contender.set_next_result(ExamineEventResult::Mismatch);
+            arena
+                .handle_unhandled_input_event(make_unhandled_touchpad_event(
+                    contact_position_units,
+                    positions,
+                ))
+                .await;
+            assert_eq!(contender.calls_received(), 0);
         }
     }
 }

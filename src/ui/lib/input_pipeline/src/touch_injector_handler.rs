@@ -435,6 +435,14 @@ mod tests {
                 contacts: vec![touch_binding::ContactDeviceDescriptor {
                     x_range: fidl_input_report::Range { min: 0, max: 100 },
                     y_range: fidl_input_report::Range { min: 0, max: 100 },
+                    x_unit: fidl_input_report::Unit {
+                        type_: fidl_input_report::UnitType::Meters,
+                        exponent: -6,
+                    },
+                    y_unit: fidl_input_report::Unit {
+                        type_: fidl_input_report::UnitType::Meters,
+                        exponent: -6,
+                    },
                     pressure_range: None,
                     width_range: None,
                     height_range: None,
@@ -450,6 +458,14 @@ mod tests {
             contacts: vec![touch_binding::ContactDeviceDescriptor {
                 x_range: fidl_input_report::Range { min: 0, max: 100 },
                 y_range: fidl_input_report::Range { min: 0, max: 100 },
+                x_unit: fidl_input_report::Unit {
+                    type_: fidl_input_report::UnitType::Meters,
+                    exponent: -6,
+                },
+                y_unit: fidl_input_report::Unit {
+                    type_: fidl_input_report::UnitType::Meters,
+                    exponent: -6,
+                },
                 pressure_range: None,
                 width_range: None,
                 height_range: None,
