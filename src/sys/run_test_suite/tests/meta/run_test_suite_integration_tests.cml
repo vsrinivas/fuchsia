@@ -33,7 +33,6 @@
                 "fuchsia.component.resolution.Resolver",
                 "fuchsia.logger.LogSink",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
                 "fuchsia.sys2.EventSource",
             ],

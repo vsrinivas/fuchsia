@@ -19,7 +19,6 @@
             protocol: [
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.intl.PropertyProvider",
-                "fuchsia.sys.Environment",
             ],
         },
     ],

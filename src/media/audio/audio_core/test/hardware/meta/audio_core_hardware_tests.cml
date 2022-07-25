@@ -16,7 +16,6 @@
                 "fuchsia.media.AudioCore",
                 "fuchsia.media.AudioDeviceEnumerator",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
             ],
         },

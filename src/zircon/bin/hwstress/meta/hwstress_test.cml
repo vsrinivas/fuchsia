@@ -16,7 +16,6 @@
                 "fuchsia.kernel.Stats",
                 "fuchsia.process.Launcher",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sys.Environment",
             ],
         },
     ],

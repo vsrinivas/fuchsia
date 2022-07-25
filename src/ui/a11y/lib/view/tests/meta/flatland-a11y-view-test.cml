@@ -19,7 +19,6 @@
                 "fuchsia.kernel.RootJobForInspect",
                 "fuchsia.kernel.Stats",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sys.Environment",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.input.ImeService",

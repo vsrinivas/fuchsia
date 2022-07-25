@@ -24,7 +24,6 @@
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.fonts.Provider",
                 "fuchsia.intl.PropertyProvider",
-                "fuchsia.sys.Environment",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.input.ImeService",
