@@ -237,11 +237,16 @@ void main() {
 
   testWidgets('usePointerInjection2 generates correct platform message',
       (WidgetTester tester) async {
-    final pointerX = 10.0, pointerY = 10.0, device = 1, traceFlowId = 1;
+    final pointerX = 10.0,
+        pointerY = 10.0,
+        device = 1,
+        traceFlowId = 1,
+        timestamp = Duration(microseconds: 1);
     final pointerEvent = PointerDownEvent(
         position: Offset(pointerX, pointerY),
         device: device,
-        pointer: traceFlowId);
+        pointer: traceFlowId,
+        timeStamp: timestamp);
 
     ui.Size window = ui.window.physicalSize / ui.window.devicePixelRatio;
 
@@ -254,6 +259,7 @@ void main() {
       'traceFlowId': traceFlowId,
       'logicalWidth': window.width,
       'logicalHeight': window.height,
+      'timestamp': timestamp.inMicroseconds * 1000, // nanosecs
       'viewRef': testHandle
     };
 

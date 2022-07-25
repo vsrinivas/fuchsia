@@ -109,7 +109,7 @@ class FuchsiaViewsService {
       {required int viewId,
       required PointerEvent pointer,
       int? viewRef}) async {
-    if (!_isValidPointerEvent(pointer)) {
+    if (!_hasFuchsiaEventPhase(pointer)) {
       return;
     }
 
@@ -144,9 +144,11 @@ class FuchsiaViewsService {
         y: y,
         phase: _getEventPhaseValue(phase),
         pointerId: ((pointer.device << 32) >> 32),
+        // `traceFlowId` and `pointer.pointer` are program specific nonces.
         traceFlowId: pointer.pointer,
         logicalWidth: window.width,
         logicalHeight: window.height,
+        timestamp: pointer.timeStamp.inMicroseconds * 1000,
         viewRef: viewRef);
 
     return platformViewChannel.invokeMethod(
@@ -162,6 +164,7 @@ class FuchsiaViewsService {
       required int traceFlowId,
       required double logicalWidth,
       required double logicalHeight,
+      required int timestamp,
       int? viewRef}) {
     final args = <String, dynamic>{
       'viewId': viewId,
@@ -171,7 +174,8 @@ class FuchsiaViewsService {
       'pointerId': pointerId,
       'traceFlowId': traceFlowId,
       'logicalWidth': logicalWidth,
-      'logicalHeight': logicalHeight
+      'logicalHeight': logicalHeight,
+      'timestamp': timestamp
     };
 
     // In Flatland, the Flutter engine holds the ViewRef and does not provide it
@@ -183,13 +187,14 @@ class FuchsiaViewsService {
   }
 
   // Check if [PointerEvent] is one of supported events.
-  bool _isValidPointerEvent(PointerEvent pointer) {
+  bool _hasFuchsiaEventPhase(PointerEvent pointer) {
     // TODO(fxbug.dev/84030) - Implement stream consistency checking: inject
     // only valid streams, and reject broken streams.
     return pointer != null &&
         (pointer is PointerDownEvent ||
             pointer is PointerUpEvent ||
-            pointer is PointerMoveEvent);
+            pointer is PointerMoveEvent ||
+            pointer is PointerCancelEvent);
   }
 
   int _getEventPhaseValue(EventPhase phase) {
