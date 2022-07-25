@@ -19,15 +19,13 @@
 
 #include <openssl/md5.h>
 
-#include "../in_stream_file.h"
-#include "../in_stream_http.h"
-#include "../in_stream_peeker.h"
-#include "src/media/codec/examples/use_media_decoder/use_video_decoder.h"
-#include "src/media/codec/examples/use_media_decoder/util.h"
-#include "../use_video_decoder.h"
-#include "../util.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
+#include "src/media/codec/examples/use_media_decoder/in_stream_file.h"
+#include "src/media/codec/examples/use_media_decoder/in_stream_http.h"
+#include "src/media/codec/examples/use_media_decoder/in_stream_peeker.h"
+#include "src/media/codec/examples/use_media_decoder/use_video_decoder.h"
+#include "src/media/codec/examples/use_media_decoder/util.h"
 #include "use_video_decoder_test.h"
 
 namespace {
@@ -217,6 +215,8 @@ int decoder_conformance_test(int argc, char* argv[], UseVideoDecoderFunction use
           printf("The md5 doesn't match - expected: %s actual: %s\n", expected_md5_string.c_str(),
                  actual_md5.c_str());
           iteration_result = false;
+          // If not using the URL, report failure on MD5 hash mismatch
+          overall_result = false;
         } else {
           printf("The computed md5 matches.  Yay!\nPASS\n");
         }
