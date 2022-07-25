@@ -110,13 +110,14 @@ template("ffx_plugin") {
       args_deps += invoker.args_deps
     }
 
+    cmd_deps = []
     p_deps = []
     json_deps = []
     json_merge_deps = []
     if (defined(invoker.plugin_deps)) {
       foreach(d, invoker.plugin_deps) {
         p_deps += [ d + "_suite" ]
-        args_deps += [ d + "_args" ]
+        cmd_deps += [ d + "_args" ]
         json_deps += [ get_label_info(d, "target_out_dir") + "/config.json" ]
         json_merge_deps += [ get_label_info(d, "dir") + ":config.json" ]
       }
@@ -134,7 +135,7 @@ template("ffx_plugin") {
         with_unit_tests = false
 
         sources = [ "$target_gen_dir/cmd_args.rs" ]
-        deps = args_deps + [
+        deps = cmd_deps + [
                  ":" + sub_cmd_gen,
                  "//third_party/rust_crates:argh",
                ]
@@ -156,13 +157,11 @@ template("ffx_plugin") {
                                  "original_target_name",
                                  "has_proxy",
                                ])
-
-        # TODO(https://fxbug.dev/104019): Avoid this suppression.
-        configs +=
-            [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
       }
 
       args_deps += [ ":" + sub_cmd ]
+    } else {
+      not_needed([ "cmd_deps" ])
     }
 
     args = output_name + "_args"
