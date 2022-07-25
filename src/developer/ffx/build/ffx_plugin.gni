@@ -58,6 +58,10 @@ import("plugins.gni")
 #     `<name>_args_lib_test` test file in the output directory. Equivalent
 #     to adding a `rustc_test` target with that name and the same source_root.
 #
+#   args_test_deps (optional)
+#     If args_with_unit_tests is true then this is like test_deps but for
+#     args_source_root.
+#
 #   test_environments (optional)
 #     What environments unit tests, if provided, should target. Only used here
 #     for linux and mac tests, with a default value of a general linux/mac
@@ -212,15 +216,8 @@ template("ffx_plugin") {
       if (defined(invoker.args_with_unit_tests) &&
           invoker.args_with_unit_tests) {
         with_unit_tests = true
-
-        # And pass in the test_deps if they have been specified for the plugin.
-        if (defined(invoker.test_deps)) {
-          test_deps = invoker.test_deps
-
-          # TODO(https://fxbug.dev/104019): Avoid this suppression.
-          # Consider defining `args_test_deps` instead of forwarding all `test_deps`.
-          test_configs =
-              [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
+        if (defined(invoker.args_test_deps)) {
+          test_deps = invoker.args_test_deps
         }
       }
       original_target_name = _original_target_name

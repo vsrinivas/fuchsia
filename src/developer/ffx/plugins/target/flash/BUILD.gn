@@ -24,8 +24,8 @@ ffx_plugin("ffx_flash") {
     "//third_party/rust_crates:termion",
   ]
 
-  # Used in args test
-  test_deps = [
+  test_deps = [ "//third_party/rust_crates:tempfile" ]
+  args_test_deps = [
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:tempfile",
   ]
