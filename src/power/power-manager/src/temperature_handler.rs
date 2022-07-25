@@ -255,6 +255,8 @@ impl Node for TemperatureHandler {
     ///
     /// Connects to the temperature driver unless a proxy was already provided (in a test).
     async fn init(&self) -> Result<(), Error> {
+        fuchsia_trace::duration!("power_manager", "TemperatureHandler::init");
+
         // Connect to the temperature driver. Typically this is None, but it may be set by tests.
         let driver_proxy = match &self.mutable_inner.borrow().driver_proxy {
             Some(p) => p.clone(),

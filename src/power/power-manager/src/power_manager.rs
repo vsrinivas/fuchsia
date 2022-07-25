@@ -162,8 +162,7 @@ impl PowerManager {
                     &self.nodes,
                     service_fs,
                 )
-                .build()
-                .await?
+                .build()?
             }
             "InputSettingsHandler" => {
                 input_settings_handler::InputSettingsHandlerBuilder::new_from_json(
