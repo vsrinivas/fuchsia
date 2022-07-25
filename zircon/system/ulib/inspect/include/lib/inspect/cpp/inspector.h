@@ -84,13 +84,13 @@ class Inspector final {
   //
   // The returned copy will always be a consistent snapshot of the inspector state, truncated to
   // include only relevant pages from the underlying VMO.
-  cpp17::optional<zx::vmo> CopyVmo() const;
+  zx::vmo CopyVmo() const;
 
   // Returns a copy of the bytes of the VMO backing this inspector.
   //
   // The returned bytes will always be a consistent snapshot of the inspector state, truncated to
   // include only relevant bytes from the underlying VMO.
-  cpp17::optional<std::vector<uint8_t>> CopyBytes() const;
+  std::vector<uint8_t> CopyBytes() const;
 
   // Returns stats about this Inspector.
   InspectStats GetStats() const;

@@ -200,13 +200,6 @@ TEST(Inspect, DoingFrozenVmoCopy) {
   ASSERT_EQ(2u, frozen_hierarchy.children().size());
 }
 
-TEST(Inspect, TransactionsBlockCopy) {
-  Inspector inspector;
-  inspector.AtomicUpdate([&](Node& n) { ASSERT_FALSE(inspector.FrozenVmoCopy().has_value()); });
-  inspector.AtomicUpdate([&](Node& n) { ASSERT_FALSE(inspector.CopyVmo().has_value()); });
-  inspector.AtomicUpdate([&](Node& n) { ASSERT_FALSE(inspector.CopyBytes().has_value()); });
-}
-
 TEST(Inspect, UsingStringReferencesAsNames) {
   auto inspector = std::make_unique<Inspector>();
   const inspect::StringReference one("one");
@@ -301,7 +294,7 @@ TEST(Inspect, CreateCopyVmo) {
   // Store a string.
   std::string s = "abcd";
   auto property = inspector->GetRoot().CreateString("string", s);
-  auto result = inspect::ReadFromVmo(inspector->CopyVmo().value());
+  auto result = inspect::ReadFromVmo(inspector->CopyVmo());
   ASSERT_TRUE(result.is_ok());
   auto hierarchy = result.take_value();
 
@@ -347,7 +340,7 @@ TEST(Inspect, StringArrays) {
     array.Set(1, shared_ref);
     array.Set(3, big);
 
-    auto bytes = inspector.CopyBytes().value();
+    auto bytes = inspector.CopyBytes();
     auto result = inspect::ReadFromBuffer(std::move(bytes));
     ASSERT_TRUE(result.is_ok());
     auto hierarchy = result.take_value();
@@ -371,7 +364,7 @@ TEST(Inspect, StringArrays) {
     EXPECT_TRUE(array_data.at(4).empty());
   }
 
-  auto bytes = inspector.CopyBytes().value();
+  auto bytes = inspector.CopyBytes();
   auto result = inspect::ReadFromBuffer(std::move(bytes));
   ASSERT_TRUE(result.is_ok());
   auto hierarchy = result.take_value();
@@ -633,7 +626,7 @@ TEST(Inspect, CreateCopyBytes) {
   std::string s = "abcd";
   auto property = inspector->GetRoot().CreateString("string", s);
 
-  auto bytes = inspector->CopyBytes().value();
+  auto bytes = inspector->CopyBytes();
   auto result = inspect::ReadFromBuffer(std::move(bytes));
   ASSERT_TRUE(result.is_ok());
   auto hierarchy = result.take_value();
