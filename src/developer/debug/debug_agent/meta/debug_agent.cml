@@ -23,7 +23,8 @@
 
                 // Used by fdio for running executables.
                 "fuchsia.process.Launcher",
-                "fuchsia.process.Resolver", // for executables with "#!resolve" directive.
+
+                // for executables with "#!resolve" directive.
 
                 // For running v1 components.
                 "fuchsia.sys.Launcher",

@@ -13,7 +13,6 @@
         {
             protocol: [
                 "fuchsia.process.Launcher",
-                "fuchsia.process.Resolver",
                 "fuchsia.sys.Launcher",
             ],
         },

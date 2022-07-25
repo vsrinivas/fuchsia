@@ -11,10 +11,7 @@
     },
     use: [
         {
-            protocol: [
-                "fuchsia.process.Launcher",
-                "fuchsia.process.Resolver",
-            ],
+            protocol: [ "fuchsia.process.Launcher" ],
         },
     ],
 }

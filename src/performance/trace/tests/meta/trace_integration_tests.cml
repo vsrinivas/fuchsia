@@ -37,10 +37,7 @@
             path: "/data",
         },
         {
-            protocol: [
-                "fuchsia.process.Launcher",
-                "fuchsia.process.Resolver",
-            ],
+            protocol: [ "fuchsia.process.Launcher" ],
         },
     ],
     offer: [

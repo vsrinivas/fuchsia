@@ -36,10 +36,7 @@
             to: "#debug_agent",
         },
         {
-            protocol: [
-                "fuchsia.process.Resolver",
-                "fuchsia.sys.Launcher",
-            ],
+            protocol: [ "fuchsia.sys.Launcher" ],
             from: "self",
             to: "#debug_agent",
         },

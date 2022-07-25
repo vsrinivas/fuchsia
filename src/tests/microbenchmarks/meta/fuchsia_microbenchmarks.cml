@@ -15,7 +15,6 @@
         {
             protocol: [
                 "fuchsia.process.Launcher",
-                "fuchsia.process.Resolver",
                 "fuchsia.scheduler.ProfileProvider",
             ],
         },
