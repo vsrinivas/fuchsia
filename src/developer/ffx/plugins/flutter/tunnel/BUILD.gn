@@ -22,6 +22,7 @@ ffx_plugin("ffx_flutter_tunnel") {
     "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:argh",
   ]
 
   args_sources = [ "src/args.rs" ]

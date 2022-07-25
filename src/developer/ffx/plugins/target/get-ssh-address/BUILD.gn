@@ -13,6 +13,7 @@ ffx_plugin("ffx_get_ssh_address") {
     "//src/developer/ffx:ffx_lib_args",
     "//src/developer/ffx/lib/netext:lib",
     "//src/developer/ffx/lib/timeout:lib",
+    "//third_party/rust_crates:argh",
   ]
 
   args_sources = [ "src/args.rs" ]

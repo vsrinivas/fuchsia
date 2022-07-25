@@ -14,6 +14,7 @@ ffx_plugin("ffx_wait") {
     "//src/developer/ffx/lib/netext:lib",
     "//src/developer/ffx/lib/rcs:lib",
     "//src/developer/ffx/lib/timeout:lib",
+    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:futures-lite",
     "//third_party/rust_crates:tracing",
