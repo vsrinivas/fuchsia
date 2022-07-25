@@ -18,4 +18,5 @@ ffx_plugin("ffx_wlan_deprecated") {
     "//sdk/fidl/fuchsia.wlan.product.deprecatedconfiguration:fuchsia.wlan.product.deprecatedconfiguration-rustc",
     "//third_party/rust_crates:eui48",
   ]
+  has_proxy = true
 }

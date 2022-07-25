@@ -19,4 +19,6 @@ ffx_plugin("ffx_temperature_logger") {
   args_sources = [ "src/args.rs" ]
   args_deps = [ "//third_party/rust_crates:regex" ]
   args_with_unit_tests = true
+
+  has_proxy = true
 }

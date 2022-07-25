@@ -26,4 +26,6 @@ ffx_plugin("ffx_debug_connect") {
   ]
 
   data_deps = [ "//src/developer/debug/zxdb" ]
+
+  has_proxy = true
 }

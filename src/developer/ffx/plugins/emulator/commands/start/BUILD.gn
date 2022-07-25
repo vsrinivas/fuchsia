@@ -31,6 +31,7 @@ if (is_host) {
       "src/pbm.rs",
     ]
     test_deps = [ "//third_party/rust_crates:tempfile" ]
+    has_proxy = true
   }
 
   group("tests") {

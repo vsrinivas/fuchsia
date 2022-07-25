@@ -12,9 +12,13 @@ ffx_plugin("ffx_net_test_realm") {
     "//src/lib/network/fidl_fuchsia_net_ext",
   ]
   deps = [
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/connectivity/lib/net-declare",
     "//src/connectivity/network/testing/network-test-realm/fidl:fuchsia.net.test.realm-rustc",
+    "//src/lib/diagnostics/selectors",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
     "//src/lib/network/fidl_fuchsia_net_ext",
     "//third_party/rust_crates:tracing",
   ]

@@ -17,4 +17,6 @@ ffx_plugin("ffx_target_add") {
     "//src/developer/ffx/lib/netext:lib",
     "//third_party/rust_crates:libc",
   ]
+
+  has_proxy = true
 }

@@ -12,4 +12,6 @@ ffx_plugin("ffx_crash") {
   args_sources = [ "src/args.rs" ]
 
   sources = [ "src/lib.rs" ]
+
+  has_proxy = true
 }

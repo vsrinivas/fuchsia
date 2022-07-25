@@ -16,6 +16,7 @@ ffx_plugin("ffx_bootloader") {
 
   deps = [
     "//build/sdk/meta:rust",
+    "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/fastboot:lib",
     "//third_party/rust_crates:async-trait",

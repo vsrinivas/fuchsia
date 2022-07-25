@@ -18,4 +18,6 @@ ffx_plugin("ffx_component_explore") {
   args_sources = [ "src/args.rs" ]
 
   sources = [ "src/lib.rs" ]
+
+  has_proxy = true
 }

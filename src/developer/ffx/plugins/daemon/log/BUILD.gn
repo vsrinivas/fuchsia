@@ -13,7 +13,10 @@ ffx_plugin("ffx_daemon_log") {
     "//third_party/rust_crates:notify",
     "//third_party/rust_crates:tracing",
   ]
-  test_deps = [ "//third_party/rust_crates:tempfile" ]
+  test_deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:tempfile",
+  ]
 
   args_sources = [ "src/args.rs" ]
 

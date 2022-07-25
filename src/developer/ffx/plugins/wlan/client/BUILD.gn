@@ -20,4 +20,5 @@ ffx_plugin("ffx_wlan_client") {
     "//src/developer/ffx/plugins/wlan/common:ffx-wlan-common",
   ]
   with_unit_tests = true
+  has_proxy = true
 }

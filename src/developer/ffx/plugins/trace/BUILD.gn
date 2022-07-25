@@ -34,4 +34,6 @@ ffx_plugin("ffx_trace") {
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde_json",
   ]
+
+  has_proxy = true
 }

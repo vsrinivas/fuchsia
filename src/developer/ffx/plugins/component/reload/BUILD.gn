@@ -10,8 +10,11 @@ ffx_plugin("ffx_component_reload") {
   with_unit_tests = true
   args_with_unit_tests = true
   deps = [
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/developer/ffx/plugins/component/common:ffx_component",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
     "//src/sys/lib/moniker",
   ]
 

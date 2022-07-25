@@ -19,4 +19,5 @@ ffx_plugin("ffx_wlan_ap") {
     "//sdk/fidl/fuchsia.wlan.policy:fuchsia.wlan.policy-rustc",
     "//src/developer/ffx/plugins/wlan/common:ffx-wlan-common",
   ]
+  has_proxy = true
 }

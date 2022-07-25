@@ -56,4 +56,6 @@ ffx_plugin("ffx_log") {
   ]
 
   test_deps = [ "//third_party/rust_crates:tempfile" ]
+
+  has_proxy = true
 }

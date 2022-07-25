@@ -15,8 +15,8 @@ ffx_plugin("ffx_agis") {
     "//third_party/rust_crates:serde_json",
   ]
   args_sources = [ "src/args.rs" ]
-
   sources = [ "src/lib.rs" ]
+  has_proxy = true
 }
 
 group("ffx") {

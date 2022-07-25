@@ -10,6 +10,9 @@ ffx_plugin("ffx_storage_blackout_step") {
   args_sources = [ "src/args.rs" ]
   sources = [ "src/lib.rs" ]
   deps = [
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+    "//src/lib/diagnostics/selectors",
+    "//src/lib/fidl/rust/fidl",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//tools/blackout/fidl/fuchsia.blackout.test:fuchsia.blackout.test-rustc",
   ]

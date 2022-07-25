@@ -22,4 +22,6 @@ ffx_plugin("ffx_setui_input") {
   args_sources = [ "src/args.rs" ]
 
   sources = [ "src/lib.rs" ]
+
+  has_proxy = true
 }

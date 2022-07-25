@@ -20,4 +20,6 @@ ffx_plugin("ffx_get_ssh_address") {
   args_deps = [ "//src/developer/ffx/config:lib" ]
 
   sources = [ "src/lib.rs" ]
+
+  has_proxy = true
 }

@@ -31,4 +31,6 @@ ffx_plugin("ffx_setui_accessibility") {
     "src/set.rs",
     "src/watch.rs",
   ]
+
+  has_proxy = true
 }

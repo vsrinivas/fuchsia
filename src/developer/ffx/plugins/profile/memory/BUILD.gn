@@ -32,4 +32,6 @@ ffx_plugin("ffx_profile_memory") {
   ]
 
   test_deps = [ "//third_party/rust_crates:pretty_assertions" ]
+
+  has_proxy = true
 }

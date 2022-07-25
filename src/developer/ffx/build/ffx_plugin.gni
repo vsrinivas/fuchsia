@@ -85,6 +85,13 @@ import("plugins.gni")
 #     built in-tree which are also published to crates.io. This would be passed to rustc as
 #     '--cfg feature=XXX'
 #
+#   has_proxy (optional)
+#     Whether this plugin has one or more proxies defined.
+#     For instance if the plugin crate has:
+#     #[ffx_plugin(MyProxy = "...")]
+#     then `has_proxy` should be set to true.
+#     Default: false.
+#
 template("ffx_plugin") {
   output_name = target_name
 
@@ -147,6 +154,7 @@ template("ffx_plugin") {
                                  "target_name",
                                  "with_unit_tests",
                                  "original_target_name",
+                                 "has_proxy",
                                ])
 
         # TODO(https://fxbug.dev/104019): Avoid this suppression.
@@ -234,6 +242,7 @@ template("ffx_plugin") {
                                "with_unit_tests",
                                "original_target_name",
                                "test_deps",
+                               "has_proxy",
                              ])
     }
     if (defined(invoker.args_with_unit_tests) && invoker.args_with_unit_tests) {
@@ -242,22 +251,22 @@ template("ffx_plugin") {
 
     lib_deps = [
       ":" + args,
-      "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
-      "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
       "//src/developer/ffx/config:lib",
       "//src/developer/ffx/core:lib",
       "//src/developer/ffx/lib/errors:lib",
-      "//src/developer/ffx/lib/rcs:lib",
-      "//src/lib/diagnostics/selectors",
-      "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia-async",
+      "//src/lib/fidl/rust/fidl",
       "//third_party/rust_crates:anyhow",
-      "//third_party/rust_crates:argh",
       "//third_party/rust_crates:futures",
     ]
-
-    if (defined(invoker.deps)) {
-      lib_deps += invoker.deps
+    if (defined(invoker.has_proxy) && invoker.has_proxy) {
+      lib_deps += [
+        "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
+        "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+        "//src/developer/ffx/lib/rcs:lib",
+        "//src/lib/diagnostics/selectors",
+        "//third_party/rust_crates:argh",
+      ]
     }
 
     plugins_name = output_name + "_plugins"
@@ -298,6 +307,9 @@ template("ffx_plugin") {
       ":" + args,
       ":" + plugins_name,
     ]
+    if (defined(invoker.deps)) {
+      suite_deps += invoker.deps
+    }
     if (defined(invoker.plugin_deps)) {
       suite_deps += [ ":" + sub_cmd ]
     }
@@ -305,6 +317,9 @@ template("ffx_plugin") {
     if (includes_execution) {
       rustc_library(output_name) {
         deps = lib_deps
+        if (defined(invoker.deps)) {
+          deps += invoker.deps
+        }
 
         # TODO(https://fxbug.dev/104019): Avoid this suppression. At the time
         # of writing it is needed because not all dependencies above are used

@@ -18,4 +18,6 @@ ffx_plugin("ffx_repository_server_start") {
     "//src/lib/network/fidl_fuchsia_net_ext",
   ]
   test_deps = [ "//third_party/rust_crates:serde_json" ]
+
+  has_proxy = true
 }

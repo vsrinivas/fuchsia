@@ -21,6 +21,7 @@ if (is_host) {
     args_sources = [ "src/args.rs" ]
     sources = [ "src/lib.rs" ]
     test_deps = [ "//third_party/rust_crates:tempfile" ]
+    has_proxy = true
   }
 
   group("tests") {

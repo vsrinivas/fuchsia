@@ -13,6 +13,7 @@ ffx_plugin("ffx_target_set_preferred_ssh_address") {
 
   sources = [ "src/lib.rs" ]
   deps = [
+    "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
     "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//src/connectivity/lib/net-declare",
     "//src/developer/ffx/lib/netext:lib",

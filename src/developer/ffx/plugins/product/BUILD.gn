@@ -27,6 +27,8 @@ ffx_plugin("ffx_product") {
   ]
 
   sources = [ "src/lib.rs" ]
+
+  has_proxy = true
 }
 
 group("product") {

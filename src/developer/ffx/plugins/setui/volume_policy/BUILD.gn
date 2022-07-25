@@ -28,4 +28,6 @@ ffx_plugin("ffx_setui_volume_policy") {
     "src/lib.rs",
     "src/remove.rs",
   ]
+
+  has_proxy = true
 }

@@ -66,4 +66,6 @@ ffx_plugin("ffx_triage") {
     "test_data/structured/map_fold_test.golden.json",
     "test_data/structured/only_runs_included_actions.golden.json",
   ]
+
+  has_proxy = true
 }

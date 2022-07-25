@@ -8,8 +8,10 @@ ffx_plugin("ffx_component_data") {
   version = "0.1.0"
   edition = "2021"
 
-  deps =
-      [ "//src/developer/ffx/plugins/component/storage:ffx_component_storage" ]
+  deps = [
+    "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+    "//src/developer/ffx/plugins/component/storage:ffx_component_storage",
+  ]
 
   args_deps = [
     "//src/developer/ffx/plugins/component/storage:ffx_component_storage_args",

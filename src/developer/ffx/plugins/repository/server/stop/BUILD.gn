@@ -21,4 +21,6 @@ ffx_plugin("ffx_repository_server_stop") {
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:serde_json",
   ]
+
+  has_proxy = true
 }

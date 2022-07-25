@@ -38,4 +38,6 @@ ffx_plugin("ffx_inspect_apply_selectors") {
     "src/terminal.rs",
     "src/test_utils.rs",
   ]
+
+  has_proxy = true
 }

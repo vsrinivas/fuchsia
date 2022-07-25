@@ -13,4 +13,6 @@ ffx_plugin("ffx_target_remove") {
 
   sources = [ "src/lib.rs" ]
   deps = [ "//src/developer/ffx/lib/errors:lib" ]
+
+  has_proxy = true
 }

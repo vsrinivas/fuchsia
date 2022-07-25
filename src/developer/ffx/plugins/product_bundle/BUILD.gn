@@ -32,6 +32,8 @@ ffx_plugin("ffx_product_bundle") {
     "src/create.rs",
     "src/lib.rs",
   ]
+
+  has_proxy = true
 }
 
 group("product_bundle") {

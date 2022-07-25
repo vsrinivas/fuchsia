@@ -38,4 +38,6 @@ ffx_plugin("ffx_target_show") {
     "src/lib.rs",
     "src/show.rs",
   ]
+
+  has_proxy = true
 }

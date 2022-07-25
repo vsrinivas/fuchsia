@@ -49,4 +49,6 @@ ffx_plugin("ffx_list") {
     "test_data/target_formatter_name_only_multiple_unknown_formatter_with_default_golden",
     "test_data/target_formatter_simple_formatter_with_default_golden",
   ]
+
+  has_proxy = true
 }
