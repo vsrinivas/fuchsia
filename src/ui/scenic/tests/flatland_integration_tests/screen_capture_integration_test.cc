@@ -79,15 +79,18 @@ class ScreenCaptureIntegrationTest : public gtest::RealLoopFixture {
 
     flatland_display_ = realm_.Connect<fuchsia::ui::composition::FlatlandDisplay>();
     flatland_display_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+      FAIL() << "Lost connection to FlatlandDisplay: " << zx_status_get_string(status);
     });
 
     flatland_allocator_ = realm_.ConnectSync<fuchsia::ui::composition::Allocator>();
 
     // Set up root view.
     root_session_ = realm_.Connect<fuchsia::ui::composition::Flatland>();
+    root_session_.events().OnError = [](fuchsia::ui::composition::FlatlandError error) {
+      FAIL() << "Received FlatlandError: " << static_cast<int>(error);
+    };
     root_session_.set_error_handler([](zx_status_t status) {
-      FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
+      FAIL() << "Lost connection to Flatland: " << zx_status_get_string(status);
     });
 
     fidl::InterfacePtr<ChildViewWatcher> child_view_watcher;
