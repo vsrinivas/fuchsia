@@ -96,13 +96,15 @@ class GnuHash {
  public:
   using size_type = typename Addr::value_type;
 
+  class iterator;
+
   class BucketIterator;
 
   constexpr explicit GnuHash(cpp20::span<const Addr> table) : GnuHash(table, *GetSizes(table)) {}
 
   static constexpr bool Valid(cpp20::span<const Addr> table) { return GetSizes(table).has_value(); }
 
-  constexpr uint32_t size() const {
+  constexpr uint32_t symtab_size() const {
     // First run through the buckets to find the largest symbol table index.
     uint32_t max_symndx = 0;
 
@@ -203,6 +205,9 @@ class GnuHash {
     }
     return 0;
   }
+
+  constexpr iterator begin() const;
+  constexpr iterator end() const;
 
  private:
   // The DT_GNU_HASH data is always a whole number of Addr-aligned units, and
@@ -325,24 +330,24 @@ class GnuHash<Word, Addr>::BucketIterator {
 
   // This creates a begin() iterator for the bucket and hash value.
   constexpr explicit BucketIterator(const GnuHash& table, uint32_t bucket, uint32_t hash)
-      : table_(table),
+      : table_(&table),
         i_(table.AbsoluteBucketChainStart(bucket)),
         // Store with the low bit set for quick comparisons to the chain table.
         hash_(hash | 1) {
     // Check for a bogus index coming from the bucket table.
     const uint32_t idx = i_ / kBucketsPerAddr;  // Word index -> tables_ index.
-    if (bucket < table_.chain_index_bias_ || idx >= table_.tables_.size()) [[unlikely]] {
+    if (bucket < table_->chain_index_bias_ || idx >= table_->tables_.size()) [[unlikely]] {
       GoToEnd();
     } else {
       // We're now pointing to the start of the bucket.
       // Advance to the first symbol matching the hash value.
-      AdvanceToNextHashMatch(table_.tables_[idx]);
+      AdvanceToNextHashMatch(table_->tables_[idx]);
     }
   }
 
   // This creates an end() iterator.
   constexpr explicit BucketIterator(const GnuHash& table)
-      : table_(table), i_(static_cast<uint32_t>(table.tables_.size() * kBucketsPerAddr)) {}
+      : table_(&table), i_(static_cast<uint32_t>(table.tables_.size() * kBucketsPerAddr)) {}
 
   constexpr bool operator==(const BucketIterator& other) const { return i_ == other.i_; }
 
@@ -350,7 +355,7 @@ class GnuHash<Word, Addr>::BucketIterator {
 
   constexpr BucketIterator& operator++() {  // prefix
     // The current chain word was the previous match for hash_.
-    size_type current = table_.tables_[i_];
+    size_type current = table_->tables_[i_ / kBucketsPerAddr];
 
     // Check the current entry for the end marker.
     if ((current >> Shift(i_)) & 1) {
@@ -370,14 +375,14 @@ class GnuHash<Word, Addr>::BucketIterator {
     return old;
   }
 
-  constexpr uint32_t operator*() const { return i_ - table_.AbsoluteBucketChainStart(0); }
+  constexpr uint32_t operator*() const { return i_ - table_->AbsoluteBucketChainStart(0); }
 
  private:
-  constexpr void GoToEnd() { i_ = static_cast<uint32_t>(table_.tables_.size() * kBucketsPerAddr); }
+  constexpr void GoToEnd() { i_ = static_cast<uint32_t>(table_->tables_.size() * kBucketsPerAddr); }
 
   constexpr void AdvanceToNextHashMatch(size_type current) {
     if constexpr (sizeof(Addr) == sizeof(uint32_t)) {
-      for (uint32_t chain : table_.tables_.subspan(i_)) {
+      for (uint32_t chain : table_->tables_.subspan(i_)) {
         if ((chain | 1) == hash_) {
           // Found a matching entry.
           return;
@@ -412,7 +417,7 @@ class GnuHash<Word, Addr>::BucketIterator {
       }
 
       // Now check two words at a time.
-      for (uint64_t word : table_.tables_.subspan(i_ >> 1)) {
+      for (uint64_t word : table_->tables_.subspan(i_ >> 1)) {
         uint32_t chain = static_cast<uint32_t>(word >> Shift(0));
         if ((chain | 1) == hash_) {
           // Found a matching entry.
@@ -446,10 +451,101 @@ class GnuHash<Word, Addr>::BucketIterator {
     }
   }
 
-  const GnuHash& table_;
+  const GnuHash* table_ = nullptr;
   uint32_t i_ = -1;
   uint32_t hash_ = 0;
 };
+
+// Iterate over the hash buckets to yield a BucketIerator for each bucket.
+// Together this allows for exhaustive iteration over the whole table.
+// Here each "bucket" is not actually a hash bucket in the DT_GNU_HASH
+// primary hash table used for lookup, but is instead a run within a bucket
+// of entries with the same full hash value (ignoring the low bit), since
+// that's what a BucketIterator covers.  So this is useful for exhaustive
+// iteration over the hash table, and for detecting actual hash collisions,
+// but is not useful for counting bucket depth and the like.
+template <typename Word, typename Addr>
+class GnuHash<Word, Addr>::iterator {
+ public:
+  constexpr iterator() = default;
+  constexpr iterator(const iterator&) = default;
+  constexpr iterator& operator=(const iterator&) = default;
+
+  constexpr bool operator==(const iterator& other) const { return i_ == other.i_; }
+
+  constexpr bool operator!=(const iterator& other) const { return !(*this == other); }
+
+  constexpr iterator& operator++() {  // prefix
+    const uint32_t hash = CurrentHash();
+    if constexpr (sizeof(Addr) == sizeof(uint32_t)) {
+      // Advance past each word that matches the current hash value.
+      do {
+        ++i_;
+      } while (i_ < table_->tables_.size() && table_->tables_[i_] == hash);
+    } else {
+      // If the current entry is in the second half of its word-pair, skip
+      // it first.  Then check two words at a time.  If the current entry
+      // is in the first half, then it's harmless to check it again.
+      if (i_ & 1) {
+        ++i_;
+      }
+
+      const uint64_t hash_twice = (static_cast<uint64_t>(hash) << 32) | hash;
+      for (uint64_t word : table_->tables_.subspan(i_ >> 1)) {
+        word |= (uint64_t{1} << 32) | 1;
+        if (word != hash_twice) {
+          if (static_cast<uint32_t>(word >> Shift(0)) == hash) {
+            // The first word matched though the second didn't.  Skip just one.
+            ++i_;
+          }
+          break;
+        }
+
+        // Both words matched.  Advance to the next pair of entries.
+        i_ += 2;
+      }
+    }
+    return *this;
+  }
+
+  constexpr iterator operator++(int) {  // postfix
+    iterator old = *this;
+    ++*this;
+    return old;
+  }
+
+  constexpr BucketIterator operator*() const {
+    return BucketIterator(*table_, CurrentBucket(), CurrentHash());
+  }
+
+ private:
+  friend GnuHash;
+
+  constexpr uint32_t CurrentBucket() const { return i_ - table_->AbsoluteBucketChainStart(0); }
+
+  constexpr uint32_t CurrentHash() const {
+    return static_cast<uint32_t>(table_->tables_[i_ / kBucketsPerAddr] >> Shift(i_)) | 1;
+  }
+
+  const GnuHash* table_ = nullptr;
+  uint32_t i_ = -1;
+};
+
+template <typename Word, typename Addr>
+constexpr auto GnuHash<Word, Addr>::begin() const -> iterator {
+  iterator it;
+  it.table_ = this;
+  it.i_ = AbsoluteBucketChainStart(chain_index_bias_);
+  return it;
+}
+
+template <typename Word, typename Addr>
+constexpr auto GnuHash<Word, Addr>::end() const -> iterator {
+  iterator it;
+  it.table_ = this;
+  it.i_ = static_cast<uint32_t>(tables_.size() * kBucketsPerAddr);
+  return it;
+}
 
 }  // namespace elfldltl
 

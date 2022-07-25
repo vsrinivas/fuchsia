@@ -39,6 +39,8 @@ constexpr uint32_t kCompatNoHash = ~uint32_t{};
 template <typename Word>
 class CompatHash {
  public:
+  class iterator;
+
   class BucketIterator;
 
   constexpr explicit CompatHash(cpp20::span<const Word> table)
@@ -52,7 +54,7 @@ class CompatHash {
     return table.size() - 2 > nbucket && table.size() - 2 - nbucket >= nchain;
   }
 
-  constexpr uint32_t size() const { return static_cast<uint32_t>(chain_.size()); }
+  constexpr uint32_t symtab_size() const { return static_cast<uint32_t>(chain_.size()); }
 
   constexpr uint32_t Bucket(uint32_t hash) const {
     if (buckets_.empty()) [[unlikely]] {
@@ -60,6 +62,9 @@ class CompatHash {
     }
     return buckets_[hash % buckets_.size()];
   }
+
+  constexpr iterator begin() const;
+  constexpr iterator end() const;
 
  private:
   cpp20::span<const Word> buckets_, chain_;
@@ -117,6 +122,50 @@ class CompatHash<Word>::BucketIterator {
   uint32_t i_ = 0;
   uint32_t count_ = 0;
 };
+
+// Iterate over the hash buckets to yield a BucketIerator for each bucket.
+// Together this allows for exhaustive iteration over the whole table.
+template <typename Word>
+class CompatHash<Word>::iterator {
+ public:
+  constexpr bool operator==(const iterator& other) const { return it_ == other.it_; }
+  constexpr bool operator!=(const iterator& other) const { return it_ != other.it_; }
+
+  constexpr iterator& operator++() {  // prefix
+    ++it_;
+    return *this;
+  }
+
+  constexpr iterator operator++(int) {  // postfix
+    iterator old = *this;
+    ++*this;
+    return old;
+  }
+
+  constexpr BucketIterator operator*() const { return BucketIterator(*table_, *it_, 0); }
+
+ private:
+  friend CompatHash<Word>;
+
+  const CompatHash<Word>* table_ = nullptr;
+  typename cpp20::span<const Word>::iterator it_;
+};
+
+template <typename Word>
+constexpr auto CompatHash<Word>::begin() const -> iterator {
+  iterator it;
+  it.table_ = this;
+  it.it_ = buckets_.begin();
+  return it;
+}
+
+template <typename Word>
+constexpr auto CompatHash<Word>::end() const -> iterator {
+  iterator it;
+  it.table_ = this;
+  it.it_ = buckets_.end();
+  return it;
+}
 
 }  // namespace elfldltl
 

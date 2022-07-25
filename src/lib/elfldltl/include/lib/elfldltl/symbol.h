@@ -145,8 +145,8 @@ class SymbolInfo {
   // * `static bool Valid(span table);` returns true if the table is usable.
   //   If this returns true, it's safe to pass `table` to the constructor.
   //
-  // * `uint32_t size() const;` computes the maximum size of the symbol table.
-  //   This is not normally needed for plain lookups, and may be costly.
+  // * `uint32_t symtab_size() const;` computes the maximum size of the symbol
+  //   table.  This is not normally needed for plain lookups; it may be costly.
   //
   // * `uint32_t Bucket(uint32_t hash) const;` returns the hash bucket for
   //   symbol names with the given hash value.  Bucket number zero is invalid.
@@ -157,6 +157,13 @@ class SymbolInfo {
   //   a "begin" iterator for the hash bucket and a two-argument constructor
   //   that yields an "end" iterator for the hash bucket.  The iterator yields
   //   a nonzero uint32_t symbol table index.
+  //
+  // * `<some type> begin(); const` and `<some type> end(); const` return
+  //   iterators over the set of buckets, whose operator*() returns a
+  //   BucketIterator, such that iterating through from begin() to end() with
+  //   an inner iteration through each BucketIterator to its end state from
+  //   there exhaustively visits every symbol in the whole hash table exactly
+  //   once.  This is only used for diagnostic purposes.
   //
   using CompatHash = ::elfldltl::CompatHash<Word>;  // See compat-hash.h.
   using GnuHash = ::elfldltl::GnuHash<Word, Addr>;  // See gnu-hash.h.
@@ -169,8 +176,11 @@ class SymbolInfo {
     using iterator = typename HashTable::BucketIterator;
     using const_iterator = iterator;
 
+    constexpr explicit HashBucket(const HashTable& table, iterator first)
+        : begin_(first), end_(table) {}
+
     constexpr explicit HashBucket(const HashTable& table, uint32_t bucket, uint32_t hash)
-        : begin_(table, bucket, hash), end_(table) {}
+        : HashBucket(table, iterator(table, bucket, hash)) {}
 
     constexpr iterator begin() const { return begin_; }
     constexpr iterator end() const { return end_; }
@@ -314,13 +324,13 @@ class SymbolInfo {
 
     // The old format makes it very cheap to detect, so prefer that.
     if (CompatHash::Valid(compat_hash_)) {
-      size_t hash_max = CompatHash(compat_hash_).size();
+      size_t hash_max = CompatHash(compat_hash_).symtab_size();
       return std::min(symtab_.size(), hash_max);
     }
 
     // The DT_GNU_HASH format has to be fully scanned to determine the size.
     if (GnuHash::Valid(gnu_hash_)) {
-      size_t hash_max = GnuHash(gnu_hash_).size();
+      size_t hash_max = GnuHash(gnu_hash_).symtab_size();
       return std::min(symtab_.size(), hash_max);
     }
 

@@ -38,8 +38,8 @@ struct SymbolFuzzer {
   static void HashBucketFuzzer(std::optional<HashTable> table, T&& fuzz) {
     using HashBucket = typename SymbolInfo::template HashBucket<HashTable>;
     if (table) {
-      for (uint32_t i = 0; i < table->size(); ++i) {
-        for (uint32_t symndx : HashBucket(*table, i, i)) {
+      for (auto bucket : *table) {
+        for (uint32_t symndx : HashBucket(*table, bucket)) {
           fuzz(symndx);
         }
       }
