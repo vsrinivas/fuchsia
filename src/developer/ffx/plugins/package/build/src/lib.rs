@@ -8,6 +8,7 @@ use {
     ffx_core::ffx_plugin,
     fuchsia_pkg::{CreationManifest, PackageBuilder},
     std::{
+        collections::BTreeSet,
         fs::{create_dir_all, File},
         io::{BufReader, BufWriter, Write as _},
     },
@@ -77,18 +78,18 @@ pub fn cmd_package_build(cmd: BuildCommand) -> Result<()> {
 
         write!(file, "{}:", meta_far_path.display())?;
 
-        for entry in package_manifest.blobs() {
-            if entry.path == "meta/" {
-                continue;
-            }
+        let deps = creation_manifest
+            .far_contents()
+            .values()
+            .chain(creation_manifest.external_contents().values())
+            .collect::<BTreeSet<_>>();
 
+        for path in deps {
             // Spaces are separators, so spaces in filenames must be escaped.
-            let path = entry.source_path.replace(' ', "\\ ");
+            let path = path.replace(' ', "\\ ");
 
             write!(file, " {}", path)?;
         }
-
-        write!(file, " {}", package_manifest_path.display())?;
     }
 
     // FIXME(fxbug.dev/101304): Write out the meta.far.merkle file, that contains the meta.far
@@ -171,7 +172,7 @@ mod test {
         },
     };
 
-    fn read_far_contents(path: &Path) -> BTreeMap<String, String> {
+    fn read_meta_far_contents(path: &Path) -> BTreeMap<String, String> {
         let mut metafar = File::open(path).unwrap();
         let mut far_reader = fuchsia_archive::Utf8Reader::new(&mut metafar).unwrap();
         let far_paths = far_reader.list().map(|e| e.path().to_string()).collect::<Vec<_>>();
@@ -300,7 +301,7 @@ mod test {
         );
 
         assert_eq!(
-            read_far_contents(&out.join(META_FAR_NAME)),
+            read_meta_far_contents(&out.join(META_FAR_NAME)),
             BTreeMap::from([
                 ("meta/contents".into(), "".into()),
                 ("meta/package".into(), r#"{"name":"my-package","version":"0"}"#.into()),
@@ -387,7 +388,7 @@ mod test {
         );
 
         assert_eq!(
-            read_far_contents(&out.join(META_FAR_NAME)),
+            read_meta_far_contents(&out.join(META_FAR_NAME)),
             BTreeMap::from([
                 ("meta/contents".into(), "".into()),
                 ("meta/package".into(), r#"{"name":"my-package","version":"0"}"#.into()),
@@ -447,15 +448,15 @@ mod test {
         let creation_manifest_path = root.join("creation.manifest");
         let mut creation_manifest = File::create(&creation_manifest_path).unwrap();
 
-        let empty_file_path = root.join("file");
+        let empty_file_path = root.join("empty-file");
         File::create(&empty_file_path).unwrap();
 
         creation_manifest
             .write_all(
                 format!(
-                    "meta/package={}\nfile={}",
+                    "empty-file={}\nmeta/package={}\n",
+                    empty_file_path.display(),
                     meta_package_path.display(),
-                    empty_file_path.display()
                 )
                 .as_bytes(),
             )
@@ -499,14 +500,14 @@ mod test {
                 "blobs": [
                     {
                         "source_path": empty_file_path,
-                        "path": "file",
+                        "path": "empty-file",
                         "merkle": "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
                         "size": 0,
                     },
                     {
                         "source_path": meta_far_path,
                         "path": "meta/",
-                        "merkle": "d47274074069240dac0d540ccc7181167b5000d3616d054ae9cfcbf3f60e72ef",
+                        "merkle": "36dde5da0ed4a51433a3b45ed9917c98442613f4b12e0f9661519678482ab3e3",
                         "size": 16384,
                     },
                 ],
@@ -514,11 +515,11 @@ mod test {
         );
 
         assert_eq!(
-            read_far_contents(&meta_far_path),
+            read_meta_far_contents(&meta_far_path),
             BTreeMap::from([
                 (
                     "meta/contents".into(),
-                    "file=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n"
+                    "empty-file=15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b\n"
                         .into(),
                 ),
                 ("meta/package".into(), r#"{"name":"my-package","version":"0"}"#.into()),
@@ -550,15 +551,15 @@ mod test {
         let creation_manifest_path = root.join("creation.manifest");
         let mut creation_manifest = File::create(&creation_manifest_path).unwrap();
 
-        let empty_file_path = root.join("file");
+        let empty_file_path = root.join("empty-file");
         File::create(&empty_file_path).unwrap();
 
         creation_manifest
             .write_all(
                 format!(
-                    "meta/package={}\nfile={}",
+                    "empty-file={}\nmeta/package={}",
+                    empty_file_path.display(),
                     meta_package_path.display(),
-                    empty_file_path.display()
                 )
                 .as_bytes(),
             )
@@ -607,7 +608,7 @@ mod test {
                 "{}: {} {}",
                 meta_far_path.display(),
                 empty_file_path.display(),
-                package_manifest_path.display()
+                meta_package_path.display(),
             ),
         );
 
@@ -617,14 +618,14 @@ mod test {
             serde_json::json!([
                     {
                         "source_path": empty_file_path,
-                        "path": "file",
+                        "path": "empty-file",
                         "merkle": "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b",
                         "size": 0,
                     },
                     {
                         "source_path": meta_far_path,
                         "path": "meta/",
-                        "merkle": "d47274074069240dac0d540ccc7181167b5000d3616d054ae9cfcbf3f60e72ef",
+                        "merkle": "36dde5da0ed4a51433a3b45ed9917c98442613f4b12e0f9661519678482ab3e3",
                         "size": 16384,
                     },
                 ]
@@ -635,7 +636,7 @@ mod test {
             read_to_string(blobs_manifest_path).unwrap(),
             format!(
                 "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b={}\n\
-                d47274074069240dac0d540ccc7181167b5000d3616d054ae9cfcbf3f60e72ef={}\n",
+                36dde5da0ed4a51433a3b45ed9917c98442613f4b12e0f9661519678482ab3e3={}\n",
                 empty_file_path.display(),
                 meta_far_path.display(),
             )
