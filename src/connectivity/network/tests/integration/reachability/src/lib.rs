@@ -286,7 +286,7 @@ async fn configure_interface<'a>(
     }: InterfaceConfig,
 ) {
     // Add addresses.
-    futures::stream::iter(IntoIterator::into_iter([
+    futures::stream::iter([
         fnet::Subnet {
             addr: fnet::IpAddress::Ipv4(fnet::Ipv4Address { addr: addr_v4.ipv4_bytes() }),
             prefix_len: PREFIX_V4,
@@ -295,7 +295,7 @@ async fn configure_interface<'a>(
             addr: fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: addr_v6.ipv6_bytes() }),
             prefix_len: PREFIX_V6,
         },
-    ]))
+    ])
     .for_each_concurrent(None, |subnet| async move {
         let address_state_provider = interfaces::add_subnet_address_and_route_wait_assigned(
             iface,

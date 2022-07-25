@@ -115,7 +115,7 @@ async fn watcher_existing<N: Netstack>(name: &str) {
     let mut eps = Vec::new();
     let mut expectations = HashMap::new();
     for (idx, (has_default_ipv4_route, has_default_ipv6_route)) in
-        IntoIterator::into_iter([true, false]).cartesian_product([true, false]).enumerate()
+        [true, false].into_iter().cartesian_product([true, false]).enumerate()
     {
         // TODO(https://fxbug.dev/88796): Use TestRealm::join_network_with
         // https://fuchsia-docs.firebaseapp.com/rust/netemul/struct.TestRealm.html#method.join_network_with

@@ -1400,7 +1400,7 @@ mod tests {
     }
 
     fn shortlist_interfaces_by_nicid(name_pattern: &str) -> Vec<u64> {
-        let mut interfaces = IntoIterator::into_iter([
+        let mut interfaces = [
             get_fake_interface(
                 1,
                 "lo",
@@ -1443,7 +1443,8 @@ mod tests {
                 finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Wlan),
                 Some([2, 2, 3, 4, 5, 8]),
             ),
-        ])
+        ]
+        .into_iter()
         .map(|(properties, _): (_, Option<fnet::MacAddress>)| {
             let finterfaces_ext::Properties { id, .. } = &properties;
             (*id, properties)
@@ -1989,7 +1990,7 @@ mac             -
             })
             .try_flatten()
             .map(|res| res.expect("watcher stream error"));
-        let (interfaces, mac_addresses): (Vec<_>, HashMap<_, _>) = IntoIterator::into_iter([
+        let (interfaces, mac_addresses): (Vec<_>, HashMap<_, _>) = [
             get_fake_interface(
                 1,
                 "lo",
@@ -2008,7 +2009,8 @@ mac             -
                 finterfaces::DeviceClass::Device(fhardware_network::DeviceClass::Virtual),
                 None,
             ),
-        ])
+        ]
+        .into_iter()
         .map(|(properties, mac)| {
             let finterfaces_ext::Properties { id, .. } = &properties;
             let id = *id;

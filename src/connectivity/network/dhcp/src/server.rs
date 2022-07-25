@@ -1740,11 +1740,11 @@ pub mod tests {
         server: &Server<DS>,
     ) -> Message {
         let mut msg = new_server_message(message_type, client_message, server);
-        msg.options.extend(IntoIterator::into_iter([
+        msg.options.extend([
             DhcpOption::IpAddressLeaseTime(100),
             DhcpOption::RenewalTimeValue(50),
             DhcpOption::RebindingTimeValue(75),
-        ]));
+        ]);
         let () = add_server_options(&mut msg, server);
         msg
     }

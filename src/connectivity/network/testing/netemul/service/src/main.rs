@@ -1792,7 +1792,7 @@ mod tests {
             // TODO(https://fxbug.dev/72043): once we allow duplicate protocols, verify that a child
             // exposing duplicate protocols results in a ZX_ERR_INTERNAL epitaph.
         ];
-        for TestCase { name, children, epitaph } in IntoIterator::into_iter(cases) {
+        for TestCase { name, children, epitaph } in cases {
             let TestRealm { realm } = TestRealm::new(
                 &sandbox,
                 fnetemul::RealmOptions {

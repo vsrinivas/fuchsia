@@ -361,10 +361,11 @@ impl InformationRequesting {
             }
         }
 
-        let actions = IntoIterator::into_iter([
+        let actions = [
             Action::CancelTimer(ClientTimerType::Retransmission),
             Action::ScheduleTimer(ClientTimerType::Refresh, information_refresh_time),
-        ])
+        ]
+        .into_iter()
         .chain(dns_servers.clone().map(|server_addrs| Action::UpdateDnsServers(server_addrs)))
         .collect::<Vec<_>>();
 
@@ -3859,11 +3860,11 @@ mod tests {
     #[test]
     fn send_information_request_and_receive_reply() {
         // Try to start information request with different list of requested options.
-        for options in IntoIterator::into_iter([
+        for options in [
             Vec::new(),
             vec![v6::OptionCode::DnsServers],
             vec![v6::OptionCode::DnsServers, v6::OptionCode::DomainList],
-        ]) {
+        ] {
             let (mut client, actions) = ClientStateMachine::start_stateless(
                 [0, 1, 2],
                 options.clone(),
@@ -5778,7 +5779,7 @@ mod tests {
         assert!(client.handle_message_receive(msg, Instant::now()).is_empty());
 
         // Messages with unsupported/unexpected types are discarded.
-        for msg_type in IntoIterator::into_iter([
+        for msg_type in [
             v6::MessageType::Solicit,
             v6::MessageType::Advertise,
             v6::MessageType::Request,
@@ -5791,7 +5792,7 @@ mod tests {
             v6::MessageType::InformationRequest,
             v6::MessageType::RelayForw,
             v6::MessageType::RelayRepl,
-        ]) {
+        ] {
             let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
                 &client;
             let builder = v6::MessageBuilder::new(msg_type, *transaction_id, &[]);

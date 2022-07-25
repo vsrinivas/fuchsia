@@ -175,7 +175,7 @@ impl<T> IntoIterator for NeighborTableEntryIteratorItemVariants<T> {
 
     fn into_iter(self) -> Self::IntoIter {
         let Self { existing, added, changed, removed, idle } = self;
-        IntoIterator::into_iter([existing, added, changed, removed, idle])
+        [existing, added, changed, removed, idle].into_iter()
     }
 }
 

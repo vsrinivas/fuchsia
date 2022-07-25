@@ -47,7 +47,7 @@ fuchsia_test_package("dns-tests") {
 }
 
 bin_base = {
-  edition = "2018"
+  edition = "2021"
 
   deps = [
     ":lib",

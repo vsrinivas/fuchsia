@@ -832,7 +832,7 @@ fn create_ip_lookup_fut<T: ResolverLookup>(
                     if result.iter().all(Option::is_none) {
                         return Err(fname::LookupError::InvalidArgs);
                     }
-                    let (addrs, error) = IntoIterator::into_iter(result)
+                    let (addrs, error) = result.into_iter()
                         .filter_map(std::convert::identity)
                         .fold((Vec::new(), None), |(mut addrs, mut error), result| {
                             let () = match result {
@@ -1575,7 +1575,7 @@ mod tests {
             .run_lookup(|proxy| async move {
                 let proxy = &proxy;
 
-                let range = || IntoIterator::into_iter([true, false]);
+                let range = || [true, false].into_iter();
 
                 futures::stream::iter(range().cartesian_product(range()))
                     .for_each_concurrent(None, move |(ipv4_lookup, ipv6_lookup)| async move {

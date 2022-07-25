@@ -54,7 +54,8 @@ impl ServerParameters {
         if server_ips.is_empty() {
             return false;
         }
-        if IntoIterator::into_iter([pool_range_start, pool_range_stop])
+        if [pool_range_start, pool_range_stop]
+            .into_iter()
             .chain(server_ips.iter())
             .any(std::net::Ipv4Addr::is_unspecified)
         {

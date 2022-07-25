@@ -3450,7 +3450,7 @@ mod tests {
         fn default() -> Self {
             let remote_ips = vec![I::get_other_remote_ip_address(1)];
             DummyUdpCtx::with_ip_socket_ctx(DummyIpSocketCtx::new(
-                IntoIterator::into_iter(MultipleDevicesId::all()).enumerate().map(|(i, device)| {
+                MultipleDevicesId::all().into_iter().enumerate().map(|(i, device)| {
                     DummyDeviceConfig {
                         device,
                         local_ips: vec![I::get_other_ip_address((i + 1).try_into().unwrap())],

@@ -927,9 +927,10 @@ mod tests {
         for addr in conn_addrs.iter().cloned() {
             let _: Conn = bound.conns_mut().try_insert(addr, 1, 'a').unwrap();
         }
-        let expected_addrs = IntoIterator::into_iter(listener_addrs)
+        let expected_addrs = listener_addrs
+            .into_iter()
             .map(Into::into)
-            .chain(IntoIterator::into_iter(conn_addrs).map(Into::into))
+            .chain(conn_addrs.into_iter().map(Into::into))
             .collect::<HashSet<_>>();
 
         assert_eq!(expected_addrs, bound.iter_addrs().cloned().collect());

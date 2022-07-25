@@ -1382,7 +1382,7 @@ mod tests {
         const ADDR2: fnet::Subnet = net_declare::fidl_subnet!("192.168.1.1/24");
         const ADDR3: fnet::Subnet = net_declare::fidl_subnet!("192.168.1.2/24");
 
-        for addrs in IntoIterator::into_iter([ADDR1, ADDR2, ADDR3]).permutations(3) {
+        for addrs in [ADDR1, ADDR2, ADDR3].into_iter().permutations(3) {
             let producer = interface_sink
                 .add_interface(
                     IFACE1_ID,

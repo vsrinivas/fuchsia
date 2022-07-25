@@ -68,7 +68,7 @@ async fn no_ip_literal() {
     let name_lookup =
         realm.connect_to_protocol::<net_name::LookupMarker>().expect("connect to protocol");
 
-    let range = || IntoIterator::into_iter([true, false]);
+    let range = || [true, false].into_iter();
 
     let name_lookup = &name_lookup;
     futures::stream::iter(range().cartesian_product(range()))
