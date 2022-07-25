@@ -123,7 +123,6 @@ if (toolchain_variant.base == "//zircon/system/ulib/c:user.libc_$target_cpu") {
       "src/thread",
       "src/time",
       "src/unistd",
-      "third_party/smoothsort",
       "third_party/tre",
     ]
   }

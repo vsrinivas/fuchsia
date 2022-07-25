@@ -10,6 +10,7 @@ llvm_libc_source_set("stdlib") {
     "atoi",
     "atol",
     "atoll",
+    "bsearch",
     "div",
     "labs",
     "ldiv",
@@ -19,5 +20,6 @@ llvm_libc_source_set("stdlib") {
     "strtoll",
     "strtoul",
     "strtoull",
+    "qsort",
   ]
 }

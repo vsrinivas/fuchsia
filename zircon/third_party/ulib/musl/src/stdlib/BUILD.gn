@@ -6,7 +6,6 @@ source_set("stdlib") {
   deps = [ "//zircon/third_party/ulib/musl:musl_internal" ]
   sources = [
     "atof.c",
-    "bsearch.c",
     "ecvt.c",
     "fcvt.c",
     "gcvt.c",
