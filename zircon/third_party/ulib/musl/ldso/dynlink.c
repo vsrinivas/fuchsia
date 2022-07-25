@@ -133,7 +133,7 @@ static struct dso ldso, vdso;
 static struct dso *head, *tail, *fini_head;
 static struct dso* detached_head;
 static unsigned long long gencnt;
-static int runtime __asm__("_dynlink_runtime") __ALWAYS_EMIT;
+int runtime __asm__("_dynlink_runtime") __ALWAYS_EMIT __attribute__((__visibility__("hidden")));
 static int ldso_fail;
 static jmp_buf* rtld_fail;
 static pthread_rwlock_t lock;
@@ -2755,43 +2755,20 @@ void _dl_locked_report_globals(sanitizer_memory_snapshot_callback_t* callback, v
 // .weakref chicanery, the _dynlink_sancov_* symbols must be in a separate
 // assembly file.
 
+#include "hwasan-stubs.h"
 #include "sancov-stubs.h"
+#include "sanitizer-stubs.h"
 
-#define SANCOV_STUB(name) SANCOV_STUB_ASM(#name)
-#define SANCOV_STUB_ASM(name)                                                       \
-  __asm__(".weakref __sanitizer_cov_" name ", _dynlink_sancov_trampoline_" name     \
-          "\n"                                                                      \
-          ".hidden _dynlink_sancov_" name                                           \
-          "\n"                                                                      \
-          ".pushsection .text._dynlink_sancov_trampoline_" name                     \
-          ",\"ax\",%progbits\n"                                                     \
-          ".local _dynlink_sancov_trampoline_" name                                 \
-          "\n"                                                                      \
-          ".type _dynlink_sancov_trampoline_" name                                  \
-          ",%function\n"                                                            \
-          "_dynlink_sancov_trampoline_" name                                        \
-          ":\n" SANCOV_STUB_ASM_BODY(name) ".size _dynlink_sancov_trampoline_" name \
-                                           ", . - _dynlink_sancov_trampoline_" name \
-                                           "\n"                                     \
-                                           ".popsection");
-
-#ifdef __x86_64__
-#define SANCOV_STUB_ASM_BODY(name)    \
-  "cmpl $0, _dynlink_runtime(%rip)\n" \
-  "jne _dynlink_sancov_" name         \
-  "\n"                                \
-  "ret\n"
-#elif defined(__aarch64__)
-#define SANCOV_STUB_ASM_BODY(name)            \
-  "adrp x16, _dynlink_runtime\n"              \
-  "ldr w16, [x16, #:lo12:_dynlink_runtime]\n" \
-  "cbnz w16, _dynlink_sancov_" name           \
-  "\n"                                        \
-  "ret\n"
-#else
-#error unsupported architecture
-#endif
+#define SANCOV_STUB(name) SANCOV_STUB_ASM("__sanitizer_cov_" #name)
+#define SANCOV_STUB_ASM(name) SANITIZER_STUB_ASM(name, SANITIZER_STUB_ASM_BODY(name))
 
 SANCOV_STUBS
+
+#if __has_feature(hwaddress_sanitizer)
+// HWASan stubs are needed here also to elide PLT relocations made during startup.
+#define HWASAN_STUB(name) HWASAN_STUB_ASM("__hwasan_" #name)
+#define HWASAN_STUB_ASM(name) SANITIZER_STUB_ASM(name, SANITIZER_STUB_ASM_BODY(name))
+HWASAN_STUBS
+#endif  // __has_feature(hwaddress_sanitizer)
 
 #endif

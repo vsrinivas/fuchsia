@@ -129,6 +129,19 @@ __NO_SAFESTACK static thrd_t copy_tls(unsigned char* mem, size_t alloc) {
   return td;
 }
 
+#if __has_feature(hwaddress_sanitizer)
+// Define stubs here for hwasan functions that call into the runtime. We want
+// to intercept runtime calls here because the hwasan runtime is instrumented
+// with shadow call stack, but x18 may not yet be setup so accessing it can
+// result in a page fault. To avoid calling into the runtime, we can define a
+// local stub that will instead be called into which can be empty.
+#include "hwasan-stubs.h"
+#include "sanitizer-stubs.h"
+#define HWASAN_STUB(name) HWASAN_STUB_ASM("__hwasan_" #name)
+#define HWASAN_STUB_ASM(name) SANITIZER_STUB_ASM(name, SANITIZER_STUB_ASM_BODY(name))
+HWASAN_STUBS
+#endif  // __has_feature(hwaddress_sanitizer)
+
 __NO_SAFESTACK static bool map_block(zx_handle_t parent_vmar, zx_handle_t vmo, size_t vmo_offset,
                                      size_t size, size_t before, size_t after,
                                      struct iovec* mapping, struct iovec* region) {

@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/zircon-internal/unique-backtrace.h>
-
-// This will include the hwasan interface.
-#include "asan_impl.h"
+#include <zircon/compiler.h>
 
 // In the HWASan build, this file provides weak definitions for all the
 // same entry points that are defined by the HWASan runtime library.
@@ -41,5 +39,14 @@ HWASAN_TRAP_STUB(load4)
 HWASAN_TRAP_STUB(load8)
 HWASAN_TRAP_STUB(load16)
 HWASAN_TRAP_STUB(tag_mismatch_v2)
+
+// This is instrumented by hwasan into the prologue of every function. Its
+// purpose is to add stack information to a thread-local ring buffer in the
+// hwasan runtime. This information is used during error reporting to check if
+// an access is being made to the stack within a particular function frame.
+// This particular stub needs to be empty since it will be called many times
+// before the runtime has been loaded. Additionally, if hwasan were to find an
+// actual bug, we should end up crashing in one of the trap stubs above.
+extern "C" __EXPORT __WEAK __NO_SAFESTACK void __hwasan_add_frame_record(void) {}
 
 #endif  // __has_feature(hwaddress_sanitizer)

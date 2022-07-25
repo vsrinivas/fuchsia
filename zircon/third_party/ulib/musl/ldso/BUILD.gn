@@ -12,6 +12,7 @@ source_set("ldso") {
   ]
   sources = [
     "//zircon/third_party/ulib/musl/arch/${clang_cpu}/dl-entry.S",
+    "dynlink-hwasan.S",
     "dynlink-sancov.S",
     "dynlink.c",
   ]
