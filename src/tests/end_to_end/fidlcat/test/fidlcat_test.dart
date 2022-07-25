@@ -64,7 +64,6 @@ class RunFidlcat {
   static Future<void> tearDown() async {
     _ffxProcess.kill();
     await _ffxProcess.exitCode;
-    await File(_socketPath).delete();
   }
 
   Future<int> run(Sl4f sl4fDriver, List<String> extraArguments) async {

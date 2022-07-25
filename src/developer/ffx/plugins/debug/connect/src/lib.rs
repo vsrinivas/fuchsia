@@ -4,15 +4,23 @@
 
 use {
     anyhow::Result,
+    async_io::Async,
     errors::{ffx_bail, ffx_error},
     fuchsia_async::unblock,
-    signal_hook::consts::signal::SIGINT,
+    futures_util::future::FutureExt,
+    futures_util::io::AsyncReadExt,
+    signal_hook::{
+        consts::signal::{SIGINT, SIGTERM},
+        low_level::pipe,
+    },
     std::ffi::OsStr,
+    std::os::unix::net::UnixStream,
     std::process::Command,
     std::sync::{atomic::AtomicBool, Arc},
 };
 
 mod debug_agent;
+
 pub use debug_agent::DebugAgentSocket;
 
 #[ffx_core::ffx_plugin(
@@ -22,19 +30,44 @@ pub async fn connect(
     debugger_proxy: fidl_fuchsia_debugger::DebugAgentProxy,
     cmd: ffx_debug_connect_args::ConnectCommand,
 ) -> Result<()> {
-    if let Err(e) = symbol_index::ensure_symbol_index_registered().await {
-        eprintln!("ensure_symbol_index_registered failed, error was: {:#?}", e);
-    }
-
     let socket = DebugAgentSocket::create(debugger_proxy)?;
 
     if cmd.agent_only {
         println!("{}", socket.unix_socket_path().display());
-        loop {
-            let _ = socket.forward_one_connection().await.map_err(|e| {
-                eprintln!("Connection to debug_agent broken: {}", e);
-            });
-        }
+
+        // We have to construct these Async objects ourselves instead of using
+        // async_net::UnixStream to force the use of std::os::unix::UnixStream,
+        // which implements IntoRawFd - a requirement for the pipe::register
+        // calls below.
+        let (mut sigterm_receiver, sigterm_sender) = Async::<UnixStream>::pair()?;
+        let (mut sigint_receiver, sigint_sender) = Async::<UnixStream>::pair()?;
+
+        // Note: This does not remove the non-blocking nature of Async from the
+        // UnixStream objects or file descriptors.
+        pipe::register(SIGTERM, sigterm_sender.into_inner()?)?;
+        pipe::register(SIGINT, sigint_sender.into_inner()?)?;
+
+        let _forward_task = fuchsia_async::Task::local(async move {
+            loop {
+                let _ = socket.forward_one_connection().await.map_err(|e| {
+                    eprintln!("Connection to debug_agent broken: {}", e);
+                });
+            }
+        });
+
+        let mut sigterm_buf = [0u8; 4];
+        let mut sigint_buf = [0u8; 4];
+
+        futures::select! {
+            res = sigterm_receiver.read(&mut sigterm_buf).fuse() => res?,
+            res = sigint_receiver.read(&mut sigint_buf).fuse() => res?,
+        };
+
+        return Ok(());
+    }
+
+    if let Err(e) = symbol_index::ensure_symbol_index_registered().await {
+        eprintln!("ensure_symbol_index_registered failed, error was: {:#?}", e);
     }
 
     let sdk = ffx_config::get_sdk().await?;
