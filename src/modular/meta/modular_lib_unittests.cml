@@ -16,7 +16,6 @@
             protocol: [
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Launcher",
-                "fuchsia.sys.Loader",
             ],
         },
         {

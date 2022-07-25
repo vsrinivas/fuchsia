@@ -17,7 +17,6 @@
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.process.Launcher",
-                "fuchsia.sys.Loader",
             ],
         },
     ],

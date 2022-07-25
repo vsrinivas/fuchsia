@@ -13,10 +13,7 @@
     },
     use: [
         {
-            protocol: [
-                "fuchsia.sys.Environment",
-                "fuchsia.sys.Loader",
-            ],
+            protocol: [ "fuchsia.sys.Environment" ],
         },
         {
             storage: "data",

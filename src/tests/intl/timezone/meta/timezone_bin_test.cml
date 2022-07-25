@@ -151,7 +151,6 @@
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.process.Launcher",
                 "fuchsia.sys.Launcher",
-                "fuchsia.sys.Loader",
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",

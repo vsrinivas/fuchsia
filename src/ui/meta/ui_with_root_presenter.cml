@@ -99,7 +99,6 @@
             protocol: [
                 "fuchsia.media.sounds.Player",
                 "fuchsia.recovery.FactoryReset",
-                "fuchsia.sys.Loader",
             ],
             from: "parent",
             to: [ "#root_presenter" ],

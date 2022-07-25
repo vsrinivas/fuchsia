@@ -12,11 +12,6 @@
         binary: "bin/inspect_unittest_exe",
     },
     use: [
-        {
-            protocol: [
-                "fuchsia.process.Launcher",
-                "fuchsia.sys.Loader",
-            ],
-        },
+        { protocol: "fuchsia.process.Launcher" },
     ],
 }
