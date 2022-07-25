@@ -228,7 +228,7 @@ The methods are summarized here and explained in full below.
 Update your component's code and manifest while retaining resources with:
 
 ```posix-terminal
-$ ffx component reload {{ '<var label="moniker">TARGET_MONIKER</var>' }}
+ffx component reload {{ '<var label="moniker">TARGET_MONIKER</var>' }}
 ```
 
 This command will first shut down the component, then reload and restart it. The
@@ -248,7 +248,7 @@ device/emulator.
 To fully reload the component and drop acquired resources, you can first destroy
 the existing component instance, then restart it. Use:
 
-```posix-terminal
+```none {:.devsite-disable-click-to-copy}
 $ ffx component destroy {{ '<var label="moniker">TARGET_MONIKER</var>' }}
 $ ffx component create {{ '<var label="moniker">TARGET_MONIKER</var>' }} {{ '<var label="url">COMPONENT_URL</var>' }}
 $ ffx component start {{ '<var label="moniker">TARGET_MONIKER</var>' }}
@@ -265,7 +265,7 @@ A convenient command that is analogous to the destroy/create/start sequence is
 the `run` command with `--recreate`:
 
 ```posix-terminal
-$ ffx component run {{ '<var label="url">COMPONENT_URL</var>' }} --recreate
+ffx component run {{ '<var label="url">COMPONENT_URL</var>' }} --recreate
 ```
 
 Note however that this command has limited applicability because it can only be
@@ -277,7 +277,7 @@ collection.
 Although it's not primarily a way to do updates, a side effect of just stopping,
 then starting your component is that it will be partially updated.
 
-```posix-terminal
+```none {:.devsite-disable-click-to-copy}
 $ ffx component stop {{ '<var label="moniker">TARGET_MONIKER</var>' }}
 $ ffx component start {{ '<var label="moniker">TARGET_MONIKER</var>' }}
 ```
