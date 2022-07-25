@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::pbm::make_configs;
+use crate::{editor::edit_configuration, pbm::make_configs};
 use anyhow::Result;
 use errors::ffx_bail;
 use ffx_core::ffx_plugin;
@@ -13,6 +13,7 @@ use ffx_emulator_start_args::StartCommand;
 use fidl_fuchsia_developer_ffx::TargetCollectionProxy;
 use std::str::FromStr;
 
+mod editor;
 mod pbm;
 
 #[ffx_plugin(TargetCollectionProxy = "daemon::protocol")]
@@ -43,6 +44,12 @@ pub async fn start(cmd: StartCommand, proxy: TargetCollectionProxy) -> Result<()
 
     if let Err(e) = engine.stage().await {
         ffx_bail!("{:?}", e.context("Problem staging to the emulator's instance directory."));
+    }
+
+    if cmd.edit {
+        if let Err(e) = edit_configuration(engine.emu_config_mut()) {
+            ffx_bail!("{:?}", e.context("Problem editing configuration."));
+        }
     }
 
     let emulator_cmd = engine.build_emulator_cmd();

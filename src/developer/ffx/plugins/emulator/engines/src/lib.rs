@@ -18,6 +18,7 @@ use ffx_emulator_common::{
     config::FfxConfigWrapper,
     instances::{get_instance_dir, SERIALIZE_FILE_NAME},
 };
+use ffx_emulator_config::FlagData;
 use ffx_emulator_config::{
     DeviceConfig, EmulatorConfiguration, EmulatorEngine, EngineType, GuestConfig, HostConfig,
     RuntimeConfig,
@@ -158,4 +159,10 @@ impl EngineBuilder {
         engine.validate()?;
         Ok(engine)
     }
+}
+
+// Given the string representation of a flag template, apply the provided configuration to resolve
+// the template into a FlagData object.
+pub fn process_flags_from_str(text: &str, emu_config: &EmulatorConfiguration) -> Result<FlagData> {
+    arg_templates::process_flags_from_str(text, emu_config)
 }

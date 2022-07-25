@@ -57,6 +57,10 @@ pub struct StartCommand {
     #[argh(switch)]
     pub dry_run: bool,
 
+    /// open the user's default editor to modify the command line flags for the emulator.
+    #[argh(switch)]
+    pub edit: bool,
+
     /// emulation engine to use for this instance. Allowed values are "femu" which is based on
     /// Android Emulator, and "qemu" which uses the version of Qemu packaged with Fuchsia. Default
     /// is "femu". This can be overridden by running `ffx config set emu.engine <type>`.

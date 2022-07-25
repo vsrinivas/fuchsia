@@ -25,10 +25,12 @@ if (is_host) {
       "//src/developer/ffx/plugins/emulator/engines:ffx_emulator_engines",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:regex",
+      "//third_party/rust_crates:serde_json",
       "//third_party/rust_crates:tracing",
     ]
     args_sources = [ "src/args.rs" ]
     sources = [
+      "src/editor.rs",
       "src/lib.rs",
       "src/pbm.rs",
     ]
