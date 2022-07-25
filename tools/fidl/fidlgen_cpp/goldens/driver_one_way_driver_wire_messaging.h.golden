@@ -168,15 +168,16 @@ static_assert(offsetof(::fidl::WireRequest<::test_driveroneway::OneWay::Send>, p
 }  // namespace fidl
 
 template <>
-class [[nodiscard]] ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send> final : public ::fidl::Status {
+class [[nodiscard]] ::fdf::WireUnownedResult<::test_driveroneway::OneWay::Send> final : public ::fidl::BaseWireResult<::test_driveroneway::OneWay::Send> {
  public:
   explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_driveroneway::OneWay> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_driveroneway::OneWay::Send>* request);
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_driveroneway::OneWay::Send>(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_driveroneway::OneWay> : public ::fidl::internal::BaseEventHandlerInterface {

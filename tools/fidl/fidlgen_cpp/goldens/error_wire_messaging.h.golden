@@ -333,93 +333,56 @@ struct ::fidl::internal::IncomingEventsStorage<::test_error::Example> final : pu
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireResult<::test_error::Example::Foo> final : public ::fidl::Status {
+struct ::fidl::internal::WireResultUnwrap<::test_error::Example::Foo> {
+  using Type = ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>;
+};
+
+template <>
+class [[nodiscard]] ::fidl::WireResult<::test_error::Example::Foo> final : public ::fidl::BaseWireResult<::test_error::Example::Foo> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_error::Example> client,
       ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>* request, std::optional<zx::time> deadline = std::nullopt);
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_error::Example::Foo>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* Unwrap() {
-    return &result_.value();
-  }
-  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* Unwrap() const {
-    return &result_.value();
-  }
-
-  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value() { return *Unwrap(); }
-  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* operator->() { return &value(); }
-  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* operator->() const { return &value(); }
-
-  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& operator*() { return value(); }
-  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
   ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> decoded_;
-  std::optional<::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>> result_ = std::nullopt;
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_error::Example::Foo> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_error::Example::Foo> final : public ::fidl::BaseWireResult<::test_error::Example::Foo> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_error::Example> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_error::Example::Foo>* request);
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_error::Example::Foo>* response)
-      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
-    auto* raw_response = &decoded_.Value()->body;
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
+      : ::fidl::BaseWireResult<::test_error::Example::Foo>(fidl::Status::Ok()), decoded_(response) {
+    ExtractValueFromDecoded(decoded_.Value());
   }
 
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view) : fidl::Status(decoded) {
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_error::Example::Foo>(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
-      auto* raw_response = &decoded_.Value()->body;
-      if (raw_response->result.is_err()) {
-        result_ = fitx::error(raw_response->result.err());
-      } else if (raw_response->result.is_response()) {
-        result_ = fitx::ok(&(raw_response->result.response()));
-      }
+      ExtractValueFromDecoded(decoded_.Value());
     }
   }
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_error::Example::Foo>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* Unwrap() {
-    return &result_.value();
-  }
-  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* Unwrap() const {
-    return &result_.value();
-  }
-
-  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value() { return *Unwrap(); }
-  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* operator->() { return &value(); }
-  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>* operator->() const { return &value(); }
-
-  ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& operator*() { return value(); }
-  const ::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_error::Example::Foo>> decoded_;
-  std::optional<::fitx::result<uint32_t, ::test_error::wire::ExampleFooResponse*>> result_ = std::nullopt;
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_error::Example> : public ::fidl::internal::BaseEventHandlerInterface {

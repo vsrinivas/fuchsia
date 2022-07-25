@@ -204,6 +204,8 @@ var (
 	WireEvent               = fidlNs.member("WireEvent")
 	WireResult              = fidlNs.member("WireResult")
 	WireUnownedResult       = transportNs.member("WireUnownedResult")
+	BaseWireResult          = fidlNs.member("BaseWireResult")
+	WireResultUnwrap        = internalNs.member("WireResultUnwrap")
 	WireResponseContext     = fidlNs.member("WireResponseContext")
 	WireCompleter           = internalNs.member("WireCompleter")
 	WireBufferCompleterImpl = internalNs.member("WireBufferCompleterImpl")
@@ -549,6 +551,8 @@ type wireMethod struct {
 	WireTransactionalResponse name
 	WireResult                name
 	WireUnownedResult         name
+	BaseWireResult            name
+	WireResultUnwrap          name
 	WireThenable              name
 	WireBufferThenable        name
 }
@@ -574,6 +578,8 @@ func newWireMethod(name string, wireTypes wireTypeNames, protocolMarker name, me
 		WireTransactionalResponse: TransactionalResponse.template(methodMarker),
 		WireResult:                WireResult.template(methodMarker),
 		WireUnownedResult:         WireUnownedResult.template(methodMarker),
+		BaseWireResult:            BaseWireResult.template(methodMarker),
+		WireResultUnwrap:          WireResultUnwrap.template(methodMarker),
 		WireThenable:              WireThenable.template(methodMarker),
 		WireBufferThenable:        WireBufferThenable.template(methodMarker),
 	}
@@ -722,6 +728,31 @@ func (m Method) HasTransportError() bool {
 	return m.Result != nil && m.Result.HasTransportError
 }
 
+// Returns true if the payload (user-specified return type) of the method is
+// non-empty. For a strict method without error syntax, the payload is the same
+// as ResponsePayload. For a flexible method or one with error syntax, the
+// payload is the value of the success variant of the method.
+//
+// Note this naming different from the naming of HasResponsePayload and
+// ResponsePayload. It is part of an ongoing change, see
+// https://fxbug.dev/90118.
+func (m Method) HasNonEmptyPayload() bool {
+	if m.HasResponsePayload {
+		if m.Result == nil {
+			// If there's a payload but no result type, then it must be
+			// non-empty (either a struct with fields or a union/table).
+			return true
+		}
+		// If there is a result type, the value type is non-empty if there are
+		// ValueParameters. For union/table return value, the parameters is just
+		// the union/table. For struct, ValueParameters is the fields of the
+		// struct, so if it is zero, then it's an empty struct.
+		return len(m.Result.ValueParameters) > 0
+	}
+	// No payload means an empty return value spec 'Method(...) -> ()'
+	return false
+}
+
 // Returns true if the method has a response that requires the server to provide
 // arguments to the response completer in order to reply.
 //
@@ -773,21 +804,7 @@ func (m Method) NaturalResultBase() string {
 	}
 }
 
-func (m Method) HasWireResultBase() bool {
-	if m.Result != nil {
-		if m.Result.HasError {
-			return true
-		}
-		if len(m.Result.ValueParameters) > 0 {
-			return true
-		}
-	} else if len(m.ResponseArgs) > 0 {
-		return true
-	}
-	return false
-}
-
-func (m Method) WireResultBase() string {
+func (m Method) WireResultUnwrapType() string {
 	if m.Result != nil {
 		if m.Result.HasError {
 			if len(m.Result.ValueParameters) > 0 {
@@ -799,14 +816,14 @@ func (m Method) WireResultBase() string {
 			if len(m.Result.ValueParameters) > 0 {
 				return m.Result.ValueTypeDecl.String()
 			} else {
-				panic("Cannot call WireResultBase on an empty response payload")
+				return ""
 			}
 		}
 	}
 	if len(m.ResponseArgs) > 0 {
 		return m.WireResponse.String()
 	}
-	panic("Cannot call WireResultBase on an empty response payload")
+	return ""
 }
 
 func (m Method) WireReplyArgs(params ...interface{}) string {

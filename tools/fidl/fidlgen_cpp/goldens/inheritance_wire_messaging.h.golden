@@ -331,35 +331,23 @@ struct ::fidl::internal::IncomingEventsStorage<::test_inheritance::Super> final 
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireResult<::test_inheritance::Super::Foo> final : public ::fidl::Status {
+struct ::fidl::internal::WireResultUnwrap<::test_inheritance::Super::Foo> {
+  using Type = ::fidl::WireResponse<::test_inheritance::Super::Foo>;
+};
+
+template <>
+class [[nodiscard]] ::fidl::WireResult<::test_inheritance::Super::Foo> final : public ::fidl::BaseWireResult<::test_inheritance::Super::Foo> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_inheritance::Super> client,
       ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>* request, std::optional<zx::time> deadline = std::nullopt);
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_inheritance::Super::Foo>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-  ::fidl::WireResponse<::test_inheritance::Super::Foo>* Unwrap() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_inheritance::Super::Foo>* Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
-  ::fidl::WireResponse<::test_inheritance::Super::Foo>& value() { return *Unwrap(); }
-  const ::fidl::WireResponse<::test_inheritance::Super::Foo>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_inheritance::Super::Foo>* operator->() { return &value(); }
-  const ::fidl::WireResponse<::test_inheritance::Super::Foo>* operator->() const { return &value(); }
-
-  ::fidl::WireResponse<::test_inheritance::Super::Foo>& operator*() { return value(); }
-  const ::fidl::WireResponse<::test_inheritance::Super::Foo>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
@@ -367,44 +355,29 @@ class [[nodiscard]] ::fidl::WireResult<::test_inheritance::Super::Foo> final : p
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_inheritance::Super::Foo> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_inheritance::Super::Foo> final : public ::fidl::BaseWireResult<::test_inheritance::Super::Foo> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_inheritance::Super> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_inheritance::Super::Foo>* request);
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>* response)
-      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+      : ::fidl::BaseWireResult<::test_inheritance::Super::Foo>(fidl::Status::Ok()), decoded_(response) {
+    ExtractValueFromDecoded(decoded_.Value());
   }
 
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view) : fidl::Status(decoded) {
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_inheritance::Super::Foo>(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
+      ExtractValueFromDecoded(decoded_.Value());
     }
   }
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_inheritance::Super::Foo>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-  ::fidl::WireResponse<::test_inheritance::Super::Foo>* Unwrap() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_inheritance::Super::Foo>* Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
-  ::fidl::WireResponse<::test_inheritance::Super::Foo>& value() { return *Unwrap(); }
-  const ::fidl::WireResponse<::test_inheritance::Super::Foo>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_inheritance::Super::Foo>* operator->() { return &value(); }
-  const ::fidl::WireResponse<::test_inheritance::Super::Foo>* operator->() const { return &value(); }
-
-  ::fidl::WireResponse<::test_inheritance::Super::Foo>& operator*() { return value(); }
-  const ::fidl::WireResponse<::test_inheritance::Super::Foo>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_inheritance::Super::Foo>> decoded_;
@@ -849,35 +822,23 @@ struct ::fidl::internal::IncomingEventsStorage<::test_inheritance::Sub> final : 
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireResult<::test_inheritance::Sub::Foo> final : public ::fidl::Status {
+struct ::fidl::internal::WireResultUnwrap<::test_inheritance::Sub::Foo> {
+  using Type = ::fidl::WireResponse<::test_inheritance::Sub::Foo>;
+};
+
+template <>
+class [[nodiscard]] ::fidl::WireResult<::test_inheritance::Sub::Foo> final : public ::fidl::BaseWireResult<::test_inheritance::Sub::Foo> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_inheritance::Sub> client,
       ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>* request, std::optional<zx::time> deadline = std::nullopt);
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_inheritance::Sub::Foo>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-  ::fidl::WireResponse<::test_inheritance::Sub::Foo>* Unwrap() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_inheritance::Sub::Foo>* Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
-  ::fidl::WireResponse<::test_inheritance::Sub::Foo>& value() { return *Unwrap(); }
-  const ::fidl::WireResponse<::test_inheritance::Sub::Foo>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_inheritance::Sub::Foo>* operator->() { return &value(); }
-  const ::fidl::WireResponse<::test_inheritance::Sub::Foo>* operator->() const { return &value(); }
-
-  ::fidl::WireResponse<::test_inheritance::Sub::Foo>& operator*() { return value(); }
-  const ::fidl::WireResponse<::test_inheritance::Sub::Foo>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
@@ -885,44 +846,29 @@ class [[nodiscard]] ::fidl::WireResult<::test_inheritance::Sub::Foo> final : pub
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_inheritance::Sub::Foo> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_inheritance::Sub::Foo> final : public ::fidl::BaseWireResult<::test_inheritance::Sub::Foo> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_inheritance::Sub> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_inheritance::Sub::Foo>* request);
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>* response)
-      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+      : ::fidl::BaseWireResult<::test_inheritance::Sub::Foo>(fidl::Status::Ok()), decoded_(response) {
+    ExtractValueFromDecoded(decoded_.Value());
   }
 
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view) : fidl::Status(decoded) {
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_inheritance::Sub::Foo>(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
+      ExtractValueFromDecoded(decoded_.Value());
     }
   }
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_inheritance::Sub::Foo>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-  ::fidl::WireResponse<::test_inheritance::Sub::Foo>* Unwrap() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_inheritance::Sub::Foo>* Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
-  ::fidl::WireResponse<::test_inheritance::Sub::Foo>& value() { return *Unwrap(); }
-  const ::fidl::WireResponse<::test_inheritance::Sub::Foo>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_inheritance::Sub::Foo>* operator->() { return &value(); }
-  const ::fidl::WireResponse<::test_inheritance::Sub::Foo>* operator->() const { return &value(); }
-
-  ::fidl::WireResponse<::test_inheritance::Sub::Foo>& operator*() { return value(); }
-  const ::fidl::WireResponse<::test_inheritance::Sub::Foo>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_inheritance::Sub::Foo>> decoded_;

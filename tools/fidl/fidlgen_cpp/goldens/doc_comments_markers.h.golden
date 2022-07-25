@@ -27,6 +27,10 @@ class Interface final {
     using Protocol = ::test_doccomments::Interface;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   /// event comment #1
   ///
@@ -38,6 +42,10 @@ class Interface final {
     using Protocol = ::test_doccomments::Interface;
     static constexpr bool kHasRequest = false;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
 };
 }  // namespace test_doccomments

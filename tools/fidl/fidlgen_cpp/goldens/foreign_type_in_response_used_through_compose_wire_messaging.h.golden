@@ -300,35 +300,23 @@ struct ::fidl::internal::IncomingEventsStorage<::test_foreigntypeinresponseusedt
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> final : public ::fidl::Status {
+struct ::fidl::internal::WireResultUnwrap<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> {
+  using Type = ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>;
+};
+
+template <>
+class [[nodiscard]] ::fidl::WireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> final : public ::fidl::BaseWireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_foreigntypeinresponseusedthroughcompose::Top> client,
       ::fidl::internal::TransactionalRequest<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* request, std::optional<zx::time> deadline = std::nullopt);
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-  ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* Unwrap() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
-  ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>& value() { return *Unwrap(); }
-  const ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* operator->() { return &value(); }
-  const ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* operator->() const { return &value(); }
-
-  ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>& operator*() { return value(); }
-  const ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
@@ -336,44 +324,29 @@ class [[nodiscard]] ::fidl::WireResult<::test_foreigntypeinresponseusedthroughco
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> final : public ::fidl::BaseWireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_foreigntypeinresponseusedthroughcompose::Top> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* request);
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* response)
-      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+      : ::fidl::BaseWireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(fidl::Status::Ok()), decoded_(response) {
+    ExtractValueFromDecoded(decoded_.Value());
   }
 
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view) : fidl::Status(decoded) {
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
+      ExtractValueFromDecoded(decoded_.Value());
     }
   }
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-  ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* Unwrap() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
-  ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>& value() { return *Unwrap(); }
-  const ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* operator->() { return &value(); }
-  const ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>* operator->() const { return &value(); }
-
-  ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>& operator*() { return value(); }
-  const ::fidl::WireResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_foreigntypeinresponseusedthroughcompose::Top::GetFoo>> decoded_;

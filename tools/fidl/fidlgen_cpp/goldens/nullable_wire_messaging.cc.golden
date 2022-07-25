@@ -29,6 +29,8 @@ extern "C" const fidl_type_t test_nullable_SimpleProtocolAddTopResponseTable;
   SetStatus(decoded);
   if (ok()) {
     decoded_ = decoded.Take();
+
+    ExtractValueFromDecoded(decoded_.Value());
   }
 }
 namespace test_nullable {
@@ -62,6 +64,8 @@ namespace test_nullable {
   SetStatus(decoded);
   if (ok()) {
     decoded_ = decoded.Take();
+
+    ExtractValueFromDecoded(decoded_.Value());
   }
 }
 namespace test_nullable {

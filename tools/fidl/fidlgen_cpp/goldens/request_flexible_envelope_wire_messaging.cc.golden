@@ -37,6 +37,8 @@ extern "C" const fidl_type_t test_requestflexibleenvelope_ProtocolRequestFlexibl
   SetStatus(decoded);
   if (ok()) {
     decoded_ = decoded.Take();
+
+    ExtractValueFromDecoded(decoded_.Value());
   }
 }
 namespace test_requestflexibleenvelope {
@@ -70,6 +72,8 @@ namespace test_requestflexibleenvelope {
   SetStatus(decoded);
   if (ok()) {
     decoded_ = decoded.Take();
+
+    ExtractValueFromDecoded(decoded_.Value());
   }
 }
 namespace test_requestflexibleenvelope {
@@ -92,6 +96,8 @@ namespace test_requestflexibleenvelope {
   SetStatus(decoded);
   if (ok()) {
     decoded_ = decoded.Take();
+
+    ExtractValueFromDecoded(decoded_.Value());
   }
 }
 namespace test_requestflexibleenvelope {
@@ -125,6 +131,8 @@ namespace test_requestflexibleenvelope {
   SetStatus(decoded);
   if (ok()) {
     decoded_ = decoded.Take();
+
+    ExtractValueFromDecoded(decoded_.Value());
   }
 }
 namespace test_requestflexibleenvelope {

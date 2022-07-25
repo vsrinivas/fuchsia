@@ -393,14 +393,8 @@ extern "C" const fidl_type_t test_bindingsdenylist_DenyEachBindingOnlyDenySyzkal
   SetStatus(decoded);
   if (ok()) {
     decoded_ = decoded.Take();
-  }
-  if (ok()) {
-    auto* raw_response = &decoded_.Value()->body;
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
+
+    ExtractValueFromDecoded(decoded_.Value());
   }
 }
 namespace test_bindingsdenylist {
@@ -434,14 +428,8 @@ namespace test_bindingsdenylist {
   SetStatus(decoded);
   if (ok()) {
     decoded_ = decoded.Take();
-  }
-  if (ok()) {
-    auto* raw_response = &decoded_.Value()->body;
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
+
+    ExtractValueFromDecoded(decoded_.Value());
   }
 }
 namespace test_bindingsdenylist {
@@ -464,14 +452,8 @@ namespace test_bindingsdenylist {
   SetStatus(decoded);
   if (ok()) {
     decoded_ = decoded.Take();
-  }
-  if (ok()) {
-    auto* raw_response = &decoded_.Value()->body;
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
+
+    ExtractValueFromDecoded(decoded_.Value());
   }
 }
 namespace test_bindingsdenylist {
@@ -505,14 +487,8 @@ namespace test_bindingsdenylist {
   SetStatus(decoded);
   if (ok()) {
     decoded_ = decoded.Take();
-  }
-  if (ok()) {
-    auto* raw_response = &decoded_.Value()->body;
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
+
+    ExtractValueFromDecoded(decoded_.Value());
   }
 }
 namespace test_bindingsdenylist {
@@ -535,14 +511,8 @@ namespace test_bindingsdenylist {
   SetStatus(decoded);
   if (ok()) {
     decoded_ = decoded.Take();
-  }
-  if (ok()) {
-    auto* raw_response = &decoded_.Value()->body;
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
+
+    ExtractValueFromDecoded(decoded_.Value());
   }
 }
 namespace test_bindingsdenylist {
@@ -576,14 +546,8 @@ namespace test_bindingsdenylist {
   SetStatus(decoded);
   if (ok()) {
     decoded_ = decoded.Take();
-  }
-  if (ok()) {
-    auto* raw_response = &decoded_.Value()->body;
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
+
+    ExtractValueFromDecoded(decoded_.Value());
   }
 }
 namespace test_bindingsdenylist {
@@ -606,14 +570,8 @@ namespace test_bindingsdenylist {
   SetStatus(decoded);
   if (ok()) {
     decoded_ = decoded.Take();
-  }
-  if (ok()) {
-    auto* raw_response = &decoded_.Value()->body;
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
+
+    ExtractValueFromDecoded(decoded_.Value());
   }
 }
 namespace test_bindingsdenylist {
@@ -647,14 +605,8 @@ namespace test_bindingsdenylist {
   SetStatus(decoded);
   if (ok()) {
     decoded_ = decoded.Take();
-  }
-  if (ok()) {
-    auto* raw_response = &decoded_.Value()->body;
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
+
+    ExtractValueFromDecoded(decoded_.Value());
   }
 }
 namespace test_bindingsdenylist {
@@ -677,14 +629,8 @@ namespace test_bindingsdenylist {
   SetStatus(decoded);
   if (ok()) {
     decoded_ = decoded.Take();
-  }
-  if (ok()) {
-    auto* raw_response = &decoded_.Value()->body;
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
+
+    ExtractValueFromDecoded(decoded_.Value());
   }
 }
 namespace test_bindingsdenylist {
@@ -718,14 +664,8 @@ namespace test_bindingsdenylist {
   SetStatus(decoded);
   if (ok()) {
     decoded_ = decoded.Take();
-  }
-  if (ok()) {
-    auto* raw_response = &decoded_.Value()->body;
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else if (raw_response->result.is_response()) {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
+
+    ExtractValueFromDecoded(decoded_.Value());
   }
 }
 namespace test_bindingsdenylist {

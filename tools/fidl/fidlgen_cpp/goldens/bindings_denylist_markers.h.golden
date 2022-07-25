@@ -48,6 +48,10 @@ class ImportsSameNameContext final {
     using Protocol = ::test_bindingsdenylist::ImportsSameNameContext;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class AlwaysAppearsInImportingLibrary final {
     AlwaysAppearsInImportingLibrary() = delete;
@@ -56,6 +60,10 @@ class ImportsSameNameContext final {
     using Protocol = ::test_bindingsdenylist::ImportsSameNameContext;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
 };
 
@@ -73,6 +81,10 @@ class DenyEachBinding final {
     using Protocol = ::test_bindingsdenylist::DenyEachBinding;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
   };
   class OnlyDenyGo final {
     OnlyDenyGo() = delete;
@@ -81,6 +93,10 @@ class DenyEachBinding final {
     using Protocol = ::test_bindingsdenylist::DenyEachBinding;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
   };
   class OnlyDenyLibfuzzer final {
     OnlyDenyLibfuzzer() = delete;
@@ -89,6 +105,10 @@ class DenyEachBinding final {
     using Protocol = ::test_bindingsdenylist::DenyEachBinding;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
   };
   class OnlyDenyRust final {
     OnlyDenyRust() = delete;
@@ -97,6 +117,10 @@ class DenyEachBinding final {
     using Protocol = ::test_bindingsdenylist::DenyEachBinding;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
   };
   class OnlyDenySyzkaller final {
     OnlyDenySyzkaller() = delete;
@@ -105,6 +129,10 @@ class DenyEachBinding final {
     using Protocol = ::test_bindingsdenylist::DenyEachBinding;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
   };
 };
 }  // namespace test_bindingsdenylist

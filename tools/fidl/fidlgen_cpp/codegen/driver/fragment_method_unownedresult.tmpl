@@ -7,8 +7,15 @@
 {{- define "driver/Method:UnownedResult:MessagingHeader" }}
 {{- EnsureNamespace "" }}
 
+{{ if .WireResultUnwrapType -}}
 template<>
-class [[nodiscard]] {{ .WireUnownedResult }} final : public ::fidl::Status {
+struct {{ .WireResultUnwrap }} {
+  using Type = {{ .WireResultUnwrapType }};
+};
+{{- end }}
+
+template<>
+class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }} {
  public:
   {{- if .Transport.HasSyncClient }}
     {{- $args := (printf "::%s::UnownedClientEnd<%s> client_end" .Transport.Namespace .Protocol) }}
@@ -19,73 +26,27 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public ::fidl::Status {
 
   {{- if .HasResponse }}
     explicit {{ .WireUnownedResult.Self }}({{ .WireTransactionalResponse }}* response)
-        : fidl::Status(fidl::Status::Ok()), decoded_(response) {
-      {{- if .HasApplicationError }}
-      auto* raw_response = &decoded_.Value()->body;
-        if (raw_response->result.is_err()) {
-          result_ = fitx::error(raw_response->result.err());
-        } else {
-          result_ = fitx::ok({{ if .Result.ValueParameters }}&(raw_response->result.response()){{ end }});
-        }
-      {{- end }}
+        : {{ .BaseWireResult }}(fidl::Status::Ok()), decoded_(response) {
+      ExtractValueFromDecoded(decoded_.Value());
     }
 
     explicit {{ .WireUnownedResult.Self }}(
       ::fidl::unstable::DecodedMessage<{{ .WireTransactionalResponse }}>&& decoded,
       ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : ::fidl::Status(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
+    ) : {{ .BaseWireResult }}(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        {{- if .HasApplicationError }}
-        auto* raw_response = &decoded_.Value()->body;
-        if (raw_response->result.is_err()) {
-          result_ = fitx::error(raw_response->result.err());
-        } else if (raw_response->result.is_response()) {
-          result_ = fitx::ok(
-            {{- if .Result.ValueParameters -}}
-              &(raw_response->result.response())
-            {{- end -}}
-          );
-        }
-        {{- end }}
+        ExtractValueFromDecoded(decoded_.Value());
       }
     }
   {{- end }}
 
-  explicit {{ .WireUnownedResult.Self }}(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit {{ .WireUnownedResult.Self }}(const ::fidl::Status& result) : {{ .BaseWireResult }}(result) {}
   {{ .WireUnownedResult.Self }}({{ .WireUnownedResult.Self }}&&) = delete;
   {{ .WireUnownedResult.Self }}(const {{ .WireUnownedResult.Self }}&) = delete;
   {{ .WireUnownedResult.Self }}* operator=({{ .WireUnownedResult.Self }}&&) = delete;
   {{ .WireUnownedResult.Self }}* operator=(const {{ .WireUnownedResult.Self }}&) = delete;
-
-  {{- if .HasWireResultBase }}
-    {{ .WireResultBase }}* Unwrap() {
-      {{- if .Result }}
-        return &result_.value();
-      {{- else }}
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-      {{- end }}
-    }
-    const {{ .WireResultBase }}* Unwrap() const {
-      {{- if .Result }}
-        return &result_.value();
-      {{- else }}
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-      {{- end }}
-    }
-
-    {{ .WireResultBase }}& value() { return *Unwrap(); }
-    const {{ .WireResultBase }}& value() const { return *Unwrap(); }
-
-
-    {{ .WireResultBase }}* operator->() { return &value(); }
-    const {{ .WireResultBase }}* operator->() const { return &value(); }
-
-    {{ .WireResultBase }}& operator*() { return value(); }
-    const {{ .WireResultBase }}& operator*() const { return value(); }
-  {{- end }}
+  ~{{ .WireUnownedResult.Self }}() = default;
 
   {{- if .HasResponse }}
     fdf::Arena& arena() {
@@ -96,9 +57,6 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public ::fidl::Status {
    private:
     ::fdf::Arena arena_;
     ::fidl::internal::DecodedValue<{{ .WireTransactionalResponse }}> decoded_;
-    {{- if and .Result .HasWireResultBase }}
-      std::optional<{{ .WireResultBase }}> result_ = std::nullopt;
-    {{- end }}
   {{- end }}
 };
 {{- end }}
@@ -138,22 +96,9 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public ::fidl::Status {
     SetStatus(decoded);
     if (ok()) {
       decoded_ = decoded.Take();
+      ExtractValueFromDecoded(decoded_.Value());
     }
     arena_ = std::move(response_storage.arena);
-    {{- if .HasApplicationError }}
-      if (ok()) {
-        auto* raw_response = &decoded_.Value()->body;
-        if (raw_response->result.is_err()) {
-          result_ = fitx::error(raw_response->result.err());
-        } else if (raw_response->result.is_response()) {
-          result_ = fitx::ok(
-            {{- if .Result.ValueParameters -}}
-              &(raw_response->result.response())
-            {{- end -}}
-          );
-        }
-      }
-    {{- end }}
   {{- else }}
     ::fidl::WriteOptions write_options = {
         .outgoing_transport_context =

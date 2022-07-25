@@ -21,6 +21,10 @@ class SimpleProtocol final {
     using Protocol = ::test_nullable::SimpleProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
 };
 }  // namespace test_nullable

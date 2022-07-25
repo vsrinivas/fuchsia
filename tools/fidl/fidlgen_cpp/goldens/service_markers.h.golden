@@ -21,6 +21,10 @@ class SecondProtocol final {
     using Protocol = ::test_service::SecondProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
 };
 
@@ -38,6 +42,10 @@ class FirstProtocol final {
     using Protocol = ::test_service::FirstProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
 };
 }  // namespace test_service

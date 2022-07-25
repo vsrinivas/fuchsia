@@ -21,6 +21,10 @@ class TestProtocol final {
     using Protocol = ::test_union::TestProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class FlexibleXUnionHenceResponseMustBeHeapAllocated final {
     FlexibleXUnionHenceResponseMustBeHeapAllocated() = delete;
@@ -29,6 +33,10 @@ class TestProtocol final {
     using Protocol = ::test_union::TestProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
 };
 }  // namespace test_union

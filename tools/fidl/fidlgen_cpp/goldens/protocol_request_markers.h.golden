@@ -21,6 +21,10 @@ class Parent final {
     using Protocol = ::test_protocolrequest::Parent;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class GetChildRequest final {
     GetChildRequest() = delete;
@@ -29,6 +33,10 @@ class Parent final {
     using Protocol = ::test_protocolrequest::Parent;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class TakeChild final {
     TakeChild() = delete;
@@ -37,6 +45,10 @@ class Parent final {
     using Protocol = ::test_protocolrequest::Parent;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class TakeChildRequest final {
     TakeChildRequest() = delete;
@@ -45,6 +57,10 @@ class Parent final {
     using Protocol = ::test_protocolrequest::Parent;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
 };
 

@@ -233,13 +233,13 @@ struct ::fidl::internal::IncomingEventsStorage<::test_doccomments::Interface> fi
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireResult<::test_doccomments::Interface::Method> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<::test_doccomments::Interface::Method> final : public ::fidl::BaseWireResult<::test_doccomments::Interface::Method> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_doccomments::Interface> client,
       ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>* request);
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_doccomments::Interface::Method>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
@@ -248,14 +248,14 @@ class [[nodiscard]] ::fidl::WireResult<::test_doccomments::Interface::Method> fi
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_doccomments::Interface::Method> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_doccomments::Interface::Method> final : public ::fidl::BaseWireResult<::test_doccomments::Interface::Method> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_doccomments::Interface> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_doccomments::Interface::Method>* request);
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_doccomments::Interface::Method>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };

@@ -275,13 +275,13 @@ struct ::fidl::internal::IncomingEventsStorage<::test_versions::Protocol> final 
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireResult<::test_versions::Protocol::Foo> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<::test_versions::Protocol::Foo> final : public ::fidl::BaseWireResult<::test_versions::Protocol::Foo> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_versions::Protocol> client,
       ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>* request);
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_versions::Protocol::Foo>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
@@ -290,14 +290,14 @@ class [[nodiscard]] ::fidl::WireResult<::test_versions::Protocol::Foo> final : p
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_versions::Protocol::Foo> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_versions::Protocol::Foo> final : public ::fidl::BaseWireResult<::test_versions::Protocol::Foo> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_versions::Protocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_versions::Protocol::Foo>* request);
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_versions::Protocol::Foo>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };

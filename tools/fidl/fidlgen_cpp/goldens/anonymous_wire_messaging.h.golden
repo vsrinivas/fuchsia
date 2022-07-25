@@ -337,93 +337,56 @@ struct ::fidl::internal::IncomingEventsStorage<::test_anonymous::SomeProtocol> f
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod> final : public ::fidl::Status {
+struct ::fidl::internal::WireResultUnwrap<::test_anonymous::SomeProtocol::SomeMethod> {
+  using Type = ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>;
+};
+
+template <>
+class [[nodiscard]] ::fidl::WireResult<::test_anonymous::SomeProtocol::SomeMethod> final : public ::fidl::BaseWireResult<::test_anonymous::SomeProtocol::SomeMethod> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> client,
       ::fidl::internal::TransactionalRequest<::test_anonymous::SomeProtocol::SomeMethod>* request, std::optional<zx::time> deadline = std::nullopt);
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_anonymous::SomeProtocol::SomeMethod>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-  ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* Unwrap() {
-    return &result_.value();
-  }
-  const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* Unwrap() const {
-    return &result_.value();
-  }
-
-  ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& value() { return *Unwrap(); }
-  const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* operator->() { return &value(); }
-  const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* operator->() const { return &value(); }
-
-  ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& operator*() { return value(); }
-  const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::InlineMessageBuffer<48> bytes_;
   ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>> decoded_;
-  std::optional<::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>> result_ = std::nullopt;
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_anonymous::SomeProtocol::SomeMethod> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_anonymous::SomeProtocol::SomeMethod> final : public ::fidl::BaseWireResult<::test_anonymous::SomeProtocol::SomeMethod> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_anonymous::SomeProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_anonymous::SomeProtocol::SomeMethod>* request);
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>* response)
-      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
-    auto* raw_response = &decoded_.Value()->body;
-    if (raw_response->result.is_err()) {
-      result_ = fitx::error(raw_response->result.err());
-    } else {
-      result_ = fitx::ok(&(raw_response->result.response()));
-    }
+      : ::fidl::BaseWireResult<::test_anonymous::SomeProtocol::SomeMethod>(fidl::Status::Ok()), decoded_(response) {
+    ExtractValueFromDecoded(decoded_.Value());
   }
 
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view) : fidl::Status(decoded) {
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_anonymous::SomeProtocol::SomeMethod>(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
-      auto* raw_response = &decoded_.Value()->body;
-      if (raw_response->result.is_err()) {
-        result_ = fitx::error(raw_response->result.err());
-      } else if (raw_response->result.is_response()) {
-        result_ = fitx::ok(&(raw_response->result.response()));
-      }
+      ExtractValueFromDecoded(decoded_.Value());
     }
   }
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_anonymous::SomeProtocol::SomeMethod>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-  ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* Unwrap() {
-    return &result_.value();
-  }
-  const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* Unwrap() const {
-    return &result_.value();
-  }
-
-  ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& value() { return *Unwrap(); }
-  const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& value() const { return *Unwrap(); }
-
-  ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* operator->() { return &value(); }
-  const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>* operator->() const { return &value(); }
-
-  ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& operator*() { return value(); }
-  const ::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_anonymous::SomeProtocol::SomeMethod>> decoded_;
-  std::optional<::fitx::result<::test_anonymous::wire::SomeProtocolSomeMethodError, ::test_anonymous::wire::SomeProtocolSomeMethodResponse*>> result_ = std::nullopt;
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_anonymous::SomeProtocol> : public ::fidl::internal::BaseEventHandlerInterface {

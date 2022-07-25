@@ -21,6 +21,10 @@ class OneWay final {
     using Protocol = ::test_driveroneway::OneWay;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
 };
 }  // namespace test_driveroneway

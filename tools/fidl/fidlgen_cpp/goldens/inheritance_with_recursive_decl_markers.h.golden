@@ -21,6 +21,10 @@ class Parent final {
     using Protocol = ::test_inheritancewithrecursivedecl::Parent;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
 };
 
@@ -38,6 +42,10 @@ class Child final {
     using Protocol = ::test_inheritancewithrecursivedecl::Child;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class Second final {
     Second() = delete;
@@ -46,6 +54,10 @@ class Child final {
     using Protocol = ::test_inheritancewithrecursivedecl::Child;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
 };
 }  // namespace test_inheritancewithrecursivedecl

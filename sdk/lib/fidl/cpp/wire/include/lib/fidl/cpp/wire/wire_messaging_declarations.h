@@ -31,6 +31,23 @@ struct WireEvent;
 
 namespace internal {
 
+// |WireResultUnwrap| is a template which will be specialized by generated code
+// to provide the type that should be returned by the |Unwrap|, |value|, and
+// dereference operator accessors on |BaseWireResult|. The template is not
+// available for methods with an empty return value and no error, since those do
+// not proivde |Unwrap| methods.
+//
+// The generated specialization will contain a single type alias called |Type|
+// which is the type that will be used in the |Unwrap| and related methods of
+// the |WireResult| and |WireUnownedResult|.
+//
+// For a method without error syntax, the |Type| will be the return type of the
+// method specified in the FIDL file. For a method with error syntax, |Type|
+// will be a |fitx::result| of the error type specified in the FIDL file and a
+// pointer to the return type (if the return type is not empty).
+template <typename FidlMethod>
+struct WireResultUnwrap;
+
 template <typename FidlMethod>
 struct TransactionalRequest;
 
@@ -41,6 +58,19 @@ template <typename FidlMethod>
 struct TransactionalEvent;
 
 }  // namespace internal
+
+// |WireResultUnwrapType| is a template which aliases the type that should be
+// returned by the |Unwrap|, |value|, and dereference operator accessors on
+// |BaseWireResult|. The template is not available for methods with an empty
+// return value and no error, since those do not proivde |Unwrap| methods.
+//
+// For a method without error syntax, the |WireResultUnwrapType| will be the
+// return type of the method specified in the FIDL file. For a method with error
+// syntax, |WireResultUnwrapType| will be a |fitx::result| of the error type
+// specified in the FIDL file and a pointer to the return type (if the return
+// type is not empty).
+template <typename FidlMethod>
+using WireResultUnwrapType = typename ::fidl::internal::WireResultUnwrap<FidlMethod>::Type;
 
 #ifdef __Fuchsia__
 // WireSyncEventHandler is used by synchronous clients to handle events for the

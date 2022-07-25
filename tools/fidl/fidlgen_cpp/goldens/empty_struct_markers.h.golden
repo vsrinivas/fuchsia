@@ -21,6 +21,10 @@ class EmptyProtocol final {
     using Protocol = ::test_emptystruct::EmptyProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class Receive final {
     Receive() = delete;
@@ -29,6 +33,10 @@ class EmptyProtocol final {
     using Protocol = ::test_emptystruct::EmptyProtocol;
     static constexpr bool kHasRequest = false;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class SendAndReceive final {
     SendAndReceive() = delete;
@@ -37,6 +45,10 @@ class EmptyProtocol final {
     using Protocol = ::test_emptystruct::EmptyProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
 };
 }  // namespace test_emptystruct

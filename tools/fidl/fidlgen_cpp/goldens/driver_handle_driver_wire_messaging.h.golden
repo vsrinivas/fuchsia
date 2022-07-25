@@ -185,15 +185,16 @@ static_assert(offsetof(::fidl::WireRequest<::test_driverhandle::HandlesInProtoco
 }  // namespace fidl
 
 template <>
-class [[nodiscard]] ::fdf::WireUnownedResult<::test_driverhandle::HandlesInProtocol::SendHandles> final : public ::fidl::Status {
+class [[nodiscard]] ::fdf::WireUnownedResult<::test_driverhandle::HandlesInProtocol::SendHandles> final : public ::fidl::BaseWireResult<::test_driverhandle::HandlesInProtocol::SendHandles> {
  public:
   explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_driverhandle::HandlesInProtocol> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_driverhandle::HandlesInProtocol::SendHandles>* request);
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_driverhandle::HandlesInProtocol::SendHandles>(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
+  ~WireUnownedResult() = default;
 };
 template <>
 class ::fidl::internal::WireEventHandlerInterface<::test_driverhandle::HandlesInProtocol> : public ::fidl::internal::BaseEventHandlerInterface {

@@ -330,35 +330,23 @@ struct ::fidl::internal::IncomingEventsStorage<::test_nullable::SimpleProtocol> 
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireResult<::test_nullable::SimpleProtocol::Add> final : public ::fidl::Status {
+struct ::fidl::internal::WireResultUnwrap<::test_nullable::SimpleProtocol::Add> {
+  using Type = ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>;
+};
+
+template <>
+class [[nodiscard]] ::fidl::WireResult<::test_nullable::SimpleProtocol::Add> final : public ::fidl::BaseWireResult<::test_nullable::SimpleProtocol::Add> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_nullable::SimpleProtocol> client,
       ::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>* request, std::optional<zx::time> deadline = std::nullopt);
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_nullable::SimpleProtocol::Add>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-  ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>* Unwrap() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>* Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
-  ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>& value() { return *Unwrap(); }
-  const ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>* operator->() { return &value(); }
-  const ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>* operator->() const { return &value(); }
-
-  ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>& operator*() { return value(); }
-  const ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
@@ -366,44 +354,29 @@ class [[nodiscard]] ::fidl::WireResult<::test_nullable::SimpleProtocol::Add> fin
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_nullable::SimpleProtocol::Add> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_nullable::SimpleProtocol::Add> final : public ::fidl::BaseWireResult<::test_nullable::SimpleProtocol::Add> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_nullable::SimpleProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_nullable::SimpleProtocol::Add>* request);
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>* response)
-      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+      : ::fidl::BaseWireResult<::test_nullable::SimpleProtocol::Add>(fidl::Status::Ok()), decoded_(response) {
+    ExtractValueFromDecoded(decoded_.Value());
   }
 
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view) : fidl::Status(decoded) {
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_nullable::SimpleProtocol::Add>(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
+      ExtractValueFromDecoded(decoded_.Value());
     }
   }
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_nullable::SimpleProtocol::Add>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-  ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>* Unwrap() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>* Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
-  ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>& value() { return *Unwrap(); }
-  const ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>* operator->() { return &value(); }
-  const ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>* operator->() const { return &value(); }
-
-  ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>& operator*() { return value(); }
-  const ::fidl::WireResponse<::test_nullable::SimpleProtocol::Add>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_nullable::SimpleProtocol::Add>> decoded_;

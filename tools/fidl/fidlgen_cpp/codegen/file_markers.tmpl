@@ -38,6 +38,10 @@ fidl/{{ .LibraryDots }}/cpp/markers.h
           using Protocol = {{ $protocol }};
           static constexpr bool kHasRequest = {{ .HasRequest }};
           static constexpr bool kHasResponse = {{ .HasResponse }};
+
+          static constexpr bool kHasNonEmptyPayload = {{ .HasNonEmptyPayload }};
+          static constexpr bool kHasApplicationError = {{ .HasApplicationError }};
+          static constexpr bool kHasTransportError = {{ .HasTransportError }};
         };
       {{- end }}
     };

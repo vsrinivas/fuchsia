@@ -4639,15 +4639,17 @@ static_assert(offsetof(::fidl::WireEvent<::test_protocollayouts::MainProtocol::O
     ::fidl::internal::IncomingEventsHandleStorage<::test_protocollayouts::MainProtocol> handles_storage_;
   };
 
+
+
 template<>
-class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayAnonComposed> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayAnonComposed> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::OneWayAnonComposed> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayAnonComposed>* request
   );
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::OneWayAnonComposed>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
@@ -4656,197 +4658,139 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::One
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::OneWayAnonComposed> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::OneWayAnonComposed> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::OneWayAnonComposed> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayAnonComposed>* request);
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::OneWayAnonComposed>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
+
+  
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> final : public ::fidl::Status {
+struct ::fidl::internal::WireResultUnwrap<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> {
+  using Type = ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>;
+};
+
+template<>
+class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* request, std::optional<zx::time> deadline = std::nullopt
   );
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* Unwrap() {
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-    }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* Unwrap() const {
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-    }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>& value() { return *Unwrap(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>& value() const { return *Unwrap(); }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* operator->() { return &value(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* operator->() const { return &value(); }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>& operator*() { return value(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>& operator*() const { return value(); }
    private:
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> decoded_;
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposed> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* response)
-        : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+        : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>(fidl::Status::Ok()), decoded_(response) {
+      ExtractValueFromDecoded(decoded_.Value());
     }
 
     explicit WireUnownedResult(
         ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : fidl::Status(decoded) {
+    ) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
+        ExtractValueFromDecoded(decoded_.Value());
       }
     }
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* Unwrap() {
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-    }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* Unwrap() const {
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-    }
 
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>& value() { return *Unwrap(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>& value() const { return *Unwrap(); }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* operator->() { return &value(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>* operator->() const { return &value(); }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>& operator*() { return value(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>& operator*() const { return value(); }
-   private:
+  private:
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposed>> decoded_;
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> final : public ::fidl::Status {
+struct ::fidl::internal::WireResultUnwrap<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> {
+  using Type = ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>;
+};
+
+template<>
+class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>* request, std::optional<zx::time> deadline = std::nullopt
   );
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>* Unwrap() {
-        return &result_.value();
-    }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>* Unwrap() const {
-        return &result_.value();
-    }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>& value() { return *Unwrap(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>& value() const { return *Unwrap(); }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>* operator->() { return &value(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>* operator->() const { return &value(); }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>& operator*() { return value(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>& operator*() const { return value(); }
    private:
     ::fidl::internal::InlineMessageBuffer<72> bytes_;
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> decoded_;
-      std::optional<::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>> result_ = std::nullopt;
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>* response)
-        : fidl::Status(fidl::Status::Ok()), decoded_(response) {
-      auto* raw_response = &decoded_.Value()->body;
-      if (raw_response->result.is_err()) {
-        result_ = fitx::error(raw_response->result.err());
-      } else {
-        result_ = fitx::ok(&(raw_response->result.response()));
-      }
+        : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>(fidl::Status::Ok()), decoded_(response) {
+      ExtractValueFromDecoded(decoded_.Value());
     }
 
     explicit WireUnownedResult(
         ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : fidl::Status(decoded) {
+    ) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        auto* raw_response = &decoded_.Value()->body;
-        if (raw_response->result.is_err()) {
-          result_ = fitx::error(raw_response->result.err());
-        } else if (raw_response->result.is_response()) {
-          result_ = fitx::ok(&(raw_response->result.response()));
-        }
+        ExtractValueFromDecoded(decoded_.Value());
       }
     }
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>* Unwrap() {
-        return &result_.value();
-    }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>* Unwrap() const {
-        return &result_.value();
-    }
 
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>& value() { return *Unwrap(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>& value() const { return *Unwrap(); }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>* operator->() { return &value(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>* operator->() const { return &value(); }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>& operator*() { return value(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>& operator*() const { return value(); }
-   private:
+  private:
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonComposedWithError>> decoded_;
-      std::optional<::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ComposedProtocolTwoWayAnonComposedWithErrorResponse*>> result_ = std::nullopt;
 };
 
+
+
 template<>
-class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayNamedComposed> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayNamedComposed> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::OneWayNamedComposed> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayNamedComposed>* request
   );
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::OneWayNamedComposed>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
@@ -4855,197 +4799,139 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::One
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::OneWayNamedComposed> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::OneWayNamedComposed> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::OneWayNamedComposed> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayNamedComposed>* request);
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::OneWayNamedComposed>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
+
+  
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> final : public ::fidl::Status {
+struct ::fidl::internal::WireResultUnwrap<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> {
+  using Type = ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>;
+};
+
+template<>
+class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* request, std::optional<zx::time> deadline = std::nullopt
   );
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* Unwrap() {
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-    }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* Unwrap() const {
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-    }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>& value() { return *Unwrap(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>& value() const { return *Unwrap(); }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* operator->() { return &value(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* operator->() const { return &value(); }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>& operator*() { return value(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>& operator*() const { return value(); }
    private:
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> decoded_;
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposed> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* response)
-        : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+        : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>(fidl::Status::Ok()), decoded_(response) {
+      ExtractValueFromDecoded(decoded_.Value());
     }
 
     explicit WireUnownedResult(
         ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : fidl::Status(decoded) {
+    ) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
+        ExtractValueFromDecoded(decoded_.Value());
       }
     }
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* Unwrap() {
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-    }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* Unwrap() const {
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-    }
 
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>& value() { return *Unwrap(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>& value() const { return *Unwrap(); }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* operator->() { return &value(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>* operator->() const { return &value(); }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>& operator*() { return value(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>& operator*() const { return value(); }
-   private:
+  private:
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposed>> decoded_;
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> final : public ::fidl::Status {
+struct ::fidl::internal::WireResultUnwrap<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> {
+  using Type = ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>;
+};
+
+template<>
+class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>* request, std::optional<zx::time> deadline = std::nullopt
   );
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* Unwrap() {
-        return &result_.value();
-    }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* Unwrap() const {
-        return &result_.value();
-    }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& value() { return *Unwrap(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& value() const { return *Unwrap(); }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* operator->() { return &value(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* operator->() const { return &value(); }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& operator*() { return value(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& operator*() const { return value(); }
    private:
     ::fidl::internal::InlineMessageBuffer<72> bytes_;
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> decoded_;
-      std::optional<::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>> result_ = std::nullopt;
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>* response)
-        : fidl::Status(fidl::Status::Ok()), decoded_(response) {
-      auto* raw_response = &decoded_.Value()->body;
-      if (raw_response->result.is_err()) {
-        result_ = fitx::error(raw_response->result.err());
-      } else {
-        result_ = fitx::ok(&(raw_response->result.response()));
-      }
+        : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>(fidl::Status::Ok()), decoded_(response) {
+      ExtractValueFromDecoded(decoded_.Value());
     }
 
     explicit WireUnownedResult(
         ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : fidl::Status(decoded) {
+    ) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        auto* raw_response = &decoded_.Value()->body;
-        if (raw_response->result.is_err()) {
-          result_ = fitx::error(raw_response->result.err());
-        } else if (raw_response->result.is_response()) {
-          result_ = fitx::ok(&(raw_response->result.response()));
-        }
+        ExtractValueFromDecoded(decoded_.Value());
       }
     }
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* Unwrap() {
-        return &result_.value();
-    }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* Unwrap() const {
-        return &result_.value();
-    }
 
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& value() { return *Unwrap(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& value() const { return *Unwrap(); }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* operator->() { return &value(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* operator->() const { return &value(); }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& operator*() { return value(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& operator*() const { return value(); }
-   private:
+  private:
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayNamedComposedWithError>> decoded_;
-      std::optional<::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>> result_ = std::nullopt;
 };
 
+
+
 template<>
-class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayImport> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayImport> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::OneWayImport> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayImport>* request
   );
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::OneWayImport>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
@@ -5054,197 +4940,139 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::One
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::OneWayImport> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::OneWayImport> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::OneWayImport> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayImport>* request);
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::OneWayImport>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
+
+  
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayImport> final : public ::fidl::Status {
+struct ::fidl::internal::WireResultUnwrap<::test_protocollayouts::MainProtocol::TwoWayImport> {
+  using Type = ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>;
+};
+
+template<>
+class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayImport> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayImport> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImport>* request, std::optional<zx::time> deadline = std::nullopt
   );
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayImport>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>* Unwrap() {
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-    }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>* Unwrap() const {
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-    }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>& value() { return *Unwrap(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>& value() const { return *Unwrap(); }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>* operator->() { return &value(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>* operator->() const { return &value(); }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>& operator*() { return value(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>& operator*() const { return value(); }
    private:
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>> decoded_;
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::TwoWayImport> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::TwoWayImport> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayImport> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImport>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>* response)
-        : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+        : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayImport>(fidl::Status::Ok()), decoded_(response) {
+      ExtractValueFromDecoded(decoded_.Value());
     }
 
     explicit WireUnownedResult(
         ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : fidl::Status(decoded) {
+    ) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayImport>(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
+        ExtractValueFromDecoded(decoded_.Value());
       }
     }
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayImport>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>* Unwrap() {
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-    }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>* Unwrap() const {
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-    }
 
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>& value() { return *Unwrap(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>& value() const { return *Unwrap(); }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>* operator->() { return &value(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>* operator->() const { return &value(); }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>& operator*() { return value(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayImport>& operator*() const { return value(); }
-   private:
+  private:
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImport>> decoded_;
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayImportWithError> final : public ::fidl::Status {
+struct ::fidl::internal::WireResultUnwrap<::test_protocollayouts::MainProtocol::TwoWayImportWithError> {
+  using Type = ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>;
+};
+
+template<>
+class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayImportWithError> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayImportWithError> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>* request, std::optional<zx::time> deadline = std::nullopt
   );
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayImportWithError>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* Unwrap() {
-        return &result_.value();
-    }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* Unwrap() const {
-        return &result_.value();
-    }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& value() { return *Unwrap(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& value() const { return *Unwrap(); }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* operator->() { return &value(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* operator->() const { return &value(); }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& operator*() { return value(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& operator*() const { return value(); }
    private:
     ::fidl::internal::InlineMessageBuffer<72> bytes_;
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> decoded_;
-      std::optional<::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>> result_ = std::nullopt;
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::TwoWayImportWithError> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::TwoWayImportWithError> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayImportWithError> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayImportWithError>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>* response)
-        : fidl::Status(fidl::Status::Ok()), decoded_(response) {
-      auto* raw_response = &decoded_.Value()->body;
-      if (raw_response->result.is_err()) {
-        result_ = fitx::error(raw_response->result.err());
-      } else {
-        result_ = fitx::ok(&(raw_response->result.response()));
-      }
+        : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayImportWithError>(fidl::Status::Ok()), decoded_(response) {
+      ExtractValueFromDecoded(decoded_.Value());
     }
 
     explicit WireUnownedResult(
         ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : fidl::Status(decoded) {
+    ) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayImportWithError>(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        auto* raw_response = &decoded_.Value()->body;
-        if (raw_response->result.is_err()) {
-          result_ = fitx::error(raw_response->result.err());
-        } else if (raw_response->result.is_response()) {
-          result_ = fitx::ok(&(raw_response->result.response()));
-        }
+        ExtractValueFromDecoded(decoded_.Value());
       }
     }
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayImportWithError>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* Unwrap() {
-        return &result_.value();
-    }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* Unwrap() const {
-        return &result_.value();
-    }
 
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& value() { return *Unwrap(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& value() const { return *Unwrap(); }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* operator->() { return &value(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>* operator->() const { return &value(); }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& operator*() { return value(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>& operator*() const { return value(); }
-   private:
+  private:
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayImportWithError>> decoded_;
-      std::optional<::fitx::result<uint32_t, ::test_protocollayouts_imported::wire::ImportUnionPayload*>> result_ = std::nullopt;
 };
 
+
+
 template<>
-class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayLocal> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayLocal> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::OneWayLocal> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayLocal>* request
   );
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::OneWayLocal>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
@@ -5253,197 +5081,139 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::One
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::OneWayLocal> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::OneWayLocal> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::OneWayLocal> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayLocal>* request);
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::OneWayLocal>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
+
+  
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayLocal> final : public ::fidl::Status {
+struct ::fidl::internal::WireResultUnwrap<::test_protocollayouts::MainProtocol::TwoWayLocal> {
+  using Type = ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>;
+};
+
+template<>
+class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayLocal> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayLocal> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>* request, std::optional<zx::time> deadline = std::nullopt
   );
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayLocal>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>* Unwrap() {
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-    }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>* Unwrap() const {
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-    }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>& value() { return *Unwrap(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>& value() const { return *Unwrap(); }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>* operator->() { return &value(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>* operator->() const { return &value(); }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>& operator*() { return value(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>& operator*() const { return value(); }
    private:
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>> decoded_;
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::TwoWayLocal> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::TwoWayLocal> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayLocal> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocal>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>* response)
-        : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+        : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayLocal>(fidl::Status::Ok()), decoded_(response) {
+      ExtractValueFromDecoded(decoded_.Value());
     }
 
     explicit WireUnownedResult(
         ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : fidl::Status(decoded) {
+    ) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayLocal>(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
+        ExtractValueFromDecoded(decoded_.Value());
       }
     }
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayLocal>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>* Unwrap() {
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-    }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>* Unwrap() const {
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-    }
 
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>& value() { return *Unwrap(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>& value() const { return *Unwrap(); }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>* operator->() { return &value(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>* operator->() const { return &value(); }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>& operator*() { return value(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>& operator*() const { return value(); }
-   private:
+  private:
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocal>> decoded_;
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> final : public ::fidl::Status {
+struct ::fidl::internal::WireResultUnwrap<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> {
+  using Type = ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>;
+};
+
+template<>
+class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>* request, std::optional<zx::time> deadline = std::nullopt
   );
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-    ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>* Unwrap() {
-        return &result_.value();
-    }
-    const ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>* Unwrap() const {
-        return &result_.value();
-    }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>& value() { return *Unwrap(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>& value() const { return *Unwrap(); }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>* operator->() { return &value(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>* operator->() const { return &value(); }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>& operator*() { return value(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>& operator*() const { return value(); }
    private:
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> decoded_;
-      std::optional<::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>> result_ = std::nullopt;
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayLocalWithError> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>* response)
-        : fidl::Status(fidl::Status::Ok()), decoded_(response) {
-      auto* raw_response = &decoded_.Value()->body;
-      if (raw_response->result.is_err()) {
-        result_ = fitx::error(raw_response->result.err());
-      } else {
-        result_ = fitx::ok(&(raw_response->result.response()));
-      }
+        : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>(fidl::Status::Ok()), decoded_(response) {
+      ExtractValueFromDecoded(decoded_.Value());
     }
 
     explicit WireUnownedResult(
         ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : fidl::Status(decoded) {
+    ) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        auto* raw_response = &decoded_.Value()->body;
-        if (raw_response->result.is_err()) {
-          result_ = fitx::error(raw_response->result.err());
-        } else if (raw_response->result.is_response()) {
-          result_ = fitx::ok(&(raw_response->result.response()));
-        }
+        ExtractValueFromDecoded(decoded_.Value());
       }
     }
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-    ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>* Unwrap() {
-        return &result_.value();
-    }
-    const ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>* Unwrap() const {
-        return &result_.value();
-    }
 
-    ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>& value() { return *Unwrap(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>& value() const { return *Unwrap(); }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>* operator->() { return &value(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>* operator->() const { return &value(); }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>& operator*() { return value(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>& operator*() const { return value(); }
-   private:
+  private:
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayLocalWithError>> decoded_;
-      std::optional<::fitx::result<uint32_t, ::test_protocollayouts::wire::LocalUnionPayload*>> result_ = std::nullopt;
 };
 
+
+
 template<>
-class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayAnon> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::OneWayAnon> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::OneWayAnon> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayAnon>* request
   );
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::OneWayAnon>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
@@ -5452,186 +5222,126 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::One
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::OneWayAnon> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::OneWayAnon> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::OneWayAnon> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::OneWayAnon>* request);
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::OneWayAnon>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
+
+  
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnon> final : public ::fidl::Status {
+struct ::fidl::internal::WireResultUnwrap<::test_protocollayouts::MainProtocol::TwoWayAnon> {
+  using Type = ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>;
+};
+
+template<>
+class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnon> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnon> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>* request, std::optional<zx::time> deadline = std::nullopt
   );
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnon>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>* Unwrap() {
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-    }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>* Unwrap() const {
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-    }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>& value() { return *Unwrap(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>& value() const { return *Unwrap(); }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>* operator->() { return &value(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>* operator->() const { return &value(); }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>& operator*() { return value(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>& operator*() const { return value(); }
    private:
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> decoded_;
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::TwoWayAnon> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::TwoWayAnon> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnon> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnon>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>* response)
-        : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+        : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnon>(fidl::Status::Ok()), decoded_(response) {
+      ExtractValueFromDecoded(decoded_.Value());
     }
 
     explicit WireUnownedResult(
         ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : fidl::Status(decoded) {
+    ) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnon>(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
+        ExtractValueFromDecoded(decoded_.Value());
       }
     }
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnon>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>* Unwrap() {
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-    }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>* Unwrap() const {
-        ZX_ASSERT(ok());
-        return &decoded_.Value()->body;
-    }
 
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>& value() { return *Unwrap(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>& value() const { return *Unwrap(); }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>* operator->() { return &value(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>* operator->() const { return &value(); }
-
-    ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>& operator*() { return value(); }
-    const ::fidl::WireResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>& operator*() const { return value(); }
-   private:
+  private:
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnon>> decoded_;
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> final : public ::fidl::Status {
+struct ::fidl::internal::WireResultUnwrap<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> {
+  using Type = ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>;
+};
+
+template<>
+class [[nodiscard]] ::fidl::WireResult<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client,
       ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>* request, std::optional<zx::time> deadline = std::nullopt
   );
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-    ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>* Unwrap() {
-        return &result_.value();
-    }
-    const ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>* Unwrap() const {
-        return &result_.value();
-    }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>& value() { return *Unwrap(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>& value() const { return *Unwrap(); }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>* operator->() { return &value(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>* operator->() const { return &value(); }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>& operator*() { return value(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>& operator*() const { return value(); }
    private:
     ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> decoded_;
-      std::optional<::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>> result_ = std::nullopt;
 };
 
 template<>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> final : public ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonWithError> {
  public:
     explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocollayouts::MainProtocol> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>* request);
     explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>* response)
-        : fidl::Status(fidl::Status::Ok()), decoded_(response) {
-      auto* raw_response = &decoded_.Value()->body;
-      if (raw_response->result.is_err()) {
-        result_ = fitx::error(raw_response->result.err());
-      } else {
-        result_ = fitx::ok(&(raw_response->result.response()));
-      }
+        : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>(fidl::Status::Ok()), decoded_(response) {
+      ExtractValueFromDecoded(decoded_.Value());
     }
 
     explicit WireUnownedResult(
         ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>>&& decoded,
         ::fidl::internal::MessageStorageViewBase* storage_view
-    ) : fidl::Status(decoded) {
+    ) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>(decoded) {
       if (decoded.ok()) {
         decoded_ = decoded.Take();
-        auto* raw_response = &decoded_.Value()->body;
-        if (raw_response->result.is_err()) {
-          result_ = fitx::error(raw_response->result.err());
-        } else if (raw_response->result.is_response()) {
-          result_ = fitx::ok(&(raw_response->result.response()));
-        }
+        ExtractValueFromDecoded(decoded_.Value());
       }
     }
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-    ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>* Unwrap() {
-        return &result_.value();
-    }
-    const ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>* Unwrap() const {
-        return &result_.value();
-    }
 
-    ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>& value() { return *Unwrap(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>& value() const { return *Unwrap(); }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>* operator->() { return &value(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>* operator->() const { return &value(); }
-
-    ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>& operator*() { return value(); }
-    const ::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>& operator*() const { return value(); }
-   private:
+  private:
     ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocollayouts::MainProtocol::TwoWayAnonWithError>> decoded_;
-      std::optional<::fitx::result<uint32_t, ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorResponse*>> result_ = std::nullopt;
 };
 template<>
 class ::fidl::internal::WireEventHandlerInterface<::test_protocollayouts::MainProtocol> : public ::fidl::internal::BaseEventHandlerInterface {

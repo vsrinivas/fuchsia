@@ -303,43 +303,34 @@ struct ::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalR
     : public ::fidl::internal::DriverMessageStorageBase<::fidl::internal::IncomingMessageStorage<::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>>> {};
 
 template <>
-class [[nodiscard]] ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> final : public ::fidl::Status {
+struct ::fidl::internal::WireResultUnwrap<::test_drivertwoway::TwoWay::Add> {
+  using Type = ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>;
+};
+
+template <>
+class [[nodiscard]] ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> final : public ::fidl::BaseWireResult<::test_drivertwoway::TwoWay::Add> {
  public:
   explicit WireUnownedResult(::fdf::UnownedClientEnd<::test_drivertwoway::TwoWay> client_end, const ::fdf::Arena& arena, ::fidl::internal::TransactionalRequest<::test_drivertwoway::TwoWay::Add>* request);
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>* response)
-      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+      : ::fidl::BaseWireResult<::test_drivertwoway::TwoWay::Add>(fidl::Status::Ok()), decoded_(response) {
+    ExtractValueFromDecoded(decoded_.Value());
   }
 
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_drivertwoway::TwoWay::Add>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::Status(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_drivertwoway::TwoWay::Add>(decoded), arena_(::fidl::internal::TakeDriverArenaFromStorage(storage_view)) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
+      ExtractValueFromDecoded(decoded_.Value());
     }
   }
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_drivertwoway::TwoWay::Add>(result) {}
   WireUnownedResult(WireUnownedResult&&) = delete;
   WireUnownedResult(const WireUnownedResult&) = delete;
   WireUnownedResult* operator=(WireUnownedResult&&) = delete;
   WireUnownedResult* operator=(const WireUnownedResult&) = delete;
-  ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* Unwrap() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
-  ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>& value() { return *Unwrap(); }
-  const ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* operator->() { return &value(); }
-  const ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>* operator->() const { return &value(); }
-
-  ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>& operator*() { return value(); }
-  const ::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>& operator*() const { return value(); }
+  ~WireUnownedResult() = default;
   fdf::Arena& arena() {
     ZX_ASSERT(ok());
     return arena_;

@@ -21,6 +21,10 @@ class Example final {
     using Protocol = ::test_error::Example;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
   };
 };
 }  // namespace test_error

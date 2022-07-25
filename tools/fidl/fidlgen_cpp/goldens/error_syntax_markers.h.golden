@@ -21,6 +21,10 @@ class ExampleUseOfErrorSyntax final {
     using Protocol = ::test_errorsyntax::ExampleUseOfErrorSyntax;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
   };
   class CallWhichMayFail final {
     CallWhichMayFail() = delete;
@@ -29,6 +33,10 @@ class ExampleUseOfErrorSyntax final {
     using Protocol = ::test_errorsyntax::ExampleUseOfErrorSyntax;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
   };
 };
 }  // namespace test_errorsyntax

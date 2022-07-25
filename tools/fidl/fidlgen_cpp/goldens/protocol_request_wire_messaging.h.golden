@@ -804,35 +804,23 @@ struct ::fidl::internal::IncomingEventsStorage<::test_protocolrequest::Parent> f
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireResult<::test_protocolrequest::Parent::GetChild> final : public ::fidl::Status {
+struct ::fidl::internal::WireResultUnwrap<::test_protocolrequest::Parent::GetChild> {
+  using Type = ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>;
+};
+
+template <>
+class [[nodiscard]] ::fidl::WireResult<::test_protocolrequest::Parent::GetChild> final : public ::fidl::BaseWireResult<::test_protocolrequest::Parent::GetChild> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
       ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>* request, std::optional<zx::time> deadline = std::nullopt);
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocolrequest::Parent::GetChild>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-  ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>* Unwrap() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>* Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
-  ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>& value() { return *Unwrap(); }
-  const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>* operator->() { return &value(); }
-  const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>* operator->() const { return &value(); }
-
-  ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>& operator*() { return value(); }
-  const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
@@ -840,79 +828,52 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolrequest::Parent::GetChild>
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChild> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChild> final : public ::fidl::BaseWireResult<::test_protocolrequest::Parent::GetChild> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChild>* request);
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>* response)
-      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+      : ::fidl::BaseWireResult<::test_protocolrequest::Parent::GetChild>(fidl::Status::Ok()), decoded_(response) {
+    ExtractValueFromDecoded(decoded_.Value());
   }
 
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view) : fidl::Status(decoded) {
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_protocolrequest::Parent::GetChild>(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
+      ExtractValueFromDecoded(decoded_.Value());
     }
   }
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocolrequest::Parent::GetChild>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-  ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>* Unwrap() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>* Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
-  ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>& value() { return *Unwrap(); }
-  const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>* operator->() { return &value(); }
-  const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>* operator->() const { return &value(); }
-
-  ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>& operator*() { return value(); }
-  const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChild>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChild>> decoded_;
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireResult<::test_protocolrequest::Parent::GetChildRequest> final : public ::fidl::Status {
+struct ::fidl::internal::WireResultUnwrap<::test_protocolrequest::Parent::GetChildRequest> {
+  using Type = ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>;
+};
+
+template <>
+class [[nodiscard]] ::fidl::WireResult<::test_protocolrequest::Parent::GetChildRequest> final : public ::fidl::BaseWireResult<::test_protocolrequest::Parent::GetChildRequest> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
       ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>* request, std::optional<zx::time> deadline = std::nullopt);
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocolrequest::Parent::GetChildRequest>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
   WireResult& operator=(const WireResult&) = delete;
   ~WireResult() = default;
-  ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>* Unwrap() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>* Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
-  ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>& value() { return *Unwrap(); }
-  const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>* operator->() { return &value(); }
-  const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>* operator->() const { return &value(); }
-
-  ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>& operator*() { return value(); }
-  const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::InlineMessageBuffer<24> bytes_;
@@ -920,57 +881,42 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolrequest::Parent::GetChildR
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChildRequest> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolrequest::Parent::GetChildRequest> final : public ::fidl::BaseWireResult<::test_protocolrequest::Parent::GetChildRequest> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::GetChildRequest>* request);
   explicit WireUnownedResult(::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>* response)
-      : fidl::Status(fidl::Status::Ok()), decoded_(response) {
+      : ::fidl::BaseWireResult<::test_protocolrequest::Parent::GetChildRequest>(fidl::Status::Ok()), decoded_(response) {
+    ExtractValueFromDecoded(decoded_.Value());
   }
 
   explicit WireUnownedResult(
       ::fidl::unstable::DecodedMessage<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>>&& decoded,
-      ::fidl::internal::MessageStorageViewBase* storage_view) : fidl::Status(decoded) {
+      ::fidl::internal::MessageStorageViewBase* storage_view) : ::fidl::BaseWireResult<::test_protocolrequest::Parent::GetChildRequest>(decoded) {
     if (decoded.ok()) {
       decoded_ = decoded.Take();
+      ExtractValueFromDecoded(decoded_.Value());
     }
   }
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocolrequest::Parent::GetChildRequest>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
-  ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>* Unwrap() {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-  const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>* Unwrap() const {
-    ZX_ASSERT(ok());
-    return &decoded_.Value()->body;
-  }
-
-  ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>& value() { return *Unwrap(); }
-  const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>& value() const { return *Unwrap(); }
-
-  ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>* operator->() { return &value(); }
-  const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>* operator->() const { return &value(); }
-
-  ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>& operator*() { return value(); }
-  const ::fidl::WireResponse<::test_protocolrequest::Parent::GetChildRequest>& operator*() const { return value(); }
 
  private:
   ::fidl::internal::DecodedValue<::fidl::internal::TransactionalResponse<::test_protocolrequest::Parent::GetChildRequest>> decoded_;
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireResult<::test_protocolrequest::Parent::TakeChild> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<::test_protocolrequest::Parent::TakeChild> final : public ::fidl::BaseWireResult<::test_protocolrequest::Parent::TakeChild> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
       ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>* request);
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocolrequest::Parent::TakeChild>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
@@ -979,26 +925,26 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolrequest::Parent::TakeChild
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolrequest::Parent::TakeChild> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolrequest::Parent::TakeChild> final : public ::fidl::BaseWireResult<::test_protocolrequest::Parent::TakeChild> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChild>* request);
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocolrequest::Parent::TakeChild>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireResult<::test_protocolrequest::Parent::TakeChildRequest> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireResult<::test_protocolrequest::Parent::TakeChildRequest> final : public ::fidl::BaseWireResult<::test_protocolrequest::Parent::TakeChildRequest> {
  public:
   WireResult(
       ::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client,
       ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>* request);
 
-  explicit WireResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
+  explicit WireResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocolrequest::Parent::TakeChildRequest>(result) {}
   WireResult(WireResult&&) = delete;
   WireResult(const WireResult&) = delete;
   WireResult& operator=(WireResult&&) = delete;
@@ -1007,14 +953,14 @@ class [[nodiscard]] ::fidl::WireResult<::test_protocolrequest::Parent::TakeChild
 };
 
 template <>
-class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolrequest::Parent::TakeChildRequest> final : public ::fidl::Status {
+class [[nodiscard]] ::fidl::WireUnownedResult<::test_protocolrequest::Parent::TakeChildRequest> final : public ::fidl::BaseWireResult<::test_protocolrequest::Parent::TakeChildRequest> {
  public:
   explicit WireUnownedResult(::fidl::UnownedClientEnd<::test_protocolrequest::Parent> client_end, ::fidl::internal::AnyBufferAllocator& allocator, ::fidl::internal::TransactionalRequest<::test_protocolrequest::Parent::TakeChildRequest>* request);
 
-  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::Status(result) {}
-  WireUnownedResult(WireUnownedResult&&) = delete;
+  explicit WireUnownedResult(const ::fidl::Status& result) : ::fidl::BaseWireResult<::test_protocolrequest::Parent::TakeChildRequest>(result) {}
+  WireUnownedResult(WireUnownedResult&&) = default;
   WireUnownedResult(const WireUnownedResult&) = delete;
-  WireUnownedResult& operator=(WireUnownedResult&&) = delete;
+  WireUnownedResult& operator=(WireUnownedResult&&) = default;
   WireUnownedResult& operator=(const WireUnownedResult&) = delete;
   ~WireUnownedResult() = default;
 };

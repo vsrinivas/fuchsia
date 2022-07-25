@@ -21,6 +21,10 @@ class WithAndWithoutRequestResponse final {
     using Protocol = ::test_protocols::WithAndWithoutRequestResponse;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class NoRequestEmptyResponse final {
     NoRequestEmptyResponse() = delete;
@@ -29,6 +33,10 @@ class WithAndWithoutRequestResponse final {
     using Protocol = ::test_protocols::WithAndWithoutRequestResponse;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class NoRequestWithResponse final {
     NoRequestWithResponse() = delete;
@@ -37,6 +45,10 @@ class WithAndWithoutRequestResponse final {
     using Protocol = ::test_protocols::WithAndWithoutRequestResponse;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class WithRequestNoResponse final {
     WithRequestNoResponse() = delete;
@@ -45,6 +57,10 @@ class WithAndWithoutRequestResponse final {
     using Protocol = ::test_protocols::WithAndWithoutRequestResponse;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class WithRequestEmptyResponse final {
     WithRequestEmptyResponse() = delete;
@@ -53,6 +69,10 @@ class WithAndWithoutRequestResponse final {
     using Protocol = ::test_protocols::WithAndWithoutRequestResponse;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class WithRequestWithResponse final {
     WithRequestWithResponse() = delete;
@@ -61,6 +81,10 @@ class WithAndWithoutRequestResponse final {
     using Protocol = ::test_protocols::WithAndWithoutRequestResponse;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class OnEmptyResponse final {
     OnEmptyResponse() = delete;
@@ -69,6 +93,10 @@ class WithAndWithoutRequestResponse final {
     using Protocol = ::test_protocols::WithAndWithoutRequestResponse;
     static constexpr bool kHasRequest = false;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class OnWithResponse final {
     OnWithResponse() = delete;
@@ -77,6 +105,10 @@ class WithAndWithoutRequestResponse final {
     using Protocol = ::test_protocols::WithAndWithoutRequestResponse;
     static constexpr bool kHasRequest = false;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
 };
 
@@ -94,6 +126,10 @@ class Transitional final {
     using Protocol = ::test_protocols::Transitional;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class OneWay final {
     OneWay() = delete;
@@ -102,6 +138,10 @@ class Transitional final {
     using Protocol = ::test_protocols::Transitional;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class Event final {
     Event() = delete;
@@ -110,6 +150,10 @@ class Transitional final {
     using Protocol = ::test_protocols::Transitional;
     static constexpr bool kHasRequest = false;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
 };
 
@@ -127,6 +171,10 @@ class WithProtocolEnds final {
     using Protocol = ::test_protocols::WithProtocolEnds;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class ServerEnds final {
     ServerEnds() = delete;
@@ -135,6 +183,10 @@ class WithProtocolEnds final {
     using Protocol = ::test_protocols::WithProtocolEnds;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class StructContainingEnds final {
     StructContainingEnds() = delete;
@@ -143,6 +195,10 @@ class WithProtocolEnds final {
     using Protocol = ::test_protocols::WithProtocolEnds;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
 };
 
@@ -160,6 +216,10 @@ class MethodWithUnion final {
     using Protocol = ::test_protocols::MethodWithUnion;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
 };
 
@@ -177,6 +237,10 @@ class ManyParameters final {
     using Protocol = ::test_protocols::ManyParameters;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
 };
 
@@ -194,6 +258,10 @@ class HandleRightsProtocol final {
     using Protocol = ::test_protocols::HandleRightsProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class ResponseMethod final {
     ResponseMethod() = delete;
@@ -202,6 +270,10 @@ class HandleRightsProtocol final {
     using Protocol = ::test_protocols::HandleRightsProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class AnEvent final {
     AnEvent() = delete;
@@ -210,6 +282,10 @@ class HandleRightsProtocol final {
     using Protocol = ::test_protocols::HandleRightsProtocol;
     static constexpr bool kHasRequest = false;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
 };
 
@@ -227,6 +303,10 @@ class WithErrorSyntax final {
     using Protocol = ::test_protocols::WithErrorSyntax;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
   };
   class ErrorAsPrimitive final {
     ErrorAsPrimitive() = delete;
@@ -235,6 +315,10 @@ class WithErrorSyntax final {
     using Protocol = ::test_protocols::WithErrorSyntax;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
   };
   class ErrorAsEnum final {
     ErrorAsEnum() = delete;
@@ -243,6 +327,10 @@ class WithErrorSyntax final {
     using Protocol = ::test_protocols::WithErrorSyntax;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
   };
   class HandleInResult final {
     HandleInResult() = delete;
@@ -251,6 +339,10 @@ class WithErrorSyntax final {
     using Protocol = ::test_protocols::WithErrorSyntax;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = true;
+    static constexpr bool kHasTransportError = false;
   };
 };
 
@@ -268,6 +360,10 @@ class DiscoverableProtocol final {
     using Protocol = ::test_protocols::DiscoverableProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
 };
 
@@ -285,6 +381,10 @@ class ChannelProtocol final {
     using Protocol = ::test_protocols::ChannelProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = false;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class EventA final {
     EventA() = delete;
@@ -293,6 +393,10 @@ class ChannelProtocol final {
     using Protocol = ::test_protocols::ChannelProtocol;
     static constexpr bool kHasRequest = false;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class MethodB final {
     MethodB() = delete;
@@ -301,6 +405,10 @@ class ChannelProtocol final {
     using Protocol = ::test_protocols::ChannelProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class TakeHandle final {
     TakeHandle() = delete;
@@ -309,6 +417,10 @@ class ChannelProtocol final {
     using Protocol = ::test_protocols::ChannelProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = false;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
   class MutateSocket final {
     MutateSocket() = delete;
@@ -317,6 +429,10 @@ class ChannelProtocol final {
     using Protocol = ::test_protocols::ChannelProtocol;
     static constexpr bool kHasRequest = true;
     static constexpr bool kHasResponse = true;
+
+    static constexpr bool kHasNonEmptyPayload = true;
+    static constexpr bool kHasApplicationError = false;
+    static constexpr bool kHasTransportError = false;
   };
 };
 

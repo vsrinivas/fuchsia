@@ -34,6 +34,7 @@ extern "C" const fidl_type_t test_drivertwoway_TwoWayAddTopResponseTable;
   SetStatus(decoded);
   if (ok()) {
     decoded_ = decoded.Take();
+    ExtractValueFromDecoded(decoded_.Value());
   }
   arena_ = std::move(response_storage.arena);
 }
