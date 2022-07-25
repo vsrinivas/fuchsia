@@ -77,6 +77,9 @@ template("verify_static_pkgs") {
 
     stamp_file = "$target_gen_dir/$target_name.verified"
     depfile = "$target_gen_dir/$target_name.d"
+    tmp_dir = "$target_out_dir/$target_name/tmp"
+
+    hermetic_action_ignored_prefixes = [ tmp_dir ]
 
     inputs = [ files.update_package ] + files.blobfs + invoker.goldens
 
@@ -90,7 +93,7 @@ template("verify_static_pkgs") {
       "--stamp",
       rebase_path(stamp_file, root_build_dir),
       "--tmp-dir",
-      rebase_path(target_gen_dir, root_build_dir),
+      rebase_path(tmp_dir, root_build_dir),
       "static-pkgs",
       "--build-path",
       rebase_path(root_build_dir, root_build_dir),

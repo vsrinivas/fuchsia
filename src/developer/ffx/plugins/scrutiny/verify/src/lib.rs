@@ -24,6 +24,16 @@ pub async fn scrutiny_verify(cmd: Command) -> Result<()> {
     }
 
     let tmp_dir = cmd.tmp_dir.as_ref();
+    if let Some(tmp_dir) = tmp_dir {
+        fs::create_dir_all(tmp_dir).map_err(|err| {
+            anyhow!(
+                "Failed to create temporary directory {:?} for `ffx scrutiny verify`: {}",
+                tmp_dir,
+                err
+            )
+        })?;
+    }
+
     let deps_set = match &cmd.subcommand {
         SubCommand::Bootfs(subcommand) => bootfs::verify(subcommand, tmp_dir).await,
         SubCommand::ComponentResolvers(subcommand) => {

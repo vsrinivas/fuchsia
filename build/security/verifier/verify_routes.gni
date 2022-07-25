@@ -75,6 +75,9 @@ template("verify_routes") {
 
     depfile = "$target_out_dir/$target_name.d"
     stamp_file = "$target_gen_dir/$target_name.verified"
+    tmp_dir = "$target_out_dir/$target_name/tmp"
+
+    hermetic_action_ignored_prefixes = [ tmp_dir ]
 
     inputs = [ files.update_package ] + invoker.allowlist + files.blobfs
     outputs = [ stamp_file ]
@@ -87,7 +90,7 @@ template("verify_routes") {
       "--stamp",
       rebase_path(stamp_file, root_build_dir),
       "--tmp-dir",
-      rebase_path(target_gen_dir, root_build_dir),
+      rebase_path(tmp_dir, root_build_dir),
       "routes",
       "--build-path",
       rebase_path(root_build_dir, root_build_dir),

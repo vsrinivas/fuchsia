@@ -63,6 +63,9 @@ template("verify_kernel_cmdline") {
 
     stamp_file = "$target_gen_dir/$target_name.verified"
     depfile = "$target_gen_dir/$target_name.d"
+    tmp_dir = "$target_out_dir/$target_name/tmp"
+
+    hermetic_action_ignored_prefixes = [ tmp_dir ]
 
     inputs = [ zbi ] + invoker.goldens
     outputs = [ stamp_file ]
@@ -75,7 +78,7 @@ template("verify_kernel_cmdline") {
       "--stamp",
       rebase_path(stamp_file, root_build_dir),
       "--tmp-dir",
-      rebase_path(target_gen_dir, root_build_dir),
+      rebase_path(tmp_dir, root_build_dir),
       "kernel-cmdline",
       "--zbi",
       rebase_path(zbi, root_build_dir),
