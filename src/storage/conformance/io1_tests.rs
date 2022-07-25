@@ -457,20 +457,19 @@ async fn open_remote_file_test() {
     .await;
 }
 
-/// Ensure specifying OPEN_FLAG_POSIX_DEPRECATED cannot cause rights escalation (fxbug.dev/40862).
+/// Ensure specifying POSIX_* flags cannot cause rights escalation (fxbug.dev/40862).
 /// The test sets up the following hierarchy of nodes:
 ///
-/// ------------------ RW   --------------------------
-/// | root_dir_proxy | ---> | root_dir_server        |
-/// ------------------ (a)  |  - /mount_point        | RWX  ---------------------
-///                         |    (remote_proxy)      | ---> |   remote_dir      |
-///                         -------------------------- (b)  ---------------------
+/// --------------------- RW   --------------------------
+/// |  root_proxy       | ---> |  root                  |
+/// --------------------- (a)  |   - /mount_point       | RWX  ---------------------
+///                            |     (remote_proxy)     | ---> |  remote_dir       |
+///                            -------------------------- (b)  ---------------------
 ///
 /// To validate the right escalation issue has been resolved, we call Open() on the test_dir_proxy
-/// passing in OPEN_FLAG_POSIX_DEPRECATED, which if handled correctly, should result in opening
-/// remote_dir as RW (and NOT RWX, which can occur if the deprecated POSIX flag is passed directly
-/// to the remote instead of only OPEN_FLAG_POSIX_WRITABLE/EXECUTABLE).
-/// TODO(fxbug.dev/81185): Replace OPEN_FLAG_POSIX_DEPRECATED with new set of equivalent flags.
+/// passing in both POSIX_* flags, which if handled correctly, should result in opening
+/// remote_dir_server as RW (and NOT RWX, which can occur if both flags are passed directly to the
+/// remote instead of being removed).
 #[fasync::run_singlethreaded(test)]
 async fn open_remote_directory_right_escalation_test() {
     let harness = TestHarness::new().await;
@@ -501,7 +500,9 @@ async fn open_remote_directory_right_escalation_test() {
     let (node_proxy, node_server) = create_proxy::<fio::NodeMarker>().expect("Cannot create proxy");
     root_proxy
         .open(
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::POSIX_DEPRECATED,
+            fio::OpenFlags::RIGHT_READABLE
+                | fio::OpenFlags::POSIX_WRITABLE
+                | fio::OpenFlags::POSIX_EXECUTABLE,
             fio::MODE_TYPE_DIRECTORY,
             mount_point,
             node_server,

@@ -60,13 +60,6 @@ impl DirectoryEntry for PkgfsPackagesVariants {
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
         let flags = flags.difference(fio::OpenFlags::POSIX_WRITABLE);
-        let flags = if flags.intersects(fio::OpenFlags::POSIX_DEPRECATED) {
-            flags
-                .difference(fio::OpenFlags::POSIX_DEPRECATED)
-                .union(fio::OpenFlags::POSIX_EXECUTABLE)
-        } else {
-            flags
-        };
 
         // This directory and all child nodes are read-only
         if flags.intersects(
@@ -447,28 +440,6 @@ mod tests {
         let (status, flags) = proxy.get_flags().await.unwrap();
         let () = zx::Status::ok(status).unwrap();
         assert_eq!(flags, fio::OpenFlags::RIGHT_READABLE);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn open_converts_posix_deprecated_to_posix_exec() {
-        let package = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
-        let (metafar_blob, _) = package.contents();
-        let (blobfs_fake, blobfs_client) = FakeBlobfs::new();
-        blobfs_fake.add_blob(metafar_blob.merkle, metafar_blob.contents);
-
-        let pkgfs_packages_variants = Arc::new(PkgfsPackagesVariants::new(
-            package_variant_hashmap! {
-                "0" => metafar_blob.merkle,
-            },
-            blobfs_client,
-        ));
-
-        let proxy = pkgfs_packages_variants
-            .proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::POSIX_DEPRECATED);
-
-        let (status, flags) = proxy.get_flags().await.unwrap();
-        let () = zx::Status::ok(status).unwrap();
-        assert_eq!(flags, fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

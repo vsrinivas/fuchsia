@@ -46,10 +46,7 @@ pub fn new_connection_validate_flags(
     flags &= !fio::OpenFlags::NOT_DIRECTORY;
 
     // For services any OPEN_FLAG_POSIX_* flags are ignored as they only apply to directories.
-    // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED after all clients are updated.
-    flags &= !(fio::OpenFlags::POSIX_DEPRECATED
-        | fio::OpenFlags::POSIX_WRITABLE
-        | fio::OpenFlags::POSIX_EXECUTABLE);
+    flags &= !(fio::OpenFlags::POSIX_WRITABLE | fio::OpenFlags::POSIX_EXECUTABLE);
 
     if flags.intersects(fio::OpenFlags::DIRECTORY) {
         return Err(Status::NOT_DIR);
@@ -68,7 +65,6 @@ pub fn new_connection_validate_flags(
     debug_assert!(!flags.intersects(
         fio::OpenFlags::DIRECTORY
             | fio::OpenFlags::NOT_DIRECTORY
-            | fio::OpenFlags::POSIX_DEPRECATED
             | fio::OpenFlags::POSIX_WRITABLE
             | fio::OpenFlags::POSIX_EXECUTABLE
             | fio::OpenFlags::NODE_REFERENCE
@@ -180,10 +176,8 @@ mod tests {
     #[test]
     fn node_reference_posix() {
         // OPEN_FLAG_POSIX_* is ignored for services.
-        // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED.
         ncvf_ok(
             fio::OpenFlags::NODE_REFERENCE
-                | fio::OpenFlags::POSIX_DEPRECATED
                 | fio::OpenFlags::POSIX_WRITABLE
                 | fio::OpenFlags::POSIX_EXECUTABLE,
             0,
@@ -192,7 +186,6 @@ mod tests {
         ncvf_ok(
             fio::OpenFlags::NODE_REFERENCE
                 | fio::OpenFlags::DESCRIBE
-                | fio::OpenFlags::POSIX_DEPRECATED
                 | fio::OpenFlags::POSIX_WRITABLE
                 | fio::OpenFlags::POSIX_EXECUTABLE,
             0,
@@ -201,7 +194,6 @@ mod tests {
         ncvf_ok(
             fio::OpenFlags::NODE_REFERENCE
                 | READ_WRITE
-                | fio::OpenFlags::POSIX_DEPRECATED
                 | fio::OpenFlags::POSIX_WRITABLE
                 | fio::OpenFlags::POSIX_EXECUTABLE,
             0,
@@ -212,19 +204,14 @@ mod tests {
     #[test]
     fn service_posix() {
         // OPEN_FLAG_POSIX_* is ignored for services.
-        // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED.
         ncvf_ok(
-            READ_WRITE
-                | fio::OpenFlags::POSIX_DEPRECATED
-                | fio::OpenFlags::POSIX_WRITABLE
-                | fio::OpenFlags::POSIX_EXECUTABLE,
+            READ_WRITE | fio::OpenFlags::POSIX_WRITABLE | fio::OpenFlags::POSIX_EXECUTABLE,
             0,
             READ_WRITE,
         );
         ncvf_ok(
             READ_WRITE
                 | fio::OpenFlags::DESCRIBE
-                | fio::OpenFlags::POSIX_DEPRECATED
                 | fio::OpenFlags::POSIX_WRITABLE
                 | fio::OpenFlags::POSIX_EXECUTABLE,
             0,

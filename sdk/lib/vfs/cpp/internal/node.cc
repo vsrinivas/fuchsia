@@ -15,12 +15,10 @@
 namespace vfs {
 namespace {
 
-// TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED when all out-of-tree clients have been
-// updated to the latest version of fuchsia.io.
 constexpr fuchsia::io::OpenFlags kCommonAllowedFlags =
     fuchsia::io::OpenFlags::DESCRIBE | fuchsia::io::OpenFlags::NODE_REFERENCE |
-    fuchsia::io::OpenFlags::POSIX_DEPRECATED | fuchsia::io::OpenFlags::POSIX_WRITABLE |
-    fuchsia::io::OpenFlags::POSIX_EXECUTABLE | fuchsia::io::OpenFlags::CLONE_SAME_RIGHTS;
+    fuchsia::io::OpenFlags::POSIX_WRITABLE | fuchsia::io::OpenFlags::POSIX_EXECUTABLE |
+    fuchsia::io::OpenFlags::CLONE_SAME_RIGHTS;
 
 constexpr std::tuple<NodeKind::Type, fuchsia::io::OpenFlags> kKindFlagMap[] = {
     {NodeKind::kReadable, fuchsia::io::OpenFlags::RIGHT_READABLE},

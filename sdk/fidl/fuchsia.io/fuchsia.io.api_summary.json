@@ -2026,11 +2026,6 @@
     },
     {
         "kind": "bits/member",
-        "name": "fuchsia.io/OpenFlags.POSIX_DEPRECATED",
-        "value": "16777216"
-    },
-    {
-        "kind": "bits/member",
         "name": "fuchsia.io/OpenFlags.POSIX_EXECUTABLE",
         "value": "268435456"
     },

@@ -130,7 +130,6 @@ void PrintIntoStringBuffer(fbl::StringBuffer<N>* sb, fuchsia_io::wire::OpenFlags
       {fuchsia_io::wire::OpenFlags::kAppend, "APPEND"},
       {fuchsia_io::wire::OpenFlags::kNodeReference, "NODE_REFERENCE"},
       {fuchsia_io::wire::OpenFlags::kDescribe, "DESCRIBE"},
-      {fuchsia_io::wire::OpenFlags::kPosixDeprecated, "POSIX_DEPRECATED"},
       {fuchsia_io::wire::OpenFlags::kPosixWritable, "POSIX_WRITABLE"},
       {fuchsia_io::wire::OpenFlags::kPosixExecutable, "POSIX_EXECUTABLE"},
       {fuchsia_io::wire::OpenFlags::kNotDirectory, "NOT_DIRECTORY"},

@@ -41,10 +41,7 @@ impl<S: crate::NonMetaStorage> vfs::directory::entry::DirectoryEntry for MetaSub
         path: VfsPath,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
-        let flags = flags
-            & !(fio::OpenFlags::POSIX_WRITABLE
-                | fio::OpenFlags::POSIX_EXECUTABLE
-                | fio::OpenFlags::POSIX_DEPRECATED);
+        let flags = flags & !(fio::OpenFlags::POSIX_WRITABLE | fio::OpenFlags::POSIX_EXECUTABLE);
         if path.is_empty() {
             if flags.intersects(
                 fio::OpenFlags::RIGHT_WRITABLE
@@ -200,8 +197,7 @@ mod tests {
             &(sub_dir as Arc<dyn DirectoryEntry>),
             fio::OpenFlags::RIGHT_READABLE
                 | fio::OpenFlags::POSIX_WRITABLE
-                | fio::OpenFlags::POSIX_EXECUTABLE
-                | fio::OpenFlags::POSIX_DEPRECATED,
+                | fio::OpenFlags::POSIX_EXECUTABLE,
             fio::OpenFlags::RIGHT_READABLE,
         )
         .await;

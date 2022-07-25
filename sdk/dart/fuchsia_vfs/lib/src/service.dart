@@ -63,7 +63,6 @@ class Service<T> extends Vnode {
     // so that underlying services don't need to handle these flags.
     final unsupportedFlags = ~(OpenFlags.rightReadable |
         OpenFlags.rightWritable |
-        OpenFlags.posixDeprecated |
         OpenFlags.posixWritable |
         OpenFlags.posixExecutable |
         OpenFlags.cloneSameRights);

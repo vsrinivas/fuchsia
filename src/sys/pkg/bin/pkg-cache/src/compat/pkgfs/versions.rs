@@ -116,13 +116,6 @@ impl vfs::directory::entry::DirectoryEntry for PkgfsVersions {
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
         let flags = flags.difference(fio::OpenFlags::POSIX_WRITABLE);
-        let flags = if flags.intersects(fio::OpenFlags::POSIX_DEPRECATED) {
-            flags
-                .difference(fio::OpenFlags::POSIX_DEPRECATED)
-                .union(fio::OpenFlags::POSIX_EXECUTABLE)
-        } else {
-            flags
-        };
 
         // This directory and all child nodes are read-only
         if flags.intersects(
@@ -443,19 +436,6 @@ mod tests {
         let (status, flags) = proxy.get_flags().await.unwrap();
         let () = zx::Status::ok(status).unwrap();
         assert_eq!(flags, fio::OpenFlags::RIGHT_READABLE);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn directory_entry_open_converts_posix_deprecated_to_posix_exec() {
-        let (_env, pkgfs_versions) =
-            TestEnv::new([], non_static_allow_list(&[]), ExecutabilityRestrictions::Enforce, &[]);
-
-        let proxy =
-            pkgfs_versions.proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::POSIX_DEPRECATED);
-
-        let (status, flags) = proxy.get_flags().await.unwrap();
-        let () = zx::Status::ok(status).unwrap();
-        assert_eq!(flags, fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

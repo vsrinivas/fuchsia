@@ -101,13 +101,6 @@ impl DirectoryEntry for PkgfsPackages {
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
         let flags = flags.difference(fio::OpenFlags::POSIX_WRITABLE);
-        let flags = if flags.intersects(fio::OpenFlags::POSIX_DEPRECATED) {
-            flags
-                .difference(fio::OpenFlags::POSIX_DEPRECATED)
-                .union(fio::OpenFlags::POSIX_EXECUTABLE)
-        } else {
-            flags
-        };
 
         // This directory and all child nodes are read-only
         if flags.intersects(
@@ -511,18 +504,5 @@ mod tests {
         let (status, flags) = proxy.get_flags().await.unwrap();
         let () = zx::Status::ok(status).unwrap();
         assert_eq!(flags, fio::OpenFlags::RIGHT_READABLE);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn open_converts_posix_deprecated_to_posix_exec() {
-        let (pkgfs_packages, _package_index) =
-            PkgfsPackages::new_test([], non_static_allow_list(&[]));
-
-        let proxy =
-            pkgfs_packages.proxy(fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::POSIX_DEPRECATED);
-
-        let (status, flags) = proxy.get_flags().await.unwrap();
-        let () = zx::Status::ok(status).unwrap();
-        assert_eq!(flags, fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE);
     }
 }

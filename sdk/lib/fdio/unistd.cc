@@ -90,11 +90,9 @@ constexpr fio::wire::OpenFlags kZxioFsMask =
     fio::wire::OpenFlags::kDirectory | fio::wire::OpenFlags::kAppend |
     fio::wire::OpenFlags::kCloneSameRights;
 
-// TODO(fxbug.dev/81185): Remove kOpenFlagPosixDeprecated after clients have updated to a newer SDK.
 constexpr fio::wire::OpenFlags kZxioFsFlags =
     kZxioFsMask | fio::wire::OpenFlags::kPosixWritable | fio::wire::OpenFlags::kPosixExecutable |
-    fio::wire::OpenFlags::kPosixDeprecated | fio::wire::OpenFlags::kNotDirectory |
-    fio::wire::OpenFlags::kCloneSameRights;
+    fio::wire::OpenFlags::kNotDirectory | fio::wire::OpenFlags::kCloneSameRights;
 
 // Verify that the remaining O_* flags don't overlap with the ZXIO_FS flags.
 static_assert(!(O_RDONLY & static_cast<uint32_t>(kZxioFsFlags)),

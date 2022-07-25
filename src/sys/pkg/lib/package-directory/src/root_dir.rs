@@ -203,11 +203,7 @@ impl<S: crate::NonMetaStorage> vfs::directory::entry::DirectoryEntry for RootDir
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
         let flags = flags & !fio::OpenFlags::POSIX_WRITABLE;
-        let flags = if flags.intersects(fio::OpenFlags::POSIX_DEPRECATED) {
-            (flags & !fio::OpenFlags::POSIX_DEPRECATED) | fio::OpenFlags::POSIX_EXECUTABLE
-        } else {
-            flags
-        };
+
         if path.is_empty() {
             if flags.intersects(
                 fio::OpenFlags::RIGHT_WRITABLE
@@ -660,19 +656,6 @@ mod tests {
             &(root_dir as Arc<dyn DirectoryEntry>),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::POSIX_WRITABLE,
             fio::OpenFlags::RIGHT_READABLE,
-        )
-        .await;
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn directory_entry_open_converts_posix_deprecated_to_posix_executable() {
-        let (_env, root_dir) = TestEnv::new().await;
-        let root_dir = Arc::new(root_dir);
-
-        let () = crate::verify_open_adjusts_flags(
-            &(root_dir as Arc<dyn DirectoryEntry>),
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::POSIX_DEPRECATED,
-            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_EXECUTABLE,
         )
         .await;
     }

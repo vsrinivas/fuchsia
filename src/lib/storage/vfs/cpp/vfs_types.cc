@@ -38,13 +38,6 @@ VnodeConnectionOptions VnodeConnectionOptions::FromIoV1Flags(
   if (fidl_flags & fio::wire::OpenFlags::kDescribe) {
     options.flags.describe = true;
   }
-  // Expand deprecated POSIX flag into new equivalents to maintain binary compatibility with
-  // out-of-tree clients while still preventing rights escalations when crossing remote mounts.
-  // TODO(fxbug.dev/81185): Remove kOpenFlagPosixDeprecated.
-  if (fidl_flags & fio::wire::OpenFlags::kPosixDeprecated) {
-    options.flags.posix_write = true;
-    options.flags.posix_execute = true;
-  }
   if (fidl_flags & fio::wire::OpenFlags::kPosixWritable) {
     options.flags.posix_write = true;
   }

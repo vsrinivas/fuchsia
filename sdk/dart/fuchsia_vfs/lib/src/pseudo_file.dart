@@ -172,7 +172,6 @@ class PseudoFile extends Vnode {
     }
     var allowedFlags = OpenFlags.describe |
         OpenFlags.nodeReference |
-        OpenFlags.posixDeprecated |
         OpenFlags.posixWritable |
         OpenFlags.posixExecutable |
         OpenFlags.cloneSameRights;

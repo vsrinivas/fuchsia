@@ -60,11 +60,7 @@ pub fn inherit_rights_for_clone(
     }
 
     // Ignore the POSIX flags for clone.
-    // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED once out-of-tree clients have been
-    // updated to the latest SDK version.
-    flags &= !(fio::OpenFlags::POSIX_DEPRECATED
-        | fio::OpenFlags::POSIX_WRITABLE
-        | fio::OpenFlags::POSIX_EXECUTABLE);
+    flags &= !(fio::OpenFlags::POSIX_WRITABLE | fio::OpenFlags::POSIX_EXECUTABLE);
 
     Ok(flags)
 }

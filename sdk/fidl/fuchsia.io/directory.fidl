@@ -41,9 +41,7 @@ type OpenFlags = strict bits : uint32 {
     /// to open a protocol that does not compose fuchsia.io/Node; the event is sent as if the
     /// protocol is fuchsia.io/Node and then the target protocol is used exclusively.
     DESCRIBE = 0x00800000;
-    /// DO NOT USE. In process of being removed.
-    /// TODO(fxbug.dev/81185): Remove when all clients have updated to the latest SDK.
-    @deprecated("Temporary flag used by servers to maintain binary compatibility with clients.")
+    @available(deprecated=7, removed=HEAD, note="Use POSIX_WRITABLE/POSIX_EXECUTABLE instead.")
     POSIX_DEPRECATED = 0x01000000;
     /// Specify this flag to request POSIX-compatibility with respect to write permission handling.
     /// Currently, it affects permission handling specifically during Open:

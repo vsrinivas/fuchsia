@@ -56,11 +56,8 @@ impl vfs::directory::entry::DirectoryEntry for Validation {
         path: VfsPath,
         server_end: ServerEnd<fio::NodeMarker>,
     ) {
-        let flags = flags.difference(
-            fio::OpenFlags::POSIX_WRITABLE
-                | fio::OpenFlags::POSIX_EXECUTABLE
-                | fio::OpenFlags::POSIX_DEPRECATED,
-        );
+        let flags =
+            flags.difference(fio::OpenFlags::POSIX_WRITABLE | fio::OpenFlags::POSIX_EXECUTABLE);
         if path.is_empty() {
             if flags.intersects(
                 fio::OpenFlags::RIGHT_WRITABLE
@@ -185,8 +182,7 @@ mod tests {
             ExecutionScope::new(),
             fio::OpenFlags::RIGHT_READABLE
                 | fio::OpenFlags::POSIX_WRITABLE
-                | fio::OpenFlags::POSIX_EXECUTABLE
-                | fio::OpenFlags::POSIX_DEPRECATED,
+                | fio::OpenFlags::POSIX_EXECUTABLE,
             0,
             VfsPath::dot(),
             server_end.into_channel().into(),

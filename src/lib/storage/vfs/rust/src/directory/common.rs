@@ -35,23 +35,15 @@ pub fn new_connection_validate_flags(
         return Err(zx::Status::NOT_FILE);
     }
 
-    // Explicitly expand OPEN_FLAG_POSIX_DEPRECATED to prevent right escalation issues.
-    // TODO(fxbug.dev/81185): Remove this branch and usesof OPEN_FLAG_POSIX_DEPRECATED below when
-    // out-of-tree clients have been updated.
-    if flags.intersects(fio::OpenFlags::POSIX_DEPRECATED) {
-        flags |= fio::OpenFlags::POSIX_WRITABLE | fio::OpenFlags::POSIX_EXECUTABLE;
-    }
     // Parent connection must check the POSIX flags in `check_child_connection_flags`, so if any
     // are still present, we expand their respective rights and remove any remaining flags.
-    if flags.intersects(fio::OpenFlags::POSIX_DEPRECATED | fio::OpenFlags::POSIX_EXECUTABLE) {
+    if flags.intersects(fio::OpenFlags::POSIX_EXECUTABLE) {
         flags |= fio::OpenFlags::RIGHT_EXECUTABLE;
     }
-    if flags.intersects(fio::OpenFlags::POSIX_DEPRECATED | fio::OpenFlags::POSIX_WRITABLE) {
+    if flags.intersects(fio::OpenFlags::POSIX_WRITABLE) {
         flags |= fio::OpenFlags::RIGHT_WRITABLE;
     }
-    flags &= !(fio::OpenFlags::POSIX_DEPRECATED
-        | fio::OpenFlags::POSIX_WRITABLE
-        | fio::OpenFlags::POSIX_EXECUTABLE);
+    flags &= !(fio::OpenFlags::POSIX_WRITABLE | fio::OpenFlags::POSIX_EXECUTABLE);
 
     let allowed_flags = fio::OpenFlags::NODE_REFERENCE
         | fio::OpenFlags::DESCRIBE
@@ -119,12 +111,6 @@ pub fn check_child_connection_flags(
         return Err(zx::Status::INVALID_ARGS);
     }
 
-    // Expand POSIX flag into new equivalents.
-    // TODO(fxbug.dev/81185): Remove branch once all out-of-tree clients have been updated.
-    if flags.intersects(fio::OpenFlags::POSIX_DEPRECATED) {
-        flags |= fio::OpenFlags::POSIX_WRITABLE | fio::OpenFlags::POSIX_EXECUTABLE;
-        flags &= !fio::OpenFlags::POSIX_DEPRECATED;
-    }
     // Remove POSIX flags when the respective rights are not available ("soft fail").
     if !parent_flags.intersects(fio::OpenFlags::RIGHT_EXECUTABLE) {
         flags &= !fio::OpenFlags::POSIX_EXECUTABLE;
@@ -247,21 +233,15 @@ mod tests {
 
     #[test]
     fn new_connection_validate_flags_posix() {
-        // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED.
         for open_flags in build_flag_combinations(
             0,
             (fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::POSIX_DEPRECATED
                 | fio::OpenFlags::POSIX_EXECUTABLE
                 | fio::OpenFlags::POSIX_WRITABLE)
                 .bits(),
         ) {
             let open_flags = fio::OpenFlags::from_bits_truncate(open_flags);
             let mut expected_rights = open_flags & fio::OpenFlags::RIGHT_READABLE;
-            if open_flags.intersects(fio::OpenFlags::POSIX_DEPRECATED) {
-                expected_rights |=
-                    fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::RIGHT_EXECUTABLE;
-            }
             if open_flags.intersects(fio::OpenFlags::POSIX_WRITABLE) {
                 expected_rights |= fio::OpenFlags::RIGHT_WRITABLE
             }

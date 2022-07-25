@@ -43,10 +43,7 @@ pub fn new_connection_validate_flags(
     }
 
     // For files, the OPEN_FLAG_POSIX_* flags are ignored as they have meaning only for directories.
-    // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED.
-    flags &= !(fio::OpenFlags::POSIX_DEPRECATED
-        | fio::OpenFlags::POSIX_WRITABLE
-        | fio::OpenFlags::POSIX_EXECUTABLE);
+    flags &= !(fio::OpenFlags::POSIX_WRITABLE | fio::OpenFlags::POSIX_EXECUTABLE);
 
     let allowed_flags = fio::OpenFlags::NODE_REFERENCE
         | fio::OpenFlags::DESCRIBE
@@ -265,9 +262,7 @@ mod tests {
     #[test]
     fn new_connection_validate_flags_posix() {
         // OPEN_FLAG_POSIX_* is ignored for files.
-        // TODO(fxbug.dev/81185): Remove OPEN_FLAG_POSIX_DEPRECATED.
         const ALL_POSIX_FLAGS: fio::OpenFlags = fio::OpenFlags::empty()
-            .union(fio::OpenFlags::POSIX_DEPRECATED)
             .union(fio::OpenFlags::POSIX_WRITABLE)
             .union(fio::OpenFlags::POSIX_EXECUTABLE);
         for open_flags in build_flag_combinations(

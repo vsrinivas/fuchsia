@@ -404,10 +404,7 @@ fn open_subdir_with_posix_flag_rights_expansion() {
     // Combinations of flags to pass in when opening a subdirectory within the root directory.
     let subdir_flag_combos = build_flag_combinations(
         fio::OpenFlags::RIGHT_READABLE.bits(),
-        (fio::OpenFlags::POSIX_DEPRECATED
-            | fio::OpenFlags::POSIX_WRITABLE
-            | fio::OpenFlags::POSIX_EXECUTABLE)
-            .bits(),
+        (fio::OpenFlags::POSIX_WRITABLE | fio::OpenFlags::POSIX_EXECUTABLE).bits(),
     )
     .into_iter()
     .map(fio::OpenFlags::from_bits_truncate)
@@ -422,17 +419,12 @@ fn open_subdir_with_posix_flag_rights_expansion() {
     ) {
         // Ensure POSIX flags were removed.
         assert!(
-            !resulting_subdir_flags.intersects(
-                fio::OpenFlags::POSIX_DEPRECATED
-                    | fio::OpenFlags::POSIX_WRITABLE
-                    | fio::OpenFlags::POSIX_EXECUTABLE
-            ),
+            !resulting_subdir_flags
+                .intersects(fio::OpenFlags::POSIX_WRITABLE | fio::OpenFlags::POSIX_EXECUTABLE),
             "POSIX flags were not removed!"
         );
         // Ensure writable rights were expanded correctly.
-        if subdir_open_flags
-            .intersects(fio::OpenFlags::POSIX_DEPRECATED | fio::OpenFlags::POSIX_WRITABLE)
-        {
+        if subdir_open_flags.intersects(fio::OpenFlags::POSIX_WRITABLE) {
             if root_node_flags.intersects(fio::OpenFlags::RIGHT_WRITABLE) {
                 assert!(
                     resulting_subdir_flags.intersects(fio::OpenFlags::RIGHT_WRITABLE),
@@ -446,9 +438,7 @@ fn open_subdir_with_posix_flag_rights_expansion() {
             }
         }
         // Ensure executable rights were expanded correctly.
-        if subdir_open_flags
-            .intersects(fio::OpenFlags::POSIX_DEPRECATED | fio::OpenFlags::POSIX_EXECUTABLE)
-        {
+        if subdir_open_flags.intersects(fio::OpenFlags::POSIX_EXECUTABLE) {
             if root_node_flags.intersects(fio::OpenFlags::RIGHT_EXECUTABLE) {
                 assert!(
                     resulting_subdir_flags.intersects(fio::OpenFlags::RIGHT_EXECUTABLE),
@@ -750,7 +740,7 @@ fn flag_posix_means_writable() {
             let nested = open_get_directory_proxy_assert_ok!(
                 &root,
                 fio::OpenFlags::RIGHT_READABLE
-                    | fio::OpenFlags::POSIX_DEPRECATED
+                    | fio::OpenFlags::POSIX_WRITABLE
                     | fio::OpenFlags::DESCRIBE,
                 "nested"
             );
@@ -794,7 +784,7 @@ fn flag_posix_does_not_add_writable_to_read_only() {
         let nested = open_get_directory_proxy_assert_ok!(
             &root,
             fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::POSIX_DEPRECATED
+                | fio::OpenFlags::POSIX_WRITABLE
                 | fio::OpenFlags::DESCRIBE,
             "nested"
         );
