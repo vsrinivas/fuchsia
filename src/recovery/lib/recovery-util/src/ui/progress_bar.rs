@@ -19,6 +19,7 @@ use carnelian::{
 };
 use euclid::size2;
 use fuchsia_async as fasync;
+use fuchsia_zircon::Duration;
 use futures::{
     channel::mpsc::{channel as pipe, Sender},
     StreamExt,
@@ -29,7 +30,6 @@ use std::{
         atomic::{AtomicU32, Ordering},
         Arc, Mutex,
     },
-    time::Duration,
 };
 
 const PROGRESS_GRANULARITY: f32 = 1000.0;
@@ -41,9 +41,10 @@ pub enum ProgressBarConfig {
     TextWithSize(ProgressBarText, Size),
 }
 
+// Progress is [0.0..1.0[
 pub enum ProgressBarMessages {
-    SetProgress(f32),
-    SetProgressSmooth(f32),
+    SetProgress(/* progress*/ f32),
+    SetProgressSmooth(/* progress */ f32, /* time to get to progress */ Duration),
     SetInternalProgress(f32),
     SetProgressBarText(String),
 }
@@ -60,8 +61,8 @@ pub struct ProgressBar {
     final_progress: Arc<AtomicU32>,
     // To make sure that we are only starting one copy of the background task
     task_running_mutex: Arc<Mutex<bool>>,
-    // Channel to send desired progress to the beckground task
-    task_sender: Option<Sender<f32>>,
+    // Channel to send desired progress to the background task
+    task_sender: Option<Sender<(/* progress */ u32, /* step_time_ms */ i64)>>,
 }
 
 #[derive(Clone)]
@@ -74,7 +75,6 @@ pub struct ProgressBarText {
 
 impl ProgressBar {
     pub fn new(
-        percent_complete: f32,
         config: ProgressBarConfig,
         builder: &mut SceneBuilder,
         app_sender: AppSender,
@@ -86,11 +86,10 @@ impl ProgressBar {
         builder.start_group("progress_bar", Stack::with_options_ptr(options));
 
         let (label, progress_bar_size) = build_progress_text(config, builder)?;
-        let filled = progress_bar_size.width * percent_complete / 100.0;
         let progress_rectangle =
-            builder.rectangle(size2(filled, progress_bar_size.height), Color::green());
+            builder.rectangle(size2(0.0, progress_bar_size.height), Color::green());
         let background_rectangle =
-            builder.rectangle(progress_bar_size, Color::from_hash_code("#000000")?);
+            builder.rectangle(progress_bar_size, Color::new() /* black */);
         builder.end_group();
 
         Ok(ProgressBar {
@@ -107,8 +106,8 @@ impl ProgressBar {
     }
 
     /// Set progress between 0 to 100 percent
-    pub fn set_percent(&mut self, scene: &mut Scene, percent_filled: f32) {
-        self.set_progress(scene, percent_filled / 100.0);
+    pub fn set_percent(&mut self, scene: &mut Scene, percent_complete: f32) {
+        self.set_progress(scene, percent_complete / 100.0);
     }
 
     /// Set progress from 0.0 to 1.0
@@ -130,39 +129,47 @@ impl ProgressBar {
         );
     }
 
-    pub fn set_percent_smooth(&mut self, view_key: ViewKey, percent_filled: f32) {
-        self.set_progress_smooth(view_key, percent_filled / 100.0);
+    pub fn set_percent_smooth(&mut self, view_key: ViewKey, percent_complete: f32) {
+        self.set_progress_smooth(view_key, percent_complete / 100.0, Duration::from_seconds(1));
     }
 
     /// Set progress from 0.0 to 1.0
-    pub fn set_progress_smooth(&mut self, view_key: ViewKey, progress: f32) {
+    pub fn set_progress_smooth(
+        &mut self,
+        view_key: ViewKey,
+        progress: f32,
+        elapsed_time: Duration,
+    ) {
+        let progress = (progress * PROGRESS_GRANULARITY) as u32;
+        let current_progress = self.current_progress.load(Ordering::Acquire);
+        let step_time_ms = (elapsed_time.into_millis()
+            / (current_progress as i32 - progress as i32).abs() as i64)
+            as i64;
         let mut running = self.task_running_mutex.lock().unwrap();
         if !*running {
             *running = true;
             let app_sender = self.app_sender.clone();
             let current_progress = self.current_progress.clone();
             let final_progress = self.final_progress.clone();
-            let (tx, mut rx) = pipe::<f32>(1);
+            let (tx, mut rx) = pipe::<(u32, i64)>(1);
             self.task_sender = Some(tx);
             let f = async move {
-                let sleep_time = Duration::from_millis(5);
+                let mut sleep_time = Duration::from_millis(step_time_ms);
                 loop {
                     let current = current_progress.load(Ordering::Acquire);
 
                     let end = final_progress.load(Ordering::Acquire);
                     let difference = end as i64 - current as i64;
                     if difference == 0 {
-                        let progress = rx.next().await.unwrap();
-                        final_progress
-                            .store((progress * PROGRESS_GRANULARITY) as u32, Ordering::Release);
+                        let (progress, step_time_ms) = rx.next().await.unwrap();
+                        sleep_time = Duration::from_millis(step_time_ms);
+                        final_progress.store(progress as u32, Ordering::Release);
                     } else {
                         match rx.try_next() {
                             Ok(value) => {
-                                if let Some(progress) = value {
-                                    final_progress.store(
-                                        (progress * PROGRESS_GRANULARITY) as u32,
-                                        Ordering::Release,
-                                    );
+                                if let Some((progress, step_time_ms)) = value {
+                                    sleep_time = Duration::from_millis(step_time_ms);
+                                    final_progress.store(progress as u32, Ordering::Release);
                                 }
                             }
                             Err(_) => { // Ignore
@@ -186,7 +193,7 @@ impl ProgressBar {
             };
             fasync::Task::local(f).detach();
         }
-        let _ = self.task_sender.as_mut().unwrap().start_send(progress);
+        let _ = self.task_sender.as_mut().unwrap().start_send((progress, step_time_ms));
     }
 
     pub fn set_color(&mut self, scene: &mut Scene, fg_color: Color, bg_color: Color) {
@@ -208,6 +215,28 @@ impl ProgressBar {
             scene.send_message(label, Box::new(SetColorMessage { color }));
         }
     }
+
+    pub fn handle_message(
+        &mut self,
+        scene: &mut Scene,
+        view_key: ViewKey,
+        message: ProgressBarMessages,
+    ) {
+        match message {
+            ProgressBarMessages::SetProgress(progress) => {
+                self.set_progress(scene, progress);
+            }
+            ProgressBarMessages::SetProgressSmooth(progress, step_time_ms) => {
+                self.set_progress_smooth(view_key, progress, step_time_ms);
+            }
+            ProgressBarMessages::SetInternalProgress(progress) => {
+                self.set_internal_progress(scene, progress);
+            }
+            ProgressBarMessages::SetProgressBarText(text) => {
+                self.set_text(scene, text);
+            }
+        }
+    }
 }
 
 fn build_text_facet(
@@ -215,8 +244,6 @@ fn build_text_facet(
     progress_bar_text: &ProgressBarText,
     face: FontFace,
 ) -> Result<FacetId, Error> {
-    // Result<(FacetId, &'a FontFace), Error> {
-    // let face = load_font(PathBuf::from("/pkg/data/fonts/Roboto-Regular.ttf"))?;
     let label = builder.text(
         face,
         &progress_bar_text.text,

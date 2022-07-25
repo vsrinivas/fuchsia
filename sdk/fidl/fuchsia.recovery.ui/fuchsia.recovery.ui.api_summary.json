@@ -23,8 +23,32 @@
         "name": "fuchsia.recovery.ui/ProgressRenderer.Render"
     },
     {
+        "declaration": "(fuchsia.recovery.ui/ProgressRendererRender2Request payload) -> ()",
+        "kind": "protocol/member",
+        "name": "fuchsia.recovery.ui/ProgressRenderer.Render2"
+    },
+    {
         "kind": "protocol",
         "name": "fuchsia.recovery.ui/ProgressRenderer"
+    },
+    {
+        "declaration": "int64",
+        "kind": "table/member",
+        "name": "fuchsia.recovery.ui/ProgressRendererRender2Request.elapsed_time"
+    },
+    {
+        "declaration": "float32",
+        "kind": "table/member",
+        "name": "fuchsia.recovery.ui/ProgressRendererRender2Request.percent_complete"
+    },
+    {
+        "declaration": "fuchsia.recovery.ui/Status",
+        "kind": "table/member",
+        "name": "fuchsia.recovery.ui/ProgressRendererRender2Request.status"
+    },
+    {
+        "kind": "table",
+        "name": "fuchsia.recovery.ui/ProgressRendererRender2Request"
     },
     {
         "kind": "enum/member",

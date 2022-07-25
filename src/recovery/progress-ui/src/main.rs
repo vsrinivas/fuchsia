@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 use anyhow::{Error, Result};
+#[cfg(feature = "debug_touch_to_update")]
+use carnelian::input;
 use carnelian::{
     app::Config,
     color::Color,
@@ -17,15 +19,19 @@ use carnelian::{
     App, AppAssistant, AppAssistantPtr, AppSender, AssistantCreatorFunc, LocalBoxFuture, Message,
     MessageTarget, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
-use euclid::{size2, Size2D};
+use euclid::size2;
 use fidl::endpoints::{DiscoverableProtocolMarker, RequestStream};
 use fidl_fuchsia_recovery_ui::{
     ProgressRendererMarker, ProgressRendererRequest, ProgressRendererRequestStream, Status,
 };
-use fuchsia_async::{self as fasync};
+use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
-use fuchsia_zircon::Event;
+use fuchsia_zircon::{Duration, Event};
 use futures::prelude::*;
+#[cfg(feature = "debug_touch_to_update")]
+use rand;
+#[cfg(not(feature = "debug_touch_to_update"))]
+use rand as _;
 use recovery_util::ui::progress_bar::{
     ProgressBar, ProgressBarConfig, ProgressBarMessages, ProgressBarText,
 };
@@ -100,7 +106,7 @@ impl ViewAssistant for ProgressBarViewAssistant {
                 .cross_align(CrossAxisAlignment::Center)
                 .contents(|builder| {
                     let progress_bar_size =
-                        size2(target_size.width / 2.0, target_size.height / 15.0);
+                        size2(target_size.width / 2.0, target_size.height / 30.0);
                     let progress_config = if SHOW_PROGRESS_TEXT {
                         ProgressBarConfig::TextWithSize(
                             ProgressBarText {
@@ -118,30 +124,18 @@ impl ViewAssistant for ProgressBarViewAssistant {
                         ProgressBarConfig::Size(progress_bar_size)
                     };
 
-                    builder.space(Size2D {
-                        width: target_size.width,
-                        height: target_size.height / 5.0,
-                        _unit: Default::default(),
-                    });
+                    builder.space(size2(target_size.width, target_size.height / 5.0));
                     let logo_size: Size = size2(logo_edge, logo_edge);
                     if let Some(logo_file) = self.logo_file.as_ref() {
                         let facet = RiveFacet::new_from_file(logo_size, logo_file, None)
                             .expect("Error creating logo facet from file");
                         builder.facet(Box::new(facet));
                     }
-                    let progress_bar = ProgressBar::new(
-                        self.percent_complete,
-                        progress_config,
-                        builder,
-                        self.app_sender.clone(),
-                    )
-                    .expect("Progress Bar");
+                    let progress_bar =
+                        ProgressBar::new(progress_config, builder, self.app_sender.clone())
+                            .expect("Progress Bar");
                     self.progress_bar = Some(progress_bar);
-                    builder.space(Size2D {
-                        width: target_size.width,
-                        height: target_size.height / 5.0,
-                        _unit: Default::default(),
-                    });
+                    builder.space(size2(target_size.width, target_size.height / 5.0));
                 });
             let mut scene = builder.build();
             scene.layout(target_size);
@@ -156,37 +150,9 @@ impl ViewAssistant for ProgressBarViewAssistant {
 
     fn handle_message(&mut self, message: Message) {
         if message.is::<ProgressBarMessages>() {
-            let proxy_message = message.downcast::<ProgressBarMessages>().unwrap();
-            match *proxy_message {
-                ProgressBarMessages::SetProgress(progress) => {
-                    if let (Some(progress_bar), Some(scene)) =
-                        (&mut self.progress_bar, &mut self.scene)
-                    {
-                        self.percent_complete = progress * 100.0;
-                        progress_bar.set_progress(scene, progress);
-                    }
-                }
-                ProgressBarMessages::SetProgressSmooth(progress) => {
-                    if let Some(progress_bar) = &mut self.progress_bar {
-                        self.percent_complete = progress * 100.0;
-                        progress_bar.set_progress_smooth(self.view_key, progress);
-                    }
-                }
-                // This is used by the slow progress task and needs to be included in code as-is
-                ProgressBarMessages::SetInternalProgress(progress) => {
-                    if let (Some(progress_bar), Some(scene)) =
-                        (&mut self.progress_bar, &mut self.scene)
-                    {
-                        progress_bar.set_internal_progress(scene, progress);
-                    }
-                }
-                ProgressBarMessages::SetProgressBarText(text) => {
-                    if let (Some(progress_bar), Some(scene)) =
-                        (&mut self.progress_bar, &mut self.scene)
-                    {
-                        progress_bar.set_text(scene, text);
-                    }
-                }
+            if let (Some(progress_bar), Some(scene)) = (&mut self.progress_bar, &mut self.scene) {
+                let message = message.downcast::<ProgressBarMessages>().unwrap();
+                progress_bar.handle_message(scene, self.view_key, *message);
             }
         }
     }
@@ -200,12 +166,15 @@ impl ViewAssistant for ProgressBarViewAssistant {
     ) -> Result<(), Error> {
         // Debounce the screen touch
         if self.touch_time.elapsed().as_millis() > 100 {
-            let r = rand::random::<f32>();
+            let rand_percent = rand::random::<f32>() * 100.0;
             self.app_sender.queue_message(
                 MessageTarget::View(self.view_key),
-                make_message(ProgressBarMessages::SetProgressSmooth(r)),
+                make_message(ProgressBarMessages::SetProgressSmooth(
+                    rand_percent,
+                    Duration::from_seconds(1),
+                )),
             );
-            let text = format!("Progress Bar {}%   ", (r * 100.0) as i32);
+            let text = format!("Progress Bar {}%   ", rand_percent as i32);
             self.app_sender.queue_message(
                 MessageTarget::View(self.view_key),
                 make_message(ProgressBarMessages::SetProgressBarText(text)),
@@ -226,13 +195,24 @@ impl ProgressBarAppAssistant {
         Self { app_sender: app_sender.clone(), progress_view_key: None }
     }
 
-    fn handle_progress_update(app_context: &AppSender, status: Status, percent_complete: f32) {
+    fn handle_progress_update(
+        app_context: &AppSender,
+        status: Status,
+        percent_complete: f32,
+        elapsed_time: Option<Duration>,
+    ) {
         match status {
             Status::Active => {
-                app_context.queue_message(
-                    MessageTarget::Application,
-                    make_message(ProgressBarMessages::SetProgress(percent_complete)),
-                );
+                let progress = percent_complete / 100.0;
+                let progress_message = if elapsed_time.is_some()
+                    && elapsed_time.unwrap() > Duration::from_seconds(0)
+                {
+                    ProgressBarMessages::SetProgressSmooth(progress, elapsed_time.unwrap())
+                } else {
+                    ProgressBarMessages::SetProgress(progress)
+                };
+                app_context
+                    .queue_message(MessageTarget::Application, make_message(progress_message));
             }
             Status::Complete => {
                 app_context.queue_message(
@@ -296,7 +276,30 @@ impl AppAssistant for ProgressBarAppAssistant {
                                         &local_app_sender,
                                         status,
                                         percent_complete,
+                                        None,
                                     );
+                                    responder.send().expect("Error replying to progress update");
+                                }
+                                ProgressRendererRequest::Render2 { payload, responder } => {
+                                    if let Some(status) = payload.status {
+                                        let elapsed_time = if let Some(nanos) = payload.elapsed_time
+                                        {
+                                            Some(Duration::from_nanos(nanos))
+                                        } else {
+                                            None
+                                        };
+                                        let mut percent_complete =
+                                            payload.percent_complete.unwrap_or_else(|| 0.0);
+                                        if percent_complete.is_nan() {
+                                            percent_complete = 0.0;
+                                        }
+                                        ProgressBarAppAssistant::handle_progress_update(
+                                            &local_app_sender,
+                                            status,
+                                            percent_complete,
+                                            elapsed_time,
+                                        );
+                                    }
                                     responder.send().expect("Error replying to progress update");
                                 }
                             }
