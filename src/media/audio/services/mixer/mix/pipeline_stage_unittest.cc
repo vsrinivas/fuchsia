@@ -7,12 +7,14 @@
 #include <lib/fit/defer.h>
 
 #include <memory>
+#include <unordered_set>
 
 #include <gtest/gtest.h>
 
 #include "src/media/audio/lib/clock/clone_mono.h"
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"
+#include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
 #include "src/media/audio/services/mixer/mix/packet_view.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
@@ -47,7 +49,7 @@ class FakeStage : public PipelineStage {
         packets_(std::move(packets)) {}
 
   // TODO(fxbug.dev/87651): Use this instead of the constructor.
-  void AddSource(PipelineStagePtr source) override {}
+  void AddSource(PipelineStagePtr source, std::unordered_set<GainControlId> gain_ids) override {}
   void RemoveSource(PipelineStagePtr source) override {}
 
   void AdvanceSelfImpl(Fixed frame) override {
@@ -119,7 +121,7 @@ class PassthroughStage : public PipelineStage {
       : PipelineStage("PassthroughStage", source->format(), DefaultClockKoid()), source_(source) {}
 
   // TODO(fxbug.dev/87651): Use this instead of the constructor.
-  void AddSource(PipelineStagePtr source) override {}
+  void AddSource(PipelineStagePtr source, std::unordered_set<GainControlId> gain_ids) override {}
   void RemoveSource(PipelineStagePtr source) override {}
 
   void AdvanceSelfImpl(Fixed frame) override {}

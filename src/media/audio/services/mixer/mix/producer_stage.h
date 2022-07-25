@@ -8,8 +8,10 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <string_view>
+#include <unordered_set>
 
 #include "src/media/audio/lib/format2/format.h"
+#include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
 #include "src/media/audio/services/mixer/mix/ptr_decls.h"
 
@@ -19,7 +21,7 @@ namespace media_audio {
 class ProducerStage : public PipelineStage {
  public:
   // Implements `PipelineStage`.
-  void AddSource(PipelineStagePtr source) final {
+  void AddSource(PipelineStagePtr source, std::unordered_set<GainControlId> gain_ids) final {
     FX_CHECK(false) << "ProducerStage should not have a source";
   }
   void RemoveSource(PipelineStagePtr source) final {

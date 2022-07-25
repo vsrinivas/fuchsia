@@ -56,7 +56,7 @@ TEST(SilencePaddingStageTest, NoSource) {
 TEST(SilencePaddingStageTest, EmptySource) {
   SilencePaddingStage silence_padding_stage(kFormat, DefaultClockKoid(), Fixed(10),
                                             /*round_down_fractional_frames=*/true);
-  silence_padding_stage.AddSource(MakePacketQueueProducerStage(kFormat));
+  silence_padding_stage.AddSource(MakePacketQueueProducerStage(kFormat), {});
 
   // Since source is empty, no packet should be returned.
   const auto packet = silence_padding_stage.Read(DefaultCtx(), Fixed(0), 20);
@@ -67,7 +67,7 @@ TEST(SilencePaddingStageTest, AfterOnePacket) {
   SilencePaddingStage silence_padding_stage(kFormat, DefaultClockKoid(), Fixed(5),
                                             /*round_down_fractional_frames=*/true);
   auto producer_stage = MakePacketQueueProducerStage(kFormat);
-  silence_padding_stage.AddSource(producer_stage);
+  silence_padding_stage.AddSource(producer_stage, {});
 
   const int16_t expected_sample = 1;
   std::vector<int16_t> source_payload(20, expected_sample);
@@ -99,7 +99,7 @@ TEST(SilencePaddingStageTest, AfterTwoPackets) {
   SilencePaddingStage silence_padding_stage(kFormat, DefaultClockKoid(), Fixed(5),
                                             /*round_down_fractional_frames=*/true);
   auto producer_stage = MakePacketQueueProducerStage(kFormat);
-  silence_padding_stage.AddSource(producer_stage);
+  silence_padding_stage.AddSource(producer_stage, {});
 
   const int16_t expected_sample_1 = 1;
   const int16_t expected_sample_2 = 2;
@@ -141,7 +141,7 @@ TEST(SilencePaddingStageTest, SkipPacket) {
   SilencePaddingStage silence_padding_stage(kFormat, DefaultClockKoid(), Fixed(5),
                                             /*round_down_fractional_frames=*/true);
   auto producer_stage = MakePacketQueueProducerStage(kFormat);
-  silence_padding_stage.AddSource(producer_stage);
+  silence_padding_stage.AddSource(producer_stage, {});
 
   const int16_t expected_sample = 1;
   std::vector<int16_t> source_payload(20, expected_sample);
@@ -160,7 +160,7 @@ TEST(SilencePaddingStageTest, GapBetweenPacketsLongerThanSilence) {
   SilencePaddingStage silence_padding_stage(kFormat, DefaultClockKoid(), Fixed(5),
                                             /*round_down_fractional_frames=*/true);
   auto producer_stage = MakePacketQueueProducerStage(kFormat);
-  silence_padding_stage.AddSource(producer_stage);
+  silence_padding_stage.AddSource(producer_stage, {});
 
   const int16_t expected_sample = 1;
   std::vector<int16_t> source_payload(10, expected_sample);
@@ -207,7 +207,7 @@ TEST(SilencePaddingStageTest, GapBetweenPacketsShorterThanSilence) {
   SilencePaddingStage silence_padding_stage(kFormat, DefaultClockKoid(), Fixed(5),
                                             /*round_down_fractional_frames=*/true);
   auto producer_stage = MakePacketQueueProducerStage(kFormat);
-  silence_padding_stage.AddSource(producer_stage);
+  silence_padding_stage.AddSource(producer_stage, {});
 
   const int16_t expected_sample = 1;
   std::vector<int16_t> source_payload(10, expected_sample);
@@ -241,7 +241,7 @@ TEST(SilencePaddingStageTest, GapBetweenPacketsShorterThanSilenceAndFractionalRo
   SilencePaddingStage silence_padding_stage(kFormat, DefaultClockKoid(), Fixed(5),
                                             /*round_down_fractional_frames=*/true);
   auto producer_stage = MakePacketQueueProducerStage(kFormat);
-  silence_padding_stage.AddSource(producer_stage);
+  silence_padding_stage.AddSource(producer_stage, {});
 
   const int16_t expected_sample = 1;
   std::vector<int16_t> source_payload(10, expected_sample);
@@ -277,7 +277,7 @@ TEST(SilencePaddingStageTest, GapBetweenPacketsShorterThanSilenceAndFractionalRo
   SilencePaddingStage silence_padding_stage(kFormat, DefaultClockKoid(), Fixed(5),
                                             /*round_down_fractional_frames=*/false);
   auto producer_stage = MakePacketQueueProducerStage(kFormat);
-  silence_padding_stage.AddSource(producer_stage);
+  silence_padding_stage.AddSource(producer_stage, {});
 
   const int16_t expected_sample = 1;
   std::vector<int16_t> source_payload(10, expected_sample);
@@ -313,7 +313,7 @@ TEST(SilencePaddingStageTest, GapBetweenPacketsLessThanOneFrameRoundDown) {
   SilencePaddingStage silence_padding_stage(kFormat, DefaultClockKoid(), Fixed(5),
                                             /*round_down_fractional_frames=*/true);
   auto producer_stage = MakePacketQueueProducerStage(kFormat);
-  silence_padding_stage.AddSource(producer_stage);
+  silence_padding_stage.AddSource(producer_stage, {});
 
   const int16_t expected_sample = 1;
   std::vector<int16_t> source_payload(10, expected_sample);
@@ -343,7 +343,7 @@ TEST(SilencePaddingStageTest, GapBetweenPacketsLessThanOneFrameRoundUp) {
   SilencePaddingStage silence_padding_stage(kFormat, DefaultClockKoid(), Fixed(5),
                                             /*round_down_fractional_frames=*/false);
   auto producer_stage = MakePacketQueueProducerStage(kFormat);
-  silence_padding_stage.AddSource(producer_stage);
+  silence_padding_stage.AddSource(producer_stage, {});
 
   const int16_t expected_sample = 1;
   std::vector<int16_t> source_payload(10, expected_sample);
@@ -380,7 +380,7 @@ TEST(SilencePaddingStageTest, CreateRoundsUpNumberOfFrames) {
   SilencePaddingStage silence_padding_stage(kFormat, DefaultClockKoid(), ffl::FromRatio(1, 2),
                                             /*round_down_fractional_frames=*/true);
   auto producer_stage = MakePacketQueueProducerStage(kFormat);
-  silence_padding_stage.AddSource(producer_stage);
+  silence_padding_stage.AddSource(producer_stage, {});
 
   const int16_t expected_sample = 1;
   std::vector<int16_t> source_payload(10, expected_sample);

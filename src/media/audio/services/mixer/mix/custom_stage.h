@@ -13,10 +13,12 @@
 
 #include <cstddef>
 #include <optional>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
 #include "src/media/audio/lib/format2/fixed.h"
+#include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
 #include "src/media/audio/services/mixer/mix/ptr_decls.h"
@@ -33,7 +35,9 @@ class CustomStage : public PipelineStage {
               zx_koid_t reference_clock_koid);
 
   // Implements `PipelineStage`.
-  void AddSource(PipelineStagePtr source) final { source_.AddSource(std::move(source)); }
+  void AddSource(PipelineStagePtr source, std::unordered_set<GainControlId> gain_ids) final {
+    source_.AddSource(std::move(source), std::move(gain_ids));
+  }
   void RemoveSource(PipelineStagePtr source) final { source_.RemoveSource(std::move(source)); }
 
  protected:

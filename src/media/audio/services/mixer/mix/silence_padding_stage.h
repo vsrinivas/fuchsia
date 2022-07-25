@@ -6,10 +6,12 @@
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_MIX_SILENCE_PADDING_STAGE_H_
 
 #include <optional>
+#include <unordered_set>
 #include <vector>
 
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"
+#include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
 #include "src/media/audio/services/mixer/mix/pipeline_stage.h"
 #include "src/media/audio/services/mixer/mix/ptr_decls.h"
@@ -90,11 +92,12 @@ class SilencePaddingStage : public PipelineStage {
         silence_buffer_(silence_frame_count_ * format.bytes_per_frame(), 0) {}
 
   // Implements `PipelineStage`.
-  void AddSource(PipelineStagePtr source) final {
+  void AddSource(PipelineStagePtr source, std::unordered_set<GainControlId> gain_ids) final {
     FX_CHECK(!source_) << "SilencePaddingStage does not support multiple sources";
     FX_CHECK(source) << "SilencePaddingStage cannot add null source";
     FX_CHECK(source->format() == format())
         << "SilencePaddingStage format does not match with source format";
+    FX_CHECK(gain_ids.empty());
     source_ = std::move(source);
   }
   void RemoveSource(PipelineStagePtr source) final {

@@ -11,14 +11,9 @@
 #include <utility>
 
 #include "src/media/audio/lib/format2/fixed.h"
-#include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
 
 namespace media_audio {
-
-void PipelineStage::AddGainControl(GainControlId gain_id) { gain_ids_.insert(gain_id); }
-
-void PipelineStage::RemoveGainControl(GainControlId gain_id) { gain_ids_.erase(gain_id); }
 
 void PipelineStage::Advance(MixJobContext& ctx, Fixed frame) {
   TRACE_DURATION("audio", advance_trace_name_.c_str(), "frame", frame.Integral().Floor(),

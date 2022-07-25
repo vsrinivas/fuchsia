@@ -74,18 +74,13 @@ class PipelineStage {
   // Adds a source stream.
   //
   // Required: caller must verify that `source` produces a stream with a compatible format.
-  virtual void AddSource(PipelineStagePtr source) TA_REQ(thread()->checker()) = 0;
+  virtual void AddSource(PipelineStagePtr source, std::unordered_set<GainControlId> gain_ids)
+      TA_REQ(thread()->checker()) = 0;
 
   // Removes a source stream.
   //
   // Required: caller must verify that `source` is currently a source for this stage.
   virtual void RemoveSource(PipelineStagePtr source) TA_REQ(thread()->checker()) = 0;
-
-  // Adds gain control with the given `gain_id`.
-  void AddGainControl(GainControlId gain_id);
-
-  // Removes gain control with the given `gain_id`.
-  void RemoveGainControl(GainControlId gain_id);
 
   // Advances the destination stream by releasing any frames before the given `frame`. This is a
   // declaration that the caller will not attempt to `Read` any frame before the given `frame`. If
@@ -182,9 +177,6 @@ class PipelineStage {
   [[nodiscard]] std::optional<TimelineFunction> presentation_time_to_frac_frame() const {
     return presentation_time_to_frac_frame_;
   }
-
-  // Returns the set of gain control ids that are attached to the stage.
-  [[nodiscard]] const std::unordered_set<GainControlId>& gain_ids() const { return gain_ids_; }
 
   // Sets the stage's thread.
   void set_thread(ThreadPtr thread) { std::atomic_store(&thread_, std::move(thread)); }
@@ -295,9 +287,6 @@ class PipelineStage {
   // Current translation from frame numbers to presentation timestamps.
   // This is nullopt iff the stage is stopped. Otherwise the stage is started.
   std::optional<TimelineFunction> presentation_time_to_frac_frame_;
-
-  // Set of gain control ids that are attached to the stage.
-  std::unordered_set<GainControlId> gain_ids_;
 };
 
 }  // namespace media_audio
