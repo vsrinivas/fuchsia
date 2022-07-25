@@ -4,6 +4,7 @@
 
 use {
     crate::resource::Resource2D,
+    crate::scanout::Scanout,
     crate::wire,
     anyhow::{anyhow, Context, Error},
     futures::StreamExt,
@@ -74,11 +75,19 @@ fn read_from_chain<'a, 'b, N: DriverNotify, M: DriverMem, T: FromBytes>(
 pub struct GpuDevice<'a, M: DriverMem> {
     resources: HashMap<u32, Resource2D<'a>>,
     mem: &'a M,
+    scanout: Option<Scanout>,
 }
 
 impl<'a, M: DriverMem> GpuDevice<'a, M> {
+    /// Create a GpuDevice without any scanouts (ex: no attached displays will be reported in
+    /// GET_DISPLAY_INFOs).
     pub fn new(mem: &'a M) -> Self {
-        Self { resources: HashMap::new(), mem }
+        Self { resources: HashMap::new(), mem, scanout: None }
+    }
+
+    /// Create a GpuDevice with a single scanout.
+    pub fn with_scanout(mem: &'a M, scanout: Scanout) -> Self {
+        Self { resources: HashMap::new(), mem, scanout: Some(scanout) }
     }
 
     pub async fn process_queues<'b, N: DriverNotify>(
@@ -132,6 +141,8 @@ impl<'a, M: DriverMem> GpuDevice<'a, M> {
             wire::VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING => self.resource_attach_backing(chain)?,
             wire::VIRTIO_GPU_CMD_RESOURCE_DETACH_BACKING => self.resource_detach_backing(chain)?,
             wire::VIRTIO_GPU_CMD_TRANSFER_TO_HOST_2D => self.transfer_to_host_2d(chain)?,
+            wire::VIRTIO_GPU_CMD_SET_SCANOUT => self.set_scanout(chain)?,
+            wire::VIRTIO_GPU_CMD_RESOURCE_FLUSH => self.resource_flush(chain)?,
             cmd => self.unsupported_command(chain, cmd)?,
         }
         Ok(())
@@ -183,20 +194,22 @@ impl<'a, M: DriverMem> GpuDevice<'a, M> {
     ) -> Result<(), Error> {
         let mut display_info: wire::VirtioGpuRespDisplayInfo = Default::default();
         display_info.hdr.ty = wire::VIRTIO_GPU_RESP_OK_DISPLAY_INFO.into();
-        // TODO(fxbug.dev/102870): For now we just report a single pmode with some initial
-        // geometry. This will eventually map to the geometry of our backing view and we might
-        // want to consider just marking the scanout as disabled before we get our initial
-        // geometry.
-        display_info.pmodes[0] = wire::VirtioGpuDisplayOne {
-            r: wire::VirtioGpuRect {
-                x: 0.into(),
-                y: 0.into(),
-                width: VIRTIO_GPU_STARTUP_WIDTH.into(),
-                height: VIRTIO_GPU_STARTUP_HEIGHT.into(),
-            },
-            enabled: 1.into(),
-            flags: 0.into(),
-        };
+        if self.scanout.is_some() {
+            // TODO(fxbug.dev/102870): For now we just report a single pmode with some initial
+            // geometry. This will eventually map to the geometry of our backing view and we might
+            // want to consider just marking the scanout as disabled before we get our initial
+            // geometry.
+            display_info.pmodes[0] = wire::VirtioGpuDisplayOne {
+                r: wire::VirtioGpuRect {
+                    x: 0.into(),
+                    y: 0.into(),
+                    width: VIRTIO_GPU_STARTUP_WIDTH.into(),
+                    height: VIRTIO_GPU_STARTUP_HEIGHT.into(),
+                },
+                enabled: 1.into(),
+                flags: 0.into(),
+            };
+        }
 
         // Now write the response to the chain.
         write_to_chain(WritableChain::from_readable(chain)?, display_info)
@@ -426,6 +439,76 @@ impl<'a, M: DriverMem> GpuDevice<'a, M> {
             },
         )
     }
+
+    fn set_scanout<'b, N: DriverNotify>(
+        &mut self,
+        mut chain: ReadableChain<'a, 'b, N, M>,
+    ) -> Result<(), Error> {
+        let cmd: wire::VirtioGpuSetScanout = match read_from_chain(&mut chain) {
+            Ok(cmd) => cmd,
+            Err(e) => {
+                tracing::warn!("Failed to read VirtioGpuSetScanout from queue: {}", e);
+                return write_error_to_chain(chain, wire::VirtioGpuError::Unspecified);
+            }
+        };
+
+        // Validate resource_id. Resource ID 0 is a special case that indicates that no resource
+        // should be associated with the target scanout.
+        let resource_id = cmd.resource_id.get();
+        let resource = if resource_id == 0 {
+            None
+        } else {
+            let resource = self.resources.get(&cmd.resource_id.get());
+            if resource.is_none() {
+                tracing::warn!("SetScanout with invalid resource_id: {}", resource_id);
+                return write_error_to_chain(chain, wire::VirtioGpuError::InvalidResourceId);
+            }
+            resource
+        };
+
+        // Validate scanout_id
+        let scanout_id: usize = cmd.scanout_id.get().try_into()?;
+        if scanout_id != 0 || self.scanout.is_none() {
+            tracing::warn!("SetScanout to invalid scanout_id {}", scanout_id);
+            return write_error_to_chain(chain, wire::VirtioGpuError::InvalidScanoutId);
+        }
+
+        // Update the scanout.
+        self.scanout.as_mut().unwrap().set_resource(&cmd, resource)?;
+
+        write_to_chain(
+            WritableChain::from_readable(chain)?,
+            wire::VirtioGpuCtrlHeader {
+                ty: wire::VIRTIO_GPU_RESP_OK_NODATA.into(),
+                ..Default::default()
+            },
+        )
+    }
+
+    fn resource_flush<'b, N: DriverNotify>(
+        &mut self,
+        mut chain: ReadableChain<'a, 'b, N, M>,
+    ) -> Result<(), Error> {
+        let _cmd: wire::VirtioGpuResourceFlush = match read_from_chain(&mut chain) {
+            Ok(cmd) => cmd,
+            Err(e) => {
+                tracing::warn!("Failed to read VirtioGpuResourceFlush from queue: {}", e);
+                return write_error_to_chain(chain, wire::VirtioGpuError::Unspecified);
+            }
+        };
+
+        if let Some(scanout) = self.scanout.as_mut() {
+            scanout.present()?;
+        }
+
+        write_to_chain(
+            WritableChain::from_readable(chain)?,
+            wire::VirtioGpuCtrlHeader {
+                ty: wire::VIRTIO_GPU_RESP_OK_NODATA.into(),
+                ..Default::default()
+            },
+        )
+    }
 }
 
 #[cfg(test)]
@@ -531,15 +614,8 @@ mod tests {
         let mut iter = returned.data_iter();
         let result = read_returned::<wire::VirtioGpuRespDisplayInfo>(iter.next().unwrap());
         assert_eq!(result.hdr.ty.get(), wire::VIRTIO_GPU_RESP_OK_DISPLAY_INFO);
-        // The first pmode is enabled.
-        assert_eq!(result.pmodes[0].r.x.get(), 0);
-        assert_eq!(result.pmodes[0].r.y.get(), 0);
-        assert_eq!(result.pmodes[0].r.width.get(), VIRTIO_GPU_STARTUP_WIDTH);
-        assert_eq!(result.pmodes[0].r.height.get(), VIRTIO_GPU_STARTUP_HEIGHT);
-        assert_eq!(result.pmodes[0].enabled.get(), 1);
-        assert_eq!(result.pmodes[0].flags.get(), 0);
-        // The rest should be disabled.
-        for pmode in 1..wire::VIRTIO_GPU_MAX_SCANOUTS {
+        // All pmodes are disabled.
+        for pmode in 0..wire::VIRTIO_GPU_MAX_SCANOUTS {
             assert_eq!(result.pmodes[pmode].r.x.get(), 0);
             assert_eq!(result.pmodes[pmode].r.y.get(), 0);
             assert_eq!(result.pmodes[pmode].r.width.get(), 0);

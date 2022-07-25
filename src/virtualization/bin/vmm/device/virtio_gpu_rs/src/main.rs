@@ -4,10 +4,12 @@
 
 mod gpu_device;
 mod resource;
+mod scanout;
 mod wire;
 
 use {
     crate::gpu_device::GpuDevice,
+    crate::scanout::Scanout,
     anyhow::{anyhow, Context},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_virtualization_hardware::VirtioGpuRequestStream,
@@ -41,8 +43,16 @@ async fn run_virtio_gpu(mut virtio_gpu_fidl: VirtioGpuRequestStream) -> Result<(
     .await
     .context("Failed to initialize device.")?;
 
-    // Initialize all queues.
-    let mut gpu_device = GpuDevice::new(&guest_mem);
+    // Create the device and attempt to attach an initial scanout. This may fail, ex if run within
+    // an environment without Flatland or a graphical shell.
+    let mut gpu_device = match Scanout::create().await {
+        Ok(scanout) => GpuDevice::with_scanout(&guest_mem, scanout),
+        Err(e) => {
+            tracing::warn!("Failed to create scanout: {}", e);
+            GpuDevice::new(&guest_mem)
+        }
+    };
+
     let control_stream = device.take_stream(wire::CONTROLQ)?;
     let cursor_stream = device.take_stream(wire::CURSORQ)?;
     ready_responder.send()?;

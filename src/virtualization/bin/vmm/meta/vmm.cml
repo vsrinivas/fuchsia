@@ -66,6 +66,7 @@
     use: [
         {
             protocol: [
+                "fuchsia.element.GraphicalPresenter",
                 "fuchsia.kernel.HypervisorResource",
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.net.virtualization.Control",
@@ -76,7 +77,10 @@
             ],
         },
         {
-            protocol: [ "fuchsia.ui.composition.Allocator" ],
+            protocol: [
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
+            ],
             availability: "optional",
         },
         {
@@ -112,12 +116,22 @@
         },
         {
             protocol: [
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.scenic.Scenic",
             ],
             from: "parent",
             to: "#virtio_gpu_devices",
             availability: "optional",
+        },
+        {
+            protocol: "fuchsia.element.GraphicalPresenter",
+            from: "parent",
+            to: "#virtio_gpu_devices",
+            dependency: "weak",
+            source_availability: "unknown", // may not be available on all products
         },
         {
             protocol: [

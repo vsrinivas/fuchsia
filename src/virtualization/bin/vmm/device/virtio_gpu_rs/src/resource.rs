@@ -6,6 +6,7 @@ use {
     crate::wire,
     anyhow::{anyhow, Error},
     fidl_fuchsia_ui_composition::BufferCollectionImportToken,
+    fuchsia_zircon::{self as zx, HandleBased},
     mapped_vmo,
     virtio_device::mem::DeviceRange,
 };
@@ -17,7 +18,6 @@ use {
     fuchsia_component::client::connect_to_protocol,
     fuchsia_framebuffer::{sysmem::BufferCollectionAllocator, FrameUsage},
     fuchsia_scenic::BufferCollectionTokenPair,
-    fuchsia_zircon as zx,
 };
 
 /// Returns the size of a pixel (in bytes).
@@ -42,11 +42,12 @@ pub const fn sysmem_pixel_format(
 }
 
 pub struct Resource2D<'a> {
+    id: u32,
     width: u32,
     height: u32,
     mapping: mapped_vmo::Mapping,
     backing: Option<Vec<&'a [u8]>>,
-    _import_token: Option<BufferCollectionImportToken>,
+    import_token: Option<BufferCollectionImportToken>,
 }
 
 impl<'a> Resource2D<'a> {
@@ -101,11 +102,12 @@ impl<'a> Resource2D<'a> {
             mapping_flags,
         )?;
         Ok(Self {
+            id: cmd.resource_id.get(),
             width: cmd.width.get(),
             height: cmd.height.get(),
             mapping,
             backing: None,
-            _import_token: Some(buffer_tokens.import_token),
+            import_token: Some(buffer_tokens.import_token),
         })
     }
 
@@ -124,28 +126,44 @@ impl<'a> Resource2D<'a> {
             })?;
         let (mapping, _vmo) = mapped_vmo::Mapping::allocate(size)?;
         Ok(Self {
+            id: cmd.resource_id.get(),
             width: cmd.width.get(),
             height: cmd.height.get(),
             mapping,
             backing: None,
-            _import_token: None,
+            import_token: None,
         })
     }
 
-    // Expose the mapping so that tests can inspect the contents of the resource.
+    /// Expose the mapping so that tests can read the contents of the host resource.
     #[cfg(test)]
     pub fn mapping(&self) -> &mapped_vmo::Mapping {
         &self.mapping
     }
 
-    #[cfg(test)]
+    pub fn id(&self) -> u32 {
+        self.id
+    }
+
     pub fn width(&self) -> u32 {
         self.width
     }
 
-    #[cfg(test)]
     pub fn height(&self) -> u32 {
         self.height
+    }
+
+    /// Returns a sysmem import token for the buffer collection that backs this resource.
+    ///
+    /// This will return None if the resource was allocated within a unit test environment (where
+    /// there is no sysmem available), or if there was an error duplicating the token handle.
+    pub fn import_token(&self) -> Option<BufferCollectionImportToken> {
+        if let Some(BufferCollectionImportToken { value }) = self.import_token.as_ref() {
+            if let Ok(value) = value.duplicate_handle(zx::Rights::SAME_RIGHTS) {
+                return Some(BufferCollectionImportToken { value });
+            }
+        }
+        None
     }
 
     pub fn attach_backing(&mut self, ranges: Vec<DeviceRange<'a>>) {

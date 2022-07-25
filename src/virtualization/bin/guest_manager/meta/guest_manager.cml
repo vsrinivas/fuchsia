@@ -49,6 +49,7 @@
         },
         {
             protocol: [
+                "fuchsia.element.GraphicalPresenter",
                 "fuchsia.kernel.HypervisorResource",
                 "fuchsia.kernel.VmexResource",
                 "fuchsia.logger.LogSink",
@@ -66,6 +67,7 @@
         {
             protocol: [
                 "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.scenic.Scenic",
             ],

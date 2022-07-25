@@ -41,6 +41,13 @@
             to: "#termina-guest-manager",
         },
         {
+            protocol: [ "fuchsia.element.GraphicalPresenter" ],
+            from: "#session-manager",
+            to: "#termina-guest-manager",
+            dependency: "weak",
+            source_availability: "unknown", // may not be available on all products
+        },
+        {
             protocol: [ "fuchsia.media.Audio" ],
             from: "#audio_core",
             to: "#termina-guest-manager",
@@ -69,6 +76,7 @@
         {
             protocol: [
                 "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.scenic.Scenic",
             ],

@@ -15,9 +15,11 @@
     use: [
         {
             protocol: [
+                "fuchsia.element.GraphicalPresenter",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
                 "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
             ],
         },
     ],

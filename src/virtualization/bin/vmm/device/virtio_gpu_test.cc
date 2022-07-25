@@ -216,6 +216,11 @@ class VirtioGpuTest : public TestWithDevice,
 };
 
 TEST_P(VirtioGpuTest, GetDisplayInfo) {
+  // TODO(fxbug.dev/102870): Enable this test for the rust device.
+  if (IsRustComponent()) {
+    GTEST_SKIP();
+  }
+
   virtio_gpu_ctrl_hdr_t request = {
       .type = VIRTIO_GPU_CMD_GET_DISPLAY_INFO,
   };
