@@ -423,8 +423,13 @@ impl<'a> ValidationContext<'a> {
         if use_.event_stream.is_some() && use_.from.is_none() {
             return Err(Error::validate("\"from\" should be present with \"event_stream\""));
         }
-        if use_.event.is_none() && use_.filter.is_some() {
-            return Err(Error::validate("\"filter\" can only be used with \"event\""));
+        if use_.event_stream.is_some() && use_.availability.is_some() {
+            return Err(Error::validate("\"availability\" cannot be used with \"event_stream\""));
+        }
+        if use_.event.is_none() && use_.event_stream.is_none() && use_.filter.is_some() {
+            return Err(Error::validate(
+                "\"filter\" can only be used with \"event\" or \"event_stream\"",
+            ));
         }
         if use_.storage.is_some() && use_.from.is_some() {
             return Err(Error::validate("\"from\" cannot be used with \"storage\""));
@@ -2204,7 +2209,7 @@ mod tests {
                     { "directory": "foobar", "path": "/foo/bar", "rights": [ "r*" ], "filter": {"path": "/diagnostics"} },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"filter\" can only be used with \"event\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"filter\" can only be used with \"event\" or \"event_stream\""
         ),
         test_cml_use_bad_as_in_event(
             json!({
@@ -2228,6 +2233,18 @@ mod tests {
                 ]
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "only \"protocol\" supports source from \"debug\""
+        ),
+        test_cml_availability_not_supported_for_event_streams(
+            json!({
+                "use": [
+                    {
+                        "event_stream": ["destroyed"],
+                        "from": "parent",
+                        "availability": "optional",
+                    }
+                ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"availability\" cannot be used with \"event_stream\""
         ),
         test_cml_use_duplicate_events(
             json!({

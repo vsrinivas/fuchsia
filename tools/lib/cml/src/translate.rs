@@ -359,6 +359,10 @@ fn translate_use(
                         .as_str()
                         .to_string(),
                     ),
+                    filter: match use_.filter.clone() {
+                        Some(dict) => Some(dictionary_from_map(dict)?),
+                        None => None,
+                    },
                     availability: Some(availability),
                     ..fdecl::UseEventStream::EMPTY
                 }));
