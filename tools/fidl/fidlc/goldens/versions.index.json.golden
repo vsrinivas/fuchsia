@@ -64,5 +64,81 @@
         }
       ]
     }
+  ],
+  "structs": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.versions/Struct",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+        "data": "Struct",
+        "start_offset": 411,
+        "end_offset": 417
+      },
+      "members": [
+        {
+          "name": "x",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "data": "x",
+            "start_offset": 471,
+            "end_offset": 472
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "identifier": "test.versions/OtherProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+        "data": "OtherProtocol",
+        "start_offset": 832,
+        "end_offset": 845
+      },
+      "methods": [],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.versions/Protocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+        "data": "Protocol",
+        "start_offset": 894,
+        "end_offset": 902
+      },
+      "methods": [
+        {
+          "identifier": "Foo",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "data": "Foo",
+            "start_offset": 1013,
+            "end_offset": 1016
+          }
+        }
+      ],
+      "composed_protocols": [
+        {
+          "identifier": "test.versions/OtherProtocol",
+          "referenced_at": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/versions.test.fidl",
+            "data": "OtherProtocol",
+            "start_offset": 955,
+            "end_offset": 968
+          }
+        }
+      ]
+    }
   ]
 }

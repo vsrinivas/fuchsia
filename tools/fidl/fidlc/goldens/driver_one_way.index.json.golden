@@ -13,5 +13,90 @@
   "dependencies": [],
   "dependency_identifiers": [],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": true,
+      "identifier": "test.driveroneway/OneWaySendRequest",
+      "members": [
+        {
+          "name": "payload",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/driver_one_way.test.fidl",
+            "data": "payload",
+            "start_offset": 304,
+            "end_offset": 311
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.driveroneway/Payload",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/driver_one_way.test.fidl",
+              "data": "Payload",
+              "start_offset": 198,
+              "end_offset": 205
+            }
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.driveroneway/Payload",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/driver_one_way.test.fidl",
+        "data": "Payload",
+        "start_offset": 198,
+        "end_offset": 205
+      },
+      "members": [
+        {
+          "name": "value",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/driver_one_way.test.fidl",
+            "data": "value",
+            "start_offset": 221,
+            "end_offset": 226
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "identifier": "test.driveroneway/OneWay",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/driver_one_way.test.fidl",
+        "data": "OneWay",
+        "start_offset": 269,
+        "end_offset": 275
+      },
+      "methods": [
+        {
+          "identifier": "Send",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/driver_one_way.test.fidl",
+            "data": "Send",
+            "start_offset": 282,
+            "end_offset": 286
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    }
+  ]
 }

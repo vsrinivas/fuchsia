@@ -13,5 +13,192 @@
   "dependencies": [],
   "dependency_identifiers": [],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.emptystruct/Empty",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
+        "data": "Empty",
+        "start_offset": 32,
+        "end_offset": 37
+      },
+      "members": []
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.emptystruct/EmptyProtocolReceiveRequest",
+      "members": [
+        {
+          "name": "e",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
+            "data": "e",
+            "start_offset": 152,
+            "end_offset": 153
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.emptystruct/Empty",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
+              "data": "Empty",
+              "start_offset": 32,
+              "end_offset": 37
+            }
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.emptystruct/EmptyProtocolSendAndReceiveRequest",
+      "members": [
+        {
+          "name": "e",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
+            "data": "e",
+            "start_offset": 205,
+            "end_offset": 206
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.emptystruct/Empty",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
+              "data": "Empty",
+              "start_offset": 32,
+              "end_offset": 37
+            }
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.emptystruct/EmptyProtocolSendAndReceiveTopResponse",
+      "members": [
+        {
+          "name": "e",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
+            "data": "e",
+            "start_offset": 242,
+            "end_offset": 243
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.emptystruct/Empty",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
+              "data": "Empty",
+              "start_offset": 32,
+              "end_offset": 37
+            }
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.emptystruct/EmptyProtocolSendRequest",
+      "members": [
+        {
+          "name": "e",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
+            "data": "e",
+            "start_offset": 103,
+            "end_offset": 104
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.emptystruct/Empty",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
+              "data": "Empty",
+              "start_offset": 32,
+              "end_offset": 37
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "identifier": "test.emptystruct/EmptyProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
+        "data": "EmptyProtocol",
+        "start_offset": 61,
+        "end_offset": 74
+      },
+      "methods": [
+        {
+          "identifier": "Send",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
+            "data": "Send",
+            "start_offset": 81,
+            "end_offset": 85
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "Receive",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
+            "data": "Receive",
+            "start_offset": 127,
+            "end_offset": 134
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "SendAndReceive",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/empty_struct.test.fidl",
+            "data": "SendAndReceive",
+            "start_offset": 173,
+            "end_offset": 187
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    }
+  ]
 }

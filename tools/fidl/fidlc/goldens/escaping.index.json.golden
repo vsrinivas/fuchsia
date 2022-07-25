@@ -13,5 +13,20 @@
   "dependencies": [],
   "dependency_identifiers": [],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.escaping/DocCommentWithQuotes",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+        "data": "DocCommentWithQuotes",
+        "start_offset": 69,
+        "end_offset": 89
+      },
+      "members": []
+    }
+  ],
+  "protocols": []
 }

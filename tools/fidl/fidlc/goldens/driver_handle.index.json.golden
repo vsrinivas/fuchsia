@@ -436,5 +436,120 @@
     }
   ],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.driverhandle/ClientEndWrapper",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+        "data": "ClientEndWrapper",
+        "start_offset": 315,
+        "end_offset": 331
+      },
+      "members": [
+        {
+          "name": "value",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+            "data": "value",
+            "start_offset": 356,
+            "end_offset": 361
+          },
+          "type": {
+            "kind": "identifier"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.driverhandle/HandlesInProtocolSendHandlesRequest",
+      "members": [
+        {
+          "name": "t",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+            "data": "t",
+            "start_offset": 680,
+            "end_offset": 681
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.driverhandle/ServerEndWrapper",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+        "data": "ServerEndWrapper",
+        "start_offset": 454,
+        "end_offset": 470
+      },
+      "members": [
+        {
+          "name": "value",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+            "data": "value",
+            "start_offset": 495,
+            "end_offset": 500
+          },
+          "type": {
+            "kind": "request"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "identifier": "test.driverhandle/DriverProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+        "data": "DriverProtocol",
+        "start_offset": 234,
+        "end_offset": 248
+      },
+      "methods": [],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.driverhandle/HandlesInProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+        "data": "HandlesInProtocol",
+        "start_offset": 618,
+        "end_offset": 635
+      },
+      "methods": [
+        {
+          "identifier": "SendHandles",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/driver_handle.test.fidl",
+            "data": "SendHandles",
+            "start_offset": 642,
+            "end_offset": 653
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    }
+  ]
 }

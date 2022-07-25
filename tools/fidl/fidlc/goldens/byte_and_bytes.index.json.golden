@@ -13,5 +13,73 @@
   "dependencies": [],
   "dependency_identifiers": [],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.byteandbytes/ByteAndBytes",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/byte_and_bytes.test.fidl",
+        "data": "ByteAndBytes",
+        "start_offset": 33,
+        "end_offset": 45
+      },
+      "members": [
+        {
+          "name": "single_byte",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/byte_and_bytes.test.fidl",
+            "data": "single_byte",
+            "start_offset": 61,
+            "end_offset": 72
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "many_bytes",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/byte_and_bytes.test.fidl",
+            "data": "many_bytes",
+            "start_offset": 83,
+            "end_offset": 93
+          },
+          "type": {
+            "kind": "vector"
+          }
+        },
+        {
+          "name": "only_one_k_bytes",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/byte_and_bytes.test.fidl",
+            "data": "only_one_k_bytes",
+            "start_offset": 105,
+            "end_offset": 121
+          },
+          "type": {
+            "kind": "vector"
+          }
+        },
+        {
+          "name": "opt_only_one_k_bytes",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/byte_and_bytes.test.fidl",
+            "data": "opt_only_one_k_bytes",
+            "start_offset": 138,
+            "end_offset": 158
+          },
+          "type": {
+            "kind": "vector"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": []
 }

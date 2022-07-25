@@ -13,5 +13,170 @@
   "dependencies": [],
   "dependency_identifiers": [],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": true,
+      "identifier": "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictRequest",
+      "members": [
+        {
+          "name": "s",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
+            "data": "s",
+            "start_offset": 367,
+            "end_offset": 368
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.requestflexibleenvelope/FlexibleFoo",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
+              "data": "FlexibleFoo",
+              "start_offset": 44,
+              "end_offset": 55
+            }
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.requestflexibleenvelope/ProtocolRequestFlexibleResponseStrictTopResponse",
+      "members": [
+        {
+          "name": "f",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
+            "data": "f",
+            "start_offset": 410,
+            "end_offset": 411
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.requestflexibleenvelope/StrictFoo",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
+              "data": "StrictFoo",
+              "start_offset": 117,
+              "end_offset": 126
+            }
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleRequest",
+      "members": [
+        {
+          "name": "s",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
+            "data": "s",
+            "start_offset": 252,
+            "end_offset": 253
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.requestflexibleenvelope/StrictFoo",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
+              "data": "StrictFoo",
+              "start_offset": 117,
+              "end_offset": 126
+            }
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.requestflexibleenvelope/ProtocolRequestStrictResponseFlexibleTopResponse",
+      "members": [
+        {
+          "name": "f",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
+            "data": "f",
+            "start_offset": 293,
+            "end_offset": 294
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.requestflexibleenvelope/FlexibleFoo",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
+              "data": "FlexibleFoo",
+              "start_offset": 44,
+              "end_offset": 55
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "identifier": "test.requestflexibleenvelope/Protocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
+        "data": "Protocol",
+        "start_offset": 190,
+        "end_offset": 198
+      },
+      "methods": [
+        {
+          "identifier": "RequestStrictResponseFlexible",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
+            "data": "RequestStrictResponseFlexible",
+            "start_offset": 205,
+            "end_offset": 234
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "RequestFlexibleResponseStrict",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl",
+            "data": "RequestFlexibleResponseStrict",
+            "start_offset": 320,
+            "end_offset": 349
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    }
+  ]
 }

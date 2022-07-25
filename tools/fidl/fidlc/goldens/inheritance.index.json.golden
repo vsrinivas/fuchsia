@@ -13,5 +13,120 @@
   "dependencies": [],
   "dependency_identifiers": [],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": true,
+      "identifier": "test.inheritance/SuperFooRequest",
+      "members": [
+        {
+          "name": "s",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
+            "data": "s",
+            "start_offset": 69,
+            "end_offset": 70
+          },
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.inheritance/SuperFooTopResponse",
+      "members": [
+        {
+          "name": "y",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
+            "data": "y",
+            "start_offset": 107,
+            "end_offset": 108
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "identifier": "test.inheritance/sub",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
+        "data": "sub",
+        "start_offset": 137,
+        "end_offset": 140
+      },
+      "methods": [
+        {
+          "identifier": "foo",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
+            "data": "foo",
+            "start_offset": 48,
+            "end_offset": 51
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": [
+        {
+          "identifier": "test.inheritance/super",
+          "referenced_at": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
+            "data": "super",
+            "start_offset": 186,
+            "end_offset": 191
+          }
+        }
+      ]
+    },
+    {
+      "identifier": "test.inheritance/super",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
+        "data": "super",
+        "start_offset": 36,
+        "end_offset": 41
+      },
+      "methods": [
+        {
+          "identifier": "foo",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/inheritance.test.fidl",
+            "data": "foo",
+            "start_offset": 48,
+            "end_offset": 51
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    }
+  ]
 }

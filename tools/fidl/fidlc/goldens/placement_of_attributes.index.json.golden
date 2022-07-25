@@ -33,7 +33,18 @@
       }
     }
   ],
-  "dependency_identifiers": [],
+  "dependency_identifiers": [
+    {
+      "identifier": "test.exampleusing/Empty",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/exampleusing.test.fidl",
+        "data": "Empty",
+        "start_offset": 33,
+        "end_offset": 38
+      }
+    }
+  ],
   "consts": [
     {
       "identifier": "test.placementofattributes/EXAMPLE_CONST",
@@ -72,6 +83,91 @@
           }
         }
       ]
+    }
+  ],
+  "structs": [
+    {
+      "is_anonymous": true,
+      "identifier": "test.placementofattributes/ExampleProtocolMethodRequest",
+      "members": [
+        {
+          "name": "arg",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+            "data": "arg",
+            "start_offset": 406,
+            "end_offset": 409
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.exampleusing/Empty",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/exampleusing.test.fidl",
+              "data": "Empty",
+              "start_offset": 33,
+              "end_offset": 38
+            }
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.placementofattributes/ExampleStruct",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+        "data": "ExampleStruct",
+        "start_offset": 463,
+        "end_offset": 476
+      },
+      "members": [
+        {
+          "name": "member",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+            "data": "member",
+            "start_offset": 514,
+            "end_offset": 520
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "identifier": "test.placementofattributes/ExampleProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+        "data": "ExampleProtocol",
+        "start_offset": 345,
+        "end_offset": 360
+      },
+      "methods": [
+        {
+          "identifier": "Method",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/placement_of_attributes/example.test.fidl",
+            "data": "Method",
+            "start_offset": 382,
+            "end_offset": 388
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
     }
   ]
 }

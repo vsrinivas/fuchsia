@@ -395,5 +395,104 @@
         }
       ]
     }
-  ]
+  ],
+  "structs": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.constants/Struct",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+        "data": "Struct",
+        "start_offset": 1018,
+        "end_offset": 1024
+      },
+      "members": [
+        {
+          "name": "int64_with_default",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+            "data": "int64_with_default",
+            "start_offset": 1078,
+            "end_offset": 1096
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "string_with_default",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+            "data": "string_with_default",
+            "start_offset": 1152,
+            "end_offset": 1171
+          },
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "bool_with_default",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+            "data": "bool_with_default",
+            "start_offset": 1232,
+            "end_offset": 1249
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "enum_with_default",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+            "data": "enum_with_default",
+            "start_offset": 1305,
+            "end_offset": 1322
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.constants/Enum",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+              "data": "Enum",
+              "start_offset": 925,
+              "end_offset": 929
+            }
+          }
+        },
+        {
+          "name": "bits_with_default",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+            "data": "bits_with_default",
+            "start_offset": 1380,
+            "end_offset": 1397
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.constants/Bits",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/constants.test.fidl",
+              "data": "Bits",
+              "start_offset": 975,
+              "end_offset": 979
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": []
 }

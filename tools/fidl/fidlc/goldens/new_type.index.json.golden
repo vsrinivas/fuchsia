@@ -47,5 +47,117 @@
         }
       ]
     }
+  ],
+  "structs": [
+    {
+      "is_anonymous": true,
+      "identifier": "test.newtype/CalculatorAddRequest",
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/new_type.test.fidl",
+            "data": "a",
+            "start_offset": 275,
+            "end_offset": 276
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/new_type.test.fidl",
+            "data": "b",
+            "start_offset": 292,
+            "end_offset": 293
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.newtype/CalculatorAddTopResponse",
+      "members": [
+        {
+          "name": "sum",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/new_type.test.fidl",
+            "data": "sum",
+            "start_offset": 329,
+            "end_offset": 332
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.newtype/Struct",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/new_type.test.fidl",
+        "data": "Struct",
+        "start_offset": 106,
+        "end_offset": 112
+      },
+      "members": [
+        {
+          "name": "foo",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/new_type.test.fidl",
+            "data": "foo",
+            "start_offset": 128,
+            "end_offset": 131
+          },
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "identifier": "test.newtype/Calculator",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/new_type.test.fidl",
+        "data": "Calculator",
+        "start_offset": 237,
+        "end_offset": 247
+      },
+      "methods": [
+        {
+          "identifier": "Add",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/new_type.test.fidl",
+            "data": "Add",
+            "start_offset": 254,
+            "end_offset": 257
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    }
   ]
 }

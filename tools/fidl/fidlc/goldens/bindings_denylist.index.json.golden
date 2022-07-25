@@ -33,7 +33,48 @@
       }
     }
   ],
-  "dependency_identifiers": [],
+  "dependency_identifiers": [
+    {
+      "identifier": "test.dependent/ContainsDeniedAlwaysDeniedRequest",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/dependent.test.fidl",
+        "data": "struct {\n        arg OnlyAppearsInImportingLibrary;\n    }",
+        "start_offset": 393,
+        "end_offset": 450
+      }
+    },
+    {
+      "identifier": "test.dependent/OnlyAppearsInImportingLibrary",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/dependent.test.fidl",
+        "data": "OnlyAppearsInImportingLibrary",
+        "start_offset": 211,
+        "end_offset": 240
+      }
+    },
+    {
+      "identifier": "test.dependent/ContainsAllowed",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/dependent.test.fidl",
+        "data": "ContainsAllowed",
+        "start_offset": 486,
+        "end_offset": 501
+      }
+    },
+    {
+      "identifier": "test.dependent/ContainsDenied",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/dependent.test.fidl",
+        "data": "ContainsDenied",
+        "start_offset": 277,
+        "end_offset": 291
+      }
+    }
+  ],
   "consts": [
     {
       "identifier": "test.bindingsdenylist/AllBindings",
@@ -72,6 +113,895 @@
           }
         }
       ]
+    }
+  ],
+  "structs": [
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/AllowedDeniedTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/Allowed_Denied_Response",
+      "members": [
+        {
+          "name": "should_never_appear_in_any_binding_4",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "should_never_appear_in_any_binding_4",
+            "start_offset": 3425,
+            "end_offset": 3461
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "name": "should_never_appear_in_any_binding_5",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "should_never_appear_in_any_binding_5",
+            "start_offset": 3510,
+            "end_offset": 3546
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "name": "should_never_appear_in_any_binding_6",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "should_never_appear_in_any_binding_6",
+            "start_offset": 3597,
+            "end_offset": 3633
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.bindingsdenylist/DeniedAnonymous",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "data": "DeniedAnonymous",
+        "start_offset": 3793,
+        "end_offset": 3808
+      },
+      "members": [
+        {
+          "name": "should_never_appear_in_any_binding_7",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "should_never_appear_in_any_binding_7",
+            "start_offset": 3824,
+            "end_offset": 3860
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "name": "should_never_appear_in_any_binding_8",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "should_never_appear_in_any_binding_8",
+            "start_offset": 3897,
+            "end_offset": 3933
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "name": "should_never_appear_in_any_binding_9",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "should_never_appear_in_any_binding_9",
+            "start_offset": 3972,
+            "end_offset": 4008
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/DeniedShouldNeverAppearInAnyBindingRequest",
+      "members": [
+        {
+          "name": "should_never_appear_in_any_binding_1",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "should_never_appear_in_any_binding_1",
+            "start_offset": 3018,
+            "end_offset": 3054
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "name": "should_never_appear_in_any_binding_2",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "should_never_appear_in_any_binding_2",
+            "start_offset": 3103,
+            "end_offset": 3139
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "name": "should_never_appear_in_any_binding_3",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "should_never_appear_in_any_binding_3",
+            "start_offset": 3190,
+            "end_offset": 3226
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/DenyEachBindingOnlyDenyCppRequest",
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "a",
+            "start_offset": 1974,
+            "end_offset": 1975
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/DenyEachBindingOnlyDenyCppTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/DenyEachBindingOnlyDenyDartRequest",
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "a",
+            "start_offset": 2106,
+            "end_offset": 2107
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/DenyEachBindingOnlyDenyDartTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/DenyEachBindingOnlyDenyGoRequest",
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "a",
+            "start_offset": 2234,
+            "end_offset": 2235
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/DenyEachBindingOnlyDenyGoTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/DenyEachBindingOnlyDenyLibfuzzerRequest",
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "a",
+            "start_offset": 2376,
+            "end_offset": 2377
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/DenyEachBindingOnlyDenyLibfuzzerTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/DenyEachBindingOnlyDenyRustRequest",
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "a",
+            "start_offset": 2508,
+            "end_offset": 2509
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/DenyEachBindingOnlyDenyRustTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/DenyEachBindingOnlyDenySyzkallerRequest",
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "a",
+            "start_offset": 2650,
+            "end_offset": 2651
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/DenyEachBindingOnlyDenySyzkallerTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/DenyEachBinding_OnlyDenyCpp_Response",
+      "members": [
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "b",
+            "start_offset": 2010,
+            "end_offset": 2011
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/DenyEachBinding_OnlyDenyDart_Response",
+      "members": [
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "b",
+            "start_offset": 2142,
+            "end_offset": 2143
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/DenyEachBinding_OnlyDenyGo_Response",
+      "members": [
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "b",
+            "start_offset": 2270,
+            "end_offset": 2271
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/DenyEachBinding_OnlyDenyLibfuzzer_Response",
+      "members": [
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "b",
+            "start_offset": 2412,
+            "end_offset": 2413
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/DenyEachBinding_OnlyDenyRust_Response",
+      "members": [
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "b",
+            "start_offset": 2544,
+            "end_offset": 2545
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/DenyEachBinding_OnlyDenySyzkaller_Response",
+      "members": [
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "b",
+            "start_offset": 2686,
+            "end_offset": 2687
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/MemberOnlyAppearsInImportingLibrary",
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "a",
+            "start_offset": 4789,
+            "end_offset": 4790
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.bindingsdenylist/OnlyAppearsInImportingLibrary",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "data": "OnlyAppearsInImportingLibrary",
+        "start_offset": 4686,
+        "end_offset": 4715
+      },
+      "members": [
+        {
+          "name": "member_only_appears_in_importing_library",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "member_only_appears_in_importing_library",
+            "start_offset": 4731,
+            "end_offset": 4771
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.bindingsdenylist/OnlyGo",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "data": "OnlyGo",
+        "start_offset": 826,
+        "end_offset": 832
+      },
+      "members": []
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/ShouldNeverAppearInAnyBinding1",
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "a",
+            "start_offset": 3076,
+            "end_offset": 3077
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/ShouldNeverAppearInAnyBinding4",
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "a",
+            "start_offset": 3483,
+            "end_offset": 3484
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.bindingsdenylist/ShouldNeverAppearInAnyBinding7",
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "a",
+            "start_offset": 3878,
+            "end_offset": 3879
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "identifier": "test.bindingsdenylist/Allowed",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "data": "Allowed",
+        "start_offset": 3299,
+        "end_offset": 3306
+      },
+      "methods": [
+        {
+          "identifier": "Denied",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "Denied",
+            "start_offset": 3395,
+            "end_offset": 3401
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.bindingsdenylist/ContainsAllowed",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "data": "ContainsAllowed",
+        "start_offset": 4442,
+        "end_offset": 4457
+      },
+      "methods": [],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.bindingsdenylist/Denied",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "data": "Denied",
+        "start_offset": 2958,
+        "end_offset": 2964
+      },
+      "methods": [
+        {
+          "identifier": "ShouldNeverAppearInAnyBinding",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "ShouldNeverAppearInAnyBinding",
+            "start_offset": 2971,
+            "end_offset": 3000
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.bindingsdenylist/DenyEachBinding",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "data": "DenyEachBinding",
+        "start_offset": 1868,
+        "end_offset": 1883
+      },
+      "methods": [
+        {
+          "identifier": "OnlyDenyCpp",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "OnlyDenyCpp",
+            "start_offset": 1945,
+            "end_offset": 1956
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "OnlyDenyDart",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "OnlyDenyDart",
+            "start_offset": 2076,
+            "end_offset": 2088
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "OnlyDenyGo",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "OnlyDenyGo",
+            "start_offset": 2206,
+            "end_offset": 2216
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "OnlyDenyLibfuzzer",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "OnlyDenyLibfuzzer",
+            "start_offset": 2341,
+            "end_offset": 2358
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "OnlyDenyRust",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "OnlyDenyRust",
+            "start_offset": 2478,
+            "end_offset": 2490
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "OnlyDenySyzkaller",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "OnlyDenySyzkaller",
+            "start_offset": 2615,
+            "end_offset": 2632
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.bindingsdenylist/ImportsSameNameContext",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "data": "ImportsSameNameContext",
+        "start_offset": 4817,
+        "end_offset": 4839
+      },
+      "methods": [
+        {
+          "identifier": "AlwaysDenied",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/dependent.test.fidl",
+            "data": "AlwaysDenied",
+            "start_offset": 380,
+            "end_offset": 392
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "Unattributed",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/dependent.test.fidl",
+            "data": "Unattributed",
+            "start_offset": 457,
+            "end_offset": 469
+          }
+        },
+        {
+          "identifier": "AlwaysAppearsInImportingLibrary",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/dependent.test.fidl",
+            "data": "AlwaysAppearsInImportingLibrary",
+            "start_offset": 508,
+            "end_offset": 539
+          }
+        }
+      ],
+      "composed_protocols": [
+        {
+          "identifier": "test.dependent/ContainsDenied",
+          "referenced_at": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "test.dependent.ContainsDenied",
+            "start_offset": 4854,
+            "end_offset": 4883
+          }
+        },
+        {
+          "identifier": "test.dependent/ContainsAllowed",
+          "referenced_at": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+            "data": "test.dependent.ContainsAllowed",
+            "start_offset": 4897,
+            "end_offset": 4927
+          }
+        }
+      ]
+    },
+    {
+      "identifier": "test.bindingsdenylist/OnlyCppAndDeps",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "data": "OnlyCppAndDeps",
+        "start_offset": 1611,
+        "end_offset": 1625
+      },
+      "methods": [],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.bindingsdenylist/OnlyLibfuzzerAndDeps",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl",
+        "data": "OnlyLibfuzzerAndDeps",
+        "start_offset": 1319,
+        "end_offset": 1339
+      },
+      "methods": [],
+      "composed_protocols": []
     }
   ]
 }

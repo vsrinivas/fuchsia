@@ -13,5 +13,91 @@
   "dependencies": [],
   "dependency_identifiers": [],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": true,
+      "identifier": "test.drivertwoway/TwoWayAddRequest",
+      "members": [
+        {
+          "name": "addend1",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/driver_two_way.test.fidl",
+            "data": "addend1",
+            "start_offset": 257,
+            "end_offset": 264
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "addend2",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/driver_two_way.test.fidl",
+            "data": "addend2",
+            "start_offset": 281,
+            "end_offset": 288
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.drivertwoway/TwoWayAddTopResponse",
+      "members": [
+        {
+          "name": "sum",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/driver_two_way.test.fidl",
+            "data": "sum",
+            "start_offset": 325,
+            "end_offset": 328
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "identifier": "test.drivertwoway/TwoWay",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/driver_two_way.test.fidl",
+        "data": "TwoWay",
+        "start_offset": 223,
+        "end_offset": 229
+      },
+      "methods": [
+        {
+          "identifier": "Add",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/driver_two_way.test.fidl",
+            "data": "Add",
+            "start_offset": 236,
+            "end_offset": 239
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    }
+  ]
 }

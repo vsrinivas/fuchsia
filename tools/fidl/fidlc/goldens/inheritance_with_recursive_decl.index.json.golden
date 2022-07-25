@@ -13,5 +13,126 @@
   "dependencies": [],
   "dependency_identifiers": [],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": true,
+      "identifier": "test.inheritancewithrecursivedecl/ChildSecondRequest",
+      "members": [
+        {
+          "name": "request",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
+            "data": "request",
+            "start_offset": 211,
+            "end_offset": 218
+          },
+          "type": {
+            "kind": "request"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.inheritancewithrecursivedecl/ParentFirstRequest",
+      "members": [
+        {
+          "name": "request",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
+            "data": "request",
+            "start_offset": 98,
+            "end_offset": 105
+          },
+          "type": {
+            "kind": "request"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "identifier": "test.inheritancewithrecursivedecl/Child",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
+        "data": "Child",
+        "start_offset": 146,
+        "end_offset": 151
+      },
+      "methods": [
+        {
+          "identifier": "First",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
+            "data": "First",
+            "start_offset": 66,
+            "end_offset": 71
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "Second",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
+            "data": "Second",
+            "start_offset": 178,
+            "end_offset": 184
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": [
+        {
+          "identifier": "test.inheritancewithrecursivedecl/Parent",
+          "referenced_at": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
+            "data": "Parent",
+            "start_offset": 166,
+            "end_offset": 172
+          }
+        }
+      ]
+    },
+    {
+      "identifier": "test.inheritancewithrecursivedecl/Parent",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
+        "data": "Parent",
+        "start_offset": 53,
+        "end_offset": 59
+      },
+      "methods": [
+        {
+          "identifier": "First",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/inheritance_with_recursive_decl.test.fidl",
+            "data": "First",
+            "start_offset": 66,
+            "end_offset": 71
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    }
+  ]
 }

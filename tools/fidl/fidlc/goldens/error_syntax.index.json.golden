@@ -33,7 +33,166 @@
       }
     }
   ],
-  "dependency_identifiers": [],
+  "dependency_identifiers": [
+    {
+      "identifier": "test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailRequest",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/error_syntax/parent.test.fidl",
+        "data": "struct {\n        s string;\n    }",
+        "start_offset": 261,
+        "end_offset": 293
+      }
+    },
+    {
+      "identifier": "test.errorsyntax.parent/ParentUsesErrorSyntaxComposedCallWhichMayFailTopResponse",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/error_syntax/parent.test.fidl",
+        "data": "(struct {\n        value int64;\n    })",
+        "start_offset": 298,
+        "end_offset": 335
+      }
+    },
+    {
+      "identifier": "test.errorsyntax.parent/ParentUsesErrorSyntax_ComposedCallWhichMayFail_Response",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/error_syntax/parent.test.fidl",
+        "data": "struct {\n        value int64;\n    }",
+        "start_offset": 299,
+        "end_offset": 334
+      }
+    },
+    {
+      "identifier": "test.errorsyntax.parent/ParentUsesErrorSyntax",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/error_syntax/parent.test.fidl",
+        "data": "ParentUsesErrorSyntax",
+        "start_offset": 208,
+        "end_offset": 229
+      }
+    }
+  ],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": true,
+      "identifier": "test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailRequest",
+      "members": [
+        {
+          "name": "s",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/error_syntax/child.test.fidl",
+            "data": "s",
+            "start_offset": 356,
+            "end_offset": 357
+          },
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.errorsyntax/ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.errorsyntax/ExampleUseOfErrorSyntax_CallWhichMayFail_Response",
+      "members": [
+        {
+          "name": "value",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/error_syntax/child.test.fidl",
+            "data": "value",
+            "start_offset": 394,
+            "end_offset": 399
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "identifier": "test.errorsyntax/ExampleUseOfErrorSyntax",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/error_syntax/child.test.fidl",
+        "data": "ExampleUseOfErrorSyntax",
+        "start_offset": 233,
+        "end_offset": 256
+      },
+      "methods": [
+        {
+          "identifier": "ComposedCallWhichMayFail",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/error_syntax/parent.test.fidl",
+            "data": "ComposedCallWhichMayFail",
+            "start_offset": 236,
+            "end_offset": 260
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "CallWhichMayFail",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/error_syntax/child.test.fidl",
+            "data": "CallWhichMayFail",
+            "start_offset": 322,
+            "end_offset": 338
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": [
+        {
+          "identifier": "test.errorsyntax.parent/ParentUsesErrorSyntax",
+          "referenced_at": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/error_syntax/child.test.fidl",
+            "data": "test.errorsyntax.parent.ParentUsesErrorSyntax",
+            "start_offset": 271,
+            "end_offset": 316
+          }
+        }
+      ]
+    }
+  ]
 }

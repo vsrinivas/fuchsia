@@ -470,5 +470,1653 @@
         }
       ]
     }
+  ],
+  "structs": [
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/ChannelProtocolEventARequest",
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "a",
+            "start_offset": 1076,
+            "end_offset": 1077
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "b",
+            "start_offset": 1093,
+            "end_offset": 1094
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/ChannelProtocolMethodARequest",
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "a",
+            "start_offset": 1011,
+            "end_offset": 1012
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "b",
+            "start_offset": 1028,
+            "end_offset": 1029
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/ChannelProtocolMethodBRequest",
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "a",
+            "start_offset": 1139,
+            "end_offset": 1140
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "b",
+            "start_offset": 1156,
+            "end_offset": 1157
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/ChannelProtocolMethodBTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "result",
+            "start_offset": 1193,
+            "end_offset": 1199
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/ChannelProtocolMutateSocketRequest",
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "a",
+            "start_offset": 1326,
+            "end_offset": 1327
+          },
+          "type": {
+            "kind": "handle"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/ChannelProtocolMutateSocketTopResponse",
+      "members": [
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "b",
+            "start_offset": 1383,
+            "end_offset": 1384
+          },
+          "type": {
+            "kind": "handle"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/ChannelProtocolTakeHandleRequest",
+      "members": [
+        {
+          "name": "h",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "h",
+            "start_offset": 1256,
+            "end_offset": 1257
+          },
+          "type": {
+            "kind": "handle"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/HandleRightsProtocolAnEventRequest",
+      "members": [
+        {
+          "name": "h",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "h",
+            "start_offset": 2327,
+            "end_offset": 2328
+          },
+          "type": {
+            "kind": "handle"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/HandleRightsProtocolNoResponseMethodRequest",
+      "members": [
+        {
+          "name": "h",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "h",
+            "start_offset": 2018,
+            "end_offset": 2019
+          },
+          "type": {
+            "kind": "handle"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/HandleRightsProtocolResponseMethodRequest",
+      "members": [
+        {
+          "name": "h",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "h",
+            "start_offset": 2135,
+            "end_offset": 2136
+          },
+          "type": {
+            "kind": "handle"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/HandleRightsProtocolResponseMethodTopResponse",
+      "members": [
+        {
+          "name": "h",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "h",
+            "start_offset": 2236,
+            "end_offset": 2237
+          },
+          "type": {
+            "kind": "handle"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/ManyParametersFifteenRequest",
+      "members": [
+        {
+          "name": "p1",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "p1",
+            "start_offset": 3325,
+            "end_offset": 3327
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "p2",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "p2",
+            "start_offset": 3342,
+            "end_offset": 3344
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "p3",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "p3",
+            "start_offset": 3359,
+            "end_offset": 3361
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "p4",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "p4",
+            "start_offset": 3376,
+            "end_offset": 3378
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "p5",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "p5",
+            "start_offset": 3393,
+            "end_offset": 3395
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "p6",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "p6",
+            "start_offset": 3410,
+            "end_offset": 3412
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "p7",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "p7",
+            "start_offset": 3427,
+            "end_offset": 3429
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "p8",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "p8",
+            "start_offset": 3444,
+            "end_offset": 3446
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "p9",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "p9",
+            "start_offset": 3461,
+            "end_offset": 3463
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "p10",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "p10",
+            "start_offset": 3478,
+            "end_offset": 3481
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "p11",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "p11",
+            "start_offset": 3496,
+            "end_offset": 3499
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "p12",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "p12",
+            "start_offset": 3514,
+            "end_offset": 3517
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "p13",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "p13",
+            "start_offset": 3532,
+            "end_offset": 3535
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "p14",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "p14",
+            "start_offset": 3550,
+            "end_offset": 3553
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "p15",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "p15",
+            "start_offset": 3568,
+            "end_offset": 3571
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/MethodWithUnionUnionMethodRequest",
+      "members": [
+        {
+          "name": "u",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "u",
+            "start_offset": 3704,
+            "end_offset": 3705
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.protocols/TheUnion",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+              "data": "TheUnion",
+              "start_offset": 3595,
+              "end_offset": 3603
+            }
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/MethodWithUnionUnionMethodTopResponse",
+      "members": [
+        {
+          "name": "u",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "u",
+            "start_offset": 3744,
+            "end_offset": 3745
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.protocols/TheUnion",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+              "data": "TheUnion",
+              "start_offset": 3595,
+              "end_offset": 3603
+            }
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.protocols/ProtocolEnds",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "data": "ProtocolEnds",
+        "start_offset": 2408,
+        "end_offset": 2420
+      },
+      "members": [
+        {
+          "name": "client",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "client",
+            "start_offset": 2445,
+            "end_offset": 2451
+          },
+          "type": {
+            "kind": "identifier"
+          }
+        },
+        {
+          "name": "server",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "server",
+            "start_offset": 2489,
+            "end_offset": 2495
+          },
+          "type": {
+            "kind": "request"
+          }
+        },
+        {
+          "name": "client_opt",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "client_opt",
+            "start_offset": 2533,
+            "end_offset": 2543
+          },
+          "type": {
+            "kind": "identifier"
+          }
+        },
+        {
+          "name": "server_opt",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "server_opt",
+            "start_offset": 2593,
+            "end_offset": 2603
+          },
+          "type": {
+            "kind": "request"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/SyscallProtocolMethodCRequest",
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "a",
+            "start_offset": 1493,
+            "end_offset": 1494
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "b",
+            "start_offset": 1510,
+            "end_offset": 1511
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/TransitionalEventRequest",
+      "members": [
+        {
+          "name": "x",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "x",
+            "start_offset": 1769,
+            "end_offset": 1770
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/TransitionalOneWayRequest",
+      "members": [
+        {
+          "name": "x",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "x",
+            "start_offset": 1703,
+            "end_offset": 1704
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/TransitionalRequestRequest",
+      "members": [
+        {
+          "name": "x",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "x",
+            "start_offset": 1602,
+            "end_offset": 1603
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/TransitionalRequestTopResponse",
+      "members": [
+        {
+          "name": "y",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "y",
+            "start_offset": 1639,
+            "end_offset": 1640
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/WithAndWithoutRequestResponseNoRequestWithResponseTopResponse",
+      "members": [
+        {
+          "name": "ret",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "ret",
+            "start_offset": 189,
+            "end_offset": 192
+          },
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/WithAndWithoutRequestResponseOnWithResponseRequest",
+      "members": [
+        {
+          "name": "ret",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "ret",
+            "start_offset": 514,
+            "end_offset": 517
+          },
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/WithAndWithoutRequestResponseWithRequestEmptyResponseRequest",
+      "members": [
+        {
+          "name": "arg",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "arg",
+            "start_offset": 318,
+            "end_offset": 321
+          },
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/WithAndWithoutRequestResponseWithRequestNoResponseRequest",
+      "members": [
+        {
+          "name": "arg",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "arg",
+            "start_offset": 252,
+            "end_offset": 255
+          },
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseRequest",
+      "members": [
+        {
+          "name": "arg",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "arg",
+            "start_offset": 389,
+            "end_offset": 392
+          },
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/WithAndWithoutRequestResponseWithRequestWithResponseTopResponse",
+      "members": [
+        {
+          "name": "ret",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "ret",
+            "start_offset": 429,
+            "end_offset": 432
+          },
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/WithErrorSyntaxErrorAsEnumTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/WithErrorSyntaxErrorAsPrimitiveTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/WithErrorSyntaxHandleInResultTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/WithErrorSyntaxResponseAsStructTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/WithErrorSyntax_ErrorAsEnum_Response",
+      "members": []
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/WithErrorSyntax_ErrorAsPrimitive_Response",
+      "members": []
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/WithErrorSyntax_HandleInResult_Response",
+      "members": [
+        {
+          "name": "h",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "h",
+            "start_offset": 895,
+            "end_offset": 896
+          },
+          "type": {
+            "kind": "handle"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/WithErrorSyntax_ResponseAsStruct_Response",
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "a",
+            "start_offset": 678,
+            "end_offset": 679
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "b",
+            "start_offset": 695,
+            "end_offset": 696
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "c",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "c",
+            "start_offset": 712,
+            "end_offset": 713
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/WithProtocolEndsClientEndsRequest",
+      "members": [
+        {
+          "name": "in",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "in",
+            "start_offset": 2722,
+            "end_offset": 2724
+          },
+          "type": {
+            "kind": "identifier"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/WithProtocolEndsClientEndsTopResponse",
+      "members": [
+        {
+          "name": "out",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "out",
+            "start_offset": 2795,
+            "end_offset": 2798
+          },
+          "type": {
+            "kind": "identifier"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/WithProtocolEndsServerEndsRequest",
+      "members": [
+        {
+          "name": "in",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "in",
+            "start_offset": 2893,
+            "end_offset": 2895
+          },
+          "type": {
+            "kind": "request"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/WithProtocolEndsServerEndsTopResponse",
+      "members": [
+        {
+          "name": "out",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "out",
+            "start_offset": 2978,
+            "end_offset": 2981
+          },
+          "type": {
+            "kind": "request"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/WithProtocolEndsStructContainingEndsRequest",
+      "members": [
+        {
+          "name": "in",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "in",
+            "start_offset": 3074,
+            "end_offset": 3076
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.protocols/ProtocolEnds",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+              "data": "ProtocolEnds",
+              "start_offset": 2408,
+              "end_offset": 2420
+            }
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocols/WithProtocolEndsStructContainingEndsTopResponse",
+      "members": [
+        {
+          "name": "out",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "out",
+            "start_offset": 3128,
+            "end_offset": 3131
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.protocols/ProtocolEnds",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+              "data": "ProtocolEnds",
+              "start_offset": 2408,
+              "end_offset": 2420
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "identifier": "test.protocols/AnotherDiscoverableProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "data": "AnotherDiscoverableProtocol",
+        "start_offset": 1906,
+        "end_offset": 1933
+      },
+      "methods": [],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.protocols/ChannelProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "data": "ChannelProtocol",
+        "start_offset": 964,
+        "end_offset": 979
+      },
+      "methods": [
+        {
+          "identifier": "MethodA",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "MethodA",
+            "start_offset": 986,
+            "end_offset": 993
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "EventA",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "EventA",
+            "start_offset": 1052,
+            "end_offset": 1058
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "MethodB",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "MethodB",
+            "start_offset": 1114,
+            "end_offset": 1121
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "TakeHandle",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "TakeHandle",
+            "start_offset": 1219,
+            "end_offset": 1229
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "MutateSocket",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "MutateSocket",
+            "start_offset": 1287,
+            "end_offset": 1299
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.protocols/DiscoverableProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "data": "DiscoverableProtocol",
+        "start_offset": 1813,
+        "end_offset": 1833
+      },
+      "methods": [
+        {
+          "identifier": "Method",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "Method",
+            "start_offset": 1840,
+            "end_offset": 1846
+          }
+        }
+      ],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.protocols/HandleRightsProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "data": "HandleRightsProtocol",
+        "start_offset": 1948,
+        "end_offset": 1968
+      },
+      "methods": [
+        {
+          "identifier": "NoResponseMethod",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "NoResponseMethod",
+            "start_offset": 1975,
+            "end_offset": 1991
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "ResponseMethod",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "ResponseMethod",
+            "start_offset": 2094,
+            "end_offset": 2108
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "AnEvent",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "AnEvent",
+            "start_offset": 2293,
+            "end_offset": 2300
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.protocols/ManyParameters",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "data": "ManyParameters",
+        "start_offset": 3167,
+        "end_offset": 3181
+      },
+      "methods": [
+        {
+          "identifier": "Fifteen",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "Fifteen",
+            "start_offset": 3300,
+            "end_offset": 3307
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.protocols/MethodWithUnion",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "data": "MethodWithUnion",
+        "start_offset": 3653,
+        "end_offset": 3668
+      },
+      "methods": [
+        {
+          "identifier": "UnionMethod",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "UnionMethod",
+            "start_offset": 3675,
+            "end_offset": 3686
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.protocols/SyscallProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "data": "SyscallProtocol",
+        "start_offset": 1446,
+        "end_offset": 1461
+      },
+      "methods": [
+        {
+          "identifier": "MethodC",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "MethodC",
+            "start_offset": 1468,
+            "end_offset": 1475
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.protocols/Transitional",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "data": "Transitional",
+        "start_offset": 1540,
+        "end_offset": 1552
+      },
+      "methods": [
+        {
+          "identifier": "Request",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "Request",
+            "start_offset": 1577,
+            "end_offset": 1584
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "OneWay",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "OneWay",
+            "start_offset": 1679,
+            "end_offset": 1685
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "Event",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "Event",
+            "start_offset": 1746,
+            "end_offset": 1751
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.protocols/WithAndWithoutRequestResponse",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "data": "WithAndWithoutRequestResponse",
+        "start_offset": 45,
+        "end_offset": 74
+      },
+      "methods": [
+        {
+          "identifier": "NoRequestNoResponse",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "NoRequestNoResponse",
+            "start_offset": 81,
+            "end_offset": 100
+          }
+        },
+        {
+          "identifier": "NoRequestEmptyResponse",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "NoRequestEmptyResponse",
+            "start_offset": 108,
+            "end_offset": 130
+          }
+        },
+        {
+          "identifier": "NoRequestWithResponse",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "NoRequestWithResponse",
+            "start_offset": 144,
+            "end_offset": 165
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "WithRequestNoResponse",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "WithRequestNoResponse",
+            "start_offset": 213,
+            "end_offset": 234
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "WithRequestEmptyResponse",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "WithRequestEmptyResponse",
+            "start_offset": 276,
+            "end_offset": 300
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "WithRequestWithResponse",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "WithRequestWithResponse",
+            "start_offset": 348,
+            "end_offset": 371
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "OnEmptyResponse",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "OnEmptyResponse",
+            "start_offset": 456,
+            "end_offset": 471
+          }
+        },
+        {
+          "identifier": "OnWithResponse",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "OnWithResponse",
+            "start_offset": 482,
+            "end_offset": 496
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.protocols/WithErrorSyntax",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "data": "WithErrorSyntax",
+        "start_offset": 616,
+        "end_offset": 631
+      },
+      "methods": [
+        {
+          "identifier": "ResponseAsStruct",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "ResponseAsStruct",
+            "start_offset": 638,
+            "end_offset": 654
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "ErrorAsPrimitive",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "ErrorAsPrimitive",
+            "start_offset": 746,
+            "end_offset": 762
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "ErrorAsEnum",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "ErrorAsEnum",
+            "start_offset": 798,
+            "end_offset": 809
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "HandleInResult",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "HandleInResult",
+            "start_offset": 848,
+            "end_offset": 862
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.protocols/WithProtocolEnds",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+        "data": "WithProtocolEnds",
+        "start_offset": 2662,
+        "end_offset": 2678
+      },
+      "methods": [
+        {
+          "identifier": "ClientEnds",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "ClientEnds",
+            "start_offset": 2685,
+            "end_offset": 2695
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "ServerEnds",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "ServerEnds",
+            "start_offset": 2856,
+            "end_offset": 2866
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StructContainingEnds",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocols.test.fidl",
+            "data": "StructContainingEnds",
+            "start_offset": 3027,
+            "end_offset": 3047
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    }
   ]
 }

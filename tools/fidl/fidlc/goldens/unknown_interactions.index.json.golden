@@ -13,5 +13,3128 @@
   "dependencies": [],
   "dependency_identifiers": [],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayFieldsTopResponse",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 7875,
+            "end_offset": 7885
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocolStrictTwoWayUnionErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocol_StrictTwoWayErr_Response",
+      "members": []
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocol_StrictTwoWayFieldsErr_Response",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 8175,
+            "end_offset": 8185
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolFlexibleEventErrRequest",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolFlexibleEventFieldsErrRequest",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolFlexibleEventFieldsRequest",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 4286,
+            "end_offset": 4296
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolFlexibleEventTableErrRequest",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolFlexibleEventUnionErrRequest",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictEventErrRequest",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictEventFieldsErrRequest",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictEventFieldsRequest",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 3695,
+            "end_offset": 3705
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictEventTableErrRequest",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictEventUnionErrRequest",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayFieldsErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayFieldsTopResponse",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 3074,
+            "end_offset": 3084
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayTableErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocolStrictTwoWayUnionErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocol_FlexibleEventErr_Response",
+      "members": []
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocol_FlexibleEventFieldsErr_Response",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 4586,
+            "end_offset": 4596
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictEventErr_Response",
+      "members": []
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictEventFieldsErr_Response",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 3979,
+            "end_offset": 3989
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictTwoWayErr_Response",
+      "members": []
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocol_StrictTwoWayFieldsErr_Response",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 3374,
+            "end_offset": 3384
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayFieldsTopResponse",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 8646,
+            "end_offset": 8656
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocolStrictTwoWayUnionErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocol_StrictTwoWayErr_Response",
+      "members": []
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocol_StrictTwoWayFieldsErr_Response",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 8946,
+            "end_offset": 8956
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictEventErrRequest",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictEventFieldsErrRequest",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictEventFieldsRequest",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 5651,
+            "end_offset": 5661
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictEventTableErrRequest",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictEventUnionErrRequest",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayFieldsErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayFieldsTopResponse",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 5030,
+            "end_offset": 5040
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayTableErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocolStrictTwoWayUnionErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictEventErr_Response",
+      "members": []
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictEventFieldsErr_Response",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 5935,
+            "end_offset": 5945
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictTwoWayErr_Response",
+      "members": []
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocol_StrictTwoWayFieldsErr_Response",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 5330,
+            "end_offset": 5340
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocolFlexibleTwoWayErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocolFlexibleTwoWayFieldsTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocolFlexibleTwoWayTableTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocolFlexibleTwoWayTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocolFlexibleTwoWayUnionErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocolFlexibleTwoWayUnionTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayFieldsErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayFieldsTopResponse",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 6421,
+            "end_offset": 6431
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayTableErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocolStrictTwoWayUnionErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWayErr_Response",
+      "members": []
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWayFieldsErr_Response",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 7369,
+            "end_offset": 7379
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWayFields_Response",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 7053,
+            "end_offset": 7063
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocol_FlexibleTwoWay_Response",
+      "members": []
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocol_StrictTwoWayErr_Response",
+      "members": []
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocol_StrictTwoWayFieldsErr_Response",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 6721,
+            "end_offset": 6731
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolFlexibleEventErrRequest",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolFlexibleEventFieldsErrRequest",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolFlexibleEventFieldsRequest",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 2303,
+            "end_offset": 2313
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolFlexibleEventTableErrRequest",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolFlexibleEventUnionErrRequest",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolFlexibleTwoWayErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolFlexibleTwoWayFieldsErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolFlexibleTwoWayFieldsTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolFlexibleTwoWayTableErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolFlexibleTwoWayTableTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolFlexibleTwoWayTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolFlexibleTwoWayUnionErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolFlexibleTwoWayUnionTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolStrictEventErrRequest",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolStrictEventFieldsErrRequest",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolStrictEventFieldsRequest",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 1712,
+            "end_offset": 1722
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolStrictEventTableErrRequest",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolStrictEventUnionErrRequest",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayFieldsErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayFieldsTopResponse",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 435,
+            "end_offset": 445
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayTableErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocolStrictTwoWayUnionErrTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleEventErr_Response",
+      "members": []
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleEventFieldsErr_Response",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 2603,
+            "end_offset": 2613
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWayErr_Response",
+      "members": []
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWayFieldsErr_Response",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 1383,
+            "end_offset": 1393
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWayFields_Response",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 1067,
+            "end_offset": 1077
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_FlexibleTwoWay_Response",
+      "members": []
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_StrictEventErr_Response",
+      "members": []
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_StrictEventFieldsErr_Response",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 1996,
+            "end_offset": 2006
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_StrictTwoWayErr_Response",
+      "members": []
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocol_StrictTwoWayFieldsErr_Response",
+      "members": [
+        {
+          "name": "some_field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "some_field",
+            "start_offset": 735,
+            "end_offset": 745
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarDriverProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "data": "UnknownInteractionsAjarDriverProtocol",
+        "start_offset": 7644,
+        "end_offset": 7681
+      },
+      "methods": [
+        {
+          "identifier": "StrictOneWay",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictOneWay",
+            "start_offset": 7718,
+            "end_offset": 7730
+          }
+        },
+        {
+          "identifier": "FlexibleOneWay",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleOneWay",
+            "start_offset": 7747,
+            "end_offset": 7761
+          }
+        },
+        {
+          "identifier": "StrictTwoWay",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWay",
+            "start_offset": 7800,
+            "end_offset": 7812
+          }
+        },
+        {
+          "identifier": "StrictTwoWayFields",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayFields",
+            "start_offset": 7833,
+            "end_offset": 7851
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayUnion",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayUnion",
+            "start_offset": 7912,
+            "end_offset": 7929
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayTable",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayTable",
+            "start_offset": 7992,
+            "end_offset": 8009
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayErr",
+            "start_offset": 8073,
+            "end_offset": 8088
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayFieldsErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayFieldsErr",
+            "start_offset": 8130,
+            "end_offset": 8151
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayUnionErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayUnionErr",
+            "start_offset": 8224,
+            "end_offset": 8244
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayTableErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayTableErr",
+            "start_offset": 8319,
+            "end_offset": 8339
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.unknowninteractions/UnknownInteractionsAjarProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "data": "UnknownInteractionsAjarProtocol",
+        "start_offset": 2849,
+        "end_offset": 2880
+      },
+      "methods": [
+        {
+          "identifier": "StrictOneWay",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictOneWay",
+            "start_offset": 2917,
+            "end_offset": 2929
+          }
+        },
+        {
+          "identifier": "FlexibleOneWay",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleOneWay",
+            "start_offset": 2946,
+            "end_offset": 2960
+          }
+        },
+        {
+          "identifier": "StrictTwoWay",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWay",
+            "start_offset": 2999,
+            "end_offset": 3011
+          }
+        },
+        {
+          "identifier": "StrictTwoWayFields",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayFields",
+            "start_offset": 3032,
+            "end_offset": 3050
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayUnion",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayUnion",
+            "start_offset": 3111,
+            "end_offset": 3128
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayTable",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayTable",
+            "start_offset": 3191,
+            "end_offset": 3208
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayErr",
+            "start_offset": 3272,
+            "end_offset": 3287
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayFieldsErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayFieldsErr",
+            "start_offset": 3329,
+            "end_offset": 3350
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayUnionErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayUnionErr",
+            "start_offset": 3423,
+            "end_offset": 3443
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayTableErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayTableErr",
+            "start_offset": 3518,
+            "end_offset": 3538
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEvent",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEvent",
+            "start_offset": 3631,
+            "end_offset": 3642
+          }
+        },
+        {
+          "identifier": "StrictEventFields",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventFields",
+            "start_offset": 3660,
+            "end_offset": 3677
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEventUnion",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventUnion",
+            "start_offset": 3735,
+            "end_offset": 3751
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEventTable",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventTable",
+            "start_offset": 3811,
+            "end_offset": 3827
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEventErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventErr",
+            "start_offset": 3888,
+            "end_offset": 3902
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEventFieldsErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventFieldsErr",
+            "start_offset": 3941,
+            "end_offset": 3961
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEventUnionErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventUnionErr",
+            "start_offset": 4031,
+            "end_offset": 4050
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEventTableErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventTableErr",
+            "start_offset": 4122,
+            "end_offset": 4141
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleEvent",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleEvent",
+            "start_offset": 4216,
+            "end_offset": 4229
+          }
+        },
+        {
+          "identifier": "FlexibleEventFields",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleEventFields",
+            "start_offset": 4249,
+            "end_offset": 4268
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleEventUnion",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleEventUnion",
+            "start_offset": 4328,
+            "end_offset": 4346
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleEventTable",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleEventTable",
+            "start_offset": 4408,
+            "end_offset": 4426
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleEventErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleEventErr",
+            "start_offset": 4489,
+            "end_offset": 4505
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleEventFieldsErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleEventFieldsErr",
+            "start_offset": 4546,
+            "end_offset": 4568
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleEventUnionErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleEventUnionErr",
+            "start_offset": 4640,
+            "end_offset": 4661
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleEventTableErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleEventTableErr",
+            "start_offset": 4735,
+            "end_offset": 4756
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedDriverProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "data": "UnknownInteractionsClosedDriverProtocol",
+        "start_offset": 8444,
+        "end_offset": 8483
+      },
+      "methods": [
+        {
+          "identifier": "StrictOneWay",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictOneWay",
+            "start_offset": 8520,
+            "end_offset": 8532
+          }
+        },
+        {
+          "identifier": "StrictTwoWay",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWay",
+            "start_offset": 8571,
+            "end_offset": 8583
+          }
+        },
+        {
+          "identifier": "StrictTwoWayFields",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayFields",
+            "start_offset": 8604,
+            "end_offset": 8622
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayUnion",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayUnion",
+            "start_offset": 8683,
+            "end_offset": 8700
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayTable",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayTable",
+            "start_offset": 8763,
+            "end_offset": 8780
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayErr",
+            "start_offset": 8844,
+            "end_offset": 8859
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayFieldsErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayFieldsErr",
+            "start_offset": 8901,
+            "end_offset": 8922
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayUnionErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayUnionErr",
+            "start_offset": 8995,
+            "end_offset": 9015
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayTableErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayTableErr",
+            "start_offset": 9090,
+            "end_offset": 9110
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.unknowninteractions/UnknownInteractionsClosedProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "data": "UnknownInteractionsClosedProtocol",
+        "start_offset": 4834,
+        "end_offset": 4867
+      },
+      "methods": [
+        {
+          "identifier": "StrictOneWay",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictOneWay",
+            "start_offset": 4904,
+            "end_offset": 4916
+          }
+        },
+        {
+          "identifier": "StrictTwoWay",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWay",
+            "start_offset": 4955,
+            "end_offset": 4967
+          }
+        },
+        {
+          "identifier": "StrictTwoWayFields",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayFields",
+            "start_offset": 4988,
+            "end_offset": 5006
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayUnion",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayUnion",
+            "start_offset": 5067,
+            "end_offset": 5084
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayTable",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayTable",
+            "start_offset": 5147,
+            "end_offset": 5164
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayErr",
+            "start_offset": 5228,
+            "end_offset": 5243
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayFieldsErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayFieldsErr",
+            "start_offset": 5285,
+            "end_offset": 5306
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayUnionErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayUnionErr",
+            "start_offset": 5379,
+            "end_offset": 5399
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayTableErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayTableErr",
+            "start_offset": 5474,
+            "end_offset": 5494
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEvent",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEvent",
+            "start_offset": 5587,
+            "end_offset": 5598
+          }
+        },
+        {
+          "identifier": "StrictEventFields",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventFields",
+            "start_offset": 5616,
+            "end_offset": 5633
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEventUnion",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventUnion",
+            "start_offset": 5691,
+            "end_offset": 5707
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEventTable",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventTable",
+            "start_offset": 5767,
+            "end_offset": 5783
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEventErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventErr",
+            "start_offset": 5844,
+            "end_offset": 5858
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEventFieldsErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventFieldsErr",
+            "start_offset": 5897,
+            "end_offset": 5917
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEventUnionErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventUnionErr",
+            "start_offset": 5987,
+            "end_offset": 6006
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEventTableErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventTableErr",
+            "start_offset": 6078,
+            "end_offset": 6097
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.unknowninteractions/UnknownInteractionsDriverProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "data": "UnknownInteractionsDriverProtocol",
+        "start_offset": 6194,
+        "end_offset": 6227
+      },
+      "methods": [
+        {
+          "identifier": "StrictOneWay",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictOneWay",
+            "start_offset": 6264,
+            "end_offset": 6276
+          }
+        },
+        {
+          "identifier": "FlexibleOneWay",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleOneWay",
+            "start_offset": 6293,
+            "end_offset": 6307
+          }
+        },
+        {
+          "identifier": "StrictTwoWay",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWay",
+            "start_offset": 6346,
+            "end_offset": 6358
+          }
+        },
+        {
+          "identifier": "StrictTwoWayFields",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayFields",
+            "start_offset": 6379,
+            "end_offset": 6397
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayUnion",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayUnion",
+            "start_offset": 6458,
+            "end_offset": 6475
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayTable",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayTable",
+            "start_offset": 6538,
+            "end_offset": 6555
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayErr",
+            "start_offset": 6619,
+            "end_offset": 6634
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayFieldsErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayFieldsErr",
+            "start_offset": 6676,
+            "end_offset": 6697
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayUnionErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayUnionErr",
+            "start_offset": 6770,
+            "end_offset": 6790
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayTableErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayTableErr",
+            "start_offset": 6865,
+            "end_offset": 6885
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleTwoWay",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleTwoWay",
+            "start_offset": 6963,
+            "end_offset": 6977
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleTwoWayFields",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleTwoWayFields",
+            "start_offset": 7009,
+            "end_offset": 7029
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleTwoWayUnion",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleTwoWayUnion",
+            "start_offset": 7092,
+            "end_offset": 7111
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleTwoWayTable",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleTwoWayTable",
+            "start_offset": 7176,
+            "end_offset": 7195
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleTwoWayErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleTwoWayErr",
+            "start_offset": 7261,
+            "end_offset": 7278
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleTwoWayFieldsErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleTwoWayFieldsErr",
+            "start_offset": 7322,
+            "end_offset": 7345
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleTwoWayUnionErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleTwoWayUnionErr",
+            "start_offset": 7420,
+            "end_offset": 7442
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleTwoWayTableErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleTwoWayTableErr",
+            "start_offset": 7519,
+            "end_offset": 7541
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.unknowninteractions/UnknownInteractionsProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+        "data": "UnknownInteractionsProtocol",
+        "start_offset": 214,
+        "end_offset": 241
+      },
+      "methods": [
+        {
+          "identifier": "StrictOneWay",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictOneWay",
+            "start_offset": 278,
+            "end_offset": 290
+          }
+        },
+        {
+          "identifier": "FlexibleOneWay",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleOneWay",
+            "start_offset": 307,
+            "end_offset": 321
+          }
+        },
+        {
+          "identifier": "StrictTwoWay",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWay",
+            "start_offset": 360,
+            "end_offset": 372
+          }
+        },
+        {
+          "identifier": "StrictTwoWayFields",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayFields",
+            "start_offset": 393,
+            "end_offset": 411
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayUnion",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayUnion",
+            "start_offset": 472,
+            "end_offset": 489
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayTable",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayTable",
+            "start_offset": 552,
+            "end_offset": 569
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayErr",
+            "start_offset": 633,
+            "end_offset": 648
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayFieldsErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayFieldsErr",
+            "start_offset": 690,
+            "end_offset": 711
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayUnionErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayUnionErr",
+            "start_offset": 784,
+            "end_offset": 804
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictTwoWayTableErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictTwoWayTableErr",
+            "start_offset": 879,
+            "end_offset": 899
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleTwoWay",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleTwoWay",
+            "start_offset": 977,
+            "end_offset": 991
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleTwoWayFields",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleTwoWayFields",
+            "start_offset": 1023,
+            "end_offset": 1043
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleTwoWayUnion",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleTwoWayUnion",
+            "start_offset": 1106,
+            "end_offset": 1125
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleTwoWayTable",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleTwoWayTable",
+            "start_offset": 1190,
+            "end_offset": 1209
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleTwoWayErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleTwoWayErr",
+            "start_offset": 1275,
+            "end_offset": 1292
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleTwoWayFieldsErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleTwoWayFieldsErr",
+            "start_offset": 1336,
+            "end_offset": 1359
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleTwoWayUnionErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleTwoWayUnionErr",
+            "start_offset": 1434,
+            "end_offset": 1456
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleTwoWayTableErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleTwoWayTableErr",
+            "start_offset": 1533,
+            "end_offset": 1555
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEvent",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEvent",
+            "start_offset": 1648,
+            "end_offset": 1659
+          }
+        },
+        {
+          "identifier": "StrictEventFields",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventFields",
+            "start_offset": 1677,
+            "end_offset": 1694
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEventUnion",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventUnion",
+            "start_offset": 1752,
+            "end_offset": 1768
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEventTable",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventTable",
+            "start_offset": 1828,
+            "end_offset": 1844
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEventErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventErr",
+            "start_offset": 1905,
+            "end_offset": 1919
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEventFieldsErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventFieldsErr",
+            "start_offset": 1958,
+            "end_offset": 1978
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEventUnionErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventUnionErr",
+            "start_offset": 2048,
+            "end_offset": 2067
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "StrictEventTableErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "StrictEventTableErr",
+            "start_offset": 2139,
+            "end_offset": 2158
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleEvent",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleEvent",
+            "start_offset": 2233,
+            "end_offset": 2246
+          }
+        },
+        {
+          "identifier": "FlexibleEventFields",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleEventFields",
+            "start_offset": 2266,
+            "end_offset": 2285
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleEventUnion",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleEventUnion",
+            "start_offset": 2345,
+            "end_offset": 2363
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleEventTable",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleEventTable",
+            "start_offset": 2425,
+            "end_offset": 2443
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleEventErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleEventErr",
+            "start_offset": 2506,
+            "end_offset": 2522
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleEventFieldsErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleEventFieldsErr",
+            "start_offset": 2563,
+            "end_offset": 2585
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleEventUnionErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleEventUnionErr",
+            "start_offset": 2657,
+            "end_offset": 2678
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleEventTableErr",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/unknown_interactions.test.fidl",
+            "data": "FlexibleEventTableErr",
+            "start_offset": 2752,
+            "end_offset": 2773
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    }
+  ]
 }

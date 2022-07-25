@@ -291,5 +291,20 @@
       }
     }
   ],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.importedconstvalues/MyStruct",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/imported_const_values/example.test.fidl",
+        "data": "MyStruct",
+        "start_offset": 200,
+        "end_offset": 208
+      },
+      "members": []
+    }
+  ],
+  "protocols": []
 }

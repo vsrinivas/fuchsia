@@ -13,5 +13,94 @@
   "dependencies": [],
   "dependency_identifiers": [],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": true,
+      "identifier": "test.error/ExampleFooRequest",
+      "members": [
+        {
+          "name": "s",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/error.test.fidl",
+            "data": "s",
+            "start_offset": 65,
+            "end_offset": 66
+          },
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.error/ExampleFooTopResponse",
+      "members": [
+        {
+          "name": "result",
+          "location": {
+            "is_virtual": true
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.error/Example_foo_Response",
+      "members": [
+        {
+          "name": "y",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/error.test.fidl",
+            "data": "y",
+            "start_offset": 103,
+            "end_offset": 104
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "identifier": "test.error/Example",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/error.test.fidl",
+        "data": "Example",
+        "start_offset": 30,
+        "end_offset": 37
+      },
+      "methods": [
+        {
+          "identifier": "foo",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/error.test.fidl",
+            "data": "foo",
+            "start_offset": 44,
+            "end_offset": 47
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    }
+  ]
 }

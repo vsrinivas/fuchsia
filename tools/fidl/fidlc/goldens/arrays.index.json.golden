@@ -13,5 +13,60 @@
   "dependencies": [],
   "dependency_identifiers": [],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.arrays/StructLargeArray",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
+        "data": "StructLargeArray",
+        "start_offset": 88,
+        "end_offset": 104
+      },
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
+            "data": "a",
+            "start_offset": 120,
+            "end_offset": 121
+          },
+          "type": {
+            "kind": "array"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.arrays/StructSmallArray",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
+        "data": "StructSmallArray",
+        "start_offset": 27,
+        "end_offset": 43
+      },
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/arrays.test.fidl",
+            "data": "a",
+            "start_offset": 59,
+            "end_offset": 60
+          },
+          "type": {
+            "kind": "array"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": []
 }

@@ -436,5 +436,308 @@
     }
   ],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.nullable/Int32Wrapper",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+        "data": "Int32Wrapper",
+        "start_offset": 609,
+        "end_offset": 621
+      },
+      "members": [
+        {
+          "name": "val",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+            "data": "val",
+            "start_offset": 637,
+            "end_offset": 640
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.nullable/SimpleProtocolAddRequest",
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+            "data": "a",
+            "start_offset": 322,
+            "end_offset": 323
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+            "data": "b",
+            "start_offset": 339,
+            "end_offset": 340
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.nullable/SimpleProtocolAddTopResponse",
+      "members": [
+        {
+          "name": "sum",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+            "data": "sum",
+            "start_offset": 376,
+            "end_offset": 379
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.nullable/StructWithNullableHandle",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+        "data": "StructWithNullableHandle",
+        "start_offset": 187,
+        "end_offset": 211
+      },
+      "members": [
+        {
+          "name": "val",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+            "data": "val",
+            "start_offset": 236,
+            "end_offset": 239
+          },
+          "type": {
+            "kind": "handle"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.nullable/StructWithNullableProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+        "data": "StructWithNullableProtocol",
+        "start_offset": 404,
+        "end_offset": 430
+      },
+      "members": [
+        {
+          "name": "val",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+            "data": "val",
+            "start_offset": 455,
+            "end_offset": 458
+          },
+          "type": {
+            "kind": "identifier"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.nullable/StructWithNullableRequest",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+        "data": "StructWithNullableRequest",
+        "start_offset": 507,
+        "end_offset": 532
+      },
+      "members": [
+        {
+          "name": "val",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+            "data": "val",
+            "start_offset": 557,
+            "end_offset": 560
+          },
+          "type": {
+            "kind": "request"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.nullable/StructWithNullableString",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+        "data": "StructWithNullableString",
+        "start_offset": 40,
+        "end_offset": 64
+      },
+      "members": [
+        {
+          "name": "val",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+            "data": "val",
+            "start_offset": 80,
+            "end_offset": 83
+          },
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.nullable/StructWithNullableStruct",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+        "data": "StructWithNullableStruct",
+        "start_offset": 657,
+        "end_offset": 681
+      },
+      "members": [
+        {
+          "name": "val",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+            "data": "val",
+            "start_offset": 697,
+            "end_offset": 700
+          },
+          "type": {
+            "kind": "identifier"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.nullable/StructWithNullableUnion",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+        "data": "StructWithNullableUnion",
+        "start_offset": 801,
+        "end_offset": 824
+      },
+      "members": [
+        {
+          "name": "val",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+            "data": "val",
+            "start_offset": 840,
+            "end_offset": 843
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.nullable/SimpleUnion",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+              "data": "SimpleUnion",
+              "start_offset": 729,
+              "end_offset": 740
+            }
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.nullable/StructWithNullableVector",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+        "data": "StructWithNullableVector",
+        "start_offset": 110,
+        "end_offset": 134
+      },
+      "members": [
+        {
+          "name": "val",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+            "data": "val",
+            "start_offset": 150,
+            "end_offset": 153
+          },
+          "type": {
+            "kind": "vector"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "identifier": "test.nullable/SimpleProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+        "data": "SimpleProtocol",
+        "start_offset": 280,
+        "end_offset": 294
+      },
+      "methods": [
+        {
+          "identifier": "Add",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/nullable.test.fidl",
+            "data": "Add",
+            "start_offset": 301,
+            "end_offset": 304
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    }
+  ]
 }

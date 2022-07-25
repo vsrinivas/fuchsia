@@ -13,5 +13,86 @@
   "dependencies": [],
   "dependency_identifiers": [],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.struct/BasicStruct",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/struct.test.fidl",
+        "data": "BasicStruct",
+        "start_offset": 81,
+        "end_offset": 92
+      },
+      "members": [
+        {
+          "name": "x",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/struct.test.fidl",
+            "data": "x",
+            "start_offset": 108,
+            "end_offset": 109
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "y",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/struct.test.fidl",
+            "data": "y",
+            "start_offset": 122,
+            "end_offset": 123
+          },
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.struct/Simple",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/struct.test.fidl",
+        "data": "Simple",
+        "start_offset": 27,
+        "end_offset": 33
+      },
+      "members": [
+        {
+          "name": "f1",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/struct.test.fidl",
+            "data": "f1",
+            "start_offset": 49,
+            "end_offset": 51
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "f2",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/struct.test.fidl",
+            "data": "f2",
+            "start_offset": 63,
+            "end_offset": 65
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": []
 }

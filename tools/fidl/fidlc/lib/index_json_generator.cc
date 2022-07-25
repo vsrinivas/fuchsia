@@ -25,6 +25,8 @@ std::ostringstream IndexJSONGenerator::Produce() {
     GenerateObjectMember("dependency_identifiers", IndexJSONGenerator::GetDependencyIdentifiers());
     GenerateObjectMember("consts", compilation_->declarations.consts);
     GenerateObjectMember("enums", compilation_->declarations.enums);
+    GenerateObjectMember("structs", compilation_->declarations.structs);
+    GenerateObjectMember("protocols", compilation_->declarations.protocols);
   });
   GenerateEOF();
 
@@ -48,6 +50,14 @@ IndexJSONGenerator::GetDependencyIdentifiers() {
             IndexJSONGenerator::ReferencedIdentifier(NameFlatName(full_name), member.name);
         identifiers.emplace_back(member_identifier);
       }
+    }
+    for (auto& structdecl : dependency.declarations.structs){
+        auto identifier = IndexJSONGenerator::ReferencedIdentifier(structdecl->name);
+        identifiers.emplace_back(identifier);
+    }
+    for (auto& protocoldecl : dependency.declarations.protocols){
+        auto identifier = IndexJSONGenerator::ReferencedIdentifier(protocoldecl->name);
+        identifiers.emplace_back(identifier);
     }
   }
   return identifiers;
@@ -141,6 +151,72 @@ void IndexJSONGenerator::Generate(const flat::Enum::Member& value) {
   GenerateObject([&]() {
     GenerateObjectMember("name", value.name.data(), Position::kFirst);
     GenerateObjectMember("location", value.name);
+  });
+}
+
+void IndexJSONGenerator::Generate(const flat::Struct& value) {
+  GenerateObject([&]() {
+    GenerateObjectMember("is_anonymous", value.IsAnonymousLayout(), Position::kFirst);
+    GenerateObjectMember("identifier", value.name);
+    if (!value.IsAnonymousLayout()) {
+      GenerateObjectMember("location", value.name.span().value());
+    }
+    GenerateObjectMember("members", value.members);
+  });
+}
+
+void IndexJSONGenerator::Generate(const flat::Struct::Member& value) {
+  GenerateObject([&]() {
+    GenerateObjectMember("name", value.name.data(), Position::kFirst);
+    GenerateObjectMember("location", value.name);
+    GenerateObjectMember("type", value.type_ctor.get());
+  });
+}
+
+void IndexJSONGenerator::Generate(const flat::TypeConstructor* value) {
+  auto type = value->type;
+  GenerateObject([&]() {
+    GenerateObjectMember("kind", NameFlatTypeKind(type), Position::kFirst);
+    // handle the non anonymous type identifier case only for now
+    // parameterized types (arrays, vectors) are not handled yet
+    if (type->kind == flat::Type::Kind::kIdentifier) {
+      GenerateObjectMember("is_anonymous", type->name.as_anonymous() != nullptr);
+      const auto* identifier = static_cast<const flat::IdentifierType*>(type);
+      if (!type->name.as_anonymous()) {
+        GenerateObjectMember("type_identifier", identifier->name);
+        GenerateObjectMember("type_referenced_at", identifier->name.span().value());
+      }
+    }
+  });
+}
+
+void IndexJSONGenerator::Generate(const flat::Protocol& value) {
+  GenerateObject([&]() {
+    GenerateObjectMember("identifier", value.name, Position::kFirst);
+    GenerateObjectMember("location", value.name.span().value());
+    GenerateObjectMember("methods", value.all_methods);
+    GenerateObjectMember("composed_protocols", value.composed_protocols);
+  });
+}
+
+void IndexJSONGenerator::Generate(const flat::Protocol::ComposedProtocol& value) {
+  GenerateObject([&]() {
+    GenerateObjectMember("identifier", value.reference.resolved().name(), Position::kFirst);
+    GenerateObjectMember("referenced_at", value.reference.span());
+  });
+}
+
+void IndexJSONGenerator::Generate(const flat::Protocol::MethodWithInfo& method_with_info) {
+  const auto& value = *method_with_info.method;
+  GenerateObject([&]() {
+    GenerateObjectMember("identifier", value.name.data(), Position::kFirst);
+    GenerateObjectMember("location", value.name);
+    if (value.maybe_request) {
+      GenerateObjectMember("request_type", value.maybe_request.get());
+    }
+    if (value.maybe_response) {
+      GenerateObjectMember("response_type", value.maybe_response.get());
+    }
   });
 }
 

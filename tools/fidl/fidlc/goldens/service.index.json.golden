@@ -13,5 +13,54 @@
   "dependencies": [],
   "dependency_identifiers": [],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [],
+  "protocols": [
+    {
+      "identifier": "test.service/FirstProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/service.test.fidl",
+        "data": "FirstProtocol",
+        "start_offset": 222,
+        "end_offset": 235
+      },
+      "methods": [
+        {
+          "identifier": "MethodOnFirst",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/service.test.fidl",
+            "data": "MethodOnFirst",
+            "start_offset": 242,
+            "end_offset": 255
+          }
+        }
+      ],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.service/SecondProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/service.test.fidl",
+        "data": "SecondProtocol",
+        "start_offset": 350,
+        "end_offset": 364
+      },
+      "methods": [
+        {
+          "identifier": "MethodOnSecond",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/service.test.fidl",
+            "data": "MethodOnSecond",
+            "start_offset": 371,
+            "end_offset": 385
+          }
+        }
+      ],
+      "composed_protocols": []
+    }
+  ]
 }

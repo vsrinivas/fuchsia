@@ -13,5 +13,697 @@
   "dependencies": [],
   "dependency_identifiers": [],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.padding/Padding1ByteEnd",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "data": "Padding1ByteEnd",
+        "start_offset": 28,
+        "end_offset": 43
+      },
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "a",
+            "start_offset": 59,
+            "end_offset": 60
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "b",
+            "start_offset": 73,
+            "end_offset": 74
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.padding/Padding1ByteMiddle",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "data": "Padding1ByteMiddle",
+        "start_offset": 640,
+        "end_offset": 658
+      },
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "a",
+            "start_offset": 674,
+            "end_offset": 675
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "b",
+            "start_offset": 709,
+            "end_offset": 710
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.padding/Padding2ByteAlignmentLength6",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "data": "Padding2ByteAlignmentLength6",
+        "start_offset": 1651,
+        "end_offset": 1679
+      },
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "a",
+            "start_offset": 1735,
+            "end_offset": 1736
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "b",
+            "start_offset": 1770,
+            "end_offset": 1771
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "c",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "c",
+            "start_offset": 1824,
+            "end_offset": 1825
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.padding/Padding2ByteEnd",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "data": "Padding2ByteEnd",
+        "start_offset": 113,
+        "end_offset": 128
+      },
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "a",
+            "start_offset": 144,
+            "end_offset": 145
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "b",
+            "start_offset": 158,
+            "end_offset": 159
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.padding/Padding2ByteMiddle",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "data": "Padding2ByteMiddle",
+        "start_offset": 728,
+        "end_offset": 746
+      },
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "a",
+            "start_offset": 762,
+            "end_offset": 763
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "b",
+            "start_offset": 798,
+            "end_offset": 799
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.padding/Padding3ByteEnd",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "data": "Padding3ByteEnd",
+        "start_offset": 199,
+        "end_offset": 214
+      },
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "a",
+            "start_offset": 230,
+            "end_offset": 231
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "b",
+            "start_offset": 244,
+            "end_offset": 245
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.padding/Padding3ByteMiddle",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "data": "Padding3ByteMiddle",
+        "start_offset": 817,
+        "end_offset": 835
+      },
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "a",
+            "start_offset": 851,
+            "end_offset": 852
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "b",
+            "start_offset": 886,
+            "end_offset": 887
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.padding/Padding4ByteAlignmentLength12",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "data": "Padding4ByteAlignmentLength12",
+        "start_offset": 1501,
+        "end_offset": 1530
+      },
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "a",
+            "start_offset": 1546,
+            "end_offset": 1547
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "b",
+            "start_offset": 1560,
+            "end_offset": 1561
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "c",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "c",
+            "start_offset": 1595,
+            "end_offset": 1596
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "d",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "d",
+            "start_offset": 1609,
+            "end_offset": 1610
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.padding/Padding4ByteEnd",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "data": "Padding4ByteEnd",
+        "start_offset": 284,
+        "end_offset": 299
+      },
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "a",
+            "start_offset": 315,
+            "end_offset": 316
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "b",
+            "start_offset": 329,
+            "end_offset": 330
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.padding/Padding4ByteMiddle",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "data": "Padding4ByteMiddle",
+        "start_offset": 905,
+        "end_offset": 923
+      },
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "a",
+            "start_offset": 939,
+            "end_offset": 940
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "b",
+            "start_offset": 975,
+            "end_offset": 976
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.padding/Padding5ByteEnd",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "data": "Padding5ByteEnd",
+        "start_offset": 370,
+        "end_offset": 385
+      },
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "a",
+            "start_offset": 401,
+            "end_offset": 402
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "b",
+            "start_offset": 415,
+            "end_offset": 416
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "c",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "c",
+            "start_offset": 429,
+            "end_offset": 430
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.padding/Padding5ByteMiddle",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "data": "Padding5ByteMiddle",
+        "start_offset": 994,
+        "end_offset": 1012
+      },
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "a",
+            "start_offset": 1028,
+            "end_offset": 1029
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "b",
+            "start_offset": 1042,
+            "end_offset": 1043
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "c",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "c",
+            "start_offset": 1077,
+            "end_offset": 1078
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.padding/Padding6ByteEnd",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "data": "Padding6ByteEnd",
+        "start_offset": 469,
+        "end_offset": 484
+      },
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "a",
+            "start_offset": 500,
+            "end_offset": 501
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "b",
+            "start_offset": 514,
+            "end_offset": 515
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.padding/Padding6ByteMiddle",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "data": "Padding6ByteMiddle",
+        "start_offset": 1096,
+        "end_offset": 1114
+      },
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "a",
+            "start_offset": 1130,
+            "end_offset": 1131
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "b",
+            "start_offset": 1166,
+            "end_offset": 1167
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.padding/Padding7ByteEnd",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "data": "Padding7ByteEnd",
+        "start_offset": 555,
+        "end_offset": 570
+      },
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "a",
+            "start_offset": 586,
+            "end_offset": 587
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "b",
+            "start_offset": 600,
+            "end_offset": 601
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.padding/Padding7ByteMiddle",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+        "data": "Padding7ByteMiddle",
+        "start_offset": 1185,
+        "end_offset": 1203
+      },
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "a",
+            "start_offset": 1219,
+            "end_offset": 1220
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/padding.test.fidl",
+            "data": "b",
+            "start_offset": 1254,
+            "end_offset": 1255
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": []
 }

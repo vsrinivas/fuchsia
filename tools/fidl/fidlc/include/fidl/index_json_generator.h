@@ -36,8 +36,7 @@ class IndexJSONGenerator : public utils::JsonWriter<IndexJSONGenerator> {
 
   // struct representing an identifier from dependency library referenced in target library
   struct ReferencedIdentifier {
-    explicit ReferencedIdentifier(const flat::Name& name)
-        :identifier(NameFlatName(name)) {
+    explicit ReferencedIdentifier(const flat::Name& name) : identifier(NameFlatName(name)) {
       ZX_ASSERT_MSG(name.span().has_value(), "anonymous name used as an identifier");
       span = name.span().value();
     }
@@ -58,6 +57,12 @@ class IndexJSONGenerator : public utils::JsonWriter<IndexJSONGenerator> {
   void Generate(const flat::Enum& value);
   void Generate(const flat::Enum::Member& value);
   void Generate(const flat::Name& value);
+  void Generate(const flat::Struct& value);
+  void Generate(const flat::Struct::Member& value);
+  void Generate(const flat::TypeConstructor* value);
+  void Generate(const flat::Protocol& value);
+  void Generate(const flat::Protocol::ComposedProtocol& value);
+  void Generate(const flat::Protocol::MethodWithInfo& method_with_info);
 
   std::ostringstream Produce();
 

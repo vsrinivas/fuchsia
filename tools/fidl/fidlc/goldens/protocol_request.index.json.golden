@@ -13,5 +13,166 @@
   "dependencies": [],
   "dependency_identifiers": [],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocolrequest/ParentGetChildRequestTopResponse",
+      "members": [
+        {
+          "name": "r",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
+            "data": "r",
+            "start_offset": 194,
+            "end_offset": 195
+          },
+          "type": {
+            "kind": "request"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocolrequest/ParentGetChildTopResponse",
+      "members": [
+        {
+          "name": "c",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
+            "data": "c",
+            "start_offset": 114,
+            "end_offset": 115
+          },
+          "type": {
+            "kind": "identifier"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocolrequest/ParentTakeChildRequest",
+      "members": [
+        {
+          "name": "c",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
+            "data": "c",
+            "start_offset": 262,
+            "end_offset": 263
+          },
+          "type": {
+            "kind": "identifier"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.protocolrequest/ParentTakeChildRequestRequest",
+      "members": [
+        {
+          "name": "r",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
+            "data": "r",
+            "start_offset": 337,
+            "end_offset": 338
+          },
+          "type": {
+            "kind": "request"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "identifier": "test.protocolrequest/Child",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
+        "data": "Child",
+        "start_offset": 40,
+        "end_offset": 45
+      },
+      "methods": [],
+      "composed_protocols": []
+    },
+    {
+      "identifier": "test.protocolrequest/Parent",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
+        "data": "Parent",
+        "start_offset": 60,
+        "end_offset": 66
+      },
+      "methods": [
+        {
+          "identifier": "GetChild",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
+            "data": "GetChild",
+            "start_offset": 73,
+            "end_offset": 81
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "GetChildRequest",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
+            "data": "GetChildRequest",
+            "start_offset": 146,
+            "end_offset": 161
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "TakeChild",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
+            "data": "TakeChild",
+            "start_offset": 226,
+            "end_offset": 235
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "TakeChildRequest",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/protocol_request.test.fidl",
+            "data": "TakeChildRequest",
+            "start_offset": 294,
+            "end_offset": 310
+          },
+          "request_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    }
+  ]
 }

@@ -33,7 +33,56 @@
       }
     }
   ],
-  "dependency_identifiers": [],
+  "dependency_identifiers": [
+    {
+      "identifier": "test.middle/Bar",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies/middle.test.fidl",
+        "data": "Bar",
+        "start_offset": 184,
+        "end_offset": 187
+      }
+    }
+  ],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.transitivedependencies/Baz",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl",
+        "data": "Baz",
+        "start_offset": 200,
+        "end_offset": 203
+      },
+      "members": [
+        {
+          "name": "g",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies/top.test.fidl",
+            "data": "g",
+            "start_offset": 219,
+            "end_offset": 220
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.middle/Bar",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies/middle.test.fidl",
+              "data": "Bar",
+              "start_offset": 184,
+              "end_offset": 187
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": []
 }

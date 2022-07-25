@@ -13,5 +13,301 @@
   "dependencies": [],
   "dependency_identifiers": [],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.union/Empty",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+        "data": "Empty",
+        "start_offset": 2168,
+        "end_offset": 2173
+      },
+      "members": []
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.union/NullableUnionStruct",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+        "data": "NullableUnionStruct",
+        "start_offset": 1254,
+        "end_offset": 1273
+      },
+      "members": [
+        {
+          "name": "the_union",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+            "data": "the_union",
+            "start_offset": 1289,
+            "end_offset": 1298
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.union/Union",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+              "data": "Union",
+              "start_offset": 505,
+              "end_offset": 510
+            }
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.union/Pasta",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+        "data": "Pasta",
+        "start_offset": 84,
+        "end_offset": 89
+      },
+      "members": [
+        {
+          "name": "sauce",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+            "data": "sauce",
+            "start_offset": 105,
+            "end_offset": 110
+          },
+          "type": {
+            "kind": "string"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.union/Pizza",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+        "data": "Pizza",
+        "start_offset": 26,
+        "end_offset": 31
+      },
+      "members": [
+        {
+          "name": "toppings",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+            "data": "toppings",
+            "start_offset": 47,
+            "end_offset": 55
+          },
+          "type": {
+            "kind": "vector"
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.union/StructWithNullableXUnion",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+        "data": "StructWithNullableXUnion",
+        "start_offset": 2642,
+        "end_offset": 2666
+      },
+      "members": [
+        {
+          "name": "x1",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+            "data": "x1",
+            "start_offset": 2682,
+            "end_offset": 2684
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.union/OlderSimpleUnion",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+              "data": "OlderSimpleUnion",
+              "start_offset": 1650,
+              "end_offset": 1666
+            }
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.union/TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedTopResponse",
+      "members": [
+        {
+          "name": "xu",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+            "data": "xu",
+            "start_offset": 2604,
+            "end_offset": 2606
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.union/OlderSimpleUnion",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+              "data": "OlderSimpleUnion",
+              "start_offset": 1650,
+              "end_offset": 1666
+            }
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": true,
+      "identifier": "test.union/TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedTopResponse",
+      "members": [
+        {
+          "name": "xu",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+            "data": "xu",
+            "start_offset": 2498,
+            "end_offset": 2500
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.union/StrictBoundedXUnion",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+              "data": "StrictBoundedXUnion",
+              "start_offset": 2334,
+              "end_offset": 2353
+            }
+          }
+        }
+      ]
+    },
+    {
+      "is_anonymous": false,
+      "identifier": "test.union/UnionSandwich",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+        "data": "UnionSandwich",
+        "start_offset": 2832,
+        "end_offset": 2845
+      },
+      "members": [
+        {
+          "name": "a",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+            "data": "a",
+            "start_offset": 2861,
+            "end_offset": 2862
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "u",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+            "data": "u",
+            "start_offset": 2875,
+            "end_offset": 2876
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.union/ExplicitXUnion",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+              "data": "ExplicitXUnion",
+              "start_offset": 2721,
+              "end_offset": 2735
+            }
+          }
+        },
+        {
+          "name": "b",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+            "data": "b",
+            "start_offset": 2897,
+            "end_offset": 2898
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "identifier": "test.union/TestProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+        "data": "TestProtocol",
+        "start_offset": 2411,
+        "end_offset": 2423
+      },
+      "methods": [
+        {
+          "identifier": "StrictXUnionHenceResponseMayBeStackAllocated",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+            "data": "StrictXUnionHenceResponseMayBeStackAllocated",
+            "start_offset": 2430,
+            "end_offset": 2474
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        },
+        {
+          "identifier": "FlexibleXUnionHenceResponseMustBeHeapAllocated",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/union.test.fidl",
+            "data": "FlexibleXUnionHenceResponseMustBeHeapAllocated",
+            "start_offset": 2534,
+            "end_offset": 2580
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": []
+    }
+  ]
 }

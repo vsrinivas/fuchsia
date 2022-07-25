@@ -94,5 +94,68 @@
         }
       ]
     }
+  ],
+  "structs": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.doccomments/Struct",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+        "data": "Struct",
+        "start_offset": 1514,
+        "end_offset": 1520
+      },
+      "members": [
+        {
+          "name": "Field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+            "data": "Field",
+            "start_offset": 1610,
+            "end_offset": 1615
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "identifier": "test.doccomments/Interface",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+        "data": "Interface",
+        "start_offset": 2239,
+        "end_offset": 2248
+      },
+      "methods": [
+        {
+          "identifier": "Method",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+            "data": "Method",
+            "start_offset": 2315,
+            "end_offset": 2321
+          }
+        },
+        {
+          "identifier": "OnEvent",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/doc_comments.test.fidl",
+            "data": "OnEvent",
+            "start_offset": 2391,
+            "end_offset": 2398
+          }
+        }
+      ],
+      "composed_protocols": []
+    }
   ]
 }

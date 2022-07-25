@@ -56,5 +56,43 @@
     }
   ],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.structdefaultvalueenumlibraryreference/Foo",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/example.test.fidl",
+        "data": "Foo",
+        "start_offset": 82,
+        "end_offset": 85
+      },
+      "members": [
+        {
+          "name": "field",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/example.test.fidl",
+            "data": "field",
+            "start_offset": 139,
+            "end_offset": 144
+          },
+          "type": {
+            "kind": "identifier",
+            "is_anonymous": false,
+            "type_identifier": "test.dependent/MyEnum",
+            "type_referenced_at": {
+              "is_virtual": false,
+              "file": "../../tools/fidl/fidlc/testdata/struct_default_value_enum_library_reference/dependent.test.fidl",
+              "data": "MyEnum",
+              "start_offset": 30,
+              "end_offset": 36
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": []
 }

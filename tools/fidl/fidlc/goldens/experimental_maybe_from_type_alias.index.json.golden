@@ -13,5 +13,398 @@
   "dependencies": [],
   "dependency_identifiers": [],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [
+    {
+      "is_anonymous": false,
+      "identifier": "test.experimentalmaybefromtypealias/Testing",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+        "data": "Testing",
+        "start_offset": 410,
+        "end_offset": 417
+      },
+      "members": [
+        {
+          "name": "u1",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "u1",
+            "start_offset": 442,
+            "end_offset": 444
+          },
+          "type": {
+            "kind": "primitive"
+          }
+        },
+        {
+          "name": "u2",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "u2",
+            "start_offset": 454,
+            "end_offset": 456
+          },
+          "type": {
+            "kind": "vector"
+          }
+        },
+        {
+          "name": "u3",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "u3",
+            "start_offset": 476,
+            "end_offset": 478
+          },
+          "type": {
+            "kind": "array"
+          }
+        },
+        {
+          "name": "u4",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "u4",
+            "start_offset": 498,
+            "end_offset": 500
+          },
+          "type": {
+            "kind": "vector"
+          }
+        },
+        {
+          "name": "u5",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "u5",
+            "start_offset": 528,
+            "end_offset": 530
+          },
+          "type": {
+            "kind": "vector"
+          }
+        },
+        {
+          "name": "u6",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "u6",
+            "start_offset": 558,
+            "end_offset": 560
+          },
+          "type": {
+            "kind": "array"
+          }
+        },
+        {
+          "name": "u7",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "u7",
+            "start_offset": 590,
+            "end_offset": 592
+          },
+          "type": {
+            "kind": "array"
+          }
+        },
+        {
+          "name": "v1",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "v1",
+            "start_offset": 623,
+            "end_offset": 625
+          },
+          "type": {
+            "kind": "vector"
+          }
+        },
+        {
+          "name": "v2",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "v2",
+            "start_offset": 638,
+            "end_offset": 640
+          },
+          "type": {
+            "kind": "vector"
+          }
+        },
+        {
+          "name": "v3",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "v3",
+            "start_offset": 661,
+            "end_offset": 663
+          },
+          "type": {
+            "kind": "array"
+          }
+        },
+        {
+          "name": "a1",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "a1",
+            "start_offset": 687,
+            "end_offset": 689
+          },
+          "type": {
+            "kind": "array"
+          }
+        },
+        {
+          "name": "a2",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "a2",
+            "start_offset": 708,
+            "end_offset": 710
+          },
+          "type": {
+            "kind": "vector"
+          }
+        },
+        {
+          "name": "a3",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "a3",
+            "start_offset": 737,
+            "end_offset": 739
+          },
+          "type": {
+            "kind": "array"
+          }
+        },
+        {
+          "name": "r1",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "r1",
+            "start_offset": 769,
+            "end_offset": 771
+          },
+          "type": {
+            "kind": "request"
+          }
+        },
+        {
+          "name": "r2",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "r2",
+            "start_offset": 792,
+            "end_offset": 794
+          },
+          "type": {
+            "kind": "vector"
+          }
+        },
+        {
+          "name": "r3",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "r3",
+            "start_offset": 823,
+            "end_offset": 825
+          },
+          "type": {
+            "kind": "array"
+          }
+        },
+        {
+          "name": "b1",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "b1",
+            "start_offset": 857,
+            "end_offset": 859
+          },
+          "type": {
+            "kind": "vector"
+          }
+        },
+        {
+          "name": "b2",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "b2",
+            "start_offset": 878,
+            "end_offset": 880
+          },
+          "type": {
+            "kind": "vector"
+          }
+        },
+        {
+          "name": "b3",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "b3",
+            "start_offset": 907,
+            "end_offset": 909
+          },
+          "type": {
+            "kind": "array"
+          }
+        },
+        {
+          "name": "s1",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "s1",
+            "start_offset": 939,
+            "end_offset": 941
+          },
+          "type": {
+            "kind": "string"
+          }
+        },
+        {
+          "name": "s2",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "s2",
+            "start_offset": 961,
+            "end_offset": 963
+          },
+          "type": {
+            "kind": "vector"
+          }
+        },
+        {
+          "name": "s3",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "s3",
+            "start_offset": 991,
+            "end_offset": 993
+          },
+          "type": {
+            "kind": "array"
+          }
+        },
+        {
+          "name": "vv1",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "vv1",
+            "start_offset": 1024,
+            "end_offset": 1027
+          },
+          "type": {
+            "kind": "vector"
+          }
+        },
+        {
+          "name": "vv2",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "vv2",
+            "start_offset": 1070,
+            "end_offset": 1073
+          },
+          "type": {
+            "kind": "vector"
+          }
+        },
+        {
+          "name": "vv3",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "vv3",
+            "start_offset": 1126,
+            "end_offset": 1129
+          },
+          "type": {
+            "kind": "array"
+          }
+        },
+        {
+          "name": "aa1",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "aa1",
+            "start_offset": 1183,
+            "end_offset": 1186
+          },
+          "type": {
+            "kind": "array"
+          }
+        },
+        {
+          "name": "aa2",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "aa2",
+            "start_offset": 1227,
+            "end_offset": 1230
+          },
+          "type": {
+            "kind": "vector"
+          }
+        },
+        {
+          "name": "aa3",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+            "data": "aa3",
+            "start_offset": 1281,
+            "end_offset": 1284
+          },
+          "type": {
+            "kind": "array"
+          }
+        }
+      ]
+    }
+  ],
+  "protocols": [
+    {
+      "identifier": "test.experimentalmaybefromtypealias/MyProtocol",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/experimental_maybe_from_type_alias.test.fidl",
+        "data": "MyProtocol",
+        "start_offset": 55,
+        "end_offset": 65
+      },
+      "methods": [],
+      "composed_protocols": []
+    }
+  ]
 }

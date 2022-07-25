@@ -43,7 +43,89 @@
       }
     }
   ],
-  "dependency_identifiers": [],
+  "dependency_identifiers": [
+    {
+      "identifier": "test.bottom/BottomGetFooTopResponse",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
+        "data": "struct {\n        foo Foo;\n    }",
+        "start_offset": 542,
+        "end_offset": 573
+      }
+    },
+    {
+      "identifier": "test.bottom/Foo",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
+        "data": "Foo",
+        "start_offset": 164,
+        "end_offset": 167
+      }
+    },
+    {
+      "identifier": "test.bottom/Bottom",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
+        "data": "Bottom",
+        "start_offset": 342,
+        "end_offset": 348
+      }
+    },
+    {
+      "identifier": "test.middle/Middle",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/middle.test.fidl",
+        "data": "Middle",
+        "start_offset": 188,
+        "end_offset": 194
+      }
+    }
+  ],
   "consts": [],
-  "enums": []
+  "enums": [],
+  "structs": [],
+  "protocols": [
+    {
+      "identifier": "test.transitivedependenciescompose/Top",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/top.test.fidl",
+        "data": "Top",
+        "start_offset": 211,
+        "end_offset": 214
+      },
+      "methods": [
+        {
+          "identifier": "GetFoo",
+          "location": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/bottom.test.fidl",
+            "data": "GetFoo",
+            "start_offset": 355,
+            "end_offset": 361
+          },
+          "response_type": {
+            "kind": "identifier",
+            "is_anonymous": true
+          }
+        }
+      ],
+      "composed_protocols": [
+        {
+          "identifier": "test.middle/Middle",
+          "referenced_at": {
+            "is_virtual": false,
+            "file": "../../tools/fidl/fidlc/testdata/transitive_dependencies_compose/top.test.fidl",
+            "data": "test.middle.Middle",
+            "start_offset": 229,
+            "end_offset": 247
+          }
+        }
+      ]
+    }
+  ]
 }

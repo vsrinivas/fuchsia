@@ -119,5 +119,7 @@
       }
     }
   ],
-  "enums": []
+  "enums": [],
+  "structs": [],
+  "protocols": []
 }
