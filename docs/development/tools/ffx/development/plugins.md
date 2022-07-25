@@ -18,7 +18,7 @@ import("//src/developer/ffx/build/ffx_plugin.gni")
 
 ffx_plugin("ffx_example") {
   version = "0.1.0"
-  edition = "2018"
+  edition = "2021"
   with_unit_tests = true
   deps = []
   sources = [
@@ -166,7 +166,7 @@ instructions in this section.
 
     ffx_plugin("ffx_example") {
       version = "0.1.0"
-      edition = "2018"
+      edition = "2021"
       with_unit_tests = true
       deps = [
         "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",

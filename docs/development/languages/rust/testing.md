@@ -136,7 +136,7 @@ These can be included in your `BUILD.gn` under `test_deps`.
 rustc_binary("bin") {
   name = "my_test"
   with_unit_tests = true
-  edition = "2018"
+  edition = "2021"
 
   test_deps = [
     "//third_party/rust_crates:matches",

@@ -1131,7 +1131,7 @@ using [Inspect][doc-inspect]:
 
       ```gn
       rustc_binary("echo_server") {
-        edition = "2018"
+        edition = "2021"
         deps = [
           "//examples/components/routing/fidl:echo-rustc",
           {{ '<strong>' }}# This library requires "inspect/client.shard.cml" {{ '</strong>' }}
@@ -1269,7 +1269,7 @@ To address the issue, verify the following:
 
       ```gn
       rustc_binary("echo_example") {
-        edition = "2018"
+        edition = "2021"
         sources = [ "src/main.rs" ]
 
         deps = [ ... ]

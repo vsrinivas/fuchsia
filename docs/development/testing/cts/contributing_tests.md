@@ -56,7 +56,7 @@ build templates.
   import("//sdk/cts/build/cts.gni")
 
   cts_rustc_test("my_test_binary") {
-    edition = "2018"
+    edition = "2021"
     source_root = "src/my_test.rs"
     sources = [ "src/my_test.rs" ]
   }

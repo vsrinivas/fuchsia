@@ -23,8 +23,9 @@
 
 ## Other Stuff
 
-The rustfmt.toml in our root directory needs to be updated to 2021 edition (even
-though that might be a no-op?)
+* The rustfmt.toml in our root directory needs to be updated to 2021 edition 
+  (this didn't cause any formatting changes)
+* Grep for BUILD file snippets in docs to update any examples to the new edition
 
 [clippy.gni]: https://cs.opensource.google/fuchsia/fuchsia/+/main:build/rust/clippy.gni
 

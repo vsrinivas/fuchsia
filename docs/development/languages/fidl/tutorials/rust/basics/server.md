@@ -60,7 +60,7 @@ To create a component:
    # specified output name that can run on Fuchsia.
    rustc_binary("bin") {
      output_name = "fidl_echo_rust_server"
-     edition = "2018"
+     edition = "2021"
 
      sources = [ "src/main.rs" ]
    }
