@@ -45,13 +45,13 @@
 #include <vm/kstack.h>
 
 class Dpc;
-struct Thread;
 class OwnedWaitQueue;
 class PreemptionState;
 class StackOwnedLoanedPagesInterval;
 class ThreadDispatcher;
-class WaitQueue;
 class VmAspace;
+class WaitQueue;
+struct Thread;
 
 // These forward declarations are needed so that Thread can friend
 // them before they are defined.
@@ -1569,12 +1569,12 @@ struct Thread {
   // See also |IsUserStateSavedLocked()| and |ScopedThreadExceptionContext|.
   bool user_state_saved_;
 
-  // Provides a way to execute a custom logic when a thread must be migrated between CPUs.
-  MigrateFn migrate_fn_;
-
   // For threads with migration functions, indicates whether a migration is in progress. When true,
   // the migrate function has been called with Before but not yet with After.
   bool migrate_pending_;
+
+  // Provides a way to execute a custom logic when a thread must be migrated between CPUs.
+  MigrateFn migrate_fn_;
 
   // Used to track threads that have set |migrate_fn_|. This is used to migrate
   // threads before a CPU is taken offline.
