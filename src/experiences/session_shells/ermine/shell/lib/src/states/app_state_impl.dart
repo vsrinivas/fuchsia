@@ -11,7 +11,6 @@ import 'package:collection/collection.dart';
 import 'package:ermine/src/services/automator_service.dart';
 import 'package:ermine/src/services/focus_service.dart';
 import 'package:ermine/src/services/launch_service.dart';
-import 'package:ermine/src/services/pointer_events_service.dart';
 import 'package:ermine/src/services/preferences_service.dart';
 import 'package:ermine/src/services/presenter_service.dart';
 import 'package:ermine/src/services/shortcuts_service.dart';
@@ -40,7 +39,6 @@ class AppStateImpl with Disposable implements AppState {
   final PresenterService presenterService;
   final ShortcutsService shortcutsService;
   final PreferencesService preferencesService;
-  final PointerEventsService pointerEventsService;
   final UserFeedbackService userFeedbackService;
 
   static const kFeedbackUrl =
@@ -60,7 +58,6 @@ class AppStateImpl with Disposable implements AppState {
     required this.presenterService,
     required this.shortcutsService,
     required this.preferencesService,
-    required this.pointerEventsService,
     required this.userFeedbackService,
   }) : _localeStream = startupService.stream.asObservable() {
     launchService.onControllerClosed = _onElementClosed;
@@ -81,11 +78,6 @@ class AppStateImpl with Disposable implements AppState {
         shortcutBindings: shortcutsService.keyboardBindings,
         displayDialog: _displayDialog);
 
-    pointerEventsService
-      ..onPeekBegin = _onPeekBegin
-      ..onPeekEnd = _onPeekEnd
-      ..onActivity = () => startupService.onActivity('pointer');
-
     startupService
       ..onInspect = _onInspect
       ..onIdle = _onIdle
@@ -99,8 +91,6 @@ class AppStateImpl with Disposable implements AppState {
     // Add reactions to state changes.
     reactions
       ..add(reaction<bool>((_) => views.isNotEmpty, (hasViews) {
-        // Listen to out-of-band pointer events only when apps are launched.
-        pointerEventsService.listen = hasViews;
         // Display overlays when no views are present.
         if (!hasViews) {
           overlayVisibility.value = true;
@@ -132,7 +122,6 @@ class AppStateImpl with Disposable implements AppState {
     presenterService.dispose();
     shortcutsService.dispose();
     preferencesService.dispose();
-    pointerEventsService.dispose();
     settingsState.dispose();
   }
 
@@ -737,24 +726,6 @@ class AppStateImpl with Disposable implements AppState {
 
       views.remove(view);
       view.dispose();
-    });
-  }
-
-  void _onPeekBegin(PeekEdge edge) {
-    runInAction(() {
-      appBarPeeking.value = edge == PeekEdge.left;
-      sideBarPeeking.value = edge == PeekEdge.right;
-      setFocusToShellView();
-    });
-  }
-
-  void _onPeekEnd() {
-    runInAction(() {
-      appBarPeeking.value = false;
-      sideBarPeeking.value = false;
-      if (!overlayVisibility.value) {
-        setFocusToChildView();
-      }
     });
   }
 

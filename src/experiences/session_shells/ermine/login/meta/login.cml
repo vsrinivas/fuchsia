@@ -134,7 +134,6 @@
                 "fuchsia.ui.composition.ScreenCapture",
                 "fuchsia.ui.focus.FocusChainListenerRegistry",
                 "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.input.PointerCaptureListenerRegistry",
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.scenic.Scenic",
                 "fuchsia.ui.shortcut.Registry",

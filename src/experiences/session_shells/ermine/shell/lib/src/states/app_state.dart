@@ -5,7 +5,6 @@
 import 'package:ermine/src/services/automator_service.dart';
 import 'package:ermine/src/services/focus_service.dart';
 import 'package:ermine/src/services/launch_service.dart';
-import 'package:ermine/src/services/pointer_events_service.dart';
 import 'package:ermine/src/services/preferences_service.dart';
 import 'package:ermine/src/services/presenter_service.dart';
 import 'package:ermine/src/services/shortcuts_service.dart';
@@ -96,10 +95,6 @@ abstract class AppState {
       focusService: FocusService(ScenicContext.hostViewRef()),
       shortcutsService: ShortcutsService(ScenicContext.hostViewRef()),
       preferencesService: PreferencesService(),
-      pointerEventsService: PointerEventsService(
-        ScenicContext.hostViewRef(),
-        insets: EdgeInsets.zero,
-      ),
       userFeedbackService: UserFeedbackService(),
     ) as AppState;
   }

@@ -35,7 +35,6 @@ dart_library("lib") {
     "src/services/automator_service.dart",
     "src/services/focus_service.dart",
     "src/services/launch_service.dart",
-    "src/services/pointer_events_service.dart",
     "src/services/preferences_service.dart",
     "src/services/presenter_service.dart",
     "src/services/shortcuts_service.dart",
