@@ -4,9 +4,6 @@
 
 //! Implementation of the daemon diagnostics streaming protocol.
 
-// TODO(fxb/104019): Consider enabling globally.
-#![deny(unused_crate_dependencies)]
-
 use {
     anyhow::bail,
     anyhow::{Context as _, Result},

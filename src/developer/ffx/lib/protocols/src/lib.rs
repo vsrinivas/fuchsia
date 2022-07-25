@@ -7,9 +7,6 @@
 //! For most relevant and up-to-date documentation, see the [protocols] mod
 //! itself.
 
-// TODO(fxb/104019): Consider enabling globally.
-#![deny(unused_crate_dependencies)]
-
 mod context;
 mod protocols;
 mod register;

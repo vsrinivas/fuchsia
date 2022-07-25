@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #![warn(clippy::all)]
-#![deny(unused_crate_dependencies)]
 
 /// Allows controllers to store state in persistent device level storage.
 pub mod device_storage;

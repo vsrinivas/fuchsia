@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #![warn(clippy::all)]
-#![deny(unused_crate_dependencies)]
 
 /// A queue of fixed length that holds inspect-writeable items that is
 /// inspect-writeable itself.

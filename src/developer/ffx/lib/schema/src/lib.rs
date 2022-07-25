@@ -24,9 +24,6 @@
 //!     gen.resolve_type::<MyType>()?;
 //!     let schema = gen.schema()?;
 
-// TODO(fxb/104019): Consider enabling globally.
-#![deny(unused_crate_dependencies)]
-
 mod de;
 
 mod errors;

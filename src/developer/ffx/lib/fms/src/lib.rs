@@ -6,9 +6,6 @@
 //!
 //! Uses a unique identifier (FMS Name) to lookup SDK Module metadata.
 
-// TODO(fxb/104019): Consider enabling globally.
-#![deny(unused_crate_dependencies)]
-
 use {
     anyhow::{bail, Context, Result},
     glob::glob,

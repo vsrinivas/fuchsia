@@ -13,9 +13,6 @@
 //! For shutdown, the [TaskManager] can be drained to get all instances of
 //! running tasks for either joining them or drop them.
 
-// TODO(fxb/104019): Consider enabling globally.
-#![deny(unused_crate_dependencies)]
-
 use {
     fuchsia_async::Task,
     futures::future::ready,

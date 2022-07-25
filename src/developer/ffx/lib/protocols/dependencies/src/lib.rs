@@ -5,9 +5,6 @@
 //! to check for runtime dependencies.
 //! See //src/developer/ffx/build/templates/protocols_macro.md for more details.
 
-// TODO(fxb/104019): Consider enabling globally.
-#![deny(unused_crate_dependencies)]
-
 use std::collections::HashMap;
 
 /// Represents a directed graph.

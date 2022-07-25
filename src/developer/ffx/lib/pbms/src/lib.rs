@@ -19,9 +19,6 @@
 //! These FMS entry names are suitable to present to the user. E.g. the name of
 //! a product bundle is also the name of the product bundle metadata entry.
 
-// TODO(fxb/104019): Consider enabling globally.
-#![deny(unused_crate_dependencies)]
-
 use {
     crate::{
         pbms::{
