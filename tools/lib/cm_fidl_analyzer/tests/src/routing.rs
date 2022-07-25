@@ -921,6 +921,7 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .use_(UseDecl::EventStream(UseEventStreamDecl {
                         source: UseSource::Framework,
+                        filter: None,
                         source_name: "started".into(),
                         target_path: CapabilityPath::from_str("/event/stream").unwrap(),
                         scope: Some(vec![EventScope::Child(cm_rust::ChildRef {
@@ -933,6 +934,7 @@ mod tests {
                         source: UseSource::Framework,
                         source_name: "capability_requested".into(),
                         target_path: CapabilityPath::from_str("/event/stream").unwrap(),
+                        filter: None,
                         scope: Some(vec![EventScope::Child(cm_rust::ChildRef {
                             collection: None,
                             name: "a".to_string(),
@@ -1041,6 +1043,7 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .use_(UseDecl::EventStream(UseEventStreamDecl {
                         source: UseSource::Parent,
+                        filter: None,
                         source_name: "started".into(),
                         target_path: CapabilityPath::from_str("/event/stream").unwrap(),
                         scope: None,
@@ -1087,6 +1090,7 @@ mod tests {
             ComponentDeclBuilder::new()
                 .use_(UseDecl::EventStream(UseEventStreamDecl {
                     source: UseSource::Parent,
+                    filter: None,
                     source_name: "started".into(),
                     target_path: CapabilityPath::from_str("/event/stream").unwrap(),
                     scope: None,
@@ -1167,6 +1171,7 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .use_(UseDecl::EventStream(UseEventStreamDecl {
                         source: UseSource::Parent,
+                        filter: None,
                         source_name: "started".into(),
                         target_path: CapabilityPath::from_str("/event/stream").unwrap(),
                         scope: None,
@@ -1179,6 +1184,7 @@ mod tests {
                 ComponentDeclBuilder::new()
                     .use_(UseDecl::EventStream(UseEventStreamDecl {
                         source: UseSource::Parent,
+                        filter: None,
                         source_name: "started".into(),
                         target_path: CapabilityPath::from_str("/event/stream").unwrap(),
                         scope: None,
@@ -1211,6 +1217,7 @@ mod tests {
                         source_name: "started".into(),
                         target_path: CapabilityPath::from_str("/event/stream").unwrap(),
                         scope: None,
+                        filter: None,
                         availability: Availability::Required,
                     }))
                     .build(),

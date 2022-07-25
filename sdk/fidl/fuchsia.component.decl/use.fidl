@@ -219,4 +219,9 @@ type UseEventStream = table {
     /// is likely to malfunction if this capability is not provided. If set to
     /// `optional`, the component can handle the capability's absence.
     5: availability Availability;
+
+    /// Filter for the event stream. The structure of the filter depends on the event stream type.
+    /// May be absent for some events.
+    @available(added=9)
+    6: filter fuchsia.data.Dictionary;
 };

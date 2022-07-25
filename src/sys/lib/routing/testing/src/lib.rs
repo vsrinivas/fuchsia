@@ -2871,6 +2871,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .use_(UseDecl::EventStream(UseEventStreamDecl {
                         source: UseSource::Framework,
                         source_name: "started".into(),
+                        filter: None,
                         target_path: CapabilityPath::from_str("/event/stream").unwrap(),
                         scope: Some(vec![EventScope::Child(cm_rust::ChildRef {
                             collection: None,
@@ -2881,6 +2882,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     .use_(UseDecl::EventStream(UseEventStreamDecl {
                         source: UseSource::Framework,
                         source_name: "capability_requested".into(),
+                        filter: None,
                         target_path: CapabilityPath::from_str("/event/stream").unwrap(),
                         scope: Some(vec![EventScope::Child(cm_rust::ChildRef {
                             collection: None,
@@ -2992,6 +2994,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "started".into(),
                         target_path: CapabilityPath::from_str("/event/stream").unwrap(),
                         scope: None,
+                        filter: None,
                         availability: Availability::Required,
                     }))
                     .build(),
@@ -3037,6 +3040,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                     source_name: "started".into(),
                     target_path: CapabilityPath::from_str("/event/stream").unwrap(),
                     scope: None,
+                    filter: None,
                     availability: Availability::Required,
                 }))
                 .build(),
@@ -3116,6 +3120,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "started".into(),
                         target_path: CapabilityPath::from_str("/event/stream").unwrap(),
                         scope: None,
+                        filter: None,
                         availability: Availability::Required,
                     }))
                     .build(),
@@ -3128,6 +3133,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "started".into(),
                         target_path: CapabilityPath::from_str("/event/stream").unwrap(),
                         scope: None,
+                        filter: None,
                         availability: Availability::Required,
                     }))
                     .offer(OfferDecl::EventStream(OfferEventStreamDecl {
@@ -3157,6 +3163,7 @@ impl<T: RoutingTestModelBuilder> CommonRoutingTest<T> {
                         source_name: "started".into(),
                         target_path: CapabilityPath::from_str("/event/stream").unwrap(),
                         scope: None,
+                        filter: None,
                         availability: Availability::Required,
                     }))
                     .build(),

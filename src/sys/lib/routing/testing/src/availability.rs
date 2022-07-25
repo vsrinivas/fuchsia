@@ -198,6 +198,7 @@ impl<T: RoutingTestModelBuilder> CommonAvailabilityTest<T> {
                             source_name: "started".into(),
                             target_path: "/event/stream".try_into().unwrap(),
                             scope: None,
+                            filter: None,
                             availability: test_case.use_availability.clone(),
                         }))
                         .build(),

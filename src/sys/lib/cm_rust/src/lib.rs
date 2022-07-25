@@ -358,6 +358,7 @@ pub struct UseEventStreamDecl {
     pub source: UseSource,
     pub scope: Option<Vec<EventScope>>,
     pub target_path: CapabilityPath,
+    pub filter: Option<HashMap<String, DictionaryValue>>,
     #[fidl_decl(default)]
     pub availability: Availability,
 }
@@ -2731,6 +2732,7 @@ mod tests {
                             scope: Some(vec![EventScope::Child(ChildRef{ name: "a".to_string(), collection: None}), EventScope::Collection("b".to_string())]),
                             source_name: CapabilityName::from("stopped"),
                             target_path: CapabilityPath::from_str("/svc/test").unwrap(),
+                            filter: None,
                             availability: Availability::Optional,
                         }),
                     ],

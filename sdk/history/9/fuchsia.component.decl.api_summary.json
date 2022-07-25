@@ -1472,6 +1472,11 @@
         "name": "fuchsia.component.decl/UseEventStream.availability"
     },
     {
+        "declaration": "fuchsia.data/Dictionary",
+        "kind": "table/member",
+        "name": "fuchsia.component.decl/UseEventStream.filter"
+    },
+    {
         "declaration": "vector<fuchsia.component.decl/Ref>",
         "kind": "table/member",
         "name": "fuchsia.component.decl/UseEventStream.scope"
