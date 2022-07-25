@@ -1,6 +1,6 @@
 *   A development machine running Linux or macOS
 *   A configured [Fuchsia SDK environment][get-started]
-*   [Emulator product bundle][start-femu] for `workstation_eng.qemu-x64`
+*   [Emulator product bundle][start-femu] for `workstation.qemu-x64`
 
 
 [get-started]: /docs/get-started/sdk/index.md
