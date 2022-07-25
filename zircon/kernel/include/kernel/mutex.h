@@ -39,7 +39,9 @@ class TA_CAP("mutex") Mutex {
   static constexpr zx_duration_t SPIN_MAX_DURATION = ZX_USEC(150);
 
   // Acquire the mutex.
-  void Acquire(zx_duration_t spin_max_duration = SPIN_MAX_DURATION) TA_ACQ() TA_EXCL(thread_lock);
+  void Acquire(zx_duration_t spin_max_duration = SPIN_MAX_DURATION) TA_ACQ() TA_EXCL(thread_lock) {
+    AcquireCommon<false>(spin_max_duration, /*timeslice_extension=*/0);
+  }
 
   // Release the mutex. Must be held by the current thread.
   void Release() TA_REL() TA_EXCL(thread_lock);
@@ -56,6 +58,16 @@ class TA_CAP("mutex") Mutex {
   // Can be used when thread safety analysis can't prove you are holding
   // a lock. The asserts may be optimized away in release builds.
   void AssertHeld() const TA_ASSERT() { DEBUG_ASSERT(IsHeld()); }
+
+ protected:
+  // Used by both Mutex and CriticalMutex.
+  //
+  // If WithTimesliceExtension is true and timeslice_extension > 0, attempt to
+  // set the timeslice extension after acquiring the mutex and return true if
+  // the extension was set.  Otherwise, return false.
+  template <bool WithTimesliceExtension>
+  bool AcquireCommon(zx_duration_t spin_max_duration, zx_duration_t timeslice_extension) TA_ACQ()
+      TA_EXCL(thread_lock);
 
  private:
   // Attempts to release the mutex. Returns STATE_FREE if the mutex was
@@ -114,13 +126,19 @@ class TA_CAP("mutex") Mutex {
   OwnedWaitQueue wait_;
 };
 
-// CriticalMutex is a mutex variant that disables preemption during the critical
-// section.
+// CriticalMutex is a mutex variant that uses a thread timeslice extension to
+// disable preemption for a limited time during the critical section.
 //
-// This variant is useful for performance-sensitive critical sections where
-// completion is more important to system progress than strict fairness or
-// priority observance and where a spinlock is not a viable alternative, due to
-// long tail critical section duration or blocking requirements.
+// Acquiring a CriticalMutex sets a timeslice extension that's cleared when the
+// mutex is released or the extension expires, whichever comes first.
+//
+// This variant is useful to avoid a form of thrash where a thread holding a
+// mutex is preempted by another thread that subsequently blocks while trying to
+// acquire the already held mutex.  CriticalMutex is designed to mitigate this
+// type of thrash by preventing the holder from being preempted, up to some
+// maximum amount of time.  By limiting maximum amount of time the holder is
+// non-preemptible, we can limit the degree to which other, logically higher
+// priority tasks are delayed from executing.
 //
 // Good candidates for CriticalMutex are global or widely shared locks that
 // typically, but not necessarily always, have very short critical sections
@@ -134,7 +152,7 @@ class TA_CAP("mutex") Mutex {
 // * Interrupts may remain enabled while holding a CriticalMutex, avoiding
 //   undesirable IRQ latency.
 //
-class TA_CAP("mutex") CriticalMutex {
+class TA_CAP("mutex") CriticalMutex : private Mutex {
  public:
   CriticalMutex() = default;
   ~CriticalMutex() = default;
@@ -147,25 +165,29 @@ class TA_CAP("mutex") CriticalMutex {
   // Acquire the mutex.
   void Acquire(zx_duration_t spin_max_duration = Mutex::SPIN_MAX_DURATION) TA_ACQ()
       TA_EXCL(thread_lock) {
-    Thread::Current::preemption_state().PreemptDisable();
-    mutex_.Acquire(spin_max_duration);
+    // TODO(maniscalco): What's the right duration here?  Is it a function of
+    // spin_max_duration?
+    const zx_duration_t timeslice_extension = spin_max_duration;
+    should_clear_ = Mutex::AcquireCommon<true>(spin_max_duration, timeslice_extension);
   }
 
   // Release the mutex. Must be held by the current thread.
   void Release() TA_REL() TA_EXCL(thread_lock) {
-    mutex_.Release();
-    Thread::Current::preemption_state().PreemptReenable();
+    Mutex::Release();
+    if (should_clear_) {
+      Thread::Current::preemption_state().ClearTimesliceExtension();
+      should_clear_ = false;
+    }
   }
 
-  // Returns true if the current thread owns the mutex.
-  bool IsHeld() const { return mutex_.IsHeld(); }
+  // See |Mutex::IsHeld|.
+  bool IsHeld() const { return Mutex::IsHeld(); }
 
-  // Asserts that the current thread owns the mutex. Static analysis will
-  // believe the lock is held after this call succeeds.
-  void AssertHeld() const TA_ASSERT() { mutex_.AssertHeld(); }
+  // See |Mutex::AssertHeld|.
+  void AssertHeld() const TA_ASSERT() { return Mutex::AssertHeld(); }
 
  private:
-  Mutex mutex_;
+  bool should_clear_{false};
 };
 
 // Lock policy for kernel mutexes

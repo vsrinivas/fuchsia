@@ -567,10 +567,14 @@ static bool test_evaluate_timeslice_extension() {
   }
   ASSERT_TRUE(preemption_state.PreemptIsEnabled());
 
+  static constexpr zx_duration_t kEpsilon = 1;
+
   // See that the timeslice extension expires.
   {
-    AutoExpiringPreemptDisabler guard(0);
+    AutoExpiringPreemptDisabler guard(kEpsilon);
     EXPECT_FALSE(preemption_state.PreemptIsEnabled());
+    Thread::Current::Reschedule();
+    Thread::Current::SleepRelative(kEpsilon);
     EXPECT_TRUE(preemption_state.EvaluateTimesliceExtension());
     EXPECT_TRUE(preemption_state.PreemptIsEnabled());
   }
@@ -578,9 +582,11 @@ static bool test_evaluate_timeslice_extension() {
 
   // AutoPreemptDisabler inside an expired AutoExpiringPreemptDisabler.
   {
-    AutoExpiringPreemptDisabler guard1(0);
+    AutoExpiringPreemptDisabler guard1(kEpsilon);
     AutoPreemptDisabler guard2;
     EXPECT_FALSE(preemption_state.PreemptIsEnabled());
+    Thread::Current::Reschedule();
+    Thread::Current::SleepRelative(kEpsilon);
     EXPECT_FALSE(preemption_state.EvaluateTimesliceExtension());
     // Still false because of the APD.
     EXPECT_FALSE(preemption_state.PreemptIsEnabled());
@@ -589,9 +595,11 @@ static bool test_evaluate_timeslice_extension() {
 
   // AutoEagerReschedDisabler inside an expired AutoExpiringPreemptDisabler.
   {
-    AutoExpiringPreemptDisabler guard1(0);
+    AutoExpiringPreemptDisabler guard1(kEpsilon);
     AutoEagerReschedDisabler guard2;
     EXPECT_FALSE(preemption_state.PreemptIsEnabled());
+    Thread::Current::Reschedule();
+    Thread::Current::SleepRelative(kEpsilon);
     EXPECT_FALSE(preemption_state.EvaluateTimesliceExtension());
     // Still false because of the AERD.
     EXPECT_FALSE(preemption_state.PreemptIsEnabled());
