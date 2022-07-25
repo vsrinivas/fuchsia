@@ -155,9 +155,7 @@ class TA_SCOPED_CAP AnnotatedAutoEagerReschedDisabler {
   AnnotatedAutoEagerReschedDisabler() TA_ACQ(preempt_disabled_token) {
     Thread::Current::preemption_state().EagerReschedDisableAnnotated();
   }
-  ~AnnotatedAutoEagerReschedDisabler() TA_REL() {
-    Thread::Current::preemption_state().EagerReschedReenableAnnotated();
-  }
+  ~AnnotatedAutoEagerReschedDisabler() TA_REL() { Enable(); }
 
   // Enables preemption if it was previously disabled by this instance.
   void Enable() TA_REL() {
