@@ -36,9 +36,9 @@ that lists any open Gerrit change in the `rfcs` directory.
 If you want to create a proposal that you want the Fuchsia Eng Council to
 review, see [Creating an RFC.](/docs/contribute/governance/rfcs/create_rfc.md)
 
-## Join a discussion group
+## Join a mailing list
 
-Stay informed about the Fuchsia project by joining a discussion group.
+Stay informed about the Fuchsia project by joining an email list through Google Groups.
 
 ### General discussion
 
