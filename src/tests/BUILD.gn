@@ -15,6 +15,7 @@ group("tests") {
   deps = [
     "assembly:tests",
     "coverage:tests",
+    "dfv2:tests",
     "diagnostics:tests",
     "disable_shell:tests",
     "disable_syscalls:tests",
