@@ -28,6 +28,7 @@ _bootfs_deps = [
   "//src/devices/tpm/drivers/tpm",
   "//src/devices/usb/drivers/xhci",
   "//src/graphics/display/drivers/intel-i915",
+  "//src/graphics/display/drivers/intel-i915-tgl",
   "//src/media/audio/drivers/codecs/alc5514",
   "//src/media/audio/drivers/codecs/alc5663",
   "//src/media/audio/drivers/codecs/max98373",
