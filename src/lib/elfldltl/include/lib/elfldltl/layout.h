@@ -7,6 +7,8 @@
 
 #include <array>
 #include <limits>
+#include <optional>
+#include <string_view>
 
 #include "constants.h"
 #include "field.h"
@@ -39,6 +41,7 @@ namespace elfldltl {
 // (ElfClass).  This base class handles differences in byte order (ElfData).
 template <ElfData Data>
 struct LayoutBase {
+  static constexpr ElfData kData = Data;
   static constexpr bool kSwap = Data != ElfData::kNative;
 
   template <typename T>
@@ -116,6 +119,9 @@ struct Layout;
 // Layout details specific to 32-bit ELF.
 template <ElfData Data>
 struct Layout<ElfClass::k32, Data> : public LayoutBase<Data> {
+  static constexpr ElfClass kClass = ElfClass::k32;
+
+  using LayoutBase<Data>::kData;
   using LayoutBase<Data>::kSwap;
   using typename LayoutBase<Data>::Byte;
   using typename LayoutBase<Data>::Half;
@@ -149,6 +155,9 @@ struct Layout<ElfClass::k32, Data> : public LayoutBase<Data> {
 // Layout details specific to 64-bit ELF.
 template <ElfData Data>
 struct Layout<ElfClass::k64, Data> : public LayoutBase<Data> {
+  static constexpr ElfClass kClass = ElfClass::k64;
+
+  using LayoutBase<Data>::kData;
   using LayoutBase<Data>::kSwap;
   using typename LayoutBase<Data>::Byte;
   using typename LayoutBase<Data>::Half;
@@ -225,8 +234,71 @@ struct Elf : private Layout<Class, Data> {
              ehsize == sizeof(Ehdr);                   // various sorts.
     }
 
-    constexpr bool Loadable(ElfMachine target = ElfMachine::kNative) const {
-      return Valid() && type == ElfType::kDyn && machine == target;
+    // This is the verbose version that uses the Diagnostics template API (see
+    // diagnostics.h) to report why it returns false when it does.
+    template <class Diagnostics>
+    constexpr bool Valid(Diagnostics& diagnostics) const {
+      using namespace std::literals::string_view_literals;
+
+      // The diagnostics object might tell us to keep going after each error.
+      bool valid = true;
+      auto check = [&](bool ok, auto&& error) -> bool {
+        if (ok) {
+          return true;
+        }
+        valid = false;
+        return diagnostics.FormatError(std::forward<decltype(error)>(error));
+      };
+
+      return check(magic == kMagic, "not an ELF file"sv) &&
+             check(elfclass == Class, "wrong ELF class (bit-width)"sv) &&
+             check(elfdata == Data, "wrong byte order"sv) &&
+             check(version == ElfVersion::kCurrent, "wrong e_version value"sv) &&
+             check(ehsize == sizeof(Ehdr), "wrong e_ehsize value"sv) &&
+             check(ident_version == ElfVersion::kCurrent, "wrong EI_VERSION value"sv) && valid;
+    }
+
+    constexpr bool Loadable(std::optional<ElfMachine> target = ElfMachine::kNative) const {
+      return Valid() && type == ElfType::kDyn && (!target || machine == target);
+    }
+
+    // This is the verbose version that uses the Diagnostics template API (see
+    // diagnostics.h) to report why it returns false when it does.
+    template <class Diagnostics>
+    constexpr bool Loadable(Diagnostics& diagnostics,
+                            std::optional<ElfMachine> target = ElfMachine::kNative) const {
+      using namespace std::literals::string_view_literals;
+
+      if (!Valid(diagnostics)) [[unlikely]] {
+        return false;
+      }
+
+      if (target && machine != target) [[unlikely]] {
+        diagnostics.FormatError("wrong e_machine for architecture"sv);
+        return false;
+      }
+
+      switch (type()) {
+        case ElfType::kDyn:
+          [[likely]];
+          break;
+        case ElfType::kExec:
+          diagnostics.FormatError(
+              "loading ET_EXEC files is not supported, only ET_DYN files;"
+              " be sure to compile and link as PIE (-fPIE, -pie)"sv);
+          return false;
+        case ElfType::kRel:
+          diagnostics.FormatError("ET_REL files cannot be loaded"sv);
+          return false;
+        case ElfType::kCore:
+          diagnostics.FormatError("ET_CORE files cannot be loaded"sv);
+          return false;
+        default:
+          diagnostics.FormatError("unrecognized e_type value"sv);
+          return false;
+      }
+
+      return true;
     }
 
     static constexpr Word kMagic{std::array{'\x7f', 'E', 'L', 'F'}};
