@@ -12,15 +12,13 @@
         {
             protocol: "fuchsia.fs.startup.Startup",
             from: "#minfs",
-            path: "/data/fuchsia.fs.startup.Startup",
+            path: "/minfs/svc/fuchsia.fs.startup.Startup",
         },
-
-        // Required for inspect data.
         {
             directory: "root",
             from: "#minfs",
             rights: [ "rw*" ],
-            path: "/data_root",
+            path: "/minfs/root",
         },
     ],
     offer: [
@@ -33,13 +31,6 @@
             ],
             from: "parent",
             to: "#minfs",
-        },
-    ],
-    expose: [
-        {
-            directory: "root",
-            from: "#minfs",
-            as: "data",
         },
     ],
 }

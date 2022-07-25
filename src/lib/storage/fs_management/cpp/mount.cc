@@ -226,8 +226,9 @@ zx::status<> MountedFilesystem::UnmountImpl() {
 __EXPORT
 zx::status<> Shutdown(fidl::UnownedClientEnd<Directory> svc_dir) {
   auto admin_or = service::ConnectAt<fuchsia_fs::Admin>(svc_dir);
-  if (admin_or.is_error())
+  if (admin_or.is_error()) {
     return admin_or.take_error();
+  }
 
   auto resp = fidl::WireCall(*admin_or)->Shutdown();
   if (resp.status() != ZX_OK)
@@ -244,8 +245,9 @@ zx::status<MountedFilesystem> Mount(fbl::unique_fd device_fd, const char* mount_
     crypt_client = options.crypt_client();
 
   auto result = StartFilesystem(std::move(device_fd), df, options, cb, std::move(crypt_client));
-  if (result.is_error())
+  if (result.is_error()) {
     return result.take_error();
+  }
   auto [export_root, data_root] = *std::move(result);
 
   auto fs = MountedFilesystem(std::move(export_root), {});

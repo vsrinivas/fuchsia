@@ -15,6 +15,11 @@
     ],
     capabilities: [
         {
+            directory: "data",
+            rights: [ "rw*" ],
+            path: "/fs/data",
+        },
+        {
             directory: "factory",
             rights: [ "r*" ],
             path: "/fs/factory",
@@ -74,6 +79,7 @@
     expose: [
         {
             directory: [
+                "data",
                 "durable",
                 "factory",
                 "mnt",

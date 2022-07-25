@@ -120,9 +120,7 @@ zx_status_t FsManager::Initialize(
   // for them, and instead point them at an empty, read-only folder in the fs dir, so the directory
   // capability can be successfully routed.
   std::vector<MountPoint> mount_points;
-  if (config.data_filesystem_format() == "f2fs") {
-    mount_points.push_back(MountPoint::kData);
-  }
+  mount_points.push_back(MountPoint::kData);
   if (config.durable()) {
     mount_points.push_back(MountPoint::kDurable);
   } else {
@@ -155,11 +153,10 @@ zx_status_t FsManager::Initialize(
       FX_PLOGS(ERROR, status) << "failed to add " << MountPointPath(point) << " to /fs directory";
     }
 
-    auto [it, inserted] =
-        mount_nodes_.try_emplace(point, FsManager::MountNode{
-                                            .export_root = std::move(endpoints_or->client),
-                                            .server_end = std::move(endpoints_or->server),
-                                        });
+    auto [it, inserted] = mount_nodes_.try_emplace(
+        point, FsManager::MountNode{.export_root = std::move(endpoints_or->client),
+                                    .server_end = std::move(endpoints_or->server),
+                                    .shutdown_required = false});
     if (!inserted) {
       FX_LOGS(ERROR) << "Channel pair for mount point " << MountPointPath(point)
                      << " already exists";
@@ -199,7 +196,8 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsManager::GetFsDir() {
   return zx::ok(std::move(endpoints->client));
 }
 
-std::optional<FsManager::MountPointEndpoints> FsManager::TakeMountPointServerEnd(MountPoint point) {
+std::optional<FsManager::MountPointEndpoints> FsManager::TakeMountPointServerEnd(
+    MountPoint point, bool shutdown_required) {
   // Hold the shutdown lock for the entire duration of the install to avoid racing with shutdown on
   // adding/removing the remote mount.
   std::lock_guard guard(shutdown_lock_);
@@ -219,6 +217,7 @@ std::optional<FsManager::MountPointEndpoints> FsManager::TakeMountPointServerEnd
   }
   fidl::ServerEnd<fuchsia_io::Directory> server_end =
       std::exchange(node->second.server_end, std::nullopt).value();
+  node->second.shutdown_required = shutdown_required;
 
   return FsManager::MountPointEndpoints{
       .export_root = node->second.export_root,
@@ -286,7 +285,7 @@ void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
   std::vector<std::pair<MountPoint, fidl::ClientEnd<fuchsia_io::Directory>>>
       filesystems_to_shut_down;
   for (auto& [point, node] : mount_nodes_) {
-    if (!node.server_end.has_value()) {
+    if (!node.server_end.has_value() && node.shutdown_required) {
       filesystems_to_shut_down.emplace_back(point, std::move(node.export_root));
     }
   }
@@ -306,6 +305,7 @@ void FsManager::Shutdown(fit::function<void(zx_status_t)> callback) {
 
     for (auto& [point, fs] : filesystems_to_shutdown) {
       FX_LOGS(INFO) << "Shutting down " << MountPointPath(point);
+      // TODO(fxbug.dev/105073): This may fail if /fuchsia.fs.Admin is the wrong path.
       if (auto result = fs_management::Shutdown({fs.borrow()}); result.is_error()) {
         FX_LOGS(WARNING) << "Failed to shut down " << MountPointPath(point) << ": "
                          << result.status_string();
@@ -485,11 +485,6 @@ zx::status<std::string> FsManager::GetDevicePath(uint64_t fs_id) {
 zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsManager::GetRoot(MountPoint point) const {
   auto node = mount_nodes_.find(point);
   if (node == mount_nodes_.cend()) {
-    if (point == MountPoint::kData) {
-      // The data mount has been mounted via a component in which case we can get to the service
-      // root through our local namespace.
-      return service::Connect<fuchsia_io::Directory>("/data_root");
-    }
     return zx::error(ZX_ERR_NOT_FOUND);
   }
   return fs_management::FsRootHandle(node->second.export_root.borrow());

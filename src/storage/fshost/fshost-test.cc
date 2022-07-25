@@ -170,7 +170,8 @@ TEST(FsManagerTestCase, ReportFailureOnUncleanUnmount) {
   BlockWatcher watcher(manager, &config);
   ASSERT_EQ(manager.Initialize({}, {}, config, watcher), ZX_OK);
 
-  std::optional endpoints_or = manager.TakeMountPointServerEnd(FsManager::MountPoint::kDurable);
+  std::optional endpoints_or =
+      manager.TakeMountPointServerEnd(FsManager::MountPoint::kDurable, true);
   ASSERT_TRUE(endpoints_or.has_value());
   auto [export_root, server_end] = std::move(endpoints_or.value());
   server_end.Close(ZX_ERR_INTERNAL);

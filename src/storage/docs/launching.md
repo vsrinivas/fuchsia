@@ -131,7 +131,8 @@ There is currently one filesystem that supports being launched as a component, b
 for blobfs is in //src/storage/bin/blobfs-component/meta/blobfs.cml.
 
 When a filesystem component is launched, it starts in a partially configured state. They serve one
-protocol - `/startup/fuchsia.fs.startup.Startup`. Filesystems need two things to run - a set of
+protocol - `fuchsia.fs.startup.Startup`. This is served from the path
+`/<fs_component>/svc/fuchsia.fs.startup.Startup`. Filesystems need two things to run - a set of
 options and a block device handle. This protocol provides methods for `Start`, as well as `Format`
 and `Check`, which take the block device and a set of options as arguments.
 

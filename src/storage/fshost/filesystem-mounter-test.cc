@@ -89,21 +89,21 @@ class TestMounter : public FilesystemMounter {
 
   void ExpectFilesystem(FilesystemType fs) { expected_filesystem_ = fs; }
 
-  zx::status<> LaunchFsComponent(zx::channel block_device,
-                                 const fs_management::MountOptions& options,
-                                 const std::string& fs_name) final {
+  zx::status<fs_management::MountedFilesystem> LaunchFsComponent(
+      zx::channel block_device, const fs_management::MountOptions& options,
+      const fs_management::DiskFormat& format) final {
     switch (expected_filesystem_) {
       case FilesystemType::kBlobfs:
-        EXPECT_EQ(fs_name, "blobfs");
+        EXPECT_EQ(format, fs_management::kDiskFormatBlobfs);
         break;
       case FilesystemType::kData:
-        EXPECT_EQ(fs_name, "data");
+        EXPECT_EQ(format, fs_management::kDiskFormatMinfs);
         break;
       default:
         ADD_FAILURE() << "Unexpected filesystem type";
     }
 
-    return zx::ok();
+    return zx::ok(fs_management::MountedFilesystem(fidl::ClientEnd<fuchsia_io::Directory>(), ""));
   }
 
   zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
@@ -138,6 +138,11 @@ class TestMounter : public FilesystemMounter {
       EXPECT_OK(zx_handle_close(hnd[i]));
     }
 
+    return ZX_OK;
+  }
+
+  zx_status_t RouteData(fs_management::MountedFilesystem mounted_filesystem,
+                        std::string_view device_path) override {
     return ZX_OK;
   }
 

@@ -16,7 +16,7 @@
         {
             protocol: "fuchsia.fs.startup.Startup",
             from: "#blobfs",
-            path: "/blobfs/fuchsia.fs.startup.Startup",
+            path: "/blobfs/svc/fuchsia.fs.startup.Startup",
         },
         {
             directory: "blob-exec",

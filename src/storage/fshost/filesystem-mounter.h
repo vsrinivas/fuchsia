@@ -72,6 +72,12 @@ class FilesystemMounter {
   FsManager& manager() { return fshost_; }
   FshostInspectManager& inspect_manager() { return fshost_.inspect_manager(); }
 
+ protected:
+  // Routes a given mounted filesystem to /data and updates device path.
+  // This can be overridden for testing.
+  virtual zx_status_t RouteData(fs_management::MountedFilesystem mounted_filesystem,
+                                std::string_view device_path);
+
  private:
   // Performs the mechanical action of mounting a filesystem, without
   // validating the type of filesystem being mounted.
@@ -86,9 +92,9 @@ class FilesystemMounter {
   // LaunchFs.
   //
   // Virtualized to enable testing.
-  virtual zx::status<> LaunchFsComponent(zx::channel block_device,
-                                         const fs_management::MountOptions& options,
-                                         const std::string& partition_name);
+  virtual zx::status<fs_management::MountedFilesystem> LaunchFsComponent(
+      zx::channel block_device, const fs_management::MountOptions& options,
+      const fs_management::DiskFormat& format);
 
   // Actually launches the filesystem process.
   //

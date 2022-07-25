@@ -60,7 +60,14 @@ class FsManager {
   // pair will have been collecting queued requests since fshost was started.
   //
   // This can only be called once per mount point, any calls beyond that will return std::nullopt.
-  std::optional<MountPointEndpoints> TakeMountPointServerEnd(MountPoint point);
+  //
+  // shutdown_required should be true IFF a filesystem is launched as a process to handle
+  // a semantic differences between component-based and process-based filesystems. Namely:
+  //   * componentized filesystems have lifetimes managed by ComponentManager.
+  //   * process-based filesystems have lifetimes we must manage ourselves.
+  // If shutdown_required is true, fuchsia.fs.Admin Shutdown will be called at unmount time.
+  std::optional<MountPointEndpoints> TakeMountPointServerEnd(MountPoint point,
+                                                             bool shutdown_required = false);
 
   // Registers the device path for the given mount point.
   void RegisterDevicePath(MountPoint point, std::string_view device_path);
@@ -159,6 +166,8 @@ class FsManager {
   struct MountNode {
     fidl::ClientEnd<fuchsia_io::Directory> export_root;
     std::optional<fidl::ServerEnd<fuchsia_io::Directory>> server_end;
+    // This flag should only be set for process-based filesystems.
+    bool shutdown_required;
   };
   std::map<MountPoint, MountNode> mount_nodes_;
 

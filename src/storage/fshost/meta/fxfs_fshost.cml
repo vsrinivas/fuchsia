@@ -24,15 +24,13 @@
         {
             protocol: "fuchsia.fs.startup.Startup",
             from: "#fxfs",
-            path: "/data/fuchsia.fs.startup.Startup",
+            path: "/fxfs/svc/fuchsia.fs.startup.Startup",
         },
-
-        // Required for inspect data and to migrate data.
         {
             directory: "root",
             from: "#fxfs",
             rights: [ "rw*" ],
-            path: "/data_root",
+            path: "/fxfs/root",
         },
     ],
     offer: [
@@ -43,13 +41,6 @@
                 "#fxfs",
                 "#fxfs-crypt",
             ],
-        },
-    ],
-    expose: [
-        {
-            directory: "root",
-            from: "#fxfs",
-            as: "data",
         },
     ],
 }

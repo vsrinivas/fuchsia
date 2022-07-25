@@ -147,17 +147,22 @@ class TestMinfsMounter : public FilesystemMounter {
   TestMinfsMounter(FsManager& fshost, const fshost_config::Config* config)
       : FilesystemMounter(fshost, config) {}
 
-  zx::status<> LaunchFsComponent(zx::channel block_device,
-                                 const fs_management::MountOptions& options,
-                                 const std::string& partition_name) final {
-    EXPECT_EQ(partition_name, "data");
-    return zx::ok();
+  zx::status<fs_management::MountedFilesystem> LaunchFsComponent(
+      zx::channel block_device, const fs_management::MountOptions& options,
+      const fs_management::DiskFormat& format) final {
+    EXPECT_EQ(format, fs_management::kDiskFormatMinfs);
+    return zx::ok(fs_management::MountedFilesystem(fidl::ClientEnd<fuchsia_io::Directory>(), ""));
   }
 
   zx_status_t LaunchFs(int argc, const char** argv, zx_handle_t* hnd, uint32_t* ids,
                        size_t len) final {
     ADD_FAILURE() << "Unexpected call to LaunchFs";
     return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  zx_status_t RouteData(fs_management::MountedFilesystem mounted_filesystem,
+                        std::string_view device_path) override {
+    return ZX_OK;
   }
 };
 
