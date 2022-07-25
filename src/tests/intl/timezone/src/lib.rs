@@ -167,10 +167,13 @@ async fn loop_until_matching_time(
         let now = ucal::get_now();
         let date_time = fmt.format(now)?;
         let vm_time = out.unwrap();
+
         if date_time == vm_time {
             break;
         }
-        if (date_time != vm_time) && attempt == MAX_ATTEMPTS {
+
+        fx_log_info!("Times do not match. VM time is {} and client time is {}", vm_time, date_time);
+        if attempt == MAX_ATTEMPTS {
             let clock = runtime::duplicate_utc_clock_handle(zx::Rights::READ)
                 .map_err(|stat| anyhow::anyhow!("Error retreiving clock: {}", stat));
             let userspace_utc_sec = match clock {
