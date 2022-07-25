@@ -36,6 +36,8 @@ redirects:
   to: /docs/reference/components/url
 - from: /docs/go/components/structured-config
   to: /docs/development/components/structured_config
+- from: /docs/go/components/static-analysis-errors
+  to: /docs/development/components/build.md#troubleshoot-build-analyzer
 - from: /docs/go/components/declaration
   to: https://fuchsia.dev/reference/fidl/fuchsia.component.decl
 - from: /docs/go/components/realm-builder-reference

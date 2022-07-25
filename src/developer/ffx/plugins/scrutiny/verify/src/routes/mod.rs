@@ -126,7 +126,7 @@ pub async fn verify(cmd: &Command, tmp_dir: Option<&PathBuf>) -> Result<HashSet<
 Static Capability Flow Analysis Error:
 The route verifier failed to verify all capability routes in this build.
 
-See https://fuchsia.dev/fuchsia-src/development/components/troubleshooting#static-analyzer
+See https://fuchsia.dev/go/components/static-analysis-errors
 
 If the broken route is required for a transition it can be temporarily added
 to the allowlist located at: {:?}
