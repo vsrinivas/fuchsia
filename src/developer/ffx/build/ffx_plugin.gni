@@ -201,16 +201,7 @@ template("ffx_plugin") {
       deps = args_deps + [
                "//src/developer/ffx/core:lib",
                "//third_party/rust_crates:argh",
-
-               # TODO(https://fxbug.dev/104019): remove the implicit anyhow
-               # dependency, have args_deps declare it instead.
-               "//third_party/rust_crates:anyhow",
              ]
-
-      # TODO(https://fxbug.dev/104019): Avoid this suppression. At the time of
-      # writing it is needed because not all dependencies above are used by all
-      # plugins.
-      configs += [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
 
       assert(
           defined(invoker.args_sources),
@@ -225,6 +216,11 @@ template("ffx_plugin") {
         # And pass in the test_deps if they have been specified for the plugin.
         if (defined(invoker.test_deps)) {
           test_deps = invoker.test_deps
+
+          # TODO(https://fxbug.dev/104019): Avoid this suppression.
+          # Consider defining `args_test_deps` instead of forwarding all `test_deps`.
+          test_configs =
+              [ "//build/config/rust/lints:allow_unused_crate_dependencies" ]
         }
       }
       original_target_name = _original_target_name

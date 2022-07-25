@@ -12,6 +12,7 @@ if (is_host) {
     args_deps = [
       "//src/developer/ffx/config:lib",
       "//src/developer/ffx/plugins/emulator/configuration:ffx_emulator_config",
+      "//third_party/rust_crates:anyhow",
     ]
     deps = [
       "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
@@ -22,6 +23,7 @@ if (is_host) {
       "//src/developer/ffx/plugins/emulator/common:ffx_emulator_common",
       "//src/developer/ffx/plugins/emulator/configuration:ffx_emulator_config",
       "//src/developer/ffx/plugins/emulator/engines:ffx_emulator_engines",
+      "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:regex",
       "//third_party/rust_crates:tracing",
     ]

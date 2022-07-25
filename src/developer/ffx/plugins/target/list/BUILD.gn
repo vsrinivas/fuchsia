@@ -22,6 +22,7 @@ ffx_plugin("ffx_list") {
   ]
 
   args_sources = [ "src/args.rs" ]
+  args_deps = [ "//third_party/rust_crates:anyhow" ]
 
   sources = [
     "src/lib.rs",

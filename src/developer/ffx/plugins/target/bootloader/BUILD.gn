@@ -9,10 +9,7 @@ ffx_plugin("ffx_bootloader") {
   edition = "2021"
   with_unit_tests = true
   args_with_unit_tests = true
-  args_deps = [
-    "//src/developer/ffx/lib/fastboot:lib",
-    "//third_party/rust_crates:serde",
-  ]
+  args_deps = [ "//src/developer/ffx/lib/fastboot:lib" ]
 
   deps = [
     "//build/sdk/meta:rust",

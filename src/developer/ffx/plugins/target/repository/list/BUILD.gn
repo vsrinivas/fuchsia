@@ -12,7 +12,6 @@ ffx_plugin("ffx_target_repository_list") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:prettytable-rs",
   ]
-  args_deps = [ "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc" ]
 
   args_sources = [ "src/args.rs" ]
 

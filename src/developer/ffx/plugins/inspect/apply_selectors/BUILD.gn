@@ -16,6 +16,7 @@ ffx_plugin("ffx_inspect_apply_selectors") {
     "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/diagnostics/selectors",
     "//src/lib/fuchsia",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:difference",
     "//third_party/rust_crates:pretty_assertions",
     "//third_party/rust_crates:serde_json",
@@ -26,8 +27,6 @@ ffx_plugin("ffx_inspect_apply_selectors") {
   test_deps = [
     "//src/developer/ffx/plugins/inspect/test_utils:ffx_inspect_test_utils",
   ]
-
-  args_deps = [ "//src/diagnostics/iquery:lib" ]
 
   args_sources = [ "src/args.rs" ]
 

@@ -14,8 +14,8 @@ ffx_plugin("ffx_wlan_dev") {
     "//src/connectivity/wlan/tools/wlantool/wlan_dev:wlan-dev",
   ]
   args_deps = [
-    "//sdk/fidl/fuchsia.wlan.device.service:fuchsia.wlan.device.service-rustc",
     "//src/connectivity/wlan/tools/wlantool/wlan_dev:wlan-dev",
+    "//third_party/rust_crates:anyhow",
   ]
   with_unit_tests = true
   args_with_unit_tests = true
