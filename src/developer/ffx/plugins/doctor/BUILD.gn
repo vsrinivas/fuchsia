@@ -11,11 +11,9 @@ ffx_plugin("ffx_doctor") {
   deps = [
     "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx-rustc",
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
-    "//src/connectivity/overnet/lib/hoist",
     "//src/developer/ffx:ffx_lib_args",
     "//src/developer/ffx/lib/doctor_utils:lib",
     "//src/developer/ffx/lib/timeout:lib",
-    "//src/developer/ffx/plugins/doctor/test_utils:lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
@@ -23,11 +21,14 @@ ffx_plugin("ffx_doctor") {
     "//third_party/rust_crates:async-lock",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:termion",
     "//third_party/rust_crates:zip",
+  ]
+  test_deps = [
+    "//src/developer/ffx/plugins/doctor/test_utils:lib",
+    "//third_party/rust_crates:itertools",
+    "//third_party/rust_crates:tempfile",
   ]
 
   args_sources = [ "src/args.rs" ]

@@ -13,10 +13,13 @@ ffx_plugin("ffx_product") {
   args_sources = [ "src/args.rs" ]
 
   deps = [
-    "//build/sdk/meta:rust",
     "//src/developer/ffx/lib/fidl-fuchsia-developer-ffx-ext",
-    "//src/developer/ffx/lib/fms:lib",
     "//src/developer/ffx/lib/pbms:lib",
+  ]
+
+  test_deps = [
+    "//build/sdk/meta:rust",
+    "//src/developer/ffx/lib/fms:lib",
     "//src/lib/gcs:lib",
     "//third_party/rust_crates:fs_extra",
     "//third_party/rust_crates:pathdiff",

@@ -23,24 +23,18 @@ ffx_plugin("ffx_log") {
 
   deps = [
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
-    "//src/developer/ffx:ffx_lib_args",
     "//src/developer/ffx/lib/writer:lib",
     "//src/developer/ffx/logger/data:lib",
     "//src/developer/ffx/logger/frontend:lib",
-    "//src/developer/ffx/logger/test_utils:lib",
-    "//src/developer/ffx/logger/utils:lib",
     "//src/lib/diagnostics/data/rust",
-    "//src/lib/diagnostics/hierarchy/rust",
     "//src/lib/diagnostics/selectors",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
     "//src/sys/lib/moniker",
-    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:blocking",
     "//third_party/rust_crates:chrono",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:futures-util",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
@@ -55,7 +49,14 @@ ffx_plugin("ffx_log") {
     "src/spam_filter.rs",
   ]
 
-  test_deps = [ "//third_party/rust_crates:tempfile" ]
+  test_deps = [
+    "//src/developer/ffx/logger/test_utils:lib",
+    "//src/developer/ffx/logger/utils:lib",
+    "//src/lib/diagnostics/hierarchy/rust",
+    "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:futures-util",
+    "//third_party/rust_crates:tempfile",
+  ]
 
   has_proxy = true
 }

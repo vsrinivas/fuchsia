@@ -19,9 +19,10 @@ ffx_plugin("ffx_preflight") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:termion",
     "//third_party/rust_crates:textwrap",
-    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
   ]
+
+  test_deps = [ "//third_party/rust_crates:thiserror" ]
 
   args_sources = [ "src/args.rs" ]
 

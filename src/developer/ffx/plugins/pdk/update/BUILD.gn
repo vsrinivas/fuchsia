@@ -22,8 +22,6 @@ ffx_plugin("ffx_pdk_update") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:futures-lite",
     "//third_party/rust_crates:hyper",
-    "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:serde_json5",
     "//third_party/rust_crates:tempfile",
@@ -44,5 +42,6 @@ ffx_plugin("ffx_pdk_update") {
     "//src/developer/ffx/lib/pkg:pkg",
     "//src/lib/fuchsia-async",
     "//src/sys/pkg/lib/fuchsia-pkg",
+    "//third_party/rust_crates:maplit",
   ]
 }
