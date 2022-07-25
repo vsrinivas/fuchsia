@@ -30,7 +30,7 @@ foreach(target, target_list) {
     } else {
       meta = "legacy_host_targets"
     }
-    assert(dir_target == false,
+    assert(!dir_target,
            "$dir appears twice in Zircon $meta metadata:" +
                " $dir_target vs $target")
     dir_target = target

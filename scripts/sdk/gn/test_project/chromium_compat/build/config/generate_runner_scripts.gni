@@ -229,7 +229,7 @@ template("fuchsia_package_runner") {
     forward_variables_from(invoker, [ "testonly" ])
     deps = [ ":${_generate_installer_target}" ]
 
-    if (!defined(invoker.install_only) || invoker.install_only == false) {
+    if (!defined(invoker.install_only) || !invoker.install_only) {
       deps += [ ":${_generate_runner_target}" ]
     }
   }

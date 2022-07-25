@@ -312,8 +312,8 @@ template("bind_test") {
 #     Forwarded from invoker.
 #
 template("bindc") {
-  assert(defined(invoker.rules) || (defined(invoker.disable_autobind) &&
-                                        invoker.disable_autobind == true),
+  assert(defined(invoker.rules) ||
+             (defined(invoker.disable_autobind) && invoker.disable_autobind),
          "Need a bind rules source")
 
   generate_bytecode = false
@@ -454,8 +454,8 @@ template("bindc") {
 #     Forwarded from invoker.
 #
 template("driver_bind_rules") {
-  assert(defined(invoker.rules) || (defined(invoker.disable_autobind) &&
-                                        invoker.disable_autobind == true),
+  assert(defined(invoker.rules) ||
+             (defined(invoker.disable_autobind) && invoker.disable_autobind),
          "Need a bind rules source")
 
   bind_output = "$target_name.bindbc"

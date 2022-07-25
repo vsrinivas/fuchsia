@@ -229,7 +229,7 @@ template("rustc_artifact") {
     inputs = _local_inputs
 
     if (!defined(invoker.enforce_source_listing) ||
-        invoker.enforce_source_listing == true) {
+        invoker.enforce_source_listing) {
       # fail early when the user forgets to list sources
       assert(defined(invoker.sources), "sources must be listed")
       sources = invoker.sources

@@ -178,7 +178,7 @@ template("rustc_binary") {
 
   # if "with_unit_tests" is set to true, generate an additional rust test target
   # TODO(https://fxbug.dev/72931): accept a string.
-  if (defined(invoker.with_unit_tests) && invoker.with_unit_tests == true) {
+  if (defined(invoker.with_unit_tests) && invoker.with_unit_tests) {
     rustc_test_internal("${target_name}_test") {
       output_name = "${_output_name}_bin_test"
       original_target_name = _original_target_name

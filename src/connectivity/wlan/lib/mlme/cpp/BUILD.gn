@@ -17,7 +17,7 @@ config("wlan_mlme_config") {
 }
 
 source_set("mlme") {
-  if (experimental_wlan_client_mlme == true) {
+  if (experimental_wlan_client_mlme) {
     defines = [ "USE_RUST_CLIENT_MLME" ]
   }
 

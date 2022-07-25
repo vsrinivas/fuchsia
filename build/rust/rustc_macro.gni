@@ -205,7 +205,7 @@ template("rustc_macro") {
   # target. Since the parent rule is used to compile macros, which only run on
   # the host, only run the test code for the macros on the host.
   # TODO(https://fxbug.dev/72931): accept a string.
-  if (defined(invoker.with_unit_tests) && invoker.with_unit_tests == true) {
+  if (defined(invoker.with_unit_tests) && invoker.with_unit_tests) {
     if (in_host_compiler_toolchain) {
       rustc_test("${target_name}_test") {
         name = target_name

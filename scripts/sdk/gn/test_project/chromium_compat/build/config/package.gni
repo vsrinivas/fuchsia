@@ -55,7 +55,7 @@ template("cr_fuchsia_package") {
     forward_variables_from(invoker, [ "testonly" ])
 
     if (!defined(invoker.manifest)) {
-      assert(testonly == true)
+      assert(testonly)
 
       # TODO(fxbug.dev/1019938): switch the default to tests.cmx which doesn't request
       # the deprecated-ambient-replace-as-executable feature.

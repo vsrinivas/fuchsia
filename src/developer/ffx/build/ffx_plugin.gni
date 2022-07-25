@@ -212,7 +212,7 @@ template("ffx_plugin") {
 
       # If the args library has tests enabled, enable them in the library.
       if (defined(invoker.args_with_unit_tests) &&
-          invoker.args_with_unit_tests == true) {
+          invoker.args_with_unit_tests) {
         with_unit_tests = true
 
         # And pass in the test_deps if they have been specified for the plugin.
@@ -236,8 +236,7 @@ template("ffx_plugin") {
                                "test_deps",
                              ])
     }
-    if (defined(invoker.args_with_unit_tests) &&
-        invoker.args_with_unit_tests == true) {
+    if (defined(invoker.args_with_unit_tests) && invoker.args_with_unit_tests) {
       tests_deps += [ ":" + args + "_test" ]
     }
 
@@ -328,7 +327,7 @@ template("ffx_plugin") {
       }
       suite_deps += [ ":" + execution_lib ]
 
-      if (defined(invoker.with_unit_tests) && invoker.with_unit_tests == true) {
+      if (defined(invoker.with_unit_tests) && invoker.with_unit_tests) {
         tests_deps += [ ":" + output_name + "_test" ]
       }
     }

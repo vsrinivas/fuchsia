@@ -353,7 +353,7 @@ if (is_kernel) {
       "//zircon/kernel/lib/jtrace/*",
     ]
 
-    if (jtrace_enabled == false) {
+    if (!jtrace_enabled) {
       defines = [ "JTRACE_TARGET_BUFFER_SIZE=0" ]
     } else {
       if (jtrace_target_buffer_size == "auto") {
