@@ -110,6 +110,7 @@ impl DataController for PackageExtractController {
     fn query(&self, model: Arc<DataModel>, query: Value) -> Result<Value> {
         let mut artifact_reader = BlobFsArtifactReader::try_compound(
             &model.config().build_path(),
+            model.config().tmp_dir_path().as_ref(),
             &model.config().blobfs_paths(),
         )
         .context("Failed to construct blobfs artifact reader for package extractor")?;

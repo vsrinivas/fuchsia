@@ -8,11 +8,62 @@ use {
     anyhow::{anyhow, Context, Result},
     std::{
         fmt::Debug,
-        io::{Read, Seek, SeekFrom},
+        fs::File,
+        io::{BufReader, Read, Seek, SeekFrom},
     },
     thiserror::Error,
     u64_arithmetic::{abs, named_u64, u64_add, u64_sub, U64Eval},
 };
+
+/// A fallible `Clone` trait.
+pub trait TryClone: Sized {
+    fn try_clone(&self) -> Result<Self>;
+}
+
+impl<T: Clone> TryClone for T {
+    fn try_clone(&self) -> Result<Self> {
+        Ok(self.clone())
+    }
+}
+
+/// A wrapper type that implements `TryClone` for `BufReader<File>`.
+pub struct TryClonableBufReaderFile(BufReader<File>);
+
+impl From<BufReader<File>> for TryClonableBufReaderFile {
+    fn from(buf_reader_file: BufReader<File>) -> Self {
+        Self(buf_reader_file)
+    }
+}
+
+impl TryClone for TryClonableBufReaderFile {
+    fn try_clone(&self) -> Result<Self> {
+        Ok(Self(
+            self.0
+                .get_ref()
+                .try_clone()
+                .map(BufReader::new)
+                .map_err(|err| anyhow!("Failed to reopen file for clone: {}", err))?,
+        ))
+    }
+}
+
+impl Read for TryClonableBufReaderFile {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.0.read(buf)
+    }
+}
+
+impl Seek for TryClonableBufReaderFile {
+    fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
+        self.0.seek(pos)
+    }
+}
+
+/// A trait for use in contexts that require `<std::io::Read + std::io::Seek>`, which, as written,
+/// is not allowed.
+pub trait ReadSeek: Read + Seek {}
+
+impl<T: Read + Seek> ReadSeek for T {}
 
 /// Convert an `anyhow::Error` to a `std::io::Error`.
 fn anyhow_to_io(error: anyhow::Error) -> std::io::Error {
@@ -90,8 +141,10 @@ impl<RS: Read + Seek> WrappedReaderSeekerBuilder<RS> {
     }
 }
 
-/// A `std::io::Read + std::io::Seek` that wraps another `std::io::Read + std::io::Seek`, and
-/// applies a restricted `[self.offset, self.length)` window to read and seek operations.
+/// A `Clone + std::io::Read + std::io::Seek` that wraps another
+/// `Clone + std::io::Read + std::io::Seek`, and applies a restricted `[self.offset, self.length)`
+/// window to read and seek operations.
+#[derive(Clone)]
 pub struct WrappedReaderSeeker<RS: Read + Seek> {
     reader_seeker: RS,
     offset: u64,
@@ -104,7 +157,7 @@ impl<RS: Read + Seek> WrappedReaderSeeker<RS> {
         WrappedReaderSeekerBuilder::new()
     }
 
-    /// Consume this wrapper and return the underlying `std::io::Read + std::io::Seek`.
+    /// Consume this wrapper and return the underlying `Clone + std::io::Read + std::io::Seek`.
     pub fn into_inner(self) -> RS {
         self.reader_seeker
     }
@@ -273,8 +326,9 @@ mod tests {
         std::io::{Read, Seek, SeekFrom},
     };
 
-    /// A `std::io::Read + std::io::Seek` that reads `b'\0'` bytes within the ranage
+    /// A `Clone + std::io::Read + std::io::Seek` that reads `b'\0'` bytes within the range
     /// `[0, self.length)`. Seeking is unrestricted, and uses naive unchecked arithmetic.
+    #[derive(Clone)]
     struct FakeReaderSeeker {
         position: u64,
         length: u64,

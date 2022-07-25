@@ -3,8 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::zstd,
-    anyhow::{anyhow, Error, Result},
+    crate::{
+        fs::TemporaryDirectory,
+        io::{ReadSeek, TryClone, WrappedReaderSeeker},
+        zstd,
+    },
+    anyhow::{anyhow, Context, Error, Result},
     byteorder::{LittleEndian, ReadBytesExt},
     hex,
     log::warn,
@@ -14,7 +18,7 @@ use {
     std::{
         collections::HashMap,
         fs::File,
-        io::{BufReader, Cursor, Read, Seek, SeekFrom},
+        io::{BufReader, Read, Seek, SeekFrom},
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -414,36 +418,46 @@ pub enum BlobFsVersion {
 /// A builder pattern implementation for`BlobFsReader`. Incremental builder
 /// operations consume the receiver and return a `Result<Self>` to facilitate
 /// `builder.op1(...)?.op2(...)?.build()?` patterns.
-pub struct BlobFsReaderBuilder<RS: Read + Seek> {
-    reader_seeker: Option<RS>,
+pub struct BlobFsReaderBuilder<TCRS: TryClone + Read + Seek> {
+    reader_seeker: Option<TCRS>,
+    tmp_dir: Option<Arc<TemporaryDirectory>>,
 }
 
-impl<RS: Read + Seek + Send + Sync> BlobFsReaderBuilder<RS> {
+impl<TCRS: TryClone + Read + Seek + Send + Sync> BlobFsReaderBuilder<TCRS> {
     /// Construct an empty `BlobFsReaderBuilder`.
     pub fn new() -> Self {
-        Self { reader_seeker: None }
+        Self { reader_seeker: None, tmp_dir: None }
     }
 
     /// Set the blobfs archive that should be read by the built `BlobFsReader`.
-    pub fn archive(mut self, reader_seeker: RS) -> Result<Self> {
+    pub fn archive(mut self, reader_seeker: TCRS) -> Result<Self> {
         self.reader_seeker = Some(reader_seeker);
+        Ok(self)
+    }
+
+    /// Set the blobfs archive that should be read by the built `BlobFsReader`.
+    pub fn tmp_dir(mut self, tmp_dir: Arc<TemporaryDirectory>) -> Result<Self> {
+        self.tmp_dir = Some(tmp_dir);
         Ok(self)
     }
 
     /// Build a `BlobFsReader` by parsing all metadata in the blobfs archive and
     /// injecting the metadata into a new `BlobFsReader` instance.
-    pub fn build(self) -> Result<BlobFsReader<RS>> {
+    pub fn build(self) -> Result<BlobFsReader<TCRS>> {
         let mut reader_seeker = self
             .reader_seeker
             .ok_or_else(|| anyhow!("Attempt to build blobfs reader with no archive reader"))?;
+        let tmp_dir = self
+            .tmp_dir
+            .ok_or_else(|| anyhow!("Attempt to build blobfs reader with no temporary directory"))?;
         let header = BlobFsHeader::parse(&mut reader_seeker)?;
         let metadata = Arc::new(Self::parse_metadata(header, &mut reader_seeker)?);
-        Ok(BlobFsReader { reader_seeker, metadata })
+        Ok(BlobFsReader { reader_seeker, tmp_dir, metadata })
     }
 
     fn parse_metadata(
         header: BlobFsHeader,
-        reader: &mut RS,
+        reader: &mut TCRS,
     ) -> Result<HashMap<PathBuf, BlobMetadata>> {
         let blobfs_version = match header.version {
             BLOBFS_VERSION_8 => BlobFsVersion::Version8,
@@ -524,65 +538,83 @@ impl<RS: Read + Seek + Send + Sync> BlobFsReaderBuilder<RS> {
 /// Bespoke reader interface for blobfs that supports reading individual blobs
 /// named by hex-string paths, and iterating over all valid blob merkle root
 /// paths.
-pub struct BlobFsReader<RS: Read + Seek> {
-    reader_seeker: RS,
+pub struct BlobFsReader<TCRS: TryClone + Read + Seek> {
+    reader_seeker: TCRS,
+    tmp_dir: Arc<TemporaryDirectory>,
     metadata: Arc<HashMap<PathBuf, BlobMetadata>>,
 }
 
-impl<RS: Read + Seek> BlobFsReader<RS> {
+impl<TCRS: TryClone + Read + Seek> TryClone for BlobFsReader<TCRS> {
+    fn try_clone(&self) -> Result<Self> {
+        Ok(Self {
+            reader_seeker: self.reader_seeker.try_clone().context("blobfs reader")?,
+            tmp_dir: self.tmp_dir.clone(),
+            metadata: self.metadata.clone(),
+        })
+    }
+}
+
+impl<TCRS: 'static + TryClone + Read + Seek> BlobFsReader<TCRS> {
+    /// Open a blob as a `std::io::Read + std::io::Seek`.
+    pub fn open<P: AsRef<Path>>(&mut self, blob_path: P) -> Result<Box<dyn ReadSeek>> {
+        let metadata = self
+            .metadata
+            .get(blob_path.as_ref())
+            .ok_or_else(|| anyhow!("Blobfs blob not found: {:?}", blob_path.as_ref()))?;
+        if metadata.prelude.is_chunk_compressed() {
+            // TODO(fxbug.dev/102061): Eliminate in-memory copy of compressed blob and/or leverage
+            // memory mapped files.
+            let mut buffer = vec![0u8; metadata.data_length as usize];
+            self.reader_seeker.seek(SeekFrom::Start(metadata.data_start))?;
+            self.reader_seeker.read_exact(&mut buffer)?;
+            let mut decompressed =
+                zstd::chunked_decompress(&buffer, metadata.inode.blob_size.try_into().unwrap());
+
+            if decompressed.len() == 0 {
+                return Err(anyhow!(
+                    "Failed to decompress chunk-compressed blob: {:?}",
+                    blob_path.as_ref()
+                ));
+            }
+
+            decompressed.truncate(metadata.inode.blob_size as usize);
+            let blob_tmp_path = self.tmp_dir.as_path().join(blob_path);
+            std::fs::write(&blob_tmp_path, decompressed)?;
+
+            File::open(&blob_tmp_path)
+                .map(BufReader::new)
+                .map(|reader| Box::new(reader) as Box<dyn ReadSeek>)
+                .map_err(|err| {
+                    anyhow!("Failed to open decompressed blob file {:?}: {}", &blob_tmp_path, err)
+                })
+        } else {
+            let reader_seeker =
+                self.reader_seeker.try_clone().context("opening file from blobfs archive")?;
+            WrappedReaderSeeker::builder()
+                .reader_seeker(reader_seeker)
+                .offset(metadata.data_start)
+                .length(metadata.inode.blob_size)
+                .build()
+                .map(|reader| Box::new(reader) as Box<dyn ReadSeek>)
+        }
+    }
+
     /// Read the blob with the merkle root described by `blob_path`. Blobs
     /// identities as paths are lowercase hex-strings of the blob merkle root.
     /// Note that this implementation does not check the integrity of merkle
     /// roots; it trusts the metadata loaded from the underlying blobfs archive.
     pub fn read_blob<P: AsRef<Path>>(&mut self, blob_path: P) -> Result<Vec<u8>> {
-        let metadata = self
-            .metadata
-            .get(blob_path.as_ref())
-            .ok_or_else(|| anyhow!("Blobfs blob not found: {:?}", blob_path.as_ref()))?;
-        let mut buffer = vec![0u8; metadata.data_length as usize];
-        self.reader_seeker.seek(SeekFrom::Start(metadata.data_start))?;
-        self.reader_seeker.read_exact(&mut buffer)?;
-
-        if metadata.prelude.is_chunk_compressed() {
-            let mut decompressed =
-                zstd::chunked_decompress(&buffer, metadata.inode.blob_size.try_into().unwrap());
-            if decompressed.len() != 0 {
-                decompressed.truncate(metadata.inode.blob_size as usize);
-                Ok(decompressed)
-            } else {
-                Err(anyhow!("Failed to decompress chunk-compressed blob: {:?}", blob_path.as_ref()))
-            }
-        } else {
-            buffer.truncate(metadata.inode.blob_size as usize);
-            Ok(buffer)
-        }
+        let mut buffer = vec![];
+        let mut reader = self.open(&blob_path)?;
+        std::io::copy(&mut reader, &mut buffer)
+            .map_err(|err| anyhow!("Failed copy blob to buffer: {}", err))?;
+        Ok(buffer)
     }
 
     /// Construct an iterator of all known paths stored in the underlying blobfs
     /// archive.
     pub fn blob_paths<'a>(&'a self) -> Box<dyn Iterator<Item = &'a PathBuf> + 'a> {
         Box::new(self.metadata.keys())
-    }
-}
-
-// Clone file-backed readers by unwrapping the result of `File.try_clone()` on
-// the underlying file.
-impl Clone for BlobFsReader<BufReader<File>> {
-    fn clone(&self) -> Self {
-        let file = self
-            .reader_seeker
-            .get_ref()
-            .try_clone()
-            .map_err(|err| anyhow!("Failed to reopen blobfs archive for clone: {}", err))
-            .unwrap();
-        Self { reader_seeker: BufReader::new(file), metadata: self.metadata.clone() }
-    }
-}
-
-// Clone buffer-backed readers by cloning each property in the usual way.
-impl Clone for BlobFsReader<Cursor<Vec<u8>>> {
-    fn clone(&self) -> Self {
-        Self { reader_seeker: self.reader_seeker.clone(), metadata: self.metadata.clone() }
     }
 }
 
@@ -594,9 +626,14 @@ mod tests {
             BlobFsReaderBuilder, Extent, Inode, NodePrelude, BLOBFS_FLAG_ALLOCATED, BLOBFS_MAGIC_0,
             BLOBFS_MAGIC_1, BLOBFS_VERSION_8, BLOBFS_VERSION_9,
         },
+        crate::{
+            fs::TemporaryDirectory,
+            io::{TryClonableBufReaderFile, TryClone},
+        },
         std::{
             fs::{write, File},
             io::{BufReader, Cursor, Read, Seek},
+            sync::Arc,
         },
         tempfile::tempdir,
     };
@@ -643,42 +680,46 @@ mod tests {
 
     fn file_and_buffer_test_from_buffer(
         buffer: Vec<u8>,
-        file_test: Box<dyn Fn(BlobFsReaderBuilder<BufReader<File>>)>,
+        file_test: Box<dyn Fn(BlobFsReaderBuilder<TryClonableBufReaderFile>)>,
         buffer_test: Box<dyn Fn(BlobFsReaderBuilder<Cursor<Vec<u8>>>)>,
     ) {
-        let dir = tempdir().unwrap();
-        let blobfs_path = dir.path().join("blob.blk");
+        let dir: Arc<TemporaryDirectory> = Arc::new(tempdir().unwrap().into());
+        let blobfs_path = dir.as_path().join("blob.blk");
         write(&blobfs_path, buffer.as_slice()).unwrap();
-        let builder = BlobFsReaderBuilder::new()
-            .archive(BufReader::new(File::open(&blobfs_path).unwrap()))
-            .unwrap();
+        let reader: TryClonableBufReaderFile =
+            BufReader::new(File::open(&blobfs_path).unwrap()).into();
+        let builder =
+            BlobFsReaderBuilder::new().archive(reader).unwrap().tmp_dir(dir.clone()).unwrap();
         file_test(builder);
 
-        let builder = BlobFsReaderBuilder::new().archive(Cursor::new(buffer)).unwrap();
+        let builder =
+            BlobFsReaderBuilder::new().archive(Cursor::new(buffer)).unwrap().tmp_dir(dir).unwrap();
         buffer_test(builder);
     }
 
-    fn blobfs_reader_builder_build_err<RS: Read + Seek + Send + Sync>(
-        builder: BlobFsReaderBuilder<RS>,
+    fn blobfs_reader_builder_build_err<TCRS: TryClone + Read + Seek + Send + Sync>(
+        builder: BlobFsReaderBuilder<TCRS>,
     ) {
         let result = builder.build();
         assert!(result.is_err());
     }
 
-    fn blobfs_reader_builder_build_err_eq<RS: Read + Seek + Send + Sync>(
+    fn blobfs_reader_builder_build_err_eq<TCRS: TryClone + Read + Seek + Send + Sync>(
         err: BlobFsError,
-    ) -> Box<dyn Fn(BlobFsReaderBuilder<RS>)> {
-        Box::new(move |builder: BlobFsReaderBuilder<RS>| {
+    ) -> Box<dyn Fn(BlobFsReaderBuilder<TCRS>)> {
+        Box::new(move |builder: BlobFsReaderBuilder<TCRS>| {
             let result = builder.build();
             assert!(result.is_err());
             assert_eq!(err, result.err().unwrap().downcast::<BlobFsError>().unwrap());
         })
     }
 
-    fn blobfs_reader_builder_build_ok_num_blobs<RS: Read + Seek + Send + Sync>(
+    fn blobfs_reader_builder_build_ok_num_blobs<
+        TCRS: 'static + TryClone + Read + Seek + Send + Sync,
+    >(
         num_blobs: usize,
-    ) -> Box<dyn Fn(BlobFsReaderBuilder<RS>)> {
-        Box::new(move |builder: BlobFsReaderBuilder<RS>| {
+    ) -> Box<dyn Fn(BlobFsReaderBuilder<TCRS>)> {
+        Box::new(move |builder: BlobFsReaderBuilder<TCRS>| {
             let reader = builder.build().unwrap();
             assert_eq!(num_blobs, reader.blob_paths().count());
         })
@@ -689,7 +730,7 @@ mod tests {
         let blobfs_bytes = vec![0u8];
         file_and_buffer_test_from_buffer(
             blobfs_bytes,
-            Box::new(blobfs_reader_builder_build_err::<BufReader<File>>),
+            Box::new(blobfs_reader_builder_build_err::<TryClonableBufReaderFile>),
             Box::new(blobfs_reader_builder_build_err::<Cursor<Vec<u8>>>),
         );
     }
@@ -760,7 +801,9 @@ mod tests {
 
         file_and_buffer_test_from_buffer(
             blobfs_bytes,
-            blobfs_reader_builder_build_err_eq::<BufReader<File>>(BlobFsError::InvalidHeaderMagic),
+            blobfs_reader_builder_build_err_eq::<TryClonableBufReaderFile>(
+                BlobFsError::InvalidHeaderMagic,
+            ),
             blobfs_reader_builder_build_err_eq::<Cursor<Vec<u8>>>(BlobFsError::InvalidHeaderMagic),
         );
     }
@@ -772,7 +815,9 @@ mod tests {
         let blobfs_bytes = bincode::serialize(&header).unwrap();
         file_and_buffer_test_from_buffer(
             blobfs_bytes,
-            blobfs_reader_builder_build_err_eq::<BufReader<File>>(BlobFsError::UnsupportedVersion),
+            blobfs_reader_builder_build_err_eq::<TryClonableBufReaderFile>(
+                BlobFsError::UnsupportedVersion,
+            ),
             blobfs_reader_builder_build_err_eq::<Cursor<Vec<u8>>>(BlobFsError::UnsupportedVersion),
         );
     }
@@ -785,7 +830,7 @@ mod tests {
         blobfs_bytes.append(&mut empty_data);
         file_and_buffer_test_from_buffer(
             blobfs_bytes,
-            blobfs_reader_builder_build_ok_num_blobs::<BufReader<File>>(0),
+            blobfs_reader_builder_build_ok_num_blobs::<TryClonableBufReaderFile>(0),
             blobfs_reader_builder_build_ok_num_blobs::<Cursor<Vec<u8>>>(0),
         );
     }
@@ -817,7 +862,7 @@ mod tests {
         // Verify we get a blob.
         file_and_buffer_test_from_buffer(
             blobfs_bytes,
-            blobfs_reader_builder_build_ok_num_blobs::<BufReader<File>>(1),
+            blobfs_reader_builder_build_ok_num_blobs::<TryClonableBufReaderFile>(1),
             blobfs_reader_builder_build_ok_num_blobs::<Cursor<Vec<u8>>>(1),
         );
     }
@@ -831,7 +876,7 @@ mod tests {
         blobfs_bytes.append(&mut empty_data);
         file_and_buffer_test_from_buffer(
             blobfs_bytes,
-            blobfs_reader_builder_build_ok_num_blobs::<BufReader<File>>(0),
+            blobfs_reader_builder_build_ok_num_blobs::<TryClonableBufReaderFile>(0),
             blobfs_reader_builder_build_ok_num_blobs::<Cursor<Vec<u8>>>(0),
         );
     }

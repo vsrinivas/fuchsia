@@ -3,7 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::blobfs::{BlobFsReader, BlobFsReaderBuilder},
+    crate::{
+        blobfs::{BlobFsReader, BlobFsReaderBuilder},
+        fs::tempdir,
+        io::{TryClonableBufReaderFile, TryClone},
+    },
     anyhow::{anyhow, Context, Result},
     log::warn,
     pathdiff::diff_paths,
@@ -12,6 +16,7 @@ use {
         fs::{self, File},
         io::{BufReader, Read, Seek},
         path::{Path, PathBuf},
+        sync::Arc,
     },
 };
 
@@ -26,17 +31,18 @@ pub trait ArtifactReader: Send + Sync {
 }
 
 /// Implementation of `ArtifactReader` for blobfs archive files.
-pub struct BlobFsArtifactReader<RS: Read + Seek> {
+pub struct BlobFsArtifactReader<TCRS: TryClone + Read + Seek> {
     blobfs_dep_path: PathBuf,
-    blobfs_reader: BlobFsReader<RS>,
+    blobfs_reader: BlobFsReader<TCRS>,
 }
 
-impl BlobFsArtifactReader<BufReader<File>> {
+impl BlobFsArtifactReader<TryClonableBufReaderFile> {
     /// Try to construct an artifact reader rooted at `build_path` that loads
     /// blobfs from the `build_path`-relative path `blobfs_path`.
-    pub fn try_new<P1: AsRef<Path>, P2: AsRef<Path>>(
+    pub fn try_new<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
         build_path: P1,
-        blobfs_path: P2,
+        tmp_root_dir_path: Option<P2>,
+        blobfs_path: P3,
     ) -> Result<Self> {
         let build_path_ref = build_path.as_ref();
         let blobfs_path_ref = blobfs_path.as_ref();
@@ -77,11 +83,16 @@ impl BlobFsArtifactReader<BufReader<File>> {
                 )
             })?;
 
+        let tmp_dir = tempdir(tmp_root_dir_path)
+            .context("Failed to create temporary directory for blobfs artifact reader")?;
         let blobfs_file = File::open(&blobfs_path)
             .map_err(|err| anyhow!("Failed to open blobfs archive {:?}: {}", blobfs_path, err))?;
+        let blobfs_file_reader: TryClonableBufReaderFile = BufReader::new(blobfs_file).into();
         let blobfs_reader = BlobFsReaderBuilder::new()
-            .archive(BufReader::new(blobfs_file))
+            .archive(blobfs_file_reader)
             .context("Failed to prepare blobfs archive for artifact reader")?
+            .tmp_dir(Arc::new(tmp_dir))
+            .context("Failed to prepare temporary directory for artifact reader")?
             .build()
             .context("Failed to parse blobfs archive metadata for artifact reader")?;
         Ok(Self { blobfs_dep_path, blobfs_reader })
@@ -90,15 +101,17 @@ impl BlobFsArtifactReader<BufReader<File>> {
     /// Try to construct a compound artifact reader that consults multiple
     /// blobfs archives (in the order specified by `blobfs_paths`) when reading
     /// artifacts.
-    pub fn try_compound<P1: AsRef<Path>, P2: AsRef<Path>>(
+    pub fn try_compound<P1: AsRef<Path>, P2: AsRef<Path>, P3: AsRef<Path>>(
         build_path: P1,
-        blobfs_paths: &Vec<P2>,
+        tmp_root_dir_path: Option<P2>,
+        blobfs_paths: &Vec<P3>,
     ) -> Result<CompoundArtifactReader> {
         Ok(CompoundArtifactReader::new(
             blobfs_paths
                 .into_iter()
                 .map(|blobfs_path| {
-                    let reader = Self::try_new(&build_path, blobfs_path)?;
+                    let reader =
+                        Self::try_new(&build_path, tmp_root_dir_path.as_ref(), blobfs_path)?;
                     let boxed: Box<dyn ArtifactReader> = Box::new(reader);
                     Ok(boxed)
                 })
@@ -107,18 +120,18 @@ impl BlobFsArtifactReader<BufReader<File>> {
     }
 }
 
-// `BlobfsArtifactReader` cannot be cloned in general, but the
-// `<BufReader<File>>` must be clonable for some workflows.
-impl Clone for BlobFsArtifactReader<BufReader<File>> {
-    fn clone(&self) -> Self {
-        Self {
+impl<TCRS: TryClone + Read + Seek> TryClone for BlobFsArtifactReader<TCRS> {
+    fn try_clone(&self) -> Result<Self> {
+        Ok(Self {
             blobfs_dep_path: self.blobfs_dep_path.clone(),
-            blobfs_reader: self.blobfs_reader.clone(),
-        }
+            blobfs_reader: self.blobfs_reader.try_clone().context("blobfs artifact reader")?,
+        })
     }
 }
 
-impl<RS: Read + Seek + Send + Sync> ArtifactReader for BlobFsArtifactReader<RS> {
+impl<TCRS: 'static + TryClone + Read + Seek + Send + Sync> ArtifactReader
+    for BlobFsArtifactReader<TCRS>
+{
     fn read_bytes(&mut self, path: &Path) -> Result<Vec<u8>> {
         self.blobfs_reader.read_blob(path).with_context(|| {
             format!("Failed to read blob {:?} from blobfs via artifact reader", path)
@@ -176,13 +189,12 @@ impl ArtifactReader for CompoundArtifactReader {
     }
 }
 
-impl From<Vec<BlobFsArtifactReader<BufReader<File>>>> for CompoundArtifactReader {
-    fn from(readers: Vec<BlobFsArtifactReader<BufReader<File>>>) -> Self {
+impl<TCRS: 'static + TryClone + Read + Seek + Send + Sync> From<Vec<BlobFsArtifactReader<TCRS>>>
+    for CompoundArtifactReader
+{
+    fn from(readers: Vec<BlobFsArtifactReader<TCRS>>) -> Self {
         Self::new(
-            readers
-                .iter()
-                .map(|reader| Box::new(reader.clone()) as Box<dyn ArtifactReader>)
-                .collect(),
+            readers.into_iter().map(|reader| Box::new(reader) as Box<dyn ArtifactReader>).collect(),
         )
     }
 }

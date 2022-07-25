@@ -39,13 +39,12 @@ use {
     scrutiny_utils::{
         artifact::{ArtifactReader, BlobFsArtifactReader, CompoundArtifactReader},
         bootfs::BootfsReader,
+        io::{TryClonableBufReaderFile, TryClone},
         zbi::{ZbiReader, ZbiType},
     },
     serde_json::Value,
     std::{
         collections::{HashMap, HashSet},
-        fs::File,
-        io::BufReader,
         path::{Path, PathBuf},
         str,
         sync::Arc,
@@ -976,20 +975,30 @@ impl DataCollector for PackageDataCollector {
     fn collect(&self, model: Arc<DataModel>) -> Result<()> {
         let model_config = model.config();
         let build_path = &model_config.build_path();
+        let tmp_root_dir_path = model_config.tmp_dir_path();
 
         // Construct blobfs readers from model config blobfs paths.
         let blobfs_readers = model_config
             .blobfs_paths()
             .iter()
-            .map(|blobfs_path| BlobFsArtifactReader::try_new(build_path, blobfs_path))
+            .map(|blobfs_path| {
+                BlobFsArtifactReader::try_new(build_path, tmp_root_dir_path.as_ref(), blobfs_path)
+            })
             // Use `collect(): Iterator<Result<_>> -> Result<Vec<_>>` to collect `Ok` values or else
             // first `Err` value.
-            .collect::<Result<Vec<BlobFsArtifactReader<BufReader<File>>>>>()
+            .collect::<Result<Vec<BlobFsArtifactReader<TryClonableBufReaderFile>>>>()
             .context("Failed to construct blobfs artifact readers for package collector")?;
 
-        let artifact_reader_for_package_reader: CompoundArtifactReader =
-            blobfs_readers.clone().into();
-        let artifact_reader_for_collect: CompoundArtifactReader = blobfs_readers.into();
+        // Clone each blobfs reader to construct two compound readers: One for the package reader
+        // interface, and one for the artifact reader interface.
+        let artifact_reader_for_package_reader: CompoundArtifactReader = blobfs_readers
+            .iter()
+            .map(BlobFsArtifactReader::try_clone)
+            .collect::<Result<Vec<BlobFsArtifactReader<TryClonableBufReaderFile>>>>()
+            .context("Failed to clone blobfs artifact readers for package collector")?
+            .into();
+
+        let artifact_reader_for_artifact_reader: CompoundArtifactReader = blobfs_readers.into();
         let package_reader: Box<dyn PackageReader> = Box::new(PackagesFromUpdateReader::new(
             &model_config.update_package_path(),
             Box::new(artifact_reader_for_package_reader),
@@ -998,7 +1007,7 @@ impl DataCollector for PackageDataCollector {
         Self::collect_with_reader(
             model.config().clone(),
             package_reader,
-            Box::new(artifact_reader_for_collect),
+            Box::new(artifact_reader_for_artifact_reader),
             model,
         )?;
 

@@ -45,6 +45,7 @@ fn test_blobfs() {
     let testdata_dir: PathBuf = TESTDATA_DIR.into();
     let mut blobfs_artifact_reader = BlobFsArtifactReader::try_new(
         testdata_dir.as_path(),
+        None::<PathBuf>,
         testdata_dir.join(ALPHA_BETA_BLOBFS_FILE).as_path(),
     )
     .unwrap();
@@ -60,11 +61,13 @@ fn test_compound_blobfs() {
     let testdata_dir: PathBuf = TESTDATA_DIR.into();
     let alpha_beta_artifact_reader = BlobFsArtifactReader::try_new(
         testdata_dir.as_path(),
+        None::<PathBuf>,
         testdata_dir.join(ALPHA_BETA_BLOBFS_FILE).as_path(),
     )
     .unwrap();
     let beta_gamma_artifact_reader = BlobFsArtifactReader::try_new(
         testdata_dir.as_path(),
+        None::<PathBuf>,
         testdata_dir.join(BETA_GAMMA_BLOBFS_FILE).as_path(),
     )
     .unwrap();

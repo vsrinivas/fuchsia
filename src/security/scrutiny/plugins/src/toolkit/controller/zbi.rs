@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result,
+    anyhow::{Context, Result},
     log::info,
     scrutiny::{
         model::controller::{DataController, HintDataType},
         model::model::*,
     },
-    scrutiny_utils::{blobfs::*, bootfs::*, fvm::*, usage::*, zbi::*},
+    scrutiny_utils::{blobfs::*, bootfs::*, fs::tempdir, fvm::*, usage::*, zbi::*},
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
     std::collections::HashMap,
@@ -31,7 +31,9 @@ pub struct ZbiExtractRequest {
 pub struct ZbiExtractController {}
 
 impl DataController for ZbiExtractController {
-    fn query(&self, _model: Arc<DataModel>, query: Value) -> Result<Value> {
+    fn query(&self, model: Arc<DataModel>, query: Value) -> Result<Value> {
+        let tmp_root_dir_path = model.config().tmp_dir_path();
+
         let request: ZbiExtractRequest = serde_json::from_value(query)?;
         let mut zbi_file = File::open(request.input)?;
         let output_path = PathBuf::from(request.output);
@@ -106,13 +108,23 @@ impl DataController for ZbiExtractController {
                             let blobfs_dir = fvm_dir.join("blobfs");
                             fs::create_dir_all(&blobfs_dir)?;
 
+                            let tmp_dir = tempdir(tmp_root_dir_path.as_ref()).context(
+                                "Failed to create temporary directory for zbi extract controller",
+                            )?;
                             let mut reader = BlobFsReaderBuilder::new()
                                 .archive(Cursor::new(partition.buffer.clone()))?
+                                .tmp_dir(Arc::new(tmp_dir))?
                                 .build()?;
-                            for blob_path in reader.clone().blob_paths() {
-                                let path = blobfs_dir.join(blob_path);
+
+                            // Clone paths out of `reader` to avoid simultaneous immutable borrow
+                            // from `reader.blob_paths()` and mutable borrow from
+                            // `reader.read_blob()`.
+                            let blob_paths: Vec<PathBuf> =
+                                reader.blob_paths().map(PathBuf::clone).collect();
+                            for blob_path in blob_paths.into_iter() {
+                                let path = blobfs_dir.join(&blob_path);
                                 let mut file = File::create(path)?;
-                                file.write_all(reader.read_blob(blob_path)?.as_slice())?;
+                                file.write_all(reader.read_blob(&blob_path)?.as_slice())?;
                             }
                         }
                     }

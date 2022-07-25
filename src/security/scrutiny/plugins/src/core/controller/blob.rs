@@ -38,6 +38,7 @@ impl DataController for BlobController {
         let model_config = model.config();
         let mut artifact_reader = BlobFsArtifactReader::try_compound(
             &model_config.build_path(),
+            model_config.tmp_dir_path().as_ref(),
             &model_config.blobfs_paths(),
         )
         .context("Failed to construct blobfs artifact reader for blob controller")?;

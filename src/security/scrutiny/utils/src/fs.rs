@@ -36,6 +36,12 @@ impl TemporaryDirectory {
     }
 }
 
+impl From<TempDir> for TemporaryDirectory {
+    fn from(temp_dir: TempDir) -> Self {
+        Self::TempDir(temp_dir)
+    }
+}
+
 /// Create a new temporary directory. If `root` is non-None, create a subdirectory under `root`,
 /// otherwise delegate to `tempfile::tempdir()` to select a directory path. Fail if either
 /// `create_dir_all()` or `tempfile::tempdir()` fails to create a suitable directory.

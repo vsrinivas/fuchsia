@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     scrutiny::{
         model::controller::{DataController, HintDataType},
         model::model::*,
     },
-    scrutiny_utils::{blobfs::*, usage::*},
+    scrutiny_utils::{blobfs::*, fs::tempdir, io::TryClonableBufReaderFile, usage::*},
     serde::{Deserialize, Serialize},
     serde_json::{json, value::Value},
     std::fs::{self, File},
@@ -29,20 +29,29 @@ pub struct BlobFsExtractRequest {
 pub struct BlobFsExtractController {}
 
 impl DataController for BlobFsExtractController {
-    fn query(&self, _model: Arc<DataModel>, query: Value) -> Result<Value> {
+    fn query(&self, model: Arc<DataModel>, query: Value) -> Result<Value> {
+        let tmp_root_dir_path = model.config().tmp_dir_path();
+        let tmp_dir = tempdir(tmp_root_dir_path.as_ref())
+            .context("Failed to create temporary directory for blobfs extract controller")?;
+
         let request: BlobFsExtractRequest = serde_json::from_value(query)?;
         let blobfs_path = PathBuf::from(request.input);
         let blobfs_file = File::open(&blobfs_path)
             .map_err(|err| anyhow!("Failed to open blbofs archive {:?}: {}", blobfs_path, err))?;
+        let reader: TryClonableBufReaderFile = BufReader::new(blobfs_file).into();
         let mut reader =
-            BlobFsReaderBuilder::new().archive(BufReader::new(blobfs_file))?.build()?;
+            BlobFsReaderBuilder::new().archive(reader)?.tmp_dir(Arc::new(tmp_dir))?.build()?;
 
         let output_path = PathBuf::from(request.output);
         fs::create_dir_all(&output_path)?;
-        for blob_path in reader.clone().blob_paths() {
-            let path = output_path.join(blob_path);
+
+        // Clone paths out of `reader` to avoid simultaneous immutable borrow from
+        // `reader.blob_paths()` and mutable borrow from `reader.read_blob()`.
+        let blob_paths: Vec<PathBuf> = reader.blob_paths().map(PathBuf::clone).collect();
+        for blob_path in blob_paths.into_iter() {
+            let path = output_path.join(&blob_path);
             let mut file = File::create(path)?;
-            file.write_all(reader.read_blob(blob_path)?.as_slice())?;
+            file.write_all(reader.read_blob(&blob_path)?.as_slice())?;
         }
         Ok(json!({"status": "ok"}))
     }

@@ -281,6 +281,7 @@ impl DataCollector for StaticPkgsCollector {
         let devmgr_config = devmgr_config_data.devmgr_config.clone().unwrap();
         let artifact_reader = match BlobFsArtifactReader::try_compound(
             &model_config.build_path(),
+            model_config.tmp_dir_path().as_ref(),
             &model_config.blobfs_paths(),
         ) {
             Ok(artifact_reader) => artifact_reader,

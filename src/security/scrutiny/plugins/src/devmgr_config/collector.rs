@@ -144,6 +144,7 @@ impl DataCollector for DevmgrConfigCollector {
         // Initialize artifact reader; early exit on initialization failure.
         let mut artifact_reader: Box<dyn ArtifactReader> = match BlobFsArtifactReader::try_compound(
             &build_path,
+            model_config.tmp_dir_path().as_ref(),
             &blobfs_paths,
         )
         .map_err(|err| DevmgrConfigError::FailedToOpenBlobfs {
