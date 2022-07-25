@@ -42,6 +42,8 @@ source_set("lib") {
 
 efi_executable("gigaboot") {
   sources = [
+    "fastboot_tcp.cc",
+    "fastboot_tcp.h",
     "main.cc",
     "sysdeps.cc",
     "zircon_boot_ops.cc",

@@ -6,6 +6,7 @@
 
 #include <stdio.h>
 
+#include "fastboot_tcp.h"
 #include "gigaboot/src/netifc.h"
 #include "xefi.h"
 #include "zircon_boot_ops.h"
@@ -20,6 +21,10 @@
 namespace {
 uint8_t kernel_load_buffer[128 * 1024 * 1024];
 }
+
+// TODO(b/235489025): The function comes from legacy gigaboot. Implement a
+// similar function in C++ and remove this.
+extern "C" char key_prompt(const char* valid_keys, int timeout_s);
 
 int main(int argc, char** argv) {
   printf("Gigaboot main\n");
@@ -36,6 +41,16 @@ int main(int argc, char** argv) {
   }
 
   printf("netifc: network interface opened\n");
+
+  printf("Auto boot in 2 seconds. Press f to enter fastboot.\n");
+  char key = key_prompt("f", 2);
+  if (key == 'f') {
+    zx::status<> ret = gigaboot::FastbootTcpMain();
+    if (ret.is_error()) {
+      printf("Fastboot failed\n");
+      return 1;
+    }
+  }
 
   // TODO(b/235489025): Implement mechanism for setting force recovery. The C gigaboot
   // uses bootbyte (a non-volatile memory), which can be device specific. Consider using
