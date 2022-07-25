@@ -879,7 +879,7 @@ impl BinderThreadState {
         let transaction = self.transactions.last().ok_or_else(|| errno!(EINVAL))?;
         match transaction {
             TransactionRole::Receiver(peer) => peer.upgrade().ok_or(TransactionError::Dead),
-            TransactionRole::Sender => error!(EINVAL)?,
+            TransactionRole::Sender(_) => error!(EINVAL)?,
         }
     }
 }
@@ -1154,8 +1154,8 @@ struct LocalBinderObject {
 /// do not record roles, since they end as soon as they begin.
 #[derive(Debug)]
 enum TransactionRole {
-    /// The binder thread initiated the transaction and is awaiting a reply.
-    Sender,
+    /// The binder thread initiated the transaction and is awaiting a reply from a peer.
+    Sender(WeakBinderPeer),
     /// The binder thread is receiving a transaction and is expected to reply to the peer binder
     /// process and thread.
     Receiver(WeakBinderPeer),
@@ -1829,6 +1829,14 @@ impl BinderDriver {
             offsets_buffer,
         };
 
+        let caller_thread = match match binder_thread.read().transactions.last() {
+            Some(TransactionRole::Receiver(rx)) => rx.upgrade(),
+            _ => None,
+        } {
+            Some((proc, thread)) if proc.pid == target_proc.pid => Some(thread),
+            _ => None,
+        };
+
         let command = if data.transaction_data.flags & transaction_flags_TF_ONE_WAY != 0 {
             // The caller is not expecting a reply.
             binder_thread.write().enqueue_command(Command::TransactionComplete);
@@ -1862,7 +1870,10 @@ impl BinderDriver {
         } else {
             // Make the sender thread part of the transaction so it doesn't get scheduled to handle
             // any other transactions.
-            binder_thread.write().transactions.push(TransactionRole::Sender);
+            binder_thread
+                .write()
+                .transactions
+                .push(TransactionRole::Sender(WeakBinderPeer::new(binder_proc, binder_thread)));
 
             // Register the transaction buffer.
             target_proc.active_transactions.lock().insert(
@@ -1883,7 +1894,9 @@ impl BinderDriver {
         let target_thread_pool = target_proc.thread_pool.write();
 
         // Find a thread to handle the transaction, or use the process' command queue.
-        if let Some(target_thread) = target_thread_pool.find_available_thread() {
+        if let Some(target_thread) = caller_thread {
+            target_thread.write().enqueue_command(command);
+        } else if let Some(target_thread) = target_thread_pool.find_available_thread() {
             target_thread.write().enqueue_command(command);
         } else {
             target_proc.enqueue_command(command);
