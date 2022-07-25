@@ -419,9 +419,10 @@ void ParseProfiles(const std::string& filename, const rapidjson::Document& docum
 
     const auto [iter, added] = profiles->emplace(profile_name, Profile{scope, info});
     if (!added) {
-      if (iter->second.scope >= scope) {
-        FX_LOGF(WARNING, "ProfileProvider", "%s: Profile \"%s\"already exists at %s scope.",
-                filename.c_str(), profile_name, ToString(scope).c_str());
+      const ProfileScope existing_scope = iter->second.scope;
+      if (existing_scope >= scope) {
+        FX_LOGF(WARNING, "ProfileProvider", "%s: Profile \"%s\" already exists at %s scope.",
+                filename.c_str(), profile_name, ToString(existing_scope).c_str());
       } else if (iter->second.scope < scope) {
         FX_LOGF(INFO, "ProfileProvider", "%s: Profile \"%s\" overridden at %s scope.",
                 filename.c_str(), profile_name, ToString(scope).c_str());
@@ -434,6 +435,61 @@ void ParseProfiles(const std::string& filename, const rapidjson::Document& docum
 }  // anonymous namespace
 
 namespace zircon_profile {
+
+fitx::result<fitx::failed, Role> ParseRoleSelector(const std::string& role_selector) {
+  static const re2::RE2 kReRoleParts{"(\\w[\\w\\-]+(?:\\.\\w[\\w\\-]+)*)(?::(.+))?"};
+  static const re2::RE2 kSelector{"(\\w[\\w\\-]+)(?:=([^,]+))?,?"};
+
+  Role role;
+  std::string selectors;
+  if (!re2::RE2::FullMatch(role_selector, kReRoleParts, &role.name, &selectors)) {
+    FX_LOGF(WARNING, "ProfileProvider", "Bad selector: %s", role_selector.c_str());
+    return fitx::failed{};
+  }
+
+  re2::StringPiece input{selectors};
+  std::string key, value;
+  while (re2::RE2::Consume(&input, kSelector, &key, &value)) {
+    const auto [iter, added] = role.selectors.emplace(key, value);
+    if (!added) {
+      FX_LOGF(WARNING, "ProfileProvider", "Duplicate key in selector: %s=%s", key.c_str(),
+              value.c_str());
+    }
+  }
+
+  return fitx::ok(std::move(role));
+}
+
+fitx::result<fitx::failed, MediaRole> MaybeMediaRole(const Role& role) {
+  const auto realm_iter = role.selectors.find("realm");
+  if (realm_iter == role.selectors.end() || realm_iter->second != "media") {
+    FX_LOGF(INFO, "ProfileProvider", "Role \"%s\" is not a media role.", role.name.c_str());
+    return fitx::failed{};
+  }
+
+  const auto capacity_iter = role.selectors.find("capacity");
+  const auto deadline_iter = role.selectors.find("deadline");
+  if (capacity_iter == role.selectors.end() || deadline_iter == role.selectors.end()) {
+    FX_LOGF(WARNING, "ProfileProvider", "Malformed media role \"%s\"!", role.name.c_str());
+    return fitx::failed{};
+  }
+
+  int64_t capacity;
+  if (!re2::RE2::FullMatch(capacity_iter->second, "(\\d+)", &capacity)) {
+    FX_LOGF(WARNING, "ProfileProvider", "Media role \"%s\" has invalid capacity selector: %s",
+            role.name.c_str(), capacity_iter->second.c_str());
+    return fitx::failed{};
+  }
+
+  int64_t deadline;
+  if (!re2::RE2::FullMatch(deadline_iter->second, "(\\d+)", &deadline)) {
+    FX_LOGF(WARNING, "ProfileProvider", "Media role \"%s\" has invalid deadline selector: %s",
+            role.name.c_str(), deadline_iter->second.c_str());
+    return fitx::failed{};
+  }
+
+  return fitx::ok(MediaRole{.capacity = capacity, .deadline = deadline});
+}
 
 fitx::result<std::string, ProfileMap> LoadConfigs(const std::string& config_path) {
   fbl::unique_fd dir_fd(openat(AT_FDCWD, config_path.c_str(), O_RDONLY | O_DIRECTORY));
