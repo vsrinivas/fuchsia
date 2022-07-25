@@ -1,0 +1,11 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/media/codec/examples/use_media_decoder/meta/decoder_secure_input_output_test.shard.cml",
+    ],
+    program: {
+        binary: "test/use_vp9_decoder_secure_input_output_test",
+    },
+}

@@ -581,6 +581,12 @@
             rights: [ "rw*" ],
         },
         {
+            directory: "dev-securemem",
+            from: "parent",
+            to: [ "#system-tests" ],
+            rights: [ "rw*" ],
+        },
+        {
             directory: "boot",
             from: "parent",
             to: [ "#system-tests" ],
