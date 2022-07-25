@@ -85,6 +85,11 @@ legacy_universe_package_labels += [
   "//src/tests/intl/timezone:tests-for-flutter",
 ]
 
+# Add Test UI Stack for use in tests.
+# TODO(fxbug.dev/105105): Remove once we migrate client usage to subpackages.
+legacy_cache_package_labels +=
+    [ "//src/ui/testing/test_ui_stack:test-ui-stack-flavors" ]
+
 # Use the product assembly config file to specify the product configuration.
 #
 # This should be overridden by products which inherit from minimal.

@@ -53,7 +53,7 @@ fuchsia_structured_config_cpp_elf_lib("test_ui_stack_config_lib") {
   cm_label = ":test_ui_stack_manifest"
 }
 
-fuchsia_structured_config_values("test_ui_stack_default_config") {
+fuchsia_structured_config_values("gfx_root_presenter_config") {
   testonly = true
   cm_label = ":test_ui_stack_manifest"
   values = {
@@ -62,10 +62,81 @@ fuchsia_structured_config_values("test_ui_stack_default_config") {
   }
 }
 
+fuchsia_structured_config_values("gfx_scene_manager_config") {
+  testonly = true
+  cm_label = ":test_ui_stack_manifest"
+  values = {
+    use_scene_manager = true
+    use_flatland = false
+  }
+}
+
+fuchsia_structured_config_values("flatland_scene_manager_config") {
+  testonly = true
+  cm_label = ":test_ui_stack_manifest"
+  values = {
+    use_scene_manager = true
+    use_flatland = true
+  }
+}
+
+# This package is identical to :gfx-root-presenter-test-ui-stack below.
+#
+# I chose to preserve a separate generic "test-ui-stack" package to
+# encourage clients to use this package moniker when they intend to
+# override the configuration.
 fuchsia_package("test-ui-stack") {
   testonly = true
   deps = [
+    ":gfx_root_presenter_config",
     ":test-ui-stack-component",
-    ":test_ui_stack_default_config",
+  ]
+}
+
+# *** Begin pre-packaged UI stack permutations ***
+#
+# The packages below contain specific configurations of the UI stack.
+#
+# Please ONLY use them if:
+#  (1) Your test needs to include a specific flavor of the UI stack
+#  statically, i.e. in the test's .cml as oppposed to RealmBuilder,
+#
+#  AND
+#
+#  (2) You cannot build your own test ui stack package with an override
+#  config file.
+fuchsia_package("gfx-root-presenter-test-ui-stack") {
+  testonly = true
+  deps = [
+    ":gfx_root_presenter_config",
+    ":test-ui-stack-component",
+  ]
+}
+
+fuchsia_package("gfx-scene-manager-test-ui-stack") {
+  testonly = true
+  deps = [
+    ":gfx_scene_manager_config",
+    ":test-ui-stack-component",
+  ]
+}
+
+fuchsia_package("flatland-scene-manager-test-ui-stack") {
+  testonly = true
+  deps = [
+    ":flatland_scene_manager_config",
+    ":test-ui-stack-component",
+  ]
+}
+
+# *** End pre-packaged UI stack permutations ***
+
+group("test-ui-stack-flavors") {
+  testonly = true
+  deps = [
+    ":flatland-scene-manager-test-ui-stack",
+    ":gfx-root-presenter-test-ui-stack",
+    ":gfx-scene-manager-test-ui-stack",
+    ":test-ui-stack",
   ]
 }
