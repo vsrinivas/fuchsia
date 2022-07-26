@@ -334,27 +334,12 @@ fidl::VectorView<fdecl::wire::Offer> Node::CreateOffers(fidl::AnyArena& arena) c
   std::vector<fdecl::wire::Offer> node_offers;
   size_t parent_index = 0;
   for (const Node* parent : parents_) {
-    // Find a parent node with a collection. This indicates that a driver has
-    // been bound to the node, and the driver is running within the collection.
-    auto source_node = parent;
-    for (; source_node != nullptr && source_node->collection_ == Collection::kNone;
-         source_node = PrimaryParent(source_node->parents_)) {
-    }
     // If this is a composite node, then the offers come from the parent nodes.
     auto& parent_offers = IsComposite() ? parent->offers() : offers();
     node_offers.reserve(node_offers.size() + parent_offers.size());
 
     for (auto& parent_offer : parent_offers) {
       fdecl::wire::Offer& offer = parent_offer->get();
-      VisitOffer<bool>(offer, [&arena, source_node](auto& decl) mutable {
-        // Assign the source of the offer.
-        fdecl::wire::ChildRef source_ref{
-            .name = {arena, source_node->TopoName()},
-            .collection = CollectionName(source_node->collection_),
-        };
-        decl.set_source(arena, fdecl::wire::Ref::WithChild(arena, source_ref));
-        return true;
-      });
 
       // If we are a composite node, then we route 'service' directories based on the parent's name.
       if (IsComposite() && offer.is_service()) {
@@ -506,6 +491,22 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
         completer.ReplyError(fdf::wire::NodeError::kOfferRefExists);
         return;
       }
+
+      // Find a parent node with a collection. This indicates that a driver has
+      // been bound to the node, and the driver is running within the collection.
+      auto source_node = this;
+      while (source_node && source_node->collection_ == Collection::kNone) {
+        source_node = PrimaryParent(source_node->parents_);
+      }
+      VisitOffer<bool>(offer, [&arena = child->arena_, source_node](auto& decl) mutable {
+        // Assign the source of the offer.
+        fdecl::wire::ChildRef source_ref{
+            .name = {arena, source_node->TopoName()},
+            .collection = CollectionName(source_node->collection_),
+        };
+        decl.set_source(arena, fdecl::wire::Ref::WithChild(arena, source_ref));
+        return true;
+      });
 
       child->offers_.push_back(OwnedMessage<fdecl::wire::Offer>::From(offer));
     }
