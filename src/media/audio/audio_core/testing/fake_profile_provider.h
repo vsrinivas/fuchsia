@@ -53,7 +53,7 @@ class FakeProfileProvider : public fuchsia::scheduler::ProfileProvider {
   // |fuchsia::scheduler::ProfileProvider|
   void SetProfileByRole(zx::thread thread, std::string role,
                         SetProfileByRoleCallback callback) override {
-    callback(ZX_ERR_NOT_SUPPORTED);
+    callback(ZX_OK);
   }
 
   std::unordered_set<uint32_t> valid_priorities_;

@@ -6,61 +6,71 @@
 
 #include <lib/syslog/cpp/macros.h>
 
+#include <sstream>
+
 #include "src/media/audio/audio_core/mix_profile_config.h"
 #include "src/media/audio/audio_core/utils.h"
 
-namespace media::audio {
+namespace {
 
-constexpr int kPriorityDefault = 16;
+// TODO(fxbug.dev/40858): Use embedded selectors to forward parameters to the system profile
+// provider until the new role API using FIDL parameters is implemented.
+std::string MakeRoleSelector(const std::string& role_name, const zx::duration capacity,
+                             const zx::duration deadline) {
+  std::stringstream stream;
+  stream << role_name << ":realm=media";
+  stream << ",capacity=" << capacity.get();
+  stream << ",deadline=" << deadline.get();
+  return stream.str();
+}
+
+}  // anonymous namespace
+
+namespace media::audio {
 
 fidl::InterfaceRequestHandler<fuchsia::media::ProfileProvider>
 ProfileProvider::GetFidlRequestHandler() {
   return bindings_.GetHandler(this);
 }
 
-void ProfileProvider::RegisterHandlerWithCapacity(zx::thread thread_handle, std::string name,
-                                                  int64_t period, float capacity_weight,
+void ProfileProvider::RegisterHandlerWithCapacity(zx::thread thread_handle,
+                                                  const std::string role_name, int64_t period,
+                                                  float capacity_weight,
                                                   RegisterHandlerWithCapacityCallback callback) {
   if (!profile_provider_) {
     profile_provider_ = context_.svc()->Connect<fuchsia::scheduler::ProfileProvider>();
   }
-  zx::duration interval = period ? zx::duration(period) : mix_profile_period_;
-  zx::duration capacity(interval.to_nsecs() * capacity_weight);
-  profile_provider_->GetDeadlineProfile(
-      capacity.get(), interval.get(), interval.get(), name,
-      [interval, capacity, callback = std::move(callback),
-       thread_handle = std::move(thread_handle)](zx_status_t status, zx::profile profile) {
+
+  const zx::duration interval = period ? zx::duration(period) : mix_profile_period_;
+  const zx::duration capacity(interval.to_nsecs() * capacity_weight);
+
+  const std::string role_selector = MakeRoleSelector(role_name, capacity, interval);
+
+  profile_provider_->SetProfileByRole(
+      std::move(thread_handle), role_selector,
+      [interval, capacity, callback = std::move(callback), role_selector](zx_status_t status) {
         if (status != ZX_OK) {
-          FX_PLOGS(WARNING, status) << "Failed to acquire deadline profile";
+          FX_PLOGS(WARNING, status) << "Failed to set role \"" << role_selector << "\" for thread";
           callback(0, 0);
-          return;
+        } else {
+          callback(interval.get(), capacity.get());
         }
-        status = thread_handle.set_profile(profile, 0);
-        if (status != ZX_OK) {
-          FX_PLOGS(WARNING, status) << "Failed to set thread profile";
-        }
-        callback(interval.get(), capacity.get());
       });
 }
 
-void ProfileProvider::UnregisterHandler(zx::thread thread_handle, std::string name,
+void ProfileProvider::UnregisterHandler(zx::thread thread_handle, const std::string name,
                                         UnregisterHandlerCallback callback) {
   if (!profile_provider_) {
     profile_provider_ = context_.svc()->Connect<fuchsia::scheduler::ProfileProvider>();
   }
 
-  profile_provider_->GetProfile(
-      kPriorityDefault, name,
-      [thread_handle = std::move(thread_handle), callback = std::move(callback)](
-          zx_status_t status, zx::profile profile) {
+  const std::string role_name = "fuchsia.default";
+  profile_provider_->SetProfileByRole(
+      std::move(thread_handle), role_name,
+      [callback = std::move(callback), &role_name, &name](zx_status_t status) {
         if (status != ZX_OK) {
-          FX_PLOGS(WARNING, status) << "Failed to acquire default profile";
-          callback();
-          return;
-        }
-        status = thread_handle.set_profile(profile, 0);
-        if (status != ZX_OK) {
-          FX_PLOGS(WARNING, status) << "Failed to set thread profile";
+          FX_PLOGS(WARNING, status)
+              << "Failed to set role \"" << role_name << "\" for thread \"" << name << "\"";
         }
         callback();
       });

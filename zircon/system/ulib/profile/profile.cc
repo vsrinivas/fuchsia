@@ -29,6 +29,8 @@ namespace {
 
 constexpr char kConfigPath[] = "/config/profiles";
 
+using zircon_profile::MaybeMediaRole;
+using zircon_profile::ParseRoleSelector;
 using zircon_profile::ProfileMap;
 
 struct Context {
@@ -114,24 +116,41 @@ zx_status_t SetProfileByRoleSimple(void* ctx, zx_handle_t thread, const char* ro
     handle_info.koid = ZX_KOID_INVALID;
     handle_info.related_koid = ZX_KOID_INVALID;
   }
-  const std::string role{role_data, role_size};
-  FX_LOGF(INFO, "ProfileProvider", "Role \"%s\" requested by %" PRId64 ":%" PRId64, role.c_str(),
-          handle_info.related_koid, handle_info.koid);
 
-  // Select the profile parameters based on the requested role. The builtin roles cannot be
+  const std::string role_selector{role_data, role_size};
+  FX_LOGF(INFO, "ProfileProvider", "Role \"%s\" requested by %" PRId64 ":%" PRId64,
+          role_selector.c_str(), handle_info.related_koid, handle_info.koid);
+
+  const fitx::result role_result = ParseRoleSelector(role_selector);
+  if (role_result.is_error()) {
+    return fuchsia_scheduler_ProfileProviderSetProfileByRole_reply(txn, ZX_ERR_INVALID_ARGS);
+  }
+
+  // Select the profile parameters based on the role selector. The builtin roles cannot be
   // overridden.
   zx_profile_info_t info = {};
-  if (role == "fuchsia.default") {
+  if (role_result->name == "fuchsia.default") {
     info.flags = ZX_PROFILE_INFO_FLAG_PRIORITY;
     info.priority = ZX_PRIORITY_DEFAULT;
-  } else if (role == "fuchsia.test-role:not-found") {
+  } else if (role_result->name == "fuchsia.test-role" && role_result->has("not-found")) {
     return fuchsia_scheduler_ProfileProviderSetProfileByRole_reply(txn, ZX_ERR_NOT_FOUND);
-  } else if (role == "fuchsia.test-role:ok") {
+  } else if (role_result->name == "fuchsia.test-role" && role_result->has("ok")) {
     return fuchsia_scheduler_ProfileProviderSetProfileByRole_reply(txn, ZX_OK);
-  } else if (auto search = context->profiles.find(role); search != context->profiles.cend()) {
+  } else if (auto search = context->profiles.find(role_result->name);
+             search != context->profiles.cend()) {
     info = search->second.info;
+  } else if (const auto media_role = MaybeMediaRole(*role_result); media_role.is_ok()) {
+    // TODO(fxbug.dev/40858): If a media profile is not found in the system config, use the
+    // forwarded parameters. This can be removed once clients are migrated to use defined roles.
+    FX_LOGF(INFO, "ProfileProvider", "No media profile override, using selector parameters: %s",
+            role_selector.c_str());
+    info.flags = ZX_PROFILE_INFO_FLAG_DEADLINE;
+    info.deadline_params.capacity = media_role->capacity;
+    info.deadline_params.relative_deadline = media_role->deadline;
+    info.deadline_params.period = media_role->deadline;
   } else {
-    FX_LOGF(WARNING, "ProfileProvider", "Requested role \"%s\" not found!", role.c_str());
+    FX_LOGF(WARNING, "ProfileProvider", "Requested role \"%s\" not found!",
+            role_result->name.c_str());
     return fuchsia_scheduler_ProfileProviderSetProfileByRole_reply(txn, ZX_ERR_NOT_FOUND);
   }
 
