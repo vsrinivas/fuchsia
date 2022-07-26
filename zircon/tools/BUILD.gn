@@ -8,5 +8,6 @@ group("tests") {
     "blobfs:tests($host_toolchain)",
     "kazoo:tests($host_toolchain)",
     "zbi:tests",
+    "zither:tests",
   ]
 }

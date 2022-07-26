@@ -1,0 +1,281 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/testing/golden_file.gni")
+import("//tools/fidl/lib/fidlgentest/fidlgentest_go_test.gni")
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    # basic unit tests
+    ":unittests($host_toolchain)",
+
+    # golden testing
+    ":empty",
+  ]
+}
+
+if (is_host) {
+  go_binary("zither") {
+    gopackage = "go.fuchsia.dev/fuchsia/zircon/tools/zither/cmd"
+    deps = [ ":main" ]
+  }
+
+  go_library("main") {
+    visibility = [ ":*" ]
+    source_dir = "cmd"
+    sources = [ "main.go" ]
+    deps = [
+      ":common",
+      "c",
+      "//tools/fidl/lib/fidlgen",
+      "//tools/lib/color",
+      "//tools/lib/flagmisc",
+      "//tools/lib/logger",
+    ]
+  }
+
+  go_library("common") {
+    visibility = [ "./*" ]
+    name = "go.fuchsia.dev/fuchsia/zircon/tools/zither"
+    deps = [ "//tools/fidl/lib/fidlgen" ]
+    sources = [
+      "zither_ir.go",
+      "zither_ir_test.go",
+    ]
+  }
+
+  fidlgentest_go_test("unittests") {
+    output_name = "zither-unittests"
+    gopackages = [ "go.fuchsia.dev/fuchsia/zircon/tools/zither" ]
+    deps = [
+      ":common",
+      "//third_party/golibs:github.com/google/go-cmp",
+      "//tools/fidl/lib/fidlgen",
+      "//tools/fidl/lib/fidlgentest",
+    ]
+  }
+}
+
+#
+# Build-time golden tests
+#
+
+# zither_golden_test() defines a suite of build-time golden tests for zither
+# backends: a FIDL library and its expected bindings are supplied, and the diff
+# checks are made as build actions. Further, a check is made that the bindings
+# give valid, compilable code.
+#
+# Parameters:
+#
+#  * sources
+#    - Required: FIDL files comprising a single library, from which bindings
+#      will be generared.
+#    - Type: list of paths
+#
+#  * cases
+#    - Required: A list of test cases.
+#    - Type: list(scope)
+#
+#    Each scope contains:
+#      * backend:
+#        - Required: The backend with which to generate bindings. Must be one
+#          of the following: "c" (C data layout bindings)
+#          (TODO(fxbug.dev/91102): also "cpp", "rust", and "go")
+#          (TODO(fxbug.dev/93393): also "asm")
+#        - Type: string
+#      * expected
+#        - Required: The expected set of generated bindings.
+#        - Type: list of paths
+#      * actual
+#        - Required: The set of actual generated bindings, relative to the
+#          output directory passed to zither.
+#        - Type: list of relative paths
+#
+template("zither_golden_test") {
+  assert(defined(invoker.cases) && invoker.cases != [], "no test cases defined")
+
+  fidlc_target = "_zither_golden_test.${target_name}.fidlc"
+  main_target = target_name
+
+  ir_file = "$target_gen_dir/$target_name.fidl.json"
+
+  # Generate the IR.
+  compiled_action(fidlc_target) {
+    visibility = [ ":*" ]
+    testonly = true
+    forward_variables_from(invoker, [ "sources" ])
+    tool = "//tools/fidl/fidlc"
+
+    outputs = [ ir_file ]
+
+    args = [
+      "--json",
+      rebase_path(outputs[0], root_build_dir),
+      "--files",
+    ]
+    args += rebase_path(sources, root_build_dir)
+  }
+
+  case_deps = []
+  foreach(case, invoker.cases) {
+    assert(defined(case.backend))
+    assert(defined(case.expected) && case.expected != [],
+           "`${case}` must provide `expected`")
+    assert(defined(case.actual) && case.actual != [],
+           "`${case}` must provide `actual`")
+
+    # TODO(fxbug.dev/51002): generalize golden_file() to golden_files().
+    expected = []  # Clear from previous iteration.
+    expected = case.expected
+    assert(
+        expected == [ expected[0] ],
+        "TODO(fxbug.dev/51002): `${case}.expected` is temporarily constrained to be a singleton")
+    actual = []  # Clear from previous iteration.
+    actual = case.actual
+    assert(
+        actual == [ actual[0] ],
+        "TODO(fxbug.dev/51002): `${case}.actual` is temporarily constrained to be a singleton")
+
+    case_name = "${main_target}.${case.backend}"
+    zither_target = "_zither_golden_test.$case_name.zither"
+    output_check_target = "_zither_golden_test.$case_name.output_check"
+    golden_target = "_zither_golden_test.$case_name.golden_file"
+    compilation_check_target =
+        "_zither_golden_test.$case_name.compilation_check"
+
+    output_dir = "$target_gen_dir/$case_name"
+    output_manifest = "$output_dir/outputs.json"
+
+    actual_bindings = []
+    foreach(file, case.actual) {
+      actual_bindings += [ "$output_dir/$file" ]
+    }
+
+    # Generate the bindings.
+    compiled_action(zither_target) {
+      visibility = [ ":*" ]
+      testonly = true
+
+      tool = ":zither"
+
+      clang_format =
+          "//prebuilt/third_party/clang/$host_platform/bin/clang-format"
+      clang_format_config = "//.clang-format"
+      inputs = [
+        clang_format,
+        clang_format_config,
+      ]
+
+      outputs = actual_bindings + [ output_manifest ]
+      args = [
+        "-ir",
+        rebase_path(ir_file, root_build_dir),
+        "-backend",
+        case.backend,
+        "-output-manifest",
+        rebase_path(output_manifest, root_build_dir),
+        "-output-dir",
+        rebase_path(output_dir, root_build_dir),
+        "-clang-format",
+        rebase_path(clang_format, root_build_dir),
+        "-clang-format-args",
+        "--style=file:" + rebase_path(clang_format_config, root_build_dir),
+      ]
+      deps = [ ":$fidlc_target" ]
+    }
+
+    # Verify that the provided set of 'actual' bindings is indeed the actual
+    # set of zither outputs (in name only). This ensures that zither's outputs
+    # were fully specified.
+    action(output_check_target) {
+      visibility = [ ":*" ]
+      testonly = true
+      script = "testing/check-outputs.py"
+
+      # Stamp file.
+      outputs = [ "$target_gen_dir/$output_check_target.stamp" ]
+
+      inputs = actual_bindings + [ output_manifest ]
+      args = [
+        "--stamp",
+        rebase_path(outputs[0], root_build_dir),
+        "--manifest",
+        rebase_path(output_manifest, root_build_dir),
+      ]
+      args += rebase_path(actual_bindings, root_build_dir)
+      deps = [ ":$zither_target" ]
+    }
+
+    case_deps += [ ":$output_check_target" ]
+
+    # Verify that the bindings are as expected.
+    expected_bindings = []
+    expected_bindings = case.expected
+    golden_file(golden_target) {
+      testonly = true
+      golden = expected_bindings[0]
+      current = actual_bindings[0]
+      deps = [ ":$zither_target" ]
+    }
+
+    case_deps += [ ":$golden_target" ]
+
+    # Now verify that the bindings give valid code.
+    if (case.backend == "c") {
+      create_source_target = "${compilation_check_target}.create_source"
+
+      source = "$output_dir/compile-check.c"
+      action(create_source_target) {
+        visibility = [ ":*" ]
+        testonly = true
+        script = "testing/create-file-with-includes.py"
+        args = [
+                 "--comment",
+                 "Generated by //" + rebase_path(script, "//"),
+                 "--output",
+                 rebase_path(source, root_build_dir),
+               ] + case.actual
+        outputs = [ source ]
+      }
+
+      source_set(compilation_check_target) {
+        visibility = [ ":*" ]
+        testonly = true
+        public = actual_bindings
+        sources = [ source ]
+        deps = [
+          ":$create_source_target",
+          ":$zither_target",
+        ]
+        include_dirs = [ output_dir ]
+      }
+    } else {
+      assert(false, "unknown zither backend: ${case}")
+    }
+
+    case_deps += [ ":$compilation_check_target" ]
+  }
+
+  group(main_target) {
+    testonly = true
+    deps = case_deps
+  }
+}
+
+zither_golden_test("empty") {
+  sources = [ "testdata/empty.test.fidl" ]
+
+  cases = [
+    {
+      backend = "c"
+      expected = [ "goldens/c/empty.h" ]
+      actual = [ "zither/test/c/empty.h" ]
+    },
+  ]
+}

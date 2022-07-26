@@ -1,0 +1,6 @@
+joshuaseaton@google.com
+mcgrathr@google.com
+
+# For convenient access to the logic directly dependent on the IR.
+per-file zither_ir.go = file: /src/fidl/OWNERS
+per-file zither_ir_test.go = file: /src/fidl/OWNERS
