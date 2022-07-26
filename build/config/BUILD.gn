@@ -583,6 +583,30 @@ config("Wno-strict-prototypes") {
   cflags = [ "-Wno-strict-prototypes" ]
 }
 
+config("Wno-sign-compare") {
+  cflags = [ "-Wno-sign-compare" ]
+  visibility =
+      [ "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan:*" ]
+}
+
+config("Wno-pointer-sign") {
+  cflags = [ "-Wno-pointer-sign" ]
+  visibility =
+      [ "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan:*" ]
+}
+
+config("Wno-incompatible-pointer-types-discards-qualifiers") {
+  cflags = [ "-Wno-incompatible-pointer-types-discards-qualifiers" ]
+  visibility =
+      [ "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan:*" ]
+}
+
+config("Wno-address-of-packed-member") {
+  cflags = [ "-Wno-address-of-packed-member" ]
+  visibility =
+      [ "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan:*" ]
+}
+
 # TODO(fxbug.dev/58162): clean up instances of this outside of third party code.
 #
 # NOTE: Do not add this to public_configs under any circumstances. Public
@@ -653,6 +677,7 @@ config("Wno-conversion") {
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm:*",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/pcie:*",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi/platform:*",
+    "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan:*",
     "//src/connectivity/wlan/drivers/wlan:*",
     "//src/connectivity/wlan/drivers/wlanif:*",
     "//src/connectivity/wlan/drivers/wlanif/test:*",
@@ -917,6 +942,7 @@ config("Wno-extra-semi") {
 config("Wno-implicit-fallthrough") {
   cflags = [ "-Wno-implicit-fallthrough" ]
   visibility = [
+    "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan:*",
     "//src/lib/fxl:third_party",
     "//third_party/rust_crates/compat/brotli",
     "//zircon/third_party/uapp/dash",

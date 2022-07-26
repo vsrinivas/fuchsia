@@ -45,6 +45,7 @@
 //src/connectivity/wlan/drivers/third_party/atheros/ath10k:ath10k_driver-driver
 //src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:fuchsia_driver-driver
 //src/connectivity/wlan/drivers/third_party/intel/iwlwifi:iwlwifi_driver-driver
+//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac:nxpfmac_sdio-driver
 //src/connectivity/wlan/drivers/wlan:wlan_driver-driver
 //src/connectivity/wlan/drivers/wlanif:wlanif_driver-driver
 //src/connectivity/wlan/drivers/wlanphy:wlanphy_driver-driver

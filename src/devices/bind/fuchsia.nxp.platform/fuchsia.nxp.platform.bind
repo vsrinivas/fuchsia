@@ -8,6 +8,11 @@ extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   NXP = 9,
 };
 
+extend uint fuchsia.BIND_PLATFORM_DEV_PID {
+  SD8897 = 1,
+};
+
 extend uint fuchsia.BIND_PLATFORM_DEV_DID {
   RTC_PCF8563 = 0x05,
+  WIFI = 1,
 };

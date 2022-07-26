@@ -16,6 +16,7 @@ group("drivers") {
     "drivers/third_party/atheros/ath10k:ath10k_driver",
     "drivers/third_party/broadcom/brcmfmac:fuchsia_driver",
     "drivers/third_party/intel/iwlwifi:iwlwifi_driver",
+    "drivers/third_party/nxp/nxpfmac:nxpfmac_sdio",
     "drivers/wlan:wlan_driver",
     "drivers/wlanif:wlanif_driver",
     "drivers/wlanphy:wlanphy_driver",

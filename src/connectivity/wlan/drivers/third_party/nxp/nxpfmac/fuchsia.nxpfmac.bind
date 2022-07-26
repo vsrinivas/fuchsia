@@ -1,0 +1,13 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.nxpfmac;
+
+extend uint fuchsia.BIND_PCI_VID {
+  NXP = 0x1131,
+};
+
+extend uint fuchsia.BIND_PCI_DID {
+  SD8897 = 0x912d,
+};

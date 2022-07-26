@@ -1,0 +1,14 @@
+{
+    "short_description": "NXP WLAN Fullmac driver",
+    "manufacturer": "NXP",
+    "families": [
+        "nxpfmac"
+    ],
+    "models": [
+        "SD8897"
+    ],
+    "areas": [
+        "Connectivity",
+        "Wlan"
+    ]
+}

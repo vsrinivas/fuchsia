@@ -89,7 +89,7 @@ typedef t_s32 t_sval;
 #define MLAN_PACK_END
 #else /* !PRAGMA_PACK */
 /** Structure packing begins */
-#define MLAN_PACK_START __packed
+#define MLAN_PACK_START [[gnu::packed]]
 /** Structure packing end */
 #define MLAN_PACK_END
 #endif /* PRAGMA_PACK */

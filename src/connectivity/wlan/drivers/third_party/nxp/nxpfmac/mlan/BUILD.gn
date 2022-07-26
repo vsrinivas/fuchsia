@@ -1,0 +1,83 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# The nxpfmac mlan sources. These files cannot be compiled without the defines
+# in the source sets below (just one for now).
+mlan_sources = [
+  "mlan_11ac.c",
+  "mlan_11ax.c",
+  "mlan_11d.c",
+  "mlan_11h.c",
+  "mlan_11n.c",
+  "mlan_11n_aggr.c",
+  "mlan_11n_rxreorder.c",
+  "mlan_cfp.c",
+  "mlan_cmdevt.c",
+  "mlan_init.c",
+  "mlan_join.c",
+  "mlan_meas.c",
+  "mlan_misc.c",
+  "mlan_module.c",
+  "mlan_scan.c",
+  "mlan_sdio.c",
+  "mlan_shim.c",
+  "mlan_sta_cmd.c",
+  "mlan_sta_cmdresp.c",
+  "mlan_sta_event.c",
+  "mlan_sta_ioctl.c",
+  "mlan_sta_rx.c",
+  "mlan_sta_tx.c",
+  "mlan_txrx.c",
+  "mlan_uap_cmdevent.c",
+  "mlan_uap_ioctl.c",
+  "mlan_uap_txrx.c",
+  "mlan_wmm.c",
+]
+mlan_public = [
+  "mlan.h",
+  "mlan_11ac.h",
+  "mlan_11ax.h",
+  "mlan_11h.h",
+  "mlan_11n.h",
+  "mlan_11n_aggr.h",
+  "mlan_11n_rxreorder.h",
+  "mlan_decl.h",
+  "mlan_fw.h",
+  "mlan_ieee.h",
+  "mlan_init.h",
+  "mlan_ioctl.h",
+  "mlan_join.h",
+  "mlan_main.h",
+  "mlan_meas.h",
+  "mlan_sdio.h",
+  "mlan_uap.h",
+  "mlan_util.h",
+  "mlan_wmm.h",
+]
+
+# SDIO chipsets running on a 64bit processor with support for STA and UAP.
+source_set("mlan_sdio") {
+  defines = [
+    "SDIO",
+    "STA_SUPPORT",
+    "UAP_SUPPORT",
+    "MLAN_64BIT",
+  ]
+  sources = mlan_sources
+  public = mlan_public
+  public_deps = []
+
+  # Suppress warnings to avoid making changes to the mlan code for easier
+  # merge with future uprevs from vendor.
+  configs += [ "//build/config:Wno-unused-but-set-variable" ]
+
+  # Ignore the following compiler warnings to get mlan code to compile as is.
+  configs += [ "//build/config:Wno-conversion" ]
+  configs += [ "//build/config:Wno-implicit-fallthrough" ]
+  configs += [ "//build/config:Wno-sign-compare" ]
+  configs += [ "//build/config:Wno-pointer-sign" ]
+  configs +=
+      [ "//build/config:Wno-incompatible-pointer-types-discards-qualifiers" ]
+  configs += [ "//build/config:Wno-address-of-packed-member" ]
+}

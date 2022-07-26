@@ -1,0 +1,114 @@
+# Copyright (c) 2022 The Fuchsia Authors.
+#
+# Permission to use, copy, modify, and/or distribute this software for any purpose with or without
+# fee is hereby granted, provided that the above copyright notice and this permission notice appear
+# in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
+# SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE
+# AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT,
+# NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
+# OF THIS SOFTWARE.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+
+visibility = [ "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/*" ]
+
+# Common configuration
+config("fuchsia_config") {
+  defines = []
+}
+
+# The nxpfmac core sources.
+source_set("core") {
+  sources = [ "device.cc" ]
+  public = [ "device.h" ]
+  deps = [ ":nxpfmac_sdio_bind" ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.wlan.common",
+    "//sdk/fidl/fuchsia.wlan.ieee80211",
+    "//src/connectivity/wlan/drivers/lib/components:cpp",
+    "//src/connectivity/wlan/lib/common/cpp:common",
+  ]
+}
+
+# Source set including the driver sources, and the bus definitions conditionally compiled in on each
+# platform.
+source_set("driver_sources") {
+  deps = [
+    ":core",
+    "//src/devices/lib/driver",
+  ]
+}
+
+bind_library("fuchsia.nxpfmac") {
+  source = "fuchsia.nxpfmac.bind"
+}
+
+driver_bind_rules("nxpfmac_sdio_bind") {
+  rules = "nxpfmac_sdio.bind"
+  header_output = "nxpfmac_sdio_bind.h"
+  bind_output = "nxpfmac_sdio.bindbc"
+  deps = [ "//src/devices/bind/fuchsia.nxp.platform" ]
+}
+
+# Driver module for the nxpfmac driver.
+fuchsia_driver("nxpfmac_sdio-driver") {
+  output_name = "nxpfmac_sdio"
+  sources = [ "binding.cc" ]
+  deps = [
+    ":driver_sources",
+    ":nxpfmac_sdio_bind",
+    "mlan:mlan_sdio",
+    "sdio",
+    "//src/connectivity/wlan/lib/common/cpp:common",
+  ]
+  public_deps = [ ":nxpfmac_sdio_bind" ]
+  public_configs = [ ":fuchsia_config" ]
+  visibility += [ "*" ]
+}
+
+fuchsia_driver_component("nxpfmac_sdio") {
+  component_name = "nxpfmac_sdio"
+  deps = [ ":nxpfmac_sdio-driver" ]
+  visibility += [
+    "*",
+    "//bundles/drivers:pci",
+    "//src/connectivity/wlan:drivers",
+  ]
+  info = "nxpfmac_driver-info.json"
+  colocate = true
+}
+
+fuchsia_driver_package("nxpfmac_driver") {
+  driver_components = [ ":nxpfmac_sdio" ]
+  visibility += [ "*" ]
+}
+
+all_fw_files = []
+
+foreach(fw_file, all_fw_files) {
+  resource("nxpfmac-firmware-" + fw_file) {
+    sources = [ "//prebuilt/connectivity/wlan/firmware/nxp/nxpfmac/" + fw_file ]
+    outputs = [ "lib/firmware/nxpfmac/" + fw_file ]
+  }
+}
+
+fuchsia_system_package("nxpfmac") {
+  deps = [ ":nxpfmac_sdio-driver" ]
+  foreach(fw_file, all_fw_files) {
+    deps += [ ":nxpfmac-firmware-" + fw_file ]
+  }
+  visibility += [ "*" ]
+  allowed_in_extra_deps = true
+}
+
+group("tests") {
+  testonly = true
+  deps = []
+  visibility += [ "*" ]
+}

@@ -70,6 +70,7 @@ group("pci") {
     "//src/connectivity/wlan/drivers/third_party/atheros/ath10k:ath10k_driver",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:fuchsia_driver",
     "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:iwlwifi_driver",
+    "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac:nxpfmac_sdio-driver",
     "//src/devices/block/drivers/ahci:ahci",
     "//src/devices/block/drivers/nvme:nvme",
     "//src/devices/block/drivers/pci-sdhci:pci-sdhci",

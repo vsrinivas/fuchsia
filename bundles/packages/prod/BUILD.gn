@@ -184,6 +184,14 @@ group("insntrace") {
   ]
 }
 
+group("nxp") {
+  public_deps = [
+    "//src/connectivity/wlan/drivers/third_party/nxp/nxpfmac:nxpfmac_driver",
+    "//src/connectivity/wlan/drivers/wlanif",
+    "//src/connectivity/wlan/drivers/wlanphy",
+  ]
+}
+
 group("run") {
   testonly = true
   public_deps = [ "//src/sys/tools/run" ]
@@ -234,5 +242,8 @@ group("wifi_intel") {
 }
 
 group("wlan_drivers") {
-  public_deps = [ ":broadcom" ]
+  public_deps = [
+    ":broadcom",
+    ":nxp",
+  ]
 }

@@ -398,6 +398,7 @@ extern t_u32 mlan_drvdbg;
 extern t_void (*assert_callback) (t_void *pmoal_handle, t_u32 cond);
 
 /** Assertion */
+#if 0
 #define MASSERT(cond)                                                          \
 	do {                                                                   \
 		if (!(cond)) {                                                 \
@@ -411,6 +412,9 @@ extern t_void (*assert_callback) (t_void *pmoal_handle, t_u32 cond);
 			}                                                      \
 		}                                                              \
 	} while (0)
+#else
+#define MASSERT(cond)
+#endif
 
 /** Maximum event buffer size */
 #define MAX_EVENT_SIZE (3 * 1024)
