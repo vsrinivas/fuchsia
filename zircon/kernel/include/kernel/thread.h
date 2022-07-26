@@ -588,18 +588,28 @@ class PreemptionState {
     // Things must be more complicated.  Check for the various situations in
     // decreasing order of likeliness.
 
+    // Are either of the counters non-zero?
     if (EagerReschedDisableCount(old_state) > 0 || PreemptDisableCount(old_state) > 1) {
       // We've got a non-zero count in one of the counters.
       return;
     }
 
-    // The counters are both zero.  Is there an unexpired active extension?
-    if (HasActiveTimesliceExtension(old_state) && !ExpireActiveTimesliceExtension()) {
-      return;
+    // The counters are both zero.  At this point, we must have a timeslice
+    // extension installed.  This extension may be inactive, active and
+    // not-yet-expired, or active and expired.
+
+    // Is there an active extension?
+    if (HasActiveTimesliceExtension(old_state)) {
+      // Has it expired?
+      if (ClearActiveTimesliceExtensionIfExpired()) {
+        // It has.  We can flush.
+        DEBUG_ASSERT(PreemptIsEnabled());
+        FlushPending(Flush::FlushLocal);
+        return;
+      }
     }
 
-    // It has.  We can flush.
-    FlushPending(Flush::FlushLocal);
+    // We have an extension that's either inactive or active+unexpired.
   }
 
   void PreemptDisableAnnotated() TA_ACQ(preempt_disabled_token) {
@@ -652,15 +662,24 @@ class PreemptionState {
       return false;
     }
 
-    // The counters are both zero.  Is there a ready timeslice extension?
-    if (HasActiveTimesliceExtension(old_state) && !ExpireActiveTimesliceExtension()) {
-      return false;
+    // The counters are both zero.  At this point, we must have a timeslice
+    // extension installed.  This extension may be inactive, active and
+    // not-yet-expired, or active and expired.
+
+    // Is there an active extension?
+    if (HasActiveTimesliceExtension(old_state)) {
+      // Has it expired?
+      if (ClearActiveTimesliceExtensionIfExpired()) {
+        // It has.
+        DEBUG_ASSERT(PreemptIsEnabled());
+        const cpu_mask_t local_mask = cpu_num_to_mask(arch_curr_cpu_num());
+        const cpu_mask_t prev_mask = preempts_pending_.fetch_and(~local_mask);
+        return (local_mask & prev_mask) != 0;
+      }
     }
 
-    // It's expired.
-    const cpu_mask_t local_mask = cpu_num_to_mask(arch_curr_cpu_num());
-    const cpu_mask_t prev_mask = preempts_pending_.fetch_and(~local_mask);
-    return (local_mask & prev_mask) != 0;
+    // We have an extension that's either inactive or active+unexpired.
+    return false;
   }
 
   // EagerReschedDisable() increments the eager resched disable counter for the
@@ -707,18 +726,22 @@ class PreemptionState {
       return;
     }
 
-    // Do we have an expired active timeslice extension?
-    if (HasActiveTimesliceExtension(old_state) && ExpireActiveTimesliceExtension()) {
-      // Yes, preempt disable count is zero and either there's no runtime
-      // extension, or an active one that has expired.
-      //
-      // Flushing all might reschedule this CPU, make sure it's OK to block.
-      FlushPending(Flush::FlushAll);
-    } else {
-      // Nope, we've either got an inactive or active-unexpired timeslice
-      // extension.  Either way, we can't flush local.
-      FlushPending(Flush::FlushRemote);
+    // Is there an active extension?
+    if (HasActiveTimesliceExtension(old_state)) {
+      // Has it expired?
+      if (ClearActiveTimesliceExtensionIfExpired()) {
+        // Yes, preempt disable count is zero and the active extension has
+        // expired.  We can flush all.
+        DEBUG_ASSERT(PreemptIsEnabled());
+        FlushPending(Flush::FlushAll);
+        return;
+      }
+      // Extension is active, can't flush local.
     }
+
+    // We have an inactive extension or an unexpired active extension.  Either
+    // way, we can flush remote, but not local.
+    FlushPending(Flush::FlushRemote);
   }
 
   void EagerReschedDisableAnnotated() TA_ACQ(preempt_disabled_token) {
@@ -813,7 +836,7 @@ class PreemptionState {
     }
 
     if (HasActiveTimesliceExtension(old_state)) {
-      if (!ExpireActiveTimesliceExtension()) {
+      if (!ClearActiveTimesliceExtensionIfExpired()) {
         return false;
       }
       // The active extension has expired.  If the counts are both zero, then
@@ -867,7 +890,7 @@ class PreemptionState {
   // it and returns true.
   //
   // Should only be called when there is an active timeslice extension.
-  bool ExpireActiveTimesliceExtension() {
+  bool ClearActiveTimesliceExtensionIfExpired() {
     // Has the extension expired?
     //
     // See comment at |timeslice_extension_deadline_| for why the signal fence is needed.
