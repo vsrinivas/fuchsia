@@ -1,0 +1,33 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "inspect/client.shard.cml",
+        "sys/testing/elf_test_runner.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/amlogic_decoder_integration_tests",
+    },
+    use: [
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+        },
+        {
+            // For /dev/aml-video/amlogic_video, provided by "devices" facet.
+            // Entire /dev/ must be routed for GetTopologicalPath on
+            // /dev/aml-video/amlogic_video to not hang.
+            directory: "dev",
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+    ],
+    facets: {
+        "fuchsia.test": { type: "devices" },
+    },
+}

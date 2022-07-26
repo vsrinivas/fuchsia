@@ -5,11 +5,15 @@
 import("//build/components.gni")
 
 fuchsia_unittest_package("amlogic_decoder_integration_tests") {
+  manifest = "meta/amlogic_decoder_integration_tests.cml"
   deps = [ ":amlogic_decoder_integration_tests_bin" ]
 
   test_specs = {
-    # Manual only for now; comment out environments to run
-    environments = []
+    environments = [
+      sherlock_env,
+      astro_env,
+      vim3_env,
+    ]
   }
 }
 

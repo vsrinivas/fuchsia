@@ -12,6 +12,7 @@
 namespace amlogic_decoder {
 namespace test {
 
+// TODO(fxbug.dev/104928) Remove the calls to fuchsia.device/Controller once upgraded to DFv2
 class TestDeviceBase {
  public:
   TestDeviceBase() {}
@@ -56,7 +57,7 @@ class TestDeviceBase {
     EXPECT_TRUE(res->is_ok());
   }
 
-  static bool BindDriver(const zx::channel& parent_device, std::string path) {
+  static bool BindDriver(const zx::channel& parent_device, const std::string& path) {
     // Rebinding the device immediately after unbinding it sometimes causes the new device to be
     // created before the old one is released, which can cause problems since the old device can
     // hold onto interrupts and other resources. Delay recreation to make that less likely.
@@ -96,7 +97,8 @@ class TestDeviceBase {
   zx::channel channel_;
 };
 
-TEST(TestRunner, RunTests) {
+// Requires the driver to be in the system image, so disabled by default.
+TEST(TestRunner, DISABLED_RunTests) {
   auto test_device = std::make_unique<TestDeviceBase>();
   test_device->InitializeFromFileName("/dev/aml-video/amlogic_video");
   zx::channel parent_device = test_device->GetParentDevice();
@@ -113,7 +115,6 @@ TEST(TestRunner, RunTests) {
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
   ASSERT_OK(fdio_service_connect("/tmp", remote.release()));
-
   auto set_output_res = fidl::WireCall<fuchsia_hardware_mediacodec::Tester>(test_device2->channel())
                             ->SetOutputDirectoryHandle(std::move(local));
   EXPECT_OK(set_output_res.status());
@@ -128,7 +129,20 @@ TEST(TestRunner, RunTests) {
   test_device2 = nullptr;
 
   // Try to rebind the correct driver.
-  TestDeviceBase::BindDriver(parent_device, "/system/driver/amlogic_video_decoder.so");
+  TestDeviceBase::BindDriver(parent_device, "");
+}
+
+// Test that unbinding and rebinding the driver works.
+TEST(TestRunner, Rebind) {
+  auto test_device = std::make_unique<TestDeviceBase>();
+  test_device->InitializeFromFileName("/dev/aml-video/amlogic_video");
+  zx::channel parent_device = test_device->GetParentDevice();
+  test_device = nullptr;
+
+  TestDeviceBase::UnbindChildren(parent_device);
+
+  // Use autobind to bind same driver.
+  TestDeviceBase::BindDriver(parent_device, "");
 }
 
 }  // namespace test
