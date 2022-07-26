@@ -186,10 +186,6 @@ class PmmNode {
 
   void AllocPageHelperLocked(vm_page_t* page) TA_REQ(lock_);
 
-  void AsanPoisonPage(vm_page_t*, uint8_t) TA_REQ(lock_);
-
-  void AsanUnpoisonPage(vm_page_t*) TA_REQ(lock_);
-
   template <typename F>
   void ForPagesInPhysRangeLocked(paddr_t start, size_t count, F func) TA_REQ(lock_);
 

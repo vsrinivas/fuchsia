@@ -46,22 +46,22 @@ void noop_callback(void* context, uint8_t idx) {}
 // response.  See |MemoryWatchdog::WorkerThread|.
 ktl::atomic<bool> alloc_failed_no_mem;
 
-}  // namespace
-
 // Poison a page |p| with value |value|. Accesses to a poisoned page via the physmap are not
 // allowed and may cause faults or kASAN checks.
-void PmmNode::AsanPoisonPage(vm_page_t* p, uint8_t value) {
+void AsanPoisonPage(vm_page_t* p, uint8_t value) {
 #if __has_feature(address_sanitizer)
   asan_poison_shadow(reinterpret_cast<uintptr_t>(paddr_to_physmap(p->paddr())), PAGE_SIZE, value);
 #endif  // __has_feature(address_sanitizer)
 }
 
 // Unpoison a page |p|. Accesses to a unpoisoned pages will not cause KASAN check failures.
-void PmmNode::AsanUnpoisonPage(vm_page_t* p) {
+void AsanUnpoisonPage(vm_page_t* p) {
 #if __has_feature(address_sanitizer)
   asan_unpoison_shadow(reinterpret_cast<uintptr_t>(paddr_to_physmap(p->paddr())), PAGE_SIZE);
 #endif  // __has_feature(address_sanitizer)
 }
+
+}  // namespace
 
 PmmNode::PmmNode() : evictor_(this) {
   // Initialize the reclamation watermarks such that system never
