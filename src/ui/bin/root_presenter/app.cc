@@ -38,7 +38,6 @@ App::App(sys::ComponentContext* component_context, fit::closure quit_callback)
       inspector_(component_context),
       input_report_inspector_(inspector_.root().CreateChild("input_reports")),
       input_reader_(this),
-      media_buttons_handler_(),
       virtual_keyboard_coordinator_(component_context),
       focus_dispatcher_(component_context->svc(), virtual_keyboard_coordinator_.GetWeakPtr()) {
   FX_DCHECK(component_context);
@@ -98,14 +97,11 @@ App::App(sys::ComponentContext* component_context, fit::closure quit_callback)
 }
 
 void App::RegisterMediaButtonsListener(
-    fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener) {
-  media_buttons_handler_.RegisterListener(std::move(listener));
-}
+    fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener) {}
 
 void App::RegisterListener(
     fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener,
     RegisterListenerCallback callback) {
-  media_buttons_handler_.RegisterListener2(std::move(listener));
   callback();
 }
 
@@ -119,12 +115,7 @@ void App::RegisterDevice(
       std::make_unique<ui_input::InputDeviceImpl>(device_id, std::move(descriptor),
                                                   std::move(input_device_request), this);
 
-  // Media button processing is done exclusively in root_presenter::App.
-  // Dependent components inside presentations register with the handler (passed
-  // at construction) to receive such events.
-  if (!media_buttons_handler_.OnDeviceAdded(input_device.get())) {
-    presentation_->OnDeviceAdded(input_device.get());
-  }
+  presentation_->OnDeviceAdded(input_device.get());
 
   devices_by_id_.emplace(device_id, std::move(input_device));
 }
@@ -135,9 +126,7 @@ void App::OnDeviceDisconnected(ui_input::InputDeviceImpl* input_device) {
 
   FX_VLOGS(1) << "UnregisterDevice " << input_device->id();
 
-  if (!media_buttons_handler_.OnDeviceRemoved(input_device->id())) {
-    presentation_->OnDeviceRemoved(input_device->id());
-  }
+  presentation_->OnDeviceRemoved(input_device->id());
 
   devices_by_id_.erase(input_device->id());
 }
@@ -160,7 +149,6 @@ void App::OnReport(ui_input::InputDeviceImpl* input_device,
   report.Clone(&cloned_report);
 
   if (cloned_report.media_buttons) {
-    media_buttons_handler_.OnReport(input_device->id(), std::move(cloned_report));
     return;
   }
 

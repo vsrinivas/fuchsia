@@ -117,7 +117,6 @@ source_set("lib") {
     ":color_transform",
     ":constants",
     ":displays",
-    ":media_buttons_handler",
     ":safe_presenter",
     ":virtual_keyboard",
     "//sdk/fidl/fuchsia.accessibility",
@@ -157,25 +156,6 @@ source_set("displays") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
-}
-
-source_set("media_buttons_handler") {
-  sources = [
-    "media_buttons_handler.cc",
-    "media_buttons_handler.h",
-  ]
-
-  public_deps = [
-    "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.policy",
-  ]
-  deps = [
-    ":constants",
-    "//sdk/lib/sys/cpp",
-    "//src/lib/fostr/fidl/fuchsia.input.report",
-    "//src/lib/fostr/fidl/fuchsia.ui.input",
-    "//src/lib/ui/input",
-  ]
 }
 
 source_set("focus_dispatcher") {

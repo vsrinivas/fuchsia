@@ -169,23 +169,6 @@ class RootPresenterTest : public gtest::RealLoopFixture,
     return input_report;
   }
 
-  fuchsia::ui::input::DeviceDescriptor MediaButtonsDescriptorTemplate() {
-    fuchsia::ui::input::DeviceDescriptor descriptor;
-    {
-      descriptor.media_buttons = std::make_unique<fuchsia::ui::input::MediaButtonsDescriptor>();
-      descriptor.media_buttons->buttons =
-          fuchsia::ui::input::kVolumeUp | fuchsia::ui::input::kVolumeDown;
-    }
-    return descriptor;
-  }
-
-  fuchsia::ui::input::InputReport MediaButtonsReportTemplate() {
-    fuchsia::ui::input::InputReport input_report{
-        .media_buttons = std::make_unique<fuchsia::ui::input::MediaButtonsReport>()};
-    input_report.media_buttons->volume_up = true;
-    return input_report;
-  }
-
   std::vector<inspect::UintArrayValue::HistogramBucket> GetHistogramBuckets(
       const std::vector<std::string>& path, const std::string& property) {
     inspect::Hierarchy root =
@@ -553,26 +536,6 @@ TEST_F(RootPresenterTest, InputInjection_InspectTouchscreen) {
     uint64_t count = 0;
     for (const inspect::UintArrayValue::HistogramBucket& bucket :
          GetHistogramBuckets({"presentation-0x0", "input_events"}, "pointer_latency")) {
-      count += bucket.count;
-    }
-    EXPECT_EQ(1u, count);
-  }
-}
-
-TEST_F(RootPresenterTest, InputInjection_InspectMediaButtons) {
-  SetUpInputTest();
-
-  fuchsia::ui::input::InputDevicePtr input_device_ptr;
-  input_device_registry_ptr_->RegisterDevice(MediaButtonsDescriptorTemplate(),
-                                             input_device_ptr.NewRequest());
-  input_device_ptr->DispatchReport(MediaButtonsReportTemplate());
-  RunLoopUntilIdle();
-
-  // Check that the histograms are updated.
-  {
-    uint64_t count = 0;
-    for (const inspect::UintArrayValue::HistogramBucket& bucket :
-         GetHistogramBuckets({"input_reports"}, "media_buttons_latency")) {
       count += bucket.count;
     }
     EXPECT_EQ(1u, count);

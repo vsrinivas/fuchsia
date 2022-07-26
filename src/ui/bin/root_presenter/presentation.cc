@@ -497,8 +497,6 @@ void Presentation::OnDeviceRemoved(uint32_t device_id) {
 }
 
 void Presentation::OnReport(uint32_t device_id, fuchsia::ui::input::InputReport input_report) {
-  // Media buttons should be processed by MediaButtonsHandler.
-  FX_DCHECK(!input_report.media_buttons);
   TRACE_DURATION("input", "presentation_on_report", "id", input_report.trace_id);
   TRACE_FLOW_END("input", "report_to_presentation", input_report.trace_id);
 

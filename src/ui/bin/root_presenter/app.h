@@ -27,7 +27,6 @@
 #include "src/ui/bin/root_presenter/constants.h"
 #include "src/ui/bin/root_presenter/focus_dispatcher.h"
 #include "src/ui/bin/root_presenter/inspect.h"
-#include "src/ui/bin/root_presenter/media_buttons_handler.h"
 #include "src/ui/bin/root_presenter/presentation.h"
 #include "src/ui/bin/root_presenter/virtual_keyboard_coordinator.h"
 #include "src/ui/bin/root_presenter/virtual_keyboard_manager.h"
@@ -85,14 +84,6 @@ class App : public fuchsia::ui::policy::DeviceListenerRegistry,
 
   uint32_t next_device_token_ = 0;
   std::unordered_map<uint32_t, std::unique_ptr<ui_input::InputDeviceImpl>> devices_by_id_;
-
-  // The media button handler manages processing input from devices with media
-  // buttons and propagating them to listeners.
-  //
-  // This processing is done at the global level through root presenter but
-  // also supports registering listeners at the presentation level for legacy
-  // support.
-  MediaButtonsHandler media_buttons_handler_;
 
   // Coordinates virtual keyboard state changes between
   // `fuchsia.input.virtualkeyboard.Controller`s and the
