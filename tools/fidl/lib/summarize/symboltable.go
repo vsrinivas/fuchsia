@@ -157,7 +157,7 @@ func (d *symbolTable) fidlTypeString(t fidlgen.Type) Decl {
 		ret.setLayout("vector")
 		ret.addParam(string(d.fidlTypeString(*t.ElementType)))
 	case fidlgen.HandleType:
-		if t.HandleSubtype != fidlgen.Handle {
+		if t.HandleSubtype != fidlgen.HandleSubtypeNone {
 			ret.setLayout("zx/handle")
 			ret.addConstraint(strings.ToUpper(string(t.HandleSubtype)))
 		} else {

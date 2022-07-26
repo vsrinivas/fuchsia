@@ -39,9 +39,9 @@ func escapeStr(value string) string {
 
 func buildHandleDef(def gidlir.HandleDef) string {
 	switch def.Subtype {
-	case fidlgen.Channel:
+	case fidlgen.HandleSubtypeChannel:
 		return fmt.Sprintf("fidl::test::util::CreateChannel(%d)", def.Rights)
-	case fidlgen.Event:
+	case fidlgen.HandleSubtypeEvent:
 		return fmt.Sprintf("fidl::test::util::CreateEvent(%d)", def.Rights)
 	default:
 		panic(fmt.Sprintf("unsupported handle subtype: %s", def.Subtype))
@@ -50,9 +50,9 @@ func buildHandleDef(def gidlir.HandleDef) string {
 
 func handleType(subtype fidlgen.HandleSubtype) string {
 	switch subtype {
-	case fidlgen.Channel:
+	case fidlgen.HandleSubtypeChannel:
 		return "ZX_OBJ_TYPE_CHANNEL"
-	case fidlgen.Event:
+	case fidlgen.HandleSubtypeEvent:
 		return "ZX_OBJ_TYPE_EVENT"
 	default:
 		panic(fmt.Sprintf("unsupported handle subtype: %s", subtype))
@@ -302,11 +302,11 @@ func typeName(decl gidlmixer.Declaration) string {
 		return fmt.Sprintf("std::vector<%s>", typeName(decl.Elem()))
 	case *gidlmixer.HandleDecl:
 		switch decl.Subtype() {
-		case fidlgen.Handle:
+		case fidlgen.HandleSubtypeNone:
 			return "zx::handle"
-		case fidlgen.Channel:
+		case fidlgen.HandleSubtypeChannel:
 			return "zx::channel"
-		case fidlgen.Event:
+		case fidlgen.HandleSubtypeEvent:
 			return "zx::event"
 		default:
 			panic(fmt.Sprintf("Handle subtype not supported %s", decl.Subtype()))

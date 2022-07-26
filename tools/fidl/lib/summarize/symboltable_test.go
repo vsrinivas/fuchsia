@@ -136,7 +136,7 @@ func TestSymboltable(t *testing.T) {
 			type_: fidlgen.Type{
 				Kind:          fidlgen.HandleType,
 				HandleRights:  fidlgen.HandleRightsBasic | fidlgen.HandleRightsApplyProfile,
-				HandleSubtype: fidlgen.Interrupt,
+				HandleSubtype: fidlgen.HandleSubtypeInterrupt,
 				Nullable:      true,
 			},
 			expected: "zx/handle:<INTERRUPT,zx.DUPLICATE,zx.TRANSFER,zx.WAIT,zx.INSPECT,zx.APPLY_PROFILE,optional>",

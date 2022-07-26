@@ -23,9 +23,9 @@ func buildHandleDefs(defs []gidlir.HandleDef) string {
 	for i, d := range defs {
 		builder.WriteString("HandleDef(")
 		switch d.Subtype {
-		case fidlgen.Event:
+		case fidlgen.HandleSubtypeEvent:
 			builder.WriteString(fmt.Sprint("HandleSubtype.event, "))
-		case fidlgen.Channel:
+		case fidlgen.HandleSubtypeChannel:
 			builder.WriteString(fmt.Sprint("HandleSubtype.channel, "))
 		default:
 			panic(fmt.Sprintf("unknown handle subtype: %v", d.Subtype))
@@ -89,11 +89,11 @@ func visit(value gidlir.Value, decl gidlmixer.Declaration) string {
 		rawHandle := buildHandleValue(value.Handle)
 		handleDecl := decl.(*gidlmixer.HandleDecl)
 		switch handleDecl.Subtype() {
-		case fidlgen.Handle:
+		case fidlgen.HandleSubtypeNone:
 			return rawHandle
-		case fidlgen.Channel:
+		case fidlgen.HandleSubtypeChannel:
 			return fmt.Sprintf("Channel(%s)", rawHandle)
-		case fidlgen.Event:
+		case fidlgen.HandleSubtypeEvent:
 			// Dart does not support events, so events are mapped to bare handles
 			return rawHandle
 		default:

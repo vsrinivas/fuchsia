@@ -241,34 +241,34 @@ const (
 type HandleSubtype string
 
 const (
-	Handle       HandleSubtype = "handle"
-	Bti          HandleSubtype = "bti"
-	Channel      HandleSubtype = "channel"
-	Clock        HandleSubtype = "clock"
-	DebugLog     HandleSubtype = "debuglog"
-	Event        HandleSubtype = "event"
-	Eventpair    HandleSubtype = "eventpair"
-	Exception    HandleSubtype = "exception"
-	Fifo         HandleSubtype = "fifo"
-	Guest        HandleSubtype = "guest"
-	Interrupt    HandleSubtype = "interrupt"
-	Iommu        HandleSubtype = "iommu"
-	Job          HandleSubtype = "job"
-	Pager        HandleSubtype = "pager"
-	PciDevice    HandleSubtype = "pcidevice"
-	Pmt          HandleSubtype = "pmt"
-	Port         HandleSubtype = "port"
-	Process      HandleSubtype = "process"
-	Profile      HandleSubtype = "profile"
-	Resource     HandleSubtype = "resource"
-	Socket       HandleSubtype = "socket"
-	Stream       HandleSubtype = "stream"
-	SuspendToken HandleSubtype = "suspendtoken"
-	Thread       HandleSubtype = "thread"
-	Time         HandleSubtype = "timer"
-	Vcpu         HandleSubtype = "vcpu"
-	Vmar         HandleSubtype = "vmar"
-	Vmo          HandleSubtype = "vmo"
+	HandleSubtypeNone         HandleSubtype = "handle"
+	HandleSubtypeBti          HandleSubtype = "bti"
+	HandleSubtypeChannel      HandleSubtype = "channel"
+	HandleSubtypeClock        HandleSubtype = "clock"
+	HandleSubtypeDebugLog     HandleSubtype = "debuglog"
+	HandleSubtypeEvent        HandleSubtype = "event"
+	HandleSubtypeEventpair    HandleSubtype = "eventpair"
+	HandleSubtypeException    HandleSubtype = "exception"
+	HandleSubtypeFifo         HandleSubtype = "fifo"
+	HandleSubtypeGuest        HandleSubtype = "guest"
+	HandleSubtypeInterrupt    HandleSubtype = "interrupt"
+	HandleSubtypeIommu        HandleSubtype = "iommu"
+	HandleSubtypeJob          HandleSubtype = "job"
+	HandleSubtypePager        HandleSubtype = "pager"
+	HandleSubtypePciDevice    HandleSubtype = "pcidevice"
+	HandleSubtypePmt          HandleSubtype = "pmt"
+	HandleSubtypePort         HandleSubtype = "port"
+	HandleSubtypeProcess      HandleSubtype = "process"
+	HandleSubtypeProfile      HandleSubtype = "profile"
+	HandleSubtypeResource     HandleSubtype = "resource"
+	HandleSubtypeSocket       HandleSubtype = "socket"
+	HandleSubtypeStream       HandleSubtype = "stream"
+	HandleSubtypeSuspendToken HandleSubtype = "suspendtoken"
+	HandleSubtypeThread       HandleSubtype = "thread"
+	HandleSubtypeTime         HandleSubtype = "timer"
+	HandleSubtypeVcpu         HandleSubtype = "vcpu"
+	HandleSubtypeVmar         HandleSubtype = "vmar"
+	HandleSubtypeVmo          HandleSubtype = "vmo"
 )
 
 // TODO(fxb/64629): Remove, source of truth is library zx.
@@ -277,7 +277,7 @@ const (
 // e.g. `#0 = event(rights: execute + write )`. And some GIDL backends care
 // about the object type. This means that we need to duplicate this mapping :/
 // It would be cleaner to limit this to GIDL and GIDL backends, rather than
-// offer that in the general purpose lib/fidlgen.
+// offer that in the general purpose lib/declDepNode
 type ObjectType uint32
 
 const (
@@ -316,57 +316,57 @@ const (
 
 func ObjectTypeFromHandleSubtype(val HandleSubtype) ObjectType {
 	switch val {
-	case Bti:
+	case HandleSubtypeBti:
 		return ObjectTypeBti
-	case Channel:
+	case HandleSubtypeChannel:
 		return ObjectTypeChannel
-	case Clock:
+	case HandleSubtypeClock:
 		return ObjectTypeClock
-	case DebugLog:
+	case HandleSubtypeDebugLog:
 		return ObjectTypeLog
-	case Event:
+	case HandleSubtypeEvent:
 		return ObjectTypeEvent
-	case Eventpair:
+	case HandleSubtypeEventpair:
 		return ObjectTypeEventPair
-	case Exception:
+	case HandleSubtypeException:
 		return ObjectTypeException
-	case Fifo:
+	case HandleSubtypeFifo:
 		return ObjectTypeFifo
-	case Guest:
+	case HandleSubtypeGuest:
 		return ObjectTypeGuest
-	case Interrupt:
+	case HandleSubtypeInterrupt:
 		return ObjectTypeInterrupt
-	case Iommu:
+	case HandleSubtypeIommu:
 		return ObjectTypeIommu
-	case Job:
+	case HandleSubtypeJob:
 		return ObjectTypeJob
-	case Pager:
+	case HandleSubtypePager:
 		return ObjectTypePager
-	case PciDevice:
+	case HandleSubtypePciDevice:
 		return ObjectTypePciDevice
-	case Pmt:
+	case HandleSubtypePmt:
 		return ObjectTypePmt
-	case Port:
+	case HandleSubtypePort:
 		return ObjectTypePort
-	case Process:
+	case HandleSubtypeProcess:
 		return ObjectTypeProcess
-	case Profile:
+	case HandleSubtypeProfile:
 		return ObjectTypeProfile
-	case Resource:
+	case HandleSubtypeResource:
 		return ObjectTypeResource
-	case Socket:
+	case HandleSubtypeSocket:
 		return ObjectTypeSocket
-	case SuspendToken:
+	case HandleSubtypeSuspendToken:
 		return ObjectTypeSuspendToken
-	case Thread:
+	case HandleSubtypeThread:
 		return ObjectTypeThread
-	case Time:
+	case HandleSubtypeTime:
 		return ObjectTypeTimer
-	case Vcpu:
+	case HandleSubtypeVcpu:
 		return ObjectTypeVcpu
-	case Vmar:
+	case HandleSubtypeVmar:
 		return ObjectTypeVmar
-	case Vmo:
+	case HandleSubtypeVmo:
 		return ObjectTypeVmo
 	default:
 		return ObjectTypeNone

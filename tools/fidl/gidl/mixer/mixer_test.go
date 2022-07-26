@@ -168,7 +168,7 @@ func TestExtractDeclarationWrongHandleTypeFailure(t *testing.T) {
 	}
 	handleDefs := []gidlir.HandleDef{
 		{
-			Subtype: fidlgen.Fifo,
+			Subtype: fidlgen.HandleSubtypeFifo,
 			Rights:  fidlgen.HandleRightsTransfer,
 		},
 	}
@@ -200,7 +200,7 @@ func TestExtractDeclarationEncodeSuccessWrongHandleTypeSuccess(t *testing.T) {
 	}
 	handleDefs := []gidlir.HandleDef{
 		{
-			Subtype: fidlgen.Fifo,
+			Subtype: fidlgen.HandleSubtypeFifo,
 			Rights:  fidlgen.HandleRightsTransfer,
 		},
 	}
@@ -392,7 +392,7 @@ func TestHandleDeclConforms(t *testing.T) {
 	// Cannot refer to any handles if there are no handle_defs.
 	checkConforms(t,
 		context{},
-		&HandleDecl{subtype: fidlgen.Event, nullable: false},
+		&HandleDecl{subtype: fidlgen.HandleSubtypeEvent, nullable: false},
 		[]conformTest{
 			conformFail{
 				defaultMetadataForHandle(-1),
@@ -423,12 +423,12 @@ func TestHandleDeclConforms(t *testing.T) {
 	checkConforms(t,
 		context{
 			handleDefs: []gidlir.HandleDef{
-				{Subtype: fidlgen.Event}, // #0
-				{Subtype: fidlgen.Port},  // #1
-				{Subtype: fidlgen.Event}, // #2
+				{Subtype: fidlgen.HandleSubtypeEvent}, // #0
+				{Subtype: fidlgen.HandleSubtypePort},  // #1
+				{Subtype: fidlgen.HandleSubtypeEvent}, // #2
 			},
 		},
-		&HandleDecl{subtype: fidlgen.Handle, nullable: false},
+		&HandleDecl{subtype: fidlgen.HandleSubtypeNone, nullable: false},
 		[]conformTest{
 			conformOk{
 				defaultMetadataForHandle(0),
@@ -456,12 +456,12 @@ func TestHandleDeclConforms(t *testing.T) {
 	checkConforms(t,
 		context{
 			handleDefs: []gidlir.HandleDef{
-				{Subtype: fidlgen.Event}, // #0
-				{Subtype: fidlgen.Port},  // #1
-				{Subtype: fidlgen.Event}, // #2
+				{Subtype: fidlgen.HandleSubtypeEvent}, // #0
+				{Subtype: fidlgen.HandleSubtypePort},  // #1
+				{Subtype: fidlgen.HandleSubtypeEvent}, // #2
 			},
 		},
-		&HandleDecl{subtype: fidlgen.Event, nullable: false},
+		&HandleDecl{subtype: fidlgen.HandleSubtypeEvent, nullable: false},
 		[]conformTest{
 			conformOk{
 				defaultMetadataForHandle(0),
@@ -490,12 +490,12 @@ func TestHandleDeclConforms(t *testing.T) {
 	checkConforms(t,
 		context{
 			handleDefs: []gidlir.HandleDef{
-				{Subtype: fidlgen.Event}, // #0
-				{Subtype: fidlgen.Port},  // #1
-				{Subtype: fidlgen.Event}, // #2
+				{Subtype: fidlgen.HandleSubtypeEvent}, // #0
+				{Subtype: fidlgen.HandleSubtypePort},  // #1
+				{Subtype: fidlgen.HandleSubtypeEvent}, // #2
 			},
 		},
-		&HandleDecl{subtype: fidlgen.Port, nullable: true},
+		&HandleDecl{subtype: fidlgen.HandleSubtypePort, nullable: true},
 		[]conformTest{
 			conformOk{
 				defaultMetadataForHandle(1),
@@ -531,10 +531,10 @@ func TestProtocolEndpointConforms(t *testing.T) {
 	checkConforms(t,
 		context{
 			handleDefs: []gidlir.HandleDef{
-				{Subtype: fidlgen.Channel}, // #0
-				{Subtype: fidlgen.Channel}, // #1
-				{Subtype: fidlgen.Channel}, // #2
-				{Subtype: fidlgen.Channel}, // #3
+				{Subtype: fidlgen.HandleSubtypeChannel}, // #0
+				{Subtype: fidlgen.HandleSubtypeChannel}, // #1
+				{Subtype: fidlgen.HandleSubtypeChannel}, // #2
+				{Subtype: fidlgen.HandleSubtypeChannel}, // #3
 			},
 		},
 		structDecl,
@@ -603,10 +603,10 @@ func TestProtocolEndpointConforms(t *testing.T) {
 	checkConforms(t,
 		context{
 			handleDefs: []gidlir.HandleDef{
-				{Subtype: fidlgen.Channel}, // #0
-				{Subtype: fidlgen.Channel}, // #1
-				{Subtype: fidlgen.Event},   // #2
-				{Subtype: fidlgen.Channel}, // #3
+				{Subtype: fidlgen.HandleSubtypeChannel}, // #0
+				{Subtype: fidlgen.HandleSubtypeChannel}, // #1
+				{Subtype: fidlgen.HandleSubtypeEvent},   // #2
+				{Subtype: fidlgen.HandleSubtypeChannel}, // #3
 			},
 		},
 		structDecl,
@@ -1024,8 +1024,8 @@ func TestVectorDeclConformsWithHandles(t *testing.T) {
 	checkConforms(t,
 		context{
 			handleDefs: []gidlir.HandleDef{
-				{Subtype: fidlgen.Event},
-				{Subtype: fidlgen.Event},
+				{Subtype: fidlgen.HandleSubtypeEvent},
+				{Subtype: fidlgen.HandleSubtypeEvent},
 			},
 		},
 		&VectorDecl{
@@ -1034,7 +1034,7 @@ func TestVectorDeclConformsWithHandles(t *testing.T) {
 				Kind: fidlgen.VectorType,
 				ElementType: &fidlgen.Type{
 					Kind:          fidlgen.HandleType,
-					HandleSubtype: fidlgen.Event,
+					HandleSubtype: fidlgen.HandleSubtypeEvent,
 				},
 			},
 		},

@@ -617,16 +617,16 @@ func TestParseHandleDefs(t *testing.T) {
 		{
 			gidl: `{ #0 = event() }`,
 			expectedValue: []ir.HandleDef{
-				{Subtype: fidlgen.Event, Rights: fidlgen.HandleRightsSameRights},
+				{Subtype: fidlgen.HandleSubtypeEvent, Rights: fidlgen.HandleRightsSameRights},
 			},
 		},
 		// several handles
 		{
 			gidl: `{ #0 = event(), #1 = event(), #2 = event() }`,
 			expectedValue: []ir.HandleDef{
-				{Subtype: fidlgen.Event, Rights: fidlgen.HandleRightsSameRights},
-				{Subtype: fidlgen.Event, Rights: fidlgen.HandleRightsSameRights},
-				{Subtype: fidlgen.Event, Rights: fidlgen.HandleRightsSameRights},
+				{Subtype: fidlgen.HandleSubtypeEvent, Rights: fidlgen.HandleRightsSameRights},
+				{Subtype: fidlgen.HandleSubtypeEvent, Rights: fidlgen.HandleRightsSameRights},
+				{Subtype: fidlgen.HandleSubtypeEvent, Rights: fidlgen.HandleRightsSameRights},
 			},
 		},
 		// handle rights
@@ -634,7 +634,7 @@ func TestParseHandleDefs(t *testing.T) {
 			gidl: `{ #0 = event(rights: execute) }`,
 			expectedValue: []ir.HandleDef{
 				{
-					Subtype: fidlgen.Event,
+					Subtype: fidlgen.HandleSubtypeEvent,
 					Rights:  16,
 				},
 			},
@@ -644,7 +644,7 @@ func TestParseHandleDefs(t *testing.T) {
 			gidl: `{ #0 = event(rights: basic) }`,
 			expectedValue: []ir.HandleDef{
 				{
-					Subtype: fidlgen.Event,
+					Subtype: fidlgen.HandleSubtypeEvent,
 					Rights:  49155,
 				},
 			},
@@ -654,7 +654,7 @@ func TestParseHandleDefs(t *testing.T) {
 			gidl: `{ #0 = event(rights: execute + write ) }`,
 			expectedValue: []ir.HandleDef{
 				{
-					Subtype: fidlgen.Event,
+					Subtype: fidlgen.HandleSubtypeEvent,
 					Rights:  24,
 				},
 			},
@@ -664,7 +664,7 @@ func TestParseHandleDefs(t *testing.T) {
 			gidl: `{ #0 = event(rights: basic - transfer ) }`,
 			expectedValue: []ir.HandleDef{
 				{
-					Subtype: fidlgen.Event,
+					Subtype: fidlgen.HandleSubtypeEvent,
 					Rights:  49153,
 				},
 			},
@@ -914,8 +914,8 @@ func TestParseEncodeSuccessCase(t *testing.T) {
 		EncodeSuccess: []ir.EncodeSuccess{{
 			Name: "OneStringOfMaxLengthFive-empty",
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidlgen.Event, Rights: fidlgen.HandleRightsWrite},
-				{Subtype: fidlgen.Channel, Rights: fidlgen.HandleRightsSameRights},
+				{Subtype: fidlgen.HandleSubtypeEvent, Rights: fidlgen.HandleRightsWrite},
+				{Subtype: fidlgen.HandleSubtypeChannel, Rights: fidlgen.HandleRightsSameRights},
 			},
 			Value: ir.Record{
 				Name: "OneStringOfMaxLengthFive",
@@ -978,8 +978,8 @@ func TestParseDecodeSuccessCase(t *testing.T) {
 		DecodeSuccess: []ir.DecodeSuccess{{
 			Name: "OneStringOfMaxLengthFive-empty",
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidlgen.Event, Rights: fidlgen.HandleRightsWrite},
-				{Subtype: fidlgen.Channel, Rights: fidlgen.HandleRightsSameRights},
+				{Subtype: fidlgen.HandleSubtypeEvent, Rights: fidlgen.HandleRightsWrite},
+				{Subtype: fidlgen.HandleSubtypeChannel, Rights: fidlgen.HandleRightsSameRights},
 			},
 			Value: ir.Record{
 				Name: "OneStringOfMaxLengthFive",
@@ -1402,7 +1402,7 @@ func TestParseSucceedsHandles(t *testing.T) {
 				},
 			}},
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidlgen.Event, Rights: fidlgen.HandleRightsSameRights},
+				{Subtype: fidlgen.HandleSubtypeEvent, Rights: fidlgen.HandleRightsSameRights},
 			},
 			CheckHandleRights: false,
 		}},
@@ -1427,7 +1427,7 @@ func TestParseSucceedsHandles(t *testing.T) {
 				Handles:    []ir.Handle{0},
 			}},
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidlgen.Event, Rights: fidlgen.HandleRightsSameRights},
+				{Subtype: fidlgen.HandleSubtypeEvent, Rights: fidlgen.HandleRightsSameRights},
 			},
 		}},
 	}
@@ -1505,7 +1505,7 @@ func TestParseSucceedsHandlesDefsAfterHandles(t *testing.T) {
 				},
 			}},
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidlgen.Event, Rights: fidlgen.HandleRightsSameRights},
+				{Subtype: fidlgen.HandleSubtypeEvent, Rights: fidlgen.HandleRightsSameRights},
 			},
 			CheckHandleRights: false,
 		}},
@@ -1530,7 +1530,7 @@ func TestParseSucceedsHandlesDefsAfterHandles(t *testing.T) {
 				Handles:    []ir.Handle{0},
 			}},
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidlgen.Event, Rights: fidlgen.HandleRightsSameRights},
+				{Subtype: fidlgen.HandleSubtypeEvent, Rights: fidlgen.HandleRightsSameRights},
 			},
 		}},
 	}

@@ -63,7 +63,7 @@ func buildHandleDefs(defs []gidlir.HandleDef) string {
 		var subtype string
 		rights := d.Rights
 		switch d.Subtype {
-		case fidlgen.Channel:
+		case fidlgen.HandleSubtypeChannel:
 			subtype = "zx.ObjectTypeChannel"
 			// Always use real rights instead of a "same rights" placeholder.
 			if rights == fidlgen.HandleRightsSameRights {
@@ -73,7 +73,7 @@ func buildHandleDefs(defs []gidlir.HandleDef) string {
 				}
 				rights = r
 			}
-		case fidlgen.Event:
+		case fidlgen.HandleSubtypeEvent:
 			subtype = "zx.ObjectTypeEvent"
 			// Always use real rights instead of a "same rights" placeholder.
 			if rights == fidlgen.HandleRightsSameRights {
@@ -189,11 +189,11 @@ func visit(value gidlir.Value, decl gidlmixer.Declaration) string {
 			return fmt.Sprintf("%s{Channel: zx.Channel(%s)}", endpointDeclName(decl), rawHandle)
 		case *gidlmixer.HandleDecl:
 			switch decl.Subtype() {
-			case fidlgen.Handle:
+			case fidlgen.HandleSubtypeNone:
 				return rawHandle
-			case fidlgen.Channel:
+			case fidlgen.HandleSubtypeChannel:
 				return fmt.Sprintf("zx.Channel(%s)", rawHandle)
-			case fidlgen.Event:
+			case fidlgen.HandleSubtypeEvent:
 				return fmt.Sprintf("zx.Event(%s)", rawHandle)
 			default:
 				panic(fmt.Sprintf("Handle subtype not supported %s", decl.Subtype()))
@@ -310,11 +310,11 @@ func typeNameHelper(decl gidlmixer.Declaration, pointerPrefix string) string {
 		return fmt.Sprintf("%s[]%s", pointerPrefix, typeName(decl.Elem()))
 	case *gidlmixer.HandleDecl:
 		switch decl.Subtype() {
-		case fidlgen.Handle:
+		case fidlgen.HandleSubtypeNone:
 			return "zx.Handle"
-		case fidlgen.Channel:
+		case fidlgen.HandleSubtypeChannel:
 			return "zx.Channel"
-		case fidlgen.Event:
+		case fidlgen.HandleSubtypeEvent:
 			return "zx.Event"
 		default:
 			panic(fmt.Sprintf("Handle subtype not supported %s", decl.Subtype()))

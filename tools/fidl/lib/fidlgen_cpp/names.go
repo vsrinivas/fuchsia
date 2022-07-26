@@ -236,7 +236,7 @@ func nameVariantsForHandle(resourceIdentifier string, t fidlgen.HandleSubtype) n
 		}
 		return commonNameVariants(zxNs.member(string(t)))
 	} else if resourceIdentifier == "fdf/handle" {
-		if t == fidlgen.Channel {
+		if t == fidlgen.HandleSubtypeChannel {
 			return commonNameVariants(fdfNs.member("Channel"))
 		}
 		panic(fmt.Sprintf("unhandled fdf.handle subtype %s", t))
@@ -248,7 +248,7 @@ func nameVariantsForHandle(resourceIdentifier string, t fidlgen.HandleSubtype) n
 // Type names for to use for handles where the name isn't the same as HandleSubtype.
 // For any subtype not in this list, string(HandleSubtype) is used instead.
 var handleTypeNames = map[fidlgen.HandleSubtype]string{
-	fidlgen.SuspendToken: "suspend_token",
+	fidlgen.HandleSubtypeSuspendToken: "suspend_token",
 }
 
 // primitiveNameVariants returns a nameVariants for a primitive type, common across all bindings.
@@ -260,10 +260,12 @@ func primitiveNameVariants(primitive string) nameVariants {
 // It's implemented by three types: stringNamePart, nestedNamePart and templateNamePart.
 // These form a tree to hold the structure of a name so that it can be accessed and manipulated safely.
 // For example in fidl::WireServer<fuchsia_library::Protocol>::ProtocolMethod this would be:
-//   WireServer<fuchsia_library::Protocol>::ProtocolMethod
-//   |-nestedNP---------------------------------------------|
-//   |-templateNP---------------------------|  |-stringNP---|
-//   |-stringNP---|-Name--------------------|
+//
+//	WireServer<fuchsia_library::Protocol>::ProtocolMethod
+//	|-nestedNP---------------------------------------------|
+//	|-templateNP---------------------------|  |-stringNP---|
+//	|-stringNP---|-Name--------------------|
+//
 // TODO(ianloic): rename to idPart
 type namePart interface {
 	// String returns the full name.

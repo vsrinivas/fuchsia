@@ -178,7 +178,7 @@ func (b *equalityCheckBuilder) visit(actualExpr string, expectedValue gidlir.Val
 
 func (b *equalityCheckBuilder) visitHandle(actualExpr string, expectedValue gidlir.HandleWithRights, decl *gidlmixer.HandleDecl) {
 	var handleVar string
-	if decl.Subtype() == fidlgen.Handle {
+	if decl.Subtype() == fidlgen.HandleSubtypeNone {
 		handleVar = fmt.Sprintf("&%s", b.createAndAssignVar(actualExpr))
 	} else {
 		handleVar = fmt.Sprintf("%s.Handle()", actualExpr)

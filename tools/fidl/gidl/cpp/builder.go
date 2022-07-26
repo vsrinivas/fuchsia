@@ -274,11 +274,11 @@ func typeNameImpl(decl gidlmixer.Declaration, ignoreNullable bool) string {
 		return fmt.Sprintf("std::vector<%s>", typeName(decl.Elem()))
 	case *gidlmixer.HandleDecl:
 		switch decl.Subtype() {
-		case fidlgen.Handle:
+		case fidlgen.HandleSubtypeNone:
 			return "zx::handle"
-		case fidlgen.Channel:
+		case fidlgen.HandleSubtypeChannel:
 			return "zx::channel"
-		case fidlgen.Event:
+		case fidlgen.HandleSubtypeEvent:
 			return "zx::event"
 		default:
 			panic(fmt.Sprintf("Handle subtype not supported %s", decl.Subtype()))

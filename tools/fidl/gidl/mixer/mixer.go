@@ -307,7 +307,7 @@ func (decl *HandleDecl) conforms(value gidlir.Value, ctx context) error {
 			return fmt.Errorf("handle #%d out of range", value.Handle)
 		}
 		if !ctx.ignoreWrongHandleType {
-			if decl.subtype == fidlgen.Handle {
+			if decl.subtype == fidlgen.HandleSubtypeNone {
 				// The declaration is an untyped handle. Any subtype conforms.
 				return nil
 			}
@@ -340,7 +340,7 @@ func (decl *ClientEndDecl) ProtocolName() string {
 
 func (decl *ClientEndDecl) UnderlyingHandleDecl() *HandleDecl {
 	return &HandleDecl{
-		subtype:  fidlgen.Channel,
+		subtype:  fidlgen.HandleSubtypeChannel,
 		nullable: decl.nullable,
 	}
 }
@@ -365,7 +365,7 @@ func (decl *ServerEndDecl) ProtocolName() string {
 
 func (decl *ServerEndDecl) UnderlyingHandleDecl() *HandleDecl {
 	return &HandleDecl{
-		subtype:  fidlgen.Channel,
+		subtype:  fidlgen.HandleSubtypeChannel,
 		nullable: decl.nullable,
 	}
 }

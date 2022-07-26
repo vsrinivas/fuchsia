@@ -701,14 +701,14 @@ var handleTypes = map[fidlgen.HandleSubtype]string{
 	// TODO(mknyszek): Add support here for process, thread, job, resource,
 	// interrupt, eventpair, fifo, guest, and time once these are actually
 	// supported in the Go runtime.
-	fidlgen.Handle:   "_zx.Handle",
-	fidlgen.Vmo:      "_zx.VMO",
-	fidlgen.Channel:  "_zx.Channel",
-	fidlgen.Event:    "_zx.Event",
-	fidlgen.Port:     "_zx.Port",
-	fidlgen.DebugLog: "_zx.Log",
-	fidlgen.Socket:   "_zx.Socket",
-	fidlgen.Vmar:     "_zx.VMAR",
+	fidlgen.HandleSubtypeNone:     "_zx.Handle",
+	fidlgen.HandleSubtypeVmo:      "_zx.VMO",
+	fidlgen.HandleSubtypeChannel:  "_zx.Channel",
+	fidlgen.HandleSubtypeEvent:    "_zx.Event",
+	fidlgen.HandleSubtypePort:     "_zx.Port",
+	fidlgen.HandleSubtypeDebugLog: "_zx.Log",
+	fidlgen.HandleSubtypeSocket:   "_zx.Socket",
+	fidlgen.HandleSubtypeVmar:     "_zx.VMAR",
 }
 
 func isReservedWord(str string) bool {
@@ -876,7 +876,7 @@ func (c *compiler) compileType(val fidlgen.Type) (r Type, t StackOfBoundsTag) {
 		if !ok {
 			// Fall back onto a generic handle if we don't support that particular
 			// handle subtype.
-			e = handleTypes[fidlgen.Handle]
+			e = handleTypes[fidlgen.HandleSubtypeNone]
 		}
 		var nullability int
 		if val.Nullable {

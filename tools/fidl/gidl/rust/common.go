@@ -183,11 +183,11 @@ func primitiveTypeName(subtype fidlgen.PrimitiveSubtype) string {
 
 func handleTypeName(subtype fidlgen.HandleSubtype) string {
 	switch subtype {
-	case fidlgen.Handle:
+	case fidlgen.HandleSubtypeNone:
 		return "Handle"
-	case fidlgen.Channel:
+	case fidlgen.HandleSubtypeChannel:
 		return "Channel"
-	case fidlgen.Event:
+	case fidlgen.HandleSubtypeEvent:
 		return "Event"
 	default:
 		panic(fmt.Sprintf("unsupported handle subtype: %s", subtype))
