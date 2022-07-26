@@ -102,6 +102,7 @@ pub(super) enum RecognizedGesture {
     #[allow(dead_code)] // Only used in tests until we implement palm recognizer.
     Palm,
     PrimaryTap,
+    SecondaryTap,
     Motion,
 }
 

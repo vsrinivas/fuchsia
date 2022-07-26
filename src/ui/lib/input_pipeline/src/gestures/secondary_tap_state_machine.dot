@@ -1,0 +1,114 @@
+digraph {
+  label="TWO-FINGER TAP RECOGNIZER" labelloc="t"
+  rankdir="LR"
+
+  // The gesture arena, which invokes methods on the various states of the recognizer.
+  arena [shape="doublecircle"]
+
+  // `InitialContender` definition.
+  arena -> examine_at_initial_contender [label="examine\nevent()"]
+  examine_at_initial_contender [shape="diamond" label="button\npressed?"]
+  examine_at_initial_contender -> examine2_at_initial_contender [label="no"]
+  examine_at_initial_contender -> return_mismatch_at_initial_contender [label="yes"]
+  examine2_at_initial_contender [shape="diamond" label="num\nfingers?"]
+  examine2_at_initial_contender -> return_mismatch_at_initial_contender [label="0 or >2"]
+  examine2_at_initial_contender -> return_one_finger_down_contender_at_initial_contender [label="1"]
+  examine2_at_initial_contender -> return_two_fingers_down_contender_at_initial_contender [label="2"]
+  return_one_finger_down_contender_at_initial_contender [shape="rectangle" label="return\nOneFingerDownContender"]
+  return_two_fingers_down_contender_at_initial_contender [shape="rectangle" label="return\nTwoFingersDownContender"]
+  return_mismatch_at_initial_contender [shape="rectangle" label="return\nMismatch"]
+  subgraph cluster_initial_contender {
+    label="InitialContender\n`impl Contender`"
+    examine_at_initial_contender
+    examine2_at_initial_contender
+    return_one_finger_down_contender_at_initial_contender
+    return_two_fingers_down_contender_at_initial_contender
+    return_mismatch_at_initial_contender
+  }
+
+  // `OneFingerDownContender` definition.
+  arena -> examine_at_one_finger_down_contender [label="examine\nevent()"]
+  examine_at_one_finger_down_contender [shape="diamond" label="elapsed\n<\nthreshold?"]
+  examine_at_one_finger_down_contender -> examine2_at_one_finger_down_contender [label="yes"]
+  examine_at_one_finger_down_contender -> return_mismatch_at_one_finger_down_contender [label="no"]
+  examine2_at_one_finger_down_contender [shape="diamond" label="button\npressed?"]
+  examine2_at_one_finger_down_contender -> return_mismatch_at_one_finger_down_contender [label="yes"]
+  examine2_at_one_finger_down_contender ->   examine3_at_one_finger_down_contender [shape="diamond" label="num fingers?"]
+  examine3_at_one_finger_down_contender -> return_mismatch_at_one_finger_down_contender [label="0 or > 2"]
+  examine3_at_one_finger_down_contender -> examine4_at_one_finger_down_contender [label="1"]
+  examine3_at_one_finger_down_contender -> examine5_at_one_finger_down_contender [label="2"]
+  examine4_at_one_finger_down_contender [shape="diamond" label="displacement\n<\nthreshold?"]
+  examine4_at_one_finger_down_contender -> return_mismatch_at_one_finger_down_contender [label="no"]
+  examine4_at_one_finger_down_contender -> return_self_at_one_finger_down_contender [label="yes"]
+  examine5_at_one_finger_down_contender [shape="diamond" label="displacement\n<\nthreshold?"]
+  examine5_at_one_finger_down_contender -> return_mismatch_at_one_finger_down_contender [label="no"]
+  examine5_at_one_finger_down_contender -> return_two_fingers_down_contender_at_one_finger_down_contender [label="yes"]
+  return_mismatch_at_one_finger_down_contender [shape="rectangle" label="return\nMismatch"]
+  return_self_at_one_finger_down_contender [shape="rectangle" label="return\n`self`"]
+  return_two_fingers_down_contender_at_one_finger_down_contender [shape="rectangle" label="return\nTwoFingersDownContender"]
+    subgraph cluster_one_finger_down_contender {
+    label="OneFingerDownContender\n`impl Contender`"
+    examine_at_one_finger_down_contender
+    examine2_at_one_finger_down_contender
+    examine3_at_one_finger_down_contender
+    examine4_at_one_finger_down_contender
+    examine5_at_one_finger_down_contender
+    return_mismatch_at_one_finger_down_contender
+    return_self_at_one_finger_down_contender
+    return_two_fingers_down_contender_at_one_finger_down_contender
+  }
+
+  // `TwoFingersDownContender` definition.
+  arena -> examine_at_two_fingers_down_contender [label="examine\nevent()"]
+  examine_at_two_fingers_down_contender [shape="diamond" label="elapsed\n<\nthreshold?"]
+  examine_at_two_fingers_down_contender -> examine2_at_two_fingers_down_contender [label="yes"]
+  examine_at_two_fingers_down_contender -> return_mismatch_at_two_fingers_down_contender [label="no"]
+  examine2_at_two_fingers_down_contender [shape="diamond" label="button\npressed?"]
+  examine2_at_two_fingers_down_contender -> return_mismatch_at_two_fingers_down_contender [label="yes"]
+  examine2_at_two_fingers_down_contender -> examine3_at_two_fingers_down_contender [label="no"]
+  examine3_at_two_fingers_down_contender [shape="diamond" label="num fingers?"]
+  examine3_at_two_fingers_down_contender -> return_mismatch_at_two_fingers_down_contender [label="1 or > 2"]
+  examine3_at_two_fingers_down_contender -> examine4_at_two_fingers_down_contender [label="2"]
+  examine3_at_two_fingers_down_contender -> return_matched_contender_at_two_fingers_down_contender [label="0"]
+  examine4_at_two_fingers_down_contender [shape="diamond" label="displacement\n<\nthreshold\nfor both fingers?"]
+  examine4_at_two_fingers_down_contender -> return_mismatch_at_two_fingers_down_contender [label="no"]
+  examine4_at_two_fingers_down_contender -> return_self_at_two_fingers_down_contender [label="yes"]
+  return_mismatch_at_two_fingers_down_contender [shape="rectangle" label="return\nMismatch"]
+  return_self_at_two_fingers_down_contender [shape="rectangle" label="return\n`self`"]
+  return_matched_contender_at_two_fingers_down_contender [shape="rectangle" label="return\nMatched\nContender"]
+    subgraph cluster_two_fingers_down_contender {
+    label="TwoFingersDownContender\n`impl Contender`"
+    examine_at_two_fingers_down_contender
+    examine2_at_two_fingers_down_contender
+    examine3_at_two_fingers_down_contender
+    examine4_at_two_fingers_down_contender
+    return_mismatch_at_two_fingers_down_contender
+    return_self_at_two_fingers_down_contender
+    return_matched_contender_at_two_fingers_down_contender
+  }
+
+  // `MatchedContender` definition.
+  arena -> verify_at_matched_contender [label="verify\nevent()"]
+  verify_at_matched_contender [shape="diamond" label="elapsed\n<\nthreshold?"]
+  verify_at_matched_contender -> return_mismatch_at_matched_contender [label="no"]
+  verify_at_matched_contender -> verify2_at_matched_contender [label="yes"]
+  verify2_at_matched_contender [shape="diamond" label="exactly\nzero\nfingers?"]
+  verify2_at_matched_contender -> return_mismatch_at_matched_contender [label="no"]
+  verify2_at_matched_contender -> verify3_at_matched_contender [label="yes"]
+  verify3_at_matched_contender [shape="diamond" label="button\npressed?"]
+  verify3_at_matched_contender -> return_mismatch_at_matched_contender [label="yes"]
+  verify3_at_matched_contender -> return_self_at_matched_contender [label="no"]
+  arena -> send_click_matched_contender [label="process\nbuffered\nevents()"]
+  return_mismatch_at_matched_contender [shape="rectangle" label="return\nMismatch"]
+  return_self_at_matched_contender [shape="rectangle" label="return\n`self`"]
+  send_click_matched_contender [shape="rectangle" label="return\nvec![Secondary Button Down, Secondary Button Up], None, TwoFingerTap"]
+  subgraph cluster_matched_contender {
+    label="MatchedContender"
+    verify_at_matched_contender
+    verify2_at_matched_contender
+    verify3_at_matched_contender
+    return_mismatch_at_matched_contender
+    return_self_at_matched_contender
+    send_click_matched_contender
+  }
+}
