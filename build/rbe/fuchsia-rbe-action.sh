@@ -256,26 +256,40 @@ test "$canonicalize_working_dir" = "false" || \
   exit 1
 }
 
-"${full_command[@]}"
+stderr_file="$primary_output_name".stderr
+
+# Copy stderr to a temporary file for diagnostic analysis.
+"${full_command[@]}" 2> >(tee "$stderr_file" >&2)
+
+trap cleanup EXIT
+
+function cleanup() {
+  rm -f "$stderr_file"
+}
 
 # Exit normally on success.
 status="$?"
 
-case "$status" in
-  35 | 45 | 137)
-    # Retry once under these conditions:
-    # 35: reclient error
-    # 45: remote execution (server) error, e.g. remote blob download failure
-    # 137: SIGKILL'd (signal 9) by OS.
-    #   Reasons may include segmentation fault, or out of memory.
-    # Successful retry will be silent.
-    # Retries can be detected by looking for duplicate action digests
-    # in reproxy logs, one will fail with REMOTE_ERROR.
-    "${full_command[@]}"
-    status="$?"
-    ;;
-  0) exit "$status" ;;
-esac
+if grep -q "fatal error:.*file not found" "$stderr_file"
+then :
+  # Do not retry.  A local file is missing.
+else
+  case "$status" in
+    35 | 45 | 137)
+      # Retry once under these conditions:
+      # 35: reclient error
+      # 45: remote execution (server) error, e.g. remote blob download failure
+      # 137: SIGKILL'd (signal 9) by OS.
+      #   Reasons may include segmentation fault, or out of memory.
+      # Successful retry will be silent.
+      # Retries can be detected by looking for duplicate action digests
+      # in reproxy logs, one will fail with REMOTE_ERROR.
+      "${full_command[@]}"
+      status="$?"
+      ;;
+    0) exit "$status" ;;
+  esac
+fi
 
 # From a nonzero exit code alone, it is difficult to distinguish a command
 # error from an infrastructure error.  We can attempt to scrape information
