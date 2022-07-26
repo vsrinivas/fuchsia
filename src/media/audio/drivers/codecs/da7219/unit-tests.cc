@@ -1,9 +1,9 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/mock-i2c/mock-i2c.h>
-#include <lib/simple-codec/simple-codec-client.h>
-#include <lib/simple-codec/simple-codec-helper.h>
+#include <lib/zx/clock.h>
 
 #include <memory>
 
@@ -14,12 +14,6 @@
 #include "src/media/audio/drivers/codecs/da7219/da7219.h"
 
 namespace audio::da7219 {
-
-struct DriverTest : public Driver {
-  explicit DriverTest(zx_device_t* parent, std::shared_ptr<Core> core, bool is_input)
-      : Driver(parent, core, is_input) {}
-  codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
-};
 
 class Da7219Test : public zxtest::Test {
  public:
@@ -44,7 +38,22 @@ class Da7219Test : public zxtest::Test {
     core_ = std::make_shared<Core>(std::move(i2c_endpoints->client), std::move(irq2));
     ASSERT_OK(core_->Initialize());
 
-    auto output_device = std::make_unique<DriverTest>(fake_root_.get(), core_, false);
+    auto codec_connector_endpoints =
+        fidl::CreateEndpoints<fuchsia_hardware_audio::CodecConnector>();
+    EXPECT_TRUE(codec_connector_endpoints.is_ok());
+    codec_connector_ = fidl::WireSyncClient(std::move(codec_connector_endpoints->client));
+
+    auto output_device = std::make_unique<Driver>(fake_root_.get(), core_, false);
+
+    fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::CodecConnector>>(
+        core_->dispatcher(), std::move(codec_connector_endpoints->server), output_device.get());
+
+    auto codec_endpoints = fidl::CreateEndpoints<fuchsia_hardware_audio::Codec>();
+    EXPECT_TRUE(codec_endpoints.is_ok());
+    codec_ = fidl::WireSyncClient(std::move(codec_endpoints->client));
+
+    [[maybe_unused]] auto unused = codec_connector_->Connect(std::move(codec_endpoints->server));
+
     ASSERT_OK(output_device->DdkAdd(ddk::DeviceAddArgs("DA7219-output")));
     output_device.release();
   }
@@ -64,19 +73,15 @@ class Da7219Test : public zxtest::Test {
   async::Loop loop_;
   zx::interrupt irq_;
   std::shared_ptr<Core> core_;
+  fidl::WireSyncClient<fuchsia_hardware_audio::CodecConnector> codec_connector_;
+  fidl::WireSyncClient<fuchsia_hardware_audio::Codec> codec_;
 };
 
 TEST_F(Da7219Test, GetInfo) {
-  auto* child_dev = fake_root_->GetLatestChild();
-  auto codec = child_dev->GetDeviceContext<DriverTest>();
-  auto codec_proto = codec->GetProto();
-  SimpleCodecClient client;
-  client.SetProtocol(&codec_proto);
-
-  auto info = client.GetInfo();
-  EXPECT_EQ(info.value().unique_id.compare(""), 0);
-  EXPECT_EQ(info.value().manufacturer.compare("Dialog"), 0);
-  EXPECT_EQ(info.value().product_name.compare("DA7219"), 0);
+  auto info = codec_->GetInfo();
+  EXPECT_EQ(info->info.unique_id.size(), 0);
+  EXPECT_EQ(std::string(info->info.manufacturer.data()).compare("Dialog"), 0);
+  EXPECT_EQ(std::string(info->info.product_name.data()).compare("DA7219"), 0);
 }
 
 TEST_F(Da7219Test, Reset) {
@@ -110,13 +115,7 @@ TEST_F(Da7219Test, Reset) {
   mock_i2c_.ExpectWriteStop({0xc5, 0xff}, ZX_OK);  // Mask buttons.
   mock_i2c_.ExpectWriteStop({0xc3, 0xff}, ZX_OK);  // Clear buttons.
 
-  auto* child_dev = fake_root_->GetLatestChild();
-  auto codec = child_dev->GetDeviceContext<DriverTest>();
-  auto codec_proto = codec->GetProto();
-  SimpleCodecClient client;
-  client.SetProtocol(&codec_proto);
-
-  [[maybe_unused]] auto unused = client.Reset();
+  [[maybe_unused]] auto unused = codec_->Reset();
 }
 
 TEST_F(Da7219Test, GoodSetDai) {
@@ -124,27 +123,20 @@ TEST_F(Da7219Test, GoodSetDai) {
   mock_i2c_.ExpectWriteStop({0x2d, 0x43}, ZX_OK);  // TDM mode disabled, output, L/R enabled.
   mock_i2c_.ExpectWriteStop({0x2c, 0xa8}, ZX_OK);  // 24 bits per sample.
 
-  auto* child_dev = fake_root_->GetLatestChild();
-  auto codec = child_dev->GetDeviceContext<DriverTest>();
-  auto codec_proto = codec->GetProto();
-  SimpleCodecClient client;
-  client.SetProtocol(&codec_proto);
-  {
-    audio::DaiFormat format = {};
-    format.number_of_channels = 2;
-    format.channels_to_use_bitmask = 3;
-    format.sample_format = SampleFormat::PCM_SIGNED;
-    format.frame_format = FrameFormat::I2S;
-    format.frame_rate = 48000;
-    format.bits_per_slot = 32;
-    format.bits_per_sample = 24;
-    auto formats = client.GetDaiFormats();
-    ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
-    auto codec_format_info = client.SetDaiFormat(std::move(format));
-    ASSERT_OK(codec_format_info.status_value());
-    EXPECT_FALSE(codec_format_info->has_turn_off_delay());
-    EXPECT_FALSE(codec_format_info->has_turn_on_delay());
-  }
+  fuchsia_hardware_audio::wire::DaiFormat format = {};
+  format.number_of_channels = 2;
+  format.channels_to_use_bitmask = 3;
+  format.sample_format = fuchsia_hardware_audio::wire::DaiSampleFormat::kPcmSigned;
+  format.frame_format = fuchsia_hardware_audio::wire::DaiFrameFormat::WithFrameFormatStandard(
+      fuchsia_hardware_audio::DaiFrameFormatStandard::kI2S);
+  format.frame_rate = 48000;
+  format.bits_per_slot = 32;
+  format.bits_per_sample = 24;
+  auto formats = codec_->GetDaiFormats();
+  auto codec_format_info = codec_->SetDaiFormat(std::move(format));
+  ASSERT_OK(codec_format_info.status());
+  EXPECT_FALSE(codec_format_info.value().value()->state.has_turn_off_delay());
+  EXPECT_FALSE(codec_format_info.value().value()->state.has_turn_on_delay());
 }
 
 TEST_F(Da7219Test, PlugDetectInitiallyUnplugged) {
@@ -200,30 +192,24 @@ TEST_F(Da7219Test, PlugDetectInitiallyUnplugged) {
       .ExpectWriteStop({0x6c, 0x77}, ZX_OK);       // HP Routing (Right HP disabled).
   mock_i2c_.ExpectWriteStop({0xc2, 0x07}, ZX_OK);  // Clear all.
 
-  auto* child_dev = fake_root_->GetLatestChild();
-  auto codec = child_dev->GetDeviceContext<DriverTest>();
-  auto codec_proto = codec->GetProto();
-  SimpleCodecClient client;
-  client.SetProtocol(&codec_proto);
-
-  [[maybe_unused]] auto unused = client.Reset();
+  [[maybe_unused]] auto unused = codec_->Reset();
 
   // Initial Watch gets status from Reset.
-  auto initial_plugged_state = client.WiredSharedClient().sync()->WatchPlugState();
+  auto initial_plugged_state = codec_->WatchPlugState();
   ASSERT_TRUE(initial_plugged_state.ok());
   ASSERT_FALSE(initial_plugged_state.value().plug_state.plugged());
   ASSERT_GT(initial_plugged_state.value().plug_state.plug_state_time(), 0);
 
   // Trigger IRQ and Watch for plugging the headset.
   ASSERT_OK(irq().trigger(0, zx::clock::get_monotonic()));
-  auto plugged_state = client.WiredSharedClient().sync()->WatchPlugState();
+  auto plugged_state = codec_->WatchPlugState();
   ASSERT_TRUE(plugged_state.ok());
   ASSERT_TRUE(plugged_state.value().plug_state.plugged());
   ASSERT_GT(plugged_state.value().plug_state.plug_state_time(), 0);
 
   // Trigger Watch and IRQ for unplugging the headset.
   auto thread = std::thread([&] {
-    auto plugged_state = client.WiredSharedClient().sync()->WatchPlugState();
+    auto plugged_state = codec_->WatchPlugState();
     ASSERT_TRUE(plugged_state.ok());
     ASSERT_FALSE(plugged_state.value().plug_state.plugged());
     ASSERT_GT(plugged_state.value().plug_state.plug_state_time(), 0);
@@ -235,8 +221,8 @@ TEST_F(Da7219Test, PlugDetectInitiallyUnplugged) {
   thread.join();
 
   // To make sure the IRQ processing is completed in the server, make a 2-way call synchronously.
-  auto info = client.GetInfo();
-  EXPECT_EQ(info.value().product_name.compare("DA7219"), 0);
+  auto info = codec_->GetInfo();
+  EXPECT_EQ(std::string(info->info.product_name.data()).compare("DA7219"), 0);
 }
 
 TEST_F(Da7219Test, PlugDetectInitiallyPlugged) {
@@ -303,16 +289,10 @@ TEST_F(Da7219Test, PlugDetectInitiallyPlugged) {
       .ExpectWriteStop({0x6c, 0xff}, ZX_OK);       // HP Routing (Right HP enabled).
   mock_i2c_.ExpectWriteStop({0xc2, 0x07}, ZX_OK);  // Clear all.
 
-  auto* child_dev = fake_root_->GetLatestChild();
-  auto codec = child_dev->GetDeviceContext<DriverTest>();
-  auto codec_proto = codec->GetProto();
-  SimpleCodecClient client;
-  client.SetProtocol(&codec_proto);
-
-  [[maybe_unused]] auto unused = client.Reset();
+  [[maybe_unused]] auto unused = codec_->Reset();
 
   // Initial Watch gets status from Reset.
-  auto initial_plugged_state = client.WiredSharedClient().sync()->WatchPlugState();
+  auto initial_plugged_state = codec_->WatchPlugState();
   ASSERT_TRUE(initial_plugged_state.ok());
   ASSERT_TRUE(initial_plugged_state.value().plug_state.plugged());
   ASSERT_GT(initial_plugged_state.value().plug_state.plug_state_time(), 0);
@@ -322,7 +302,7 @@ TEST_F(Da7219Test, PlugDetectInitiallyPlugged) {
 
   // Trigger Watch and IRQ for unplugging the headset.
   auto thread = std::thread([&] {
-    auto plugged_state = client.WiredSharedClient().sync()->WatchPlugState();
+    auto plugged_state = codec_->WatchPlugState();
     ASSERT_TRUE(plugged_state.ok());
     ASSERT_FALSE(plugged_state.value().plug_state.plugged());
     ASSERT_GT(plugged_state.value().plug_state.plug_state_time(), 0);
@@ -335,7 +315,7 @@ TEST_F(Da7219Test, PlugDetectInitiallyPlugged) {
 
   // Trigger IRQ for plugging the headset again.
   auto thread2 = std::thread([&] {
-    auto plugged_state = client.WiredSharedClient().sync()->WatchPlugState();
+    auto plugged_state = codec_->WatchPlugState();
     ASSERT_TRUE(plugged_state.ok());
     ASSERT_TRUE(plugged_state.value().plug_state.plugged());
     ASSERT_GT(plugged_state.value().plug_state.plug_state_time(), 0);
@@ -347,8 +327,8 @@ TEST_F(Da7219Test, PlugDetectInitiallyPlugged) {
   thread2.join();
 
   // To make sure the IRQ processing is completed in the server, make a 2-way call synchronously.
-  auto info = client.GetInfo();
-  EXPECT_EQ(info.value().product_name.compare("DA7219"), 0);
+  auto info = codec_->GetInfo();
+  EXPECT_EQ(std::string(info->info.product_name.data()).compare("DA7219"), 0);
 }
 
 TEST_F(Da7219Test, PlugDetectNoMicrophoneWatchBeforeReset) {
@@ -374,28 +354,32 @@ TEST_F(Da7219Test, PlugDetectNoMicrophoneWatchBeforeReset) {
       .ExpectWriteStop({0x6c, 0xff}, ZX_OK);       // HP Routing (Right HP enabled).
   mock_i2c_.ExpectWriteStop({0xc2, 0x07}, ZX_OK);  // Clear all.
 
-  auto* output_child_dev = fake_root_->GetLatestChild();
-  auto output_codec = output_child_dev->GetDeviceContext<DriverTest>();
-  auto output_codec_proto = output_codec->GetProto();
-  SimpleCodecClient output_client;
-  output_client.SetProtocol(&output_codec_proto);
+  auto input_codec_connector_endpoints =
+      fidl::CreateEndpoints<fuchsia_hardware_audio::CodecConnector>();
+  EXPECT_TRUE(input_codec_connector_endpoints.is_ok());
+  auto input_codec_connector =
+      fidl::WireSyncClient(std::move(input_codec_connector_endpoints->client));
+  auto input_device = std::make_unique<Driver>(fake_root_.get(), core_, true);
+  fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::CodecConnector>>(
+      core_->dispatcher(), std::move(input_codec_connector_endpoints->server), input_device.get());
 
-  auto input_device = std::make_unique<DriverTest>(fake_root_.get(), core_, true);
+  auto input_codec_endpoints = fidl::CreateEndpoints<fuchsia_hardware_audio::Codec>();
+  EXPECT_TRUE(input_codec_endpoints.is_ok());
+  auto input_codec = fidl::WireSyncClient(std::move(input_codec_endpoints->client));
+
+  [[maybe_unused]] auto unused =
+      input_codec_connector->Connect(std::move(input_codec_endpoints->server));
+
   ASSERT_OK(input_device->DdkAdd(ddk::DeviceAddArgs("DA7219-input")));
   input_device.release();
-  auto* input_child_dev = fake_root_->GetLatestChild();
-  auto input_codec = input_child_dev->GetDeviceContext<DriverTest>();
-  auto input_codec_proto = input_codec->GetProto();
-  SimpleCodecClient input_client;
-  input_client.SetProtocol(&input_codec_proto);
 
   // When a Watch is issued before Reset the driver has no choice but to reply with some default
   // initialized values (in this case unpluged at time "0").
-  auto output_initial_state = output_client.WiredSharedClient().sync()->WatchPlugState();
+  auto output_initial_state = codec_->WatchPlugState();
   ASSERT_TRUE(output_initial_state.ok());
   ASSERT_FALSE(output_initial_state.value().plug_state.plugged());
   ASSERT_EQ(output_initial_state.value().plug_state.plug_state_time(), 0);
-  auto input_initial_state = input_client.WiredSharedClient().sync()->WatchPlugState();
+  auto input_initial_state = input_codec->WatchPlugState();
   ASSERT_TRUE(input_initial_state.ok());
   ASSERT_FALSE(input_initial_state.value().plug_state.plugged());
   ASSERT_EQ(input_initial_state.value().plug_state.plug_state_time(), 0);
@@ -407,10 +391,10 @@ TEST_F(Da7219Test, PlugDetectNoMicrophoneWatchBeforeReset) {
   // Trigger IRQ and Watch for plugging the headset.
   ASSERT_OK(irq().trigger(0, zx::clock::get_monotonic()));
 
-  auto output_state = output_client.WiredSharedClient().sync()->WatchPlugState();
+  auto output_state = codec_->WatchPlugState();
   ASSERT_TRUE(output_state.ok());
   ASSERT_TRUE(output_state.value().plug_state.plugged());
-  auto input_state = input_client.WiredSharedClient().sync()->WatchPlugState();
+  auto input_state = input_codec->WatchPlugState();
   ASSERT_TRUE(input_state.ok());
   ASSERT_FALSE(input_state.value().plug_state.plugged());  // No mic reports unplugged.
   // The last 2-way sync call makes sure the IRQ processing is completed in the server.
@@ -439,28 +423,32 @@ TEST_F(Da7219Test, PlugDetectWithMicrophoneWatchBeforeReset) {
       .ExpectWriteStop({0x6c, 0xff}, ZX_OK);       // HP Routing (Right HP enabled).
   mock_i2c_.ExpectWriteStop({0xc2, 0x07}, ZX_OK);  // Clear all.
 
-  auto* output_child_dev = fake_root_->GetLatestChild();
-  auto output_codec = output_child_dev->GetDeviceContext<DriverTest>();
-  auto output_codec_proto = output_codec->GetProto();
-  SimpleCodecClient output_client;
-  output_client.SetProtocol(&output_codec_proto);
+  auto input_codec_connector_endpoints =
+      fidl::CreateEndpoints<fuchsia_hardware_audio::CodecConnector>();
+  EXPECT_TRUE(input_codec_connector_endpoints.is_ok());
+  auto input_codec_connector =
+      fidl::WireSyncClient(std::move(input_codec_connector_endpoints->client));
+  auto input_device = std::make_unique<Driver>(fake_root_.get(), core_, true);
+  fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::CodecConnector>>(
+      core_->dispatcher(), std::move(input_codec_connector_endpoints->server), input_device.get());
 
-  auto input_device = std::make_unique<DriverTest>(fake_root_.get(), core_, true);
+  auto input_codec_endpoints = fidl::CreateEndpoints<fuchsia_hardware_audio::Codec>();
+  EXPECT_TRUE(input_codec_endpoints.is_ok());
+  auto input_codec = fidl::WireSyncClient(std::move(input_codec_endpoints->client));
+
+  [[maybe_unused]] auto unused =
+      input_codec_connector->Connect(std::move(input_codec_endpoints->server));
+
   ASSERT_OK(input_device->DdkAdd(ddk::DeviceAddArgs("DA7219-input")));
   input_device.release();
-  auto* input_child_dev = fake_root_->GetLatestChild();
-  auto input_codec = input_child_dev->GetDeviceContext<DriverTest>();
-  auto input_codec_proto = input_codec->GetProto();
-  SimpleCodecClient input_client;
-  input_client.SetProtocol(&input_codec_proto);
 
   // When a Watch is issued before Reset the driver has no choice but to reply with some default
   // initialized values (in this case unpluged at time "0").
-  auto output_initial_state = output_client.WiredSharedClient().sync()->WatchPlugState();
+  auto output_initial_state = codec_->WatchPlugState();
   ASSERT_TRUE(output_initial_state.ok());
   ASSERT_FALSE(output_initial_state.value().plug_state.plugged());
   ASSERT_EQ(output_initial_state.value().plug_state.plug_state_time(), 0);
-  auto input_initial_state = input_client.WiredSharedClient().sync()->WatchPlugState();
+  auto input_initial_state = input_codec->WatchPlugState();
   ASSERT_TRUE(input_initial_state.ok());
   ASSERT_FALSE(input_initial_state.value().plug_state.plugged());
   ASSERT_EQ(input_initial_state.value().plug_state.plug_state_time(), 0);
@@ -472,10 +460,10 @@ TEST_F(Da7219Test, PlugDetectWithMicrophoneWatchBeforeReset) {
   // Trigger IRQ and Watch for plugging the headset.
   ASSERT_OK(irq().trigger(0, zx::clock::get_monotonic()));
 
-  auto output_state = output_client.WiredSharedClient().sync()->WatchPlugState();
+  auto output_state = codec_->WatchPlugState();
   ASSERT_TRUE(output_state.ok());
   ASSERT_TRUE(output_state.value().plug_state.plugged());
-  auto input_state = input_client.WiredSharedClient().sync()->WatchPlugState();
+  auto input_state = input_codec->WatchPlugState();
   ASSERT_TRUE(input_state.ok());
   ASSERT_TRUE(input_state.value().plug_state.plugged());  // With mic reports plugged.
   // The last 2-way sync call makes sure the IRQ processing is completed in the server.

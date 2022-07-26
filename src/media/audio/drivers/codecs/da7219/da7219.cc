@@ -13,6 +13,8 @@
 
 namespace audio::da7219 {
 
+// Core methods.
+
 Core::Core(fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c, zx::interrupt irq)
     : i2c_(std::move(i2c)), irq_(std::move(irq)) {
   async_loop_config_t config = kAsyncLoopConfigNeverAttachToThread;
@@ -23,24 +25,42 @@ Core::Core(fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c, zx::interrupt irq)
   loop_->StartThread();
 }
 
-void Driver::Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) {
-  if (bound_) {
-    completer.Close(ZX_ERR_NO_RESOURCES);  // Only allow one connection.
+void Core::PlugDetected(bool plugged, bool with_mic) {
+  zxlogf(INFO, "Plug event: %s %s", plugged ? "plugged" : "unplugged",
+         with_mic ? "with mic" : "no mic");
+
+  // Enable/disable HP left.
+  auto hplctrl = HpLCtrl::Read(i2c_);
+  if (!hplctrl.is_ok()) {
     return;
   }
-  bound_ = true;
-  fidl::OnUnboundFn<fidl::WireServer<fuchsia_hardware_audio::Codec>> on_unbound =
-      [this](fidl::WireServer<fuchsia_hardware_audio::Codec>*, fidl::UnbindInfo info,
-             fidl::ServerEnd<fuchsia_hardware_audio::Codec>) {
-        // Do not log canceled cases which happens too often in particular in test cases.
-        if (info.status() != ZX_ERR_CANCELED) {
-          zxlogf(INFO, "Codec channel closing: %s", info.FormatDescription().c_str());
-        }
-        bound_ = false;
-      };
+  zx_status_t status = hplctrl
+                           ->set_hp_l_amp_en(plugged)  // HP_L_AMP amplifier control.
+                           .set_hp_l_amp_oe(plugged)   // Output control, output is driven.
+                           .Write(i2c_);
+  if (status != ZX_OK)
+    return;
 
-  fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::Codec>>(
-      core_->dispatcher(), std::move(request->codec_protocol), this, std::move(on_unbound));
+  // Enable/disable HP right.
+  auto hprctrl = HpRCtrl::Read(i2c_);
+  if (!hprctrl.is_ok()) {
+    return;
+  }
+  status = hprctrl
+               ->set_hp_r_amp_en(plugged)  // HP_R_AMP amplifier control.
+               .set_hp_r_amp_oe(plugged)   // Output control, output is driven.
+               .Write(i2c_);
+  if (status != ZX_OK)
+    return;
+
+  // No errors, now update callbacks. Input is plugged only if the HW detected a 4-pole jack.
+  if (plug_callback_input_.has_value()) {
+    (*plug_callback_input_)(plugged && with_mic);
+  }
+
+  if (plug_callback_output_.has_value()) {
+    (*plug_callback_output_)(plugged);
+  }
 }
 
 void Core::AddPlugCallback(bool is_input, PlugCallback cb) {
@@ -237,8 +257,11 @@ zx_status_t Core::Reset() {
       .Write(i2c_);
 }
 
+// Driver methods.
+
 Driver::Driver(zx_device_t* parent, std::shared_ptr<Core> core, bool is_input)
     : Base(parent), core_(core), is_input_(is_input) {
+  ddk_proto_id_ = ZX_PROTOCOL_CODEC;
   core_->AddPlugCallback(is_input_, [this](bool plugged) {
     // Update plug state if we haven't set it yet, or if changed.
     if (!plugged_time_.get() || plugged_ != plugged) {
@@ -256,6 +279,26 @@ Driver::Driver(zx_device_t* parent, std::shared_ptr<Core> core, bool is_input)
       }
     }
   });
+}
+
+void Driver::Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) {
+  if (bound_) {
+    completer.Close(ZX_ERR_NO_RESOURCES);  // Only allow one connection.
+    return;
+  }
+  bound_ = true;
+  fidl::OnUnboundFn<fidl::WireServer<fuchsia_hardware_audio::Codec>> on_unbound =
+      [this](fidl::WireServer<fuchsia_hardware_audio::Codec>*, fidl::UnbindInfo info,
+             fidl::ServerEnd<fuchsia_hardware_audio::Codec>) {
+        // Do not log canceled cases which happens too often in particular in test cases.
+        if (info.status() != ZX_ERR_CANCELED) {
+          zxlogf(INFO, "Codec channel closing: %s", info.FormatDescription().c_str());
+        }
+        bound_ = false;
+      };
+
+  fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::Codec>>(
+      core_->dispatcher(), std::move(request->codec_protocol), this, std::move(on_unbound));
 }
 
 void Driver::Reset(ResetRequestView request, ResetCompleter::Sync& completer) {
@@ -452,44 +495,6 @@ void Driver::WatchPlugState(WatchPlugStateRequestView request,
     plug_state_completer_.emplace(completer.ToAsync());
   } else {
     zxlogf(WARNING, "Client called WatchPlugState when another hanging get was pending");
-  }
-}
-
-void Core::PlugDetected(bool plugged, bool with_mic) {
-  zxlogf(INFO, "Plug event: %s %s", plugged ? "plugged" : "unplugged",
-         with_mic ? "with mic" : "no mic");
-
-  // Enable/disable HP left.
-  auto hplctrl = HpLCtrl::Read(i2c_);
-  if (!hplctrl.is_ok()) {
-    return;
-  }
-  zx_status_t status = hplctrl
-                           ->set_hp_l_amp_en(plugged)  // HP_L_AMP amplifier control.
-                           .set_hp_l_amp_oe(plugged)   // Output control, output is driven.
-                           .Write(i2c_);
-  if (status != ZX_OK)
-    return;
-
-  // Enable/disable HP right.
-  auto hprctrl = HpRCtrl::Read(i2c_);
-  if (!hprctrl.is_ok()) {
-    return;
-  }
-  status = hprctrl
-               ->set_hp_r_amp_en(plugged)  // HP_R_AMP amplifier control.
-               .set_hp_r_amp_oe(plugged)   // Output control, output is driven.
-               .Write(i2c_);
-  if (status != ZX_OK)
-    return;
-
-  // No errors, now update callbacks. Input is plugged only if the HW detected a 4-pole jack.
-  if (plug_callback_input_.has_value()) {
-    (*plug_callback_input_)(plugged && with_mic);
-  }
-
-  if (plug_callback_output_.has_value()) {
-    (*plug_callback_output_)(plugged);
   }
 }
 

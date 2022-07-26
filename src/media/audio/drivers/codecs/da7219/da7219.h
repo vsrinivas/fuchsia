@@ -7,7 +7,6 @@
 
 #include <fidl/fuchsia.hardware.audio/cpp/wire.h>
 #include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
-#include <fuchsia/hardware/audio/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/irq.h>
 #include <lib/fit/function.h>
@@ -53,7 +52,7 @@ using Base = ddk::Device<Driver, ddk::Messageable<fuchsia_hardware_audio::CodecC
 
 class Driver : public Base,
                public fidl::WireServer<fuchsia_hardware_audio::Codec>,
-               public ddk::CodecProtocol<Driver, ddk::base_protocol> {
+               public ddk::internal::base_protocol {
  public:
   explicit Driver(zx_device_t* parent, std::shared_ptr<Core> core, bool is_input);
 
@@ -69,13 +68,6 @@ class Driver : public Base,
     // Either driver shuts down the whole core.
     core_->Shutdown();
     txn.Reply(ZX_OK, txn.requested_state());
-  }
-
-  zx_status_t CodecConnect(zx::channel channel) {
-    fidl::BindServer<fidl::WireServer<fuchsia_hardware_audio::Codec>>(
-        core_->dispatcher(), fidl::ServerEnd<fuchsia_hardware_audio::Codec>(std::move(channel)),
-        this);
-    return ZX_OK;
   }
 
  private:
