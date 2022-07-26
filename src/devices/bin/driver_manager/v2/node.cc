@@ -205,8 +205,8 @@ std::optional<fdecl::wire::Offer> CreateCompositeOffer(fidl::AnyArena& arena,
     return CreateCompositeServiceOffer(arena, offer, parents_name, primary_parent);
   }
 
-  // Other capabilities we can simply forward unchanged.
-  return offer;
+  // Other capabilities we can simply forward unchanged, but allocated on the new arena.
+  return fidl::ToWire(arena, fidl::ToNatural(offer));
 }
 
 BindResultTracker::BindResultTracker(size_t expected_result_count,
@@ -296,17 +296,17 @@ zx::status<std::shared_ptr<Node>> Node::CreateCompositeNode(
   }
 
   // Copy the offers from each parent.
-  std::vector<OwnedOffer> node_offers;
+  std::vector<fdecl::wire::Offer> node_offers;
   size_t parent_index = 0;
   for (const Node* parent : composite->parents_) {
-    auto& parent_offers = parent->offers();
-    node_offers.reserve(node_offers.size() + parent_offers.size());
+    auto parent_offers = parent->offers();
+    node_offers.reserve(node_offers.size() + parent_offers.count());
 
     for (auto& parent_offer : parent_offers) {
-      auto offer = CreateCompositeOffer(composite->arena_, parent_offer->get(),
+      auto offer = CreateCompositeOffer(composite->arena_, parent_offer,
                                         composite->parents_names_[parent_index], parent_index == 0);
       if (offer) {
-        node_offers.push_back(OwnedMessage<fdecl::wire::Offer>::From(*offer));
+        node_offers.push_back(*offer);
       }
     }
     parent_index++;
@@ -327,10 +327,11 @@ const std::vector<Node*>& Node::parents() const { return parents_; }
 
 const std::list<std::shared_ptr<Node>>& Node::children() const { return children_; }
 
-std::vector<Node::OwnedOffer>& Node::offers() const {
+fidl::VectorView<fuchsia_component_decl::wire::Offer> Node::offers() const {
   // TODO(fxbug.dev/66150): Once FIDL wire types support a Clone() method,
   // remove the const_cast.
-  return const_cast<decltype(offers_)&>(offers_);
+  return fidl::VectorView<fdecl::wire::Offer>::FromExternal(
+      const_cast<decltype(offers_)&>(offers_));
 }
 
 fidl::VectorView<fdf::wire::NodeSymbol> Node::symbols() const {
@@ -372,18 +373,10 @@ std::string Node::TopoName() const {
   return fxl::JoinStrings(names, ".");
 }
 
-fidl::VectorView<fdecl::wire::Offer> Node::CreateOffers(fidl::AnyArena& arena) const {
-  fidl::VectorView<fdecl::wire::Offer> node_offers(arena, offers_.size());
-  for (size_t i = 0; i < offers_.size(); i++) {
-    node_offers[i] = offers_[i]->get();
-  }
-  return node_offers;
-}
-
 fuchsia_driver_framework::wire::NodeAddArgs Node::CreateAddArgs(fidl::AnyArena& arena) {
   fuchsia_driver_framework::wire::NodeAddArgs args(arena);
   args.set_name(arena, arena, name());
-  args.set_offers(arena, CreateOffers(arena));
+  args.set_offers(arena, offers());
   args.set_properties(
       arena,
       fidl::VectorView<fuchsia_driver_framework::wire::NodeProperty>::FromExternal(properties_));
@@ -528,7 +521,8 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
         return true;
       });
 
-      child->offers_.push_back(OwnedMessage<fdecl::wire::Offer>::From(offer));
+      auto natural = fidl::ToNatural(offer);
+      child->offers_.push_back(fidl::ToWire(child->arena_, std::move(natural)));
     }
   }
 

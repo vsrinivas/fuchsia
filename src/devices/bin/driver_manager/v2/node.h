@@ -21,36 +21,6 @@ std::optional<fuchsia_component_decl::wire::Offer> CreateCompositeServiceOffer(
     fidl::AnyArena& arena, fuchsia_component_decl::wire::Offer& offer,
     std::string_view parents_name, bool primary_parent);
 
-// TODO(fxbug.dev/66150): Once FIDL wire types support a Clone() method,
-// stop encoding and decoding messages as a workaround.
-template <typename T>
-class OwnedMessage {
- public:
-  static std::unique_ptr<OwnedMessage<T>> From(T& message) {
-    // TODO(fxbug.dev/45252): Use FIDL at rest.
-    fidl::unstable::OwnedEncodedMessage<T> encoded(fidl::internal::WireFormatVersion::kV2,
-                                                   &message);
-    ZX_ASSERT_MSG(encoded.ok(), "Failed to encode: %s", encoded.FormatDescription().data());
-    return std::make_unique<OwnedMessage>(encoded);
-  }
-
-  T& get() { return *decoded_.PrimaryObject(); }
-
- private:
-  friend std::unique_ptr<OwnedMessage<T>> std::make_unique<OwnedMessage<T>>(
-      fidl::unstable::OwnedEncodedMessage<T>&);
-
-  // TODO(fxbug.dev/45252): Use FIDL at rest.
-  explicit OwnedMessage(fidl::unstable::OwnedEncodedMessage<T>& encoded)
-      : converted_(encoded.GetOutgoingMessage()),
-        decoded_(fidl::internal::WireFormatVersion::kV2, std::move(converted_.incoming_message())) {
-    ZX_ASSERT_MSG(decoded_.ok(), "Failed to decode: %s", decoded_.FormatDescription().c_str());
-  }
-
-  fidl::OutgoingToIncomingMessage converted_;
-  fidl::unstable::DecodedMessage<T> decoded_;
-};
-
 class Node;
 
 using NodeBindingInfoResultCallback =
@@ -100,8 +70,6 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
              public fidl::WireServer<fuchsia_driver_framework::Node>,
              public std::enable_shared_from_this<Node> {
  public:
-  using OwnedOffer = std::unique_ptr<OwnedMessage<fuchsia_component_decl::wire::Offer>>;
-
   Node(std::string_view name, std::vector<Node*> parents, DriverBinder* driver_binder,
        async_dispatcher_t* dispatcher);
   ~Node() override;
@@ -111,8 +79,6 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
       std::vector<std::string> parents_names,
       std::vector<fuchsia_driver_framework::wire::NodeProperty> properties,
       DriverBinder* driver_binder, async_dispatcher_t* dispatcher);
-
-  fidl::VectorView<fuchsia_component_decl::wire::Offer> CreateOffers(fidl::AnyArena& arena) const;
 
   fuchsia_driver_framework::wire::NodeAddArgs CreateAddArgs(fidl::AnyArena& arena);
 
@@ -134,7 +100,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   const DriverComponent* driver_component() const;
   const std::vector<Node*>& parents() const;
   const std::list<std::shared_ptr<Node>>& children() const;
-  std::vector<OwnedOffer>& offers() const;
+  fidl::VectorView<fuchsia_component_decl::wire::Offer> offers() const;
   fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols() const;
   const std::vector<fuchsia_driver_framework::wire::NodeProperty>& properties() const;
   DriverHostComponent* driver_host() const;
@@ -167,7 +133,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
   async_dispatcher_t* const dispatcher_;
 
   fidl::Arena<128> arena_;
-  std::vector<OwnedOffer> offers_;
+  std::vector<fuchsia_component_decl::wire::Offer> offers_;
   std::vector<fuchsia_driver_framework::wire::NodeSymbol> symbols_;
   std::vector<fuchsia_driver_framework::wire::NodeProperty> properties_;
 

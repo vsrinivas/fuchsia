@@ -97,10 +97,10 @@ void InspectNode(inspect::Inspector& inspector, InspectStack& stack) {
     }
 
     // Populate root with data from node.
-    if (auto& offers = node->offers(); !offers.empty()) {
+    if (auto offers = node->offers(); !offers.empty()) {
       std::vector<std::string_view> strings;
       for (auto& offer : offers) {
-        auto string = VisitOffer<std::string_view>(offer->get(), inspect_decl);
+        auto string = VisitOffer<std::string_view>(offer, inspect_decl);
         strings.push_back(string.value_or("unknown"));
       }
       root->CreateString("offers", fxl::JoinStrings(strings, ", "), &inspector);
@@ -611,7 +611,7 @@ zx::status<> DriverRunner::CreateComponent(std::string name, Collection collecti
       .set_startup(fdecl::wire::StartupMode::kLazy);
   fcomponent::wire::CreateChildArgs child_args(arena);
   if (opts.node != nullptr) {
-    child_args.set_dynamic_offers(arena, opts.node->CreateOffers(arena));
+    child_args.set_dynamic_offers(arena, opts.node->offers());
   }
   fprocess::wire::HandleInfo handle_info;
   if (opts.token) {
