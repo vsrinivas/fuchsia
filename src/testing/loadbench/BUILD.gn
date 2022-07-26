@@ -43,26 +43,8 @@ executable("bin") {
   deps = [ ":lib" ]
 }
 
-resource("loadbench_files") {
-  sources = [
-    "data/deadline_test.json",
-    "data/default.json",
-    "data/example.json",
-    "data/port_test.json",
-    "data/relative_bandwidth.json",
-    "data/simple_load.json",
-    "data/tests/automated/large_core_counts_overload_test.json",
-    "data/tests/dpc_latency.json",
-  ]
-  outputs = [ "data/{{source_file_part}}" ]
-}
-
-fuchsia_package_with_single_component("loadbench") {
-  manifest = "meta/loadbench.cmx"
-  deps = [
-    ":bin",
-    ":loadbench_files",
-  ]
+fuchsia_shell_package("loadbench") {
+  deps = [ ":bin" ]
 }
 
 executable("loadbench_unittests") {

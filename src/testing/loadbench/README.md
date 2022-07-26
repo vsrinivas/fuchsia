@@ -27,32 +27,18 @@ Once the tool is included in a build and flashed to the device, it can be driven
 from the commandline using the `run` command:
 
 ```bash
-$ fx shell run loadbench --help
+$ fx shell loadbench --help
 ```
 
-Use the `--file <path>` option to specify a JSON workload specification file to
+Run a workload by specifying a JSON workload specification file to
 execute:
 
 ```bash
 $ fx scp ./my_test_load.json "[$(fx get-device-addr)]:/tmp/"
-$ fx shell run loadbench --file /tmp/my_test_load.json
+$ fx shell loadbench /tmp/my_test_load.json
 ```
 
-Note: `/tmp/r/sys/fuchsia.com:loadbench:0#meta:loadbench.cmx` will not be present
-until the loadbench package is run for the first time after device boot. To
-explicitly create this directory from the commandline use:
-
-```bash
-$ fx shell mkdir -p /tmp/r/sys/fuchsia.com:loadbench:0\#meta:loadbench.cmx/
-```
-
-Workload specification files can also be built into the package. This is useful
-for workloads intended for automated and regression testing. These files can be
-run manually by referencing them relative to the `/pkg/data/` path prefix:
-
-```bash
-$ fx shell run loadbench --file /pkg/data/simple_load.json
-```
+Several predefined workloads are also available in the `data` directory.
 
 ## Workload Specification Files
 

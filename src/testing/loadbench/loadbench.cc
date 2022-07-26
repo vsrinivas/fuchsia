@@ -34,44 +34,36 @@
 using std::chrono_literals::operator""ms;
 using std::chrono_literals::operator""s;
 
-constexpr char kShortOptions[] = "hfiltv::";
+constexpr char kShortOptions[] = "hitv::";
 
 // clang-format off
 constexpr struct option kLongOptions[] = {
     { "help",       no_argument,        nullptr, 'h' },
-    { "file",       required_argument,  nullptr, 'f' },
     { "interval",   required_argument,  nullptr, 'i' },
-    { "list",       no_argument,        nullptr, 'l' },
     { "terse",      no_argument,        nullptr, 't' },
     { "verbose",    no_argument,        nullptr, 'v' },
     { nullptr, 0, nullptr, 0 }
 };
 // clang-format on
-
-constexpr char kDefaultWorkloadPath[] = "/pkg/data/default.json";
 constexpr auto kDefaultWorkloadInterval = 10s;
 
 void PrintUsage(const char* program_name) {
   printf(
-      "Usage: %s [-hfltv] [--help] [--file <PATH>] [--interval <INTERVAL>] [--list] [--terse] "
-      "[--verbose]\n"
+      "Usage: %s [-hitv] [--help] [--interval <INTERVAL>] [--terse] [--verbose]\n"
       "Executes a synthetic workload and reports benchmarks.\n"
       "With --help or -h, display this help and exit.\n"
-      "With --file <PATH> or -f <PATH>, execute the workload file given by PATH.\n"
       "With --interval <INTERVAL> or -i <INTERVAL>, run workload for <INTERVAL> time.\n"
-      "With --list or -l, list workload files included in this package.\n"
       "With --terse or -t, show simplified output.\n"
       "With --verbose or -v, show verbose output.\n"
       "\n"
-      "The default workload file is: %s\n"
       "The default workload interval is %llu seconds, unless specified in the\n"
       "workload config or using --interval.\n",
-      program_name, kDefaultWorkloadPath, kDefaultWorkloadInterval.count());
+      program_name, kDefaultWorkloadInterval.count());
 }
 
 int main(int argc, char** argv) {
   std::optional<std::chrono::nanoseconds> default_interval;
-  std::string workload_path = kDefaultWorkloadPath;
+  std::string workload_path;
   bool help_flag = false;
   bool verbose_flag = false;
 
@@ -87,9 +79,6 @@ int main(int argc, char** argv) {
       case 'i':
         default_interval = ParseDurationString(optarg);
         break;
-      case 'f':
-        workload_path = optarg;
-        break;
       default:
         PrintUsage(argv[0]);
         return 1;
@@ -97,6 +86,15 @@ int main(int argc, char** argv) {
   }
 
   if (help_flag) {
+    PrintUsage(argv[0]);
+    return 0;
+  }
+
+  // If there is exactly one non-optional argument, that must be the path to the
+  // workload config
+  if (optind == argc - 1) {
+    workload_path = argv[optind];
+  } else {
     PrintUsage(argv[0]);
     return 0;
   }

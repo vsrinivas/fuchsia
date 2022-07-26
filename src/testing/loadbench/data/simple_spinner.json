@@ -1,6 +1,6 @@
-// Default workload.
+// Simple spinner.
 {
-  "name": "Default workload.",
+  "name": "Simple spinner.",
   "workers": [
     {
       "name": "Simple spinner",
