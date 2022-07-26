@@ -52,7 +52,6 @@ rustc_library("input_pipeline") {
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:rust_icu_sys",
     "//third_party/rust_crates:rust_icu_unorm2",
-    "//third_party/rust_crates:tracing",
   ]
 
   test_deps = [
