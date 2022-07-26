@@ -413,6 +413,7 @@ enum CmsgType {
     IpTtl,
     Ipv6Tclass,
     Ipv6Hoplimit,
+    Ipv6PktInfo,
     SoTimestamp,
     SoTimestampNs,
 }
@@ -449,6 +450,10 @@ fn validate_recv_msg_postflight_response(
     assert_eq!(
         bits_cmsg_requested(CmsgRequests::IPV6_HOPLIMIT),
         cmsg_expected(CmsgType::Ipv6Hoplimit)
+    );
+    assert_eq!(
+        bits_cmsg_requested(CmsgRequests::IPV6_PKTINFO),
+        cmsg_expected(CmsgType::Ipv6PktInfo)
     );
     assert_eq!(
         *timestamp == Some(TimestampOption::Nanosecond),
@@ -502,6 +507,13 @@ async fn toggle_cmsg(
                 .expect("set_ipv6_receive_hop_limit fidl error")
                 .expect("set_ipv6_receive_hop_limit failed");
         }
+        CmsgType::Ipv6PktInfo => {
+            let () = proxy
+                .set_ipv6_receive_packet_info(requested)
+                .await
+                .expect("set_ipv6_receive_packet_info fidl error")
+                .expect("set_ipv6_receive_packet_info failed");
+        }
         CmsgType::SoTimestamp => {
             let option = if requested {
                 fposix_socket::TimestampOption::Microsecond
@@ -533,6 +545,7 @@ async fn toggle_cmsg(
 #[test_case("ip_ttl", CmsgType::IpTtl)]
 #[test_case("ipv6_tclass", CmsgType::Ipv6Tclass)]
 #[test_case("ipv6_hoplimit", CmsgType::Ipv6Hoplimit)]
+#[test_case("ipv6_pktinfo", CmsgType::Ipv6PktInfo)]
 #[test_case("so_timestamp_ns", CmsgType::SoTimestampNs)]
 #[test_case("so_timestamp", CmsgType::SoTimestamp)]
 #[fuchsia_async::run_singlethreaded(test)]
