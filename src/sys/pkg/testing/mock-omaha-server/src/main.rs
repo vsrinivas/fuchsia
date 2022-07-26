@@ -92,10 +92,13 @@ impl tokio::io::AsyncRead for ConnectionStream {
         buf: &mut tokio::io::ReadBuf<'_>,
     ) -> Poll<Result<(), std::io::Error>> {
         match &mut *self {
-            ConnectionStream::Tcp(t) => Pin::new(t).poll_read(cx, buf.initialized_mut()),
-            ConnectionStream::Socket(t) => Pin::new(t).poll_read(cx, buf.initialized_mut()),
+            ConnectionStream::Tcp(t) => Pin::new(t).poll_read(cx, buf.initialize_unfilled()),
+            ConnectionStream::Socket(t) => Pin::new(t).poll_read(cx, buf.initialize_unfilled()),
         }
-        .map(|_usize| Ok(()))
+        .map_ok(|sz| {
+            buf.advance(sz);
+            ()
+        })
     }
 }
 
