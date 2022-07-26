@@ -9,8 +9,10 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fit/defer.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <threads.h>
 #include <zircon/hw/gpt.h>
 #include <zircon/process.h>
+#include <zircon/status.h>
 #include <zircon/threads.h>
 
 #include <ddktl/fidl.h>
@@ -627,7 +629,21 @@ void SdmmcBlockDevice::HandleRpmbRequests(std::deque<RpmbRequestInfo>& rpmb_list
 }
 
 int SdmmcBlockDevice::WorkerThread() {
+  {
+    const char* role_name = "fuchsia.devices.block.drivers.sdmmc.worker";
+    const size_t role_name_size = strlen(role_name);
+    const zx_status_t status = device_set_profile_by_role(
+        this->zxdev(), thrd_get_zx_handle(thrd_current()), role_name, role_name_size);
+    if (status != ZX_OK) {
+      zxlogf(WARNING,
+             "Failed to apply role \"%s\" to worker thread: %s Performance may be reduced.",
+             role_name, zx_status_get_string(status));
+    }
+  }
+
   for (;;) {
+    TRACE_DURATION("sdmmc", "work loop");
+
     block::BorrowedOperationQueue<PartitionInfo> txn_list;
     std::deque<RpmbRequestInfo> rpmb_list;
 
