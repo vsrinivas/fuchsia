@@ -55,6 +55,8 @@ class DisplayInfoDelegate : public Scenic::GetDisplayInfoDelegateDeprecated {
   void GetDisplayOwnershipEvent(
       fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) override;
 
+  fuchsia::math::SizeU GetDisplayDimensions();
+
  private:
   std::shared_ptr<display::Display> display_ = nullptr;
 };
@@ -134,7 +136,7 @@ class App {
 
   std::shared_ptr<view_tree::ViewTreeSnapshotter> view_tree_snapshotter_;
 
-  std::unique_ptr<screen_capture::ScreenCaptureManager> screen_capture_manager_;
+  std::shared_ptr<screen_capture::ScreenCaptureManager> screen_capture_manager_;
   std::unique_ptr<screenshot::ScreenshotManager> screenshot_manager_;
 
   view_tree::ViewRefInstalledImpl view_ref_installed_impl_;

@@ -194,6 +194,10 @@ void DisplayInfoDelegate::GetDisplayInfo(
   callback(std::move(info));
 }
 
+fuchsia::math::SizeU DisplayInfoDelegate::GetDisplayDimensions() {
+  return {display_->width_in_px(), display_->height_in_px()};
+}
+
 void DisplayInfoDelegate::GetDisplayOwnershipEvent(
     fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) {
   // These constants are defined as raw hex in the FIDL file, so we confirm here that they are the
@@ -546,12 +550,13 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
   {
     TRACE_DURATION("gfx", "App::InitializeServices[screen_capture_manager]");
 
-    std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> importers;
-    importers.push_back(screen_capture_buffer_collection_importer);
+    std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> screen_capture_importers;
+    screen_capture_importers.push_back(screen_capture_buffer_collection_importer);
 
     // Capture flatland_manager since the primary display may not have been initialized yet.
-    screen_capture_manager_ = std::make_unique<screen_capture::ScreenCaptureManager>(
-        flatland_engine_, flatland_renderer, flatland_manager_, std::move(importers));
+    screen_capture_manager_ = std::make_shared<screen_capture::ScreenCaptureManager>(
+        flatland_engine_, flatland_renderer, flatland_manager_,
+        std::move(screen_capture_importers));
 
     fit::function<void(fidl::InterfaceRequest<fuchsia::ui::composition::ScreenCapture>)> handler =
         fit::bind_member(screen_capture_manager_.get(),
@@ -560,11 +565,22 @@ void App::InitializeGraphics(std::shared_ptr<display::Display> display) {
     FX_DCHECK(status == ZX_OK);
   }
 
-  // Easy screenshot protocol.
+  // Make ScreenshotManager for the client-friendly screenshot protocol.
   {
     TRACE_DURATION("gfx", "App::InitializeServices[screenshot_manager]");
-    screenshot_manager_ =
-        std::make_unique<screenshot::ScreenshotManager>(config_values_.i_can_haz_flatland);
+
+    std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> screen_capture_importers;
+    screen_capture_importers.push_back(screen_capture_buffer_collection_importer);
+
+    // Capture flatland_manager since the primary display may not have been initialized yet.
+    screenshot_manager_ = std::make_unique<screenshot::ScreenshotManager>(
+        config_values_.i_can_haz_flatland, allocator_, flatland_renderer,
+        [this]() {
+          auto display = flatland_manager_->GetPrimaryFlatlandDisplayForRendering();
+          return flatland_engine_->GetRenderables(*display);
+        },
+        std::move(screen_capture_importers), display_info_delegate_->GetDisplayDimensions());
+
     fit::function<void(fidl::InterfaceRequest<fuchsia::ui::composition::Screenshot>)> handler =
         fit::bind_member(screenshot_manager_.get(), &screenshot::ScreenshotManager::CreateBinding);
     zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(handler));

@@ -14,11 +14,11 @@
 #include "src/ui/scenic/lib/flatland/engine/engine.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 
-namespace screen_capture {
-
 using Rectangle2D = escher::Rectangle2D;
 using glm::vec2;
 using GetRenderables = std::function<flatland::Renderables()>;
+
+namespace screen_capture {
 
 class ScreenCapture : public fuchsia::ui::composition::ScreenCapture {
  public:

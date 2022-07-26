@@ -12,7 +12,11 @@ source_set("screenshot") {
     "screenshot_manager.h",
   ]
   public_deps = [
+    "//sdk/fidl/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.ui.composition",
     "//src/lib/fsl:fsl",
+    "//src/ui/scenic/lib/allocation",
+    "//src/ui/scenic/lib/flatland/engine",
+    "//src/ui/scenic/lib/screen_capture",
   ]
 }

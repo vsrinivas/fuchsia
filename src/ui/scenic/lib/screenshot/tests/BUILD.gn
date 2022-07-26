@@ -1,0 +1,31 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+
+  public_deps = [ ":unittests" ]
+}
+
+executable("unittests") {
+  output_name = "screenshot_unittests"
+
+  testonly = true
+
+  sources = [ "flatland_screenshot_unittest.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fsl:fsl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture:gtest",
+    "//src/ui/scenic/lib/allocation",
+    "//src/ui/scenic/lib/flatland/engine",
+    "//src/ui/scenic/lib/screen_capture",
+    "//src/ui/scenic/lib/screenshot",
+    "//src/ui/scenic/lib/utils",
+    "//third_party/googletest:gmock",
+  ]
+}
