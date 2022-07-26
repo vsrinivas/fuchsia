@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dart/config.gni")
 import("//build/packages/prebuilt_package.gni")
+import("//src/sys/core/build/core_shard.gni")
 
 group("dart") {
   public_deps = [
@@ -55,4 +57,22 @@ group("dart_jit_product") {
     "//src/dart:dart_jit_product_runner",
     "//src/lib/icu/tzdata:icu_tzdata_for_dart_jit_product_runner",
   ]
+}
+
+core_shard("dart_runner_core_shard") {
+  if (!dart_default_build_cfg.is_aot && !dart_default_build_cfg.is_product) {
+    shard_file = "meta/dart_jit_runner.core_shard.cml"
+  } else if (!dart_default_build_cfg.is_aot &&
+             dart_default_build_cfg.is_product) {
+    shard_file = "meta/dart_jit_product_runner.core_shard.cml"
+  } else if (dart_default_build_cfg.is_aot &&
+             !dart_default_build_cfg.is_product) {
+    shard_file = "meta/dart_aot_runner.core_shard.cml"
+  } else if (dart_default_build_cfg.is_aot &&
+             dart_default_build_cfg.is_product) {
+    shard_file = "meta/dart_aot_product_runner.core_shard.cml"
+  }
+
+  # We are currently limiting dart runner availability to non-production builds
+  deps = [ "//build/validate:non_production_tag" ]
 }

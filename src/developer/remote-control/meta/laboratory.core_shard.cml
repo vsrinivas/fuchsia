@@ -7,7 +7,7 @@
             // This collection is used by developers to create and run arbitrary components.
             // The `ffx component run` command adds components to this collection.
             name: "ffx-laboratory",
-            environment: "#full-resolver-env",
+            environment: "#laboratory-env",
             durability: "transient",
         },
     ],

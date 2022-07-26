@@ -4,8 +4,11 @@ To run:
 
 On host:
 
-```
-fx set <product>.<board> --with examples/fidl/dart:all
-fx build
-fx run fuchsia-pkg://fuchsia.com/example-launcher-dart#meta/example-launcher-dart.cmx fuchsia-pkg://fuchsia.com/echo-launcher-dart-client#meta/echo-launcher-dart-client.cmx fuchsia-pkg://fuchsia.com/echo-launcher-dart-server#meta/echo-launcher-dart-server.cmx fuchsia.examples.EchoLauncher
+```shell
+$ fx set <product>.<board> --with examples/fidl/dart:all \
+  --with-base //src/dart \
+  --args='core_realm_shards += [ "//src/dart:dart_runner_core_shard" ]'
+$ fx build
+$ ffx component run fuchsia-pkg://fuchsia.com/echo-launcher-dart#meta/echo_realm.cm
+$ ffx component start /core/ffx-laboratory:echo_realm/echo_client
 ```

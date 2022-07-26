@@ -1,0 +1,84 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "dart_aot_runner",
+            url: "fuchsia-pkg://fuchsia.com/dart_aot_runner#meta/dart_aot_runner.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.feedback.CrashReporter" ],
+            from: "#feedback",
+            to: [ "#dart_aot_runner" ],
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "#trace_manager",
+            to: [ "#dart_aot_runner" ],
+        },
+        {
+            protocol: [
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "#network",
+            to: [ "#dart_aot_runner" ],
+        },
+        {
+            // from appmgr.core_shard.cml
+            protocol: [
+                "fuchsia.intl.PropertyProvider",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+            ],
+            from: "self",
+            to: [ "#dart_aot_runner" ],
+        },
+        {
+            protocol: [
+                "fuchsia.device.NameProvider",
+                "fuchsia.logger.LogSink",
+            ],
+            from: "parent",
+            to: [ "#dart_aot_runner" ],
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#dart_aot_runner" ],
+        },
+    ],
+    environments: [
+        // Create an environment usable by core children
+        // that offers everything offered by the `full-resolver-env`, PLUS the
+        // Dart runners (if available).
+        //
+        // TODO(fxbug.dev/105062): There is no way to inherit environments
+        // within a single realm (core, in this case) so this environment must
+        // include the resolver that is published via
+        // `full-resolver.core_shard.cml` so core children that used
+        // `full-resolver-env` can still use `laboratory-env`.
+        // The linked bug proposes implementing some way to inherit capabilities
+        // from one environment to another.
+        {
+            name: "laboratory-env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "dart_aot_runner",
+                    from: "#dart_aot_runner",
+                },
+            ],
+            resolvers: [
+                {
+                    resolver: "full-resolver",
+                    from: "#full-resolver",
+                    scheme: "fuchsia-pkg",
+                },
+            ],
+        },
+    ],
+}

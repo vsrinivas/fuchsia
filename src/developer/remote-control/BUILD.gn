@@ -183,7 +183,10 @@ group("runtime") {
   ]
 }
 
-# This shard enables ffx component laboratory functionality
+# This shard enables ffx component laboratory functionality.
+# Note that the laboratory core shard requires the `laboratory-env`, so when
+# the laboratory shard is included in a product, a core shard must also be
+# included that defines this environment.
 core_shard("laboratory-core-shard") {
   shard_file = "meta/laboratory.core_shard.cml"
 }

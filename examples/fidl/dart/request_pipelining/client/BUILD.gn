@@ -2,18 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dart/dart_app.gni")
+import("//build/dart/dart_test_component.gni")
 
-dart_app("echo-launcher-dart-client") {
-  main_dart = "lib/main.dart"
+dart_library("lib") {
+  package_name = "echo_client"
+
   null_safe = true
-  meta = [
-    {
-      path = rebase_path("meta/client.cmx")
-      dest = "echo-launcher-dart-client.cmx"
-    },
-  ]
+
   sources = [ "main.dart" ]
+
   deps = [
     "//examples/fidl/fuchsia.examples",
     "//sdk/dart/fidl",
@@ -24,7 +21,11 @@ dart_app("echo-launcher-dart-client") {
   ]
 }
 
-group("client") {
-  testonly = true
-  deps = [ ":echo-launcher-dart-client" ]
+dart_component("echo-client") {
+  component_name = "echo_client"
+  manifest = "meta/client.cml"
+
+  null_safe = true
+
+  deps = [ ":lib" ]
 }

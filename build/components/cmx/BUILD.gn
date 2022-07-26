@@ -49,8 +49,6 @@ group("cmx_allowlist") {
     "//examples/diagnostics/inspect/codelab/dart/part_5:bin_dart_component_manifest_compile",
     "//examples/diagnostics/inspect/codelab/dart/part_5:integration-tests-component_manifest_compile",
     "//examples/fidl/dart/client:echo-dart-client_dart_component_manifest_compile",
-    "//examples/fidl/dart/request_pipelining/client:echo-launcher-dart-client_dart_component_manifest_compile",
-    "//examples/fidl/dart/request_pipelining/server:echo-launcher-dart-server_dart_component_manifest_compile",
     "//examples/fidl/dart/server:echo-dart-server_dart_component_manifest_compile",
     "//examples/fuzzers/cpp:corpus_fuzzer_component_manifest_compile",
     "//examples/fuzzers/cpp:corpus_fuzzer_without_corpus_component_manifest_compile",

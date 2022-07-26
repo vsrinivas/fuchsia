@@ -26,6 +26,7 @@ core_realm_shards += [
   "//src/connectivity/wlan/wlandevicemonitor:wlandevicemonitor-core-shard",
   "//src/connectivity/wlan/wlanstack:wlanstack-core-shard",
   "//src/developer/debug/debug_agent:core_shard",
+  "//src/developer:default-laboratory-env-core-shard",
   "//src/developer/remote-control:laboratory-core-shard",
   "//src/devices/bin/driver_playground:driver-playground-core-shard",
   "//src/developer/sshd-host:core_shard",

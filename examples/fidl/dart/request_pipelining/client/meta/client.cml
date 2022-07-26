@@ -1,0 +1,20 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// [START example_snippet]
+{
+    include: [ "syslog/client.shard.cml" ],
+
+    // Capabilities used by this component.
+    use: [
+        {
+            protocol: [
+                "fuchsia.examples.Echo",
+                "fuchsia.examples.EchoLauncher",
+            ],
+        },
+    ],
+}
+
+// [END example_snippet]

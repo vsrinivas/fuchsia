@@ -1,0 +1,31 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    environments: [
+        // Create an environment usable by core children
+        // that offers everything offered by the `full-resolver-env`.
+        // Depending on build configurations, a different core shard may define
+        // the `laboratory-env` and add other capabilities to the environment
+        // (for example, Dart implementations add the dart runner).
+        //
+        // TODO(fxbug.dev/105062): There is no way to inherit environments
+        // within a single realm (core, in this case) so this environment must
+        // include the resolver that is published via
+        // `full-resolver.core_shard.cml` so core children that used
+        // `full-resolver-env` can still use `laboratory-env`.
+        // The linked bug proposes implementing some way to inherit capabilities
+        // from one environment to another.
+        {
+            name: "laboratory-env",
+            extends: "realm",
+            resolvers: [
+                {
+                    resolver: "full-resolver",
+                    from: "#full-resolver",
+                    scheme: "fuchsia-pkg",
+                },
+            ],
+        },
+    ],
+}

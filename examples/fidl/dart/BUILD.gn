@@ -2,14 +2,24 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/components.gni")
+
 # Group containing all example code
 group("all") {
   testonly = true
   deps = [
+    ":echo-launcher-dart",
     "client",
-    "request_pipelining/client",
-    "request_pipelining/server",
     "server",
+  ]
+}
+
+# //docs/development/languages/fidl/tutorials/dart/topics/request-pipelining.md
+fuchsia_package("echo-launcher-dart") {
+  deps = [
+    "request_pipelining/client:echo-client",
+    "request_pipelining/server:echo-server",
+    "//examples/fidl/echo-realm:echo_realm",
   ]
 }
 
