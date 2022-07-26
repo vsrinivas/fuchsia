@@ -66,7 +66,7 @@ pub struct IssueTemplate<'a> {
     component_defs: OnceCell<ComponentDefs>,
 }
 
-const HOLDING_COMPONENT: &'static str = "Rust>codehealth";
+const HOLDING_COMPONENT: &'static str = "Rust>tools>Shush>Rollout";
 
 impl<'a> IssueTemplate<'a> {
     pub fn new(
