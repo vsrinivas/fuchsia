@@ -863,14 +863,6 @@ impl<C: EthernetIpLinkDeviceNonSyncContext<SC::DeviceId>, SC: EthernetIpLinkDevi
     ) {
         mac_resolution_failed(self, ctx, device_id.into(), IpAddr::V4(proto_addr));
     }
-    fn address_resolution_expired(
-        &mut self,
-        _ctx: &mut C,
-        _device_id: <SC as ArpDeviceIdContext<EthernetLinkDevice>>::DeviceId,
-        _proto_addr: Ipv4Addr,
-    ) {
-        log_unimplemented!((), "ArpContext::address_resolution_expired");
-    }
 }
 
 pub(super) fn get_mac<

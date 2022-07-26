@@ -52,21 +52,13 @@ where
 #[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
 pub(crate) struct ArpTimerId<D: ArpDevice, P: PType, DeviceId> {
     device_id: DeviceId,
-    inner: ArpTimerIdInner<P>,
+    proto_addr: P,
     _marker: PhantomData<D>,
 }
 
 impl<D: ArpDevice, P: PType, DeviceId> ArpTimerId<D, P, DeviceId> {
-    fn new(device_id: DeviceId, inner: ArpTimerIdInner<P>) -> ArpTimerId<D, P, DeviceId> {
-        ArpTimerId { device_id, inner, _marker: PhantomData }
-    }
-
     fn new_request_retry(device_id: DeviceId, proto_addr: P) -> ArpTimerId<D, P, DeviceId> {
-        ArpTimerId::new(device_id, ArpTimerIdInner::RequestRetry { proto_addr })
-    }
-
-    fn new_entry_expiration(device_id: DeviceId, proto_addr: P) -> ArpTimerId<D, P, DeviceId> {
-        ArpTimerId::new(device_id, ArpTimerIdInner::EntryExpiration { proto_addr })
+        ArpTimerId { device_id, proto_addr, _marker: PhantomData }
     }
 
     pub(crate) fn get_device_id(&self) -> &DeviceId {
@@ -193,10 +185,6 @@ pub(crate) trait ArpContext<D: ArpDevice, P: PType, C: ArpNonSyncCtx<D, P, Self:
     /// Notifies the device layer that the hardware address resolution for the
     /// given protocol address `proto_addr` failed.
     fn address_resolution_failed(&mut self, ctx: &mut C, device_id: Self::DeviceId, proto_addr: P);
-
-    /// Notifies the device layer that a previously-cached resolution entry has
-    /// expired, and is no longer valid.
-    fn address_resolution_expired(&mut self, ctx: &mut C, device_id: Self::DeviceId, proto_addr: P);
 }
 
 /// An ARP handler for ARP Events.
@@ -275,9 +263,6 @@ impl<D: ArpDevice, P: PType, C: ArpNonSyncCtx<D, P, SC::DeviceId>, SC: ArpContex
         // will be no-ops.
         let outstanding_request =
             ctx.cancel_timer(ArpTimerId::new_request_retry(device_id, addr)).is_some();
-        let _: Option<C::Instant> =
-            ctx.cancel_timer(ArpTimerId::new_entry_expiration(device_id, addr));
-
         // If there was an outstanding resolution request, notify the device
         // layer that it's been resolved.
         if outstanding_request {
@@ -302,56 +287,13 @@ pub(super) fn handle_timer<D: ArpDevice, P: PType, C, H: ArpHandler<D, P, C>>(
 impl<D: ArpDevice, P: PType, C: ArpNonSyncCtx<D, P, SC::DeviceId>, SC: ArpContext<D, P, C>>
     TimerHandler<C, ArpTimerId<D, P, SC::DeviceId>> for SC
 {
-    fn handle_timer(&mut self, ctx: &mut C, id: ArpTimerId<D, P, SC::DeviceId>) {
-        match id.inner {
-            ArpTimerIdInner::RequestRetry { proto_addr } => {
-                send_arp_request(self, ctx, id.device_id, proto_addr)
-            }
-            ArpTimerIdInner::EntryExpiration { proto_addr } => {
-                self.get_state_mut_with(id.device_id).table.remove(proto_addr);
-                self.address_resolution_expired(ctx, id.device_id, proto_addr);
-
-                // There are several things to notice:
-                // - Unlike when we send an ARP request in response to a lookup,
-                //   here we don't schedule a retry timer, so the request will
-                //   be sent only once.
-                // - This is best-effort in the sense that the protocol is still
-                //   correct if we don't manage to send an ARP request or
-                //   receive an ARP response.
-                // - The point of doing this is just to make it more likely for
-                //   our ARP cache to stay up to date; it's not actually a
-                //   requirement of the protocol. Note that the RFC does say "It
-                //   may be desirable to have table aging and/or timers".
-                if let Some(sender_protocol_addr) = self.get_protocol_addr(ctx, id.device_id) {
-                    let self_hw_addr = self.get_hardware_addr(ctx, id.device_id);
-                    // TODO(joshlf): Do something if send_frame returns an
-                    // error?
-                    let _ = self.send_frame(
-                        ctx,
-                        ArpFrameMetadata { device_id: id.device_id, dst_addr: D::HType::BROADCAST },
-                        ArpPacketBuilder::new(
-                            ArpOp::Request,
-                            self_hw_addr.get(),
-                            sender_protocol_addr,
-                            // This is meaningless, since RFC 826 does not
-                            // specify the behaviour. However, the broadcast
-                            // address is sensible, as this is the actual
-                            // address we are sending the packet to.
-                            D::HType::BROADCAST,
-                            proto_addr,
-                        )
-                        .into_serializer(),
-                    );
-                }
-            }
-        }
+    fn handle_timer(
+        &mut self,
+        ctx: &mut C,
+        ArpTimerId { device_id, proto_addr, _marker }: ArpTimerId<D, P, SC::DeviceId>,
+    ) {
+        send_arp_request(self, ctx, device_id, proto_addr)
     }
-}
-
-#[derive(Copy, Clone, Debug, Eq, PartialEq, Hash)]
-enum ArpTimerIdInner<P: PType> {
-    RequestRetry { proto_addr: P },
-    EntryExpiration { proto_addr: P },
 }
 
 /// Handles an inbound ARP packet.
@@ -539,7 +481,7 @@ fn insert_dynamic<
     SC: ArpContext<D, P, C>,
 >(
     sync_ctx: &mut SC,
-    ctx: &mut C,
+    _ctx: &mut C,
     device_id: SC::DeviceId,
     net: P,
     hw: D::HType,
@@ -547,11 +489,7 @@ fn insert_dynamic<
     // Let's extend the expiration deadline by rescheduling the timer. It is
     // assumed that `schedule_timer` will first cancel the timer that is already
     // there.
-    let expiration = ArpTimerId::new_entry_expiration(device_id, net);
-    if sync_ctx.get_state_mut_with(device_id).table.insert_dynamic(net, hw) {
-        let _: Option<C::Instant> =
-            ctx.schedule_timer(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD, expiration);
-    }
+    let _: bool = sync_ctx.get_state_mut_with(device_id).table.insert_dynamic(net, hw);
 }
 
 /// Look up the hardware address for a network protocol address.
@@ -573,9 +511,6 @@ pub(super) fn lookup<D: ArpDevice, P: PType, C, H: ArpHandler<D, P, C>>(
 const DEFAULT_ARP_REQUEST_MAX_TRIES: usize = 4;
 // Currently at 20 seconds because that's what FreeBSD does.
 const DEFAULT_ARP_REQUEST_PERIOD: Duration = Duration::from_secs(20);
-// Based on standard implementations, 60 seconds is quite usual to expire an ARP
-// entry.
-const DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD: Duration = Duration::from_secs(60);
 
 fn send_arp_request<
     D: ArpDevice,
@@ -768,17 +703,8 @@ mod tests {
     const TEST_LOCAL_MAC: Mac = Mac::new([0, 1, 2, 3, 4, 5]);
     const TEST_REMOTE_MAC: Mac = Mac::new([6, 7, 8, 9, 10, 11]);
     const TEST_INVALID_MAC: Mac = Mac::new([0, 0, 0, 0, 0, 0]);
-    const TEST_ENTRY_EXPIRATION_TIMER_ID: ArpTimerId<EthernetLinkDevice, Ipv4Addr, ()> =
-        ArpTimerId {
-            device_id: (),
-            inner: ArpTimerIdInner::EntryExpiration { proto_addr: TEST_REMOTE_IPV4 },
-            _marker: PhantomData,
-        };
-    const TEST_REQUEST_RETRY_TIMER_ID: ArpTimerId<EthernetLinkDevice, Ipv4Addr, ()> = ArpTimerId {
-        device_id: (),
-        inner: ArpTimerIdInner::RequestRetry { proto_addr: TEST_REMOTE_IPV4 },
-        _marker: PhantomData,
-    };
+    const TEST_REQUEST_RETRY_TIMER_ID: ArpTimerId<EthernetLinkDevice, Ipv4Addr, ()> =
+        ArpTimerId { device_id: (), proto_addr: TEST_REMOTE_IPV4, _marker: PhantomData };
 
     /// A dummy `ArpContext` that stores frames, address resolution events, and
     /// address resolution failure events.
@@ -787,7 +713,6 @@ mod tests {
         hw_addr: UnicastAddr<Mac>,
         addr_resolved: Vec<(Ipv4Addr, Mac)>,
         addr_resolution_failed: Vec<Ipv4Addr>,
-        addr_resolution_expired: Vec<Ipv4Addr>,
         arp_state: ArpState<EthernetLinkDevice, Ipv4Addr>,
     }
 
@@ -798,7 +723,6 @@ mod tests {
                 hw_addr: UnicastAddr::new(TEST_LOCAL_MAC).unwrap(),
                 addr_resolved: Vec::new(),
                 addr_resolution_failed: Vec::new(),
-                addr_resolution_expired: Vec::new(),
                 arp_state: ArpState::default(),
             }
         }
@@ -839,15 +763,6 @@ mod tests {
             proto_addr: Ipv4Addr,
         ) {
             self.get_mut().addr_resolution_failed.push(proto_addr);
-        }
-
-        fn address_resolution_expired(
-            &mut self,
-            _ctx: &mut MockNonSyncCtx,
-            _device_id: (),
-            proto_addr: Ipv4Addr,
-        ) {
-            self.get_mut().addr_resolution_expired.push(proto_addr);
         }
     }
 
@@ -935,14 +850,6 @@ mod tests {
         validate_single_timer(non_sync_ctx, instant, ArpTimerId::new_request_retry((), addr))
     }
 
-    fn validate_single_entry_timer(
-        non_sync_ctx: &MockNonSyncCtx,
-        instant: Duration,
-        addr: Ipv4Addr,
-    ) {
-        validate_single_timer(non_sync_ctx, instant, ArpTimerId::new_entry_expiration((), addr))
-    }
-
     #[test]
     fn test_receive_gratuitous_arp_request() {
         // Test that, when we receive a gratuitous ARP request, we cache the
@@ -1028,14 +935,6 @@ mod tests {
             Some(&TEST_REMOTE_MAC)
         );
 
-        // The retry timer should be canceled, and replaced by an entry
-        // expiration timer.
-        validate_single_entry_timer(
-            &non_sync_ctx,
-            DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD,
-            TEST_REMOTE_IPV4,
-        );
-
         // We should have notified the device layer.
         assert_eq!(
             sync_ctx.get_ref().addr_resolved.as_slice(),
@@ -1102,15 +1001,6 @@ mod tests {
                 proto_addr: Ipv4Addr,
             ) {
                 self.get_mut().addr_resolution_failed.push(proto_addr);
-            }
-
-            fn address_resolution_expired(
-                &mut self,
-                _ctx: &mut MockNonSyncCtx2,
-                _device_id: usize,
-                proto_addr: Ipv4Addr,
-            ) {
-                self.get_mut().addr_resolution_expired.push(proto_addr);
             }
         }
 
@@ -1203,14 +1093,6 @@ mod tests {
         assert_eq!(
             sync_ctx.get_ref().addr_resolved.as_slice(),
             [(TEST_REMOTE_IPV4, TEST_REMOTE_MAC)]
-        );
-
-        // The retry timer should be canceled, and replaced by an entry
-        // expiration timer.
-        validate_single_entry_timer(
-            &non_sync_ctx,
-            DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD,
-            TEST_REMOTE_IPV4,
         );
     }
 
@@ -1562,15 +1444,6 @@ mod tests {
                 .lookup(requested_remote_proto_addr),
             Some(&requested_remote_hw_addr)
         );
-        // The retry timer should be canceled, and replaced by an entry
-        // expiration timer.
-        network.with_context(local_name, |DummyCtx { sync_ctx: _, non_sync_ctx }| {
-            validate_single_entry_timer(
-                non_sync_ctx,
-                DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD,
-                requested_remote_proto_addr,
-            );
-        });
         // The device layer should have been notified.
         assert_eq!(
             network.sync_ctx(local_name).get_ref().addr_resolved.as_slice(),
@@ -1705,12 +1578,6 @@ mod tests {
             sync_ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4),
             Some(&TEST_REMOTE_MAC)
         );
-        // We should have an ARP entry expiration timer set.
-        validate_single_entry_timer(
-            &non_sync_ctx,
-            DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD,
-            TEST_REMOTE_IPV4,
-        );
 
         // Now insert a static entry.
         insert_static_neighbor(
@@ -1723,112 +1590,6 @@ mod tests {
 
         // The timer should have been canceled.
         non_sync_ctx.timer_ctx().assert_no_timers_installed();
-    }
-
-    #[test]
-    fn test_arp_entry_expiration() {
-        // Test that, if a dynamic entry is installed, it is removed after the
-        // appropriate amount of time.
-
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::default());
-
-        insert_dynamic(&mut sync_ctx, &mut non_sync_ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
-
-        // We should have the address in cache.
-        assert_eq!(
-            sync_ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4),
-            Some(&TEST_REMOTE_MAC)
-        );
-        // We should have an ARP entry expiration timer set.
-        validate_single_entry_timer(
-            &non_sync_ctx,
-            DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD,
-            TEST_REMOTE_IPV4,
-        );
-
-        // Trigger the entry expiration timer.
-        assert_eq!(
-            non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
-            Some(TEST_ENTRY_EXPIRATION_TIMER_ID)
-        );
-
-        // The right amount of time should have elapsed.
-        assert_eq!(non_sync_ctx.now(), DummyInstant::from(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD));
-        // The entry should have been removed.
-        assert_eq!(sync_ctx.get_ref().arp_state.table.table.get(&TEST_REMOTE_IPV4), None);
-        // The timer should have been canceled.
-        non_sync_ctx.timer_ctx().assert_no_timers_installed();
-        // The device layer should have been notified.
-        assert_eq!(sync_ctx.get_ref().addr_resolution_expired, [TEST_REMOTE_IPV4]);
-    }
-
-    #[test]
-    fn test_gratuitous_arp_resets_entry_timer() {
-        // Test that a gratuitous ARP resets the entry expiration timer by
-        // performing the following steps:
-        // 1. An arp entry is installed with default timer at instant t
-        // 2. A gratuitous arp message is sent after 5 seconds
-        // 3. Check at instant DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD whether the
-        //    entry is there (it should be)
-        // 4. Check whether the entry disappears at instant
-        //    (DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD + 5)
-
-        let DummyCtx { mut sync_ctx, mut non_sync_ctx } =
-            DummyCtx::with_sync_ctx(MockCtx::default());
-
-        insert_dynamic(&mut sync_ctx, &mut non_sync_ctx, (), TEST_REMOTE_IPV4, TEST_REMOTE_MAC);
-
-        // Let 5 seconds elapse.
-        assert_empty(non_sync_ctx.trigger_timers_until_instant(
-            &mut sync_ctx,
-            DummyInstant::from(Duration::from_secs(5)),
-            TimerHandler::handle_timer,
-        ));
-
-        // The entry should still be there.
-        assert_eq!(
-            sync_ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4),
-            Some(&TEST_REMOTE_MAC)
-        );
-
-        // Receive the gratuitous ARP response.
-        send_arp_packet(
-            &mut sync_ctx,
-            &mut non_sync_ctx,
-            ArpOp::Response,
-            TEST_REMOTE_IPV4,
-            TEST_REMOTE_IPV4,
-            TEST_REMOTE_MAC,
-            TEST_REMOTE_MAC,
-        );
-
-        // Let the remaining time elapse to the first entry expiration timer.
-        assert_empty(non_sync_ctx.trigger_timers_until_instant(
-            &mut sync_ctx,
-            DummyInstant::from(DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD),
-            TimerHandler::handle_timer,
-        ));
-        // The entry should still be there.
-        assert_eq!(
-            sync_ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4),
-            Some(&TEST_REMOTE_MAC)
-        );
-
-        // Trigger the entry expiration timer.
-        assert_eq!(
-            non_sync_ctx.trigger_next_timer(&mut sync_ctx, TimerHandler::handle_timer),
-            Some(TEST_ENTRY_EXPIRATION_TIMER_ID)
-        );
-        // The right amount of time should have elapsed.
-        assert_eq!(
-            non_sync_ctx.now(),
-            DummyInstant::from(Duration::from_secs(5) + DEFAULT_ARP_ENTRY_EXPIRATION_PERIOD)
-        );
-        // The entry should be gone.
-        assert_eq!(sync_ctx.get_ref().arp_state.table.lookup(TEST_REMOTE_IPV4), None);
-        // The device layer should have been notified.
-        assert_eq!(sync_ctx.get_ref().addr_resolution_expired, [TEST_REMOTE_IPV4]);
     }
 
     #[test]
