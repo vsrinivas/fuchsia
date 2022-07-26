@@ -68,10 +68,9 @@ rustc_library("isolated-swd") {
   ]
 }
 
-fuchsia_component("isolated-swd-tests-component") {
-  testonly = true
+fuchsia_test_component("isolated-swd-tests-component") {
   component_name = "isolated-swd-tests"
-  manifest = "meta/isolated-swd-tests.cmx"
+  manifest = "meta/isolated-swd-tests.cml"
   deps = [ ":isolated-swd_test" ]
 }
 
@@ -85,9 +84,11 @@ fuchsia_test_package("isolated-swd-tests") {
   test_components = [ ":isolated-swd-tests-component" ]
 
   deps = [
-    "//src/connectivity/network/dns:component-legacy",
-    "//src/connectivity/network/netstack:component-legacy",
+    "//src/connectivity/network/dns:component",
+    "//src/connectivity/network/netstack:component",
+    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr-component",
     "//src/storage/bin/blobfs",
+    "//src/storage/testing:storage_driver_test_realm",
     "//src/sys/pkg/bin/pm:pm_bin",
     "//src/sys/pkg/lib/fuchsia-pkg-testing/certs",
     "//src/sys/pkg/tests/pkg-resolver:empty-repo",
@@ -107,8 +108,5 @@ fuchsia_package("isolated-swd-components") {
 
 group("tests") {
   testonly = true
-  public_deps = [
-    ":isolated-swd-tests",
-    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
-  ]
+  public_deps = [ ":isolated-swd-tests" ]
 }
