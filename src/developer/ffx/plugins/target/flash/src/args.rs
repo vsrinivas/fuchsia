@@ -11,7 +11,7 @@ use {
 };
 
 #[ffx_command()]
-#[derive(FromArgs, Default, Debug, PartialEq)]
+#[derive(FromArgs, Default, Debug, Eq, PartialEq)]
 #[argh(
     subcommand,
     name = "flash",
@@ -66,8 +66,8 @@ pub struct FlashCommand {
 
     #[argh(
         option,
-        description = "path to authorized keys file - will default to the `ssh.pub` \
-           key in ffx config"
+        description = "path to authorized keys file - will default to the value configured for \
+           `ssh.pub` key in ffx config. If the file does not exist, it will be created."
     )]
     pub authorized_keys: Option<String>,
 
@@ -94,7 +94,6 @@ impl Into<ManifestParams> for FlashCommand {
             skip_verify: self.skip_verify,
             no_bootloader_reboot: self.no_bootloader_reboot,
             op: Command::Flash,
-            ..Default::default()
         }
     }
 }

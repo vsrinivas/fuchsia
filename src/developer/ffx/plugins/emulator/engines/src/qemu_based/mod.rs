@@ -9,6 +9,7 @@ use crate::{arg_templates::process_flag_template, serialization::SerializingEngi
 use anyhow::{anyhow, bail, Context, Result};
 use async_trait::async_trait;
 use errors::ffx_bail;
+use ffx_config::SshKeyFiles;
 use ffx_emulator_common::{
     config,
     config::FfxConfigWrapper,
@@ -82,10 +83,9 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         instance_root.push(instance_name);
         fs::create_dir_all(&instance_root)?;
 
-        let kernel_name = guest_config
-            .kernel_image
-            .file_name()
-            .ok_or(anyhow!("cannot read kernel file name '{:?}'", guest_config.kernel_image));
+        let kernel_name = guest_config.kernel_image.file_name().ok_or_else(|| {
+            anyhow!("cannot read kernel file name '{:?}'", guest_config.kernel_image)
+        });
         let kernel_path = instance_root.join(kernel_name?);
         if kernel_path.exists() && reuse {
             tracing::debug!("Using existing file for {:?}", kernel_path.file_name().unwrap());
@@ -94,8 +94,12 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                 .context("cannot stage kernel file")?;
         }
 
-        let zbi_path = instance_root
-            .join(guest_config.zbi_image.file_name().ok_or(anyhow!("cannot read zbi file name"))?);
+        let zbi_path = instance_root.join(
+            guest_config
+                .zbi_image
+                .file_name()
+                .ok_or_else(|| anyhow!("cannot read zbi file name"))?,
+        );
 
         if zbi_path.exists() && reuse {
             tracing::debug!("Using existing file for {:?}", zbi_path.file_name().unwrap());
@@ -110,7 +114,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         let fvm_path = match &guest_config.fvm_image {
             Some(src_fvm) => {
                 let fvm_path = instance_root
-                    .join(src_fvm.file_name().ok_or(anyhow!("cannot read fvm file name"))?);
+                    .join(src_fvm.file_name().ok_or_else(|| anyhow!("cannot read fvm file name"))?);
                 if fvm_path.exists() && reuse {
                     tracing::debug!("Using existing file for {:?}", fvm_path.file_name().unwrap());
                 } else {
@@ -155,18 +159,18 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
     ) -> Result<()> {
         let zbi_tool =
             config.get_host_tool(config::ZBI_HOST_TOOL).await.context("ZBI tool is missing")?;
-        let auth_keys = config
-            .file(config::SSH_PUBLIC_KEY)
-            .await
-            .context("Fuchsia authorized keys are missing.")?;
-
+        let ssh_keys = SshKeyFiles::load().await.context("finding ssh authorized_keys file.")?;
+        ssh_keys.create_keys_if_needed().context("create ssh keys if needed")?;
+        let auth_keys = ssh_keys.authorized_keys.display().to_string();
+        if !ssh_keys.authorized_keys.exists() {
+            bail!("No authorized_keys found to configure emulator. {} does not exist.", auth_keys);
+        }
         if src == dest {
             return Err(anyhow!("source and dest zbi paths cannot be the same."));
         }
 
-        let mut replace_str = "data/ssh/authorized_keys=".to_owned();
+        let replace_str = format!("data/ssh/authorized_keys={}", auth_keys);
 
-        replace_str.push_str(auth_keys.to_str().ok_or(anyhow!("cannot to_str auth_keys path."))?);
         let auth_keys_output = Command::new(zbi_tool)
             .arg("-o")
             .arg(dest)
@@ -189,14 +193,12 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                 You may experience errors with your current configuration."
             );
         }
-        if emu_config.host.networking == NetworkingMode::Tap {
-            if !tap_available() {
-                eprintln!("To use emu with networking on Linux, configure Tun/Tap:");
-                eprintln!(
-                    "  sudo ip tuntap add dev qemu mode tap user $USER && sudo ip link set qemu up"
-                );
-                bail!("Configure Tun/Tap on your host or try --net user.")
-            }
+        if emu_config.host.networking == NetworkingMode::Tap && !tap_available() {
+            eprintln!("To use emu with networking on Linux, configure Tun/Tap:");
+            eprintln!(
+                "  sudo ip tuntap add dev qemu mode tap user $USER && sudo ip link set qemu up"
+            );
+            bail!("Configure Tun/Tap on your host or try --net user.")
         }
         Ok(())
     }
@@ -220,7 +222,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
         env::set_current_dir(&emu_config.runtime.instance_directory.parent().unwrap())
             .context("problem changing directory to instance dir")?;
 
-        emu_config.flags = process_flag_template(&emu_config)
+        emu_config.flags = process_flag_template(emu_config)
             .context("Failed to process the flags template file.")?;
 
         Ok(())
@@ -255,8 +257,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
                 // need to eventually be configurable to support running emulators on
                 // multiple tap interfaces.
                 .arg("qemu")
-                .status()
-                .expect(&format!("Couldn't execute upscript {}", script.display()));
+                .status()?;
             if !status.success() {
                 return Err(anyhow!(
                     "Upscript {} returned non-zero exit code {}",
@@ -318,7 +319,7 @@ pub(crate) trait QemuBasedEngine: EmulatorEngine + SerializingEngine {
             }
         } else if !self.emu_config().runtime.startup_timeout.is_zero() {
             // Wait until the emulator is considered "active" before returning to the user.
-            let mut time_left = self.emu_config().runtime.startup_timeout.clone();
+            let mut time_left = self.emu_config().runtime.startup_timeout;
             print!("Waiting for Fuchsia to start (up to {} seconds).", &time_left.as_secs());
             tracing::debug!(
                 "Waiting for Fuchsia to start (up to {} seconds)...",
@@ -479,8 +480,10 @@ mod tests {
 
     use super::*;
     use async_trait::async_trait;
+    use ffx_config::{query, ConfigLevel};
     use ffx_emulator_config::EngineType;
     use serde::Serialize;
+    use serde_json::json;
     use tempfile::{tempdir, TempDir};
 
     #[derive(Serialize)]
@@ -529,7 +532,7 @@ mod tests {
     const ORIGINAL: &str = "THIS_STRING";
     const UPDATED: &str = "THAT_VALUE*";
 
-    fn setup(
+    async fn setup(
         config: &mut FfxConfigWrapper,
         guest: &mut GuestConfig,
         temp: &TempDir,
@@ -556,21 +559,23 @@ mod tests {
             .open(&fvm_path)
             .context("cannot create test fvm file")?;
 
-        let auth_keys_path = root.join("authorized_keys");
-        let _ = fs::File::options()
-            .write(true)
-            .create(true)
-            .open(&auth_keys_path)
-            .context("cannot create test auth keys file.")?;
-
         config.overrides.insert(config::FVM_HOST_TOOL, "echo".to_string());
         config.overrides.insert(config::ZBI_HOST_TOOL, "echo".to_string());
         config.overrides.insert(config::EMU_INSTANCE_ROOT_DIR, root.display().to_string());
-        config.overrides.insert(config::SSH_PUBLIC_KEY, auth_keys_path.display().to_string());
 
         guest.kernel_image = kernel_path;
         guest.zbi_image = zbi_path;
         guest.fvm_image = Some(fvm_path);
+
+        // Set the paths to use for the SSH keys
+        query("ssh.pub")
+            .level(Some(ConfigLevel::User))
+            .set(json!([root.join("test_authorized_keys")]))
+            .await?;
+        query("ssh.priv")
+            .level(Some(ConfigLevel::User))
+            .set(json!([root.join("test_ed25519_key")]))
+            .await?;
 
         Ok(PathBuf::from(root))
     }
@@ -589,17 +594,18 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_staging_no_reuse() -> Result<()> {
+        let _env = ffx_config::test_init().await?;
         let temp = tempdir().context("cannot get tempdir")?;
         let mut config = FfxConfigWrapper::new();
         let instance_name = "test-instance";
         let mut guest = GuestConfig::default();
         let device = DeviceConfig::default();
 
-        let root = setup(&mut config, &mut guest, &temp)?;
+        let root = setup(&mut config, &mut guest, &temp).await?;
 
-        write_to(&guest.kernel_image, &ORIGINAL)
+        write_to(&guest.kernel_image, ORIGINAL)
             .context("cannot write original value to kernel file")?;
-        write_to(&guest.fvm_image.as_ref().unwrap(), &ORIGINAL)
+        write_to(guest.fvm_image.as_ref().unwrap(), ORIGINAL)
             .context("cannot write original value to fvm file")?;
 
         let updated = <TestEngine as QemuBasedEngine>::stage_image_files(
@@ -618,14 +624,13 @@ mod tests {
             kernel_image: root.join(instance_name).join("kernel"),
             zbi_image: root.join(instance_name).join("zbi"),
             fvm_image: Some(root.join(instance_name).join("fvm")),
-            ..Default::default()
         };
         assert_eq!(actual, expected);
 
         // Test no reuse when old files exist. The original files should be overwritten.
-        write_to(&guest.kernel_image, &UPDATED)
+        write_to(&guest.kernel_image, UPDATED)
             .context("cannot write updated value to kernel file")?;
-        write_to(&guest.fvm_image.as_ref().unwrap(), &UPDATED)
+        write_to(guest.fvm_image.as_ref().unwrap(), UPDATED)
             .context("cannot write updated value to fvm file")?;
 
         let updated = <TestEngine as QemuBasedEngine>::stage_image_files(
@@ -644,7 +649,6 @@ mod tests {
             kernel_image: root.join(instance_name).join("kernel"),
             zbi_image: root.join(instance_name).join("zbi"),
             fvm_image: Some(root.join(instance_name).join("fvm")),
-            ..Default::default()
         };
         assert_eq!(actual, expected);
 
@@ -671,18 +675,19 @@ mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_staging_with_reuse() -> Result<()> {
+        let _env = ffx_config::test_init().await?;
         let temp = tempdir().context("cannot get tempdir")?;
         let mut config = FfxConfigWrapper::new();
         let instance_name = "test-instance";
         let mut guest = GuestConfig::default();
         let device = DeviceConfig::default();
 
-        let root = setup(&mut config, &mut guest, &temp)?;
+        let root = setup(&mut config, &mut guest, &temp).await?;
 
         // This checks if --reuse is true, but the directory isn't there to reuse; should succeed.
-        write_to(&guest.kernel_image, &ORIGINAL)
+        write_to(&guest.kernel_image, ORIGINAL)
             .context("cannot write original value to kernel file")?;
-        write_to(&guest.fvm_image.as_ref().unwrap(), &ORIGINAL)
+        write_to(guest.fvm_image.as_ref().unwrap(), ORIGINAL)
             .context("cannot write original value to fvm file")?;
 
         let updated: Result<GuestConfig> = <TestEngine as QemuBasedEngine>::stage_image_files(
@@ -701,15 +706,14 @@ mod tests {
             kernel_image: root.join(instance_name).join("kernel"),
             zbi_image: root.join(instance_name).join("zbi"),
             fvm_image: Some(root.join(instance_name).join("fvm")),
-            ..Default::default()
         };
         assert_eq!(actual, expected);
 
         // Test reuse. Note that the ZBI file isn't actually copied in the test, since we replace
         // the ZBI tool with an "echo" command.
-        write_to(&guest.kernel_image, &UPDATED)
+        write_to(&guest.kernel_image, UPDATED)
             .context("cannot write updated value to kernel file")?;
-        write_to(&guest.fvm_image.as_ref().unwrap(), &UPDATED)
+        write_to(guest.fvm_image.as_ref().unwrap(), UPDATED)
             .context("cannot write updated value to fvm file")?;
 
         let updated = <TestEngine as QemuBasedEngine>::stage_image_files(
@@ -728,7 +732,6 @@ mod tests {
             kernel_image: root.join(instance_name).join("kernel"),
             zbi_image: root.join(instance_name).join("zbi"),
             fvm_image: Some(root.join(instance_name).join("fvm")),
-            ..Default::default()
         };
         assert_eq!(actual, expected);
 

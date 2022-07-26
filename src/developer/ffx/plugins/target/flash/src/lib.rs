@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Result},
+    anyhow::{anyhow, Context, Result},
     errors::ffx_bail,
-    ffx_config::query,
+    ffx_config::SshKeyFiles,
     ffx_core::ffx_plugin,
     ffx_fastboot::common::{cmd::OemFile, from_manifest},
     ffx_flash_args::FlashCommand,
@@ -33,7 +33,7 @@ pub async fn flash_plugin_impl<W: Write>(
                     ffx_bail!("Cannot find SSH key \"{}\": {}", ssh, err);
                 }
             };
-            if cmd.oem_stage.iter().find(|f| f.command() == SSH_OEM_COMMAND).is_some() {
+            if cmd.oem_stage.iter().any(|f| f.command() == SSH_OEM_COMMAND) {
                 ffx_bail!("Both the SSH key and the SSH OEM Stage flags were set. Only use one.");
             }
             cmd.oem_stage.push(OemFile::new(
@@ -45,17 +45,17 @@ pub async fn flash_plugin_impl<W: Write>(
             ));
         }
         None => {
-            if cmd.oem_stage.iter().find(|f| f.command() == SSH_OEM_COMMAND).is_none() {
-                let key: Option<String> = query("ssh.pub").get_file().await?;
-                match key {
-                    Some(k) => {
-                        eprintln!("No `--authorized-keys` flag, using {}", k);
-                        cmd.oem_stage.push(OemFile::new(SSH_OEM_COMMAND.to_string(), k));
-                    }
-                    None => ffx_bail!(
-                        "Warning: flashing without a SSH key is not advised. \n\
-                              Use the `--authorized-keys` to pass a ssh key."
-                    ),
+            if !cmd.oem_stage.iter().any(|f| f.command() == SSH_OEM_COMMAND) {
+                let ssh_keys =
+                    SshKeyFiles::load().await.context("finding ssh authorized_keys file.")?;
+                ssh_keys.create_keys_if_needed().context("creating ssh keys if needed")?;
+                if ssh_keys.authorized_keys.exists() {
+                    let k = ssh_keys.authorized_keys.display().to_string();
+                    eprintln!("No `--authorized-keys` flag, using {}", k);
+                    cmd.oem_stage.push(OemFile::new(SSH_OEM_COMMAND.to_string(), k));
+                } else {
+                    // Since the key will be initialized, this should never happen.
+                    ffx_bail!("Warning: flashing without a SSH key is not advised.");
                 }
             }
         }
