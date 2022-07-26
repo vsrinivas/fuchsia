@@ -44,6 +44,11 @@ void XdrAgentServiceIndexEntry(XdrContext* const xdr,
                                fuchsia::modular::session::AgentServiceIndexEntry* const data) {
   xdr->Field(modular_config::kServiceName, data->mutable_service_name());
   xdr->Field(modular_config::kAgentUrl, data->mutable_agent_url());
+  if (xdr->HasField(modular_config::kExposeFrom, data->has_expose_from())) {
+    xdr->Field(modular_config::kExposeFrom, data->mutable_expose_from());
+  } else {
+    data->clear_expose_from();
+  }
 }
 
 std::vector<fuchsia::modular::session::SessionShellMapEntry> GetDefaultSessionShellMap() {

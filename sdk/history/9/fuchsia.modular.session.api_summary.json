@@ -7,6 +7,11 @@
     {
         "declaration": "string",
         "kind": "table/member",
+        "name": "fuchsia.modular.session/AgentServiceIndexEntry.expose_from"
+    },
+    {
+        "declaration": "string",
+        "kind": "table/member",
         "name": "fuchsia.modular.session/AgentServiceIndexEntry.service_name"
     },
     {

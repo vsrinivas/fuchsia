@@ -128,6 +128,13 @@ type AgentServiceIndexEntry = table {
 
     /// The fuchsia component url for agent.
     2: agent_url fuchsia.sys.component_url;
+
+    /// [Optional] The name of the service as published by the Agent.
+    /// This allows a service published by an Agent to be made available under
+    /// a different name (e.g. for disambiguation from other implementations
+    /// of the same service) in the agent-services index.
+    @available(added=9)
+    3: expose_from string;
 };
 
 /// Contains the configurations for the modular framework components.

@@ -326,9 +326,13 @@ void SessionmgrImpl::InitializeAgentRunner(const std::string& session_shell_url)
   // will soon deprecated and replace this Modular solution.
   //
   // Create a new launcher that uses sessionmgr's realm launcher.
-  std::map<std::string, std::string> agent_service_index;
+  std::map<std::string, AgentServiceEntry> agent_service_index;
   for (auto& entry : config_accessor_.sessionmgr_config().agent_service_index()) {
-    agent_service_index.emplace(entry.service_name(), entry.agent_url());
+    const std::string& expose_from =
+        entry.has_expose_from() ? entry.expose_from() : entry.service_name();
+    agent_service_index.emplace(
+        entry.service_name(),
+        AgentServiceEntry{.agent_url = entry.agent_url(), .expose_from = expose_from});
   }
 
   ArgvInjectingLauncher::ArgvMap argv_map;

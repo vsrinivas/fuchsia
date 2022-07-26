@@ -120,6 +120,7 @@ TEST_F(ModularConfigReaderTest, ProvideAgentServiceIndex) {
   const std::string agent_url_0 = kAgentUrlForTest + "0";
   const std::string service_name_1 = kServiceNameForTest + "1";
   const std::string agent_url_1 = kAgentUrlForTest + "1";
+  const std::string expose_from_1 = kServiceNameForTest + "1b";
 
   std::string config_contents = fxl::Substitute(
       R"({
@@ -131,12 +132,13 @@ TEST_F(ModularConfigReaderTest, ProvideAgentServiceIndex) {
             },
             {
               "service_name": "$2",
-              "agent_url": "$3"
+              "agent_url": "$3",
+              "expose_from": "$4"
             }
           ]
         }
       })",
-      service_name_0, agent_url_0, service_name_1, agent_url_1);
+      service_name_0, agent_url_0, service_name_1, agent_url_1, expose_from_1);
 
   modular::PseudoDirServer server(modular::MakeFilePathWithContents(
       files::JoinPath(modular_config::kOverriddenConfigDir, modular_config::kStartupConfigFilePath),
@@ -148,8 +150,11 @@ TEST_F(ModularConfigReaderTest, ProvideAgentServiceIndex) {
   // Verify that ModularConfigReader parsed the config values we gave it.
   EXPECT_EQ(service_name_0, config.agent_service_index().at(0).service_name());
   EXPECT_EQ(agent_url_0, config.agent_service_index().at(0).agent_url());
+  EXPECT_FALSE(config.agent_service_index().at(0).has_expose_from());
   EXPECT_EQ(service_name_1, config.agent_service_index().at(1).service_name());
   EXPECT_EQ(agent_url_1, config.agent_service_index().at(1).agent_url());
+  EXPECT_TRUE(config.agent_service_index().at(1).has_expose_from());
+  EXPECT_EQ(expose_from_1, config.agent_service_index().at(1).expose_from());
 }
 
 TEST_F(ModularConfigReaderTest, GetConfigAsString) {

@@ -32,6 +32,11 @@ namespace modular {
 
 class AgentContextImpl;
 
+struct AgentServiceEntry {
+  std::string agent_url;
+  std::string expose_from;
+};
+
 // This class provides a way for components to connect to agents and
 // manages the life time of a running agent.
 class AgentRunner {
@@ -43,7 +48,7 @@ class AgentRunner {
   AgentRunner(const ModularConfigAccessor* config_accessor, fuchsia::sys::Launcher* launcher,
               AgentServicesFactory* agent_services_factory, inspect::Node* session_inspect_node,
               std::function<void()> on_critical_agent_crash,
-              std::map<std::string, std::string> agent_service_index = {},
+              std::map<std::string, AgentServiceEntry> agent_service_index = {},
               std::vector<std::string> session_agents = {},
               std::vector<std::string> restart_session_on_agent_crash = {},
               sys::ComponentContext* sessionmgr_context = nullptr);
@@ -123,7 +128,7 @@ class AgentRunner {
 
   // A set of all agents that are either running or scheduled to be run.
   std::vector<std::string> GetAllAgents();
-  
+
   const ModularConfigAccessor* config_accessor_;
 
   // agent URL -> done callbacks to invoke once agent has started.
@@ -150,7 +155,7 @@ class AgentRunner {
 
   // Services mapped to agents that provide those services. Used when a service is requested
   // without specifying the handling agent. May be empty.
-  std::map<std::string, std::string> agent_service_index_;
+  std::map<std::string, AgentServiceEntry> agent_service_index_;
 
   // The session agents specified in the modular configuration.
   std::vector<std::string> session_agents_;

@@ -28,7 +28,7 @@ AgentRunner::AgentRunner(const ModularConfigAccessor* config_accessor,
                          AgentServicesFactory* const agent_services_factory,
                          inspect::Node* const session_inspect_node,
                          std::function<void()> on_critical_agent_crash,
-                         std::map<std::string, std::string> agent_service_index,
+                         std::map<std::string, AgentServiceEntry> agent_service_index,
                          std::vector<std::string> session_agents,
                          std::vector<std::string> restart_session_on_agent_crash,
                          sys::ComponentContext* const sessionmgr_context)
@@ -256,12 +256,14 @@ void AgentRunner::ConnectToAgentService(const std::string& requestor_url,
   }
 
   std::string agent_url;
+  std::string service_name = request.service_name();
   if (request.has_handler()) {
     agent_url = request.handler();
   } else {
     auto it = agent_service_index_.find(request.service_name());
     if (it != agent_service_index_.end()) {
-      agent_url = it->second;
+      agent_url = it->second.agent_url;
+      service_name = it->second.expose_from;
     } else {
       HandleAgentServiceNotFound(std::move(*request.mutable_channel()), request.service_name());
       return;
@@ -269,7 +271,7 @@ void AgentRunner::ConnectToAgentService(const std::string& requestor_url,
   }
 
   ConnectToService(requestor_url, agent_url, std::move(*request.mutable_agent_controller()),
-                   request.service_name(), std::move(*request.mutable_channel()));
+                   service_name, std::move(*request.mutable_channel()));
 }
 
 component::Services* AgentRunner::GetAgentOutgoingServices(std::string agent_url) {
@@ -282,8 +284,9 @@ component::Services* AgentRunner::GetAgentOutgoingServices(std::string agent_url
 }
 
 bool AgentRunner::AgentInServiceIndex(const std::string& agent_url) const {
-  auto it = std::find_if(agent_service_index_.begin(), agent_service_index_.end(),
-                         [agent_url](const auto& entry) { return entry.second == agent_url; });
+  auto it =
+      std::find_if(agent_service_index_.begin(), agent_service_index_.end(),
+                   [agent_url](const auto& entry) { return entry.second.agent_url == agent_url; });
   return it != agent_service_index_.end();
 }
 

@@ -1,119 +1,174 @@
 {
-  "$schema": "http://json-schema.org/schema#",
-  "title": "Schema for modular framework configuration",
-  "definitions": {
-    "agent_service_index_entry": {
-      "type": "object",
-      "properties": {
-        "service_name": {
-          "type": "string",
-          "pattern": "^[^.]+[.][^.]+([.][^.]+)*$"
+    "$schema": "http://json-schema.org/schema#",
+    "title": "Schema for modular framework configuration",
+    "definitions": {
+        "agent_service_index_entry": {
+            "type": "object",
+            "properties": {
+                "service_name": {
+                    "$ref": "#/definitions/service_name"
+                },
+                "agent_url": {
+                    "$ref": "#/definitions/component_url"
+                },
+                "expose_from": {
+                    "$ref": "#/definitions/service_name"
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "service_name",
+                "agent_url"
+            ]
         },
-        "agent_url": {"$ref": "#/definitions/component_url" }
-      },
-      "additionalProperties": false,
-      "required": ["service_name", "agent_url"]
-    },
-    "basemgr": {
-      "type": "object",
-      "properties": {
-        "enable_cobalt": { "type": "boolean", "default": true },
-        "use_session_shell_for_story_shell_factory": {
-          "type": "boolean",
-          "default": false
-        },
-        "session_shells": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/session_shell" },
-          "maxItems": 1
-        },
-        "story_shell_url": {
-          "$ref": "#/definitions/component_url",
-          "default": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
-        }
-      },
-      "additionalProperties": true,
-      "required": ["session_shells"]
-    },
-    "component_args": {
-      "type": "object",
-      "properties": {
-        "uri": { "$ref": "#/definitions/component_url" },
-        "args": {
-          "type": "array",
-          "items": { "type": "string" }
-        }
-      },
-      "required": ["uri", "args"]
-    },
-    "component_url": { "$ref": "#/definitions/uri" },
-    "component_url_and_args": {
-      "type": "object",
-      "properties": {
-        "url": { "$ref": "#/definitions/component_url" },
-        "args": {
-          "type": "array",
-          "items": { "type": "string" }
-        }
-      },
-      "required": ["url", "args"]
-    },
-    "session_shell": {
-      "type": "object",
-      "properties": {
-        "url": {
-          "$ref": "#/definitions/component_url",
-          "default": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx"
-        }
-      },
-      "additionalProperties": true,
-      "required": ["url"]
-    },
-    "sessionmgr": {
-      "type": "object",
-      "properties": {
-        "enable_cobalt": { "type": "boolean", "default": true },
-        "startup_agents": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/component_url" },
-          "uniqueItems": true
-        },
-        "session_agents": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/component_url" },
-          "uniqueItems": true
+        "basemgr": {
+            "type": "object",
+            "properties": {
+                "enable_cobalt": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "use_session_shell_for_story_shell_factory": {
+                    "type": "boolean",
+                    "default": false
+                },
+                "session_shells": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/session_shell"
+                    },
+                    "maxItems": 1
+                },
+                "story_shell_url": {
+                    "$ref": "#/definitions/component_url",
+                    "default": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
+                }
+            },
+            "additionalProperties": true,
+            "required": [
+                "session_shells"
+            ]
         },
         "component_args": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/component_args" }
+            "type": "object",
+            "properties": {
+                "uri": {
+                    "$ref": "#/definitions/component_url"
+                },
+                "args": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": [
+                "uri",
+                "args"
+            ]
         },
-        "agent_service_index": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/agent_service_index_entry" },
-          "uniqueItems": true
+        "component_url": {
+            "$ref": "#/definitions/uri"
         },
-        "restart_session_on_agent_crash": {
-          "type": "array",
-          "items": { "$ref": "#/definitions/component_url" },
-          "uniqueItems": true
+        "component_url_and_args": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "$ref": "#/definitions/component_url"
+                },
+                "args": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            },
+            "required": [
+                "url",
+                "args"
+            ]
         },
-        "disable_agent_restart_on_crash": {
-          "type": "boolean",
-          "default": false
+        "service_name": {
+            "type": "string",
+            "pattern": "^[^.]+[.][^.]+([.][^.]+)*$"
+        },
+        "session_shell": {
+            "type": "object",
+            "properties": {
+                "url": {
+                    "$ref": "#/definitions/component_url",
+                    "default": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx"
+                }
+            },
+            "additionalProperties": true,
+            "required": [
+                "url"
+            ]
+        },
+        "sessionmgr": {
+            "type": "object",
+            "properties": {
+                "enable_cobalt": {
+                    "type": "boolean",
+                    "default": true
+                },
+                "startup_agents": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/component_url"
+                    },
+                    "uniqueItems": true
+                },
+                "session_agents": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/component_url"
+                    },
+                    "uniqueItems": true
+                },
+                "component_args": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/component_args"
+                    }
+                },
+                "agent_service_index": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/agent_service_index_entry"
+                    },
+                    "uniqueItems": true
+                },
+                "restart_session_on_agent_crash": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/component_url"
+                    },
+                    "uniqueItems": true
+                },
+                "disable_agent_restart_on_crash": {
+                    "type": "boolean",
+                    "default": false
+                }
+            },
+            "additionalProperties": false
+        },
+        "uri": {
+            "type": "string",
+            "pattern": "^[a-z|-]+:.+"
         }
-      },
-      "additionalProperties": false
     },
-    "uri": {
-      "type": "string",
-      "pattern": "^[a-z|-]+:.+"
-    }
-  },
-  "type": "object",
-  "properties": {
-    "basemgr": { "$ref": "#/definitions/basemgr" },
-    "sessionmgr": { "$ref": "#/definitions/sessionmgr" }
-  },
-  "required": ["basemgr"],
-  "additionalProperties": false
+    "type": "object",
+    "properties": {
+        "basemgr": {
+            "$ref": "#/definitions/basemgr"
+        },
+        "sessionmgr": {
+            "$ref": "#/definitions/sessionmgr"
+        }
+    },
+    "required": [
+        "basemgr"
+    ],
+    "additionalProperties": false
 }

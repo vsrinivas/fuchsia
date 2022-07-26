@@ -175,7 +175,8 @@ class AgentRunnerTest : public gtest::RealLoopFixture {
 
   fuchsia::modular::session::ModularConfig& modular_config() { return config_; }
 
-  void set_agent_service_index(std::map<std::string, std::string> agent_service_index) {
+  void set_agent_service_index(
+      std::map<std::string, modular::AgentServiceEntry> agent_service_index) {
     agent_service_index_ = std::move(agent_service_index);
   }
 
@@ -197,7 +198,7 @@ class AgentRunnerTest : public gtest::RealLoopFixture {
   fuchsia::modular::session::ModularConfig config_;
   std::unique_ptr<modular::ModularConfigAccessor> config_accessor_;
   std::unique_ptr<modular::AgentRunner> agent_runner_;
-  std::map<std::string, std::string> agent_service_index_;
+  std::map<std::string, modular::AgentServiceEntry> agent_service_index_;
   std::vector<std::string> restart_session_on_agent_crash_;
   std::function<void()> on_session_restart_callback_;
 
@@ -345,7 +346,7 @@ TEST_F(AgentRunnerTest, ConnectToAgentService_NoAgentForServiceName) {
       [](fuchsia::sys::LaunchInfo launch_info,
          fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) { FX_NOTREACHED(); });
 
-  set_agent_service_index({{"different_service", kTestAgentUrl}});
+  set_agent_service_index({{"different_service", {kTestAgentUrl, "different_service"}}});
   fuchsia::modular::AgentServiceRequest request;
   request.set_service_name(fuchsia::testing::modular::TestProtocol::Name_);
   request.set_channel(service_ptr.NewRequest().TakeChannel());
@@ -389,9 +390,56 @@ TEST_F(AgentRunnerTest, ConnectToAgentService_ConnectToServiceNameSuccess) {
                                                  std::move(ctrl), std::move(service_namespace));
       });
 
-  set_agent_service_index({{fuchsia::testing::modular::TestProtocol::Name_, kTestAgentUrl}});
+  set_agent_service_index({{fuchsia::testing::modular::TestProtocol::Name_,
+                            {kTestAgentUrl, fuchsia::testing::modular::TestProtocol::Name_}}});
   fuchsia::modular::AgentServiceRequest request;
   request.set_service_name(fuchsia::testing::modular::TestProtocol::Name_);
+  request.set_channel(service_ptr_request.TakeChannel());
+  GetOrCreateAgentRunner()->ConnectToAgentService("requestor_url", std::move(request));
+
+  RunLoopUntil([&] { return agent_got_service_request; });
+}
+
+// ConnectToAgentService, when successful for a service published with the
+// expose_from field set, should launch the agent specified in the
+// agent_service_index, and provide it with the channel endpoint in
+// AgentServiceRequest.channel, but request the service named in expose_from.
+TEST_F(AgentRunnerTest, ConnectToAgentService_ConnectToExposeAsServiceNameSuccess) {
+  fuchsia::testing::modular::TestProtocolPtr service_ptr;
+  auto service_ptr_request = service_ptr.NewRequest();
+
+  zx_status_t status;
+  bool channel_closed = false;
+  service_ptr.set_error_handler([&](zx_status_t s) {
+    channel_closed = true;
+    status = s;
+  });
+
+  // Create a ServiceNamespace with the test service in it.
+  auto service_namespace = std::make_unique<component::ServiceNamespace>();
+  bool agent_got_service_request = false;
+  service_namespace->AddService<fuchsia::testing::modular::TestProtocol>(
+      [&agent_got_service_request,
+       cached_service_request_koid = get_object_koid(service_ptr_request.channel().get())](
+          fidl::InterfaceRequest<fuchsia::testing::modular::TestProtocol> request) {
+        // Expect the same channel object that was originally provided in AgentServiceRequest.
+        EXPECT_EQ(get_object_koid(request.channel().get()), cached_service_request_koid);
+        agent_got_service_request = true;
+      });
+
+  // Register to intercept the agent launch.
+  std::unique_ptr<TestAgent> test_agent;
+  launcher()->RegisterComponent(
+      kTestAgentUrl, [&](fuchsia::sys::LaunchInfo launch_info,
+                         fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) {
+        test_agent = std::make_unique<TestAgent>(std::move(launch_info.directory_request),
+                                                 std::move(ctrl), std::move(service_namespace));
+      });
+
+  set_agent_service_index({{"some_other_service_name",
+                            {kTestAgentUrl, fuchsia::testing::modular::TestProtocol::Name_}}});
+  fuchsia::modular::AgentServiceRequest request;
+  request.set_service_name("some_other_service_name");
   request.set_channel(service_ptr_request.TakeChannel());
   GetOrCreateAgentRunner()->ConnectToAgentService("requestor_url", std::move(request));
 
@@ -426,7 +474,8 @@ TEST_F(AgentRunnerTest, AddRunningAgent_CanConnectToAgentService) {
                                                  std::move(ctrl), std::move(service_namespace));
       });
 
-  set_agent_service_index({{fuchsia::testing::modular::TestProtocol::Name_, kTestAgentUrl}});
+  set_agent_service_index({{fuchsia::testing::modular::TestProtocol::Name_,
+                            {kTestAgentUrl, fuchsia::testing::modular::TestProtocol::Name_}}});
   auto agent_runner = GetOrCreateAgentRunner();
 
   fuchsia::modular::session::AppConfig agent_app_config;
@@ -565,7 +614,8 @@ TEST_F(AgentRunnerTest, GetAgentOutgoingServices) {
                 }));
       });
 
-  set_agent_service_index({{fuchsia::testing::modular::TestProtocol::Name_, kTestAgentUrl}});
+  set_agent_service_index({{fuchsia::testing::modular::TestProtocol::Name_,
+                            {kTestAgentUrl, fuchsia::testing::modular::TestProtocol::Name_}}});
 
   auto agent_runner = GetOrCreateAgentRunner();
   EXPECT_EQ(nullptr, agent_runner->GetAgentOutgoingServices("noexist"));

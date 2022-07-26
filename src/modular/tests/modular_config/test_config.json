@@ -1,49 +1,58 @@
-// This is an example Modular configuration.
 {
-  "basemgr": {
-    "enable_cobalt": true,
-    "use_session_shell_for_story_shell_factory": true,
-    "session_shells": [
-      {
-        "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx"
-      }
-    ],
-    "story_shell_url": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
-  },
-  "sessionmgr": {
-    "enable_cobalt": false,
-    "startup_agents": [
-      "fuchsia-pkg://fuchsia.com/startup_agent#meta/startup_agent.cmx"
-    ],
-    "session_agents": [
-      "fuchsia-pkg://fuchsia.com/session_agent#meta/session_agent.cmx"
-    ],
-    "component_args": [
-      {
-        "uri": "fuchsia-pkg://fuchsia.com/component#meta/component.cmx",
-        "args": [ "--arg1", "--arg2=true" ]
-      },
-      {
-        "uri": "cast://a12345/",
-        "args": [ "--arg" ]
-      }
-    ],
-    "agent_service_index": [
-      {
-        "service_name": "somenamespace.someappspace.SomeService",
-        "agent_url": "fuchsia-pkg://fuchsia.com/some_agent#meta/some_agent.cmx"
-      },
-      {
-        "service_name": "google.service.name",
-        "agent_url": "fuchsia-pkg://fuchsia.com/google_service#meta/google_service.cmx"
-      },
-      {
-        "service_name": "fake.Service.Name",
-        "agent_url": "fuchsia-pkg://fuchsia.com/fake_service#meta/fake_service.cmx"
-      }
-    ],
-    "restart_session_on_agent_crash": [
-      "fuchsia-pkg://fuchsia.com/some_agent#meta/some_agent.cmx"
-    ]
-  }
+    "basemgr": {
+        "enable_cobalt": true,
+        "use_session_shell_for_story_shell_factory": true,
+        "session_shells": [
+            {
+                "url": "fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx"
+            }
+        ],
+        "story_shell_url": "fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx"
+    },
+    "sessionmgr": {
+        "enable_cobalt": false,
+        "startup_agents": [
+            "fuchsia-pkg://fuchsia.com/startup_agent#meta/startup_agent.cmx"
+        ],
+        "session_agents": [
+            "fuchsia-pkg://fuchsia.com/session_agent#meta/session_agent.cmx"
+        ],
+        "component_args": [
+            {
+                "uri": "fuchsia-pkg://fuchsia.com/component#meta/component.cmx",
+                "args": [
+                    "--arg1",
+                    "--arg2=true"
+                ]
+            },
+            {
+                "uri": "cast://a12345/",
+                "args": [
+                    "--arg"
+                ]
+            }
+        ],
+        "agent_service_index": [
+            {
+                "service_name": "somenamespace.someappspace.SomeService",
+                "agent_url": "fuchsia-pkg://fuchsia.com/some_agent#meta/some_agent.cmx"
+            },
+            {
+                "service_name": "google.service.name",
+                "agent_url": "fuchsia-pkg://fuchsia.com/google_service#meta/google_service.cmx"
+            },
+            {
+                "service_name": "fake.Service.Name",
+                "agent_url": "fuchsia-pkg://fuchsia.com/fake_service#meta/fake_service.cmx"
+            },
+            {
+                "service_name": "fake.Service.Name",
+                "agent_url": "fuchsia-pkg://fuchsia.com/fake_service#meta/fake_service.cmx",
+                "expose_from": "fake.OtherService.Name"
+            }
+        ],
+        "restart_session_on_agent_crash": [
+            "fuchsia-pkg://fuchsia.com/some_agent#meta/some_agent.cmx"
+        ]
+    }
 }

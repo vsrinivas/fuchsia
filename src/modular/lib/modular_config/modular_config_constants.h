@@ -40,6 +40,7 @@ constexpr char kComponentArgs[] = "component_args";
 constexpr char kAgentServiceIndex[] = "agent_service_index";
 constexpr char kServiceName[] = "service_name";
 constexpr char kAgentUrl[] = "agent_url";
+constexpr char kExposeFrom[] = "expose_from";
 constexpr char kUri[] = "uri";
 constexpr char kStartupAgents[] = "startup_agents";
 constexpr char kSessionAgents[] = "session_agents";
