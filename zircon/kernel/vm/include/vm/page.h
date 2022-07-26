@@ -357,6 +357,10 @@ struct vm_page {
   char padding_bytes[3];
 
   // helper routines
+
+  // Returns whether this page is in the FREE state. When in the FREE state the page is assumed to
+  // be owned by the relevant PmmNode, and hence unless its lock is held this query must be assumed
+  // to be racy.
   bool is_free() const { return state() == vm_page_state::FREE; }
   // TODO(dustingreen): Make is_loaned() atomically-readable so we can avoid pmm_is_loaned().
   bool is_loaned() const { return loaned; }

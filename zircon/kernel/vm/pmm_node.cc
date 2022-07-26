@@ -256,6 +256,10 @@ void PmmNode::AllocPageHelperLocked(vm_page_t* page) {
     ktl::atomic_thread_fence(ktl::memory_order_release);
   }
 
+  // Here we transition the page from FREE->ALLOC, completing the transfer of ownership from the
+  // PmmNode to the stack. This must be done under lock_, and more specifically the same lock_
+  // acquisition that removes the page from the free list, as both being the free list, or being
+  // in the ALLOC state, indicate ownership by the PmmNode.
   page->set_state(vm_page_state::ALLOC);
 
   if (unlikely(free_fill_enabled_)) {
@@ -459,6 +463,9 @@ zx_status_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) 
         break;
       }
 
+      // As we hold lock_, we can assume that any page in the FREE state is owned by us, and
+      // protected by lock_, and so should is_free() be true we will be allowed to assume it is in
+      // the free list, remove it from said list, and allocate it.
       if (!page->is_free()) {
         break;
       }
@@ -514,6 +521,8 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
   Guard<Mutex> guard{&lock_};
 
   for (auto& a : arena_list_) {
+    // FindFreeContiguous will search the arena for FREE pages. As we hold lock_, any pages in the
+    // FREE state are assumed to be owned by us, and would only be modified if lock_ were held.
     vm_page_t* p = a.FindFreeContiguous(count, alignment_log2);
     if (!p) {
       continue;
@@ -528,6 +537,8 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
       DEBUG_ASSERT(!p->loaned);
       DEBUG_ASSERT(list_in_list(&p->queue_node));
 
+      // Atomically (that is, in a single lock acquisition) remove this page from both the free list
+      // and FREE state, ensuring it is owned by us.
       list_delete(&p->queue_node);
       p->set_state(vm_page_state::ALLOC);
 
@@ -554,7 +565,10 @@ void PmmNode::FreePageHelperLocked(vm_page* page) {
   DEBUG_ASSERT(!page->is_free());
   DEBUG_ASSERT(page->state() != vm_page_state::OBJECT || page->object.pin_count == 0);
 
-  // mark it free
+  // mark it free. This makes the page owned the PmmNode, even though it may not be in any page
+  // list, since the page is findable via the arena, and so we must ensure to:
+  // 1. Be performing set_state here under the lock_
+  // 2. Place the page in the free list and cease referring to the page before ever dropping lock_
   page->set_state(vm_page_state::FREE);
 
   // Coming from OBJECT or ALLOC, this will only be true if the page was loaned (and may still be
