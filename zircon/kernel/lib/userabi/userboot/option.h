@@ -11,23 +11,28 @@
 
 #include <string_view>
 
-// Userboot's terminal behaviour.
-enum class Epilogue {
-  kExitAfterChildLaunch,
-  kPowerOffAfterChildExit,  // If `userboot.shutdown` is set.
-};
-
 // Userboot options, as determined by a ZBI's CMDLINE payloads.
 struct Options {
-  // `userboot.root`: the BOOTFS directory under which userboot will find its
-  // child program and the libraries accessible to its loader service
-  std::string_view root;
+  struct ProgramInfo {
+    // `prefix.root`: the BOOTFS directory under which userboot will find its
+    // child program and the libraries accessible to its loader service
+    std::string_view root;
 
-  // `userboot.next`: The root-relative child program path, with optional '+' separated
-  // arguments to pass to the child program.
-  std::string_view next;
+    // `prefix.next`: The root-relative child program path, with optional '+' separated
+    // arguments to pass to the child program.
+    std::string_view next;
 
-  Epilogue epilogue = Epilogue::kExitAfterChildLaunch;
+    constexpr std::string_view filename() const { return next.substr(0, next.find('+')); }
+  };
+
+  // Optional Program to be executed and handed control to.
+  // Userboot will provide the SvcStash Handle to this elf binary.
+  // prefix: `userboot`
+  ProgramInfo boot;
+
+  // Optional Program to be executed before the booting program.
+  // prefix: `userboot.test`
+  ProgramInfo test;
 };
 
 // Parses the provided CMDLINE payload for userboot options.

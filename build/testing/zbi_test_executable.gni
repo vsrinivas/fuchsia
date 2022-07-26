@@ -13,7 +13,12 @@ import("//build/zbi/kernel_cmdline.gni")
 # zbi_test() target, along with a kernel.  An auxiliary metadata target
 # "$target_name.cmdline" is defined and referenced in data_deps.
 #
-# Parameters are as for test().
+# Parameters: (see test for other parameters)
+#
+#   userboot_entry_type (optional, defaults to "test")
+#     [string] May be "test" or "boot". By setting this parameter, the
+#     executable will be launched by userboot as a test program or as boot
+#     program.
 #
 # Note that defaults for `configs` exclude the implicit fdio dependency, and
 # defaults for `disable_syslog_backend` and `assert_no_deps` are injected to
@@ -27,6 +32,12 @@ template("zbi_test_executable") {
     output_name = target_name
   }
   install_path = "test/$output_name"
+
+  if (defined(invoker.userboot_entry_type)) {
+    userboot_entry_type = invoker.userboot_entry_type
+  } else {
+    userboot_entry_type = "test"
+  }
 
   main_target = target_name
   cmdline_target = "$target_name.cmdline"
@@ -43,11 +54,18 @@ template("zbi_test_executable") {
     if (defined(visibility)) {
       visibility += [ ":$main_target" ]
     }
-    args = [
-      "userboot.root=",
-      "userboot.next=$install_path",
-      "userboot.shutdown",
-    ]
+
+    if (userboot_entry_type == "test") {
+      args = [
+        "userboot.test.root=",
+        "userboot.test.next=$install_path",
+      ]
+    } else {
+      args = [
+        "userboot.root=",
+        "userboot.next=$install_path",
+      ]
+    }
   }
 }
 

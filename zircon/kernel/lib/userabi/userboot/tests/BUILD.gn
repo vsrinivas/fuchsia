@@ -3,25 +3,58 @@
 # found in the LICENSE file.
 
 import("//build/testing/kernel_zbi_test.gni")
-import("//build/testing/zbi_test.gni")
 import("//build/testing/zbi_test_executable.gni")
+import("//build/testing/zbi_test_success.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":early-boot-single-process-test" ]
+  deps = [
+    ":early-boot-multiple-process-test",
+    ":early-boot-single-process-test",
+  ]
 }
 
 if (is_fuchsia) {
+  source_set("helper") {
+    configs += [ "//build/c:fidl-deprecated-c-bindings" ]
+    testonly = true
+    visibility = [ ":*" ]
+    defines = [ "ZBI_TEST_SUCCESS_STRING=\"$zbi_test_success_string\"" ]
+
+    sources = [ "helper.cc" ]
+    public = [ "helper.h" ]
+    deps = [
+      "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
+      "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_c",
+      "//sdk/fidl/fuchsia.io:fuchsia.io_c",
+      "//sdk/lib/fit",
+      "//src/zircon/testing/standalone-test:headers",
+      "//zircon/system/ulib/zx",
+      "//zircon/system/ulib/zxtest",
+    ]
+  }
+
   # Verify that the '/svc' and svc stash handle work correctly.
   zbi_test_executable("early-boot-single-process-test-bin") {
     configs += [ "//build/c:fidl-deprecated-c-bindings" ]
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-    disable_syslog_backend = true
     sources = [ "svc-test.cc" ]
     deps = [
+      ":helper",
+      "//src/zircon/testing/standalone-test",
+      "//zircon/system/ulib/zx",
+      "//zircon/system/ulib/zxtest",
+    ]
+
+    # This test needs to run as a 'boot' program, such that it is handed the SvcStash handle.
+    userboot_entry_type = "boot"
+  }
+
+  # Verify that the '/svc' and svc stash handle work correctly.
+  zbi_test_executable("early-boot-multiple-process-test-bin") {
+    configs += [ "//build/c:fidl-deprecated-c-bindings" ]
+    sources = [ "multiple-svc-test.cc" ]
+    deps = [
+      ":helper",
       "//sdk/fidl/fuchsia.boot:fuchsia.boot_c",
       "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_c",
       "//sdk/fidl/fuchsia.io:fuchsia.io_c",
@@ -29,11 +62,28 @@ if (is_fuchsia) {
       "//zircon/system/ulib/zx",
       "//zircon/system/ulib/zxtest",
     ]
+
+    # This test needs to run as a 'boot' program, such that it is handed the SvcStash handle.
+    userboot_entry_type = "boot"
   }
 }
 
 kernel_zbi_test("early-boot-single-process-test") {
   deps = [ ":early-boot-single-process-test-bin" ]
+  device_types = [
+    "AEMU",
+    "Astro",
+    "QEMU",
+    "Intel NUC Kit NUC7i5DNHE",
+    "Sherlock",
+  ]
+}
+
+kernel_zbi_test("early-boot-multiple-process-test") {
+  deps = [
+    ":early-boot-multiple-process-test-bin",
+    "data-publisher:early-boot-data-publisher-bin",
+  ]
   device_types = [
     "AEMU",
     "Astro",

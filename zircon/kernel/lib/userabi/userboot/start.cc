@@ -33,10 +33,12 @@
 #include <array>
 #include <climits>
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
 #include "bootfs.h"
@@ -76,10 +78,10 @@ zx::vmar ReserveLowAddressSpace(const zx::debuglog& log, const zx::vmar& root_vm
   return vmar;
 }
 
-void ParseNextProcessArguments(const zx::debuglog& log, const Options& opts, uint32_t& argc,
+void ParseNextProcessArguments(const zx::debuglog& log, std::string_view next, uint32_t& argc,
                                char* argv) {
   // Extra byte for null terminator.
-  size_t required_size = opts.next.size() + 1;
+  size_t required_size = next.size() + 1;
   if (required_size > kProcessArgsMaxBytes) {
     fail(log, "required %zu bytes for process arguments, but only %u are available", required_size,
          kProcessArgsMaxBytes);
@@ -88,7 +90,7 @@ void ParseNextProcessArguments(const zx::debuglog& log, const Options& opts, uin
   // At a minimum, child processes will be passed a single argument containing the binary name.
   argc++;
   uint32_t index = 0;
-  for (char c : opts.next) {
+  for (char c : next) {
     if (c == '+') {
       // Argument list is provided as '+' separated, but passed as null separated. Every time
       // we encounter a '+' we replace it with a null and increment the argument counter.
@@ -101,10 +103,6 @@ void ParseNextProcessArguments(const zx::debuglog& log, const Options& opts, uin
   }
 
   argv[index] = '\0';
-}
-
-std::string_view GetUserbootNextFilename(const Options& opts) {
-  return opts.next.substr(0, opts.next.find_first_of('+'));
 }
 
 // We don't need our own thread handle, but the child does. In addition we pass on a decompressed
@@ -203,19 +201,31 @@ std::array<zx_handle_t, kChildHandleCount> ExtractHandles(zx::channel bootstrap)
 
 template <typename T>
 T DuplicateOrDie(const zx::debuglog& log, const T& typed_handle,
-                 unsigned int line = cpp20::source_location::current().line()) {
+                 cpp20::source_location src_loc = cpp20::source_location::current()) {
   T dup;
   auto status = typed_handle.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
-  check(log, status, "[start.cc:%d]: Failed to duplicate handle.", line);
+  check(log, status, "[%s:%d]: Failed to duplicate handle.", src_loc.file_name(), src_loc.line());
+  return dup;
+}
+
+zx_handle_t RawDuplicateOrDie(const zx::debuglog& log, zx_handle_t handle,
+                              cpp20::source_location src_loc = cpp20::source_location::current()) {
+  zx_handle_t dup;
+  auto status = zx_handle_duplicate(handle, ZX_RIGHT_SAME_RIGHTS, &dup);
+  check(log, status, "[%s:%d]: Failed to duplicate handle.", src_loc.file_name(), src_loc.line());
   return dup;
 }
 
 zx::debuglog DuplicateOrDie(const zx::debuglog& log,
-                            unsigned int line = cpp20::source_location::current().line()) {
-  return DuplicateOrDie(log, log, line);
+                            cpp20::source_location src_loc = cpp20::source_location::current()) {
+  return DuplicateOrDie(log, log, src_loc);
 }
 
 struct ChildContext {
+  ChildContext() = default;
+  ChildContext(ChildContext&&) = default;
+  ~ChildContext() { zx_handle_close_many(handles.data(), handles.size()); }
+
   // Process creation handles
   zx::process process;
   zx::vmar vmar;
@@ -224,6 +234,8 @@ struct ChildContext {
 
   zx::channel svc_client;
   zx::channel svc_server;
+
+  std::array<zx_handle_t, kChildHandleCount> handles = {};
 };
 
 ChildContext CreateChildContext(const zx::debuglog& log, std::string_view name,
@@ -246,25 +258,42 @@ ChildContext CreateChildContext(const zx::debuglog& log, std::string_view name,
 
   status = zx::channel::create(0, &child.svc_client, &child.svc_server);
   check(log, status, "Failed to create svc channels.");
+
+  // Copy all resources that are not explicitly duplicated in SetChildHandles.
+  for (size_t i = 0; i < handles.size() && i < kHandleCount; ++i) {
+    if (i == kProcSelf) {
+      continue;
+    }
+
+    if (i == kVmarRootSelf) {
+      continue;
+    }
+
+    if (handles[i] == ZX_HANDLE_INVALID) {
+      continue;
+    }
+
+    child.handles[i] = RawDuplicateOrDie(log, handles[i]);
+  }
+
   return child;
 }
 
-void SetChildHandles(const zx::debuglog& log, const zx::vmo& bootfs_vmo, ChildContext& child,
-                     cpp20::span<zx_handle_t, kChildHandleCount> child_handles) {
-  child_handles[kBootfsVmo] = DuplicateOrDie(log, bootfs_vmo).release();
-  child_handles[kDebugLog] = DuplicateOrDie(log).release();
-  child_handles[kProcSelf] = DuplicateOrDie(log, child.process).release();
-  child_handles[kVmarRootSelf] = DuplicateOrDie(log, child.vmar).release();
-  child_handles[kThreadSelf] = DuplicateOrDie(log, child.thread).release();
-  child_handles[kSvcStub] = child.svc_client.release();
+void SetChildHandles(const zx::debuglog& log, const zx::vmo& bootfs_vmo, ChildContext& child) {
+  child.handles[kBootfsVmo] = DuplicateOrDie(log, bootfs_vmo).release();
+  child.handles[kDebugLog] = DuplicateOrDie(log).release();
+  child.handles[kProcSelf] = DuplicateOrDie(log, child.process).release();
+  child.handles[kVmarRootSelf] = DuplicateOrDie(log, child.vmar).release();
+  child.handles[kThreadSelf] = DuplicateOrDie(log, child.thread).release();
+  child.handles[kSvcStub] = child.svc_client.release();
 
   // Verify all child handles.
-  for (size_t i = 0; i < child_handles.size(); ++i) {
+  for (size_t i = 0; i < child.handles.size(); ++i) {
     // The stash handle is only passed to the last process launched by userboot.
     if (i == kSvcStash) {
       continue;
     }
-    auto handle = child_handles[i];
+    auto handle = child.handles[i];
     zx_info_handle_basic_t info;
     auto status =
         zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
@@ -322,10 +351,9 @@ Resources CreateResources(const zx::debuglog& log,
   return resources;
 }
 
-zx::channel StartChildProcess(const zx::debuglog& log, const Options& options,
-                              const ChildMessageLayout& child_message, std::string_view filename,
-                              ChildContext& child, Bootfs& bootfs,
-                              cpp20::span<zx_handle_t> handles) {
+zx::channel StartChildProcess(const zx::debuglog& log, const Options::ProgramInfo& elf_entry,
+                              const ChildMessageLayout& child_message, ChildContext& child,
+                              Bootfs& bootfs, size_t handle_count) {
   size_t stack_size = ZIRCON_DEFAULT_STACK_SIZE;
 
   zx::channel to_child, bootstrap;
@@ -336,11 +364,13 @@ zx::channel StartChildProcess(const zx::debuglog& log, const Options& options,
 
   // Examine the bootfs image and find the requested file in it.
   // This will handle a PT_INTERP by doing a second lookup in bootfs.
-  zx_vaddr_t entry = elf_load_bootfs(log, bootfs, options.root, child.process, child.vmar,
-                                     child.thread, filename, to_child, &stack_size, &loader_svc);
+  zx_vaddr_t entry =
+      elf_load_bootfs(log, bootfs, elf_entry.root, child.process, child.vmar, child.thread,
+                      elf_entry.filename(), to_child, &stack_size, &loader_svc);
 
   // Now load the vDSO into the child, so it has access to system calls.
-  zx_vaddr_t vdso_base = elf_load_vdso(log, child.vmar, *zx::unowned_vmo{handles[kFirstVdso]});
+  zx_vaddr_t vdso_base =
+      elf_load_vdso(log, child.vmar, *zx::unowned_vmo{child.handles[kFirstVdso]});
 
   stack_size = (stack_size + zx_system_get_page_size() - 1) &
                -static_cast<uint64_t>(zx_system_get_page_size());
@@ -363,8 +393,8 @@ zx::channel StartChildProcess(const zx::debuglog& log, const Options& options,
   child.reserved_vmar.reset();
   // Now send the bootstrap message.  This transfers away all the handles
   // we have left except the process and thread themselves.
-  status = to_child.write(0, &child_message, sizeof(child_message), handles.data(),
-                          static_cast<uint32_t>(handles.size()));
+  status = to_child.write(0, &child_message, sizeof(child_message), child.handles.data(),
+                          static_cast<uint32_t>(handle_count));
   check(log, status, "zx_channel_write to child failed");
 
   // Start the process going.
@@ -375,38 +405,44 @@ zx::channel StartChildProcess(const zx::debuglog& log, const Options& options,
   return loader_svc;
 }
 
-[[noreturn]] void HandleTermination(const zx::debuglog& log, const Options& options,
-                                    std::string_view filename, ChildContext& child,
-                                    zx::resource power) {
-  auto wait_till_child_exits = [child_name = filename, &log, &child]() {
-    printl(log, "Waiting for %.*s to exit...", static_cast<int>(child_name.size()),
-           child_name.data());
-    zx_status_t status =
-        child.process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
-    check(log, status, "zx_object_wait_one on process failed");
-    zx_info_process_t info;
-    status = child.process.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
-    check(log, status, "zx_object_get_info on process failed");
-    printl(log, "*** Exit status %zd ***\n", info.return_code);
-    if (info.return_code == 0) {
-      // The test runners match this exact string on the console log
-      // to determine that the test succeeded since shutting the
-      // machine down doesn't return a value to anyone for us.
-      printl(log, "%s\n", ZBI_TEST_SUCCESS_STRING);
-    }
-  };
+int64_t WaitForProcessExit(const zx::debuglog& log, const Options::ProgramInfo& entry,
+                           const ChildContext& child) {
+  printl(log, "Waiting for %.*s to exit...", static_cast<int>(entry.filename().size()),
+         entry.filename().data());
+  zx_status_t status = child.process.wait_one(ZX_PROCESS_TERMINATED, zx::time::infinite(), nullptr);
+  check(log, status, "zx_object_wait_one on process failed");
+  zx_info_process_t info;
+  status = child.process.get_info(ZX_INFO_PROCESS, &info, sizeof(info), nullptr, nullptr);
+  check(log, status, "zx_object_get_info on process failed");
+  printl(log, "*** Exit status %zd ***\n", info.return_code);
+  return info.return_code;
+}
 
-  // Now we've accomplished our purpose in life, and we can die happy.
-  if (options.epilogue == Epilogue::kExitAfterChildLaunch) {
-    child.process.reset();
+struct TerminationInfo {
+  // Depending on test mode and result, this might be the return code of boot or test elf.
+  std::optional<int64_t> test_return_code;
+
+  // Whether we should continue or shutdown.
+  bool should_shutdown = false;
+
+  zx::resource power;
+};
+
+[[noreturn]] void HandleTermination(const zx::debuglog& log, const TerminationInfo& info) {
+  if (!info.should_shutdown) {
     printl(log, "finished!");
     zx_process_exit(0);
   }
 
-  wait_till_child_exits();
+  // The test runners match this exact string on the console log
+  // to determine that the test succeeded since shutting the
+  // machine down doesn't return a value to anyone for us.
+  if (info.test_return_code && info.test_return_code == 0) {
+    printl(log, "%s\n", ZBI_TEST_SUCCESS_STRING);
+  }
 
   printl(log, "Process exited.  Executing poweroff");
-  zx_system_powerctl(power.get(), ZX_SYSTEM_POWERCTL_SHUTDOWN, nullptr);
+  zx_system_powerctl(info.power.get(), ZX_SYSTEM_POWERCTL_SHUTDOWN, nullptr);
   printl(log, "still here after poweroff!");
 
   while (true)
@@ -453,38 +489,60 @@ zx::channel StartChildProcess(const zx::debuglog& log, const Options& options,
   // Parse CMDLINE items to determine the set of runtime options.
   Options opts = GetOptionsFromZbi(log, vmar_self, *zbi);
 
-  // Strips any arguments passed along with the filename to userboot.next.
-  std::string_view filename = GetUserbootNextFilename(opts);
-
-  ChildMessageLayout child_message = CreateChildMessage();
-  ChildContext child = CreateChildContext(log, filename, handles);
-
-  StashSvc(log, svc_stash_client, filename, std::move(child.svc_server));
-  SetChildHandles(log, bootfs_vmo, child, handles);
-  SetStashHandle(log, std::move(svc_stash_server), handles);
-
-  // Fill in any '+' separated arguments provided by `userboot.next`. If arguments are longer than
-  // kProcessArgsMaxBytes, this function will fail process creation.
-  ParseNextProcessArguments(log, opts, child_message.header.args_num, child_message.args.data());
+  TerminationInfo info = {
+      .power = std::move(power),
+  };
 
   {
-    // Map in the bootfs so we can look for files in it.
+    auto borrowed_bootfs = bootfs_vmo.borrow();
     Bootfs bootfs{vmar_self.borrow(), std::move(bootfs_vmo), std::move(vmex), DuplicateOrDie(log)};
+    auto launch_process = [&](auto& elf_entry,
+                              zx::channel svc_stash = zx::channel()) -> ChildContext {
+      ChildMessageLayout child_message = CreateChildMessage();
+      ChildContext child = CreateChildContext(log, elf_entry.filename(), handles);
+      size_t handle_count = kChildHandleCount - 1;
 
-    zx::channel loader_svc =
-        StartChildProcess(log, opts, child_message, filename, child, bootfs, handles);
-    printl(log, "process %.*s started.", static_cast<int>(filename.size()), filename.data());
+      StashSvc(log, svc_stash_client, elf_entry.filename(), std::move(child.svc_server));
+      SetChildHandles(log, *borrowed_bootfs, child);
+      if (svc_stash) {
+        SetStashHandle(log, std::move(svc_stash), child.handles);
+        handle_count++;
+      }
 
-    // Now become the loader service for as long as that's needed.
-    if (loader_svc) {
-      LoaderService ldsvc(DuplicateOrDie(log), &bootfs, opts.root);
-      ldsvc.Serve(std::move(loader_svc));
+      // Fill in any '+' separated arguments provided by `userboot.next`. If arguments are longer
+      // than kProcessArgsMaxBytes, this function will fail process creation.
+      ParseNextProcessArguments(log, elf_entry.next, child_message.header.args_num,
+                                child_message.args.data());
+
+      // Map in the bootfs so we can look for files in it.
+      zx::channel loader_svc =
+          StartChildProcess(log, elf_entry, child_message, child, bootfs, handle_count);
+      printl(log, "process %.*s started.", static_cast<int>(elf_entry.filename().size()),
+             elf_entry.filename().data());
+
+      // Now become the loader service for as long as that's needed.
+      if (loader_svc) {
+        LoaderService ldsvc(DuplicateOrDie(log), &bootfs, elf_entry.root);
+        ldsvc.Serve(std::move(loader_svc));
+      }
+
+      return child;
+    };
+
+    if (!opts.test.next.empty()) {
+      // If no boot, then hand over the stash to the test program. Test does not get the svc stash.
+      auto test_context = launch_process(opts.test);
+      // Wait for test to finish.
+      info.test_return_code = WaitForProcessExit(log, opts.test, test_context);
+
+      info.should_shutdown = opts.boot.next.empty();
     }
 
-    // All done with bootfs! Let it go out of scope.
+    if (!opts.boot.next.empty()) {
+      [[maybe_unused]] auto boot_context = launch_process(opts.boot, std::move(svc_stash_server));
+    }
   }
-
-  HandleTermination(log, opts, filename, child, std::move(power));
+  HandleTermination(log, info);
 }
 
 }  // anonymous namespace

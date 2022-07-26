@@ -3,18 +3,11 @@
 // found in the LICENSE file.
 
 #include <lib/standalone-test/standalone.h>
-#include <lib/stdcompat/array.h>
-#include <lib/zx/channel.h>
-#include <lib/zx/eventpair.h>
-#include <zircon/errors.h>
-#include <zircon/rights.h>
+#include <zircon/process.h>
+#include <zircon/processargs.h>
 #include <zircon/sanitizer.h>
-#include <zircon/syscalls.h>
-#include <zircon/syscalls/object.h>
-#include <zircon/types.h>
 
-#include <cstdint>
-#include <string_view>
+#include <string>
 
 #include <zxtest/zxtest.h>
 
@@ -22,11 +15,12 @@
 
 namespace {
 
-class SvcSingleProcessTest : public zxtest::Test {
+class MultipleProcessSvcTest : public zxtest::Test {
  public:
   void SetUp() final {
     static zx::channel svc_stash;
     static zx::channel svc_server;
+    static zx::channel provider_svc_server;
 
     // Prevents multiple iterations from discarding this.
     if (!svc_stash) {
@@ -35,6 +29,11 @@ class SvcSingleProcessTest : public zxtest::Test {
     }
 
     // Order matters, provider is stored first.
+    if (!provider_svc_server) {
+      ASSERT_NO_FATAL_FAILURE(GetStashedSvc(svc_stash.borrow(), provider_svc_server));
+    }
+
+    // Ours is stored second.
     if (!svc_server) {
       ASSERT_NO_FATAL_FAILURE(GetStashedSvc(svc_stash.borrow(), svc_server));
     }
@@ -42,41 +41,42 @@ class SvcSingleProcessTest : public zxtest::Test {
     svc_stash_ = svc_stash.borrow();
     svc_ = standalone::GetNsDir("/svc");
     stashed_svc_ = svc_server.borrow();
+    provider_svc_ = provider_svc_server.borrow();
   }
 
   zx::unowned_channel svc_stash() { return svc_stash_->borrow(); }
   zx::unowned_channel local_svc() { return svc_->borrow(); }
   zx::unowned_channel stashed_svc() { return stashed_svc_->borrow(); }
+  zx::unowned_channel provider_svc() { return provider_svc_->borrow(); }
 
  private:
   zx::unowned_channel svc_stash_;
   zx::unowned_channel svc_;
   zx::unowned_channel stashed_svc_;
+  zx::unowned_channel provider_svc_;
 };
 
-TEST_F(SvcSingleProcessTest, SvcStubIsValidHandle) { ASSERT_TRUE(local_svc()->is_valid()); }
+// The provided data is in 'data-publisher/main.cc'.
+TEST_F(MultipleProcessSvcTest, ProviderDataMatchesExpectations) {
+  Message debug_msg;
+  ASSERT_NO_FAILURES(GetDebugDataMessage(provider_svc(), debug_msg));
+  DebugDataMessageView view(debug_msg);
 
-TEST_F(SvcSingleProcessTest, SvcStashIsValidHandle) {
-  ASSERT_TRUE(svc_stash()->is_valid());
-  ASSERT_TRUE(stashed_svc()->is_valid());
+  ASSERT_EQ(view.sink(), "data-provider");
+
+  // Token must be signaled with peer closed.
+  zx_signals_t observed = 0;
+  view.token()->wait_one(ZX_EVENTPAIR_PEER_CLOSED, zx::time::infinite_past(), &observed);
+  EXPECT_TRUE((observed & ZX_EVENTPAIR_PEER_CLOSED) != 0);
+
+  // Check vmo contents.
+  std::array<char, 12> actual_contents = {};
+  ASSERT_OK(view.vmo()->read(actual_contents.data(), 0, actual_contents.size()));
+
+  ASSERT_EQ(std::string(actual_contents.data(), actual_contents.size()), "Hello World!");
 }
 
-TEST_F(SvcSingleProcessTest, WritingIntoSvcShowsUpInStashHandle) {
-  ASSERT_TRUE(local_svc()->is_valid());
-  ASSERT_TRUE(stashed_svc()->is_valid());
-
-  auto written_message = cpp20::to_array("Hello World!");
-  ASSERT_OK(local_svc()->write(0, written_message.data(), written_message.size(), nullptr, 0));
-
-  decltype(written_message) read_message = {};
-  uint32_t actual_bytes, actual_handles;
-  ASSERT_OK(stashed_svc()->read(0, read_message.data(), nullptr, read_message.size(), 0,
-                                &actual_bytes, &actual_handles));
-
-  EXPECT_EQ(read_message, written_message);
-}
-
-TEST_F(SvcSingleProcessTest, SanitizerPublishDataShowsUpInStashedHandle) {
+TEST_F(MultipleProcessSvcTest, SanitizerPublishDataShowsUpInStashedHandle) {
   ASSERT_TRUE(local_svc()->is_valid());
   ASSERT_TRUE(stashed_svc()->is_valid());
 
@@ -109,5 +109,4 @@ TEST_F(SvcSingleProcessTest, SanitizerPublishDataShowsUpInStashedHandle) {
   ASSERT_EQ(GetKoid(view.vmo()->get()), vmo_koid);
   ASSERT_EQ(GetKoid(view.token()->get()), token_koid);
 }
-
 }  // namespace
