@@ -351,8 +351,7 @@ zx_status_t FutexContext::FutexWaitInternal(user_in_ptr<const zx_futex_t> value_
         preempt_disabler.Enable();
         if (auto fault = copy_result.fault_info) {
           new_owner_guard.CallUnlocked([&] {
-            result =
-                ProcessDispatcher::GetCurrent()->aspace()->SoftFault(fault->pf_va, fault->pf_flags);
+            result = Thread::Current::Get()->aspace()->SoftFault(fault->pf_va, fault->pf_flags);
           });
           if (result != ZX_OK) {
             return result;
@@ -654,8 +653,7 @@ zx_status_t FutexContext::FutexRequeueInternal(
       eager_resched_disabler.Enable();
       if (auto fault = copy_result.fault_info) {
         new_owner_guard.CallUnlocked([&] {
-          result =
-              ProcessDispatcher::GetCurrent()->aspace()->SoftFault(fault->pf_va, fault->pf_flags);
+          result = Thread::Current::Get()->aspace()->SoftFault(fault->pf_va, fault->pf_flags);
         });
         if (result != ZX_OK) {
           return result;

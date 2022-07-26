@@ -376,7 +376,7 @@ zx_status_t sys_process_read_memory(zx_handle_t handle, zx_vaddr_t vaddr, user_o
   if (status != ZX_OK)
     return status;
 
-  auto aspace = process->aspace();
+  auto aspace = process->aspace_at(vaddr);
   if (!aspace)
     return ZX_ERR_BAD_STATE;
 
@@ -402,8 +402,8 @@ zx_status_t sys_process_read_memory(zx_handle_t handle, zx_vaddr_t vaddr, user_o
     buffer_size = ktl::min(buffer_size, vm_mapping->size() - (vaddr - vm_mapping->base()));
   }
   size_t out_actual = 0;
-  zx_status_t st = vmo->ReadUser(up->aspace().get(), buffer.reinterpret<char>(), offset,
-                                 buffer_size, &out_actual);
+  zx_status_t st = vmo->ReadUser(Thread::Current::Get()->aspace(), buffer.reinterpret<char>(),
+                                 offset, buffer_size, &out_actual);
   if (st != ZX_OK) {
     // Do not write |out_actual| to |actual| on error
     return st;
@@ -435,7 +435,7 @@ zx_status_t sys_process_write_memory(zx_handle_t handle, zx_vaddr_t vaddr,
   if (status != ZX_OK)
     return status;
 
-  auto aspace = process->aspace();
+  auto aspace = process->aspace_at(vaddr);
   if (!aspace)
     return ZX_ERR_BAD_STATE;
 
@@ -466,8 +466,9 @@ zx_status_t sys_process_write_memory(zx_handle_t handle, zx_vaddr_t vaddr,
     buffer_size = ktl::min(buffer_size, vm_mapping->size() - (vaddr - vm_mapping->base()));
   }
   size_t out_actual = 0;
-  zx_status_t st = vmo->WriteUser(up->aspace().get(), buffer.reinterpret<const char>(), offset,
-                                  buffer_size, &out_actual);
+  zx_status_t st =
+      vmo->WriteUser(Thread::Current::Get()->aspace(), buffer.reinterpret<const char>(), offset,
+                     buffer_size, &out_actual);
   if (st != ZX_OK) {
     // Do not write |out_actual| to |actual| on error~
     return st;

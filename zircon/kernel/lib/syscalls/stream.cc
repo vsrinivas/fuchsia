@@ -77,11 +77,11 @@ zx_status_t sys_stream_writev(zx_handle_t handle, uint32_t options,
 
   size_t actual = 0;
   if (options & ZX_STREAM_APPEND) {
-    status =
-        stream->AppendVector(up->aspace().get(), make_user_in_iovec(vector, vector_count), &actual);
+    status = stream->AppendVector(Thread::Current::Get()->aspace(),
+                                  make_user_in_iovec(vector, vector_count), &actual);
   } else {
-    status =
-        stream->WriteVector(up->aspace().get(), make_user_in_iovec(vector, vector_count), &actual);
+    status = stream->WriteVector(Thread::Current::Get()->aspace(),
+                                 make_user_in_iovec(vector, vector_count), &actual);
   }
 
   if (status == ZX_OK && out_actual) {
@@ -114,8 +114,8 @@ zx_status_t sys_stream_writev_at(zx_handle_t handle, uint32_t options, zx_off_t 
   }
 
   size_t actual = 0;
-  status = stream->WriteVectorAt(up->aspace().get(), make_user_in_iovec(vector, vector_count),
-                                 offset, &actual);
+  status = stream->WriteVectorAt(Thread::Current::Get()->aspace(),
+                                 make_user_in_iovec(vector, vector_count), offset, &actual);
 
   if (status == ZX_OK && out_actual) {
     status = out_actual.copy_to_user(actual);
@@ -146,8 +146,8 @@ zx_status_t sys_stream_readv(zx_handle_t handle, uint32_t options, user_out_ptr<
   }
 
   size_t actual = 0;
-  status =
-      stream->ReadVector(up->aspace().get(), make_user_out_iovec(vector, vector_count), &actual);
+  status = stream->ReadVector(Thread::Current::Get()->aspace(),
+                              make_user_out_iovec(vector, vector_count), &actual);
 
   if (status == ZX_OK && out_actual) {
     status = out_actual.copy_to_user(actual);
@@ -179,8 +179,8 @@ zx_status_t sys_stream_readv_at(zx_handle_t handle, uint32_t options, zx_off_t o
   }
 
   size_t actual = 0;
-  status = stream->ReadVectorAt(up->aspace().get(), make_user_out_iovec(vector, vector_count),
-                                offset, &actual);
+  status = stream->ReadVectorAt(Thread::Current::Get()->aspace(),
+                                make_user_out_iovec(vector, vector_count), offset, &actual);
 
   if (status == ZX_OK && out_actual) {
     status = out_actual.copy_to_user(actual);

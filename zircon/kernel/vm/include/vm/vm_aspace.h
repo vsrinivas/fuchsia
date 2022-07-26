@@ -53,6 +53,15 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   // Returns null on failure (e.g. due to resource starvation).
   static fbl::RefPtr<VmAspace> Create(Type type, const char* name);
 
+  // Create an address space of the type specified in |type| with name |name|.
+  //
+  // The returned aspace will start at |base| and span |size|.
+  //
+  // Although reference counted, the returned VmAspace must be explicitly destroyed via Destroy.
+  //
+  // Returns null on failure (e.g. due to resource starvation).
+  static fbl::RefPtr<VmAspace> Create(vaddr_t base, size_t size, Type type, const char* name);
+
   // Destroy this address space.
   //
   // Destroy does not free this object, but rather allows it to be freed when the last retaining
@@ -93,11 +102,11 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
 
   static void DumpAllAspaces(bool verbose);
 
-  // Harvests all accessed information across all user mappings and updates any page age information
-  // for terminal mappings, and potentially harvests page tables depending on the passed in action.
-  // This requires holding the aspaces_list_lock_ over the entire duration and whilst not a commonly
-  // used lock this function should still only be called infrequently to avoid monopolizing the
-  // lock.
+  // Harvests all accessed information across all user mappings and updates any page age
+  // information for terminal mappings, and potentially harvests page tables depending on the
+  // passed in action. This requires holding the aspaces_list_lock_ over the entire duration and
+  // whilst not a commonly used lock this function should still only be called infrequently to
+  // avoid monopolizing the lock.
   using NonTerminalAction = ArchVmAspace::NonTerminalAction;
   using TerminalAction = ArchVmAspace::TerminalAction;
   static void HarvestAllUserAccessedBits(NonTerminalAction non_terminal_action,
@@ -273,21 +282,20 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   // TODO(fxb/101641): This is a temporary solution and needs to be replaced with something that is
   // formalized.
   // Indicates whether or not this aspace is considered a latency sensitive object. For an aspace,
-  // being latency sensitive means it will not perform page table reclamation, and will also pass on
-  // this tag to any VMOs that get mapped into it. This is an atomic so that it can be safely read
-  // outside the lock, however writes should occur inside the lock.
+  // being latency sensitive means it will not perform page table reclamation, and will also pass
+  // on this tag to any VMOs that get mapped into it. This is an atomic so that it can be safely
+  // read outside the lock, however writes should occur inside the lock.
   ktl::atomic<bool> is_latency_sensitive_ = false;
 
   mutable DECLARE_MUTEX(VmAspace) lock_;
 
-  // Keep a cache of the VmMapping of the last PageFault that occurred. On a page fault this can be
-  // checked to see if it matches more quickly than walking the full vmar tree. Mappings that are
-  // stored here must be in the ALIVE state, implying that they are in the VMAR tree. It is then the
-  // responsibility of the VmMapping to remove itself from here should it transition out of ALIVE,
-  // and remove itself from the VMAR tree.
-  // A raw pointer is stored here since the VmMapping must be alive and in tree anyway and if it
-  // were a RefPtr we would not be able to handle being the one to drop the last ref and perform
-  // destruction.
+  // Keep a cache of the VmMapping of the last PageFault that occurred. On a page fault this can
+  // be checked to see if it matches more quickly than walking the full vmar tree. Mappings that
+  // are stored here must be in the ALIVE state, implying that they are in the VMAR tree. It is
+  // then the responsibility of the VmMapping to remove itself from here should it transition out
+  // of ALIVE, and remove itself from the VMAR tree. A raw pointer is stored here since the
+  // VmMapping must be alive and in tree anyway and if it were a RefPtr we would not be able to
+  // handle being the one to drop the last ref and perform destruction.
   VmMapping* last_fault_ TA_GUARDED(lock_) = nullptr;
 
   // root of virtual address space
@@ -306,9 +314,9 @@ class VmAspace : public fbl::DoublyLinkedListable<VmAspace*>, public fbl::RefCou
   fbl::RefPtr<VmMapping> vdso_code_mapping_ TA_GUARDED(lock_);
 
   // The number of page table reclamations attempted since last active. This is used since we need
-  // to perform pt reclamation twice in a row (once to clear accessed bits, another time to reclaim
-  // page tables) before the aspace is at a fixed point and we can actually stop performing the
-  // harvests.
+  // to perform pt reclamation twice in a row (once to clear accessed bits, another time to
+  // reclaim page tables) before the aspace is at a fixed point and we can actually stop
+  // performing the harvests.
   uint32_t pt_harvest_since_active_ TA_GUARDED(AspaceListLock::Get()) = 0;
 
   DECLARE_SINGLETON_MUTEX(AspaceListLock);

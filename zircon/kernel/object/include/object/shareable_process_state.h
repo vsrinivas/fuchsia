@@ -11,6 +11,7 @@
 #include <kernel/mutex.h>
 #include <object/futex_context.h>
 #include <object/handle_table.h>
+#include <vm/vm_aspace.h>
 
 // This class is logically private to ProcessDispatcher.
 //
@@ -43,6 +44,15 @@ class ShareableProcessState : public fbl::RefCounted<ShareableProcessState> {
     }
     // That was the last one.
     handle_table_.Clean();
+    if (aspace_) {
+      zx_status_t result = aspace_->Destroy();
+      ASSERT_MSG(result == ZX_OK, "%d\n", result);
+    }
+  }
+
+  bool Initialize(vaddr_t aspace_base, vaddr_t aspace_size, const char* aspace_name) {
+    aspace_ = VmAspace::Create(aspace_base, aspace_size, VmAspace::Type::User, aspace_name);
+    return aspace_ != nullptr;
   }
 
   HandleTable& handle_table() { return handle_table_; }
@@ -51,12 +61,17 @@ class ShareableProcessState : public fbl::RefCounted<ShareableProcessState> {
   FutexContext& futex_context() { return futex_context_; }
   const FutexContext& futex_context() const { return futex_context_; }
 
+  fbl::RefPtr<VmAspace> aspace() { return aspace_; }
+  const fbl::RefPtr<VmAspace>& aspace() const { return aspace_; }
+
  private:
   // The number of processes currently sharing this state.
   RelaxedAtomic<uint32_t> process_count_ = 0;
 
   HandleTable handle_table_;
   FutexContext futex_context_;
+
+  fbl::RefPtr<VmAspace> aspace_;
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_SHAREABLE_PROCESS_STATE_H_

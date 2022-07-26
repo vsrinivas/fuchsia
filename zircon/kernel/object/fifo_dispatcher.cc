@@ -109,7 +109,7 @@ zx_status_t FifoDispatcher::WriteFromUser(size_t elem_size, user_in_ptr<const ui
     if (auto fault = copy_result.fault_info) {
       // If we have a fault the original status is irrelevant and we replace it with the result of
       // the fault.
-      result = ProcessDispatcher::GetCurrent()->aspace()->SoftFault(fault->pf_va, fault->pf_flags);
+      result = Thread::Current::Get()->aspace()->SoftFault(fault->pf_va, fault->pf_flags);
     } else {
       // If there's no fault information then the assumption is that the original copy cannot have
       // succeeded.
@@ -207,7 +207,7 @@ zx_status_t FifoDispatcher::ReadToUser(size_t elem_size, user_out_ptr<uint8_t> p
     if (auto fault = copy_result.fault_info) {
       // If we have a fault the original status is irrelevant and we replace it with the result of
       // the fault.
-      result = ProcessDispatcher::GetCurrent()->aspace()->SoftFault(fault->pf_va, fault->pf_flags);
+      result = Thread::Current::Get()->aspace()->SoftFault(fault->pf_va, fault->pf_flags);
     } else {
       // If there's no fault information then the assumption is that the original copy cannot have
       // succeeded.

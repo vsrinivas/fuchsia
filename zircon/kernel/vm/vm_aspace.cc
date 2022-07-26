@@ -70,6 +70,37 @@ inline bool is_inside(VmAspace& aspace, vaddr_t vaddr) {
   return (vaddr >= aspace.base() && vaddr <= aspace.base() + aspace.size() - 1);
 }
 
+// Returns true if the base + size is valid for the given |type|.
+inline bool is_valid_for_type(vaddr_t base, size_t size, VmAspace::Type type) {
+  if (base + size < base) {
+    return false;
+  }
+
+  vaddr_t min = 0;
+  vaddr_t max = 0;
+  switch (type) {
+    case VmAspace::Type::User:
+      min = USER_ASPACE_BASE;
+      max = USER_ASPACE_BASE + USER_ASPACE_SIZE;
+      break;
+    case VmAspace::Type::Kernel:
+      min = KERNEL_ASPACE_BASE;
+      max = KERNEL_ASPACE_BASE + KERNEL_ASPACE_SIZE;
+      break;
+    case VmAspace::Type::LowKernel:
+      min = 0;
+      max = USER_ASPACE_BASE + USER_ASPACE_SIZE;
+      break;
+    case VmAspace::Type::GuestPhys:
+      min = GUEST_PHYSICAL_ASPACE_BASE;
+      max = GUEST_PHYSICAL_ASPACE_BASE + GUEST_PHYSICAL_ASPACE_SIZE;
+      break;
+    default:
+      panic("Invalid aspace type");
+  }
+  return base >= min && base + size <= max;
+}
+
 inline size_t trim_to_aspace(VmAspace& aspace, vaddr_t vaddr, size_t size) {
   DEBUG_ASSERT(is_inside(aspace, vaddr));
 
@@ -164,30 +195,11 @@ zx_status_t VmAspace::Init() {
   return ZX_OK;
 }
 
-fbl::RefPtr<VmAspace> VmAspace::Create(Type type, const char* name) {
+fbl::RefPtr<VmAspace> VmAspace::Create(vaddr_t base, size_t size, Type type, const char* name) {
   LTRACEF("type %u, name '%s'\n", static_cast<uint>(type), name);
 
-  vaddr_t base;
-  size_t size;
-  switch (type) {
-    case Type::User:
-      base = USER_ASPACE_BASE;
-      size = USER_ASPACE_SIZE;
-      break;
-    case Type::Kernel:
-      base = KERNEL_ASPACE_BASE;
-      size = KERNEL_ASPACE_SIZE;
-      break;
-    case Type::LowKernel:
-      base = 0;
-      size = USER_ASPACE_BASE + USER_ASPACE_SIZE;
-      break;
-    case Type::GuestPhys:
-      base = GUEST_PHYSICAL_ASPACE_BASE;
-      size = GUEST_PHYSICAL_ASPACE_SIZE;
-      break;
-    default:
-      panic("Invalid aspace type");
+  if (!is_valid_for_type(base, size, type)) {
+    return nullptr;
   }
 
   fbl::AllocChecker ac;
@@ -212,6 +224,33 @@ fbl::RefPtr<VmAspace> VmAspace::Create(Type type, const char* name) {
 
   // return a ref pointer to the aspace
   return aspace;
+}
+
+fbl::RefPtr<VmAspace> VmAspace::Create(Type type, const char* name) {
+  vaddr_t base;
+  size_t size;
+  switch (type) {
+    case Type::User:
+      base = USER_ASPACE_BASE;
+      size = USER_ASPACE_SIZE;
+      break;
+    case Type::Kernel:
+      base = KERNEL_ASPACE_BASE;
+      size = KERNEL_ASPACE_SIZE;
+      break;
+    case Type::LowKernel:
+      base = 0;
+      size = USER_ASPACE_BASE + USER_ASPACE_SIZE;
+      break;
+    case Type::GuestPhys:
+      base = GUEST_PHYSICAL_ASPACE_BASE;
+      size = GUEST_PHYSICAL_ASPACE_SIZE;
+      break;
+    default:
+      panic("Invalid aspace type");
+  }
+
+  return Create(base, size, type, name);
 }
 
 void VmAspace::Rename(const char* name) {
@@ -764,10 +803,10 @@ void VmAspace::MarkAsLatencySensitive() {
   // TODO(fxb/101641): Need a better mechanism than checking for the process name here. See
   // fxbug.dev/85056 for more context.
   char name[ZX_MAX_NAME_LEN];
-  auto up = ProcessDispatcher::GetCurrent();
-  if (up->aspace().get() != this) {
+  if (Thread::Current::Get()->aspace() != this) {
     return;
   }
+  ProcessDispatcher* up = ProcessDispatcher::GetCurrent();
   up->get_name(name);
   if (strncmp(name, "audio_core.cm", ZX_MAX_NAME_LEN) != 0 &&
       strncmp(name, "waves_host.cm", ZX_MAX_NAME_LEN) != 0) {

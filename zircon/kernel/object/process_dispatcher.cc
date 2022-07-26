@@ -80,13 +80,13 @@ zx_status_t ProcessDispatcher::Create(fbl::RefPtr<JobDispatcher> job, ktl::strin
     return ZX_ERR_NO_MEMORY;
   }
 
-  zx_status_t result = new_handle.dispatcher()->Initialize();
+  zx_status_t result = new_handle.dispatcher()->Initialize(nullptr);
   if (result != ZX_OK)
     return result;
 
   // Create a dispatcher for the root VMAR.
   KernelHandle<VmAddressRegionDispatcher> new_vmar_handle;
-  result = VmAddressRegionDispatcher::Create(new_handle.dispatcher()->aspace()->RootVmar(),
+  result = VmAddressRegionDispatcher::Create(new_handle.dispatcher()->normal_aspace()->RootVmar(),
                                              ARCH_MMU_FLAG_PERM_USER, &new_vmar_handle,
                                              root_vmar_rights);
   if (result != ZX_OK)
@@ -128,7 +128,8 @@ ProcessDispatcher::~ProcessDispatcher() {
   DEBUG_ASSERT(state_ == State::INITIAL || state_ == State::DEAD);
 
   // Assert that the -> DEAD transition cleaned up what it should have.
-  DEBUG_ASSERT(!aspace_ || aspace_->is_destroyed());
+  DEBUG_ASSERT(!shared_state_->aspace() || shared_state_->aspace()->is_destroyed());
+  DEBUG_ASSERT(!restricted_aspace_ || restricted_aspace_->is_destroyed());
 
   kcounter_add(dispatcher_process_destroy_count, 1);
 
@@ -164,19 +165,26 @@ zx_status_t ProcessDispatcher::set_name(const char* name, size_t len) {
   return name_.set(name, len);
 }
 
-zx_status_t ProcessDispatcher::Initialize() {
+zx_status_t ProcessDispatcher::Initialize(fbl::RefPtr<VmAspace> restricted_aspace) {
   LTRACE_ENTRY_OBJ;
 
   Guard<Mutex> guard{get_lock()};
 
   DEBUG_ASSERT(state_ == State::INITIAL);
 
-  // create an address space for this process, named after the process's koid.
   char aspace_name[ZX_MAX_NAME_LEN];
   snprintf(aspace_name, sizeof(aspace_name), "proc:%" PRIu64, get_koid());
-  aspace_ = VmAspace::Create(VmAspace::Type::User, aspace_name);
-  if (!aspace_) {
-    TRACEF("error creating address space\n");
+
+  if (restricted_aspace) {
+    static constexpr vaddr_t top_of_private = USER_ASPACE_BASE + USER_ASPACE_SIZE / 2;
+    shared_state_->Initialize(top_of_private, USER_ASPACE_SIZE / 2, aspace_name);
+    restricted_aspace_ = restricted_aspace;
+  } else {
+    shared_state_->Initialize(USER_ASPACE_BASE, USER_ASPACE_SIZE, aspace_name);
+  }
+
+  if (!shared_state_) {
+    TRACEF("error creating shared process state\n");
     return ZX_ERR_NO_MEMORY;
   }
 
@@ -421,8 +429,8 @@ void ProcessDispatcher::FinishDeadTransition() {
   shared_state_->DecrementShareCount();
 
   // Tear down the address space. It may not exist if Initialize() failed.
-  if (aspace_) {
-    zx_status_t result = aspace_->Destroy();
+  if (restricted_aspace_) {
+    zx_status_t result = restricted_aspace_->Destroy();
     ASSERT_MSG(result == ZX_OK, "%d\n", result);
   }
 
@@ -508,10 +516,23 @@ zx_status_t ProcessDispatcher::GetStats(zx_info_task_stats_t* stats) const {
     return ZX_ERR_BAD_STATE;
   }
   VmAspace::vm_usage_t usage;
-  zx_status_t s = aspace_->GetMemoryUsage(&usage);
+  zx_status_t s = shared_state_->aspace()->GetMemoryUsage(&usage);
   if (s != ZX_OK) {
     return s;
   }
+
+  if (restricted_aspace_) {
+    VmAspace::vm_usage_t restricted_usage;
+    zx_status_t sr = restricted_aspace_->GetMemoryUsage(&restricted_usage);
+    usage.mapped_pages += restricted_usage.mapped_pages;
+    usage.private_pages += restricted_usage.private_pages;
+    usage.shared_pages += restricted_usage.shared_pages;
+    usage.scaled_shared_bytes += restricted_usage.scaled_shared_bytes;
+    if (sr != ZX_OK) {
+      return sr;
+    }
+  }
+
   stats->mem_mapped_bytes = usage.mapped_pages * PAGE_SIZE;
   stats->mem_private_bytes = usage.private_pages * PAGE_SIZE;
   stats->mem_shared_bytes = usage.shared_pages * PAGE_SIZE;
@@ -533,12 +554,33 @@ zx_status_t ProcessDispatcher::AccumulateRuntimeTo(zx_info_task_runtime_t* info)
 }
 
 zx_status_t ProcessDispatcher::GetAspaceMaps(user_out_ptr<zx_info_maps_t> maps, size_t max,
-                                             size_t* actual, size_t* available) const {
+                                             size_t* actual_out, size_t* available_out) const {
+  *actual_out = 0;
+  *available_out = 0;
+
   // Do not check the state_ since we need to call GetVmAspaceMaps without the dispatcher lock held,
   // and so any check will become stale anyway. Should the process be dead, or transition to the
   // dead state during the operation, then the associated aspace will also be destroyed, which will
   // be noticed and result in a ZX_ERR_BAD_STATE being returned from GetVmAspaceMaps.
-  return GetVmAspaceMaps(aspace_, maps, max, actual, available);
+  size_t actual = 0;
+  size_t available = 0;
+  zx_status_t status = GetVmAspaceMaps(shared_state_->aspace(), maps, max, &actual, &available);
+  DEBUG_ASSERT(max >= actual);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  size_t actual2 = 0;
+  size_t available2 = 0;
+  if (restricted_aspace_) {
+    user_out_ptr<zx_info_maps_t> maps_offset = maps ? maps.element_offset(actual) : maps;
+    status = GetVmAspaceMaps(restricted_aspace_, maps_offset, max - actual, &actual2, &available2);
+  }
+
+  *actual_out = actual + actual2;
+  *available_out = available + available2;
+
+  return status;
 }
 
 zx_status_t ProcessDispatcher::GetVmos(VmoInfoWriter& vmos, size_t max, size_t* actual_out,
@@ -561,12 +603,24 @@ zx_status_t ProcessDispatcher::GetVmos(VmoInfoWriter& vmos, size_t max, size_t* 
   size_t available2 = 0;
   DEBUG_ASSERT(max >= actual);
   vmos.AddOffset(actual);
-  s = GetVmAspaceVmos(aspace_, vmos, max - actual, &actual2, &available2);
+  s = GetVmAspaceVmos(shared_state_->aspace(), vmos, max - actual, &actual2, &available2);
   if (s != ZX_OK) {
     return s;
   }
-  *actual_out = actual + actual2;
-  *available_out = available + available2;
+
+  size_t actual3 = 0;
+  size_t available3 = 0;
+  DEBUG_ASSERT(max >= actual2);
+  vmos.AddOffset(actual2);
+  if (restricted_aspace_) {
+    s = GetVmAspaceVmos(restricted_aspace_, vmos, max - actual2, &actual3, &available3);
+    if (s != ZX_OK) {
+      return s;
+    }
+  }
+
+  *actual_out = actual + actual2 + actual3;
+  *available_out = available + available2 + available3;
   return ZX_OK;
 }
 
@@ -633,7 +687,12 @@ size_t ProcessDispatcher::PageCount() const {
   if (state_ != State::RUNNING) {
     return 0;
   }
-  return aspace_->AllocatedPages();
+
+  size_t count = shared_state_->aspace()->AllocatedPages();
+  if (restricted_aspace_ != nullptr) {
+    count += restricted_aspace_->AllocatedPages();
+  }
+  return count;
 }
 
 class FindProcessByKoid final : public JobEnumerator {
@@ -733,7 +792,7 @@ TaskRuntimeStats ProcessDispatcher::GetAggregatedRuntime() const {
 
 uintptr_t ProcessDispatcher::cache_vdso_code_address() {
   Guard<Mutex> guard{get_lock()};
-  vdso_code_address_ = aspace_->vdso_code_address();
+  vdso_code_address_ = normal_aspace()->vdso_code_address();
   return vdso_code_address_;
 }
 
@@ -762,4 +821,21 @@ void ProcessDispatcher::OnProcessStartForJobDebugger(ThreadDispatcher* t,
 
     job = job->parent();
   }
+}
+
+fbl::RefPtr<VmAspace> ProcessDispatcher::aspace_at(vaddr_t va) {
+  if (!restricted_aspace_) {
+    // If there is no restricted aspace associated with the process, shortcut and return the normal
+    // aspace.
+    return shared_state_->aspace();
+  }
+
+  const vaddr_t begin = restricted_aspace_->base();
+  const vaddr_t end = begin + restricted_aspace_->size();
+
+  if (va >= begin && va < end) {
+    return restricted_aspace_;
+  }
+
+  return shared_state_->aspace();
 }

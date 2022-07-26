@@ -6,11 +6,14 @@
 
 #include <lib/fit/defer.h>
 
+#include <arch/kernel_aspace.h>
 #include <ktl/initializer_list.h>
 #include <ktl/limits.h>
 #include <vm/vm.h>
 #include <vm/vm_address_region_enumerator.h>
 
+#include "arch/kernel_aspace.h"
+#include "lib/unittest/unittest.h"
 #include "test_helper.h"
 
 #include <ktl/enforce.h>
@@ -182,6 +185,30 @@ static bool vmaspace_create_smoke_test() {
   auto aspace = VmAspace::Create(VmAspace::Type::User, "test aspace");
   zx_status_t err = aspace->Destroy();
   EXPECT_EQ(ZX_OK, err, "VmAspace::Destroy");
+  END_TEST;
+}
+
+static bool vmaspace_create_invalid_ranges() {
+  BEGIN_TEST;
+
+// These are defined in vm_aspace.cc.
+#define GUEST_PHYSICAL_ASPACE_BASE 0UL
+#define GUEST_PHYSICAL_ASPACE_SIZE (1UL << MMU_GUEST_SIZE_SHIFT)
+
+  // Test when base < valid base.
+  EXPECT_NULL(VmAspace::Create(USER_ASPACE_BASE - 1, 4096, VmAspace::Type::User, "test"));
+  EXPECT_NULL(VmAspace::Create(KERNEL_ASPACE_BASE - 1, 4096, VmAspace::Type::Kernel, "test"));
+  EXPECT_NULL(
+      VmAspace::Create(GUEST_PHYSICAL_ASPACE_BASE - 1, 4096, VmAspace::Type::GuestPhys, "test"));
+
+  // Test when base + size exceeds valid range.
+  EXPECT_NULL(
+      VmAspace::Create(USER_ASPACE_BASE, USER_ASPACE_SIZE + 1, VmAspace::Type::User, "test"));
+  EXPECT_NULL(
+      VmAspace::Create(KERNEL_ASPACE_BASE, KERNEL_ASPACE_SIZE + 1, VmAspace::Type::Kernel, "test"));
+  EXPECT_NULL(VmAspace::Create(GUEST_PHYSICAL_ASPACE_BASE, GUEST_PHYSICAL_ASPACE_SIZE + 1,
+                               VmAspace::Type::GuestPhys, "test"));
+
   END_TEST;
 }
 
@@ -1733,6 +1760,7 @@ VM_UNITTEST(vmm_alloc_bad_specific_pointer_fails)
 VM_UNITTEST(vmm_alloc_contiguous_missing_flag_commit_fails)
 VM_UNITTEST(vmm_alloc_contiguous_zero_size_fails)
 VM_UNITTEST(vmaspace_create_smoke_test)
+VM_UNITTEST(vmaspace_create_invalid_ranges)
 VM_UNITTEST(vmaspace_alloc_smoke_test)
 VM_UNITTEST(vmaspace_accessed_test_untagged)
 #if defined(__aarch64__)

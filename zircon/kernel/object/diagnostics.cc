@@ -540,7 +540,7 @@ void DumpProcessVmObjects(zx_koid_t id, pretty::SizeUnit format_unit) {
   printf("Mapped VMOs:\n");
   PrintVmoDumpHeader(/* handles */ false);
   AspaceVmoDumper avd(format_unit);
-  pd->aspace()->EnumerateChildren(&avd);
+  pd->EnumerateAspaceChildren(&avd);
   PrintVmoDumpHeader(/* handles */ false);
 }
 
@@ -981,7 +981,7 @@ void DumpProcessAddressSpace(zx_koid_t id) {
     return;
   }
 
-  pd->aspace()->Dump(true);
+  pd->DumpAspace(true);
 }
 
 // Dumps an address space based on the arg.
