@@ -659,11 +659,14 @@ void SemanticTree::FillInspectTree(inspect::Node inspect_node,
       inspector->emplace(std::move(inspect_node));
       return;
     }
+
+    int width = static_cast<int>(std::to_string(node->child_ids().size() - 1).length());
+    int child_index = 0;
     for (const auto& child_id : node->child_ids()) {
       const auto* child = GetNode(child_id);
       FX_DCHECK(child);
 
-      auto name = fxl::StringPrintf("node_%u", child->node_id());
+      auto name = fxl::StringPrintf("node_idx_%0*d_id_%u", width, child_index++, child->node_id());
       fillTree(child, current_level + 1, inspect_node.CreateChild(name));
     }
     inspector->emplace(std::move(inspect_node));

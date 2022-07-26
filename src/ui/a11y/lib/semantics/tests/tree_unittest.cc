@@ -569,30 +569,36 @@ TEST_F(SemanticTreeTest, InspectOutput) {
   using namespace inspect::testing;
   using testing::UnorderedElementsAre;
 
-  auto node3 = AllOf(
-      NodeMatches(AllOf(NameMatches("node_3"), PropertyList(UnorderedElementsAre(
-                                                   UintIs("id", 3), StringIs("label", "Node-3"))))),
-      ChildrenMatch(UnorderedElementsAre()));
-  auto node4 = AllOf(
-      NodeMatches(AllOf(NameMatches("node_4"), PropertyList(UnorderedElementsAre(
-                                                   UintIs("id", 4), StringIs("label", "Node-4"))))),
-      ChildrenMatch(UnorderedElementsAre()));
-  auto node5 = AllOf(
-      NodeMatches(AllOf(NameMatches("node_5"), PropertyList(UnorderedElementsAre(
-                                                   UintIs("id", 5), StringIs("label", "Node-5"))))),
-      ChildrenMatch(UnorderedElementsAre()));
-  auto node6 = AllOf(
-      NodeMatches(AllOf(NameMatches("node_6"), PropertyList(UnorderedElementsAre(
-                                                   UintIs("id", 6), StringIs("label", "Node-6"))))),
-      ChildrenMatch(UnorderedElementsAre()));
-  auto node1 = AllOf(
-      NodeMatches(AllOf(NameMatches("node_1"), PropertyList(UnorderedElementsAre(
-                                                   UintIs("id", 1), StringIs("label", "Node-1"))))),
-      ChildrenMatch(UnorderedElementsAre(node3, node4)));
-  auto node2 = AllOf(
-      NodeMatches(AllOf(NameMatches("node_2"), PropertyList(UnorderedElementsAre(
-                                                   UintIs("id", 2), StringIs("label", "Node-2"))))),
-      ChildrenMatch(UnorderedElementsAre(node5, node6)));
+  auto node3 =
+      AllOf(NodeMatches(AllOf(
+                NameMatches("node_idx_0_id_3"),
+                PropertyList(UnorderedElementsAre(UintIs("id", 3), StringIs("label", "Node-3"))))),
+            ChildrenMatch(UnorderedElementsAre()));
+  auto node4 =
+      AllOf(NodeMatches(AllOf(
+                NameMatches("node_idx_1_id_4"),
+                PropertyList(UnorderedElementsAre(UintIs("id", 4), StringIs("label", "Node-4"))))),
+            ChildrenMatch(UnorderedElementsAre()));
+  auto node5 =
+      AllOf(NodeMatches(AllOf(
+                NameMatches("node_idx_0_id_5"),
+                PropertyList(UnorderedElementsAre(UintIs("id", 5), StringIs("label", "Node-5"))))),
+            ChildrenMatch(UnorderedElementsAre()));
+  auto node6 =
+      AllOf(NodeMatches(AllOf(
+                NameMatches("node_idx_1_id_6"),
+                PropertyList(UnorderedElementsAre(UintIs("id", 6), StringIs("label", "Node-6"))))),
+            ChildrenMatch(UnorderedElementsAre()));
+  auto node1 =
+      AllOf(NodeMatches(AllOf(
+                NameMatches("node_idx_0_id_1"),
+                PropertyList(UnorderedElementsAre(UintIs("id", 1), StringIs("label", "Node-1"))))),
+            ChildrenMatch(UnorderedElementsAre(node3, node4)));
+  auto node2 =
+      AllOf(NodeMatches(AllOf(
+                NameMatches("node_idx_1_id_2"),
+                PropertyList(UnorderedElementsAre(UintIs("id", 2), StringIs("label", "Node-2"))))),
+            ChildrenMatch(UnorderedElementsAre(node5, node6)));
 
   auto root_node =
       AllOf(NodeMatches(AllOf(
