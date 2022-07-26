@@ -412,6 +412,32 @@ impl TokenStore {
         Ok(res)
     }
 
+    /// Determine whether a gs url points to either a file or directory.
+    ///
+    /// A leading slash "/" on `prefix` will be ignored.
+    ///
+    /// Ok(false) will be returned instead of GcsError::NotFound.
+    pub async fn exists(
+        &self,
+        https_client: &HttpsClient,
+        bucket: &str,
+        prefix: &str,
+    ) -> Result<bool> {
+        // Note: gs 'stat' will not match a directory.  So, gs 'list' is used to
+        // determine existence. The number of items in a directory may be
+        // enormous, so the results are limited to one item.
+        match self.list(https_client, bucket, prefix, /*limit=*/ Some(1)).await {
+            Ok(list) => {
+                assert!(list.len() <= 1, "exists returned {} items.", list.len());
+                Ok(!list.is_empty())
+            }
+            Err(e) => match e.downcast_ref::<GcsError>() {
+                Some(GcsError::NotFound(_, _)) => Ok(false),
+                Some(_) | None => Err(e),
+            },
+        }
+    }
+
     /// List objects from GCS in `bucket` with matching `prefix`.
     ///
     /// A leading slash "/" on `prefix` will be ignored.
@@ -420,8 +446,9 @@ impl TokenStore {
         https_client: &HttpsClient,
         bucket: &str,
         prefix: &str,
+        limit: Option<u32>,
     ) -> Result<Vec<String>> {
-        Ok(match self.attempt_list(https_client, bucket, prefix).await {
+        Ok(match self.attempt_list(https_client, bucket, prefix, limit).await {
             Err(e) => {
                 match e.downcast_ref::<GcsError>() {
                     Some(GcsError::NeedNewAccessToken) => {
@@ -429,7 +456,7 @@ impl TokenStore {
                             Some(_) => {
                                 // Refresh the access token and make one extra try.
                                 self.refresh_access_token(&https_client).await?;
-                                self.attempt_list(https_client, bucket, prefix).await?
+                                self.attempt_list(https_client, bucket, prefix, limit).await?
                             }
                             None => {
                                 // With no refresh token, there's no option to retry.
@@ -442,9 +469,8 @@ impl TokenStore {
                             }
                         }
                     }
-                    Some(_) | None => {
-                        bail!("Unable to list GCS data. Error {:?}", e);
-                    }
+                    Some(_) => return Err(e),
+                    None => bail!("Unable to list GCS data. Error {:?}", e),
                 }
             }
             Ok(value) => value,
@@ -452,11 +478,15 @@ impl TokenStore {
     }
 
     /// Make one attempt to list objects from GCS.
+    ///
+    /// If `limit` is given, at most N results will be returned. If `limit` is
+    /// None then all matching values will be returned.
     async fn attempt_list(
         &self,
         https_client: &HttpsClient,
         bucket: &str,
         prefix: &str,
+        limit: Option<u32>,
     ) -> Result<Vec<String>> {
         // If the bucket and prefix are from a gs:// URL, the prefix may have a
         // undesirable leading slash. Trim it if present.
@@ -469,6 +499,9 @@ impl TokenStore {
             .append_pair("prefix", prefix)
             .append_pair("prettyPrint", "false")
             .append_pair("fields", "nextPageToken,items/name");
+        if let Some(limit) = limit {
+            base_url.query_pairs_mut().append_pair("maxResults", &limit.to_string());
+        }
         let mut results = Vec::new();
         let mut page_token: Option<String> = None;
         loop {
@@ -488,6 +521,11 @@ impl TokenStore {
                     results.extend(info.items.into_iter().map(|i| i.name));
                     if info.next_page_token.is_none() {
                         break;
+                    }
+                    if let Some(limit) = limit {
+                        if results.len() >= limit as usize {
+                            break;
+                        }
                     }
                     page_token = info.next_page_token;
                 }
@@ -737,5 +775,29 @@ mod test {
         let object = "development/LATEST_LINUX";
         let res = token_store.download(&https, bucket, object).await.expect("client download");
         assert_eq!(res.status(), StatusCode::OK);
+    }
+
+    // This test is marked "ignore" because it actually downloads from GCS,
+    // which isn't good for a CI/GI test. It's here because it's handy to have
+    // as a local developer test. Run with `fx test gcs_lib_test -- --ignored`.
+    // Note: gsutil config is required.
+    #[ignore]
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_gcs_exits() {
+        use home::home_dir;
+        let boto_path = Path::new(&home_dir().expect("home dir")).join(".boto");
+        let refresh_token =
+            read_boto_refresh_token(&boto_path).expect("boto file").expect("refresh token");
+        let token_store = TokenStore::new_with_auth(refresh_token, /*access_token=*/ None)
+            .expect("new with auth");
+        let https = new_https_client();
+        token_store.refresh_access_token(&https).await.expect("refresh_access_token");
+        let bucket = "fuchsia-sdk";
+        let object = "development/LATEST_";
+        assert!(token_store.exists(&https, bucket, object).await.expect("exists"));
+        let object = "development";
+        assert!(token_store.exists(&https, bucket, object).await.expect("exists"));
+        let object = "development_not_found";
+        assert!(!token_store.exists(&https, bucket, object).await.expect("exists"));
     }
 }

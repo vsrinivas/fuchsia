@@ -6,6 +6,23 @@
 
 use anyhow::{bail, Result};
 
+/// Join one or more entries onto the url path.
+///
+/// Unlike Url::join, this will include the last path entry, even if no trailing
+/// slash is present.
+///
+/// E.g.
+/// extend_url_path("gs://foo/bar", "blah/baz.json") will yield
+/// "gs://foo/bar/blah/baz.json". Compare to (with missing "bar/"):
+/// Url("gs://foo/bar").join("blah/baz.json") => "gs://foo/blah/baz.json"
+pub fn extend_url_path(base: &mut url::Url, add: &str) -> Result<()> {
+    base.path_segments_mut()
+        .map_err(|_| anyhow::anyhow!("cannot be base"))?
+        .pop_if_empty()
+        .extend(add.split("/").collect::<Vec<&str>>());
+    Ok(())
+}
+
 /// Split a url into (bucket, object) tuple.
 ///
 /// Example: `gs://bucket/object/path` will return ("bucket", "object/path").
@@ -51,5 +68,33 @@ mod tests {
         assert!(split_gs_url(&"gs://".to_string()).is_err());
         assert!(split_gs_url(&"g".to_string()).is_err());
         assert!(split_gs_url(&"".to_string()).is_err());
+    }
+
+    #[test]
+    fn test_extend_url_path() {
+        let mut my_url = url::Url::parse("http://example.com").expect("url parse");
+        let add = "test1";
+        extend_url_path(&mut my_url, add).expect("extend url with test1");
+        assert_eq!(my_url.as_str(), "http://example.com/test1");
+        extend_url_path(&mut my_url, add).expect("extend url with test1");
+        assert_eq!(my_url.as_str(), "http://example.com/test1/test1");
+
+        let mut my_url = url::Url::parse("http://example.com/dir1").expect("url parse");
+        let add = "dir2/test2";
+        extend_url_path(&mut my_url, add).expect("extend url with dir2/test2");
+        assert_eq!(my_url.as_str(), "http://example.com/dir1/dir2/test2");
+
+        let mut my_url = url::Url::parse("http://example.com/dir1/").expect("url parse");
+        let add = "dir2/test3";
+        extend_url_path(&mut my_url, add).expect("extend url with dir2/test3");
+        assert_eq!(my_url.as_str(), "http://example.com/dir1/dir2/test3");
+    }
+
+    #[should_panic(expected = "cannot be base")]
+    #[test]
+    fn test_extend_url_path_fail() {
+        let mut my_url = url::Url::parse("fake:example").expect("url parse");
+        let add = "test1";
+        extend_url_path(&mut my_url, add).expect("extend url with test1");
     }
 }

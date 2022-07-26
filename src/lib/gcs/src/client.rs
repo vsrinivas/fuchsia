@@ -143,6 +143,11 @@ impl Client {
         Self { https: new_https_client(), token_store }
     }
 
+    /// Similar to path::exists(), return true if the blob is available.
+    pub async fn exists(&self, bucket: &str, prefix: &str) -> Result<bool> {
+        self.token_store.exists(&self.https, bucket, prefix).await
+    }
+
     /// Save content of matching objects (blob) from GCS to local location
     /// `output_dir`.
     pub async fn fetch_all<P, F>(
@@ -158,7 +163,7 @@ impl Client {
     {
         let objects = self
             .token_store
-            .list(&self.https, bucket, prefix)
+            .list(&self.https, bucket, prefix, /*limit=*/ None)
             .await
             .context("listing with token store")?;
         let output_dir = output_dir.as_ref();
@@ -318,7 +323,7 @@ impl Client {
 
     /// List objects in `bucket` with matching `prefix`.
     pub async fn list(&self, bucket: &str, prefix: &str) -> Result<Vec<String>> {
-        self.token_store.list(&self.https, bucket, prefix).await
+        self.token_store.list(&self.https, bucket, prefix, /*limit=*/ None).await
     }
 }
 

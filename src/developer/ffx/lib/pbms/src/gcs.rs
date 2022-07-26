@@ -60,6 +60,49 @@ pub(crate) fn get_gcs_client_with_auth(boto_path: &Path) -> Result<Client> {
     Ok(client_factory.create_client())
 }
 
+/// Return true if the blob is available.
+///
+/// `gcs_url` is the full GCS url, e.g. "gs://bucket/path/to/file".
+/// The resulting data will be written to a directory at `local_dir`.
+pub(crate) async fn exists_in_gcs(gcs_url: &str) -> Result<bool> {
+    let client = get_gcs_client_without_auth();
+    let (bucket, gcs_path) = split_gs_url(gcs_url).context("Splitting gs URL.")?;
+    match client.exists(bucket, gcs_path).await {
+        Ok(exists) => Ok(exists),
+        Err(_) => exists_in_gcs_with_auth(bucket, gcs_path).await.context("fetch with auth"),
+    }
+}
+
+/// Return true if the blob is available, using auth.
+///
+/// Fallback from using `exists_in_gcs()` without auth.
+async fn exists_in_gcs_with_auth(gcs_bucket: &str, gcs_path: &str) -> Result<bool> {
+    let boto_path = get_boto_path().await?;
+
+    loop {
+        let client = get_gcs_client_with_auth(&boto_path)?;
+        match client.exists(gcs_bucket, gcs_path).await {
+            Ok(exists) => return Ok(exists),
+            Err(e) => match e.downcast_ref::<GcsError>() {
+                Some(GcsError::NeedNewRefreshToken) => {
+                    update_refresh_token(&boto_path).await.context("Updating refresh token")?
+                }
+                Some(GcsError::NotFound(_, _)) => {
+                    // Ok(false) should be returned rather than NotFound.
+                    unreachable!();
+                }
+                Some(_) | None => bail!(
+                    "Cannot get product bundle container while \
+                    downloading from gs://{}/{}, error {:?}",
+                    gcs_bucket,
+                    gcs_path,
+                    e,
+                ),
+            },
+        }
+    }
+}
+
 /// Download from a given `gcs_url`.
 ///
 /// `gcs_url` is the full GCS url, e.g. "gs://bucket/path/to/file".

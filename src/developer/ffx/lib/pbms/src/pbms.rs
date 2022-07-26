@@ -7,7 +7,8 @@
 use {
     crate::{
         gcs::{
-            fetch_from_gcs, get_boto_path, get_gcs_client_with_auth, get_gcs_client_without_auth,
+            exists_in_gcs, fetch_from_gcs, get_boto_path, get_gcs_client_with_auth,
+            get_gcs_client_without_auth,
         },
         repo_info::RepoInfo,
     },
@@ -236,6 +237,9 @@ where
         tracing::debug!("    image: {:?}", image);
         let base_url = url::Url::parse(&image.base_uri)
             .with_context(|| format!("parsing image.base_uri {:?}", image.base_uri))?;
+        if !exists_in_gcs(&image.base_uri).await? {
+            tracing::warn!("The base_uri does not exist: {}", image.base_uri);
+        }
         fetch_by_format(&image.format, &base_url, &local_dir, &mut |_d, _f| {
             write!(writer, ".")?;
             writer.flush()?;
