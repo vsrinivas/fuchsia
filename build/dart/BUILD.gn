@@ -44,8 +44,6 @@ group("deprecated_dart_app_allowlist") {
     "//examples/diagnostics/inspect/codelab/dart/part_3:bin",
     "//examples/diagnostics/inspect/codelab/dart/part_4:bin",
     "//examples/diagnostics/inspect/codelab/dart/part_5:bin",
-    "//examples/fidl/dart/client:echo-dart-client",
-    "//examples/fidl/dart/server:echo-dart-server",
     "//sdk/dart/fuchsia_inspect/test/integration:dart-inspect-vmo-test-writer",
     "//sdk/dart/fuchsia_inspect/test/validator_puppet:dart-inspect-validator-puppet",
     "//sdk/dart/fuchsia_services/test_support:fuchsia-services-foo-test-server",

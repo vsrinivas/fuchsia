@@ -5,7 +5,10 @@ To run:
 On host:
 
 ```
-fx set <product>.<board> --with examples/fidl/dart:all
-fx build
-fx run fuchsia-pkg://fuchsia.com/example-launcher-dart#meta/example-launcher-dart.cmx fuchsia-pkg://fuchsia.com/echo-dart-client#meta/echo-dart-client.cmx fuchsia-pkg://fuchsia.com/echo-dart-server#meta/echo-dart-server.cmx fuchsia.examples.Echo
+$ fx set <product>.<board> --with examples/fidl/dart:all \
+    --with-base //src/dart \
+    --args='core_realm_shards += [ "//src/dart:dart_runner_core_shard" ]'
+$ fx build
+$ ffx component run fuchsia-pkg://fuchsia.com/echo-dart-client#meta/echo_realm.cm
+$ ffx component start /core/ffx-laboratory:echo_realm/echo_client
 ```

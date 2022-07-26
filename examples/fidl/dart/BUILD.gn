@@ -8,9 +8,18 @@ import("//build/components.gni")
 group("all") {
   testonly = true
   deps = [
+    ":echo-dart-client",
     ":echo-launcher-dart",
-    "client",
-    "server",
+    "server:echo-dart-server",
+  ]
+}
+
+# //docs/development/languages/fidl/tutorials/dart/basics/client.md
+fuchsia_package("echo-dart-client") {
+  deps = [
+    "client:echo-client",
+    "server:echo-server",
+    "//examples/fidl/echo-realm:echo_realm",
   ]
 }
 

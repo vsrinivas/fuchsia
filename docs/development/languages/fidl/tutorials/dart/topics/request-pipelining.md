@@ -185,7 +185,7 @@ Note: You can explore the full source for the realm component at
    ```
 
    NOTE: The flag `--with-base //src/dart` adds the required dart runner to the
-   base packages; and the `core_realm_shard` argument updates the
+   base packages; and the `core_realm_shards` argument updates the
    `laboratory-env` component environment (the environment provided to the
    `ffx-laboratory` realm, used in `ffx component start`) to include the
    required dart runner.

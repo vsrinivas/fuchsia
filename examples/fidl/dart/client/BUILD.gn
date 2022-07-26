@@ -2,17 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dart/dart_app.gni")
+# [START imports]
+import("//build/dart/dart_test_component.gni")
 
-dart_app("echo-dart-client") {
+# [END imports]
+
+dart_library("lib") {
+  package_name = "echo_client"
+
   null_safe = true
-  main_dart = "lib/main.dart"
-  meta = [
-    {
-      path = rebase_path("meta/client.cmx")
-      dest = "echo-dart-client.cmx"
-    },
-  ]
+
   sources = [ "main.dart" ]
 
   # [START deps]
@@ -27,7 +26,13 @@ dart_app("echo-dart-client") {
   # [END deps]
 }
 
-group("client") {
-  testonly = true
-  deps = [ ":echo-dart-client" ]
+# [START rest]
+dart_component("echo-client") {
+  component_name = "echo_client"
+  manifest = "meta/client.cml"
+
+  null_safe = true
+
+  deps = [ ":lib" ]
 }
+# [END rest]
