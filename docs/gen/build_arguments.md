@@ -1484,6 +1484,18 @@ You can still build //build/images:netboot explicitly even if enable_netboot is 
 
 From //build/images/args.gni:77
 
+### enable_tiger_lake_display_driver
+Set to false to opt out of the Tiger Lake display driver. This driver is not
+yet fully stable, and some teams may have a better experience by using the
+simple VGA driver.
+
+TODO(fxbug.dev/104963): Remove the opt-out once the Tiger Lake display
+driver is stable enough.
+
+**Current value (from the default):** `false`
+
+From //src/graphics/display/drivers/args.gni:12
+
 ### enable_virtual_heap
 Enables the use of a virtually managed kernel heap instead of one managed
 directly out of the physmap. The virtual heap may have some performance and
