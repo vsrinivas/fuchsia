@@ -45,6 +45,10 @@ group("tools") {
     "//tools/update_crates($host_toolchain)",
     "//tools/virtual_device:fvd($host_toolchain)",
     "//tools/zedmon/client:zedmon_client",
+
+    # This go program should be still correctly built even if a Windows SDK
+    # sysroot is absent.
+    "//tools/winsdk($win_x64_toolchain)",
   ]
 }
 

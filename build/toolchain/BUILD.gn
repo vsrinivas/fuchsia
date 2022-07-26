@@ -21,6 +21,11 @@ clang_toolchain_suite("win_x64") {
   toolchain_cpu = "x64"
   toolchain_os = "win"
   use_strip = true
+
+  # For now, do not allow instrumentation variants since they require
+  # a valid sysroot which is not available yet.
+  # TODO(haowei): Remove this once we have a proper Windows sysroot.
+  exclude_variant_tags = [ "instrumented" ]
 }
 
 clang_toolchain_suite("linux_arm64") {

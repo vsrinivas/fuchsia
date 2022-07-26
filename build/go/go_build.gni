@@ -111,6 +111,8 @@ template("go_build") {
   }
   if (carchive) {
     output_name = "${output_name}.a"
+  } else if (is_win) {
+    output_name = "${output_name}.exe"
   }
 
   if (defined(invoker.output_dir)) {
@@ -226,13 +228,6 @@ template("go_build") {
     hermetic_inputs_target = ":${hermetic_inputs_target_name}"
     hermetic_inputs_file = hermetic_inputs_target_output
 
-    if (is_fuchsia) {
-      # For Fuchsia binaries, use a Go-specific sysroot instead of the
-      # standard one which only contains empty linker stubs (see
-      # comments in //zircon/public/sysroot/BUILD.gn for details).
-      sysroot = go_sysroot_dir
-    }
-
     args = [
       "--root-out-dir",
       rebase_path(root_out_dir, root_build_dir),
@@ -256,13 +251,24 @@ template("go_build") {
       "$rebased_clang_prefix/llvm-objcopy",
       "--ar",
       "$rebased_clang_prefix/llvm-ar",
-      "--sysroot",
-      rebase_path(sysroot, root_build_dir),
       "--target",
       current_target_tuple,
       "--golibs-dir",
       rebase_path("//third_party/golibs", root_build_dir),
     ]
+
+    if (sysroot != "") {
+      if (is_fuchsia) {
+        # For Fuchsia binaries, use a Go-specific sysroot instead of the
+        # standard one which only contains empty linker stubs (see
+        # comments in //zircon/public/sysroot/BUILD.gn for details).
+        sysroot = go_sysroot_dir
+      }
+      args += [
+        "--sysroot",
+        rebase_path(sysroot, root_build_dir),
+      ]
+    }
 
     include_dirs = []
     if (defined(invoker.include_dirs)) {
