@@ -1026,19 +1026,19 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/81cd12b72415332eca031781fdedde3fdff3d24e/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/7569479252a8ffdce0109ed6b92c42d5c4b777d7/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_http_transport_impl
 
 **Current value (from the default):** `"libcurl"`
 
-From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/81cd12b72415332eca031781fdedde3fdff3d24e/util/net/tls.gni#21)
+From [//third_party/crashpad/util/net/tls.gni:21](https://fuchsia.googlesource.com/third_party/crashpad/+/7569479252a8ffdce0109ed6b92c42d5c4b777d7/util/net/tls.gni#21)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/81cd12b72415332eca031781fdedde3fdff3d24e/util/net/tls.gni#30)
+From [//third_party/crashpad/util/net/tls.gni:30](https://fuchsia.googlesource.com/third_party/crashpad/+/7569479252a8ffdce0109ed6b92c42d5c4b777d7/util/net/tls.gni#30)
 
 ### cts_version
 Name of the CTS version.
@@ -3721,6 +3721,15 @@ From //build/dart/dart.gni:8
 **Current value (from the default):** `"//prebuilt/third_party/fastboot/fastboot"`
 
 From //build/images/tools/fastboot.gni:6
+
+### prebuilt_go_dir
+  prebuilt_go_dir
+    [string] points to the directory containing the prebuilt host go
+    binary. By default, this points to the //prebuilts directory.
+
+**Current value (from the default):** `"//prebuilt/third_party/go/linux-x64"`
+
+From //build/go/go_build.gni:27
 
 ### prebuilt_libvulkan_img_path
 The path to a prebuilt libvulkan.so for an IMG GPU.
