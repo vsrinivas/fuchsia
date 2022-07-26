@@ -149,6 +149,15 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node,
   std::vector<UtteranceAndContext> description;
   description = DescribeContainerChanges(message_context);
 
+  // If the node is a button, describe it as a button.
+  // TODO(fxbug.dev/81707): Create separate Describe* methods for each role.
+  if (node->has_role() && node->role() == Role::BUTTON) {
+    auto button_description = DescribeButton(node);
+    std::copy(std::make_move_iterator(button_description.begin()),
+              std::make_move_iterator(button_description.end()), std::back_inserter(description));
+    return description;
+  }
+
   {
     const std::string label = node->has_attributes() && node->attributes().has_label() &&
                                       !node->attributes().label().empty()
@@ -192,9 +201,7 @@ ScreenReaderMessageGenerator::DescribeNode(const Node* node,
   {
     Utterance utterance;
     if (node->has_role()) {
-      if (node->role() == Role::BUTTON) {
-        description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_BUTTON));
-      } else if (node->role() == Role::HEADER) {
+      if (node->role() == Role::HEADER) {
         description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_HEADER));
       } else if (node->role() == Role::IMAGE) {
         description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_IMAGE));
@@ -233,6 +240,54 @@ ScreenReaderMessageGenerator::GenerateUtteranceByMessageId(
     utterance.delay = delay;
   }
   return utterance;
+}
+
+std::vector<ScreenReaderMessageGenerator::UtteranceAndContext>
+ScreenReaderMessageGenerator::DescribeButton(const fuchsia::accessibility::semantics::Node* node) {
+  FX_DCHECK(node->has_role() && node->role() == fuchsia::accessibility::semantics::Role::BUTTON);
+
+  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> description;
+
+  // Describe the node as "selected", if the node is selected.
+  //
+  // We do NOT describe unselected buttons as "unselected", because some
+  // runtimes may set the "selected" state to false by default, as opposed to
+  // leaving it unset.
+  if (node->has_states() && node->states().has_selected() && node->states().selected()) {
+    description.emplace_back(
+        GenerateUtteranceByMessageId(MessageIds::ELEMENT_SELECTED, zx::duration(zx::msec(0))));
+  }
+
+  // Add the label to the description, if present.
+  if (node->has_attributes() && node->attributes().has_label() &&
+      !node->attributes().label().empty()) {
+    Utterance utterance;
+    utterance.set_message(node->attributes().label());
+    description.emplace_back(UtteranceAndContext{.utterance = std::move(utterance)});
+  }
+
+  // Announce that the element is a button.
+  description.emplace_back(GenerateUtteranceByMessageId(MessageIds::ROLE_BUTTON));
+
+  // Announce the toggled state for the button, if set.
+  //
+  // Some UI elements have hybrid toggle/button semantics.
+  if (node->has_states() && node->states().has_toggled_state()) {
+    const auto message_id =
+        node->states().toggled_state() == fuchsia::accessibility::semantics::ToggledState::ON
+            ? MessageIds::ELEMENT_TOGGLED_ON
+            : MessageIds::ELEMENT_TOGGLED_OFF;
+    description.emplace_back(GenerateUtteranceByMessageId(message_id, zx::duration(zx::msec(0))));
+  }
+
+  // Announce if the node is clickable.
+  // TODO(fxbug.dev/81707): Maybe move out of this function once we create
+  // separate describe methods for each node type.
+  if (NodeIsClickable(node)) {
+    description.emplace_back(GenerateUtteranceByMessageId(MessageIds::DOUBLE_TAP_HINT, kLongDelay));
+  }
+
+  return description;
 }
 
 ScreenReaderMessageGenerator::UtteranceAndContext ScreenReaderMessageGenerator::DescribeRadioButton(
