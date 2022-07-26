@@ -76,6 +76,29 @@ void UnbindAndReset(std::optional<fidl::ServerBindingRef<T>>& ref) {
   }
 }
 
+fitx::result<fdf::wire::NodeError> ValidateSymbols(
+    fidl::VectorView<fdf::wire::NodeSymbol> symbols) {
+  std::unordered_set<std::string_view> names;
+  for (auto& symbol : symbols) {
+    if (!symbol.has_name()) {
+      LOGF(ERROR, "SymbolError: a symbol is missing a name");
+      return fitx::error(fdf::wire::NodeError::kSymbolNameMissing);
+    }
+    if (!symbol.has_address()) {
+      LOGF(ERROR, "SymbolError: symbol '%.*s' is missing an address",
+           static_cast<int>(symbol.name().size()), symbol.name().data());
+      return fitx::error(fdf::wire::NodeError::kSymbolAddressMissing);
+    }
+    auto [_, inserted] = names.emplace(symbol.name().get());
+    if (!inserted) {
+      LOGF(ERROR, "SymbolError: symbol '%.*s' already exists",
+           static_cast<int>(symbol.name().size()), symbol.name().data());
+      return fitx::error(fdf::wire::NodeError::kSymbolAlreadyExists);
+    }
+  }
+  return fitx::ok();
+}
+
 }  // namespace
 
 std::optional<fdecl::wire::Offer> CreateCompositeDirOffer(fidl::AnyArena& arena,
@@ -548,52 +571,7 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
   if (request->args.has_properties()) {
     child->properties_.reserve(request->args.properties().count() + 1);  // + 1 for DFv2 prop.
     for (auto& property : request->args.properties()) {
-      auto node_property = fdf::wire::NodeProperty::Builder(child->arena_);
-      if (property.has_key()) {
-        using fdf::wire::NodePropertyKey;
-        switch (property.key().Which()) {
-          case NodePropertyKey::Tag::kIntValue:
-            node_property.key(NodePropertyKey::WithIntValue(property.key().int_value()));
-            break;
-          case NodePropertyKey::Tag::kStringValue: {
-            node_property.key(NodePropertyKey::WithStringValue(
-                child->arena_,
-                fidl::StringView(child->arena_, property.key().string_value().get())));
-            break;
-          }
-          default:
-            LOGF(ERROR, "NodeProperty has unknown key tag '0x%lx'", property.key().Which());
-            completer.ReplyError(fdf::wire::NodeError::kInternal);
-            return;
-        }
-      }
-      if (property.has_value()) {
-        using fdf::wire::NodePropertyValue;
-        switch (property.value().Which()) {
-          case NodePropertyValue::Tag::kIntValue:
-          case NodePropertyValue::Tag::kBoolValue:
-            node_property.value(property.value());
-            break;
-          case NodePropertyValue::Tag::kStringValue: {
-            node_property.value(NodePropertyValue::WithStringValue(
-                child->arena_,
-                fidl::StringView(child->arena_, property.value().string_value().get())));
-            break;
-          }
-          case NodePropertyValue::Tag::kEnumValue: {
-            node_property.value(NodePropertyValue::WithEnumValue(
-                child->arena_,
-                fidl::StringView(child->arena_, property.value().enum_value().get())));
-
-            break;
-          }
-          default:
-            LOGF(ERROR, "NodeProperty has unknown value tag '0x%lx'", property.value().Which());
-            completer.ReplyError(fdf::wire::NodeError::kInternal);
-            return;
-        }
-      }
-      child->properties_.emplace_back(node_property.Build());
+      child->properties_.emplace_back(fidl::ToWire(child->arena_, fidl::ToNatural(property)));
     }
   }
 
@@ -605,34 +583,20 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
                                       .Build());
 
   if (request->args.has_symbols()) {
+    auto is_valid = ValidateSymbols(request->args.symbols());
+    if (is_valid.is_error()) {
+      LOGF(ERROR, "Failed to add Node '%.*s', bad symbols", static_cast<int>(name.size()),
+           name.data());
+      completer.ReplyError(is_valid.error_value());
+      return;
+    }
+
     child->symbols_.reserve(request->args.symbols().count());
-    std::unordered_set<std::string_view> names;
     for (auto& symbol : request->args.symbols()) {
-      if (!symbol.has_name()) {
-        LOGF(ERROR, "Failed to add Node '%.*s', a symbol is missing a name",
-             static_cast<int>(name.size()), name.data());
-        completer.ReplyError(fdf::wire::NodeError::kSymbolNameMissing);
-        return;
-      }
-      if (!symbol.has_address()) {
-        LOGF(ERROR, "Failed to add Node '%.*s', symbol '%.*s' is missing an address",
-             static_cast<int>(name.size()), name.data(), static_cast<int>(symbol.name().size()),
-             symbol.name().data());
-        completer.ReplyError(fdf::wire::NodeError::kSymbolAddressMissing);
-        return;
-      }
-      auto inserted = names.emplace(symbol.name().data(), symbol.name().size()).second;
-      if (!inserted) {
-        LOGF(ERROR, "Failed to add Node '%.*s', symbol '%.*s' already exists",
-             static_cast<int>(name.size()), name.data(), static_cast<int>(symbol.name().size()),
-             symbol.name().data());
-        completer.ReplyError(fdf::wire::NodeError::kSymbolAlreadyExists);
-        return;
-      }
-      fdf::wire::NodeSymbol node_symbol(child->arena_);
-      node_symbol.set_name(child->arena_, child->arena_, symbol.name().get());
-      node_symbol.set_address(child->arena_, symbol.address());
-      child->symbols_.push_back(std::move(node_symbol));
+      child->symbols_.emplace_back(fdf::wire::NodeSymbol::Builder(child->arena_)
+                                       .name(child->arena_, symbol.name().get())
+                                       .address(symbol.address())
+                                       .Build());
     }
   }
 
