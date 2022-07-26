@@ -268,6 +268,19 @@ zx::status<std::shared_ptr<Node>> Node::CreateCompositeNode(
     composite->properties_.push_back(new_prop);
   }
 
+  auto primary = PrimaryParent(composite->parents_);
+  // We know that our device has a parent because we're creating it.
+  ZX_ASSERT(primary);
+
+  // Copy the symbols from the primary parent.
+  composite->symbols_.reserve(primary->symbols_.size());
+  for (auto& symbol : primary->symbols_) {
+    composite->symbols_.emplace_back(fdf::wire::NodeSymbol::Builder(composite->arena_)
+                                         .name(composite->arena_, symbol.name().get())
+                                         .address(symbol.address())
+                                         .Build());
+  }
+
   composite->parents_names_ = std::move(parents_names);
   composite->AddToParents();
   return zx::ok(std::move(composite));
@@ -293,11 +306,9 @@ fidl::VectorView<fdf::wire::NodeSymbol> Node::symbols() const {
   auto primary_parent = PrimaryParent(parents_);
   // If this node is colocated with its parent, then provide the symbols.
   if (primary_parent != nullptr && primary_parent->driver_host_ == driver_host_) {
-    // If we are a composite node, then take the symbols of our primary parent.
-    auto& symbols = IsComposite() ? primary_parent->symbols_ : symbols_;
     // TODO(fxbug.dev/7999): Remove const_cast once VectorView supports const.
     return fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(
-        const_cast<decltype(symbols_)&>(symbols));
+        const_cast<decltype(symbols_)&>(symbols_));
   }
   return {};
 }
