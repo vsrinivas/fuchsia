@@ -5,6 +5,8 @@
 use {
     anyhow::Error,
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
+    fidl_fuchsia_input_interaction::NotifierRequestStream,
+    fidl_fuchsia_input_interaction_observation::AggregatorRequestStream,
     fidl_fuchsia_recovery_policy::DeviceRequestStream,
     fidl_fuchsia_recovery_ui::FactoryResetCountdownRequestStream,
     fidl_fuchsia_ui_policy::DeviceListenerRegistryRequestStream as MediaButtonsListenerRegistryRequestStream,
@@ -15,7 +17,8 @@ use {
     input_pipeline as input_pipeline_lib,
     input_pipeline::input_device,
     input_pipeline::{
-        factory_reset_handler::FactoryResetHandler, media_buttons_handler::MediaButtonsHandler,
+        activity::ActivityManager, factory_reset_handler::FactoryResetHandler,
+        media_buttons_handler::MediaButtonsHandler,
     },
     std::rc::Rc,
 };
@@ -29,6 +32,8 @@ enum ExposedServices {
     InputDeviceRegistry(InputDeviceRegistryRequestStream),
     MediaButtonsListenerRegistry(MediaButtonsListenerRegistryRequestStream),
     RecoveryPolicy(DeviceRequestStream),
+    UserInteractionObservation(AggregatorRequestStream),
+    UserInteraction(NotifierRequestStream),
 }
 
 #[fasync::run_singlethreaded]
@@ -42,6 +47,8 @@ async fn main() -> Result<(), Error> {
     fs.dir("svc").add_fidl_service(ExposedServices::InputDeviceRegistry);
     fs.dir("svc").add_fidl_service(ExposedServices::MediaButtonsListenerRegistry);
     fs.dir("svc").add_fidl_service(ExposedServices::RecoveryPolicy);
+    fs.dir("svc").add_fidl_service(ExposedServices::UserInteractionObservation);
+    fs.dir("svc").add_fidl_service(ExposedServices::UserInteraction);
     fs.take_and_serve_directory_handle()?;
 
     // Declare the types of input to support.
@@ -75,6 +82,9 @@ async fn main() -> Result<(), Error> {
 
     // Handle input events.
     fasync::Task::local(input_pipeline.handle_input_events()).detach();
+
+    // Create Activity Manager.
+    let activity_manager = ActivityManager::new();
 
     // Handle incoming injection input devices. Start with u32::Max to avoid conflicting device ids.
     let mut injected_device_id = u32::MAX;
@@ -113,6 +123,18 @@ async fn main() -> Result<(), Error> {
                 );
 
                 fasync::Task::local(recovery_policy_fut).detach();
+            }
+            ExposedServices::UserInteractionObservation(stream) => {
+                let interaction_aggregator_fut =
+                    handle_interaction_aggregator_request_stream(activity_manager.clone(), stream);
+
+                fasync::Task::local(interaction_aggregator_fut).detach();
+            }
+            ExposedServices::UserInteraction(stream) => {
+                let interaction_notifier_fut =
+                    handle_interaction_notifier_request_stream(activity_manager.clone(), stream);
+
+                fasync::Task::local(interaction_notifier_fut).detach();
             }
         }
     }
@@ -181,5 +203,32 @@ async fn handle_recovery_policy_device_request_stream(
         Err(e) => {
             fx_log_warn!("failure while serving fuchsia.recovery.policy.Device: {}", e);
         }
+    }
+}
+
+async fn handle_interaction_aggregator_request_stream(
+    activity_manager: Rc<ActivityManager>,
+    stream: AggregatorRequestStream,
+) {
+    if let Err(error) = activity_manager.handle_interaction_aggregator_request_stream(stream).await
+    {
+        fx_log_warn!(
+            "failure while serving fuchsia.input.interaction.observation.Aggregator: {}; \
+   will continue serving other clients",
+            error
+        );
+    }
+}
+
+async fn handle_interaction_notifier_request_stream(
+    activity_manager: Rc<ActivityManager>,
+    stream: NotifierRequestStream,
+) {
+    if let Err(error) = activity_manager.handle_interaction_notifier_request_stream(stream).await {
+        fx_log_warn!(
+            "failure while serving fuchsia.input.interaction.Notifier: {}; \
+ will continue serving other clients",
+            error
+        );
     }
 }

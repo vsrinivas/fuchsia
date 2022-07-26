@@ -15,6 +15,8 @@ rustc_binary("scene_manager_bin") {
     "//sdk/fidl/fuchsia.accessibility:fuchsia.accessibility-rustc",
     "//sdk/fidl/fuchsia.accessibility.scene:fuchsia.accessibility.scene-rustc",
     "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",
+    "//sdk/fidl/fuchsia.input.interaction:fuchsia.input.interaction-rustc",
+    "//sdk/fidl/fuchsia.input.interaction.observation:fuchsia.input.interaction.observation-rustc",
     "//sdk/fidl/fuchsia.recovery.policy:fuchsia.recovery.policy-rustc",
     "//sdk/fidl/fuchsia.recovery.ui:fuchsia.recovery.ui-rustc",
     "//sdk/fidl/fuchsia.session.scene:fuchsia.session.scene-rustc",

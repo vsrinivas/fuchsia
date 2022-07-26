@@ -14,6 +14,8 @@
         {
             protocol: [
                 "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.input.interaction.Notifier",
+                "fuchsia.input.interaction.observation.Aggregator",
                 "fuchsia.recovery.policy.Device",
                 "fuchsia.recovery.ui.FactoryResetCountdown",
                 "fuchsia.ui.policy.DeviceListenerRegistry",
@@ -33,6 +35,10 @@
             ],
         },
         {
+            protocol: "fuchsia.input.interaction.observation.Aggregator",
+            from: "self",
+        },
+        {
             directory: "config-data",
             from: "parent",
             rights: [ "r*" ],
@@ -49,6 +55,8 @@
         {
             protocol: [
                 "fuchsia.input.injection.InputDeviceRegistry",
+                "fuchsia.input.interaction.Notifier",
+                "fuchsia.input.interaction.observation.Aggregator",
                 "fuchsia.recovery.policy.Device",
                 "fuchsia.recovery.ui.FactoryResetCountdown",
                 "fuchsia.ui.policy.DeviceListenerRegistry",

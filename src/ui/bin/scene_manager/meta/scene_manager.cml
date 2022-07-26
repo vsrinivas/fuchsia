@@ -24,6 +24,8 @@
         },
         {
             protocol: [
+                "fuchsia.input.interaction.Notifier",
+                "fuchsia.input.interaction.observation.Aggregator",
                 "fuchsia.recovery.policy.Device",
                 "fuchsia.recovery.ui.FactoryResetCountdown",
                 "fuchsia.session.scene.Manager",
@@ -80,6 +82,11 @@
             protocol: "fuchsia.ui.app.ViewProvider",
             from: "#cursor",
         },
+        {
+            // Used by the input pipeline library to report activity.
+            protocol: "fuchsia.input.interaction.observation.Aggregator",
+            from: "self",
+        },
     ],
     offer: [
         {
@@ -105,6 +112,8 @@
         },
         {
             protocol: [
+                "fuchsia.input.interaction.Notifier",
+                "fuchsia.input.interaction.observation.Aggregator",
                 "fuchsia.recovery.policy.Device",
                 "fuchsia.recovery.ui.FactoryResetCountdown",
                 "fuchsia.session.scene.Manager",

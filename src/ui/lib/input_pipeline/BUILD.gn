@@ -12,6 +12,8 @@ rustc_library("input_pipeline") {
   deps = [
     "//sdk/fidl/fuchsia.input:fuchsia.input-rustc",
     "//sdk/fidl/fuchsia.input.injection:fuchsia.input.injection-rustc",
+    "//sdk/fidl/fuchsia.input.interaction:fuchsia.input.interaction-rustc",
+    "//sdk/fidl/fuchsia.input.interaction.observation:fuchsia.input.interaction.observation-rustc",
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
@@ -67,6 +69,7 @@ rustc_library("input_pipeline") {
   ]
 
   sources = [
+    "src/activity.rs",
     "src/autorepeater.rs",
     "src/click_drag_handler.rs",
     "src/consumer_controls_binding.rs",

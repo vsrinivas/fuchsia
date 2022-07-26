@@ -3,11 +3,14 @@
 // found in the LICENSE file.
 
 use {
+    ::input_pipeline::activity::ActivityManager,
     anyhow::{Context, Error},
     fidl::prelude::*,
     fidl_fuchsia_accessibility::{MagnificationHandlerMarker, MagnifierMarker},
     fidl_fuchsia_accessibility_scene as a11y_view,
     fidl_fuchsia_input_injection::InputDeviceRegistryRequestStream,
+    fidl_fuchsia_input_interaction::NotifierRequestStream,
+    fidl_fuchsia_input_interaction_observation::AggregatorRequestStream,
     fidl_fuchsia_recovery_policy::{
         DeviceRequest as FactoryResetDeviceRequest,
         DeviceRequestStream as FactoryResetDeviceRequestStream,
@@ -58,6 +61,8 @@ enum ExposedServices {
     InputConfigFeatures(InputConfigFeaturesRequestStream),
     InputDeviceRegistry(InputDeviceRegistryRequestStream),
     SceneManager(SceneManagerRequestStream),
+    UserInteractionObservation(AggregatorRequestStream),
+    UserInteraction(NotifierRequestStream),
 }
 
 #[fuchsia::main(logging_tags = [ "scene_manager" ])]
@@ -87,7 +92,9 @@ async fn inner_main() -> Result<(), Error> {
         .add_fidl_service(ExposedServices::FactoryReset)
         .add_fidl_service(ExposedServices::InputConfigFeatures)
         .add_fidl_service(ExposedServices::InputDeviceRegistry)
-        .add_fidl_service(ExposedServices::SceneManager);
+        .add_fidl_service(ExposedServices::SceneManager)
+        .add_fidl_service(ExposedServices::UserInteractionObservation)
+        .add_fidl_service(ExposedServices::UserInteraction);
     fs.take_and_serve_directory_handle()?;
 
     let (input_device_registry_server, input_device_registry_request_stream_receiver) =
@@ -221,6 +228,9 @@ async fn inner_main() -> Result<(), Error> {
         fasync::Task::local(input_pipeline.handle_input_events()).detach();
     }
 
+    // Create Activity Manager.
+    let activity_manager = ActivityManager::new();
+
     while let Some(service_request) = fs.next().await {
         match service_request {
             ExposedServices::AccessibilityViewRegistry(request_stream) => {
@@ -300,6 +310,36 @@ async fn inner_main() -> Result<(), Error> {
                     Ok(()) => (),
                     Err(e) => {
                         fx_log_warn!("failed to forward InputConfigFeaturesRequestStream: {:?}", e)
+                    }
+                }
+            }
+            ExposedServices::UserInteractionObservation(stream) => {
+                match activity_manager
+                    .clone()
+                    .handle_interaction_aggregator_request_stream(stream)
+                    .await
+                {
+                    Ok(()) => (),
+                    Err(e) => {
+                        fx_log_warn!(
+                      "failure while serving fuchsia.input.interaction.observation.Aggregator: {:?}",
+                      e
+                  );
+                    }
+                }
+            }
+            ExposedServices::UserInteraction(stream) => {
+                match activity_manager
+                    .clone()
+                    .handle_interaction_notifier_request_stream(stream)
+                    .await
+                {
+                    Ok(()) => (),
+                    Err(e) => {
+                        fx_log_warn!(
+                            "failure while serving fuchsia.input.interaction.Notifier: {:?}",
+                            e
+                        );
                     }
                 }
             }
