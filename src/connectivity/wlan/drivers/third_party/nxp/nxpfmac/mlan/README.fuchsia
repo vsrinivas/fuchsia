@@ -1,0 +1,20 @@
+Name: mlan
+URL: https://www.nxp.com
+Version: None provided by Vendor
+License: BSD
+License File: ../LICENSE
+
+Description:
+
+This directory contains OS agnostic code for the NXP fullmac driver. This code
+was downloaded from the vendor's website and not from a repository. The
+goal is to avoid any changes unless it is absolutely required to build the
+code for Fuchsia. To this end an OWNERS file has been added to prevent
+inadvertent formatting or other changes.
+
+OSRB approval requested in fxbug.dev/101261.
+Initial check-in of mlan code fxrev.dev/700142.
+
+Local Modifications:
+Added this file - README.fuchsia.
+Added OWNERS file.
