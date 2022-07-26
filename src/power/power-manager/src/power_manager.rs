@@ -67,13 +67,6 @@ impl PowerManager {
 
         info!("Setup complete");
 
-        // TODO (https://fxbug.dev/98138) Remove this is a load-bearing print
-        // used in the OOM test E2E test when this bug is resolved.
-        fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_boot::WriteOnlyLogMarker>()?
-            .get()
-            .await?
-            .write("power-manager: service initialization complete".as_bytes())?;
-
         // Run the ServiceFs (handles incoming request streams) and node futures. This future never
         // completes.
         futures::join!(service_fs_task, node_futures_task);

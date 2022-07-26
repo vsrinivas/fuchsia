@@ -36,7 +36,6 @@ rustc_binary("bin") {
     ":power_manager_metrics_rustlib",
     "system_power_mode_config/parser",
     "thermal_config/parser",
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot-rustc",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager-rustc",
