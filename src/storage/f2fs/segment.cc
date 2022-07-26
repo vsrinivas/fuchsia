@@ -457,26 +457,39 @@ void SegmentManager::SetPrefreeAsFreeSegments() {
 }
 
 void SegmentManager::ClearPrefreeSegments() {
-  uint32_t segno, offset = 0;
+  uint32_t offset = 0;
   uint32_t total_segs = TotalSegs();
 
   std::lock_guard seglist_lock(dirty_info_->seglist_lock);
   while (true) {
-    segno = FindNextBit(dirty_info_->dirty_segmap[static_cast<int>(DirtyType::kPre)].get(),
-                        total_segs, offset);
-    if (segno >= total_segs)
+    uint32_t start = FindNextBit(dirty_info_->dirty_segmap[static_cast<int>(DirtyType::kPre)].get(),
+                                 total_segs, offset);
+    if (start >= total_segs) {
       break;
-
-    offset = segno + 1;
-    if (TestAndClearBit(segno,
-                        dirty_info_->dirty_segmap[static_cast<int>(DirtyType::kPre)].get())) {
-      --dirty_info_->nr_dirty[static_cast<int>(DirtyType::kPre)];
     }
 
-    if (superblock_info_->TestOpt(kMountDiscard)) {
-      fs_->MakeOperation(storage::OperationType::kTrim, StartBlock(segno),
-                         (1 << superblock_info_->GetLogBlocksPerSeg()));
+    uint32_t end = FindNextZeroBit(
+        dirty_info_->dirty_segmap[static_cast<int>(DirtyType::kPre)].get(), total_segs, start + 1);
+    if (end > total_segs) {
+      end = total_segs;
     }
+    offset = end + 1;
+
+    for (uint32_t i = start; i < end; ++i) {
+      if (TestAndClearBit(i, dirty_info_->dirty_segmap[static_cast<int>(DirtyType::kPre)].get())) {
+        --dirty_info_->nr_dirty[static_cast<int>(DirtyType::kPre)];
+      }
+    }
+
+    if (!superblock_info_->TestOpt(kMountDiscard)) {
+      continue;
+    }
+
+    block_t num_of_blocks =
+        safemath::CheckMul<block_t>(safemath::CheckSub<uint32_t>(end, start).ValueOrDie(),
+                                    superblock_info_->GetBlocksPerSeg())
+            .ValueOrDie();
+    fs_->MakeOperation(storage::OperationType::kTrim, StartBlock(start), num_of_blocks);
   }
 }
 
