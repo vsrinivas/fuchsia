@@ -230,6 +230,11 @@ func (typ PrimitiveSubtype) IsUnsigned() bool {
 	return ok
 }
 
+// IsFloat indicates whether this subtype represents a floating-point number.
+func (typ PrimitiveSubtype) IsFloat() bool {
+	return typ == Float32 || typ == Float64
+}
+
 type InternalSubtype string
 
 const (
@@ -429,6 +434,7 @@ type Constant struct {
 	Identifier EncodedCompoundIdentifier `json:"identifier,omitempty"`
 	Literal    Literal                   `json:"literal,omitempty"`
 	Value      string                    `json:"value"`
+	Expression string                    `json:"expression"`
 }
 
 // Location gives the location of the FIDL declaration in its source `.fidl`
@@ -603,8 +609,8 @@ type AttributeArg struct {
 
 // ValueString returns the attribute arg's value in string form.
 // TODO(fxbug.dev/81390): Attribute values may only be string literals for now.
-//  Make sure to fix this API once that changes to resolve the constant value
-//  for all constant types.
+// Make sure to fix this API once that changes to resolve the constant value
+// for all constant types.
 func (el AttributeArg) ValueString() string {
 	return el.Value.Value
 }
@@ -1419,9 +1425,10 @@ func (r *Root) GetMessageBodyTypeNames() EncodedCompoundIdentifierSet {
 // payloads by this library. Specifically, for the following FIDL method
 // definition:
 //
-//   MyMethod(struct{...}) -> (struct{...}) error uint32;
-//           |-----A-----|    |-----B-----| |-----C-----|
-//                            |------------D------------|
+// MyMethod(struct{...}) -> (struct{...}) error uint32;
+//
+//	|-----A-----|    |-----B-----| |-----C-----|
+//	                 |------------D------------|
 //
 // types `A` and `B` are payloads, but `C` (the error) and `D` (the result) are
 // not. If the `error` syntax is not used, the message body type name and
@@ -1449,9 +1456,9 @@ func (r *Root) payloadTypeNames() EncodedCompoundIdentifierSet {
 // is used only as a payload parameter list, a wire message shape, or both. For
 // example, consider the following FIDL method:
 //
-//   MyMethod(struct{...}) -> (struct{...}) error uint32;
-//           |-----A-----|    |-----B-----| |-----C-----|
-//                            |------------D------------|
+//	MyMethod(struct{...}) -> (struct{...}) error uint32;
+//	        |-----A-----|    |-----B-----| |-----C-----|
+//	                         |------------D------------|
 //
 // Types `B` is `OnlyPayloadMethodTypeUsage` (it is exposed to the user, but
 // never sent over the wire), type `D` is `OnlyWireMethodTypeUsage` (it
