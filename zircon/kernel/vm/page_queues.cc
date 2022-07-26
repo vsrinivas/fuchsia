@@ -537,7 +537,7 @@ ktl::optional<PageQueues::VmoBacklink> PageQueues::ProcessQueueHelper(
       list_delete(&page->queue_node);
       list_add_head(&page_queues_[page_queue], &page->queue_node);
 
-      if (queue_is_active(page_queue, mru_queue) && do_sweeping && !pmm_is_loaned(page)) {
+      if (queue_is_active(page_queue, mru_queue) && do_sweeping && !page->is_loaned()) {
         DEBUG_ASSERT(sweep_to_loaned_count < kMaxQueueWork);
         VmCowPages* cow = reinterpret_cast<VmCowPages*>(page->object.get_object());
         uint64_t page_offset = page->object.get_page_offset();

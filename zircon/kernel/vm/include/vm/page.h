@@ -337,23 +337,13 @@ struct vm_page {
 
   // offset 0x2c
 
-  // If true, this page is "loaned" in the sense of being loaned from a contiguous VMO (via
-  // decommit) to Zircon.  If the original contiguous VMO is deleted, this page will no longer be
-  // loaned.  A loaned page cannot be pinned.  Instead a different physical page (non-loaned) is
-  // used for the pin.  A loaned page can be (re-)committed back into its original contiguous VMO,
-  // which causes the data in the loaned page to be moved into a different physical page (which
-  // itself can be non-loaned or loaned).  A loaned page cannot be used to allocate a new contiguous
-  // VMO.
-  uint8_t loaned : 1;
-  // If true, the original contiguous VMO wants the page back.  Such pages won't be re-used until
-  // the page is no longer loaned, either via commit of the page back into the contiguous VMO that
-  // loaned the page, or via deletion of the contiguous VMO that loaned the page.  Such pages are
-  // not in the free_loaned_list_ in pmm, which is how re-use is prevented.
-  uint8_t loan_cancelled : 1;
+  // logically private, use loaned getters and setters below.
+  static constexpr uint8_t kLoanedStateIsLoaned = 1;
+  static constexpr uint8_t kLoanedStateIsLoanCancelled = 2;
+  uint8_t loaned_state_priv;
 
   // This padding is inserted here to make sizeof(vm_page) a multiple of 8 and help validate that
   // all commented offsets were indeed correct.
-  uint8_t padding_bits : 6;
   char padding_bytes[3];
 
   // helper routines
@@ -362,9 +352,43 @@ struct vm_page {
   // be owned by the relevant PmmNode, and hence unless its lock is held this query must be assumed
   // to be racy.
   bool is_free() const { return state() == vm_page_state::FREE; }
-  // TODO(dustingreen): Make is_loaned() atomically-readable so we can avoid pmm_is_loaned().
-  bool is_loaned() const { return loaned; }
-  bool is_loan_cancelled() const { return loan_cancelled; }
+
+  // If true, this page is "loaned" in the sense of being loaned from a contiguous VMO (via
+  // decommit) to Zircon.  If the original contiguous VMO is deleted, this page will no longer be
+  // loaned.  A loaned page cannot be pinned.  Instead a different physical page (non-loaned) is
+  // used for the pin.  A loaned page can be (re-)committed back into its original contiguous VMO,
+  // which causes the data in the loaned page to be moved into a different physical page (which
+  // itself can be non-loaned or loaned).  A loaned page cannot be used to allocate a new contiguous
+  // VMO.
+  bool is_loaned() const {
+    return !!(ktl::atomic_ref<const uint8_t>(loaned_state_priv).load(ktl::memory_order_relaxed) &
+              kLoanedStateIsLoaned);
+  }
+  // If true, the original contiguous VMO wants the page back.  Such pages won't be re-used until
+  // the page is no longer loaned, either via commit of the page back into the contiguous VMO that
+  // loaned the page, or via deletion of the contiguous VMO that loaned the page.  Such pages are
+  // not in the free_loaned_list_ in pmm, which is how re-use is prevented.
+  bool is_loan_cancelled() const {
+    return !!(ktl::atomic_ref<const uint8_t>(loaned_state_priv).load(ktl::memory_order_relaxed) &
+              kLoanedStateIsLoanCancelled);
+  }
+  // Manipulation of 'loaned' should only be done by the PmmNode under its lock whilst it is the
+  // owner of the page.
+  void set_is_loaned() {
+    ktl::atomic_ref<uint8_t>(loaned_state_priv).fetch_or(kLoanedStateIsLoaned);
+  }
+  void clear_is_loaned() {
+    ktl::atomic_ref<uint8_t>(loaned_state_priv).fetch_and(~kLoanedStateIsLoaned);
+  }
+
+  // Manipulation of 'loan_cancelled' should only be done by the PmmNode under its lock, but may be
+  // done when the PmmNode is not the owner of the page.
+  void set_is_loan_cancelled() {
+    ktl::atomic_ref<uint8_t>(loaned_state_priv).fetch_or(kLoanedStateIsLoanCancelled);
+  }
+  void clear_is_loan_cancelled() {
+    ktl::atomic_ref<uint8_t>(loaned_state_priv).fetch_and(~kLoanedStateIsLoanCancelled);
+  }
 
   void dump() const;
 

@@ -113,8 +113,6 @@ void pmm_end_loan(paddr_t address, size_t count, list_node* page_list);
 // (non-loaned) pages.
 void pmm_delete_lender(paddr_t address, size_t count);
 
-bool pmm_is_loaned(vm_page_t* page);
-
 // Free a list of physical pages.
 void pmm_free(list_node* list) __NONNULL((1));
 

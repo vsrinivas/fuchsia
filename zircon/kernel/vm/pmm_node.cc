@@ -156,8 +156,8 @@ void PmmNode::AddFreePages(list_node* list) TA_NO_THREAD_SAFETY_ANALYSIS {
   vm_page *temp, *page;
   list_for_every_entry_safe (list, page, temp, vm_page, queue_node) {
     list_delete(&page->queue_node);
-    DEBUG_ASSERT(!page->loaned);
-    DEBUG_ASSERT(!page->loan_cancelled);
+    DEBUG_ASSERT(!page->is_loaned());
+    DEBUG_ASSERT(!page->is_loan_cancelled());
     DEBUG_ASSERT(page->is_free());
     list_add_tail(&free_list_, &page->queue_node);
     ++free_count;
@@ -471,7 +471,7 @@ zx_status_t PmmNode::AllocRange(paddr_t address, size_t count, list_node* list) 
       }
 
       // We never allocate loaned pages for caller of AllocRange()
-      if (page->loaned) {
+      if (page->is_loaned()) {
         break;
       }
 
@@ -534,7 +534,7 @@ zx_status_t PmmNode::AllocContiguous(const size_t count, uint alloc_flags, uint8
     for (size_t i = 0; i < count; i++, p++) {
       DEBUG_ASSERT_MSG(p->is_free(), "p %p state %u\n", p, static_cast<uint32_t>(p->state()));
       // Loaned pages are never returned by FindFreeContiguous() above.
-      DEBUG_ASSERT(!p->loaned);
+      DEBUG_ASSERT(!p->is_loaned());
       DEBUG_ASSERT(list_in_list(&p->queue_node));
 
       // Atomically (that is, in a single lock acquisition) remove this page from both the free list
@@ -610,10 +610,10 @@ void PmmNode::FreePage(vm_page* page) {
   FreePageHelperLocked(page);
 
   list_node* which_list = nullptr;
-  if (!page->loaned) {
+  if (!page->is_loaned()) {
     IncrementFreeCountLocked(1);
     which_list = &free_list_;
-  } else if (!page->loan_cancelled) {
+  } else if (!page->is_loan_cancelled()) {
     IncrementFreeLoanedCountLocked(1);
     which_list = &free_loaned_list_;
   }
@@ -621,7 +621,7 @@ void PmmNode::FreePage(vm_page* page) {
   // Add the page to the appropriate free queue, unless loan_cancelled.  The loan_cancelled pages
   // don't go in any free queue because they shouldn't get re-used until reclaimed by their
   // underlying contiguous VMO or until that underlying contiguous VMO is deleted.
-  DEBUG_ASSERT(which_list || page->loan_cancelled);
+  DEBUG_ASSERT(which_list || page->is_loan_cancelled());
   if (which_list) {
     if constexpr (!__has_feature(address_sanitizer)) {
       list_add_head(which_list, &page->queue_node);
@@ -644,11 +644,11 @@ void PmmNode::FreeListLocked(list_node* list) {
     while (page) {
       FreePageHelperLocked(page);
       vm_page_t* next_page = list_prev_type(list, &page->queue_node, vm_page_t, queue_node);
-      if (page->loaned) {
+      if (page->is_loaned()) {
         // Remove from |list| and possibly put on freed_loaned_list instead, to route to the correct
         // free list, or no free list if loan_cancelled.
         list_delete(&page->queue_node);
-        if (!page->loan_cancelled) {
+        if (!page->is_loan_cancelled()) {
           list_add_head(&freed_loaned_list, &page->queue_node);
           ++loaned_count;
         }
@@ -906,11 +906,11 @@ void PmmNode::BeginLoan(list_node* page_list) {
   uint64_t loaned_count = 0;
   vm_page* page;
   list_for_every_entry (page_list, page, vm_page, queue_node) {
-    DEBUG_ASSERT(!page->loaned);
+    DEBUG_ASSERT(!page->is_loaned());
     DEBUG_ASSERT(!page->is_free());
-    page->loaned = true;
+    page->set_is_loaned();
     ++loaned_count;
-    DEBUG_ASSERT(!page->loan_cancelled);
+    DEBUG_ASSERT(!page->is_loan_cancelled());
   }
   IncrementLoanedCountLocked(loaned_count);
 
@@ -935,11 +935,11 @@ void PmmNode::CancelLoan(paddr_t address, size_t count) {
                               // We can assert this because of PageSource's overlapping request
                               // handling.
                               DEBUG_ASSERT(page->is_loaned());
-                              bool was_cancelled = page->loan_cancelled;
+                              bool was_cancelled = page->is_loan_cancelled();
                               // We can assert this because of PageSource's overlapping request
                               // handling.
                               DEBUG_ASSERT(!was_cancelled);
-                              page->loan_cancelled = true;
+                              page->set_is_loan_cancelled();
                               ++loan_cancelled_count;
                               if (page->is_free()) {
                                 // Currently in free_loaned_list_.
@@ -976,8 +976,8 @@ void PmmNode::EndLoan(paddr_t address, size_t count, list_node* page_list) {
     // Already not in free_loaned_list_ (because loan_cancelled already).
     DEBUG_ASSERT(!list_in_list(&page->queue_node));
 
-    page->loaned = false;
-    page->loan_cancelled = false;
+    page->clear_is_loaned();
+    page->clear_is_loan_cancelled();
     ++loan_ended_count;
 
     AllocPageHelperLocked(page);
@@ -1003,13 +1003,13 @@ void PmmNode::DeleteLender(paddr_t address, size_t count) {
   ForPagesInPhysRangeLocked(address, count,
                             [this, &removed_free_loaned_count, &loan_un_cancelled_count,
                              &added_free_count, &loan_ended_count](vm_page_t* page) {
-                              DEBUG_ASSERT(page->loaned);
-                              if (page->is_free() && !page->loan_cancelled) {
+                              DEBUG_ASSERT(page->is_loaned());
+                              if (page->is_free() && !page->is_loan_cancelled()) {
                                 // Remove from free_loaned_list_.
                                 list_delete(&page->queue_node);
                                 ++removed_free_loaned_count;
                               }
-                              if (page->loan_cancelled) {
+                              if (page->is_loan_cancelled()) {
                                 ++loan_un_cancelled_count;
                               }
                               if (page->is_free()) {
@@ -1023,8 +1023,8 @@ void PmmNode::DeleteLender(paddr_t address, size_t count) {
                                 }
                                 added_free_count++;
                               }
-                              page->loan_cancelled = false;
-                              page->loaned = false;
+                              page->clear_is_loan_cancelled();
+                              page->clear_is_loaned();
                               ++loan_ended_count;
                             });
 
@@ -1032,12 +1032,6 @@ void PmmNode::DeleteLender(paddr_t address, size_t count) {
   IncrementFreeCountLocked(added_free_count);
   DecrementLoanedCountLocked(loan_ended_count);
   DecrementLoanCancelledCountLocked(loan_un_cancelled_count);
-}
-
-bool PmmNode::IsLoaned(vm_page_t* page) {
-  AutoPreemptDisabler preempt_disable;
-  Guard<Mutex> guard{&lock_};
-  return page->loaned;
 }
 
 template <typename F>

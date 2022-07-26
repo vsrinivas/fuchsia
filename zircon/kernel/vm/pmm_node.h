@@ -44,7 +44,6 @@ class PmmNode {
   void CancelLoan(paddr_t address, size_t count);
   void EndLoan(paddr_t address, size_t count, list_node* page_list);
   void DeleteLender(paddr_t address, size_t count);
-  bool IsLoaned(vm_page_t* page);
 
   // For purposes of signalling memory pressure level, only free_list_ pages are counted, not
   // free_loaned_list_ pages.

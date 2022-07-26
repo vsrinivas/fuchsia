@@ -174,13 +174,13 @@ static bool pmm_node_loan_borrow_cancel_reclaim_end() {
   }
 
   list_for_every_entry (&list, page, vm_page_t, queue_node) {
-    EXPECT_FALSE(page->loaned);
-    EXPECT_FALSE(page->loan_cancelled);
+    EXPECT_FALSE(page->is_loaned());
+    EXPECT_FALSE(page->is_loan_cancelled());
   }
   node.node().BeginLoan(&list);
   list_for_every_entry (&list, page, vm_page_t, queue_node) {
-    EXPECT_TRUE(page->loaned);
-    EXPECT_FALSE(page->loan_cancelled);
+    EXPECT_TRUE(page->is_loaned());
+    EXPECT_FALSE(page->is_loan_cancelled());
   }
 
   EXPECT_EQ(kLoanCount, node.node().CountLoanedPages());
@@ -206,11 +206,11 @@ static bool pmm_node_loan_borrow_cancel_reclaim_end() {
   }
 
   list_for_every_entry (&list, page, vm_page_t, queue_node) {
-    EXPECT_TRUE(page->loaned);
-    EXPECT_FALSE(page->loan_cancelled);
+    EXPECT_TRUE(page->is_loaned());
+    EXPECT_FALSE(page->is_loan_cancelled());
     node.node().CancelLoan(page->paddr(), 1);
-    EXPECT_TRUE(page->loaned);
-    EXPECT_TRUE(page->loan_cancelled);
+    EXPECT_TRUE(page->is_loaned());
+    EXPECT_TRUE(page->is_loan_cancelled());
   }
 
   EXPECT_EQ(kLoanCount, node.node().CountLoanedPages());
@@ -237,7 +237,7 @@ static bool pmm_node_loan_borrow_cancel_reclaim_end() {
   EXPECT_EQ(ZX_OK, status, "allocate all the not-loaned pages");
 
   list_for_every_entry (&list, page, vm_page_t, queue_node) {
-    EXPECT_FALSE(page->loaned);
+    EXPECT_FALSE(page->is_loaned());
     for (i = 0; i < kLoanCount; ++i) {
       if (paddr[i] == page->paddr()) {
         break;
@@ -257,8 +257,8 @@ static bool pmm_node_loan_borrow_cancel_reclaim_end() {
     EXPECT_EQ(1u, list_length(&tmp_list));
     page = list_remove_head_type(&tmp_list, vm_page, queue_node);
     EXPECT_EQ(paddr[j], page->paddr());
-    EXPECT_FALSE(page->loaned);
-    EXPECT_FALSE(page->loan_cancelled);
+    EXPECT_FALSE(page->is_loaned());
+    EXPECT_FALSE(page->is_loan_cancelled());
     list_add_tail(&list, &page->queue_node);
   }
 
@@ -276,8 +276,8 @@ static bool pmm_node_loan_borrow_cancel_reclaim_end() {
   EXPECT_EQ(ManagedPmmNode::kNumPages, list_length(&list));
 
   list_for_every_entry (&list, page, vm_page_t, queue_node) {
-    EXPECT_FALSE(page->loaned);
-    EXPECT_FALSE(page->loan_cancelled);
+    EXPECT_FALSE(page->is_loaned());
+    EXPECT_FALSE(page->is_loan_cancelled());
   }
 
   node.node().FreeList(&list);

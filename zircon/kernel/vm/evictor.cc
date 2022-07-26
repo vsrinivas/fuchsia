@@ -347,7 +347,7 @@ Evictor::EvictedPageCounts Evictor::EvictPagerBacked(uint64_t target_pages,
       }
       if (backlink->cow->RemovePageForEviction(backlink->page, backlink->offset, hint_action)) {
         list_add_tail(&freed_list, &backlink->page->queue_node);
-        if (pmm_is_loaned(backlink->page)) {
+        if (backlink->page->is_loaned()) {
           counts.pager_backed_loaned++;
         } else {
           counts.pager_backed++;

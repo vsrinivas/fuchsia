@@ -533,17 +533,17 @@ static bool vmo_contiguous_decommit_test() {
         ASSERT(page_from_cow);
         ASSERT(page_from_cow == page_from_pmm);
         ASSERT(cow->DebugIsPage(offset));
-        ASSERT(!page_from_pmm->loaned);
+        ASSERT(!page_from_pmm->is_loaned());
       } else {
         ASSERT(!page_from_cow);
         ASSERT(cow->DebugIsEmpty(offset));
-        ASSERT(page_from_pmm->loaned);
+        ASSERT(page_from_pmm->is_loaned());
         if (!page_from_pmm->is_free()) {
           // It's not in cow, and it's not free, so note that we observed a borrowed page.
           borrowed_seen = true;
         }
       }
-      ASSERT(!page_from_pmm->loan_cancelled);
+      ASSERT(!page_from_pmm->is_loan_cancelled());
     }
   };
   verify_expected_pages();
@@ -1568,7 +1568,7 @@ static bool vmo_always_need_evicts_loaned_test() {
       status = make_committed_pager_vmo(1, /*trap_dirty=*/false, /*resizable=*/false, &page, &vmo);
       ASSERT_EQ(ZX_OK, status);
       ++iteration_count;
-    } while (!pmm_is_loaned(page) && iteration_count < kMaxIterations);
+    } while (!page->is_loaned() && iteration_count < kMaxIterations);
 
     // If we hit this iteration count, something almost certainly went wrong...
     ASSERT_TRUE(iteration_count < kMaxIterations);
@@ -1582,7 +1582,7 @@ static bool vmo_always_need_evicts_loaned_test() {
     // If the page was still loaned, it will be replaced with a non-loaned page now.
     page = vmo->DebugGetPage(0);
 
-    ASSERT_FALSE(pmm_is_loaned(page));
+    ASSERT_FALSE(page->is_loaned());
   }
 
   END_TEST;
@@ -2991,7 +2991,7 @@ static bool vmo_stack_owned_loaned_pages_interval_test() {
   for (auto& page : ot.pages) {
     EXPECT_EQ(vm_page_state::FREE, page.state());
     // Normally this would be under PmmLock; only for testing.
-    page.loaned = true;
+    page.set_is_loaned();
   }
 
   // Test no pages stack owned in a given interval.

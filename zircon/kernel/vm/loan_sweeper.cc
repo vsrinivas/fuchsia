@@ -165,7 +165,7 @@ uint64_t LoanSweeper::SynchronousSweepInternal() {
         // next page
         break;
       }
-      if (ppb_enabled == pmm_is_loaned(page)) {
+      if (ppb_enabled == page->is_loaned()) {
         // next page
         break;
       }

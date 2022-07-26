@@ -351,7 +351,7 @@ zx_status_t VmObjectPaged::CreateFromWiredPages(const void* data, size_t size, b
       status = vmo->cow_pages_locked()->AddNewPageLocked(
           count * PAGE_SIZE, page, VmCowPages::CanOverwriteContent::Zero, nullptr, false, false);
       ASSERT(status == ZX_OK);
-      DEBUG_ASSERT(!pmm_is_loaned(page));
+      DEBUG_ASSERT(!page->is_loaned());
     }
 
     if (exclusive && !is_physmap_addr(data)) {

@@ -142,11 +142,6 @@ void pmm_delete_lender(paddr_t address, size_t count) {
   pmm_node.DeleteLender(address, count);
 }
 
-bool pmm_is_loaned(vm_page_t* page) {
-  VM_KTRACE_DURATION(3, "pmm_is_loaned");
-  return pmm_node.IsLoaned(page);
-}
-
 void pmm_free(list_node* list) {
   VM_KTRACE_DURATION(3, "pmm_free");
   pmm_node.FreeList(list);
