@@ -165,7 +165,7 @@ For [flexible](#strict-flexible) bits:
   for known members.
 
 Strict bits MAY provide the above APIs as well in order to simplify [transitions
-betwen strict and flexible][source-compatible].
+between strict and flexible][source-compatible].
 
 In some languages, it is difficult or impossible to prevent users from
 manually creating an instance of a `bits` type from a primitive, therefore
@@ -361,7 +361,7 @@ handler and events arriving on the endpoint.
 Bindings MUST close the connection upon receiving an unknown
 [strict event][strict-event].
 
-### Error types
+### Domain error types
 
 It is OPTIONAL that bindings provide some form of special support for protocol
 methods with an error type matching the idiomatic way errors are handled in the
@@ -388,6 +388,53 @@ categorized as errors encountered when converting between the native type and
 the wire format data, or as errors from the underlying transport mechanism (for
 example, an error obtained from calling `zx_channel_write_etc`). These errors
 MAY consist of the error status, as well as any other diagnostics information.
+
+We define these transport errors as terminal. The rest of the document may
+additionally specify other situations as terminal errors, such as incorrect
+transaction IDs.
+
+* Validation errors during encode, if validation is performed.
+* Decode errors.
+* Errors from the underlying transport mechanism. Note: this does not include
+  the `transport_err` member from the family of result unions sent by a server
+  in response to an unknown flexible interaction.
+
+By comparison, domain errors found in a method declaration are not terminal.
+
+### Terminal error handling
+
+Bindings MUST provide client and server APIs that own the underlying endpoint.
+When a terminal error occurs over a connection, the client and server APIs MUST
+teardown the connection by closing the underlying endpoint.
+
+Because the IPC transport model of FIDL does not contain transient errors, there
+is no value in e.g. retrying sending the same reply. Triggering teardown on
+error encourages this way of bindings usage and simplifies error handling.
+
+Bindings MAY provide client and server APIs that do not own the underlying
+endpoint, to cater to low level use cases. Those APIs cannot close the endpoint
+on errors, and SHOULD be clearly documented accordingly. The owning flavors
+SHOULD be the recommended flavors of APIs.
+
+### Peer closed special handling
+
+When the underlying transport mechanism reports that the peer endpoint is
+closed during message sending (e.g. getting a `ZX_ERR_PEER_CLOSED` error when
+writing to the channel), the client/server MUST first read and process any
+remaining messages, before surfacing the transport error to the user and closing
+the connection.
+
+When the underlying transport mechanism notifies that the peer endpoint is
+closed during message waiting (e.g. observing a `ZX_CHANNEL_PEER_CLOSED` signal
+when waiting for signals on the channel), the client/server MUST first read and
+process any remaining message, before surfacing the transport error to the user
+and closing the connection.
+
+This is to stay coherent with the read semantics of a channel: given a pair of
+endpoints `A <-> B`, suppose several messages are written into `B`, and then
+`B` is closed. One can keep reading from `A` without observing peer closed
+errors until all lingering messages are drained. In other words, "peer closed"
+is not a fatal error until no more messages could be read from the endpoint.
 
 ## Handle type and rights checking
 
