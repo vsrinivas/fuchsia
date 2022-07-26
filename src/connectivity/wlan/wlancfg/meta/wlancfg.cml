@@ -28,13 +28,16 @@
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.diagnostics.persist.DataPersistence-wlan",
                 "fuchsia.location.namedplace.RegulatoryRegionWatcher",
-                "fuchsia.location.sensor.WlanBaseStationWatcher",
                 "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.power.clientlevel.Connector",
                 "fuchsia.stash.SecureStore",
                 "fuchsia.wlan.device.service.DeviceMonitor",
                 "fuchsia.wlan.device.service.DeviceService",
             ],
+        },
+        {
+            protocol: [ "fuchsia.location.sensor.WlanBaseStationWatcher" ],
+            availability: "optional",
         },
         {
             storage: "data",

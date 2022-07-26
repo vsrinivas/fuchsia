@@ -88,5 +88,11 @@
             from: "#wlancfg",
             to: "#session-manager",
         },
+        {
+            protocol: "fuchsia.location.sensor.WlanBaseStationWatcher",
+            from: "#emergency",
+            to: "#wlancfg",
+            source_availability: "unknown",
+        },
     ],
 }

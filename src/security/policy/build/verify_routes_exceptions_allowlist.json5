@@ -796,24 +796,6 @@
                     },
                 },
                 {
-                    // Emergency location is not present in all products.
-                    using_node: "/core/wlancfg",
-                    capability: "fuchsia.location.sensor.WlanBaseStationWatcher",
-                    error: {
-                        error: {
-                            analyzer_model_error: {
-                                routing_error: {
-                                    use_from_parent_not_found: {
-                                        moniker: "/core/wlancfg",
-                                        capability_id: "fuchsia.location.sensor.WlanBaseStationWatcher",
-                                    },
-                                },
-                            },
-                        },
-                        message: "A `use from parent` declaration was found at `/core/wlancfg` for `fuchsia.location.sensor.WlanBaseStationWatcher`, but no matching `offer` declaration was found in the parent",
-                    },
-                },
-                {
                     // system-update-configurator is not present in all products.
                     using_node: "/core/omaha-client-service",
                     capability: "fuchsia.update.config.OptOut",

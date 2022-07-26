@@ -17,11 +17,6 @@
     ],
     offer: [
         {
-            protocol: "fuchsia.location.sensor.WlanBaseStationWatcher",
-            from: "#emergency",
-            to: "#wlancfg",
-        },
-        {
             protocol: "fuchsia.net.http.Loader",
             from: "#network",
             to: "#emergency",
