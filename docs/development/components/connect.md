@@ -107,6 +107,37 @@ for communicating over the channel:
   {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/cpp/echo_client/main.cc" region_tag="main_body" adjust_indentation="auto" highlight="2,3,4,5,7,8,10" %}
   ```
 
+#### Mark some used capabilities as optional {#optional-use}
+
+Not all capabilities used by a component are required for it to operate
+successfully. Sometimes a component can still execute without issue if a
+capability is missing, and its presence will merely enable some additional or
+alternative behavior.
+
+To enable the component framework to understand which capabilities a component
+requires and which capabilities are optional for a component, use the
+`availability` field.
+
+```
+use: [
+    {
+        // It is ok if this protocol is unavailable
+        protocol: "fuchsia.examples.Echo1",
+        availability: "optional",
+    },
+    {
+        // This protocol MUST be provided for the component to function correctly.
+        protocol: "fuchsia.examples.Echo2",
+        availability: "required",
+    },
+]
+```
+
+If a component has a `required` use declaration for a capability but its parent
+offers the capability as `optional`, then the [static capability
+analyzer][static-analyzer] will generate an error and connection attempts at
+runtime will always fail.
+
 ### Route capabilities {#route-capability}
 
 Components may only access capabilities routed to them. Capabilities can originate
@@ -133,6 +164,59 @@ do the following:
     ```json5
     {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/meta/echo_realm.cml" region_tag="example_snippet" highlight="13,14,15,16,17,18,19,21,22,23,24,25,26,27,28,29,30" %}
     ```
+
+#### Optional dependencies {#optional-offer}
+
+When a component has an optional dependency on a capability, it is then up to
+that component's parent to decide if the component will receive that capability
+or not. When offering a capability, a component may set the `availability` field
+to either `optional`, `required`, or `same_as_target`. Each value has the
+following semantics:
+
+- `optional`: The target of the offer must declare it's ability to handle the
+  absence of this capability by marking it's `use` declaration as `optional`. If
+  the target cannot do this, (i.e. the target has an availability of `required`
+  for this capability), then routing the capability will cause an error.
+- `required`: The target must receive this capability. If the offer source is
+  `parent` and the component's parent (the target's grandparent) offered this as
+  an optional capability, then routing the capability will cause an error
+  because the parent cannot guarantee the capability's availability.
+- `same_as_target`: The availability of this capability is determined by the
+  target's expectations. If the target has an optional dependency on this
+  capability, then this offer will also be optional. If the target has a
+  required dependency on this capability, then this offer will also be required.
+
+```
+offer: [
+    {
+        // child-1 MUST receive the protocol 'fuchsia.logger.LogSink'.
+        protocol: "fuchsia.logger.LogSink",
+        to: "#child-1",
+        from: "#child-2",
+        availability: "required",
+    },
+    {
+        // child-1 MUST be able to handle the absence of the protocol
+        // 'fuchsia.tracing.provider.Registry'.
+        protocol: "fuchsia.tracing.provider.Registry",
+        to: "#child-1",
+        from: "parent",
+        availability: "optional",
+    },
+    {
+        // child-1 decides if it must receive the protocol
+        // 'fuchsia.posix.socket.Provider', or if it must be able to support its
+        // absence.
+        protocol: "fuchsia.posix.socket.Provider",
+        to: "#child-1",
+        from: "parent",
+        availability: "same_as_target",
+    },
+]
+```
+
+Like with use declarations, the `availability` field may be omitted, in which
+case it defaults to `required`.
 
 ## Managing child components {#children}
 
@@ -630,3 +714,4 @@ the cause:
 [glossary.namespace]: /docs/glossary/README.md#namespace
 [glossary.outgoing-directory]: /docs/glossary/README.md#outgoing-directory
 [src-security-policy]: /src/security/policy/component_manager_policy.json5
+[static-analyzer]: /docs/development/components/build.md#troubleshoot-build-analyzer

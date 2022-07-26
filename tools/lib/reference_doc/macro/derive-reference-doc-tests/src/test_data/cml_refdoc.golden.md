@@ -406,8 +406,13 @@ this component and the capability's source.
       handle these dependencies becoming unavailable. This type exists to keep
       track of weak dependencies that resulted from migrations into v2
       components.
-- `availability`: (_optional `string`_) Determines whether this capability is required to be available, or if its presence is
-  optional.
+- `availability`: (_optional `string`_) `availability` _(optional)_: The expectations around this capability's availability. One
+  of:
+  -   `required` (default): a required dependency, the component is unable to perform its
+      work without this capability.
+  -   `optional`: an optional dependency, the component will be able to function without this
+      capability (although if the capability is unavailable some functionality may be
+      disabled).
 
 Example:
 
@@ -553,11 +558,19 @@ instance or a [child collection][doc-collections].
 - `filter`: (_optional `object`_) TODO(fxb/96705): Complete.
 - `event_stream`: (_optional `string or array of strings`_) TODO(fxb/96705): Complete.
 - `scope`: (_optional `string or array of strings`_) TODO(fxb/96705): Complete.
-- `availability`: (_optional `string`_) Whether or not this capability must be present. Defaults to `required`.
+- `availability`: (_optional `string`_) `availability` _(optional)_: The expectations around this capability's availability. One
+  of:
+  -   `required` (default): a required dependency, the target of this offer must receive this
+      capability.
+  -   `optional`: an optional dependency, the target of this offer may or may not receive
+      this capability, and the target must consume this capability as `optional`.
+  -   `same_as_target`: the availability expectations of this capability will match whatever
+      the target's. If the target requires the capability, then this field is set to
+      `required`. If the target has an optional dependency on the capability, then the field
+      is set to `optional`.
 - `source_availability`: (_optional `string`_) Whether or not the source of this offer must exist. If set to `unknown`, the source of this
   offer will be rewritten to `void` if the source does not exist (i.e. is not defined in this
-  manifest). The availability must be set to `optional` when `source_availability` is set to
-  `unknown`. Defaults to `required`.
+  manifest). Defaults to `required`.
 
 Example:
 

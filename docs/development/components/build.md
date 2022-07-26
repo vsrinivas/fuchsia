@@ -159,6 +159,81 @@ Include paths that begin with `"//"` are relative to the root of the source tree
 that you are working in. For include paths that don't begin with `"//"`, the
 build system will attempt to resolve them from the Fuchsia SDK.
 
+#### Inter-shard dependencies
+
+If one manifest shard adds a child to the manifest and a second manifest shard
+adds a second child which depends on the first, then the offer declaration from
+the first child to the second child will cause a manifest validation error if
+the second shard is ever included in a manifest without the first shard, since
+the offer will reference a non-existent child.
+
+```json
+// echo_server.shard.cml
+{
+    children: [ {
+        name: "echo_server",
+        url: "fuchsia-pkg://fuchsia.com/echo_server#meta/echo_server.cm",
+    } ],
+}
+```
+
+```json
+// echo_client.shard.cml
+{
+    children: [
+        {
+            name: "echo_client",
+            url: "fuchsia-pkg://fuchsia.com/echo_client#meta/echo_client.cm",
+        }
+    ],
+    offer: [ {
+        // This offer will cause manifest validation to fail if
+        // `echo_client.shard.cml` is included in a manifest without
+        // `echo_server.shard.cml`.
+        protocol: "fuchsia.examples.Echo",
+        from: "echo_server",
+        to: "echo_client",
+    } ],
+}
+```
+
+To address this, the `source_availability` field on an offer can be set to
+inform manifest compilation that it's acceptable for an offer source to be
+missing. When set to `unknown`, then the following will happen to the offer
+declaration:
+
+- If the `from` source exists: the availability is set to `required`.
+- If the `from` source does not exist: the availability is set to `optional` and
+  the source of the offer is rewritten to `void`.
+
+```json
+// echo_client.shard.cml
+{
+    children: [
+        {
+            name: "echo_client",
+            url: "fuchsia-pkg://fuchsia.com/echo_client#meta/echo_client.cm",
+        }
+    ],
+    offer: [
+        {
+            // If `echo_server.shard.cml` is included in this manifest, then
+            // `echo_client` can access the `fuchsia.examples.Echo` protocol from
+            // it.
+            //
+            // If `echo_server.shard.cml` is not included in this manifest, then
+            // `echo_client` will be offered the protocol with a source of
+            // `void` and `availability == optional`. `echo_client` must consume
+            // the capability optionally to not fail route validation.
+            protocol: "fuchsia.examples.Echo",
+            from: "echo_server",
+            to: "echo_client",
+            source_availability: "unknown",
+        }
+    ],
+}
+```
+
 ### Client library includes {#component-manifest-includes}
 
 As shown above, the component manifest supports "include" syntax, which allows
