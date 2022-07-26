@@ -1,0 +1,19 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_ACPI_BUS_TYPE": "fuchsia.acpi.BIND_ACPI_BUS_TYPE.I2C",
+            "fuchsia.acpi.hid": "\"MSFT0101\""
+        },
+        "expected": "match",
+        "name": "TPM LPC Driver"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_ACPI_BUS_TYPE": "fuchsia.acpi.BIND_ACPI_BUS_TYPE.SPI",
+            "fuchsia.BIND_COMPOSITE": "1",
+            "fuchsia.acpi.first_cid": "\"google,not-cr50\""
+        },
+        "expected": "abort",
+        "name": "Wrong compatible"
+    }
+]

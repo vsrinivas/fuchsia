@@ -259,6 +259,7 @@
 //src/devices/thermal/drivers/aml-thermistor:aml-thermistor-driver
 //src/devices/thermal/drivers/as370-thermal:as370-thermal-driver
 //src/devices/tpm/drivers/cr50-spi:fuchsia_driver
+//src/devices/tpm/drivers/tpm-lpc:fuchsia_driver
 //src/devices/tpm/drivers/tpm:fuchsia_driver
 //src/devices/usb/drivers/aml-usb-phy-v2:aml-usb-phy-v2-driver
 //src/devices/usb/drivers/as370-usb-phy:as370-usb-phy-driver

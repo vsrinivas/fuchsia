@@ -1,0 +1,9 @@
+{
+    "short_description": "TPM LPC Driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "Misc"
+    ]
+}
