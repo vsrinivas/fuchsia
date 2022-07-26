@@ -36,18 +36,22 @@ rustc_test("driver") {
   sources = [ "src/lib.rs" ]
 }
 
-fuchsia_component("isolated-ota-integration-test") {
+fuchsia_test_component("isolated-ota-integration-test") {
   testonly = true
-  manifest = "meta/isolated-ota-integration-test.cmx"
+  manifest = "meta/isolated-ota-integration-test.cml"
   deps = [ ":driver" ]
 }
 
 fuchsia_test_package("isolated-ota-integration-tests") {
   test_components = [ ":isolated-ota-integration-test" ]
   deps = [
-    "//src/connectivity/network/dns:component-legacy",
-    "//src/connectivity/network/netstack:component-legacy",
+    "//src/connectivity/network/dns:component",
+    "//src/connectivity/network/netstack:component",
+
+    # For ramdisk devices, needed to back blobfs (which in turn backs pkg-cache)
+    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr-component",
     "//src/storage/bin/blobfs",
+    "//src/storage/testing:storage_driver_test_realm",
     "//src/sys/pkg/bin/pm:pm_bin",
     "//src/sys/pkg/lib/fuchsia-pkg-testing/certs",
     "//src/sys/pkg/tests/pkg-resolver:empty-repo",
@@ -63,7 +67,6 @@ group("tests") {
   testonly = true
   public_deps = [
     ":isolated-ota-integration-tests",
-    "//src/lib/storage/ramdevice_client:ramdisk-isolated-devmgr",
     "//src/sys/pkg/lib/isolated-swd:isolated-swd-components",
   ]
 }

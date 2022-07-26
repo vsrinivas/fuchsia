@@ -1,0 +1,55 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/lib/fuchsia-hyper/hyper_testing.shard.cml",
+        "//src/storage/testing/driver_test_realm/meta/client.shard.cml",
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "//src/sys/test_runners/tmp_storage.shard.cml",
+        "inspect/client.shard.cml",
+
+        // Depends on root ssl certificate which is currently a system capability.
+        "sys/testing/system-test.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/isolated_ota_integration_test",
+    },
+    children: [
+        {
+            name: "netstack",
+            url: "#meta/netstack.cm",
+        },
+        {
+            name: "dns_resolver",
+            url: "#meta/dns_resolver.cm",
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.diagnostics.ArchiveAccessor",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Launcher",
+                "fuchsia.sys.Loader",
+            ],
+        },
+        {
+            protocol: [ "fuchsia.posix.socket.Provider" ],
+            from: "#netstack",
+        },
+        {
+            protocol: [ "fuchsia.net.name.Lookup" ],
+            from: "#dns_resolver",
+        },
+        {
+            // TODO(fxbug.dev/103980): use certs from this package rather than the system realm.
+            directory: "root-ssl-certificates",
+            rights: [ "r*" ],
+            path: "/config/ssl",
+        },
+    ],
+    offer: [],
+}
