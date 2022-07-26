@@ -55,7 +55,6 @@ group("config") {
   deps = [
     "//src/media/codec/bundles:config",
     "//src/media/playback/bundles:config",
-    "//src/media/sessions/bundles:config",
     "//src/media/sounds/bundles:config",
     "//src/media/stream_processors/bundles:config",
   ]

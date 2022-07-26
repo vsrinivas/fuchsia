@@ -18,13 +18,20 @@
         {
             protocol: [
                 "fuchsia.media.SessionAudioConsumerFactory",
-                "fuchsia.media.sessions2.Discovery",
-                "fuchsia.media.sessions2.Publisher",
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "self",
             to: "#bt-a2dp",
             dependency: "weak_for_migration",
+        },
+        {
+            protocol: [
+                "fuchsia.media.sessions2.Discovery",
+                "fuchsia.media.sessions2.Publisher",
+            ],
+            from: "#mediasession",
+            to: "#bt-a2dp",
+            source_availability: "unknown",
         },
         {
             protocol: "fuchsia.settings.Audio",

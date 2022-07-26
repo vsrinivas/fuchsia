@@ -43,14 +43,18 @@
                 "fuchsia.bluetooth.bredr.Profile",
                 "fuchsia.media.AudioDeviceEnumerator",
                 "fuchsia.media.SessionAudioConsumerFactory",
-                "fuchsia.media.sessions2.Publisher",
                 "fuchsia.mediacodec.CodecFactory",
                 "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.settings.Audio",
                 "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
             ],
-            from: "parent",
+        },
+        {
+            protocol: [
+                "fuchsia.media.sessions2.Publisher",
+            ],
+            availability: "optional",
         },
         {
             protocol: [ "fuchsia.bluetooth.component.Lifecycle" ],
@@ -62,11 +66,18 @@
             protocol: [
                 "fuchsia.bluetooth.avrcp.PeerManager",
                 "fuchsia.logger.LogSink",
-                "fuchsia.media.sessions2.Discovery",
                 "fuchsia.power.battery.BatteryManager",
             ],
             from: "parent",
             to: [ "#bt-avrcp-target" ],
+        },
+        {
+            protocol: [
+                "fuchsia.media.sessions2.Discovery",
+            ],
+            from: "parent",
+            to: [ "#bt-avrcp-target" ],
+            availability: "optional",
         },
     ],
     expose: [

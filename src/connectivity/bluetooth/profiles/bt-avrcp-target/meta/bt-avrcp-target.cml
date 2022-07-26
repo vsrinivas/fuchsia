@@ -17,11 +17,11 @@
     ],
     use: [
         {
-            protocol: [
-                "fuchsia.bluetooth.avrcp.PeerManager",
-                "fuchsia.media.sessions2.Discovery",
-            ],
-            from: "parent",
+            protocol: [ "fuchsia.bluetooth.avrcp.PeerManager" ],
+        },
+        {
+            protocol: [ "fuchsia.media.sessions2.Discovery" ],
+            availability: "optional",
         },
     ],
     expose: [

@@ -23,7 +23,6 @@
                 "fuchsia.lowpan.bootstrap.Thread",
                 "fuchsia.media.ActivityReporter",
                 "fuchsia.media.audio.EffectsController",
-                "fuchsia.media.sessions2.ActiveSession",
                 "fuchsia.media.UsageGainReporter",
                 "fuchsia.timezone.Timezone",
                 "fuchsia.ultrasound.Factory",
@@ -43,9 +42,6 @@
                 "fuchsia.location.namedplace.RegulatoryRegionWatcher",
                 "fuchsia.lowpan.bootstrap.Thread",
                 "fuchsia.media.SessionAudioConsumerFactory",
-                "fuchsia.media.sessions2.ActiveSession",
-                "fuchsia.media.sessions2.Discovery",
-                "fuchsia.media.sessions2.Publisher",
                 "fuchsia.sys.Environment",
                 "fuchsia.sys.Loader",
                 "fuchsia.timezone.Timezone",
@@ -88,6 +84,15 @@
         {
             protocol: "fuchsia.ui.brightness.Control",
             from: "#brightness_manager",
+            to: "#session-manager",
+        },
+        {
+            protocol: [
+                "fuchsia.media.sessions2.ActiveSession",
+                "fuchsia.media.sessions2.Discovery",
+                "fuchsia.media.sessions2.Publisher",
+            ],
+            from: "#mediasession",
             to: "#session-manager",
         },
         {

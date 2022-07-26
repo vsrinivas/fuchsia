@@ -363,8 +363,6 @@ group("cmx_allowlist") {
     "//src/media/playback/mediaplayer:mediaplayer_component_manifest_compile",
     "//src/media/playback/mediaplayer:mediaplayer_test_util_component_manifest_compile",
     "//src/media/playback/mediaplayer:mediaplayer_tests_component_manifest_compile",
-    "//src/media/sessions:legacy_component_manifest_compile",
-    "//src/media/sessions:mediasession_tests_component_manifest_compile",
     "//src/media/sessions/examples:example_player_component_manifest_compile",
     "//src/media/stream_processors/test:audio_decoder_test_component_manifest_compile",
     "//src/media/stream_processors/test:audio_encoder_test_component_manifest_compile",

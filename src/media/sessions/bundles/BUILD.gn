@@ -20,7 +20,3 @@ group("examples") {
   testonly = true
   deps = [ "//src/media/sessions/examples" ]
 }
-
-group("config") {
-  deps = [ "//src/media/sessions:mediasession_config" ]
-}
