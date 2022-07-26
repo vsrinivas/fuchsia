@@ -205,11 +205,12 @@ pub struct FlatlandSceneManager {
     _viewport_publisher: Arc<Mutex<InjectorViewportPublisher>>,
 
     // Used to position the cursor.
-    cursor_transform_id: TransformId,
+    cursor_transform_id: Option<TransformId>,
 
     // Used to track cursor visibility.
     cursor_visibility: bool,
 
+    // Used to track the display metrics for the root scene.
     display_metrics: DisplayMetrics,
 }
 
@@ -285,39 +286,43 @@ impl SceneManager for FlatlandSceneManager {
     }
 
     fn set_cursor_position(&mut self, position: input_pipeline::Position) {
-        let x = position.x.round() as i32 - physical_cursor_size(CURSOR_HOTSPOT.0) as i32;
-        let y = position.y.round() as i32 - physical_cursor_size(CURSOR_HOTSPOT.1) as i32;
-        let flatland = self.root_flatland.flatland.lock();
-        flatland
-            .set_translation(&mut self.cursor_transform_id, &mut fmath::Vec_ { x, y })
-            .expect("fidl error");
-        self.root_flatland_presentation_sender
-            .unbounded_send(PresentationMessage::Present)
-            .expect("send failed");
-    }
-
-    fn set_cursor_visibility(&mut self, visible: bool) {
-        if self.cursor_visibility != visible {
-            self.cursor_visibility = visible;
+        if let Some(cursor_transform_id) = self.cursor_transform_id {
+            let x = position.x.round() as i32 - physical_cursor_size(CURSOR_HOTSPOT.0) as i32;
+            let y = position.y.round() as i32 - physical_cursor_size(CURSOR_HOTSPOT.1) as i32;
             let flatland = self.root_flatland.flatland.lock();
-            if visible {
-                flatland
-                    .add_child(
-                        &mut self.root_flatland.root_transform_id.clone(),
-                        &mut self.cursor_transform_id.clone(),
-                    )
-                    .expect("failed to add cursor to scene");
-            } else {
-                flatland
-                    .remove_child(
-                        &mut self.root_flatland.root_transform_id.clone(),
-                        &mut self.cursor_transform_id.clone(),
-                    )
-                    .expect("failed to remove cursor from scene");
-            }
+            flatland
+                .set_translation(&mut cursor_transform_id.clone(), &mut fmath::Vec_ { x, y })
+                .expect("fidl error");
             self.root_flatland_presentation_sender
                 .unbounded_send(PresentationMessage::Present)
                 .expect("send failed");
+        }
+    }
+
+    fn set_cursor_visibility(&mut self, visible: bool) {
+        if let Some(cursor_transform_id) = self.cursor_transform_id {
+            if self.cursor_visibility != visible {
+                self.cursor_visibility = visible;
+                let flatland = self.root_flatland.flatland.lock();
+                if visible {
+                    flatland
+                        .add_child(
+                            &mut self.root_flatland.root_transform_id.clone(),
+                            &mut cursor_transform_id.clone(),
+                        )
+                        .expect("failed to add cursor to scene");
+                } else {
+                    flatland
+                        .remove_child(
+                            &mut self.root_flatland.root_transform_id.clone(),
+                            &mut cursor_transform_id.clone(),
+                        )
+                        .expect("failed to remove cursor from scene");
+                }
+                self.root_flatland_presentation_sender
+                    .unbounded_send(PresentationMessage::Present)
+                    .expect("send failed");
+            }
         }
     }
 
@@ -352,8 +357,6 @@ impl FlatlandSceneManager {
 
         // Generate unique transform/content IDs that will be used to create the sub-scenegraphs
         // in the Flatland instances managed by SceneManager.
-        let cursor_transform_id = id_generator.next_transform_id();
-        let cursor_viewport_content_id = id_generator.next_content_id();
         let pointerinjector_viewport_transform_id = id_generator.next_transform_id();
         let pointerinjector_viewport_content_id = id_generator.next_content_id();
         let a11y_viewport_transform_id = id_generator.next_transform_id();
@@ -369,14 +372,6 @@ impl FlatlandSceneManager {
             root_view_creation_pair.view_creation_token,
             &mut id_generator,
         )?;
-
-        let mut cursor_view_creation_pair = scenic::flatland::ViewCreationTokenPair::new()?;
-        cursor_view_provider
-            .create_view2(ui_app::CreateView2Args {
-                view_creation_token: Some(cursor_view_creation_pair.view_creation_token),
-                ..ui_app::CreateView2Args::EMPTY
-            })
-            .expect("fidl error");
 
         let mut pointerinjector_view_creation_pair =
             scenic::flatland::ViewCreationTokenPair::new()?;
@@ -409,9 +404,7 @@ impl FlatlandSceneManager {
         // Obtain layout info from the display.
         let layout_info = root_flatland.parent_viewport_watcher.get_layout().await?;
 
-        // Create the root transform and two permanent children, one for the cursor, and one
-        // to hold the viewport to the pointerinjector view.  Create the viewport, and
-        // set it on the transform.
+        // Create the pointerinjector view and embed it as a child of the root view.
         {
             let flatland = root_flatland.flatland.lock();
             flatland.create_transform(&mut pointerinjector_viewport_transform_id.clone())?;
@@ -438,43 +431,63 @@ impl FlatlandSceneManager {
                 &mut pointerinjector_viewport_transform_id.clone(),
                 &mut pointerinjector_viewport_content_id.clone(),
             )?;
-
-            // We create/add the cursor transform second, so that it is above everything else in
-            // the scene graph.
-            flatland.create_transform(&mut cursor_transform_id.clone())?;
-            flatland.add_child(
-                &mut root_flatland.root_transform_id.clone(),
-                &mut cursor_transform_id.clone(),
-            )?;
-            // Visible but offscreen until we get a first position event.
-            flatland.set_translation(
-                &mut cursor_transform_id.clone(),
-                &mut fmath::Vec_ { x: -100, y: -100 },
-            )?;
-
-            let cursor_size = fmath::SizeU {
-                width: physical_cursor_size(CURSOR_SIZE.0),
-                height: physical_cursor_size(CURSOR_SIZE.1),
-            };
-            let link_properties = ui_comp::ViewportProperties {
-                logical_size: Some(cursor_size),
-                ..ui_comp::ViewportProperties::EMPTY
-            };
-
-            let (_, child_view_watcher_request) =
-                create_proxy::<ui_comp::ChildViewWatcherMarker>()?;
-
-            flatland.create_viewport(
-                &mut cursor_viewport_content_id.clone(),
-                &mut cursor_view_creation_pair.viewport_creation_token,
-                link_properties,
-                child_view_watcher_request,
-            )?;
-            flatland.set_content(
-                &mut cursor_transform_id.clone(),
-                &mut cursor_viewport_content_id.clone(),
-            )?;
         }
+
+        // If the cursor exists, create the cursor view and embed it as a child of the root view.
+        let mut maybe_cursor_transform_id = None;
+        let mut cursor_view_creation_pair = scenic::flatland::ViewCreationTokenPair::new()?;
+        match cursor_view_provider.create_view2(ui_app::CreateView2Args {
+            view_creation_token: Some(cursor_view_creation_pair.view_creation_token),
+            ..ui_app::CreateView2Args::EMPTY
+        }) {
+            Ok(_) => {
+                let flatland = root_flatland.flatland.lock();
+
+                let cursor_transform_id = id_generator.next_transform_id();
+                let cursor_viewport_content_id = id_generator.next_content_id();
+
+                // We create/add the cursor transform second, so that it is above everything else in
+                // the scene graph.
+                flatland.create_transform(&mut cursor_transform_id.clone())?;
+                flatland.add_child(
+                    &mut root_flatland.root_transform_id.clone(),
+                    &mut cursor_transform_id.clone(),
+                )?;
+                // Visible but offscreen until we get a first position event.
+                flatland.set_translation(
+                    &mut cursor_transform_id.clone(),
+                    &mut fmath::Vec_ { x: -100, y: -100 },
+                )?;
+
+                let cursor_size = fmath::SizeU {
+                    width: physical_cursor_size(CURSOR_SIZE.0),
+                    height: physical_cursor_size(CURSOR_SIZE.1),
+                };
+                let link_properties = ui_comp::ViewportProperties {
+                    logical_size: Some(cursor_size),
+                    ..ui_comp::ViewportProperties::EMPTY
+                };
+
+                let (_, child_view_watcher_request) =
+                    create_proxy::<ui_comp::ChildViewWatcherMarker>()?;
+
+                flatland.create_viewport(
+                    &mut cursor_viewport_content_id.clone(),
+                    &mut cursor_view_creation_pair.viewport_creation_token,
+                    link_properties,
+                    child_view_watcher_request,
+                )?;
+                flatland.set_content(
+                    &mut cursor_transform_id.clone(),
+                    &mut cursor_viewport_content_id.clone(),
+                )?;
+
+                maybe_cursor_transform_id = Some(cursor_transform_id);
+            }
+            Err(e) => {
+                fx_log_warn!("Failed to create cursor View: {:?}. Cursor disabled.", e);
+            }
+        };
 
         let mut a11y_view_creation_pair = scenic::flatland::ViewCreationTokenPair::new()?;
 
@@ -591,7 +604,7 @@ impl FlatlandSceneManager {
             id_generator,
             viewport_hanging_get,
             _viewport_publisher: viewport_publisher,
-            cursor_transform_id,
+            cursor_transform_id: maybe_cursor_transform_id,
             cursor_visibility: true,
             display_metrics,
         })
