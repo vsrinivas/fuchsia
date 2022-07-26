@@ -7,7 +7,10 @@ use {
     ffx_scrutiny_verify_args::bootfs::Command,
     scrutiny_config::{Config, LoggingConfig, ModelConfig, PluginConfig, RuntimeConfig},
     scrutiny_frontend::{command_builder::CommandBuilder, launcher},
-    scrutiny_utils::golden::{CompareResult, GoldenFile},
+    scrutiny_utils::{
+        bootfs::BootfsPackageIndex,
+        golden::{CompareResult, GoldenFile},
+    },
     serde_json,
     std::{
         collections::HashSet,
@@ -88,11 +91,59 @@ pub async fn verify(cmd: &Command, tmp_dir: Option<&PathBuf>) -> Result<HashSet<
         deps.insert(golden_file_path.clone());
     }
 
-    // TODO(fxbug.dev/97517): Remove this check when we support scrutiny of bootfs package
-    // index!
-    if non_blob_files.len() != total_bootfs_file_count {
-        return Err(anyhow!("Entries under /blob not supported yet!"));
-    } else {
-        return Ok(deps);
+    // Extract the bootfs package index.
+    let config = Config::run_command_with_runtime(
+        CommandBuilder::new("tool.zbi.extract.bootfs.packages").param("input", zbi).build(),
+        RuntimeConfig {
+            logging: LoggingConfig { silent_mode: true, ..LoggingConfig::minimal() },
+            plugin: PluginConfig { plugins: vec!["ToolkitPlugin".to_string()] },
+            ..RuntimeConfig::minimal()
+        },
+    );
+    let scrutiny_output =
+        launcher::launch_from_config(config).context("Failed to launch scrutiny")?;
+
+    let bootfs_packages: BootfsPackageIndex = serde_json::from_str(&scrutiny_output)
+        .context(format!("Failed to deserialize scrutiny output: {}", scrutiny_output))?;
+
+    // TODO(fxbug.dev/97517) After the first bootfs package is migrated to a component, an
+    // absence of a bootfs package index is an error.
+    if bootfs_packages.bootfs_pkgs.is_none() {
+        if non_blob_files.len() != total_bootfs_file_count {
+            return Err(anyhow!("tool.zbi.extract.bootfs.packages returned empty result, but there were blobs in the bootfs."));
+        } else {
+            return Ok(deps);
+        }
     }
+
+    // Extract package names from bootfs package descriptions.
+    let bootfs_packages = bootfs_packages.bootfs_pkgs.unwrap();
+    let bootfs_package_names: Vec<String> = bootfs_packages
+        .into_iter()
+        .map(|((name, _variant), _hash)| name.as_ref().to_string())
+        .collect();
+
+    for golden_packages_path in cmd.golden_packages.iter() {
+        let golden_packages = GoldenFile::open(&golden_packages_path)
+            .context("Failed to open the golden packages list")?;
+
+        match golden_packages.compare(bootfs_package_names.clone()) {
+            CompareResult::Matches => Ok(()),
+            CompareResult::Mismatch { errors } => {
+                println!("Bootfs package index mismatch \n");
+                for error in errors.iter() {
+                    println!("{}", error);
+                }
+                println!(
+                    "\nIf you intended to change the bootfs contents, please acknowledge it by updating {:?} with the added or removed lines.",
+                    golden_packages_path,
+                );
+                println!("{}", SOFT_TRANSITION_MSG);
+                Err(anyhow!("bootfs package index mismatch"))
+            }
+        }?;
+        deps.insert(golden_packages_path.clone());
+    }
+
+    Ok(deps)
 }

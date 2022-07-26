@@ -25,4 +25,7 @@ pub struct Command {
     /// absolute or working directory-relative path(s) to golden file(s) for verifying bootfs paths.
     #[argh(option)]
     pub golden: Vec<PathBuf>,
+    /// absolute or working directory-relative path(s) to golden file(s) for verifying bootfs packages.
+    #[argh(option)]
+    pub golden_packages: Vec<PathBuf>,
 }

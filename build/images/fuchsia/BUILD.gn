@@ -303,7 +303,8 @@ if (is_fuchsia) {
         deps += [ ":verify_static_pkgs" ]
       }
 
-      if (fuchsia_zbi_bootfs_filelist_goldens != []) {
+      if (fuchsia_zbi_bootfs_filelist_goldens != [] ||
+          fuchsia_zbi_bootfs_packages_goldens != []) {
         deps += [ ":verify_bootfs_filelist" ]
       }
       if (fuchsia_zbi_kernel_cmdline_goldens != []) {
@@ -690,6 +691,7 @@ if (is_fuchsia) {
       image_assembler_target = ":fuchsia.image_assembler"
       assembly_image_name = "fuchsia"
       goldens = fuchsia_zbi_bootfs_filelist_goldens
+      golden_packages = fuchsia_zbi_bootfs_packages_goldens
     }
 
     verify_kernel_cmdline("verify_kernel_cmdline") {

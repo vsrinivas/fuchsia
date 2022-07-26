@@ -27,6 +27,14 @@ import("//src/developer/ffx/build/ffx_action.gni")
 #     one golden file in this list for normal case and two golden files, one for
 #     the old golden file, one for the new golden file during a soft transition.
 #
+#   golden_packages (required)
+#     [list of strings] Path to a list of golden files that contain golden
+#     bootfs index in the format of one package name per line. The actual
+#     bootfs package index must match either one of the goldens. There should be
+#     only one golden file in this list for normal case and two golden files,
+#     one for the old golden file, one for the new golden file during a soft
+#     transition.
+#
 #   deps, public_deps, data_deps (optional)
 #     Usual GN meaning.
 
@@ -39,6 +47,8 @@ template("verify_bootfs_filelist") {
          "verify_bootfs_filelist() must specify assembly_image_name")
   assert(defined(invoker.goldens),
          "verify_bootfs_filelist() must specify goldens")
+  assert(defined(invoker.golden_packages),
+         "verify_bootfs_filelist() must specify a golden_packages.")
 
   image_assembler_target_out_dir =
       get_label_info(invoker.image_assembler_target, "target_out_dir")
@@ -66,7 +76,7 @@ template("verify_bootfs_filelist") {
 
     hermetic_action_ignored_prefixes = [ tmp_dir ]
 
-    inputs = [ zbi ] + invoker.goldens
+    inputs = [ zbi ] + invoker.goldens + invoker.golden_packages
 
     outputs = [ stamp_file ]
 
@@ -83,6 +93,14 @@ template("verify_bootfs_filelist") {
       "--zbi",
       rebase_path(zbi, root_build_dir),
     ]
+
+    if (invoker.golden_packages != []) {
+      args += [
+        "--golden_packages",
+        rebase_path(invoker.golden_packages, root_build_dir),
+      ]
+    }
+
     foreach(golden, invoker.goldens) {
       args += [
         "--golden",
