@@ -1668,9 +1668,6 @@ func (eps *endpointWithSocket) handleEndpointReadError(err tcpip.Error, inCh <-c
 	}
 }
 
-// TODO(https://fxbug.dev/104957): Move this alias into `//third_party/go`.
-const socketSignalWriteThreshold = zx.SignalObject11
-
 // handleZxSocketWriteError handles the zircon socket read error contained in `err`, returning
 // true iff the error was found to be terminal. If the `err` requires a socket wait, the
 // `waitThreshold` parameter identifies the # of bytes to wait for.
@@ -1680,7 +1677,7 @@ func (eps *endpointWithSocket) handleZxSocketWriteError(err zx.Error, waitThresh
 		sigs := zx.SignalSocketWriteDisabled | localSignalClosing
 		performThresholdWait := waitThreshold != 0
 		if performThresholdWait {
-			sigs |= socketSignalWriteThreshold
+			sigs |= zx.SignalSocketWriteThreshold
 			if status := zx.Sys_object_set_property(
 				zx.Handle(eps.local),
 				zx.PropSocketTXThreshold,
@@ -1701,9 +1698,9 @@ func (eps *endpointWithSocket) handleZxSocketWriteError(err zx.Error, waitThresh
 			// Should always be checked first so loop routines can terminate when
 			// the socket is closed.
 			return true
-		case obs&socketSignalWriteThreshold != 0:
+		case obs&zx.SignalSocketWriteThreshold != 0:
 			if !performThresholdWait {
-				panic(fmt.Sprintf("zxwait.WaitContext(_, _, %b) returned %b even though threshold wait not requested", sigs, socketSignalWriteThreshold))
+				panic(fmt.Sprintf("zxwait.WaitContext(_, _, %b) returned %b even though threshold wait not requested", sigs, zx.SignalSocketWriteThreshold))
 			}
 			return false
 		case obs&zx.SignalSocketWritable != 0:
