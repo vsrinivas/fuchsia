@@ -42,9 +42,6 @@ impl PowerManager {
         // the PowerManager hosts.
         let mut fs = ServiceFs::new_local();
 
-        // Allow our services to be discovered.
-        fs.take_and_serve_directory_handle()?;
-
         // Required call to serve the inspect tree
         let inspector = component::inspector();
         inspect_runtime::serve(inspector, &mut fs)?;
@@ -52,6 +49,11 @@ impl PowerManager {
         // Create the nodes according to the config file
         let node_futures = FuturesUnordered::new();
         self.create_nodes_from_config(&mut fs, &node_futures).await?;
+
+        // Begin serving FIDL requests. It's important to do this after creating nodes but before
+        // initializing them, since some nodes depend on incoming FIDL requests for their `init()`
+        // process.
+        fs.take_and_serve_directory_handle()?;
 
         // Technically these two tasks could be merged into a single `fuchsia_async::Task`. However,
         // without a clear benefit to do so, it reads nicer to keep the two buckets of futures
