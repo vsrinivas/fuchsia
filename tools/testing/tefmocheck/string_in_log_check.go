@@ -463,5 +463,11 @@ func infraToolLogChecks() []FailureModeCheck {
 			String: "FAILED (remote: 'error writing the image')",
 			Type:   swarmingOutputType,
 		},
+		// For https://fxbug.dev/96079.
+		// This error usually means some kind of USB flakiness/instability when fastboot flashing.
+		&stringInLogCheck{
+			String: "FAILED (Status read failed (Protocol error))",
+			Type:   swarmingOutputType,
+		},
 	}
 }
