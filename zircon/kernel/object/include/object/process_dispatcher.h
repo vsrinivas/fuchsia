@@ -100,10 +100,14 @@ class ProcessDispatcher final
 
   FutexContext& futex_context() { return shared_state_->futex_context(); }
 
+  // Returns a pointer to the process's VmAspace containing |va| if such an aspace exists, otherwise
+  // it returns the normal aspace of the process.
   fbl::RefPtr<VmAspace> aspace_at(vaddr_t va);
 
 #if ARCH_X86
-  uintptr_t hw_trace_context_id() {
+  // Returns an identifier that can be used to associate hardware trace
+  // data with this process.
+  uintptr_t hw_trace_context_id() const {
     // TODO(fxbug.dev/104750): Figure out how to make HW tracing work in restricted mode.
     return shared_state_->aspace()->arch_aspace().pt_phys();
   }
@@ -114,7 +118,6 @@ class ProcessDispatcher final
   void EnumerateAspaceChildren(VmEnumerator* ve) {
     shared_state_->aspace()->EnumerateChildren(ve);
     if (restricted_aspace_) {
-      printf("Restricted Aspace:\n");
       restricted_aspace_->EnumerateChildren(ve);
     }
   }
@@ -122,7 +125,6 @@ class ProcessDispatcher final
   void DumpAspace(bool verbose) {
     shared_state_->aspace()->Dump(true);
     if (restricted_aspace_) {
-      printf("Restricted Aspace:\n");
       restricted_aspace_->Dump(true);
     }
   }

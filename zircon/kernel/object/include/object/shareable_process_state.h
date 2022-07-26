@@ -23,7 +23,10 @@
 class ShareableProcessState : public fbl::RefCounted<ShareableProcessState> {
  public:
   ShareableProcessState() = default;
-  ~ShareableProcessState() { DEBUG_ASSERT(process_count_.load() == 0); }
+  ~ShareableProcessState() {
+    DEBUG_ASSERT(!aspace_ || aspace_->is_destroyed());
+    DEBUG_ASSERT(process_count_.load() == 0);
+  }
 
   // Shares this state with a process, effectively incrementing the number of calls to
   // |RemoveFromProcess| that can be made before the shared resources are cleaned up.

@@ -1011,7 +1011,7 @@ zx_status_t sys_object_get_property(zx_handle_t handle_value, uint32_t property,
       auto process = DownCastDispatcher<ProcessDispatcher>(&dispatcher);
       if (!process)
         return ZX_ERR_WRONG_TYPE;
-      uintptr_t value = up->vdso_base_address();
+      uintptr_t value = process->vdso_base_address();
       return _value.reinterpret<uintptr_t>().copy_to_user(value);
     }
     case ZX_PROP_PROCESS_HW_TRACE_CONTEXT_ID: {

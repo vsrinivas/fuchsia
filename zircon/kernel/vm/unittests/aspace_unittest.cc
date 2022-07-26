@@ -12,8 +12,6 @@
 #include <vm/vm.h>
 #include <vm/vm_address_region_enumerator.h>
 
-#include "arch/kernel_aspace.h"
-#include "lib/unittest/unittest.h"
 #include "test_helper.h"
 
 #include <ktl/enforce.h>

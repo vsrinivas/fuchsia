@@ -31,6 +31,8 @@
 #include <vm/vm_aspace.h>
 #include <vm/vm_object.h>
 
+#include "zircon/errors.h"
+
 #define LOCAL_TRACE 0
 
 namespace {
@@ -128,7 +130,6 @@ ProcessDispatcher::~ProcessDispatcher() {
   DEBUG_ASSERT(state_ == State::INITIAL || state_ == State::DEAD);
 
   // Assert that the -> DEAD transition cleaned up what it should have.
-  DEBUG_ASSERT(!shared_state_->aspace() || shared_state_->aspace()->is_destroyed());
   DEBUG_ASSERT(!restricted_aspace_ || restricted_aspace_->is_destroyed());
 
   kcounter_add(dispatcher_process_destroy_count, 1);
@@ -176,16 +177,15 @@ zx_status_t ProcessDispatcher::Initialize(fbl::RefPtr<VmAspace> restricted_aspac
   snprintf(aspace_name, sizeof(aspace_name), "proc:%" PRIu64, get_koid());
 
   if (restricted_aspace) {
-    static constexpr vaddr_t top_of_private = USER_ASPACE_BASE + USER_ASPACE_SIZE / 2;
-    shared_state_->Initialize(top_of_private, USER_ASPACE_SIZE / 2, aspace_name);
+    static constexpr vaddr_t kTopOfRestricted = USER_ASPACE_BASE + USER_ASPACE_SIZE / 2;
+    if (!shared_state_->Initialize(kTopOfRestricted, USER_ASPACE_SIZE / 2, aspace_name)) {
+      return ZX_ERR_NO_MEMORY;
+    }
     restricted_aspace_ = restricted_aspace;
   } else {
-    shared_state_->Initialize(USER_ASPACE_BASE, USER_ASPACE_SIZE, aspace_name);
-  }
-
-  if (!shared_state_) {
-    TRACEF("error creating shared process state\n");
-    return ZX_ERR_NO_MEMORY;
+    if (!shared_state_->Initialize(USER_ASPACE_BASE, USER_ASPACE_SIZE, aspace_name)) {
+      return ZX_ERR_NO_MEMORY;
+    }
   }
 
   return ZX_OK;
@@ -428,7 +428,8 @@ void ProcessDispatcher::FinishDeadTransition() {
   LTRACEF_LEVEL(2, "removing shared state reference from proc %p\n", this);
   shared_state_->DecrementShareCount();
 
-  // Tear down the address space. It may not exist if Initialize() failed.
+  // Tear down the restricted address space. It may not exist if Initialize() failed or if this
+  // process was not created with one.
   if (restricted_aspace_) {
     zx_status_t result = restricted_aspace_->Destroy();
     ASSERT_MSG(result == ZX_OK, "%d\n", result);
@@ -826,7 +827,7 @@ void ProcessDispatcher::OnProcessStartForJobDebugger(ThreadDispatcher* t,
 fbl::RefPtr<VmAspace> ProcessDispatcher::aspace_at(vaddr_t va) {
   if (!restricted_aspace_) {
     // If there is no restricted aspace associated with the process, shortcut and return the normal
-    // aspace.
+    // aspace. This ensures a valid VmAspace pointer is returned.
     return shared_state_->aspace();
   }
 
