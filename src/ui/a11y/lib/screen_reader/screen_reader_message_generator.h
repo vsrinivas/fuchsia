@@ -93,6 +93,13 @@ class ScreenReaderMessageGenerator {
   std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> DescribeContainerChanges(
       const ScreenReaderMessageContext& message_context);
 
+  // Helper method to describe button nodes. The description will be:
+  // <seleccted*> <label> button <toggled*> <actionable>
+  //
+  // * = if applicable
+  std::vector<ScreenReaderMessageGenerator::UtteranceAndContext> DescribeButton(
+      const fuchsia::accessibility::semantics::Node* node);
+
   // Helper method to describe a node that is a radio button.
   UtteranceAndContext DescribeRadioButton(const fuchsia::accessibility::semantics::Node* node);
 
