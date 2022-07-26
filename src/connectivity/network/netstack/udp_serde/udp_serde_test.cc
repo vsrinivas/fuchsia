@@ -23,7 +23,8 @@ TEST_P(UdpSerdeTest, SendSerializeThenDeserialize) {
   uint8_t kBuf[kTxUdpPreludeSize];
   fidl::Arena alloc;
   fsocket::wire::SendMsgMeta fidl = meta.Get(alloc);
-  ASSERT_TRUE(serialize_send_msg_meta(fidl, cpp20::span<uint8_t>(kBuf, kTxUdpPreludeSize)));
+  ASSERT_EQ(serialize_send_msg_meta(fidl, cpp20::span<uint8_t>(kBuf, kTxUdpPreludeSize)),
+            SerializeSendMsgMetaErrorNone);
 
   const Buffer in_buf = {
       .buf = kBuf,
@@ -31,6 +32,30 @@ TEST_P(UdpSerdeTest, SendSerializeThenDeserialize) {
   };
 
   const DeserializeSendMsgMetaResult res = deserialize_send_msg_meta(in_buf);
+
+  ASSERT_EQ(res.err, DeserializeSendMsgMetaErrorNone);
+  EXPECT_EQ(res.port, meta.Port());
+  EXPECT_EQ(res.to_addr.addr_type, meta.AddrType());
+  const span found_addr(res.to_addr.addr, meta.AddrLen());
+  const span expected(meta.Addr(), meta.AddrLen());
+  EXPECT_EQ(found_addr, expected);
+}
+
+TEST_P(UdpSerdeTest, SendSerializeFromAddrThenDeserialize) {
+  TestSendMsgMeta meta(GetParam().GetKind());
+  IpAddress addr{
+      .addr_type = meta.AddrType(),
+  };
+  memcpy(addr.addr, meta.Addr(), meta.AddrLen());
+  uint8_t kBuf[kTxUdpPreludeSize];
+  Buffer buf = {
+      .buf = kBuf,
+      .buf_size = kTxUdpPreludeSize,
+  };
+  ASSERT_EQ(serialize_send_msg_meta_from_addr(addr, meta.Port(), buf),
+            SerializeSendMsgMetaErrorNone);
+
+  const DeserializeSendMsgMetaResult res = deserialize_send_msg_meta(buf);
 
   ASSERT_EQ(res.err, DeserializeSendMsgMetaErrorNone);
   EXPECT_EQ(res.port, meta.Port());
@@ -198,7 +223,33 @@ TEST_P(UdpSerdeTest, DeserializeSendErrors) {
 TEST_P(UdpSerdeTest, SerializeSendErrors) {
   fsocket::wire::SendMsgMeta meta;
   uint8_t kBuf[kTxUdpPreludeSize];
-  EXPECT_FALSE(serialize_send_msg_meta(meta, cpp20::span<uint8_t>(kBuf, 0)));
+  EXPECT_EQ(serialize_send_msg_meta(meta, cpp20::span<uint8_t>(kBuf, 0)),
+            SerializeSendMsgMetaErrorOutputBufferTooSmall);
+}
+
+TEST_P(UdpSerdeTest, SerializeSendFromAddrErrors) {
+  TestSendMsgMeta meta(GetParam().GetKind());
+  IpAddress addr{
+      .addr_type = meta.AddrType(),
+  };
+  memcpy(addr.addr, meta.Addr(), meta.AddrLen());
+  uint8_t kBuf[kTxUdpPreludeSize];
+
+  // Output buffer null.
+  EXPECT_EQ(serialize_send_msg_meta_from_addr(addr, meta.Port(),
+                                              {
+                                                  .buf = nullptr,
+                                                  .buf_size = 0,
+                                              }),
+            SerializeSendMsgMetaErrorOutputBufferNull);
+
+  // Output buffer too short.
+  EXPECT_EQ(serialize_send_msg_meta_from_addr(addr, meta.Port(),
+                                              {
+                                                  .buf = kBuf,
+                                                  .buf_size = 0,
+                                              }),
+            SerializeSendMsgMetaErrorOutputBufferTooSmall);
 }
 
 TEST_P(UdpSerdeTest, SerializeRecvErrors) {

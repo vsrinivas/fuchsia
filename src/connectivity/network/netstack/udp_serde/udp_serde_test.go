@@ -19,10 +19,10 @@ const preludeOffset = 8
 type DeserializeSendMsgAddressErrorCondition int
 
 const (
-	InputBufferNil DeserializeSendMsgAddressErrorCondition = iota
-	InputBufferTooSmall
-	NonZeroPrelude
-	FailedToDecode
+	DeserializeSendMsgAddressErrInputBufferNil DeserializeSendMsgAddressErrorCondition = iota
+	DeserializeSendMsgAddressErrInputBufferTooSmall
+	DeserializeSendMsgAddressErrNonZeroPrelude
+	DeserializeSendMsgAddressErrFailedToDecode
 )
 
 func TestDeserializeSendMsgAddressFailures(t *testing.T) {
@@ -31,23 +31,23 @@ func TestDeserializeSendMsgAddressFailures(t *testing.T) {
 		errCondition DeserializeSendMsgAddressErrorCondition
 		expectedErr  error
 	}{
-		{"nil buffer", InputBufferNil, InputBufferNullErr{}},
-		{"buffer too small", InputBufferTooSmall, InputBufferTooSmallErr{}},
-		{"nonzero prelude", NonZeroPrelude, NonZeroPreludeErr{}},
-		{"failed to decode", FailedToDecode, FailedToDecodeErr{}},
+		{"nil buffer", DeserializeSendMsgAddressErrInputBufferNil, InputBufferNullErr{}},
+		{"buffer too small", DeserializeSendMsgAddressErrInputBufferTooSmall, InputBufferTooSmallErr{}},
+		{"nonzero prelude", DeserializeSendMsgAddressErrNonZeroPrelude, NonZeroPreludeErr{}},
+		{"failed to decode", DeserializeSendMsgAddressErrFailedToDecode, FailedToDecodeErr{}},
 	} {
 
 		t.Run(fmt.Sprintf("%s", testCase.name), func(t *testing.T) {
 			buf := make([]byte, TxUdpPreludeSize())
 
 			switch DeserializeSendMsgAddressErrorCondition(testCase.errCondition) {
-			case InputBufferNil:
+			case DeserializeSendMsgAddressErrInputBufferNil:
 				buf = nil
-			case InputBufferTooSmall:
+			case DeserializeSendMsgAddressErrInputBufferTooSmall:
 				buf = buf[:preludeOffset-1]
-			case NonZeroPrelude:
+			case DeserializeSendMsgAddressErrNonZeroPrelude:
 				buf[preludeOffset] = 1
-			case FailedToDecode:
+			case DeserializeSendMsgAddressErrFailedToDecode:
 			}
 
 			_, err := DeserializeSendMsgAddress(buf)
@@ -67,9 +67,9 @@ func TestDeserializeSendMsgAddressFailures(t *testing.T) {
 type SerializeRecvMsgMetaErrorCondition int
 
 const (
-	OutputBufferNil SerializeRecvMsgMetaErrorCondition = iota
-	OutputBufferTooSmall
-	PayloadTooLarge
+	SerializeRecvMsgMetaErrOutputBufferNil SerializeRecvMsgMetaErrorCondition = iota
+	SerializeRecvMsgMetaErrOutputBufferTooSmall
+	SerializeRecvMsgMetaErrPayloadTooLarge
 )
 
 func TestSerializeRecvMsgMetaFailures(t *testing.T) {
@@ -81,9 +81,9 @@ func TestSerializeRecvMsgMetaFailures(t *testing.T) {
 		errCondition SerializeRecvMsgMetaErrorCondition
 		expectedErr  error
 	}{
-		{"nil buffer", OutputBufferNil, InputBufferNullErr{}},
-		{"buffer too small", OutputBufferTooSmall, InputBufferTooSmallErr{}},
-		{"payload too large", PayloadTooLarge, PayloadSizeExceedsMaxAllowedErr{payloadSize: tooBigPayloadSize, maxAllowed: maxPayloadSize}},
+		{"nil buffer", SerializeRecvMsgMetaErrOutputBufferNil, InputBufferNullErr{}},
+		{"buffer too small", SerializeRecvMsgMetaErrOutputBufferTooSmall, InputBufferTooSmallErr{}},
+		{"payload too large", SerializeRecvMsgMetaErrPayloadTooLarge, PayloadSizeExceedsMaxAllowedErr{payloadSize: tooBigPayloadSize, maxAllowed: maxPayloadSize}},
 	} {
 		for _, netProto := range []tcpip.NetworkProtocolNumber{
 			header.IPv4ProtocolNumber,
@@ -94,11 +94,11 @@ func TestSerializeRecvMsgMetaFailures(t *testing.T) {
 				buf := make([]byte, TxUdpPreludeSize())
 
 				switch SerializeRecvMsgMetaErrorCondition(testCase.errCondition) {
-				case OutputBufferNil:
+				case SerializeRecvMsgMetaErrOutputBufferNil:
 					buf = nil
-				case OutputBufferTooSmall:
+				case SerializeRecvMsgMetaErrOutputBufferTooSmall:
 					buf = buf[:preludeOffset-1]
-				case PayloadTooLarge:
+				case SerializeRecvMsgMetaErrPayloadTooLarge:
 					res.Count = tooBigPayloadSize
 				}
 
@@ -127,6 +127,77 @@ func TestSerializeRecvMsgMetaSuccess(t *testing.T) {
 
 			if err := SerializeRecvMsgMeta(tcpip.NetworkProtocolNumber(netProto), res, buf); err != nil {
 				t.Errorf("expect SerializeRecvMsgMeta(%d, %#v, _) succeeds, got: %s", netProto, res, err)
+			}
+		})
+	}
+}
+
+const (
+	ipv4Loopback tcpip.Address = "\x7f\x00\x00\x01"
+	ipv6Loopback tcpip.Address = "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01"
+)
+
+func TestSerializeSendFromAddrThenDeserialize(t *testing.T) {
+	for _, netProto := range []tcpip.NetworkProtocolNumber{
+		header.IPv4ProtocolNumber,
+		header.IPv6ProtocolNumber,
+	} {
+		t.Run(fmt.Sprintf("%d", netProto), func(t *testing.T) {
+			buf := make([]byte, TxUdpPreludeSize())
+			addr := tcpip.FullAddress{
+				Port: 42,
+			}
+			switch netProto {
+			case header.IPv4ProtocolNumber:
+				addr.Addr = ipv4Loopback
+			case header.IPv6ProtocolNumber:
+				addr.Addr = ipv6Loopback
+			}
+
+			if err := SerializeSendMsgAddress(tcpip.NetworkProtocolNumber(netProto), addr, buf); err != nil {
+				t.Fatalf("expect SerializeSendMsgAddress(%d, %#v, _) succeeds, got: %s", netProto, addr, err)
+			}
+
+			deserializedAddr, err := DeserializeSendMsgAddress(buf)
+
+			if err != nil {
+				t.Fatalf("expect DeserializeSendMsgAddress(_) succeeds, got: %s", err)
+			}
+
+			if addr != *deserializedAddr {
+				t.Errorf("address after serde (%#v) != address before serde (%#v)", *deserializedAddr, addr)
+			}
+		})
+	}
+}
+
+func TestSerializeSendFromAddrFailures(t *testing.T) {
+	for _, testCase := range []struct {
+		name        string
+		setupBuffer func(*[]byte)
+		expectedErr error
+	}{
+		{"nil buffer", func(buf *[]byte) { *buf = nil }, InputBufferNullErr{}},
+		{"buffer too small", func(buf *[]byte) { *buf = (*buf)[:preludeOffset-1] }, InputBufferTooSmallErr{}},
+	} {
+
+		t.Run(fmt.Sprintf("%s", testCase.name), func(t *testing.T) {
+			buf := make([]byte, TxUdpPreludeSize())
+			testCase.setupBuffer(&buf)
+
+			addr := tcpip.FullAddress{
+				Port: 42,
+				Addr: ipv4Loopback,
+			}
+
+			err := SerializeSendMsgAddress(header.IPv4ProtocolNumber, addr, buf)
+
+			if err == nil {
+				t.Errorf("expect SerializeSendMsgAddress(%d, %#v, _) fails", header.IPv4ProtocolNumber, addr)
+			}
+
+			if !errors.Is(err, testCase.expectedErr) {
+				t.Errorf("SerializeSendMsgAddress(%d, %#v, _) failed with error: %#v, expected: %#v", header.IPv4ProtocolNumber, addr, err, testCase.expectedErr)
 			}
 		})
 	}

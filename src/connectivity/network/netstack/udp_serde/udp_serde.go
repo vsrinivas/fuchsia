@@ -48,6 +48,18 @@ func convertDeserializeSendMsgMetaErr(err C.DeserializeSendMsgMetaError) error {
 	}
 }
 
+func getFidlAddrTypeAndSlice(protocol tcpip.NetworkProtocolNumber, addr tcpip.FullAddress) (C.IpAddrType, []byte) {
+	fidlAddr := fidlconv.ToNetSocketAddressWithProto(protocol, addr)
+	switch w := fidlAddr.Which(); w {
+	case fidlnet.SocketAddressIpv4:
+		return C.Ipv4, fidlAddr.Ipv4.Address.Addr[:]
+	case fidlnet.SocketAddressIpv6:
+		return C.Ipv6, fidlAddr.Ipv6.Address.Addr[:]
+	default:
+		panic(fmt.Sprintf("unrecognized socket address %d", w))
+	}
+}
+
 // DeserializeSendMsgAddress deserializes metadata contained within `buf`
 // as a SendMsgMeta FIDL message using the LLCPP bindings.
 //
@@ -105,21 +117,8 @@ func convertSerializeRecvMsgMetaErr(err C.SerializeRecvMsgMetaError) error {
 // SerializeRecvMsgMeta serializes metadata contained within `res` into `buf`
 // as a RecvMsgMeta FIDL message using the LLCPP bindings.
 func SerializeRecvMsgMeta(protocol tcpip.NetworkProtocolNumber, res tcpip.ReadResult, buf []byte) error {
-	fidlAddr := fidlconv.ToNetSocketAddressWithProto(protocol, res.RemoteAddr)
-	var fromAddrType C.IpAddrType
-	var addrBuf C.ConstBuffer
-	var addrSlice []byte
-	switch w := fidlAddr.Which(); w {
-	case fidlnet.SocketAddressIpv4:
-		fromAddrType = C.Ipv4
-		addrSlice = fidlAddr.Ipv4.Address.Addr[:]
-	case fidlnet.SocketAddressIpv6:
-		fromAddrType = C.Ipv6
-		addrSlice = fidlAddr.Ipv6.Address.Addr[:]
-	default:
-		panic(fmt.Sprintf("unrecognized socket address %d", w))
-	}
-	addrBuf = C.ConstBuffer{
+	fromAddrType, addrSlice := getFidlAddrTypeAndSlice(protocol, res.RemoteAddr)
+	addrBuf := C.ConstBuffer{
 		buf:      (*C.uchar)(unsafe.Pointer(((*reflect.SliceHeader)(unsafe.Pointer(&addrSlice))).Data)),
 		buf_size: C.ulong(len(addrSlice)),
 	}
@@ -161,4 +160,37 @@ func SerializeRecvMsgMeta(protocol tcpip.NetworkProtocolNumber, res tcpip.ReadRe
 	}
 
 	return convertSerializeRecvMsgMetaErr(C.serialize_recv_msg_meta(&recv_meta, addrBuf, bufOut))
+}
+
+func convertSerializeSendMsgMetaErr(err C.SerializeSendMsgMetaError) error {
+	switch err {
+	case C.SerializeSendMsgMetaErrorNone:
+		return nil
+	case C.SerializeSendMsgMetaErrorOutputBufferNull:
+		return InputBufferNullErr{}
+	case C.SerializeSendMsgMetaErrorOutputBufferTooSmall:
+		return InputBufferTooSmallErr{}
+	case C.SerializeSendMsgMetaErrorFailedToEncode:
+		return FailedToEncodeErr{}
+	default:
+		panic(fmt.Sprintf("unknown serialization result %#v", err))
+	}
+}
+
+// SerializeSendMsgAddress serializes `addr` into `buf` as a SendMsgMeta FIDL message using
+// the LLCPP bindings.
+func SerializeSendMsgAddress(protocol tcpip.NetworkProtocolNumber, addr tcpip.FullAddress, buf []byte) error {
+	fromAddrType, addrSlice := getFidlAddrTypeAndSlice(protocol, addr)
+	ip_addr := C.IpAddress{
+		addr_type: fromAddrType,
+	}
+	header := (*reflect.SliceHeader)(unsafe.Pointer(&ip_addr.addr))
+	copy(*(*[]byte)(unsafe.Pointer(&header)), addrSlice)
+
+	bufOut := C.Buffer{
+		buf:      (*C.uchar)(unsafe.Pointer(((*reflect.SliceHeader)(unsafe.Pointer(&buf))).Data)),
+		buf_size: C.ulong(len(buf)),
+	}
+
+	return convertSerializeSendMsgMetaErr(C.serialize_send_msg_meta_from_addr(ip_addr, C.ushort(addr.Port), bufOut))
 }

@@ -174,21 +174,59 @@ DeserializeSendMsgMetaResult deserialize_send_msg_meta(Buffer buf) {
   return res;
 }
 
-bool serialize_send_msg_meta(fsocket::wire::SendMsgMeta& meta, cpp20::span<uint8_t> out_buf) {
+SerializeSendMsgMetaError serialize_send_msg_meta(fsocket::wire::SendMsgMeta& meta,
+                                                  cpp20::span<uint8_t> out_buf) {
   fidl::unstable::OwnedEncodedMessage<fsocket::wire::SendMsgMeta> encoded(
       fidl::internal::WireFormatVersion::kV2, &meta);
   if (!encoded.ok()) {
-    return false;
+    return SerializeSendMsgMetaErrorFailedToEncode;
   }
 
   fidl::OutgoingMessage& outgoing_meta = encoded.GetOutgoingMessage();
   std::optional meta_size_validated = compute_and_validate_message_size(outgoing_meta);
   if (!meta_size_validated.has_value() ||
       !can_serialize_into(out_buf, meta_size_validated.value())) {
-    return false;
+    return SerializeSendMsgMetaErrorOutputBufferTooSmall;
   }
   serialize_unchecked(out_buf, meta_size_validated.value(), outgoing_meta);
-  return true;
+  return SerializeSendMsgMetaErrorNone;
+}
+
+SerializeSendMsgMetaError serialize_send_msg_meta_from_addr(IpAddress addr, uint16_t port,
+                                                            Buffer out_buf) {
+  fidl::Arena<
+      fidl::MaxSizeInChannel<fsocket::wire::SendMsgMeta, fidl::MessageDirection::kSending>()>
+      alloc;
+  fidl::WireTableBuilder<fsocket::wire::SendMsgMeta> meta_builder =
+      fsocket::wire::SendMsgMeta::Builder(alloc);
+
+  fnet::wire::SocketAddress socket_addr;
+  fnet::wire::Ipv4SocketAddress ipv4_socket_addr;
+  fnet::wire::Ipv6SocketAddress ipv6_socket_addr;
+  switch (addr.addr_type) {
+    case IpAddrType::Ipv4: {
+      cpp20::span<const uint8_t> from_addr_span(addr.addr, sizeof(ipv4_socket_addr.address.addr));
+      cpp20::span<uint8_t> to_addr(ipv4_socket_addr.address.addr.data(),
+                                   sizeof(ipv4_socket_addr.address.addr));
+      copy_into(to_addr, from_addr_span);
+      ipv4_socket_addr.port = port;
+      socket_addr = fnet::wire::SocketAddress::WithIpv4(alloc, ipv4_socket_addr);
+    } break;
+    case IpAddrType::Ipv6: {
+      cpp20::span<const uint8_t> from_addr_span(addr.addr, sizeof(ipv6_socket_addr.address.addr));
+      cpp20::span<uint8_t> to_addr(ipv6_socket_addr.address.addr.data(),
+                                   sizeof(ipv6_socket_addr.address.addr));
+      copy_into(to_addr, from_addr_span);
+      ipv6_socket_addr.port = port;
+      socket_addr = fnet::wire::SocketAddress::WithIpv6(alloc, ipv6_socket_addr);
+    } break;
+  }
+  meta_builder.to(socket_addr);
+  fsocket::wire::SendMsgMeta meta = meta_builder.Build();
+  if (out_buf.buf == nullptr) {
+    return SerializeSendMsgMetaErrorOutputBufferNull;
+  }
+  return serialize_send_msg_meta(meta, cpp20::span<uint8_t>(out_buf.buf, out_buf.buf_size));
 }
 
 fidl::unstable::DecodedMessage<fsocket::wire::RecvMsgMeta> deserialize_recv_msg_meta(

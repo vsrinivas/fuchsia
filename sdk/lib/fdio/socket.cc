@@ -3029,9 +3029,9 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
               meta, cpp20::span<uint8_t>(buf, netstack_versioned_tx_prelude_size_));
         };
 
-    bool serialize_success;
+    SerializeSendMsgMetaError serialize_err;
     if (addr.has_value()) {
-      serialize_success = addr.value().WithFIDL(
+      serialize_err = addr.value().WithFIDL(
           [&build_and_serialize, &meta_builder_with_cdata](fnet::wire::SocketAddress address) {
             fidl::WireTableBuilder meta_builder = meta_builder_with_cdata();
             meta_builder.to(address);
@@ -3039,10 +3039,10 @@ struct datagram_socket : public socket_with_zx_socket<DatagramSocket> {
           });
     } else {
       fidl::WireTableBuilder meta_builder = meta_builder_with_cdata();
-      serialize_success = build_and_serialize(meta_builder);
+      serialize_err = build_and_serialize(meta_builder);
     }
 
-    if (!serialize_success) {
+    if (serialize_err != SerializeSendMsgMetaErrorNone) {
       *out_code = EIO;
       return ZX_OK;
     }

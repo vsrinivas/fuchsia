@@ -36,9 +36,9 @@ bool SendMsgMeta(perftest::RepeatState* const state, AddrKind::Kind addr_kind, b
   auto validate_serialize = [&fidl, &span]() {
     perftest::DoNotOptimize(&fidl);
     perftest::DoNotOptimize(&span);
-    bool result = serialize_send_msg_meta(fidl, span);
+    SerializeSendMsgMetaError result = serialize_send_msg_meta(fidl, span);
     perftest::DoNotOptimize(result);
-    FX_CHECK(result);
+    FX_CHECK(result == SerializeSendMsgMetaErrorNone);
   };
 
   auto validate_deserialize = [](const Buffer& buf) {

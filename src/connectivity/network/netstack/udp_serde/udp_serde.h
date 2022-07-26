@@ -120,6 +120,22 @@ UDP_SERDE_EXPORT SerializeRecvMsgMetaError serialize_recv_msg_meta(const RecvMsg
                                                                    ConstBuffer from_addr,
                                                                    Buffer out_buf);
 
+typedef enum SerializeSendMsgMetaError {
+  SerializeSendMsgMetaErrorNone,
+  SerializeSendMsgMetaErrorFailedToEncode,
+  SerializeSendMsgMetaErrorOutputBufferNull,
+  SerializeSendMsgMetaErrorOutputBufferTooSmall,
+} SerializeSendMsgMetaError;
+
+// Utility for serializing the provided `addr` and `port` into the provided buffer
+// using the LLCPP bindings.
+//
+// On success, returns SerializeSendMsgMetaErrNone. On failure, returns an error
+// describing the reason for the failure.
+UDP_SERDE_EXPORT SerializeSendMsgMetaError serialize_send_msg_meta_from_addr(IpAddress addr,
+                                                                             uint16_t port,
+                                                                             Buffer out_buf);
+
 // The length of the prelude bytes in a Tx message.
 UDP_SERDE_EXPORT extern const uint32_t kTxUdpPreludeSize;
 
@@ -137,9 +153,10 @@ namespace fsocket = fuchsia_posix_socket;
 // Utility for serializing a SendMsgMeta into the provided buffer using the LLCPP
 // bindings.
 //
-// On success, returns true. On failure, returns false.
-UDP_SERDE_EXPORT bool serialize_send_msg_meta(fsocket::wire::SendMsgMeta& meta,
-                                              cpp20::span<uint8_t> out_buf);
+// On success, returns SerializeSendMsgMetaErrNone. On failure, returns an error
+// describing the reason for the failure.
+UDP_SERDE_EXPORT SerializeSendMsgMetaError serialize_send_msg_meta(fsocket::wire::SendMsgMeta& meta,
+                                                                   cpp20::span<uint8_t> out_buf);
 
 // Utility for deserializing a RecvMsgMeta from the provided buffer.
 //
