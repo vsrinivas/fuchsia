@@ -14,6 +14,7 @@ group("tests") {
 _common_source_root = "src/main.rs"
 
 _common_sources = [
+  "src/gpu_command.rs",
   "src/gpu_device.rs",
   "src/resource.rs",
   "src/scanout.rs",
@@ -27,6 +28,7 @@ _common_deps = [
   "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition-rustc",
   "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views-rustc",
   "//sdk/fidl/fuchsia.virtualization.hardware:fuchsia.virtualization.hardware-rustc",
+  "//src/lib/async-utils",
   "//src/lib/fidl/rust/fidl",
   "//src/lib/fuchsia",
   "//src/lib/fuchsia-async",

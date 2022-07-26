@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod gpu_command;
 mod gpu_device;
 mod resource;
 mod scanout;
@@ -9,10 +10,11 @@ mod wire;
 
 use {
     crate::gpu_device::GpuDevice,
-    crate::scanout::Scanout,
+    crate::scanout::FlatlandScanout,
     anyhow::{anyhow, Context},
     fidl::endpoints::RequestStream,
     fidl_fuchsia_virtualization_hardware::VirtioGpuRequestStream,
+    fuchsia_async as fasync,
     fuchsia_component::server,
     futures::{StreamExt, TryFutureExt, TryStreamExt},
     tracing,
@@ -32,6 +34,8 @@ async fn run_virtio_gpu(mut virtio_gpu_fidl: VirtioGpuRequestStream) -> Result<(
 
     responder.send()?;
 
+    let control_handle = virtio_gpu_fidl.control_handle();
+
     // Complete the setup of queues and get a device.
     let mut virtio_device_fidl = virtio_gpu_fidl.cast_stream();
     let (device, ready_responder) = machina_virtio_device::config_builder_from_stream(
@@ -44,14 +48,16 @@ async fn run_virtio_gpu(mut virtio_gpu_fidl: VirtioGpuRequestStream) -> Result<(
     .context("Failed to initialize device.")?;
 
     // Create the device and attempt to attach an initial scanout. This may fail, ex if run within
-    // an environment without Flatland or a graphical shell.
-    let mut gpu_device = match Scanout::create().await {
-        Ok(scanout) => GpuDevice::with_scanout(&guest_mem, scanout),
-        Err(e) => {
+    // an environment without Flatland or a graphical shell. If this happens then the GPU will
+    // simply not expose any scanouts to the driver.
+    let mut gpu_device = GpuDevice::new(&guest_mem, control_handle);
+    let command_sender = gpu_device.command_sender();
+    fasync::Task::local(async move {
+        if let Err(e) = FlatlandScanout::attach(command_sender).await {
             tracing::warn!("Failed to create scanout: {}", e);
-            GpuDevice::new(&guest_mem)
         }
-    };
+    })
+    .detach();
 
     let control_stream = device.take_stream(wire::CONTROLQ)?;
     let cursor_stream = device.take_stream(wire::CURSORQ)?;

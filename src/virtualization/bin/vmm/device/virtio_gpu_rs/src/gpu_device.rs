@@ -3,11 +3,14 @@
 // found in the LICENSE file.
 
 use {
+    crate::gpu_command::{AttachScanoutResponder, GpuCommand, GpuCommandSender, ScanoutId},
     crate::resource::Resource2D,
     crate::scanout::Scanout,
     crate::wire,
     anyhow::{anyhow, Context, Error},
-    futures::StreamExt,
+    fidl_fuchsia_ui_composition::LayoutInfo,
+    fidl_fuchsia_virtualization_hardware::VirtioGpuControlHandle,
+    futures::{channel::mpsc, select, StreamExt},
     machina_virtio_device::WrappedDescChainStream,
     std::collections::{hash_map::Entry, HashMap},
     std::io::{Read, Write},
@@ -18,8 +21,6 @@ use {
     zerocopy::{AsBytes, FromBytes},
 };
 
-const VIRTIO_GPU_STARTUP_HEIGHT: u32 = 720;
-const VIRTIO_GPU_STARTUP_WIDTH: u32 = 1280;
 /// This is a (somewhat arbitrary) upper bound to the number of entries in a
 /// VIRTIO_GPU_CMD_RESOURCE_ATTACH_BACKING command.
 const ATTACH_BACKING_MAX_ENTRIES: u32 = 1024;
@@ -72,22 +73,38 @@ fn read_from_chain<'a, 'b, N: DriverNotify, M: DriverMem, T: FromBytes>(
     Ok(T::read_from(buffer.as_slice()).unwrap())
 }
 
+#[derive(Default)]
+struct ScanoutEntry {
+    scanout: Option<Box<dyn Scanout>>,
+    generation: usize,
+}
+
 pub struct GpuDevice<'a, M: DriverMem> {
     resources: HashMap<u32, Resource2D<'a>>,
     mem: &'a M,
-    scanout: Option<Scanout>,
+    scanouts: [ScanoutEntry; wire::VIRTIO_GPU_MAX_SCANOUTS],
+    command_receiver: mpsc::Receiver<GpuCommand>,
+    command_sender: mpsc::Sender<GpuCommand>,
+    control_handle: VirtioGpuControlHandle,
 }
 
 impl<'a, M: DriverMem> GpuDevice<'a, M> {
     /// Create a GpuDevice without any scanouts (ex: no attached displays will be reported in
     /// GET_DISPLAY_INFOs).
-    pub fn new(mem: &'a M) -> Self {
-        Self { resources: HashMap::new(), mem, scanout: None }
+    pub fn new(mem: &'a M, control_handle: VirtioGpuControlHandle) -> Self {
+        let (command_sender, command_receiver) = mpsc::channel(10);
+        Self {
+            resources: HashMap::new(),
+            mem,
+            scanouts: Default::default(),
+            command_receiver,
+            command_sender,
+            control_handle,
+        }
     }
 
-    /// Create a GpuDevice with a single scanout.
-    pub fn with_scanout(mem: &'a M, scanout: Scanout) -> Self {
-        Self { resources: HashMap::new(), mem, scanout: Some(scanout) }
+    pub fn command_sender(&self) -> GpuCommandSender {
+        GpuCommandSender::new(self.command_sender.clone())
     }
 
     pub async fn process_queues<'b, N: DriverNotify>(
@@ -102,25 +119,67 @@ impl<'a, M: DriverMem> GpuDevice<'a, M> {
             Control,
             Cursor,
         }
-        let mut stream = futures::stream::select(
+        let mut queue_stream = futures::stream::select(
             control_stream.map(|chain| (CommandQueue::Control, chain)),
             cursor_stream.map(|chain| (CommandQueue::Cursor, chain)),
-        );
+        )
+        .fuse();
 
-        while let Some((queue, chain)) = stream.next().await {
-            let result = match queue {
-                CommandQueue::Control => {
-                    self.process_control_chain(ReadableChain::new(chain, self.mem)).await
+        loop {
+            select! {
+                queue_chain = queue_stream.next() => match queue_chain {
+                    Some((queue, chain)) => {
+                        let result = match queue {
+                            CommandQueue::Control => {
+                                self.process_control_chain(ReadableChain::new(chain, self.mem)).await
+                            }
+                            CommandQueue::Cursor => {
+                                self.process_cursor_chain(ReadableChain::new(chain, self.mem))
+                            }
+                        };
+                        if let Err(e) = result {
+                            tracing::warn!("Error processing control queue: {}", e);
+                        }
+                    }
+                    None => {
+                        break;
+                    }
+                },
+                gpu_command = self.command_receiver.next() => match gpu_command {
+                    Some(command) => self.handle_gpu_command(command),
+                    None => { }
                 }
-                CommandQueue::Cursor => {
-                    self.process_cursor_chain(ReadableChain::new(chain, self.mem))
-                }
-            };
-            if let Err(e) = result {
-                tracing::warn!("Error processing control queue: {}", e);
             }
         }
         Ok(())
+    }
+
+    fn handle_gpu_command(&mut self, command: GpuCommand) {
+        match command {
+            GpuCommand::AttachScanout { scanout, responder } => {
+                self.attach_scanout(scanout, responder);
+            }
+            GpuCommand::ResizeScanout { scanout_id, layout_info } => {
+                self.resize_scanout(scanout_id, layout_info);
+            }
+            GpuCommand::DetachScanout { scanout_id } => {
+                self.detach_scanout(scanout_id);
+            }
+        }
+    }
+
+    #[cfg(test)]
+    pub async fn process_gpu_commands(&mut self) {
+        while let Some(command) = self.command_receiver.next().await {
+            self.handle_gpu_command(command);
+        }
+    }
+
+    #[cfg(test)]
+    pub fn process_gpu_commands_until_idle(&mut self) {
+        while let Ok(Some(command)) = self.command_receiver.try_next() {
+            self.handle_gpu_command(command);
+        }
     }
 
     pub async fn process_control_chain<'b, N: DriverNotify>(
@@ -194,21 +253,20 @@ impl<'a, M: DriverMem> GpuDevice<'a, M> {
     ) -> Result<(), Error> {
         let mut display_info: wire::VirtioGpuRespDisplayInfo = Default::default();
         display_info.hdr.ty = wire::VIRTIO_GPU_RESP_OK_DISPLAY_INFO.into();
-        if self.scanout.is_some() {
-            // TODO(fxbug.dev/102870): For now we just report a single pmode with some initial
-            // geometry. This will eventually map to the geometry of our backing view and we might
-            // want to consider just marking the scanout as disabled before we get our initial
-            // geometry.
-            display_info.pmodes[0] = wire::VirtioGpuDisplayOne {
-                r: wire::VirtioGpuRect {
-                    x: 0.into(),
-                    y: 0.into(),
-                    width: VIRTIO_GPU_STARTUP_WIDTH.into(),
-                    height: VIRTIO_GPU_STARTUP_HEIGHT.into(),
-                },
-                enabled: 1.into(),
-                flags: 0.into(),
-            };
+        for (index, entry) in self.scanouts.iter().enumerate() {
+            if let Some(scanout) = entry.scanout.as_ref() {
+                let layout_info = scanout.layout_info();
+                display_info.pmodes[index] = wire::VirtioGpuDisplayOne {
+                    r: wire::VirtioGpuRect {
+                        x: 0.into(),
+                        y: 0.into(),
+                        width: layout_info.logical_size.unwrap().width.into(),
+                        height: layout_info.logical_size.unwrap().height.into(),
+                    },
+                    enabled: 1.into(),
+                    flags: 0.into(),
+                };
+            }
         }
 
         // Now write the response to the chain.
@@ -468,13 +526,13 @@ impl<'a, M: DriverMem> GpuDevice<'a, M> {
 
         // Validate scanout_id
         let scanout_id: usize = cmd.scanout_id.get().try_into()?;
-        if scanout_id != 0 || self.scanout.is_none() {
+        if scanout_id >= self.scanouts.len() || self.scanouts[scanout_id].scanout.is_none() {
             tracing::warn!("SetScanout to invalid scanout_id {}", scanout_id);
             return write_error_to_chain(chain, wire::VirtioGpuError::InvalidScanoutId);
         }
 
         // Update the scanout.
-        self.scanout.as_mut().unwrap().set_resource(&cmd, resource)?;
+        self.scanouts[scanout_id].scanout.as_mut().unwrap().set_resource(&cmd, resource)?;
 
         write_to_chain(
             WritableChain::from_readable(chain)?,
@@ -497,7 +555,9 @@ impl<'a, M: DriverMem> GpuDevice<'a, M> {
             }
         };
 
-        if let Some(scanout) = self.scanout.as_mut() {
+        // TODO: this is just presenting _all_ scanouts, but we should only be presenting to
+        // scanouts that resource is mapped to.
+        for scanout in self.scanouts.iter_mut().filter_map(|e| e.scanout.as_mut()) {
             scanout.present()?;
         }
 
@@ -509,20 +569,81 @@ impl<'a, M: DriverMem> GpuDevice<'a, M> {
             },
         )
     }
+
+    fn attach_scanout(&mut self, scanout: Box<dyn Scanout>, responder: AttachScanoutResponder) {
+        for (index, entry) in self.scanouts.iter_mut().enumerate() {
+            if entry.scanout.is_none() {
+                entry.generation += 1;
+                let scanout_id = ScanoutId { index, generation: entry.generation };
+                match responder.send(Ok(scanout_id)) {
+                    Err(_) => {
+                        tracing::warn!("Response receiver dropped before reponse could be sent")
+                    }
+                    Ok(()) => entry.scanout = Some(scanout),
+                }
+                self.control_handle.send_on_config_changed().unwrap();
+                return;
+            }
+        }
+        // If this fails, then the receiving endpoint has been dropped.
+        let _result = responder.send(Err(anyhow!("No available scanout slots.")));
+    }
+
+    fn find_scanout_mut(&mut self, scanout_id: ScanoutId) -> Option<&mut ScanoutEntry> {
+        if scanout_id.index >= self.scanouts.len() {
+            return None;
+        }
+        let entry = &mut self.scanouts[scanout_id.index];
+        if entry.scanout.is_none() || entry.generation != scanout_id.generation {
+            return None;
+        }
+        Some(entry)
+    }
+
+    fn resize_scanout(&mut self, scanout_id: ScanoutId, layout_info: LayoutInfo) {
+        let scanout = match self.find_scanout_mut(scanout_id) {
+            Some(entry) => entry.scanout.as_mut().unwrap(),
+            None => {
+                return;
+            }
+        };
+        scanout.set_layout_info(layout_info);
+        self.control_handle.send_on_config_changed().unwrap();
+    }
+
+    fn detach_scanout(&mut self, scanout_id: ScanoutId) {
+        let entry = match self.find_scanout_mut(scanout_id) {
+            Some(entry) => entry,
+            None => {
+                return;
+            }
+        };
+        entry.scanout = None;
+        self.control_handle.send_on_config_changed().unwrap();
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use {
         super::*,
+        crate::gpu_command::ScanoutController,
         crate::resource::bytes_per_pixel,
+        crate::scanout::FakeScanout,
         crate::wire,
+        fidl::endpoints::{create_proxy_and_stream, RequestStream},
+        fidl_fuchsia_math as fmath,
+        fidl_fuchsia_virtualization_hardware::{VirtioGpuMarker, VirtioGpuProxy},
+        futures::FutureExt,
         virtio_device::{
             chain::ReadableChain,
             fake_queue::{ChainBuilder, IdentityDriverMem, TestQueue},
             mem::DeviceRange,
         },
     };
+
+    const VIRTIO_GPU_STARTUP_HEIGHT: u32 = 720;
+    const VIRTIO_GPU_STARTUP_WIDTH: u32 = 1280;
 
     fn read_returned<T: FromBytes>(range: (u64, u32)) -> T {
         let (data, len) = range;
@@ -554,7 +675,8 @@ mod tests {
             .unwrap();
 
         // Process the chain.
-        let mut device = GpuDevice::new(&mem);
+        let (_proxy, stream) = create_proxy_and_stream::<VirtioGpuMarker>().unwrap();
+        let mut device = GpuDevice::new(&mem, stream.control_handle());
 
         // Process the request.
         device
@@ -572,59 +694,6 @@ mod tests {
         assert_eq!(result.ty.get(), wire::VIRTIO_GPU_RESP_ERR_UNSPEC);
     }
 
-    #[fuchsia::test]
-    async fn test_get_display_info() {
-        let mem = IdentityDriverMem::new();
-        let mut state = TestQueue::new(32, &mem);
-        state
-            .fake_queue
-            .publish(
-                ChainBuilder::new()
-                    // Header
-                    .readable(
-                        std::slice::from_ref(&wire::VirtioGpuCtrlHeader {
-                            ty: wire::VIRTIO_GPU_CMD_GET_DISPLAY_INFO.into(),
-                            ..Default::default()
-                        }),
-                        &mem,
-                    )
-                    .writable(std::mem::size_of::<wire::VirtioGpuRespDisplayInfo>() as u32, &mem)
-                    .build(),
-            )
-            .unwrap();
-
-        // Process the chain.
-        let mut device = GpuDevice::new(&mem);
-
-        // Process the request.
-        device
-            .process_control_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem))
-            .await
-            .expect("Failed to process control chain");
-
-        // Validate returned chain. We should have a DISPLAY_INFO response structure.
-        let returned = state.fake_queue.next_used().unwrap();
-        assert_eq!(
-            std::mem::size_of::<wire::VirtioGpuRespDisplayInfo>(),
-            returned.written() as usize
-        );
-
-        // Expect a single scanout reported with hard-coded geometry. The other scanouts should be
-        // disabled.
-        let mut iter = returned.data_iter();
-        let result = read_returned::<wire::VirtioGpuRespDisplayInfo>(iter.next().unwrap());
-        assert_eq!(result.hdr.ty.get(), wire::VIRTIO_GPU_RESP_OK_DISPLAY_INFO);
-        // All pmodes are disabled.
-        for pmode in 0..wire::VIRTIO_GPU_MAX_SCANOUTS {
-            assert_eq!(result.pmodes[pmode].r.x.get(), 0);
-            assert_eq!(result.pmodes[pmode].r.y.get(), 0);
-            assert_eq!(result.pmodes[pmode].r.width.get(), 0);
-            assert_eq!(result.pmodes[pmode].r.height.get(), 0);
-            assert_eq!(result.pmodes[pmode].enabled.get(), 0);
-            assert_eq!(result.pmodes[pmode].flags.get(), 0);
-        }
-    }
-
     const VALID_RESOURCE_ID: u32 = 1;
     const VALID_RESOURCE_WIDTH: u32 = 1024;
     const VALID_RESOURCE_HEIGHT: u32 = 768;
@@ -635,13 +704,72 @@ mod tests {
         mem: &'a IdentityDriverMem,
         state: TestQueue<'a>,
         device: GpuDevice<'a, IdentityDriverMem>,
+        _proxy: VirtioGpuProxy,
     }
 
     impl<'a> TestFixture<'a> {
         pub fn new(mem: &'a IdentityDriverMem) -> Self {
             let state = TestQueue::new(32, mem);
-            let device = GpuDevice::new(mem);
-            Self { mem, state, device }
+            let (proxy, stream) = create_proxy_and_stream::<VirtioGpuMarker>().unwrap();
+            let device = GpuDevice::new(mem, stream.control_handle());
+            Self { mem, state, device, _proxy: proxy }
+        }
+
+        async fn attach_scanout(
+            &mut self,
+            width: u32,
+            height: u32,
+        ) -> Result<ScanoutController, Error> {
+            let attach_fut = FakeScanout::attach(width, height, self.device.command_sender());
+            // Select on the future to create the scanout and also the future to process the
+            // incoming commands. We need this because we need the gpu to process the attach
+            // command and assign a ScanoutId to complete the attach request.
+            select! {
+                controller = attach_fut.fuse() => controller,
+                () = self.device.process_gpu_commands().fuse() => {
+                    panic!("control channel closed while attaching scanout");
+                }
+            }
+        }
+
+        async fn get_display_info(&mut self) -> wire::VirtioGpuRespDisplayInfo {
+            self.state
+                .fake_queue
+                .publish(
+                    ChainBuilder::new()
+                        // Header
+                        .readable(
+                            std::slice::from_ref(&wire::VirtioGpuCtrlHeader {
+                                ty: wire::VIRTIO_GPU_CMD_GET_DISPLAY_INFO.into(),
+                                ..Default::default()
+                            }),
+                            self.mem,
+                        )
+                        .writable(
+                            std::mem::size_of::<wire::VirtioGpuRespDisplayInfo>() as u32,
+                            self.mem,
+                        )
+                        .build(),
+                )
+                .unwrap();
+
+            self.device
+                .process_control_chain(ReadableChain::new(
+                    self.state.queue.next_chain().unwrap(),
+                    self.mem,
+                ))
+                .await
+                .expect("Failed to process control chain");
+
+            let returned = self.state.fake_queue.next_used().unwrap();
+            assert_eq!(
+                std::mem::size_of::<wire::VirtioGpuRespDisplayInfo>(),
+                returned.written() as usize
+            );
+
+            // Read and return the header.
+            let mut iter = returned.data_iter();
+            read_returned::<wire::VirtioGpuRespDisplayInfo>(iter.next().unwrap())
         }
 
         /// Sends a VIRTIO_GPU_CMD_RESOURCE_CREATE_2D and returns the response.
@@ -989,6 +1117,135 @@ mod tests {
                 offset += res_width * bytes_per_pixel();
             }
         }
+    }
+
+    #[fuchsia::test]
+    async fn test_get_display_info() {
+        let mem = IdentityDriverMem::new();
+        let mut test = TestFixture::new(&mem);
+
+        // By default there are no scanouts.
+        let result = test.get_display_info().await;
+        for pmode in 0..wire::VIRTIO_GPU_MAX_SCANOUTS {
+            assert_eq!(result.pmodes[pmode].r.x.get(), 0);
+            assert_eq!(result.pmodes[pmode].r.y.get(), 0);
+            assert_eq!(result.pmodes[pmode].r.width.get(), 0);
+            assert_eq!(result.pmodes[pmode].r.height.get(), 0);
+            assert_eq!(result.pmodes[pmode].enabled.get(), 0);
+            assert_eq!(result.pmodes[pmode].flags.get(), 0);
+        }
+
+        // Attach a single scanout with some expected geometry.
+        let _scanout_controller =
+            test.attach_scanout(VIRTIO_GPU_STARTUP_WIDTH, VIRTIO_GPU_STARTUP_HEIGHT).await.unwrap();
+
+        let result = test.get_display_info().await;
+        assert_eq!(result.hdr.ty.get(), wire::VIRTIO_GPU_RESP_OK_DISPLAY_INFO);
+
+        // The first pmode is enabled.
+        assert_eq!(result.pmodes[0].r.x.get(), 0);
+        assert_eq!(result.pmodes[0].r.y.get(), 0);
+        assert_eq!(result.pmodes[0].r.width.get(), VIRTIO_GPU_STARTUP_WIDTH);
+        assert_eq!(result.pmodes[0].r.height.get(), VIRTIO_GPU_STARTUP_HEIGHT);
+        assert_eq!(result.pmodes[0].enabled.get(), 1);
+        assert_eq!(result.pmodes[0].flags.get(), 0);
+        // The rest should be disabled.
+        for pmode in 1..wire::VIRTIO_GPU_MAX_SCANOUTS {
+            assert_eq!(result.pmodes[pmode].r.x.get(), 0);
+            assert_eq!(result.pmodes[pmode].r.y.get(), 0);
+            assert_eq!(result.pmodes[pmode].r.width.get(), 0);
+            assert_eq!(result.pmodes[pmode].r.height.get(), 0);
+            assert_eq!(result.pmodes[pmode].enabled.get(), 0);
+            assert_eq!(result.pmodes[pmode].flags.get(), 0);
+        }
+    }
+
+    #[fuchsia::test]
+    async fn test_get_display_info_max_scanouts() {
+        let mem = IdentityDriverMem::new();
+        let mut test = TestFixture::new(&mem);
+
+        // Create the max number of scanouts. We'll size scanout 0 as 100x100, scanout 1 as
+        // 200x200, ... and scanout 15 as 1600x1600.
+
+        let mut scanout_controllers = Vec::new();
+        for index in 0..wire::VIRTIO_GPU_MAX_SCANOUTS {
+            let size = u32::try_from((index + 1) * 100).unwrap();
+            scanout_controllers.push(test.attach_scanout(size, size).await.unwrap());
+        }
+
+        let result = test.get_display_info().await;
+
+        for index in 0..wire::VIRTIO_GPU_MAX_SCANOUTS {
+            let size = u32::try_from((index + 1) * 100).unwrap();
+            assert_eq!(result.pmodes[index].r.x.get(), 0);
+            assert_eq!(result.pmodes[index].r.y.get(), 0);
+            assert_eq!(result.pmodes[index].r.width.get(), size);
+            assert_eq!(result.pmodes[index].r.height.get(), size);
+            assert_eq!(result.pmodes[index].enabled.get(), 1);
+            assert_eq!(result.pmodes[index].flags.get(), 0);
+        }
+    }
+
+    #[fuchsia::test]
+    async fn test_get_display_info_resize_scanout() {
+        let mem = IdentityDriverMem::new();
+        let mut test = TestFixture::new(&mem);
+
+        const SCANOUT_WIDTH: u32 = 1920;
+        const SCANOUT_HEIGHT: u32 = 1080;
+
+        // Create a scanout and validate initial geometry.
+        let mut scanout_controller =
+            test.attach_scanout(SCANOUT_WIDTH, SCANOUT_HEIGHT).await.unwrap();
+        // The change should be visible in GET_DISPLAY_INFO.
+        let result = test.get_display_info().await;
+        assert_eq!(result.pmodes[0].r.width.get(), SCANOUT_WIDTH);
+        assert_eq!(result.pmodes[0].r.height.get(), SCANOUT_HEIGHT);
+
+        // Resize scanout; both dimensions are cut in half.
+        scanout_controller
+            .resize(LayoutInfo {
+                logical_size: Some(fmath::SizeU {
+                    width: SCANOUT_WIDTH / 2,
+                    height: SCANOUT_HEIGHT / 2,
+                }),
+                ..LayoutInfo::EMPTY
+            })
+            .await
+            .unwrap();
+        test.device.process_gpu_commands_until_idle();
+        // And the resize should be reflected in GET_DISPLAY_INFO.
+        let result = test.get_display_info().await;
+        assert_eq!(result.pmodes[0].r.width.get(), SCANOUT_WIDTH / 2);
+        assert_eq!(result.pmodes[0].r.height.get(), SCANOUT_HEIGHT / 2);
+    }
+
+    #[fuchsia::test]
+    async fn test_get_display_info_detach_scanout() {
+        let mem = IdentityDriverMem::new();
+        let mut test = TestFixture::new(&mem);
+
+        const SCANOUT_WIDTH: u32 = 1920;
+        const SCANOUT_HEIGHT: u32 = 1080;
+
+        // Create a scanout and validate initial geometry.
+        let scanout_controller = test.attach_scanout(SCANOUT_WIDTH, SCANOUT_HEIGHT).await.unwrap();
+        // The change should be visible in GET_DISPLAY_INFO.
+        let result = test.get_display_info().await;
+        assert_eq!(result.pmodes[0].r.width.get(), SCANOUT_WIDTH);
+        assert_eq!(result.pmodes[0].r.height.get(), SCANOUT_HEIGHT);
+        assert_eq!(result.pmodes[0].enabled.get(), 1);
+
+        // Now detach the scanout.
+        scanout_controller.detach().await.unwrap();
+        test.device.process_gpu_commands_until_idle();
+
+        // Verify it no longer appears in DISPLAY_INFO
+        let result = test.get_display_info().await;
+        assert_eq!(result.pmodes[0].r.width.get(), 0);
+        assert_eq!(result.pmodes[0].r.height.get(), 0);
+        assert_eq!(result.pmodes[0].enabled.get(), 0);
     }
 
     #[fuchsia::test]
