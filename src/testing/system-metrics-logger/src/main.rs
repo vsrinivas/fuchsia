@@ -9,13 +9,13 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_zircon as zx,
     futures::{
         stream::{StreamExt, TryStreamExt},
         TryFutureExt,
     },
     std::{cell::RefCell, rc::Rc, task::Poll},
+    tracing::*,
 };
 
 struct SystemMetricsLoggerServer {
@@ -46,7 +46,7 @@ impl SystemMetricsLoggerServer {
                 }
                 Ok(())
             }
-            .unwrap_or_else(|e: Error| fx_log_err!("{:?}", e)),
+            .unwrap_or_else(|e: Error| error!("{:?}", e)),
         )
     }
 
@@ -55,11 +55,7 @@ impl SystemMetricsLoggerServer {
         interval_ms: u32,
         duration_ms: Option<u32>,
     ) -> fsysmetrics::SystemMetricsLoggerStartLoggingResult {
-        fx_log_info!(
-            "Starting logging interval_ms {:?} duration_ms {:?}",
-            interval_ms,
-            duration_ms
-        );
+        info!(interval_ms, duration_ms, "Starting logging");
 
         // If self.cpu_logging_task is None, then the server has never logged. If the task exists
         // and is Pending then logging is already active, and an error is returned. If the task is
@@ -144,8 +140,8 @@ impl CpuUsageLogger {
             Some(proxy) => proxy.clone(),
             None => match connect_to_protocol::<fkernel::StatsMarker>() {
                 Ok(s) => s,
-                Err(e) => {
-                    fx_log_err!("Failed to connect to kernel_stats service: {}", e);
+                Err(err) => {
+                    error!(?err, "Failed to connect to kernel_stats service");
                     return;
                 }
             },
@@ -177,25 +173,22 @@ impl CpuUsageLogger {
 
                 self.last_sample.replace((now, cpu_stats));
             }
-            Err(e) => fx_log_err!("get_cpu_stats IPC failed: {}", e),
+            Err(err) => error!(?err, "get_cpu_stats IPC failed"),
         }
     }
 }
 
-#[fasync::run_singlethreaded]
+#[fuchsia::main(logging_tags = ["system-metrics-logger"])]
 async fn main() {
     // v2 components can't surface stderr yet, so we need to explicitly log errors.
     match inner_main().await {
-        Err(e) => fx_log_err!("Terminated with error: {}", e),
-        Ok(()) => fx_log_info!("Terminated with Ok(())"),
+        Err(err) => error!(?err, "Terminated with error"),
+        Ok(()) => info!("Terminated with Ok(())"),
     }
 }
 
 async fn inner_main() -> Result<()> {
-    fuchsia_syslog::init_with_tags(&["system-metrics-logger"])
-        .expect("failed to initialize logger");
-
-    fx_log_info!("Starting system metrics logger");
+    info!("Starting system metrics logger");
 
     // Set up tracing
     fuchsia_trace_provider::trace_provider_create_with_fdio();
@@ -302,7 +295,7 @@ mod tests {
         }
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_logging_duration() {
         let mut runner = Runner::new();
 
@@ -317,7 +310,7 @@ mod tests {
         assert_eq!(runner.iterate_logging_task(), false);
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_logging_duration_too_short() {
         let mut runner = Runner::new();
 
@@ -330,7 +323,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_logging_forever() {
         let mut runner = Runner::new();
 
@@ -350,7 +343,7 @@ mod tests {
         assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_already_logging() {
         let mut runner = Runner::new();
 
@@ -377,7 +370,7 @@ mod tests {
         assert_matches!(runner.executor.run_until_stalled(&mut query), Poll::Ready(Ok(Ok(()))));
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_invalid_argument() {
         let mut runner = Runner::new();
 
@@ -388,7 +381,7 @@ mod tests {
         );
     }
 
-    #[test]
+    #[fuchsia::test]
     fn test_multiple_stops_ok() {
         let mut runner = Runner::new();
 
