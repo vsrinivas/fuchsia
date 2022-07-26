@@ -101,50 +101,6 @@ fitx::result<fdf::wire::NodeError> ValidateSymbols(
 
 }  // namespace
 
-std::optional<fdecl::wire::Offer> CreateCompositeDirOffer(fidl::AnyArena& arena,
-                                                          fdecl::wire::Offer& offer,
-                                                          std::string_view parents_name) {
-  if (!offer.is_directory() || !offer.directory().has_target_name()) {
-    return std::nullopt;
-  }
-
-  std::string target_name =
-      std::string(offer.directory().target_name().data(), offer.directory().target_name().size());
-  size_t split_index = target_name.rfind('-');
-  if (split_index == std::string::npos) {
-    return std::nullopt;
-  }
-  std::string dir_name = target_name.substr(0, split_index);
-  std::string instance_name = target_name.substr(split_index + 1, target_name.size());
-
-  // We only update directories that route the 'default' instance.
-  if (instance_name != "default") {
-    return std::nullopt;
-  }
-  // We have to create a new offer so we aren't manipulating our parent's offer.
-  auto dir = fdecl::wire::OfferDirectory::Builder(arena);
-  if (offer.directory().has_source_name()) {
-    dir.source_name(offer.directory().source_name());
-  }
-  dir.target_name(arena, dir_name + std::string("-").append(parents_name));
-  if (offer.directory().has_rights()) {
-    dir.rights(offer.directory().rights());
-  }
-  if (offer.directory().has_subdir()) {
-    dir.subdir(offer.directory().subdir());
-  }
-  if (offer.directory().has_dependency_type()) {
-    dir.dependency_type(offer.directory().dependency_type());
-  }
-  if (offer.directory().has_source()) {
-    dir.source(offer.directory().source());
-  }
-  if (offer.directory().has_target()) {
-    dir.target(offer.directory().target());
-  }
-  return fdecl::wire::Offer::WithDirectory(arena, dir.Build());
-}
-
 std::optional<fdecl::wire::Offer> CreateCompositeServiceOffer(fidl::AnyArena& arena,
                                                               fdecl::wire::Offer& offer,
                                                               std::string_view parents_name,
@@ -399,19 +355,6 @@ fidl::VectorView<fdecl::wire::Offer> Node::CreateOffers(fidl::AnyArena& arena) c
         decl.set_source(arena, fdecl::wire::Ref::WithChild(arena, source_ref));
         return true;
       });
-
-      // If we are a composite node, then we route 'service' directories based on the parent's name.
-      if (IsComposite() && offer.is_directory()) {
-        auto new_offer = CreateCompositeDirOffer(arena, offer, parents_names_[parent_index]);
-        if (new_offer) {
-          node_offers.push_back(*new_offer);
-
-          // If we aren't the primary parent, then skip adding the "default" directory.
-          if (parent_index != 0) {
-            continue;
-          }
-        }
-      }
 
       // If we are a composite node, then we route 'service' directories based on the parent's name.
       if (IsComposite() && offer.is_service()) {

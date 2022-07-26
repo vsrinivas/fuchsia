@@ -1951,24 +1951,6 @@ TEST_F(DriverRunnerTest, TestBindResultTracker) {
   ASSERT_EQ(true, callback_called);
 }
 
-TEST(CompositeDirOfferTest, WorkingOffer) {
-  const std::string_view kServiceName = "fuchsia.service";
-  fidl::Arena<> arena;
-  auto service = fcd::wire::OfferDirectory::Builder(arena);
-  service.source_name(arena, kServiceName);
-  service.target_name(arena, std::string(kServiceName) + "-default");
-  service.rights(fuchsia_io::wire::kRwStarDir);
-  service.dependency_type(fcd::wire::DependencyType::kStrong);
-
-  auto offer = fcd::wire::Offer::WithDirectory(arena, service.Build());
-  auto new_offer = CreateCompositeDirOffer(arena, offer, "parent_node");
-  ASSERT_TRUE(new_offer);
-
-  std::string new_target(new_offer->directory().target_name().data(),
-                         new_offer->directory().target_name().size());
-  ASSERT_EQ(new_target, std::string(kServiceName).append("-parent_node"));
-}
-
 TEST(CompositeServiceOfferTest, WorkingOffer) {
   const std::string_view kServiceName = "fuchsia.service";
   fidl::Arena<> arena;
