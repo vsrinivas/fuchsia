@@ -196,6 +196,19 @@ std::optional<fdecl::wire::Offer> CreateCompositeServiceOffer(fidl::AnyArena& ar
   return fdecl::wire::Offer::WithService(arena, service.Build());
 }
 
+std::optional<fdecl::wire::Offer> CreateCompositeOffer(fidl::AnyArena& arena,
+                                                       fdecl::wire::Offer& offer,
+                                                       std::string_view parents_name,
+                                                       bool primary_parent) {
+  // We route 'service' capabilities based on the parent's name.
+  if (offer.is_service()) {
+    return CreateCompositeServiceOffer(arena, offer, parents_name, primary_parent);
+  }
+
+  // Other capabilities we can simply forward unchanged.
+  return offer;
+}
+
 BindResultTracker::BindResultTracker(size_t expected_result_count,
                                      NodeBindingInfoResultCallback result_callback)
     : expected_result_count_(expected_result_count),
@@ -261,6 +274,7 @@ zx::status<std::shared_ptr<Node>> Node::CreateCompositeNode(
     std::vector<fuchsia_driver_framework::wire::NodeProperty> properties,
     DriverBinder* driver_binder, async_dispatcher_t* dispatcher) {
   auto composite = std::make_shared<Node>(node_name, std::move(parents), driver_binder, dispatcher);
+  composite->parents_names_ = std::move(parents_names);
 
   for (auto& prop : properties) {
     auto natural = fidl::ToNatural(prop);
@@ -281,7 +295,24 @@ zx::status<std::shared_ptr<Node>> Node::CreateCompositeNode(
                                          .Build());
   }
 
-  composite->parents_names_ = std::move(parents_names);
+  // Copy the offers from each parent.
+  std::vector<OwnedOffer> node_offers;
+  size_t parent_index = 0;
+  for (const Node* parent : composite->parents_) {
+    auto& parent_offers = parent->offers();
+    node_offers.reserve(node_offers.size() + parent_offers.size());
+
+    for (auto& parent_offer : parent_offers) {
+      auto offer = CreateCompositeOffer(composite->arena_, parent_offer->get(),
+                                        composite->parents_names_[parent_index], parent_index == 0);
+      if (offer) {
+        node_offers.push_back(OwnedMessage<fdecl::wire::Offer>::From(*offer));
+      }
+    }
+    parent_index++;
+  }
+  composite->offers_ = std::move(node_offers);
+
   composite->AddToParents();
   return zx::ok(std::move(composite));
 }
@@ -342,33 +373,11 @@ std::string Node::TopoName() const {
 }
 
 fidl::VectorView<fdecl::wire::Offer> Node::CreateOffers(fidl::AnyArena& arena) const {
-  std::vector<fdecl::wire::Offer> node_offers;
-  size_t parent_index = 0;
-  for (const Node* parent : parents_) {
-    // If this is a composite node, then the offers come from the parent nodes.
-    auto& parent_offers = IsComposite() ? parent->offers() : offers();
-    node_offers.reserve(node_offers.size() + parent_offers.size());
-
-    for (auto& parent_offer : parent_offers) {
-      fdecl::wire::Offer& offer = parent_offer->get();
-
-      // If we are a composite node, then we route 'service' directories based on the parent's name.
-      if (IsComposite() && offer.is_service()) {
-        auto new_offer = CreateCompositeServiceOffer(arena, offer, parents_names_[parent_index],
-                                                     parent_index == 0);
-        if (new_offer) {
-          node_offers.push_back(*new_offer);
-        }
-        continue;
-      }
-
-      node_offers.push_back(offer);
-    }
-    parent_index++;
+  fidl::VectorView<fdecl::wire::Offer> node_offers(arena, offers_.size());
+  for (size_t i = 0; i < offers_.size(); i++) {
+    node_offers[i] = offers_[i]->get();
   }
-  fidl::VectorView<fdecl::wire::Offer> out(arena, node_offers.size());
-  std::copy(node_offers.begin(), node_offers.end(), out.begin());
-  return out;
+  return node_offers;
 }
 
 fuchsia_driver_framework::wire::NodeAddArgs Node::CreateAddArgs(fidl::AnyArena& arena) {
