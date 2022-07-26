@@ -106,6 +106,61 @@ async fn inner_main() -> Result<(), Error> {
         scenic.get_display_ownership_event().await.expect("Failed to get display ownership.");
     fx_log_info!("Instantiating SceneManager, use_flatland: {:?}", use_flatland);
 
+    // Read config files to discover display attributes.
+    let display_rotation = match std::fs::read_to_string("/config/data/display_rotation") {
+        Ok(contents) => {
+            let contents = contents.trim();
+            contents.parse::<i32>().context(format!(
+                "Failed to parse /config/data/display_rotation - \
+            expected an integer, got {contents}"
+            ))?
+        }
+        Err(e) => {
+            fx_log_warn!(
+                "Wasn't able to read config/data/display_rotation, \
+                defaulting to a display rotation of 0 degrees: {}",
+                e
+            );
+            0
+        }
+    };
+    let display_pixel_density = match std::fs::read_to_string("/config/data/display_pixel_density")
+    {
+        Ok(contents) => {
+            let contents = contents.trim();
+            Some(contents.parse::<f32>().context(format!(
+                "Failed to parse /config/data/display_pixel_density - \
+                expected a decimal, got {contents}"
+            ))?)
+        }
+        Err(e) => {
+            fx_log_warn!(
+                "Wasn't able to read config/data/display_pixel_density, \
+                    guessing based on display size: {}",
+                e
+            );
+            None
+        }
+    };
+    let viewing_distance = match std::fs::read_to_string("/config/data/display_usage") {
+        Ok(s) => Some(match s.trim() {
+            "handheld" => ViewingDistance::Handheld,
+            "close" => ViewingDistance::Close,
+            "near" => ViewingDistance::Near,
+            "midrange" => ViewingDistance::Midrange,
+            "far" => ViewingDistance::Far,
+            unknown => anyhow::bail!("Invalid /config/data/display_usage value: {unknown}"),
+        }),
+        Err(e) => {
+            fx_log_warn!(
+                "Wasn't able to read config/data/display_usage, \
+                guessing based on display size: {}",
+                e
+            );
+            None
+        }
+    };
+
     let scene_manager: Arc<Mutex<Box<dyn SceneManager>>> = if use_flatland {
         // TODO(fxbug.dev/86379): Support for insertion of accessibility view.  Pass ViewRefInstalled
         // to the SceneManager, the same way we do for the Gfx branch.
@@ -117,71 +172,20 @@ async fn inner_main() -> Result<(), Error> {
         let a11y_view_provider = connect_to_protocol::<a11y_view::ProviderMarker>()?;
         Arc::new(Mutex::new(Box::new(
             scene_management::FlatlandSceneManager::new(
-                scenic,
                 flatland_display,
                 root_flatland,
                 pointerinjector_flatland,
                 scene_flatland,
                 cursor_view_provider,
                 a11y_view_provider,
+                display_rotation,
+                display_pixel_density,
+                viewing_distance,
             )
             .await?,
         )))
     } else {
         let view_ref_installed = connect_to_protocol::<ui_views::ViewRefInstalledMarker>()?;
-        let display_rotation = match std::fs::read_to_string("/config/data/display_rotation") {
-            Ok(contents) => {
-                let contents = contents.trim();
-                contents.parse::<i32>().context(format!(
-                    "Failed to parse /config/data/display_rotation - \
-                expected an integer, got {contents}"
-                ))?
-            }
-            Err(e) => {
-                fx_log_warn!(
-                    "Wasn't able to read config/data/display_rotation, \
-                    defaulting to a display rotation of 0 degrees: {}",
-                    e
-                );
-                0
-            }
-        };
-        let display_pixel_density =
-            match std::fs::read_to_string("/config/data/display_pixel_density") {
-                Ok(contents) => {
-                    let contents = contents.trim();
-                    Some(contents.parse::<f32>().context(format!(
-                        "Failed to parse /config/data/display_pixel_density - \
-                    expected a decimal, got {contents}"
-                    ))?)
-                }
-                Err(e) => {
-                    fx_log_warn!(
-                        "Wasn't able to read config/data/display_pixel_density, \
-                        guessing based on display size: {}",
-                        e
-                    );
-                    None
-                }
-            };
-        let viewing_distance = match std::fs::read_to_string("/config/data/display_usage") {
-            Ok(s) => Some(match s.trim() {
-                "handheld" => ViewingDistance::Handheld,
-                "close" => ViewingDistance::Close,
-                "near" => ViewingDistance::Near,
-                "midrange" => ViewingDistance::Midrange,
-                "far" => ViewingDistance::Far,
-                unknown => anyhow::bail!("Invalid /config/data/display_usage value: {unknown}"),
-            }),
-            Err(e) => {
-                fx_log_warn!(
-                    "Wasn't able to read config/data/display_usage, \
-                    guessing based on display size: {}",
-                    e
-                );
-                None
-            }
-        };
         let gfx_scene_manager: Arc<Mutex<Box<dyn SceneManager>>> = Arc::new(Mutex::new(Box::new(
             scene_management::GfxSceneManager::new(
                 scenic,

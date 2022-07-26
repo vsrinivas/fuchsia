@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        display_metrics::{DisplayMetrics, ViewingDistance},
         pointerinjector_config::{
             InjectorViewportHangingGet, InjectorViewportPublisher, InjectorViewportSpec,
             InjectorViewportSubscriber,
@@ -11,21 +12,20 @@ use {
         scene_manager::{
             self, PresentationMessage, PresentationSender, SceneManager, ViewportToken,
         },
-        DisplayMetrics,
     },
     anyhow::anyhow,
     anyhow::Error,
     async_trait::async_trait,
     fidl,
     fidl::endpoints::create_proxy,
-    fidl_fuchsia_accessibility_scene as a11y_scene, fidl_fuchsia_math as fmath,
+    fidl_fuchsia_accessibility_scene as a11y_scene, fidl_fuchsia_math as math,
     fidl_fuchsia_ui_app as ui_app,
     fidl_fuchsia_ui_composition::{self as ui_comp, ContentId, TransformId},
-    fidl_fuchsia_ui_scenic as ui_scenic, fidl_fuchsia_ui_views as ui_views,
-    fuchsia_scenic as scenic,
+    fidl_fuchsia_ui_views as ui_views, fuchsia_scenic as scenic,
     fuchsia_syslog::fx_log_warn,
     futures::channel::mpsc::unbounded,
     input_pipeline::Size,
+    math as fmath,
     parking_lot::Mutex,
     std::sync::Arc,
 };
@@ -155,6 +155,10 @@ pub struct FlatlandSceneManager {
 
     // Layout info received from the display.
     layout_info: ui_comp::LayoutInfo,
+
+    // The size that will ultimately be assigned to the View created with the
+    // `fuchsia.session.scene.Manager` protocol.
+    client_viewport_size: math::SizeU,
 
     // Flatland instance that connects to |display|.  Hosts a viewport which connects it to
     // to a view in |pointerinjector_flatland|.
@@ -345,13 +349,15 @@ impl SceneManager for FlatlandSceneManager {
 
 impl FlatlandSceneManager {
     pub async fn new(
-        scenic: ui_scenic::ScenicProxy,
         display: ui_comp::FlatlandDisplayProxy,
         root_flatland: ui_comp::FlatlandProxy,
         pointerinjector_flatland: ui_comp::FlatlandProxy,
         scene_flatland: ui_comp::FlatlandProxy,
         cursor_view_provider: ui_app::ViewProviderProxy,
         a11y_view_provider: a11y_scene::ProviderProxy,
+        display_rotation: i32,
+        display_pixel_density: Option<f32>,
+        viewing_distance: Option<ViewingDistance>,
     ) -> Result<Self, Error> {
         let mut id_generator = scenic::flatland::IdGenerator::new();
 
@@ -403,6 +409,68 @@ impl FlatlandSceneManager {
 
         // Obtain layout info from the display.
         let layout_info = root_flatland.parent_viewport_watcher.get_layout().await?;
+        let root_viewport_size = layout_info
+            .logical_size
+            .ok_or(anyhow::anyhow!("Did not receive layout info from the display"))?;
+        match layout_info.pixel_scale {
+            Some(math::SizeU { width: 1, height: 1 }) => (),
+            Some(size) => {
+                fx_log_warn!(
+                    "Expected size {:?} from display, got {:?}",
+                    math::SizeU { width: 1, height: 1 },
+                    size
+                )
+            }
+            None => (),
+        };
+
+        // Combine the layout info with passed-in display properties.
+        // TODO(fxbug.dev/92193): Pixel density and viewing distance currently do nothing here.
+        let display_metrics = DisplayMetrics::new(
+            Size {
+                width: root_viewport_size.width as f32,
+                height: root_viewport_size.height as f32,
+            },
+            display_pixel_density,
+            viewing_distance,
+            None,
+        );
+        let (
+            display_rotation_enum,
+            injector_viewport_translation,
+            flip_injector_viewport_dimensions,
+        ) = match display_rotation % 360 {
+            0 => Ok((ui_comp::Orientation::Ccw0Degrees, math::Vec_ { x: 0, y: 0 }, false)),
+            90 => Ok((
+                ui_comp::Orientation::Ccw90Degrees,
+                math::Vec_ { x: display_metrics.width_in_pixels() as i32, y: 0 },
+                true,
+            )),
+            180 => Ok((
+                ui_comp::Orientation::Ccw180Degrees,
+                math::Vec_ {
+                    x: display_metrics.width_in_pixels() as i32,
+                    y: display_metrics.height_in_pixels() as i32,
+                },
+                false,
+            )),
+            270 => Ok((
+                ui_comp::Orientation::Ccw270Degrees,
+                math::Vec_ { x: 0, y: display_metrics.height_in_pixels() as i32 },
+                true,
+            )),
+            _ => Err(anyhow::anyhow!("Invalid display rotation; must be {{0,90,180,270}}")),
+        }?;
+        let client_viewport_size = match flip_injector_viewport_dimensions {
+            true => math::SizeU {
+                width: display_metrics.height_in_pixels(),
+                height: display_metrics.width_in_pixels(),
+            },
+            false => math::SizeU {
+                width: display_metrics.width_in_pixels(),
+                height: display_metrics.height_in_pixels(),
+            },
+        };
 
         // Create the pointerinjector view and embed it as a child of the root view.
         {
@@ -412,9 +480,17 @@ impl FlatlandSceneManager {
                 &mut root_flatland.root_transform_id.clone(),
                 &mut pointerinjector_viewport_transform_id.clone(),
             )?;
+            flatland.set_orientation(
+                &mut pointerinjector_viewport_transform_id.clone(),
+                display_rotation_enum,
+            )?;
+            flatland.set_translation(
+                &mut pointerinjector_viewport_transform_id.clone(),
+                &mut injector_viewport_translation.clone(),
+            )?;
 
             let link_properties = ui_comp::ViewportProperties {
-                logical_size: Some(layout_info.logical_size.unwrap()),
+                logical_size: Some(client_viewport_size),
                 ..ui_comp::ViewportProperties::EMPTY
             };
 
@@ -503,7 +579,7 @@ impl FlatlandSceneManager {
             )?;
 
             let link_properties = ui_comp::ViewportProperties {
-                logical_size: Some(layout_info.logical_size.unwrap()),
+                logical_size: Some(client_viewport_size),
                 ..ui_comp::ViewportProperties::EMPTY
             };
 
@@ -573,24 +649,10 @@ impl FlatlandSceneManager {
         let context_view_ref = scenic::duplicate_view_ref(&root_flatland.view_ref)?;
         let target_view_ref = scenic::duplicate_view_ref(&pointerinjector_flatland.view_ref)?;
 
-        // Query display info from Scenic, and compute `DisplayMetrics`.
-        let display_metrics = {
-            let display_info = scenic.get_display_info().await?;
-            let size_in_pixels = Size {
-                width: display_info.width_in_px as f32,
-                height: display_info.height_in_px as f32,
-            };
-            DisplayMetrics::new(
-                size_in_pixels,
-                /* density_in_pixels_per_mm */ None,
-                /* viewing_distance */ None,
-                /* display_rotation */ None,
-            )
-        };
-
         Ok(FlatlandSceneManager {
             _display: display,
             layout_info,
+            client_viewport_size,
             root_flatland,
             _pointerinjector_flatland: pointerinjector_flatland,
             scene_flatland,
@@ -637,7 +699,7 @@ impl FlatlandSceneManager {
         {
             let locked = self.scene_flatland.flatland.lock();
             let viewport_properties = ui_comp::ViewportProperties {
-                logical_size: Some(self.layout_info.logical_size.unwrap()),
+                logical_size: Some(self.client_viewport_size),
                 ..ui_comp::ViewportProperties::EMPTY
             };
             locked.create_viewport(
