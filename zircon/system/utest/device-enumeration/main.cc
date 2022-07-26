@@ -222,7 +222,9 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
       "vim3-usb-phy",
       "dwc2/dwc2/usb-peripheral/function-000/cdc-eth-function",
       "xhci/xhci",
-      "xhci/xhci/usb-bus/000/usb-hub",  // USB 2.0 Hub
+      // TODO(https://fxbug.dev/103458): usb-bus fails to bind occasionally. Temporarily disabling
+      // testing for this device until the root cause is fixed.
+      // "xhci/xhci/usb-bus/000/usb-hub",  // USB 2.0 Hub
 
       // Thermal
       "sys/platform/05:06:28",
