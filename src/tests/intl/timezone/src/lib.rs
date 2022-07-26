@@ -153,7 +153,7 @@ async fn loop_until_matching_time(
     detailed_format: &udat::UDateFormat,
     echo: &fecho::EchoProxy,
 ) -> Result<(), Error> {
-    const MAX_ATTEMPTS: usize = 100;
+    const MAX_ATTEMPTS: usize = 15;
     let sleep = zx::Duration::from_millis(3000);
     let utc_format = formatter_for_timezone(FULL_TIMESTAMP_FORMAT, "UTC");
 
