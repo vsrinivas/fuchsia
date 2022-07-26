@@ -116,7 +116,7 @@ void DeviceControllerConnection::BindDriver(BindDriverRequestView request,
   std::string_view driver_path(request->driver_path.data(), request->driver_path.size());
 
   // TODO: api lock integration
-  if (driver_path != "/boot/driver/fragment.so") {
+  if (driver_path != "#driver/fragment.so") {
     LOGD(INFO, *dev, "Binding driver '%.*s'", static_cast<int>(driver_path.size()),
          driver_path.data());
   } else {
