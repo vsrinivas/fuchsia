@@ -10,6 +10,7 @@
 #include <lib/fpromise/result.h>
 #include <stdint.h>
 
+#include <ostream>
 #include <string>
 
 #include "src/media/audio/lib/format2/fixed.h"
@@ -45,6 +46,7 @@ class Format {
 
   // Returns the frame rate as ratio of frames per nanoseconds.
   const media::TimelineRate& frames_per_ns() const { return frames_per_ns_; }
+  const media::TimelineRate& frac_frames_per_ns() const { return frac_frames_per_ns_; }
 
   // Computes the number of integral frames for the given duration.
   // Rounds up by default.
@@ -74,7 +76,10 @@ class Format {
   int64_t bytes_per_frame_;
   int32_t valid_bits_per_sample_;
   media::TimelineRate frames_per_ns_;
+  media::TimelineRate frac_frames_per_ns_;
 };
+
+std::ostream& operator<<(std::ostream& out, const Format& format);
 
 }  // namespace media_audio
 

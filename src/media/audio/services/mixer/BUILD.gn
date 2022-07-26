@@ -7,6 +7,7 @@ group("tests") {
   deps = [
     "common:tests",
     "fidl:tests",
+    "fidl_realtime:tests",
     "mix:tests",
   ]
 }

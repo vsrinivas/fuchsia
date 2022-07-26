@@ -23,7 +23,9 @@ class TestFence {
   // This method can be called at most once.
   zx::eventpair Take() {
     FX_CHECK(peer_.has_value());
-    return std::move(*peer_);
+    auto out = std::move(*peer_);
+    peer_ = std::nullopt;
+    return out;
   }
 
   // Reports if the fence has been reached.

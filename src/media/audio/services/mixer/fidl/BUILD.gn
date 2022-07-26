@@ -43,6 +43,7 @@ source_set("fidl") {
     "//sdk/lib/fit-promise",
     "//src/media/audio/services/common",
     "//src/media/audio/services/mixer/common",
+    "//src/media/audio/services/mixer/fidl_realtime",
     "//src/media/audio/services/mixer/mix",
     "//zircon/system/ulib/trace",
   ]

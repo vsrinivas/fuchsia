@@ -103,8 +103,11 @@ global task queue. The final call must happen on thread `T2`.
 ### Updates to other state
 
 For state that doesn't affect the DAG structure and doesn't need to be
-serialized with structural updates, we use separate thread-safe queues. For
-example, when a Producer is backed by a StreamSink, the real-time FIDL thread
-pushes packets onto a thread-safe queue as those packets arrive. This queue is
-shared by a ProducerStage object, which consumes packets from the queue as mix
-jobs are executed.
+serialized with structural updates, we use separate thread-safe queues. This
+avoids global serialization, which is especially important for latency-sensitive
+operations. Currently we use the following additional queues:
+
+*   When a Producer is backed by a StreamSink, the real-time FIDL thread pushes
+    packets onto a queue as those packets arrive. This queue is shared by a
+    PacketQueueProducerStage object, which consumes packets from the queue as
+    mix jobs are executed.

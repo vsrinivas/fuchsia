@@ -7,13 +7,18 @@ flow through various processing nodes.
 ## Code layout
 
 [`fidl/`](../fidl/) contains implementations of all FIDL protocols and all code
-that manages the DAG of Nodes.
+that manages the DAG of Nodes. Code in this directory runs on the
+[FIDL thread](execution_model.md#concurrency).
+
+[`fidl_realtime/`](../fidl_realtime/) contains implementations of all
+latency-sensitive FIDL protocols. Code in this directory runs on the
+[real-time FIDL thread](execution_model.md#concurrency) and does not have access
+to the DAG of Nodes. Communication with other threads happens over thread-safe
+queues.
 
 [`mix/`](../mix/) defines all PipelineStage objects and all code which drives
-the mix threads. This code is almost entirely single-threaded -- there is no
-cross-thread communication with FIDL threads except for a few places that use
-thread-safe queues (see [concurrency](execution_model.md#concurrency) for more
-details).
+the mix threads. Code in this directory cannot access FIDL servers or the DAG of
+Nodes. Communication with other threads happens over thread-safe queues.
 
 [`common/`](../common/) contains thread-safe code that can run on any thread.
 Code in this directory must implement a thread-safe interface. For example, this

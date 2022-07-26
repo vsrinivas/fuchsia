@@ -13,7 +13,7 @@
 
 namespace media_audio {
 
-// A generic thread-safe queue.
+// A generic thread-safe queue. Safe for use with multiple producers and multiple consumers.
 //
 // The element type must be movable.
 template <typename T>

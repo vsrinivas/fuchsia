@@ -83,6 +83,9 @@ Format::Format(fuchsia_mediastreams::wire::AudioSampleFormat sample_format, int6
 
   bytes_per_frame_ = bytes_per_sample * channels_;
   frames_per_ns_ = TimelineRate(frames_per_second_, zx::sec(1).to_nsecs());
+
+  auto frac_frames_per_frame = TimelineRate(Fixed(1).raw_value(), 1);
+  frac_frames_per_ns_ = TimelineRate::Product(frames_per_ns_, frac_frames_per_frame);
 }
 
 bool Format::operator==(const Format& rhs) const {
@@ -104,12 +107,37 @@ int64_t Format::integer_frames_per(zx::duration duration, TimelineRate::Rounding
 }
 
 Fixed Format::frac_frames_per(zx::duration duration, TimelineRate::RoundingMode mode) const {
-  return Fixed::FromRaw(TimelineRate(Fixed(frames_per_second_).raw_value(), zx::sec(1).to_nsecs())
-                            .Scale(duration.to_nsecs(), mode));
+  return Fixed::FromRaw(frac_frames_per_ns_.Scale(duration.to_nsecs(), mode));
 }
 
 int64_t Format::bytes_per(zx::duration duration, TimelineRate::RoundingMode mode) const {
   return bytes_per_frame_ * integer_frames_per(duration, mode);
+}
+
+std::ostream& operator<<(std::ostream& out, const Format& format) {
+  out << format.frames_per_second() << "hz-" << format.channels() << "ch-";
+
+  switch (format.sample_format()) {
+    case AudioSampleFormat::kUnsigned8:
+      out << "u8";
+      break;
+    case AudioSampleFormat::kSigned16:
+      out << "i16";
+      break;
+    case AudioSampleFormat::kSigned24In32:
+      out << "i24in32";
+      break;
+    case AudioSampleFormat::kSigned32:
+      out << "i24";
+      break;
+    case AudioSampleFormat::kFloat:
+      out << "f32";
+      break;
+    default:
+      FX_CHECK(false) << static_cast<int>(format.sample_format());
+  }
+
+  return out;
 }
 
 }  // namespace media_audio

@@ -13,6 +13,7 @@ source_set("mix") {
   visibility = [
     "./*",
     "//src/media/audio/services/mixer/fidl/*",
+    "//src/media/audio/services/mixer/fidl_realtime/*",
   ]
 
   sources = [
